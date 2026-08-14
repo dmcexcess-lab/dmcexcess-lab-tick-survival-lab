@@ -155,3 +155,11 @@ Rules get one durable owner. UI must not own simulation state. The map generator
 ## Continuous deployment
 
 `.github/workflows/pages.yml` is the permanent build/deploy gate. It validates canonical files, imports/parses with Godot 4.7.1, runs deterministic map/tick/environment/perception smoke tests, starts the real scene headlessly, exports Web, uploads the artifact, and deploys GitHub Pages.
+
+## Procedural region foundation
+
+The current large-map stress slice uses `ProceduralRegionGenerator.gd` to build a deterministic 64×64 local region. It is deliberately a region/chunk prototype, not the final island size. The generator assigns residential, commercial, downtown, woods, and rural zones from seeded spatial centers, lays arterial/secondary roads, then applies biome-specific parcel/structure rules. Existing physical map facts (ground, indoor rectangles, walls, doors, glass, obstacles, props, lights, exits) remain the shared schema.
+
+Scaling rule: world generation may cover large deterministic regions, but rendering, lighting, perception and eventually actor simulation must stay local/chunked around active areas. The final island should be composed from deterministic regions/chunks rather than represented as one permanently active mega-array.
+
+The Web harness currently defaults to a 64×64 procedural region and exposes player-controlled map zoom. Zoom changes presentation only; world coordinates, movement cost, LOS and simulation geometry do not change.

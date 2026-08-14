@@ -1,5 +1,15 @@
 # Changelog
 
+## Procedural Region / Player Zoom / Safari First-Touch Fix — 2026-08-14
+
+- Added a deterministic 64×64 procedural region stress slice with residential, commercial, downtown, woods, and rural zoning.
+- Added seeded road hierarchy and biome-specific parcel/structure/decor rules while preserving the existing physical map schema.
+- Generalized local-world bounds and perception dimensions for maps larger than the original 20×18 authored locations.
+- Bounded lighting/perception work around the player so larger generated regions do not require full-map visibility scans each action.
+- Added player-controlled map zoom with four presentation levels; zoom does not alter world/simulation coordinates.
+- Added a Web touch autoload that detects touch-capable browsers up front and swallows synthetic mouse clicks, including the first-click-before-first-touch Safari case.
+- Added deterministic region generation smoke coverage.
+
 ## Mobile Map Zoom / Clock Direction — 2026-08-14
 
 - Increased tactical tile presentation from 28px to 31px for better mobile readability.

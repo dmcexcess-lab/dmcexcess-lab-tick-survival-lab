@@ -1,6 +1,7 @@
 extends Node2D
 
 const MapGen = preload("res://scripts/TacticalMapGenerator.gd")
+const RegionGen = preload("res://scripts/ProceduralRegionGenerator.gd")
 const TickSchedulerClass = preload("res://scripts/TickScheduler.gd")
 const PlayerActorClass = preload("res://scripts/PlayerActor.gd")
 const LocalWorldStateClass = preload("res://scripts/LocalWorldState.gd")
@@ -10,9 +11,11 @@ const Lighting = preload("res://scripts/TacticalLighting.gd")
 const Perception = preload("res://scripts/TacticalPerception.gd")
 const Weather = preload("res://scripts/TacticalWeather.gd")
 
-const TILE := 31.0
-const VISIBLE_COLS := 18
-const VISIBLE_ROWS := 16
+const ZOOM_PRESETS := [[28.0, 20, 17], [31.0, 18, 16], [35.0, 16, 14], [39.0, 14, 12]]
+var TILE := 35.0
+var VISIBLE_COLS := 16
+var VISIBLE_ROWS := 14
+var zoom_index := 2
 const BOARD_X := 41.0
 const TOP := 132.0
 const CONTROL_TOP := 648.0
@@ -35,6 +38,8 @@ const BTN_TURN_R := Rect2(462, CONTROL_ROW_TURN_Y, CONTROL_SIDE_W, CONTROL_TURN_
 const BTN_CROUCH := Rect2(30, CONTROL_ROW_BOTTOM_Y, 126, 52)
 const BTN_FORWARD := Rect2(462, CONTROL_ROW_TOP_Y, CONTROL_SIDE_W, CONTROL_ROW_TURN_Y - CONTROL_ROW_TOP_Y - 8.0)
 const BTN_BACK := Rect2(462, CONTROL_ROW_BOTTOM_Y, CONTROL_SIDE_W, VIEW_H - CONTROL_ROW_BOTTOM_Y - 8.0)
+const BTN_ZOOM_OUT := Rect2(218, 718, 78, 52)
+const BTN_ZOOM_IN := Rect2(344, 718, 78, 52)
 const DEV_PANEL := Rect2(72, 154, 496, 286)
 const DEV_WEATHER := Rect2(220, 286, 292, 38)
 const DEV_APPLY := Rect2(408, 336, 104, 38)
@@ -45,6 +50,7 @@ const MENU_EXIT := Rect2(190, 430, 260, 62)
 var rng := RandomNumberGenerator.new()
 var environment_id := "back_alley"
 var variant := 0
+var region_seed := 0
 var spec: Dictionary = {}
 var font: Font
 var scheduler = TickSchedulerClass.new()
@@ -120,9 +126,10 @@ func _create_dev_inputs() -> void:
     add_child(dev_date_input)
 
 func reroll() -> void:
-    environment_id = MapGen.pick_random(rng)
-    variant = MapGen.pick_variant(environment_id, rng)
-    spec = MapGen.build_layout(environment_id, variant)
+    region_seed = rng.randi_range(1, 2147483646)
+    environment_id = "procedural_region"
+    variant = 0
+    spec = RegionGen.generate(region_seed)
     world.load_from_spec(spec)
     scheduler.reset()
     player.reset(spec.get("player_spawn", Vector2i.ZERO))
@@ -179,6 +186,10 @@ func _unhandled_input(event: InputEvent) -> void:
             _recalc_perception(); get_viewport().set_input_as_handled(); return
         if key_event.keycode == KEY_6:
             _cycle_weather(); get_viewport().set_input_as_handled(); return
+        if key_event.keycode in [KEY_EQUAL, KEY_KP_ADD]:
+            _zoom(1); get_viewport().set_input_as_handled(); return
+        if key_event.keycode in [KEY_MINUS, KEY_KP_SUBTRACT]:
+            _zoom(-1); get_viewport().set_input_as_handled(); return
         if key_event.keycode == KEY_1:
             _dev_timed_action("light_test", 3); get_viewport().set_input_as_handled(); return
         if key_event.keycode == KEY_2:
@@ -264,6 +275,14 @@ func _toggle_move_mode() -> void:
 func _toggle_crouch() -> void:
     player.set_crouched(not player.crouched)
     _commit("stance", player.stance_cost(), "CROUCH" if player.crouched else "STAND")
+
+func _zoom(delta: int) -> void:
+    zoom_index = clampi(zoom_index + delta, 0, ZOOM_PRESETS.size() - 1)
+    var preset: Array = ZOOM_PRESETS[zoom_index]
+    TILE = float(preset[0])
+    VISIBLE_COLS = int(preset[1])
+    VISIBLE_ROWS = int(preset[2])
+    _record_zero("zoom", "%dx%d @ %.0fpx" % [VISIBLE_COLS, VISIBLE_ROWS, TILE])
 
 func _cycle_weather() -> void:
     weather_index = (weather_index + 1) % WEATHER_KINDS.size()
@@ -430,7 +449,7 @@ func _current_temp_f() -> float:
 
 func _look_at_label() -> String:
     var target: Vector2i = player.cell + player.facing
-    if target.x < 0 or target.y < 0 or target.x >= MapGen.BOARD_W or target.y >= MapGen.BOARD_H:
+    if target.x < 0 or target.y < 0 or target.x >= _map_w() or target.y >= _map_h():
         return "map edge"
     for entry_value in spec.get("props", []):
         var entry: Array = entry_value
@@ -482,6 +501,10 @@ func _handle_pointer(pos: Vector2) -> void:
         _step_back(); return
     if BTN_CROUCH.has_point(pos):
         _toggle_crouch(); return
+    if BTN_ZOOM_OUT.has_point(pos):
+        _zoom(-1); return
+    if BTN_ZOOM_IN.has_point(pos):
+        _zoom(1); return
     var board_rect: Rect2 = _visible_board_rect()
     if not board_rect.has_point(pos):
         return
@@ -526,7 +549,7 @@ func _draw_game_hud() -> void:
         env_text = "INDOOR  %.0f°F" % _current_temp_f()
     draw_string(font, Vector2(12, 85), env_text, HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Color("b7c8c2"))
     draw_string(font, Vector2(12, 106), "Looking at: %s" % _look_at_label(), HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Color("c8d5cf"))
-    draw_string(font, Vector2(12, 124), "%s v%d" % [MapGen.display_name(environment_id), variant], HORIZONTAL_ALIGNMENT_LEFT, -1, 9, Color("7f918b"))
+    draw_string(font, Vector2(12, 124), "%s | seed %d" % [str(spec.get("display_name", MapGen.display_name(environment_id))), region_seed], HORIZONTAL_ALIGNMENT_LEFT, -1, 9, Color("7f918b"))
 
 func _draw_dev_panel() -> void:
     draw_rect(DEV_PANEL, Color(0.035, 0.045, 0.041, 0.97))
@@ -619,7 +642,7 @@ func _draw_fog() -> void:
             draw_rect(_cell_rect(p), Color(0.005, 0.008, 0.010, alpha))
 
 func _weather_cell_allowed(cell: Vector2i) -> bool:
-    if cell.x < 0 or cell.y < 0 or cell.x >= MapGen.BOARD_W or cell.y >= MapGen.BOARD_H:
+    if cell.x < 0 or cell.y < 0 or cell.x >= _map_w() or cell.y >= _map_h():
         return false
     if indoor_cells.has(cell):
         return false
@@ -703,7 +726,10 @@ func _draw_controls() -> void:
     _draw_button(BTN_CROUCH, "CROUCH", player.crouched, 11)
     _draw_button(BTN_FORWARD, "FORWARD", false, 11)
     _draw_button(BTN_BACK, "BACK", false, 11)
+    _draw_button(BTN_ZOOM_OUT, "-", zoom_index > 0, 20)
+    _draw_button(BTN_ZOOM_IN, "+", zoom_index < ZOOM_PRESETS.size() - 1, 20)
     draw_string(font, Vector2(210, 690), "World controls", HORIZONTAL_ALIGNMENT_CENTER, 220, 11, Color("84928c"))
+    draw_string(font, Vector2(296, 751), "ZOOM", HORIZONTAL_ALIGNMENT_CENTER, 48, 9, Color("84928c"))
     draw_string(font, Vector2(210, 823), "Tap map still works", HORIZONTAL_ALIGNMENT_CENTER, 220, 10, Color("84928c"))
 
 func _draw_menu() -> void:
@@ -730,9 +756,15 @@ func _facing_name(dir: Vector2i) -> String:
     if dir == Vector2i.LEFT: return "W"
     return "?"
 
+func _map_w() -> int:
+    return int(spec.get("width", MapGen.BOARD_W))
+
+func _map_h() -> int:
+    return int(spec.get("height", MapGen.BOARD_H))
+
 func _view_origin() -> Vector2i:
-    var max_x: int = maxi(0, MapGen.BOARD_W - VISIBLE_COLS)
-    var max_y: int = maxi(0, MapGen.BOARD_H - VISIBLE_ROWS)
+    var max_x: int = maxi(0, _map_w() - VISIBLE_COLS)
+    var max_y: int = maxi(0, _map_h() - VISIBLE_ROWS)
     var x: int = clampi(player.cell.x - VISIBLE_COLS / 2, 0, max_x)
     var y: int = clampi(player.cell.y - VISIBLE_ROWS / 2, 0, max_y)
     return Vector2i(x, y)
