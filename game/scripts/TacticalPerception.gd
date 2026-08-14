@@ -3,6 +3,7 @@ class_name TacticalPerception
 
 const Lighting = preload("res://scripts/TacticalLighting.gd")
 const MapGen = preload("res://scripts/TacticalMapGenerator.gd")
+const Weather = preload("res://scripts/TacticalWeather.gd")
 
 const OPAQUE_PROPS := ["dumpster", "car", "store_shelf", "fridge", "crate", "forklift", "machine", "ice_box"]
 const FLASHLIGHT_PROFILE := {"light": "cone", "light_range": 8.0, "light_strength": 1.0, "light_spread": 0.48}
@@ -40,17 +41,20 @@ static func make_sources(spec: Dictionary) -> Array:
         sources.append(Lighting.make_source(entry[0], str(entry[1]), sources.size(), requires_power))
     return sources
 
-static func calculate_lighting(spec: Dictionary, world, environment_id: String, time_of_day: String, power_on: bool, player_cell: Vector2i, facing: Vector2i, flashlight_on: bool) -> Dictionary:
+static func calculate_lighting(spec: Dictionary, world, environment_id: String, time_of_day: String, power_on: bool, player_cell: Vector2i, facing: Vector2i, flashlight_on: bool, weather_state: Dictionary = {}) -> Dictionary:
     var indoors: Dictionary = indoor_cells(spec)
     var opaque: Dictionary = opaque_cells(spec)
     var sources: Array = make_sources(spec)
     var levels: Dictionary = {}
     var tints: Dictionary = {}
     var theme: String = MapGen.theme_name(environment_id)
+    var weather_light: float = Weather.light_multiplier(weather_state) if not weather_state.is_empty() else 1.0
     for y in range(MapGen.BOARD_H):
         for x in range(MapGen.BOARD_W):
             var cell := Vector2i(x, y)
             var level: float = Lighting.ambient_level(theme, time_of_day, indoors.has(cell))
+            if not indoors.has(cell):
+                level *= weather_light
             var strongest := 0.0
             var tint_hex := ""
             for source_value in sources:
@@ -70,7 +74,7 @@ static func calculate_lighting(spec: Dictionary, world, environment_id: String, 
                     var window_pos: Vector2i = window_value
                     if not line_clear(window_pos, cell, spec, world, opaque):
                         continue
-                    var daylight: float = Lighting.window_daylight_contribution(window_pos, cell)
+                    var daylight: float = Lighting.window_daylight_contribution(window_pos, cell) * weather_light
                     level = maxf(level, daylight)
                     if daylight > strongest:
                         strongest = daylight
@@ -86,9 +90,12 @@ static func calculate_lighting(spec: Dictionary, world, environment_id: String, 
                 tints[cell] = tint_hex
     return {"levels": levels, "tints": tints, "indoors": indoors, "sources": sources, "opaque": opaque}
 
-static func calculate_visibility(player_cell: Vector2i, facing: Vector2i, levels: Dictionary, spec: Dictionary, world, opaque: Dictionary, memory: Dictionary, max_range: int = 7) -> Dictionary:
+static func calculate_visibility(player_cell: Vector2i, facing: Vector2i, levels: Dictionary, spec: Dictionary, world, opaque: Dictionary, memory: Dictionary, max_range: int = 7, weather_state: Dictionary = {}) -> Dictionary:
     var visible: Dictionary = {}
     var updated_memory: Dictionary = memory.duplicate(true)
+    var effective_range: int = max_range
+    if not weather_state.is_empty():
+        effective_range = maxi(2, int(round(float(max_range) * Weather.visibility_multiplier(weather_state))))
     for y in range(MapGen.BOARD_H):
         for x in range(MapGen.BOARD_W):
             var p := Vector2i(x, y)
@@ -97,16 +104,16 @@ static func calculate_visibility(player_cell: Vector2i, facing: Vector2i, levels
                 visible[p] = true
                 updated_memory[p] = true
                 continue
-            if dist > max_range:
+            if dist > effective_range:
                 continue
-            if not in_cone(player_cell, facing, p, max_range, 0.14):
+            if not in_cone(player_cell, facing, p, effective_range, 0.14):
                 continue
             if not line_clear(player_cell, p, spec, world, opaque):
                 continue
-            if Lighting.visible_at_distance(float(levels.get(p, 0.0)), dist, max_range):
+            if Lighting.visible_at_distance(float(levels.get(p, 0.0)), dist, effective_range):
                 visible[p] = true
                 updated_memory[p] = true
-    return {"visible": visible, "memory": updated_memory}
+    return {"visible": visible, "memory": updated_memory, "range": effective_range}
 
 static func line_clear(a: Vector2i, b: Vector2i, spec: Dictionary, world, opaque: Dictionary) -> bool:
     var walls: Array = spec.get("walls", [])
