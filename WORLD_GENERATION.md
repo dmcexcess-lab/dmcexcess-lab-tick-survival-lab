@@ -26,7 +26,7 @@ Every region must be reproducible from:
 - region coordinate;
 - generator version/ruleset.
 
-The same inputs must produce the same biome ownership, roads, parcels, initial buildings, and initial props. Persistent changes after generation belong to world state and override regenerated initial facts.
+The current local generator now exposes `generator_version = 2`. The same inputs must produce the same biome ownership, roads, road classes, initial buildings, initial clutter, and lights. Persistent changes after generation belong to world state and override regenerated initial facts.
 
 ## Biome/district vocabulary
 
@@ -37,11 +37,11 @@ Purpose: homes, yards, small apartment pockets, neighborhood streets, schools/pa
 Rules:
 
 - medium road density;
-- mostly small detached structures with yard setbacks;
-- occasional denser residential parcels near commercial/downtown borders;
-- more grass/wood/carpet/linoleum than concrete;
-- many windows and multiple household access points over time;
-- moderate loot density, high variety, low industrial material density.
+- detached structures require practical road frontage rather than appearing deep inside inaccessible parcels;
+- yard setbacks and undeveloped yard parcels remain common;
+- grass/wood dominate with sidewalks near roads;
+- mailboxes, bins, bushes, trees and household clutter reinforce the street edge;
+- multiple household access points and richer interiors can expand later without changing the parcel contract.
 
 ### Commercial
 
@@ -49,11 +49,11 @@ Purpose: strip retail, gas stations, restaurants, offices, parking lots and road
 
 Rules:
 
-- high road adjacency;
-- broad paved/concrete surfaces and parking areas;
+- strong road adjacency requirement;
+- broad paved/concrete surfaces and parking/open lots;
 - medium/large rectangular footprints;
-- storefront-facing doors/windows;
-- signs, carts, counters, shelving, vending and utility objects;
+- entrances orient toward the nearest road frontage;
+- storefront windows, counters, shelving, carts, bins, benches and utility clutter;
 - strongest transition band between residential and downtown.
 
 ### Downtown
@@ -63,10 +63,10 @@ Purpose: dense urban core, multi-use buildings, narrow alleys, service access an
 Rules:
 
 - highest structural density;
-- arterial road focus plus alleys/service corridors;
+- arterial road focus plus short local/service streets rather than arbitrary full-region grids;
 - larger footprints and reduced setbacks;
 - more sidewalk/tile/concrete;
-- more artificial lighting and powered infrastructure;
+- benches, hydrants, streetlights and powered infrastructure;
 - future verticality can be represented as building interiors/floors without changing outdoor region coordinates.
 
 ### Woods
@@ -75,11 +75,12 @@ Purpose: wilderness, concealment, trails, camps, hunting areas and low-infrastru
 
 Rules:
 
-- very low paved-road density except crossings;
-- grass/dirt dominant;
-- vegetation obstacles clustered rather than uniformly random;
-- winding dirt paths/clearings;
-- sparse structures;
+- paved roads do not grid through woods;
+- district connectors become narrow dirt trails;
+- grass/dirt dominate;
+- trees are true movement/vision obstacles while low bushes can remain visual clutter;
+- vegetation is clustered rather than uniformly random;
+- sparse firewood/camp clutter may appear;
 - stronger presence near island edge and between developed pockets when geography supports it.
 
 ### Rural
@@ -89,9 +90,10 @@ Purpose: farmland, ranches, farmhouses, sheds, fields, service roads and isolate
 Rules:
 
 - low road density but long connected routes;
+- dirt/service roads instead of urban street grids;
 - large open parcels;
-- dirt/grass fields;
-- sparse farmhouses/outbuildings;
+- sparse farmhouses should still sit within useful reach of a road;
+- fences, trees, firewood and mailboxes define farm edges;
 - natural transition between woods and developed districts;
 - future crops, livestock and utility infrastructure plug into these parcels.
 
@@ -103,24 +105,29 @@ Long-term refinement should add macro geography before biome assignment: coastli
 
 ## Road hierarchy
 
-Generation order matters.
+Generation order matters and is now enforced in the 64×64 prototype.
 
-1. Major arterials establish long-distance connectivity.
-2. Secondary roads connect districts and parcels.
-3. Local residential/commercial streets subdivide developed areas.
-4. Rural service roads and woodland trails use lighter ground types and lower connectivity requirements.
-5. Parcels/structures are placed after roads so buildings never sever required travel corridors.
+1. Each biome receives a connector toward the nearest main arterial axis.
+2. Developed biomes receive short local cross streets; rural and woods receive lighter service roads/trails.
+3. A three-tile arterial cross is carved last so its surface/class wins at intersections.
+4. All four region exits are placed on that same arterial network.
+5. The player spawn is placed on the arterial crossing, so the test start can reach every edge exit by road.
+6. Developed road edges receive sidewalks; rural edges receive dirt shoulders.
+7. Parcels/structures are placed only after roads, and developed structures require nearby road frontage.
+8. Building doors orient toward the nearest road side instead of always facing one global direction.
 
-Major roads should eventually continue across region boundaries using edge contracts derived from world seed + region coordinate. A road leaving one chunk must enter its neighbor at the same coordinate.
+`road_cells` records traversable road/trail membership, while `road_class_cells` records `arterial`, `secondary`, `local`, or `trail`. Region validation fails if an exit or spawn is not on the road network, if an edge exit cannot be reached from spawn through road cells, or if later geometry blocks a road tile.
+
+This is still a local-region prototype, not the final island road planner. Major roads must eventually continue across region boundaries using deterministic edge contracts derived from world seed + neighboring region coordinates. A road leaving one chunk must enter its neighbor at the same coordinate. The current `road_ports` field establishes the local data shape but does not yet claim neighbor-compatible macro contracts.
 
 ## Parcel and structure rules
 
 Structures are generated from parcels, not by scattering wall rectangles independently.
 
-A parcel owns:
+A parcel owns or derives:
 
 - biome/district;
-- road frontage;
+- road frontage/distance;
 - allowed footprint range;
 - setback/open-space rules;
 - structure archetype candidates;
@@ -128,7 +135,17 @@ A parcel owns:
 - entrance preference;
 - density.
 
-The structure generator then writes standard physical facts into the shared map schema. Authored building templates may later be inserted into compatible parcels, allowing procedural city layout with hand-authored high-quality interiors.
+The structure generator then writes standard physical facts into the shared map schema. Procedural buildings now also record per-wall theme metadata, orient doors toward road frontage, use more appropriate interior light profiles, and receive modest deterministic interior/exterior clutter.
+
+Authored building templates may later be inserted into compatible parcels, allowing procedural city layout with hand-authored high-quality interiors.
+
+## Clutter rules
+
+Clutter must reinforce place identity without becoming random visual noise or secretly changing game rules.
+
+Current reusable clutter vocabulary includes indoor chair, desk, toilet, sink, cabinet, bookshelf, television, lamp, rug and laundry sprites plus outdoor tree, bush, fence, mailbox, trash can, road sign, bench, hydrant, streetlight, planter, tire pile, cardboard, picnic table and firewood sprites.
+
+Placement rules distinguish visual clutter from physical obstacles. Large/tall objects may enter `obstacles`; small decoration remains in `props`. Tall objects that should block vision are separately recognized by perception. This preserves the important distinction between **looks solid**, **blocks movement**, and **blocks sight**.
 
 ## Region boundaries
 
@@ -152,6 +169,8 @@ Rendering is camera-local. Lighting and vision are player-local. Later actor sim
 
 The world remains authoritative without requiring every zombie, animal, crop and survivor on the island to execute every tick.
 
-## Current prototype limits
+## Current prototype limits / next geography work
 
-The 64×64 generator currently proves rules and data flow only. It does not yet simulate coastlines, rivers, elevation, cross-region road contracts, true building archetype libraries, utilities, loot economy, populations, outbreak state, or persistence deltas. Those should be layered onto this foundation rather than replacing it.
+The 64×64 generator now proves contiguous biome fields, connected road hierarchy, frontage-aware structures, deterministic clutter, follow-camera navigation, weather, day/night lighting and local LOS/fog. It does not yet simulate coastlines, rivers, elevation, neighbor-compatible chunk road contracts, true building archetype libraries, utilities, loot economy, populations, outbreak state, or persistence deltas.
+
+Before building a full island, the next world-generation-specific work should be **macro geography + edge contracts**, not simply making the current local region bigger. Coastline/water/elevation and cross-region roads should become the constraints that the existing biome/parcel generator responds to.
