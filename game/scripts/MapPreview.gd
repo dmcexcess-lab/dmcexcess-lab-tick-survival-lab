@@ -18,12 +18,19 @@ const VIEW_W := 640.0
 const VIEW_H := 844.0
 const WEATHER_KINDS := [Weather.CLEAR, Weather.RAIN, Weather.STORM, Weather.FOG, Weather.WIND]
 
+const CONTROL_ROW_TOP_Y := 652.0
+const CONTROL_ROW_TURN_Y := 712.0
+const CONTROL_ROW_BOTTOM_Y := 780.0
+const CONTROL_SIDE_W := 170.0
+const CONTROL_TURN_H := 60.0
+
 const BTN_MENU := Rect2(546, 8, 86, 38)
-const BTN_TURN_L := Rect2(8, 708, 170, 64)
-const BTN_TURN_R := Rect2(462, 708, 170, 64)
-const BTN_CROUCH := Rect2(30, 780, 126, 52)
-const BTN_FORWARD := Rect2(462, 650, 170, 50)
-const BTN_BACK := Rect2(462, 780, 170, 56)
+const BTN_TURN_L := Rect2(8, CONTROL_ROW_TURN_Y, CONTROL_SIDE_W, CONTROL_TURN_H)
+const BTN_TURN_R := Rect2(462, CONTROL_ROW_TURN_Y, CONTROL_SIDE_W, CONTROL_TURN_H)
+const BTN_CROUCH := Rect2(30, CONTROL_ROW_BOTTOM_Y, 126, 52)
+const BTN_FORWARD := Rect2(462, CONTROL_ROW_TOP_Y, CONTROL_SIDE_W, CONTROL_ROW_TURN_Y - CONTROL_ROW_TOP_Y - 8.0)
+const BTN_BACK := Rect2(462, CONTROL_ROW_BOTTOM_Y, CONTROL_SIDE_W, VIEW_H - CONTROL_ROW_BOTTOM_Y - 8.0)
+const BTN_WEATHER := Rect2(218, CONTROL_ROW_TOP_Y, 204, 52)
 const MENU_PANEL := Rect2(120, 238, 400, 300)
 const MENU_RESUME := Rect2(190, 340, 260, 62)
 const MENU_EXIT := Rect2(190, 430, 260, 62)
@@ -289,6 +296,8 @@ func _handle_pointer(pos: Vector2) -> void:
         elif MENU_EXIT.has_point(pos):
             _quit_to_google()
         return
+    if BTN_WEATHER.has_point(pos):
+        _cycle_weather(); return
     if BTN_TURN_L.has_point(pos):
         _rotate_player(-1); return
     if BTN_TURN_R.has_point(pos):
@@ -318,7 +327,7 @@ func _draw() -> void:
     draw_string(font, Vector2(12, 63), "TICK %d  READY %s  %s  FACE %s  %s  WEATHER %s" % [scheduler.world_tick, str(scheduler.player_ready).to_upper(), "CROUCH" if player.crouched else player.move_mode.to_upper(), _facing_name(player.facing), scene_time.to_upper(), str(weather_state.get("kind", Weather.CLEAR)).to_upper()], HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color("f2d27a"))
     draw_string(font, Vector2(12, 84), "LAST %s +%d [%s]  %s" % [last_action_label, last_action_cost, last_action_status.to_upper(), last_action_detail], HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Color("d8e0c8"))
     draw_string(font, Vector2(12, 104), "Fog: black=unseen, dim=remembered. Facing is the vision cone. Weather VFX keep moving while paused.", HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Color("9eb0ae"))
-    draw_string(font, Vector2(12, 123), "Touch: level turn controls. Weather state is fixed for now; 6 cycles test profiles.", HORIZONTAL_ALIGNMENT_LEFT, -1, 9, Color("8fa4a1"))
+    draw_string(font, Vector2(12, 123), "Touch: true 3-row control grid. Weather selector cycles fixed test profiles.", HORIZONTAL_ALIGNMENT_LEFT, -1, 9, Color("8fa4a1"))
     _draw_button(BTN_MENU, "MENU", menu_open, 12)
 
     _draw_map_tiles()
@@ -401,26 +410,30 @@ func _draw_weather_vfx() -> void:
     var wind: float = Weather.wind_strength(weather_state)
     var direction: Vector2 = Weather.wind_direction(weather_state)
     if fog_amount > 0.05:
-        for i in range(5):
-            var phase: float = fmod(weather_vfx_time * (9.0 + float(i)) + float(i) * 91.0, board.size.x + 180.0) - 90.0
-            var y: float = board.position.y + 45.0 + float(i) * 88.0 + sin(weather_vfx_time * 0.45 + float(i)) * 18.0
-            draw_circle(Vector2(board.position.x + phase, y), 72.0 + float(i % 2) * 24.0, Color(0.72, 0.78, 0.77, 0.025 + fog_amount * 0.055))
+        for i in range(7):
+            var phase: float = fmod(weather_vfx_time * (11.0 + float(i) * 1.6) + float(i) * 91.0, board.size.x + 220.0) - 110.0
+            var y: float = board.position.y + 34.0 + float(i) * 70.0 + sin(weather_vfx_time * 0.55 + float(i)) * 19.0
+            draw_circle(Vector2(board.position.x + phase, y), 76.0 + float(i % 3) * 18.0, Color(0.72, 0.78, 0.77, 0.032 + fog_amount * 0.07))
     if rain > 0.02:
-        var count: int = 24 + int(rain * 46.0)
+        var count: int = 34 + int(rain * 62.0)
         for i in range(count):
             var seed_x: float = fmod(float(i * 83), board.size.x)
-            var speed: float = 170.0 + float(i % 7) * 19.0 + rain * 130.0
-            var y: float = fmod(float(i * 47) + weather_vfx_time * speed, board.size.y + 30.0) - 15.0
-            var x: float = fmod(seed_x + weather_vfx_time * direction.x * 54.0 + y * direction.x * 0.18, board.size.x)
+            var speed: float = 190.0 + float(i % 7) * 21.0 + rain * 150.0
+            var y: float = fmod(float(i * 47) + weather_vfx_time * speed, board.size.y + 36.0) - 18.0
+            var x: float = fmod(seed_x + weather_vfx_time * direction.x * 68.0 + y * direction.x * 0.22, board.size.x)
             var start := board.position + Vector2(x, y)
-            var streak := Vector2(direction.x * 8.0, 10.0 + rain * 8.0)
-            draw_line(start, start + streak, Color(0.72, 0.84, 0.90, 0.20 + rain * 0.22), 1.0)
+            var streak := Vector2(direction.x * (9.0 + rain * 5.0), 12.0 + rain * 11.0)
+            draw_line(start, start + streak, Color(0.72, 0.84, 0.90, 0.26 + rain * 0.28), 1.25)
     if wind > 0.28:
-        for i in range(7):
-            var travel: float = fmod(weather_vfx_time * (35.0 + wind * 55.0) + float(i) * 97.0, board.size.x + 60.0) - 30.0
-            var y: float = board.position.y + 60.0 + fmod(float(i * 73), board.size.y - 80.0)
-            var p := Vector2(board.position.x + travel, y + sin(weather_vfx_time * 2.0 + float(i)) * 9.0)
-            draw_line(p, p + direction * (5.0 + wind * 8.0), Color(0.55, 0.48, 0.35, 0.48), 2.0)
+        for i in range(10):
+            var travel: float = fmod(weather_vfx_time * (38.0 + wind * 70.0) + float(i) * 97.0, board.size.x + 70.0) - 35.0
+            var y: float = board.position.y + 50.0 + fmod(float(i * 73), board.size.y - 70.0)
+            var p := Vector2(board.position.x + travel, y + sin(weather_vfx_time * 2.2 + float(i)) * 11.0)
+            draw_line(p, p + direction * (6.0 + wind * 10.0), Color(0.55, 0.48, 0.35, 0.56), 2.0)
+    if str(weather_state.get("kind", Weather.CLEAR)) == Weather.STORM:
+        var pulse: float = maxf(0.0, sin(weather_vfx_time * 1.9 + sin(weather_vfx_time * 0.37) * 3.0) - 0.965) * 5.0
+        if pulse > 0.0:
+            draw_rect(board, Color(0.78, 0.84, 0.92, minf(0.16, pulse * 0.12)))
 
 func _draw_controls() -> void:
     draw_rect(Rect2(0, CONTROL_TOP, VIEW_W, VIEW_H - CONTROL_TOP), Color(0.025, 0.032, 0.028, 0.96))
@@ -430,6 +443,7 @@ func _draw_controls() -> void:
     _draw_button(BTN_CROUCH, "CROUCH", player.crouched, 11)
     _draw_button(BTN_FORWARD, "FORWARD", false, 11)
     _draw_button(BTN_BACK, "BACK", false, 11)
+    _draw_button(BTN_WEATHER, "WEATHER: %s" % str(weather_state.get("kind", Weather.CLEAR)).to_upper(), true, 11)
     draw_string(font, Vector2(210, 823), "Tap map still works", HORIZONTAL_ALIGNMENT_CENTER, 220, 10, Color("84928c"))
 
 func _draw_menu() -> void:
