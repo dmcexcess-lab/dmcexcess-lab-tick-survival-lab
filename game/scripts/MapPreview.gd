@@ -8,6 +8,7 @@ const TimingDummyClass = preload("res://scripts/TimingDummy.gd")
 const Tiles = preload("res://scripts/TacticalTiles.gd")
 const Lighting = preload("res://scripts/TacticalLighting.gd")
 const Perception = preload("res://scripts/TacticalPerception.gd")
+const Weather = preload("res://scripts/TacticalWeather.gd")
 
 const TILE := 28.0
 const BOARD_X := 40.0
@@ -15,13 +16,14 @@ const TOP := 132.0
 const CONTROL_TOP := 648.0
 const VIEW_W := 640.0
 const VIEW_H := 844.0
+const WEATHER_KINDS := [Weather.CLEAR, Weather.RAIN, Weather.STORM, Weather.FOG, Weather.WIND]
 
 const BTN_MENU := Rect2(546, 8, 86, 38)
-const BTN_TURN_L := Rect2(8, 668, 182, 96)
-const BTN_CROUCH := Rect2(36, 776, 126, 52)
-const BTN_FORWARD := Rect2(480, 650, 134, 48)
-const BTN_TURN_R := Rect2(450, 704, 182, 88)
-const BTN_BACK := Rect2(480, 796, 134, 48)
+const BTN_TURN_L := Rect2(8, 708, 170, 64)
+const BTN_TURN_R := Rect2(462, 708, 170, 64)
+const BTN_CROUCH := Rect2(30, 780, 126, 52)
+const BTN_FORWARD := Rect2(462, 650, 170, 50)
+const BTN_BACK := Rect2(462, 780, 170, 56)
 const MENU_PANEL := Rect2(120, 238, 400, 300)
 const MENU_RESUME := Rect2(190, 340, 260, 62)
 const MENU_EXIT := Rect2(190, 430, 260, 62)
@@ -51,6 +53,9 @@ var opaque_cells: Dictionary = {}
 var visible_cells: Dictionary = {}
 var memory: Dictionary = {}
 var menu_open := false
+var weather_state: Dictionary = {}
+var weather_index := 1
+var weather_vfx_time := 0.0
 
 func _ready() -> void:
     process_mode = Node.PROCESS_MODE_ALWAYS
@@ -64,6 +69,10 @@ func _ready() -> void:
         print("MAP_BOOTSTRAP_VALIDATION_OK")
     reroll()
 
+func _process(delta: float) -> void:
+    weather_vfx_time += delta
+    queue_redraw()
+
 func reroll() -> void:
     environment_id = MapGen.pick_random(rng)
     variant = MapGen.pick_variant(environment_id, rng)
@@ -76,6 +85,8 @@ func reroll() -> void:
     scene_time = "night"
     power_on = true
     flashlight_on = true
+    weather_index = 1
+    weather_state = Weather.make_state(WEATHER_KINDS[weather_index], Vector2(0.7, 0.25))
     last_action_label = "spawn"
     last_action_cost = 0
     last_action_detail = "new map"
@@ -112,6 +123,8 @@ func _unhandled_input(event: InputEvent) -> void:
             power_on = not power_on
             _record_zero("power", "ON" if power_on else "OFF")
             _recalc_perception(); get_viewport().set_input_as_handled(); return
+        if key_event.keycode == KEY_6:
+            _cycle_weather(); get_viewport().set_input_as_handled(); return
         if key_event.keycode == KEY_1:
             _dev_timed_action("light_test", 3); get_viewport().set_input_as_handled(); return
         if key_event.keycode == KEY_2:
@@ -192,6 +205,12 @@ func _toggle_crouch() -> void:
     player.set_crouched(not player.crouched)
     _commit("stance", player.stance_cost(), "CROUCH" if player.crouched else "STAND")
 
+func _cycle_weather() -> void:
+    weather_index = (weather_index + 1) % WEATHER_KINDS.size()
+    weather_state = Weather.make_state(WEATHER_KINDS[weather_index], Vector2(0.7, 0.25))
+    _record_zero("weather", str(weather_state.get("kind", Weather.CLEAR)))
+    _recalc_perception()
+
 func _commit(action_id: String, cost: int, detail: String) -> void:
     var before: int = timing_dummy.actions_taken
     var result: Dictionary = scheduler.execute_action(player.actor_id, action_id, cost, TickSchedulerClass.POLICY_COMMITTED, [], {"cell": player.cell, "facing": player.facing}, [timing_dummy])
@@ -238,13 +257,13 @@ func _record_zero(action_id: String, detail: String) -> void:
     queue_redraw()
 
 func _recalc_perception() -> void:
-    var lighting: Dictionary = Perception.calculate_lighting(spec, world, environment_id, scene_time, power_on, player.cell, player.facing, flashlight_on)
+    var lighting: Dictionary = Perception.calculate_lighting(spec, world, environment_id, scene_time, power_on, player.cell, player.facing, flashlight_on, weather_state)
     light_levels = lighting.get("levels", {})
     light_tints = lighting.get("tints", {})
     indoor_cells = lighting.get("indoors", {})
     light_sources = lighting.get("sources", [])
     opaque_cells = lighting.get("opaque", {})
-    var visibility: Dictionary = Perception.calculate_visibility(player.cell, player.facing, light_levels, spec, world, opaque_cells, memory, 7)
+    var visibility: Dictionary = Perception.calculate_visibility(player.cell, player.facing, light_levels, spec, world, opaque_cells, memory, 7, weather_state)
     visible_cells = visibility.get("visible", {})
     memory = visibility.get("memory", {})
     queue_redraw()
@@ -294,12 +313,12 @@ func _handle_pointer(pos: Vector2) -> void:
 
 func _draw() -> void:
     draw_rect(Rect2(0, 0, VIEW_W, VIEW_H), Color("101416"))
-    draw_string(font, Vector2(12, 21), "Tick Survival Lab — tick + perception slice", HORIZONTAL_ALIGNMENT_LEFT, -1, 17, Color.WHITE)
-    draw_string(font, Vector2(12, 42), "%s v%d | WASD | E door | C crouch | F light | 4 day/night | 5 power" % [MapGen.display_name(environment_id), variant], HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Color("b8c4c2"))
-    draw_string(font, Vector2(12, 63), "TICK %d  READY %s  %s  FACE %s  %s  POWER %s  FLASH %s" % [scheduler.world_tick, str(scheduler.player_ready).to_upper(), "CROUCH" if player.crouched else player.move_mode.to_upper(), _facing_name(player.facing), scene_time.to_upper(), "ON" if power_on else "OFF", "ON" if flashlight_on else "OFF"], HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color("f2d27a"))
+    draw_string(font, Vector2(12, 21), "Tick Survival Lab — tick + perception + weather slice", HORIZONTAL_ALIGNMENT_LEFT, -1, 17, Color.WHITE)
+    draw_string(font, Vector2(12, 42), "%s v%d | WASD | E door | C crouch | F light | 4 day/night | 5 power | 6 weather" % [MapGen.display_name(environment_id), variant], HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Color("b8c4c2"))
+    draw_string(font, Vector2(12, 63), "TICK %d  READY %s  %s  FACE %s  %s  WEATHER %s" % [scheduler.world_tick, str(scheduler.player_ready).to_upper(), "CROUCH" if player.crouched else player.move_mode.to_upper(), _facing_name(player.facing), scene_time.to_upper(), str(weather_state.get("kind", Weather.CLEAR)).to_upper()], HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color("f2d27a"))
     draw_string(font, Vector2(12, 84), "LAST %s +%d [%s]  %s" % [last_action_label, last_action_cost, last_action_status.to_upper(), last_action_detail], HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Color("d8e0c8"))
-    draw_string(font, Vector2(12, 104), "Fog: black=unseen, dim=remembered. Facing is shown by the vision cone; the survivor stays upright.", HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Color("9eb0ae"))
-    draw_string(font, Vector2(12, 123), "Touch: side-stacked FF controls. Menu pauses simulation. 1/2/3 keep scheduler proofs.", HORIZONTAL_ALIGNMENT_LEFT, -1, 9, Color("8fa4a1"))
+    draw_string(font, Vector2(12, 104), "Fog: black=unseen, dim=remembered. Facing is the vision cone. Weather VFX keep moving while paused.", HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Color("9eb0ae"))
+    draw_string(font, Vector2(12, 123), "Touch: level turn controls. Weather state is fixed for now; 6 cycles test profiles.", HORIZONTAL_ALIGNMENT_LEFT, -1, 9, Color("8fa4a1"))
     _draw_button(BTN_MENU, "MENU", menu_open, 12)
 
     _draw_map_tiles()
@@ -307,6 +326,7 @@ func _draw() -> void:
     _draw_light_glows()
     _draw_player()
     _draw_fog()
+    _draw_weather_vfx()
     _draw_controls()
     if menu_open:
         _draw_menu()
@@ -374,13 +394,41 @@ func _draw_fog() -> void:
             var alpha: float = 0.62 if memory.has(p) else 0.96
             draw_rect(_cell_rect(p), Color(0.005, 0.008, 0.010, alpha))
 
+func _draw_weather_vfx() -> void:
+    var board := Rect2(BOARD_X, TOP, float(MapGen.BOARD_W) * TILE, float(MapGen.BOARD_H) * TILE)
+    var rain: float = Weather.precipitation(weather_state)
+    var fog_amount: float = Weather.fog_density(weather_state)
+    var wind: float = Weather.wind_strength(weather_state)
+    var direction: Vector2 = Weather.wind_direction(weather_state)
+    if fog_amount > 0.05:
+        for i in range(5):
+            var phase: float = fmod(weather_vfx_time * (9.0 + float(i)) + float(i) * 91.0, board.size.x + 180.0) - 90.0
+            var y: float = board.position.y + 45.0 + float(i) * 88.0 + sin(weather_vfx_time * 0.45 + float(i)) * 18.0
+            draw_circle(Vector2(board.position.x + phase, y), 72.0 + float(i % 2) * 24.0, Color(0.72, 0.78, 0.77, 0.025 + fog_amount * 0.055))
+    if rain > 0.02:
+        var count: int = 24 + int(rain * 46.0)
+        for i in range(count):
+            var seed_x: float = fmod(float(i * 83), board.size.x)
+            var speed: float = 170.0 + float(i % 7) * 19.0 + rain * 130.0
+            var y: float = fmod(float(i * 47) + weather_vfx_time * speed, board.size.y + 30.0) - 15.0
+            var x: float = fmod(seed_x + weather_vfx_time * direction.x * 54.0 + y * direction.x * 0.18, board.size.x)
+            var start := board.position + Vector2(x, y)
+            var streak := Vector2(direction.x * 8.0, 10.0 + rain * 8.0)
+            draw_line(start, start + streak, Color(0.72, 0.84, 0.90, 0.20 + rain * 0.22), 1.0)
+    if wind > 0.28:
+        for i in range(7):
+            var travel: float = fmod(weather_vfx_time * (35.0 + wind * 55.0) + float(i) * 97.0, board.size.x + 60.0) - 30.0
+            var y: float = board.position.y + 60.0 + fmod(float(i * 73), board.size.y - 80.0)
+            var p := Vector2(board.position.x + travel, y + sin(weather_vfx_time * 2.0 + float(i)) * 9.0)
+            draw_line(p, p + direction * (5.0 + wind * 8.0), Color(0.55, 0.48, 0.35, 0.48), 2.0)
+
 func _draw_controls() -> void:
     draw_rect(Rect2(0, CONTROL_TOP, VIEW_W, VIEW_H - CONTROL_TOP), Color(0.025, 0.032, 0.028, 0.96))
     draw_line(Vector2(0, CONTROL_TOP), Vector2(VIEW_W, CONTROL_TOP), Color("626a64"), 2.0)
-    _draw_button(BTN_TURN_L, "TURN L", false, 20)
+    _draw_button(BTN_TURN_L, "TURN L", false, 18)
+    _draw_button(BTN_TURN_R, "TURN R", false, 18)
     _draw_button(BTN_CROUCH, "CROUCH", player.crouched, 11)
     _draw_button(BTN_FORWARD, "FORWARD", false, 11)
-    _draw_button(BTN_TURN_R, "TURN R", false, 20)
     _draw_button(BTN_BACK, "BACK", false, 11)
     draw_string(font, Vector2(210, 823), "Tap map still works", HORIZONTAL_ALIGNMENT_CENTER, 220, 10, Color("84928c"))
 
@@ -389,7 +437,7 @@ func _draw_menu() -> void:
     draw_rect(MENU_PANEL, Color("171d1b"))
     draw_rect(MENU_PANEL, Color("a5b0a8"), false, 2.0)
     draw_string(font, Vector2(MENU_PANEL.position.x, MENU_PANEL.position.y + 52), "PAUSED", HORIZONTAL_ALIGNMENT_CENTER, MENU_PANEL.size.x, 24, Color.WHITE)
-    draw_string(font, Vector2(MENU_PANEL.position.x, MENU_PANEL.position.y + 80), "Actual pause menu — world ticks do not advance.", HORIZONTAL_ALIGNMENT_CENTER, MENU_PANEL.size.x, 11, Color("aab7b0"))
+    draw_string(font, Vector2(MENU_PANEL.position.x, MENU_PANEL.position.y + 80), "Simulation paused — cosmetic weather keeps moving.", HORIZONTAL_ALIGNMENT_CENTER, MENU_PANEL.size.x, 11, Color("aab7b0"))
     _draw_button(MENU_RESUME, "RESUME", false, 16)
     _draw_button(MENU_EXIT, "EXIT TO GOOGLE", false, 15)
 
