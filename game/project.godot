@@ -6,6 +6,9 @@ config_version=5
 config/name="Tick Survival Lab"
 run/main_scene="res://main.tscn"
 
+[autoload]
+SafariInputGuard="*res://scripts/SafariInputGuard.gd"
+
 [display]
 
 [display/window]
