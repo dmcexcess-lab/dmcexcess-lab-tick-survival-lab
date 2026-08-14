@@ -1,5 +1,19 @@
 # Changelog
 
+## Milestone 0.2 — Action Execution Model — 2026-08-13
+
+- Replaced the immediate tick-jump prototype with an explicit player action execution state machine.
+- Added player-ready auto-pause semantics: the player is ready only before/after an action, never during committed execution.
+- Added action start/end ticks, elapsed/remaining progress, phases, status, payload, and deterministic event traces.
+- Added committed, resumable, canceled, and forced-failure interruption behavior.
+- Added damage interruption hooks; committed actions continue through ordinary damage while resumable actions preserve exact elapsed/phase state.
+- Added `TimingDummy.gd`, a minimal autonomous scheduled actor used to prove multiple actors can advance during one player action.
+- Added deterministic tie ordering by next action tick then actor ID.
+- Expanded scheduler CI to prove a 10-tick action permits two 4-tick dummy actions while a 3-tick action permits none.
+- Added a phased reload proof that interrupts at tick 5, preserves the `mag_in` phase, then resumes to completion.
+- Added a committed axe-swing proof that ordinary damage does not cancel execution.
+- Updated the Web developer harness with READY/status diagnostics and keys 1/2/3 for light/heavy/reload timing demonstrations.
+
 ## Design / First Fire Reuse Pass — 2026-08-13
 
 - Added `DESIGN.md` as the durable long-form design document for Tick Survival Lab.

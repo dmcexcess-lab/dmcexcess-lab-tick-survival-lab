@@ -38,6 +38,7 @@ jobs:
           test -f game/scripts/LocalWorldState.gd
           test -f game/scripts/TickScheduler.gd
           test -f game/scripts/PlayerActor.gd
+          test -f game/scripts/TimingDummy.gd
           test -f game/scripts/TacticalLighting.gd
           test -f game/scripts/TacticalSound.gd
           test -f game/scripts/MapPreview.gd
@@ -46,6 +47,7 @@ jobs:
           test -f game/scripts/ci/EnvironmentSmoke.gd
           grep -q 'class_name TacticalMapGenerator' game/scripts/TacticalMapGenerator.gd
           grep -q 'class_name TickScheduler' game/scripts/TickScheduler.gd
+          grep -q 'class_name TimingDummy' game/scripts/TimingDummy.gd
           grep -q 'class_name TacticalLighting' game/scripts/TacticalLighting.gd
           grep -q 'class_name TacticalSound' game/scripts/TacticalSound.gd
           grep -q 'run/main_scene="res://main.tscn"' game/project.godot
