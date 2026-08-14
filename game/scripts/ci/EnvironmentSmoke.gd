@@ -29,6 +29,7 @@ func _init() -> void:
         return
     var clear_weather: Dictionary = Weather.make_state(Weather.CLEAR)
     var storm_weather: Dictionary = Weather.make_state(Weather.STORM, Vector2(1.0, 0.25))
+    var snow_weather: Dictionary = Weather.make_state(Weather.SNOW, Vector2(0.4, 0.2))
     if Weather.visibility_multiplier(storm_weather) >= Weather.visibility_multiplier(clear_weather):
         push_error("ENV_SMOKE_STORM_VISIBILITY_NOT_REDUCED")
         quit(1)
@@ -43,6 +44,14 @@ func _init() -> void:
         return
     if Weather.precipitation(storm_weather) < 0.9 or Weather.wind_strength(storm_weather) < 0.7:
         push_error("ENV_SMOKE_STORM_PROFILE_TOO_WEAK")
+        quit(1)
+        return
+    if Weather.snowfall(snow_weather) < 0.7 or Weather.precipitation(snow_weather) > 0.0:
+        push_error("ENV_SMOKE_SNOW_PROFILE_INVALID")
+        quit(1)
+        return
+    if Weather.outside_temperature_f(1, 15, 360, snow_weather) >= Weather.outside_temperature_f(1, 15, 360, clear_weather):
+        push_error("ENV_SMOKE_SNOW_NOT_COLDER")
         quit(1)
         return
     if Sound.surface_step_label("wood", false) != "creak":
