@@ -3,9 +3,11 @@ class_name TacticalTiles
 
 const ATLAS_PATH := "res://assets/tactical_atlas.svg"
 const CLUTTER_ATLAS_PATH := "res://assets/clutter_atlas.svg"
+const PLAYER_ATLAS_PATH := "res://assets/player_facing_atlas.svg"
 const CELL := 32.0
 static var _atlas: Texture2D = null
 static var _clutter_atlas: Texture2D = null
+static var _player_atlas: Texture2D = null
 
 const GROUND := {
     "asphalt": 0, "road": 1, "sidewalk": 2, "concrete": 3, "tile": 4,
@@ -47,8 +49,16 @@ static func _clutter_texture() -> Texture2D:
         _clutter_atlas = ResourceLoader.load(CLUTTER_ATLAS_PATH) as Texture2D
     return _clutter_atlas
 
+static func _player_texture() -> Texture2D:
+    if _player_atlas == null:
+        _player_atlas = ResourceLoader.load(PLAYER_ATLAS_PATH) as Texture2D
+    return _player_atlas
+
 static func region(index: int) -> Rect2:
     return Rect2(float(posmod(index, 16)) * CELL, float(index / 16) * CELL, CELL, CELL)
+
+static func player_region(index: int) -> Rect2:
+    return Rect2(float(index) * CELL, 0.0, CELL, CELL)
 
 static func draw_region(canvas: CanvasItem, index: int, rect: Rect2, modulate: Color = Color.WHITE) -> void:
     var texture: Texture2D = _texture()
@@ -84,16 +94,19 @@ static func draw_prop(canvas: CanvasItem, rect: Rect2, kind: String) -> void:
     draw_region(canvas, int(PROP.get(kind, 48)), rect)
 
 static func player_region_for_facing(facing: Vector2i) -> int:
-    # Atlas 96-99 are authored as south/front, west, north/back, east.
+    # Separate upright poses: south/front, west/profile, north/back, east/mirrored profile.
     if facing == Vector2i.UP:
-        return 98
+        return 2
     if facing == Vector2i.DOWN:
-        return 96
+        return 0
     if facing == Vector2i.LEFT:
-        return 97
+        return 1
     if facing == Vector2i.RIGHT:
-        return 99
-    return 96
+        return 3
+    return 0
 
 static func draw_player(canvas: CanvasItem, rect: Rect2, facing: Vector2i) -> void:
-    draw_region(canvas, player_region_for_facing(facing), rect)
+    var texture: Texture2D = _player_texture()
+    if texture == null:
+        return
+    canvas.draw_texture_rect_region(texture, rect, player_region(player_region_for_facing(facing)), Color.WHITE, false, true)
