@@ -12,10 +12,14 @@ const DOOR_TICKS := 8
 const STANCE_TICKS := 4
 
 var actor_id := "player"
+var display_name := "Survivor"
 var cell := Vector2i.ZERO
 var facing := Vector2i.DOWN
 var move_mode := MODE_WALK
 var crouched := false
+var health := 100.0
+var carry_weight := 0.0
+var carry_capacity := 18.0
 var encumbrance_ratio := 0.0
 var fatigue_ratio := 0.0
 
@@ -24,6 +28,9 @@ func reset(spawn: Vector2i) -> void:
     facing = Vector2i.DOWN
     move_mode = MODE_WALK
     crouched = false
+    health = 100.0
+    carry_weight = 0.0
+    carry_capacity = 18.0
     encumbrance_ratio = 0.0
     fatigue_ratio = 0.0
 
@@ -52,6 +59,9 @@ func door_cost() -> int:
 
 func stance_cost() -> int:
     return _modified_cost(STANCE_TICKS)
+
+func fatigue_percent() -> int:
+    return clampi(int(round(fatigue_ratio * 100.0)), 0, 100)
 
 func _modified_cost(base: int) -> int:
     # Timing modifiers are deliberately centralized here so later condition,
