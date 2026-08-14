@@ -30,16 +30,19 @@ jobs:
           test -f README_SOPS.md
           test -f DESIGN.md
           test -f ROADMAP.md
+          test -f WORLD_GENERATION.md
           test -f FIRST_FIRE_REUSE.md
           test -f game/project.godot
           test -f game/export_presets.cfg
           test -f game/main.tscn
           test -f game/assets/tactical_atlas.svg
           test -f game/scripts/TacticalMapGenerator.gd
+          test -f game/scripts/ProceduralRegionGenerator.gd
           test -f game/scripts/LocalWorldState.gd
           test -f game/scripts/TickScheduler.gd
           test -f game/scripts/PlayerActor.gd
           test -f game/scripts/TimingDummy.gd
+          test -f game/scripts/SafariInputGuard.gd
           test -f game/scripts/TacticalLighting.gd
           test -f game/scripts/TacticalSound.gd
           test -f game/scripts/TacticalWeather.gd
@@ -47,10 +50,12 @@ jobs:
           test -f game/scripts/TacticalPerception.gd
           test -f game/scripts/MapPreview.gd
           test -f game/scripts/ci/MapSmoke.gd
+          test -f game/scripts/ci/RegionSmoke.gd
           test -f game/scripts/ci/TickSmoke.gd
           test -f game/scripts/ci/EnvironmentSmoke.gd
           test -f game/scripts/ci/PerceptionSmoke.gd
           grep -q 'class_name TacticalMapGenerator' game/scripts/TacticalMapGenerator.gd
+          grep -q 'class_name ProceduralRegionGenerator' game/scripts/ProceduralRegionGenerator.gd
           grep -q 'class_name TickScheduler' game/scripts/TickScheduler.gd
           grep -q 'class_name TimingDummy' game/scripts/TimingDummy.gd
           grep -q 'class_name TacticalLighting' game/scripts/TacticalLighting.gd
@@ -58,6 +63,7 @@ jobs:
           grep -q 'class_name TacticalWeather' game/scripts/TacticalWeather.gd
           grep -q 'class_name TacticalTiles' game/scripts/TacticalTiles.gd
           grep -q 'class_name TacticalPerception' game/scripts/TacticalPerception.gd
+          grep -q 'SafariInputGuard' game/project.godot
           grep -q 'run/main_scene="res://main.tscn"' game/project.godot
 
       - name: Install Godot 4.7.1 and export templates
@@ -86,6 +92,14 @@ jobs:
           ./Godot_v4.7.1-stable_linux.x86_64 --headless --path "$GITHUB_WORKSPACE/game" --script res://scripts/ci/MapSmoke.gd 2>&1 | tee "$RUNNER_TEMP/map-smoke.log"
           grep -q 'TICK_SURVIVAL_MAP_SMOKE_OK' "$RUNNER_TEMP/map-smoke.log"
           if grep -Eqi 'SCRIPT ERROR|Parse Error|Failed to load script' "$RUNNER_TEMP/map-smoke.log"; then exit 1; fi
+
+      - name: Procedural region smoke
+        shell: bash
+        run: |
+          set -euxo pipefail
+          ./Godot_v4.7.1-stable_linux.x86_64 --headless --path "$GITHUB_WORKSPACE/game" --script res://scripts/ci/RegionSmoke.gd 2>&1 | tee "$RUNNER_TEMP/region-smoke.log"
+          grep -q 'TICK_SURVIVAL_REGION_SMOKE_OK' "$RUNNER_TEMP/region-smoke.log"
+          if grep -Eqi 'SCRIPT ERROR|Parse Error|Failed to load script' "$RUNNER_TEMP/region-smoke.log"; then exit 1; fi
 
       - name: Tick scheduler smoke
         shell: bash
