@@ -5,8 +5,15 @@ const Lighting = preload("res://scripts/TacticalLighting.gd")
 const MapGen = preload("res://scripts/TacticalMapGenerator.gd")
 const Weather = preload("res://scripts/TacticalWeather.gd")
 
-const OPAQUE_PROPS := ["dumpster", "car", "store_shelf", "fridge", "crate", "forklift", "machine", "ice_box"]
+const OPAQUE_PROPS := ["dumpster", "car", "store_shelf", "fridge", "crate", "forklift", "machine", "ice_box", "scrub"]
 const FLASHLIGHT_PROFILE := {"light": "cone", "light_range": 8.0, "light_strength": 1.0, "light_spread": 0.48}
+const LIGHTING_RADIUS := 13
+
+static func map_width(spec: Dictionary) -> int:
+    return int(spec.get("width", MapGen.BOARD_W))
+
+static func map_height(spec: Dictionary) -> int:
+    return int(spec.get("height", MapGen.BOARD_H))
 
 static func indoor_cells(spec: Dictionary) -> Dictionary:
     var result: Dictionary = {}
@@ -49,8 +56,14 @@ static func calculate_lighting(spec: Dictionary, world, environment_id: String, 
     var tints: Dictionary = {}
     var theme: String = MapGen.theme_name(environment_id)
     var weather_light: float = Weather.light_multiplier(weather_state) if not weather_state.is_empty() else 1.0
-    for y in range(MapGen.BOARD_H):
-        for x in range(MapGen.BOARD_W):
+    var width := map_width(spec)
+    var height := map_height(spec)
+    var min_x := maxi(0, player_cell.x - LIGHTING_RADIUS)
+    var max_x := mini(width - 1, player_cell.x + LIGHTING_RADIUS)
+    var min_y := maxi(0, player_cell.y - LIGHTING_RADIUS)
+    var max_y := mini(height - 1, player_cell.y + LIGHTING_RADIUS)
+    for y in range(min_y, max_y + 1):
+        for x in range(min_x, max_x + 1):
             var cell := Vector2i(x, y)
             var level: float = Lighting.ambient_level(theme, time_of_day, indoors.has(cell))
             if not indoors.has(cell):
@@ -62,6 +75,8 @@ static func calculate_lighting(spec: Dictionary, world, environment_id: String, 
                 if not Lighting.source_active(source, power_on):
                     continue
                 var source_pos: Vector2i = source.get("pos", Vector2i(-99, -99))
+                if Vector2(source_pos - cell).length() > float(source.get("radius", 6.0)) + 1.0:
+                    continue
                 if not line_clear(source_pos, cell, spec, world, opaque):
                     continue
                 var contribution: float = Lighting.radial_contribution(cell, source)
@@ -72,6 +87,8 @@ static func calculate_lighting(spec: Dictionary, world, environment_id: String, 
             if time_of_day == "day" and indoors.has(cell):
                 for window_value in spec.get("glass", []):
                     var window_pos: Vector2i = window_value
+                    if Vector2(window_pos - cell).length() > 5.5:
+                        continue
                     if not line_clear(window_pos, cell, spec, world, opaque):
                         continue
                     var daylight: float = Lighting.window_daylight_contribution(window_pos, cell) * weather_light
@@ -96,8 +113,14 @@ static func calculate_visibility(player_cell: Vector2i, facing: Vector2i, levels
     var effective_range: int = max_range
     if not weather_state.is_empty():
         effective_range = maxi(2, int(round(float(max_range) * Weather.visibility_multiplier(weather_state))))
-    for y in range(MapGen.BOARD_H):
-        for x in range(MapGen.BOARD_W):
+    var width := map_width(spec)
+    var height := map_height(spec)
+    var min_x := maxi(0, player_cell.x - effective_range)
+    var max_x := mini(width - 1, player_cell.x + effective_range)
+    var min_y := maxi(0, player_cell.y - effective_range)
+    var max_y := mini(height - 1, player_cell.y + effective_range)
+    for y in range(min_y, max_y + 1):
+        for x in range(min_x, max_x + 1):
             var p := Vector2i(x, y)
             var dist: int = absi(player_cell.x - p.x) + absi(player_cell.y - p.y)
             if p == player_cell or dist <= 1:
