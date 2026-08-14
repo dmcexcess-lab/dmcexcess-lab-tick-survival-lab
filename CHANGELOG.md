@@ -1,5 +1,16 @@
 # Changelog
 
+## Split HUD / Safari Input / Environment Readout — 2026-08-14
+
+- Split the information display into a read-only in-game survivor/world HUD plus a separate `DEV` overlay.
+- In-game HUD now shows survivor name, health, fatigue, carry weight/capacity, in-game time/date/weather, local temperature, indoor/outdoor status, outdoor wind speed, and a `Looking at:` readout for the object/tile directly ahead.
+- Added HUD-ready base survivor fields to `PlayerActor.gd` without introducing inventory or body-system ownership early.
+- Added developer-only world controls for HH:MM, MM/DD, and weather. HH:MM and MM/DD use native `LineEdit` controls so mobile Safari can summon the keyboard; weather remains a touch button and key `6` fallback.
+- Added a lightweight deterministic temperature hook from date/time/current weather plus indoor thermal buffering and wind-speed display helpers in `TacticalWeather.gd`; this is not yet weather-pattern simulation.
+- Fixed the returning 180-degree-turn / double-move mobile bug by suppressing Safari's synthesized mouse click after a handled touch event, so one physical tap commits one action.
+- Weather VFX now reject indoor cells and wall cells. Rain and wind debris are filtered by their current map cell; fog and storm flashes are rendered per outdoor cell rather than across whole structures.
+- Moved weather VFX beneath fog-of-war so masking indoor/unseen areas does not reveal room geometry.
+
 ## Weather Selector / True Control Grid — 2026-08-14
 
 - Rebuilt the touch deck around shared row constants so `TURN L` and `TURN R` use the exact same middle-row Y coordinate and height.
