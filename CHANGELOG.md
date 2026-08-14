@@ -1,5 +1,15 @@
 # Changelog
 
+## Weather Foundation / Touch Layout Refinement — 2026-08-14
+
+- Added `TacticalWeather.gd` as the deterministic owner for current weather state and gameplay-facing weather modifiers; no weather-pattern forecasting or transitions are simulated yet.
+- Added fixed clear, rain, storm, fog, and wind profiles with precipitation, fog, wind, visibility, ambient-light, and future sound-masking values.
+- Integrated weather into perception so poor weather can reduce outdoor/daylight illumination and effective visual range without changing flashlight behavior.
+- Added presentation-only rain, drifting fog, and windblown debris VFX driven by real presentation time. They continue animating while the game tree is paused, while authoritative weather state remains frozen.
+- Added developer key `6` to cycle weather profiles for testing; the current harness starts in rain so the VFX are immediately visible.
+- Added weather invariants to the existing deterministic environment smoke test and made Pages CI require the new weather module.
+- Refined mobile controls again: `TURN L` and `TURN R` are now identical size and exactly level; both are slightly shorter. The right column gives all remaining upper space to `FORWARD` and remaining lower space to `BACK`. `CROUCH` remains below `TURN L`, leaving the matching upper-left space intentionally empty.
+
 ## Touch Control Layout Correction — 2026-08-14
 
 - Repositioned the FF-style mobile controls to match the intended layout: `FORWARD` above `TURN R`, `BACK` below `TURN R`, and `CROUCH` below `TURN L`.
