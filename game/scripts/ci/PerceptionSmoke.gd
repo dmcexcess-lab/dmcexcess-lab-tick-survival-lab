@@ -39,5 +39,30 @@ func _init() -> void:
     if second.get("visible", {}).has(Vector2i(6, 5)) or not second.get("memory", {}).has(Vector2i(6, 5)):
         push_error("PERCEPTION_SMOKE_FOG_MEMORY_BAD")
         quit(1); return
+
+    var corner_spec: Dictionary = {
+        "default_ground": "asphalt", "ground_rects": [], "indoor_rects": [],
+        "walls": [Vector2i(2, 1), Vector2i(1, 2)], "obstacles": [], "glass": [], "doors": [],
+        "barrels": [], "props": [[Vector2i(4, 3), "tree"]], "lights": [], "player_spawn": Vector2i(1, 1), "exit_cells": [Vector2i(6, 6)]
+    }
+    var corner_world = WorldClass.new()
+    corner_world.load_from_spec(corner_spec)
+    var corner_opaque: Dictionary = Perception.opaque_cells(corner_spec)
+    if Perception.line_clear(Vector2i(1, 1), Vector2i(3, 3), corner_spec, corner_world, corner_opaque):
+        push_error("PERCEPTION_SMOKE_DIAGONAL_CORNER_LEAK")
+        quit(1); return
+    if not corner_opaque.has(Vector2i(4, 3)):
+        push_error("PERCEPTION_SMOKE_TREE_NOT_OPAQUE")
+        quit(1); return
+
+    var region_spec: Dictionary = {
+        "width": 16, "height": 16, "default_ground": "grass", "ground_rects": [], "indoor_rects": [],
+        "walls": [], "obstacles": [], "glass": [], "doors": [], "barrels": [], "props": [], "lights": [],
+        "biome_cells": {Vector2i(3, 3): "woods", Vector2i(4, 3): "downtown"}, "player_spawn": Vector2i(3, 3), "exit_cells": []
+    }
+    if Perception.theme_for_cell(region_spec, "procedural_region", Vector2i(3, 3)) != "wash" or Perception.theme_for_cell(region_spec, "procedural_region", Vector2i(4, 3)) != "industrial":
+        push_error("PERCEPTION_SMOKE_PROCEDURAL_BIOME_THEME_BAD")
+        quit(1); return
+
     print("TICK_SURVIVAL_PERCEPTION_SMOKE_OK")
     quit(0)
