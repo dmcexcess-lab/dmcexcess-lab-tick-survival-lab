@@ -17,11 +17,11 @@ const VIEW_W := 640.0
 const VIEW_H := 844.0
 
 const BTN_MENU := Rect2(546, 8, 86, 38)
-const BTN_TURN_L := Rect2(8, 692, 170, 108)
-const BTN_TURN_R := Rect2(462, 692, 170, 108)
-const BTN_FORWARD := Rect2(268, 660, 104, 42)
-const BTN_CROUCH := Rect2(268, 711, 104, 42)
-const BTN_BACK := Rect2(268, 762, 104, 42)
+const BTN_TURN_L := Rect2(8, 684, 170, 100)
+const BTN_TURN_R := Rect2(462, 702, 170, 90)
+const BTN_FORWARD := Rect2(495, 652, 104, 42)
+const BTN_CROUCH := Rect2(41, 792, 104, 42)
+const BTN_BACK := Rect2(495, 798, 104, 42)
 const MENU_PANEL := Rect2(120, 238, 400, 300)
 const MENU_RESUME := Rect2(190, 340, 260, 62)
 const MENU_EXIT := Rect2(190, 430, 260, 62)
@@ -299,7 +299,7 @@ func _draw() -> void:
     draw_string(font, Vector2(12, 63), "TICK %d  READY %s  %s  FACE %s  %s  POWER %s  FLASH %s" % [scheduler.world_tick, str(scheduler.player_ready).to_upper(), "CROUCH" if player.crouched else player.move_mode.to_upper(), _facing_name(player.facing), scene_time.to_upper(), "ON" if power_on else "OFF", "ON" if flashlight_on else "OFF"], HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color("f2d27a"))
     draw_string(font, Vector2(12, 84), "LAST %s +%d [%s]  %s" % [last_action_label, last_action_cost, last_action_status.to_upper(), last_action_detail], HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Color("d8e0c8"))
     draw_string(font, Vector2(12, 104), "Fog: black=unseen, dim=remembered. Facing moves the cone; the survivor sprite stays upright.", HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Color("9eb0ae"))
-    draw_string(font, Vector2(12, 123), "Touch: large TURN buttons + FORWARD/BACK/CROUCH. Menu pauses the game. 1/2/3 keep scheduler proofs.", HORIZONTAL_ALIGNMENT_LEFT, -1, 9, Color("8fa4a1"))
+    draw_string(font, Vector2(12, 123), "Touch: FF-style stacked controls. Menu pauses the game. 1/2/3 keep scheduler proofs.", HORIZONTAL_ALIGNMENT_LEFT, -1, 9, Color("8fa4a1"))
     _draw_button(BTN_MENU, "MENU", menu_open, 12)
 
     _draw_map_tiles()
