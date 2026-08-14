@@ -1,0 +1,66 @@
+name: One-shot calendar integration
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    if: ${{ !contains(github.event.head_commit.message, '[calendar-patched]') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+      - name: Integrate authoritative calendar
+        shell: python
+        run: |
+          from pathlib import Path
+          p = Path('game/scripts/MapPreview.gd')
+          s = p.read_text()
+          s = s.replace(
+              'const Weather = preload("res://scripts/TacticalWeather.gd")\n',
+              'const Weather = preload("res://scripts/TacticalWeather.gd")\nconst Calendar = preload("res://scripts/WorldCalendar.gd")\n'
+          )
+          s = s.replace('const TICKS_PER_MINUTE := 600\n', 'const TICKS_PER_MINUTE := Calendar.TICKS_PER_MINUTE\n')
+          s = s.replace('const DAYS_IN_MONTH := [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]\n', 'const DAYS_IN_MONTH := Calendar.DAYS_IN_MONTH\n')
+          old = '''func _current_total_minutes() -> int:\n    return clock_anchor_minutes + maxi(0, scheduler.world_tick - clock_anchor_tick) / TICKS_PER_MINUTE\n\nfunc _current_minute_of_day() -> int:\n    return posmod(_current_total_minutes(), 1440)\n\nfunc _current_month_day() -> Vector2i:\n    var month: int = clock_anchor_month\n    var day: int = clock_anchor_day + _current_total_minutes() / 1440\n    while day > DAYS_IN_MONTH[month - 1]:\n        day -= DAYS_IN_MONTH[month - 1]\n        month += 1\n        if month > 12:\n            month = 1\n    return Vector2i(month, day)\n'''
+          new = '''func _current_total_minutes() -> int:\n    return Calendar.total_minutes(clock_anchor_minutes, clock_anchor_tick, scheduler.world_tick)\n\nfunc _current_minute_of_day() -> int:\n    return Calendar.minute_of_day(clock_anchor_minutes, clock_anchor_tick, scheduler.world_tick)\n\nfunc _current_month_day() -> Vector2i:\n    return Calendar.month_day(clock_anchor_month, clock_anchor_day, clock_anchor_minutes, clock_anchor_tick, scheduler.world_tick)\n'''
+          if old not in s:
+              raise SystemExit('clock function block not found')
+          s = s.replace(old, new)
+          old_phase = '''func _sync_scene_time_from_clock() -> void:\n    var hour: int = _current_minute_of_day() / 60\n    scene_time = "day" if hour >= 7 and hour < 19 else "night"\n'''
+          new_phase = '''func _sync_scene_time_from_clock() -> void:\n    scene_time = Calendar.phase(_current_minute_of_day())\n'''
+          if old_phase not in s:
+              raise SystemExit('scene time block not found')
+          s = s.replace(old_phase, new_phase)
+          s = s.replace(
+              '    draw_string(font, Vector2(94, 378), "Tick %d | Ready %s | Cell %s | Face %s | Power %s | Flash %s" % [scheduler.world_tick, str(scheduler.player_ready).to_upper(), str(player.cell), _facing_name(player.facing), "ON" if power_on else "OFF", "ON" if flashlight_on else "OFF"], HORIZONTAL_ALIGNMENT_LEFT, -1, 9, Color("a9b9b3"))\n',
+              '    draw_string(font, Vector2(94, 378), "Tick %d | %s | Day %dt | Ready %s | Cell %s | Face %s" % [scheduler.world_tick, scene_time.to_upper(), Calendar.TICKS_PER_DAY, str(scheduler.player_ready).to_upper(), str(player.cell), _facing_name(player.facing)], HORIZONTAL_ALIGNMENT_LEFT, -1, 9, Color("a9b9b3"))\n'
+          )
+          p.write_text(s)
+
+          c = Path('README_CONTEXT.md')
+          cs = c.read_text()
+          cs = cs.replace('The current clock harness uses 600 world ticks per displayed in-game minute as a provisional presentation mapping. This is not yet a final global calendar-speed design promise.\n\nClock design direction: keep the authoritative action tick as a fine physical-opportunity unit (roughly second-scale for action intuition), but allow calendar/day progression to use a separate fixed compression factor. Do not force one action tick to equal one displayed game second; the final calendar multiplier should be tuned once infected timing and body needs are playable.\n', 'World time now advances only from authoritative scheduler ticks through `WorldCalendar.gd`. Current tuning is **7,200 ticks per 24-hour day** (5 ticks per displayed minute / 12 displayed seconds per tick). This is a gameplay compression ratio, not a claim that a physical action tick literally equals 12 real seconds. The ratio remains tunable independently of action costs.\n\nDaylight phases are tick-driven: night → dawn (05:30) → day (07:00) → dusk (18:30) → night (20:00). Pausing does not advance calendar time. Weather VFX may continue animating while paused because they remain presentation-only.\n')
+          c.write_text(cs)
+
+          ch = Path('CHANGELOG.md')
+          text = ch.read_text()
+          entry = '''## Tick-Driven Calendar / Day-Night Cycle — 2026-08-14\n\n- Added `WorldCalendar.gd` as the durable tick-to-calendar owner.\n- Set initial play-test compression to 7,200 authoritative ticks per 24-hour day (5 ticks per game minute).\n- Movement, turning, doors, combat proofs, and every future timed action now naturally advance visible clock/date through the same scheduler tick count.\n- Added tick-driven night, dawn, day, and dusk phases; pausing does not advance the sun/calendar.\n- Added dawn/dusk ambient lighting and reduced window daylight during transition phases.\n- Added deterministic calendar smoke coverage for rate, phase boundaries, and date rollover.\n\n'''
+          if '## Tick-Driven Calendar / Day-Night Cycle' not in text:
+              text = text.replace('# Changelog\n\n', '# Changelog\n\n' + entry)
+          ch.write_text(text)
+      - name: Commit calendar integration
+        shell: bash
+        run: |
+          set -euxo pipefail
+          git config user.name "dmcexcess-lab"
+          git config user.email "dmcexcess@gmail.com"
+          git add game/scripts/MapPreview.gd README_CONTEXT.md CHANGELOG.md
+          git diff --cached --check
+          git commit -m "Integrate tick-driven calendar [calendar-patched]"
+          git push origin HEAD:main
