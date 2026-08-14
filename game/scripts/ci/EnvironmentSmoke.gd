@@ -2,6 +2,7 @@ extends SceneTree
 
 const Lighting = preload("res://scripts/TacticalLighting.gd")
 const Sound = preload("res://scripts/TacticalSound.gd")
+const Weather = preload("res://scripts/TacticalWeather.gd")
 
 func _init() -> void:
     var source: Dictionary = Lighting.make_source(Vector2i(5, 5), "neon_cyan", 3, true)
@@ -24,6 +25,24 @@ func _init() -> void:
         return
     if Lighting.item_contribution(Vector2i(5, 5), Vector2i.RIGHT, Vector2i(2, 5), flashlight) > 0.0:
         push_error("ENV_SMOKE_FLASHLIGHT_CONE_POINTS_BACKWARD")
+        quit(1)
+        return
+    var clear_weather: Dictionary = Weather.make_state(Weather.CLEAR)
+    var storm_weather: Dictionary = Weather.make_state(Weather.STORM, Vector2(1.0, 0.25))
+    if Weather.visibility_multiplier(storm_weather) >= Weather.visibility_multiplier(clear_weather):
+        push_error("ENV_SMOKE_STORM_VISIBILITY_NOT_REDUCED")
+        quit(1)
+        return
+    if Weather.light_multiplier(storm_weather) >= Weather.light_multiplier(clear_weather):
+        push_error("ENV_SMOKE_STORM_LIGHT_NOT_REDUCED")
+        quit(1)
+        return
+    if Weather.sound_mask(storm_weather) <= Weather.sound_mask(clear_weather):
+        push_error("ENV_SMOKE_STORM_SOUND_MASK_MISSING")
+        quit(1)
+        return
+    if Weather.precipitation(storm_weather) < 0.9 or Weather.wind_strength(storm_weather) < 0.7:
+        push_error("ENV_SMOKE_STORM_PROFILE_TOO_WEAK")
         quit(1)
         return
     if Sound.surface_step_label("wood", false) != "creak":
