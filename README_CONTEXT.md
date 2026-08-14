@@ -18,24 +18,25 @@ Durable design references: `DESIGN.md`, `ROADMAP.md`, and `FIRST_FIRE_REUSE.md`.
 
 ## Current milestone
 
-**Milestone 0.2 — Action Execution Model is complete. Milestone 0.3A — Visual Perception is complete. Milestone 0.3B — Weather Foundation is next, followed by 0.3C Spatial Sound Visualization.**
+**Milestone 0.2 — Action Execution Model is complete. Milestone 0.3A — Visual Perception is complete. Milestone 0.3B — Weather Foundation is functionally present; 0.3C Spatial Sound Visualization is next after weather/UI play-test cleanup.**
 
-Canonical source includes the tactical map/world/scheduler/player/timing-dummy modules, reused lighting/sound helpers, restored tactical atlas + `TacticalTiles.gd`, `TacticalPerception.gd`, `MapPreview.gd`, and deterministic map/tick/environment/perception smoke tests.
+Canonical source includes map/world/scheduler/player/timing-dummy modules, tactical atlas/tiles, lighting, perception/fog, silent sound helpers, weather state/VFX, split dev/in-game HUDs, and deterministic map/tick/environment/perception smoke tests.
 
 Ownership:
 
 - `TacticalMapGenerator.gd` — authored initial physical map facts.
 - `LocalWorldState.gd` — mutable local physical facts such as door state/collision.
 - `TickScheduler.gd` — authoritative world tick, active action execution, interruption state, actor ordering, and player-ready state.
-- `PlayerActor.gd` — current player location/facing/movement/stance state and timing modifiers.
-- `TimingDummy.gd` — tiny autonomous scheduled actor used only for scheduler proof/tests and developer diagnostics; not zombie AI.
+- `PlayerActor.gd` — current player location/facing/movement/stance state, base survivor HUD fields, and timing modifiers.
+- `TimingDummy.gd` — autonomous scheduled actor used only for scheduler proof/tests and diagnostics; not zombie AI.
 - `TacticalLighting.gd` — dependency-free lighting math adapted from First Fire.
-- `TacticalSound.gd` — dependency-free sound/localization helpers adapted from First Fire; real propagation still pending.
+- `TacticalSound.gd` — silent sound/localization helpers adapted from First Fire; propagation is pending.
+- `TacticalWeather.gd` — current weather profile, visibility/light/sound-mask hooks, temperature hook, indoor thermal buffer, and wind display helper. It does not yet simulate weather patterns.
 - `TacticalTiles.gd` — Tick-native renderer for the restored First Fire tactical atlas subset.
-- `TacticalPerception.gd` — LOS, facing cone, opaque geometry, light integration, visible cells, and remembered fog state.
-- `MapPreview.gd` — development input/presentation harness only.
+- `TacticalPerception.gd` — LOS, facing cone, opaque geometry, light/weather integration, visible cells, and remembered fog state.
+- `MapPreview.gd` — development input/presentation harness only; it may present debug controls but must not become the permanent owner of simulation rules.
 
-## Implemented timing semantics
+## Timing semantics
 
 The control model is **real time with automatic pause**, represented synchronously in the current developer harness while authoritative outcomes remain discrete.
 
@@ -50,51 +51,64 @@ Implemented interruption policies: committed, resumable, canceled, and forced fa
 
 `TickSmoke.gd` proves concurrent actors, resumable reload progress, and committed-through-damage behavior.
 
-## Implemented visual/perception semantics
+## Mobile/touch semantics
 
-- Ground, wall, door, window, prop, barrel, and survivor visuals come from a same-owner First Fire tactical atlas subset under `game/assets/tactical_atlas.svg`.
-- The survivor paper-doll stays visually upright; facing changes the perception cone/action direction rather than rotating the body sprite.
-- Facing is intentionally communicated by the vision cone; no extra facing arrow should be drawn over the survivor.
-- Existing map light markers feed real per-cell lighting.
-- Ambient level depends on day/night, theme, and indoor/outdoor state.
+The logical viewport is 640×844. The touch deck is a true three-row layout:
+
+- left column: intentional empty top slot → `TURN L` → `CROUCH`;
+- right column: `FORWARD` → `TURN R` → `BACK`;
+- both turn controls share exactly the same Y position and height;
+- forward/back preserve facing;
+- crouch is a timed stance action.
+
+**One physical touch must equal one action.** Mobile Safari may synthesize a mouse click after a touch; `MapPreview.gd` suppresses that synthetic click for a short window after handling `InputEventScreenTouch`. Do not remove this guard or reintroduce double-move / 180-degree-turn behavior.
+
+Map tapping remains available. `MENU`/Escape opens the actual pause menu and Web exit uses same-tab browser navigation.
+
+## HUD rule
+
+Keep player-facing information separate from developer controls.
+
+The normal in-game HUD is read-only and currently shows:
+
+- survivor name;
+- health;
+- fatigue;
+- carry weight/capacity;
+- in-game time/date/current weather;
+- current local temperature;
+- indoor/outdoor status;
+- outdoor wind speed when outside;
+- `Looking at:` for the tile/object directly in front of the player.
+
+The `DEV` overlay contains tick/debug diagnostics plus manual world test controls. Current editable dev fields are HH:MM, MM/DD, and current weather. HH:MM and MM/DD use native Godot `LineEdit` controls so iOS/Safari can summon the keyboard. Developer controls do not cost world ticks.
+
+The current clock harness uses 600 world ticks per displayed in-game minute as a provisional presentation mapping. This is not yet a final global calendar-speed design promise.
+
+## Visual/perception semantics
+
+- Tactical ground/wall/door/window/prop/barrel/survivor visuals come from the same-owner First Fire atlas subset.
+- The survivor stays visually upright; facing is communicated by the vision cone.
+- Existing map light markers feed per-cell lighting.
+- Ambient level depends on day/night, theme, indoor/outdoor state and weather light modifier.
 - Powered sources switch off when power is unavailable.
 - Windows transmit sight and daylight.
-- A directional flashlight profile demonstrates carried cone lighting.
-- Walls, closed doors, and opaque/tall props block line of sight and light.
-- Player visibility requires facing cone + clear LOS + sufficient light at distance.
-- Fog has two states: unseen and remembered-but-not-currently-visible.
-- Turning, moving, doors, time, power, and flashlight state recalculate perception.
+- Flashlight is directional.
+- Walls, closed doors, and opaque/tall props block LOS/light.
+- Player visibility requires facing cone + clear LOS + enough light.
+- Fog has unseen and remembered states.
 
-`PerceptionSmoke.gd` proves closed/open door occlusion, forward-vs-behind cone behavior, directional flashlight contribution, and persistent fog memory.
+Weather VFX are presentation-only real-time animation and may continue while simulation is paused. Rain, fog, wind debris and storm flash must not mutate authoritative weather/world state.
 
-## Current controls / Web-mobile harness
-
-The logical viewport is 640×844 so the full tactical board and dedicated touch-control strip fit on mobile/Safari without relying on keyboard input.
-
-- Large `TURN L` and `TURN R` touch buttons rotate facing and consume turn ticks.
-- The controls are side-stacked, not centered: `FORWARD` is directly above `TURN R`, `BACK` directly below `TURN R`, and `CROUCH` directly below `TURN L`.
-- Forward/back movement preserves facing; backward movement does not rotate the perception cone.
-- Crouching is a real timed stance action and uses a slower crouched movement cost.
-- `MENU` / Escape opens the actual pause menu; the tree is paused while it is open.
-- The pause menu can resume or `EXIT TO GOOGLE`; Web uses same-tab browser navigation.
-- Map tapping remains available alongside the dedicated buttons.
-- Keyboard developer controls remain: WASD/arrows, Tab walk/run, E/Space/Enter door, C crouch, R reroll, F flashlight, 4 day/night, 5 power, and 1/2/3 scheduler proofs.
+Weather VFX should not visibly pass through interiors or wall tiles. Current presentation filters rain/debris by outdoor cell and renders fog/storm flashes per outdoor non-wall cell. Weather is drawn beneath fog-of-war so the mask does not reveal hidden room geometry.
 
 ## Sound presentation rule
 
 There is **no audible sound playback in Tick Survival Lab**.
 
-Sound still exists as an authoritative simulated physical/perception system because zombies, survivors, animals, weather, weapons, doors, vehicles, and environments need to emit and react to sound. The player receives that information visually through the yellow sound boxes/markers established in the First Fire tactical work, including uncertainty when the source is not known precisely.
+Sound still exists as authoritative simulated physical/perception data because zombies, survivors, animals, weather, weapons, doors, vehicles, and environments need to emit and react to sound. The player receives it visually through yellow sound boxes/markers, including uncertain localization.
 
-Do not add music, ambient audio, footsteps, gunshot playback, zombie voices, weather audio, or other actual game sound unless the user explicitly reverses this rule later.
-
-## Weather rule
-
-Weather state will be authoritative and tick-driven, but weather **presentation** is allowed to animate independently of simulation time.
-
-When gameplay is automatically paused or the pause menu is open, weather state, effects on visibility, masking, temperature, etc. do not advance. However presentation-only effects may keep moving: rain can continue falling, fog can swirl, trash/leaves can blow in the current wind, lights may visually flicker, and similar cosmetic motion can continue using non-authoritative real time.
-
-Presentation animation must never mutate world state or create different deterministic outcomes simply because a player spent longer deciding while paused.
+Do not add music, ambient audio, footsteps, gunshot playback, zombie voices, weather audio, or other actual game sound unless the user explicitly reverses this rule.
 
 ## Player/world separation
 
@@ -116,15 +130,9 @@ The island mixes city, suburban, commercial/industrial, rural/farm, and woods/wi
 
 See `DESIGN.md`. Intended systems include persistent infected; visualized spatial sound; deterministic weather; dangerous timing-driven combat; body-region wounds and amputation; hunger/thirst/fatigue; inventory/loot/equipment; use-based skills and learning media; destructible/free-build environments; farming/crafting; autonomous survivors and animals; emergent settlements; patrols and supply routes; vehicles; infrastructure reclamation; and eventual outbreak epicenter/spread/response plus occupation/family starts.
 
-## First Fire reuse policy
-
-Before recreating a major tactical/world subsystem, inspect current First Fire for same-owner reusable work. Port coherent rules only after removing `Game`, encounter UI, camp, expedition, objective, and save-schema coupling.
-
-Already reused/adapted: tactical map schema, tactical atlas/tile rendering subset, lighting helpers, FOV/LOS/fog concepts, FF-style mobile tactical controls, and sound/localization helpers.
-
 ## Near-term scope
 
-Next is **0.3B Weather Foundation**: deterministic weather state plus light/vision/sound-masking hooks and cosmetic animation that can continue while simulation is paused. Then **0.3C Spatial Sound Visualization** creates tick-owned sound events, propagation/attenuation through physical cells, door/window/wall occlusion, uncertain source localization, and yellow visual sound markers. Persistent infected can then consume the same perception + sound model on the scheduler.
+After current weather/HUD mobile play-test cleanup, **0.3C Spatial Sound Visualization** should create tick-owned sound events, propagation/attenuation through physical cells, door/window/wall occlusion, weather masking, uncertain source localization, and yellow visual sound markers. Persistent infected can then consume the same perception + silent-sound model on the scheduler.
 
 Preferred dependency direction:
 
