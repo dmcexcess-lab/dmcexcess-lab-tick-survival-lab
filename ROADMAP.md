@@ -28,7 +28,7 @@ Implemented:
 ### 0.3A Visual perception — COMPLETE
 
 - First Fire tactical atlas presentation restored as Tick-native reusable assets/rendering;
-- ground/walls/doors/windows/props/barrels plus directional survivor sprite;
+- ground/walls/doors/windows/props/barrels plus survivor sprite;
 - runtime light sources from authored map markers;
 - powered/unpowered environment lights;
 - indoor/outdoor ambient lighting;
@@ -41,14 +41,33 @@ Implemented:
 - visible-cell state plus remembered-cell fog of war;
 - deterministic perception smoke coverage.
 
-### 0.3B Spatial sound — NEXT
+### 0.3B Weather foundation — NEXT
 
-- real sound event records tied to world tick;
+Keep this deliberately small and simulation-first:
+
+- deterministic tick-owned weather state seeded from world/calendar inputs;
+- clear/cloudy/rain/heavy-rain/storm/fog baseline states;
+- precipitation intensity, cloud cover, wind direction/speed, and temperature fields;
+- cloud/fog hooks into ambient light and visibility;
+- rain/storm hooks into sound masking calculations;
+- presentation-only rain, drifting fog, and windblown debris animation;
+- weather **simulation state freezes whenever the world is paused**, while presentation particles/visual motion may continue animating using non-authoritative real time;
+- weather visuals never advance world state or alter deterministic outcomes on their own.
+
+Do not add wet clothing, puddles, hypothermia, crop watering, snow accumulation, lightning fires, mud, or vehicle traction yet.
+
+### 0.3C Spatial sound visualization
+
+There will be **no audible sound playback**. Sound remains a simulated physical/perception system represented visually.
+
+- sound event records tied to world tick;
 - propagation and attenuation through physical cells;
 - door/window/wall occlusion costs;
+- rain/storm masking where appropriate;
 - uncertain source locations outside vision;
+- yellow sound boxes/markers as the player-facing representation;
 - no UI-owned sound truth;
-- later infected hearing consumes the same event model.
+- infected hearing consumes the same event model even though the game itself stays silent.
 
 Already present as clean helpers: `TacticalLighting.gd` and `TacticalSound.gd`.
 
@@ -130,6 +149,8 @@ Seasons/weather depth, farming/ecology, degradation, zombie redistribution/migra
 - normal input occurs at player-ready auto-pause points;
 - interruption is explicit and rule driven;
 - no AI drama director spawning threats for tension;
+- no audible game sound; simulated sound is communicated visually;
+- presentation animation may continue while paused only when it cannot advance simulation state;
 - persistent physical consequences beat summary event rolls;
 - reuse compatible original Tick/First Fire work rather than rebuilding solved systems;
 - never import First Fire camp/expedition/menu architecture;
