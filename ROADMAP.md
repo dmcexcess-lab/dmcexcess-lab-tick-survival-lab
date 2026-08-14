@@ -1,329 +1,126 @@
 # Tick Survival Lab — Roadmap
 
-This roadmap describes implementation order, not a promise to build every distant system before playtesting the current slice. Current `main` remains the source of truth for what actually exists.
+This is implementation order, not a promise to build distant systems before playtesting current work. Current `main` remains the truth for what exists.
 
 ## Milestone 0.1 — Authoritative Tick Movement — COMPLETE
 
-Foundation already on `main`:
+Authoritative world tick, player movement/facing, walk/run timing, fatigue/encumbrance-ready modifiers, physical doors, keyboard + pointer/touch controls, developer HUD, and deterministic smoke coverage.
 
-- authoritative world tick counter/scheduler;
-- player movement/facing;
-- walk/run timing;
-- fatigue/encumbrance-ready timing modifiers;
-- physical door state;
-- keyboard and pointer/touch dev controls;
-- developer tick/action HUD;
-- deterministic CI smoke coverage.
+## Milestone 0.2 — Action Execution Model — COMPLETE
 
-## Milestone 0.2 — Action Execution Model
+Implemented:
 
-Goal: turn the current immediate-cost prototype into the real real-time-with-auto-pause action model.
-
-- player-ready automatic pause state;
-- actions with explicit start/end ticks;
-- action phases;
+- explicit player-ready auto-pause state;
+- actions with start/end tick, elapsed/remaining progress, payload and status;
+- phased actions;
 - committed/resumable/canceled interruption policies;
-- hard invalidation for knockdown/unconsciousness/death/lost requirement;
-- damage interruption hooks;
-- no normal mid-action player cancel;
-- scheduler support for multiple actors advancing during one player action;
-- deterministic tie/order rules;
-- developer timeline/action-phase diagnostics.
+- forced-failure hook for hard invalidation;
+- damage interruption hook;
+- no normal mid-action player cancellation;
+- multiple scheduled actors advancing during one player action;
+- deterministic ordering by next tick then actor ID;
+- exact resumable phase/progress snapshots;
+- developer diagnostics and light/heavy/reload timing proofs;
+- deterministic CI proving concurrent actions, committed-through-damage behavior, and interrupted/resumed reloads.
 
-Do not add combat breadth until this model is trustworthy.
+The current harness resolves execution synchronously rather than animating wall-clock time; the simulation semantics are authoritative and presentation must never change them.
 
-## Milestone 0.3 — Physical Perception Foundation
+## Milestone 0.3 — Physical Perception Foundation — NEXT
 
-Goal: reuse/adapt the strongest existing First Fire tactical-environment work instead of starting over.
-
-Already ported as clean Tick-native helpers:
-
-- `TacticalLighting.gd`;
-- `TacticalSound.gd`.
-
-Next:
+Goal: connect the already-reused First Fire environment work to real Tick world state.
 
 - runtime light-source state from existing map light markers;
 - powered/unpowered environment lights;
-- indoor/outdoor ambient light;
-- window daylight;
-- directional carried lights;
+- indoor/outdoor ambient light and window daylight;
+- directional carried-light model;
 - opaque physical facts for walls/doors/props;
 - line of sight and four-direction facing cone;
 - darkness-limited recognition;
 - spatial sound event representation;
-- sound propagation/attenuation/occlusion;
+- sound propagation, attenuation and occlusion;
 - uncertain sound-location information outside vision.
+
+Already present as clean helpers: `TacticalLighting.gd` and `TacticalSound.gd`.
 
 ## Milestone 0.4 — Persistent Infected
 
-Goal: prove the clock by placing zombies on the same scheduler.
-
-- infected actor records and timing profiles;
-- persistent initial placement, no drama-director edge spawning;
-- idle/wander/investigate/chase behavior;
-- sight and sound acquisition;
-- memory/last-known-position rules;
-- facing;
-- actor occupancy/pathing;
-- movement pace variation so some infected keep pace, lose ground, or gain ground;
-- basic contact attacks/damage interruption;
-- corpse state;
-- local persistence when leaving/returning.
+Infected actor records/timing profiles, persistent placement, idle/wander/investigate/chase, sight/sound acquisition, memory, facing, occupancy/pathing, pace variation, basic contact attacks and interruption, corpses, and local persistence. No drama-director edge spawning.
 
 ## Milestone 0.5 — Core Combat Commitments
 
-Goal: make weapon timing tactically meaningful before expanding weapon count.
-
-- melee reach and facing;
-- light vs heavy action timing;
-- committed swing phases;
-- hit/miss/damage resolution;
-- multiple attackers acting during long swings;
-- shove/space-making equivalent if playtests require it;
-- stealth attacks;
-- weapon noise;
-- firearm aiming/shooting baseline;
-- phased reloads with persistent intermediate magazine/round state;
-- damage interruptions and hard failures.
+Melee reach/facing, light vs heavy timing, committed swing phases, hit/damage resolution, multiple attackers during long swings, stealth, weapon noise, firearm baseline, phased reload state, and interruption/hard-failure integration.
 
 ## Milestone 0.6 — Body and Survival
 
-Goal: persistent physical consequences that feed directly back into tick costs and capability.
-
-- body regions;
-- scratches/lacerations/bites;
-- deep wounds and persistent/restarting bleeding;
-- bandages and sutures;
-- fractures;
-- splints;
-- crafted crutches/mobility aids;
-- pain and impairment;
-- wound infection vs zombie infection;
-- fatal trauma thresholds;
-- hunger/thirst;
-- fatigue/endurance;
-- encumbrance;
-- stress/panic;
-- sleep;
-- basic environmental exposure;
-- extremity amputation as a desperate time-sensitive infection intervention;
-- permanent missing-limb consequences.
+Body regions; scratches/lacerations/bites; deep wounds; bleeding; bandages/sutures; fractures; splints/crutches; pain/impairment; wound vs zombie infection; fatal trauma; hunger/thirst; fatigue/endurance; encumbrance; stress/panic; sleep; basic exposure; time-sensitive extremity amputation and permanent missing-limb consequences.
 
 ## Milestone 0.7 — Inventory, Loot, Equipment, Learning
 
-Goal: make scavenging physically meaningful.
-
-- persistent items and containers;
-- carried weight/capacity;
-- clothing/equipment;
-- tools/weapons/ammo;
-- food/water/medicine;
-- item condition where useful;
-- spoilage where useful;
-- tick-cost searching/transferring/equipping;
-- use-based skill progression;
-- occupations as starting knowledge/competence, not classes;
-- recipe/skill books and manuals;
-- VHS-like/recorded instructional media;
-- recipe/technique prerequisites and learning acceleration.
+Persistent items/containers, carrying capacity, clothing/equipment, tools/weapons/ammo, food/water/medicine, useful condition/spoilage, tick-cost manipulation/search, use-based skills, occupations as starting knowledge, books/manuals, recorded/VHS-like training media, and recipe/technique learning.
 
 ## Milestone 0.8 — Mutable Local World
 
-Goal: authored locations stop being static scenery.
-
-- breakable windows/doors;
-- wall/material durability;
-- barricades;
-- moving furniture;
-- dismantling;
-- fire/burn damage;
-- dropped debris/corpses;
-- persistent local destruction;
-- player construction using compatible wall/floor/door/fence concepts;
-- authored and built structures converge toward one runtime physical model.
+Breakable doors/windows, material durability, barricades, furniture movement, dismantling, fire, debris/corpses, persistent destruction, free construction, and convergence of authored vs player-built physical structures.
 
 ## Milestone 0.9 — Local Homesteading
 
-Goal: prove that a player can live in the world instead of only raid it.
-
-- free building improvements;
-- storage organization;
-- cooking;
-- rain/water systems;
-- farming baseline;
-- generators/electricity baseline;
-- repairs;
-- crafting stations;
-- traps where useful;
-- enough renewable production for long-term survival in one region.
+Storage, cooking, water collection, farming, generators/electricity, repairs, crafting stations, traps where useful, and enough renewable production to survive long-term in one region.
 
 ## Alpha 1 — Persistent World Save / Player Separation
 
-Goal: the island/world is the durable save; the player is one mortal actor inside it.
-
-- explicit world seed/world ID;
-- persistent calendar;
-- world-state save schema/version;
-- player-character records separate from world identity;
-- permanent player death;
-- create/select a new playable survivor in the same continuing world;
-- previous player corpse/stash/base remain physically present;
-- start-new-world option remains independent;
-- local-area unload/reload without state reset.
+World seed/ID, calendar, versioned world state, player records separate from world identity, permanent character death, new playable survivor in the same world, old corpse/stash/base persistence, independent new-world option, and area unload/reload without reset.
 
 ## Alpha 2 — Island World Generation
 
-Goal: connect local physical locations into a large coherent region.
-
-- island/isolated-region world seed;
-- city, suburb, commercial, industrial, rural, farm, forest/wilderness biomes;
-- road network and plausible town/industry placement;
-- coast/water barriers;
-- destroyed/bombed bridges and other quarantine-era cutoffs;
-- infrastructure corridors that visibly used to connect beyond the playable region;
-- hierarchical generation: world → district → local area → building/location → tile/object;
-- reuse/stitch/transform existing authored location schema rather than replace it;
-- streaming and deterministic regeneration of unchanged initial facts.
+Large isolated region with city/suburb/commercial/industrial/rural/farm/forest biomes; plausible roads/towns/industry; coast barriers; bombed bridges/quarantine cutoffs; infrastructure corridors; hierarchical generation using the existing physical map language; streaming and deterministic regeneration.
 
 ## Alpha 3 — Autonomous Human Survivors
 
-Goal: bring First Fire's survivor/social ambitions into the physical world instead of a menu layer.
-
-- autonomous survivor actors;
-- personalities/traits/skills/needs;
-- perception and self-preservation;
-- equipment choice/use;
-- combat/scavenging behavior;
-- memories and relationships;
-- trust/conflict/cooperation;
-- recruitment and departure;
-- player orders as goals/jobs/constraints rather than puppet control;
-- autonomous task execution on the same clock/world.
+Autonomous actors with traits/skills/needs, self-preservation, equipment use, combat/scavenging, memories/relationships, trust/conflict, recruitment/departure, and player orders expressed as goals/jobs/constraints rather than puppet control.
 
 ## Alpha 4 — Animals
 
-Goal: living companions and base ecology.
-
-- dogs: warning, tracking/scouting, defense, bonding, fetching/hunting where appropriate;
-- cats: roaming, pest hunting, base life/morale, autonomous behavior;
-- chickens/roosters and basic livestock loops;
-- feeding, enclosure, injury/illness, reproduction where appropriate;
-- zombie/predator/noise interactions;
-- animals use the same physical actor/world model as far as practical.
+Dogs, cats, chickens/roosters and later livestock using the same world as practical: feeding, bonding, roaming, warning/utility behaviors, enclosure, injury/illness, reproduction where appropriate, and zombie/noise interaction.
 
 ## Alpha 5 — Emergent Settlements
 
-Goal: no separate settlement minigame.
-
 **free building + resources + autonomous survivors + assignable jobs = settlement**
 
-- multiple player bases;
-- NPC-created/occupied bases;
-- work assignments;
-- guard posts;
-- patrol routes;
-- scavenging parties;
-- supply routes between bases;
-- cooking/farming/building/repair/logistics jobs;
-- storage/bed/food/water/power needs;
-- community growth, fracture, relocation, abandonment, merging;
-- local safety emerges from actual patrols/fortifications/population.
+Multiple bases, NPC bases, work assignments, guard posts, patrol routes, scavenging parties, supply routes, farming/cooking/building/repair/logistics jobs, settlement needs, growth/fracture/relocation/abandonment, and safety emerging from actual people/fortifications.
 
 ## Alpha 6 — Vehicles and Logistics
 
-Goal: make the island's geography and multiple bases operationally meaningful.
-
-- tick-driven acceleration/braking/steering;
-- committed multi-tile movement and momentum;
-- collisions and zombie impacts;
-- vehicle noise;
-- fuel/battery;
-- component damage/repair;
-- cargo;
-- entering/exiting/seat changes;
-- NPC driving;
-- patrol/supply/scavenging use;
-- towing later if it earns its complexity.
+Tick-driven driving, committed multi-tile movement, momentum, collisions, noise, fuel/battery, component repair, cargo, seat actions, NPC driving, patrol/supply/scavenging use, and later towing if worthwhile.
 
 ## Alpha 7 — Infrastructure Reclamation
 
-Goal: late-game communities can physically reclaim pieces of civilization.
-
-- power plant/generation;
-- substations/grid segments;
-- regional powered light state;
-- water facilities/network simplification;
-- radio/communications;
-- fuel/logistics sites;
-- repair projects requiring skills/materials/time;
-- guards/patrols required to keep sites usable;
-- restored infrastructure creates real light, noise, traffic, value, and danger.
+Power generation/substations/grid segments, water simplification, communications, fuel/logistics sites, repair projects requiring skills/materials/time, guards/patrols, and infrastructure that creates actual light/noise/traffic/value/danger.
 
 ## Beta 1 — Outbreak Scenario Generator
 
-Goal: a new world can be parameterized by how the apocalypse began.
-
-- outbreak epicenter(s);
-- infection/transmission/incubation settings;
-- initial infected/population distribution;
-- public awareness;
-- emergency/government response factors;
-- evacuation/quarantine timing;
-- bridge destruction/isolation events;
-- utility resilience;
-- season/weather/start date;
-- loot/vehicle abundance;
-- deterministic world-history generation when starting after collapse.
+Epicenter(s), transmission/incubation, initial population/infected distribution, awareness/response, evacuation/quarantine, bridge destruction, utility resilience, season/weather/start date, loot/vehicle abundance, and deterministic generated history for post-collapse starts.
 
 ## Beta 2 — Personal Pre-Outbreak Context
 
-Goal: the starting character already belongs to the generated world.
-
-- starting occupation;
-- home/work/school-relevant locations;
-- family/household relationships;
-- friends/known survivors;
-- pets;
-- plausible starting property/vehicle/resources;
-- family members are autonomous real actors, not frozen quest tokens;
-- communications/knowledge determine what people attempt during collapse.
+Starting occupation, home/work/school locations, family/household, friends, pets, plausible property/vehicles/resources, and autonomous family members who act according to information and circumstance rather than waiting as quest tokens.
 
 ## Beta 3 — Live Collapse / Outbreak Start
 
-Long-term crown-jewel simulation. Do not force this early.
-
-- functioning pre-collapse civilian world at start;
-- infection spreads from generated conditions;
-- civilians/emergency services respond;
-- hospitals/roads/refuges become stressed by actual population movement;
-- quarantines/checkpoints/bridge destruction emerge from configured response;
-- utilities fail or survive according to world causes;
-- infected are created through the simulated outbreak rather than post-hoc placement;
-- aggressive coarse simulation/LOD required for island-scale population counts.
+Long-term crown jewel: functioning civilian world, simulated spread, emergency response, hospitals/roads/refuges stressed by population movement, quarantines/checkpoints/isolation, causal utility failure/survival, and infected produced by the simulated outbreak. Requires aggressive coarse simulation/LOD.
 
 ## Beta 4 — Long-Term World Depth
 
-- seasons/weather depth;
-- farming/ecology expansion;
-- long-term building/infrastructure degradation;
-- zombie redistribution/migration caused by world stimuli;
-- larger community politics without turning into a menu strategy game;
-- trade and inter-base logistics;
-- advanced construction/crafting only where it creates new decisions;
-- richer animals/vehicles/infrastructure as playtests justify them.
+Seasons/weather depth, farming/ecology, degradation, zombie redistribution/migration from stimuli, richer community politics without a menu strategy layer, trade/logistics, and advanced crafting/construction only where it creates decisions.
 
-## Permanent design constraints
-
-Across every milestone:
+## Permanent constraints
 
 - world state is authoritative, not UI;
-- player and world saves remain conceptually separate;
+- player and world remain conceptually separate;
 - every meaningful physical action uses ticks;
-- normal player input happens at player-ready auto-pause points;
-- action interruption is explicit and data/rule driven;
-- no AI drama director spawning threats to manufacture tension;
-- persistent consequences beat summary event rolls;
-- reuse Tick/First Fire original systems when they fit; do not rebuild solved work merely for purity;
-- do not import First Fire camp/expedition/menu architecture into the runtime;
+- normal input occurs at player-ready auto-pause points;
+- interruption is explicit and rule driven;
+- no AI drama director spawning threats for tension;
+- persistent physical consequences beat summary event rolls;
+- reuse compatible original Tick/First Fire work rather than rebuilding solved systems;
+- never import First Fire camp/expedition/menu architecture;
 - build vertically and playtest before racing down the roadmap.
