@@ -9,13 +9,17 @@ func _init() -> void:
             push_error("REGION_SMOKE_DIMENSIONS_CHANGED")
             quit(1)
             return
+        if int(spec.get("generator_version", 0)) != RegionGen.GENERATOR_VERSION:
+            push_error("REGION_SMOKE_GENERATOR_VERSION_MISSING")
+            quit(1)
+            return
         var result: Dictionary = RegionGen.validate(spec)
         if not bool(result.get("ok", false)):
             push_error("REGION_SMOKE_VALIDATION_FAILED seed=%d failures=%s" % [seed_value, str(result.get("failures", []))])
             quit(1)
             return
         var again: Dictionary = RegionGen.generate(seed_value)
-        if spec.get("player_spawn") != again.get("player_spawn") or spec.get("biome_cells") != again.get("biome_cells") or spec.get("walls") != again.get("walls"):
+        if spec.get("player_spawn") != again.get("player_spawn") or spec.get("biome_cells") != again.get("biome_cells") or spec.get("walls") != again.get("walls") or spec.get("road_cells") != again.get("road_cells") or spec.get("props") != again.get("props"):
             push_error("REGION_SMOKE_NONDETERMINISTIC seed=%d" % seed_value)
             quit(1)
             return
@@ -25,5 +29,21 @@ func _init() -> void:
                 push_error("REGION_SMOKE_MISSING_BIOME seed=%d biome=%s" % [seed_value, biome])
                 quit(1)
                 return
+        if spec.get("exit_cells", []).size() != 4 or spec.get("road_ports", {}).size() != 4:
+            push_error("REGION_SMOKE_ROAD_PORTS_MISSING seed=%d" % seed_value)
+            quit(1)
+            return
+        if not spec.get("road_cells", {}).has(spec.get("player_spawn")):
+            push_error("REGION_SMOKE_SPAWN_NOT_ON_ROAD seed=%d" % seed_value)
+            quit(1)
+            return
+        if spec.get("props", []).size() < 12:
+            push_error("REGION_SMOKE_CLUTTER_TOO_SPARSE seed=%d" % seed_value)
+            quit(1)
+            return
+        if spec.get("wall_themes", {}).is_empty():
+            push_error("REGION_SMOKE_WALL_THEMES_MISSING seed=%d" % seed_value)
+            quit(1)
+            return
     print("TICK_SURVIVAL_REGION_SMOKE_OK")
     quit(0)
