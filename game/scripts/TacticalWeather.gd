@@ -6,13 +6,15 @@ const RAIN := "rain"
 const STORM := "storm"
 const FOG := "fog"
 const WIND := "wind"
+const SNOW := "snow"
 
 const PROFILES := {
-    CLEAR: {"precipitation": 0.0, "fog": 0.0, "wind": 0.12, "visibility": 1.0, "light": 1.0, "sound_mask": 0.0, "temp_offset_f": 0.0},
-    RAIN: {"precipitation": 0.62, "fog": 0.10, "wind": 0.34, "visibility": 0.88, "light": 0.90, "sound_mask": 0.18, "temp_offset_f": -4.0},
-    STORM: {"precipitation": 1.0, "fog": 0.18, "wind": 0.82, "visibility": 0.72, "light": 0.76, "sound_mask": 0.42, "temp_offset_f": -7.0},
-    FOG: {"precipitation": 0.0, "fog": 0.82, "wind": 0.08, "visibility": 0.58, "light": 0.86, "sound_mask": 0.05, "temp_offset_f": -2.0},
-    WIND: {"precipitation": 0.0, "fog": 0.04, "wind": 0.90, "visibility": 0.96, "light": 0.98, "sound_mask": 0.14, "temp_offset_f": -1.0},
+    CLEAR: {"precipitation": 0.0, "snowfall": 0.0, "fog": 0.0, "wind": 0.12, "visibility": 1.0, "light": 1.0, "sound_mask": 0.0, "temp_offset_f": 0.0},
+    RAIN: {"precipitation": 0.62, "snowfall": 0.0, "fog": 0.10, "wind": 0.34, "visibility": 0.88, "light": 0.90, "sound_mask": 0.18, "temp_offset_f": -4.0},
+    STORM: {"precipitation": 1.0, "snowfall": 0.0, "fog": 0.18, "wind": 0.82, "visibility": 0.72, "light": 0.76, "sound_mask": 0.42, "temp_offset_f": -7.0},
+    FOG: {"precipitation": 0.0, "snowfall": 0.0, "fog": 0.82, "wind": 0.08, "visibility": 0.58, "light": 0.86, "sound_mask": 0.05, "temp_offset_f": -2.0},
+    WIND: {"precipitation": 0.0, "snowfall": 0.0, "fog": 0.04, "wind": 0.90, "visibility": 0.96, "light": 0.98, "sound_mask": 0.14, "temp_offset_f": -1.0},
+    SNOW: {"precipitation": 0.0, "snowfall": 0.78, "fog": 0.16, "wind": 0.28, "visibility": 0.80, "light": 0.88, "sound_mask": 0.11, "temp_offset_f": -12.0},
 }
 
 # Moderate-island placeholder climate. This is deliberately not a weather-pattern
@@ -37,6 +39,9 @@ static func sound_mask(state: Dictionary) -> float:
 
 static func precipitation(state: Dictionary) -> float:
     return clampf(float(state.get("precipitation", 0.0)), 0.0, 1.0)
+
+static func snowfall(state: Dictionary) -> float:
+    return clampf(float(state.get("snowfall", 0.0)), 0.0, 1.0)
 
 static func fog_density(state: Dictionary) -> float:
     return clampf(float(state.get("fog", 0.0)), 0.0, 1.0)
