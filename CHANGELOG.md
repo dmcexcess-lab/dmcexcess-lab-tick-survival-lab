@@ -1,5 +1,11 @@
 # Changelog
 
+## Upright Directional Survivor Poses — 2026-08-14
+
+- Replaced the old directional player presentation that literally rotated one front-facing sprite by 90/180/270 degrees.
+- Added `player_facing_atlas.svg` with separate upright south/front, north/back, and west/profile poses; east uses a horizontal mirror of the side profile.
+- All facings keep the survivor's feet at the bottom/south side of the tile while `player.facing` still drives vision, flashlight, movement, and interaction.
+
 ## World / Navigation Foundation Audit — 2026-08-14
 
 - Reworked procedural road generation from an arbitrary full-region grid into a connected hierarchy: biome connectors, developed local streets, rural service roads, woodland trails, and a three-tile arterial network that reaches all four edge exits.
@@ -106,7 +112,7 @@
 
 - Restored the reusable First Fire tactical atlas presentation into Tick as a clean same-owner asset subset covering ground, walls, doors, windows, props, barrels, and a four-direction survivor sprite.
 - Added `TacticalTiles.gd` as the Tick-native atlas renderer instead of continuing with programmer rectangles/text labels.
-- Added `TacticalPerception.gd` to own line-of-sight, facing cone, opaque-prop rules, light integration, visible cells, and remembered-cell fog state.
+- Added `TacticalPerception.gd` to own line-of-sight, facing cone, opaque-prop rules, light integration, visible cells, and remembered fog state.
 - Wired existing authored light markers into actual per-cell lighting using the already-ported `TacticalLighting.gd` rules.
 - Added powered/unpowered environment lights, indoor/outdoor ambient light, window daylight, and a directional flashlight test profile.
 - Added real LOS occlusion: walls, closed doors, and tall/opaque obstacles block sight/light; windows transmit sight and daylight.
