@@ -1,5 +1,16 @@
 # Changelog
 
+## Snow / Fog / Survivor HUD Refinement — 2026-08-14
+
+- Added `snow` as a fixed weather profile with its own snowfall intensity, cold temperature offset, visibility/light effects, wind, and silent sound-masking hook.
+- Added animated snowflakes that continue moving while paused and respect the same outdoor/non-wall weather mask as rain and debris.
+- Increased fog presentation density without changing the underlying fog gameplay profile.
+- Refined the in-game HUD: replaced ambiguous `FAT %` with survivor-facing `STAMINA %`; raw fatigue remains an internal/deeper-info value.
+- Weather is now shown in the in-game HUD only while outdoors.
+- Indoor HUD temperature now shows only the local indoor temperature; it no longer exposes outside temperature or outdoor weather.
+- Outdoor HUD keeps current temperature and wind speed alongside current weather.
+- Expanded deterministic environment smoke coverage to validate the snow profile and cold-temperature behavior.
+
 ## Split HUD / Safari Input / Environment Readout — 2026-08-14
 
 - Split the information display into a read-only in-game survivor/world HUD plus a separate `DEV` overlay.
