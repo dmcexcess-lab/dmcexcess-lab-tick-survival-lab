@@ -17,11 +17,11 @@ const VIEW_W := 640.0
 const VIEW_H := 844.0
 
 const BTN_MENU := Rect2(546, 8, 86, 38)
-const BTN_TURN_L := Rect2(8, 684, 170, 100)
-const BTN_TURN_R := Rect2(462, 702, 170, 90)
-const BTN_FORWARD := Rect2(495, 652, 104, 42)
-const BTN_CROUCH := Rect2(41, 792, 104, 42)
-const BTN_BACK := Rect2(495, 798, 104, 42)
+const BTN_TURN_L := Rect2(8, 668, 182, 96)
+const BTN_CROUCH := Rect2(36, 776, 126, 52)
+const BTN_FORWARD := Rect2(480, 650, 134, 48)
+const BTN_TURN_R := Rect2(450, 704, 182, 88)
+const BTN_BACK := Rect2(480, 796, 134, 48)
 const MENU_PANEL := Rect2(120, 238, 400, 300)
 const MENU_RESUME := Rect2(190, 340, 260, 62)
 const MENU_EXIT := Rect2(190, 430, 260, 62)
@@ -298,8 +298,8 @@ func _draw() -> void:
     draw_string(font, Vector2(12, 42), "%s v%d | WASD | E door | C crouch | F light | 4 day/night | 5 power" % [MapGen.display_name(environment_id), variant], HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Color("b8c4c2"))
     draw_string(font, Vector2(12, 63), "TICK %d  READY %s  %s  FACE %s  %s  POWER %s  FLASH %s" % [scheduler.world_tick, str(scheduler.player_ready).to_upper(), "CROUCH" if player.crouched else player.move_mode.to_upper(), _facing_name(player.facing), scene_time.to_upper(), "ON" if power_on else "OFF", "ON" if flashlight_on else "OFF"], HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color("f2d27a"))
     draw_string(font, Vector2(12, 84), "LAST %s +%d [%s]  %s" % [last_action_label, last_action_cost, last_action_status.to_upper(), last_action_detail], HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Color("d8e0c8"))
-    draw_string(font, Vector2(12, 104), "Fog: black=unseen, dim=remembered. Facing moves the cone; the survivor sprite stays upright.", HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Color("9eb0ae"))
-    draw_string(font, Vector2(12, 123), "Touch: FF-style stacked controls. Menu pauses the game. 1/2/3 keep scheduler proofs.", HORIZONTAL_ALIGNMENT_LEFT, -1, 9, Color("8fa4a1"))
+    draw_string(font, Vector2(12, 104), "Fog: black=unseen, dim=remembered. Facing is shown by the vision cone; the survivor stays upright.", HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Color("9eb0ae"))
+    draw_string(font, Vector2(12, 123), "Touch: side-stacked FF controls. Menu pauses simulation. 1/2/3 keep scheduler proofs.", HORIZONTAL_ALIGNMENT_LEFT, -1, 9, Color("8fa4a1"))
     _draw_button(BTN_MENU, "MENU", menu_open, 12)
 
     _draw_map_tiles()
@@ -364,10 +364,6 @@ func _draw_light_glows() -> void:
 func _draw_player() -> void:
     Tiles.draw_player(self, _cell_rect(player.cell).grow(-1), player.facing)
     draw_rect(_cell_rect(player.cell).grow(-2), Color("65cfff"), false, 1.5)
-    var center := _cell_center(player.cell)
-    var facing_tip := center + Vector2(player.facing) * 11.0
-    draw_line(center, facing_tip, Color("d9f7ff"), 2.0)
-    draw_circle(facing_tip, 2.0, Color("d9f7ff"))
 
 func _draw_fog() -> void:
     for y in range(MapGen.BOARD_H):
@@ -382,9 +378,9 @@ func _draw_controls() -> void:
     draw_rect(Rect2(0, CONTROL_TOP, VIEW_W, VIEW_H - CONTROL_TOP), Color(0.025, 0.032, 0.028, 0.96))
     draw_line(Vector2(0, CONTROL_TOP), Vector2(VIEW_W, CONTROL_TOP), Color("626a64"), 2.0)
     _draw_button(BTN_TURN_L, "TURN L", false, 20)
-    _draw_button(BTN_TURN_R, "TURN R", false, 20)
-    _draw_button(BTN_FORWARD, "FORWARD", false, 11)
     _draw_button(BTN_CROUCH, "CROUCH", player.crouched, 11)
+    _draw_button(BTN_FORWARD, "FORWARD", false, 11)
+    _draw_button(BTN_TURN_R, "TURN R", false, 20)
     _draw_button(BTN_BACK, "BACK", false, 11)
     draw_string(font, Vector2(210, 823), "Tap map still works", HORIZONTAL_ALIGNMENT_CENTER, 220, 10, Color("84928c"))
 
