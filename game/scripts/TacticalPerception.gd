@@ -5,7 +5,7 @@ const Lighting = preload("res://scripts/TacticalLighting.gd")
 const MapGen = preload("res://scripts/TacticalMapGenerator.gd")
 const Weather = preload("res://scripts/TacticalWeather.gd")
 
-const OPAQUE_PROPS := ["dumpster", "car", "store_shelf", "fridge", "crate", "forklift", "machine", "ice_box", "scrub"]
+const OPAQUE_PROPS := ["dumpster", "car", "store_shelf", "fridge", "crate", "forklift", "machine", "ice_box", "scrub", "tree", "bookshelf", "cabinet"]
 const FLASHLIGHT_PROFILE := {"light": "cone", "light_range": 8.0, "light_strength": 1.0, "light_spread": 0.48}
 const LIGHTING_RADIUS := 13
 
@@ -14,6 +14,18 @@ static func map_width(spec: Dictionary) -> int:
 
 static func map_height(spec: Dictionary) -> int:
     return int(spec.get("height", MapGen.BOARD_H))
+
+static func theme_for_cell(spec: Dictionary, environment_id: String, cell: Vector2i) -> String:
+    if environment_id != "procedural_region":
+        return MapGen.theme_name(environment_id)
+    var biome := str(spec.get("biome_cells", {}).get(cell, "rural"))
+    match biome:
+        "residential": return "house"
+        "commercial": return "store"
+        "downtown": return "industrial"
+        "woods": return "wash"
+        "rural": return "house"
+        _: return "alley"
 
 static func indoor_cells(spec: Dictionary) -> Dictionary:
     var result: Dictionary = {}
@@ -54,7 +66,6 @@ static func calculate_lighting(spec: Dictionary, world, environment_id: String, 
     var sources: Array = make_sources(spec)
     var levels: Dictionary = {}
     var tints: Dictionary = {}
-    var theme: String = MapGen.theme_name(environment_id)
     var weather_light: float = Weather.light_multiplier(weather_state) if not weather_state.is_empty() else 1.0
     var width := map_width(spec)
     var height := map_height(spec)
@@ -65,7 +76,8 @@ static func calculate_lighting(spec: Dictionary, world, environment_id: String, 
     for y in range(min_y, max_y + 1):
         for x in range(min_x, max_x + 1):
             var cell := Vector2i(x, y)
-            var level: float = Lighting.ambient_level(theme, time_of_day, indoors.has(cell))
+            var cell_theme := theme_for_cell(spec, environment_id, cell)
+            var level: float = Lighting.ambient_level(cell_theme, time_of_day, indoors.has(cell))
             if not indoors.has(cell):
                 level *= weather_light
             var strongest := 0.0
@@ -140,7 +152,8 @@ static func calculate_visibility(player_cell: Vector2i, facing: Vector2i, levels
     return {"visible": visible, "memory": updated_memory, "range": effective_range}
 
 static func line_clear(a: Vector2i, b: Vector2i, spec: Dictionary, world, opaque: Dictionary) -> bool:
-    var walls: Array = spec.get("walls", [])
+    if a == b:
+        return true
     var x0: int = a.x
     var y0: int = a.y
     var x1: int = b.x
@@ -150,13 +163,10 @@ static func line_clear(a: Vector2i, b: Vector2i, spec: Dictionary, world, opaque
     var dy: int = -absi(y1 - y0)
     var sy: int = 1 if y0 < y1 else -1
     var err: int = dx + dy
-    while true:
-        var p := Vector2i(x0, y0)
-        if p != a and p != b:
-            if walls.has(p) or opaque.has(p) or (world.is_door(p) and not world.is_door_open(p)):
-                return false
-        if x0 == x1 and y0 == y1:
-            break
+
+    while x0 != x1 or y0 != y1:
+        var old_x := x0
+        var old_y := y0
         var e2: int = 2 * err
         if e2 >= dy:
             err += dy
@@ -164,7 +174,22 @@ static func line_clear(a: Vector2i, b: Vector2i, spec: Dictionary, world, opaque
         if e2 <= dx:
             err += dx
             y0 += sy
+
+        # Supercover-style corner rule: if a diagonal ray squeezes exactly
+        # between two opaque orthogonal cells, that corner blocks vision/light.
+        if x0 != old_x and y0 != old_y:
+            var side_a := Vector2i(x0, old_y)
+            var side_b := Vector2i(old_x, y0)
+            if _blocks_vision(side_a, spec, world, opaque) and _blocks_vision(side_b, spec, world, opaque):
+                return false
+
+        var p := Vector2i(x0, y0)
+        if p != b and _blocks_vision(p, spec, world, opaque):
+            return false
     return true
+
+static func _blocks_vision(p: Vector2i, spec: Dictionary, world, opaque: Dictionary) -> bool:
+    return spec.get("walls", []).has(p) or opaque.has(p) or (world.is_door(p) and not world.is_door_open(p))
 
 static func in_cone(origin: Vector2i, facing: Vector2i, p: Vector2i, max_range: int, min_dot: float) -> bool:
     var diff := Vector2(p - origin)
