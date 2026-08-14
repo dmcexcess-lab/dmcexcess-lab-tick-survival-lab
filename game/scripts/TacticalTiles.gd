@@ -58,8 +58,17 @@ static func draw_barrel(canvas: CanvasItem, rect: Rect2) -> void:
 static func draw_prop(canvas: CanvasItem, rect: Rect2, kind: String) -> void:
     draw_region(canvas, int(PROP.get(kind, 48)), rect)
 
-static func draw_player(canvas: CanvasItem, rect: Rect2, _facing: Vector2i) -> void:
-    # Keep the top-down paper-doll visually upright. Facing belongs to the
-    # perception/action model; rotating the atlas pose made the character look
-    # like they were standing on their head when facing north/south.
-    draw_region(canvas, 96, rect)
+static func player_region_for_facing(facing: Vector2i) -> int:
+    # Atlas 96-99 are authored as south/front, west, north/back, east.
+    if facing == Vector2i.UP:
+        return 98
+    if facing == Vector2i.DOWN:
+        return 96
+    if facing == Vector2i.LEFT:
+        return 97
+    if facing == Vector2i.RIGHT:
+        return 99
+    return 96
+
+static func draw_player(canvas: CanvasItem, rect: Rect2, facing: Vector2i) -> void:
+    draw_region(canvas, player_region_for_facing(facing), rect)
