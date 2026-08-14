@@ -18,7 +18,7 @@ Durable design references: `DESIGN.md`, `ROADMAP.md`, and `FIRST_FIRE_REUSE.md`.
 
 ## Current milestone
 
-**Milestone 0.2 — Action Execution Model is complete. Milestone 0.3A — Visual Perception is complete. Milestone 0.3B — Spatial Sound is next.**
+**Milestone 0.2 — Action Execution Model is complete. Milestone 0.3A — Visual Perception is complete. Milestone 0.3B — Weather Foundation is next, followed by 0.3C Spatial Sound Visualization.**
 
 Canonical source includes the tactical map/world/scheduler/player/timing-dummy modules, reused lighting/sound helpers, restored tactical atlas + `TacticalTiles.gd`, `TacticalPerception.gd`, `MapPreview.gd`, and deterministic map/tick/environment/perception smoke tests.
 
@@ -54,6 +54,7 @@ Implemented interruption policies: committed, resumable, canceled, and forced fa
 
 - Ground, wall, door, window, prop, barrel, and survivor visuals come from a same-owner First Fire tactical atlas subset under `game/assets/tactical_atlas.svg`.
 - The survivor paper-doll stays visually upright; facing changes the perception cone/action direction rather than rotating the body sprite.
+- Facing is intentionally communicated by the vision cone; no extra facing arrow should be drawn over the survivor.
 - Existing map light markers feed real per-cell lighting.
 - Ambient level depends on day/night, theme, and indoor/outdoor state.
 - Powered sources switch off when power is unavailable.
@@ -71,13 +72,29 @@ Implemented interruption policies: committed, resumable, canceled, and forced fa
 The logical viewport is 640×844 so the full tactical board and dedicated touch-control strip fit on mobile/Safari without relying on keyboard input.
 
 - Large `TURN L` and `TURN R` touch buttons rotate facing and consume turn ticks.
-- Smaller `FORWARD`, `BACK`, and `CROUCH` buttons provide FF-style mobile controls.
+- The controls are side-stacked, not centered: `FORWARD` is directly above `TURN R`, `BACK` directly below `TURN R`, and `CROUCH` directly below `TURN L`.
 - Forward/back movement preserves facing; backward movement does not rotate the perception cone.
 - Crouching is a real timed stance action and uses a slower crouched movement cost.
 - `MENU` / Escape opens the actual pause menu; the tree is paused while it is open.
 - The pause menu can resume or `EXIT TO GOOGLE`; Web uses same-tab browser navigation.
 - Map tapping remains available alongside the dedicated buttons.
 - Keyboard developer controls remain: WASD/arrows, Tab walk/run, E/Space/Enter door, C crouch, R reroll, F flashlight, 4 day/night, 5 power, and 1/2/3 scheduler proofs.
+
+## Sound presentation rule
+
+There is **no audible sound playback in Tick Survival Lab**.
+
+Sound still exists as an authoritative simulated physical/perception system because zombies, survivors, animals, weather, weapons, doors, vehicles, and environments need to emit and react to sound. The player receives that information visually through the yellow sound boxes/markers established in the First Fire tactical work, including uncertainty when the source is not known precisely.
+
+Do not add music, ambient audio, footsteps, gunshot playback, zombie voices, weather audio, or other actual game sound unless the user explicitly reverses this rule later.
+
+## Weather rule
+
+Weather state will be authoritative and tick-driven, but weather **presentation** is allowed to animate independently of simulation time.
+
+When gameplay is automatically paused or the pause menu is open, weather state, effects on visibility, masking, temperature, etc. do not advance. However presentation-only effects may keep moving: rain can continue falling, fog can swirl, trash/leaves can blow in the current wind, lights may visually flicker, and similar cosmetic motion can continue using non-authoritative real time.
+
+Presentation animation must never mutate world state or create different deterministic outcomes simply because a player spent longer deciding while paused.
 
 ## Player/world separation
 
@@ -97,7 +114,7 @@ The island mixes city, suburban, commercial/industrial, rural/farm, and woods/wi
 
 ## Long-term simulation direction
 
-See `DESIGN.md`. Intended systems include persistent infected; spatial sound; dangerous timing-driven combat; body-region wounds and amputation; hunger/thirst/fatigue; inventory/loot/equipment; use-based skills and learning media; destructible/free-build environments; farming/crafting; autonomous survivors and animals; emergent settlements; patrols and supply routes; vehicles; infrastructure reclamation; and eventual outbreak epicenter/spread/response plus occupation/family starts.
+See `DESIGN.md`. Intended systems include persistent infected; visualized spatial sound; deterministic weather; dangerous timing-driven combat; body-region wounds and amputation; hunger/thirst/fatigue; inventory/loot/equipment; use-based skills and learning media; destructible/free-build environments; farming/crafting; autonomous survivors and animals; emergent settlements; patrols and supply routes; vehicles; infrastructure reclamation; and eventual outbreak epicenter/spread/response plus occupation/family starts.
 
 ## First Fire reuse policy
 
@@ -107,7 +124,7 @@ Already reused/adapted: tactical map schema, tactical atlas/tile rendering subse
 
 ## Near-term scope
 
-Next remains **0.3B Spatial Sound**: create tick-owned sound events, propagation/attenuation through physical cells, door/window/wall occlusion, and uncertain source localization. Then persistent infected can consume the same perception + sound model on the scheduler.
+Next is **0.3B Weather Foundation**: deterministic weather state plus light/vision/sound-masking hooks and cosmetic animation that can continue while simulation is paused. Then **0.3C Spatial Sound Visualization** creates tick-owned sound events, propagation/attenuation through physical cells, door/window/wall occlusion, uncertain source localization, and yellow visual sound markers. Persistent infected can then consume the same perception + sound model on the scheduler.
 
 Preferred dependency direction:
 
