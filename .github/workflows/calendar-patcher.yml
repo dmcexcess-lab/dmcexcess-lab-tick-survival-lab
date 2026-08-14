@@ -19,33 +19,47 @@ jobs:
         shell: python
         run: |
           from pathlib import Path
+          import re
+
           p = Path('game/scripts/MapPreview.gd')
           s = p.read_text()
-          s = s.replace(
-              'const Weather = preload("res://scripts/TacticalWeather.gd")\n',
-              'const Weather = preload("res://scripts/TacticalWeather.gd")\nconst Calendar = preload("res://scripts/WorldCalendar.gd")\n'
+          if 'const Calendar = preload("res://scripts/WorldCalendar.gd")' not in s:
+              s = s.replace(
+                  'const Weather = preload("res://scripts/TacticalWeather.gd")\n',
+                  'const Weather = preload("res://scripts/TacticalWeather.gd")\nconst Calendar = preload("res://scripts/WorldCalendar.gd")\n'
+              )
+          s = re.sub(r'^const TICKS_PER_MINUTE := .*$', 'const TICKS_PER_MINUTE := Calendar.TICKS_PER_MINUTE', s, flags=re.M)
+          s = re.sub(r'^const DAYS_IN_MONTH := .*$', 'const DAYS_IN_MONTH := Calendar.DAYS_IN_MONTH', s, flags=re.M)
+          s = re.sub(
+              r'func _current_total_minutes\(\) -> int:\n.*?\n(?=func _format_time)',
+              'func _current_total_minutes() -> int:\n    return Calendar.total_minutes(clock_anchor_minutes, clock_anchor_tick, scheduler.world_tick)\n\nfunc _current_minute_of_day() -> int:\n    return Calendar.minute_of_day(clock_anchor_minutes, clock_anchor_tick, scheduler.world_tick)\n\nfunc _current_month_day() -> Vector2i:\n    return Calendar.month_day(clock_anchor_month, clock_anchor_day, clock_anchor_minutes, clock_anchor_tick, scheduler.world_tick)\n\n',
+              s,
+              flags=re.S
           )
-          s = s.replace('const TICKS_PER_MINUTE := 600\n', 'const TICKS_PER_MINUTE := Calendar.TICKS_PER_MINUTE\n')
-          s = s.replace('const DAYS_IN_MONTH := [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]\n', 'const DAYS_IN_MONTH := Calendar.DAYS_IN_MONTH\n')
-          old = '''func _current_total_minutes() -> int:\n    return clock_anchor_minutes + maxi(0, scheduler.world_tick - clock_anchor_tick) / TICKS_PER_MINUTE\n\nfunc _current_minute_of_day() -> int:\n    return posmod(_current_total_minutes(), 1440)\n\nfunc _current_month_day() -> Vector2i:\n    var month: int = clock_anchor_month\n    var day: int = clock_anchor_day + _current_total_minutes() / 1440\n    while day > DAYS_IN_MONTH[month - 1]:\n        day -= DAYS_IN_MONTH[month - 1]\n        month += 1\n        if month > 12:\n            month = 1\n    return Vector2i(month, day)\n'''
-          new = '''func _current_total_minutes() -> int:\n    return Calendar.total_minutes(clock_anchor_minutes, clock_anchor_tick, scheduler.world_tick)\n\nfunc _current_minute_of_day() -> int:\n    return Calendar.minute_of_day(clock_anchor_minutes, clock_anchor_tick, scheduler.world_tick)\n\nfunc _current_month_day() -> Vector2i:\n    return Calendar.month_day(clock_anchor_month, clock_anchor_day, clock_anchor_minutes, clock_anchor_tick, scheduler.world_tick)\n'''
-          if old not in s:
-              raise SystemExit('clock function block not found')
-          s = s.replace(old, new)
-          old_phase = '''func _sync_scene_time_from_clock() -> void:\n    var hour: int = _current_minute_of_day() / 60\n    scene_time = "day" if hour >= 7 and hour < 19 else "night"\n'''
-          new_phase = '''func _sync_scene_time_from_clock() -> void:\n    scene_time = Calendar.phase(_current_minute_of_day())\n'''
-          if old_phase not in s:
-              raise SystemExit('scene time block not found')
-          s = s.replace(old_phase, new_phase)
-          s = s.replace(
-              '    draw_string(font, Vector2(94, 378), "Tick %d | Ready %s | Cell %s | Face %s | Power %s | Flash %s" % [scheduler.world_tick, str(scheduler.player_ready).to_upper(), str(player.cell), _facing_name(player.facing), "ON" if power_on else "OFF", "ON" if flashlight_on else "OFF"], HORIZONTAL_ALIGNMENT_LEFT, -1, 9, Color("a9b9b3"))\n',
-              '    draw_string(font, Vector2(94, 378), "Tick %d | %s | Day %dt | Ready %s | Cell %s | Face %s" % [scheduler.world_tick, scene_time.to_upper(), Calendar.TICKS_PER_DAY, str(scheduler.player_ready).to_upper(), str(player.cell), _facing_name(player.facing)], HORIZONTAL_ALIGNMENT_LEFT, -1, 9, Color("a9b9b3"))\n'
+          s = re.sub(
+              r'func _sync_scene_time_from_clock\(\) -> void:\n(?:    .*\n)+?(?=\nfunc )',
+              'func _sync_scene_time_from_clock() -> void:\n    scene_time = Calendar.phase(_current_minute_of_day())\n',
+              s,
+              count=1
           )
+          s = re.sub(
+              r'    draw_string\(font, Vector2\(94, 378\), .*?\n',
+              '    draw_string(font, Vector2(94, 378), "Tick %d | %s | Day %dt | Ready %s | Cell %s | Face %s" % [scheduler.world_tick, scene_time.to_upper(), Calendar.TICKS_PER_DAY, str(scheduler.player_ready).to_upper(), str(player.cell), _facing_name(player.facing)], HORIZONTAL_ALIGNMENT_LEFT, -1, 9, Color("a9b9b3"))\n',
+              s,
+              count=1
+          )
+          if 'Calendar.total_minutes' not in s or 'Calendar.phase' not in s:
+              raise SystemExit('calendar integration did not land')
           p.write_text(s)
 
           c = Path('README_CONTEXT.md')
           cs = c.read_text()
-          cs = cs.replace('The current clock harness uses 600 world ticks per displayed in-game minute as a provisional presentation mapping. This is not yet a final global calendar-speed design promise.\n\nClock design direction: keep the authoritative action tick as a fine physical-opportunity unit (roughly second-scale for action intuition), but allow calendar/day progression to use a separate fixed compression factor. Do not force one action tick to equal one displayed game second; the final calendar multiplier should be tuned once infected timing and body needs are playable.\n', 'World time now advances only from authoritative scheduler ticks through `WorldCalendar.gd`. Current tuning is **7,200 ticks per 24-hour day** (5 ticks per displayed minute / 12 displayed seconds per tick). This is a gameplay compression ratio, not a claim that a physical action tick literally equals 12 real seconds. The ratio remains tunable independently of action costs.\n\nDaylight phases are tick-driven: night → dawn (05:30) → day (07:00) → dusk (18:30) → night (20:00). Pausing does not advance calendar time. Weather VFX may continue animating while paused because they remain presentation-only.\n')
+          cs = re.sub(
+              r'The current clock harness uses 600 world ticks per displayed in-game minute.*?once infected timing and body needs are playable\.\n',
+              'World time now advances only from authoritative scheduler ticks through `WorldCalendar.gd`. Current tuning is **7,200 ticks per 24-hour day** (5 ticks per displayed minute / 12 displayed seconds per tick). This is a gameplay compression ratio, not a claim that a physical action tick literally equals 12 real seconds. The ratio remains tunable independently of action costs.\n\nDaylight phases are tick-driven: night → dawn (05:30) → day (07:00) → dusk (18:30) → night (20:00). Pausing does not advance calendar time. Weather VFX may continue animating while paused because they remain presentation-only.\n',
+              cs,
+              flags=re.S
+          )
           c.write_text(cs)
 
           ch = Path('CHANGELOG.md')
