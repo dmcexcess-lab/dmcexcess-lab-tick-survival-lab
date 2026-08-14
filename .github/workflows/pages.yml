@@ -42,6 +42,7 @@ jobs:
           test -f game/scripts/TimingDummy.gd
           test -f game/scripts/TacticalLighting.gd
           test -f game/scripts/TacticalSound.gd
+          test -f game/scripts/TacticalWeather.gd
           test -f game/scripts/TacticalTiles.gd
           test -f game/scripts/TacticalPerception.gd
           test -f game/scripts/MapPreview.gd
@@ -54,6 +55,7 @@ jobs:
           grep -q 'class_name TimingDummy' game/scripts/TimingDummy.gd
           grep -q 'class_name TacticalLighting' game/scripts/TacticalLighting.gd
           grep -q 'class_name TacticalSound' game/scripts/TacticalSound.gd
+          grep -q 'class_name TacticalWeather' game/scripts/TacticalWeather.gd
           grep -q 'class_name TacticalTiles' game/scripts/TacticalTiles.gd
           grep -q 'class_name TacticalPerception' game/scripts/TacticalPerception.gd
           grep -q 'run/main_scene="res://main.tscn"' game/project.godot
