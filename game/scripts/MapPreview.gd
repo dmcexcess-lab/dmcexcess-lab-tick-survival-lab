@@ -17,7 +17,7 @@ const CONTROL_TOP := 648.0
 const VIEW_W := 640.0
 const VIEW_H := 844.0
 const TICKS_PER_MINUTE := 600
-const WEATHER_KINDS := [Weather.CLEAR, Weather.RAIN, Weather.STORM, Weather.FOG, Weather.WIND]
+const WEATHER_KINDS := [Weather.CLEAR, Weather.RAIN, Weather.STORM, Weather.FOG, Weather.WIND, Weather.SNOW]
 const DAYS_IN_MONTH := [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
 
 const CONTROL_ROW_TOP_Y := 652.0
@@ -497,7 +497,6 @@ func _draw() -> void:
     _draw_game_hud()
     _draw_button(BTN_DEV, "DEV", dev_open, 12)
     _draw_button(BTN_MENU, "MENU", menu_open, 12)
-
     _draw_map_tiles()
     _draw_lighting()
     _draw_light_glows()
@@ -511,15 +510,18 @@ func _draw() -> void:
         _draw_menu()
 
 func _draw_game_hud() -> void:
+    var outside: bool = not _player_is_indoor()
     draw_string(font, Vector2(12, 20), "TICK SURVIVAL LAB", HORIZONTAL_ALIGNMENT_LEFT, -1, 15, Color.WHITE)
-    draw_string(font, Vector2(12, 43), "%s  HP %d  FAT %d%%  CARRY %.1f/%.1f" % [player.display_name, int(round(player.health)), player.fatigue_percent(), player.carry_weight, player.carry_capacity], HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color("dce7df"))
-    draw_string(font, Vector2(12, 64), "%s  %s  %s" % [_format_time(), _format_date(), str(weather_state.get("kind", Weather.CLEAR)).to_upper()], HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color("f2d27a"))
-    var outside: float = _outside_temp_f()
+    draw_string(font, Vector2(12, 43), "%s  HP %d  STAMINA %d%%  CARRY %.1f/%.1f" % [player.display_name, int(round(player.health)), player.stamina_percent(), player.carry_weight, player.carry_capacity], HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color("dce7df"))
+    var world_line: String = "%s  %s" % [_format_time(), _format_date()]
+    if outside:
+        world_line += "  %s" % str(weather_state.get("kind", Weather.CLEAR)).to_upper()
+    draw_string(font, Vector2(12, 64), world_line, HORIZONTAL_ALIGNMENT_LEFT, -1, 11, Color("f2d27a"))
     var env_text: String
-    if _player_is_indoor():
-        env_text = "INDOOR  %.0f°F   Outside %.0f°F" % [_current_temp_f(), outside]
+    if outside:
+        env_text = "OUTDOOR  %.0f°F   Wind %.0f mph" % [_current_temp_f(), Weather.wind_mph(weather_state)]
     else:
-        env_text = "OUTDOOR  %.0f°F   Wind %.0f mph" % [outside, Weather.wind_mph(weather_state)]
+        env_text = "INDOOR  %.0f°F" % _current_temp_f()
     draw_string(font, Vector2(12, 85), env_text, HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Color("b7c8c2"))
     draw_string(font, Vector2(12, 106), "Looking at: %s" % _look_at_label(), HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Color("c8d5cf"))
     draw_string(font, Vector2(12, 124), "%s v%d" % [MapGen.display_name(environment_id), variant], HORIZONTAL_ALIGNMENT_LEFT, -1, 9, Color("7f918b"))
@@ -617,6 +619,7 @@ func _screen_to_cell(pos: Vector2) -> Vector2i:
 func _draw_weather_vfx() -> void:
     var board := Rect2(BOARD_X, TOP, float(MapGen.BOARD_W) * TILE, float(MapGen.BOARD_H) * TILE)
     var rain: float = Weather.precipitation(weather_state)
+    var snow: float = Weather.snowfall(weather_state)
     var fog_amount: float = Weather.fog_density(weather_state)
     var wind: float = Weather.wind_strength(weather_state)
     var direction: Vector2 = Weather.wind_direction(weather_state)
@@ -628,7 +631,7 @@ func _draw_weather_vfx() -> void:
                 if not _weather_cell_allowed(cell):
                     continue
                 var drift: float = 0.5 + 0.5 * sin(weather_vfx_time * 0.7 + float(x) * 0.43 + float(y) * 0.71)
-                draw_rect(_cell_rect(cell), Color(0.72, 0.78, 0.77, fog_amount * (0.035 + drift * 0.055)))
+                draw_rect(_cell_rect(cell), Color(0.72, 0.78, 0.77, fog_amount * (0.055 + drift * 0.09)))
 
     if rain > 0.02:
         var count: int = 34 + int(rain * 62.0)
@@ -642,6 +645,20 @@ func _draw_weather_vfx() -> void:
                 continue
             var streak := Vector2(direction.x * (9.0 + rain * 5.0), 12.0 + rain * 11.0)
             draw_line(start, start + streak, Color(0.72, 0.84, 0.90, 0.26 + rain * 0.28), 1.25)
+
+    if snow > 0.02:
+        var flake_count: int = 38 + int(snow * 70.0)
+        for i in range(flake_count):
+            var seed_x: float = fmod(float(i * 67), board.size.x)
+            var fall_speed: float = 34.0 + float(i % 9) * 4.0 + snow * 24.0
+            var y: float = fmod(float(i * 41) + weather_vfx_time * fall_speed, board.size.y + 20.0) - 10.0
+            var sway: float = sin(weather_vfx_time * (0.9 + float(i % 5) * 0.08) + float(i) * 1.7) * (7.0 + snow * 5.0)
+            var x: float = fmod(seed_x + weather_vfx_time * direction.x * 28.0 + sway, board.size.x)
+            var p := board.position + Vector2(x, y)
+            if not _weather_cell_allowed(_screen_to_cell(p)):
+                continue
+            var radius: float = 1.2 + float(i % 3) * 0.45
+            draw_circle(p, radius, Color(0.93, 0.96, 1.0, 0.55 + snow * 0.30))
 
     if wind > 0.28:
         for i in range(10):
