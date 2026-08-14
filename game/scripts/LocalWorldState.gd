@@ -5,12 +5,16 @@ var walls: Dictionary = {}
 var obstacles: Dictionary = {}
 var glass: Dictionary = {}
 var doors: Dictionary = {}
+var width := TacticalMapGenerator.BOARD_W
+var height := TacticalMapGenerator.BOARD_H
 
 func load_from_spec(spec: Dictionary) -> void:
     walls.clear()
     obstacles.clear()
     glass.clear()
     doors.clear()
+    width = int(spec.get("width", TacticalMapGenerator.BOARD_W))
+    height = int(spec.get("height", TacticalMapGenerator.BOARD_H))
     for value in spec.get("walls", []):
         walls[value] = true
     for value in spec.get("obstacles", []):
@@ -22,7 +26,7 @@ func load_from_spec(spec: Dictionary) -> void:
         doors[entry[0]] = bool(entry[1])
 
 func is_inside(cell: Vector2i) -> bool:
-    return cell.x >= 1 and cell.y >= 1 and cell.x < TacticalMapGenerator.BOARD_W - 1 and cell.y < TacticalMapGenerator.BOARD_H - 1
+    return cell.x >= 1 and cell.y >= 1 and cell.x < width - 1 and cell.y < height - 1
 
 func is_door(cell: Vector2i) -> bool:
     return doors.has(cell)
