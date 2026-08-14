@@ -29,7 +29,7 @@ The extraction intentionally does **not** bring over First Fire's camp, menus, e
 
 ## Current milestone
 
-**Bootstrap 0.0 — Map Foundation**
+**Milestone 0.1 — Authoritative Tick Movement**
 
 Current canonical source:
 
@@ -39,11 +39,16 @@ game/
   main.tscn
   scripts/
     TacticalMapGenerator.gd
+    LocalWorldState.gd
+    TickScheduler.gd
+    PlayerActor.gd
     MapPreview.gd
-    ci/MapSmoke.gd
+    ci/
+      MapSmoke.gd
+      TickSmoke.gd
 ```
 
-`MapPreview.gd` is a disposable development harness. `TacticalMapGenerator.gd` is the durable seed.
+`MapPreview.gd` remains a development presentation/input harness and owns no simulation timing rules. `TacticalMapGenerator.gd` owns authored physical map specifications only. `LocalWorldState.gd` owns mutable local physical state such as open/closed doors. `TickScheduler.gd` owns authoritative world time. `PlayerActor.gd` owns player action timing inputs/modifiers.
 
 ## Map reality
 
@@ -80,6 +85,15 @@ This format is the starting physical language for the new game. Expand it rather
 One player character survives in a persistent hostile world.
 
 The simulation is **tick-driven**. Actions have explicit time costs, and all active actors/world processes advance according to the same authoritative world clock. The eventual control feel may be responsive, but simulation time is discrete and inspectable.
+
+Current implemented tick semantics:
+
+- authoritative world time advances only through `TickScheduler.commit_action()`;
+- movement, turning, and door interaction have explicit costs;
+- blocked movement and presentation-only mode changes cost zero ticks;
+- player action costs are centralized in `PlayerActor.gd`;
+- encumbrance and fatigue ratios can already modify action costs without those larger systems existing yet;
+- rendering/input does not advance simulation time by `_process(delta)`.
 
 Important intended properties:
 
@@ -135,11 +149,15 @@ Preferred dependency direction:
 
 Rules should have one durable owner. UI must not own simulation state. The map generator must not become a dumping ground for combat, inventory, AI, or save logic.
 
+Current permanent seams:
+
+- `TacticalMapGenerator.gd` — authored initial physical map facts;
+- `LocalWorldState.gd` — mutable runtime physical facts;
+- `TickScheduler.gd` — authoritative tick clock/action ledger;
+- `PlayerActor.gd` — player location/facing/movement mode and action-cost calculations.
+
 Likely future module seams should be created only when their behavior actually exists, for example:
 
-- world/tile state owner;
-- tick scheduler;
-- player actor rules;
 - infected actor rules;
 - vision/LOS;
 - sound propagation;
@@ -151,7 +169,17 @@ Do not prebuild empty architecture for imagined features.
 
 ## Platform
 
-Platform target is intentionally not locked yet. Do not assume First Fire's phone-first constraints automatically carry over. Keep simulation/input separable so desktop controls can be developed without burying them inside world rules.
+Platform target is intentionally not locked yet. Keyboard and pointer/touch controls are developed together while simulation/input remain separable.
+
+Current developer controls:
+
+- WASD/arrows: turn toward direction first, then move if already facing it;
+- Tab: toggle walk/run mode without advancing time;
+- E/Space/Enter: toggle the door directly ahead if present;
+- R: reroll/reset the current development map;
+- click/tap around the player: directional turn/move;
+- click/tap the player: interact with the facing door;
+- click/tap the three HUD regions: mode / interact / reroll.
 
 ## Source-of-truth order
 
@@ -164,4 +192,4 @@ Platform target is intentionally not locked yet. Do not assume First Fire's phon
 
 ## Continuous deployment
 
-`.github/workflows/pages.yml` is the permanent build/deploy gate. It validates the canonical scaffold, imports/parses with Godot 4.7.1, runs deterministic map validation, starts the real scene headlessly, exports Web, enables/configures GitHub Pages, uploads the artifact, and deploys it.
+`.github/workflows/pages.yml` is the permanent build/deploy gate. It validates the canonical scaffold, imports/parses with Godot 4.7.1, runs deterministic map validation and scheduler/world smoke tests, starts the real scene headlessly, exports Web, enables/configures GitHub Pages, uploads the artifact, and deploys it.
