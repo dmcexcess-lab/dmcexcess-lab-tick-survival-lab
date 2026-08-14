@@ -1,5 +1,4 @@
 extends Node
-class_name SafariInputGuard
 
 # Mobile Safari can synthesize a mouse click around the same physical touch.
 # MapPreview already suppresses post-touch mouse events, but the first synthetic
