@@ -1,5 +1,11 @@
 # Changelog
 
+## Directional Survivor Sprite — 2026-08-14
+
+- Activated the existing four authored survivor atlas facings instead of forcing one upright pose for every direction.
+- South now shows the survivor's front, north shows the survivor's back, and east/west use their matching side profiles.
+- Sprite facing reads directly from the same authoritative `player.facing` already used by vision, flashlight, interaction, and movement; no duplicate visual-facing state was added.
+
 ## Tick-Driven Calendar / Day-Night Cycle — 2026-08-14
 
 - Added `WorldCalendar.gd` as the durable tick-to-calendar owner.
