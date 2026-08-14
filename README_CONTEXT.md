@@ -85,6 +85,8 @@ The `DEV` overlay contains tick/debug diagnostics plus manual world test control
 
 The current clock harness uses 600 world ticks per displayed in-game minute as a provisional presentation mapping. This is not yet a final global calendar-speed design promise.
 
+Clock design direction: keep the authoritative action tick as a fine physical-opportunity unit (roughly second-scale for action intuition), but allow calendar/day progression to use a separate fixed compression factor. Do not force one action tick to equal one displayed game second; the final calendar multiplier should be tuned once infected timing and body needs are playable.
+
 ## Visual/perception semantics
 
 - Tactical ground/wall/door/window/prop/barrel/survivor visuals come from the same-owner First Fire atlas subset.

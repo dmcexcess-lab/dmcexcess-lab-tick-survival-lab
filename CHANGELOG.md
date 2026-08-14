@@ -1,5 +1,12 @@
 # Changelog
 
+## Mobile Map Zoom / Clock Direction — 2026-08-14
+
+- Increased tactical tile presentation from 28px to 31px for better mobile readability.
+- Added an 18×16 player-following presentation window over the unchanged 20×18 physical map; the camera crops the outer ring but shifts near edges so exits and edge tiles remain reachable.
+- Updated map tapping, weather particles, fog, lighting, props and light glows to use the cropped camera coordinates without changing simulation/world coordinates.
+- Kept the current calendar-speed constant provisional; documented that action ticks and displayed calendar progression should be separate concepts so combat timing can stay second-scale while days remain playable.
+
 ## Snow / Fog / Survivor HUD Refinement — 2026-08-14
 
 - Added `snow` as a fixed weather profile with its own snowfall intensity, cold temperature offset, visibility/light effects, wind, and silent sound-masking hook.

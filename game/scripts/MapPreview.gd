@@ -10,8 +10,10 @@ const Lighting = preload("res://scripts/TacticalLighting.gd")
 const Perception = preload("res://scripts/TacticalPerception.gd")
 const Weather = preload("res://scripts/TacticalWeather.gd")
 
-const TILE := 28.0
-const BOARD_X := 40.0
+const TILE := 31.0
+const VISIBLE_COLS := 18
+const VISIBLE_ROWS := 16
+const BOARD_X := 41.0
 const TOP := 132.0
 const CONTROL_TOP := 648.0
 const VIEW_W := 640.0
@@ -480,7 +482,7 @@ func _handle_pointer(pos: Vector2) -> void:
         _step_back(); return
     if BTN_CROUCH.has_point(pos):
         _toggle_crouch(); return
-    var board_rect := Rect2(BOARD_X, TOP, float(MapGen.BOARD_W) * TILE, float(MapGen.BOARD_H) * TILE)
+    var board_rect: Rect2 = _visible_board_rect()
     if not board_rect.has_point(pos):
         return
     var center: Vector2 = _cell_center(player.cell)
@@ -543,29 +545,38 @@ func _draw_dev_panel() -> void:
 
 func _draw_map_tiles() -> void:
     var theme: String = MapGen.theme_name(environment_id)
-    for y in range(MapGen.BOARD_H):
-        for x in range(MapGen.BOARD_W):
+    var origin: Vector2i = _view_origin()
+    for y in range(origin.y, origin.y + VISIBLE_ROWS):
+        for x in range(origin.x, origin.x + VISIBLE_COLS):
             var p := Vector2i(x, y)
             Tiles.draw_ground(self, _cell_rect(p), MapGen.ground_at(spec, p))
     for p_value in spec.get("walls", []):
-        Tiles.draw_wall(self, _cell_rect(p_value), theme)
+        if _cell_on_screen(p_value):
+            Tiles.draw_wall(self, _cell_rect(p_value), theme)
     for door_value in world.doors.keys():
         var p: Vector2i = door_value
-        Tiles.draw_door(self, _cell_rect(p), world.is_door_open(p))
+        if _cell_on_screen(p):
+            Tiles.draw_door(self, _cell_rect(p), world.is_door_open(p))
     for p_value in spec.get("glass", []):
-        Tiles.draw_window(self, _cell_rect(p_value))
+        if _cell_on_screen(p_value):
+            Tiles.draw_window(self, _cell_rect(p_value))
     for entry_value in spec.get("props", []):
         var entry: Array = entry_value
-        Tiles.draw_prop(self, _cell_rect(entry[0]), str(entry[1]))
+        if _cell_on_screen(entry[0]):
+            Tiles.draw_prop(self, _cell_rect(entry[0]), str(entry[1]))
     for p_value in spec.get("barrels", []):
-        Tiles.draw_barrel(self, _cell_rect(p_value))
+        if _cell_on_screen(p_value):
+            Tiles.draw_barrel(self, _cell_rect(p_value))
     for exit_value in spec.get("exit_cells", []):
-        draw_rect(_cell_rect(exit_value).grow(-3), Color("55d56e"), false, 2.0)
+        if _cell_on_screen(exit_value):
+            draw_rect(_cell_rect(exit_value).grow(-3), Color("55d56e"), false, 2.0)
+    draw_rect(_visible_board_rect(), Color("6c7772"), false, 1.0)
 
 func _draw_lighting() -> void:
     var dark_tint: Color = Lighting.ambient_tint(MapGen.theme_name(environment_id), scene_time)
-    for y in range(MapGen.BOARD_H):
-        for x in range(MapGen.BOARD_W):
+    var origin: Vector2i = _view_origin()
+    for y in range(origin.y, origin.y + VISIBLE_ROWS):
+        for x in range(origin.x, origin.x + VISIBLE_COLS):
             var cell := Vector2i(x, y)
             var level: float = float(light_levels.get(cell, 0.0))
             var darkness: float = Lighting.darkness_alpha(level)
@@ -583,7 +594,7 @@ func _draw_light_glows() -> void:
         if not Lighting.source_active(source, power_on):
             continue
         var p: Vector2i = source.get("pos", Vector2i(-99, -99))
-        if p.x < 0:
+        if p.x < 0 or not _cell_on_screen(p):
             continue
         var c: Vector2 = _cell_center(p)
         var source_color := Color(str(source.get("color", "ffffff")))
@@ -592,12 +603,15 @@ func _draw_light_glows() -> void:
         draw_circle(c, 3.0, Color(source_color.r, source_color.g, source_color.b, 0.65 * strength))
 
 func _draw_player() -> void:
+    if not _cell_on_screen(player.cell):
+        return
     Tiles.draw_player(self, _cell_rect(player.cell).grow(-1), player.facing)
     draw_rect(_cell_rect(player.cell).grow(-2), Color("65cfff"), false, 1.5)
 
 func _draw_fog() -> void:
-    for y in range(MapGen.BOARD_H):
-        for x in range(MapGen.BOARD_W):
+    var origin: Vector2i = _view_origin()
+    for y in range(origin.y, origin.y + VISIBLE_ROWS):
+        for x in range(origin.x, origin.x + VISIBLE_COLS):
             var p := Vector2i(x, y)
             if visible_cells.has(p):
                 continue
@@ -614,10 +628,11 @@ func _weather_cell_allowed(cell: Vector2i) -> bool:
     return true
 
 func _screen_to_cell(pos: Vector2) -> Vector2i:
-    return Vector2i(int(floor((pos.x - BOARD_X) / TILE)), int(floor((pos.y - TOP) / TILE)))
+    var origin: Vector2i = _view_origin()
+    return origin + Vector2i(int(floor((pos.x - BOARD_X) / TILE)), int(floor((pos.y - TOP) / TILE)))
 
 func _draw_weather_vfx() -> void:
-    var board := Rect2(BOARD_X, TOP, float(MapGen.BOARD_W) * TILE, float(MapGen.BOARD_H) * TILE)
+    var board: Rect2 = _visible_board_rect()
     var rain: float = Weather.precipitation(weather_state)
     var snow: float = Weather.snowfall(weather_state)
     var fog_amount: float = Weather.fog_density(weather_state)
@@ -625,8 +640,9 @@ func _draw_weather_vfx() -> void:
     var direction: Vector2 = Weather.wind_direction(weather_state)
 
     if fog_amount > 0.05:
-        for y in range(MapGen.BOARD_H):
-            for x in range(MapGen.BOARD_W):
+        var origin: Vector2i = _view_origin()
+        for y in range(origin.y, origin.y + VISIBLE_ROWS):
+            for x in range(origin.x, origin.x + VISIBLE_COLS):
                 var cell := Vector2i(x, y)
                 if not _weather_cell_allowed(cell):
                     continue
@@ -672,8 +688,9 @@ func _draw_weather_vfx() -> void:
     if str(weather_state.get("kind", Weather.CLEAR)) == Weather.STORM:
         var pulse: float = maxf(0.0, sin(weather_vfx_time * 1.9 + sin(weather_vfx_time * 0.37) * 3.0) - 0.965) * 5.0
         if pulse > 0.0:
-            for y in range(MapGen.BOARD_H):
-                for x in range(MapGen.BOARD_W):
+            var origin: Vector2i = _view_origin()
+            for y in range(origin.y, origin.y + VISIBLE_ROWS):
+                for x in range(origin.x, origin.x + VISIBLE_COLS):
                     var cell := Vector2i(x, y)
                     if _weather_cell_allowed(cell):
                         draw_rect(_cell_rect(cell), Color(0.78, 0.84, 0.92, minf(0.16, pulse * 0.12)))
@@ -713,8 +730,24 @@ func _facing_name(dir: Vector2i) -> String:
     if dir == Vector2i.LEFT: return "W"
     return "?"
 
+func _view_origin() -> Vector2i:
+    var max_x: int = maxi(0, MapGen.BOARD_W - VISIBLE_COLS)
+    var max_y: int = maxi(0, MapGen.BOARD_H - VISIBLE_ROWS)
+    var x: int = clampi(player.cell.x - VISIBLE_COLS / 2, 0, max_x)
+    var y: int = clampi(player.cell.y - VISIBLE_ROWS / 2, 0, max_y)
+    return Vector2i(x, y)
+
+func _cell_on_screen(p: Vector2i) -> bool:
+    var origin: Vector2i = _view_origin()
+    return p.x >= origin.x and p.y >= origin.y and p.x < origin.x + VISIBLE_COLS and p.y < origin.y + VISIBLE_ROWS
+
+func _visible_board_rect() -> Rect2:
+    return Rect2(BOARD_X, TOP, float(VISIBLE_COLS) * TILE, float(VISIBLE_ROWS) * TILE)
+
 func _cell_rect(p: Vector2i) -> Rect2:
-    return Rect2(BOARD_X + float(p.x) * TILE, TOP + float(p.y) * TILE, TILE, TILE)
+    var origin: Vector2i = _view_origin()
+    return Rect2(BOARD_X + float(p.x - origin.x) * TILE, TOP + float(p.y - origin.y) * TILE, TILE, TILE)
 
 func _cell_center(p: Vector2i) -> Vector2:
-    return Vector2(BOARD_X + (float(p.x) + 0.5) * TILE, TOP + (float(p.y) + 0.5) * TILE)
+    var origin: Vector2i = _view_origin()
+    return Vector2(BOARD_X + (float(p.x - origin.x) + 0.5) * TILE, TOP + (float(p.y - origin.y) + 0.5) * TILE)
