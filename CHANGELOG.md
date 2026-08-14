@@ -1,5 +1,17 @@
 # Changelog
 
+## Mobile Controls / Upright Player Pass — 2026-08-13
+
+- Kept the tactical survivor paper-doll visually upright while facing continues to drive the vision cone, flashlight direction, interaction direction, and action logic.
+- Added a small facing indicator so direction remains readable without rotating the body sprite.
+- Expanded the logical Web/mobile viewport to 640×844 and centered a slightly smaller tactical board so a dedicated control strip fits cleanly below it.
+- Restored FF-style touch controls with large `TURN L` / `TURN R` buttons and smaller `FORWARD`, `BACK`, and `CROUCH` buttons.
+- Added forward/back movement that preserves facing; backing up no longer turns the survivor or perception cone.
+- Added a timed crouch stance to `PlayerActor.gd`; crouched movement is slower and running is disabled while crouched.
+- Added a real pause menu accessible by `MENU` or Escape. Opening it pauses the Godot tree; it can resume or exit to Google.
+- Web exit uses same-tab browser navigation for Safari/mobile reliability; desktop falls back to `OS.shell_open`.
+- Preserved map tapping and all existing keyboard/developer controls alongside the new touch layout.
+
 ## Milestone 0.3A — Visual Perception Restoration — 2026-08-13
 
 - Restored the reusable First Fire tactical atlas presentation into Tick as a clean same-owner asset subset covering ground, walls, doors, windows, props, barrels, and a four-direction survivor sprite.

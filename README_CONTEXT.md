@@ -20,36 +20,14 @@ Durable design references: `DESIGN.md`, `ROADMAP.md`, and `FIRST_FIRE_REUSE.md`.
 
 **Milestone 0.2 — Action Execution Model is complete. Milestone 0.3A — Visual Perception is complete. Milestone 0.3B — Spatial Sound is next.**
 
-Canonical source now includes:
-
-```text
-game/
-  assets/
-    tactical_atlas.svg
-  scripts/
-    TacticalMapGenerator.gd
-    LocalWorldState.gd
-    TickScheduler.gd
-    PlayerActor.gd
-    TimingDummy.gd
-    TacticalLighting.gd
-    TacticalSound.gd
-    TacticalTiles.gd
-    TacticalPerception.gd
-    MapPreview.gd
-    ci/
-      MapSmoke.gd
-      TickSmoke.gd
-      EnvironmentSmoke.gd
-      PerceptionSmoke.gd
-```
+Canonical source includes the tactical map/world/scheduler/player/timing-dummy modules, reused lighting/sound helpers, restored tactical atlas + `TacticalTiles.gd`, `TacticalPerception.gd`, `MapPreview.gd`, and deterministic map/tick/environment/perception smoke tests.
 
 Ownership:
 
 - `TacticalMapGenerator.gd` — authored initial physical map facts.
 - `LocalWorldState.gd` — mutable local physical facts such as door state/collision.
 - `TickScheduler.gd` — authoritative world tick, active action execution, interruption state, actor ordering, and player-ready state.
-- `PlayerActor.gd` — current player location/facing/movement mode and timing modifiers.
+- `PlayerActor.gd` — current player location/facing/movement/stance state and timing modifiers.
 - `TimingDummy.gd` — tiny autonomous scheduled actor used only for scheduler proof/tests and developer diagnostics; not zombie AI.
 - `TacticalLighting.gd` — dependency-free lighting math adapted from First Fire.
 - `TacticalSound.gd` — dependency-free sound/localization helpers adapted from First Fire; real propagation still pending.
@@ -74,9 +52,8 @@ Implemented interruption policies: committed, resumable, canceled, and forced fa
 
 ## Implemented visual/perception semantics
 
-The First Fire tactical visual foundation is no longer deferred.
-
-- Ground, wall, door, window, prop, barrel, and directional survivor visuals come from a same-owner First Fire tactical atlas subset under `game/assets/tactical_atlas.svg`.
+- Ground, wall, door, window, prop, barrel, and survivor visuals come from a same-owner First Fire tactical atlas subset under `game/assets/tactical_atlas.svg`.
+- The survivor paper-doll stays visually upright; facing changes the perception cone/action direction rather than rotating the body sprite.
 - Existing map light markers feed real per-cell lighting.
 - Ambient level depends on day/night, theme, and indoor/outdoor state.
 - Powered sources switch off when power is unavailable.
@@ -89,7 +66,18 @@ The First Fire tactical visual foundation is no longer deferred.
 
 `PerceptionSmoke.gd` proves closed/open door occlusion, forward-vs-behind cone behavior, directional flashlight contribution, and persistent fog memory.
 
-Developer controls include WASD/arrows, Tab walk/run, E/Space/Enter door, R reroll, F flashlight, 4 day/night, 5 power, and 1/2/3 scheduler timing proofs.
+## Current controls / Web-mobile harness
+
+The logical viewport is 640×844 so the full tactical board and dedicated touch-control strip fit on mobile/Safari without relying on keyboard input.
+
+- Large `TURN L` and `TURN R` touch buttons rotate facing and consume turn ticks.
+- Smaller `FORWARD`, `BACK`, and `CROUCH` buttons provide FF-style mobile controls.
+- Forward/back movement preserves facing; backward movement does not rotate the perception cone.
+- Crouching is a real timed stance action and uses a slower crouched movement cost.
+- `MENU` / Escape opens the actual pause menu; the tree is paused while it is open.
+- The pause menu can resume or `EXIT TO GOOGLE`; Web uses same-tab browser navigation.
+- Map tapping remains available alongside the dedicated buttons.
+- Keyboard developer controls remain: WASD/arrows, Tab walk/run, E/Space/Enter door, C crouch, R reroll, F flashlight, 4 day/night, 5 power, and 1/2/3 scheduler proofs.
 
 ## Player/world separation
 
@@ -115,11 +103,11 @@ See `DESIGN.md`. Intended systems include persistent infected; spatial sound; da
 
 Before recreating a major tactical/world subsystem, inspect current First Fire for same-owner reusable work. Port coherent rules only after removing `Game`, encounter UI, camp, expedition, objective, and save-schema coupling.
 
-Already reused/adapted: tactical map schema, tactical atlas/tile rendering subset, lighting helpers, FOV/LOS/fog concepts, and sound/localization helpers.
+Already reused/adapted: tactical map schema, tactical atlas/tile rendering subset, lighting helpers, FOV/LOS/fog concepts, FF-style mobile tactical controls, and sound/localization helpers.
 
 ## Near-term scope
 
-Next is **0.3B Spatial Sound**: create tick-owned sound events, propagation/attenuation through physical cells, door/window/wall occlusion, and uncertain source localization. Then persistent infected can consume the same perception + sound model on the scheduler.
+Next remains **0.3B Spatial Sound**: create tick-owned sound events, propagation/attenuation through physical cells, door/window/wall occlusion, and uncertain source localization. Then persistent infected can consume the same perception + sound model on the scheduler.
 
 Preferred dependency direction:
 
