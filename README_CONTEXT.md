@@ -14,26 +14,28 @@ This is an original Godot 4 top-down zombie-apocalypse survival simulation. Proj
 
 First Fire is a same-owner source project. Reusable tactical/physical-world work may be adapted after inspection, but Tick must not inherit First Fire's camp/menu/expedition architecture.
 
-Durable design references: `DESIGN.md`, `ROADMAP.md`, and `FIRST_FIRE_REUSE.md`.
+Durable design references: `DESIGN.md`, `ROADMAP.md`, `WORLD_GENERATION.md`, and `FIRST_FIRE_REUSE.md`.
 
-## Current milestone
+## Current milestone / stage
 
-**Milestone 0.2 — Action Execution Model is complete. Milestone 0.3A — Visual Perception is complete. Milestone 0.3B — Weather Foundation is functionally present; 0.3C Spatial Sound Visualization is next after weather/UI play-test cleanup.**
+**Milestone 0.2 — Action Execution Model is complete. Milestone 0.3A — Visual Perception is complete. Milestone 0.3B — Weather Foundation is functionally present. The current pass is a world/navigation foundation completion audit before 0.3C Spatial Sound Visualization.**
 
-Canonical source includes map/world/scheduler/player/timing-dummy modules, tactical atlas/tiles, lighting, perception/fog, silent sound helpers, weather state/VFX, split dev/in-game HUDs, and deterministic map/tick/environment/perception smoke tests.
+Canonical source includes authored maps, deterministic 64×64 procedural regions, connected road hierarchy, follow-camera/zoom, world/scheduler/player/timing-dummy modules, tactical + clutter atlases, lighting, perception/fog, silent sound helpers, weather state/VFX, tick-driven calendar/day-night cycle, split dev/in-game HUDs, Safari touch suppression, and deterministic map/region/tick/calendar/environment/perception smoke tests.
 
 Ownership:
 
 - `TacticalMapGenerator.gd` — authored initial physical map facts.
+- `ProceduralRegionGenerator.gd` — deterministic 64×64 local-region biome, road, parcel, structure, clutter and initial-light generation using the shared physical map schema.
 - `LocalWorldState.gd` — mutable local physical facts such as door state/collision.
 - `TickScheduler.gd` — authoritative world tick, active action execution, interruption state, actor ordering, and player-ready state.
+- `WorldCalendar.gd` — tick-to-clock/date/daylight-phase mapping.
 - `PlayerActor.gd` — current player location/facing/movement/stance state, base survivor HUD fields, and timing modifiers.
 - `TimingDummy.gd` — autonomous scheduled actor used only for scheduler proof/tests and diagnostics; not zombie AI.
 - `TacticalLighting.gd` — dependency-free lighting math adapted from First Fire.
 - `TacticalSound.gd` — silent sound/localization helpers adapted from First Fire; propagation is pending.
 - `TacticalWeather.gd` — current weather profile, visibility/light/sound-mask hooks, temperature hook, indoor thermal buffer, and wind display helper. It does not yet simulate weather patterns.
-- `TacticalTiles.gd` — Tick-native renderer for the restored First Fire tactical atlas subset.
-- `TacticalPerception.gd` — LOS, facing cone, opaque geometry, light/weather integration, visible cells, and remembered fog state.
+- `TacticalTiles.gd` — Tick-native renderer for the restored First Fire tactical atlas plus Tick's clutter atlas.
+- `TacticalPerception.gd` — LOS, facing cone, opaque geometry, biome-aware ambient-light selection, light/weather integration, visible cells, and remembered fog state.
 - `MapPreview.gd` — development input/presentation harness only; it may present debug controls but must not become the permanent owner of simulation rules.
 
 ## Timing semantics
@@ -51,6 +53,14 @@ Implemented interruption policies: committed, resumable, canceled, and forced fa
 
 `TickSmoke.gd` proves concurrent actors, resumable reload progress, and committed-through-damage behavior.
 
+## Calendar/day-night semantics
+
+World time advances only from authoritative scheduler ticks through `WorldCalendar.gd`.
+
+Current tuning is **7,200 ticks per 24-hour day**: 5 ticks per displayed minute / 12 displayed seconds per tick. This is a gameplay compression ratio, not a claim that one physical action tick literally equals 12 real seconds. Calendar compression remains tunable independently of action costs.
+
+Daylight phases are tick-driven: night → dawn (05:30) → day (07:00) → dusk (18:30) → night (20:00). Pausing does not advance calendar time. Weather VFX may continue animating while paused because they remain presentation-only.
+
 ## Mobile/touch semantics
 
 The logical viewport is 640×844. The touch deck is a true three-row layout:
@@ -59,9 +69,10 @@ The logical viewport is 640×844. The touch deck is a true three-row layout:
 - right column: `FORWARD` → `TURN R` → `BACK`;
 - both turn controls share exactly the same Y position and height;
 - forward/back preserve facing;
-- crouch is a timed stance action.
+- crouch is a timed stance action;
+- plus/minus controls change presentation zoom only.
 
-**One physical touch must equal one action.** Mobile Safari may synthesize a mouse click after a touch; `MapPreview.gd` suppresses that synthetic click for a short window after handling `InputEventScreenTouch`. Do not remove this guard or reintroduce double-move / 180-degree-turn behavior.
+**One physical touch must equal one action.** Mobile Safari may synthesize a mouse click around a touch; `SafariInputGuard.gd` and the local suppression window prevent first-touch and follow-up double-actions. Do not remove these guards or reintroduce double-move / 180-degree-turn behavior.
 
 Map tapping remains available. `MENU`/Escape opens the actual pause menu and Web exit uses same-tab browser navigation.
 
@@ -69,40 +80,29 @@ Map tapping remains available. `MENU`/Escape opens the actual pause menu and Web
 
 Keep player-facing information separate from developer controls.
 
-The normal in-game HUD is read-only and currently shows:
-
-- survivor name;
-- health;
-- fatigue;
-- carry weight/capacity;
-- in-game time/date/current weather;
-- current local temperature;
-- indoor/outdoor status;
-- outdoor wind speed when outside;
-- `Looking at:` for the tile/object directly in front of the player.
+The normal in-game HUD is read-only and currently shows survivor name, health, stamina, carry weight/capacity, in-game time/date, outdoor weather when outside, current local temperature, indoor/outdoor status, outdoor wind speed, and `Looking at:` for the tile/object directly ahead.
 
 The `DEV` overlay contains tick/debug diagnostics plus manual world test controls. Current editable dev fields are HH:MM, MM/DD, and current weather. HH:MM and MM/DD use native Godot `LineEdit` controls so iOS/Safari can summon the keyboard. Developer controls do not cost world ticks.
 
-World time now advances only from authoritative scheduler ticks through `WorldCalendar.gd`. Current tuning is **7,200 ticks per 24-hour day** (5 ticks per displayed minute / 12 displayed seconds per tick). This is a gameplay compression ratio, not a claim that a physical action tick literally equals 12 real seconds. The ratio remains tunable independently of action costs.
-
-Daylight phases are tick-driven: night → dawn (05:30) → day (07:00) → dusk (18:30) → night (20:00). Pausing does not advance calendar time. Weather VFX may continue animating while paused because they remain presentation-only.
-
 ## Visual/perception semantics
 
-- Tactical ground/wall/door/window/prop/barrel/survivor visuals come from the same-owner First Fire atlas subset.
-- The survivor stays visually upright; facing is communicated by the vision cone.
+- Tactical ground/wall/door/window/legacy prop/barrel/survivor visuals come from the same-owner First Fire atlas subset.
+- Additional Tick clutter lives in `clutter_atlas.svg` and includes indoor furniture/fixtures plus outdoor vegetation/street/rural clutter.
+- The survivor has four authored facings: north shows the back, south the front, east/west side views. Sprite facing reads the same `player.facing` used by perception, flashlight, interaction and movement.
 - Existing map light markers feed per-cell lighting.
-- Ambient level depends on day/night, theme, indoor/outdoor state and weather light modifier.
+- Ambient light level for procedural regions now responds to the biome under each cell instead of treating the whole 64×64 region as an alley.
 - Powered sources switch off when power is unavailable.
 - Windows transmit sight and daylight.
 - Flashlight is directional.
-- Walls, closed doors, and opaque/tall props block LOS/light.
+- Walls, closed doors, and tall/opaque props block LOS/light.
+- Trees, bookshelves and cabinets are among the new tall clutter types that block vision; lower clutter does not automatically do so.
 - Player visibility requires facing cone + clear LOS + enough light.
 - Fog has unseen and remembered states.
+- LOS uses a sealed-corner rule so diagonal rays cannot squeeze between two touching opaque orthogonal cells.
 
-Weather VFX are presentation-only real-time animation and may continue while simulation is paused. Rain, fog, wind debris and storm flash must not mutate authoritative weather/world state.
+Weather VFX are presentation-only real-time animation and may continue while simulation is paused. Rain, snow, fog, wind debris and storm flash must not mutate authoritative weather/world state.
 
-Weather VFX should not visibly pass through interiors or wall tiles. Current presentation filters rain/debris by outdoor cell and renders fog/storm flashes per outdoor non-wall cell. Weather is drawn beneath fog-of-war so the mask does not reveal hidden room geometry.
+Weather VFX should not visibly pass through interiors or wall tiles. Current presentation filters precipitation/debris by outdoor cell and renders fog/storm effects per outdoor non-wall cell. Weather is drawn beneath fog-of-war so the mask does not reveal hidden room geometry.
 
 ## Sound presentation rule
 
@@ -122,19 +122,50 @@ On player death, the user can eventually either play a new survivor in the same 
 
 The imported First Fire map foundation remains an authored-layout catalog of 20×18 physical locations: Back Alley, Gas Station, Residential House, Apartment, Corner Store, Warehouse Yard, and Drainage Wash. Each can describe ground, indoor regions, walls, doors, windows/glass, obstacles, props, barrels, light markers, player spawn, and exits.
 
-Do not replace this with a second incompatible map language. Long-term hierarchy should compose it into:
+The large-map stress slice uses `ProceduralRegionGenerator.gd` to generate a deterministic 64×64 region using the same physical language. The current generator version is 2.
 
-**tile/object → building/location → local area/block → biome/district → large island world**
+Current road rules:
 
-The island mixes city, suburban, commercial/industrial, rural/farm, and woods/wilderness biomes. Destroyed/bombed bridges and failed crossings can show that the region once connected to a larger world.
+- biome centers are contiguous seeded fields;
+- each non-downtown biome connects toward the nearest main arterial axis;
+- developed areas get short local streets, rural gets service roads, woods gets dirt trails;
+- a three-tile arterial cross is carved last and connects all four region exits;
+- player spawn sits on the arterial crossing;
+- validation proves each exit is road-connected to spawn and no generated structure blocks road cells;
+- developed buildings require nearby road frontage and orient their door toward the nearest road;
+- developed roads receive sidewalk edges, rural roads dirt shoulders;
+- `road_class_cells` distinguishes arterial/secondary/local/trail;
+- `road_ports` establishes a future chunk-edge data shape but is not yet a neighbor-compatible macro road contract.
+
+Do not replace this with a second incompatible map language. Long-term hierarchy remains:
+
+**tile/object → building/location → local area/block → biome/district → region/chunk → large island world**
+
+The island mixes city/downtown, suburban/residential, commercial/industrial, rural/farm, and woods/wilderness. Destroyed/bombed bridges and failed crossings can show that the playable region once connected to a larger world.
+
+## Clutter / physical-object rule
+
+Visual variety must not blur physical semantics.
+
+A prop may be purely visual, may be included in `obstacles` to block movement, and may separately be treated as opaque by perception. These are distinct questions. Do not infer movement or sight blocking merely because an object has a sprite.
+
+Current added clutter vocabulary includes chairs, desks, toilet, sink, cabinet, bookshelf, TV, lamp, rug, laundry, trees, bushes, fences, mailbox, trash can, road sign, bench, hydrant, streetlight, planter, tire pile, cardboard, picnic table and firewood.
+
+## Current procedural limits / next world work
+
+The 64×64 generator currently proves deterministic biome fields, connected road hierarchy, frontage-aware structures, deterministic clutter, camera-local rendering, local lighting/vision and world navigation. It does **not** yet simulate coastline, water/rivers, elevation, neighbor-compatible chunk edge contracts, utility grids, true building-template libraries, loot economy, populations, outbreak state, or persistence deltas.
+
+Before simply making a larger map, the next world-generation-specific step should be **macro geography + chunk-edge contracts**: coastline/water/elevation plus shared road/trail/river/utility ports that neighboring chunks agree on.
 
 ## Long-term simulation direction
 
 See `DESIGN.md`. Intended systems include persistent infected; visualized spatial sound; deterministic weather; dangerous timing-driven combat; body-region wounds and amputation; hunger/thirst/fatigue; inventory/loot/equipment; use-based skills and learning media; destructible/free-build environments; farming/crafting; autonomous survivors and animals; emergent settlements; patrols and supply routes; vehicles; infrastructure reclamation; and eventual outbreak epicenter/spread/response plus occupation/family starts.
 
-## Near-term scope
+## Near-term scope recommendation
 
-After current weather/HUD mobile play-test cleanup, **0.3C Spatial Sound Visualization** should create tick-owned sound events, propagation/attenuation through physical cells, door/window/wall occlusion, weather masking, uncertain source localization, and yellow visual sound markers. Persistent infected can then consume the same perception + silent-sound model on the scheduler.
+This world/navigation foundation should be considered ready to leave once the current road/clutter/perception pass survives play-testing. The only world-scale work worth doing before actors is macro geography + cross-chunk contracts if we want to lock island topology first.
+
+Otherwise the next gameplay-system milestone remains **0.3C Spatial Sound Visualization**: tick-owned silent sound events, propagation/attenuation through physical cells, door/window/wall occlusion, weather masking, uncertain source localization, and yellow visual sound markers. Persistent infected can then consume the same perception + silent-sound model on the scheduler.
 
 Preferred dependency direction:
 
@@ -148,18 +179,10 @@ Rules get one durable owner. UI must not own simulation state. The map generator
 2. Current `main` repository state
 3. `README_SOPS.md`
 4. This file
-5. `DESIGN.md` / `ROADMAP.md` / `FIRST_FIRE_REUSE.md`
+5. `DESIGN.md` / `ROADMAP.md` / `WORLD_GENERATION.md` / `FIRST_FIRE_REUSE.md`
 6. Human `README.md`
 7. Conversation memory only as supporting context
 
 ## Continuous deployment
 
-`.github/workflows/pages.yml` is the permanent build/deploy gate. It validates canonical files, imports/parses with Godot 4.7.1, runs deterministic map/tick/environment/perception smoke tests, starts the real scene headlessly, exports Web, uploads the artifact, and deploys GitHub Pages.
-
-## Procedural region foundation
-
-The current large-map stress slice uses `ProceduralRegionGenerator.gd` to build a deterministic 64×64 local region. It is deliberately a region/chunk prototype, not the final island size. The generator assigns residential, commercial, downtown, woods, and rural zones from seeded spatial centers, lays arterial/secondary roads, then applies biome-specific parcel/structure rules. Existing physical map facts (ground, indoor rectangles, walls, doors, glass, obstacles, props, lights, exits) remain the shared schema.
-
-Scaling rule: world generation may cover large deterministic regions, but rendering, lighting, perception and eventually actor simulation must stay local/chunked around active areas. The final island should be composed from deterministic regions/chunks rather than represented as one permanently active mega-array.
-
-The Web harness currently defaults to a 64×64 procedural region and exposes player-controlled map zoom. Zoom changes presentation only; world coordinates, movement cost, LOS and simulation geometry do not change.
+`.github/workflows/pages.yml` is the permanent build/deploy gate. It validates canonical files, imports/parses with Godot 4.7.1, runs deterministic authored-map/region/tick/calendar/environment/perception smoke tests, starts the real scene headlessly, exports Web, uploads the artifact, and deploys GitHub Pages.
