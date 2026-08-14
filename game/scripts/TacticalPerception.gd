@@ -84,14 +84,15 @@ static func calculate_lighting(spec: Dictionary, world, environment_id: String, 
                 if contribution > strongest:
                     strongest = contribution
                     tint_hex = str(source.get("color", "ffffff"))
-            if time_of_day == "day" and indoors.has(cell):
+            var daylight_factor := 1.0 if time_of_day == "day" else (0.58 if time_of_day == "dawn" else (0.46 if time_of_day == "dusk" else 0.0))
+            if daylight_factor > 0.0 and indoors.has(cell):
                 for window_value in spec.get("glass", []):
                     var window_pos: Vector2i = window_value
                     if Vector2(window_pos - cell).length() > 5.5:
                         continue
                     if not line_clear(window_pos, cell, spec, world, opaque):
                         continue
-                    var daylight: float = Lighting.window_daylight_contribution(window_pos, cell) * weather_light
+                    var daylight: float = Lighting.window_daylight_contribution(window_pos, cell) * weather_light * daylight_factor
                     level = maxf(level, daylight)
                     if daylight > strongest:
                         strongest = daylight
