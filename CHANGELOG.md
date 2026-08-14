@@ -1,5 +1,13 @@
 # Changelog
 
+## Weather Selector / True Control Grid — 2026-08-14
+
+- Rebuilt the touch deck around shared row constants so `TURN L` and `TURN R` use the exact same middle-row Y coordinate and height.
+- Preserved the intentional empty upper-left slot, with `CROUCH` below `TURN L`; the right column remains `FORWARD` / `TURN R` / `BACK`.
+- Added an on-screen `WEATHER: <STATE>` touch control in the center column; developer key `6` remains available.
+- Strengthened presentation-only weather animation with denser moving rain, broader drifting fog, more windblown debris, and a silent visual storm-flash effect.
+- Weather VFX continue running from non-authoritative presentation time while the player is auto-paused or the pause menu is open; simulation weather state still does not advance while paused.
+
 ## Weather Foundation / Touch Layout Refinement — 2026-08-14
 
 - Added `TacticalWeather.gd` as the deterministic owner for current weather state and gameplay-facing weather modifiers; no weather-pattern forecasting or transitions are simulated yet.
