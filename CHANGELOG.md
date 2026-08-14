@@ -1,5 +1,14 @@
 # Changelog
 
+## Tick-Driven Calendar / Day-Night Cycle — 2026-08-14
+
+- Added `WorldCalendar.gd` as the durable tick-to-calendar owner.
+- Set initial play-test compression to 7,200 authoritative ticks per 24-hour day (5 ticks per game minute).
+- Movement, turning, doors, combat proofs, and every future timed action now naturally advance visible clock/date through the same scheduler tick count.
+- Added tick-driven night, dawn, day, and dusk phases; pausing does not advance the sun/calendar.
+- Added dawn/dusk ambient lighting and reduced window daylight during transition phases.
+- Added deterministic calendar smoke coverage for rate, phase boundaries, and date rollover.
+
 ## Procedural Region / Player Zoom / Safari First-Touch Fix — 2026-08-14
 
 - Added a deterministic 64×64 procedural region stress slice with residential, commercial, downtown, woods, and rural zoning.

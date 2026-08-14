@@ -83,9 +83,9 @@ The normal in-game HUD is read-only and currently shows:
 
 The `DEV` overlay contains tick/debug diagnostics plus manual world test controls. Current editable dev fields are HH:MM, MM/DD, and current weather. HH:MM and MM/DD use native Godot `LineEdit` controls so iOS/Safari can summon the keyboard. Developer controls do not cost world ticks.
 
-The current clock harness uses 600 world ticks per displayed in-game minute as a provisional presentation mapping. This is not yet a final global calendar-speed design promise.
+World time now advances only from authoritative scheduler ticks through `WorldCalendar.gd`. Current tuning is **7,200 ticks per 24-hour day** (5 ticks per displayed minute / 12 displayed seconds per tick). This is a gameplay compression ratio, not a claim that a physical action tick literally equals 12 real seconds. The ratio remains tunable independently of action costs.
 
-Clock design direction: keep the authoritative action tick as a fine physical-opportunity unit (roughly second-scale for action intuition), but allow calendar/day progression to use a separate fixed compression factor. Do not force one action tick to equal one displayed game second; the final calendar multiplier should be tuned once infected timing and body needs are playable.
+Daylight phases are tick-driven: night → dawn (05:30) → day (07:00) → dusk (18:30) → night (20:00). Pausing does not advance calendar time. Weather VFX may continue animating while paused because they remain presentation-only.
 
 ## Visual/perception semantics
 

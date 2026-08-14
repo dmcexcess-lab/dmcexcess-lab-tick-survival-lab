@@ -10,6 +10,7 @@ const Tiles = preload("res://scripts/TacticalTiles.gd")
 const Lighting = preload("res://scripts/TacticalLighting.gd")
 const Perception = preload("res://scripts/TacticalPerception.gd")
 const Weather = preload("res://scripts/TacticalWeather.gd")
+const Calendar = preload("res://scripts/WorldCalendar.gd")
 
 const ZOOM_PRESETS := [[28.0, 20, 17], [31.0, 18, 16], [35.0, 16, 14], [39.0, 14, 12]]
 var TILE := 35.0
@@ -21,9 +22,9 @@ const TOP := 132.0
 const CONTROL_TOP := 648.0
 const VIEW_W := 640.0
 const VIEW_H := 844.0
-const TICKS_PER_MINUTE := 600
+const TICKS_PER_MINUTE := Calendar.TICKS_PER_MINUTE
 const WEATHER_KINDS := [Weather.CLEAR, Weather.RAIN, Weather.STORM, Weather.FOG, Weather.WIND, Weather.SNOW]
-const DAYS_IN_MONTH := [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31]
+const DAYS_IN_MONTH := Calendar.DAYS_IN_MONTH
 
 const CONTROL_ROW_TOP_Y := 652.0
 const CONTROL_ROW_TURN_Y := 712.0
@@ -405,20 +406,13 @@ func _apply_dev_fields() -> void:
     _recalc_perception()
 
 func _current_total_minutes() -> int:
-    return clock_anchor_minutes + maxi(0, scheduler.world_tick - clock_anchor_tick) / TICKS_PER_MINUTE
+    return Calendar.total_minutes(clock_anchor_minutes, clock_anchor_tick, scheduler.world_tick)
 
 func _current_minute_of_day() -> int:
-    return posmod(_current_total_minutes(), 1440)
+    return Calendar.minute_of_day(clock_anchor_minutes, clock_anchor_tick, scheduler.world_tick)
 
 func _current_month_day() -> Vector2i:
-    var month: int = clock_anchor_month
-    var day: int = clock_anchor_day + _current_total_minutes() / 1440
-    while day > DAYS_IN_MONTH[month - 1]:
-        day -= DAYS_IN_MONTH[month - 1]
-        month += 1
-        if month > 12:
-            month = 1
-    return Vector2i(month, day)
+    return Calendar.month_day(clock_anchor_month, clock_anchor_day, clock_anchor_minutes, clock_anchor_tick, scheduler.world_tick)
 
 func _format_time() -> String:
     var minute: int = _current_minute_of_day()
@@ -433,8 +427,7 @@ func _format_date() -> String:
     return "%02d/%02d" % [md.x, md.y]
 
 func _sync_scene_time_from_clock() -> void:
-    var hour: int = _current_minute_of_day() / 60
-    scene_time = "day" if hour >= 7 and hour < 19 else "night"
+    scene_time = Calendar.phase(_current_minute_of_day())
 
 func _outside_temp_f() -> float:
     var md: Vector2i = _current_month_day()
@@ -562,7 +555,7 @@ func _draw_dev_panel() -> void:
     _draw_button(DEV_APPLY, "APPLY", false, 11)
     var location: String = "INDOOR" if _player_is_indoor() else "OUTDOOR"
     draw_string(font, Vector2(94, 356), "Tile: %s   Current %.0f°F   Outside %.0f°F   Wind %.0f mph" % [location, _current_temp_f(), _outside_temp_f(), Weather.wind_mph(weather_state)], HORIZONTAL_ALIGNMENT_LEFT, -1, 10, Color("c8d5cf"))
-    draw_string(font, Vector2(94, 378), "Tick %d | Ready %s | Cell %s | Face %s | Power %s | Flash %s" % [scheduler.world_tick, str(scheduler.player_ready).to_upper(), str(player.cell), _facing_name(player.facing), "ON" if power_on else "OFF", "ON" if flashlight_on else "OFF"], HORIZONTAL_ALIGNMENT_LEFT, -1, 9, Color("a9b9b3"))
+    draw_string(font, Vector2(94, 378), "Tick %d | %s | Day %dt | Ready %s | Cell %s | Face %s" % [scheduler.world_tick, scene_time.to_upper(), Calendar.TICKS_PER_DAY, str(scheduler.player_ready).to_upper(), str(player.cell), _facing_name(player.facing)], HORIZONTAL_ALIGNMENT_LEFT, -1, 9, Color("a9b9b3"))
     draw_string(font, Vector2(94, 399), "Last: %s +%d [%s] %s" % [last_action_label, last_action_cost, last_action_status.to_upper(), last_action_detail], HORIZONTAL_ALIGNMENT_LEFT, -1, 9, Color("a9b9b3"))
     draw_string(font, Vector2(94, 420), "Keyboard dev: 1/2/3 timing | 4 +12h | 5 power | 6 weather | F light", HORIZONTAL_ALIGNMENT_LEFT, -1, 8, Color("82958e"))
 
