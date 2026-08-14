@@ -30,6 +30,10 @@ const SOURCE_PRESETS := {
 static func ambient_level(theme: String, time_of_day: String, indoors: bool) -> float:
     if time_of_day == "day":
         return 0.48 if indoors else 0.88
+    if time_of_day == "dawn":
+        return 0.30 if indoors else 0.58
+    if time_of_day == "dusk":
+        return 0.25 if indoors else 0.48
     var profile: Dictionary = NIGHT_AMBIENT_BY_THEME.get(theme, NIGHT_AMBIENT_BY_THEME["alley"])
     var level: float = float(profile.get("level", 0.08))
     return level * 0.72 if indoors else level
@@ -37,6 +41,10 @@ static func ambient_level(theme: String, time_of_day: String, indoors: bool) -> 
 static func ambient_tint(theme: String, time_of_day: String) -> Color:
     if time_of_day == "day":
         return Color("20221f")
+    if time_of_day == "dawn":
+        return Color("3a302a")
+    if time_of_day == "dusk":
+        return Color("2b2028")
     var profile: Dictionary = NIGHT_AMBIENT_BY_THEME.get(theme, NIGHT_AMBIENT_BY_THEME["alley"])
     return Color(str(profile.get("tint", "081020")))
 
