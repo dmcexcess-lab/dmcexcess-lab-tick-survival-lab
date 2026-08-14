@@ -1,5 +1,10 @@
 # Changelog
 
+## Touch Control Layout Correction — 2026-08-14
+
+- Repositioned the FF-style mobile controls to match the intended layout: `FORWARD` above `TURN R`, `BACK` below `TURN R`, and `CROUCH` below `TURN L`.
+- Kept all existing touch semantics, timing, perception, pause-menu behavior, and Safari-oriented large hit targets unchanged.
+
 ## Mobile Controls / Upright Player Pass — 2026-08-13
 
 - Kept the tactical survivor paper-doll visually upright while facing continues to drive the vision cone, flashlight direction, interaction direction, and action logic.
