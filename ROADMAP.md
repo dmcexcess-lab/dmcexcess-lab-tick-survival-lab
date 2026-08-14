@@ -23,22 +23,32 @@ Implemented:
 - developer diagnostics and light/heavy/reload timing proofs;
 - deterministic CI proving concurrent actions, committed-through-damage behavior, and interrupted/resumed reloads.
 
-The current harness resolves execution synchronously rather than animating wall-clock time; the simulation semantics are authoritative and presentation must never change them.
+## Milestone 0.3 — Physical Perception Foundation — IN PROGRESS
 
-## Milestone 0.3 — Physical Perception Foundation — NEXT
+### 0.3A Visual perception — COMPLETE
 
-Goal: connect the already-reused First Fire environment work to real Tick world state.
-
-- runtime light-source state from existing map light markers;
+- First Fire tactical atlas presentation restored as Tick-native reusable assets/rendering;
+- ground/walls/doors/windows/props/barrels plus directional survivor sprite;
+- runtime light sources from authored map markers;
 - powered/unpowered environment lights;
-- indoor/outdoor ambient light and window daylight;
-- directional carried-light model;
-- opaque physical facts for walls/doors/props;
-- line of sight and four-direction facing cone;
+- indoor/outdoor ambient lighting;
+- window daylight;
+- directional carried-light/flashlight profile;
+- walls, closed doors and opaque props block LOS/light;
+- windows transmit sight/daylight;
+- four-direction facing cone;
 - darkness-limited recognition;
-- spatial sound event representation;
-- sound propagation, attenuation and occlusion;
-- uncertain sound-location information outside vision.
+- visible-cell state plus remembered-cell fog of war;
+- deterministic perception smoke coverage.
+
+### 0.3B Spatial sound — NEXT
+
+- real sound event records tied to world tick;
+- propagation and attenuation through physical cells;
+- door/window/wall occlusion costs;
+- uncertain source locations outside vision;
+- no UI-owned sound truth;
+- later infected hearing consumes the same event model.
 
 Already present as clean helpers: `TacticalLighting.gd` and `TacticalSound.gd`.
 

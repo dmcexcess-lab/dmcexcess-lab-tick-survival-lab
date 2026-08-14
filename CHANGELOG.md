@@ -1,5 +1,19 @@
 # Changelog
 
+## Milestone 0.3A — Visual Perception Restoration — 2026-08-13
+
+- Restored the reusable First Fire tactical atlas presentation into Tick as a clean same-owner asset subset covering ground, walls, doors, windows, props, barrels, and a four-direction survivor sprite.
+- Added `TacticalTiles.gd` as the Tick-native atlas renderer instead of continuing with programmer rectangles/text labels.
+- Added `TacticalPerception.gd` to own line-of-sight, facing cone, opaque-prop rules, light integration, visible cells, and remembered-cell fog state.
+- Wired existing authored light markers into actual per-cell lighting using the already-ported `TacticalLighting.gd` rules.
+- Added powered/unpowered environment lights, indoor/outdoor ambient light, window daylight, and a directional flashlight test profile.
+- Added real LOS occlusion: walls, closed doors, and tall/opaque obstacles block sight/light; windows transmit sight and daylight.
+- Added actual four-direction vision cone plus darkness-limited recognition.
+- Added two-state fog of war: unseen cells are nearly black; previously seen cells remain dimly remembered.
+- Added developer toggles: `F` flashlight, `4` day/night, `5` power, while preserving existing scheduler proof controls.
+- Added deterministic `PerceptionSmoke.gd` coverage for door occlusion, cone direction, directional flashlight lighting, and fog memory.
+- Updated CI, roadmap/context, and First Fire reuse audit to make the restored visual/perception layer part of canonical Tick rather than a deferred candidate.
+
 ## Milestone 0.2 — Action Execution Model — 2026-08-13
 
 - Replaced the immediate tick-jump prototype with an explicit player action execution state machine.

@@ -18,24 +18,30 @@ Durable design references: `DESIGN.md`, `ROADMAP.md`, and `FIRST_FIRE_REUSE.md`.
 
 ## Current milestone
 
-**Milestone 0.2 — Action Execution Model is implemented.**
+**Milestone 0.2 — Action Execution Model is complete. Milestone 0.3A — Visual Perception is complete. Milestone 0.3B — Spatial Sound is next.**
 
 Canonical source now includes:
 
 ```text
-game/scripts/
-  TacticalMapGenerator.gd
-  LocalWorldState.gd
-  TickScheduler.gd
-  PlayerActor.gd
-  TimingDummy.gd
-  TacticalLighting.gd
-  TacticalSound.gd
-  MapPreview.gd
-  ci/
-    MapSmoke.gd
-    TickSmoke.gd
-    EnvironmentSmoke.gd
+game/
+  assets/
+    tactical_atlas.svg
+  scripts/
+    TacticalMapGenerator.gd
+    LocalWorldState.gd
+    TickScheduler.gd
+    PlayerActor.gd
+    TimingDummy.gd
+    TacticalLighting.gd
+    TacticalSound.gd
+    TacticalTiles.gd
+    TacticalPerception.gd
+    MapPreview.gd
+    ci/
+      MapSmoke.gd
+      TickSmoke.gd
+      EnvironmentSmoke.gd
+      PerceptionSmoke.gd
 ```
 
 Ownership:
@@ -44,16 +50,16 @@ Ownership:
 - `LocalWorldState.gd` — mutable local physical facts such as door state/collision.
 - `TickScheduler.gd` — authoritative world tick, active action execution, interruption state, actor ordering, and player-ready state.
 - `PlayerActor.gd` — current player location/facing/movement mode and timing modifiers.
-- `TimingDummy.gd` — deliberately tiny autonomous scheduled actor used only for scheduler proof/tests and developer diagnostics; not zombie AI.
-- `TacticalLighting.gd` — dependency-free lighting helpers adapted from First Fire.
-- `TacticalSound.gd` — dependency-free sound/localization helpers adapted from First Fire.
+- `TimingDummy.gd` — tiny autonomous scheduled actor used only for scheduler proof/tests and developer diagnostics; not zombie AI.
+- `TacticalLighting.gd` — dependency-free lighting math adapted from First Fire.
+- `TacticalSound.gd` — dependency-free sound/localization helpers adapted from First Fire; real propagation still pending.
+- `TacticalTiles.gd` — Tick-native renderer for the restored First Fire tactical atlas subset.
+- `TacticalPerception.gd` — LOS, facing cone, opaque geometry, light integration, visible cells, and remembered fog state.
 - `MapPreview.gd` — development input/presentation harness only.
 
 ## Implemented timing semantics
 
 The control model is **real time with automatic pause**, represented synchronously in the current developer harness while authoritative outcomes remain discrete.
-
-Normal scheduler loop:
 
 1. `player_ready == true` while waiting for a player choice.
 2. A player action begins with explicit cost, start tick, interruption policy, optional phases, and payload.
@@ -62,23 +68,28 @@ Normal scheduler loop:
 5. The world advances to action completion unless interruption policy ends it early.
 6. The scheduler auto-returns to `player_ready == true` when the action completes, interrupts, cancels, or hard-fails.
 
-Implemented interruption policies:
+Implemented interruption policies: committed, resumable, canceled, and forced failure. Tie ordering is earliest `next_tick`, then lexical actor ID. Actors scheduled exactly on the player action end tick execute before the player becomes ready.
 
-- **committed** — ordinary damage is recorded but execution continues;
-- **resumable** — damage interrupts and preserves exact elapsed tick/phase state for later continuation;
-- **canceled** — damage interrupts and loses action progress;
-- **forced failure** — hard invalidation can terminate any action.
+`TickSmoke.gd` proves concurrent actors, resumable reload progress, and committed-through-damage behavior.
 
-Tie ordering for scheduled actors is deterministic: earliest `next_tick`, then lexical actor ID. Actors scheduled exactly on the player action end tick execute before the player becomes ready.
+## Implemented visual/perception semantics
 
-`TickSmoke.gd` proves:
+The First Fire tactical visual foundation is no longer deferred.
 
-- a 10-tick player action allows two actions from a dummy scheduled every 4 ticks;
-- a 3-tick action allows none;
-- a 12-tick three-phase reload interrupted at tick 5 preserves the second phase and resumes to completion;
-- a committed axe-style action continues through ordinary damage.
+- Ground, wall, door, window, prop, barrel, and directional survivor visuals come from a same-owner First Fire tactical atlas subset under `game/assets/tactical_atlas.svg`.
+- Existing map light markers feed real per-cell lighting.
+- Ambient level depends on day/night, theme, and indoor/outdoor state.
+- Powered sources switch off when power is unavailable.
+- Windows transmit sight and daylight.
+- A directional flashlight profile demonstrates carried cone lighting.
+- Walls, closed doors, and opaque/tall props block line of sight and light.
+- Player visibility requires facing cone + clear LOS + sufficient light at distance.
+- Fog has two states: unseen and remembered-but-not-currently-visible.
+- Turning, moving, doors, time, power, and flashlight state recalculate perception.
 
-The Web harness exposes keys `1`/`2`/`3` for light/heavy/reload timing demonstrations and displays current tick, player-ready state, action status, and timing-dummy activity.
+`PerceptionSmoke.gd` proves closed/open door occlusion, forward-vs-behind cone behavior, directional flashlight contribution, and persistent fog memory.
+
+Developer controls include WASD/arrows, Tab walk/run, E/Space/Enter door, R reroll, F flashlight, 4 day/night, 5 power, and 1/2/3 scheduler timing proofs.
 
 ## Player/world separation
 
@@ -98,17 +109,17 @@ The island mixes city, suburban, commercial/industrial, rural/farm, and woods/wi
 
 ## Long-term simulation direction
 
-See `DESIGN.md` for the complete design. Major intended systems include persistent infected; facing/LOS/darkness/spatial sound; dangerous timing-driven combat; hunger/thirst/fatigue/encumbrance/stress; body-region wounds, deep wounds, bleeding, sutures, fractures, splints, crutches, infection and amputation; persistent inventory/loot/equipment; use-based skills and physical learning media; destructible/free-build environments; farming/crafting/homesteading; autonomous survivors, dogs, cats and livestock; emergent settlements from free building + resources + assignable autonomous jobs; patrols/supply routes; vehicles; infrastructure reclamation; and eventual outbreak epicenter/spread/response plus occupation/family starts.
+See `DESIGN.md`. Intended systems include persistent infected; spatial sound; dangerous timing-driven combat; body-region wounds and amputation; hunger/thirst/fatigue; inventory/loot/equipment; use-based skills and learning media; destructible/free-build environments; farming/crafting; autonomous survivors and animals; emergent settlements; patrols and supply routes; vehicles; infrastructure reclamation; and eventual outbreak epicenter/spread/response plus occupation/family starts.
 
 ## First Fire reuse policy
 
 Before recreating a major tactical/world subsystem, inspect current First Fire for same-owner reusable work. Port coherent rules only after removing `Game`, encounter UI, camp, expedition, objective, and save-schema coupling.
 
-Already reused/adapted: tactical map schema, lighting helpers, and sound/localization helpers. Concepts worth adapting later include timing/load/fatigue from `FFTacticalTime.gd`, facing/LOS/noise/infected scheduling concepts from `FFCombat.gd`, and survivor/social concepts transformed into physical autonomous-world behavior.
+Already reused/adapted: tactical map schema, tactical atlas/tile rendering subset, lighting helpers, FOV/LOS/fog concepts, and sound/localization helpers.
 
 ## Near-term scope
 
-The next milestone is **0.3 Physical Perception Foundation**: connect existing light markers to runtime lighting, add opaque-state/LOS/facing, and create real spatial sound event propagation. Do not race ahead into full zombies, inventory, settlements, or island generation until perception is trustworthy.
+Next is **0.3B Spatial Sound**: create tick-owned sound events, propagation/attenuation through physical cells, door/window/wall occlusion, and uncertain source localization. Then persistent infected can consume the same perception + sound model on the scheduler.
 
 Preferred dependency direction:
 
@@ -128,4 +139,4 @@ Rules get one durable owner. UI must not own simulation state. The map generator
 
 ## Continuous deployment
 
-`.github/workflows/pages.yml` is the permanent build/deploy gate. It validates canonical files, imports/parses with Godot 4.7.1, runs deterministic map/tick/environment smoke tests, starts the real scene headlessly, exports Web, uploads the artifact, and deploys GitHub Pages.
+`.github/workflows/pages.yml` is the permanent build/deploy gate. It validates canonical files, imports/parses with Godot 4.7.1, runs deterministic map/tick/environment/perception smoke tests, starts the real scene headlessly, exports Web, uploads the artifact, and deploys GitHub Pages.

@@ -2,104 +2,52 @@
 
 Tick Survival Lab is a clean project, but First Fire is an original project by the same owner and contains tactical/world work worth adapting. The goal is **reuse without architectural contamination**.
 
-Audit source: current `dmcexcess-lab/first-fire` `main` inspected during the Tick Survival Lab 2026-08-13 design/roadmap pass.
+Audit source: current `dmcexcess-lab/first-fire` `main` inspected during Tick development.
 
 ## Reused now
 
 ### `FFTacticalEnvironments.gd` → `TacticalMapGenerator.gd`
 
-Already extracted during bootstrap:
-
-- seven authored physical location families;
-- fourteen variants;
-- ground and indoor regions;
-- walls;
-- doors;
-- windows/glass;
-- obstacles/props;
-- barrels;
-- light-source markers;
-- player spawn and exits;
-- structural validation concepts.
-
-Tick deliberately removed First Fire zone/encounter/objective/camp assumptions.
+Extracted physical place families, authored variants, ground/indoor regions, walls, doors, windows/glass, obstacles/props, barrels, light markers, player spawn/exits, and structural validation. First Fire zone/encounter/objective/camp assumptions were removed.
 
 ### `FFTacticalLighting.gd` → `TacticalLighting.gd`
 
-Ported in this pass as a clean dependency-free physical-lighting helper:
-
-- theme/day-night ambient levels and tints;
-- source presets;
-- powered/unpowered source checks;
-- radial falloff;
-- window daylight contribution;
-- directional/radial carried-light contribution from an externally supplied item profile;
-- darkness/visibility helpers;
-- visual flicker helpers.
-
-Not imported:
-
-- `FFData.gd` gear ownership;
-- First Fire inventory slots;
-- encounter UI/redraw ownership.
+Ported as a dependency-free lighting helper: theme/day-night ambient levels/tints, source presets, powered source checks, radial falloff, window daylight, directional/radial carried light, darkness/visibility helpers, and visual flicker. No `FFData`, inventory, encounter UI, or camp dependency.
 
 ### `FFTacticalSound.gd` → `TacticalSound.gd`
 
-Ported in this pass as a clean sound-interpretation helper:
+Ported surface footstep labels, localization accuracy, uncertain source estimates, display labels, and ambient profiles. Real Tick-owned emission/propagation/occlusion remains Milestone 0.3B.
 
-- surface footstep labels;
-- intensity-based zombie localization accuracy;
-- awareness/intensity/distance-based player localization accuracy;
-- bounded uncertain sound-source estimates;
-- compact display labels;
-- ambient sound profiles by theme/time/power.
+### `FFTacticalTiles.gd` + `tactical_atlas` → `TacticalTiles.gd` + Tick atlas subset
 
-Sound emission, propagation, occlusion, persistence and AI response are intentionally not faked yet; those need Tick-native world owners.
+The deferred visual work is now restored. Tick carries a same-owner tactical atlas subset containing the physical tiles needed by the current maps plus a four-direction survivor sprite. `TacticalTiles.gd` renders ground, theme walls, open/closed doors, windows, barrels, props, and the player sprite.
+
+The asset is intentionally a subset rather than importing unrelated First Fire UI art or unused game assets.
+
+### `FFCombat.gd` perception concepts → `TacticalPerception.gd`
+
+Ported the coherent physical-perception rules instead of copying the encounter runtime:
+
+- Bresenham-style LOS;
+- walls, opaque/tall obstacles, and closed doors block sight;
+- windows transmit sight/light;
+- four-direction facing cone;
+- lighting-gated distance recognition;
+- visible cell set;
+- remembered cell state for fog of war;
+- light recalculation after physical/facing state changes.
+
+Not imported from `FFCombat.gd`: encounter objectives, `Game` singleton coupling, camp/survivor roster logic, companion encounter control, combat UI, escape flow, or First Fire runtime persistence.
 
 ## Reuse as concepts, not copy-paste runtime
 
 ### `FFTacticalTime.gd`
 
-Good reusable concepts:
-
-- equipment/encumbrance affects movement and action time;
-- fatigue affects movement/turn/interaction/attack time;
-- injuries/condition affect movement time;
-- skill can reduce costs within bounded limits;
-- different infected can have different pace/attack schedules;
-- fatigue/load can create breathing noise.
-
-Do not transplant directly because Tick already owns timing in `PlayerActor.gd`/`TickScheduler.gd` and will move to a richer phased action model.
-
-### `FFCombat.gd`
-
-Good reusable concepts:
-
-- facing-aware movement and stealth;
-- physical doors/glass/barrels;
-- light recalculation before AI perception;
-- sound emission from footsteps, doors, glass, melee, firearms and explosions;
-- zombies scheduled independently during a player action;
-- zombies investigate heard locations and chase visible targets;
-- environmental destruction affects state;
-- escape/clearing the map need not be the objective.
-
-Do not transplant directly. `FFCombat.gd` mixes UI, encounter objectives, First Fire's `Game` singleton, survivor records, companion logic, combat rules and presentation. Tick needs those behaviors separated into scheduler/world/actor/perception owners.
+Useful concepts remain equipment load, fatigue, injury, skill effects on action time, varying infected pace, and breathing noise. Tick owns timing in `PlayerActor.gd`/`TickScheduler.gd`, so these should be adapted into Tick-native actor/body systems rather than transplanted.
 
 ### First Fire survivor/social systems
 
-Good long-term concepts:
-
-- autonomous survivors rather than pure player puppets;
-- personality/relationship-driven interactions;
-- stress, morale and social consequences;
-- survivors doing useful work while the player is elsewhere.
-
-Do not transplant the camp/menu layer. Tick's version must happen through physical autonomous actors in the persistent world. Jobs/orders should be goals that AI characters execute on their own schedule.
-
-## Candidate assets / presentation work
-
-First Fire also contains tactical tile/visual work such as `FFTacticalTiles.gd` and its tactical atlas. These are same-owner original assets and may be reusable, but they are **not imported in this pass** because Tick's current developer preview is still deliberately minimal and the next architectural priority is action/perception simulation. Revisit when the rendering layer is ready to adopt a durable asset pipeline.
+Keep the ambitions—autonomous survivors, personality/relationships, morale/stress, useful work while the player is elsewhere—but not the camp/menu layer. Tick's version must happen through physical autonomous world actors whose jobs are goals rather than puppet controls.
 
 ## Explicitly do not import
 
@@ -115,4 +63,4 @@ First Fire also contains tactical tile/visual work such as `FFTacticalTiles.gd` 
 
 ## Reuse rule going forward
 
-Before implementing a major tactical/world subsystem from scratch, inspect the current First Fire source for same-owner reusable work. Port only the smallest coherent rule set, remove First Fire-specific dependencies, give it a Tick-native owner, and add deterministic smoke coverage where practical.
+Before implementing a major tactical/world subsystem from scratch, inspect current First Fire source for same-owner reusable work. Port only the smallest coherent rule set, remove First Fire-specific dependencies, give it a Tick-native owner, and add deterministic smoke coverage where practical.
