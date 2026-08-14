@@ -1,5 +1,18 @@
 # Changelog
 
+## World / Navigation Foundation Audit — 2026-08-14
+
+- Reworked procedural road generation from an arbitrary full-region grid into a connected hierarchy: biome connectors, developed local streets, rural service roads, woodland trails, and a three-tile arterial network that reaches all four edge exits.
+- Moved the player spawn onto the arterial crossing and added deterministic road-network validation so every exit must be reachable from spawn and later geometry may not block road cells.
+- Added road classes (`arterial`, `secondary`, `local`, `trail`), local `road_ports`, developed sidewalks, rural dirt shoulders, road-frontage requirements for developed structures, and road-facing procedural building entrances.
+- Added generator version 2 metadata and strengthened region smoke coverage for deterministic roads, props, wall themes, clutter density, spawn/exit road membership, and four edge ports.
+- Added `clutter_atlas.svg` with 24 new indoor/outdoor sprites: chair, desk, toilet, sink, cabinet, bookshelf, TV, lamp, tree, bush, fence, mailbox, trash can, road sign, bench, hydrant, streetlight, rug, laundry, planter, tire pile, cardboard, picnic table, and firewood.
+- Expanded procedural residential, commercial, downtown, woods, and rural decoration using the new clutter while keeping visual props, movement blockers, and sight blockers as separate physical concepts.
+- Added per-building wall-theme metadata and more appropriate procedural interior light types for houses, stores, and downtown/industrial structures.
+- Made procedural ambient lighting biome-aware instead of treating the whole 64×64 region as one alley theme.
+- Added sealed-corner LOS handling so diagonal vision/light cannot squeeze between two touching opaque orthogonal cells; trees, bookshelves, and cabinets now participate in tall-object occlusion.
+- Added `WORLD_NAVIGATION_AUDIT.md` and refreshed `WORLD_GENERATION.md` / `README_CONTEXT.md` to define what is complete, what is optional before actor systems, and what should wait.
+
 ## Directional Survivor Sprite — 2026-08-14
 
 - Activated the existing four authored survivor atlas facings instead of forcing one upright pose for every direction.
