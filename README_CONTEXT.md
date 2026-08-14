@@ -10,189 +10,111 @@ GitHub repository: `dmcexcess-lab/dmcexcess-lab-tick-survival-lab`
 
 Web preview: `https://dmcexcess-lab.github.io/dmcexcess-lab-tick-survival-lab/`
 
-This is an original Godot 4 top-down zombie-apocalypse survival simulation. Project Zomboid is a systemic-scope reference only; do not copy its code, art, maps, UI, names, text or proprietary content.
+This is an original Godot 4 top-down zombie-apocalypse survival simulation. Project Zomboid is a systemic-scope reference only; do not copy its proprietary code, art, maps, UI, names, text, or content.
 
 First Fire is a same-owner source project. Reusable tactical/physical-world work may be adapted after inspection, but Tick must not inherit First Fire's camp/menu/expedition architecture.
 
-Durable design references now live in:
-
-- `DESIGN.md`
-- `ROADMAP.md`
-- `FIRST_FIRE_REUSE.md`
+Durable design references: `DESIGN.md`, `ROADMAP.md`, and `FIRST_FIRE_REUSE.md`.
 
 ## Current milestone
 
-**Milestone 0.1 — Authoritative Tick Movement** is implemented.
+**Milestone 0.2 — Action Execution Model is implemented.**
 
-Current canonical source includes:
+Canonical source now includes:
 
 ```text
-game/
-  project.godot
-  main.tscn
-  scripts/
-    TacticalMapGenerator.gd
-    LocalWorldState.gd
-    TickScheduler.gd
-    PlayerActor.gd
-    TacticalLighting.gd
-    TacticalSound.gd
-    MapPreview.gd
-    ci/
-      MapSmoke.gd
-      TickSmoke.gd
-      EnvironmentSmoke.gd
+game/scripts/
+  TacticalMapGenerator.gd
+  LocalWorldState.gd
+  TickScheduler.gd
+  PlayerActor.gd
+  TimingDummy.gd
+  TacticalLighting.gd
+  TacticalSound.gd
+  MapPreview.gd
+  ci/
+    MapSmoke.gd
+    TickSmoke.gd
+    EnvironmentSmoke.gd
 ```
 
 Ownership:
 
-- `TacticalMapGenerator.gd` — authored initial physical map facts;
-- `LocalWorldState.gd` — mutable local physical facts such as door state/collision;
-- `TickScheduler.gd` — authoritative world tick/action ledger;
-- `PlayerActor.gd` — current player location/facing/movement mode and timing modifiers;
-- `TacticalLighting.gd` — dependency-free environment/carried-light calculation helpers adapted from First Fire;
-- `TacticalSound.gd` — dependency-free surface/localization/ambient sound helpers adapted from First Fire;
+- `TacticalMapGenerator.gd` — authored initial physical map facts.
+- `LocalWorldState.gd` — mutable local physical facts such as door state/collision.
+- `TickScheduler.gd` — authoritative world tick, active action execution, interruption state, actor ordering, and player-ready state.
+- `PlayerActor.gd` — current player location/facing/movement mode and timing modifiers.
+- `TimingDummy.gd` — deliberately tiny autonomous scheduled actor used only for scheduler proof/tests and developer diagnostics; not zombie AI.
+- `TacticalLighting.gd` — dependency-free lighting helpers adapted from First Fire.
+- `TacticalSound.gd` — dependency-free sound/localization helpers adapted from First Fire.
 - `MapPreview.gd` — development input/presentation harness only.
 
-## Core timing design
+## Implemented timing semantics
 
-The intended final control model is **real time with automatic pause**, not a classic synchronized turn system.
+The control model is **real time with automatic pause**, represented synchronously in the current developer harness while authoritative outcomes remain discrete.
 
-Normal loop:
+Normal scheduler loop:
 
-1. world is paused because the player character is ready;
-2. player commits one action;
-3. simulation advances through that action's ticks;
-4. other actors/world processes act on their own schedules during those ticks;
-5. world auto-pauses when the player becomes ready again.
+1. `player_ready == true` while waiting for a player choice.
+2. A player action begins with explicit cost, start tick, interruption policy, optional phases, and payload.
+3. `player_ready == false` while that action executes.
+4. Other scheduled actors whose `next_tick` falls inside the action window execute in deterministic order.
+5. The world advances to action completion unless interruption policy ends it early.
+6. The scheduler auto-returns to `player_ready == true` when the action completes, interrupts, cancels, or hard-fails.
 
-The player cannot normally cancel a committed action or tactical-pause mid-action. The actual pause menu may pause the application.
+Implemented interruption policies:
 
-Actions will gain explicit interruption policies:
+- **committed** — ordinary damage is recorded but execution continues;
+- **resumable** — damage interrupts and preserves exact elapsed tick/phase state for later continuation;
+- **canceled** — damage interrupts and loses action progress;
+- **forced failure** — hard invalidation can terminate any action.
 
-- committed through ordinary damage where physically sensible;
-- interrupted/resumable from persistent intermediate state;
-- interrupted/canceled;
-- forced failure when death, unconsciousness, knockdown, lost limb/tool or other invalidation makes continuation impossible.
+Tie ordering for scheduled actors is deterministic: earliest `next_tick`, then lexical actor ID. Actors scheduled exactly on the player action end tick execute before the player becomes ready.
 
-Long actions such as reloads should eventually have phases and persistent intermediate state.
+`TickSmoke.gd` proves:
 
-Current implementation is still the simpler 0.1 immediate commit model; Milestone 0.2 in `ROADMAP.md` is the planned action-execution upgrade.
+- a 10-tick player action allows two actions from a dummy scheduled every 4 ticks;
+- a 3-tick action allows none;
+- a 12-tick three-phase reload interrupted at tick 5 preserves the second phase and resumes to completion;
+- a committed axe-style action continues through ordinary damage.
+
+The Web harness exposes keys `1`/`2`/`3` for light/heavy/reload timing demonstrations and displays current tick, player-ready state, action status, and timing-dummy activity.
 
 ## Player/world separation
 
-The persistent world is conceptually separate from the player character.
+The persistent world is conceptually separate from the player character. The world/save owns seed, calendar, outbreak history, actors, zombies, structures, construction/destruction, items, corpses, vehicles, crops, settlements, infrastructure, and persistent consequences. The player is one mortal actor record within that world.
 
-The world/save owns seed, calendar, outbreak history, actors, zombies, structures, construction/destruction, items, corpses, vehicles, crops, settlements, infrastructure and other persistent consequences.
-
-The player is one mortal actor record within that world.
-
-On player death, the user can eventually:
-
-- play a new survivor in the same continuing world; or
-- start a new world seed.
-
-A later player can encounter the previous player's corpse, base, stash, family, vehicles and world consequences.
+On player death, the user can eventually either play a new survivor in the same continuing world or start a new world seed. A later player may encounter the previous player's corpse, base, stash, family, vehicles, and consequences.
 
 ## Map/world direction
 
-The imported First Fire map foundation remains an authored-layout catalog of 20×18 physical locations. Current families:
+The imported First Fire map foundation remains an authored-layout catalog of 20×18 physical locations: Back Alley, Gas Station, Residential House, Apartment, Corner Store, Warehouse Yard, and Drainage Wash. Each can describe ground, indoor regions, walls, doors, windows/glass, obstacles, props, barrels, light markers, player spawn, and exits.
 
-- Back Alley
-- Gas Station
-- Residential House
-- Apartment
-- Corner Store
-- Warehouse Yard
-- Drainage Wash
-
-Each can describe ground, indoor regions, walls, doors, windows/glass, obstacles, props, barrels, light markers, player spawn and exits.
-
-Do not replace this with a second incompatible map language. Long-term world hierarchy should compose it into:
+Do not replace this with a second incompatible map language. Long-term hierarchy should compose it into:
 
 **tile/object → building/location → local area/block → biome/district → large island world**
 
-The long-term island mixes city, suburban, commercial/industrial, rural/farm and woods/wilderness biomes. Destroyed/bombed bridges and other failed crossings can make it clear the region used to connect to a larger world.
+The island mixes city, suburban, commercial/industrial, rural/farm, and woods/wilderness biomes. Destroyed/bombed bridges and failed crossings can show that the region once connected to a larger world.
 
 ## Long-term simulation direction
 
-The complete design is in `DESIGN.md`. Major intended systems include:
-
-- persistent infected responding to sight/sound rather than drama-director spawns;
-- darkness, lighting, facing and spatial sound;
-- dangerous combat where slow actions expose the player to more enemy actions;
-- hunger/thirst/fatigue/encumbrance/stress;
-- body-region wounds, deep wounds, bleeding, sutures, fractures, splints and crutches;
-- zombie infection and possible time-sensitive extremity amputation with permanent consequences;
-- persistent inventory/loot/equipment;
-- use-based skills;
-- occupations as starting knowledge/competence rather than rigid classes;
-- physical skill/recipe books, manuals and VHS-like recorded training media;
-- destructible and freely buildable environment;
-- farming/crafting/homesteading;
-- autonomous human survivors, dogs, cats and livestock;
-- free building + resources + assignable autonomous NPC jobs producing emergent settlements;
-- multiple bases, patrols, scavenging parties and supply routes;
-- tick-driven vehicles/logistics;
-- reclaimable power/water/communications infrastructure;
-- eventual new-world outbreak parameters including epicenter/spread/response/isolation factors;
-- eventual starting occupation, family, friends, pets, home/work context, with those people as autonomous world actors.
+See `DESIGN.md` for the complete design. Major intended systems include persistent infected; facing/LOS/darkness/spatial sound; dangerous timing-driven combat; hunger/thirst/fatigue/encumbrance/stress; body-region wounds, deep wounds, bleeding, sutures, fractures, splints, crutches, infection and amputation; persistent inventory/loot/equipment; use-based skills and physical learning media; destructible/free-build environments; farming/crafting/homesteading; autonomous survivors, dogs, cats and livestock; emergent settlements from free building + resources + assignable autonomous jobs; patrols/supply routes; vehicles; infrastructure reclamation; and eventual outbreak epicenter/spread/response plus occupation/family starts.
 
 ## First Fire reuse policy
 
-Before recreating a major tactical/world subsystem, inspect current First Fire for same-owner reusable work.
+Before recreating a major tactical/world subsystem, inspect current First Fire for same-owner reusable work. Port coherent rules only after removing `Game`, encounter UI, camp, expedition, objective, and save-schema coupling.
 
-Port only coherent rules that fit Tick-native ownership. Remove `Game`, encounter UI, camp, expedition, objective and save-schema coupling. Add smoke coverage where practical.
+Already reused/adapted: tactical map schema, lighting helpers, and sound/localization helpers. Concepts worth adapting later include timing/load/fatigue from `FFTacticalTime.gd`, facing/LOS/noise/infected scheduling concepts from `FFCombat.gd`, and survivor/social concepts transformed into physical autonomous-world behavior.
 
-Already reused/adapted:
+## Near-term scope
 
-- tactical authored map schema;
-- tactical lighting helpers;
-- tactical sound/localization helpers.
-
-Good concepts to adapt later rather than copy wholesale:
-
-- timing/load/fatigue concepts from `FFTacticalTime.gd`;
-- facing/LOS/noise/infected scheduling concepts from `FFCombat.gd`;
-- survivor/social concepts transformed into physical autonomous-world behavior.
-
-See `FIRST_FIRE_REUSE.md` for the audit.
-
-## Scope discipline
-
-Do not attempt the whole roadmap at once.
-
-The near-term vertical slice remains:
-
-1. robust phased action scheduler/auto-pause/interruption model;
-2. physical perception/lighting/sound;
-3. persistent infected on the same clock;
-4. core dangerous combat;
-5. body/injury and inventory persistence.
-
-Island-scale generation, settlements, vehicles, live outbreak simulation and large autonomous populations are long-term directions whose architecture should be permitted but not prematurely implemented.
-
-## Architecture direction
+The next milestone is **0.3 Physical Perception Foundation**: connect existing light markers to runtime lighting, add opaque-state/LOS/facing, and create real spatial sound event propagation. Do not race ahead into full zombies, inventory, settlements, or island generation until perception is trustworthy.
 
 Preferred dependency direction:
 
 **map/data → persistent world state → tick scheduler/rules → actor simulation → presentation/input**
 
-Rules get one durable owner. UI must not own simulation state. The map generator must not become a dumping ground for combat, inventory, AI, saves or social systems.
-
-## Platform
-
-Platform target is not locked. Keyboard and pointer/touch controls should continue to be developed together with input separated from simulation rules.
-
-Current developer controls:
-
-- WASD/arrows: turn toward direction first, then move if already facing it;
-- Tab: toggle walk/run mode without advancing time;
-- E/Space/Enter: toggle the door directly ahead if present;
-- R: reroll/reset the current development map;
-- click/tap around the player: directional turn/move;
-- click/tap the player: interact with facing door;
-- click/tap HUD regions: mode / interact / reroll.
+Rules get one durable owner. UI must not own simulation state. The map generator must not become a dumping ground for combat, inventory, AI, saves, or social systems.
 
 ## Source-of-truth order
 
@@ -206,4 +128,4 @@ Current developer controls:
 
 ## Continuous deployment
 
-`.github/workflows/pages.yml` is the permanent build/deploy gate. It validates the canonical scaffold, imports/parses with Godot 4.7.1, runs deterministic map/tick/environment smoke tests, starts the real scene headlessly, exports Web, uploads the artifact, and deploys GitHub Pages.
+`.github/workflows/pages.yml` is the permanent build/deploy gate. It validates canonical files, imports/parses with Godot 4.7.1, runs deterministic map/tick/environment smoke tests, starts the real scene headlessly, exports Web, uploads the artifact, and deploys GitHub Pages.
