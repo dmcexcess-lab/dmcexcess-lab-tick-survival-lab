@@ -63,6 +63,9 @@ func stance_cost() -> int:
 func fatigue_percent() -> int:
     return clampi(int(round(fatigue_ratio * 100.0)), 0, 100)
 
+func stamina_percent() -> int:
+    return clampi(100 - fatigue_percent(), 0, 100)
+
 func _modified_cost(base: int) -> int:
     # Timing modifiers are deliberately centralized here so later condition,
     # inventory, and injury systems can feed ratios without owning the clock.
