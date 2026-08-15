@@ -3,7 +3,12 @@ class_name ProceduralRegionGenerator
 
 const REGION_W := 64
 const REGION_H := 64
-const GENERATOR_VERSION := 2
+const GENERATOR_VERSION := 3
+
+const ROAD_N := 1
+const ROAD_E := 2
+const ROAD_S := 4
+const ROAD_W := 8
 
 const BIOMES := ["residential", "commercial", "downtown", "woods", "rural"]
 const DEVELOPED_BIOMES := ["residential", "commercial", "downtown"]
@@ -29,7 +34,9 @@ static func generate(seed_value: int, width: int = REGION_W, height: int = REGIO
         "wall_themes": {},
         "obstacles": [],
         "glass": [],
+        "window_themes": {},
         "doors": [],
+        "door_themes": {},
         "barrels": [],
         "props": [],
         "lights": [],
@@ -38,6 +45,8 @@ static func generate(seed_value: int, width: int = REGION_W, height: int = REGIO
         "biome_cells": {},
         "road_cells": {},
         "road_class_cells": {},
+        "road_surface_cells": {},
+        "road_links": {},
         "road_ports": {},
     }
 
@@ -45,6 +54,7 @@ static func generate(seed_value: int, width: int = REGION_W, height: int = REGIO
     _assign_biomes(spec, centers, seed_value)
     _carve_roads(spec, centers, rng)
     _add_road_shoulders(spec)
+    _finalize_road_art(spec)
     _decorate_biomes(spec, rng)
     _clear_spawn(spec)
     return spec
@@ -75,7 +85,15 @@ static func validate(spec: Dictionary) -> Dictionary:
         elif not _road_reachable(spec, spawn, exit_cell):
             failures.append("exit disconnected from spawn: %s" % str(exit_cell))
 
-    for road_value in spec.get("road_cells", {}).keys():
+    var road_cells: Dictionary = spec.get("road_cells", {})
+    var road_links: Dictionary = spec.get("road_links", {})
+    var road_surfaces: Dictionary = spec.get("road_surface_cells", {})
+    if road_links.size() != road_cells.size():
+        failures.append("road link metadata incomplete")
+    if road_surfaces.size() != road_cells.size():
+        failures.append("road surface metadata incomplete")
+
+    for road_value in road_cells.keys():
         var road_cell: Vector2i = road_value
         if spec.get("walls", []).has(road_cell) or spec.get("obstacles", []).has(road_cell) or spec.get("glass", []).has(road_cell):
             failures.append("road physically blocked: %s" % str(road_cell))
@@ -149,8 +167,6 @@ static func _carve_roads(spec: Dictionary, centers: Dictionary, rng: RandomNumbe
     var arterial_x: int = clampi(downtown.x - 1, 4, width - 7)
     var arterial_y: int = clampi(downtown.y - 1, 4, height - 7)
 
-    # District connectors are biome-aware and terminate at the main arterial
-    # instead of drawing an arbitrary full-region street grid through woods.
     for biome in BIOMES:
         var center: Vector2i = centers[biome]
         if biome == "downtown":
@@ -167,12 +183,9 @@ static func _carve_roads(spec: Dictionary, centers: Dictionary, rng: RandomNumbe
             _road_v(spec, center.x, mini(center.y, arterial_y + 1), maxi(center.y, arterial_y + 1), thickness, ground_kind, road_class)
             _local_cross_street(spec, center, biome, false)
 
-    # A small downtown street pair feeds directly into the arterial crossing.
     _road_h(spec, clampi(downtown.y + 5, 2, height - 3), maxi(2, downtown.x - 10), mini(width - 3, downtown.x + 10), 2, "road", "local")
     _road_v(spec, clampi(downtown.x + 6, 2, width - 3), maxi(2, downtown.y - 10), mini(height - 3, downtown.y + 10), 2, "road", "local")
 
-    # Main cross-region arterial is carved last so its pavement and class win
-    # at intersections. All four exits are therefore guaranteed connected.
     _road_h(spec, arterial_y, 1, width - 2, 3, "road", "arterial")
     _road_v(spec, arterial_x, 1, height - 2, 3, "road", "arterial")
 
@@ -186,9 +199,8 @@ static func _carve_roads(spec: Dictionary, centers: Dictionary, rng: RandomNumbe
     spec["exit_cells"] = [north, south, west, east]
     spec["player_spawn"] = Vector2i(center_x, center_y)
 
-    # Occasional street furniture belongs on shoulders, never in travel lanes.
     if rng.randf() < 0.8:
-        _safe_prop(spec, Vector2i(center_x + 3, center_y - 2), "road_sign", false)
+        _safe_prop(spec, Vector2i(center_x + 3, center_y - 2), "stop_sign", false)
 
 static func _local_cross_street(spec: Dictionary, center: Vector2i, biome: String, connector_was_horizontal: bool) -> void:
     var extent: int
@@ -217,7 +229,10 @@ static func _road_h(spec: Dictionary, y: int, x0: int, x1: int, thickness: int, 
     for yy in range(y, mini(y + thickness, int(spec["height"]) - 1)):
         _ground(spec, x0, yy, x1 - x0 + 1, 1, ground_kind)
         for x in range(x0, x1 + 1):
-            _mark_road(spec, Vector2i(x, yy), road_class)
+            var links := 0
+            if x > x0: links = links | ROAD_W
+            if x < x1: links = links | ROAD_E
+            _mark_road(spec, Vector2i(x, yy), road_class, ground_kind, links)
 
 static func _road_v(spec: Dictionary, x: int, y0: int, y1: int, thickness: int, ground_kind: String, road_class: String) -> void:
     if y1 < y0:
@@ -225,31 +240,104 @@ static func _road_v(spec: Dictionary, x: int, y0: int, y1: int, thickness: int, 
     for xx in range(x, mini(x + thickness, int(spec["width"]) - 1)):
         _ground(spec, xx, y0, 1, y1 - y0 + 1, ground_kind)
         for y in range(y0, y1 + 1):
-            _mark_road(spec, Vector2i(xx, y), road_class)
+            var links := 0
+            if y > y0: links = links | ROAD_N
+            if y < y1: links = links | ROAD_S
+            _mark_road(spec, Vector2i(xx, y), road_class, ground_kind, links)
 
-static func _mark_road(spec: Dictionary, p: Vector2i, road_class: String) -> void:
+static func _mark_road(spec: Dictionary, p: Vector2i, road_class: String, ground_kind: String, links: int) -> void:
     if not _inside(spec, p):
         return
     spec["road_cells"][p] = true
     var old_class := str(spec["road_class_cells"].get(p, ""))
-    if old_class == "" or int(ROAD_RANK.get(road_class, 0)) > int(ROAD_RANK.get(old_class, 0)):
+    var old_rank := int(ROAD_RANK.get(old_class, -1))
+    var new_rank := int(ROAD_RANK.get(road_class, 0))
+    if old_class == "" or new_rank >= old_rank:
         spec["road_class_cells"][p] = road_class
+        spec["road_surface_cells"][p] = ground_kind
+    var old_links := int(spec["road_links"].get(p, 0))
+    spec["road_links"][p] = old_links | links
 
 static func _add_road_shoulders(spec: Dictionary) -> void:
-    var done: Dictionary = {}
     var road_cells: Dictionary = spec.get("road_cells", {})
+    var sidewalk_sides: Dictionary = {}
+    var rural_shoulders: Dictionary = {}
     for road_value in road_cells.keys():
         var road: Vector2i = road_value
         for d in DIRS:
             var p := road + d
-            if not _inside(spec, p) or road_cells.has(p) or done.has(p):
+            if not _inside(spec, p) or road_cells.has(p):
                 continue
-            done[p] = true
             var biome := biome_at(spec, p)
             if biome in DEVELOPED_BIOMES:
-                _ground(spec, p.x, p.y, 1, 1, "sidewalk")
+                var side_bit := 0
+                if d == Vector2i.DOWN: side_bit = ROAD_N
+                elif d == Vector2i.LEFT: side_bit = ROAD_E
+                elif d == Vector2i.UP: side_bit = ROAD_S
+                elif d == Vector2i.RIGHT: side_bit = ROAD_W
+                sidewalk_sides[p] = int(sidewalk_sides.get(p, 0)) | side_bit
             elif biome == "rural":
-                _ground(spec, p.x, p.y, 1, 1, "dirt")
+                rural_shoulders[p] = true
+    for p_value in sidewalk_sides.keys():
+        var p: Vector2i = p_value
+        var sides := int(sidewalk_sides[p])
+        var kind := "sidewalk"
+        if sides == ROAD_N: kind = "sidewalk_curb_n"
+        elif sides == ROAD_E: kind = "sidewalk_curb_e"
+        elif sides == ROAD_S: kind = "sidewalk_curb_s"
+        elif sides == ROAD_W: kind = "sidewalk_curb_w"
+        _ground(spec, p.x, p.y, 1, 1, kind)
+    for p_value in rural_shoulders.keys():
+        var p: Vector2i = p_value
+        _ground(spec, p.x, p.y, 1, 1, "dirt")
+
+static func _finalize_road_art(spec: Dictionary) -> void:
+    for road_value in spec.get("road_cells", {}).keys():
+        var p: Vector2i = road_value
+        var surface := str(spec.get("road_surface_cells", {}).get(p, "road"))
+        var kind := _road_art_kind(spec, p, surface)
+        _ground(spec, p.x, p.y, 1, 1, kind)
+
+static func _road_art_kind(spec: Dictionary, p: Vector2i, surface: String) -> String:
+    var mask := int(spec.get("road_links", {}).get(p, 0))
+    if surface == "dirt":
+        var horizontal := (mask & (ROAD_E | ROAD_W)) != 0
+        var vertical := (mask & (ROAD_N | ROAD_S)) != 0
+        if horizontal and not vertical: return "dirt_road_h"
+        if vertical and not horizontal: return "dirt_road_v"
+        return "gravel"
+
+    var road_class := str(spec.get("road_class_cells", {}).get(p, "local"))
+    if road_class == "arterial":
+        if mask == (ROAD_E | ROAD_W):
+            var north_links := int(spec.get("road_links", {}).get(p + Vector2i.UP, 0))
+            var south_links := int(spec.get("road_links", {}).get(p + Vector2i.DOWN, 0))
+            if (north_links & (ROAD_E | ROAD_W)) != (ROAD_E | ROAD_W) or (south_links & (ROAD_E | ROAD_W)) != (ROAD_E | ROAD_W):
+                return "road_plain"
+        elif mask == (ROAD_N | ROAD_S):
+            var east_links := int(spec.get("road_links", {}).get(p + Vector2i.RIGHT, 0))
+            var west_links := int(spec.get("road_links", {}).get(p + Vector2i.LEFT, 0))
+            if (east_links & (ROAD_N | ROAD_S)) != (ROAD_N | ROAD_S) or (west_links & (ROAD_N | ROAD_S)) != (ROAD_N | ROAD_S):
+                return "road_plain"
+        elif (mask & (ROAD_N | ROAD_S)) != 0 and (mask & (ROAD_E | ROAD_W)) != 0:
+            return "road_plain"
+
+    if mask == (ROAD_N | ROAD_S): return "road_v"
+    if mask == (ROAD_E | ROAD_W): return "road_h"
+    if mask == (ROAD_N | ROAD_E): return "road_ne"
+    if mask == (ROAD_E | ROAD_S): return "road_es"
+    if mask == (ROAD_S | ROAD_W): return "road_sw"
+    if mask == (ROAD_W | ROAD_N): return "road_wn"
+    if mask == (ROAD_N | ROAD_E | ROAD_S): return "road_t_nes"
+    if mask == (ROAD_E | ROAD_S | ROAD_W): return "road_t_esw"
+    if mask == (ROAD_S | ROAD_W | ROAD_N): return "road_t_swn"
+    if mask == (ROAD_W | ROAD_N | ROAD_E): return "road_t_wne"
+    if mask == (ROAD_N | ROAD_E | ROAD_S | ROAD_W): return "road_cross"
+    if mask == ROAD_N: return "road_end_n"
+    if mask == ROAD_E: return "road_end_e"
+    if mask == ROAD_S: return "road_end_s"
+    if mask == ROAD_W: return "road_end_w"
+    return "road_plain"
 
 static func _decorate_biomes(spec: Dictionary, rng: RandomNumberGenerator) -> void:
     var width: int = int(spec["width"])
@@ -284,38 +372,46 @@ static func _decorate_biomes(spec: Dictionary, rng: RandomNumberGenerator) -> vo
 static func _place_house(spec: Dictionary, a: Vector2i, rng: RandomNumberGenerator) -> void:
     _ground(spec, a.x, a.y, 7, 7, "grass")
     var rect := Rect2i(a.x + 1, a.y + 1, 5, 4)
-    _building(spec, rect, "wood", "house", rng)
+    _building(spec, rect, "hardwood_h" if rng.randf() < 0.5 else "hardwood_v", "house", rng)
     _safe_prop(spec, Vector2i(a.x + 1, a.y + 6), "mailbox", false)
     if rng.randf() < 0.65:
         _safe_prop(spec, Vector2i(a.x + 5, a.y + 6), "trash_can", false)
     if rng.randf() < 0.55:
-        _safe_prop(spec, Vector2i(a.x + 6, a.y + 1), "bush", false)
+        _safe_prop(spec, Vector2i(a.x + 6, a.y + 1), "hedge", false)
+    if rng.randf() < 0.35:
+        _safe_prop(spec, Vector2i(a.x + 6, a.y + 4), "flower_bed", false)
 
 static func _place_residential_yard(spec: Dictionary, a: Vector2i, rng: RandomNumberGenerator) -> void:
     _ground(spec, a.x, a.y, 7, 7, "grass")
     if rng.randf() < 0.55:
         _safe_prop(spec, Vector2i(a.x + 2, a.y + 3), "tree", true)
     if rng.randf() < 0.7:
-        _safe_prop(spec, Vector2i(a.x + 5, a.y + 4), "bush", false)
+        _safe_prop(spec, Vector2i(a.x + 5, a.y + 4), "hedge", false)
+    if rng.randf() < 0.35:
+        _safe_prop(spec, Vector2i(a.x + 4, a.y + 2), "flower_bed", false)
 
 static func _place_shop(spec: Dictionary, a: Vector2i, rng: RandomNumberGenerator) -> void:
-    _ground(spec, a.x, a.y, 7, 7, "concrete")
-    _building(spec, Rect2i(a.x + 1, a.y + 1, 6, 4), "tile", "store", rng)
+    _ground(spec, a.x, a.y, 7, 7, "parking")
+    _building(spec, Rect2i(a.x + 1, a.y + 1, 6, 4), "shop_floor", "store", rng)
     if rng.randf() < 0.7:
         _safe_prop(spec, Vector2i(a.x + 2, a.y + 6), "shopping_cart", false)
     if rng.randf() < 0.55:
-        _safe_prop(spec, Vector2i(a.x + 5, a.y + 6), "trash_can", false)
+        _safe_prop(spec, Vector2i(a.x + 5, a.y + 6), "bollard", true)
 
 static func _place_commercial_lot(spec: Dictionary, a: Vector2i, rng: RandomNumberGenerator) -> void:
-    _ground(spec, a.x, a.y, 7, 7, "concrete")
+    _ground(spec, a.x, a.y, 7, 7, "parking")
     if rng.randf() < 0.65:
         _safe_prop(spec, Vector2i(a.x + 2, a.y + 4), "bench", true)
     if rng.randf() < 0.45:
         _safe_prop(spec, Vector2i(a.x + 5, a.y + 2), "planter", true)
+    if rng.randf() < 0.35:
+        _safe_prop(spec, Vector2i(a.x + 1, a.y + 1), "parking_meter", false)
 
 static func _place_downtown(spec: Dictionary, a: Vector2i, rng: RandomNumberGenerator) -> void:
     _ground(spec, a.x, a.y, 7, 7, "sidewalk")
-    _building(spec, Rect2i(a.x, a.y, 7, 6), "tile", "industrial", rng)
+    var building_theme := "office" if rng.randf() < 0.62 else "industrial"
+    var floor_kind := "office_carpet" if building_theme == "office" else "warehouse_floor"
+    _building(spec, Rect2i(a.x, a.y, 7, 6), floor_kind, building_theme, rng)
     if rng.randf() < 0.45:
         _safe_prop(spec, Vector2i(a.x + 1, a.y + 6), "hydrant", false)
     if rng.randf() < 0.55:
@@ -339,17 +435,22 @@ static func _place_woods(spec: Dictionary, a: Vector2i, rng: RandomNumberGenerat
         _safe_prop(spec, Vector2i(a.x + 5, a.y + 5), "firewood", false)
 
 static func _place_rural(spec: Dictionary, a: Vector2i, rng: RandomNumberGenerator, road_distance: int) -> void:
-    _ground(spec, a.x, a.y, 7, 7, "dirt" if rng.randf() < 0.48 else "grass")
+    var ground_kind := "field_rows" if rng.randf() < 0.36 else ("dirt" if rng.randf() < 0.48 else "grass")
+    _ground(spec, a.x, a.y, 7, 7, ground_kind)
     if road_distance <= 4 and rng.randf() < 0.38:
-        _building(spec, Rect2i(a.x + 1, a.y + 1, 5, 4), "wood", "house", rng)
+        _building(spec, Rect2i(a.x + 1, a.y + 1, 5, 4), "hardwood_v", "rural_wood", rng)
         _safe_prop(spec, Vector2i(a.x + 1, a.y + 6), "mailbox", false)
+        if rng.randf() < 0.4:
+            _safe_prop(spec, Vector2i(a.x + 6, a.y + 5), "propane_tank", false)
     else:
         if rng.randf() < 0.58:
             for i in range(3):
                 _safe_prop(spec, Vector2i(a.x + 1 + i * 2, a.y + 5), "fence", true)
         if rng.randf() < 0.5:
             _safe_prop(spec, Vector2i(a.x + 5, a.y + 2), "tree", true)
-        if rng.randf() < 0.4:
+        if rng.randf() < 0.34:
+            _safe_prop(spec, Vector2i(a.x + 2, a.y + 2), "shed", true)
+        elif rng.randf() < 0.4:
             _safe_prop(spec, Vector2i(a.x + 2, a.y + 2), "firewood", false)
 
 static func _building(spec: Dictionary, rect: Rect2i, floor_kind: String, theme: String, rng: RandomNumberGenerator) -> void:
@@ -366,45 +467,59 @@ static func _building(spec: Dictionary, rect: Rect2i, floor_kind: String, theme:
     var door := _wall_midpoint(rect, front_side)
     _cut_wall(spec, door)
     spec["doors"].append([door, false])
+    spec["door_themes"][door] = _opening_theme(theme)
 
     var front_window := _wall_offset(rect, front_side, 1)
     if front_window != door:
-        _add_window(spec, front_window)
+        _add_window(spec, front_window, _opening_theme(theme))
     var side_name := "west" if front_side in ["north", "south"] else "north"
     var side_window := _wall_offset(rect, side_name, 1)
     if side_window != door:
-        _add_window(spec, side_window)
+        _add_window(spec, side_window, _opening_theme(theme))
 
     var light := Vector2i(rect.position.x + rect.size.x / 2, rect.position.y + rect.size.y / 2)
-    var light_kind := "warm" if theme == "house" else ("fluorescent" if theme == "store" else "security")
+    var light_kind := "warm" if theme in ["house", "rural_wood"] else ("fluorescent" if theme in ["store", "office"] else "security")
     if rng.randf() < 0.82:
         spec["lights"].append([light, light_kind, true])
 
     _decorate_interior(spec, rect, theme, door, rng)
+    if rng.randf() < 0.42:
+        _safe_prop(spec, Vector2i(rect.end.x, rect.position.y + rect.size.y / 2), "exterior_ac", false, door)
+
+static func _opening_theme(theme: String) -> String:
+    if theme == "store": return "storefront"
+    if theme == "industrial": return "warehouse"
+    return theme
 
 static func _decorate_interior(spec: Dictionary, rect: Rect2i, theme: String, door: Vector2i, rng: RandomNumberGenerator) -> void:
     var center := Vector2i(rect.position.x + rect.size.x / 2, rect.position.y + rect.size.y / 2)
     match theme:
-        "house":
+        "house", "rural_wood":
             _safe_prop(spec, center, "rug", false)
-            if rng.randf() < 0.7:
-                _safe_prop(spec, Vector2i(rect.position.x + 1, rect.position.y + 1), "lamp", false)
-            if rng.randf() < 0.6:
-                _safe_prop(spec, Vector2i(rect.end.x - 2, rect.position.y + 1), "cabinet", true, door)
-            if rect.size.y >= 5 and rng.randf() < 0.55:
-                _safe_prop(spec, Vector2i(rect.end.x - 2, rect.end.y - 2), "chair", true, door)
+            _safe_prop(spec, Vector2i(rect.position.x + 1, rect.position.y + 1), "stove", true, door)
+            if rng.randf() < 0.72:
+                _safe_prop(spec, Vector2i(rect.end.x - 2, rect.position.y + 1), "dresser", true, door)
+            elif rng.randf() < 0.6:
+                _safe_prop(spec, Vector2i(rect.end.x - 2, rect.position.y + 1), "armchair", true, door)
         "store":
-            _safe_prop(spec, Vector2i(rect.position.x + 1, rect.position.y + 1), "counter", true, door)
+            _safe_prop(spec, Vector2i(rect.position.x + 1, rect.position.y + 1), "checkout", true, door)
             if rect.size.x >= 6:
-                _safe_prop(spec, Vector2i(rect.end.x - 2, rect.position.y + 1), "store_shelf", true, door)
+                _safe_prop(spec, Vector2i(rect.end.x - 2, rect.position.y + 1), "freezer", true, door)
             if rng.randf() < 0.55:
                 _safe_prop(spec, Vector2i(rect.end.x - 2, rect.end.y - 2), "cardboard", false)
-        _:
+        "office":
             _safe_prop(spec, Vector2i(rect.position.x + 1, rect.position.y + 1), "desk", true, door)
-            if rng.randf() < 0.65:
-                _safe_prop(spec, Vector2i(rect.end.x - 2, rect.position.y + 1), "bookshelf", true, door)
+            _safe_prop(spec, Vector2i(rect.position.x + 2, rect.position.y + 1), "computer", false, door)
+            if rng.randf() < 0.7:
+                _safe_prop(spec, Vector2i(rect.end.x - 2, rect.position.y + 1), "filing_cabinet", true, door)
             if rng.randf() < 0.45:
                 _safe_prop(spec, Vector2i(rect.end.x - 2, rect.end.y - 2), "planter", true, door)
+        _:
+            _safe_prop(spec, Vector2i(rect.position.x + 1, rect.position.y + 1), "workbench", true, door)
+            if rng.randf() < 0.65:
+                _safe_prop(spec, Vector2i(rect.end.x - 2, rect.position.y + 1), "locker", true, door)
+            if rng.randf() < 0.45:
+                _safe_prop(spec, Vector2i(rect.end.x - 2, rect.end.y - 2), "tool_chest", true, door)
 
 static func _nearest_road_side(spec: Dictionary, rect: Rect2i) -> String:
     var best_side := "south"
@@ -448,10 +563,12 @@ static func _wall_offset(rect: Rect2i, side: String, offset: int) -> Vector2i:
         return Vector2i(rect.position.x, clampi(rect.position.y + offset, rect.position.y + 1, rect.end.y - 2))
     return Vector2i(rect.end.x - 1, clampi(rect.position.y + offset, rect.position.y + 1, rect.end.y - 2))
 
-static func _add_window(spec: Dictionary, p: Vector2i) -> void:
+static func _add_window(spec: Dictionary, p: Vector2i, theme: String = "") -> void:
     _cut_wall(spec, p)
     if not spec["glass"].has(p):
         spec["glass"].append(p)
+    if theme != "":
+        spec["window_themes"][p] = theme
 
 static func _parcel_hits_road(spec: Dictionary, rect: Rect2i) -> bool:
     for y in range(rect.position.y, rect.end.y):
@@ -503,9 +620,11 @@ static func _clear_cell(spec: Dictionary, p: Vector2i) -> void:
         spec["obstacles"].erase(p)
     while spec["glass"].has(p):
         spec["glass"].erase(p)
+    spec.get("window_themes", {}).erase(p)
     for i in range(spec["doors"].size() - 1, -1, -1):
         if spec["doors"][i][0] == p:
             spec["doors"].remove_at(i)
+    spec.get("door_themes", {}).erase(p)
     for i in range(spec["props"].size() - 1, -1, -1):
         if spec["props"][i][0] == p:
             spec["props"].remove_at(i)

@@ -1,0 +1,66 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="64" viewBox="0 0 512 64" shape-rendering="crispEdges">
+<!-- 0 stove -->
+<g transform="translate(0 0)"><rect x="5" y="5" width="22" height="24" fill="#aeb3b1" stroke="#4d5554" stroke-width="2"/><circle cx="11" cy="11" r="3" fill="#303536"/><circle cx="21" cy="11" r="3" fill="#303536"/><rect x="8" y="17" width="16" height="9" fill="#383f41"/></g>
+<!-- 1 kitchen counter -->
+<g transform="translate(32 0)"><rect x="3" y="9" width="26" height="19" fill="#927456" stroke="#463629" stroke-width="2"/><rect x="2" y="6" width="28" height="6" fill="#c0b6a2"/><path d="M12 12v16M21 12v16" stroke="#6f563f"/></g>
+<!-- 2 dresser -->
+<g transform="translate(64 0)"><rect x="5" y="6" width="22" height="23" fill="#77553a" stroke="#37281e" stroke-width="2"/><path d="M7 13h18M7 20h18" stroke="#a57b54"/><circle cx="16" cy="10" r="1" fill="#d1af69"/><circle cx="16" cy="17" r="1" fill="#d1af69"/><circle cx="16" cy="24" r="1" fill="#d1af69"/></g>
+<!-- 3 nightstand -->
+<g transform="translate(96 0)"><rect x="9" y="10" width="14" height="18" fill="#76543a" stroke="#39281e" stroke-width="2"/><path d="M11 17h10" stroke="#a77d55"/><circle cx="16" cy="14" r="1" fill="#d2b26d"/></g>
+<!-- 4 bathtub -->
+<g transform="translate(128 0)"><rect x="3" y="9" width="26" height="17" rx="7" fill="#e3e5df" stroke="#6a7472" stroke-width="2"/><rect x="7" y="12" width="18" height="10" rx="5" fill="#83a9b1"/><path d="M24 6v7" stroke="#aeb7b3" stroke-width="3"/></g>
+<!-- 5 shower -->
+<g transform="translate(160 0)"><rect x="5" y="4" width="22" height="25" fill="#9fb5b7" stroke="#5f6e70" stroke-width="2"/><path d="M9 5v23M23 5v23" stroke="#d7e3e2"/><path d="M16 7v6h5" stroke="#777f7d" stroke-width="2"/><circle cx="21" cy="13" r="2" fill="#bfc9c6"/></g>
+<!-- 6 vanity -->
+<g transform="translate(192 0)"><rect x="5" y="12" width="22" height="15" fill="#c5c4b9" stroke="#666a66" stroke-width="2"/><ellipse cx="16" cy="18" rx="6" ry="4" fill="#76969d"/><rect x="8" y="3" width="16" height="8" fill="#82989b" stroke="#d5dfdc"/></g>
+<!-- 7 dining table -->
+<g transform="translate(224 0)"><ellipse cx="16" cy="16" rx="12" ry="9" fill="#825f40" stroke="#3f3023" stroke-width="2"/><path d="M10 24v5M22 24v5" stroke="#463326" stroke-width="3"/></g>
+<!-- 8 armchair -->
+<g transform="translate(256 0)"><rect x="7" y="9" width="18" height="17" rx="5" fill="#80605a" stroke="#352a29" stroke-width="2"/><rect x="10" y="13" width="12" height="10" fill="#a47b70"/><rect x="4" y="14" width="5" height="10" fill="#684b47"/><rect x="23" y="14" width="5" height="10" fill="#684b47"/></g>
+<!-- 9 filing cabinet -->
+<g transform="translate(288 0)"><rect x="7" y="4" width="18" height="26" fill="#777f80" stroke="#303637" stroke-width="2"/><path d="M9 11h14M9 18h14M9 25h14" stroke="#aab2b1"/><path d="M14 8h4M14 15h4M14 22h4" stroke="#363d3e"/></g>
+<!-- 10 cubicle -->
+<g transform="translate(320 0)"><path d="M5 5v22h22M5 16h16V5" fill="none" stroke="#79888b" stroke-width="4"/><rect x="9" y="18" width="12" height="7" fill="#715940"/></g>
+<!-- 11 computer -->
+<g transform="translate(352 0)"><rect x="6" y="5" width="20" height="14" fill="#252b2d" stroke="#697476" stroke-width="2"/><rect x="9" y="8" width="14" height="8" fill="#4d7180"/><path d="M16 19v5M10 25h12" stroke="#596365" stroke-width="2"/><rect x="7" y="27" width="18" height="3" fill="#4f5657"/></g>
+<!-- 12 checkout -->
+<g transform="translate(384 0)"><rect x="3" y="10" width="26" height="17" fill="#6e5843" stroke="#342a22" stroke-width="2"/><rect x="4" y="7" width="18" height="6" fill="#aca899"/><rect x="22" y="4" width="6" height="9" fill="#303638"/><rect x="23" y="5" width="4" height="4" fill="#70a1a8"/></g>
+<!-- 13 freezer -->
+<g transform="translate(416 0)"><rect x="4" y="6" width="24" height="22" fill="#d1dcdb" stroke="#5f7273" stroke-width="2"/><rect x="7" y="9" width="18" height="10" fill="#6996a1"/><path d="M16 7v20" stroke="#8ba4a7"/></g>
+<!-- 14 produce bin -->
+<g transform="translate(448 0)"><path d="M5 12h22l-3 16H8z" fill="#7b5a3a" stroke="#3b2d21" stroke-width="2"/><circle cx="10" cy="15" r="3" fill="#8a3f36"/><circle cx="17" cy="15" r="3" fill="#5b7a43"/><circle cx="23" cy="16" r="3" fill="#d19a42"/></g>
+<!-- 15 pallet rack -->
+<g transform="translate(480 0)"><path d="M5 3v27M27 3v27M5 10h22M5 20h22" stroke="#596267" stroke-width="3"/><rect x="8" y="5" width="7" height="5" fill="#a87845"/><rect x="17" y="13" width="8" height="7" fill="#8f6942"/><rect x="8" y="22" width="10" height="7" fill="#9b754a"/></g>
+<!-- 16 tool chest -->
+<g transform="translate(0 32)"><rect x="5" y="8" width="22" height="20" fill="#9f3d35" stroke="#4e2420" stroke-width="2"/><path d="M7 14h18M7 20h18" stroke="#d36a58"/><path d="M13 11h6" stroke="#ddd0a2" stroke-width="2"/></g>
+<!-- 17 workbench -->
+<g transform="translate(32 32)"><rect x="3" y="8" width="26" height="8" fill="#79583d" stroke="#392b21" stroke-width="2"/><path d="M7 16v13M25 16v13" stroke="#4d392b" stroke-width="3"/><path d="M10 10h8M21 10h5" stroke="#b7a06b"/></g>
+<!-- 18 locker -->
+<g transform="translate(64 32)"><rect x="6" y="3" width="20" height="27" fill="#667477" stroke="#2c3436" stroke-width="2"/><path d="M16 4v25M9 9h4M19 9h4" stroke="#97a4a3"/><circle cx="14" cy="18" r="1"/><circle cx="18" cy="18" r="1"/></g>
+<!-- 19 utility sink -->
+<g transform="translate(96 32)"><rect x="5" y="10" width="22" height="15" fill="#929b98" stroke="#454d4b" stroke-width="2"/><rect x="8" y="13" width="16" height="9" fill="#5f7e83"/><path d="M16 5v7h5" stroke="#b3bbb8" stroke-width="3"/><path d="M9 25v5M23 25v5" stroke="#515957" stroke-width="3"/></g>
+<!-- 20 water heater -->
+<g transform="translate(128 32)"><rect x="9" y="4" width="14" height="25" rx="6" fill="#aab1af" stroke="#4d5654" stroke-width="2"/><path d="M12 8h8M12 23h8" stroke="#6f7876"/><path d="M14 4V1M19 4V1" stroke="#767e7c" stroke-width="2"/></g>
+<!-- 21 exterior AC -->
+<g transform="translate(160 32)"><rect x="5" y="6" width="22" height="22" fill="#788281" stroke="#353d3d" stroke-width="2"/><circle cx="16" cy="17" r="8" fill="#4a5353" stroke="#a0aaa7"/><path d="M16 9v16M8 17h16M10 11l12 12M22 11L10 23" stroke="#626c6a"/></g>
+<!-- 22 electric meter -->
+<g transform="translate(192 32)"><rect x="10" y="9" width="12" height="18" fill="#7b8585" stroke="#333b3b" stroke-width="2"/><circle cx="16" cy="15" r="5" fill="#c3d2d0" stroke="#5c6968"/><path d="M16 15l3-2" stroke="#313839"/><path d="M16 4v5M16 27v4" stroke="#5a6463" stroke-width="2"/></g>
+<!-- 23 utility pole -->
+<g transform="translate(224 32)"><rect x="14" y="3" width="5" height="28" fill="#6c5036"/><path d="M6 9h21M9 6v6M24 6v6" stroke="#4e3c2c" stroke-width="3"/><path d="M0 7h32M0 11h32" stroke="#272b2c"/></g>
+<!-- 24 traffic light -->
+<g transform="translate(256 32)"><rect x="14" y="14" width="4" height="17" fill="#59605f"/><rect x="9" y="2" width="14" height="16" rx="2" fill="#2c3131"/><circle cx="16" cy="6" r="3" fill="#b5443c"/><circle cx="16" cy="11" r="3" fill="#d0a33d"/><circle cx="16" cy="16" r="3" fill="#4b8952"/></g>
+<!-- 25 stop sign -->
+<g transform="translate(288 32)"><rect x="14" y="14" width="4" height="17" fill="#6f7472"/><path d="M9 4l4-3h6l4 3 3 4v6l-3 4-4 3h-6l-4-3-3-4V8z" fill="#b54039" stroke="#e4dfcf" stroke-width="2"/><path d="M10 11h12" stroke="#f0e8d5" stroke-width="2"/></g>
+<!-- 26 parking meter -->
+<g transform="translate(320 32)"><rect x="14" y="13" width="4" height="17" fill="#656e6d"/><rect x="9" y="4" width="14" height="12" rx="5" fill="#7d8b8b" stroke="#384140" stroke-width="2"/><rect x="12" y="7" width="8" height="5" fill="#b7c7c4"/></g>
+<!-- 27 bollard -->
+<g transform="translate(352 32)"><rect x="11" y="8" width="10" height="21" rx="3" fill="#d0a83f" stroke="#655528" stroke-width="2"/><path d="M12 17h8" stroke="#2e3334" stroke-width="3"/></g>
+<!-- 28 hedge -->
+<g transform="translate(384 32)"><rect x="4" y="12" width="24" height="16" rx="5" fill="#3f5c3c"/><circle cx="9" cy="13" r="6" fill="#4d7047"/><circle cx="16" cy="11" r="7" fill="#577a4e"/><circle cx="24" cy="14" r="6" fill="#456641"/></g>
+<!-- 29 flower bed -->
+<g transform="translate(416 32)"><rect x="3" y="19" width="26" height="9" fill="#684b35"/><circle cx="8" cy="16" r="3" fill="#c64e67"/><circle cx="15" cy="13" r="3" fill="#d0a343"/><circle cx="22" cy="16" r="3" fill="#8059ad"/><path d="M8 18v5M15 15v8M22 18v5" stroke="#4a6c42" stroke-width="2"/></g>
+<!-- 30 shed -->
+<g transform="translate(448 32)"><rect x="5" y="10" width="22" height="19" fill="#76543a" stroke="#34281f" stroke-width="2"/><path d="M3 11l13-8 13 8" fill="#4c3b2d" stroke="#30261f" stroke-width="2"/><rect x="12" y="17" width="8" height="12" fill="#4d3729"/></g>
+<!-- 31 propane tank -->
+<g transform="translate(480 32)"><rect x="5" y="12" width="22" height="13" rx="6" fill="#d0d3ca" stroke="#686f6d" stroke-width="2"/><path d="M8 25v4M24 25v4" stroke="#5b6260" stroke-width="3"/><rect x="14" y="8" width="5" height="5" fill="#777e7b"/></g>
+</svg>

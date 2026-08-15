@@ -5,7 +5,7 @@ const Lighting = preload("res://scripts/TacticalLighting.gd")
 const MapGen = preload("res://scripts/TacticalMapGenerator.gd")
 const Weather = preload("res://scripts/TacticalWeather.gd")
 
-const OPAQUE_PROPS := ["dumpster", "car", "store_shelf", "fridge", "crate", "forklift", "machine", "ice_box", "scrub", "tree", "bookshelf", "cabinet"]
+const OPAQUE_PROPS := ["dumpster", "car", "store_shelf", "fridge", "crate", "forklift", "machine", "ice_box", "scrub", "tree", "bookshelf", "cabinet", "freezer", "filing_cabinet", "pallet_rack", "locker", "water_heater", "hedge", "shed"]
 const FLASHLIGHT_PROFILE := {"light": "cone", "light_range": 8.0, "light_strength": 1.0, "light_spread": 0.48}
 const LIGHTING_RADIUS := 13
 
@@ -175,8 +175,6 @@ static func line_clear(a: Vector2i, b: Vector2i, spec: Dictionary, world, opaque
             err += dx
             y0 += sy
 
-        # Supercover-style corner rule: if a diagonal ray squeezes exactly
-        # between two opaque orthogonal cells, that corner blocks vision/light.
         if x0 != old_x and y0 != old_y:
             var side_a := Vector2i(x0, old_y)
             var side_b := Vector2i(old_x, y0)

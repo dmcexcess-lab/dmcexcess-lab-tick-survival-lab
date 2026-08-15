@@ -78,8 +78,6 @@ static func validate_layout(spec: Dictionary) -> bool:
         if not _inside(exit_cell) or blocked.has(exit_cell):
             return false
 
-    # Doors and windows are considered potentially traversable for structural
-    # validation; runtime interaction rules decide how they are crossed.
     var seen: Dictionary = {spawn: true}
     var queue: Array = [spawn]
     var dirs: Array[Vector2i] = [Vector2i.UP, Vector2i.RIGHT, Vector2i.DOWN, Vector2i.LEFT]
@@ -107,20 +105,26 @@ static func ground_at(spec: Dictionary, p: Vector2i) -> String:
         var h := int(entry[3])
         if p.x >= x and p.x < x + w and p.y >= y and p.y < y + h:
             result = str(entry[4])
+    var cell_overrides: Dictionary = spec.get("ground_cells", {})
+    if cell_overrides.has(p):
+        result = str(cell_overrides[p])
     return result
 
 static func ground_color(kind: String) -> Color:
+    if kind.begins_with("road_"):
+        return Color("26292b")
+    if kind.begins_with("sidewalk"):
+        return Color("686866")
     match kind:
         "road": return Color("26292b")
-        "asphalt": return Color("303436")
-        "sidewalk": return Color("686866")
-        "concrete": return Color("555754")
-        "tile": return Color("7b7d78")
-        "wood": return Color("755d43")
-        "carpet": return Color("514b4f")
+        "asphalt", "cracked_asphalt", "parking", "parking_v": return Color("303436")
+        "concrete", "stained_concrete", "warehouse_floor": return Color("555754")
+        "tile", "shop_floor", "kitchen_tile", "bathroom_tile": return Color("7b7d78")
+        "wood", "hardwood_h", "hardwood_v": return Color("755d43")
+        "carpet", "office_carpet", "worn_carpet": return Color("514b4f")
         "linoleum": return Color("6f756d")
-        "grass": return Color("3f5138")
-        "dirt": return Color("69563d")
+        "grass", "field_rows": return Color("3f5138")
+        "dirt", "dirt_road_h", "dirt_road_v", "gravel": return Color("69563d")
         "wash_concrete": return Color("77716a")
         _: return Color("303436")
 
@@ -142,11 +146,15 @@ static func _spec(default_ground_kind: String, player_spawn: Vector2i, exits: Ar
     return {
         "default_ground": default_ground_kind,
         "ground_rects": [],
+        "ground_cells": {},
         "indoor_rects": [],
         "walls": [],
+        "wall_themes": {},
         "obstacles": [],
         "glass": [],
+        "window_themes": {},
         "doors": [],
+        "door_themes": {},
         "barrels": [],
         "props": [],
         "lights": [],
