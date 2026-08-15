@@ -1,5 +1,18 @@
 # Changelog
 
+## Procedural World Art Vocabulary Pass — 2026-08-14
+
+- Added `world_art_atlas.svg`, a 64-tile generator-support atlas covering directional paved roads, corners, T-junctions, four-way intersections, road end caps, plain/wide-road asphalt, sidewalk/curb variants, driveways, parking stalls, crosswalks, cracked asphalt, stained concrete, dirt roads, gravel, field rows, richer interior floors, building wall materials, door variants, window variants, and utility surface details.
+- Added `building_props_atlas.svg` with 32 new interior/exterior sprites including stove, kitchen counter, dresser, nightstand, bathtub, shower, vanity, dining table, armchair, filing cabinet, cubicle, computer, checkout, freezer, produce bin, pallet rack, tool chest, workbench, locker, utility sink, water heater, exterior AC, electric meter, utility pole, traffic light, stop sign, parking meter, bollard, hedge, flower bed, shed, and propane tank.
+- Upgraded `ProceduralRegionGenerator.gd` to generator version 3 with explicit per-road directional link masks and road-surface metadata, so horizontal roads are actually drawn horizontally and the same data contract supports corners/intersections for the upcoming macro road graph.
+- Added directional sidewalk curb art and distinct paved/dirt road presentation without changing road collision or network semantics.
+- Expanded procedural houses, shops, downtown buildings, industrial spaces, yards and rural parcels to use the new floor/parking/field and fixture vocabulary immediately.
+- Added `door_themes` and `window_themes` alongside existing per-cell wall themes so richer building-template rendering can select residential, commercial, industrial, office and storefront openings without changing physical door/glass ownership.
+- Expanded tall-object perception vocabulary for appropriate new fixtures such as freezers, filing cabinets, pallet racks, lockers, water heaters, hedges and sheds.
+- Extended the shared ground language with optional `ground_cells` overrides for future sparse topology details while retaining rectangle fills for rooms/lots/fields.
+- Strengthened procedural-region CI to require deterministic road links/surfaces, both horizontal and vertical road directions, directional road art, and opening-theme metadata.
+- Added `ART_VOCABULARY.md` as the durable art/physics contract for the next building-template and macro-world passes.
+
 ## Upright Directional Survivor Poses — 2026-08-14
 
 - Replaced the old directional player presentation that literally rotated one front-facing sprite by 90/180/270 degrees.
