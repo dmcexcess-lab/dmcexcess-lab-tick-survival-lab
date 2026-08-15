@@ -121,6 +121,10 @@ func _init() -> void:
         var parking_cells: Dictionary = spec.get("parking_cells", {})
         if not spec.get("parking_lots", []).is_empty():
             saw_parking_lot = true
+            if not ground_kinds.has("asphalt_patch"):
+                push_error("REGION_SMOKE_PARKING_LOT_BASE_MISSING seed=%d" % seed_value)
+                quit(1)
+                return
             if parking_cells.is_empty():
                 push_error("REGION_SMOKE_PARKING_STALLS_MISSING seed=%d" % seed_value)
                 quit(1)
