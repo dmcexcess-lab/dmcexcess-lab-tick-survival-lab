@@ -24,6 +24,8 @@ The environment renderer now has a deliberately oversized vocabulary for:
 
 Future work should reuse/combine this vocabulary before adding another general-purpose atlas. Small feature-specific art may still be added when a genuinely new simulation object requires it.
 
+The **next presentation consumer is the overworld/local-area map**: it should reuse procedural world data rather than introduce another art vocabulary, show the player's current position as a red marker, and expose a touch-safe on-screen map control for Safari/mobile alongside keyboard access.
+
 ## Important inventory rule
 
 **Inventory items are not represented as loose world sprites.**
