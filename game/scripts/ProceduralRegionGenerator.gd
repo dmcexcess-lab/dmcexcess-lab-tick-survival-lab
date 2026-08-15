@@ -375,7 +375,7 @@ static func _decorate_biomes(spec: Dictionary, rng: RandomNumberGenerator) -> vo
             var parcel := Rect2i(anchor, Vector2i(PARCEL_W, PARCEL_H))
             if _parcel_hits_road(spec, parcel):
                 continue
-            var biome := biome_at(spec, anchor + Vector2i(PARCEL_W / 2, PARCEL_H / 2))
+            var biome := biome_at(spec, anchor + Vector2i(int(PARCEL_W / 2), int(PARCEL_H / 2)))
             var road_distance := _parcel_road_distance(spec, parcel)
             match biome:
                 "residential":
@@ -400,13 +400,13 @@ static func _place_house(spec: Dictionary, a: Vector2i, rng: RandomNumberGenerat
     _ground(spec, a.x, a.y, PARCEL_W, PARCEL_H, "grass")
     var rect := Rect2i(a.x, a.y + 1, 9, 8)
     _building(spec, rect, "hardwood_h" if rng.randf() < 0.5 else "hardwood_v", "house", rng)
-    _safe_prop(spec, Vector2i(a.x + 1, a.y + 6), "mailbox", false)
+    _safe_prop(spec, Vector2i(a.x + 1, a.y + 10), "mailbox", false)
     if rng.randf() < 0.65:
-        _safe_prop(spec, Vector2i(a.x + 5, a.y + 6), "trash_can", false)
+        _safe_prop(spec, Vector2i(a.x + 5, a.y + 10), "trash_can", false)
     if rng.randf() < 0.55:
-        _safe_prop(spec, Vector2i(a.x + 6, a.y + 1), "hedge", false)
+        _safe_prop(spec, Vector2i(a.x + 9, a.y + 2), "hedge", false)
     if rng.randf() < 0.35:
-        _safe_prop(spec, Vector2i(a.x + 6, a.y + 4), "flower_bed", false)
+        _safe_prop(spec, Vector2i(a.x + 9, a.y + 5), "flower_bed", false)
 
 static func _place_residential_yard(spec: Dictionary, a: Vector2i, rng: RandomNumberGenerator) -> void:
     _ground(spec, a.x, a.y, PARCEL_W, PARCEL_H, "grass")
@@ -460,9 +460,9 @@ static func _place_downtown(spec: Dictionary, a: Vector2i, rng: RandomNumberGene
     var floor_kind := "office_carpet" if building_theme == "office" else "warehouse_floor"
     _building(spec, Rect2i(a.x, a.y, 10, 10), floor_kind, building_theme, rng)
     if rng.randf() < 0.45:
-        _safe_prop(spec, Vector2i(a.x + 1, a.y + 6), "hydrant", false)
+        _safe_prop(spec, Vector2i(a.x + 1, a.y + 10), "hydrant", false)
     if rng.randf() < 0.55:
-        var lamp_cell := Vector2i(a.x + 5, a.y + 6)
+        var lamp_cell := Vector2i(a.x + 8, a.y + 10)
         _safe_prop(spec, lamp_cell, "streetlight", true)
         if not spec.get("road_cells", {}).has(lamp_cell):
             spec["lights"].append([lamp_cell, "security", true])
@@ -477,7 +477,7 @@ static func _place_woods(spec: Dictionary, a: Vector2i, rng: RandomNumberGenerat
             elif rng.randf() < 0.12:
                 _safe_prop(spec, p, "bush", false)
     if rng.randf() < 0.55:
-        _ground(spec, a.x, a.y + PARCEL_H / 2, PARCEL_W, 1, "dirt")
+        _ground(spec, a.x, a.y + int(PARCEL_H / 2), PARCEL_W, 1, "dirt")
     if rng.randf() < 0.22:
         _safe_prop(spec, Vector2i(a.x + 5, a.y + 5), "firewood", false)
 
@@ -486,9 +486,9 @@ static func _place_rural(spec: Dictionary, a: Vector2i, rng: RandomNumberGenerat
     _ground(spec, a.x, a.y, PARCEL_W, PARCEL_H, ground_kind)
     if road_distance <= 4 and rng.randf() < 0.38:
         _building(spec, Rect2i(a.x, a.y + 1, 9, 8), "hardwood_v", "rural_wood", rng)
-        _safe_prop(spec, Vector2i(a.x + 1, a.y + 6), "mailbox", false)
+        _safe_prop(spec, Vector2i(a.x + 1, a.y + 10), "mailbox", false)
         if rng.randf() < 0.4:
-            _safe_prop(spec, Vector2i(a.x + 6, a.y + 5), "propane_tank", false)
+            _safe_prop(spec, Vector2i(a.x + 9, a.y + 6), "propane_tank", false)
     else:
         if rng.randf() < 0.58:
             for i in range(3):

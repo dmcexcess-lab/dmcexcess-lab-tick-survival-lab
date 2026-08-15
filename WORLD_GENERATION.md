@@ -26,7 +26,7 @@ Every region must be reproducible from:
 - region coordinate;
 - generator version/ruleset.
 
-The current local generator now exposes `generator_version = 2`. The same inputs must produce the same biome ownership, roads, road classes, initial buildings, initial clutter, and lights. Persistent changes after generation belong to world state and override regenerated initial facts.
+The current local generator exposes `generator_version = 4`. The same inputs must produce the same biome ownership, roads, road classes, initial buildings, initial clutter, and lights. Persistent changes after generation belong to world state and override regenerated initial facts.
 
 ## Biome/district vocabulary
 
@@ -137,6 +137,12 @@ A parcel owns or derives:
 
 The structure generator then writes standard physical facts into the shared map schema. Procedural buildings now also record per-wall theme metadata, orient doors toward road frontage, use more appropriate interior light profiles, and receive modest deterministic interior/exterior clutter.
 
+The current local-region parcel pass uses **10×11 parcel cells** as its bootstrap block grammar instead of the old 7×7 micro-parcels. Generated houses/shops are generally 9×8, while downtown structures may occupy 10×10. This gives structures enough interior area to function as places rather than decorative boxes.
+
+Generated structures now emit `building_rects` plus real `rooms`. Room boundaries are written as ordinary physical wall cells with ordinary door cells cut through them; there is no separate fake interior-map schema. Current bootstrap layouts provide three-room houses/rural homes, sales-floor + stockroom stores, three-zone offices, and utility-room + warehouse industrial layouts. Room-specific floor overlays use the same shared ground language.
+
+Commercial parking uses an asphalt lot base plus explicit `parking_cells` for marked stalls. **Parking stall tiles may not touch cardinally**: there must be at least one non-parking tile between neighboring marked stalls. `parking_lots` records the lot footprint while `parking_cells` records only individual marked spaces.
+
 Authored building templates may later be inserted into compatible parcels, allowing procedural city layout with hand-authored high-quality interiors.
 
 ## Clutter rules
@@ -146,6 +152,12 @@ Clutter must reinforce place identity without becoming random visual noise or se
 Current reusable clutter vocabulary includes indoor chair, desk, toilet, sink, cabinet, bookshelf, television, lamp, rug and laundry sprites plus outdoor tree, bush, fence, mailbox, trash can, road sign, bench, hydrant, streetlight, planter, tire pile, cardboard, picnic table and firewood sprites.
 
 Placement rules distinguish visual clutter from physical obstacles. Large/tall objects may enter `obstacles`; small decoration remains in `props`. Tall objects that should block vision are separately recognized by perception. This preserves the important distinction between **looks solid**, **blocks movement**, and **blocks sight**.
+
+## Overworld map presentation
+
+The player-facing map is one **full-screen overworld map**, opened from the tactical view by the on-screen `MAP` control or keyboard `M`. It is a schematic presentation of the same authoritative world coordinates: biome terrain, roads, parking lots, building footprints, exits, and the survivor as a red dot. Opening/closing it costs zero ticks and it does not own simulation state.
+
+There is intentionally **no minimap and no separate local-area map mode**. Interior rooms remain tactical-world geometry and are seen by entering/exploring the building rather than through a second local map layer.
 
 ## Region boundaries
 
@@ -171,6 +183,6 @@ The world remains authoritative without requiring every zombie, animal, crop and
 
 ## Current prototype limits / next geography work
 
-The 64×64 generator now proves contiguous biome fields, connected road hierarchy, frontage-aware structures, deterministic clutter, follow-camera navigation, weather, day/night lighting and local LOS/fog. It does not yet simulate coastlines, rivers, elevation, neighbor-compatible chunk road contracts, true building archetype libraries, utilities, loot economy, populations, outbreak state, or persistence deltas.
+The 64×64 generator now proves contiguous biome fields, connected road hierarchy, frontage-aware structures, deterministic clutter, follow-camera navigation, weather, day/night lighting and local LOS/fog. It does not yet simulate coastlines, rivers, elevation, neighbor-compatible chunk road contracts, larger authored building-archetype libraries, utilities, loot economy, populations, outbreak state, or persistence deltas.
 
 Before building a full island, the next world-generation-specific work should be **macro geography + edge contracts**, not simply making the current local region bigger. Coastline/water/elevation and cross-region roads should become the constraints that the existing biome/parcel generator responds to.

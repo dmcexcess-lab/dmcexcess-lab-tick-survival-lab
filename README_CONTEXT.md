@@ -20,12 +20,12 @@ Durable design references: `DESIGN.md`, `ROADMAP.md`, `WORLD_GENERATION.md`, `WO
 
 **Milestone 0.2 — Action Execution Model is complete. Milestone 0.3A — Visual Perception is complete. Milestone 0.3B — Weather Foundation is functionally present. The current world/navigation stage now includes a generator-support art vocabulary pass before the next macro geography / chunk-contract expansion or 0.3C Spatial Sound Visualization.**
 
-Canonical source includes authored maps, deterministic 64×64 procedural regions, connected road hierarchy, directional road topology art, follow-camera/zoom, world/scheduler/player/timing-dummy modules, tactical + clutter + world/building-prop atlases, lighting, perception/fog, silent sound helpers, weather state/VFX, tick-driven calendar/day-night cycle, split dev/in-game HUDs, Safari touch suppression, and deterministic map/region/tick/calendar/environment/perception smoke tests.
+Canonical source includes authored maps, deterministic 64×64 procedural regions, connected road hierarchy, larger room-aware procedural buildings, spaced parking stalls, a full-screen overworld map, directional road topology art, follow-camera/zoom, world/scheduler/player/timing-dummy modules, tactical + clutter + world/building-prop atlases, lighting, perception/fog, silent sound helpers, weather state/VFX, tick-driven calendar/day-night cycle, split dev/in-game HUDs, Safari touch suppression, and deterministic map/region/tick/calendar/environment/perception smoke tests.
 
 Ownership:
 
 - `TacticalMapGenerator.gd` — authored initial physical map facts plus the shared ground-query language used by authored and procedural maps.
-- `ProceduralRegionGenerator.gd` — deterministic 64×64 local-region biome, road, parcel, structure, clutter and initial-light generation using the shared physical map schema. Current generator version is 3.
+- `ProceduralRegionGenerator.gd` — deterministic 64×64 local-region biome, road, parcel, structure, clutter and initial-light generation using the shared physical map schema. Current generator version is 4.
 - `LocalWorldState.gd` — mutable local physical facts such as door state/collision.
 - `TickScheduler.gd` — authoritative world tick, active action execution, interruption state, actor ordering, and player-ready state.
 - `WorldCalendar.gd` — tick-to-clock/date/daylight-phase mapping.
@@ -75,6 +75,8 @@ The logical viewport is 640×844. The touch deck is a true three-row layout:
 **One physical touch must equal one action.** Mobile Safari may synthesize a mouse click around a touch; `SafariInputGuard.gd` and the local suppression window prevent first-touch and follow-up double-actions. Do not remove these guards or reintroduce double-move / 180-degree-turn behavior.
 
 Map tapping remains available. `MENU`/Escape opens the actual pause menu and Web exit uses same-tab browser navigation.
+
+The player map is **one full-screen overworld map only**. `MAP` on touch or keyboard `M` opens it; it shows the current generated region with roads, parking lots, building footprints, biome terrain, exits, and the survivor as a red dot. It costs zero ticks and blocks tactical action input while open. There is deliberately no minimap and no separate local-area-map mode.
 
 ## HUD rule
 
@@ -140,7 +142,7 @@ On player death, the user can eventually either play a new survivor in the same 
 
 The imported First Fire map foundation remains an authored-layout catalog of 20×18 physical locations: Back Alley, Gas Station, Residential House, Apartment, Corner Store, Warehouse Yard, and Drainage Wash. Each can describe ground, indoor regions, walls, doors, windows/glass, obstacles, props, barrels, light markers, player spawn, and exits.
 
-The large-map stress slice uses `ProceduralRegionGenerator.gd` to generate a deterministic 64×64 region using the same physical language. The current generator version is **3**.
+The large-map stress slice uses `ProceduralRegionGenerator.gd` to generate a deterministic 64×64 region using the same physical language. The current generator version is **4**.
 
 Current road rules and data contracts:
 
@@ -157,6 +159,9 @@ Current road rules and data contracts:
 - `road_links` is a four-bit N/E/S/W topology mask used by directional road art and is the intended contract for future curved/branching macro road routes;
 - `road_ports` establishes a future chunk-edge data shape but is not yet a neighbor-compatible macro road contract;
 - procedural buildings now emit `wall_themes`, `door_themes`, and `window_themes` as presentation metadata while physical membership remains walls/doors/glass.
+- generator v4 uses 10×11 bootstrap parcels with 9×8 houses/shops and up-to-10×10 downtown structures;
+- `building_rects` records overmap-scale footprints while `rooms` records room zones; room partitions themselves are ordinary physical wall/door cells;
+- `parking_lots` records paved lot footprints and `parking_cells` records marked stalls; parking stall cells are never cardinally adjacent, guaranteeing at least one non-parking tile between marked spaces.
 
 The shared ground language supports rectangle fills plus optional sparse `ground_cells` overrides. Do not replace this with a second incompatible map language. Long-term hierarchy remains:
 
@@ -174,7 +179,7 @@ See `ART_VOCABULARY.md` for the full current surface/opening/fixture vocabulary 
 
 ## Current procedural limits / next world work
 
-The 64×64 generator currently proves deterministic biome fields, connected road hierarchy, directional road topology metadata/art, frontage-aware structures, richer floor/material vocabulary, deterministic clutter, camera-local rendering, local lighting/vision and world navigation. It does **not** yet simulate coastline, water/rivers, elevation, neighbor-compatible chunk edge contracts, utility grids, true room-aware building-template libraries, loot economy, populations, outbreak state, or persistence deltas.
+The 64×64 generator currently proves deterministic biome fields, connected road hierarchy, directional road topology metadata/art, frontage-aware structures, richer floor/material vocabulary, deterministic clutter, camera-local rendering, local lighting/vision and world navigation. It does **not** yet simulate coastline, water/rivers, elevation, neighbor-compatible chunk edge contracts, utility grids, larger authored building-template libraries, loot economy, populations, outbreak state, or persistence deltas.
 
 The next world-generation-specific step should be **macro geography + chunk-edge contracts**: a seed-driven larger world composed of deterministic chunks, with coastline/water/elevation plus shared road/trail/river/utility ports that neighboring chunks agree on. Road routing should use the existing `road_links`/class/surface vocabulary and generate actual bends, junctions, loops and local street graphs.
 

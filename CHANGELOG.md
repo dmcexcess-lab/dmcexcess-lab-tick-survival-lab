@@ -1,5 +1,17 @@
 # Changelog
 
+## Full-Screen Overworld Map / Generation v4 — 2026-08-14
+
+- Added one full-screen Zomboid-style overworld map presentation, opened by keyboard `M` or a Safari-safe on-screen `MAP` button; there is intentionally no minimap and no separate local-area map mode.
+- The overworld uses the same generated region coordinates and shows biome terrain, road network, parking-lot footprints, building footprints, exits, and the survivor as a red dot; opening/closing it costs zero authoritative ticks and tactical actions are blocked while it is open.
+- Upgraded `ProceduralRegionGenerator.gd` to generator version 4 and replaced 7×7 micro-parcels with a 10×11 bootstrap parcel grammar.
+- Enlarged generated houses/shops to roughly 9×8 and downtown structures to as much as 10×10 so interiors have meaningful traversable area.
+- Added real physical interior subdivision: houses/rural homes get three rooms, stores get sales + stock rooms, offices get three zones, and industrial buildings get utility + warehouse zones. Interior partitions are ordinary wall cells with ordinary door cells, not a second map schema.
+- Added `building_rects` and `rooms` metadata for presentation/testing while keeping collision/LOS authority in the existing walls/doors/world state.
+- Reworked commercial parking: lots use an asphalt base and only marked stalls use parking tiles; parking stall cells are prohibited from touching cardinally, guaranteeing at least one non-parking tile between adjacent marked spaces.
+- Updated tactical presentation to consume per-cell wall/door/window themes so the new interior partitions and existing shell metadata render with their intended material vocabulary.
+- Strengthened deterministic region validation/smoke coverage for building footprint size, room subdivisions, interior walls/doors, parking metadata, and parking-stall spacing.
+
 ## Final Environment Art Pass — 2026-08-14
 
 - Added `final_environment_props_atlas.svg` with 128 environment-only sprites: 32 nature, 32 street/civic, 40 residential fixtures/furniture, and 24 commercial/office/industrial fixtures.
