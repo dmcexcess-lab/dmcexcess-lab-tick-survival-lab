@@ -439,7 +439,12 @@ static func _place_commercial_lot(spec: Dictionary, a: Vector2i, rng: RandomNumb
 static func _parking_lot(spec: Dictionary, rect: Rect2i, storefront_row_only: bool) -> void:
     _ground(spec, rect.position.x, rect.position.y, rect.size.x, rect.size.y, "asphalt_patch")
     spec["parking_lots"].append([rect.position.x, rect.position.y, rect.size.x, rect.size.y])
-    var rows: Array[int] = [rect.end.y - 1] if storefront_row_only else [rect.position.y + 2, rect.position.y + 7]
+    var rows: Array[int] = []
+    if storefront_row_only:
+        rows.append(rect.end.y - 1)
+    else:
+        rows.append(rect.position.y + 2)
+        rows.append(rect.position.y + 7)
     for y in rows:
         for x in range(rect.position.x + 1, rect.end.x - 1, 2):
             _parking_stall(spec, Vector2i(x, y))
