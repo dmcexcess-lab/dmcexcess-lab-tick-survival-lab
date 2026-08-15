@@ -3,7 +3,7 @@ class_name ProceduralRegionGenerator
 
 const REGION_W := 64
 const REGION_H := 64
-const GENERATOR_VERSION := 3
+const GENERATOR_VERSION := 4
 
 const ROAD_N := 1
 const ROAD_E := 2
@@ -14,6 +14,8 @@ const BIOMES := ["residential", "commercial", "downtown", "woods", "rural"]
 const DEVELOPED_BIOMES := ["residential", "commercial", "downtown"]
 const DIRS: Array[Vector2i] = [Vector2i.UP, Vector2i.RIGHT, Vector2i.DOWN, Vector2i.LEFT]
 const ROAD_RANK := {"trail": 0, "local": 1, "secondary": 2, "arterial": 3}
+const PARCEL_W := 10
+const PARCEL_H := 11
 
 static func generate(seed_value: int, width: int = REGION_W, height: int = REGION_H) -> Dictionary:
     var rng := RandomNumberGenerator.new()
@@ -48,6 +50,10 @@ static func generate(seed_value: int, width: int = REGION_W, height: int = REGIO
         "road_surface_cells": {},
         "road_links": {},
         "road_ports": {},
+        "building_rects": [],
+        "rooms": [],
+        "parking_lots": [],
+        "parking_cells": {},
     }
 
     var centers: Dictionary = _biome_centers(rng, width, height)
@@ -113,6 +119,27 @@ static func validate(spec: Dictionary) -> Dictionary:
     for biome in BIOMES:
         if int(counts.get(biome, 0)) < 24:
             failures.append("biome too small: %s" % biome)
+
+    var buildings: Array = spec.get("building_rects", [])
+    if buildings.is_empty():
+        failures.append("no generated buildings")
+    for building_value in buildings:
+        var building: Array = building_value
+        if int(building[2]) < 8 or int(building[3]) < 8:
+            failures.append("generated building footprint too small: %s" % str(building))
+            break
+    var rooms: Array = spec.get("rooms", [])
+    if rooms.size() < buildings.size() * 2:
+        failures.append("generated buildings missing room subdivisions")
+    var parking_cells: Dictionary = spec.get("parking_cells", {})
+    for parking_value in parking_cells.keys():
+        var parking_cell: Vector2i = parking_value
+        for d in DIRS:
+            if parking_cells.has(parking_cell + d):
+                failures.append("parking stalls touch without spacing: %s" % str(parking_cell))
+                break
+        if not failures.is_empty() and failures.back().begins_with("parking stalls touch"):
+            break
 
     return {"ok": failures.is_empty(), "failures": failures, "biome_counts": counts}
 
@@ -342,27 +369,27 @@ static func _road_art_kind(spec: Dictionary, p: Vector2i, surface: String) -> St
 static func _decorate_biomes(spec: Dictionary, rng: RandomNumberGenerator) -> void:
     var width: int = int(spec["width"])
     var height: int = int(spec["height"])
-    for y in range(4, height - 8, 8):
-        for x in range(4, width - 8, 8):
+    for y in range(2, height - PARCEL_H, PARCEL_H):
+        for x in range(2, width - PARCEL_W, PARCEL_W):
             var anchor := Vector2i(x, y)
-            var parcel := Rect2i(anchor, Vector2i(7, 7))
+            var parcel := Rect2i(anchor, Vector2i(PARCEL_W, PARCEL_H))
             if _parcel_hits_road(spec, parcel):
                 continue
-            var biome := biome_at(spec, anchor + Vector2i(3, 3))
+            var biome := biome_at(spec, anchor + Vector2i(PARCEL_W / 2, PARCEL_H / 2))
             var road_distance := _parcel_road_distance(spec, parcel)
             match biome:
                 "residential":
-                    if road_distance <= 2 and rng.randf() < 0.84:
+                    if road_distance <= 3 and rng.randf() < 0.86:
                         _place_house(spec, anchor, rng)
                     else:
                         _place_residential_yard(spec, anchor, rng)
                 "commercial":
-                    if road_distance <= 2 and rng.randf() < 0.82:
+                    if road_distance <= 3 and rng.randf() < 0.80:
                         _place_shop(spec, anchor, rng)
-                    elif road_distance <= 3:
+                    elif road_distance <= 4:
                         _place_commercial_lot(spec, anchor, rng)
                 "downtown":
-                    if road_distance <= 2 and rng.randf() < 0.92:
+                    if road_distance <= 3 and rng.randf() < 0.94:
                         _place_downtown(spec, anchor, rng)
                 "woods":
                     _place_woods(spec, anchor, rng)
@@ -370,8 +397,8 @@ static func _decorate_biomes(spec: Dictionary, rng: RandomNumberGenerator) -> vo
                     _place_rural(spec, anchor, rng, road_distance)
 
 static func _place_house(spec: Dictionary, a: Vector2i, rng: RandomNumberGenerator) -> void:
-    _ground(spec, a.x, a.y, 7, 7, "grass")
-    var rect := Rect2i(a.x + 1, a.y + 1, 5, 4)
+    _ground(spec, a.x, a.y, PARCEL_W, PARCEL_H, "grass")
+    var rect := Rect2i(a.x, a.y + 1, 9, 8)
     _building(spec, rect, "hardwood_h" if rng.randf() < 0.5 else "hardwood_v", "house", rng)
     _safe_prop(spec, Vector2i(a.x + 1, a.y + 6), "mailbox", false)
     if rng.randf() < 0.65:
@@ -382,7 +409,7 @@ static func _place_house(spec: Dictionary, a: Vector2i, rng: RandomNumberGenerat
         _safe_prop(spec, Vector2i(a.x + 6, a.y + 4), "flower_bed", false)
 
 static func _place_residential_yard(spec: Dictionary, a: Vector2i, rng: RandomNumberGenerator) -> void:
-    _ground(spec, a.x, a.y, 7, 7, "grass")
+    _ground(spec, a.x, a.y, PARCEL_W, PARCEL_H, "grass")
     if rng.randf() < 0.55:
         _safe_prop(spec, Vector2i(a.x + 2, a.y + 3), "tree", true)
     if rng.randf() < 0.7:
@@ -391,27 +418,47 @@ static func _place_residential_yard(spec: Dictionary, a: Vector2i, rng: RandomNu
         _safe_prop(spec, Vector2i(a.x + 4, a.y + 2), "flower_bed", false)
 
 static func _place_shop(spec: Dictionary, a: Vector2i, rng: RandomNumberGenerator) -> void:
-    _ground(spec, a.x, a.y, 7, 7, "parking")
-    _building(spec, Rect2i(a.x + 1, a.y + 1, 6, 4), "shop_floor", "store", rng)
+    var parcel := Rect2i(a, Vector2i(PARCEL_W, PARCEL_H))
+    _parking_lot(spec, parcel, true)
+    _building(spec, Rect2i(a.x, a.y + 1, 9, 8), "shop_floor", "store", rng)
     if rng.randf() < 0.7:
-        _safe_prop(spec, Vector2i(a.x + 2, a.y + 6), "shopping_cart", false)
+        _safe_prop(spec, Vector2i(a.x + 8, a.y + 9), "shopping_cart", false)
     if rng.randf() < 0.55:
-        _safe_prop(spec, Vector2i(a.x + 5, a.y + 6), "bollard", true)
+        _safe_prop(spec, Vector2i(a.x + 9, a.y + 9), "bollard", true)
 
 static func _place_commercial_lot(spec: Dictionary, a: Vector2i, rng: RandomNumberGenerator) -> void:
-    _ground(spec, a.x, a.y, 7, 7, "parking")
+    var parcel := Rect2i(a, Vector2i(PARCEL_W, PARCEL_H))
+    _parking_lot(spec, parcel, false)
     if rng.randf() < 0.65:
-        _safe_prop(spec, Vector2i(a.x + 2, a.y + 4), "bench", true)
+        _safe_prop(spec, Vector2i(a.x + 8, a.y + 5), "bench", true)
     if rng.randf() < 0.45:
-        _safe_prop(spec, Vector2i(a.x + 5, a.y + 2), "planter", true)
+        _safe_prop(spec, Vector2i(a.x + 8, a.y + 8), "planter", true)
     if rng.randf() < 0.35:
-        _safe_prop(spec, Vector2i(a.x + 1, a.y + 1), "parking_meter", false)
+        _safe_prop(spec, Vector2i(a.x + 9, a.y + 1), "parking_meter", false)
+
+static func _parking_lot(spec: Dictionary, rect: Rect2i, storefront_row_only: bool) -> void:
+    _ground(spec, rect.position.x, rect.position.y, rect.size.x, rect.size.y, "asphalt_patch")
+    spec["parking_lots"].append([rect.position.x, rect.position.y, rect.size.x, rect.size.y])
+    var rows: Array[int] = [rect.end.y - 1] if storefront_row_only else [rect.position.y + 2, rect.position.y + 7]
+    for y in rows:
+        for x in range(rect.position.x + 1, rect.end.x - 1, 2):
+            _parking_stall(spec, Vector2i(x, y))
+
+static func _parking_stall(spec: Dictionary, p: Vector2i) -> void:
+    if not _inside(spec, p) or spec.get("road_cells", {}).has(p):
+        return
+    var parking_cells: Dictionary = spec["parking_cells"]
+    for d in DIRS:
+        if parking_cells.has(p + d):
+            return
+    parking_cells[p] = true
+    _ground(spec, p.x, p.y, 1, 1, "parking")
 
 static func _place_downtown(spec: Dictionary, a: Vector2i, rng: RandomNumberGenerator) -> void:
-    _ground(spec, a.x, a.y, 7, 7, "sidewalk")
+    _ground(spec, a.x, a.y, PARCEL_W, PARCEL_H, "sidewalk")
     var building_theme := "office" if rng.randf() < 0.62 else "industrial"
     var floor_kind := "office_carpet" if building_theme == "office" else "warehouse_floor"
-    _building(spec, Rect2i(a.x, a.y, 7, 6), floor_kind, building_theme, rng)
+    _building(spec, Rect2i(a.x, a.y, 10, 10), floor_kind, building_theme, rng)
     if rng.randf() < 0.45:
         _safe_prop(spec, Vector2i(a.x + 1, a.y + 6), "hydrant", false)
     if rng.randf() < 0.55:
@@ -421,24 +468,24 @@ static func _place_downtown(spec: Dictionary, a: Vector2i, rng: RandomNumberGene
             spec["lights"].append([lamp_cell, "security", true])
 
 static func _place_woods(spec: Dictionary, a: Vector2i, rng: RandomNumberGenerator) -> void:
-    _ground(spec, a.x, a.y, 7, 7, "grass")
-    for yy in range(a.y, a.y + 7):
-        for xx in range(a.x, a.x + 7):
+    _ground(spec, a.x, a.y, PARCEL_W, PARCEL_H, "grass")
+    for yy in range(a.y, a.y + PARCEL_H):
+        for xx in range(a.x, a.x + PARCEL_W):
             var p := Vector2i(xx, yy)
             if rng.randf() < 0.105:
                 _safe_prop(spec, p, "tree", true)
             elif rng.randf() < 0.12:
                 _safe_prop(spec, p, "bush", false)
     if rng.randf() < 0.55:
-        _ground(spec, a.x, a.y + 3, 7, 1, "dirt")
+        _ground(spec, a.x, a.y + PARCEL_H / 2, PARCEL_W, 1, "dirt")
     if rng.randf() < 0.22:
         _safe_prop(spec, Vector2i(a.x + 5, a.y + 5), "firewood", false)
 
 static func _place_rural(spec: Dictionary, a: Vector2i, rng: RandomNumberGenerator, road_distance: int) -> void:
     var ground_kind := "field_rows" if rng.randf() < 0.36 else ("dirt" if rng.randf() < 0.48 else "grass")
-    _ground(spec, a.x, a.y, 7, 7, ground_kind)
+    _ground(spec, a.x, a.y, PARCEL_W, PARCEL_H, ground_kind)
     if road_distance <= 4 and rng.randf() < 0.38:
-        _building(spec, Rect2i(a.x + 1, a.y + 1, 5, 4), "hardwood_v", "rural_wood", rng)
+        _building(spec, Rect2i(a.x, a.y + 1, 9, 8), "hardwood_v", "rural_wood", rng)
         _safe_prop(spec, Vector2i(a.x + 1, a.y + 6), "mailbox", false)
         if rng.randf() < 0.4:
             _safe_prop(spec, Vector2i(a.x + 6, a.y + 5), "propane_tank", false)
@@ -456,6 +503,7 @@ static func _place_rural(spec: Dictionary, a: Vector2i, rng: RandomNumberGenerat
 static func _building(spec: Dictionary, rect: Rect2i, floor_kind: String, theme: String, rng: RandomNumberGenerator) -> void:
     _ground(spec, rect.position.x, rect.position.y, rect.size.x, rect.size.y, floor_kind)
     spec["indoor_rects"].append([rect.position.x, rect.position.y, rect.size.x, rect.size.y])
+    spec["building_rects"].append([rect.position.x, rect.position.y, rect.size.x, rect.size.y, theme])
     for x in range(rect.position.x, rect.end.x):
         _wall(spec, Vector2i(x, rect.position.y), theme)
         _wall(spec, Vector2i(x, rect.end.y - 1), theme)
@@ -482,6 +530,8 @@ static func _building(spec: Dictionary, rect: Rect2i, floor_kind: String, theme:
     if rng.randf() < 0.82:
         spec["lights"].append([light, light_kind, true])
 
+    _add_room_layout(spec, rect, theme)
+    _ensure_entry_path(spec, rect, door, theme)
     _decorate_interior(spec, rect, theme, door, rng)
     if rng.randf() < 0.42:
         _safe_prop(spec, Vector2i(rect.end.x, rect.position.y + rect.size.y / 2), "exterior_ac", false, door)
@@ -520,6 +570,72 @@ static func _decorate_interior(spec: Dictionary, rect: Rect2i, theme: String, do
                 _safe_prop(spec, Vector2i(rect.end.x - 2, rect.position.y + 1), "locker", true, door)
             if rng.randf() < 0.45:
                 _safe_prop(spec, Vector2i(rect.end.x - 2, rect.end.y - 2), "tool_chest", true, door)
+
+static func _add_room_layout(spec: Dictionary, rect: Rect2i, theme: String) -> void:
+    match theme:
+        "house", "rural_wood":
+            var split_x := rect.position.x + 4
+            _interior_wall_v(spec, split_x, rect.position.y + 1, rect.end.y - 2, theme, rect.position.y + 3)
+            _interior_wall_h(spec, rect.position.y + 4, split_x + 1, rect.end.x - 2, theme, split_x + 2)
+            _room(spec, Rect2i(rect.position.x + 1, rect.position.y + 1, 3, rect.size.y - 2), "living_kitchen", "laminate_light")
+            _room(spec, Rect2i(split_x + 1, rect.position.y + 1, rect.end.x - split_x - 2, 3), "bedroom", "carpet_beige")
+            _room(spec, Rect2i(split_x + 1, rect.position.y + 5, rect.end.x - split_x - 2, rect.end.y - rect.position.y - 6), "bathroom", "tile_white")
+        "store":
+            var split_y := rect.position.y + 4
+            _interior_wall_h(spec, split_y, rect.position.x + 1, rect.end.x - 2, theme, rect.position.x + 4)
+            _room(spec, Rect2i(rect.position.x + 1, rect.position.y + 1, rect.size.x - 2, 3), "sales_floor", "shop_floor")
+            _room(spec, Rect2i(rect.position.x + 1, split_y + 1, rect.size.x - 2, rect.end.y - split_y - 2), "stockroom", "warehouse_floor")
+        "office":
+            var split_x := rect.position.x + 4
+            var split_y := rect.position.y + 5
+            _interior_wall_v(spec, split_x, rect.position.y + 1, rect.end.y - 2, theme, rect.position.y + 3)
+            _interior_wall_h(spec, split_y, rect.position.x + 1, split_x - 1, theme, rect.position.x + 2)
+            _room(spec, Rect2i(rect.position.x + 1, rect.position.y + 1, split_x - rect.position.x - 1, split_y - rect.position.y - 1), "office_front", "office_carpet")
+            _room(spec, Rect2i(rect.position.x + 1, split_y + 1, split_x - rect.position.x - 1, rect.end.y - split_y - 2), "office_back", "office_carpet")
+            _room(spec, Rect2i(split_x + 1, rect.position.y + 1, rect.end.x - split_x - 2, rect.size.y - 2), "office_side", "carpet_blue")
+        _:
+            var split_x := rect.position.x + 3
+            _interior_wall_v(spec, split_x, rect.position.y + 1, rect.end.y - 2, theme, rect.position.y + 4)
+            _room(spec, Rect2i(rect.position.x + 1, rect.position.y + 1, split_x - rect.position.x - 1, rect.size.y - 2), "utility_room", "concrete_clean")
+            _room(spec, Rect2i(split_x + 1, rect.position.y + 1, rect.end.x - split_x - 2, rect.size.y - 2), "warehouse", "warehouse_floor")
+
+static func _room(spec: Dictionary, rect: Rect2i, room_kind: String, floor_kind: String) -> void:
+    if rect.size.x <= 0 or rect.size.y <= 0:
+        return
+    spec["rooms"].append([rect.position.x, rect.position.y, rect.size.x, rect.size.y, room_kind])
+    _ground(spec, rect.position.x, rect.position.y, rect.size.x, rect.size.y, floor_kind)
+
+static func _interior_wall_v(spec: Dictionary, x: int, y0: int, y1: int, theme: String, door_y: int) -> void:
+    for y in range(y0, y1 + 1):
+        _wall(spec, Vector2i(x, y), "interior")
+    _add_interior_door(spec, Vector2i(x, door_y), theme)
+
+static func _interior_wall_h(spec: Dictionary, y: int, x0: int, x1: int, theme: String, door_x: int) -> void:
+    for x in range(x0, x1 + 1):
+        _wall(spec, Vector2i(x, y), "interior")
+    _add_interior_door(spec, Vector2i(door_x, y), theme)
+
+static func _add_interior_door(spec: Dictionary, p: Vector2i, theme: String) -> void:
+    _cut_wall(spec, p)
+    for door_value in spec["doors"]:
+        var entry: Array = door_value
+        if entry[0] == p:
+            return
+    spec["doors"].append([p, false])
+    spec["door_themes"][p] = _opening_theme(theme)
+
+static func _ensure_entry_path(spec: Dictionary, rect: Rect2i, exterior_door: Vector2i, theme: String) -> void:
+    var inward := exterior_door
+    if exterior_door.y == rect.position.y:
+        inward += Vector2i.DOWN
+    elif exterior_door.y == rect.end.y - 1:
+        inward += Vector2i.UP
+    elif exterior_door.x == rect.position.x:
+        inward += Vector2i.RIGHT
+    elif exterior_door.x == rect.end.x - 1:
+        inward += Vector2i.LEFT
+    if spec["walls"].has(inward):
+        _add_interior_door(spec, inward, theme)
 
 static func _nearest_road_side(spec: Dictionary, rect: Rect2i) -> String:
     var best_side := "south"
