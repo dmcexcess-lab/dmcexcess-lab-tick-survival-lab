@@ -1,0 +1,29 @@
+name: Apply generation v4
+
+"on":
+  push:
+    paths:
+      - '.github/workflows/generation-v4-writer.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  apply:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Apply generation rules
+        shell: bash
+        run: python3 .generation_v4_patcher.py
+      - name: Commit generator and remove temporary writer
+        shell: bash
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git rm .generation_v4_patcher.py .github/workflows/generation-v4-writer.yml
+          git add game/scripts/ProceduralRegionGenerator.gd
+          git commit -m 'Expand procedural buildings and parking rules'
+          git push origin HEAD:main
