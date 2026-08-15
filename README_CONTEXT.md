@@ -14,18 +14,18 @@ This is an original Godot 4 top-down zombie-apocalypse survival simulation. Proj
 
 First Fire is a same-owner source project. Reusable tactical/physical-world work may be adapted after inspection, but Tick must not inherit First Fire's camp/menu/expedition architecture.
 
-Durable design references: `DESIGN.md`, `ROADMAP.md`, `WORLD_GENERATION.md`, and `FIRST_FIRE_REUSE.md`.
+Durable design references: `DESIGN.md`, `ROADMAP.md`, `WORLD_GENERATION.md`, `WORLD_NAVIGATION_AUDIT.md`, `ART_VOCABULARY.md`, and `FIRST_FIRE_REUSE.md`.
 
 ## Current milestone / stage
 
-**Milestone 0.2 — Action Execution Model is complete. Milestone 0.3A — Visual Perception is complete. Milestone 0.3B — Weather Foundation is functionally present. The current pass is a world/navigation foundation completion audit before 0.3C Spatial Sound Visualization.**
+**Milestone 0.2 — Action Execution Model is complete. Milestone 0.3A — Visual Perception is complete. Milestone 0.3B — Weather Foundation is functionally present. The current world/navigation stage now includes a generator-support art vocabulary pass before the next macro geography / chunk-contract expansion or 0.3C Spatial Sound Visualization.**
 
-Canonical source includes authored maps, deterministic 64×64 procedural regions, connected road hierarchy, follow-camera/zoom, world/scheduler/player/timing-dummy modules, tactical + clutter atlases, lighting, perception/fog, silent sound helpers, weather state/VFX, tick-driven calendar/day-night cycle, split dev/in-game HUDs, Safari touch suppression, and deterministic map/region/tick/calendar/environment/perception smoke tests.
+Canonical source includes authored maps, deterministic 64×64 procedural regions, connected road hierarchy, directional road topology art, follow-camera/zoom, world/scheduler/player/timing-dummy modules, tactical + clutter + world/building-prop atlases, lighting, perception/fog, silent sound helpers, weather state/VFX, tick-driven calendar/day-night cycle, split dev/in-game HUDs, Safari touch suppression, and deterministic map/region/tick/calendar/environment/perception smoke tests.
 
 Ownership:
 
-- `TacticalMapGenerator.gd` — authored initial physical map facts.
-- `ProceduralRegionGenerator.gd` — deterministic 64×64 local-region biome, road, parcel, structure, clutter and initial-light generation using the shared physical map schema.
+- `TacticalMapGenerator.gd` — authored initial physical map facts plus the shared ground-query language used by authored and procedural maps.
+- `ProceduralRegionGenerator.gd` — deterministic 64×64 local-region biome, road, parcel, structure, clutter and initial-light generation using the shared physical map schema. Current generator version is 3.
 - `LocalWorldState.gd` — mutable local physical facts such as door state/collision.
 - `TickScheduler.gd` — authoritative world tick, active action execution, interruption state, actor ordering, and player-ready state.
 - `WorldCalendar.gd` — tick-to-clock/date/daylight-phase mapping.
@@ -34,7 +34,7 @@ Ownership:
 - `TacticalLighting.gd` — dependency-free lighting math adapted from First Fire.
 - `TacticalSound.gd` — silent sound/localization helpers adapted from First Fire; propagation is pending.
 - `TacticalWeather.gd` — current weather profile, visibility/light/sound-mask hooks, temperature hook, indoor thermal buffer, and wind display helper. It does not yet simulate weather patterns.
-- `TacticalTiles.gd` — Tick-native renderer for the restored First Fire tactical atlas plus Tick's clutter atlas.
+- `TacticalTiles.gd` — Tick-native renderer for the restored First Fire tactical atlas plus Tick's clutter, world-art, building-prop and independent player-facing assets.
 - `TacticalPerception.gd` — LOS, facing cone, opaque geometry, biome-aware ambient-light selection, light/weather integration, visible cells, and remembered fog state.
 - `MapPreview.gd` — development input/presentation harness only; it may present debug controls but must not become the permanent owner of simulation rules.
 
@@ -84,18 +84,32 @@ The normal in-game HUD is read-only and currently shows survivor name, health, s
 
 The `DEV` overlay contains tick/debug diagnostics plus manual world test controls. Current editable dev fields are HH:MM, MM/DD, and current weather. HH:MM and MM/DD use native Godot `LineEdit` controls so iOS/Safari can summon the keyboard. Developer controls do not cost world ticks.
 
+## Visual / art semantics
+
+**Art is not physics.** A sprite/tile does not become solid, opaque, interactive, searchable or destructible merely because it looks like a physical object. Movement blocking, LOS blocking and runtime interaction remain explicit world data.
+
+Current art sources:
+
+- `tactical_atlas.svg` — restored same-owner First Fire tactical subset for legacy ground/walls/openings/props/barrels;
+- `clutter_atlas.svg` — original Tick indoor/outdoor clutter;
+- `world_art_atlas.svg` — generator-support road topology, sidewalks/curbs, driveways, parking, crosswalks, exterior surfaces, interior floors, wall materials, door/window materials and utility surfaces;
+- `building_props_atlas.svg` — expanded domestic, commercial, office, industrial, street and rural fixtures;
+- `player_south.svg`, `player_north.svg`, `player_west.svg`, `player_east.svg` — independent upright player poses with no rotation/mirror transform in the runtime draw path.
+
+The world-art road vocabulary includes vertical/horizontal paved straights, four corners, four T-junctions, a four-way intersection, directional end caps, plain/wide intersection asphalt, and horizontal/vertical dirt-road presentation. Future macro routing must emit the same road topology contract rather than inventing a second art system.
+
+The current expanded fixture vocabulary includes domestic fixtures/furniture (stove, counters, dresser, nightstand, bath/shower/vanity, dining table, armchair), office/commercial fixtures (filing cabinet, cubicle, computer, checkout, freezer, produce bin), industrial/utility fixtures (pallet rack, tool chest, workbench, locker, utility sink, water heater, exterior AC, electric meter), and exterior/street/rural objects (utility pole, traffic light, stop sign, parking meter, bollard, hedge, flower bed, shed, propane tank), in addition to the earlier clutter atlas.
+
 ## Visual/perception semantics
 
-- Tactical ground/wall/door/window/legacy prop/barrel/survivor visuals come from the same-owner First Fire atlas subset.
-- Additional Tick clutter lives in `clutter_atlas.svg` and includes indoor furniture/fixtures plus outdoor vegetation/street/rural clutter.
-- The survivor has four authored facings: north shows the back, south the front, east/west side views. Sprite facing reads the same `player.facing` used by perception, flashlight, interaction and movement.
+- The survivor has four independent authored facings: north shows the back, south the front, east/west are true side-profile body poses. Sprite facing reads the same `player.facing` used by perception, flashlight, interaction and movement.
 - Existing map light markers feed per-cell lighting.
-- Ambient light level for procedural regions now responds to the biome under each cell instead of treating the whole 64×64 region as an alley.
+- Ambient light level for procedural regions responds to the biome under each cell instead of treating the whole 64×64 region as an alley.
 - Powered sources switch off when power is unavailable.
 - Windows transmit sight and daylight.
 - Flashlight is directional.
 - Walls, closed doors, and tall/opaque props block LOS/light.
-- Trees, bookshelves and cabinets are among the new tall clutter types that block vision; lower clutter does not automatically do so.
+- Tall new fixture types such as freezers, filing cabinets, pallet racks, lockers, water heaters, hedges and sheds participate in opacity when designated by perception; lower clutter does not automatically block sight.
 - Player visibility requires facing cone + clear LOS + enough light.
 - Fog has unseen and remembered states.
 - LOS uses a sealed-corner rule so diagonal rays cannot squeeze between two touching opaque orthogonal cells.
@@ -122,9 +136,9 @@ On player death, the user can eventually either play a new survivor in the same 
 
 The imported First Fire map foundation remains an authored-layout catalog of 20×18 physical locations: Back Alley, Gas Station, Residential House, Apartment, Corner Store, Warehouse Yard, and Drainage Wash. Each can describe ground, indoor regions, walls, doors, windows/glass, obstacles, props, barrels, light markers, player spawn, and exits.
 
-The large-map stress slice uses `ProceduralRegionGenerator.gd` to generate a deterministic 64×64 region using the same physical language. The current generator version is 2.
+The large-map stress slice uses `ProceduralRegionGenerator.gd` to generate a deterministic 64×64 region using the same physical language. The current generator version is **3**.
 
-Current road rules:
+Current road rules and data contracts:
 
 - biome centers are contiguous seeded fields;
 - each non-downtown biome connects toward the nearest main arterial axis;
@@ -135,9 +149,12 @@ Current road rules:
 - developed buildings require nearby road frontage and orient their door toward the nearest road;
 - developed roads receive sidewalk edges, rural roads dirt shoulders;
 - `road_class_cells` distinguishes arterial/secondary/local/trail;
-- `road_ports` establishes a future chunk-edge data shape but is not yet a neighbor-compatible macro road contract.
+- `road_surface_cells` distinguishes paved road from dirt/trail presentation;
+- `road_links` is a four-bit N/E/S/W topology mask used by directional road art and is the intended contract for future curved/branching macro road routes;
+- `road_ports` establishes a future chunk-edge data shape but is not yet a neighbor-compatible macro road contract;
+- procedural buildings now emit `wall_themes`, `door_themes`, and `window_themes` as presentation metadata while physical membership remains walls/doors/glass.
 
-Do not replace this with a second incompatible map language. Long-term hierarchy remains:
+The shared ground language supports rectangle fills plus optional sparse `ground_cells` overrides. Do not replace this with a second incompatible map language. Long-term hierarchy remains:
 
 **tile/object → building/location → local area/block → biome/district → region/chunk → large island world**
 
@@ -149,13 +166,15 @@ Visual variety must not blur physical semantics.
 
 A prop may be purely visual, may be included in `obstacles` to block movement, and may separately be treated as opaque by perception. These are distinct questions. Do not infer movement or sight blocking merely because an object has a sprite.
 
-Current added clutter vocabulary includes chairs, desks, toilet, sink, cabinet, bookshelf, TV, lamp, rug, laundry, trees, bushes, fences, mailbox, trash can, road sign, bench, hydrant, streetlight, planter, tire pile, cardboard, picnic table and firewood.
+See `ART_VOCABULARY.md` for the full current surface/opening/fixture vocabulary and the generator-facing art contract.
 
 ## Current procedural limits / next world work
 
-The 64×64 generator currently proves deterministic biome fields, connected road hierarchy, frontage-aware structures, deterministic clutter, camera-local rendering, local lighting/vision and world navigation. It does **not** yet simulate coastline, water/rivers, elevation, neighbor-compatible chunk edge contracts, utility grids, true building-template libraries, loot economy, populations, outbreak state, or persistence deltas.
+The 64×64 generator currently proves deterministic biome fields, connected road hierarchy, directional road topology metadata/art, frontage-aware structures, richer floor/material vocabulary, deterministic clutter, camera-local rendering, local lighting/vision and world navigation. It does **not** yet simulate coastline, water/rivers, elevation, neighbor-compatible chunk edge contracts, utility grids, true room-aware building-template libraries, loot economy, populations, outbreak state, or persistence deltas.
 
-Before simply making a larger map, the next world-generation-specific step should be **macro geography + chunk-edge contracts**: coastline/water/elevation plus shared road/trail/river/utility ports that neighboring chunks agree on.
+The next world-generation-specific step should be **macro geography + chunk-edge contracts**: a seed-driven larger world composed of deterministic chunks, with coastline/water/elevation plus shared road/trail/river/utility ports that neighboring chunks agree on. Road routing should use the existing `road_links`/class/surface vocabulary and generate actual bends, junctions, loops and local street graphs.
+
+A separate near-term building pass can consume the new wall/door/window material metadata to add true building templates and room-specific interiors without another art-schema rewrite.
 
 ## Long-term simulation direction
 
@@ -163,7 +182,7 @@ See `DESIGN.md`. Intended systems include persistent infected; visualized spatia
 
 ## Near-term scope recommendation
 
-This world/navigation foundation should be considered ready to leave once the current road/clutter/perception pass survives play-testing. The only world-scale work worth doing before actors is macro geography + cross-chunk contracts if we want to lock island topology first.
+The world/navigation foundation is suitable for the next macro-world experiment now that its art vocabulary can represent horizontal/vertical roads and richer buildings. The next world-scale pass should be seed-driven macro geography + cross-chunk road/terrain contracts if island topology is the priority.
 
 Otherwise the next gameplay-system milestone remains **0.3C Spatial Sound Visualization**: tick-owned silent sound events, propagation/attenuation through physical cells, door/window/wall occlusion, weather masking, uncertain source localization, and yellow visual sound markers. Persistent infected can then consume the same perception + silent-sound model on the scheduler.
 
@@ -179,7 +198,7 @@ Rules get one durable owner. UI must not own simulation state. The map generator
 2. Current `main` repository state
 3. `README_SOPS.md`
 4. This file
-5. `DESIGN.md` / `ROADMAP.md` / `WORLD_GENERATION.md` / `FIRST_FIRE_REUSE.md`
+5. `DESIGN.md` / `ROADMAP.md` / `WORLD_GENERATION.md` / `WORLD_NAVIGATION_AUDIT.md` / `ART_VOCABULARY.md` / `FIRST_FIRE_REUSE.md`
 6. Human `README.md`
 7. Conversation memory only as supporting context
 
