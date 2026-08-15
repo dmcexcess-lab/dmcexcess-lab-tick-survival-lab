@@ -5,6 +5,10 @@ const Tiles = preload("res://scripts/TacticalTiles.gd")
 
 func _init() -> void:
     _validate_final_art_vocabulary()
+    if RegionGen.GENERATOR_VERSION < 4 or RegionGen.PARCEL_W < 10 or RegionGen.PARCEL_H < 11:
+        push_error("REGION_SMOKE_GENERATION_V4_CONTRACT_REGRESSED")
+        quit(1)
+        return
     var saw_parking_lot := false
     for seed_value in [1, 7, 42, 1337, 9001]:
         var spec: Dictionary = RegionGen.generate(seed_value)
