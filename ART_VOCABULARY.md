@@ -1,155 +1,230 @@
 # Tick Survival Lab — Art Vocabulary
 
-This document defines the current procedural-world art vocabulary and the physical meaning boundaries that future generators must preserve.
+This document defines the procedural-world art vocabulary and the physical-meaning boundaries future generators must preserve.
 
 ## Core rule
 
-**Art is not physics.** A visual tile or prop does not become solid, opaque, destructible, searchable, or interactive merely because it has a sprite. Those rules remain explicit world data.
+**Art is not physics.** A visual tile or prop does not become solid, opaque, destructible, searchable, lootable, or interactive merely because it has a sprite. Movement blocking, sight blocking, durability, interaction and persistence remain explicit world data.
+
+## Bootstrap environment-art freeze
+
+The **Final Environment Art Pass** is intended to be the last broad bootstrap expansion of world art before macro-world / overworld-map work.
+
+The environment renderer now has a deliberately oversized vocabulary for:
+
+- terrain and natural ground;
+- roads, lots, curbs and civic surfaces;
+- exterior building materials;
+- interior floors and wall finishes;
+- nature / vegetation;
+- street furniture and traffic/civic signage;
+- residential furniture and permanent fixtures;
+- bathroom, kitchen, living-room, bedroom and laundry fixtures;
+- retail, restaurant, office, warehouse and industrial clutter/fixtures.
+
+Future work should reuse/combine this vocabulary before adding another general-purpose atlas. Small feature-specific art may still be added when a genuinely new simulation object requires it.
+
+## Important inventory rule
+
+**Inventory items are not represented as loose world sprites.**
+
+Loose inventory, loot and equipment are future data/UI concerns. The tactical world depicts only:
+
+- terrain / ground surfaces;
+- walls, windows and doors;
+- furniture;
+- permanent or semi-permanent fixtures;
+- environmental clutter;
+- vegetation;
+- civic / street infrastructure;
+- large world objects whose physical presence matters.
+
+A box of cereal, screwdriver, magazine, medicine bottle, ammunition stack, individual weapon pickup, etc. should not require another world sprite simply because it can exist in inventory.
 
 ## Atlases
 
-- `tactical_atlas.svg` — original same-owner First Fire tactical subset: legacy ground, walls, doors, windows, props, barrels.
-- `clutter_atlas.svg` — small Tick indoor/outdoor clutter.
-- `world_art_atlas.svg` — generator-support surfaces, road topology, floor materials, wall materials, doors/windows, utility surface tiles.
-- `building_props_atlas.svg` — expanded building/interior/exterior fixture vocabulary.
+- `tactical_atlas.svg` — original same-owner First Fire tactical subset.
+- `clutter_atlas.svg` — first Tick indoor/outdoor clutter set.
+- `world_art_atlas.svg` — 64 generator-support road/surface/shell tiles.
+- `building_props_atlas.svg` — 32 second-pass building/exterior fixture sprites.
+- `final_environment_surfaces_atlas.svg` — **64 final-pass terrain/interior/shell tiles**.
+- `final_environment_props_atlas.svg` — **128 final-pass environment/fixture sprites**.
 - `player_*.svg` — four independent upright player-facing sprites.
+
+The two final-pass atlases are new files rather than extensions of the previous atlases so existing atlas indices remain stable.
 
 ## Road topology
 
-Procedural road cells now carry a four-bit link mask:
+Procedural road cells carry a four-bit link mask:
 
 - north = 1
 - east = 2
 - south = 4
 - west = 8
 
-The current atlas contains paved variants for:
+`world_art_atlas.svg` contains horizontal/vertical straights, four corners, four T junctions, four-way intersection, directional end caps and plain wide-road/intersection pavement.
 
-- horizontal / vertical straights
-- four corners
-- four T junctions
-- four-way intersection
-- four directional end caps
-- plain wide-road/intersection asphalt
+`road_surface_cells` stores paved versus dirt/trail presentation. `road_class_cells` stores hierarchy (`arterial`, `secondary`, `local`, `trail`). Those remain separate concepts.
 
-Dirt roads/trails currently have horizontal, vertical, and generic gravel/junction presentation. Future macro routing should write the same `road_links` contract instead of inventing a second road-art system.
+The final surface atlas adds supporting street detail including potholes, patches, lane markings, gravel shoulders, curb ramps, faded parking, stained alleys, patio pavers and brick pavers.
 
-`road_surface_cells` stores whether a road segment is paved (`road`) or dirt/trail (`dirt`). `road_class_cells` remains the gameplay/network hierarchy (`arterial`, `secondary`, `local`, `trail`). These are separate concepts.
+## Final surface vocabulary
 
-## Exterior surfaces
+`final_environment_surfaces_atlas.svg` contains 64 tiles.
 
-Available world surfaces include:
+### Nature / terrain
 
-- sidewalk + four curb-facing variants
-- driveway
-- parking stalls in two orientations
-- horizontal/vertical crosswalks
-- cracked asphalt
-- stained concrete
-- gravel
-- field rows
+- lush grass
+- dry grass
+- weedy grass
+- forest floor
+- mud
+- sand / beach sand
+- moss
+- marsh ground
+- rocky ground
+- dark/light dirt
+- dark/light gravel
+- green/dry field texture
 
-These exist so the next macro generator can construct actual street frontage, lots, parking areas, driveways, farms and intersections rather than recoloring one generic ground tile.
+### Street / exterior
 
-## Interior floors
+- asphalt patch
+- pothole
+- horizontal/vertical white lane stripe
+- horizontal/vertical yellow lane stripe
+- gravel shoulder
+- curb ramp
+- patio pavers
+- brick pavers
+- clean/cracked/oil-stained concrete
+- gravel driveway
+- faded parking surface
+- stained alley surface
 
-Available generator-ready floors include:
+### Interior floors
 
-- horizontal hardwood
-- vertical hardwood
-- kitchen tile
-- bathroom tile
-- office carpet
-- worn carpet
-- warehouse concrete
-- shop tile
+- light/dark laminate
+- parquet
+- blue/beige/green carpet
+- white/checker/mosaic tile
+- green/yellow linoleum
+- garage floor
+- basement floor
+- restaurant floor
+- hospital-style floor
+- classroom/commercial institutional floor
 
-Room-generation code should select floors from room/building purpose, not random per tile noise.
+### Additional shell/opening art
 
-## Wall / opening materials
+- wallpaper
+- wood paneling
+- red brick
+- white brick
+- stone
+- tiled wall
+- glass partition
+- plaster
+- concrete wall
+- metal panel wall
+- interior door
+- reinforced door
+- boarded window
+- broken window
+- sliding glass opening
+- screen door
 
-Generator-ready wall materials include:
+These shell tiles are presentation vocabulary; physical wall/door/glass membership remains in the shared map schema.
 
-- residential siding
-- brick
-- cinderblock
-- drywall/interior partition
-- office wall
-- warehouse wall
-- rural wood
-- storefront framing
+## Final prop vocabulary
 
-Generator-ready opening art includes:
+`final_environment_props_atlas.svg` contains **128 sprites**.
 
-- residential door open/closed
-- commercial door open/closed
-- metal/industrial door open/closed
-- glass/storefront door open/closed
-- garage door open/closed
-- residential window
-- storefront window
-- industrial window
-- office/apartment window
+### Nature — 32
 
-`wall_themes`, `door_themes`, and `window_themes` are presentation metadata only. Physical wall/door/glass membership still comes from the existing map schema.
+Includes small/large deciduous trees, pine, dead tree, stump, fallen log, rocks, dense/thorn bushes, tall grass, weeds, wildflowers, reeds, vines, leaf litter, branch/brush piles, dirt mound, gardens, green/dry crops, hay bale, compost, cactus, palm, desert scrub, cattails, mushrooms, mossy rock, sapling and fallen branches.
 
-## Expanded building props
+### Street / civic — 32
 
-`building_props_atlas.svg` adds:
+Includes yield, speed-limit, no-parking, street-name, one-way, dead-end, road-work, pedestrian and bus-stop signs; public trash bin; guardrail; chain-link/wood/privacy fences; cone; barricade; storm drain; manhole; utility box; transformer; phone/news boxes; bike rack; crossing beacon; parking sign; call box; road barrier; sewer grate; street planter; curb mailbox; wood utility pole and transformer pole.
 
-### Residential / domestic
-- stove
-- kitchen counter
-- dresser
-- nightstand
-- bathtub
-- shower
-- vanity
-- dining table
-- armchair
+### Residential / domestic — 40
 
-### Office / commercial
-- filing cabinet
-- cubicle
-- computer
-- checkout
-- freezer
-- produce bin
+Kitchen:
+- white/stainless refrigerators
+- range
+- kitchen sink
+- straight/corner counters
+- pantry
+- dishwasher
+- island
+- microwave counter
+- breakfast table / dining chair
 
-### Industrial / utility
-- pallet rack
-- tool chest
-- workbench
-- locker
-- utility sink
-- water heater
-- exterior AC
-- electric meter
+Living:
+- sofa
+- loveseat
+- recliner
+- coffee/end tables
+- flat/old television
+- TV stand
+- tall bookshelf
+- floor lamp
 
-### Street / exterior / rural
-- utility pole
-- traffic light
-- stop sign
-- parking meter
-- bollard
-- hedge
-- flower bed
-- shed
-- propane tank
+Bedroom / study:
+- single/double/bunk beds
+- wide dresser
+- wardrobe
+- home desk / desk chair
+- hamper
 
-The generator may place these as visual-only or add them independently to `obstacles` when movement blocking is appropriate. Tall objects that should block sight must also be included in the perception opacity vocabulary.
+Bathroom / laundry:
+- modern toilet
+- pedestal sink
+- bathroom vanity
+- clawfoot tub
+- shower stall
+- towel rack
+- medicine cabinet
+- front-load washer / dryer
+- tall water heater
 
-## Ground representation for larger worlds
+### Commercial / office / industrial — 24
 
-The shared map language now supports optional `ground_cells` overrides in addition to rectangle fills. Rectangle fills remain appropriate for rooms, lots, fields and large surfaces. Per-cell overrides are intended for sparse topology details such as road turns/intersections, curb details and other local surface transitions.
+Includes retail shelf/endcap, walk-in cooler, chest freezer, produce display, restaurant table/booth, office desk/chair, tall filing cabinet, copier, cubicle corner, server rack, pallet stack, warehouse rack, heavy workbench, tool cabinet, industrial machine, portable generator, locker bank, janitor sink/cart, vending machine and break-room table.
 
-For the next macro-world pass, prefer:
+## Legacy-name presentation aliases
+
+To make the art pass visible immediately without changing physical object semantics, `TacticalTiles.gd` can render several existing generic prop names with newer art.
+
+Examples include:
+
+- `tree` → final large deciduous tree;
+- `bush` → final dense bush;
+- `road_sign` → final street-name sign;
+- `fence` → final wood fence;
+- `tv` → final flat television;
+- `toilet` / `sink` → final bathroom fixtures;
+- `fridge` / `kitchen` / `washer` → final appliance/fixture art;
+- `couch`, `table`, `bed`, `bookshelf`, `desk`, `chair` → final residential furniture.
+
+The **underlying prop name does not change**, so collision, perception and future persistence semantics are not silently rewritten by this visual aliasing.
+
+Legacy generic ground names similarly receive richer presentation aliases while road topology remains handled by the directional road renderer.
+
+## Larger-world ground representation
+
+The shared map language supports optional `ground_cells` overrides in addition to rectangle fills. Rectangle fills remain appropriate for rooms, lots, fields and broad surfaces. Per-cell overrides are for sparse topology details such as road turns/intersections, curb details and local transitions.
+
+Prefer:
 
 1. broad region/parcel surface rectangles;
 2. sparse per-cell topology overrides;
 3. explicit physical objects;
-4. no second incompatible tile schema.
+4. no second incompatible map/tile schema.
 
 ## Known presentation limitation
 
-The current developer preview consumes the expanded floor/road/prop art immediately. Procedural specs also emit per-building `wall_themes`, `door_themes`, and `window_themes`, but the preview still has a legacy whole-map wall/opening draw path. The metadata and art are ready for the upcoming building-template renderer pass; do not duplicate those themes elsewhere as a workaround.
+Procedural specs already emit per-building `wall_themes`, `door_themes`, and `window_themes`. The current developer preview still has a legacy whole-map shell draw path, so the complete per-building shell vocabulary is not yet consumed everywhere.
+
+Do not work around that by creating duplicate physical map systems. The next building-template renderer can consume the existing metadata and the art already present here.

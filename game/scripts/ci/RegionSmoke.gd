@@ -1,8 +1,10 @@
 extends SceneTree
 
 const RegionGen = preload("res://scripts/ProceduralRegionGenerator.gd")
+const Tiles = preload("res://scripts/TacticalTiles.gd")
 
 func _init() -> void:
+    _validate_final_art_vocabulary()
     for seed_value in [1, 7, 42, 1337, 9001]:
         var spec: Dictionary = RegionGen.generate(seed_value)
         if int(spec.get("width", 0)) != RegionGen.REGION_W or int(spec.get("height", 0)) != RegionGen.REGION_H:
@@ -75,3 +77,36 @@ func _init() -> void:
             return
     print("TICK_SURVIVAL_REGION_SMOKE_OK")
     quit(0)
+
+func _validate_final_art_vocabulary() -> void:
+    if Tiles.FINAL_PROP.size() != Tiles.FINAL_PROP_COUNT or Tiles.FINAL_PROP_COUNT < 128:
+        push_error("REGION_SMOKE_FINAL_PROP_VOCABULARY_INCOMPLETE")
+        quit(1)
+        return
+    if Tiles.FINAL_GROUND.size() < 48 or Tiles.FINAL_SURFACE_COUNT < 64:
+        push_error("REGION_SMOKE_FINAL_SURFACE_VOCABULARY_INCOMPLETE")
+        quit(1)
+        return
+    for required_prop in [
+        "deciduous_large", "pine_tree", "yield_sign", "street_name_sign",
+        "refrigerator_stainless", "kitchen_sink", "tv_flat", "bed_double",
+        "toilet_modern", "bathroom_vanity", "washer_front", "retail_shelf",
+        "office_desk", "server_rack", "industrial_machine"
+    ]:
+        if not Tiles.FINAL_PROP.has(required_prop):
+            push_error("REGION_SMOKE_FINAL_PROP_MISSING %s" % required_prop)
+            quit(1)
+            return
+    for required_ground in [
+        "grass_lush", "forest_floor", "mud", "beach_sand", "pothole",
+        "patio_pavers", "laminate_light", "tile_mosaic", "garage_floor"
+    ]:
+        if not Tiles.FINAL_GROUND.has(required_ground):
+            push_error("REGION_SMOKE_FINAL_GROUND_MISSING %s" % required_ground)
+            quit(1)
+            return
+    for resource_path in [Tiles.FINAL_PROPS_PATH, Tiles.FINAL_SURFACES_PATH]:
+        if not ResourceLoader.exists(resource_path):
+            push_error("REGION_SMOKE_FINAL_ART_RESOURCE_MISSING %s" % resource_path)
+            quit(1)
+            return

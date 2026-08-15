@@ -34,7 +34,7 @@ Ownership:
 - `TacticalLighting.gd` — dependency-free lighting math adapted from First Fire.
 - `TacticalSound.gd` — silent sound/localization helpers adapted from First Fire; propagation is pending.
 - `TacticalWeather.gd` — current weather profile, visibility/light/sound-mask hooks, temperature hook, indoor thermal buffer, and wind display helper. It does not yet simulate weather patterns.
-- `TacticalTiles.gd` — Tick-native renderer for the restored First Fire tactical atlas plus Tick's clutter, world-art, building-prop and independent player-facing assets.
+- `TacticalTiles.gd` — Tick-native renderer for the restored First Fire tactical atlas plus Tick's clutter, world-art, building-prop, final-environment and independent player-facing assets.
 - `TacticalPerception.gd` — LOS, facing cone, opaque geometry, biome-aware ambient-light selection, light/weather integration, visible cells, and remembered fog state.
 - `MapPreview.gd` — development input/presentation harness only; it may present debug controls but must not become the permanent owner of simulation rules.
 
@@ -88,12 +88,16 @@ The `DEV` overlay contains tick/debug diagnostics plus manual world test control
 
 **Art is not physics.** A sprite/tile does not become solid, opaque, interactive, searchable or destructible merely because it looks like a physical object. Movement blocking, LOS blocking and runtime interaction remain explicit world data.
 
+**Inventory-art rule:** loose inventory, loot, ammunition, equipment and ordinary pickup items are data/UI only and do not require world sprites. World art represents environment surfaces, structures, fixtures, furniture, vegetation, civic infrastructure, large physical objects and clutter.
+
 Current art sources:
 
 - `tactical_atlas.svg` — restored same-owner First Fire tactical subset for legacy ground/walls/openings/props/barrels;
 - `clutter_atlas.svg` — original Tick indoor/outdoor clutter;
 - `world_art_atlas.svg` — generator-support road topology, sidewalks/curbs, driveways, parking, crosswalks, exterior surfaces, interior floors, wall materials, door/window materials and utility surfaces;
 - `building_props_atlas.svg` — expanded domestic, commercial, office, industrial, street and rural fixtures;
+- `final_environment_surfaces_atlas.svg` — final bootstrap terrain/interior/shell expansion;
+- `final_environment_props_atlas.svg` — final bootstrap nature, civic, residential, commercial, office and industrial environment/fixture expansion;
 - `player_south.svg`, `player_north.svg`, `player_west.svg`, `player_east.svg` — independent upright player poses with no rotation/mirror transform in the runtime draw path.
 
 The world-art road vocabulary includes vertical/horizontal paved straights, four corners, four T-junctions, a four-way intersection, directional end caps, plain/wide intersection asphalt, and horizontal/vertical dirt-road presentation. Future macro routing must emit the same road topology contract rather than inventing a second art system.

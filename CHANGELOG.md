@@ -1,5 +1,15 @@
 # Changelog
 
+## Final Environment Art Pass — 2026-08-14
+
+- Added `final_environment_props_atlas.svg` with 128 environment-only sprites: 32 nature, 32 street/civic, 40 residential fixtures/furniture, and 24 commercial/office/industrial fixtures.
+- Added `final_environment_surfaces_atlas.svg` with 64 terrain, exterior, interior-floor, wall-finish, and opening tiles.
+- Defined the bootstrap art freeze: inventory items, loot, and equipment are not depicted as loose world sprites; tactical world art is reserved for surfaces, structures, fixtures, furniture, vegetation, civic infrastructure, large physical objects, and clutter.
+- Routed selected legacy ground/prop names through final-pass art so current generated/authored maps immediately gain richer trees, signs, furniture, bathroom/kitchen fixtures, TVs/appliances, and floor materials without changing object identity, collision, or LOS semantics.
+- Extended `TacticalTiles.gd` with stable final-atlas catalogs and caches without reindexing any prior atlas.
+- Strengthened permanent region smoke coverage to require the 128-prop / 64-surface final vocabulary and both final atlas resources.
+- Expanded `ART_VOCABULARY.md` as the durable no-more-broad-environment-art contract before overworld and macro-world work.
+
 ## Procedural World Art Vocabulary Pass — 2026-08-14
 
 - Added `world_art_atlas.svg`, a 64-tile generator-support atlas covering directional paved roads, corners, T-junctions, four-way intersections, road end caps, plain/wide-road asphalt, sidewalk/curb variants, driveways, parking stalls, crosswalks, cracked asphalt, stained concrete, dirt roads, gravel, field rows, richer interior floors, building wall materials, door variants, window variants, and utility surface details.

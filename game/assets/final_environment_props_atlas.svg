@@ -1,0 +1,258 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="256" viewBox="0 0 512 256" shape-rendering="crispEdges">
+<!-- 0 deciduous_small -->
+<g transform="translate(0 0)"><circle cx="10" cy="20" r="5" fill="#556b42"/><circle cx="20" cy="16" r="7" fill="#6f7d4a"/></g>
+<!-- 1 deciduous_large -->
+<g transform="translate(32 0)"><circle cx="10" cy="20" r="5" fill="#556b42"/><circle cx="20" cy="16" r="7" fill="#6f7d4a"/></g>
+<!-- 2 pine_tree -->
+<g transform="translate(64 0)"><rect x="14" y="18" width="4" height="12" fill="#60462f"/><path d="M16 2L6 18h20zM16 7L8 23h16z" fill="#355944" stroke="#20392d"/></g>
+<!-- 3 dead_tree -->
+<g transform="translate(96 0)"><path d="M15 29V9L9 4M15 13l7-7M15 19l-7-5" fill="none" stroke="#735a42" stroke-width="4"/><path d="M9 4l-2-3M22 6l3-3" stroke="#584331" stroke-width="2"/></g>
+<!-- 4 tree_stump -->
+<g transform="translate(128 0)"><ellipse cx="16" cy="28" rx="8" ry="2" fill="#000" opacity=".2"/><rect x="13" y="16" width="6" height="14" fill="#654a31"/><circle cx="10" cy="13" r="10" fill="#3d613e"/><circle cx="21" cy="12" r="11" fill="#4c7348"/><circle cx="16" cy="7" r="12" fill="#5a8050"/></g>
+<!-- 5 fallen_log -->
+<g transform="translate(160 0)"><path d="M4 21L28 12" stroke="#765337" stroke-width="7"/><circle cx="5" cy="21" r="4" fill="#9a7048" stroke="#4d3525"/><path d="M10 19l-4-8M18 16l5-8" stroke="#5e432e" stroke-width="3"/></g>
+<!-- 6 rock_small -->
+<g transform="translate(192 0)"><path d="M5 24l4-12 9-5 9 9-4 10H9z" fill="#69716d" stroke="#3d4643" stroke-width="2"/><path d="M11 13l7 5 5-2" fill="none" stroke="#89908c"/></g>
+<!-- 7 rock_cluster -->
+<g transform="translate(224 0)"><path d="M5 24l4-12 9-5 9 9-4 10H9z" fill="#69716d" stroke="#3d4643" stroke-width="2"/><path d="M11 13l7 5 5-2" fill="none" stroke="#89908c"/></g>
+<!-- 8 dense_bush -->
+<g transform="translate(256 0)"><circle cx="9" cy="20" r="7" fill="#3e613b"/><circle cx="18" cy="17" r="9" fill="#4c7445"/><circle cx="23" cy="23" r="6" fill="#365736"/><path d="M6 12l4 14M18 8v19M25 14l-5 11" stroke="#2d4a2c"/></g>
+<!-- 9 thorn_bush -->
+<g transform="translate(288 0)"><circle cx="9" cy="20" r="7" fill="#3e613b"/><circle cx="18" cy="17" r="9" fill="#4c7445"/><circle cx="23" cy="23" r="6" fill="#365736"/><path d="M6 12l4 14M18 8v19M25 14l-5 11" stroke="#2d4a2c"/></g>
+<!-- 10 tall_grass -->
+<g transform="translate(320 0)"><path d="M5 29L9 8M10 29l4-24M16 29l2-20M21 29l6-22M25 29l-2-15" stroke="#6f8050" stroke-width="2"/><rect x="7" y="5" width="4" height="8" rx="2" fill="#65462f"/><rect x="24" y="4" width="4" height="8" rx="2" fill="#65462f"/></g>
+<!-- 11 weeds_patch -->
+<g transform="translate(352 0)"><path d="M5 29l5-16M13 29l2-21M20 29l6-17M26 29l-8-13" stroke="#4e713d" stroke-width="2"/><circle cx="10" cy="12" r="3" fill="#d7b75d"/><circle cx="15" cy="7" r="3" fill="#a66d9a"/><circle cx="26" cy="12" r="3" fill="#d67a69"/></g>
+<!-- 12 wildflowers -->
+<g transform="translate(384 0)"><path d="M5 29l5-16M13 29l2-21M20 29l6-17M26 29l-8-13" stroke="#4e713d" stroke-width="2"/><circle cx="10" cy="12" r="3" fill="#d7b75d"/><circle cx="15" cy="7" r="3" fill="#a66d9a"/><circle cx="26" cy="12" r="3" fill="#d67a69"/></g>
+<!-- 13 reeds -->
+<g transform="translate(416 0)"><path d="M5 29L9 8M10 29l4-24M16 29l2-20M21 29l6-22M25 29l-2-15" stroke="#6f8050" stroke-width="2"/><rect x="7" y="5" width="4" height="8" rx="2" fill="#65462f"/><rect x="24" y="4" width="4" height="8" rx="2" fill="#65462f"/></g>
+<!-- 14 vine_patch -->
+<g transform="translate(448 0)"><path d="M5 29l5-16M13 29l2-21M20 29l6-17M26 29l-8-13" stroke="#4e713d" stroke-width="2"/><circle cx="10" cy="12" r="3" fill="#d7b75d"/><circle cx="15" cy="7" r="3" fill="#a66d9a"/><circle cx="26" cy="12" r="3" fill="#d67a69"/></g>
+<!-- 15 leaf_litter -->
+<g transform="translate(480 0)"><ellipse cx="16" cy="23" rx="13" ry="7" fill="#654b32"/><circle cx="8" cy="19" r="3" fill="#9b713d"/><circle cx="15" cy="24" r="4" fill="#7d5a36"/><circle cx="22" cy="19" r="4" fill="#aa7840"/></g>
+<!-- 16 branch_pile -->
+<g transform="translate(0 32)"><path d="M4 21L28 12" stroke="#765337" stroke-width="7"/><circle cx="5" cy="21" r="4" fill="#9a7048" stroke="#4d3525"/><path d="M10 19l-4-8M18 16l5-8" stroke="#5e432e" stroke-width="3"/></g>
+<!-- 17 brush_pile -->
+<g transform="translate(32 32)"><ellipse cx="16" cy="23" rx="13" ry="7" fill="#654b32"/><circle cx="8" cy="19" r="3" fill="#9b713d"/><circle cx="15" cy="24" r="4" fill="#7d5a36"/><circle cx="22" cy="19" r="4" fill="#aa7840"/></g>
+<!-- 18 dirt_mound -->
+<g transform="translate(64 32)"><ellipse cx="16" cy="23" rx="13" ry="7" fill="#775a3c" stroke="#4d3b2b"/><path d="M8 22l5-5 5 3 5-2" fill="none" stroke="#9a774f"/></g>
+<!-- 19 garden_patch -->
+<g transform="translate(96 32)"><rect x="3" y="4" width="26" height="25" fill="#5b4731"/><path d="M5 8h22M5 14h22M5 20h22M5 26h22" stroke="#567b43" stroke-width="3" stroke-dasharray="4 3"/></g>
+<!-- 20 crop_green -->
+<g transform="translate(128 32)"><rect x="3" y="4" width="26" height="25" fill="#5b4731"/><path d="M5 8h22M5 14h22M5 20h22M5 26h22" stroke="#567b43" stroke-width="3" stroke-dasharray="4 3"/></g>
+<!-- 21 crop_dry -->
+<g transform="translate(160 32)"><rect x="3" y="4" width="26" height="25" fill="#5b4731"/><path d="M5 8h22M5 14h22M5 20h22M5 26h22" stroke="#aa8b54" stroke-width="3" stroke-dasharray="4 3"/></g>
+<!-- 22 hay_bale -->
+<g transform="translate(192 32)"><rect x="5" y="9" width="22" height="18" rx="4" fill="#b89a55" stroke="#6e5a32" stroke-width="2"/><path d="M10 9v18M21 9v18M6 15h20M6 22h20" stroke="#d3bb72"/></g>
+<!-- 23 compost_pile -->
+<g transform="translate(224 32)"><path d="M3 27l6-13 10-5 10 18z" fill="#59452f" stroke="#342c23"/><path d="M9 18l5-6M18 19l5-5M12 23l10-3" stroke="#74824d" stroke-width="2"/></g>
+<!-- 24 cactus -->
+<g transform="translate(256 32)"><path d="M15 30V8c0-5 6-5 6 0v6h4V9c0-3 5-3 5 0v10c0 3-2 5-5 5h-4v6z" fill="#4c7a50" stroke="#294a31" stroke-width="2"/></g>
+<!-- 25 palm_tree -->
+<g transform="translate(288 32)"><path d="M15 30c2-9 0-15 2-22" fill="none" stroke="#775635" stroke-width="5"/><path d="M17 8C7 4 5 9 3 12M17 8c8-7 11-3 13-1M17 8c7 1 10 7 12 11M17 8C10 10 7 16 6 20" fill="none" stroke="#477044" stroke-width="4"/></g>
+<!-- 26 desert_scrub -->
+<g transform="translate(320 32)"><circle cx="9" cy="20" r="7" fill="#3e613b"/><circle cx="18" cy="17" r="9" fill="#4c7445"/><circle cx="23" cy="23" r="6" fill="#365736"/><path d="M6 12l4 14M18 8v19M25 14l-5 11" stroke="#2d4a2c"/></g>
+<!-- 27 cattails -->
+<g transform="translate(352 32)"><path d="M5 29L9 8M10 29l4-24M16 29l2-20M21 29l6-22M25 29l-2-15" stroke="#6f8050" stroke-width="2"/><rect x="7" y="5" width="4" height="8" rx="2" fill="#65462f"/><rect x="24" y="4" width="4" height="8" rx="2" fill="#65462f"/></g>
+<!-- 28 mushroom_patch -->
+<g transform="translate(384 32)"><path d="M8 25v-7M16 27v-9M24 24v-6" stroke="#d7d0b0" stroke-width="3"/><path d="M3 18c2-7 9-7 11 0zM10 18c2-8 11-8 13 0zM19 18c2-6 8-6 10 0z" fill="#b55f4f" stroke="#6b3b34"/></g>
+<!-- 29 mossy_rock -->
+<g transform="translate(416 32)"><path d="M5 24l4-12 9-5 9 9-4 10H9z" fill="#69716d" stroke="#3d4643" stroke-width="2"/><path d="M11 13l7 5 5-2" fill="none" stroke="#89908c"/></g>
+<!-- 30 sapling -->
+<g transform="translate(448 32)"><rect x="15" y="15" width="3" height="15" fill="#6d5137"/><circle cx="12" cy="14" r="6" fill="#4b7249"/><circle cx="20" cy="11" r="6" fill="#5c8054"/></g>
+<!-- 31 fallen_branches -->
+<g transform="translate(480 32)"><path d="M4 21L28 12" stroke="#765337" stroke-width="7"/><circle cx="5" cy="21" r="4" fill="#9a7048" stroke="#4d3525"/><path d="M10 19l-4-8M18 16l5-8" stroke="#5e432e" stroke-width="3"/></g>
+<!-- 32 yield_sign -->
+<g transform="translate(0 64)"><rect x="15" y="13" width="3" height="17" fill="#6f7778"/><path d="M5 4h22L16 22z" fill="#f1eee3" stroke="#b54c43" stroke-width="3"/></g>
+<!-- 33 speed_limit_sign -->
+<g transform="translate(32 64)"><rect x="15" y="13" width="3" height="17" fill="#6f7778"/><rect x="7" y="3" width="19" height="16" rx="2" fill="#eee" stroke="#333" stroke-width="2"/><path d="M11 9h11M12 14h9" stroke="#333" stroke-width="2"/></g>
+<!-- 34 no_parking_sign -->
+<g transform="translate(64 64)"><rect x="15" y="13" width="3" height="17" fill="#6f7778"/><rect x="7" y="3" width="19" height="16" fill="#e7edf0" stroke="#376993" stroke-width="2"/><path d="M12 15V7h5c5 0 5 6 0 6h-5" fill="none" stroke="#376993" stroke-width="2"/></g>
+<!-- 35 street_name_sign -->
+<g transform="translate(96 64)"><rect x="15" y="13" width="3" height="17" fill="#6f7778"/><rect x="2" y="5" width="28" height="9" rx="2" fill="#3d6e55" stroke="#e7eee7"/><path d="M6 9h20" stroke="#eef5ed" stroke-width="2"/></g>
+<!-- 36 one_way_sign -->
+<g transform="translate(128 64)"><rect x="15" y="13" width="3" height="17" fill="#6f7778"/><rect x="3" y="5" width="26" height="11" fill="#e7e7e2" stroke="#292d2d"/><path d="M7 10h15l-4-4m4 4l-4 4" stroke="#242727" stroke-width="2" fill="none"/></g>
+<!-- 37 dead_end_sign -->
+<g transform="translate(160 64)"><rect x="15" y="13" width="3" height="17" fill="#6f7778"/><rect x="4" y="4" width="24" height="13" fill="#d6c86b" stroke="#303534"/><path d="M8 8h16M8 13h16" stroke="#343836" stroke-width="2"/></g>
+<!-- 38 road_work_sign -->
+<g transform="translate(192 64)"><rect x="15" y="13" width="3" height="17" fill="#6f7778"/><rect x="7" y="3" width="18" height="18" transform="rotate(45 16 12)" fill="#dd9845" stroke="#46392e"/><path d="M16 6v11M11 12h10" stroke="#2c2d2b" stroke-width="2"/></g>
+<!-- 39 pedestrian_sign -->
+<g transform="translate(224 64)"><rect x="15" y="13" width="3" height="17" fill="#6f7778"/><rect x="7" y="3" width="18" height="18" transform="rotate(45 16 12)" fill="#dd9845" stroke="#46392e"/><path d="M16 6v11M11 12h10" stroke="#2c2d2b" stroke-width="2"/></g>
+<!-- 40 bus_stop_sign -->
+<g transform="translate(256 64)"><rect x="15" y="13" width="3" height="17" fill="#6f7778"/><rect x="7" y="3" width="18" height="16" rx="2" fill="#446d8c" stroke="#dce5e8"/><rect x="11" y="7" width="10" height="7" fill="#bfd1d8"/></g>
+<!-- 41 public_trash_bin -->
+<g transform="translate(288 64)"><rect x="8" y="7" width="16" height="22" rx="3" fill="#465950" stroke="#26332e"/><rect x="6" y="5" width="20" height="5" fill="#627269"/></g>
+<!-- 42 guardrail -->
+<g transform="translate(320 64)"><rect x="2" y="12" width="28" height="6" rx="2" fill="#9da5a3" stroke="#555d5d"/><rect x="5" y="18" width="3" height="11" fill="#5d6463"/><rect x="24" y="18" width="3" height="11" fill="#5d6463"/></g>
+<!-- 43 chainlink_fence -->
+<g transform="translate(352 64)"><path d="M3 5v24M29 5v24M3 8h26M3 26h26M5 8l22 18M13 8l16 16M27 8L5 26M19 8L3 24" stroke="#77807f" stroke-width="1.5"/></g>
+<!-- 44 wood_fence -->
+<g transform="translate(384 64)"><rect x="2" y="7" width="28" height="20" fill="#7e6041" stroke="#3c3127"/><path d="M9 7v20M16 7v20M23 7v20M2 14h28M2 22h28" stroke="#a07b52"/></g>
+<!-- 45 privacy_fence -->
+<g transform="translate(416 64)"><rect x="2" y="7" width="28" height="20" fill="#645041" stroke="#3c3127"/><path d="M9 7v20M16 7v20M23 7v20M2 14h28M2 22h28" stroke="#a07b52"/></g>
+<!-- 46 traffic_cone -->
+<g transform="translate(448 64)"><path d="M16 3L8 26h16z" fill="#d87535" stroke="#693b28"/><path d="M11 18h10" stroke="#eee5d4" stroke-width="4"/><rect x="5" y="26" width="22" height="4" fill="#5b4b3f"/></g>
+<!-- 47 road_barricade -->
+<g transform="translate(480 64)"><path d="M6 28l4-14M26 28l-4-14" stroke="#66533f" stroke-width="3"/><rect x="3" y="8" width="26" height="8" fill="#e5d7bb" stroke="#604b3d"/><path d="M6 15l7-7M15 16l8-8M23 16l6-6" stroke="#c75d38" stroke-width="4"/></g>
+<!-- 48 storm_drain -->
+<g transform="translate(0 96)"><rect x="3" y="10" width="26" height="16" rx="2" fill="#454d4d" stroke="#242a2a" stroke-width="2"/><path d="M7 12v12M12 12v12M17 12v12M22 12v12M27 12v12" stroke="#798180" stroke-width="2"/></g>
+<!-- 49 manhole -->
+<g transform="translate(32 96)"><circle cx="16" cy="17" r="11" fill="#555d5d" stroke="#2c3232" stroke-width="3"/><circle cx="16" cy="17" r="7" fill="none" stroke="#737c7b"/><path d="M10 13h12M10 18h12M12 9v16M20 9v16" stroke="#343a39"/></g>
+<!-- 50 utility_box -->
+<g transform="translate(64 96)"><rect x="6" y="5" width="20" height="24" rx="2" fill="#59675d" stroke="#29332e" stroke-width="2"/><path d="M8 14h16M16 6v22" stroke="#849086"/><circle cx="20" cy="20" r="2" fill="#c8b15e"/></g>
+<!-- 51 transformer -->
+<g transform="translate(96 96)"><rect x="6" y="5" width="20" height="24" rx="2" fill="#59675d" stroke="#29332e" stroke-width="2"/><path d="M8 14h16M16 6v22" stroke="#849086"/><circle cx="20" cy="20" r="2" fill="#c8b15e"/></g>
+<!-- 52 phone_box -->
+<g transform="translate(128 96)"><rect x="6" y="5" width="20" height="24" rx="2" fill="#496276" stroke="#29332e" stroke-width="2"/><path d="M8 14h16M16 6v22" stroke="#849086"/><circle cx="20" cy="20" r="2" fill="#c8b15e"/></g>
+<!-- 53 newspaper_box -->
+<g transform="translate(160 96)"><rect x="6" y="7" width="20" height="18" fill="#466c88" stroke="#263d4f" stroke-width="2"/><rect x="9" y="10" width="14" height="8" fill="#dde1d8"/><rect x="13" y="25" width="6" height="5" fill="#53606a"/></g>
+<!-- 54 bike_rack -->
+<g transform="translate(192 96)"><path d="M4 26V14c0-8 8-8 8 0v12M12 26V14c0-8 8-8 8 0v12M20 26V14c0-8 8-8 8 0v12" fill="none" stroke="#6b7474" stroke-width="3"/></g>
+<!-- 55 crosswalk_beacon -->
+<g transform="translate(224 96)"><rect x="15" y="13" width="3" height="17" fill="#6f7778"/><rect x="6" y="3" width="20" height="15" rx="2" fill="#d8d6bd" stroke="#555"/></g>
+<!-- 56 parking_sign -->
+<g transform="translate(256 96)"><rect x="15" y="13" width="3" height="17" fill="#6f7778"/><rect x="7" y="3" width="19" height="16" fill="#e7edf0" stroke="#376993" stroke-width="2"/><path d="M12 15V7h5c5 0 5 6 0 6h-5" fill="none" stroke="#376993" stroke-width="2"/></g>
+<!-- 57 fire_call_box -->
+<g transform="translate(288 96)"><rect x="15" y="13" width="3" height="17" fill="#6f7778"/><rect x="6" y="3" width="20" height="15" rx="2" fill="#d8d6bd" stroke="#555"/></g>
+<!-- 58 road_barrier -->
+<g transform="translate(320 96)"><rect x="2" y="12" width="28" height="6" rx="2" fill="#9da5a3" stroke="#555d5d"/><rect x="5" y="18" width="3" height="11" fill="#5d6463"/><rect x="24" y="18" width="3" height="11" fill="#5d6463"/></g>
+<!-- 59 sewer_grate -->
+<g transform="translate(352 96)"><rect x="3" y="10" width="26" height="16" rx="2" fill="#454d4d" stroke="#242a2a" stroke-width="2"/><path d="M7 12v12M12 12v12M17 12v12M22 12v12M27 12v12" stroke="#798180" stroke-width="2"/></g>
+<!-- 60 street_planter -->
+<g transform="translate(384 96)"><rect x="5" y="17" width="22" height="12" fill="#785b45" stroke="#443428"/><path d="M16 17V6M16 12l-7-5M16 11l7-6" stroke="#477047" stroke-width="3"/><circle cx="8" cy="6" r="4" fill="#5e8756"/><circle cx="24" cy="5" r="4" fill="#6a915d"/></g>
+<!-- 61 curb_mailbox -->
+<g transform="translate(416 96)"><rect x="6" y="7" width="20" height="12" rx="5" fill="#52636c" stroke="#29343a" stroke-width="2"/><rect x="14" y="19" width="4" height="11" fill="#71583c"/><rect x="23" y="8" width="3" height="10" fill="#b54b42"/></g>
+<!-- 62 utility_pole_wood -->
+<g transform="translate(448 96)"><rect x="14" y="3" width="5" height="27" fill="#735336"/><rect x="5" y="7" width="23" height="3" fill="#5c4431"/><circle cx="8" cy="10" r="2" fill="#d7d0b0"/><circle cx="25" cy="10" r="2" fill="#d7d0b0"/></g>
+<!-- 63 utility_pole_transformer -->
+<g transform="translate(480 96)"><rect x="14" y="3" width="5" height="27" fill="#735336"/><rect x="5" y="7" width="23" height="3" fill="#5c4431"/><circle cx="8" cy="10" r="2" fill="#d7d0b0"/><circle cx="25" cy="10" r="2" fill="#d7d0b0"/><rect x="9" y="8" width="14" height="7" rx="2" fill="#707b72" stroke="#3c4740"/></g>
+<!-- 64 refrigerator_white -->
+<g transform="translate(0 128)"><rect x="7" y="3" width="18" height="27" rx="2" fill="#d9dedb" stroke="#505857" stroke-width="2"/><path d="M8 13h16M20 6v5M20 17v7" stroke="#596160" stroke-width="2"/></g>
+<!-- 65 refrigerator_stainless -->
+<g transform="translate(32 128)"><rect x="7" y="3" width="18" height="27" rx="2" fill="#899292" stroke="#505857" stroke-width="2"/><path d="M8 13h16M20 6v5M20 17v7" stroke="#596160" stroke-width="2"/></g>
+<!-- 66 stove_range -->
+<g transform="translate(64 128)"><rect x="5" y="6" width="22" height="24" fill="#a4aaa7" stroke="#515856" stroke-width="2"/><circle cx="11" cy="11" r="3" fill="#303535"/><circle cx="21" cy="11" r="3" fill="#303535"/><rect x="8" y="17" width="16" height="10" fill="#3c4343"/></g>
+<!-- 67 kitchen_sink -->
+<g transform="translate(96 128)"><rect x="4" y="9" width="24" height="18" fill="#b9c2bf" stroke="#5b6763" stroke-width="2"/><ellipse cx="16" cy="17" rx="8" ry="5" fill="#6f8a91"/><path d="M16 6v7h6" stroke="#abb4b1" stroke-width="3" fill="none"/></g>
+<!-- 68 counter_straight -->
+<g transform="translate(128 128)"><rect x="3" y="10" width="26" height="16" fill="#846448" stroke="#3b2e23" stroke-width="2"/><rect x="3" y="7" width="26" height="5" fill="#b7a98a"/></g>
+<!-- 69 counter_corner -->
+<g transform="translate(160 128)"><path d="M4 7h24v8H13v13H4z" fill="#8a6949" stroke="#3d3024" stroke-width="2"/><path d="M5 8h22" stroke="#c2ae87" stroke-width="3"/></g>
+<!-- 70 pantry -->
+<g transform="translate(192 128)"><rect x="5" y="3" width="22" height="27" fill="#76583f" stroke="#342920" stroke-width="2"/><path d="M16 4v25" stroke="#4b392b"/><circle cx="13" cy="16" r="1.5" fill="#d0ae63"/><circle cx="19" cy="16" r="1.5" fill="#d0ae63"/></g>
+<!-- 71 dishwasher -->
+<g transform="translate(224 128)"><rect x="5" y="6" width="22" height="23" fill="#aab1af" stroke="#515858" stroke-width="2"/><rect x="8" y="9" width="16" height="4" fill="#424a4a"/><circle cx="22" cy="11" r="1.5" fill="#79a86d"/></g>
+<!-- 72 kitchen_island -->
+<g transform="translate(256 128)"><rect x="3" y="10" width="26" height="16" fill="#846448" stroke="#3b2e23" stroke-width="2"/><rect x="3" y="7" width="26" height="5" fill="#b7a98a"/></g>
+<!-- 73 microwave_counter -->
+<g transform="translate(288 128)"><rect x="3" y="10" width="26" height="16" fill="#846448" stroke="#3b2e23" stroke-width="2"/><rect x="3" y="7" width="26" height="5" fill="#b7a98a"/><rect x="17" y="7" width="8" height="7" fill="#444d50"/></g>
+<!-- 74 breakfast_table -->
+<g transform="translate(320 128)"><rect x="5" y="10" width="22" height="10" rx="2" fill="#76583f" stroke="#3c2f24" stroke-width="2"/><rect x="7" y="20" width="3" height="9" fill="#4b392b"/><rect x="22" y="20" width="3" height="9" fill="#4b392b"/></g>
+<!-- 75 dining_chair -->
+<g transform="translate(352 128)"><rect x="8" y="8" width="16" height="13" rx="4" fill="#6f5745" stroke="#352a22" stroke-width="2"/><rect x="6" y="18" width="20" height="8" rx="3" fill="#856b55"/><rect x="8" y="25" width="3" height="5" fill="#3d3128"/><rect x="21" y="25" width="3" height="5" fill="#3d3128"/></g>
+<!-- 76 sofa -->
+<g transform="translate(384 128)"><rect x="2" y="8" width="27" height="12" rx="4" fill="#556c68" stroke="#293a37" stroke-width="2"/><rect x="1" y="17" width="29" height="9" rx="3" fill="#6a817c"/><path d="M16 18v8" stroke="#344c48"/></g>
+<!-- 77 loveseat -->
+<g transform="translate(416 128)"><rect x="4" y="8" width="23" height="12" rx="4" fill="#556c68" stroke="#293a37" stroke-width="2"/><rect x="3" y="17" width="25" height="9" rx="3" fill="#6a817c"/><path d="M16 18v8" stroke="#344c48"/></g>
+<!-- 78 recliner -->
+<g transform="translate(448 128)"><rect x="8" y="8" width="16" height="13" rx="4" fill="#6f5745" stroke="#352a22" stroke-width="2"/><rect x="6" y="18" width="20" height="8" rx="3" fill="#856b55"/><rect x="8" y="25" width="3" height="5" fill="#3d3128"/><rect x="21" y="25" width="3" height="5" fill="#3d3128"/></g>
+<!-- 79 coffee_table -->
+<g transform="translate(480 128)"><rect x="5" y="10" width="22" height="10" rx="2" fill="#76583f" stroke="#3c2f24" stroke-width="2"/><rect x="7" y="20" width="3" height="9" fill="#4b392b"/><rect x="22" y="20" width="3" height="9" fill="#4b392b"/></g>
+<!-- 80 tv_flat -->
+<g transform="translate(0 160)"><rect x="3" y="6" width="26" height="17" rx="2" fill="#202627" stroke="#5d6767" stroke-width="2"/><rect x="6" y="9" width="20" height="11" fill="#45636e"/><path d="M12 28h8M16 23v5" stroke="#596262" stroke-width="2"/></g>
+<!-- 81 tv_old -->
+<g transform="translate(32 160)"><rect x="5" y="5" width="22" height="20" rx="4" fill="#4c4942" stroke="#252522" stroke-width="2"/><rect x="8" y="8" width="14" height="12" rx="3" fill="#526b71"/><circle cx="24" cy="11" r="2" fill="#b0a56c"/></g>
+<!-- 82 tv_stand -->
+<g transform="translate(64 160)"><rect x="5" y="5" width="22" height="20" rx="4" fill="#4c4942" stroke="#252522" stroke-width="2"/><rect x="8" y="8" width="14" height="12" rx="3" fill="#526b71"/><circle cx="24" cy="11" r="2" fill="#b0a56c"/></g>
+<!-- 83 bookshelf_tall -->
+<g transform="translate(96 160)"><rect x="5" y="3" width="22" height="27" fill="#5d4633" stroke="#2d241d" stroke-width="2"/><path d="M7 10h18M7 17h18M7 24h18" stroke="#9c7854" stroke-width="2"/><path d="M10 5v4M15 5v4M21 12v4M11 19v4M19 19v4" stroke="#9c5a4c" stroke-width="3"/></g>
+<!-- 84 end_table -->
+<g transform="translate(128 160)"><rect x="8" y="10" width="15" height="10" rx="2" fill="#76583f" stroke="#3c2f24" stroke-width="2"/><rect x="10" y="20" width="3" height="9" fill="#4b392b"/><rect x="18" y="20" width="3" height="9" fill="#4b392b"/></g>
+<!-- 85 floor_lamp -->
+<g transform="translate(160 160)"><path d="M9 12h14l-4-9h-6z" fill="#d9c477" stroke="#6c5d37"/><rect x="15" y="12" width="3" height="15" fill="#84785b"/><ellipse cx="16.5" cy="28" rx="7" ry="2" fill="#4c463a"/></g>
+<!-- 86 bed_single -->
+<g transform="translate(192 160)"><rect x="5" y="5" width="22" height="24" rx="3" fill="#6a8290" stroke="#374951" stroke-width="2"/><rect x="7" y="7" width="18" height="7" fill="#d4d0bd"/><path d="M7 16h18" stroke="#91a4ac"/></g>
+<!-- 87 bed_double -->
+<g transform="translate(224 160)"><rect x="2" y="5" width="27" height="24" rx="3" fill="#6a8290" stroke="#374951" stroke-width="2"/><rect x="4" y="7" width="23" height="7" fill="#d4d0bd"/><path d="M4 16h23" stroke="#91a4ac"/></g>
+<!-- 88 bunk_bed -->
+<g transform="translate(256 160)"><rect x="4" y="5" width="24" height="8" fill="#6e8491" stroke="#34434a"/><rect x="4" y="19" width="24" height="8" fill="#7a8f99" stroke="#34434a"/><path d="M5 3v27M27 3v27M5 15h22" stroke="#594737" stroke-width="3"/></g>
+<!-- 89 dresser_wide -->
+<g transform="translate(288 160)"><rect x="3" y="9" width="26" height="14" fill="#765940" stroke="#34291f" stroke-width="2"/><path d="M10 10v12M20 10v12" stroke="#4d3a2c"/><circle cx="8" cy="16" r="1" fill="#d2b36d"/><circle cx="23" cy="16" r="1" fill="#d2b36d"/></g>
+<!-- 90 wardrobe -->
+<g transform="translate(320 160)"><rect x="5" y="3" width="22" height="27" fill="#76583f" stroke="#342920" stroke-width="2"/><path d="M16 4v25" stroke="#4b392b"/><circle cx="13" cy="16" r="1.5" fill="#d0ae63"/><circle cx="19" cy="16" r="1.5" fill="#d0ae63"/></g>
+<!-- 91 home_desk -->
+<g transform="translate(352 160)"><rect x="3" y="9" width="26" height="14" fill="#765940" stroke="#34291f" stroke-width="2"/><path d="M10 10v12M20 10v12" stroke="#4d3a2c"/><circle cx="8" cy="16" r="1" fill="#d2b36d"/><circle cx="23" cy="16" r="1" fill="#d2b36d"/></g>
+<!-- 92 desk_chair -->
+<g transform="translate(384 160)"><rect x="8" y="8" width="16" height="13" rx="4" fill="#6f5745" stroke="#352a22" stroke-width="2"/><rect x="6" y="18" width="20" height="8" rx="3" fill="#856b55"/><rect x="8" y="25" width="3" height="5" fill="#3d3128"/><rect x="21" y="25" width="3" height="5" fill="#3d3128"/></g>
+<!-- 93 hamper -->
+<g transform="translate(416 160)"><path d="M6 8h20l-3 21H9z" fill="#8b785d" stroke="#4a4032" stroke-width="2"/><path d="M9 11h14M10 16h12M10 21h12" stroke="#c1ae89"/></g>
+<!-- 94 toilet_modern -->
+<g transform="translate(448 160)"><rect x="8" y="4" width="16" height="9" rx="2" fill="#d9dfdc" stroke="#707875"/><ellipse cx="16" cy="21" rx="9" ry="8" fill="#eef1ed" stroke="#707875" stroke-width="2"/><ellipse cx="16" cy="20" rx="5" ry="4" fill="#789ba3"/></g>
+<!-- 95 pedestal_sink -->
+<g transform="translate(480 160)"><rect x="4" y="9" width="24" height="18" fill="#b9c2bf" stroke="#5b6763" stroke-width="2"/><ellipse cx="16" cy="17" rx="8" ry="5" fill="#6f8a91"/><path d="M16 6v7h6" stroke="#abb4b1" stroke-width="3" fill="none"/></g>
+<!-- 96 bathroom_vanity -->
+<g transform="translate(0 192)"><rect x="5" y="8" width="22" height="18" fill="#d0d5d2" stroke="#606967" stroke-width="2"/><ellipse cx="16" cy="15" rx="7" ry="4" fill="#718b91"/><rect x="10" y="26" width="12" height="4" fill="#7b6d5a"/></g>
+<!-- 97 bathtub_clawfoot -->
+<g transform="translate(32 192)"><rect x="3" y="10" width="26" height="17" rx="7" fill="#e2e6e3" stroke="#68716f" stroke-width="2"/><rect x="6" y="13" width="20" height="11" rx="5" fill="#88a8ad"/><path d="M24 7v7" stroke="#999f9d" stroke-width="3"/></g>
+<!-- 98 shower_stall -->
+<g transform="translate(64 192)"><rect x="5" y="4" width="22" height="26" fill="#a8c3c4" opacity=".65" stroke="#5e7778" stroke-width="2"/><path d="M8 8h16M16 5v24" stroke="#dce8e6"/><circle cx="21" cy="10" r="3" fill="#7d8b89"/></g>
+<!-- 99 towel_rack -->
+<g transform="translate(96 192)"><path d="M5 9v16M27 9v16M5 12h22" stroke="#777f7d" stroke-width="3"/><rect x="8" y="13" width="16" height="13" fill="#a77b66"/></g>
+<!-- 100 medicine_cabinet -->
+<g transform="translate(128 192)"><rect x="6" y="4" width="20" height="24" fill="#b9c9c8" stroke="#596867" stroke-width="2"/><path d="M16 5v22M8 16h16" stroke="#e1ecea"/><circle cx="20" cy="20" r="1" fill="#596867"/></g>
+<!-- 101 washer_front -->
+<g transform="translate(160 192)"><rect x="5" y="5" width="22" height="25" fill="#c2c8c5" stroke="#59615f" stroke-width="2"/><circle cx="16" cy="19" r="8" fill="#4d6166" stroke="#879594" stroke-width="2"/><circle cx="23" cy="9" r="2" fill="#75827f"/></g>
+<!-- 102 dryer_front -->
+<g transform="translate(192 192)"><rect x="5" y="5" width="22" height="25" fill="#c2c8c5" stroke="#59615f" stroke-width="2"/><circle cx="16" cy="19" r="8" fill="#4d6166" stroke="#879594" stroke-width="2"/><circle cx="23" cy="9" r="2" fill="#75827f"/></g>
+<!-- 103 water_heater_tall -->
+<g transform="translate(224 192)"><rect x="8" y="3" width="16" height="27" rx="7" fill="#aab2ad" stroke="#58615d" stroke-width="2"/><path d="M12 5v-4M20 5v-4" stroke="#626967" stroke-width="2"/><rect x="11" y="18" width="10" height="6" fill="#6e7974"/></g>
+<!-- 104 retail_shelf -->
+<g transform="translate(256 192)"><rect x="4" y="4" width="24" height="26" fill="#555f5f" stroke="#293030" stroke-width="2"/><path d="M6 10h20M6 17h20M6 24h20" stroke="#9d8b65" stroke-width="3"/><rect x="8" y="6" width="4" height="3" fill="#b55e4d"/><rect x="17" y="12" width="6" height="4" fill="#5d8392"/></g>
+<!-- 105 retail_endcap -->
+<g transform="translate(288 192)"><rect x="5" y="5" width="22" height="24" fill="#697370" stroke="#353c3a"/></g>
+<!-- 106 walkin_cooler -->
+<g transform="translate(320 192)"><rect x="4" y="5" width="24" height="24" fill="#b8c8c7" stroke="#586867" stroke-width="2"/><rect x="7" y="8" width="18" height="16" fill="#68838a"/><path d="M16 8v16" stroke="#d7e1df"/><rect x="10" y="25" width="12" height="3" fill="#677270"/></g>
+<!-- 107 chest_freezer -->
+<g transform="translate(352 192)"><rect x="4" y="5" width="24" height="24" fill="#b8c8c7" stroke="#586867" stroke-width="2"/><rect x="7" y="8" width="18" height="16" fill="#68838a"/><path d="M16 8v16" stroke="#d7e1df"/><rect x="10" y="25" width="12" height="3" fill="#677270"/></g>
+<!-- 108 produce_display -->
+<g transform="translate(384 192)"><path d="M4 14h24l-3 15H7z" fill="#8d6340" stroke="#4b3526" stroke-width="2"/><circle cx="9" cy="13" r="4" fill="#6d944c"/><circle cx="16" cy="10" r="5" fill="#c87845"/><circle cx="23" cy="14" r="4" fill="#a94e43"/></g>
+<!-- 109 restaurant_table -->
+<g transform="translate(416 192)"><circle cx="16" cy="15" r="10" fill="#765b45" stroke="#3c2f26" stroke-width="2"/><rect x="14" y="23" width="4" height="7" fill="#4a3b30"/></g>
+<!-- 110 restaurant_booth -->
+<g transform="translate(448 192)"><rect x="3" y="5" width="26" height="10" rx="4" fill="#7e4e47" stroke="#402b29"/><rect x="3" y="18" width="26" height="10" rx="4" fill="#7e4e47" stroke="#402b29"/><rect x="10" y="14" width="12" height="5" fill="#765b45"/></g>
+<!-- 111 office_desk -->
+<g transform="translate(480 192)"><rect x="3" y="7" width="26" height="12" fill="#725942" stroke="#362b22" stroke-width="2"/><rect x="5" y="19" width="7" height="10" fill="#514338"/><rect x="20" y="19" width="7" height="10" fill="#514338"/><rect x="12" y="9" width="10" height="7" fill="#394448"/></g>
+<!-- 112 office_chair -->
+<g transform="translate(0 224)"><rect x="8" y="5" width="16" height="14" rx="4" fill="#424c50"/><rect x="10" y="17" width="12" height="8" rx="3" fill="#536065"/><path d="M16 25v4M9 29h14" stroke="#31383b" stroke-width="3"/></g>
+<!-- 113 file_cabinet_tall -->
+<g transform="translate(32 224)"><rect x="6" y="3" width="20" height="27" fill="#697574" stroke="#343c3c" stroke-width="2"/><path d="M7 10h18M7 17h18M7 24h18" stroke="#949e9c"/><circle cx="21" cy="7" r="1" fill="#d0c37c"/></g>
+<!-- 114 copier -->
+<g transform="translate(64 224)"><rect x="4" y="11" width="24" height="18" fill="#aeb5b2" stroke="#515957" stroke-width="2"/><path d="M8 11l4-7h12l3 7" fill="#ced3d1" stroke="#59615f"/><rect x="9" y="17" width="14" height="5" fill="#3d484b"/></g>
+<!-- 115 cubicle_corner -->
+<g transform="translate(96 224)"><path d="M4 5v24M4 7h24v13M16 7v22" fill="none" stroke="#7f8e8c" stroke-width="4"/><rect x="18" y="11" width="8" height="6" fill="#39484d"/></g>
+<!-- 116 server_rack -->
+<g transform="translate(128 224)"><rect x="4" y="4" width="24" height="26" fill="#555f5f" stroke="#293030" stroke-width="2"/><path d="M6 10h20M6 17h20M6 24h20" stroke="#9d8b65" stroke-width="3"/><rect x="8" y="6" width="4" height="3" fill="#b55e4d"/><rect x="17" y="12" width="6" height="4" fill="#5d8392"/></g>
+<!-- 117 pallet_stack -->
+<g transform="translate(160 224)"><rect x="3" y="20" width="26" height="7" fill="#846144" stroke="#423124"/><rect x="6" y="8" width="20" height="13" fill="#9a7653" stroke="#5a422f"/><path d="M12 8v13M20 8v13" stroke="#674c36"/></g>
+<!-- 118 warehouse_rack -->
+<g transform="translate(192 224)"><rect x="4" y="4" width="24" height="26" fill="#555f5f" stroke="#293030" stroke-width="2"/><path d="M6 10h20M6 17h20M6 24h20" stroke="#9d8b65" stroke-width="3"/><rect x="8" y="6" width="4" height="3" fill="#b55e4d"/><rect x="17" y="12" width="6" height="4" fill="#5d8392"/></g>
+<!-- 119 workbench_heavy -->
+<g transform="translate(224 224)"><rect x="3" y="8" width="26" height="8" fill="#76563d" stroke="#392c22" stroke-width="2"/><rect x="5" y="16" width="4" height="13" fill="#4b3a2e"/><rect x="23" y="16" width="4" height="13" fill="#4b3a2e"/><path d="M11 11h10" stroke="#9da5a1" stroke-width="3"/></g>
+<!-- 120 tool_cabinet -->
+<g transform="translate(256 224)"><rect x="6" y="3" width="20" height="27" fill="#697574" stroke="#343c3c" stroke-width="2"/><path d="M7 10h18M7 17h18M7 24h18" stroke="#949e9c"/><circle cx="21" cy="7" r="1" fill="#d0c37c"/></g>
+<!-- 121 industrial_machine -->
+<g transform="translate(288 224)"><rect x="4" y="8" width="24" height="19" rx="2" fill="#55615c" stroke="#28302d" stroke-width="2"/><circle cx="11" cy="17" r="5" fill="#2f3835"/><rect x="18" y="12" width="7" height="8" fill="#303a38"/><path d="M7 6h18" stroke="#7f8b85" stroke-width="3"/></g>
+<!-- 122 portable_generator -->
+<g transform="translate(320 224)"><rect x="4" y="8" width="24" height="19" rx="2" fill="#55615c" stroke="#28302d" stroke-width="2"/><circle cx="11" cy="17" r="5" fill="#2f3835"/><rect x="18" y="12" width="7" height="8" fill="#303a38"/><path d="M7 6h18" stroke="#7f8b85" stroke-width="3"/></g>
+<!-- 123 locker_bank -->
+<g transform="translate(352 224)"><rect x="5" y="3" width="22" height="27" fill="#566668" stroke="#293335" stroke-width="2"/><path d="M16 4v25M7 11h18M7 20h18" stroke="#819091"/><circle cx="13" cy="15" r="1" fill="#d1b65f"/></g>
+<!-- 124 janitor_sink -->
+<g transform="translate(384 224)"><rect x="5" y="12" width="22" height="15" fill="#a7b0ac" stroke="#515c58"/><rect x="8" y="15" width="16" height="9" fill="#667c7e"/><path d="M16 4v10h7" stroke="#9ba5a1" stroke-width="3" fill="none"/></g>
+<!-- 125 janitor_cart -->
+<g transform="translate(416 224)"><rect x="5" y="12" width="20" height="12" fill="#6b7674" stroke="#333c3a"/><path d="M7 12V5h15M10 25v4M22 25v4" stroke="#5b6563" stroke-width="3"/><circle cx="10" cy="29" r="2" fill="#303535"/><circle cx="22" cy="29" r="2" fill="#303535"/></g>
+<!-- 126 vending_machine -->
+<g transform="translate(448 224)"><rect x="4" y="8" width="24" height="19" rx="2" fill="#55615c" stroke="#28302d" stroke-width="2"/><circle cx="11" cy="17" r="5" fill="#2f3835"/><rect x="18" y="12" width="7" height="8" fill="#303a38"/><path d="M7 6h18" stroke="#7f8b85" stroke-width="3"/></g>
+<!-- 127 breakroom_table -->
+<g transform="translate(480 224)"><circle cx="16" cy="15" r="10" fill="#765b45" stroke="#3c2f26" stroke-width="2"/><rect x="14" y="23" width="4" height="7" fill="#4a3b30"/></g>
+</svg>

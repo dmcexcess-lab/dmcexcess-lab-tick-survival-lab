@@ -1,0 +1,130 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="128" viewBox="0 0 512 128" shape-rendering="crispEdges">
+<!-- 0 grass_lush -->
+<g transform="translate(0 0)"><rect width="32" height="32" fill="#46613f"/><circle cx="7" cy="8" r="2" fill="#658054"/><circle cx="22" cy="20" r="2" fill="#384d34"/></g>
+<!-- 1 grass_dry -->
+<g transform="translate(32 0)"><rect width="32" height="32" fill="#857b48"/><circle cx="7" cy="8" r="2" fill="#658054"/><circle cx="22" cy="20" r="2" fill="#384d34"/></g>
+<!-- 2 grass_weedy -->
+<g transform="translate(64 0)"><rect width="32" height="32" fill="#566344"/><path d="M3 27l4-8 2 8M12 29l3-10 3 10M22 28l4-9 2 9" stroke="#708153" stroke-width="2"/></g>
+<!-- 3 forest_floor -->
+<g transform="translate(96 0)"><rect width="32" height="32" fill="#4a4332"/><path d="M3 7l8 3M19 5l7 5M6 23l9-4M21 23l6 3" stroke="#7c6340" stroke-width="2"/><circle cx="15" cy="12" r="3" fill="#334b31"/></g>
+<!-- 4 mud -->
+<g transform="translate(128 0)"><rect width="32" height="32" fill="#5d4c3d"/><ellipse cx="9" cy="10" rx="6" ry="3" fill="#443d35"/><ellipse cx="23" cy="23" rx="7" ry="4" fill="#736052"/><path d="M2 28c7-5 13 3 20-2" stroke="#493e34" fill="none"/></g>
+<!-- 5 sand -->
+<g transform="translate(160 0)"><rect width="32" height="32" fill="#b69a67"/><circle cx="6" cy="7" r="1" fill="#8f774f"/><circle cx="22" cy="13" r="1" fill="#9b8258"/><path d="M3 25c7-3 12 2 19-1s7 0 10 1" fill="none" stroke="#dbc68f"/></g>
+<!-- 6 beach_sand -->
+<g transform="translate(192 0)"><rect width="32" height="32" fill="#cfb77d"/><circle cx="6" cy="7" r="1" fill="#8f774f"/><circle cx="22" cy="13" r="1" fill="#9b8258"/><path d="M3 25c7-3 12 2 19-1s7 0 10 1" fill="none" stroke="#dbc68f"/></g>
+<!-- 7 moss_ground -->
+<g transform="translate(224 0)"><rect width="32" height="32" fill="#46553d"/><circle cx="8" cy="9" r="6" fill="#667b50"/><circle cx="22" cy="19" r="8" fill="#587048"/><circle cx="11" cy="25" r="4" fill="#71865b"/></g>
+<!-- 8 marsh_ground -->
+<g transform="translate(256 0)"><rect width="32" height="32" fill="#53634f"/><path d="M0 8h32M0 19h32M0 28h32" stroke="#596f6e" stroke-width="3"/><path d="M5 30L8 7M14 30l-1-19M23 30l4-22" stroke="#7c8759" stroke-width="2"/></g>
+<!-- 9 rocky_ground -->
+<g transform="translate(288 0)"><rect width="32" height="32" fill="#62635b"/><path d="M3 8l5-4 6 4-3 5H5zM18 18l4-6 7 4-2 8h-7zM5 27l5-6 5 5z" fill="#7c7e76" stroke="#494b47"/></g>
+<!-- 10 dirt_dark -->
+<g transform="translate(320 0)"><rect width="32" height="32" fill="#51402f"/><circle cx="7" cy="9" r="2" fill="#9a7b59"/><circle cx="23" cy="22" r="2" fill="#3f3429"/><path d="M3 28l8-3M19 8l9-4" stroke="#6b543e"/></g>
+<!-- 11 dirt_light -->
+<g transform="translate(352 0)"><rect width="32" height="32" fill="#80664a"/><circle cx="7" cy="9" r="2" fill="#9a7b59"/><circle cx="23" cy="22" r="2" fill="#3f3429"/><path d="M3 28l8-3M19 8l9-4" stroke="#6b543e"/></g>
+<!-- 12 gravel_dark -->
+<g transform="translate(384 0)"><rect width="32" height="32" fill="#64655e"/><circle cx="5" cy="7" r="2" fill="#a5a296"/><circle cx="13" cy="15" r="2" fill="#4f524d"/><circle cx="24" cy="8" r="2" fill="#77796f"/><circle cx="25" cy="25" r="2" fill="#aaa69a"/><circle cx="8" cy="25" r="2" fill="#52554f"/></g>
+<!-- 13 gravel_light -->
+<g transform="translate(416 0)"><rect width="32" height="32" fill="#87867a"/><circle cx="5" cy="7" r="2" fill="#a5a296"/><circle cx="13" cy="15" r="2" fill="#4f524d"/><circle cx="24" cy="8" r="2" fill="#77796f"/><circle cx="25" cy="25" r="2" fill="#aaa69a"/><circle cx="8" cy="25" r="2" fill="#52554f"/></g>
+<!-- 14 field_green -->
+<g transform="translate(448 0)"><rect width="32" height="32" fill="#59472f"/><path d="M3 0v32M9 0v32M15 0v32M21 0v32M27 0v32" stroke="#556d3d" stroke-width="4"/></g>
+<!-- 15 field_dry -->
+<g transform="translate(480 0)"><rect width="32" height="32" fill="#59472f"/><path d="M3 0v32M9 0v32M15 0v32M21 0v32M27 0v32" stroke="#8b7044" stroke-width="4"/></g>
+<!-- 16 asphalt_patch -->
+<g transform="translate(0 32)"><rect width="32" height="32" fill="#343839"/><path d="M2 6l7-2 5 3 8-2 8 4M4 25l8-4 7 2 9-4" stroke="#44494a" stroke-width="2"/><ellipse cx="22" cy="25" rx="6" ry="3" fill="#25292a" opacity=".6"/></g>
+<!-- 17 pothole -->
+<g transform="translate(32 32)"><rect width="32" height="32" fill="#35393a"/><ellipse cx="16" cy="17" rx="11" ry="8" fill="#232728" stroke="#4d5150" stroke-width="3"/><ellipse cx="16" cy="18" rx="7" ry="4" fill="#191d1e"/></g>
+<!-- 18 road_white_line_h -->
+<g transform="translate(64 32)"><rect width="32" height="32" fill="#303536"/><rect y="14" width="32" height="4" fill="#e6e6d8"/></g>
+<!-- 19 road_white_line_v -->
+<g transform="translate(96 32)"><rect width="32" height="32" fill="#303536"/><rect x="14" width="4" height="32" fill="#e6e6d8"/></g>
+<!-- 20 road_yellow_line_h -->
+<g transform="translate(128 32)"><rect width="32" height="32" fill="#303536"/><rect y="14" width="32" height="4" fill="#d5bd55"/></g>
+<!-- 21 road_yellow_line_v -->
+<g transform="translate(160 32)"><rect width="32" height="32" fill="#303536"/><rect x="14" width="4" height="32" fill="#d5bd55"/></g>
+<!-- 22 shoulder_gravel -->
+<g transform="translate(192 32)"><rect width="32" height="32" fill="#87867a"/><circle cx="5" cy="7" r="2" fill="#a5a296"/><circle cx="13" cy="15" r="2" fill="#4f524d"/><circle cx="24" cy="8" r="2" fill="#77796f"/><circle cx="25" cy="25" r="2" fill="#aaa69a"/><circle cx="8" cy="25" r="2" fill="#52554f"/></g>
+<!-- 23 curb_ramp -->
+<g transform="translate(224 32)"><rect width="32" height="32" fill="#777874"/><path d="M3 3h26v13H18L3 29z" fill="#989a94"/><circle cx="7" cy="24" r="1.5" fill="#d2c66d"/><circle cx="12" cy="20" r="1.5" fill="#d2c66d"/></g>
+<!-- 24 patio_pavers -->
+<g transform="translate(256 32)"><rect width="32" height="32" fill="#83786a"/><path d="M0 8h32M0 16h32M0 24h32M8 0v8M24 0v8M16 8v8M8 16v8M24 16v8M16 24v8" stroke="#5a5148" stroke-width="1"/></g>
+<!-- 25 brick_pavers -->
+<g transform="translate(288 32)"><rect width="32" height="32" fill="#8c5748"/><path d="M0 8h32M0 16h32M0 24h32M8 0v8M24 0v8M16 8v8M8 16v8M24 16v8M16 24v8" stroke="#5a5148" stroke-width="1"/></g>
+<!-- 26 concrete_clean -->
+<g transform="translate(320 32)"><rect width="32" height="32" fill="#7a7d79"/></g>
+<!-- 27 concrete_cracked -->
+<g transform="translate(352 32)"><rect width="32" height="32" fill="#696b68"/><path d="M3 5l8 7-5 8 8 9M17 3l4 9 8 3" fill="none" stroke="#4c4e4b" stroke-width="2"/></g>
+<!-- 28 concrete_oil -->
+<g transform="translate(384 32)"><rect width="32" height="32" fill="#696b68"/><ellipse cx="17" cy="18" rx="10" ry="6" fill="#343838" opacity=".55"/></g>
+<!-- 29 driveway_gravel -->
+<g transform="translate(416 32)"><rect width="32" height="32" fill="#87867a"/><circle cx="5" cy="7" r="2" fill="#a5a296"/><circle cx="13" cy="15" r="2" fill="#4f524d"/><circle cx="24" cy="8" r="2" fill="#77796f"/><circle cx="25" cy="25" r="2" fill="#aaa69a"/><circle cx="8" cy="25" r="2" fill="#52554f"/></g>
+<!-- 30 parking_faded -->
+<g transform="translate(448 32)"><rect width="32" height="32" fill="#343839"/><path d="M2 6l7-2 5 3 8-2 8 4M4 25l8-4 7 2 9-4" stroke="#44494a" stroke-width="2"/><ellipse cx="22" cy="25" rx="6" ry="3" fill="#25292a" opacity=".6"/></g>
+<!-- 31 alley_stained -->
+<g transform="translate(480 32)"><rect width="32" height="32" fill="#343839"/><path d="M2 6l7-2 5 3 8-2 8 4M4 25l8-4 7 2 9-4" stroke="#44494a" stroke-width="2"/><ellipse cx="22" cy="25" rx="6" ry="3" fill="#25292a" opacity=".6"/></g>
+<!-- 32 laminate_light -->
+<g transform="translate(0 64)"><rect width="32" height="32" fill="#a47c52"/><path d="M0 8h32M0 16h32M0 24h32M9 0v8M22 8v8M12 16v8M25 24v8" stroke="#513c2d" stroke-width="1"/></g>
+<!-- 33 laminate_dark -->
+<g transform="translate(32 64)"><rect width="32" height="32" fill="#624934"/><path d="M0 8h32M0 16h32M0 24h32M9 0v8M22 8v8M12 16v8M25 24v8" stroke="#513c2d" stroke-width="1"/></g>
+<!-- 34 wood_parquet -->
+<g transform="translate(64 64)"><rect width="32" height="32" fill="#8a6546"/><path d="M0 0l32 32M16 0l16 16M0 16l16 16M32 0L0 32M16 0L0 16M32 16L16 32" stroke="#5a402e" stroke-width="2"/></g>
+<!-- 35 carpet_blue -->
+<g transform="translate(96 64)"><rect width="32" height="32" fill="#536473"/><path d="M3 5l3 1M11 15l4-1M23 7l5 2M4 26l5-1M21 24l4 2" stroke="#9b988c" opacity=".4"/></g>
+<!-- 36 carpet_beige -->
+<g transform="translate(128 64)"><rect width="32" height="32" fill="#81796c"/><path d="M3 5l3 1M11 15l4-1M23 7l5 2M4 26l5-1M21 24l4 2" stroke="#9b988c" opacity=".4"/></g>
+<!-- 37 carpet_green -->
+<g transform="translate(160 64)"><rect width="32" height="32" fill="#56675a"/><path d="M3 5l3 1M11 15l4-1M23 7l5 2M4 26l5-1M21 24l4 2" stroke="#9b988c" opacity=".4"/></g>
+<!-- 38 tile_white -->
+<g transform="translate(192 64)"><rect width="32" height="32" fill="#e2e0d8"/><path d="M0 16h32M16 0v32" stroke="#aaa9a3" stroke-width="2"/></g>
+<!-- 39 tile_blackwhite -->
+<g transform="translate(224 64)"><rect x="0" y="0" width="8" height="8" fill="#d7d7d0"/><rect x="8" y="0" width="8" height="8" fill="#444746"/><rect x="16" y="0" width="8" height="8" fill="#d7d7d0"/><rect x="24" y="0" width="8" height="8" fill="#444746"/><rect x="0" y="8" width="8" height="8" fill="#444746"/><rect x="8" y="8" width="8" height="8" fill="#d7d7d0"/><rect x="16" y="8" width="8" height="8" fill="#444746"/><rect x="24" y="8" width="8" height="8" fill="#d7d7d0"/><rect x="0" y="16" width="8" height="8" fill="#d7d7d0"/><rect x="8" y="16" width="8" height="8" fill="#444746"/><rect x="16" y="16" width="8" height="8" fill="#d7d7d0"/><rect x="24" y="16" width="8" height="8" fill="#444746"/><rect x="0" y="24" width="8" height="8" fill="#444746"/><rect x="8" y="24" width="8" height="8" fill="#d7d7d0"/><rect x="16" y="24" width="8" height="8" fill="#444746"/><rect x="24" y="24" width="8" height="8" fill="#d7d7d0"/></g>
+<!-- 40 tile_mosaic -->
+<g transform="translate(256 64)"><rect width="32" height="32" fill="#b9b5a6"/><path d="M0 6h32M0 12h32M0 18h32M0 24h32M0 30h32M6 0v32M12 0v32M18 0v32M24 0v32M30 0v32" stroke="#75837e"/><circle cx="15" cy="15" r="4" fill="#6e8f91"/></g>
+<!-- 41 linoleum_green -->
+<g transform="translate(288 64)"><rect width="32" height="32" fill="#70806d"/><path d="M0 0l32 32M32 0L0 32" stroke="#b5ae8c" opacity=".35"/></g>
+<!-- 42 linoleum_yellow -->
+<g transform="translate(320 64)"><rect width="32" height="32" fill="#9b8f65"/><path d="M0 0l32 32M32 0L0 32" stroke="#b5ae8c" opacity=".35"/></g>
+<!-- 43 garage_floor -->
+<g transform="translate(352 64)"><rect width="32" height="32" fill="#5a5d5b"/><path d="M0 16h32M16 0v32" stroke="#4b4f4d" opacity=".45"/></g>
+<!-- 44 basement_floor -->
+<g transform="translate(384 64)"><rect width="32" height="32" fill="#4e5351"/><path d="M0 16h32M16 0v32" stroke="#4b4f4d" opacity=".45"/></g>
+<!-- 45 restaurant_floor -->
+<g transform="translate(416 64)"><rect width="32" height="32" fill="#6c5a50"/><path d="M0 16h32M16 0v32" stroke="#4b4f4d" opacity=".45"/></g>
+<!-- 46 hospital_floor -->
+<g transform="translate(448 64)"><rect width="32" height="32" fill="#a5aaa4"/><path d="M0 16h32M16 0v32" stroke="#4b4f4d" opacity=".45"/></g>
+<!-- 47 classroom_floor -->
+<g transform="translate(480 64)"><rect width="32" height="32" fill="#796f5c"/><path d="M0 16h32M16 0v32" stroke="#4b4f4d" opacity=".45"/></g>
+<!-- 48 wall_wallpaper -->
+<g transform="translate(0 96)"><rect width="32" height="32" fill="#9b8f78"/><path d="M6 0v32M16 0v32M26 0v32" stroke="#b3a58b"/><circle cx="11" cy="8" r="2" fill="#7f745f"/><circle cx="21" cy="22" r="2" fill="#7f745f"/></g>
+<!-- 49 wall_paneling -->
+<g transform="translate(32 96)"><rect width="32" height="32" fill="#76573f"/><path d="M5 0v32M11 0v32M17 0v32M23 0v32M29 0v32" stroke="#493528" stroke-width="2"/></g>
+<!-- 50 wall_red_brick -->
+<g transform="translate(64 96)"><rect width="32" height="32" fill="#884b40"/><path d="M0 8h32M0 16h32M0 24h32M8 0v8M24 0v8M16 8v8M8 16v8M24 16v8M16 24v8" stroke="#5e5148" stroke-width="2"/></g>
+<!-- 51 wall_white_brick -->
+<g transform="translate(96 96)"><rect width="32" height="32" fill="#d0c8b6"/><path d="M0 8h32M0 16h32M0 24h32M8 0v8M24 0v8M16 8v8M8 16v8M24 16v8M16 24v8" stroke="#5e5148" stroke-width="2"/></g>
+<!-- 52 wall_stone -->
+<g transform="translate(128 96)"><rect width="32" height="32" fill="#6e6b61"/><path d="M2 3l10-2 5 6-4 7-11-2zM18 2l12 3-2 9-9 2-4-8zM4 18l12-2 4 9-7 6-11-4zM21 18l9-2v14l-10-1z" fill="#88857a" stroke="#4d4b45"/></g>
+<!-- 53 wall_tile -->
+<g transform="translate(160 96)"><rect width="32" height="32" fill="#c7cfcb"/><path d="M0 8h32M0 16h32M0 24h32M8 0v32M16 0v32M24 0v32" stroke="#8b9995"/></g>
+<!-- 54 wall_glass_partition -->
+<g transform="translate(192 96)"><rect width="32" height="32" fill="#6f9197" opacity=".75"/><path d="M2 2h28v28H2zM16 2v28M2 16h28" fill="none" stroke="#a9c6c8" stroke-width="2"/></g>
+<!-- 55 wall_plaster -->
+<g transform="translate(224 96)"><rect width="32" height="32" fill="#b6aa96"/><path d="M4 7c6-4 8 3 14-1M3 23c5-3 10 2 15-2M21 13l7-3" stroke="#918675" opacity=".6"/></g>
+<!-- 56 wall_concrete -->
+<g transform="translate(256 96)"><rect width="32" height="32" fill="#777b79"/><circle cx="8" cy="8" r="2" fill="#5e6260"/><circle cx="24" cy="20" r="2" fill="#929694"/><path d="M3 27l9-5" stroke="#5e6260"/></g>
+<!-- 57 wall_metal_panel -->
+<g transform="translate(288 96)"><rect width="32" height="32" fill="#626b6c"/><path d="M4 0v32M10 0v32M16 0v32M22 0v32M28 0v32" stroke="#899293"/><circle cx="7" cy="5" r="1" fill="#333b3c"/><circle cx="25" cy="27" r="1" fill="#333b3c"/></g>
+<!-- 58 door_interior_closed -->
+<g transform="translate(320 96)"><rect width="32" height="32" fill="#756049"/><rect x="5" y="3" width="22" height="29" fill="#9a7d5a" stroke="#493b2d" stroke-width="2"/><circle cx="22" cy="18" r="2" fill="#d5bd6e"/></g>
+<!-- 59 door_reinforced_closed -->
+<g transform="translate(352 96)"><rect width="32" height="32" fill="#4d5555"/><rect x="4" y="2" width="24" height="30" fill="#606b6c" stroke="#272e2e" stroke-width="3"/><path d="M7 8h18M7 16h18M7 24h18" stroke="#879092" stroke-width="2"/><rect x="21" y="14" width="4" height="5" fill="#c0a85d"/></g>
+<!-- 60 window_boarded -->
+<g transform="translate(384 96)"><rect width="32" height="32" fill="#38505a"/><path d="M3 7l26 7M4 18l24 6M5 29L27 3" stroke="#865f3d" stroke-width="6"/></g>
+<!-- 61 window_broken -->
+<g transform="translate(416 96)"><rect width="32" height="32" fill="#4f7480"/><path d="M16 2l-3 10 6 4-5 14M2 17l11-5M19 16l12-7M19 16l9 11" stroke="#d9eceb" stroke-width="2" fill="none"/></g>
+<!-- 62 sliding_glass -->
+<g transform="translate(448 96)"><rect width="32" height="32" fill="#5c7f86"/><rect x="2" y="2" width="28" height="30" fill="none" stroke="#b4cdcf" stroke-width="2"/><path d="M16 2v30" stroke="#b4cdcf" stroke-width="3"/><circle cx="13" cy="17" r="1.5" fill="#e1d5a5"/></g>
+<!-- 63 screen_door -->
+<g transform="translate(480 96)"><rect width="32" height="32" fill="#444d4c"/><rect x="4" y="2" width="24" height="30" fill="#66817e" opacity=".6" stroke="#303838" stroke-width="2"/><path d="M5 6l22 22M12 3l16 16M4 15l15 15M27 6L5 28M20 3L4 19M28 14L12 30" stroke="#94a9a6" stroke-width=".8"/></g>
+</svg>
