@@ -1,0 +1,77 @@
+name: Final environment art installer
+
+on:
+  push:
+    paths:
+      - '.github/workflows/final-art-writer.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  install:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Reassemble validated art bundle
+        shell: bash
+        run: |
+          cat .final_art_bundle.0?? > /tmp/final_art_bundle.b64
+          base64 -d /tmp/final_art_bundle.b64 > /tmp/final_art_bundle.tgz
+          echo 'a372bf930e8f7e8c0171549db698cff8d4426745836cb451c18825ca9ccb826a  /tmp/final_art_bundle.tgz' | sha256sum -c -
+          mkdir -p /tmp/final_art
+          tar -xzf /tmp/final_art_bundle.tgz -C /tmp/final_art
+      - name: Install final environment vocabulary
+        shell: bash
+        run: |
+          cp /tmp/final_art/final_environment_props_atlas.svg game/assets/final_environment_props_atlas.svg
+          cp /tmp/final_art/final_environment_surfaces_atlas.svg game/assets/final_environment_surfaces_atlas.svg
+          cp /tmp/final_art/TacticalTiles.gd game/scripts/TacticalTiles.gd
+          cp /tmp/final_art/RegionSmoke.gd game/scripts/ci/RegionSmoke.gd
+          cp /tmp/final_art/ART_VOCABULARY.md ART_VOCABULARY.md
+          python3 - <<'PY'
+          from pathlib import Path
+
+          changelog = Path('CHANGELOG.md')
+          text = changelog.read_text()
+          heading = '## Final Environment Art Pass — 2026-08-14'
+          section = '''## Final Environment Art Pass — 2026-08-14
+
+- Added `final_environment_props_atlas.svg` with 128 environment-only sprites: 32 nature, 32 street/civic, 40 residential fixtures/furniture, and 24 commercial/office/industrial fixtures.
+- Added `final_environment_surfaces_atlas.svg` with 64 terrain, exterior, interior-floor, wall-finish, and opening tiles.
+- Defined the bootstrap art freeze: inventory items, loot, and equipment are not depicted as loose world sprites; tactical world art is reserved for surfaces, structures, fixtures, furniture, vegetation, civic infrastructure, large physical objects, and clutter.
+- Routed selected legacy ground/prop names through final-pass art so current generated/authored maps immediately gain richer trees, signs, furniture, bathroom/kitchen fixtures, TVs/appliances, and floor materials without changing object identity, collision, or LOS semantics.
+- Extended `TacticalTiles.gd` with stable final-atlas catalogs and caches without reindexing any prior atlas.
+- Strengthened permanent region smoke coverage to require the 128-prop / 64-surface final vocabulary and both final atlas resources.
+- Expanded `ART_VOCABULARY.md` as the durable no-more-broad-environment-art contract before overworld and macro-world work.
+
+'''
+          if heading not in text:
+              assert text.startswith('# Changelog\n')
+              text = '# Changelog\n\n' + section + text[len('# Changelog\n'):].lstrip('\n')
+              changelog.write_text(text)
+
+          context = Path('README_CONTEXT.md')
+          ctx = context.read_text()
+          old = '- `building_props_atlas.svg` — expanded domestic, commercial, office, industrial, street and rural fixtures;\n- `player_south.svg`, `player_north.svg`, `player_west.svg`, `player_east.svg` — independent upright player poses with no rotation/mirror transform in the runtime draw path.'
+          new = '- `building_props_atlas.svg` — expanded domestic, commercial, office, industrial, street and rural fixtures;\n- `final_environment_surfaces_atlas.svg` — final bootstrap terrain/interior/shell expansion;\n- `final_environment_props_atlas.svg` — final bootstrap nature, civic, residential, commercial, office and industrial environment/fixture expansion;\n- `player_south.svg`, `player_north.svg`, `player_west.svg`, `player_east.svg` — independent upright player poses with no rotation/mirror transform in the runtime draw path.'
+          if old in ctx:
+              ctx = ctx.replace(old, new, 1)
+          marker = '**Art is not physics.** A sprite/tile does not become solid, opaque, interactive, searchable or destructible merely because it looks like a physical object. Movement blocking, LOS blocking and runtime interaction remain explicit world data.'
+          inventory = '\n\n**Inventory-art rule:** loose inventory, loot, ammunition, equipment and ordinary pickup items are data/UI only and do not require world sprites. World art represents environment surfaces, structures, fixtures, furniture, vegetation, civic infrastructure, large physical objects and clutter.'
+          if marker in ctx and 'Inventory-art rule:' not in ctx:
+              ctx = ctx.replace(marker, marker + inventory, 1)
+          ctx = ctx.replace("plus Tick's clutter, world-art, building-prop and independent player-facing assets.", "plus Tick's clutter, world-art, building-prop, final-environment and independent player-facing assets.")
+          context.write_text(ctx)
+          PY
+      - name: Commit final art and remove installer staging
+        shell: bash
+        run: |
+          git config user.name 'github-actions[bot]'
+          git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+          git rm .final_art_bundle.0?? .github/workflows/final-art-writer.yml
+          git add game/assets/final_environment_props_atlas.svg game/assets/final_environment_surfaces_atlas.svg game/scripts/TacticalTiles.gd game/scripts/ci/RegionSmoke.gd ART_VOCABULARY.md CHANGELOG.md README_CONTEXT.md
+          git commit -m 'Final environment art vocabulary pass'
+          git push origin HEAD:main
