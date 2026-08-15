@@ -5,6 +5,7 @@ const Tiles = preload("res://scripts/TacticalTiles.gd")
 
 func _init() -> void:
     _validate_final_art_vocabulary()
+    var saw_parking_lot := false
     for seed_value in [1, 7, 42, 1337, 9001]:
         var spec: Dictionary = RegionGen.generate(seed_value)
         if int(spec.get("width", 0)) != RegionGen.REGION_W or int(spec.get("height", 0)) != RegionGen.REGION_H:
@@ -21,7 +22,19 @@ func _init() -> void:
             quit(1)
             return
         var again: Dictionary = RegionGen.generate(seed_value)
-        if spec.get("player_spawn") != again.get("player_spawn") or spec.get("biome_cells") != again.get("biome_cells") or spec.get("walls") != again.get("walls") or spec.get("road_cells") != again.get("road_cells") or spec.get("road_links") != again.get("road_links") or spec.get("road_surface_cells") != again.get("road_surface_cells") or spec.get("props") != again.get("props"):
+        if (
+            spec.get("player_spawn") != again.get("player_spawn")
+            or spec.get("biome_cells") != again.get("biome_cells")
+            or spec.get("walls") != again.get("walls")
+            or spec.get("road_cells") != again.get("road_cells")
+            or spec.get("road_links") != again.get("road_links")
+            or spec.get("road_surface_cells") != again.get("road_surface_cells")
+            or spec.get("props") != again.get("props")
+            or spec.get("building_rects") != again.get("building_rects")
+            or spec.get("rooms") != again.get("rooms")
+            or spec.get("parking_lots") != again.get("parking_lots")
+            or spec.get("parking_cells") != again.get("parking_cells")
+        ):
             push_error("REGION_SMOKE_NONDETERMINISTIC seed=%d" % seed_value)
             quit(1)
             return
@@ -75,6 +88,50 @@ func _init() -> void:
             push_error("REGION_SMOKE_OPENING_THEMES_MISSING seed=%d" % seed_value)
             quit(1)
             return
+
+        var buildings: Array = spec.get("building_rects", [])
+        var rooms: Array = spec.get("rooms", [])
+        if buildings.is_empty():
+            push_error("REGION_SMOKE_BUILDINGS_MISSING seed=%d" % seed_value)
+            quit(1)
+            return
+        for building_value in buildings:
+            var building: Array = building_value
+            if int(building[2]) < 8 or int(building[3]) < 8:
+                push_error("REGION_SMOKE_BUILDING_TOO_SMALL seed=%d building=%s" % [seed_value, str(building)])
+                quit(1)
+                return
+        if rooms.size() < buildings.size() * 2:
+            push_error("REGION_SMOKE_ROOM_SUBDIVISION_MISSING seed=%d buildings=%d rooms=%d" % [seed_value, buildings.size(), rooms.size()])
+            quit(1)
+            return
+        if not spec.get("wall_themes", {}).values().has("interior"):
+            push_error("REGION_SMOKE_INTERIOR_WALLS_MISSING seed=%d" % seed_value)
+            quit(1)
+            return
+        if spec.get("doors", []).size() < buildings.size() * 2:
+            push_error("REGION_SMOKE_INTERIOR_DOORS_MISSING seed=%d" % seed_value)
+            quit(1)
+            return
+
+        var parking_cells: Dictionary = spec.get("parking_cells", {})
+        if not spec.get("parking_lots", []).is_empty():
+            saw_parking_lot = true
+            if parking_cells.is_empty():
+                push_error("REGION_SMOKE_PARKING_STALLS_MISSING seed=%d" % seed_value)
+                quit(1)
+                return
+        for parking_value in parking_cells.keys():
+            var parking_cell: Vector2i = parking_value
+            for d in RegionGen.DIRS:
+                if parking_cells.has(parking_cell + d):
+                    push_error("REGION_SMOKE_PARKING_STALLS_TOUCH seed=%d cell=%s" % [seed_value, str(parking_cell)])
+                    quit(1)
+                    return
+    if not saw_parking_lot:
+        push_error("REGION_SMOKE_NO_PARKING_LOTS_ACROSS_SEEDS")
+        quit(1)
+        return
     print("TICK_SURVIVAL_REGION_SMOKE_OK")
     quit(0)
 
