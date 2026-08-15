@@ -33,24 +33,25 @@ jobs:
           cp /tmp/final_art/ART_VOCABULARY.md ART_VOCABULARY.md
           python3 - <<'PY'
           from pathlib import Path
-
           changelog = Path('CHANGELOG.md')
           text = changelog.read_text()
           heading = '## Final Environment Art Pass — 2026-08-14'
-          section = '''## Final Environment Art Pass — 2026-08-14
-
-- Added `final_environment_props_atlas.svg` with 128 environment-only sprites: 32 nature, 32 street/civic, 40 residential fixtures/furniture, and 24 commercial/office/industrial fixtures.
-- Added `final_environment_surfaces_atlas.svg` with 64 terrain, exterior, interior-floor, wall-finish, and opening tiles.
-- Defined the bootstrap art freeze: inventory items, loot, and equipment are not depicted as loose world sprites; tactical world art is reserved for surfaces, structures, fixtures, furniture, vegetation, civic infrastructure, large physical objects, and clutter.
-- Routed selected legacy ground/prop names through final-pass art so current generated/authored maps immediately gain richer trees, signs, furniture, bathroom/kitchen fixtures, TVs/appliances, and floor materials without changing object identity, collision, or LOS semantics.
-- Extended `TacticalTiles.gd` with stable final-atlas catalogs and caches without reindexing any prior atlas.
-- Strengthened permanent region smoke coverage to require the 128-prop / 64-surface final vocabulary and both final atlas resources.
-- Expanded `ART_VOCABULARY.md` as the durable no-more-broad-environment-art contract before overworld and macro-world work.
-
-'''
+          lines = [
+              heading,
+              '',
+              '- Added `final_environment_props_atlas.svg` with 128 environment-only sprites: 32 nature, 32 street/civic, 40 residential fixtures/furniture, and 24 commercial/office/industrial fixtures.',
+              '- Added `final_environment_surfaces_atlas.svg` with 64 terrain, exterior, interior-floor, wall-finish, and opening tiles.',
+              '- Defined the bootstrap art freeze: inventory items, loot, and equipment are not depicted as loose world sprites; tactical world art is reserved for surfaces, structures, fixtures, furniture, vegetation, civic infrastructure, large physical objects, and clutter.',
+              '- Routed selected legacy ground/prop names through final-pass art so current generated/authored maps immediately gain richer trees, signs, furniture, bathroom/kitchen fixtures, TVs/appliances, and floor materials without changing object identity, collision, or LOS semantics.',
+              '- Extended `TacticalTiles.gd` with stable final-atlas catalogs and caches without reindexing any prior atlas.',
+              '- Strengthened permanent region smoke coverage to require the 128-prop / 64-surface final vocabulary and both final atlas resources.',
+              '- Expanded `ART_VOCABULARY.md` as the durable no-more-broad-environment-art contract before overworld and macro-world work.',
+              '',
+          ]
           if heading not in text:
               assert text.startswith('# Changelog\n')
-              text = '# Changelog\n\n' + section + text[len('# Changelog\n'):].lstrip('\n')
+              section = '\n'.join(lines)
+              text = '# Changelog\n\n' + section + '\n' + text[len('# Changelog\n'):].lstrip('\n')
               changelog.write_text(text)
 
           context = Path('README_CONTEXT.md')
