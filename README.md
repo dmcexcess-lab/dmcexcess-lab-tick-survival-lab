@@ -8,47 +8,56 @@ The project has deliberately restarted from a small runtime core. Existing envir
 
 The current playable foundation contains:
 
-- deterministic **Rural Road generator v3**;
-- one rural main road with dirt/gravel property connectors;
+- deterministic **Rural Road generator v4**;
+- straight, bent/curved-looking, and crossroads rural main-road variants;
+- dirt/gravel property connectors;
 - exactly four residences plus one gas station or corner/convenience store per tactical sample;
 - one farm complex, one or two trailers/double-wides, and substantial country housing;
-- compact functional interiors and wall-aware installed fixtures;
-- the **actual original tactical structural tile vocabulary** recovered from historical `TacticalTiles.gd`;
-- hard door/door-approach clearance against walls and clutter;
+- compact functional interiors with a **3x3 minimum room size**;
+- authoritative wall-axis door geometry with protected approaches;
+- the original tactical structural tile vocabulary recovered from historical `TacticalTiles.gd`;
 - dense roadside utility poles with static power-line presentation, sparse stop signs and no traffic lights;
 - broad grass/tree/bush/scrub vegetation;
 - grid player movement with cardinal facing and left/right turning;
 - collision against generated walls and blocking fixtures;
-- touch-first `FORWARD`, `BACK`, `TURN L`, `TURN R`, `MAP`, and zoom controls;
-- keyboard development controls;
+- touch-first movement/turn/map/zoom controls;
 - three tactical zoom levels;
 - a static strategic progression map from rural outskirts toward the city;
 - an event-driven renderer that draws only visible tactical cells and does no idle redraw work.
 
-Vision cone, lighting, weather, sound, infected, loot, combat, ticks/calendar, injuries, vehicles, and persistence are intentionally absent for now. They will be redesigned and added back only after the generator/player foundation is strong.
+Vision cone, lighting, weather, sound, infected, loot, combat, ticks/calendar, injuries, vehicles, and persistence are intentionally absent for now.
 
 ## Current rural slice
 
 A tactical map represents a **sample of rural road** rather than one giant property or a miniature city.
 
-Each seed produces one cross-map rural main road, small dirt/gravel access roads, four residential properties and one roadside business. The residence grammar includes one farm complex, one or two manufactured homes and the remaining substantial houses. The business is either a gas station or corner/convenience store; there is no rural strip-mall generator.
+Each seed chooses a main-road topology: straight, a connected bend, or a crossroads. The road graph is generated first and protected from later yard/building/field painting. Four residential properties and one roadside business are then arranged around it.
 
-The current small-business interior contract is:
+The residence grammar includes one farm complex, one or two manufactured homes and substantial country houses. The business is either a gas station or corner/convenience store; there is no rural strip-mall generator.
+
+Current small-business interior contract:
 
 - storefront: **7x7**;
 - stock room: **3x3**;
-- manager office: **3x1**;
-- bathroom: **2x2**.
+- manager office: **3x3**;
+- bathroom: **3x3**;
+- rear service: **7x3**.
 
-Clutter is room-purpose driven: checkout/shelves/cold-case or vending in the sales floor, crates/pallets in stock, desk in the office, and normal bathroom fixtures. Gas stations get a compact pump/forecourt/sign setup rather than a giant parking lot.
+Clutter is room-purpose driven: checkout/shelves/cold-case or vending in the sales floor, crates/pallets in stock/service space, desk/chair in the office, and normal bathroom fixtures. Gas stations get a compact pump/forecourt/sign setup rather than a giant parking lot.
 
-Roadside infrastructure is intentionally rural: frequent utility poles and visible static power lines, a few stop signs, and no traffic lights. Grass, trees, bushes, scrub and weeds fill the negative space around properties and road shoulders.
+## Door geometry
+
+The remaining visible "wall behind door" problem turned out to be **bad partition geometry**, not the tile set.
+
+Doors now know the axis of the wall they belong to. A horizontal-wall door must have clear north/south approaches; a vertical-wall door must have clear east/west approaches. Those approach cells are reserved from later walls, windows, furniture and clutter, while the two cells along the door's own wall axis must remain structural.
+
+This catches doors generated at wall crosses/T-junctions even when no wall occupies the actual door cell. The permanent generator smoke rejects those maps.
+
+Every recorded functional room is also now at least 3x3, reducing cramped partition situations and giving furniture/fixtures usable clearance.
 
 ## Artwork
 
-The old tile set was not lost. The reboot initially restored the wrong structural layer.
-
-The remembered look came from the early tactical renderer:
+The old tile set was not lost. Canonical structures remain pinned to the early tactical renderer:
 
 - tactical walls **16–22**;
 - closed door **23**;
@@ -56,9 +65,7 @@ The remembered look came from the early tactical renderer:
 - window **25**;
 - original tactical ground/floor/common-prop tiles plus the clutter sheet.
 
-The later `world_art` closed-door tile contains its own wall-colored background, which caused the visible "wall behind doors" effect during the earlier reboot pass. `RebootArt.gd` now pins the original tactical structural indices and uses later atlases only as supplements for road topology, utility hardware, selected fixtures and vegetation.
-
-Doors are true opening cells. Generator rules erase any wall/window/prop at the door itself, reserve cardinal approach cells from clutter, and run a final approach cleanup before validation.
+`world_art` is supplemental for connected road topology/gravel/field rows; later sheets supplement utility hardware, selected fixtures and vegetation.
 
 ## World direction
 
@@ -66,7 +73,7 @@ The strategic world progresses geographically:
 
 **BASE -> RURAL EDGE -> SMALL TOWN -> SUBURBS -> CITY EDGE -> CITY CORE**
 
-The current build only exposes rural walking-range samples. Deeper nodes are visible but locked for later roaming/vehicle progression.
+The current build only exposes rural walking-range samples. Deeper nodes remain locked for later roaming/vehicle progression.
 
 ## Performance direction
 
@@ -89,14 +96,7 @@ Canonical reboot runtime:
 - `game/scripts/reboot/RebootMain.gd`
 - `game/scripts/ci/RebootSmoke.gd`
 
-See:
-
-- `REBOOT_CORE.md` — current implementation contract;
-- `README_CONTEXT.md` — current development context;
-- `README_SOPS.md` — repository/coding rules;
-- `TRAVEL_DEPTH_VEHICLE_GATEWAY_DESIGN.md` — later strategic travel/vehicle direction.
-
-Legacy prototype files remain temporarily for historical/reference use but are not active runtime dependencies.
+See `REBOOT_CORE.md`, `README_CONTEXT.md`, `README_SOPS.md`, and `TRAVEL_DEPTH_VEHICLE_GATEWAY_DESIGN.md`.
 
 ## Run
 
