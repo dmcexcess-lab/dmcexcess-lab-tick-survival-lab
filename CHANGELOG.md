@@ -1,5 +1,22 @@
 # Changelog
 
+## Modular Rebuild Reset / Golden Recovery Contract — 2026-08-16
+
+- Reclassified the current clean-reboot runtime under `game/scripts/reboot/` as **frozen/deprecated reference code** rather than the architecture to keep extending. The live Web build remains available until its modular replacement is proven.
+- Added `MODULAR_REBUILD_MASTER_DESIGN.md` as the canonical next-build architecture and consolidated the current game direction, rural-generation rules, static strategic-map progression, vehicle-gateway concept, prefab direction, recovered/deferred systems, and implementation order.
+- Made modularity a hard project rule: the root `Main.gd` is bootstrap/composition only. Rendering, input, controls, camera, zoom, player movement, collision, generation, strategic map, prefab authoring, extraction/travel, persistence, validation, and later simulation systems must each have standalone owners rather than accumulating as functions in Main.
+- Pinned golden pre-clean-rewrite recovery commit `1763958f44eb7f855fd49944c00d1ffe608c0abe` for exact visual/system archaeology.
+- Confirmed that the richer pre-rewrite artwork was **not lost**. The six important atlas files and four directional player sprites on current `main` are byte-identical to the golden commit. The visual regression came from replacing `TacticalTiles.gd`'s semantic multi-atlas selection/render behavior with a simplified reboot catalog, not from missing image files.
+- Recorded exact golden/current asset blob hashes in the master design/context/SOP so future recovery work can distinguish an unchanged art asset from a changed renderer.
+- Identified golden `TacticalTiles.gd` (`3d8a0a70ac983408bb48f58fc659dfb07e216ed3`) as the source of the mature multi-atlas visual vocabulary. Its semantic mappings/road topology/prop-selection behavior will be recovered into a standalone `ArtCatalog` plus separate ground/structure/prop/player renderers instead of copied back into another monolithic presentation script.
+- Established a semantic world-data boundary: procedural generation must output concepts such as house walls, gravel driveways and kitchen sinks plus explicit physics facts; it may not output atlas indices or invoke renderer functions. This makes the random generator independently replaceable without changing graphics, player controls, camera, strategic map or other systems.
+- Documented a proposed highly modular folder layout with independent app/data/art/render/camera/input/player/world/strategic/raid/generation/prefab-dev/UI/time/perception domains and separate generation planners/validators.
+- Consolidated the current Rural Edge target: two-lane rural roads with straight/bend/crossroads variation, dirt/gravel access roads, broad vegetation/open land, utility/power infrastructure, sparse stop signs, roughly 3–4 residential properties as a normal scale rather than a rigid quota, farm/country-house/manufactured-home variation, and normally zero/one compact gas/convenience/corner store with no rural strip malls.
+- Preserved the strongest recent geometry lessons: functional procedural rooms normally at least 3x3, storefront/public rooms around 5x5–7x7, support rooms around 3x3, wall-aware installed fixtures, circulation-aware clutter, and authoritative door-axis/approach validation.
+- Defined the next implementation order: first build a bootstrap-only Main and recover the **exact old visual stack on a tiny authored test map**; only after the visuals are visibly verified should the new modular Rural Edge generator be written. Prefab tooling, travel/extraction, ticks, vision, lighting, weather and silent spatial sound follow as separate subsystem phases.
+- Updated `README_CONTEXT.md` and `README_SOPS.md` so future code prompts are forced to treat the modular master design as canonical, inspect the actual golden implementation when recovering old behavior, avoid cross-subsystem rewrites, and ask targeted clarification before genuinely ambiguous destructive changes.
+- This reset is deliberately **design/architecture only**: no current runtime scripts or retained art files were deleted or rewritten in this pass.
+
 ## Prefab Workshop / Authored Generator Inserts — 2026-08-16
 
 - **Safari/mobile access fix:** replaced the easy-to-miss small strategic-map prefab control with a large bottom-center **PREFAB BUILDER** touch button, and enlarged/renamed the tactical prefab control to the same clear label.
