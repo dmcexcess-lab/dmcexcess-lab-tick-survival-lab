@@ -1,5 +1,22 @@
 # Changelog
 
+## Mini-World / Streetscape v5 — 2026-08-15
+
+- Added `MINI_WORLD_STREETSCAPE_DESIGN.md` as the durable design for the mini-Zomboid pivot: a cheap deterministic macro world connected to detailed local tactical regions rather than one continuously rendered island.
+- Added `MiniWorldState.gd` with a deterministic 5×5 macro world, guaranteed downtown/commercial/residential/rural/woods identities, stable per-region seeds, current-region coordinates, and bounded cardinal travel.
+- Added `MiniRegionGenerator.gd` as generator version 5. It keeps procedural generator v4 as the physical road/map baseline, prepares region-appropriate building shells, then applies a deterministic streetscape/building-family coherence pass.
+- Added `MiniRegionFocusPass.gd` so macro cells labeled residential, commercial, rural, woods, or downtown are guaranteed enough coherent local building shells even when an arbitrary v4 seed would otherwise produce no buildings of the needed type.
+- Added `StreetscapePass.gd` with actual traffic-control usage: traffic lights, multiple stop signs, street-name signs, streetlights, hydrants, and rural/woodland utility poles now appear from road/intersection rules instead of leaving most civic art unused.
+- Added single-story trailer, mansion/estate-house, duplex, and two-/three-unit strip-mall grammars while retaining existing houses, farmhouses, standalone stores, offices, and warehouses.
+- Added family metadata as the sixth `building_rects` field and family-aware footprint validation so narrow trailers and shallow strip malls are legal without weakening ordinary building rules.
+- Eliminated generated parking lots with no destination: every v5 parking-lot rectangle must overlap a building, and legacy parking-only commercial parcels are deterministically repaired into attached strip malls.
+- Added a door-sanity pass that removes accidental horizontal or vertical runs of three adjacent doors; multi-unit storefront entrances are deliberately spaced with wall/window frontage between them.
+- Replaced the old whole-region overmap with a central 5×5 mini-world map. The survivor is shown as a red dot inside the current macro cell using local coordinates; `M` and the Safari-safe on-screen `MAP` button remain zero-tick controls.
+- Added region travel through local edge roads. Crossing an edge into a valid neighboring macro cell loads its deterministic local region while preserving scheduler/calendar, weather, survivor state, and authoritative movement cost.
+- Narrowed tactical zoom to performance-safe local-detail views: 14×12 at 39px, 12×10 at 44px by default, and 10×9 at 50px. The far 14×12 view uses lower-rate/lower-density cosmetic weather while authoritative weather and perception values remain unchanged.
+- Retired v4's old validation assumption that every individual 64×64 map must contain a substantial patch of all five biomes; region identity now belongs to the 5×5 macro world. Road connectivity, blocked-road, exit, geometry, room, and physical-world validation remain in force.
+- Added permanent `MiniWorldSmoke.gd` coverage across all 25 macro regions for deterministic world/local generation, world bounds, traffic controls, parking/building coherence, no triple-door runs, and the requested trailer/mansion/duplex/strip-mall family diversity.
+
 ## Tactical Weather Performance / De-Sync Pass — 2026-08-15
 
 - Stopped the active presentation harness from repainting the entire tactical scene on every process frame solely for weather/light animation.
@@ -59,7 +76,7 @@
 - Added `clutter_atlas.svg` with 24 new indoor/outdoor sprites: chair, desk, toilet, sink, cabinet, bookshelf, TV, lamp, tree, bush, fence, mailbox, trash can, road sign, bench, hydrant, streetlight, rug, laundry, planter, tire pile, cardboard, picnic table, and firewood.
 - Expanded procedural residential, commercial, downtown, woods, and rural decoration using the new clutter while keeping visual props, movement blockers, and sight blockers as separate physical concepts.
 - Added per-building wall-theme metadata and more appropriate procedural interior light types for houses, stores, and downtown/industrial structures.
-- Made procedural ambient lighting biome-aware instead of treating the whole 64×64 region as an alley theme.
+- Made procedural ambient lighting biome-aware instead of treating the whole 64×64 region as one alley theme.
 - Added sealed-corner LOS handling so diagonal vision/light cannot squeeze between two touching opaque orthogonal cells; trees, bookshelves, and cabinets now participate in tall-object occlusion.
 - Added `WORLD_NAVIGATION_AUDIT.md` and refreshed `WORLD_GENERATION.md` / `README_CONTEXT.md` to define what is complete, what is optional before actor systems, and what should wait.
 
