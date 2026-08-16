@@ -2,44 +2,37 @@
 
 This directory is the detailed durable memory for individual systems.
 
-A system is implemented only after its design status is **APPROVED** by the user.
-
-Before using this ledger, read `PROJECT_NORTH_STAR.md` and `DESIGN_DECISIONS.md`. The ledger tracks system detail/status; it does not replace whole-game intent.
+A major system moves through **NOT DESIGNED -> DRAFT -> APPROVED -> IMPLEMENTED** only through the process in `DESIGN_WORKFLOW.md`. Before using this ledger, read `PROJECT_NORTH_STAR.md` and `DESIGN_DECISIONS.md`.
 
 ## Status meanings
 
 - **NOT DESIGNED** — known future system, no detailed design yet.
 - **DRAFT** — being discussed; do not implement.
 - **APPROVED** — user approved the design; implementation may begin.
-- **IMPLEMENTED** — approved design is present in the canonical modular runtime/source and tested.
+- **IMPLEMENTED** — approved design is present in canonical modular source and tested.
 - **SUPERSEDED** — retained for history but replaced by newer direction.
 - **RECOVERY SOURCE** — historical behavior worth mining, not current architecture.
 
-## Current foundational architecture
+## Current canonical architecture
 
-The earlier attempt to start with a tactical `RaidMapSpec` was too high-level and assumed a disconnected raid architecture that has since been removed.
-
-The current foundation is organized around **WHERE / WHAT / WHEN** rather than treating map generation as the engine.
-
-Canonical umbrella design:
-
-**[`00_FOUNDATION_WHERE_WHAT_WHEN.md`](00_FOUNDATION_WHERE_WHAT_WHEN.md)**
-
-The three-part decomposition is settled and all three bounded foundation contracts now have canonical tested implementations.
+The current foundation is organized around **WHERE / WHAT / WHEN** rather than treating map generation as the engine. Collision and Movement are the first downstream gameplay systems consuming those foundations.
 
 | Order | System | Status | Design source | Notes |
 |---|---|---|---|---|
 | 00 | WHERE / WHAT / WHEN Simulation Foundation | **IMPLEMENTED via child contracts** | `00_FOUNDATION_WHERE_WHAT_WHEN.md` | Umbrella relationship realized by independently tested 00A/00B/00C modules |
-| 00A | Spatial Model — WHERE | **IMPLEMENTED** | `00A_SPATIAL_MODEL.md` | Canonical global `Vector2i` grid, N/E/S/W facing, arbitrary whole-cell footprints, structure cells with explicit axis, pure geometry contract |
-| 00B | Persistent World / Entity State — WHAT | **IMPLEMENTED** | `00B_PERSISTENT_WORLD_STATE.md` | Stable IDs, semantic terrain/entities, WHERE placement, derived occupancy, validated mutations, revision/change events, deterministic snapshot/restore |
-| 00C | Tick / Action / Pause Kernel — WHEN | **IMPLEMENTED** | `00C_TICK_ACTION_PAUSE.md` | Integer world tick, deterministic scheduled-event heap, concurrent actor actions, phases/interruption/resume, decision auto-pause, hard pause, atomic snapshot/restore |
-| 01 | Collision / Spatial Query | **IMPLEMENTED** | `01_COLLISION_SPATIAL_QUERY.md` | Explicit type-level movement collision + sparse per-entity overrides; read-only WHERE+WHAT occupancy queries with CLEAR/BLOCKED/UNKNOWN |
-| 00D | Global World Planning / Generation Contract | **NOT DESIGNED** | `00D_GLOBAL_WORLD_GENERATION.md` | Geography/roads/utilities/parcels/building footprints planned coherently; generator feeds initial WHAT using WHERE |
-| 00E | Population / Household / Outbreak / Player Story | **NOT DESIGNED** | `00E_POPULATION_OUTBREAK_PLAYER_STORY.md` | Persistent people/homes/jobs/relationships, scalable simulation resolution, player embedded in generated world |
+| 00A | Spatial Model — WHERE | **IMPLEMENTED** | `00A_SPATIAL_MODEL.md` | Global `Vector2i` grid, N/E/S/W facing, whole-cell footprints, structure cells/axis |
+| 00B | Persistent World / Entity State — WHAT | **IMPLEMENTED** | `00B_PERSISTENT_WORLD_STATE.md` | Stable IDs, semantic terrain/entities, placements, mutations, revision, snapshot/restore |
+| 00C | Tick / Action / Pause Kernel — WHEN | **IMPLEMENTED** | `00C_TICK_ACTION_PAUSE.md` | Integer tick, deterministic queue, timed actions/phases, tactical/hard pause |
+| 01 | Collision / Spatial Query | **IMPLEMENTED** | `01_COLLISION_SPATIAL_QUERY.md` | Type collision + sparse overrides; CLEAR/BLOCKED/UNKNOWN hypothetical footprint queries |
+| 02 | Movement Actions | **IMPLEMENTED** | `02_MOVEMENT_ACTIONS.md` | Forward/back/turn actions bridge WHERE + WHAT + Collision + WHEN with commit-time revalidation |
+| 00D | Global World Planning / Generation Contract | **NOT DESIGNED** | `00D_GLOBAL_WORLD_GENERATION.md` | Global geography/roads/utilities/parcels/building facts before local materialization |
+| 00E | Population / Household / Outbreak / Player Story | **NOT DESIGNED** | `00E_POPULATION_OUTBREAK_PLAYER_STORY.md` | Persistent people/homes/jobs/relationships and scalable causal outbreak simulation |
 | 00F | Streaming / Materialization | **NOT DESIGNED** | `00F_STREAMING_MATERIALIZATION.md` | Performance/storage mechanism over one logical world; partitions never define reality |
-| old-01 | Semantic tactical map / `RaidMapSpec` | **SUPERSEDED** | `01_RAID_MAP_DATA.md` | Design mine only; assumed separate raid maps and started above the real foundations |
+| old-01 | Semantic tactical map / `RaidMapSpec` | **SUPERSEDED** | `01_RAID_MAP_DATA.md` | Historical design mine; assumed separate raid maps |
 
-### Implemented WHERE owners
+## Implemented source owners
+
+### 00A WHERE
 
 - `game/scripts/foundation/spatial/SpatialFacing.gd`
 - `game/scripts/foundation/spatial/SpatialFootprint.gd`
@@ -48,7 +41,7 @@ The three-part decomposition is settled and all three bounded foundation contrac
 - `game/scripts/foundation/spatial/SpatialModel.gd`
 - `game/scripts/ci/SpatialModelSmoke.gd`
 
-### Implemented WHAT owners
+### 00B WHAT
 
 - `game/scripts/foundation/world/WorldEntityId.gd`
 - `game/scripts/foundation/world/WorldEntityRecord.gd`
@@ -62,7 +55,7 @@ The three-part decomposition is settled and all three bounded foundation contrac
 - `game/scripts/foundation/world/WorldMutationService.gd`
 - `game/scripts/ci/WorldStateSmoke.gd`
 
-### Implemented WHEN owners
+### 00C WHEN
 
 - `game/scripts/foundation/time/TickRules.gd`
 - `game/scripts/foundation/time/ActionPhase.gd`
@@ -72,7 +65,7 @@ The three-part decomposition is settled and all three bounded foundation contrac
 - `game/scripts/foundation/time/TickKernel.gd`
 - `game/scripts/ci/TickKernelSmoke.gd`
 
-### Implemented Collision / Spatial Query owners
+### 01 Collision / Spatial Query
 
 - `game/scripts/simulation/collision/CollisionProfile.gd`
 - `game/scripts/simulation/collision/CollisionCatalog.gd`
@@ -81,35 +74,37 @@ The three-part decomposition is settled and all three bounded foundation contrac
 - `game/scripts/simulation/collision/SpatialQueryService.gd`
 - `game/scripts/ci/CollisionSpatialQuerySmoke.gd`
 
-WHERE, WHAT, WHEN, and Collision / Spatial Query are intentionally not wired into the frozen playable reference runtime yet. Integration waits for approved canonical neighboring systems rather than creating temporary adapters.
+### 02 Movement Actions
+
+- `game/scripts/simulation/movement/MovementActionResult.gd`
+- `game/scripts/simulation/movement/MovementTraversalPolicy.gd`
+- `game/scripts/simulation/movement/MovementActionService.gd`
+- `game/scripts/ci/MovementActionsSmoke.gd`
+- `.github/workflows/movement.yml`
+
+The canonical modules above are intentionally **not** wired into the frozen `game/scripts/reboot/` playable reference through temporary adapters. Integration waits for real neighboring canonical contracts.
+
+## Current Movement contract in one paragraph
+
+Movement accepts semantic forward/back/turn requests, uses Collision to validate the actor's target footprint, uses a replaceable traversal policy for terrain capability/base duration, submits a COMMITTED timed action through WHEN, and mutates WHAT only at `movement.commit` after rechecking the destination and expected origin. Destinations are not reserved: simultaneous actors may both begin toward a cell, but deterministic WHEN ordering plus commit-time revalidation allows only a still-legal action to occupy it. Backward movement preserves facing and turns validate the fully rotated footprint.
 
 ## Why generation is not the foundation
 
-Generation is one producer of initial world state. It must use the same spatial/entity contracts as every other system.
-
-- world generation creates virgin terrain/structures/population;
-- construction later adds or changes structures;
-- destruction changes them;
-- doors/containers/vehicles mutate through gameplay;
-- save/load restores the resulting persistent state;
-- rendering only reads that state.
-
-Replacing the generator must not require replacing the spatial model, tick kernel, renderer, player controls or saved world contract.
+Generation is one producer of initial world state. It must use the same spatial/entity contracts as every other system. Construction/destruction/gameplay later mutate the same WHAT, and replacing the generator must not require replacing WHERE, WHEN, movement, rendering, controls or saved-world semantics.
 
 ## Later modular systems
 
-Exact order will be refined after the foundations are designed.
+Exact order is refined one approved design at a time.
 
 | System | Status | Notes |
 |---|---|---|
-| Recovered multi-atlas Art Catalog | NOT DESIGNED | Recover exact golden `TacticalTiles.gd` semantics; semantic N/E/S/W orientation with rotation or explicit variants |
+| Actor state / stance / movement capability | NOT DESIGNED | Recommended next discussion: durable/shared actor facts and movement-policy modifiers without putting them in WHAT/WHEN |
+| Recovered multi-atlas Art Catalog | NOT DESIGNED | Recover exact golden `TacticalTiles.gd` semantics |
 | Ground renderer | NOT DESIGNED | Reads canonical world/spatial data + ArtCatalog |
-| Structure renderer | NOT DESIGNED | Walls/doors/windows only; must consume WHERE structure-cell/axis contract |
+| Structure renderer | NOT DESIGNED | Walls/doors/windows; consumes WHERE structure-cell/axis contract |
 | Prop/fixture/vegetation renderer | NOT DESIGNED | Whole-cell footprints/orientation; world props only |
-| Player/actor renderer | NOT DESIGNED | Four directional sprites initially; should not make underlying actor model player-only |
+| Player/actor renderer | NOT DESIGNED | Four directional sprites initially; shared actor semantics |
 | Authored visual test area | NOT DESIGNED | Proves recovered graphics independently of procedural generation |
-| Actor state/facing | NOT DESIGNED | Shared actor foundation for player/NPC/infected where appropriate |
-| Movement actions | NOT DESIGNED | First true WHERE + WHAT + Collision + WHEN bridge; no input/render ownership |
 | Tactical camera + zoom | NOT DESIGNED | One canonical zoom owner |
 | Touch/keyboard/Safari input | NOT DESIGNED | Emits semantic intents; hard-pause lifecycle requirements |
 | Tactical controls UI | NOT DESIGNED | Presentation/hit regions only |
@@ -119,44 +114,42 @@ Exact order will be refined after the foundations are designed.
 | Procedural room/layout | NOT DESIGNED | Room graph, circulation, doors |
 | Furniture/fixture/clutter dressing | NOT DESIGNED | Purpose-aware planners, directional art semantics |
 | Vegetation/utilities/civic dressing | NOT DESIGNED | Local detail respecting global utility/network facts |
-| World/generator validation | NOT DESIGNED | Independent coherence/quality gates; may consume collision coverage diagnostics |
-| Prefab authoring tools | NOT DESIGNED | Shared canonical semantic data/art renderer; separate controller/view/storage/validation |
-| Construction/destruction | DEFERRED | Persistent WHAT mutation using WHERE; player may build/secure bases anywhere legal |
-| Base/community summary layer | NOT DESIGNED | Optional thin summary/management layer over physical world facts; no special base map |
-| Health/body/first aid | NOT DESIGNED | Mini-Zomboid severity/treatment model; modifies action capability/cost through explicit seams, not scheduler internals |
-| Needs/fatigue/temperature | NOT DESIGNED | Coarse meaningful states, real consequences |
-| Vision/perception | DEFERRED | Major mood/gameplay system; consumes WHERE + WHAT, mine golden solved work |
-| Lighting | DEFERRED | Major mood/gameplay system; consumes world geometry/state/time, mine golden solved work |
+| World/generator validation | NOT DESIGNED | Independent coherence/quality gates; consumes canonical diagnostics/contracts |
+| Prefab authoring tools | NOT DESIGNED | Shared semantic data/art renderer; separate controller/view/storage/validation |
+| Construction/destruction | DEFERRED | Persistent WHAT mutation using WHERE; bases anywhere legal |
+| Base/community summary layer | NOT DESIGNED | Thin summary over physical world facts; no special base reality |
+| Health/body/first aid | NOT DESIGNED | Mini-Zomboid severity/treatment model; affects capability via explicit seams |
+| Needs/fatigue/temperature | NOT DESIGNED | Coarse meaningful states with real consequences |
+| Vision/perception | DEFERRED | Major mood/gameplay system; consumes WHERE + WHAT; mine golden work |
+| Lighting | DEFERRED | Major mood/gameplay system; mine golden work |
 | Weather | DEFERRED | State/system scheduled through WHEN + separate VFX |
 | Silent spatial sound | DEFERRED | Spatial events using WHERE + WHAT + WHEN; no default audible playback |
 | Infected AI | DEFERRED | Emits actions using shared actor/action/perception/world contracts |
-| Loot/inventory/search | DEFERRED | Persistent physical containers/items keyed by WHAT entity IDs; timed actions through WHEN |
+| Loot/inventory/search | DEFERRED | Persistent containers/items keyed by WHAT IDs; timed actions through WHEN |
 | Combat | DEFERRED | Generic action timing + health consequences; no combat rules inside WHEN |
-| Vehicles | DEFERRED | Persistent multi-cell entities using WHERE/WHAT; timed travel/actions through WHEN |
-| Old raid/extraction/session architecture | **SUPERSEDED** | No required raid/extraction/staging loop in current design |
+| Vehicles | DEFERRED | Persistent multi-cell entities using WHERE/WHAT; timed actions through WHEN |
+| Old raid/extraction/session architecture | **SUPERSEDED** | No required raid/extraction/staging loop |
 
 ## Design template
 
-Each system file should include:
+Every major system design should contain:
 
-1. **Status** — NOT DESIGNED / DRAFT / APPROVED / IMPLEMENTED / SUPERSEDED.
-2. **Goal** — the one problem this subsystem solves.
-3. **Non-goals** — nearby responsibilities it explicitly does not own.
-4. **Owner(s)** — intended standalone script/module owners.
-5. **Public contract** — inputs, outputs, methods, signals and semantic data.
-6. **Data ownership** — what state it may mutate and what it may only read.
-7. **Allowed dependencies**.
-8. **Forbidden dependencies**.
-9. **Detailed behavior/rules**.
-10. **Edge/failure cases**.
-11. **Performance requirements**.
-12. **Safari/mobile requirements** where relevant.
-13. **Tests / acceptance criteria**.
-14. **Recovery sources** from historical code when applicable.
-15. **Future extension seams** for known later systems.
-16. **North-star fit** — how it serves Ultima-style turn-based mini Zomboid without owning unrelated behavior.
-17. **Approved decisions** with rationale.
+1. status;
+2. goal;
+3. non-goals;
+4. owner(s);
+5. public contract/API;
+6. data ownership;
+7. allowed dependencies;
+8. forbidden dependencies;
+9. detailed behavior/rules;
+10. edge/failure cases;
+11. performance requirements;
+12. Safari/mobile requirements where relevant;
+13. tests/acceptance criteria;
+14. recovery sources where relevant;
+15. future extension seams;
+16. North-star fit;
+17. approved decisions with rationale.
 
-## Rule for changes after approval
-
-If implementation reveals that an APPROVED design cannot work without crossing a forbidden module boundary, do not silently patch around it. Return the system design to DRAFT, explain the conflict, propose the smallest contract change, and get approval before continuing.
+If implementation reveals an APPROVED design cannot work without crossing a forbidden module boundary, return the design to DRAFT and obtain approval for the smallest contract change rather than patching around the boundary.
