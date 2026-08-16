@@ -2,8 +2,9 @@
 
 ## Prefab Workshop / Authored Generator Inserts — 2026-08-16
 
+- **Safari/mobile access fix:** replaced the easy-to-miss small strategic-map prefab control with a large bottom-center **PREFAB BUILDER** touch button, and enlarged/renamed the tactical prefab control to the same clear label.
 - Added an in-game **Prefab Workshop** so reusable tactical structures can be authored directly in the running game instead of hardcoding every floor plan into `RebootSiteGenerator.gd`.
-- Added `RebootPrefabEditor.gd`, a touch/mouse-first developer overlay with a **16x14 maximum canvas**, matching one far-zoom tactical window. Access it from `PREFABS` in tactical play, `PREFABS n` on the strategic map, or F2 on desktop.
+- Added `RebootPrefabEditor.gd`, a touch/mouse-first developer overlay with a **16x14 maximum canvas**, matching one far-zoom tactical window. Access it from `PREFAB BUILDER` in tactical play, the large `PREFAB BUILDER (n)` button on the strategic map, or F2 on desktop.
 - Added a native `LineEdit` prefab-name field for reliable Web/Safari keyboard behavior.
 - Added tap/click and drag painting for common floor tiles, canonical house/light/store/industrial walls, windows, horizontal-wall doors, vertical-wall doors, and three pages of common furniture/fixture/prop tools.
 - Added ERASER plus two-tap CLEAR and DELETE protection for destructive editing actions.
