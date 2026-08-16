@@ -597,7 +597,7 @@ static func _small_trailer(spec: Dictionary, rect: Rect2i, front_south: bool, pr
     var divider_x := x + 4
 
     _partition_h(spec, split_a, x + 1, rect.end.x - 2, [x + 4])
-    _partition_h(spec, split_b, x + 1, rect.end.x - 2, [x + 4])
+    _partition_h(spec, split_b, x + 1, rect.end.x - 2, [x + 2])
     _partition_v(spec, divider_x, split_b + 1, rect.end.y - 2, [y + 11])
 
     var living := Rect2i(x + 1, y + 1, 7, 4)
