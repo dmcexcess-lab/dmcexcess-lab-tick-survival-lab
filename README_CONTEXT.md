@@ -29,7 +29,7 @@ Web preview: `https://dmcexcess-lab.github.io/dmcexcess-lab-tick-survival-lab/`
 
 ## 2. Current architectural phase
 
-The project is now in **Phase 1: modular foundation implementation**.
+The project is in **Phase 1: modular foundation implementation**.
 
 The currently deployed runtime under `game/scripts/reboot/` remains **frozen/deprecated reference code**. Do not extend it as the target architecture.
 
@@ -37,9 +37,13 @@ Golden recovery commit for mature pre-clean-rewrite behavior/art:
 
 `1763958f44eb7f855fd49944c00d1ffe608c0abe`
 
-The first canonical modular foundation slice, **00A WHERE / Spatial Model, is implemented and CI-gated** under `game/scripts/foundation/spatial/`.
+Canonical modular foundation progress:
 
-The live playable scene does not import the new foundation yet. This is intentional: no temporary adapter layer will connect WHERE to the deprecated runtime merely to make new code visibly run.
+- **00A WHERE / Spatial Model — IMPLEMENTED and CI-gated** under `game/scripts/foundation/spatial/`.
+- **00B WHAT / Persistent World State — IMPLEMENTED and CI-gated** under `game/scripts/foundation/world/`.
+- **00C WHEN / Tick Action Pause — next bounded design/implementation target; not yet implemented.**
+
+The live playable scene does not import the new foundation yet. This is intentional: no temporary adapter layer will connect canonical foundation modules to the deprecated runtime merely to make new code visibly run.
 
 ## 3. Foundation architecture
 
@@ -79,17 +83,44 @@ Locked spatial rules:
 - no sub-cell/free movement baseline;
 - WHERE owns geometry only, no occupants/world state/collision policy/rendering/timing/generation.
 
-### 00B WHAT — NOT YET APPROVED FOR CODE
+### 00B WHAT — IMPLEMENTED
 
-Umbrella draft covers stable IDs, persistent entity/state stores, placement/occupancy indexes, initial-vs-current world truth, mutations and scene-tree independence.
+Canonical design: `SYSTEM_DESIGNS/00B_PERSISTENT_WORLD_STATE.md`.
 
-Before implementation, create/refine a standalone `00B_PERSISTENT_WORLD_STATE.md`, review it against the implemented WHERE contract, and get explicit bounded approval.
+Implemented owners:
+
+- `game/scripts/foundation/world/WorldEntityId.gd`
+- `game/scripts/foundation/world/WorldEntityRecord.gd`
+- `game/scripts/foundation/world/WorldPlacement.gd`
+- `game/scripts/foundation/world/TerrainStore.gd`
+- `game/scripts/foundation/world/EntityStore.gd`
+- `game/scripts/foundation/world/PlacementStore.gd`
+- `game/scripts/foundation/world/OccupancyIndex.gd`
+- `game/scripts/foundation/world/WorldChange.gd`
+- `game/scripts/foundation/world/WorldState.gd`
+- `game/scripts/foundation/world/WorldMutationService.gd`
+- test: `game/scripts/ci/WorldStateSmoke.gd`
+
+Locked WHAT rules:
+
+- one authoritative current persistent world, not parallel generated/current gameplay realities;
+- stable opaque string entity IDs independent of Godot Nodes and store ordering;
+- semantic entity types; no art indices and no generic metadata junk drawer;
+- entities may persist without a tactical placement;
+- terrain is a primary semantic cell fact;
+- placed entities use WHERE channel + anchor + facing + footprint + optional structure axis;
+- occupancy is a derived acceleration index, never source of truth;
+- WHAT does not invent overlap/collision legality;
+- normal writes go through `WorldMutationService`; public reads return mutation-safe copies;
+- every successful foundation mutation advances revision and emits typed mechanic-agnostic change data;
+- snapshot/restore is deterministic and atomic, rebuilds derived occupancy, and is an in-memory state boundary rather than the final save-file implementation;
+- WHAT has no generator, renderer, streaming, tick/action, health, inventory, AI, construction or reboot dependency.
 
 ### 00C WHEN — NOT YET APPROVED FOR CODE
 
 Umbrella draft covers integer world ticks, variable-duration actions, scheduled events, phases/interruption, deterministic ordering, tactical auto-pause, hard real-life pause and coarse distant simulation seams.
 
-Before implementation, create/refine a standalone `00C_TICK_ACTION_PAUSE.md` and get explicit bounded approval.
+Before implementation, create/refine a standalone `00C_TICK_ACTION_PAUSE.md`, recover useful golden `TickScheduler.gd` behavior deliberately, review it against implemented WHERE/WHAT, and get explicit bounded approval.
 
 ## 4. Open-world / generation direction
 
@@ -101,11 +132,13 @@ Long-term top-down planning:
 
 Roads, utilities, rivers, parcels and other cross-region structures are planned in global coordinates before streaming/materialization. A local region may load part of a road; it does not invent how that road connects.
 
-Once world state exists, persistent WHAT owns changes. Replacing generation later must not reset looted containers, destroyed structures, construction, vehicles, corpses or other saved state.
+Generation will create ordinary semantic terrain/entities through WHAT using WHERE. Once they exist, the same current persistent world owns later changes. Replacing generation must not reset looted containers, destroyed structures, construction, vehicles, corpses or other durable state.
 
 ## 5. Outbreak / player-story direction
 
 The long-term world should support a populated pre-collapse state with persistent people, households, homes, jobs/workplaces, schedules, vehicles and relationships, then simulate outbreak/collapse causally.
+
+WHAT's stable identity model intentionally allows a person to remain the same persistent actor whether tactically placed nearby, temporarily unplaced, or later represented by a coarse distant simulation system.
 
 Distant simulation may use coarser deterministic resolution for performance while preserving causal persistent state.
 
@@ -117,6 +150,8 @@ A base is not a special map or required mode.
 
 The player may build/secure one or many locations anywhere normal construction/occupancy rules permit, abandon them, relocate, or live nomadically. Any later base/community UI must summarize underlying physical world facts rather than create a separate base reality.
 
+WHAT contains no privileged `BaseMap`/base-region truth. Future construction/storage/power/water/community systems attach ordinary typed state to persistent entities and locations.
+
 ## 7. Graphics recovery truth
 
 The richer pre-rewrite artwork remains intact. The mature look came from golden `TacticalTiles.gd` combining six atlases plus four directional player sprites.
@@ -125,7 +160,7 @@ Golden semantic renderer blob:
 
 `3d8a0a70ac983408bb48f58fc659dfb07e216ed3`
 
-Rendering is not being rebuilt in this foundation slice. When designed, it must consume WHERE/WHAT and recover exact semantic art behavior rather than approximate it.
+Rendering is not being rebuilt in these foundation slices. When designed, it must consume WHERE/WHAT and recover exact semantic art behavior rather than approximate it.
 
 ## 8. Development process / anti-drift rules
 
@@ -148,6 +183,7 @@ Global invariants:
 11. Phone/Safari remains first-class.
 12. Important decisions/lessons do not live only in chat.
 13. Do not wire new modules into deprecated runtime through temporary compatibility code merely to make progress visible.
+14. Persistent-world mechanics should attach typed state through stable entity IDs rather than expanding `WorldEntityRecord` into a generic metadata bag.
 
 ## 9. Documentation ownership
 
@@ -179,4 +215,4 @@ Global invariants:
 
 **Do not jump to generation or rendering.**
 
-Next recommended bounded design/implementation target: **00B WHAT — Persistent World / Entity State**, built against the already-implemented WHERE contract. WHEN follows as its own later slice.
+Next recommended bounded target: **00C WHEN — Tick / Action / Pause Kernel**. First refine the umbrella timing design into a standalone child design against the now-implemented WHERE and WHAT contracts, then obtain explicit approval before coding it.
