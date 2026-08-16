@@ -8,7 +8,7 @@ Read this before detailed system designs. This file exists to preserve the game 
 
 > **Ultima-style turn-based mini Zomboid.**
 
-Tick Survival Lab is a top-down, tile-based, persistent open-world zombie survival simulation with discrete-time actions, systemic consequences, extraction-style expedition risk, and deliberately simplified-but-interconnected survival mechanics.
+Tick Survival Lab is a top-down, tile-based, persistent open-world zombie survival simulation with discrete-time actions, systemic consequences, player-built bases, a causally simulated outbreak, and deliberately simplified-but-interconnected survival mechanics.
 
 ## Core philosophy
 
@@ -18,43 +18,40 @@ The project should capture the decisions, danger, atmosphere and systemic conseq
 
 Examples:
 
-- Health does not need to model literal blood volume to make a serious wound frightening. Injury severity, body region, treatment requirements and action/mobility consequences can preserve the meaningful decision.
-- Hunger does not need metabolic simulation to force the player to decide whether to keep scavenging or return home.
-- Weather does not need fluid dynamics to alter visibility, temperature, sound masking, travel and mood.
+- Health does not need literal blood-volume simulation to make a serious wound frightening. Injury severity, body region, treatment requirements and action/mobility consequences can preserve the meaningful decision.
+- Hunger does not need metabolic simulation to make dwindling food matter.
+- Weather does not need fluid dynamics to alter visibility, temperature, sound masking and mood.
 
 Simplify internal calculation where possible. Do **not** simplify away consequence, causality, uncertainty, risk or atmosphere.
 
 ## Player experience target
 
-The world should feel like a small, readable Ultima-like top-down world with the systemic survival pressure of a much deeper zombie simulation.
+The world should feel like a readable Ultima-like top-down world with the systemic survival pressure of a much deeper zombie simulation.
 
 The player should be able to:
 
-- explore a persistent world;
+- live and travel in one persistent open world;
 - enter houses, stores, farms and other believable places;
 - scavenge real physical locations;
-- bring equipment out and risk it while away from safety;
-- return home/base with what they survived long enough to recover;
-- interact with doors, containers, vehicles, utilities, weather, light, sound and later other survivors;
-- experience consequences that remain in the world.
+- carry equipment and supplies physically through that same world;
+- build, secure, expand, abandon and revisit bases anywhere the world/construction rules permit;
+- interact with doors, containers, vehicles, utilities, weather, light, sound and other persistent actors;
+- experience consequences that remain in the world;
+- pursue emergent goals rather than being forced through a raid/extraction loop.
 
-The extraction-shooter influence is primarily **risk/reward expedition structure**:
-
-> prepare at safety -> leave with gear at risk -> search/explore/fight/avoid -> decide when greed has gone too far -> get back alive -> keep what you brought home.
-
-This does **not** require the physical world to be divided into disconnected raid instances.
+**There is no extraction-shooter layer in the current design.** The player may leave home, wander indefinitely, relocate, establish multiple safe places, or never formally designate a base at all. Returning somewhere safe can still be strategically valuable, but it is not a separate extraction mechanic or game-state boundary.
 
 ## Persistent open world
 
-The current direction is a **logically continuous persistent open world**, not a collection of independently generated tactical raid maps.
+The current direction is a **logically continuous persistent open world**, not a collection of independently generated tactical maps or raid instances.
 
 The world may be streamed, partitioned or simulated at different resolutions internally for performance, but those partitions are implementation/storage details rather than separate realities.
 
 Important consequences:
 
-- roads, utilities, rivers, parcels and other large structures are planned in global world coordinates so independently generated chunk edges cannot invent incompatible geometry;
-- a local streaming chunk materializes part of an already coherent world plan rather than independently deciding where a road should exit;
-- once a place is generated/materialized, persistent world state owns subsequent changes;
+- roads, utilities, rivers, parcels and other large structures are planned in global world coordinates so local partitions cannot invent incompatible geometry;
+- a streaming/materialization region asks the global world plan what exists there rather than independently deciding world-spanning geometry;
+- once a place exists, persistent world state owns subsequent changes;
 - looted containers, broken doors/windows, parked vehicles, corpses, construction and other meaningful changes should remain when the player returns;
 - replacing the generator later must not rewrite existing saved world state.
 
@@ -67,6 +64,8 @@ Long-term top-down planning should establish large-scale facts before detailed l
 world seed -> geography -> towns/districts/rural regions -> road network -> utilities/infrastructure -> parcels/addresses -> building footprints/types -> households/businesses/population -> detailed local materialization.
 
 Detailed rooms, furniture, clutter and vegetation may be created when needed, but they must respect higher-level facts already decided globally.
+
+A generated world's roads and infrastructure must be coherent globally before streaming boundaries are considered.
 
 ## Outbreak simulation
 
@@ -103,11 +102,11 @@ Family and known people are real persistent actors. Their outbreak situation sho
 
 ## Base philosophy
 
-A base should fundamentally be **a real physical place in the persistent world**, not merely a separate stash menu.
+A base is **not a separate map, menu layer or preselected special property**.
 
-A home, farmhouse, warehouse or other claimed site can become important because the player makes it useful and safer.
+The player may build and secure a base anywhere in the persistent world where ordinary construction/occupancy rules allow it. A starting house may be useful, but it is not mechanically privileged. The player can fortify an existing building, construct in open land, occupy a warehouse, maintain several safe sites, abandon one, or move entirely.
 
-Long-term base mechanics may include physical storage, beds, work areas, refrigeration, generators/power, water, vehicles, construction, survivors, pets, crops and defenses. Higher-level base/community UI may summarize these facts later, but it should not replace the underlying physical world.
+Long-term base-related mechanics may include physical storage, beds, work areas, refrigeration, generators/power, water, vehicles, construction, survivors, pets, crops and defenses. Higher-level summary/community UI may exist later, but it should summarize underlying physical world facts rather than create a separate base reality.
 
 ## Space / tactical presentation
 
@@ -119,7 +118,7 @@ Current favored direction:
 - props/fixtures can occupy one or multiple whole cells;
 - directional props carry N/E/S/W orientation;
 - renderer may rotate art in 90-degree steps or use authored directional variants where rotation looks wrong;
-- generation stores semantic object + orientation, never renderer-specific atlas assumptions;
+- world/generation data stores semantic object + orientation, never renderer-specific atlas assumptions;
 - four-way actor facing is the simple baseline and supports vision cone, vulnerability, attacks and readable graphics;
 - exact wall/door/window representation (wall cells vs cell-edge structures) remains a design question and must be resolved deliberately rather than assumed.
 
@@ -183,6 +182,18 @@ The game should feel lonely, dangerous, uncertain and physically grounded withou
 
 Lighting, weather, darkness, line of sight, silence/spatial sound information, abandoned homes, evidence of the outbreak, persistent consequences and the player's personal connections to the world should create atmosphere through systems rather than scripted drama whenever practical.
 
+## Foundational architecture idea
+
+The current lowest-level design question is not “which generator do we write?” The simulation foundation is expected to separate at least three peer truths:
+
+- **WHERE — spatial model:** global grid coordinates, cells, footprints, facing, structures/openings and spatial queries;
+- **WHAT — persistent world/entity state:** what terrain, objects, actors, items, structures and mutations exist;
+- **WHEN — tick/action kernel:** when actors/systems act, action durations, scheduling, auto-pause and hard pause.
+
+Generation later creates initial persistent world state using the spatial contract. Construction, destruction and gameplay later mutate that same world state. Rendering reads it. None of those systems owns the others.
+
+The exact detailed ordering/contracts remain design work and are not approved merely because this North Star names them.
+
 ## Modularity / development rule
 
 The project is built one approved system at a time.
@@ -200,7 +211,7 @@ The project is built one approved system at a time.
 
 ## Design discipline
 
-The north star is deliberately short enough to reread often.
+The North Star is deliberately short enough to reread often.
 
 Detailed mechanics belong in `SYSTEM_DESIGNS/`. Cross-cutting approved choices belong in `DESIGN_DECISIONS.md`. Current work/status belongs in `README_CONTEXT.md`. Coding/GitHub process lessons belong in `README_SOPS.md`.
 
