@@ -32,6 +32,8 @@ jobs:
           test -f ROADMAP.md
           test -f WORLD_GENERATION.md
           test -f MINI_WORLD_STREETSCAPE_DESIGN.md
+          test -f EXTRACTION_RAID_DESIGN.md
+          test -f FOCUSED_RAID_INTERIORS.md
           test -f FIRST_FIRE_REUSE.md
           test -f game/project.godot
           test -f game/export_presets.cfg
@@ -40,8 +42,12 @@ jobs:
           test -f game/scripts/TacticalMapGenerator.gd
           test -f game/scripts/ProceduralRegionGenerator.gd
           test -f game/scripts/MiniRegionGenerator.gd
-          test -f game/scripts/MiniWorldState.gd
+          test -f game/scripts/MiniRegionFocusPass.gd
+          test -f game/scripts/DestinationFocusCleanupPass.gd
           test -f game/scripts/StreetscapePass.gd
+          test -f game/scripts/DestinationInteriorPass.gd
+          test -f game/scripts/MiniWorldState.gd
+          test -f game/scripts/ExtractionRaidState.gd
           test -f game/scripts/LocalWorldState.gd
           test -f game/scripts/TickScheduler.gd
           test -f game/scripts/WorldCalendar.gd
@@ -56,6 +62,7 @@ jobs:
           test -f game/scripts/MapPreview.gd
           test -f game/scripts/MapPreviewPresentation.gd
           test -f game/scripts/MiniWorldPresentation.gd
+          test -f game/scripts/ExtractionWorldPresentation.gd
           test -f game/scripts/ci/MapSmoke.gd
           test -f game/scripts/ci/RegionSmoke.gd
           test -f game/scripts/ci/MiniWorldSmoke.gd
@@ -66,8 +73,12 @@ jobs:
           grep -q 'class_name TacticalMapGenerator' game/scripts/TacticalMapGenerator.gd
           grep -q 'class_name ProceduralRegionGenerator' game/scripts/ProceduralRegionGenerator.gd
           grep -q 'class_name MiniRegionGenerator' game/scripts/MiniRegionGenerator.gd
-          grep -q 'class_name MiniWorldState' game/scripts/MiniWorldState.gd
+          grep -q 'class_name MiniRegionFocusPass' game/scripts/MiniRegionFocusPass.gd
+          grep -q 'class_name DestinationFocusCleanupPass' game/scripts/DestinationFocusCleanupPass.gd
           grep -q 'class_name StreetscapePass' game/scripts/StreetscapePass.gd
+          grep -q 'class_name DestinationInteriorPass' game/scripts/DestinationInteriorPass.gd
+          grep -q 'class_name MiniWorldState' game/scripts/MiniWorldState.gd
+          grep -q 'class_name ExtractionRaidState' game/scripts/ExtractionRaidState.gd
           grep -q 'class_name TickScheduler' game/scripts/TickScheduler.gd
           grep -q 'class_name WorldCalendar' game/scripts/WorldCalendar.gd
           grep -q 'class_name TimingDummy' game/scripts/TimingDummy.gd
