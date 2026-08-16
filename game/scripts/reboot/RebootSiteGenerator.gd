@@ -665,8 +665,9 @@ static func _wall_cell(room: Rect2i, side: String, offset: int) -> Vector2i:
 static func _adjacent_to_wall_plane(spec: Dictionary, p: Vector2i) -> bool:
     var walls: Dictionary = spec.get("walls", {})
     var windows: Dictionary = spec.get("windows", {})
-    for delta in [Vector2i.UP, Vector2i.RIGHT, Vector2i.DOWN, Vector2i.LEFT]:
-        var neighbor := p + delta
+    var directions: Array[Vector2i] = [Vector2i.UP, Vector2i.RIGHT, Vector2i.DOWN, Vector2i.LEFT]
+    for delta in directions:
+        var neighbor: Vector2i = p + delta
         if walls.has(neighbor) or windows.has(neighbor):
             return true
     return false
