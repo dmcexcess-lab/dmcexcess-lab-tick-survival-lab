@@ -4,6 +4,8 @@ class_name RebootMain
 const Art = preload("res://scripts/reboot/RebootArt.gd")
 const Generator = preload("res://scripts/reboot/RebootSiteGenerator.gd")
 const Player = preload("res://scripts/reboot/RebootPlayer.gd")
+const PrefabLibrary = preload("res://scripts/reboot/RebootPrefabLibrary.gd")
+const PrefabEditor = preload("res://scripts/reboot/RebootPrefabEditor.gd")
 
 const VIEW_SIZE := Vector2(640, 844)
 const BOARD := Rect2(8, 58, 624, 548)
@@ -13,6 +15,8 @@ const DEFAULT_ZOOM := 1
 const MAP_BUTTON := Rect2(516, 10, 112, 38)
 const ZOOM_OUT_BUTTON := Rect2(422, 10, 42, 38)
 const ZOOM_IN_BUTTON := Rect2(468, 10, 42, 38)
+const PREFAB_BUTTON := Rect2(18, 620, 154, 62)
+const MAP_PREFAB_BUTTON := Rect2(448, 104, 156, 38)
 const TURN_LEFT_BUTTON := Rect2(18, 690, 154, 62)
 const FORWARD_BUTTON := Rect2(468, 620, 154, 62)
 const TURN_RIGHT_BUTTON := Rect2(468, 690, 154, 62)
@@ -33,10 +37,18 @@ var active_site := ""
 var visit_counts: Dictionary = {}
 var last_touch_msec := -10000
 var font: Font
+var saved_prefabs: Array = []
+var prefab_editor
 
 func _ready() -> void:
     set_process(false)
     font = ThemeDB.fallback_font
+    saved_prefabs = PrefabLibrary.load_all()
+    prefab_editor = PrefabEditor.new()
+    add_child(prefab_editor)
+    prefab_editor.visible = false
+    prefab_editor.closed.connect(_on_prefab_editor_closed)
+    prefab_editor.library_changed.connect(_on_prefab_library_changed)
     queue_redraw()
     print("REBOOT_BOOT_OK")
 
@@ -70,9 +82,6 @@ func _draw_tactical() -> void:
     var windows: Dictionary = spec["windows"]
     var props: Dictionary = spec["props"]
 
-    # Pass 1: ground and structure. Doors/windows are mutually exclusive with wall
-    # cells in generated data, so the transparent original door tile is never painted
-    # over a wall tile.
     for sy in range(rows):
         var world_y := start_y + sy
         if world_y >= height:
@@ -92,11 +101,8 @@ func _draw_tactical() -> void:
             elif doors.has(p):
                 _draw_art(int(doors[p]), dest)
 
-    # Static wires are cheap: they redraw only on the same events as the board and
-    # are drawn behind pole/prop sprites.
     _draw_power_lines(start_x, start_y, cols, rows, tile, origin)
 
-    # Pass 2: furniture, vegetation, signs, pumps and utility poles.
     for sy in range(rows):
         var world_y := start_y + sy
         if world_y >= height:
@@ -118,11 +124,15 @@ func _draw_tactical() -> void:
 
     draw_rect(Rect2(origin, Vector2(drawn_w, drawn_h)), Color("d6d6d6"), false, 2.0)
     _draw_label(Vector2(14, 24), "%s  |  %s  |  %d,%d" % [str(spec.get("title", "SITE")), _facing_name(), player.cell.x, player.cell.y], 16, Color.WHITE)
+    var used: Array = spec.get("user_prefabs_used", [])
+    if not used.is_empty():
+        var placed: Dictionary = used[0]
+        _draw_label(Vector2(14, 47), "Authored prefab: %s" % str(placed.get("name", "Prefab")), 12, Color("e5d785"))
     _draw_top_buttons()
     _draw_control_buttons()
     _draw_label(Vector2(190, 722), "W/UP forward   S/DOWN back", 14, Color("c7cbd0"))
     _draw_label(Vector2(190, 744), "A/D or LEFT/RIGHT turn", 14, Color("c7cbd0"))
-    _draw_label(Vector2(190, 775), "Visible-cell renderer / no idle redraw", 13, Color("8d949c"))
+    _draw_label(Vector2(190, 775), "F2 prefab workshop", 13, Color("8d949c"))
 
 func _draw_power_lines(start_x: int, start_y: int, cols: int, rows: int, tile: int, origin: Vector2) -> void:
     var links: Array = spec.get("power_links", [])
@@ -143,7 +153,8 @@ func _cell_visible(cell: Vector2i, start_x: int, start_y: int, cols: int, rows: 
 func _draw_strategic_map() -> void:
     draw_rect(Rect2(18, 62, 604, 742), Color("171d22"), true)
     _draw_label(Vector2(34, 92), "OUTSKIRTS -> CITY", 27, Color.WHITE)
-    _draw_label(Vector2(34, 120), "Walking range: rural edge. Each node generates a rural-road sample.", 14, Color("c7cbd0"))
+    _draw_label(Vector2(34, 120), "Walking range: rural edge.", 14, Color("c7cbd0"))
+    _draw_button(MAP_PREFAB_BUTTON, "PREFABS %d" % saved_prefabs.size(), false)
 
     var rural := Rect2(52, 154, 182, 590)
     var town := Rect2(234, 154, 116, 590)
@@ -184,7 +195,7 @@ func _draw_strategic_map() -> void:
     _draw_locked_node(Vector2(493, 545), "WAREHOUSES")
     _draw_locked_node(Vector2(564, 425), "CITY CENTER")
 
-    _draw_label(Vector2(68, 775), "Rural nodes vary homes, farm complex, trailers and roadside business.", 14, Color("d4dad2"))
+    _draw_label(Vector2(68, 775), "Saved prefabs can appear as extra authored structures in generated rural maps.", 12, Color("d4dad2"))
     if not active_site.is_empty():
         _draw_button(MAP_BUTTON, "CLOSE MAP", false)
 
@@ -200,6 +211,7 @@ func _draw_top_buttons() -> void:
     _draw_button(MAP_BUTTON, "MAP", false)
 
 func _draw_control_buttons() -> void:
+    _draw_button(PREFAB_BUTTON, "PREFABS", false)
     _draw_button(TURN_LEFT_BUTTON, "TURN L", false)
     _draw_button(FORWARD_BUTTON, "FORWARD", false)
     _draw_button(TURN_RIGHT_BUTTON, "TURN R", false)
@@ -212,6 +224,8 @@ func _draw_button(rect: Rect2, text: String, disabled: bool) -> void:
     draw_rect(rect, fill, true)
     draw_rect(rect, border, false, 2.0)
     var size := 15 if text.length() > 4 else 22
+    if text.length() > 9:
+        size = 13
     var text_size := font.get_string_size(text, HORIZONTAL_ALIGNMENT_LEFT, -1, size)
     var pos := rect.position + Vector2((rect.size.x - text_size.x) * 0.5, (rect.size.y + text_size.y * 0.5) * 0.5)
     draw_string(font, pos, text, HORIZONTAL_ALIGNMENT_LEFT, -1, size, text_color)
@@ -226,6 +240,8 @@ func _draw_vertical_label(pos: Vector2, text: String, color: Color) -> void:
     _draw_label(pos, text, 11, color)
 
 func _unhandled_input(event: InputEvent) -> void:
+    if prefab_editor != null and prefab_editor.visible:
+        return
     if event is InputEventScreenTouch:
         var touch := event as InputEventScreenTouch
         if touch.pressed:
@@ -248,6 +264,9 @@ func _unhandled_input(event: InputEvent) -> void:
         _handle_key(key.keycode)
 
 func _handle_key(keycode: Key) -> void:
+    if keycode == KEY_F2:
+        _open_prefab_editor()
+        return
     if keycode == KEY_M:
         _toggle_map()
         return
@@ -274,6 +293,9 @@ func _handle_key(keycode: Key) -> void:
 
 func _handle_pointer(pos: Vector2) -> void:
     if map_open:
+        if MAP_PREFAB_BUTTON.has_point(pos):
+            _open_prefab_editor()
+            return
         if not active_site.is_empty() and MAP_BUTTON.has_point(pos):
             map_open = false
             queue_redraw()
@@ -292,6 +314,8 @@ func _handle_pointer(pos: Vector2) -> void:
         _zoom(-1)
     elif ZOOM_IN_BUTTON.has_point(pos):
         _zoom(1)
+    elif PREFAB_BUTTON.has_point(pos):
+        _open_prefab_editor()
     elif TURN_LEFT_BUTTON.has_point(pos):
         player.turn_left()
         queue_redraw()
@@ -310,6 +334,7 @@ func _load_site(site_id: String, archetype: String, display_name: String, seed_b
     visit_counts[site_id] = visit
     var seed := seed_base + visit * 104729
     spec = Generator.generate(archetype, seed)
+    PrefabLibrary.try_stamp_random(spec, saved_prefabs, seed)
     spec["title"] = display_name
     var validation: Dictionary = Generator.validate(spec)
     if not bool(validation.get("ok", false)):
@@ -317,6 +342,19 @@ func _load_site(site_id: String, archetype: String, display_name: String, seed_b
     player.reset(spec["spawn"], 1)
     active_site = site_id
     map_open = false
+    queue_redraw()
+
+func _open_prefab_editor() -> void:
+    if prefab_editor == null:
+        return
+    prefab_editor.open_library()
+
+func _on_prefab_library_changed() -> void:
+    saved_prefabs = PrefabLibrary.load_all()
+    queue_redraw()
+
+func _on_prefab_editor_closed() -> void:
+    saved_prefabs = PrefabLibrary.load_all()
     queue_redraw()
 
 func _toggle_map() -> void:
