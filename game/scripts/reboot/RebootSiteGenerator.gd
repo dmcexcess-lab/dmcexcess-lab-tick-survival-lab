@@ -29,6 +29,7 @@ static func generate(archetype: String, seed_value: int) -> Dictionary:
     _generate_rural_road(spec, rng)
     _scatter_edge_nature(spec, rng)
     _normalize_door_geometry(spec)
+    _finalize_main_road_tiles(spec)
     _clear_spawn(spec)
     return spec
 
@@ -229,7 +230,7 @@ static func _blank(seed: int) -> Dictionary:
 
 static func _generate_rural_road(spec: Dictionary, rng: RandomNumberGenerator) -> void:
     var base_y := rng.randi_range(30, 32)
-    var variant := ROAD_VARIANTS[rng.randi_range(0, ROAD_VARIANTS.size() - 1)]
+    var variant := ROAD_VARIANTS[posmod(int(spec.get("seed", 1)), ROAD_VARIANTS.size())]
     spec["road_variant"] = variant
     spec["main_road_y"] = base_y
 
@@ -478,19 +479,17 @@ static func _farmhouse(spec: Dictionary, rect: Rect2i, front_south: bool, proper
     _shell(spec, rect, "farmhouse", property_id, Art.G_WOOD, Art.S_WALL_HOUSE)
     var x := rect.position.x
     var y := rect.position.y
-    var right := rect.end.x - 1
-    var bottom := rect.end.y - 1
     var split_x := x + 8
     var left_split := y + 6
     var utility_x := x + 4
     var right_split_a := y + 4
     var right_split_b := y + 8
 
-    _partition_v(spec, split_x, y + 1, bottom - 1, [y + 3, y + 6, y + 10])
+    _partition_v(spec, split_x, y + 1, rect.end.y - 2, [y + 3, y + 6, y + 10])
     _partition_h(spec, left_split, x + 1, split_x - 1, [x + 6])
-    _partition_v(spec, utility_x, left_split + 1, bottom - 1, [y + 9])
-    _partition_h(spec, right_split_a, split_x + 1, right - 1, [split_x + 3])
-    _partition_h(spec, right_split_b, split_x + 1, right - 1, [split_x + 3])
+    _partition_v(spec, utility_x, left_split + 1, rect.end.y - 2, [y + 9])
+    _partition_h(spec, right_split_a, split_x + 1, rect.end.x - 2, [split_x + 3])
+    _partition_h(spec, right_split_b, split_x + 1, rect.end.x - 2, [split_x + 3])
 
     var living := Rect2i(x + 1, y + 1, 7, 5)
     var kitchen := Rect2i(x + 1, left_split + 1, 3, 5)
@@ -521,17 +520,15 @@ static func _country_house(spec: Dictionary, rect: Rect2i, front_south: bool, pr
     _shell(spec, rect, "country_house", property_id, Art.G_WOOD, Art.S_WALL_HOUSE)
     var x := rect.position.x
     var y := rect.position.y
-    var right := rect.end.x - 1
-    var bottom := rect.end.y - 1
     var split_x := x + 7
     var left_split := y + 6
     var right_split_a := y + 4
     var right_split_b := y + 8
 
-    _partition_v(spec, split_x, y + 1, bottom - 1, [y + 3, y + 6, y + 10])
+    _partition_v(spec, split_x, y + 1, rect.end.y - 2, [y + 3, y + 6, y + 10])
     _partition_h(spec, left_split, x + 1, split_x - 1, [x + 4])
-    _partition_h(spec, right_split_a, split_x + 1, right - 1, [split_x + 3])
-    _partition_h(spec, right_split_b, split_x + 1, right - 1, [split_x + 3])
+    _partition_h(spec, right_split_a, split_x + 1, rect.end.x - 2, [split_x + 3])
+    _partition_h(spec, right_split_b, split_x + 1, rect.end.x - 2, [split_x + 3])
 
     var living := Rect2i(x + 1, y + 1, 6, 5)
     var kitchen := Rect2i(x + 1, left_split + 1, 6, 5)
@@ -559,17 +556,15 @@ static func _double_wide(spec: Dictionary, rect: Rect2i, front_south: bool, prop
     _shell(spec, rect, "double_wide", property_id, Art.G_LINOLEUM, Art.S_WALL_HOUSE)
     var x := rect.position.x
     var y := rect.position.y
-    var right := rect.end.x - 1
-    var bottom := rect.end.y - 1
     var horizontal_split := y + 5
     var top_split := x + 8
     var lower_split_a := x + 5
     var lower_split_b := x + 10
 
-    _partition_h(spec, horizontal_split, x + 1, right - 1, [x + 3, x + 7, x + 12])
+    _partition_h(spec, horizontal_split, x + 1, rect.end.x - 2, [x + 3, x + 7, x + 12])
     _partition_v(spec, top_split, y + 1, horizontal_split - 1, [y + 3])
-    _partition_v(spec, lower_split_a, horizontal_split + 1, bottom - 1, [y + 7])
-    _partition_v(spec, lower_split_b, horizontal_split + 1, bottom - 1, [y + 7])
+    _partition_v(spec, lower_split_a, horizontal_split + 1, rect.end.y - 2, [y + 7])
+    _partition_v(spec, lower_split_b, horizontal_split + 1, rect.end.y - 2, [y + 7])
 
     var living := Rect2i(x + 1, y + 1, 7, 4)
     var primary := Rect2i(top_split + 1, y + 1, 5, 4)
@@ -597,15 +592,13 @@ static func _small_trailer(spec: Dictionary, rect: Rect2i, front_south: bool, pr
     _shell(spec, rect, "small_trailer", property_id, Art.G_LINOLEUM, Art.S_WALL_HOUSE)
     var x := rect.position.x
     var y := rect.position.y
-    var right := rect.end.x - 1
-    var bottom := rect.end.y - 1
     var split_a := y + 5
     var split_b := y + 9
     var divider_x := x + 4
 
-    _partition_h(spec, split_a, x + 1, right - 1, [x + 4])
-    _partition_h(spec, split_b, x + 1, right - 1, [x + 4])
-    _partition_v(spec, divider_x, split_b + 1, bottom - 1, [y + 11])
+    _partition_h(spec, split_a, x + 1, rect.end.x - 2, [x + 4])
+    _partition_h(spec, split_b, x + 1, rect.end.x - 2, [x + 4])
+    _partition_v(spec, divider_x, split_b + 1, rect.end.y - 2, [y + 11])
 
     var living := Rect2i(x + 1, y + 1, 7, 4)
     var kitchen := Rect2i(x + 1, split_a + 1, 7, 3)
@@ -631,10 +624,9 @@ static func _roadside_store(spec: Dictionary, rect: Rect2i, front_south: bool, p
     _shell(spec, rect, kind, property_id, Art.G_TILE, wall_tile)
     var x := rect.position.x
     var y := rect.position.y
-    var bottom := rect.end.y - 1
     var service_wall_x := x + 4
 
-    _partition_v(spec, service_wall_x, y + 1, bottom - 1, [y + 2, y + 6, y + 10])
+    _partition_v(spec, service_wall_x, y + 1, rect.end.y - 2, [y + 2, y + 6, y + 10])
     _partition_h(spec, y + 4, x + 1, service_wall_x - 1, [])
     _partition_h(spec, y + 8, x + 1, service_wall_x - 1, [])
 
@@ -794,7 +786,9 @@ static func _connector_to_road(spec: Dictionary, door: Vector2i, front_south: bo
         return
     _ground_rect(spec, Rect2i(door.x, y0, 1, y1 - y0 + 1), tile)
     for y in range(y0, y1 + 1):
-        spec["side_road_cells"][Vector2i(door.x, y)] = true
+        var p := Vector2i(door.x, y)
+        if not spec["road_cells"].has(p):
+            spec["side_road_cells"][p] = true
 
 static func _mailbox_for_connector(spec: Dictionary, drive_x: int, front_south: bool) -> void:
     var road_y := _road_y_at_x(spec, drive_x)
@@ -805,7 +799,8 @@ static func _add_roadside_utilities(spec: Dictionary, rng: RandomNumberGenerator
     var pole_cells: Array[Vector2i] = []
     var x := rng.randi_range(3, 5)
     while x <= WIDTH - 4:
-        if int(spec.get("crossroad_x", -1)) >= 0 and abs(x - int(spec["crossroad_x"])) <= 1:
+        var cross_x := int(spec.get("crossroad_x", -1))
+        if cross_x >= 0 and abs(x - cross_x) <= 1:
             x += 2
         var road_y := _road_y_at_x(spec, x)
         var p := Vector2i(x, road_y - 2)
@@ -824,7 +819,8 @@ static func _add_sparse_stop_signs(spec: Dictionary, rng: RandomNumberGenerator)
     if str(spec.get("road_variant", "")) == "crossroads":
         var cross_x := int(spec.get("crossroad_x", 23))
         var road_y := _road_y_at_x(spec, cross_x)
-        for p in [Vector2i(cross_x - 1, road_y - 2), Vector2i(cross_x + 1, road_y + 2)]:
+        var cross_signs: Array[Vector2i] = [Vector2i(cross_x - 1, road_y - 2), Vector2i(cross_x + 1, road_y + 2)]
+        for p in cross_signs:
             _prop(spec, p, Art.P_STOP_SIGN, false)
             if int(spec["props"].get(p, -1)) == Art.P_STOP_SIGN:
                 signs_added += 1
@@ -970,7 +966,13 @@ static func _door(spec: Dictionary, p: Vector2i, tile: int, axis: String) -> voi
     spec["doors"][p] = tile
     spec["door_axes"][p] = axis
     spec["door_clear"][p] = true
-    var approaches: Array[Vector2i] = [p + Vector2i.UP, p + Vector2i.DOWN] if axis == "h" else [p + Vector2i.LEFT, p + Vector2i.RIGHT]
+    var approaches: Array[Vector2i] = []
+    if axis == "h":
+        approaches.append(p + Vector2i.UP)
+        approaches.append(p + Vector2i.DOWN)
+    else:
+        approaches.append(p + Vector2i.LEFT)
+        approaches.append(p + Vector2i.RIGHT)
     for q in approaches:
         if not _inside(q):
             continue
@@ -1023,7 +1025,13 @@ static func _normalize_door_geometry(spec: Dictionary) -> void:
         spec["props"].erase(door)
         spec["fixture_tags"].erase(door)
         spec["blocked"].erase(door)
-        var approaches: Array[Vector2i] = [door + Vector2i.UP, door + Vector2i.DOWN] if axis == "h" else [door + Vector2i.LEFT, door + Vector2i.RIGHT]
+        var approaches: Array[Vector2i] = []
+        if axis == "h":
+            approaches.append(door + Vector2i.UP)
+            approaches.append(door + Vector2i.DOWN)
+        else:
+            approaches.append(door + Vector2i.LEFT)
+            approaches.append(door + Vector2i.RIGHT)
         for p in approaches:
             if not _inside(p):
                 continue
@@ -1078,8 +1086,12 @@ static func _near_main_road(spec: Dictionary, p: Vector2i, distance: int) -> boo
 static func _ground_rect(spec: Dictionary, rect: Rect2i, tile: int) -> void:
     var clipped := rect.intersection(Rect2i(0, 0, WIDTH, HEIGHT))
     var ground: PackedInt32Array = spec["ground"]
+    var painting_road := tile in ROAD_TILES
     for y in range(clipped.position.y, clipped.end.y):
         for x in range(clipped.position.x, clipped.end.x):
+            var p := Vector2i(x, y)
+            if spec.get("road_cells", {}).has(p) and not painting_road:
+                continue
             ground[y * WIDTH + x] = tile
 
 static func _set_ground(spec: Dictionary, p: Vector2i, tile: int) -> void:
