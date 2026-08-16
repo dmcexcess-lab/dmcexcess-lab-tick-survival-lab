@@ -1,5 +1,23 @@
 # Changelog
 
+## Prefab Workshop / Authored Generator Inserts — 2026-08-16
+
+- Added an in-game **Prefab Workshop** so reusable tactical structures can be authored directly in the running game instead of hardcoding every floor plan into `RebootSiteGenerator.gd`.
+- Added `RebootPrefabEditor.gd`, a touch/mouse-first developer overlay with a **16x14 maximum canvas**, matching one far-zoom tactical window. Access it from `PREFABS` in tactical play, `PREFABS n` on the strategic map, or F2 on desktop.
+- Added a native `LineEdit` prefab-name field for reliable Web/Safari keyboard behavior.
+- Added tap/click and drag painting for common floor tiles, canonical house/light/store/industrial walls, windows, horizontal-wall doors, vertical-wall doors, and three pages of common furniture/fixture/prop tools.
+- Added ERASER plus two-tap CLEAR and DELETE protection for destructive editing actions.
+- SAVE trims empty outer rows/columns, so a structure only occupies its actual used footprint rather than carrying the full 16x14 editor canvas.
+- Added `RebootPrefabLibrary.gd` as the durable authored-content owner. Prefabs are serialized as portable JSON data at `user://reboot_prefabs.json` rather than becoming generator code.
+- Web prefab persistence is intentionally **browser/device-local**. It is separate from the future survivor/world save system and does not automatically commit or synchronize authored prefabs to GitHub/another device.
+- Added hard authored-prefab validation before SAVE. Door H/V orientation uses the same v4 wall-axis contract as procedural doors; bad wall intersections, blocked approaches, overlapping structure/props, and doors without same-axis structural neighbors are rejected.
+- Exterior authored doors are supported: their approach clearance can extend outside the stored prefab footprint and is checked against the destination map during placement.
+- Integrated saved prefabs into future Rural Road generation. After normal deterministic procedural generation, the runtime deterministically attempts **at most one** authored prefab insert before running the canonical site validator.
+- Safe placement rejects player-spawn proximity, main roads, side roads, existing building buffers, existing structures, non-vegetation props, incompatible road/asphalt/field ground, and doorway-clearance conflicts. If no valid footprint exists, the map remains purely procedural.
+- Authored prefabs currently appear as **additional structures** rather than replacing one of the four residences or roadside business. Semantic prefab roles/room tagging are intentionally deferred so the existing Rural Road property contract remains intact.
+- Added `RebootPrefabSmoke.gd` as a permanent Pages CI gate. It builds a real cabin prefab, checks 16x14-to-used-footprint trimming, storage encode/decode round trip, deliberate broken-door rejection, deterministic stamping, preserved door-axis metadata, authored-use metadata, and full `RebootSiteGenerator.validate()` success after insertion.
+- Added `PREFAB_WORKSHOP.md` and updated reboot context/SOP/core docs so prefab authoring, local persistence, safe stamping, and future export/import/semantic-role work have explicit owners and boundaries.
+
 ## Rural Road Generator v4 / Door Geometry & Road Variety — 2026-08-16
 
 - Corrected the reported remaining "wall behind doors" problem as a **generator floor-plan defect rather than an art defect**. The tactical door tile was already correct; several prefabs were placing doors on or too near perpendicular partition geometry.
