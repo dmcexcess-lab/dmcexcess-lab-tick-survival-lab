@@ -1,114 +1,158 @@
 # GPT CODING / GITHUB SOP — TICK SURVIVAL LAB
 
-> **MANDATORY ENTRY CONDITION FOR GPT:** At the start of every new user prompt requesting code or repository changes, fetch and reread this file and `README_CONTEXT.md` from current `main`, then inspect the current files relevant to that prompt. Refresh once per prompt/change request, not before every edit.
+> **MANDATORY ENTRY CONDITION:** At the start of every new prompt requesting repository/code changes, fetch current `README_SOPS.md`, `README_CONTEXT.md`, `DESIGN_WORKFLOW.md`, current `main` SHA, and the active system design(s). Read `MODULAR_REBUILD_MASTER_DESIGN.md` for architecture/global-direction work. Inspect current relevant source. Refresh once per prompt, not before every edit inside the same coherent task.
 
-## 1. Current architectural status
+## 1. Current status
 
-Tick Survival Lab is entering a **full modular rebuild**.
+Tick Survival Lab is in a **full modular redesign/rebuild**.
 
-The currently deployed `game/scripts/reboot/` runtime is **frozen/deprecated reference code**. Do not extend `RebootMain.gd` or treat the clean-reboot architecture as the target merely because it is currently playable.
+The deployed `game/scripts/reboot/` runtime is **frozen/deprecated reference code**. Do not extend it as the target architecture.
 
-Canonical target architecture:
+Canonical global architecture: `MODULAR_REBUILD_MASTER_DESIGN.md`.
 
-`MODULAR_REBUILD_MASTER_DESIGN.md`
+Canonical development process: `DESIGN_WORKFLOW.md`.
 
-Golden recovery baseline for the mature pre-clean-rewrite visual/system implementation:
+System approval ledger: `SYSTEM_DESIGNS/README.md`.
+
+Golden recovery commit for mature pre-clean-rewrite behavior/art archaeology:
 
 `1763958f44eb7f855fd49944c00d1ffe608c0abe`
 
-Use that commit for exact archaeology when recovering old graphics/behavior. Do not restore its old presentation inheritance stack wholesale.
-
 ## 2. Core operating rules
 
-1. **Current repo beats memory.** Fetch first.
-2. **Newest explicit user instruction beats older design.**
-3. **Canonical Godot source is `game/`.**
-4. **Direct `main` is normal** unless the user asks for a branch/PR workflow.
-5. **Batch coherent changes.**
-6. **One named system = one standalone owning script/module at minimum.**
-7. **Main is composition only.** Never put a temporary subsystem in Main.
-8. **Prefer composition and narrow data/API contracts over deep inheritance.**
+1. **Newest explicit user instruction beats older design.**
+2. **Current repo beats memory.** Fetch first.
+3. **Design before implementation.** Major systems require user-approved system designs.
+4. **One major system per implementation slice by default.**
+5. **Push back when scope is too broad.** Do not attempt "the whole game" or several major systems in one prompt just because the user asked quickly.
+6. **Main/root is composition only.**
+7. **One named system = one standalone owner at minimum.**
+8. Prefer composition, small public contracts, and dependency injection over deep inheritance/shared internals.
 9. **A subsystem rewrite must not opportunistically rewrite neighboring systems.**
-10. **Do not describe an approximation as recovered old behavior.** Inspect the actual golden code/assets first.
-11. **Do not claim a build works without exact-SHA Godot/Pages validation.**
-12. **Keep simulation testable without presentation.**
-13. **Ask a targeted clarification before destructive cross-module work when the requested scope or historical visual target is genuinely ambiguous.**
+10. **No placeholders/fake completion.** DEV-only shortcuts must be explicit DEV tools and separately owned.
+11. **Do not approximate historical behavior and call it recovered.** Inspect the actual golden implementation/assets.
+12. **Ask targeted clarification when a material ambiguity remains after inspection.**
+13. Do not ask about ordinary spelling/typos when intent is clear.
+14. Keep simulation testable without presentation.
+15. Do not claim success without exact-final-SHA validation for code changes.
+16. Direct `main` remains normal unless the user explicitly requests branch/PR workflow.
 
-## 3. Required pre-code checklist — once per prompt
+## 3. Scope gate / mandatory pushback
 
-Before changing code or repository behavior:
+Before implementing, classify the request.
 
-1. Fetch/read current `README_SOPS.md`.
-2. Fetch/read current `README_CONTEXT.md`.
-3. Fetch current `main` SHA.
-4. Read `MODULAR_REBUILD_MASTER_DESIGN.md` when the task touches architecture, generation, rendering, player/input, strategic map, prefabs, extraction, or recovery work.
-5. Inspect the actual current files relevant to the requested subsystem.
-6. If recovering anything described as old/previous/better/last build, inspect the relevant file(s) at golden commit `1763958f44eb7f855fd49944c00d1ffe608c0abe` before making claims or edits.
-7. Identify the stable data/API boundary of the requested subsystem.
-8. Identify exactly which standalone owner(s) should change and which neighboring modules must remain untouched.
-9. Fetch current blob SHAs for files that will be replaced.
-10. Check whether tests need a contract/architecture guard update.
+### Single-system request
+Proceed through the approved system design and impact declaration.
 
-Do not ask the user to repeat information already present in current repo context or the current conversation. Ask only when a material ambiguity cannot be resolved by inspection.
+### Multi-system request
+If the request requires meaningful work across multiple major domains (for example generator + renderer + player + strategic map), **do not begin coding all of them**.
 
-## 4. Non-negotiable Main/root rule
+Instead:
 
-The future `Main.gd` / root scene script is a **bootstrap and wiring layer only**.
+1. identify the systems involved;
+2. explain dependency/order;
+3. recommend the first bounded system;
+4. describe that system;
+5. obtain user approval;
+6. implement only that approved slice later.
 
-Allowed responsibilities:
+Small wiring changes needed to connect an approved module are allowed, but list them in advance and do not redesign the neighboring subsystem.
 
-- get references to child/services;
+If implementation unexpectedly expands across a forbidden boundary, stop. Do not keep patching.
+
+## 4. Clarification triggers
+
+Ask a concise targeted question before implementation when unresolved ambiguity could materially change:
+
+- architecture/module ownership;
+- destructive scope;
+- stable public contracts;
+- visual target/history;
+- simulation semantics;
+- mobile/Safari interaction;
+- persistence/save shape;
+- timing semantics;
+- player-visible behavior.
+
+Examples:
+
+- "restore the old graphics" when several historical renderers exist and archaeology cannot identify which one;
+- "make vehicles work" when this could mean strategic gateways or tactical driving;
+- "rewrite the generator" when it is unclear whether existing semantic data contracts must remain compatible.
+
+Inspect repo/history first. Ask only what remains unresolved.
+
+## 5. Required pre-implementation checklist
+
+For an approved code change:
+
+1. Read current SOP/context/workflow.
+2. Read the APPROVED system design.
+3. Read master design if architecture/boundaries are involved.
+4. Fetch current main SHA.
+5. Inspect current owner module(s).
+6. Inspect recovery/golden files when relevant.
+7. State the system's public contract.
+8. Declare files/modules expected to change.
+9. Declare neighboring modules that must remain untouched.
+10. Identify whether the public contract itself changes.
+11. Fetch current blob SHAs for files being replaced.
+12. Identify required subsystem and integration tests.
+
+If no APPROVED system design exists for a major new system, do not code it. Draft/design it first.
+
+## 6. Main/root rule
+
+Future `Main.gd` is bootstrap/wiring only.
+
+Allowed:
+
+- obtain module references;
 - construct/inject dependencies;
 - connect high-level signals;
-- select the initial top-level controller/mode;
-- minimal lifecycle startup/shutdown bookkeeping.
+- choose initial top-level controller/mode;
+- minimal lifecycle bookkeeping.
 
-Forbidden responsibilities:
+Forbidden:
 
-- `_draw()` game/presentation implementation;
-- `_unhandled_input()` gameplay/control implementation;
-- touch hit testing;
+- drawing;
+- gameplay input handling;
+- touch hit testing/button geometry;
 - keyboard mappings;
-- button rectangles/UI geometry;
-- tactical rendering;
-- strategic-map rendering;
-- HUD rendering;
-- camera origin/viewport math;
-- zoom rules;
-- map/raid generation;
-- road/property/building generation;
-- prefab placement/editor implementation;
-- player movement/facing rules;
+- tactical/strategic rendering;
+- HUD/control rendering;
+- camera/zoom math;
+- generation;
+- prefab logic;
+- player movement/facing;
 - collision/door rules;
-- extraction/travel rules;
+- travel/extraction rules;
 - art/atlas selection;
-- persistence/serialization;
+- persistence;
 - ticks/calendar;
 - lighting/perception/weather/sound;
-- validation/quality rules.
+- validation/quality rules;
+- subsystem-specific DEV tools.
 
-If a behavior can be given a system name, it belongs in its own script.
+Never justify implementation in Main because it is temporary, easy, small, or only for development.
 
-Never justify putting functionality in Main because it is temporary, small, convenient, or only used by DEV.
+## 7. Replaceability test
 
-## 5. Replaceability rule
+Architecture is acceptable only if these remain plausible:
 
-The architecture must permit literal subsystem replacement.
+- delete/rewrite `generation/` without touching art/render/player/input/camera/strategic;
+- delete/rewrite `render/` without touching generation/player physics/strategic state;
+- replace `input/` without changing movement/simulation rules;
+- replace `strategic/` without changing tactical generation;
+- replace art mapping without changing physics;
+- replace prefab DEV tooling without changing normal tactical renderer/generator contracts;
+- add later lighting/perception/weather/sound without generator-specific presentation hacks.
 
-These statements must remain true:
+When a feature requires edits on both sides of a contract, determine whether the contract needs an explicit approved revision. Do not silently make modules depend on each other's internals.
 
-- `generation/` can be deleted and rewritten without modifying art/render/player/input/camera/strategic modules;
-- `render/` can be deleted and rewritten without modifying generation, physics, player state, or strategic state;
-- `input/` can be replaced without changing simulation/action rules;
-- `strategic/` can be replaced without changing tactical raid generation;
-- `prefabs_dev/` can be replaced without changing normal tactical rendering or generation contracts;
-- perception/lighting/weather/sound can be added or replaced without the generator knowing how those systems render.
+## 8. Semantic world-data boundary
 
-If a requested change crosses one of these boundaries, stop and determine whether the shared contract is actually insufficient. Do not simply edit both sides to make it work.
-
-## 6. Stable semantic data contract
-
-Generation and simulation use **semantic world data**, not atlas indices or renderer calls.
+Generation/simulation use semantic IDs and explicit physics/state facts.
 
 Examples:
 
@@ -119,34 +163,28 @@ Examples:
 - `fixture.kitchen_sink`
 - `prop.utility_pole`
 
-Generator code must not reference texture paths, atlas coordinates, drawing functions, UI geometry, player sprites, or presentation colors.
+Generator code must not know:
 
-The art catalog maps semantic IDs to exact visual resources.
+- texture paths;
+- atlas coordinates;
+- renderer calls;
+- UI geometry;
+- player sprites;
+- presentation colors.
 
-### Art is not physics
+Rendering maps semantic IDs through the canonical art catalog.
 
-A visual ID/sprite does not decide:
+**Art is not physics.** Sprites do not implicitly decide collision, opacity, door state, interaction, searchability, destructibility, or persistence.
 
-- movement blocking;
-- opacity/LOS;
-- door state;
-- interaction;
-- destructibility;
-- searchability;
-- loot contents;
-- persistence.
+## 9. Golden visual recovery
 
-Those are explicit world/simulation facts.
+Golden mature visual source: commit `1763958f44eb7f855fd49944c00d1ffe608c0abe`.
 
-### Inventory-art boundary
+Golden `TacticalTiles.gd` blob:
 
-Preserve the mature art rule: ordinary inventory items do not need loose tactical floor sprites. Tactical world art depicts terrain, structures, furniture, fixtures, vegetation, civic infrastructure, environmental clutter, and large physical objects.
+`3d8a0a70ac983408bb48f58fc659dfb07e216ed3`
 
-## 7. Golden art recovery contract
-
-The richer pre-rewrite graphics were produced by a **multi-atlas semantic renderer**, not one tile sheet.
-
-Golden `TacticalTiles.gd` at commit `1763958...` combined:
+It combined:
 
 - `tactical_atlas.svg`;
 - `clutter_atlas.svg`;
@@ -156,111 +194,60 @@ Golden `TacticalTiles.gd` at commit `1763958...` combined:
 - `final_environment_props_atlas.svg`;
 - four directional player SVGs.
 
-The current asset files are byte-identical to the golden baseline. Preserve these exact blob hashes until an explicit art-change prompt:
+The current art files are preserved. Visual recovery means recovering semantic selection/draw behavior into standalone art/render modules, not choosing one atlas and claiming success.
 
-- tactical: `a031ac456a7d92b7fbf2d6e4d625c3a30e749a4f`
-- clutter: `966c9de04ad84d05d6203cc4e078f2fad07c03d4`
-- world art: `995e52973e14db0ef60f3562c1cfa5ae342d62d2`
-- building props: `856be2fc90d009d1b4bcc565990b9428323bb4d6`
-- final surfaces: `a42607858bae04f25fb1c6621a6d9262e81550b1`
-- final props: `7714d8c95833e20ebca20cfa1374f23eaa5509f1`
-- player N: `dfeb5be1c9cc0b66aec842d969b60b485d3a4f99`
-- player E: `76c3e7e1a3b07712c65b385f1d80e131b45d90b3`
-- player S: `a2e358fd8fe15d497bf9559ae89835af0331d10f`
-- player W: `c2cc192efed4c4a81905eb0d8100cd4776d4731b`
+Do not modify preserved baseline art during non-art prompts.
 
-Recover golden `TacticalTiles.gd` semantics into modular `ArtCatalog` + layer renderers. Do not copy its responsibilities into Main.
+## 10. Design-document discipline
 
-## 8. Target module boundaries
+Detailed system rules belong under `SYSTEM_DESIGNS/`.
 
-`MODULAR_REBUILD_MASTER_DESIGN.md` contains the detailed folder plan. At minimum keep these domains separate:
+`README_CONTEXT.md` is a current-state routing index only.
 
-- `app/` — bootstrap + high-level flow;
-- `data/` — stable semantic data records;
-- `art/` — semantic art catalog/source resolution;
-- `render/` — tactical layer renderers;
-- `camera/` — view window and zoom;
-- `input/` — touch, keyboard, Safari de-duplication, semantic action intents;
-- `player/` — player state/facing/movement;
-- `world/` — collision, mutable local world/doors;
-- `strategic/` — static map state/view/input and travel reachability;
-- `raid/` — raid session/deployment/extraction;
-- `generation/` — replaceable procedural generation modules;
-- `prefabs_dev/` — authoring UI/storage/validation;
-- `ui/` — HUD/control views;
-- later `time/` and `perception/` modules.
+`MODULAR_REBUILD_MASTER_DESIGN.md` owns global architecture/game direction.
 
-Avoid inheritance chains where one presentation class inherits another presentation class to gain unrelated behavior. Prefer controller/view composition and signals.
+`DESIGN_WORKFLOW.md` owns approval/scope/process.
 
-## 9. Rendering rules
+### Approval status
 
-Rendering consumes semantic `RaidMapSpec`/world state and never mutates simulation.
+- DRAFT = discussion only; no implementation.
+- APPROVED = implementation allowed.
+- IMPLEMENTED = approved design exists in canonical runtime and is tested.
+- SUPERSEDED = historical only.
 
-Split at least:
+If implementation reveals the APPROVED design cannot work without crossing a forbidden boundary, return the design to DRAFT, explain the conflict, and get approval for the contract change.
 
-- ground layer;
-- walls/doors/windows layer;
-- props/fixtures/vegetation layer;
-- player layer;
-- power-line/static infrastructure overlay;
-- extraction markers;
-- later lighting/perception/weather overlays.
+## 11. No-placeholder / no-fake rule
 
-A tactical renderer may orchestrate these layers, but must not own generator/player/input logic.
+Do not implement a substitute merely to satisfy the prompt.
 
-### Performance baseline
+Examples of unacceptable behavior:
 
-Preserve the best clean-reboot performance lessons:
+- random placeholder values that silently become architecture;
+- fake AI/event rolls presented as simulated actors;
+- fake travel costs before travel/tick ownership exists;
+- fake loot/search before inventory ownership exists;
+- presentation erasure that hides invalid geometry;
+- a temporary monolithic function intended to be "split later";
+- calling an approximation the recovered original.
 
-- no idle full tactical redraw when nothing animated is active;
-- draw only camera-visible cells;
-- use sparse O(1)-style lookup structures;
-- animated overlays later should have bounded redraw cadence and should not force unrelated systems to recompute every frame;
-- mobile/Safari remains first-class.
+If the actual owning system is not designed yet, stop at a clean interface or defer the behavior explicitly.
 
-## 10. Player/camera/input rules
+## 12. Generator standards
 
-Player state, movement, facing, camera, zoom, touch input, keyboard input, Safari suppression, and control rendering are separate owners.
+Generator work begins only after the visual/data/player/input/map foundation is approved and verified.
 
-Input adapters emit semantic intents such as `MOVE_FORWARD`, `TURN_LEFT`, `OPEN_MAP`; they do not mutate player state directly.
+Generator coordinator orchestrates modules; it is not a god script.
 
-Movement consumes player state + collision query. It does not know button rectangles or sprites.
+Expected separated owners include:
 
-Proven local zoom targets to re-evaluate during recovered-renderer work:
-
-- 14x12 @ ~39 px;
-- 12x10 @ ~44 px;
-- 10x9 @ ~50 px.
-
-Do not duplicate zoom preset values across multiple scripts. One zoom owner supplies them.
-
-## 11. Strategic-world rules
-
-The macro world is a **static authored image/background with interactive semantic nodes**, not a seamless generated tactical surface.
-
-Geographic progression:
-
-**BASE / RURAL EDGE -> SMALL TOWNS -> SUBURBS -> CITY EDGE -> CITY CENTER**
-
-Foot travel initially limits reachability. Vehicles later act primarily as strategic gateway/stair transitions to farther travel anchors/depths. Travel state/range is simulation/state, not map-view logic.
-
-A strategic view renders state; a strategic input module emits selection/travel/deploy intents; travel rules decide reachability.
-
-## 12. Generator rules
-
-The tactical generator outputs one coherent raid/site sample.
-
-Generator coordinator must call replaceable modules; it must not become a new god script.
-
-Separate responsibilities should include at least:
-
-- biome rule selection;
-- broad site composition;
-- main-road topology;
+- biome/site rule catalog;
+- road layout/topology;
 - side roads/driveways;
-- property/parcel planning;
-- prefab selection/placement;
-- room/layout generation where needed;
+- property planning;
+- building/prefab selection;
+- placement/transforms;
+- room graph/layout;
 - door planning/validation;
 - fixtures;
 - furniture;
@@ -271,201 +258,101 @@ Separate responsibilities should include at least:
 - extraction placement;
 - independent validation.
 
-Do not use a chain of corrective passes that repeatedly deletes/rebuilds previous generator output as the primary architecture. Plan semantic composition first; validate after.
+Avoid corrective pass chains that repeatedly delete/rebuild earlier generation output. Compose semantics intentionally, then validate.
 
-### Rural Edge — first biome only
+## 13. Door/room quality rules
 
-Before Small Town, Rural Edge must consistently look believable across many seeds.
+Current broad design direction:
 
-Current direction:
+- functional rooms normally at least 3x3 usable cells;
+- public/storefront spaces often ~5x5–7x7;
+- support rooms often ~3x3;
+- fixtures/furniture must respect room use and circulation;
+- clutter cannot block doors/critical paths;
+- doors have authoritative wall axes;
+- perpendicular approaches remain clear;
+- same-axis wall neighbors remain structural;
+- no doors at wall crosses/T-junctions.
 
-- one two-lane rural main road;
-- weighted straight, bend/curve-like, crossroads; later T/offset options;
-- small dirt/gravel side roads and drives;
-- broad grass/open rural land;
-- lots of trees/bushes/scrub/weeds;
-- frequent utility poles/power-line runs along developed frontage;
-- sparse stop signs;
-- few/no traffic lights;
-- roughly 3–4 residential properties as a normal scale, not a rigid quota;
-- mix may include one farm complex, substantial country houses, small trailers and double-wides;
-- normally zero/one gas-convenience-corner store, maximum two only when intentional;
-- no rural strip malls.
+If geometry fails, fix layout/ownership. Do not hide it visually or weaken tests just to turn CI green.
 
-Examples describe weighted grammar, not a fixed list every seed.
+## 14. Performance/mobile rules
 
-### Rooms/furniture/clutter
+Phone/Safari is first-class.
 
-- functional procedural rooms normally >= 3x3 usable cells;
-- storefront/public rooms commonly ~5x5–7x7;
-- support/back rooms commonly ~3x3;
-- sinks/ranges/fridges/bath fixtures against plausible walls/plumbing planes;
-- beds/TV/seating/desks/shelves arranged with usable circulation;
-- retail shelves create aisles;
-- checkout respects entrance flow;
-- stock/service clutter stays clear of doors;
-- clutter never blindly scatters after layout without reservations.
+- one physical touch = one semantic action;
+- no hover-only interaction;
+- synthetic mouse duplication must be handled by dedicated Safari/input owners;
+- native text inputs should be used where Safari keyboard behavior matters;
+- renderer should draw only visible cells;
+- no idle full tactical redraw if nothing animated requires it;
+- future animated overlays should use bounded redraw cadence and not force unrelated simulation recomputation;
+- one zoom owner supplies canonical zoom values.
 
-### Door invariant
+## 15. Reusable coding/GitHub lessons — living SOP
 
-Every door has a wall axis.
+This section grows when repeated lessons are discovered.
 
-- horizontal wall door: north/south approaches clear, left/right remain structural;
-- vertical wall door: east/west approaches clear, up/down remain structural;
-- no door at perpendicular wall crosses/T-junctions;
-- door/approach reservation cannot later receive wall/window/prop/clutter.
+### Godot/GDScript
 
-If generation violates this, change the layout. Do not cosmetically erase geometry to hide the bug or weaken validation just to pass CI.
+- Be conservative with `:=` around `Dictionary`/`Variant`; explicit types/conversions avoid strict inference surprises.
+- Keep data schemas/API names stable and test them as contracts.
+- Avoid mutation inside draw functions.
+- Prefer deterministic headless tests for generation/simulation.
+- DEV UI is still a subsystem; do not hide it in Main.
 
-## 13. Prefab rules
+### Web/Safari
 
-Prefab authoring remains a first-class developer tool, but rebuild it on the shared semantic data/art contracts.
+- Real touch may synthesize mouse input; de-duplication needs one dedicated owner.
+- Keyboard shortcuts are developer conveniences, never the only route to mobile-visible features.
+- Native `LineEdit`/editable controls are safer where iOS Safari must summon the keyboard.
 
-A prefab is data, not code and not atlas indices.
+### GitHub/CI
 
-Prefab data should support:
+- Exact final SHA is the only SHA that counts for completion.
+- CI should test system contracts, not merely parse success.
+- When a bug exposes a missing invariant, add the invariant/test rather than only patching the one seed/case.
+- Historical recovery claims should cite/inspect the historical commit/file, not rely on chat memory.
+- Do not weaken a test merely because implementation fails; decide whether the design or implementation is wrong.
 
-- semantic ground/structures/props;
-- door axes;
-- trimmed footprint;
-- entrance/frontage anchors;
-- site/building tags;
-- allowed biome tags;
-- room metadata;
-- road/drive relation;
-- allowed rotation/mirroring.
+### Living-SOP update rule
 
-Separate owners:
+If a reusable lesson is discovered during a prompt, add it here in that same coherent prompt when it applies across systems.
 
-- builder controller;
-- builder view;
-- palette/tools;
-- preview renderer using canonical tactical renderer/art catalog;
-- validator;
-- serializer;
-- local storage;
-- later import/export.
+If it belongs only to one subsystem, record it in that subsystem design instead.
 
-Do not let the prefab builder invent its own art mapping.
+Do not leave important lessons only in chat.
 
-## 14. Recovered/deferred systems
+## 16. Validation rule
 
-These old systems are **deferred, not discarded**. Inspect/port from golden commit when reintroduced:
+For documentation-only changes, preserve the currently deployed reference build and run the existing Pages gate if repository workflow triggers it.
 
-- `TickScheduler.gd` — authoritative discrete time/action execution/interruption;
-- `WorldCalendar.gd`;
-- `TacticalLighting.gd`;
-- `TacticalPerception.gd` — vision cone/LOS/fog memory;
-- `TacticalWeather.gd` — separate state from VFX when ported;
-- `TacticalSound.gd` — silent spatial sound/localization;
-- `LocalWorldState.gd`;
-- `SafariInputGuard.gd`.
+For future modular code changes, exact final SHA must pass:
 
-The user wants vision cone, lighting and weather restored later, after the modular generator/player/render/input/map foundation.
+1. source/architecture checks;
+2. Godot import/parse;
+3. owning subsystem contract test(s);
+4. relevant integration test(s);
+5. real startup smoke;
+6. Web export;
+7. Pages deployment when live behavior changed.
 
-The game remains **silent** unless explicitly reversed. Sound is simulated data communicated visually; do not add audible game audio by default.
+Add one focused CI test per subsystem instead of one giant smoke script that knows every internal detail.
 
-## 15. Modular rebuild implementation sequence
+## 17. Communication rule
 
-Follow this order unless the user explicitly changes it:
+- Surface architectural concerns before coding.
+- Explain when a user request is too broad and propose a smaller sequence.
+- Do not be afraid to recommend a better architecture/process, but respect the user's final choice after explaining tradeoffs.
+- Distinguish design, implementation, verified behavior, and future intent.
+- Do not claim something was preserved/recovered unless inspection proves it.
+- If clarification is needed, ask the smallest question that changes the decision.
 
-### Phase 0 — design/freeze
+## 18. Required final footer after repository changes
 
-- master design/context/SOP;
-- pin golden recovery commit and art hashes;
-- leave current live reboot as reference;
-- do not extend it.
-
-### Phase 1 — recovered graphics + modular foundation
-
-1. bootstrap-only Main;
-2. semantic data records;
-3. exact golden art mapping into standalone ArtCatalog;
-4. split ground/structure/prop/player renderers;
-5. tiny authored visual test map;
-6. verify visually that the mature old graphics are actually back;
-7. separate player state/facing/movement/collision;
-8. separate camera/zoom;
-9. separate touch/keyboard/Safari input and control view;
-10. separate static strategic map state/view/input.
-
-**Do not write the new random generator until the recovered graphics are visibly verified.**
-
-### Phase 2 — Rural Edge generator
-
-Build modular semantic generator and polish many seeds.
-
-### Phase 3 — prefab tooling
-
-Rebuild semantic prefab authoring on the shared renderer/data contracts.
-
-### Phase 4 — travel/extraction
-
-Static strategic reachability, deployment, physical extraction, return to staging.
-
-### Phase 5 — recover simulation systems individually
-
-Ticks/calendar -> perception cone -> lighting -> weather -> silent sound -> infected -> loot/inventory -> extraction stakes -> combat/body -> richer vehicles.
-
-## 16. Validation / architecture guards
-
-Meaningful modular-rebuild code changes must eventually pass exact final SHA through:
-
-1. canonical source checks;
-2. Godot 4.7.1 import/parse;
-3. module contract/smoke tests relevant to changed subsystem;
-4. main scene startup;
-5. Web export;
-6. Pages artifact/deploy.
-
-Add architecture CI as the modular shell lands. It should fail if Main gains forbidden responsibilities such as `_draw`, `_unhandled_input`, atlas references, button geometry, generator logic, or simulation data.
-
-Add an art-baseline hash guard while recovered visuals are frozen.
-
-Renderer tests should prove semantic IDs resolve to the same golden atlas source/index behavior.
-
-Generator tests should validate semantic/physical quality, not renderer details.
-
-A mock generator should be swappable without changing renderer/player/input code. A mock renderer should be swappable without changing generator/simulation code.
-
-## 17. Legacy/current code policy
-
-- `game/scripts/reboot/` = deprecated/frozen reference until modular shell replaces it.
-- golden pre-rewrite code = archaeology source for exact solved behavior.
-- neither should be blindly copied into new architecture.
-- do not delete historical/current reference code during a design-only change.
-- Git history is the ultimate rollback source.
-
-When the modular shell is proven, remove/deprecate superseded runtime code in a separate intentional cleanup pass.
-
-## 18. Communication / clarification
-
-- State when something is recovered exactly versus reimplemented approximately.
-- If the user says “the old graphics,” inspect the golden implementation before claiming what that means.
-- If a destructive rewrite could mean either “replace one module” or “replace adjacent systems too,” ask which scope is intended unless the stable module contract makes the answer unambiguous.
-- Spelling/typos are not themselves a reason to ask questions when intent is clear from context.
-- Prefer a targeted question over a guessed destructive change.
-- Do not repeatedly ask for confirmation once the requested scope is clear.
-
-## 19. Final self-check
-
-Before calling a repo task done:
-
-- Did I reread current SOP/context once for this prompt?
-- Did I inspect current relevant source?
-- If recovering old behavior, did I inspect the actual golden code/assets?
-- Did I change only the owning subsystem(s)?
-- Did I preserve stable contracts and sibling modules?
-- Did I keep Main as composition only?
-- Did generation remain renderer/art-index independent?
-- Did art remain separate from physics?
-- Did I add/update subsystem tests where appropriate?
-- Did exact final SHA pass required Godot/Pages gates for code/runtime changes?
-- Did I avoid claiming approximation = recovery?
-
-## 20. Required footer after repository changes
-
-When a prompt changes this repository, end with:
+End repo-change responses with:
 
 - Changelog: `https://github.com/dmcexcess-lab/dmcexcess-lab-tick-survival-lab/blob/main/CHANGELOG.md`
 - Play: `https://dmcexcess-lab.github.io/dmcexcess-lab-tick-survival-lab/`
+
+For design-only repository changes, make clear that the live play build is still the frozen/deprecated reference runtime.
