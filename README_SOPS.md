@@ -1,14 +1,22 @@
 # GPT CODING / GITHUB SOP — TICK SURVIVAL LAB
 
-> **MANDATORY ENTRY CONDITION:** At the start of every new prompt requesting repository/code changes, fetch current `README_SOPS.md`, `README_CONTEXT.md`, `DESIGN_WORKFLOW.md`, current `main` SHA, and the active system design(s). Read `MODULAR_REBUILD_MASTER_DESIGN.md` for architecture/global-direction work. Inspect current relevant source. Refresh once per prompt, not before every edit inside the same coherent task.
+> **MANDATORY ENTRY CONDITION:** At the start of every new prompt requesting repository/code changes, fetch current `PROJECT_NORTH_STAR.md`, `README_SOPS.md`, `README_CONTEXT.md`, `DESIGN_WORKFLOW.md`, `DESIGN_DECISIONS.md`, current `main` SHA, and the active system design(s). Read `MODULAR_REBUILD_MASTER_DESIGN.md` for architecture/global-direction work, subject to newer North Star/decision entries. Inspect current relevant source/history. Refresh once per prompt, not before every edit inside the same coherent task.
 
 ## 1. Current status
 
 Tick Survival Lab is in a **full modular redesign/rebuild**.
 
+Primary game shorthand:
+
+> **Ultima-style turn-based mini Zomboid.**
+
+Canonical game identity/anti-drift reference: `PROJECT_NORTH_STAR.md`.
+
+Cross-system decisions/rationale: `DESIGN_DECISIONS.md`.
+
 The deployed `game/scripts/reboot/` runtime is **frozen/deprecated reference code**. Do not extend it as the target architecture.
 
-Canonical global architecture: `MODULAR_REBUILD_MASTER_DESIGN.md`.
+Canonical broad modular architecture inventory: `MODULAR_REBUILD_MASTER_DESIGN.md`, but older static-raid/strategic-map assumptions in that file yield to newer North Star/decision entries.
 
 Canonical development process: `DESIGN_WORKFLOW.md`.
 
@@ -21,23 +29,38 @@ Golden recovery commit for mature pre-clean-rewrite behavior/art archaeology:
 ## 2. Core operating rules
 
 1. **Newest explicit user instruction beats older design.**
-2. **Current repo beats memory.** Fetch first.
-3. **Design before implementation.** Major systems require user-approved system designs.
-4. **One major system per implementation slice by default.**
-5. **Push back when scope is too broad.** Do not attempt "the whole game" or several major systems in one prompt just because the user asked quickly.
-6. **Main/root is composition only.**
-7. **One named system = one standalone owner at minimum.**
-8. Prefer composition, small public contracts, and dependency injection over deep inheritance/shared internals.
-9. **A subsystem rewrite must not opportunistically rewrite neighboring systems.**
-10. **No placeholders/fake completion.** DEV-only shortcuts must be explicit DEV tools and separately owned.
-11. **Do not approximate historical behavior and call it recovered.** Inspect the actual golden implementation/assets.
-12. **Ask targeted clarification when a material ambiguity remains after inspection.**
-13. Do not ask about ordinary spelling/typos when intent is clear.
-14. Keep simulation testable without presentation.
-15. Do not claim success without exact-final-SHA validation for code changes.
-16. Direct `main` remains normal unless the user explicitly requests branch/PR workflow.
+2. **Read the North Star before solving the local problem.** A locally convenient fix must still make sense for the whole game.
+3. **Current repo beats memory.** Fetch first.
+4. **Design before implementation.** Major systems require user-approved system designs.
+5. **One major system per implementation slice by default.**
+6. **Push back when scope is too broad.** Do not attempt "the whole game" or several major systems in one prompt just because the user asked quickly.
+7. **Main/root is composition only.**
+8. **One named independently changeable system = one standalone owner at minimum.** Do not split every helper function into a file merely for file-count modularity.
+9. Prefer composition, small public contracts, and dependency injection over deep inheritance/shared internals.
+10. **A subsystem rewrite must not opportunistically rewrite neighboring systems.**
+11. **No placeholders/fake completion.** DEV-only shortcuts must be explicit DEV tools and separately owned.
+12. **Do not approximate historical behavior and call it recovered.** Inspect the actual golden implementation/assets.
+13. **Ask targeted clarification when a material ambiguity remains after inspection.**
+14. Do not ask about ordinary spelling/typos when intent is clear.
+15. Keep simulation testable without presentation.
+16. Do not claim success without exact-final-SHA validation for code changes.
+17. Direct `main` remains normal unless the user explicitly requests branch/PR workflow.
+18. **When a new discussion materially changes the game's cross-system direction, update North Star/decision/context docs in the same coherent prompt rather than letting chat outrun the repo.**
 
-## 3. Scope gate / mandatory pushback
+## 3. North-star drift check
+
+Before proposing or implementing a system/fix, ask internally:
+
+- Does this still serve **Ultima-style turn-based mini Zomboid**?
+- Are we preserving **reduced complexity, not reduced consequence or mood**?
+- Does this assume an older architecture that the persistent-open-world direction superseded?
+- Is this local fix making the owning system cleaner, or merely hiding the visible symptom?
+- Does the proposed API leave known future systems room to connect without making the current system own them?
+- Would this decision force a later generator/render/input/etc. rewrite to touch unrelated systems?
+
+If the local solution conflicts with the North Star or a newer cross-system decision, stop and surface the conflict instead of optimizing the local symptom.
+
+## 4. Scope gate / mandatory pushback
 
 Before implementing, classify the request.
 
@@ -45,7 +68,7 @@ Before implementing, classify the request.
 Proceed through the approved system design and impact declaration.
 
 ### Multi-system request
-If the request requires meaningful work across multiple major domains (for example generator + renderer + player + strategic map), **do not begin coding all of them**.
+If the request requires meaningful work across multiple major domains (for example generator + renderer + player + strategic world), **do not begin coding all of them**.
 
 Instead:
 
@@ -60,7 +83,7 @@ Small wiring changes needed to connect an approved module are allowed, but list 
 
 If implementation unexpectedly expands across a forbidden boundary, stop. Do not keep patching.
 
-## 4. Clarification triggers
+## 5. Clarification triggers
 
 Ask a concise targeted question before implementation when unresolved ambiguity could materially change:
 
@@ -72,21 +95,23 @@ Ask a concise targeted question before implementation when unresolved ambiguity 
 - mobile/Safari interaction;
 - persistence/save shape;
 - timing semantics;
-- player-visible behavior.
+- player-visible behavior;
+- whether a new idea changes the North Star rather than only one subsystem.
 
 Examples:
 
 - "restore the old graphics" when several historical renderers exist and archaeology cannot identify which one;
-- "make vehicles work" when this could mean strategic gateways or tactical driving;
-- "rewrite the generator" when it is unclear whether existing semantic data contracts must remain compatible.
+- "make vehicles work" when this could mean strategic travel abstraction, physical tactical driving, or both;
+- "rewrite the generator" when it is unclear whether existing semantic/persistent-world contracts must remain compatible;
+- "make the world open" when it is unclear whether partitions are separate realities or only streaming/storage divisions.
 
 Inspect repo/history first. Ask only what remains unresolved.
 
-## 5. Required pre-implementation checklist
+## 6. Required pre-implementation checklist
 
 For an approved code change:
 
-1. Read current SOP/context/workflow.
+1. Read current North Star/SOP/context/workflow/decision log.
 2. Read the APPROVED system design.
 3. Read master design if architecture/boundaries are involved.
 4. Fetch current main SHA.
@@ -96,12 +121,13 @@ For an approved code change:
 8. Declare files/modules expected to change.
 9. Declare neighboring modules that must remain untouched.
 10. Identify whether the public contract itself changes.
-11. Fetch current blob SHAs for files being replaced.
-12. Identify required subsystem and integration tests.
+11. Check known future seams listed in the North Star/system design so the local implementation does not become needlessly restrictive.
+12. Fetch current blob SHAs for files being replaced.
+13. Identify required subsystem and integration tests.
 
 If no APPROVED system design exists for a major new system, do not code it. Draft/design it first.
 
-## 6. Main/root rule
+## 7. Main/root rule
 
 Future `Main.gd` is bootstrap/wiring only.
 
@@ -136,21 +162,22 @@ Forbidden:
 
 Never justify implementation in Main because it is temporary, easy, small, or only for development.
 
-## 7. Replaceability test
+## 8. Replaceability test
 
 Architecture is acceptable only if these remain plausible:
 
-- delete/rewrite `generation/` without touching art/render/player/input/camera/strategic;
-- delete/rewrite `render/` without touching generation/player physics/strategic state;
+- delete/rewrite `generation/` without touching art/render/player/input/camera/persistent-world rules;
+- delete/rewrite `render/` without touching generation/player physics/persistent state;
 - replace `input/` without changing movement/simulation rules;
-- replace `strategic/` without changing tactical generation;
 - replace art mapping without changing physics;
-- replace prefab DEV tooling without changing normal tactical renderer/generator contracts;
-- add later lighting/perception/weather/sound without generator-specific presentation hacks.
+- replace prefab DEV tooling without changing normal world/render/generator contracts;
+- add/recover lighting/perception/weather/sound without generator-specific presentation hacks;
+- replace streaming/storage partition strategy without changing the logical global world coordinate model;
+- change extraction/base UI without turning persistent physical world facts into menu-only truth.
 
 When a feature requires edits on both sides of a contract, determine whether the contract needs an explicit approved revision. Do not silently make modules depend on each other's internals.
 
-## 8. Semantic world-data boundary
+## 9. Semantic world-data boundary
 
 Generation/simulation use semantic IDs and explicit physics/state facts.
 
@@ -176,7 +203,9 @@ Rendering maps semantic IDs through the canonical art catalog.
 
 **Art is not physics.** Sprites do not implicitly decide collision, opacity, door state, interaction, searchability, destructibility, or persistence.
 
-## 9. Golden visual recovery
+Directional world objects should store semantic orientation/facing. Renderer owns whether that means 90-degree rotation or an explicit alternate-facing image.
+
+## 10. Golden visual recovery
 
 Golden mature visual source: commit `1763958f44eb7f855fd49944c00d1ffe608c0abe`.
 
@@ -198,13 +227,17 @@ The current art files are preserved. Visual recovery means recovering semantic s
 
 Do not modify preserved baseline art during non-art prompts.
 
-## 10. Design-document discipline
+## 11. Design-document discipline
 
 Detailed system rules belong under `SYSTEM_DESIGNS/`.
 
+`PROJECT_NORTH_STAR.md` owns the short game identity, experience target and anti-drift principles.
+
+`DESIGN_DECISIONS.md` owns cross-system settled decisions and rationale. New decisions supersede old entries explicitly; do not erase history.
+
 `README_CONTEXT.md` is a current-state routing index only.
 
-`MODULAR_REBUILD_MASTER_DESIGN.md` owns global architecture/game direction.
+`MODULAR_REBUILD_MASTER_DESIGN.md` owns broad architecture inventory but may contain older assumptions; newer North Star/decision entries take precedence.
 
 `DESIGN_WORKFLOW.md` owns approval/scope/process.
 
@@ -217,7 +250,7 @@ Detailed system rules belong under `SYSTEM_DESIGNS/`.
 
 If implementation reveals the APPROVED design cannot work without crossing a forbidden boundary, return the design to DRAFT, explain the conflict, and get approval for the contract change.
 
-## 11. No-placeholder / no-fake rule
+## 12. No-placeholder / no-fake rule
 
 Do not implement a substitute merely to satisfy the prompt.
 
@@ -225,6 +258,7 @@ Examples of unacceptable behavior:
 
 - random placeholder values that silently become architecture;
 - fake AI/event rolls presented as simulated actors;
+- fake outbreak history presented as causal simulation;
 - fake travel costs before travel/tick ownership exists;
 - fake loot/search before inventory ownership exists;
 - presentation erasure that hides invalid geometry;
@@ -233,50 +267,44 @@ Examples of unacceptable behavior:
 
 If the actual owning system is not designed yet, stop at a clean interface or defer the behavior explicitly.
 
-## 12. Generator standards
+## 13. Persistent-world / generation standards
 
-Generator work begins only after the visual/data/player/input/map foundation is approved and verified.
+The logical world is not defined by streaming chunks. Global coordinates/world planning define reality; streaming/storage partitions are implementation details.
 
-Generator coordinator orchestrates modules; it is not a god script.
+Large-scale generation should establish globally coherent facts before local detail materialization, particularly for roads/utilities/parcels and other cross-boundary structures.
 
-Expected separated owners include:
+Generation is an input to initial world state. Once a place exists and gameplay changes it, persistent world state owns those changes.
 
-- biome/site rule catalog;
-- road layout/topology;
-- side roads/driveways;
-- property planning;
-- building/prefab selection;
-- placement/transforms;
-- room graph/layout;
-- door planning/validation;
-- fixtures;
-- furniture;
-- clutter;
-- vegetation;
-- utility networks;
-- civic props;
-- extraction placement;
+A generator coordinator orchestrates focused modules; it is not a god script.
+
+Expected separated generation/world-planning responsibilities may include:
+
+- global geography/district planning;
+- road network/topology;
+- utility/infrastructure network;
+- parcels/addresses/access;
+- building/property selection and footprints;
+- household/business/population assignment;
+- local room/layout materialization;
+- fixtures/furniture/clutter;
+- vegetation/civic dressing;
 - independent validation.
 
-Avoid corrective pass chains that repeatedly delete/rebuild earlier generation output. Compose semantics intentionally, then validate.
+Avoid corrective pass chains that repeatedly delete/rebuild earlier output. Compose semantics intentionally, then validate.
 
-## 13. Door/room quality rules
+## 14. Spatial baseline / unresolved question
 
-Current broad design direction:
+Current favored baseline:
 
-- functional rooms normally at least 3x3 usable cells;
-- public/storefront spaces often ~5x5–7x7;
-- support rooms often ~3x3;
-- fixtures/furniture must respect room use and circulation;
-- clutter cannot block doors/critical paths;
-- doors have authoritative wall axes;
-- perpendicular approaches remain clear;
-- same-axis wall neighbors remain structural;
-- no doors at wall crosses/T-junctions.
+- invisible authoritative tactical grid;
+- cell-to-cell actors;
+- whole-cell prop/fixture footprints;
+- N/E/S/W semantic facing/orientation;
+- no sub-cell/free movement without a concrete gameplay need.
 
-If geometry fails, fix layout/ownership. Do not hide it visually or weaken tests just to turn CI green.
+**Wall/door/window representation remains unresolved** (occupied cells vs cell-edge structures). Do not implement a dependent world contract until this is explicitly decided in the Spatial Model design.
 
-## 14. Performance/mobile rules
+## 15. Performance/mobile rules
 
 Phone/Safari is first-class.
 
@@ -287,9 +315,10 @@ Phone/Safari is first-class.
 - renderer should draw only visible cells;
 - no idle full tactical redraw if nothing animated requires it;
 - future animated overlays should use bounded redraw cadence and not force unrelated simulation recomputation;
-- one zoom owner supplies canonical zoom values.
+- one zoom owner supplies canonical zoom values;
+- real-life interruption requires a hard application pause design; browser/app visibility/focus behavior must never let simulation continue unnoticed when the platform gives us a reliable lifecycle signal.
 
-## 15. Reusable coding/GitHub lessons — living SOP
+## 16. Reusable coding/GitHub lessons — living SOP
 
 This section grows when repeated lessons are discovered.
 
@@ -300,6 +329,7 @@ This section grows when repeated lessons are discovered.
 - Avoid mutation inside draw functions.
 - Prefer deterministic headless tests for generation/simulation.
 - DEV UI is still a subsystem; do not hide it in Main.
+- Do not make every persistent world object a Godot Node merely because it exists; detailed node/materialization strategy belongs to the approved streaming/render design.
 
 ### Web/Safari
 
@@ -315,15 +345,17 @@ This section grows when repeated lessons are discovered.
 - Historical recovery claims should cite/inspect the historical commit/file, not rely on chat memory.
 - Do not weaken a test merely because implementation fails; decide whether the design or implementation is wrong.
 
-### Living-SOP update rule
+### Living-document update rule
 
-If a reusable lesson is discovered during a prompt, add it here in that same coherent prompt when it applies across systems.
+If a reusable coding/process lesson is discovered during a prompt, add it here in that same coherent prompt when it applies across systems.
+
+If a cross-system **game/design decision** changes, add it to `DESIGN_DECISIONS.md` and update North Star/context if required.
 
 If it belongs only to one subsystem, record it in that subsystem design instead.
 
-Do not leave important lessons only in chat.
+Do not leave important lessons or decisions only in chat.
 
-## 16. Validation rule
+## 17. Validation rule
 
 For documentation-only changes, preserve the currently deployed reference build and run the existing Pages gate if repository workflow triggers it.
 
@@ -339,7 +371,7 @@ For future modular code changes, exact final SHA must pass:
 
 Add one focused CI test per subsystem instead of one giant smoke script that knows every internal detail.
 
-## 17. Communication rule
+## 18. Communication rule
 
 - Surface architectural concerns before coding.
 - Explain when a user request is too broad and propose a smaller sequence.
@@ -347,8 +379,9 @@ Add one focused CI test per subsystem instead of one giant smoke script that kno
 - Distinguish design, implementation, verified behavior, and future intent.
 - Do not claim something was preserved/recovered unless inspection proves it.
 - If clarification is needed, ask the smallest question that changes the decision.
+- If current repo docs conflict with the current conversation, do not silently pick one: identify whether the conversation changed the design and update durable memory accordingly.
 
-## 18. Required final footer after repository changes
+## 19. Required final footer after repository changes
 
 End repo-change responses with:
 
