@@ -18,7 +18,6 @@ const FORWARD_BUTTON := Rect2(468, 620, 154, 62)
 const TURN_RIGHT_BUTTON := Rect2(468, 690, 154, 62)
 const BACK_BUTTON := Rect2(468, 760, 154, 62)
 
-# These are samples within the same rural-edge biome, not one-property archetypes.
 const MAP_NODES := [
     {"id":"rural_road", "archetype":"rural_road", "label":"RURAL ROAD", "pos":Vector2(146, 260), "seed":1103},
     {"id":"farm_road", "archetype":"rural_road", "label":"FARM ROAD", "pos":Vector2(176, 390), "seed":2207},
@@ -71,6 +70,9 @@ func _draw_tactical() -> void:
     var windows: Dictionary = spec["windows"]
     var props: Dictionary = spec["props"]
 
+    # Pass 1: ground and structure. Doors/windows are mutually exclusive with wall
+    # cells in generated data, so the transparent original door tile is never painted
+    # over a wall tile.
     for sy in range(rows):
         var world_y := start_y + sy
         if world_y >= height:
@@ -89,7 +91,23 @@ func _draw_tactical() -> void:
                 _draw_art(int(windows[p]), dest)
             elif doors.has(p):
                 _draw_art(int(doors[p]), dest)
+
+    # Static wires are cheap: they redraw only on the same events as the board and
+    # are drawn behind pole/prop sprites.
+    _draw_power_lines(start_x, start_y, cols, rows, tile, origin)
+
+    # Pass 2: furniture, vegetation, signs, pumps and utility poles.
+    for sy in range(rows):
+        var world_y := start_y + sy
+        if world_y >= height:
+            break
+        for sx in range(cols):
+            var world_x := start_x + sx
+            if world_x >= width:
+                break
+            var p := Vector2i(world_x, world_y)
             if props.has(p):
+                var dest := Rect2(origin + Vector2(sx * tile, sy * tile), Vector2(tile, tile))
                 _draw_art(int(props[p]), dest)
 
     var px: int = player.cell.x - start_x
@@ -105,6 +123,22 @@ func _draw_tactical() -> void:
     _draw_label(Vector2(190, 722), "W/UP forward   S/DOWN back", 14, Color("c7cbd0"))
     _draw_label(Vector2(190, 744), "A/D or LEFT/RIGHT turn", 14, Color("c7cbd0"))
     _draw_label(Vector2(190, 775), "Visible-cell renderer / no idle redraw", 13, Color("8d949c"))
+
+func _draw_power_lines(start_x: int, start_y: int, cols: int, rows: int, tile: int, origin: Vector2) -> void:
+    var links: Array = spec.get("power_links", [])
+    for link_value in links:
+        var link: Dictionary = link_value
+        var a: Vector2i = link.get("a", Vector2i(-1, -1))
+        var b: Vector2i = link.get("b", Vector2i(-1, -1))
+        if not _cell_visible(a, start_x, start_y, cols, rows) or not _cell_visible(b, start_x, start_y, cols, rows):
+            continue
+        var pa := origin + Vector2((a.x - start_x + 0.5) * tile, (a.y - start_y + 0.22) * tile)
+        var pb := origin + Vector2((b.x - start_x + 0.5) * tile, (b.y - start_y + 0.22) * tile)
+        draw_line(pa, pb, Color("24282b"), 3.0, true)
+        draw_line(pa + Vector2(0, 3), pb + Vector2(0, 3), Color("3a3f43"), 1.0, true)
+
+func _cell_visible(cell: Vector2i, start_x: int, start_y: int, cols: int, rows: int) -> bool:
+    return cell.x >= start_x and cell.y >= start_y and cell.x < start_x + cols and cell.y < start_y + rows
 
 func _draw_strategic_map() -> void:
     draw_rect(Rect2(18, 62, 604, 742), Color("171d22"), true)
@@ -150,7 +184,7 @@ func _draw_strategic_map() -> void:
     _draw_locked_node(Vector2(493, 545), "WAREHOUSES")
     _draw_locked_node(Vector2(564, 425), "CITY CENTER")
 
-    _draw_label(Vector2(68, 775), "Rural nodes vary the road, homes, trailers, yards and farm context.", 14, Color("d4dad2"))
+    _draw_label(Vector2(68, 775), "Rural nodes vary homes, farm complex, trailers and roadside business.", 14, Color("d4dad2"))
     if not active_site.is_empty():
         _draw_button(MAP_BUTTON, "CLOSE MAP", false)
 
