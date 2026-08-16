@@ -4,17 +4,6 @@ This is the durable log for **approved or clearly settled cross-cutting decision
 
 It is not a brainstorming file. Detailed mechanics belong in `SYSTEM_DESIGNS/`. Current work status belongs in `README_CONTEXT.md`. This log exists so later work can recover the reason behind a major direction instead of inferring it from implementation.
 
-## How to use this file
-
-For each durable cross-system decision record:
-
-- date;
-- decision;
-- why it was chosen;
-- what it supersedes, if anything;
-- systems affected;
-- unresolved follow-up questions.
-
 If a later discussion changes a decision, do not erase history. Add a newer entry that explicitly supersedes the old one.
 
 ---
@@ -41,16 +30,29 @@ If a later discussion changes a decision, do not erase history. Add a newer entr
 
 **Why:**
 
-- the desired game is closer to a persistent survival world than a sequence of disconnected maps;
+- the desired game is a persistent survival world rather than a sequence of disconnected maps;
 - independently generated local maps create unacceptable risk of road/infrastructure seam errors;
-- a continuous world supports persistent homes, vehicles, corpses, construction, households and outbreak history more naturally;
-- extraction-shooter risk/reward can exist as expeditions away from safety without requiring instanced raid maps.
+- a continuous world supports persistent homes, vehicles, corpses, construction, households and outbreak history naturally.
 
 **Supersedes:** earlier static strategic-map -> generated raid -> extraction architecture as the long-term foundation.
 
-**Affected systems:** world model, generation, persistence, streaming, travel, extraction, base, vehicles, population/outbreak simulation.
+**Affected systems:** world model, generation, persistence, streaming, travel, bases, vehicles, population/outbreak simulation.
 
 **Unresolved:** exact streaming/storage partition size and activation model.
+
+---
+
+## 2026-08-16 — Extraction-shooter framing removed
+
+**Decision:** Extraction-shooter structure is no longer part of the current game identity or required gameplay loop.
+
+The player exists continuously in the open world. There is no required raid boundary, extraction zone, gear-in/gear-out transaction, staging screen, or forced return-to-base loop. The player may roam indefinitely, move home, establish multiple safe locations, abandon them, or live nomadically.
+
+Returning to shelter with valuable supplies can still be an emergent survival decision, but it is not a separate extraction mechanic.
+
+**Supersedes:** all remaining “extraction-style expedition risk/reward” language in the North Star/context and the old extraction/session design direction.
+
+**Affected systems:** progression, inventory, travel, base, persistence, death, UI, world flow.
 
 ---
 
@@ -84,11 +86,15 @@ If a later discussion changes a decision, do not erase history. Add a newer entr
 
 ---
 
-## 2026-08-16 — Base is fundamentally a physical world location
+## 2026-08-16 — Bases are emergent physical constructions/secured places anywhere
 
-**Decision:** A base/home is primarily an ordinary persistent physical location made safe/useful by the player. Higher-level base/community UI may summarize it later but should not replace physical storage, beds, workspaces, vehicles, power, water, construction, residents, etc.
+**Decision:** There is no special base map or mandatory preselected base property. The player may build and secure a base anywhere in the persistent world where normal construction/occupancy rules allow it.
 
-**Affected systems:** world state, construction, inventory/storage, power, vehicles, survivors/community, base UI.
+A starting home may be useful but is not mechanically privileged. Existing buildings may be fortified; open land may be developed; multiple safe sites can coexist; bases may be abandoned or moved.
+
+Higher-level base/community UI may summarize physical facts later, but should not create a separate base reality.
+
+**Affected systems:** construction, world state, inventory/storage, power, water, vehicles, survivors/community, farming, base UI.
 
 ---
 
@@ -100,7 +106,7 @@ If a later discussion changes a decision, do not erase history. Add a newer entr
 
 **Why:** Grid-based space substantially simplifies graphics, generation, collision, pathfinding, AI, persistence and deterministic tick movement without requiring the game to look like a board game.
 
-**Affected systems:** spatial model, art catalog, renderers, movement, collision, generation, prefabs, AI, perception.
+**Affected systems:** spatial model, art catalog, renderers, movement, collision, generation, construction, AI, perception.
 
 **Unresolved:** whether walls/doors/windows are represented as occupied cells or cell-edge structures. Resolve in Spatial Model design before implementation.
 
