@@ -28,9 +28,13 @@ jobs:
           test -f README.md
           test -f README_CONTEXT.md
           test -f README_SOPS.md
+          test -f DESIGN_WORKFLOW.md
+          test -f SYSTEM_DESIGNS/README.md
           test -f MODULAR_REBUILD_MASTER_DESIGN.md
           test -f REBOOT_CORE.md
           test -f PREFAB_WORKSHOP.md
+          grep -q 'DESCRIBE -> APPROVE -> IMPLEMENT -> VERIFY' DESIGN_WORKFLOW.md
+          grep -q 'One major system per implementation slice' README_SOPS.md
           grep -q 'Main is composition, not implementation' MODULAR_REBUILD_MASTER_DESIGN.md
           grep -q '1763958f44eb7f855fd49944c00d1ffe608c0abe' MODULAR_REBUILD_MASTER_DESIGN.md
           test -f game/project.godot
