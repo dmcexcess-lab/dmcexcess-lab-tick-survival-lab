@@ -1,5 +1,22 @@
 # Changelog
 
+## 00B WHAT / Persistent World State Implementation — 2026-08-16
+
+- Implemented the second bounded WHERE / WHAT / WHEN foundation slice, **00B Persistent World / Entity State (WHAT)**, after the user explicitly authorized WHAT as the next system.
+- Added `SYSTEM_DESIGNS/00B_PERSISTENT_WORLD_STATE.md` and locked one authoritative **current persistent world** rather than parallel generated/original and modified/current gameplay realities. Future save storage may optimize with baselines/journals/regions, but gameplay sees one truth.
+- Added `game/scripts/foundation/world/WorldEntityId.gd` and `WorldEntityRecord.gd` for stable opaque persistent IDs plus semantic entity types independent of Godot Nodes, rendering, storage order and tactical placement.
+- Added `WorldPlacement.gd` as the WHAT/WHERE seam: spatial channel, global anchor, N/E/S/W facing, arbitrary whole-cell footprint and optional HORIZONTAL/VERTICAL structure axis. Entities may intentionally remain persistent while unplaced.
+- Added separate `TerrainStore.gd`, `EntityStore.gd` and `PlacementStore.gd` owners rather than one giant world dictionary or generic metadata bag.
+- Added `OccupancyIndex.gd` as a **derived** global-cell/channel lookup rebuilt from placements. WHAT permits overlap and does not invent collision/construction legality; those decisions remain with later owning systems.
+- Added `WorldMutationService.gd` as the validated normal write path for entity create/remove, place/unplace and terrain set/clear. `WorldState.gd` exposes mutation-safe reads instead of leaking internal dictionaries/records.
+- Added `WorldChange.gd` plus monotonic world revisions so later rendering, caches, persistence adapters and simulation systems can observe foundation-level entity/placement/terrain changes without WHAT learning mechanic-specific meanings.
+- Added deterministic, atomic in-memory snapshot/restore to `WorldState.gd`, including runtime-ID serial and revision. Occupancy is intentionally not serialized and is rebuilt from canonical placement truth. This is a state boundary, not the final browser/disk save implementation.
+- Added permanent headless `WorldStateSmoke.gd` coverage for stable IDs, immutable-style reads, negative-coordinate terrain, rotated multi-cell placement, structure-axis validation, overlap indexing, move/unplace/remove behavior, revision/change signals, deterministic snapshot round-trip, occupancy rebuild, atomic malformed-snapshot rejection and post-restore ID allocation.
+- CI now independently gates both `SPATIAL_MODEL_SMOKE_OK` and `WORLD_STATE_SMOKE_OK`, plus source guards proving WHAT does not import the reboot runtime or `TickScheduler`.
+- During verification, the contract test exposed GDScript strictness issues rather than design failures: typed `Array[T]` values cannot safely use ternaries with a bare `[]`, and typed-return functions may need an explicit fallback return after an apparently infinite loop. Both lessons were added to `README_SOPS.md` instead of weakening tests.
+- Deliberately **did not wire WHAT into `game/scripts/reboot/` or the live scene**. WHERE and WHAT remain canonical independently tested foundation source; WHEN is the next bounded design target.
+- Updated the system ledger, context, design-decision log and SOP so future work treats WHAT as IMPLEMENTED and does not smuggle door/health/inventory/vehicle/construction logic into the foundation entity record.
+
 ## 00A WHERE / Spatial Model Implementation — 2026-08-16
 
 - Promoted the first bounded WHERE / WHAT / WHEN slice, **00A Spatial Model (WHERE)**, from design into the canonical modular source after the user explicitly authorized implementation from the reviewed foundation design.
