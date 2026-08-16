@@ -29,7 +29,7 @@ Web preview: `https://dmcexcess-lab.github.io/dmcexcess-lab-tick-survival-lab/`
 
 ## 2. Current architectural phase
 
-The project has completed the **WHERE / WHAT / WHEN modular simulation foundation triad** and remains in staged modular replacement of the deprecated playable runtime.
+The project has completed the **WHERE / WHAT / WHEN modular simulation foundation triad** and the first downstream **Collision / Spatial Query** system. It remains in staged modular replacement of the deprecated playable runtime.
 
 The currently deployed runtime under `game/scripts/reboot/` remains **frozen/deprecated reference code**. Do not extend it as the target architecture.
 
@@ -37,13 +37,14 @@ Golden recovery commit for mature pre-clean-rewrite behavior/art:
 
 `1763958f44eb7f855fd49944c00d1ffe608c0abe`
 
-Canonical modular foundation progress:
+Canonical modular progress:
 
 - **00A WHERE / Spatial Model — IMPLEMENTED and CI-gated** under `game/scripts/foundation/spatial/`.
 - **00B WHAT / Persistent World State — IMPLEMENTED and CI-gated** under `game/scripts/foundation/world/`.
 - **00C WHEN / Tick Action Pause — IMPLEMENTED and CI-gated** under `game/scripts/foundation/time/`.
+- **01 Collision / Spatial Query — IMPLEMENTED and CI-gated** under `game/scripts/simulation/collision/`.
 
-The live playable scene does not import the new foundation yet. This is intentional: no temporary adapter layer will connect canonical foundation modules to the deprecated runtime merely to make new code visibly run.
+The live playable scene does not import the new canonical modules yet. This is intentional: no temporary adapter layer will connect them to the deprecated runtime merely to make new code visibly run.
 
 ## 3. Foundation architecture
 
@@ -63,15 +64,6 @@ Generation is downstream: it creates initial WHAT using WHERE. Construction/dest
 
 Canonical design: `SYSTEM_DESIGNS/00A_SPATIAL_MODEL.md`.
 
-Implemented owners:
-
-- `game/scripts/foundation/spatial/SpatialFacing.gd`
-- `game/scripts/foundation/spatial/SpatialFootprint.gd`
-- `game/scripts/foundation/spatial/SpatialStructureGeometry.gd`
-- `game/scripts/foundation/spatial/SpatialLayer.gd`
-- `game/scripts/foundation/spatial/SpatialModel.gd`
-- test: `game/scripts/ci/SpatialModelSmoke.gd`
-
 Locked spatial rules:
 
 - global integer `Vector2i` cells;
@@ -86,20 +78,6 @@ Locked spatial rules:
 ### 00B WHAT — IMPLEMENTED
 
 Canonical design: `SYSTEM_DESIGNS/00B_PERSISTENT_WORLD_STATE.md`.
-
-Implemented owners:
-
-- `game/scripts/foundation/world/WorldEntityId.gd`
-- `game/scripts/foundation/world/WorldEntityRecord.gd`
-- `game/scripts/foundation/world/WorldPlacement.gd`
-- `game/scripts/foundation/world/TerrainStore.gd`
-- `game/scripts/foundation/world/EntityStore.gd`
-- `game/scripts/foundation/world/PlacementStore.gd`
-- `game/scripts/foundation/world/OccupancyIndex.gd`
-- `game/scripts/foundation/world/WorldChange.gd`
-- `game/scripts/foundation/world/WorldState.gd`
-- `game/scripts/foundation/world/WorldMutationService.gd`
-- test: `game/scripts/ci/WorldStateSmoke.gd`
 
 Locked WHAT rules:
 
@@ -120,16 +98,6 @@ Locked WHAT rules:
 
 Canonical design: `SYSTEM_DESIGNS/00C_TICK_ACTION_PAUSE.md`.
 
-Implemented owners:
-
-- `game/scripts/foundation/time/TickRules.gd`
-- `game/scripts/foundation/time/ActionPhase.gd`
-- `game/scripts/foundation/time/TimedAction.gd`
-- `game/scripts/foundation/time/ScheduledEvent.gd`
-- `game/scripts/foundation/time/TickEventQueue.gd`
-- `game/scripts/foundation/time/TickKernel.gd`
-- test: `game/scripts/ci/TickKernelSmoke.gd`
-
 Locked WHEN rules:
 
 - one non-negative integer world tick is authoritative; render FPS/wall clock do not advance simulation implicitly;
@@ -146,6 +114,32 @@ Locked WHEN rules:
 - bounded safety/trace mechanisms prevent zero-time loops or debug history from becoming unbounded;
 - WHEN has no direct dependency on WHERE, WHAT, reboot, generator, renderer or gameplay domains.
 
+### 01 Collision / Spatial Query — IMPLEMENTED
+
+Canonical design: `SYSTEM_DESIGNS/01_COLLISION_SPATIAL_QUERY.md`.
+
+Implemented owners:
+
+- `game/scripts/simulation/collision/CollisionProfile.gd`
+- `game/scripts/simulation/collision/CollisionCatalog.gd`
+- `game/scripts/simulation/collision/CollisionOverrideState.gd`
+- `game/scripts/simulation/collision/SpatialQueryResult.gd`
+- `game/scripts/simulation/collision/SpatialQueryService.gd`
+- test: `game/scripts/ci/CollisionSpatialQuerySmoke.gd`
+
+Locked collision/query rules:
+
+- hard movement collision is explicit physics, never inferred from art;
+- normal collision behavior is type-level through `CollisionCatalog`, avoiding one redundant collision record per static world entity;
+- dynamic exceptions use sparse per-entity overrides keyed by stable WHAT ID;
+- STRUCTURE / OBJECT / ACTOR placements require an explicit profile or override;
+- missing required profile is UNKNOWN/fail-closed, not silently passable;
+- missing terrain is UNKNOWN/fail-closed so unmaterialized space is never treated as empty world;
+- loose items/effects do not require profiles by default and remain non-blocking unless explicitly overridden/profiled;
+- queries support arbitrary rotated multi-cell WHERE footprints and self-ignore for hypothetical relocation;
+- query is read-only and does not mutate WHAT or consume WHEN;
+- terrain traversal capability is deliberately deferred to Movement/Traversal.
+
 ## 4. Open-world / generation direction
 
 Generation is not the engine and must not define reality by chunk boundaries.
@@ -156,7 +150,7 @@ Long-term top-down planning:
 
 Roads, utilities, rivers, parcels and other cross-region structures are planned in global coordinates before streaming/materialization. A local region may load part of a road; it does not invent how that road connects.
 
-Generation will create ordinary semantic terrain/entities through WHAT using WHERE. Once they exist, the same current persistent world owns later changes. Replacing generation must not reset looted containers, destroyed structures, construction, vehicles, corpses or other durable state.
+Generation will create ordinary semantic terrain/entities through WHAT using WHERE. Collision/content validation can then prove required placed entities have explicit physics profiles. Once world facts exist, the same current persistent world owns later changes.
 
 ## 5. Outbreak / player-story direction
 
@@ -186,7 +180,7 @@ Golden semantic renderer blob:
 
 `3d8a0a70ac983408bb48f58fc659dfb07e216ed3`
 
-Rendering is not being rebuilt in these foundation slices. When designed, it must consume WHERE/WHAT and recover exact semantic art behavior rather than approximate it.
+Rendering is not being rebuilt in these simulation slices. When designed, it must consume WHERE/WHAT and recover exact semantic art behavior rather than approximate it.
 
 ## 8. Development process / anti-drift rules
 
@@ -211,6 +205,7 @@ Global invariants:
 13. Do not wire new modules into deprecated runtime through temporary compatibility code merely to make progress visible.
 14. Persistent-world mechanics should attach typed state through stable entity IDs rather than expanding `WorldEntityRecord` into a generic metadata bag.
 15. Gameplay systems may use WHEN for duration/order but WHEN must never absorb their mechanic-specific rules.
+16. Movement legality must consume the canonical Collision / Spatial Query contract rather than duplicating occupancy rules.
 
 ## 9. Documentation ownership
 
@@ -240,6 +235,10 @@ Global invariants:
 
 ## 11. Current next action
 
-The **WHERE / WHAT / WHEN foundation is complete**. Do not automatically start another major subsystem merely because the foundation exists.
+**Do not jump directly to generation or rendering yet.**
 
-On the next design prompt, choose one bounded downstream system and run it through the approval workflow. A likely architectural next design is **00D Global World Planning / Generation Contract**, because generation can now populate canonical WHAT using WHERE while later gameplay can run through WHEN, but 00D is **not authorized for implementation by the WHEN prompt**.
+Recommended next bounded system: **Movement Actions**.
+
+Why: Movement is the first true integration seam that can put WHERE + WHAT + Collision + WHEN together without needing graphics. It should ask Collision / Spatial Query about a target footprint, submit approved variable-duration movement through WHEN, then mutate WHAT placement at the correct action phase/completion. Terrain traversal policy must be designed explicitly rather than smuggled into collision.
+
+Do not implement Movement until its own standalone system design has been described/approved or the user explicitly authorizes that bounded implementation.
