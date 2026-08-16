@@ -16,7 +16,11 @@ Cross-system decisions/rationale: `DESIGN_DECISIONS.md`.
 
 The deployed `game/scripts/reboot/` runtime is **frozen/deprecated reference code**. Do not extend it as the target architecture.
 
-The first canonical modular foundation subsystem, **00A WHERE / Spatial Model**, is implemented under `game/scripts/foundation/spatial/` and has its own CI contract smoke. WHAT and WHEN remain separate bounded future systems.
+Canonical modular foundation status:
+
+- **00A WHERE / Spatial Model — IMPLEMENTED** under `game/scripts/foundation/spatial/`, dedicated CI contract smoke.
+- **00B WHAT / Persistent World State — IMPLEMENTED** under `game/scripts/foundation/world/`, dedicated CI contract smoke.
+- **00C WHEN / Tick Action Pause — next bounded system; not implemented.**
 
 Canonical broad modular architecture inventory: `MODULAR_REBUILD_MASTER_DESIGN.md`, but older static-raid/strategic-map assumptions in that file yield to newer North Star/decision entries.
 
@@ -316,7 +320,28 @@ Canonical WHERE rules:
 
 Do not reopen these decisions as accidental implementation details. If a later system exposes a real gameplay requirement to change them, treat it as an explicit cross-system contract revision.
 
-## 15. Performance/mobile rules
+## 15. Canonical persistent-world foundation
+
+`SYSTEM_DESIGNS/00B_PERSISTENT_WORLD_STATE.md` is IMPLEMENTED.
+
+Canonical WHAT rules:
+
+- one authoritative current persistent world;
+- opaque stable string entity IDs independent of Nodes/array order/placement;
+- semantic entity types and semantic terrain; no renderer indices;
+- no generic metadata bag in the foundation entity record;
+- entities may remain persistent while unplaced;
+- placement uses WHERE channel + anchor + facing + footprint + optional structure axis;
+- occupancy is derived/indexed and never owns collision legality;
+- normal writes pass through `WorldMutationService`;
+- public entity/placement reads are mutation-safe copies;
+- successful foundation mutations advance a revision and emit typed mechanic-agnostic changes;
+- deterministic in-memory snapshot/restore is atomic and rebuilds derived occupancy;
+- WHAT has no WHEN/generator/render/streaming/reboot or gameplay-mechanic dependency.
+
+Future health/inventory/door/vehicle/infection/etc. state should normally be explicit typed domain state keyed by the same stable entity IDs rather than appended to a universal foundation dictionary.
+
+## 16. Performance/mobile rules
 
 Phone/Safari is first-class.
 
@@ -330,13 +355,15 @@ Phone/Safari is first-class.
 - one zoom owner supplies canonical zoom values;
 - real-life interruption requires a hard application pause design; browser/app visibility/focus behavior must never let simulation continue unnoticed when the platform gives us a reliable lifecycle signal.
 
-## 16. Reusable coding/GitHub lessons — living SOP
+## 17. Reusable coding/GitHub lessons — living SOP
 
 This section grows when repeated lessons are discovered.
 
 ### Godot/GDScript
 
 - Be conservative with `:=` around `Dictionary`/`Variant`; explicit types/conversions avoid strict inference surprises.
+- **Do not initialize a typed array through a ternary whose alternate branch is a bare `[]`.** Godot can produce an untyped `Array` at runtime and reject assignment to `Array[T]`. Initialize `var values: Array[T] = []` first, then assign inside an explicit branch.
+- GDScript static return analysis may still require an explicit fallback return after an apparently infinite `while true` loop in a typed-return function.
 - Keep data schemas/API names stable and test them as contracts.
 - Avoid mutation inside draw functions.
 - Prefer deterministic headless tests for generation/simulation.
@@ -375,7 +402,7 @@ If it belongs only to one subsystem, record it in that subsystem design instead.
 
 Do not leave important lessons or decisions only in chat.
 
-## 17. Validation rule
+## 18. Validation rule
 
 For documentation-only changes, preserve the currently deployed reference build and run the existing Pages gate if repository workflow triggers it.
 
@@ -392,7 +419,7 @@ For modular code changes, exact final SHA must pass:
 
 Add one focused CI test per subsystem instead of one giant smoke script that knows every internal detail.
 
-## 18. Communication rule
+## 19. Communication rule
 
 - Surface architectural concerns before coding.
 - Explain when a user request is too broad and propose a smaller sequence.
@@ -403,7 +430,7 @@ Add one focused CI test per subsystem instead of one giant smoke script that kno
 - If current repo docs conflict with the current conversation, do not silently pick one: identify whether the conversation changed the design and update durable memory accordingly.
 - When canonical code is intentionally not wired into the frozen playable reference, say so plainly rather than implying the live game changed.
 
-## 19. Required final footer after repository changes
+## 20. Required final footer after repository changes
 
 End repo-change responses with:
 
