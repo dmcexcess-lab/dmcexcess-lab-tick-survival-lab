@@ -34,6 +34,7 @@ jobs:
           test -f SYSTEM_DESIGNS/README.md
           test -f SYSTEM_DESIGNS/00_FOUNDATION_WHERE_WHAT_WHEN.md
           test -f SYSTEM_DESIGNS/00A_SPATIAL_MODEL.md
+          test -f SYSTEM_DESIGNS/00B_PERSISTENT_WORLD_STATE.md
           test -f MODULAR_REBUILD_MASTER_DESIGN.md
           test -f REBOOT_CORE.md
           test -f PREFAB_WORKSHOP.md
@@ -44,6 +45,7 @@ jobs:
           grep -q 'One major system per implementation slice' README_SOPS.md
           grep -q 'Main is composition, not implementation' MODULAR_REBUILD_MASTER_DESIGN.md
           grep -q 'Status: \*\*IMPLEMENTED' SYSTEM_DESIGNS/00A_SPATIAL_MODEL.md
+          grep -q 'Status: \*\*APPROVED' SYSTEM_DESIGNS/00B_PERSISTENT_WORLD_STATE.md
           grep -q '1763958f44eb7f855fd49944c00d1ffe608c0abe' MODULAR_REBUILD_MASTER_DESIGN.md
           test -f game/project.godot
           test -f game/export_presets.cfg
@@ -58,7 +60,7 @@ jobs:
           test -f game/assets/player_east.svg
           test -f game/assets/player_south.svg
           test -f game/assets/player_west.svg
-          # First canonical modular foundation slice: WHERE / Spatial Model.
+          # Canonical modular foundation slice 00A: WHERE / Spatial Model.
           test -f game/scripts/foundation/spatial/SpatialFacing.gd
           test -f game/scripts/foundation/spatial/SpatialFootprint.gd
           test -f game/scripts/foundation/spatial/SpatialStructureGeometry.gd
@@ -70,6 +72,30 @@ jobs:
           grep -q 'class_name SpatialStructureGeometry' game/scripts/foundation/spatial/SpatialStructureGeometry.gd
           grep -q 'class_name SpatialLayer' game/scripts/foundation/spatial/SpatialLayer.gd
           grep -q 'class_name SpatialModel' game/scripts/foundation/spatial/SpatialModel.gd
+          # Canonical modular foundation slice 00B: WHAT / Persistent World State.
+          test -f game/scripts/foundation/world/WorldEntityId.gd
+          test -f game/scripts/foundation/world/WorldEntityRecord.gd
+          test -f game/scripts/foundation/world/WorldPlacement.gd
+          test -f game/scripts/foundation/world/TerrainStore.gd
+          test -f game/scripts/foundation/world/EntityStore.gd
+          test -f game/scripts/foundation/world/PlacementStore.gd
+          test -f game/scripts/foundation/world/OccupancyIndex.gd
+          test -f game/scripts/foundation/world/WorldChange.gd
+          test -f game/scripts/foundation/world/WorldState.gd
+          test -f game/scripts/foundation/world/WorldMutationService.gd
+          test -f game/scripts/ci/WorldStateSmoke.gd
+          grep -q 'class_name WorldEntityId' game/scripts/foundation/world/WorldEntityId.gd
+          grep -q 'class_name WorldEntityRecord' game/scripts/foundation/world/WorldEntityRecord.gd
+          grep -q 'class_name WorldPlacement' game/scripts/foundation/world/WorldPlacement.gd
+          grep -q 'class_name TerrainStore' game/scripts/foundation/world/TerrainStore.gd
+          grep -q 'class_name EntityStore' game/scripts/foundation/world/EntityStore.gd
+          grep -q 'class_name PlacementStore' game/scripts/foundation/world/PlacementStore.gd
+          grep -q 'class_name OccupancyIndex' game/scripts/foundation/world/OccupancyIndex.gd
+          grep -q 'class_name WorldChange' game/scripts/foundation/world/WorldChange.gd
+          grep -q 'class_name WorldState' game/scripts/foundation/world/WorldState.gd
+          grep -q 'class_name WorldMutationService' game/scripts/foundation/world/WorldMutationService.gd
+          ! grep -R -q 'scripts/reboot' game/scripts/foundation/world
+          ! grep -R -q 'TickScheduler' game/scripts/foundation/world
           # Current live reference remains the deprecated clean-reboot runtime until
           # the modular replacement lands. Keep proving it still builds while the
           # modular foundation is introduced beside it.
@@ -117,6 +143,14 @@ jobs:
           ./Godot_v4.7.1-stable_linux.x86_64 --headless --path "$GITHUB_WORKSPACE/game" --script res://scripts/ci/SpatialModelSmoke.gd 2>&1 | tee "$RUNNER_TEMP/spatial-smoke.log"
           grep -q 'SPATIAL_MODEL_SMOKE_OK' "$RUNNER_TEMP/spatial-smoke.log"
           if grep -Eqi 'SCRIPT ERROR|Parse Error|Failed to load script' "$RUNNER_TEMP/spatial-smoke.log"; then exit 1; fi
+
+      - name: Persistent world state contract smoke
+        shell: bash
+        run: |
+          set -euxo pipefail
+          ./Godot_v4.7.1-stable_linux.x86_64 --headless --path "$GITHUB_WORKSPACE/game" --script res://scripts/ci/WorldStateSmoke.gd 2>&1 | tee "$RUNNER_TEMP/world-state-smoke.log"
+          grep -q 'WORLD_STATE_SMOKE_OK' "$RUNNER_TEMP/world-state-smoke.log"
+          if grep -Eqi 'SCRIPT ERROR|Parse Error|Failed to load script' "$RUNNER_TEMP/world-state-smoke.log"; then exit 1; fi
 
       - name: Reboot reference core smoke
         shell: bash
