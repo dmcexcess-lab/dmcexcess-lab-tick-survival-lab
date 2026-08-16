@@ -8,253 +8,212 @@ Repository: `dmcexcess-lab/dmcexcess-lab-tick-survival-lab`
 
 Web preview: `https://dmcexcess-lab.github.io/dmcexcess-lab-tick-survival-lab/`
 
-Tick Survival Lab is an original Godot 4 top-down zombie-apocalypse survival/extraction project in a **clean reboot**. Existing artwork is retained; the old gameplay/generator architecture is no longer canonical.
+Tick Survival Lab is an original Godot 4 top-down zombie-apocalypse survival/extraction simulation.
 
-Primary current design/runtime reference: `REBOOT_CORE.md`.
+## Current architectural status
 
-Prefab authoring reference: `PREFAB_WORKSHOP.md`.
+The project is entering a **full modular rebuild**.
 
-`TRAVEL_DEPTH_VEHICLE_GATEWAY_DESIGN.md` remains useful for later macro progression: the survivor begins on the rural outskirts, gains roaming capability toward small towns/suburbs/city, and vehicles eventually act as strategic gateway/stair transitions rather than requiring a seamless rendered island.
+The currently deployed clean-reboot runtime under `game/scripts/reboot/` is **frozen/deprecated reference code**. It remains playable and may be mined for useful recent generation/door/prefab lessons, but it is not the architecture to extend.
 
-## Current canonical runtime
+The canonical implementation target is:
 
-The active main scene is `game/main.tscn` using `game/scripts/reboot/RebootMain.gd`.
+**`MODULAR_REBUILD_MASTER_DESIGN.md`**
 
-The active runtime intentionally contains only:
+Do not add new systems to `RebootMain.gd`. Do not treat the clean-reboot renderer/art catalog as the authentic pre-rewrite graphics implementation.
 
-- retained tactical/environment/player artwork;
-- deterministic **Rural Road generator v4**;
-- the active **Prefab Workshop** for authored 16x14-or-smaller generator inserts;
-- browser/device-local prefab-library persistence;
-- player grid position and cardinal facing;
-- forward/back movement and left/right turning;
-- collision;
-- touch-first controls plus keyboard convenience;
-- three tactical zoom levels;
-- an event-driven visible-cell renderer;
-- cheap static roadside power-line rendering;
-- a static strategic progression map.
+## Golden recovery baseline
 
-The current build intentionally does **not** contain tick/calendar, weather, lighting, perception/fog, silent sound, infected, loot/inventory, combat, injuries, vehicles, extraction rewards/loss, off-screen simulation, or normal survivor/world save serialization. `user://reboot_prefabs.json` is a developer-authored prefab library, not the future gameplay save system.
+The last mature pre-clean-rewrite visual/system baseline is commit:
 
-## Current owners
+`1763958f44eb7f855fd49944c00d1ffe608c0abe`
 
-- `game/scripts/reboot/RebootArt.gd` — reboot-only art owner. Canonical structures use the early tactical-atlas vocabulary: walls 16–22, closed/open doors 23/24, window 25, original tactical floors/common props, and the clutter sheet. `world_art` supplements connected road topology.
-- `game/scripts/reboot/RebootSiteGenerator.gd` — canonical physical Rural Road generator and all authoritative procedural site/door/road geometry.
-- `game/scripts/reboot/RebootPrefabLibrary.gd` — authored-prefab data schema, validation, JSON persistence, trimming, deterministic safe-footprint search and stamping.
-- `game/scripts/reboot/RebootPrefabEditor.gd` — touch/mouse-first in-game dev workshop for painting, saving, loading and deleting authored prefabs.
-- `game/scripts/reboot/RebootPlayer.gd` — canonical player cell/facing/movement owner.
-- `game/scripts/reboot/RebootMain.gd` — active presentation/input shell: visible-cell rendering, buttons, zoom, strategic map, touch/mouse de-duplication, site-selection orchestration, local prefab-library handoff/stamping orchestration, and static visible power-line presentation.
-- `game/scripts/ci/RebootSmoke.gd` — deterministic generator/player quality smoke test, including door-axis geometry and road-variety checks.
-- `game/scripts/ci/RebootPrefabSmoke.gd` — authored-prefab validation/round-trip/deterministic-stamping smoke test.
+Title: `Document focused raid interiors v6`.
 
-Preferred dependency direction:
+This commit is an **archaeology/recovery source**, not architecture to restore wholesale.
 
-**site/prefab data -> player/world rules -> presentation/input**
+The old visuals came from `TacticalTiles.gd` combining multiple art sources, not from one atlas. Recover its semantic art-selection/draw behavior into modular art/render scripts.
 
-The procedural generator does not own or hardcode user-authored prefab data. `RebootMain` generates the normal site, asks `RebootPrefabLibrary` to attempt a safe deterministic insert, then runs the canonical generator validator over the complete map.
+### Preserved art baseline
 
-## Rural generator direction — v4
+These current asset files are byte-identical to the golden commit and must be preserved unless an explicit art-change prompt says otherwise:
 
-A tactical rural map is a **coherent sample of rural road**, not one building and not a miniature city.
+- `tactical_atlas.svg` — `a031ac456a7d92b7fbf2d6e4d625c3a30e749a4f`
+- `clutter_atlas.svg` — `966c9de04ad84d05d6203cc4e078f2fad07c03d4`
+- `world_art_atlas.svg` — `995e52973e14db0ef60f3562c1cfa5ae342d62d2`
+- `building_props_atlas.svg` — `856be2fc90d009d1b4bcc565990b9428323bb4d6`
+- `final_environment_surfaces_atlas.svg` — `a42607858bae04f25fb1c6621a6d9262e81550b1`
+- `final_environment_props_atlas.svg` — `7714d8c95833e20ebca20cfa1374f23eaa5509f1`
+- `player_north.svg` — `dfeb5be1c9cc0b66aec842d969b60b485d3a4f99`
+- `player_east.svg` — `76c3e7e1a3b07712c65b385f1d80e131b45d90b3`
+- `player_south.svg` — `a2e358fd8fe15d497bf9559ae89835af0331d10f`
+- `player_west.svg` — `c2cc192efed4c4a81905eb0d8100cd4776d4731b`
 
-Every generated 64x64 sample currently contains:
+The graphics regression after the clean rewrite was caused by replacing the old semantic renderer/catalog behavior, not by losing the asset files.
 
-- one dominant rural main road whose topology can be **straight, bent/curved-looking, or a crossroads**;
-- narrow dirt/gravel property roads and driveways branching from it;
-- exactly **four residences**;
-- exactly **one roadside gas station or corner/convenience store**;
-- exactly one farm complex among the residences;
-- one or two manufactured homes (`small_trailer` / `double_wide`);
-- the remaining residential slots filled by substantial country houses;
-- frequent roadside utility poles with static connecting power lines;
-- sparse stop signs and **no traffic lights**;
-- broad grass plus trees, bushes, scrub, tall grass, weeds and edge growth;
-- property-specific mailboxes, sheds, barns, fields, propane, firewood and rough-yard clutter;
-- optionally, at most one locally saved authored prefab when a safe destination footprint exists.
+## Non-negotiable modular rule
 
-The authored prefab is currently an **extra structure**. It does not replace one of the canonical four residences or the roadside business because user prefabs do not yet carry semantic room/property roles.
+The root/main script is **composition only**.
 
-Road topology is generated as authoritative connected cells first, then rendered with horizontal/vertical/corner/T/cross/end road sprites. Later yard, field, building-floor, forecourt and prefab painting may not overwrite main-road cells.
+Main may:
 
-### Room-size rule
+- obtain child/service references;
+- inject dependencies/configuration;
+- connect high-level signals;
+- select initial controller/mode;
+- do minimal lifecycle bookkeeping.
 
-All recorded procedural functional rooms are **at least 3x3 usable cells**. This is both a readability rule and a structural safety rule: tiny sliver rooms made interior partition/door intersections too easy to generate incorrectly.
+Main may not own drawing, input handling, button geometry, zoom/camera math, generation, player movement, collision, strategic-map presentation, prefab logic, persistence, extraction, weather, lighting, perception, sound, validation, or subsystem UI.
 
-Current residential rooms are compact but functional. The current rural business uses:
+Every named system belongs in its own standalone script/module. Prefer small replaceable composition over inheritance chains or god objects.
 
-- storefront: **7x7**;
-- stock room: **3x3**;
-- manager office: **3x3**;
-- bathroom: **3x3**;
-- rear service area: **7x3**.
+The architectural success criterion is that a subsystem can be deleted and rewritten behind a stable data/API contract without modifying unrelated modules.
 
-The earlier 3x1 office / 2x2 bathroom contract is superseded by the 3x3 minimum.
+## Stable world-data rule
 
-### Door geometry contract
+Generation outputs **semantic world data**, never atlas indices or draw calls.
 
-The reported “wall behind door” problem was generator geometry, not the tile set.
+Example semantic IDs:
 
-Doors have authoritative wall-axis metadata:
+- `ground.grass_lush`
+- `ground.gravel_driveway`
+- `wall.house_siding`
+- `door.house`
+- `fixture.kitchen_sink`
+- `prop.utility_pole`
 
-- `h` = opening in a horizontal wall; north/south are the clear approaches;
-- `v` = opening in a vertical wall; east/west are the clear approaches.
+A separate recovered `ArtCatalog` decides which asset/source/index represents each semantic ID.
 
-For every procedural or authored door:
+**Art is not physics.** Blocking, opacity, door state, interaction and later search/destruction/persistence facts are explicit world data separate from sprites.
 
-- the door cell itself is reserved from walls, windows, props and blockers;
-- the two approach cells perpendicular to the wall are reserved from structural cells and clutter;
-- later wall placement is forbidden from overwriting a reserved door/approach cell;
-- the two same-axis neighbors must remain structural, proving that the door sits in one continuous wall rather than at a wall intersection;
-- authored exterior-door clearance may extend outside the prefab footprint and must still be safe in the destination map;
-- the completed site must pass `RebootSiteGenerator.validate()`.
+This boundary is what must allow the random generator to be completely rewritten without losing graphics/player/input/map behavior.
 
-The stronger v4 rule caught real prefab bugs during implementation: country-house exterior doors shared an x-axis with an interior divider, and one farmhouse partition door sat too close to a perpendicular junction. Those floor plans were corrected rather than weakening the validator.
+## Current game direction
 
-### Roadside business grammar
+The strategic world is a **static map image/background with interactive destination nodes**, not a generated seamless tactical world.
 
-The rural band supports only a small roadside **gas station** or **corner/convenience store**. Strip malls are not generated here.
+Progression moves geographically:
 
-Store clutter follows room purpose: checkout counter, retail shelving, cold case/vending, crates/pallets, manager desk/chair, bathroom fixtures and rear-service clutter. Gas stations add a compact asphalt forecourt, pumps and gas sign; corner stores use modest frontage.
+**BASE / RURAL EDGE → SMALL TOWNS → SUBURBS → CITY EDGE → CITY CENTER**
 
-## Prefab Workshop
+The survivor starts with limited foot travel. Vehicles later act primarily as strategic gateway/stair transitions to farther travel depths/anchors. They can gain fuel/damage/storage/driving mechanics later without changing that navigation model.
 
-The active dev workshop is intentionally simple and data-driven.
+Core loop:
 
-- Maximum canvas: **16x14 cells**, matching one far-zoom tactical window.
-- Empty outer rows/columns are trimmed on SAVE.
-- Paintable layers: selected ground/floor tiles, canonical walls, windows, horizontal/vertical doors and common props/furniture.
-- Native `LineEdit` is used for naming so Web/Safari gets normal keyboard behavior.
-- Paint by tap/click or drag.
-- CLEAR and DELETE use two-tap confirmation.
-- SAVE validates hard door/overlap rules before writing.
-- Library data persists at `user://reboot_prefabs.json` for the current browser/device profile.
-- Saved prefabs are reloaded immediately by `RebootMain` and become inputs to future random Rural Road generation.
-- Given the same seed and ordered prefab library, prefab selection/origin is deterministic.
-- If no safe footprint exists, the normal procedural map is used unchanged.
+**STATIC STRATEGIC MAP → REACHABLE DESTINATION → GENERATED TACTICAL RAID → PHYSICAL EXTRACTION → RETURN TO STAGING → EXPAND ROAMING RANGE.**
 
-Safe stamping rejects roads, side roads, spawn proximity, existing buildings/buffers, structural conflicts, non-vegetation props, incompatible road/asphalt/field ground and doorway-clearance conflicts. A small amount of vegetation may be cleared, after which the full Rural Road validator still decides whether the completed map is valid.
+A deeper raid returns to the staging anchor that launched it, such as a parked vehicle later, rather than magically returning all the way home.
 
-Current workshop access:
+## Tactical raid rule
 
-- strategic map `PREFABS n` button;
-- tactical `PREFABS` button;
-- desktop F2 convenience.
+A tactical map represents **one coherent sample of a place**. It must not try to show every biome or spend most of its space on roads/filler.
 
-See `PREFAB_WORKSHOP.md` for the detailed contract and future role/room-tagging/export/import direction.
+Roads serve the site. Properties/buildings/vegetation define the site.
 
-## Art / tile-set rule
+The first rebuild target is **Rural Edge**. Do not implement Small Town until Rural Edge repeatedly looks authored and believable.
 
-The user's remembered structural look is pinned to historical early `TacticalTiles.gd` mapping:
+### Rural Edge direction
 
-- `tactical_atlas.svg`: canonical common ground/floors, walls 16–22, closed/open doors 23/24, window 25, and common tactical props;
-- `clutter_atlas.svg`: canonical household/street clutter where available;
-- `world_art_atlas.svg`: supplemental connected road topology, dirt/gravel and field rows;
-- `building_props_atlas.svg`: supplemental fixtures and civic infrastructure such as utility poles/stop signs;
-- `final_environment_props_atlas.svg`: limited supplemental vegetation;
-- individual directional player sprites remain canonical.
+Typical rural sample qualities:
 
-Do not change structural walls/doors/windows to later `world_art` shell tiles unless the user explicitly asks to change the visual style. The workshop must use this same canonical structural vocabulary.
+- one two-lane main road;
+- road topology varies among straight, bend/curve-like, crossroads, later T/offset variants;
+- narrow dirt/gravel roads and driveways branch from it;
+- lots of grass, trees, bushes, scrub, weeds and rural open land;
+- frequent utility poles/power lines along developed road frontage;
+- sparse stop signs;
+- few/no traffic lights;
+- 3–4-ish residential properties as a normal scale, not a rigid quota;
+- property mix may include a farm complex, substantial rural houses, trailers and double-wides;
+- zero or one small gas/convenience/corner store normally, never a rural strip mall; up to two only when a composition intentionally supports it.
 
-## Quality validation
+Examples are grammar, not hardcoded quotas.
 
-`RebootSiteGenerator.validate()` and `RebootSmoke.gd` exercise eight deterministic seeds and check, among other things:
+### Rural buildings/interiors
 
-- deterministic complete generation;
-- exactly five canonical primary sites: four residences + one roadside business;
-- one farm complex;
-- one or two manufactured homes;
-- multiple substantial residences;
-- exactly one gas station/corner store;
-- every procedural functional room at least 3x3;
-- exact business room sizes 7x7 / 3x3 / 3x3 / 3x3 plus rear service;
-- connected main-road and side-road presence;
-- straight + bend + crossroads variants represented across the permanent sample set;
-- dense utility-pole/power-line infrastructure;
-- sparse stop signs and zero traffic lights;
-- substantial vegetation presence;
-- original tactical structural art source;
-- exact tactical closed-door art;
-- axis-correct doors with clear approaches and no perpendicular wall intersections;
-- no door-adjacent clutter;
-- wall-aware installed fixture placement;
-- valid player spawn/movement.
+- functional rooms normally at least 3x3 usable cells;
+- public spaces such as a storefront generally 5x5–7x7;
+- support rooms generally around 3x3;
+- multiple believable rooms rather than giant empty interiors;
+- sinks/stoves/refrigerators/bathroom fixtures placed against sensible wall/plumbing planes;
+- beds/desks/shelves/counters placed with usable circulation;
+- retail shelving creates aisles;
+- stockroom/service clutter stays clear of entrances.
 
-`RebootPrefabSmoke.gd` additionally checks:
+Door geometry is a hard physical rule: every door has a wall axis, perpendicular approaches stay clear, same-axis structural neighbors remain, and a door cannot occupy a wall cross/T-junction.
 
-- a real authored cabin prefab;
-- 16x14 workshop-content trimming;
-- JSON storage encode/decode round trip;
-- rejection of broken authored door geometry;
-- deterministic safe stamping;
-- door-axis preservation after stamping;
-- authored-use metadata;
-- canonical Rural Road validation after the authored insert.
+## Prefab direction
 
-## Strategic world direction
+Prefab authoring remains part of the game/dev tooling, but it will be rebuilt modularly.
 
-The overworld is cheap/static presentation, not simulated terrain.
+A prefab is semantic data, not code and not atlas indices. It can carry:
 
-Progression runs geographically from:
+- ground/structure/prop data;
+- door axes;
+- footprint;
+- frontage/entrance anchors;
+- building/site tags;
+- allowed biome tags;
+- room metadata;
+- road/drive requirements;
+- allowed rotations/mirroring.
 
-**BASE -> RURAL EDGE -> SMALL TOWN -> SUBURBS -> CITY EDGE -> CITY CORE**
+Builder controller, builder view, palette, preview renderer, validator, serializer and storage must be separate scripts.
 
-Only rural nodes are selectable in the current reboot slice. The visible rural nodes are deterministic seed streams for the same Rural Road grammar; deeper bands remain locked for later roaming/vehicle systems.
+The builder must use the same canonical renderer/art catalog as tactical gameplay so it cannot develop a second visual language.
 
-## Controls / mobile
+Maximum authored footprint should be approximately one far-zoom tactical window; resolve exact dimensions from the canonical zoom module during implementation rather than pinning a stale number in multiple places.
 
-Logical viewport remains 640x844.
+## Recovered systems to preserve for later
 
-Touch controls:
+From the golden pre-rewrite build, inspect/port rather than casually reinvent:
 
-- FORWARD
-- BACK
-- TURN L
-- TURN R
-- MAP
-- PREFABS
-- zoom - / +
+- `TacticalTiles.gd` semantic art behavior — recover now, split into modules;
+- `LocalWorldState.gd` — mutable door/collision ideas;
+- `PlayerActor.gd` — useful movement/facing semantics;
+- `SafariInputGuard.gd` — Safari de-duplication;
+- `TickScheduler.gd` — authoritative tick/action system, deferred but already substantially solved;
+- `WorldCalendar.gd` — deferred;
+- `TacticalLighting.gd` — deferred, user wants lighting later;
+- `TacticalPerception.gd` — deferred, user wants vision cone later;
+- `TacticalWeather.gd` — deferred, user wants weather later;
+- `TacticalSound.gd` — deferred silent spatial sound system;
+- `ExtractionRaidState.gd` — mine extraction state semantics;
+- old generation/street/interior passes — mine rules/algorithms only, do not recreate old patch-chain architecture.
 
-Keyboard:
+The game remains intentionally **silent** unless explicitly changed: sound is simulation data communicated visually (for example yellow spatial/noise markers), not audible playback.
 
-- W/Up forward
-- S/Down backward
-- A/Left turn left
-- D/Right turn right
-- M map
-- -/+ zoom
-- F2 prefab workshop
+## Initial modular rebuild sequence
 
-Touch is first-class. The active shell and workshop suppress synthetic mouse actions after a real touch. The workshop's native name field is retained for Web/Safari keyboard reliability.
+1. **Do not start with random generation.**
+2. Build bootstrap-only Main plus semantic data records.
+3. Recover exact golden art mappings into standalone `ArtCatalog`.
+4. Split tactical rendering into ground/structure/prop/player renderers.
+5. Restore the old rich visuals on a tiny authored test map and verify them visually.
+6. Build separate player state/movement/facing/collision modules.
+7. Build separate camera/zoom modules.
+8. Build separate touch/keyboard/Safari input modules and tactical controls view.
+9. Build separate static strategic map state/view/input.
+10. Only after the old visual baseline is visibly restored, build the new modular Rural Edge generator.
+11. Rebuild prefab tooling on top of the shared semantic data/renderer.
+12. Add travel/extraction state.
+13. Recover tick/perception/lighting/weather/sound one subsystem at a time later.
 
-## Performance contract
+## Current deployed runtime
 
-The reboot tactical renderer remains event-driven.
+The live build at the web preview still runs the clean-reboot code until the modular foundation replaces it. It is useful only for reference/playtesting and should not be mistaken for the target architecture.
 
-- no idle `_process()` redraw loop;
-- no weather animation;
-- no perception scan;
-- no whole-map tactical draw;
-- only visible camera cells are rendered;
-- redraw happens only after movement, turning, zoom, map toggle, site load or explicit dev-editor input;
-- static power lines are drawn only during those same tactical redraws and only for visible linked poles;
-- the workshop is a bounded 16x14 editor, not a whole-world simulation layer.
-
-## Legacy code
-
-Many old scripts remain temporarily as historical/reference material, but they are not current architecture. Historical `TacticalTiles.gd` remains useful as an exact art-index reference only.
-
-## Current next step
-
-Playtest the Prefab Workshop on desktop and Safari: author several shapes, save/load/delete them, verify native naming input, and generate repeated Rural Road seeds to judge placement quality. Continue inspecting procedural door openings/partition junctions and straight/bent/crossroads layouts. Add semantic prefab roles/room tagging only after the basic author-save-insert loop feels reliable.
+Do not delete it during a design-only prompt. Git history plus the golden commit are the rollback/recovery sources.
 
 ## Source-of-truth order
 
 1. Newest explicit user instruction
-2. Current `main` repository state
+2. Current repository state
 3. `README_SOPS.md`
-4. This file
-5. `REBOOT_CORE.md`
-6. `PREFAB_WORKSHOP.md` for authored-prefab details
-7. `TRAVEL_DEPTH_VEHICLE_GATEWAY_DESIGN.md` for future macro travel direction
-8. Legacy design docs only when they do not conflict with the reboot
+4. This context file
+5. **`MODULAR_REBUILD_MASTER_DESIGN.md`**
+6. Golden recovery commit `1763958f44eb7f855fd49944c00d1ffe608c0abe` for exact old code/art archaeology
+7. `TRAVEL_DEPTH_VEHICLE_GATEWAY_DESIGN.md` where compatible with the newer static strategic-map direction
+8. Older design docs only where they do not conflict
+
+If a user requests a destructive rewrite and the scope is genuinely ambiguous, ask a targeted clarifying question before crossing subsystem boundaries.
