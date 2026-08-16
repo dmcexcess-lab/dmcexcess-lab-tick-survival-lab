@@ -33,6 +33,7 @@ The three-part decomposition is settled and all three bounded foundation contrac
 | 00A | Spatial Model — WHERE | **IMPLEMENTED** | `00A_SPATIAL_MODEL.md` | Canonical global `Vector2i` grid, N/E/S/W facing, arbitrary whole-cell footprints, structure cells with explicit axis, pure geometry contract |
 | 00B | Persistent World / Entity State — WHAT | **IMPLEMENTED** | `00B_PERSISTENT_WORLD_STATE.md` | Stable IDs, semantic terrain/entities, WHERE placement, derived occupancy, validated mutations, revision/change events, deterministic snapshot/restore |
 | 00C | Tick / Action / Pause Kernel — WHEN | **IMPLEMENTED** | `00C_TICK_ACTION_PAUSE.md` | Integer world tick, deterministic scheduled-event heap, concurrent actor actions, phases/interruption/resume, decision auto-pause, hard pause, atomic snapshot/restore |
+| 01 | Collision / Spatial Query | **IMPLEMENTED** | `01_COLLISION_SPATIAL_QUERY.md` | Explicit type-level movement collision + sparse per-entity overrides; read-only WHERE+WHAT occupancy queries with CLEAR/BLOCKED/UNKNOWN |
 | 00D | Global World Planning / Generation Contract | **NOT DESIGNED** | `00D_GLOBAL_WORLD_GENERATION.md` | Geography/roads/utilities/parcels/building footprints planned coherently; generator feeds initial WHAT using WHERE |
 | 00E | Population / Household / Outbreak / Player Story | **NOT DESIGNED** | `00E_POPULATION_OUTBREAK_PLAYER_STORY.md` | Persistent people/homes/jobs/relationships, scalable simulation resolution, player embedded in generated world |
 | 00F | Streaming / Materialization | **NOT DESIGNED** | `00F_STREAMING_MATERIALIZATION.md` | Performance/storage mechanism over one logical world; partitions never define reality |
@@ -71,7 +72,16 @@ The three-part decomposition is settled and all three bounded foundation contrac
 - `game/scripts/foundation/time/TickKernel.gd`
 - `game/scripts/ci/TickKernelSmoke.gd`
 
-WHERE, WHAT, and WHEN are intentionally not wired into the frozen playable reference runtime yet. Integration waits for approved canonical neighboring systems rather than creating temporary adapters.
+### Implemented Collision / Spatial Query owners
+
+- `game/scripts/simulation/collision/CollisionProfile.gd`
+- `game/scripts/simulation/collision/CollisionCatalog.gd`
+- `game/scripts/simulation/collision/CollisionOverrideState.gd`
+- `game/scripts/simulation/collision/SpatialQueryResult.gd`
+- `game/scripts/simulation/collision/SpatialQueryService.gd`
+- `game/scripts/ci/CollisionSpatialQuerySmoke.gd`
+
+WHERE, WHAT, WHEN, and Collision / Spatial Query are intentionally not wired into the frozen playable reference runtime yet. Integration waits for approved canonical neighboring systems rather than creating temporary adapters.
 
 ## Why generation is not the foundation
 
@@ -99,8 +109,7 @@ Exact order will be refined after the foundations are designed.
 | Player/actor renderer | NOT DESIGNED | Four directional sprites initially; should not make underlying actor model player-only |
 | Authored visual test area | NOT DESIGNED | Proves recovered graphics independently of procedural generation |
 | Actor state/facing | NOT DESIGNED | Shared actor foundation for player/NPC/infected where appropriate |
-| Collision/spatial query | NOT DESIGNED | Reads WHERE + WHAT; no UI/generator ownership |
-| Movement actions | NOT DESIGNED | Uses WHERE + WHAT + WHEN contracts |
+| Movement actions | NOT DESIGNED | First true WHERE + WHAT + Collision + WHEN bridge; no input/render ownership |
 | Tactical camera + zoom | NOT DESIGNED | One canonical zoom owner |
 | Touch/keyboard/Safari input | NOT DESIGNED | Emits semantic intents; hard-pause lifecycle requirements |
 | Tactical controls UI | NOT DESIGNED | Presentation/hit regions only |
@@ -110,7 +119,7 @@ Exact order will be refined after the foundations are designed.
 | Procedural room/layout | NOT DESIGNED | Room graph, circulation, doors |
 | Furniture/fixture/clutter dressing | NOT DESIGNED | Purpose-aware planners, directional art semantics |
 | Vegetation/utilities/civic dressing | NOT DESIGNED | Local detail respecting global utility/network facts |
-| World/generator validation | NOT DESIGNED | Independent coherence/quality gates |
+| World/generator validation | NOT DESIGNED | Independent coherence/quality gates; may consume collision coverage diagnostics |
 | Prefab authoring tools | NOT DESIGNED | Shared canonical semantic data/art renderer; separate controller/view/storage/validation |
 | Construction/destruction | DEFERRED | Persistent WHAT mutation using WHERE; player may build/secure bases anywhere legal |
 | Base/community summary layer | NOT DESIGNED | Optional thin summary/management layer over physical world facts; no special base map |
