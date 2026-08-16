@@ -21,15 +21,18 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Validate reboot source
+      - name: Validate transition source
         shell: bash
         run: |
           set -euxo pipefail
           test -f README.md
           test -f README_CONTEXT.md
           test -f README_SOPS.md
+          test -f MODULAR_REBUILD_MASTER_DESIGN.md
           test -f REBOOT_CORE.md
           test -f PREFAB_WORKSHOP.md
+          grep -q 'Main is composition, not implementation' MODULAR_REBUILD_MASTER_DESIGN.md
+          grep -q '1763958f44eb7f855fd49944c00d1ffe608c0abe' MODULAR_REBUILD_MASTER_DESIGN.md
           test -f game/project.godot
           test -f game/export_presets.cfg
           test -f game/main.tscn
@@ -43,6 +46,10 @@ jobs:
           test -f game/assets/player_east.svg
           test -f game/assets/player_south.svg
           test -f game/assets/player_west.svg
+          # Current live reference remains the deprecated clean-reboot runtime until
+          # the modular replacement lands. Keep proving it still builds during the
+          # design/foundation transition; architecture guards switch to the modular
+          # source as that source becomes active.
           test -f game/scripts/reboot/RebootArt.gd
           test -f game/scripts/reboot/RebootSiteGenerator.gd
           test -f game/scripts/reboot/RebootPlayer.gd
@@ -80,7 +87,7 @@ jobs:
           ./Godot_v4.7.1-stable_linux.x86_64 --headless --editor --path "$GITHUB_WORKSPACE/game" --quit 2>&1 | tee "$RUNNER_TEMP/import.log"
           if grep -Eqi 'SCRIPT ERROR|Parse Error|Failed to load script' "$RUNNER_TEMP/import.log"; then exit 1; fi
 
-      - name: Reboot core smoke
+      - name: Reboot reference core smoke
         shell: bash
         run: |
           set -euxo pipefail
@@ -88,7 +95,7 @@ jobs:
           grep -q 'REBOOT_CORE_SMOKE_OK' "$RUNNER_TEMP/reboot-smoke.log"
           if grep -Eqi 'SCRIPT ERROR|Parse Error|Failed to load script' "$RUNNER_TEMP/reboot-smoke.log"; then exit 1; fi
 
-      - name: Prefab workshop smoke
+      - name: Prefab workshop reference smoke
         shell: bash
         run: |
           set -euxo pipefail
