@@ -32,8 +32,8 @@ Before changing code or repository behavior:
 
 Canonical active owners:
 
-- `scripts/reboot/RebootArt.gd` — retained artwork indices/resources and canonical tactical tile vocabulary.
-- `scripts/reboot/RebootSiteGenerator.gd` — physical tactical-site/biome-sample generation.
+- `scripts/reboot/RebootArt.gd` — retained artwork indices/resources, canonical tactical structural vocabulary, supplemental road topology tiles.
+- `scripts/reboot/RebootSiteGenerator.gd` — physical tactical-site generation, road graph, building/room geometry, door axes/clearance and collision facts.
 - `scripts/reboot/RebootPlayer.gd` — player cell/facing/movement.
 - `scripts/reboot/RebootMain.gd` — rendering/input/zoom/static strategic map orchestration and cheap static tactical presentation such as power lines.
 - `scripts/ci/RebootSmoke.gd` — deterministic core/quality validation.
@@ -46,65 +46,64 @@ When later systems return, add them as new focused owners rather than embedding 
 
 ## 4. Reboot scope discipline
 
-The active reboot currently excludes:
-
-- tick/calendar;
-- weather;
-- lighting;
-- vision/fog;
-- sound;
-- infected;
-- loot/inventory;
-- combat/injuries;
-- vehicles;
-- save serialization.
+The active reboot currently excludes tick/calendar, weather, lighting, vision/fog, sound, infected, loot/inventory, combat/injuries, vehicles and save serialization.
 
 Do not restore one of these simply because legacy code exists. Reintroduce only when the user asks and the current foundation has been inspected.
 
 ## 5. Generator rules
 
-A generated tactical map represents **one coherent local biome sample**. A sample may contain several related properties/buildings/businesses when that is the natural scale of the biome; it should not become a giant mixed-biome city map.
+A generated tactical map represents **one coherent local biome sample**.
 
-- Generate the biome/site purpose and composition first.
-- Roads/driveways must serve believable destinations rather than exist as filler.
+- Generate biome/site composition first.
+- Roads/driveways serve believable destinations rather than exist as filler.
+- Generate authoritative road connectivity before selecting road art.
+- Protect main-road cells from later building-floor, yard, field or forecourt painting.
 - Use purposeful prefab/floor-plan grammar and functional room metadata.
-- Furniture/clutter should reinforce room/site purpose.
+- **Every functional room must be at least 3x3 usable cells unless the user explicitly changes this rule.**
+- Furniture/clutter must reinforce room purpose.
 - Maintain O(1)-style collision lookups for runtime movement.
 - Validate quality invariants, not merely successful Dictionary creation.
-- Reserve doors and their immediate approach cells from furniture/clutter.
-- Keep installed fixtures structurally placed against appropriate walls/partitions.
 
-Current Rural Road v3 composition is intentionally constrained:
+Current Rural Road v4 composition:
 
-- one cross-map rural two-lane main road plus narrow dirt/gravel connectors;
-- exactly four residences and one roadside gas station/corner store;
+- main-road topology varies among straight, bent/curved-looking and crossroads;
+- narrow dirt/gravel property connectors;
+- exactly four residences + one gas station/corner store;
 - exactly one farm complex;
 - one or two manufactured homes;
-- remaining residences as substantial country/farm housing;
-- dense utility poles/power lines, sparse stop signs, zero traffic lights;
+- remaining residences substantial country housing;
+- frequent utility poles/power lines, sparse stop signs, zero traffic lights;
 - broad grass/tree/bush/scrub vegetation;
-- compact commercial interior contract: 7x7 storefront, 3x3 stock room, 3x1 office, 2x2 bathroom.
+- compact commercial contract: 7x7 storefront, 3x3 stock room, 3x3 manager office, 3x3 bathroom, 7x3 rear service.
 
-Current validation rejects compositions that violate these authored constraints, allows at most 13% road/gravel/asphalt coverage, and rejects wall-door overlap or door-adjacent clutter.
+### Door geometry is a hard invariant
+
+Doors are openings in one authoritative wall axis, not decorative sprites.
+
+- Horizontal-wall door (`h`): north/south approaches must be structurally clear; left/right neighbors remain structural.
+- Vertical-wall door (`v`): east/west approaches must be structurally clear; up/down neighbors remain structural.
+- The door cell and its two perpendicular approach cells are reserved from later wall/window/prop placement.
+- Later wall generation must never erase/overwrite a recorded door.
+- A door may not sit at a perpendicular partition intersection or share an axis in a way that destroys the continuous wall around another door.
+- Clutter/fixtures cannot occupy a reserved door approach.
+- Validation must reject bad prefab geometry; do not hide it with presentation tricks.
+
+If a prefab fails these checks, change the floorplan/door placement. Do not weaken the validator merely to make CI green.
 
 ## 6. Art / tile-set rules
-
-The remembered old structural look is **not** the later world-art house shell vocabulary.
 
 Canonical reboot structural art is pinned to historical early `TacticalTiles.gd` indices:
 
 - tactical walls 16–22;
 - tactical closed/open doors 23/24;
 - tactical window 25;
-- original tactical ground/floors/common props and clutter sheet where available.
+- original tactical ground/floors/common props and clutter where available.
 
-Use later atlases only to supplement capabilities the early sheets did not provide cleanly, such as road topology/gravel/fields, utility poles/stop signs, selected installed fixtures and vegetation variants.
+`world_art` may supplement connected road topology/gravel/fields. Later building/final atlases may supplement utility hardware, fixtures and vegetation.
 
-Do not silently swap structural walls/doors/windows to later `world_art` tiles. The later closed-door art includes its own wall-colored backing and does not reproduce the user's remembered tile set.
+Do not silently swap structural walls/doors/windows to later `world_art` tiles unless the user explicitly requests a visual-style change.
 
 ## 7. Performance rules
-
-The reboot establishes a deliberately cheap baseline:
 
 - no idle redraw loop;
 - render only visible tactical cells;
@@ -112,9 +111,9 @@ The reboot establishes a deliberately cheap baseline:
 - use dictionary lookups for sparse walls/props/blockers;
 - avoid scanning the full 64x64 site per frame;
 - static strategic map is presentation, not simulated terrain;
-- cheap static overlays such as power lines may render only during existing event-driven redraws and should be bounded to visible content.
+- cheap static overlays such as power lines render only during existing event-driven redraws and remain bounded to visible content.
 
-Any future animated/perception system must preserve this baseline as much as possible and should own its own bounded work rather than forcing whole-scene redraws.
+Any future animated/perception system must preserve this baseline as much as possible.
 
 ## 8. Input / mobile rules
 
@@ -124,7 +123,7 @@ Phone/Safari remains first-class.
 - large on-screen controls;
 - synthetic mouse duplication must be suppressed;
 - keyboard controls are development convenience;
-- map/zoom are zero-simulation-cost presentation controls until a future timing system explicitly says otherwise.
+- map/zoom are zero-simulation-cost presentation controls until timing explicitly returns.
 
 ## 9. GDScript rules
 
@@ -140,7 +139,7 @@ Phone/Safari remains first-class.
 
 Legacy scripts/design docs may remain temporarily in the repository, but they are inactive unless current `README_CONTEXT.md` says otherwise.
 
-Do not make new features depend on inactive legacy modules merely to save coding time. Historical files may be inspected to recover exact art indices or deliberately selected algorithms, but the active implementation belongs in reboot owners. Git history is the rollback/reference mechanism.
+Historical files may be inspected to recover exact art indices or deliberately selected algorithms, but active implementation belongs in reboot owners. Git history is the rollback/reference mechanism.
 
 ## 11. Validation
 
@@ -152,6 +151,8 @@ For meaningful reboot code changes, exact final SHA must pass:
 4. real main-scene startup smoke with `REBOOT_BOOT_OK`;
 5. Web export;
 6. Pages artifact upload/deployment.
+
+Rural generator smoke must continue to exercise multiple deterministic seeds and cover all current road variants plus room-size and door-axis geometry invariants.
 
 Logs must be rejected for `SCRIPT ERROR`, `Parse Error`, or `Failed to load script`.
 
@@ -169,9 +170,10 @@ Before calling a repo task done:
 
 - Did I refresh SOP + context once at prompt start?
 - Did I inspect current relevant source?
-- Did I use the reboot owners rather than legacy patch layers?
+- Did I use reboot owners rather than legacy patch layers?
 - Did I protect the event-driven/visible-cell performance baseline?
-- Did I preserve the pinned original tactical structural vocabulary unless explicitly asked otherwise?
+- Did I preserve the pinned tactical structural vocabulary unless explicitly asked otherwise?
+- Are every recorded room and every generated doorway still valid under the current hard geometry rules?
 - Did I add/update deterministic validation where appropriate?
 - Did exact final SHA pass Godot + Pages?
 - Did I leave no temporary writer/tooling artifacts?
