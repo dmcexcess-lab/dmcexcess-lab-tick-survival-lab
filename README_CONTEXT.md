@@ -14,18 +14,21 @@ This is an original Godot 4 top-down zombie-apocalypse survival simulation. Proj
 
 First Fire is a same-owner source project. Reusable tactical/physical-world work may be adapted after inspection, but Tick must not inherit First Fire's camp/menu/expedition architecture.
 
-Durable design references: `DESIGN.md`, `ROADMAP.md`, `WORLD_GENERATION.md`, `WORLD_NAVIGATION_AUDIT.md`, `ART_VOCABULARY.md`, and `FIRST_FIRE_REUSE.md`.
+Durable design references: `DESIGN.md`, `ROADMAP.md`, `WORLD_GENERATION.md`, `WORLD_NAVIGATION_AUDIT.md`, `ART_VOCABULARY.md`, `MINI_WORLD_STREETSCAPE_DESIGN.md`, and `FIRST_FIRE_REUSE.md`.
 
 ## Current milestone / stage
 
-**Milestone 0.2 — Action Execution Model is complete. Milestone 0.3A — Visual Perception is complete. Milestone 0.3B — Weather Foundation is functionally present. The current world/navigation stage now includes a generator-support art vocabulary pass before the next macro geography / chunk-contract expansion or 0.3C Spatial Sound Visualization.**
+**Milestone 0.2 — Action Execution Model is complete. Milestone 0.3A — Visual Perception is complete. Milestone 0.3B — Weather Foundation is functionally present. World/navigation is now pivoting to a mini-world architecture: a deterministic 5×5 macro map of local 64×64 regions, with only the current local region rendered tactically. Streetscape/building coherence is v5.**
 
-Canonical source includes authored maps, deterministic 64×64 procedural regions, connected road hierarchy, larger room-aware procedural buildings, spaced parking stalls, a full-screen overworld map, directional road topology art, follow-camera/zoom, world/scheduler/player/timing-dummy modules, tactical + clutter + world/building-prop atlases, lighting, perception/fog, silent sound helpers, weather state/VFX, tick-driven calendar/day-night cycle, split dev/in-game HUDs, Safari touch suppression, and deterministic map/region/tick/calendar/environment/perception smoke tests.
+Canonical source includes authored maps, deterministic 64×64 procedural regions, connected road hierarchy, larger room-aware procedural buildings, spaced parking stalls, a full-screen mini-world map, directional road topology art, performance-bounded local zoom, world/scheduler/player/timing-dummy modules, tactical + clutter + world/building-prop atlases, lighting, perception/fog, silent sound helpers, weather state/VFX, tick-driven calendar/day-night cycle, split dev/in-game HUDs, Safari touch suppression, and deterministic map/region/mini-world/tick/calendar/environment/perception smoke tests.
 
 Ownership:
 
 - `TacticalMapGenerator.gd` — authored initial physical map facts plus the shared ground-query language used by authored and procedural maps.
-- `ProceduralRegionGenerator.gd` — deterministic 64×64 local-region biome, road, parcel, structure, clutter and initial-light generation using the shared physical map schema. Current generator version is 4.
+- `ProceduralRegionGenerator.gd` — deterministic v4 64×64 physical baseline: biome, road, parcel, structure, clutter and initial-light generation using the shared physical map schema.
+- `MiniRegionGenerator.gd` — generator v5 orchestration layer for mini-world local regions; wraps v4 and applies the deterministic streetscape/building-family coherence pass.
+- `StreetscapePass.gd` — v5 local-generation pass for traffic controls, street furniture, building families, parking-destination repair and door-run sanitation. It owns generation-time coherence only, not runtime simulation.
+- `MiniWorldState.gd` — deterministic 5×5 macro region identity, per-region seed, current region coordinate and world-edge travel bounds.
 - `LocalWorldState.gd` — mutable local physical facts such as door state/collision.
 - `TickScheduler.gd` — authoritative world tick, active action execution, interruption state, actor ordering, and player-ready state.
 - `WorldCalendar.gd` — tick-to-clock/date/daylight-phase mapping.
@@ -36,7 +39,8 @@ Ownership:
 - `TacticalWeather.gd` — current weather profile, visibility/light/sound-mask hooks, temperature hook, indoor thermal buffer, and wind display helper. It does not yet simulate weather patterns.
 - `TacticalTiles.gd` — Tick-native renderer for the restored First Fire tactical atlas plus Tick's clutter, world-art, building-prop, final-environment and independent player-facing assets.
 - `TacticalPerception.gd` — LOS, facing cone, opaque geometry, biome-aware ambient-light selection, light/weather integration, visible cells, and remembered fog state.
-- `MapPreview.gd` — development input/presentation harness only; it may present debug controls but must not become the permanent owner of simulation rules.
+- `MapPreview.gd` / `MapPreviewPresentation.gd` — development harness/presentation base only.
+- `MiniWorldPresentation.gd` — current playable presentation harness: safe local zoom, macro map, region travel orchestration and far-zoom cosmetic LOD. It owns no simulation rule.
 
 ## Timing semantics
 
@@ -51,7 +55,7 @@ The control model is **real time with automatic pause**, represented synchronous
 
 Implemented interruption policies: committed, resumable, canceled, and forced failure. Tie ordering is earliest `next_tick`, then lexical actor ID. Actors scheduled exactly on the player action end tick execute before the player becomes ready.
 
-`TickSmoke.gd` proves concurrent actors, resumable reload progress, and committed-through-damage behavior.
+Region travel through a local edge road is a real movement action and costs movement ticks. Opening/closing the mini-world map costs zero ticks.
 
 ## Calendar/day-night semantics
 
@@ -63,20 +67,48 @@ Daylight phases are tick-driven: night → dawn (05:30) → day (07:00) → dusk
 
 ## Mobile/touch semantics
 
-The logical viewport is 640×844. The touch deck is a true three-row layout:
+The logical viewport is 640×844. The touch deck remains:
 
 - left column: intentional empty top slot → `TURN L` → `CROUCH`;
 - right column: `FORWARD` → `TURN R` → `BACK`;
 - both turn controls share exactly the same Y position and height;
 - forward/back preserve facing;
 - crouch is a timed stance action;
-- plus/minus controls change presentation zoom only.
+- plus/minus controls change presentation zoom only;
+- `MAP` opens the full-screen mini-world map.
 
 **One physical touch must equal one action.** Mobile Safari may synthesize a mouse click around a touch; `SafariInputGuard.gd` and the local suppression window prevent first-touch and follow-up double-actions. Do not remove these guards or reintroduce double-move / 180-degree-turn behavior.
 
 Map tapping remains available. `MENU`/Escape opens the actual pause menu and Web exit uses same-tab browser navigation.
 
-The player map is **one full-screen overworld map only**. `MAP` on touch or keyboard `M` opens it; it shows the current generated region with roads, parking lots, building footprints, biome terrain, exits, and the survivor as a red dot. It costs zero ticks and blocks tactical action input while open. There is deliberately no minimap and no separate local-area-map mode.
+## Mini-world / map semantics
+
+The player map is **one full-screen mini-world map only**. `MAP` on touch or keyboard `M` opens it.
+
+Bootstrap world scale:
+
+- 5×5 macro regions;
+- each region has a deterministic seed and broad identity: downtown, commercial, residential, rural, or woods;
+- the center is downtown and all five identities are guaranteed somewhere in each new world;
+- only the current 64×64 region is generated/rendered in tactical detail;
+- the red survivor dot is positioned inside the current macro cell according to current local coordinates;
+- continuing through a local edge road moves into the adjacent macro region if it is inside world bounds;
+- scheduler/calendar/weather/player state persist across transitions;
+- local runtime deltas are not yet persisted across unload/reload; deterministic regeneration is the baseline for later delta saves.
+
+There is deliberately no minimap and no second local-area-map mode.
+
+## Tactical zoom / performance rule
+
+The macro map owns broad orientation. Tactical presentation is local-detail only.
+
+Supported local zoom levels:
+
+- 39px / 14×12 — far local overview;
+- 44px / 12×10 — default;
+- 50px / 10×9 — close detail.
+
+The old 16×14, 18×16 and 20×17 tactical overview modes are intentionally removed from the active mini-world harness because Safari showed visible lag under animated weather. The 14×12 mode uses lower-rate/lower-density cosmetic weather while preserving the same authoritative weather/perception values.
 
 ## HUD rule
 
@@ -102,9 +134,35 @@ Current art sources:
 - `final_environment_props_atlas.svg` — final bootstrap nature, civic, residential, commercial, office and industrial environment/fixture expansion;
 - `player_south.svg`, `player_north.svg`, `player_west.svg`, `player_east.svg` — independent upright player poses with no rotation/mirror transform in the runtime draw path.
 
-The world-art road vocabulary includes vertical/horizontal paved straights, four corners, four T-junctions, a four-way intersection, directional end caps, plain/wide intersection asphalt, and horizontal/vertical dirt-road presentation. Future macro routing must emit the same road topology contract rather than inventing a second art system.
+The current art vocabulary already includes traffic lights, stop signs, street-name signs, hydrants, streetlights and utility poles. Generator v5 now actively places traffic lights and multiple traffic-control/street-furniture objects instead of leaving most of that art unused.
 
-The current expanded fixture vocabulary includes domestic fixtures/furniture (stove, counters, dresser, nightstand, bath/shower/vanity, dining table, armchair), office/commercial fixtures (filing cabinet, cubicle, computer, checkout, freezer, produce bin), industrial/utility fixtures (pallet rack, tool chest, workbench, locker, utility sink, water heater, exterior AC, electric meter), and exterior/street/rural objects (utility pole, traffic light, stop sign, parking meter, bollard, hedge, flower bed, shed, propane tank), in addition to the earlier clutter atlas.
+## Streetscape / building-family semantics
+
+V5 generation adds explicit `building_kind` as the sixth `building_rects` field.
+
+Current families include:
+
+- house;
+- farmhouse;
+- standalone store;
+- office;
+- warehouse;
+- trailer;
+- mansion / estate house;
+- duplex;
+- two- and three-unit strip malls.
+
+All buildings remain single-level.
+
+V5 coherence invariants:
+
+- every parking-lot rectangle overlaps a building destination;
+- old parking-only commercial parcels are repaired into attached strip malls;
+- every generated v5 local region contains at least one visible stop sign and traffic light;
+- developed intersections can receive traffic lights, stop signs, street-name signs, streetlights and hydrants;
+- rural/woodland roads bias toward utility poles rather than dense city furniture;
+- no horizontal or vertical run of three adjacent door cells may survive generation;
+- strip-mall unit doors are intentionally separated by wall/window frontage.
 
 ## Visual/perception semantics
 
@@ -115,14 +173,13 @@ The current expanded fixture vocabulary includes domestic fixtures/furniture (st
 - Windows transmit sight and daylight.
 - Flashlight is directional.
 - Walls, closed doors, and tall/opaque props block LOS/light.
-- Tall new fixture types such as freezers, filing cabinets, pallet racks, lockers, water heaters, hedges and sheds participate in opacity when designated by perception; lower clutter does not automatically block sight.
 - Player visibility requires facing cone + clear LOS + enough light.
 - Fog has unseen and remembered states.
 - LOS uses a sealed-corner rule so diagonal rays cannot squeeze between two touching opaque orthogonal cells.
 
 Weather VFX are presentation-only real-time animation and may continue while simulation is paused. Rain, snow, fog, wind debris and storm flash must not mutate authoritative weather/world state.
 
-Weather VFX should not visibly pass through interiors or wall tiles. Current presentation filters precipitation/debris by outdoor cell and renders fog/storm effects per outdoor non-wall cell. Weather is drawn beneath fog-of-war so the mask does not reveal hidden room geometry.
+Weather VFX should not visibly pass through interiors or wall tiles. Far local zoom may use cheaper cosmetic presentation, but gameplay weather modifiers do not change with zoom.
 
 ## Sound presentation rule
 
@@ -138,79 +195,26 @@ The persistent world is conceptually separate from the player character. The wor
 
 On player death, the user can eventually either play a new survivor in the same continuing world or start a new world seed. A later player may encounter the previous player's corpse, base, stash, family, vehicles, and consequences.
 
-## Map/world direction
+The current mini-world establishes stable world seed + macro region coordinates for later per-region persistence deltas.
 
-The imported First Fire map foundation remains an authored-layout catalog of 20×18 physical locations: Back Alley, Gas Station, Residential House, Apartment, Corner Store, Warehouse Yard, and Drainage Wash. Each can describe ground, indoor regions, walls, doors, windows/glass, obstacles, props, barrels, light markers, player spawn, and exits.
+## Current procedural limits / next work
 
-The large-map stress slice uses `ProceduralRegionGenerator.gd` to generate a deterministic 64×64 region using the same physical language. The current generator version is **4**.
+The mini-world now proves deterministic macro regions, deterministic local seeds, region transitions, a central world map, streetscape traffic-control density, family-aware single-story buildings, parking-destination coherence, door-run sanitation, local lighting/vision and mobile-safe tactical zoom.
 
-Current road rules and data contracts:
+It does **not** yet simulate coastline, water/rivers, elevation, off-screen region activity, local-region save deltas, loot economy, populations, outbreak state, vehicles or infected.
 
-- biome centers are contiguous seeded fields;
-- each non-downtown biome connects toward the nearest main arterial axis;
-- developed areas get short local streets, rural gets service roads, woods gets dirt trails;
-- a three-tile arterial cross is carved last and connects all four region exits;
-- player spawn sits on the arterial crossing;
-- validation proves each exit is road-connected to spawn and no generated structure blocks road cells;
-- developed buildings require nearby road frontage and orient their door toward the nearest road;
-- developed roads receive sidewalk edges, rural roads dirt shoulders;
-- `road_class_cells` distinguishes arterial/secondary/local/trail;
-- `road_surface_cells` distinguishes paved road from dirt/trail presentation;
-- `road_links` is a four-bit N/E/S/W topology mask used by directional road art and is the intended contract for future curved/branching macro road routes;
-- `road_ports` establishes a future chunk-edge data shape but is not yet a neighbor-compatible macro road contract;
-- procedural buildings now emit `wall_themes`, `door_themes`, and `window_themes` as presentation metadata while physical membership remains walls/doors/glass.
-- generator v4 uses 10×11 bootstrap parcels with 9×8 houses/shops and up-to-10×10 downtown structures;
-- `building_rects` records overmap-scale footprints while `rooms` records room zones; room partitions themselves are ordinary physical wall/door cells;
-- `parking_lots` records paved lot footprints and `parking_cells` records marked stalls; parking stall cells are never cardinally adjacent, guaranteeing at least one non-parking tile between marked spaces.
-
-The shared ground language supports rectangle fills plus optional sparse `ground_cells` overrides. Do not replace this with a second incompatible map language. Long-term hierarchy remains:
-
-**tile/object → building/location → local area/block → biome/district → region/chunk → large island world**
-
-The island mixes city/downtown, suburban/residential, commercial/industrial, rural/farm, and woods/wilderness. Destroyed/bombed bridges and failed crossings can show that the playable region once connected to a larger world.
-
-## Clutter / physical-object rule
-
-Visual variety must not blur physical semantics.
-
-A prop may be purely visual, may be included in `obstacles` to block movement, and may separately be treated as opaque by perception. These are distinct questions. Do not infer movement or sight blocking merely because an object has a sprite.
-
-See `ART_VOCABULARY.md` for the full current surface/opening/fixture vocabulary and the generator-facing art contract.
-
-## Current procedural limits / next world work
-
-The 64×64 generator currently proves deterministic biome fields, connected road hierarchy, directional road topology metadata/art, frontage-aware structures, richer floor/material vocabulary, deterministic clutter, camera-local rendering, local lighting/vision and world navigation. It does **not** yet simulate coastline, water/rivers, elevation, neighbor-compatible chunk edge contracts, utility grids, larger authored building-template libraries, loot economy, populations, outbreak state, or persistence deltas.
-
-The next world-generation-specific step should be **macro geography + chunk-edge contracts**: a seed-driven larger world composed of deterministic chunks, with coastline/water/elevation plus shared road/trail/river/utility ports that neighboring chunks agree on. Road routing should use the existing `road_links`/class/surface vocabulary and generate actual bends, junctions, loops and local street graphs.
-
-A separate near-term building pass can consume the new wall/door/window material metadata to add true building templates and room-specific interiors without another art-schema rewrite.
-
-## Long-term simulation direction
-
-See `DESIGN.md`. Intended systems include persistent infected; visualized spatial sound; deterministic weather; dangerous timing-driven combat; body-region wounds and amputation; hunger/thirst/fatigue; inventory/loot/equipment; use-based skills and learning media; destructible/free-build environments; farming/crafting; autonomous survivors and animals; emergent settlements; patrols and supply routes; vehicles; infrastructure reclamation; and eventual outbreak epicenter/spread/response plus occupation/family starts.
-
-## Near-term scope recommendation
-
-The world/navigation foundation is suitable for the next macro-world experiment now that its art vocabulary can represent horizontal/vertical roads and richer buildings. The next world-scale pass should be seed-driven macro geography + cross-chunk road/terrain contracts if island topology is the priority.
-
-Otherwise the next gameplay-system milestone remains **0.3C Spatial Sound Visualization**: tick-owned silent sound events, propagation/attenuation through physical cells, door/window/wall occlusion, weather masking, uncertain source localization, and yellow visual sound markers. Persistent infected can then consume the same perception + silent-sound model on the scheduler.
+The preferred next gameplay-system milestone remains **0.3C Spatial Sound Visualization**: tick-owned silent sound events, propagation/attenuation through physical cells, door/window/wall occlusion, weather masking, uncertain source localization, and yellow visual sound markers. Persistent infected can then consume the same perception + silent-sound model on the scheduler.
 
 Preferred dependency direction:
 
 **map/data → persistent world state → tick scheduler/rules → actor simulation → presentation/input**
 
-Rules get one durable owner. UI must not own simulation state. The map generator must not become a dumping ground for combat, inventory, AI, saves, or social systems.
+Rules get one durable owner. UI must not own simulation state. The generator must not become a dumping ground for combat, inventory, AI, saves, or social systems.
 
 ## Source-of-truth order
 
 1. Newest explicit user instruction
 2. Current `main` repository state
 3. `README_SOPS.md`
-4. This file
-5. `DESIGN.md` / `ROADMAP.md` / `WORLD_GENERATION.md` / `WORLD_NAVIGATION_AUDIT.md` / `ART_VOCABULARY.md` / `FIRST_FIRE_REUSE.md`
-6. Human `README.md`
-7. Conversation memory only as supporting context
-
-## Continuous deployment
-
-`.github/workflows/pages.yml` is the permanent build/deploy gate. It validates canonical files, imports/parses with Godot 4.7.1, runs deterministic authored-map/region/tick/calendar/environment/perception smoke tests, starts the real scene headlessly, exports Web, uploads the artifact, and deploys GitHub Pages.
+4. This context file
+5. Other durable design docs
