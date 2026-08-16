@@ -15,21 +15,30 @@ Before using this ledger, read `PROJECT_NORTH_STAR.md` and `DESIGN_DECISIONS.md`
 - **SUPERSEDED** — retained for history but replaced by newer direction.
 - **RECOVERY SOURCE** — historical behavior worth mining, not current architecture.
 
-## Current foundational sequence
+## Current foundational architecture
 
 The earlier attempt to start with a tactical `RaidMapSpec` was too high-level and assumed a disconnected raid architecture that has since been removed.
 
-The current recommended design order starts with **WHERE / WHAT / WHEN**. This is a planning order only; no foundational system is approved for code yet.
+The current foundation is organized around **WHERE / WHAT / WHEN** rather than treating map generation as the engine.
 
-| Order | System | Status | Design file | Notes |
+Canonical current umbrella draft:
+
+**[`00_FOUNDATION_WHERE_WHAT_WHEN.md`](00_FOUNDATION_WHERE_WHAT_WHEN.md)**
+
+The three-part decomposition is settled in concept. The detailed proposals inside that document remain DRAFT until the user reviews/approves them.
+
+| Order | System | Status | Design source | Notes |
 |---|---|---|---|---|
-| 00A | Spatial Model — WHERE | **NOT DESIGNED** | `00A_SPATIAL_MODEL.md` | Invisible tactical grid, global coordinates, cell footprints/facing, structures/openings; resolve wall/door/window representation |
-| 00B | Persistent World / Entity State — WHAT | **NOT DESIGNED** | `00B_PERSISTENT_WORLD_STATE.md` | Persistent IDs/entities/mutations, initial vs current state, world ownership independent of Godot scene nodes |
-| 00C | Tick / Action / Pause Kernel — WHEN | **NOT DESIGNED** | `00C_TICK_ACTION_PAUSE.md` | Variable action duration, scheduling, auto-pause, held movement semantics, hard real-life pause |
-| 00D | Global World Planning / Generation Contract | **NOT DESIGNED** | `00D_GLOBAL_WORLD_GENERATION.md` | Geography/roads/utilities/parcels/building footprints planned coherently; generator feeds initial world state |
+| 00 | WHERE / WHAT / WHEN Simulation Foundation | **DRAFT** | `00_FOUNDATION_WHERE_WHAT_WHEN.md` | Thorough umbrella architecture; no implementation permission |
+| 00A | Spatial Model — WHERE | **DRAFT (umbrella)** | Sections 2–9 of foundation doc | Invisible tactical grid, global coordinates, directions, footprints, occupancy; structure-cell recommendation still needs approval |
+| 00B | Persistent World / Entity State — WHAT | **DRAFT (umbrella)** | Sections 10–22 of foundation doc | Persistent IDs/entities/mutations; world truth independent of renderer/nodes/generator |
+| 00C | Tick / Action / Pause Kernel — WHEN | **DRAFT (umbrella)** | Sections 23–36 of foundation doc | Variable-duration actions, scheduled events, phases, interruptions, auto-pause, hard pause, coarse simulation seam |
+| 00D | Global World Planning / Generation Contract | **NOT DESIGNED** | `00D_GLOBAL_WORLD_GENERATION.md` | Geography/roads/utilities/parcels/building footprints planned coherently; generator feeds initial WHAT using WHERE |
 | 00E | Population / Household / Outbreak / Player Story | **NOT DESIGNED** | `00E_POPULATION_OUTBREAK_PLAYER_STORY.md` | Persistent people/homes/jobs/relationships, scalable simulation resolution, player embedded in generated world |
 | 00F | Streaming / Materialization | **NOT DESIGNED** | `00F_STREAMING_MATERIALIZATION.md` | Performance/storage mechanism over one logical world; partitions never define reality |
 | old-01 | Semantic tactical map / `RaidMapSpec` | **SUPERSEDED** | `01_RAID_MAP_DATA.md` | Design mine only; assumed separate raid maps and started above the real foundations |
+
+Before any 00A/00B/00C implementation begins, create/refine its standalone child design if needed from the approved umbrella and obtain explicit approval for that bounded subsystem. Do not treat umbrella approval as permission to implement all three at once.
 
 ## Why generation is not the foundation
 
@@ -57,8 +66,8 @@ Exact order will be refined after the foundations are designed.
 | Player/actor renderer | NOT DESIGNED | Four directional sprites initially; should not make underlying actor model player-only |
 | Authored visual test area | NOT DESIGNED | Proves recovered graphics independently of procedural generation |
 | Actor state/facing | NOT DESIGNED | Shared actor foundation for player/NPC/infected where appropriate |
-| Collision/spatial query | NOT DESIGNED | Reads spatial/world state; no UI/generator ownership |
-| Movement actions | NOT DESIGNED | Uses spatial query + tick/action contracts |
+| Collision/spatial query | NOT DESIGNED | Reads WHERE + WHAT; no UI/generator ownership |
+| Movement actions | NOT DESIGNED | Uses WHERE + WHAT + WHEN contracts |
 | Tactical camera + zoom | NOT DESIGNED | One canonical zoom owner |
 | Touch/keyboard/Safari input | NOT DESIGNED | Emits semantic intents; hard-pause lifecycle requirements |
 | Tactical controls UI | NOT DESIGNED | Presentation/hit regions only |
@@ -70,18 +79,18 @@ Exact order will be refined after the foundations are designed.
 | Vegetation/utilities/civic dressing | NOT DESIGNED | Local detail respecting global utility/network facts |
 | World/generator validation | NOT DESIGNED | Independent coherence/quality gates |
 | Prefab authoring tools | NOT DESIGNED | Shared canonical semantic data/art renderer; separate controller/view/storage/validation |
-| Construction/destruction | DEFERRED | Persistent world mutation; player may build/secure bases anywhere legal |
+| Construction/destruction | DEFERRED | Persistent WHAT mutation using WHERE; player may build/secure bases anywhere legal |
 | Base/community summary layer | NOT DESIGNED | Optional thin summary/management layer over physical world facts; no special base map |
-| Health/body/first aid | NOT DESIGNED | Mini-Zomboid severity/treatment model; reduced physiology, preserved consequence |
+| Health/body/first aid | NOT DESIGNED | Mini-Zomboid severity/treatment model; modifies action capability/cost through explicit seams, not scheduler internals |
 | Needs/fatigue/temperature | NOT DESIGNED | Coarse meaningful states, real consequences |
-| Vision/perception | DEFERRED | Major mood/gameplay system; mine golden solved work |
-| Lighting | DEFERRED | Major mood/gameplay system; mine golden solved work |
-| Weather | DEFERRED | State/system + separate VFX; major mood contributor |
-| Silent spatial sound | DEFERRED | Physical sound events/localization; no default audible playback |
-| Infected AI | DEFERRED | Uses shared actor/action/perception/sound/world contracts |
-| Loot/inventory/search | DEFERRED | Persistent physical containers/items in the continuous world |
-| Combat | DEFERRED | Tick/action-based exposure and injury consequences |
-| Vehicles | DEFERRED | Persistent physical world objects/travel/logistics later |
+| Vision/perception | DEFERRED | Major mood/gameplay system; consumes WHERE + WHAT, mine golden solved work |
+| Lighting | DEFERRED | Major mood/gameplay system; consumes world geometry/state/time, mine golden solved work |
+| Weather | DEFERRED | State/system scheduled through WHEN + separate VFX |
+| Silent spatial sound | DEFERRED | Spatial events using WHERE + WHAT + WHEN; no default audible playback |
+| Infected AI | DEFERRED | Emits actions using shared actor/action/perception/world contracts |
+| Loot/inventory/search | DEFERRED | Persistent physical containers/items in WHAT; timed actions through WHEN |
+| Combat | DEFERRED | Generic action timing + health consequences; no combat rules inside WHEN |
+| Vehicles | DEFERRED | Persistent multi-cell entities using WHERE/WHAT; timed travel/actions through WHEN |
 | Old raid/extraction/session architecture | **SUPERSEDED** | No required raid/extraction/staging loop in current design |
 
 ## Design template
