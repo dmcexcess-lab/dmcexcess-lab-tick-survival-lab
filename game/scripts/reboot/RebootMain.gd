@@ -18,11 +18,12 @@ const FORWARD_BUTTON := Rect2(468, 620, 154, 62)
 const TURN_RIGHT_BUTTON := Rect2(468, 690, 154, 62)
 const BACK_BUTTON := Rect2(468, 760, 154, 62)
 
+# These are samples within the same rural-edge biome, not one-property archetypes.
 const MAP_NODES := [
-    {"id":"farmstead", "label":"FARMSTEAD", "pos":Vector2(146, 260), "seed":1103},
-    {"id":"small_trailer", "label":"TRAILER", "pos":Vector2(176, 390), "seed":2207},
-    {"id":"double_wide", "label":"DOUBLE-WIDE", "pos":Vector2(144, 520), "seed":3313},
-    {"id":"country_house", "label":"COUNTRY HOUSE", "pos":Vector2(194, 650), "seed":4421},
+    {"id":"rural_road", "archetype":"rural_road", "label":"RURAL ROAD", "pos":Vector2(146, 260), "seed":1103},
+    {"id":"farm_road", "archetype":"rural_road", "label":"FARM ROAD", "pos":Vector2(176, 390), "seed":2207},
+    {"id":"county_road", "archetype":"rural_road", "label":"COUNTY ROAD", "pos":Vector2(144, 520), "seed":3313},
+    {"id":"country_lane", "archetype":"rural_road", "label":"COUNTRY LANE", "pos":Vector2(194, 650), "seed":4421},
 ]
 
 var player = Player.new()
@@ -81,15 +82,15 @@ func _draw_tactical() -> void:
             var p := Vector2i(world_x, world_y)
             var dest := Rect2(origin + Vector2(sx * tile, sy * tile), Vector2(tile, tile))
             var ground_index := int(ground[world_y * width + world_x])
-            _draw_surface(ground_index, dest)
+            _draw_art(ground_index, dest)
             if walls.has(p):
-                _draw_surface(int(walls[p]), dest)
+                _draw_art(int(walls[p]), dest)
             elif windows.has(p):
-                _draw_surface(int(windows[p]), dest)
+                _draw_art(int(windows[p]), dest)
             elif doors.has(p):
-                _draw_surface(int(doors[p]), dest)
+                _draw_art(int(doors[p]), dest)
             if props.has(p):
-                _draw_prop(int(props[p]), dest)
+                _draw_art(int(props[p]), dest)
 
     var px: int = player.cell.x - start_x
     var py: int = player.cell.y - start_y
@@ -103,12 +104,12 @@ func _draw_tactical() -> void:
     _draw_control_buttons()
     _draw_label(Vector2(190, 722), "W/UP forward   S/DOWN back", 14, Color("c7cbd0"))
     _draw_label(Vector2(190, 744), "A/D or LEFT/RIGHT turn", 14, Color("c7cbd0"))
-    _draw_label(Vector2(190, 775), "Event-driven renderer: no idle redraw", 13, Color("8d949c"))
+    _draw_label(Vector2(190, 775), "Visible-cell renderer / no idle redraw", 13, Color("8d949c"))
 
 func _draw_strategic_map() -> void:
     draw_rect(Rect2(18, 62, 604, 742), Color("171d22"), true)
     _draw_label(Vector2(34, 92), "OUTSKIRTS -> CITY", 27, Color.WHITE)
-    _draw_label(Vector2(34, 120), "Walking range: rural edge. Vehicles will unlock deeper bands later.", 14, Color("c7cbd0"))
+    _draw_label(Vector2(34, 120), "Walking range: rural edge. Each node generates a rural-road sample.", 14, Color("c7cbd0"))
 
     var rural := Rect2(52, 154, 182, 590)
     var town := Rect2(234, 154, 116, 590)
@@ -149,7 +150,7 @@ func _draw_strategic_map() -> void:
     _draw_locked_node(Vector2(493, 545), "WAREHOUSES")
     _draw_locked_node(Vector2(564, 425), "CITY CENTER")
 
-    _draw_label(Vector2(68, 775), "Tap a rural site to generate it. Tap it again later for a new seed.", 14, Color("d4dad2"))
+    _draw_label(Vector2(68, 775), "Rural nodes vary the road, homes, trailers, yards and farm context.", 14, Color("d4dad2"))
     if not active_site.is_empty():
         _draw_button(MAP_BUTTON, "CLOSE MAP", false)
 
@@ -181,11 +182,8 @@ func _draw_button(rect: Rect2, text: String, disabled: bool) -> void:
     var pos := rect.position + Vector2((rect.size.x - text_size.x) * 0.5, (rect.size.y + text_size.y * 0.5) * 0.5)
     draw_string(font, pos, text, HORIZONTAL_ALIGNMENT_LEFT, -1, size, text_color)
 
-func _draw_surface(index: int, dest: Rect2) -> void:
-    draw_texture_rect_region(Art.SURFACES, dest, Art.atlas_region(index))
-
-func _draw_prop(index: int, dest: Rect2) -> void:
-    draw_texture_rect_region(Art.PROPS, dest, Art.atlas_region(index))
+func _draw_art(encoded: int, dest: Rect2) -> void:
+    Art.draw_encoded(self, encoded, dest)
 
 func _draw_label(pos: Vector2, text: String, size: int, color: Color) -> void:
     draw_string(font, pos, text, HORIZONTAL_ALIGNMENT_LEFT, -1, size, color)
@@ -250,7 +248,7 @@ func _handle_pointer(pos: Vector2) -> void:
             var node: Dictionary = node_value
             var node_pos: Vector2 = node["pos"]
             if node_pos.distance_to(pos) <= 28.0:
-                _load_site(str(node["id"]), int(node["seed"]))
+                _load_site(str(node["id"]), str(node["archetype"]), str(node["label"]), int(node["seed"]))
                 return
         return
 
@@ -273,16 +271,17 @@ func _handle_pointer(pos: Vector2) -> void:
         player.move_backward(spec)
         queue_redraw()
 
-func _load_site(archetype: String, seed_base: int) -> void:
-    var visit := int(visit_counts.get(archetype, 0)) + 1
-    visit_counts[archetype] = visit
+func _load_site(site_id: String, archetype: String, display_name: String, seed_base: int) -> void:
+    var visit := int(visit_counts.get(site_id, 0)) + 1
+    visit_counts[site_id] = visit
     var seed := seed_base + visit * 104729
     spec = Generator.generate(archetype, seed)
+    spec["title"] = display_name
     var validation: Dictionary = Generator.validate(spec)
     if not bool(validation.get("ok", false)):
         push_error("REBOOT_SITE_INVALID %s" % str(validation.get("failures", [])))
-    player.reset(spec["spawn"], 2)
-    active_site = archetype
+    player.reset(spec["spawn"], 1)
+    active_site = site_id
     map_open = false
     queue_redraw()
 
@@ -298,7 +297,11 @@ func _zoom(delta: int) -> void:
 
 func _facing_name() -> String:
     match player.facing:
-        0: return "N"
-        1: return "E"
-        2: return "S"
-        _: return "W"
+        0:
+            return "N"
+        1:
+            return "E"
+        2:
+            return "S"
+        _:
+            return "W"
