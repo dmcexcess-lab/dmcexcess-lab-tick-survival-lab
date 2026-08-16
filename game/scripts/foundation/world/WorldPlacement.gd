@@ -55,8 +55,9 @@ func copy() -> WorldPlacement:
     return WorldPlacement.new(entity_id, channel, anchor, facing, footprint, structure_axis)
 
 func world_cells() -> Array[Vector2i]:
+    var result: Array[Vector2i] = []
     if footprint == null:
-        return []
+        return result
     return footprint.world_cells(anchor, facing)
 
 func equivalent(other: WorldPlacement) -> bool:
@@ -68,8 +69,14 @@ func equivalent(other: WorldPlacement) -> bool:
         return false
     if structure_axis != other.structure_axis:
         return false
-    var own_offsets: Array[Vector2i] = footprint.offsets() if footprint != null else []
-    var other_offsets: Array[Vector2i] = other.footprint.offsets() if other.footprint != null else []
+
+    var own_offsets: Array[Vector2i] = []
+    if footprint != null:
+        own_offsets = footprint.offsets()
+    var other_offsets: Array[Vector2i] = []
+    if other.footprint != null:
+        other_offsets = other.footprint.offsets()
+
     if own_offsets.size() != other_offsets.size():
         return false
     var own_set: Dictionary = {}
@@ -82,7 +89,9 @@ func equivalent(other: WorldPlacement) -> bool:
 
 func to_snapshot() -> Dictionary:
     var serialized_offsets: Array = []
-    var offsets: Array[Vector2i] = footprint.offsets() if footprint != null else []
+    var offsets: Array[Vector2i] = []
+    if footprint != null:
+        offsets = footprint.offsets()
     offsets.sort_custom(_cell_less)
     for offset: Vector2i in offsets:
         serialized_offsets.append([offset.x, offset.y])
