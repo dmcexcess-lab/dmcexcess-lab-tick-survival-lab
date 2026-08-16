@@ -1,5 +1,19 @@
 # Changelog
 
+## Design-First Modular Workflow / System Approval Ledger — 2026-08-16
+
+- Added `DESIGN_WORKFLOW.md` as the mandatory project process: **DESCRIBE -> APPROVE -> IMPLEMENT -> VERIFY** for every major new subsystem or rewrite.
+- Added an explicit scope gate requiring GPT to push back before coding when a prompt spans multiple major systems, break the work into dependency-ordered pieces, recommend the first bounded system, and obtain approval before implementation.
+- Added a strict no-placeholder/no-fake-completion rule. Missing prerequisite systems must be designed first or explicitly deferred rather than replaced with temporary mechanics that silently become architecture.
+- Added targeted clarification rules for genuinely ambiguous historical references, destructive scope, module ownership, stable contract changes, Safari/mobile interaction, timing, persistence and player-visible semantics. Ordinary spelling/typos do not require clarification when intent is clear.
+- Recast `README_CONTEXT.md` as a concise routing/current-state index rather than the encyclopedia of every subsystem. Detailed canonical system memory now belongs under `SYSTEM_DESIGNS/`.
+- Added `SYSTEM_DESIGNS/README.md` as the subsystem approval ledger and reusable system-design template. Major systems move through DRAFT -> APPROVED -> IMPLEMENTED (or SUPERSEDED), and DRAFT explicitly does not authorize coding.
+- Added a change-impact declaration requirement: before implementing an approved system, identify the modules expected to change, neighboring modules that must remain untouched, and whether any public contract changes.
+- Added the rule that if implementation unexpectedly requires crossing a forbidden module boundary, work stops and the system design returns to DRAFT rather than cascading a convenient patch into neighboring systems.
+- Strengthened `README_SOPS.md` into a living repository SOP with the new scope/approval gates plus reusable Godot, Safari and GitHub lessons. Reusable discoveries must be written back to SOP/system docs during the same coherent prompt instead of living only in chat history.
+- Added CI guards requiring the design workflow and system approval ledger to remain present and preserving the frozen reference runtime while Phase 0 design work continues.
+- Set the recommended first detailed subsystem design to the semantic tactical map / `RaidMapSpec` contract. No new modular runtime code was implemented in this pass.
+
 ## Modular Rebuild Reset / Golden Recovery Contract — 2026-08-16
 
 - Reclassified the current clean-reboot runtime under `game/scripts/reboot/` as **frozen/deprecated reference code** rather than the architecture to keep extending. The live Web build remains available until its modular replacement is proven.
