@@ -2,7 +2,7 @@
 
 Status: **mandatory project process**.
 
-This project is intentionally being developed one subsystem at a time. The goal is not merely to keep files small. The goal is to make each system understandable, independently testable, and replaceable without forcing unrelated systems to change.
+This project is intentionally developed one subsystem at a time. The goal is not merely to keep files small. The goal is to make each system understandable, independently testable, replaceable, and consistent with the same whole-game direction even after months of deeper work.
 
 ## 1. Core development rule
 
@@ -10,45 +10,89 @@ This project is intentionally being developed one subsystem at a time. The goal 
 
 For any new major system or meaningful rewrite:
 
-1. GPT describes the system in a focused design proposal.
-2. The user approves, rejects, or changes that design.
-3. Only after approval does implementation begin.
-4. The implementation is verified against that approved system design.
+1. GPT first refreshes the project North Star/current decisions/current context.
+2. GPT describes the system in a focused design proposal.
+3. The user approves, rejects, or changes that design.
+4. Only after approval does implementation begin.
+5. The implementation is verified against that approved system design and protected neighboring contracts.
 
 Do not skip the design/approval step merely because the code looks straightforward.
 
-## 2. Scope gate — push back when the request is too large
+## 2. The anti-drift document stack
+
+Different documents answer different questions. Do not make one giant context file do all of them.
+
+### `PROJECT_NORTH_STAR.md` — WHY / WHAT GAME
+Short, frequently reread identity and experience target.
+
+It answers:
+
+- What game are we making?
+- What should it feel like?
+- What simplification philosophy are we using?
+- What broad world/time/player assumptions should survive local redesigns?
+
+A local system design must not casually contradict the North Star.
+
+### `DESIGN_DECISIONS.md` — WHAT WE SETTLED / WHY
+Cross-system choices and rationale, including explicit supersession history.
+
+This prevents later work from seeing only the current code and forgetting why a foundational decision was made.
+
+### `README_CONTEXT.md` — WHERE WE ARE NOW
+Short routing/current-state index.
+
+It answers:
+
+- current phase;
+- current active design/system;
+- implemented vs frozen/reference status;
+- next design step;
+- which docs/history are authoritative.
+
+It should not become an encyclopedia.
+
+### `SYSTEM_DESIGNS/*.md` — HOW THIS ONE SYSTEM WORKS
+Detailed canonical contract/rules for one subsystem.
+
+### `README_SOPS.md` — HOW GPT SHOULD WORK
+Coding/GitHub/Godot/Safari/process lessons and mandatory repository workflow.
+
+### `MODULAR_REBUILD_MASTER_DESIGN.md` — BROAD ARCHITECTURE INVENTORY
+Useful global module/boundary inventory, but newer North Star/decision entries supersede older macro assumptions when the game direction evolves.
+
+## 3. Scope gate — push back when the request is too large
 
 A single implementation prompt should normally target **one major subsystem** or one tightly coupled slice of a subsystem.
 
-Examples of major subsystems:
+If a request would require designing or rewriting several major systems at once, GPT must **push back before implementation**.
 
-- semantic tactical map data;
-- art catalog;
-- ground renderer;
-- structure renderer;
-- player renderer;
-- player movement;
-- collision;
-- camera/zoom;
-- touch input;
-- controls UI;
-- strategic map;
-- road generator;
-- property planner;
-- prefab system;
-- lighting;
-- perception;
-- weather;
-- tick scheduler;
-- inventory;
-- infected AI.
+Do this:
 
-If a request would require designing or rewriting several of these at once, GPT must **push back before implementation**. Explain the natural split, identify dependencies, recommend the first piece, and wait for approval of that piece.
+1. identify the systems involved;
+2. explain dependency/order;
+3. recommend the first bounded piece;
+4. describe that piece;
+5. get approval;
+6. implement only that approved piece in a later implementation step.
 
 Small integration edits needed to connect an already-approved subsystem are allowed, but they must be identified before implementation and must not become an excuse to redesign neighboring systems.
 
-## 3. No placeholder / fake-completion rule
+## 4. Whole-game check before local design
+
+Before proposing a subsystem, reread the North Star and ask:
+
+- What future gameplay features are already known to depend on this area?
+- Can this system expose a stable seam for those features without implementing them now?
+- Is the design becoming too specific to today's temporary implementation?
+- Is complexity being added because it creates consequence/mood, or merely because a deeper simulator could model it?
+- Does this local choice accidentally reintroduce an architecture that was superseded?
+
+Future-proofing means **extension seams**, not premature implementation.
+
+Example: a health system should leave room for combat, movement penalties and first aid without simulating detailed physiology merely to prove extensibility.
+
+## 5. No placeholder / fake-completion rule
 
 The project does not use fake systems merely to make a prompt look complete.
 
@@ -56,41 +100,39 @@ Do not add:
 
 - placeholder mechanics presented as finished behavior;
 - arbitrary hardcoded values intended to be silently replaced later;
-- fake loot, fake AI, fake travel costs, fake persistence, or fake simulation results;
+- fake loot, fake AI, fake outbreak history, fake travel costs, fake persistence, or fake simulation results;
 - presentation tricks that hide invalid world geometry;
 - compatibility shims that quietly become permanent architecture;
 - "good enough for now" substitute systems when the real owning system has not been designed.
 
 A temporary DEV tool is allowed only when it is explicitly a DEV tool, has its own owner, and does not pretend to be final gameplay.
 
-When a prerequisite system is missing, either design that prerequisite first or clearly defer the dependent behavior.
+Small scope is encouraged. **Fake scope is not.** A tiny authored test world can exercise a real renderer; a disposable fake renderer is not acceptable.
 
-## 4. Clarification rule
+## 6. Clarification rule
 
-GPT should ask a targeted question when a material ambiguity could change architecture, data, visuals, or destructive scope.
+GPT should ask a targeted question when a material ambiguity could change architecture, data, visuals, destructive scope, simulation semantics, persistence, timing or player-visible behavior.
 
 Clarification is especially required when:
 
-- "old", "new", "previous", "better", or similar historical references could point to multiple implementations and repository archaeology cannot resolve the target;
-- a word/phrase could reasonably describe two different gameplay behaviors;
-- a change could delete or replace significant existing work;
-- the requested feature could belong to more than one subsystem and ownership matters;
-- mobile/Safari behavior is unclear and would materially change the interaction design;
-- a request conflicts with an already approved design decision;
-- implementation would require changing a stable public contract between modules.
+- historical references could point to multiple implementations and archaeology cannot resolve the target;
+- a phrase could reasonably describe two different gameplay models;
+- a change could delete/replace significant work;
+- ownership between systems is unclear;
+- a request conflicts with an approved/cross-system decision;
+- implementation would require changing a stable public contract;
+- a new idea may change the North Star itself rather than only one subsystem.
 
-Do **not** ask the user to clarify ordinary typos or spelling when intent is clear. Do **not** ask for information that can be resolved from the repository, current conversation, or golden recovery history.
+Do not ask about ordinary typos/spelling when intent is clear. Inspect repository/history/current conversation first; ask only what remains unresolved.
 
-When uncertain: inspect first, then ask only the unresolved question.
-
-## 5. System design document requirement
+## 7. System design document requirement
 
 Every major subsystem gets a standalone design file under `SYSTEM_DESIGNS/` before implementation.
 
 Each design should contain:
 
 1. **Status** — DRAFT / APPROVED / IMPLEMENTED / SUPERSEDED.
-2. **Goal** — the one problem this subsystem solves.
+2. **Goal** — one problem this subsystem solves.
 3. **Non-goals** — nearby responsibilities it explicitly does not own.
 4. **Owner** — intended standalone script(s).
 5. **Public contract/API** — inputs, outputs, signals, data types.
@@ -103,65 +145,45 @@ Each design should contain:
 12. **Failure cases / edge cases**.
 13. **Tests / acceptance criteria**.
 14. **Recovery sources** — old files/commits if this system has solved historical work.
-15. **Future extension points** — what later systems may add without changing this contract.
-16. **Approved decisions** — concise record of user-approved choices.
+15. **Future extension points** — known future systems that should attach without rewriting this system.
+16. **North-star fit** — brief explanation of how this design serves the whole-game identity without owning unrelated future behavior.
+17. **Approved decisions** — concise user-approved choices with date/rationale.
 
-The system design is the canonical detailed memory for that subsystem. `README_CONTEXT.md` should link to it instead of trying to summarize every implementation detail forever.
+The system design is canonical detailed memory for that subsystem.
 
-## 6. Context-file role
+## 8. Approval state
 
-`README_CONTEXT.md` is a **routing/index/current-state document**, not the encyclopedia of the game.
+- **DRAFT** — discussion only; no implementation.
+- **APPROVED** — user approved; implementation may begin.
+- **IMPLEMENTED** — approved design is present/tested in canonical runtime.
+- **SUPERSEDED** — retained for history but no longer current.
+- **RECOVERY SOURCE** — useful historical behavior, not current architecture.
 
-It should stay relatively short and answer:
+A design becoming detailed is not approval by itself.
 
-- What game are we making?
-- What architectural phase are we in?
-- What is currently implemented vs frozen/reference?
-- Which system is currently being designed or implemented?
-- Which system designs are APPROVED?
-- What is the next approved step?
-- What documents are authoritative?
-- What major global invariants must never be forgotten?
+If later user direction invalidates a draft, mark/supersede it instead of quietly adapting implementation around stale assumptions.
 
-Detailed subsystem rules belong in `SYSTEM_DESIGNS/<system>.md`.
+## 9. Cross-system decision logging
 
-This prevents the context file from becoming thousands of vague lines that future GPT sessions skim incorrectly.
+When a discussion settles something that affects several systems—such as open-world persistence, tactical grid semantics, hard-pause requirements, player-story philosophy, or art/physics separation—record it in `DESIGN_DECISIONS.md`.
 
-## 7. SOP-file role
+Do not copy every minor implementation fact into the decision log.
 
-`README_SOPS.md` owns **how GPT works on the repository**, not gameplay design.
+When a decision changes:
 
-It should contain:
+1. add a new dated entry;
+2. name the older decision it supersedes;
+3. explain why;
+4. update North Star/context/system specs as needed.
 
-- pre-prompt repository refresh ritual;
-- modularity rules;
-- scope/pushback rules;
-- clarification rules;
-- Git/GitHub workflow lessons;
-- testing/CI rules;
-- artifact/deployment verification rules;
-- recurring coding pitfalls discovered during development.
+History should remain readable.
 
-### Living-SOP rule
-
-When a reusable coding, Godot, Safari, testing, or GitHub lesson is discovered, update `README_SOPS.md` in the same coherent prompt if it will help future work avoid repeating the problem.
-
-When the lesson belongs only to one subsystem, update that subsystem's design instead.
-
-Do not let useful lessons exist only in chat history.
-
-## 8. Master-design role
-
-`MODULAR_REBUILD_MASTER_DESIGN.md` owns the long-term architecture, project identity, system boundaries, and global gameplay direction.
-
-It should not become a dumping ground for every implementation detail. Detailed mechanics belong in system designs.
-
-## 9. Change-impact declaration
+## 10. Change-impact declaration
 
 Before implementing an approved system, GPT should explicitly identify:
 
 ### Files/modules expected to change
-The owning module(s), its tests, and narrowly necessary wiring/docs.
+The owning module(s), tests, and narrowly necessary wiring/docs.
 
 ### Files/modules that must remain untouched
 Neighboring systems protected by the current contract.
@@ -169,77 +191,90 @@ Neighboring systems protected by the current contract.
 ### Contract impact
 Whether any public data/API contract changes. If yes, explain why before editing dependent modules.
 
+### Future seam check
+Which already-known future systems are expected to consume/extend this contract, and why the implementation does not need to own them now.
+
 If implementation unexpectedly requires unrelated module changes, stop and reassess the design instead of continuing a cascading patch.
 
-## 10. Implementation workflow
+## 11. Implementation workflow
 
 For each approved system:
 
 ### A. Refresh
-- Read current SOP/context.
-- Read this workflow.
-- Read master design.
-- Read the active system design.
-- Inspect current relevant code.
-- Inspect golden/recovery code when applicable.
+- Read North Star.
+- Read decision log.
+- Read SOP/context/workflow.
+- Read active approved system design.
+- Read master design only where relevant/current.
+- Inspect current source/history/golden code as needed.
 
 ### B. Declare impact surface
 State which subsystem/files will change and which adjacent systems will not.
 
-### C. Implement only the approved behavior
+### C. Implement only approved behavior
 Do not opportunistically add neighboring features.
 
-### D. Test the subsystem independently
+### D. Test subsystem independently
 Prefer deterministic contract/unit/smoke tests that can run without presentation when possible.
 
 ### E. Integration test
-Prove the system works through its public contract, not by reaching into internals.
+Prove it works through public contracts, not internal reach-through.
 
 ### F. Update durable memory
-- system design status and discoveries;
+- system status/discoveries;
+- cross-system decision log if a foundational decision changed;
+- North Star only if game identity/direction genuinely changed;
 - context current phase/next step;
-- SOP reusable lessons;
-- changelog for repository changes.
+- SOP reusable implementation lessons;
+- changelog.
 
 ### G. Exact-head validation
-For code changes, validate the exact final commit through Godot/CI/Web deployment before claiming success.
+For code changes, validate exact final SHA through Godot/CI/Web deployment before claiming success.
 
-## 11. Design review standard
+## 12. Design review standard
 
-A design should be questioned before approval if:
+Question a design before approval if:
 
 - ownership is unclear;
 - one module has several unrelated reasons to change;
-- a system would need to inspect another system's internals;
-- renderer and simulation data are mixed;
+- a system would inspect another system's internals;
+- renderer/simulation truth are mixed;
 - generated data contains art indices;
 - UI directly mutates world state instead of emitting intent;
+- a local streaming/chunk representation is being mistaken for the logical world model;
 - the only way to replace the system is to edit many unrelated files;
 - the system has no testable public contract;
-- a later known feature would obviously require tearing the design apart.
+- a known future feature would obviously require tearing the design apart;
+- extra complexity does not buy meaningful consequence or mood.
 
-Future-proofing does not mean implementing future systems early. It means leaving explicit extension seams for them.
+## 13. Current game-level development philosophy
 
-## 12. Game-level development philosophy
+The canonical shorthand is:
 
-Tick Survival Lab is a **mini-Zomboid-style systemic survival simulation with extraction-shooter structure**, built in small approved pieces.
+> **Ultima-style turn-based mini Zomboid.**
 
-Core direction:
+And:
 
-- physical, spatial survival gameplay;
-- persistent/consequential systems where implemented;
-- no drama director faking threats;
-- tactical local maps generated from believable real-world grammar;
-- static strategic map controlling progression from rural edge toward city center;
-- extraction as the boundary between tactical risk and strategic progression;
-- phone/Safari as a first-class platform;
-- silent sound simulation unless explicitly reversed;
+> **Mini means reduced complexity, not reduced consequence or mood.**
+
+Current broad direction includes:
+
+- persistent logically continuous open world;
+- invisible tactical grid / discrete action timing;
+- hard real-life interruption safety;
+- globally coherent world planning before local materialization;
+- physical base/home in the world;
+- extraction-style expedition risk/reward rather than mandatory disconnected raid instances;
+- causal outbreak/population simulation using scalable simulation resolution;
+- customizable player story embedded in generated households/jobs/homes/relationships;
+- strong vision/lighting/weather/spatial-sound mood systems later;
+- simplified health/needs where deep physiology does not add enough meaningful decision;
 - no placeholder systems presented as final mechanics.
 
-The project should prefer a small number of well-designed, finished systems over many half-designed systems.
+See `PROJECT_NORTH_STAR.md` for canonical details.
 
-## 13. Approval ledger
+## 14. Approval ledger
 
 The authoritative approval/status index lives in `SYSTEM_DESIGNS/README.md`.
 
-A DRAFT design is not permission to implement it. An APPROVED design is implementation-ready. If later user instructions change an approved design, update the system design/status before changing code.
+The current foundational design sequence begins below the old RaidMapSpec level: Spatial Model, Tick/Action/Pause, Persistent World Identity/State, then Population/Outbreak/Player-Story foundations before generalized local world data/render/materialization.
