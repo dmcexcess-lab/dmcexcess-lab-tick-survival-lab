@@ -94,7 +94,7 @@ static func validate(spec: Dictionary) -> Dictionary:
     for cell_value in fixture_tags.keys():
         var cell: Vector2i = cell_value
         var tag := str(fixture_tags[cell])
-        if tag in WALL_FIXTURE_TAGS and not _adjacent_to_wall(spec, cell):
+        if tag in WALL_FIXTURE_TAGS and not _adjacent_to_wall_plane(spec, cell):
             failures.append("wall fixture floating in room: %s at %s" % [tag, str(cell)])
             break
 
@@ -662,9 +662,14 @@ static func _wall_cell(room: Rect2i, side: String, offset: int) -> Vector2i:
         _:
             return Vector2i(room.position.x, clampi(room.position.y + offset, room.position.y, room.end.y - 1))
 
-static func _adjacent_to_wall(spec: Dictionary, p: Vector2i) -> bool:
+static func _adjacent_to_wall_plane(spec: Dictionary, p: Vector2i) -> bool:
     var walls: Dictionary = spec.get("walls", {})
-    return walls.has(p + Vector2i.UP) or walls.has(p + Vector2i.RIGHT) or walls.has(p + Vector2i.DOWN) or walls.has(p + Vector2i.LEFT)
+    var windows: Dictionary = spec.get("windows", {})
+    for delta in [Vector2i.UP, Vector2i.RIGHT, Vector2i.DOWN, Vector2i.LEFT]:
+        var neighbor := p + delta
+        if walls.has(neighbor) or windows.has(neighbor):
+            return true
+    return false
 
 static func _ground_rect(spec: Dictionary, rect: Rect2i, tile: int) -> void:
     var clipped := rect.intersection(Rect2i(0, 0, WIDTH, HEIGHT))
