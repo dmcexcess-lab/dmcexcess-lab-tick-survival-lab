@@ -1,5 +1,14 @@
 # Changelog
 
+## Tactical Weather Performance / De-Sync Pass — 2026-08-15
+
+- Stopped the active presentation harness from repainting the entire tactical scene on every process frame solely for weather/light animation.
+- Capped cosmetic redraws at 30 FPS normally and 24 FPS at the widest 20×17 tactical zoom; player actions, zoom changes, menus, map toggles, and other state changes still request immediate redraws.
+- Static clear-weather scenes now stop continuous redraws unless an actually flickering light source is visible/active.
+- Replaced repeated linear wall-array scans in weather masking with a cached wall-cell dictionary, making wall rejection effectively O(1) per fog/particle sample.
+- Reworked rain, snow, and wind-debris trajectories to use deterministic seed-derived independent phases, speeds, drift rates, and sizes so the particles no longer converge into obvious synchronized bands/cycles.
+- Kept all changes presentation-only: authoritative weather state, scheduler ticks, perception modifiers, indoor/outdoor rules, and fog-of-war semantics are unchanged.
+
 ## Full-Screen Overworld Map / Generation v4 — 2026-08-14
 
 - Added one full-screen Zomboid-style overworld map presentation, opened by keyboard `M` or a Safari-safe on-screen `MAP` button; there is intentionally no minimap and no separate local-area map mode.
@@ -50,7 +59,7 @@
 - Added `clutter_atlas.svg` with 24 new indoor/outdoor sprites: chair, desk, toilet, sink, cabinet, bookshelf, TV, lamp, tree, bush, fence, mailbox, trash can, road sign, bench, hydrant, streetlight, rug, laundry, planter, tire pile, cardboard, picnic table, and firewood.
 - Expanded procedural residential, commercial, downtown, woods, and rural decoration using the new clutter while keeping visual props, movement blockers, and sight blockers as separate physical concepts.
 - Added per-building wall-theme metadata and more appropriate procedural interior light types for houses, stores, and downtown/industrial structures.
-- Made procedural ambient lighting biome-aware instead of treating the whole 64×64 region as one alley theme.
+- Made procedural ambient lighting biome-aware instead of treating the whole 64×64 region as an alley theme.
 - Added sealed-corner LOS handling so diagonal vision/light cannot squeeze between two touching opaque orthogonal cells; trees, bookshelves, and cabinets now participate in tall-object occlusion.
 - Added `WORLD_NAVIGATION_AUDIT.md` and refreshed `WORLD_GENERATION.md` / `README_CONTEXT.md` to define what is complete, what is optional before actor systems, and what should wait.
 
@@ -102,7 +111,7 @@
 - Split the information display into a read-only in-game survivor/world HUD plus a separate `DEV` overlay.
 - In-game HUD now shows survivor name, health, fatigue, carry weight/capacity, in-game time/date/weather, local temperature, indoor/outdoor status, outdoor wind speed, and a `Looking at:` readout for the object/tile directly ahead.
 - Added HUD-ready base survivor fields to `PlayerActor.gd` without introducing inventory or body-system ownership early.
-- Added developer-only world controls for HH:MM, MM/DD, and weather. HH:MM and MM/DD use native `LineEdit` controls so mobile Safari can summon the keyboard; weather remains a touch button and key `6` fallback.
+- Added developer-only world controls for HH:MM, MM/DD, and weather. HH:MM and MM/DD use native Godot `LineEdit` controls so mobile Safari can summon the keyboard; weather remains a touch button and key `6` fallback.
 - Added a lightweight deterministic temperature hook from date/time/current weather plus indoor thermal buffering and wind-speed display helpers in `TacticalWeather.gd`; this is not yet weather-pattern simulation.
 - Fixed the returning 180-degree-turn / double-move mobile bug by suppressing Safari's synthesized mouse click after a handled touch event, so one physical tap commits one action.
 - Weather VFX now reject indoor cells and wall cells. Rain and wind debris are filtered by their current map cell; fog and storm flashes are rendered per outdoor cell rather than across whole structures.
@@ -121,7 +130,7 @@
 - Added `TacticalWeather.gd` as the deterministic owner for current weather state and gameplay-facing weather modifiers; no weather-pattern forecasting or transitions are simulated yet.
 - Added fixed clear, rain, storm, fog, and wind profiles with precipitation, fog, wind, visibility, ambient-light, and future sound-masking values.
 - Integrated weather into perception so poor weather can reduce outdoor/daylight illumination and effective visual range without changing flashlight behavior.
-- Added presentation-only rain, drifting fog, and windblown debris VFX driven by real presentation time. They continue animating while the game tree is paused, while authoritative weather state remains frozen.
+- Added presentation-only rain, drifting fog, and windblown debris VFX driven by real presentation time. They continue animating while paused, while authoritative weather state remains frozen.
 - Added developer key `6` to cycle weather profiles for testing; the current harness starts in rain so the VFX are immediately visible.
 - Added weather invariants to the existing deterministic environment smoke test and made Pages CI require the new weather module.
 - Refined mobile controls again: `TURN L` and `TURN R` are now identical size and exactly level; both are slightly shorter. The right column gives all remaining upper space to `FORWARD` and remaining lower space to `BACK`. `CROUCH` remains below `TURN L`, leaving the matching upper-left space intentionally empty.
