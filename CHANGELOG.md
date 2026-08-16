@@ -1,5 +1,19 @@
 # Changelog
 
+## 00A WHERE / Spatial Model Implementation — 2026-08-16
+
+- Promoted the first bounded WHERE / WHAT / WHEN slice, **00A Spatial Model (WHERE)**, from design into the canonical modular source after the user explicitly authorized implementation from the reviewed foundation design.
+- Added `SYSTEM_DESIGNS/00A_SPATIAL_MODEL.md` as the implementation contract and locked the spatial choices that were previously unresolved: global integer `Vector2i` cells, N/E/S/W semantic facing, arbitrary whole-cell footprint masks, deterministic 90-degree rotation around a stable anchor, **structure cells** rather than edge walls, explicit HORIZONTAL/VERTICAL structure axis, and centralized `SpatialModel.CELL_METERS = 1.0` planning scale.
+- Added `game/scripts/foundation/spatial/SpatialFacing.gd` as the standalone four-way facing/direction owner with cardinal vectors, vector conversion, left/right/opposite and deterministic relative-offset rotation.
+- Added `SpatialFootprint.gd` as an immutable-style geometry value object with single-cell/rectangle helpers, arbitrary relative-cell masks, duplicate removal, stable anchors, facing rotation and world-cell derivation including negative global coordinates.
+- Added `SpatialStructureGeometry.gd` as the geometry-only structure-axis owner. Horizontal structures expose north/south approaches plus east/west continuity; vertical structures expose east/west approaches plus north/south continuity. It does not inspect world state.
+- Added `SpatialLayer.gd` as the shared occupancy-channel vocabulary (`TERRAIN`, `STRUCTURE`, `OBJECT`, `ACTOR`, `LOOSE_ITEM`, `EFFECT`) without storing occupants.
+- Added `SpatialModel.gd` as the small pure-geometry facade for adjacency, front/back/left/right cells, four-neighbor queries, Manhattan distance/cardinal adjacency, footprint world cells, overlap and integer bounds.
+- Added permanent headless `SpatialModelSmoke.gd` contract coverage for facing, rotation, footprint behavior, duplicate removal, negative/global coordinates, overlap/bounds, structure axes, spatial channels and the canonical cell scale.
+- Wired the spatial smoke into Pages CI ahead of the frozen-reference smokes and added source guards for every WHERE owner. The new spatial contract passed Godot import/parse and its dedicated smoke without requiring changes to the old runtime.
+- Deliberately **did not wire WHERE into `game/scripts/reboot/` or the live scene**. The deployed reboot remains frozen reference code; temporary compatibility glue is rejected until WHAT and WHEN have their own approved contracts.
+- Updated the North Star, decision log, human README, context index and system ledger so structure cells/scale are no longer described as unresolved and the project status is now **modular foundation implementation** with WHERE implemented and WHAT next.
+
 ## WHERE / WHAT / WHEN Simulation Foundation Design — 2026-08-16
 
 - Added `SYSTEM_DESIGNS/00_FOUNDATION_WHERE_WHAT_WHEN.md` as the thorough DRAFT architecture for the three peer simulation foundations beneath generation/rendering: **WHERE (Spatial Model), WHAT (Persistent World / Entity State), and WHEN (Tick / Action / Pause Kernel)**.
@@ -39,7 +53,7 @@
 - Added `DESIGN_WORKFLOW.md` as the mandatory project process: **DESCRIBE -> APPROVE -> IMPLEMENT -> VERIFY** for every major new subsystem or rewrite.
 - Added an explicit scope gate requiring GPT to push back before coding when a prompt spans multiple major systems, break the work into dependency-ordered pieces, recommend the first bounded system, and obtain approval before implementation.
 - Added a strict no-placeholder/no-fake-completion rule. Missing prerequisite systems must be designed first or explicitly deferred rather than replaced with temporary mechanics that silently become architecture.
-- Added targeted clarification rules for genuinely ambiguous historical references, destructive scope, module ownership, stable contract changes, Safari/mobile interaction, timing, persistence and player-visible semantics. Ordinary spelling/typos do not require clarification when intent is clear.
+- Added targeted clarification rules for genuinely ambiguous historical references, destructive scope, module ownership, stable public contracts, Safari/mobile interaction, timing, persistence and player-visible semantics. Ordinary spelling/typos do not require clarification when intent is clear.
 - Recast `README_CONTEXT.md` as a concise routing/current-state index rather than the encyclopedia of every subsystem. Detailed canonical system memory now belongs under `SYSTEM_DESIGNS/`.
 - Added `SYSTEM_DESIGNS/README.md` as the subsystem approval ledger and reusable system-design template. Major systems move through DRAFT -> APPROVED -> IMPLEMENTED (or SUPERSEDED), and DRAFT explicitly does not authorize coding.
 - Added a change-impact declaration requirement: before implementing an approved system, identify the modules expected to change, neighboring modules that must remain untouched, and whether any public contract changes.
