@@ -1,10 +1,10 @@
 extends RefCounted
 class_name RebootArt
 
-# The reboot now uses the original tactical presentation vocabulary for the things
+# The reboot uses the original tactical presentation vocabulary for the things
 # that define the game's look: ground, floors, walls, doors, windows and common
-# furniture/clutter. Later atlases are used only where the old sheets never had
-# an equivalent (utility poles, stop signs and a few installed fixtures).
+# furniture/clutter. Later atlases are supplemental only where the early sheets
+# did not have a clean equivalent.
 const TACTICAL: Texture2D = preload("res://assets/tactical_atlas.svg")
 const CLUTTER: Texture2D = preload("res://assets/clutter_atlas.svg")
 const WORLD: Texture2D = preload("res://assets/world_art_atlas.svg")
@@ -39,8 +39,23 @@ const G_GRASS := SOURCE_TACTICAL * ENCODE_SCALE + 8
 const G_DIRT := SOURCE_TACTICAL * ENCODE_SCALE + 9
 const G_WASH_CONCRETE := SOURCE_TACTICAL * ENCODE_SCALE + 10
 
-# Small road additions that did not exist on the first tactical sheet.
+# Supplemental world-art road topology. Indices 0-14 are the old v4 road
+# connectivity sprites: vertical, horizontal, corners, T junctions, cross and ends.
+const G_ROAD_V := SOURCE_WORLD * ENCODE_SCALE + 0
 const G_ROAD_H := SOURCE_WORLD * ENCODE_SCALE + 1
+const G_ROAD_NE := SOURCE_WORLD * ENCODE_SCALE + 2
+const G_ROAD_ES := SOURCE_WORLD * ENCODE_SCALE + 3
+const G_ROAD_SW := SOURCE_WORLD * ENCODE_SCALE + 4
+const G_ROAD_WN := SOURCE_WORLD * ENCODE_SCALE + 5
+const G_ROAD_NES := SOURCE_WORLD * ENCODE_SCALE + 6
+const G_ROAD_ESW := SOURCE_WORLD * ENCODE_SCALE + 7
+const G_ROAD_NSW := SOURCE_WORLD * ENCODE_SCALE + 8
+const G_ROAD_NEW := SOURCE_WORLD * ENCODE_SCALE + 9
+const G_ROAD_CROSS := SOURCE_WORLD * ENCODE_SCALE + 10
+const G_ROAD_END_N := SOURCE_WORLD * ENCODE_SCALE + 11
+const G_ROAD_END_E := SOURCE_WORLD * ENCODE_SCALE + 12
+const G_ROAD_END_S := SOURCE_WORLD * ENCODE_SCALE + 13
+const G_ROAD_END_W := SOURCE_WORLD * ENCODE_SCALE + 14
 const G_DIRT_ROAD_V := SOURCE_WORLD * ENCODE_SCALE + 29
 const G_GRAVEL := SOURCE_WORLD * ENCODE_SCALE + 30
 const G_FIELD_ROWS := SOURCE_WORLD * ENCODE_SCALE + 31
@@ -113,8 +128,8 @@ const P_NIGHTSTAND := SOURCE_BUILDING * ENCODE_SCALE + 3
 const P_BATHTUB := SOURCE_BUILDING * ENCODE_SCALE + 4
 const P_SHOWER := SOURCE_BUILDING * ENCODE_SCALE + 5
 const P_BATH_VANITY := SOURCE_BUILDING * ENCODE_SCALE + 6
-const P_WORKBENCH := SOURCE_BUILDING * ENCODE_SCALE + 17
 const P_TOOL_CABINET := SOURCE_BUILDING * ENCODE_SCALE + 16
+const P_WORKBENCH := SOURCE_BUILDING * ENCODE_SCALE + 17
 const P_WATER_HEATER := SOURCE_BUILDING * ENCODE_SCALE + 20
 const P_UTILITY_POLE := SOURCE_BUILDING * ENCODE_SCALE + 23
 const P_TRAFFIC_LIGHT := SOURCE_BUILDING * ENCODE_SCALE + 24
