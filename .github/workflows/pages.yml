@@ -26,6 +26,8 @@ jobs:
         run: |
           set -euxo pipefail
           test -f README.md
+          test -f PROJECT_NORTH_STAR.md
+          test -f DESIGN_DECISIONS.md
           test -f README_CONTEXT.md
           test -f README_SOPS.md
           test -f DESIGN_WORKFLOW.md
@@ -33,6 +35,9 @@ jobs:
           test -f MODULAR_REBUILD_MASTER_DESIGN.md
           test -f REBOOT_CORE.md
           test -f PREFAB_WORKSHOP.md
+          grep -q 'Ultima-style turn-based mini Zomboid' PROJECT_NORTH_STAR.md
+          grep -q 'reduced complexity, not reduced consequence or mood' PROJECT_NORTH_STAR.md
+          grep -q 'Persistent open world replaces separate-raid world as foundation' DESIGN_DECISIONS.md
           grep -q 'DESCRIBE -> APPROVE -> IMPLEMENT -> VERIFY' DESIGN_WORKFLOW.md
           grep -q 'One major system per implementation slice' README_SOPS.md
           grep -q 'Main is composition, not implementation' MODULAR_REBUILD_MASTER_DESIGN.md
