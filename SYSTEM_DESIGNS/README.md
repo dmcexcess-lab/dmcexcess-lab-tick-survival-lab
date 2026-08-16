@@ -21,18 +21,18 @@ The earlier attempt to start with a tactical `RaidMapSpec` was too high-level an
 
 The current foundation is organized around **WHERE / WHAT / WHEN** rather than treating map generation as the engine.
 
-Canonical umbrella draft:
+Canonical umbrella design:
 
 **[`00_FOUNDATION_WHERE_WHAT_WHEN.md`](00_FOUNDATION_WHERE_WHAT_WHEN.md)**
 
-The three-part decomposition is settled in concept. Implementation proceeds one bounded subsystem at a time.
+The three-part decomposition is settled and all three bounded foundation contracts now have canonical tested implementations.
 
 | Order | System | Status | Design source | Notes |
 |---|---|---|---|---|
-| 00 | WHERE / WHAT / WHEN Simulation Foundation | **DRAFT** | `00_FOUNDATION_WHERE_WHAT_WHEN.md` | Umbrella architecture; WHEN details remain subject to bounded approval |
+| 00 | WHERE / WHAT / WHEN Simulation Foundation | **IMPLEMENTED via child contracts** | `00_FOUNDATION_WHERE_WHAT_WHEN.md` | Umbrella relationship realized by independently tested 00A/00B/00C modules |
 | 00A | Spatial Model — WHERE | **IMPLEMENTED** | `00A_SPATIAL_MODEL.md` | Canonical global `Vector2i` grid, N/E/S/W facing, arbitrary whole-cell footprints, structure cells with explicit axis, pure geometry contract |
 | 00B | Persistent World / Entity State — WHAT | **IMPLEMENTED** | `00B_PERSISTENT_WORLD_STATE.md` | Stable IDs, semantic terrain/entities, WHERE placement, derived occupancy, validated mutations, revision/change events, deterministic snapshot/restore |
-| 00C | Tick / Action / Pause Kernel — WHEN | **DRAFT (umbrella only)** | Sections 23–36 of foundation doc | Variable-duration actions, scheduled events, phases, interruptions, auto-pause, hard pause; needs standalone approval before code |
+| 00C | Tick / Action / Pause Kernel — WHEN | **IMPLEMENTED** | `00C_TICK_ACTION_PAUSE.md` | Integer world tick, deterministic scheduled-event heap, concurrent actor actions, phases/interruption/resume, decision auto-pause, hard pause, atomic snapshot/restore |
 | 00D | Global World Planning / Generation Contract | **NOT DESIGNED** | `00D_GLOBAL_WORLD_GENERATION.md` | Geography/roads/utilities/parcels/building footprints planned coherently; generator feeds initial WHAT using WHERE |
 | 00E | Population / Household / Outbreak / Player Story | **NOT DESIGNED** | `00E_POPULATION_OUTBREAK_PLAYER_STORY.md` | Persistent people/homes/jobs/relationships, scalable simulation resolution, player embedded in generated world |
 | 00F | Streaming / Materialization | **NOT DESIGNED** | `00F_STREAMING_MATERIALIZATION.md` | Performance/storage mechanism over one logical world; partitions never define reality |
@@ -61,7 +61,17 @@ The three-part decomposition is settled in concept. Implementation proceeds one 
 - `game/scripts/foundation/world/WorldMutationService.gd`
 - `game/scripts/ci/WorldStateSmoke.gd`
 
-WHERE and WHAT are intentionally not wired into the frozen playable reference runtime yet. Integration waits for adjacent approved canonical contracts rather than creating temporary adapters.
+### Implemented WHEN owners
+
+- `game/scripts/foundation/time/TickRules.gd`
+- `game/scripts/foundation/time/ActionPhase.gd`
+- `game/scripts/foundation/time/TimedAction.gd`
+- `game/scripts/foundation/time/ScheduledEvent.gd`
+- `game/scripts/foundation/time/TickEventQueue.gd`
+- `game/scripts/foundation/time/TickKernel.gd`
+- `game/scripts/ci/TickKernelSmoke.gd`
+
+WHERE, WHAT, and WHEN are intentionally not wired into the frozen playable reference runtime yet. Integration waits for approved canonical neighboring systems rather than creating temporary adapters.
 
 ## Why generation is not the foundation
 
@@ -113,7 +123,7 @@ Exact order will be refined after the foundations are designed.
 | Infected AI | DEFERRED | Emits actions using shared actor/action/perception/world contracts |
 | Loot/inventory/search | DEFERRED | Persistent physical containers/items keyed by WHAT entity IDs; timed actions through WHEN |
 | Combat | DEFERRED | Generic action timing + health consequences; no combat rules inside WHEN |
-| Vehicles | DEFERRED | Persistent multi-cell entities using WHERE/WHAT; timed actions through WHEN |
+| Vehicles | DEFERRED | Persistent multi-cell entities using WHERE/WHAT; timed travel/actions through WHEN |
 | Old raid/extraction/session architecture | **SUPERSEDED** | No required raid/extraction/staging loop in current design |
 
 ## Design template
