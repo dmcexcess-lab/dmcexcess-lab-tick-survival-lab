@@ -1,6 +1,6 @@
 # Tick Survival Lab — 02 Movement Actions
 
-Status: **APPROVED — user explicitly approved implementation 2026-08-16**
+Status: **IMPLEMENTED — canonical modular source and dedicated Godot CI contract present 2026-08-16**
 
 Approval basis: after the Movement Actions design was described in chat, the user instructed: **“Approved code it.”**
 
@@ -43,6 +43,7 @@ Canonical implementation is under `game/scripts/simulation/movement/`:
 - `MovementTraversalPolicy.gd` — replaceable terrain traversal and base duration policy.
 - `MovementActionService.gd` — validates, submits, revalidates and commits movement actions.
 - `game/scripts/ci/MovementActionsSmoke.gd` — deterministic integration/contract smoke.
+- `.github/workflows/movement.yml` — dedicated Godot 4.7.1 source-boundary/parse/contract gate.
 
 ## 5. Allowed dependencies
 
@@ -128,7 +129,7 @@ The canonical simple policy:
 - a multi-cell step uses the maximum step cost among target footprint terrain cells;
 - turning uses a separately configured positive turn duration and does not imply terrain translation.
 
-The production policy contains no health/injury/fatigue/inventory state. Future richer policy implementations may consume those systems and still satisfy the same MovementActionService contract.
+The production policy contains no health/injury/fatigue/inventory state. Future richer policy implementations may consume those systems and still satisfy the same `MovementActionService` contract.
 
 The historical golden `PlayerActor.gd` used 10 ticks for walking and 3 for turning and centralized later cost modifiers. Those values/shape are recovery guidance, not WHEN rules.
 
@@ -145,9 +146,9 @@ Movement emits semantic result signals for:
 
 Input/render/AI may observe those later without Movement owning presentation or decision logic.
 
-## 15. Tests / acceptance criteria
+## 15. Verified acceptance criteria
 
-The permanent smoke must prove at least:
+Dedicated Godot CI proves:
 
 - forward movement commits only at the final tick;
 - backward movement preserves facing;
@@ -159,7 +160,8 @@ The permanent smoke must prove at least:
 - two actors racing for one target do not reserve it and only one can commit;
 - origin displacement during an action prevents stale overwrite;
 - multi-cell rotation checks the rotated footprint;
-- hard pause freezes a pending movement action;
+- ordinary interruption does not cancel COMMITTED movement;
+- hard pause freezes a pending movement action and resumes without advancing hidden time;
 - the frozen reboot runtime is not imported or modified.
 
 ## 16. North-star fit
