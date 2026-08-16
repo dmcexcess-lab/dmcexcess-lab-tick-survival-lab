@@ -10,7 +10,8 @@ func _init() -> void:
         "double_wide": 314159,
         "country_house": 420691,
     }
-    for archetype in Generator.ARCHETYPES:
+    for archetype_value in Generator.ARCHETYPES:
+        var archetype := str(archetype_value)
         var seed := int(seeds[archetype])
         var a: Dictionary = Generator.generate(archetype, seed)
         var b: Dictionary = Generator.generate(archetype, seed)
@@ -25,7 +26,7 @@ func _init() -> void:
             return
         var player = Player.new()
         player.reset(a["spawn"], 2)
-        var before := player.cell
+        var before: Vector2i = player.cell
         player.turn_left()
         player.turn_right()
         if player.cell != before or player.facing != 2:
