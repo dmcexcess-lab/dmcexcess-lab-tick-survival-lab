@@ -196,7 +196,7 @@ The simulation foundation separates three peer truths rather than treating the m
 
 Generation later creates initial persistent world state using WHERE. Construction, destruction and gameplay later mutate that same world state. Rendering reads it. None of those systems owns the others.
 
-**WHERE is implemented. WHAT and WHEN still require their own bounded approved designs/implementation slices.** The umbrella relationship remains `SYSTEM_DESIGNS/00_FOUNDATION_WHERE_WHAT_WHEN.md`.
+**WHERE, WHAT, and WHEN are implemented as independently tested canonical foundation modules.** Their umbrella relationship remains `SYSTEM_DESIGNS/00_FOUNDATION_WHERE_WHAT_WHEN.md`; detailed contracts live in `00A_SPATIAL_MODEL.md`, `00B_PERSISTENT_WORLD_STATE.md`, and `00C_TICK_ACTION_PAUSE.md`.
 
 ## Modularity / development rule
 
