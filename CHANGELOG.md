@@ -1,5 +1,20 @@
 # Changelog
 
+## WHERE / WHAT / WHEN Simulation Foundation Design — 2026-08-16
+
+- Added `SYSTEM_DESIGNS/00_FOUNDATION_WHERE_WHAT_WHEN.md` as the thorough DRAFT architecture for the three peer simulation foundations beneath generation/rendering: **WHERE (Spatial Model), WHAT (Persistent World / Entity State), and WHEN (Tick / Action / Pause Kernel)**.
+- Defined WHERE around one global integer tactical-grid coordinate language, N/E/S/W directions, arbitrary whole-cell footprints, deterministic footprint rotation, layered occupancy concepts and structure/opening geometry. The document recommends structure cells with explicit axis rather than cell-edge walls for simplicity/recovered-art compatibility, but that recommendation remains DRAFT until explicitly approved.
+- Defined WHAT as durable world truth independent of procedural generators, Godot Nodes, renderers and streaming partitions. Proposed stable opaque entity IDs, semantic world types, explicit stores/mutation paths, derived occupancy indexes, generated-initial-state versus current-persistent-state separation, and ordinary persistent physical state as the basis for player-built bases anywhere.
+- Defined WHEN as one integer world-tick/action/event kernel for player actions, other actors and future scheduled systems. Preserved useful golden `TickScheduler.gd` concepts—explicit costs, deterministic ordering, phases, committed/resumable/cancelable interruption, resumable snapshots and player-ready auto-pause—while generalizing beyond a player-centric actor list to a deterministic scheduled-event queue.
+- Separated normal tactical auto-pause from **hard real-life application pause**. Hard pause advances zero simulation ticks and must preserve in-progress action state across work/customer/browser/mobile interruptions.
+- Designed one world tick to support both detailed nearby actions and coarse distant population/outbreak events, allowing causal open-world simulation without executing every invisible footstep.
+- Added explicit cross-system examples for movement, doors, simplified serious injuries, construction/base building, global world generation and outbreak simulation, plus compatibility checks for rendering, vision, lighting, weather, silent spatial sound, inventory, AI, vehicles, construction and streaming.
+- Added shared determinism/performance rules: integer coordinates/ticks, stable IDs, deterministic event tie-breaking, named/sub-seeded RNG streams, event-driven world-change notifications, no full-world per-tick scans, no permanent Node per persistent object, visible/detail simulation only where relevant.
+- Recorded the **WHERE / WHAT / WHEN decomposition as settled in concept** in `DESIGN_DECISIONS.md`; the detailed umbrella remains DRAFT and does not authorize code.
+- Updated `SYSTEM_DESIGNS/README.md` so 00A/00B/00C point to the umbrella draft and explicitly require bounded subsystem approval before implementation. Generation remains downstream as a producer of initial WHAT using WHERE.
+- Updated `README_CONTEXT.md` so the current task is review of the foundation draft before any new runtime code, and corrected `DESIGN_WORKFLOW.md` to remove the last stale extraction-style gameplay language from current project philosophy.
+- No gameplay/runtime code changed. The deployed Web build remains the frozen/deprecated clean-reboot reference.
+
 ## Project North Star / Persistent-World Anti-Drift Reset — 2026-08-16
 
 - Added `PROJECT_NORTH_STAR.md` as the short canonical game-identity document future work must reread before local subsystem design. Primary shorthand is now **“Ultima-style turn-based mini Zomboid.”**
