@@ -43,7 +43,7 @@ jobs:
           grep -q 'DESCRIBE -> APPROVE -> IMPLEMENT -> VERIFY' DESIGN_WORKFLOW.md
           grep -q 'One major system per implementation slice' README_SOPS.md
           grep -q 'Main is composition, not implementation' MODULAR_REBUILD_MASTER_DESIGN.md
-          grep -q 'Status: \*\*APPROVED' SYSTEM_DESIGNS/00A_SPATIAL_MODEL.md
+          grep -q 'Status: \*\*IMPLEMENTED' SYSTEM_DESIGNS/00A_SPATIAL_MODEL.md
           grep -q '1763958f44eb7f855fd49944c00d1ffe608c0abe' MODULAR_REBUILD_MASTER_DESIGN.md
           test -f game/project.godot
           test -f game/export_presets.cfg
