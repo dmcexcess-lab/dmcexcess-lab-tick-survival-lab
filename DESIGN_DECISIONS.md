@@ -211,3 +211,25 @@ The timing kernel stores serializable action/event records rather than live acto
 **Affected systems:** movement, AI, combat, health, inventory/search, doors, construction, weather, utilities, vehicles, crops, population/outbreak, save/load, input decision flow and app/Safari pause lifecycle.
 
 **Implementation:** `SYSTEM_DESIGNS/00C_TICK_ACTION_PAUSE.md` and `game/scripts/foundation/time/`.
+
+---
+
+## 2026-08-16 — Collision uses type defaults plus sparse dynamic overrides
+
+**Decision:** Hard movement collision is an explicit downstream physics system that consumes WHERE + WHAT but does not live inside either foundation. Normal collision behavior is registered once per semantic entity type; only dynamic per-entity exceptions consume persistent override state.
+
+STRUCTURE, OBJECT and ACTOR placements must have either a type collision profile or an explicit per-entity override. Missing required classification returns **UNKNOWN/fail-closed** rather than silently treating the entity as passable. Missing terrain is also UNKNOWN so unmaterialized/uninitialized world space cannot be walked into as if it were empty.
+
+LOOSE_ITEM and EFFECT placements do not require collision profiles by default. Terrain traversal capability is separate from hard occupancy collision and will be owned by Movement/Traversal.
+
+**Why:**
+
+- avoids one redundant collision record for every static wall/chair/tree/actor in a potentially huge persistent world;
+- keeps physics explicit and independent from art;
+- supports dynamic doors/corpses/special states through sparse stable-ID overrides;
+- prevents generator/content omissions from becoming invisible passability bugs;
+- gives movement, AI, pathfinding and construction one shared query contract.
+
+**Affected systems:** movement, doors, AI/pathfinding, generator/content validation, construction, vehicles, death/corpses, persistence/save orchestration.
+
+**Implementation:** `SYSTEM_DESIGNS/01_COLLISION_SPATIAL_QUERY.md` and `game/scripts/simulation/collision/`.
