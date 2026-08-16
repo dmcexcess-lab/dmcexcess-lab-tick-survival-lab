@@ -11,7 +11,7 @@ Before using this ledger, read `PROJECT_NORTH_STAR.md` and `DESIGN_DECISIONS.md`
 - **NOT DESIGNED** — known future system, no detailed design yet.
 - **DRAFT** — being discussed; do not implement.
 - **APPROVED** — user approved the design; implementation may begin.
-- **IMPLEMENTED** — approved design is present in the canonical modular runtime and tested.
+- **IMPLEMENTED** — approved design is present in the canonical modular runtime/source and tested.
 - **SUPERSEDED** — retained for history but replaced by newer direction.
 - **RECOVERY SOURCE** — historical behavior worth mining, not current architecture.
 
@@ -21,24 +21,33 @@ The earlier attempt to start with a tactical `RaidMapSpec` was too high-level an
 
 The current foundation is organized around **WHERE / WHAT / WHEN** rather than treating map generation as the engine.
 
-Canonical current umbrella draft:
+Canonical umbrella draft:
 
 **[`00_FOUNDATION_WHERE_WHAT_WHEN.md`](00_FOUNDATION_WHERE_WHAT_WHEN.md)**
 
-The three-part decomposition is settled in concept. The detailed proposals inside that document remain DRAFT until the user reviews/approves them.
+The three-part decomposition is settled in concept. Implementation proceeds one bounded subsystem at a time.
 
 | Order | System | Status | Design source | Notes |
 |---|---|---|---|---|
-| 00 | WHERE / WHAT / WHEN Simulation Foundation | **DRAFT** | `00_FOUNDATION_WHERE_WHAT_WHEN.md` | Thorough umbrella architecture; no implementation permission |
-| 00A | Spatial Model — WHERE | **DRAFT (umbrella)** | Sections 2–9 of foundation doc | Invisible tactical grid, global coordinates, directions, footprints, occupancy; structure-cell recommendation still needs approval |
-| 00B | Persistent World / Entity State — WHAT | **DRAFT (umbrella)** | Sections 10–22 of foundation doc | Persistent IDs/entities/mutations; world truth independent of renderer/nodes/generator |
-| 00C | Tick / Action / Pause Kernel — WHEN | **DRAFT (umbrella)** | Sections 23–36 of foundation doc | Variable-duration actions, scheduled events, phases, interruptions, auto-pause, hard pause, coarse simulation seam |
+| 00 | WHERE / WHAT / WHEN Simulation Foundation | **DRAFT** | `00_FOUNDATION_WHERE_WHAT_WHEN.md` | Umbrella architecture; WHAT/WHEN details remain subject to bounded approval |
+| 00A | Spatial Model — WHERE | **IMPLEMENTED** | `00A_SPATIAL_MODEL.md` | Canonical global `Vector2i` grid, N/E/S/W facing, arbitrary whole-cell footprints, structure cells with explicit axis, pure geometry contract |
+| 00B | Persistent World / Entity State — WHAT | **DRAFT (umbrella only)** | Sections 10–22 of foundation doc | Persistent IDs/entities/mutations; world truth independent of renderer/nodes/generator; needs standalone approval before code |
+| 00C | Tick / Action / Pause Kernel — WHEN | **DRAFT (umbrella only)** | Sections 23–36 of foundation doc | Variable-duration actions, scheduled events, phases, interruptions, auto-pause, hard pause; needs standalone approval before code |
 | 00D | Global World Planning / Generation Contract | **NOT DESIGNED** | `00D_GLOBAL_WORLD_GENERATION.md` | Geography/roads/utilities/parcels/building footprints planned coherently; generator feeds initial WHAT using WHERE |
 | 00E | Population / Household / Outbreak / Player Story | **NOT DESIGNED** | `00E_POPULATION_OUTBREAK_PLAYER_STORY.md` | Persistent people/homes/jobs/relationships, scalable simulation resolution, player embedded in generated world |
 | 00F | Streaming / Materialization | **NOT DESIGNED** | `00F_STREAMING_MATERIALIZATION.md` | Performance/storage mechanism over one logical world; partitions never define reality |
 | old-01 | Semantic tactical map / `RaidMapSpec` | **SUPERSEDED** | `01_RAID_MAP_DATA.md` | Design mine only; assumed separate raid maps and started above the real foundations |
 
-Before any 00A/00B/00C implementation begins, create/refine its standalone child design if needed from the approved umbrella and obtain explicit approval for that bounded subsystem. Do not treat umbrella approval as permission to implement all three at once.
+### Implemented WHERE owners
+
+- `game/scripts/foundation/spatial/SpatialFacing.gd`
+- `game/scripts/foundation/spatial/SpatialFootprint.gd`
+- `game/scripts/foundation/spatial/SpatialStructureGeometry.gd`
+- `game/scripts/foundation/spatial/SpatialLayer.gd`
+- `game/scripts/foundation/spatial/SpatialModel.gd`
+- `game/scripts/ci/SpatialModelSmoke.gd`
+
+WHERE is intentionally not wired into the frozen playable reference runtime yet. Integration waits for adjacent approved foundation contracts rather than creating temporary adapters.
 
 ## Why generation is not the foundation
 
@@ -61,7 +70,7 @@ Exact order will be refined after the foundations are designed.
 |---|---|---|
 | Recovered multi-atlas Art Catalog | NOT DESIGNED | Recover exact golden `TacticalTiles.gd` semantics; semantic N/E/S/W orientation with rotation or explicit variants |
 | Ground renderer | NOT DESIGNED | Reads canonical world/spatial data + ArtCatalog |
-| Structure renderer | NOT DESIGNED | Walls/doors/windows only, after Spatial Model settles representation |
+| Structure renderer | NOT DESIGNED | Walls/doors/windows only; must consume WHERE structure-cell/axis contract |
 | Prop/fixture/vegetation renderer | NOT DESIGNED | Whole-cell footprints/orientation; world props only |
 | Player/actor renderer | NOT DESIGNED | Four directional sprites initially; should not make underlying actor model player-only |
 | Authored visual test area | NOT DESIGNED | Proves recovered graphics independently of procedural generation |
