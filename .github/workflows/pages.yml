@@ -29,6 +29,7 @@ jobs:
           test -f README_CONTEXT.md
           test -f README_SOPS.md
           test -f REBOOT_CORE.md
+          test -f PREFAB_WORKSHOP.md
           test -f game/project.godot
           test -f game/export_presets.cfg
           test -f game/main.tscn
