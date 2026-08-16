@@ -29,7 +29,7 @@ Web preview: `https://dmcexcess-lab.github.io/dmcexcess-lab-tick-survival-lab/`
 
 ## 2. Current architectural phase
 
-The project is in **Phase 1: modular foundation implementation**.
+The project has completed the **WHERE / WHAT / WHEN modular simulation foundation triad** and remains in staged modular replacement of the deprecated playable runtime.
 
 The currently deployed runtime under `game/scripts/reboot/` remains **frozen/deprecated reference code**. Do not extend it as the target architecture.
 
@@ -41,7 +41,7 @@ Canonical modular foundation progress:
 
 - **00A WHERE / Spatial Model — IMPLEMENTED and CI-gated** under `game/scripts/foundation/spatial/`.
 - **00B WHAT / Persistent World State — IMPLEMENTED and CI-gated** under `game/scripts/foundation/world/`.
-- **00C WHEN / Tick Action Pause — next bounded design/implementation target; not yet implemented.**
+- **00C WHEN / Tick Action Pause — IMPLEMENTED and CI-gated** under `game/scripts/foundation/time/`.
 
 The live playable scene does not import the new foundation yet. This is intentional: no temporary adapter layer will connect canonical foundation modules to the deprecated runtime merely to make new code visibly run.
 
@@ -116,11 +116,35 @@ Locked WHAT rules:
 - snapshot/restore is deterministic and atomic, rebuilds derived occupancy, and is an in-memory state boundary rather than the final save-file implementation;
 - WHAT has no generator, renderer, streaming, tick/action, health, inventory, AI, construction or reboot dependency.
 
-### 00C WHEN — NOT YET APPROVED FOR CODE
+### 00C WHEN — IMPLEMENTED
 
-Umbrella draft covers integer world ticks, variable-duration actions, scheduled events, phases/interruption, deterministic ordering, tactical auto-pause, hard real-life pause and coarse distant simulation seams.
+Canonical design: `SYSTEM_DESIGNS/00C_TICK_ACTION_PAUSE.md`.
 
-Before implementation, create/refine a standalone `00C_TICK_ACTION_PAUSE.md`, recover useful golden `TickScheduler.gd` behavior deliberately, review it against implemented WHERE/WHAT, and get explicit bounded approval.
+Implemented owners:
+
+- `game/scripts/foundation/time/TickRules.gd`
+- `game/scripts/foundation/time/ActionPhase.gd`
+- `game/scripts/foundation/time/TimedAction.gd`
+- `game/scripts/foundation/time/ScheduledEvent.gd`
+- `game/scripts/foundation/time/TickEventQueue.gd`
+- `game/scripts/foundation/time/TickKernel.gd`
+- test: `game/scripts/ci/TickKernelSmoke.gd`
+
+Locked WHEN rules:
+
+- one non-negative integer world tick is authoritative; render FPS/wall clock do not advance simulation implicitly;
+- no fixed tick-to-calendar conversion lives in WHEN;
+- one deterministic scheduled-event min-heap serves actor actions and world-system events;
+- queue order is due tick -> priority -> owner/source key -> serial;
+- all work due at the current tick drains before tactical player-decision pause engages;
+- one actor may have one active action, while many actors may have concurrent actions;
+- action phases are semantic timing checkpoints; WHEN never owns their physical/gameplay effects;
+- COMMITTED, RESUMABLE and CANCELABLE interruption policies are canonical;
+- a separate hard application pause freezes ticks/actions/events immediately and safely;
+- execution jumps directly between due ticks rather than scanning every empty tick;
+- deterministic atomic snapshot/restore preserves active/resumable work and pending events;
+- bounded safety/trace mechanisms prevent zero-time loops or debug history from becoming unbounded;
+- WHEN has no direct dependency on WHERE, WHAT, reboot, generator, renderer or gameplay domains.
 
 ## 4. Open-world / generation direction
 
@@ -139,6 +163,8 @@ Generation will create ordinary semantic terrain/entities through WHAT using WHE
 The long-term world should support a populated pre-collapse state with persistent people, households, homes, jobs/workplaces, schedules, vehicles and relationships, then simulate outbreak/collapse causally.
 
 WHAT's stable identity model intentionally allows a person to remain the same persistent actor whether tactically placed nearby, temporarily unplaced, or later represented by a coarse distant simulation system.
+
+WHEN's event queue intentionally allows distant/coarse actions and long-horizon causal events to share the same world clock without simulating every invisible tactical step.
 
 Distant simulation may use coarser deterministic resolution for performance while preserving causal persistent state.
 
@@ -184,6 +210,7 @@ Global invariants:
 12. Important decisions/lessons do not live only in chat.
 13. Do not wire new modules into deprecated runtime through temporary compatibility code merely to make progress visible.
 14. Persistent-world mechanics should attach typed state through stable entity IDs rather than expanding `WorldEntityRecord` into a generic metadata bag.
+15. Gameplay systems may use WHEN for duration/order but WHEN must never absorb their mechanic-specific rules.
 
 ## 9. Documentation ownership
 
@@ -213,6 +240,6 @@ Global invariants:
 
 ## 11. Current next action
 
-**Do not jump to generation or rendering.**
+The **WHERE / WHAT / WHEN foundation is complete**. Do not automatically start another major subsystem merely because the foundation exists.
 
-Next recommended bounded target: **00C WHEN — Tick / Action / Pause Kernel**. First refine the umbrella timing design into a standalone child design against the now-implemented WHERE and WHAT contracts, then obtain explicit approval before coding it.
+On the next design prompt, choose one bounded downstream system and run it through the approval workflow. A likely architectural next design is **00D Global World Planning / Generation Contract**, because generation can now populate canonical WHAT using WHERE while later gameplay can run through WHEN, but 00D is **not authorized for implementation by the WHEN prompt**.
