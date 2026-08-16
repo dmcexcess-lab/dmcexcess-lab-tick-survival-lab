@@ -1,13 +1,10 @@
 ; Engine configuration file.
-; Bootstrap for Tick Survival Lab.
+; Clean reboot core for Tick Survival Lab.
 config_version=5
 
 [application]
 config/name="Tick Survival Lab"
 run/main_scene="res://main.tscn"
-
-[autoload]
-SafariInputGuard="*res://scripts/SafariInputGuard.gd"
 
 [display]
 
