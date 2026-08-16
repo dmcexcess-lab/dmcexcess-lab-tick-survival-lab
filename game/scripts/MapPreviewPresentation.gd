@@ -12,6 +12,12 @@ const EXTENDED_ZOOM_PRESETS := [
     [50.0, 10, 9],
 ]
 
+# The base harness used to redraw the entire tactical scene every process frame
+# solely to animate presentation effects. Keep cosmetic motion smooth while
+# bounding the expensive full-scene redraw rate, especially at wide zoom.
+const ANIMATION_FPS_NORMAL := 30.0
+const ANIMATION_FPS_WIDE := 24.0
+
 # One full-screen overworld map only. There is intentionally no minimap and no
 # second local-area map mode. This is a schematic presentation of the same
 # authoritative region coordinates used by tactical play.
@@ -19,11 +25,37 @@ const BTN_MAP := Rect2(236, 780, 168, 52)
 const OVERMAP_CLOSE := Rect2(500, 16, 120, 46)
 const OVERMAP_AREA := Rect2(20, 88, 600, 600)
 var overworld_open := false
+var animation_redraw_accumulator := 0.0
+var weather_wall_cells: Dictionary = {}
+var weather_wall_cache_seed := -1
 
 func _process(delta: float) -> void:
     if overworld_open:
         return
-    super._process(delta)
+    weather_vfx_time += delta
+    if not _presentation_animation_active():
+        animation_redraw_accumulator = 0.0
+        return
+    animation_redraw_accumulator += delta
+    var redraw_fps: float = ANIMATION_FPS_WIDE if VISIBLE_COLS >= 20 else ANIMATION_FPS_NORMAL
+    var redraw_interval: float = 1.0 / redraw_fps
+    if animation_redraw_accumulator < redraw_interval:
+        return
+    animation_redraw_accumulator = fposmod(animation_redraw_accumulator, redraw_interval)
+    queue_redraw()
+
+func _presentation_animation_active() -> bool:
+    if Weather.precipitation(weather_state) > 0.02:
+        return true
+    if Weather.snowfall(weather_state) > 0.02:
+        return true
+    if Weather.fog_density(weather_state) > 0.05:
+        return true
+    if Weather.wind_strength(weather_state) > 0.28:
+        return true
+    if str(weather_state.get("kind", Weather.CLEAR)) == Weather.STORM:
+        return true
+    return Lighting.has_animated_sources(light_sources, power_on)
 
 func _zoom(delta: int) -> void:
     zoom_index = clampi(zoom_index + delta, 0, EXTENDED_ZOOM_PRESETS.size() - 1)
@@ -31,6 +63,7 @@ func _zoom(delta: int) -> void:
     TILE = float(preset[0])
     VISIBLE_COLS = int(preset[1])
     VISIBLE_ROWS = int(preset[2])
+    animation_redraw_accumulator = 0.0
     _record_zero("zoom", "%dx%d @ %.0fpx" % [VISIBLE_COLS, VISIBLE_ROWS, TILE])
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -223,7 +256,32 @@ func _building_map_color(theme: String) -> Color:
         "industrial": return Color("82786d")
         _: return Color("8b8175")
 
+func _refresh_weather_wall_cache() -> void:
+    if weather_wall_cache_seed == region_seed:
+        return
+    weather_wall_cells.clear()
+    for p_value in spec.get("walls", []):
+        weather_wall_cells[p_value] = true
+    weather_wall_cache_seed = region_seed
+
+func _weather_cell_allowed(cell: Vector2i) -> bool:
+    if cell.x < 0 or cell.y < 0 or cell.x >= _map_w() or cell.y >= _map_h():
+        return false
+    if indoor_cells.has(cell):
+        return false
+    if weather_wall_cache_seed != region_seed:
+        _refresh_weather_wall_cache()
+    if weather_wall_cells.has(cell):
+        return false
+    return true
+
+func _weather_hash01(index: int, salt: int) -> float:
+    var seed_mix: int = posmod(region_seed, 1000003)
+    var n: float = float(index * 15731 + salt * 789221 + seed_mix * 31)
+    return fposmod(sin(n) * 43758.5453123, 1.0)
+
 func _draw_weather_vfx() -> void:
+    _refresh_weather_wall_cache()
     var board: Rect2 = _visible_board_rect()
     var rain: float = Weather.precipitation(weather_state)
     var snow: float = Weather.snowfall(weather_state)
@@ -243,37 +301,52 @@ func _draw_weather_vfx() -> void:
 
     if rain > 0.02:
         var count: int = 34 + int(rain * 62.0)
+        var rain_span_y: float = board.size.y + 36.0
         for i in range(count):
-            var seed_x: float = fmod(float(i * 83), board.size.x)
-            var speed: float = 190.0 + float(i % 7) * 21.0 + rain * 150.0
-            var y: float = fmod(float(i * 47) + weather_vfx_time * speed, board.size.y + 36.0) - 18.0
-            var x: float = fmod(seed_x + weather_vfx_time * direction.x * 68.0 + y * direction.x * 0.22, board.size.x)
+            var seed_x: float = _weather_hash01(i, 11) * board.size.x
+            var seed_y: float = _weather_hash01(i, 23) * rain_span_y
+            var speed_mix: float = _weather_hash01(i, 37)
+            var drift_mix: float = _weather_hash01(i, 53)
+            var speed: float = 175.0 + speed_mix * 165.0 + rain * 125.0
+            var y: float = fposmod(seed_y + weather_vfx_time * speed, rain_span_y) - 18.0
+            var x: float = fposmod(seed_x + weather_vfx_time * direction.x * (42.0 + drift_mix * 44.0) + y * direction.x * (0.10 + drift_mix * 0.16), board.size.x)
             var start := board.position + Vector2(x, y)
             if not board.has_point(start) or not _weather_cell_allowed(_screen_to_cell(start)):
                 continue
-            var streak := Vector2(direction.x * (9.0 + rain * 5.0), 12.0 + rain * 11.0)
+            var streak_scale: float = 0.82 + _weather_hash01(i, 67) * 0.38
+            var streak := Vector2(direction.x * (9.0 + rain * 5.0), 12.0 + rain * 11.0) * streak_scale
             var finish := _clamp_weather_point(start + streak, board, 0.75)
             draw_line(start, finish, Color(0.72, 0.84, 0.90, 0.26 + rain * 0.28), 1.25)
 
     if snow > 0.02:
         var flake_count: int = 38 + int(snow * 70.0)
+        var snow_span_y: float = board.size.y + 20.0
         for i in range(flake_count):
-            var seed_x: float = fmod(float(i * 67), board.size.x)
-            var fall_speed: float = 34.0 + float(i % 9) * 4.0 + snow * 24.0
-            var y: float = fmod(float(i * 41) + weather_vfx_time * fall_speed, board.size.y + 20.0) - 10.0
-            var sway: float = sin(weather_vfx_time * (0.9 + float(i % 5) * 0.08) + float(i) * 1.7) * (7.0 + snow * 5.0)
-            var x: float = fmod(seed_x + weather_vfx_time * direction.x * 28.0 + sway, board.size.x)
+            var seed_x: float = _weather_hash01(i, 101) * board.size.x
+            var seed_y: float = _weather_hash01(i, 113) * snow_span_y
+            var fall_speed: float = 27.0 + _weather_hash01(i, 127) * 45.0 + snow * 22.0
+            var y: float = fposmod(seed_y + weather_vfx_time * fall_speed, snow_span_y) - 10.0
+            var sway_rate: float = 0.62 + _weather_hash01(i, 139) * 0.88
+            var sway_phase: float = _weather_hash01(i, 151) * TAU
+            var sway_amount: float = 5.0 + _weather_hash01(i, 163) * 9.0 + snow * 4.0
+            var sway: float = sin(weather_vfx_time * sway_rate + sway_phase) * sway_amount
+            var wind_drift: float = weather_vfx_time * direction.x * (18.0 + _weather_hash01(i, 179) * 24.0)
+            var x: float = fposmod(seed_x + wind_drift + sway, board.size.x)
             var p := board.position + Vector2(x, y)
-            var radius: float = 1.2 + float(i % 3) * 0.45
+            var radius: float = 1.0 + _weather_hash01(i, 191) * 1.1
             if not board.grow(-radius).has_point(p) or not _weather_cell_allowed(_screen_to_cell(p)):
                 continue
             draw_circle(p, radius, Color(0.93, 0.96, 1.0, 0.55 + snow * 0.30))
 
     if wind > 0.28:
+        var travel_span: float = board.size.x + 70.0
         for i in range(10):
-            var travel: float = fmod(weather_vfx_time * (38.0 + wind * 70.0) + float(i) * 97.0, board.size.x + 70.0) - 35.0
-            var y: float = board.position.y + 50.0 + fmod(float(i * 73), board.size.y - 70.0)
-            var p := Vector2(board.position.x + travel, y + sin(weather_vfx_time * 2.2 + float(i)) * 11.0)
+            var travel_speed: float = 34.0 + wind * 62.0 + _weather_hash01(i, 211) * 32.0
+            var travel: float = fposmod(_weather_hash01(i, 223) * travel_span + weather_vfx_time * travel_speed, travel_span) - 35.0
+            var base_y: float = board.position.y + 20.0 + _weather_hash01(i, 239) * maxf(1.0, board.size.y - 40.0)
+            var wobble_rate: float = 1.2 + _weather_hash01(i, 251) * 1.7
+            var wobble_phase: float = _weather_hash01(i, 263) * TAU
+            var p := Vector2(board.position.x + travel, base_y + sin(weather_vfx_time * wobble_rate + wobble_phase) * 10.0)
             if not board.has_point(p) or not _weather_cell_allowed(_screen_to_cell(p)):
                 continue
             var finish := _clamp_weather_point(p + direction * (6.0 + wind * 10.0), board, 1.0)
