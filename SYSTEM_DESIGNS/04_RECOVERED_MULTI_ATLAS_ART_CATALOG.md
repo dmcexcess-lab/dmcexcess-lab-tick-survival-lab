@@ -1,6 +1,6 @@
 # Tick Survival Lab — 04 Recovered Multi-Atlas Art Catalog
 
-Status: **APPROVED — implementation authorized by the user on 2026-08-16**
+Status: **IMPLEMENTED — canonical recovered catalog and dedicated Godot CI contract present 2026-08-16**
 
 Approval basis: after 03 implementation, the recommended next bounded system was the recovered multi-atlas Art Catalog. The user instructed: **“Yea we spent a lot of time on art already lets recover it if we can. Approved”**.
 
@@ -14,11 +14,11 @@ Golden recovery baseline: commit `1763958f44eb7f855fd49944c00d1ffe608c0abe`.
 
 Golden `TacticalTiles.gd` blob: `3d8a0a70ac983408bb48f58fc659dfb07e216ed3`.
 
-Baseline art assets remain byte-identical to the golden blobs and must remain unchanged in this slice.
+Baseline art assets remain byte-identical to the golden blobs and are CI-protected in this system.
 
 ## 3. Scope
 
-Recover:
+Recovered:
 
 - six atlas source families;
 - four directional player sprites;
@@ -28,7 +28,7 @@ Recover:
 - 32px, 16-column atlas-region math;
 - explicit diagnostics for unknown semantic art requests.
 
-Do not implement CanvasItem drawing or layer renderers yet.
+CanvasItem drawing and layer renderers remain separate later systems.
 
 ## 4. Owners
 
@@ -72,7 +72,7 @@ Golden code silently substituted asphalt/alley/crate-style fallback art for unkn
 
 ## 8. Road topology
 
-Recover N/E/S/W bitmask values `1/2/4/8`, straight/corner/T/cross/end/plain world-art road indices, golden arterial plain-road special cases, dirt-road orientation selection, and sidewalk curb selection.
+Recovered N/E/S/W bitmask values `1/2/4/8`, straight/corner/T/cross/end/plain world-art road indices, golden arterial plain-road special cases, dirt-road orientation selection, and sidewalk curb selection.
 
 The catalog receives precomputed connectivity masks. It never inspects generator dictionaries or WHAT.
 
@@ -88,20 +88,23 @@ Forbidden: WHAT, WHEN, collision, movement, actor capability, generator, rendere
 
 The catalog mutates no simulation state.
 
-## 11. Verification
+## 11. Verified acceptance
 
-CI must prove:
+Dedicated Godot 4.7.1 CI proves:
 
-- all ten baseline art blob hashes remain exact;
-- source paths load;
-- atlas region math;
-- representative and boundary mappings across all six atlases;
-- precedence rules;
-- door/window default/theme behavior;
-- road/dirt-road/sidewalk topology;
-- four player directions;
-- UNKNOWN behavior;
-- no forbidden imports.
+- all ten baseline art Git blob hashes remain exact;
+- all ten texture paths load;
+- atlas region math is correct;
+- representative/boundary mappings across all six atlases match golden behavior;
+- all 128 final-prop entries, all 32 building props, and all 24 clutter props remain represented;
+- ground/wall/prop precedence matches golden `TacticalTiles.gd`;
+- themed/default door and window behavior matches the approved contract;
+- road/dirt-road/sidewalk topology and arterial special cases are preserved;
+- N/E/S/W player source paths are exact;
+- unknown semantic requests fail visibly as UNKNOWN;
+- production `game/scripts/art/` imports none of the forbidden neighboring systems.
+
+Implementation commit `9ebb382e658168c7d76b3b7c3deb596154b65f27` passed the dedicated `Recovered Art Catalog contract` with no production repair required.
 
 ## 12. Future seams
 

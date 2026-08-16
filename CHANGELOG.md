@@ -1,5 +1,21 @@
 # Changelog
 
+## 04 Recovered Multi-Atlas Art Catalog — 2026-08-16
+
+- Recovered the mature golden `TacticalTiles.gd` semantic art-selection system into the canonical modular `game/scripts/art/` layer rather than creating or approximating new artwork.
+- Preserved all six golden atlas assets and all four directional player sprites byte-for-byte. Dedicated CI now verifies their exact Git blob hashes on every art-catalog run so accidental art replacement becomes an immediate contract failure.
+- Added `ArtSource.gd` and typed `ArtSelection.gd` descriptors so future renderers can resolve texture sources/atlas regions without world or generator data containing atlas paths or indices.
+- Added `ArtBaselineManifest.gd` with the pinned recovery commit, golden `TacticalTiles.gd` blob, and the ten protected asset identities.
+- Added `ArtCatalog.gd` with the complete recovered multi-atlas vocabulary: tactical, clutter, world-art, building-prop, final-surface and final-prop sources plus the four player-facing full textures.
+- Recovered the golden selection precedence exactly for known content: ground uses final exact -> final alias -> world -> tactical; walls use final -> world -> tactical; props use final exact -> final alias -> building -> clutter -> tactical.
+- Restored the complete richer vocabulary rather than the reboot subset, including all 48 final ground/surface entries, all 32 building props, all 24 clutter props and all 128 final environment props through index 127, plus tactical props and the golden barrel helper.
+- Recovered themed/default door and window mappings and exact NORTH/EAST/SOUTH/WEST player sprite selection.
+- Added `RoadArtTopology.gd` as pure presentation logic for straight/corner/T/cross/end/plain road sprites, the golden arterial plain-road special cases, dirt-road orientation and sidewalk-curb selection. It consumes connectivity masks rather than generator dictionaries or WHAT state.
+- Deliberately improved missing-content failure behavior: unknown semantic ground/wall/prop/theme/facing requests now return typed `UNKNOWN` instead of silently rendering asphalt, alley wall or crate fallback art. Known golden mappings remain unchanged.
+- Added `ArtCatalogSmoke.gd` and the dedicated Godot 4.7.1 `Recovered Art Catalog contract`, covering asset integrity, texture loading, atlas-region math, source precedence, representative/boundary mappings, topology, player facings and UNKNOWN behavior.
+- Kept this slice descriptor-only: no CanvasItem renderer, no generator changes, no physics changes, no simulation changes, no art asset edits, and no wiring into the frozen `game/scripts/reboot/` playable reference.
+- The next bounded visual system is the Ground Layer Renderer, which can consume canonical WHAT terrain plus Art Catalog selections without mixing structures, props, actors, camera, input or generation.
+
 ## 03 Actor Locomotion State & Movement Capability — 2026-08-16
 
 - Implemented **03 Actor Locomotion State & Movement Capability** after the user explicitly approved the design with “Approved!”.

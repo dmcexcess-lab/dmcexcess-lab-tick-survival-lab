@@ -45,6 +45,7 @@ Canonical modular progress:
 - **01 Collision / Spatial Query — IMPLEMENTED and CI-gated** under `game/scripts/simulation/collision/`.
 - **02 Movement Actions — IMPLEMENTED and CI-gated** under `game/scripts/simulation/movement/`.
 - **03 Actor Locomotion State & Movement Capability — IMPLEMENTED and CI-gated** under `game/scripts/simulation/actors/locomotion/`.
+- **04 Recovered Multi-Atlas Art Catalog — IMPLEMENTED and CI-gated** under `game/scripts/art/`.
 
 The canonical modules are intentionally tested beside the frozen playable reference until enough neighboring canonical presentation/input/world-composition systems exist for clean replacement rather than compatibility glue.
 
@@ -120,22 +121,40 @@ Locked rules:
 - capability provider BLOCKED outranks UNKNOWN, allowed BP adjustments combine deterministically;
 - actor-aware Movement policy composes base terrain timing + actor capability without importing condition domains into Movement or WHEN.
 
-Implemented owners include:
+## 5. Canonical presentation recovery
 
-- `ActorStance.gd`
-- `ActorLocomotionRecord.gd`
-- `ActorLocomotionState.gd`
-- `ActorLocomotionMutationService.gd`
-- `ActorMovementCapabilityDecision.gd`
-- `ActorMobilityModifierProvider.gd`
-- `ActorMovementCapabilityService.gd`
-- `ActorMovementTraversalPolicy.gd`
-- `ActorStanceActionResult.gd`
-- `ActorStanceActionService.gd`
-- `game/scripts/ci/ActorLocomotionSmoke.gd`
-- `.github/workflows/actor-locomotion.yml`
+### 04 Recovered Multi-Atlas Art Catalog — IMPLEMENTED
 
-## 5. Open-world / generation direction
+Canonical design: `SYSTEM_DESIGNS/04_RECOVERED_MULTI_ATLAS_ART_CATALOG.md`.
+
+The exact semantic-selection vocabulary from golden `TacticalTiles.gd` has been recovered into pure descriptor-based owners under `game/scripts/art/`.
+
+Locked/recovered facts:
+
+- six preserved atlas families plus four directional player sprites;
+- all baseline art files remain byte-identical to the pinned golden blobs and are protected by dedicated CI;
+- 32x32 atlas cells, 16 columns;
+- golden ground precedence: final exact -> final alias -> world -> tactical;
+- golden wall precedence: final -> world -> tactical;
+- golden prop precedence: final exact -> final alias -> building -> clutter -> tactical;
+- complete final-prop vocabulary through index 127 is retained;
+- themed/default door and window art mappings are retained;
+- road straight/corner/T/cross/end/plain selection, arterial special cases, dirt-road orientation and sidewalk-curb selection are recovered as pure topology-to-art logic;
+- canonical N/E/S/W facing maps to the exact four preserved player SVGs;
+- missing semantic art IDs now return typed UNKNOWN rather than silently becoming asphalt/alley-wall/crate fallback art;
+- Art Catalog performs no CanvasItem drawing and reads no WHAT/generator/physics state.
+
+Implemented owners:
+
+- `ArtSource.gd`
+- `ArtSelection.gd`
+- `ArtBaselineManifest.gd`
+- `RoadArtTopology.gd`
+- `ArtCatalog.gd`
+- `game/scripts/ci/ArtCatalogSmoke.gd`
+- `.github/workflows/art-catalog.yml`
+
+## 6. Open-world / generation direction
 
 Generation is not the engine and streaming partitions never define logical reality.
 
@@ -145,7 +164,7 @@ Long-term planning order:
 
 Roads, utilities, rivers, parcels and other cross-region structures are planned globally before local materialization. Once facts exist, persistent WHAT owns later changes.
 
-## 6. Outbreak / player story / bases
+## 7. Outbreak / player story / bases
 
 Long-term world state supports pre-collapse persistent people, households, homes, jobs/workplaces, schedules, vehicles and relationships, then causal outbreak/collapse simulation. Distant populations may use coarser deterministic resolution while preserving causal state.
 
@@ -153,17 +172,19 @@ The playable survivor eventually inhabits a real generated-world person with ide
 
 A base is an ordinary physical world location, not a special map/mode. Multiple bases, relocation, abandonment and nomadic play remain valid.
 
-## 7. Graphics recovery truth
+## 8. Graphics recovery truth
 
-The richer pre-rewrite artwork remains intact. Mature presentation came from golden `TacticalTiles.gd` combining six atlases plus four directional player sprites.
+The richer pre-rewrite artwork remains intact. Mature semantic art selection came from golden `TacticalTiles.gd` combining six atlases plus four directional player sprites.
 
-Golden semantic renderer blob:
+Golden semantic source blob:
 
 `3d8a0a70ac983408bb48f58fc659dfb07e216ed3`
 
-Visual recovery means reconstructing exact semantic art-selection behavior into standalone canonical art/render systems, not approximating with one atlas or extending reboot presentation.
+**The selection/catalog half of that recovery is now complete in 04.** The next visual work must use the canonical Art Catalog to build focused layer renderers rather than copy draw behavior back into a monolith or extend `RebootArt.gd`.
 
-## 8. Development invariants
+Visible recovery is not yet claimed: the frozen Web reference still renders through deprecated reboot presentation. Ground, Structure, Prop, and Actor renderers plus a later authored visual integration area remain separate systems.
+
+## 9. Development invariants
 
 Canonical process:
 
@@ -186,8 +207,9 @@ Global rules:
 13. Gameplay systems use WHEN for duration/order; WHEN never learns mechanic meanings.
 14. Movement consumes canonical Collision and typed policy decisions rather than duplicating occupancy/condition rules.
 15. Actor condition domains affect mobility through narrow provider contracts instead of being imported into locomotion/Movement.
+16. Renderers consume semantic world facts through Art Catalog selections; world/generator data never stores atlas indices or texture paths.
 
-## 9. Documentation source order
+## 10. Documentation source order
 
 1. newest explicit user instruction;
 2. `PROJECT_NORTH_STAR.md`;
@@ -201,10 +223,10 @@ Global rules:
 10. compatible `MODULAR_REBUILD_MASTER_DESIGN.md` material;
 11. golden history for recovered behavior.
 
-## 10. Recommended next bounded design
+## 11. Recommended next bounded design
 
-**Recovered multi-atlas Art Catalog** is the recommended next discussion target, not authorization to code it.
+**Ground Layer Renderer** is the recommended next discussion target, not authorization to implement it automatically.
 
-Why now: the canonical simulation stack has real space, persistent state, time, collision, movement and actor locomotion/capability contracts. Recovering the exact golden semantic art-selection vocabulary next creates the stable presentation boundary needed before Ground/Structure/Prop/Actor renderers and an authored visual integration area are designed.
+Why next: it is the smallest visible consumer of the recovered Art Catalog and can prove real atlas loading/region drawing against canonical WHAT terrain without mixing walls/openings, props, actors, generation, controls, camera, lighting, or weather into the same slice.
 
-Do not jump from Art Catalog design into generation, input, weather, lighting or a full playable-runtime replacement in one slice. Those remain separate systems.
+After Ground Renderer, keep Structure Renderer, Prop/Fixture/Vegetation Renderer, Player/Actor Renderer, and an Authored Visual Test Area as separately approved systems. Do not jump directly into procedural generation or full playable-runtime replacement.

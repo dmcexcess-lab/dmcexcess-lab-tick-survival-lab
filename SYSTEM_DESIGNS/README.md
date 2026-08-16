@@ -15,7 +15,7 @@ A major system moves through **NOT DESIGNED -> DRAFT -> APPROVED -> IMPLEMENTED*
 
 ## Current canonical architecture
 
-The canonical simulation stack is **WHERE / WHAT / WHEN**, followed by focused downstream physics/action/actor systems. Generation is not the engine.
+The canonical simulation stack is **WHERE / WHAT / WHEN**, followed by focused downstream physics/action/actor systems and independently replaceable presentation systems. Generation is not the engine.
 
 | Order | System | Status | Design source | Notes |
 |---|---|---|---|---|
@@ -26,6 +26,7 @@ The canonical simulation stack is **WHERE / WHAT / WHEN**, followed by focused d
 | 01 | Collision / Spatial Query | **IMPLEMENTED** | `01_COLLISION_SPATIAL_QUERY.md` | Explicit type collision + sparse overrides; CLEAR/BLOCKED/UNKNOWN queries |
 | 02 | Movement Actions | **IMPLEMENTED** | `02_MOVEMENT_ACTIONS.md` | Forward/back/turn bridge; typed movement policy; commit-time revalidation |
 | 03 | Actor Locomotion State & Movement Capability | **IMPLEMENTED** | `03_ACTOR_LOCOMOTION_MOVEMENT_CAPABILITY.md` | Standing/crouched state, timed stance, capability providers, actor-aware Movement policy |
+| 04 | Recovered Multi-Atlas Art Catalog | **IMPLEMENTED** | `04_RECOVERED_MULTI_ATLAS_ART_CATALOG.md` | Golden six-atlas + four-facing selection descriptors, topology and asset-integrity gate |
 | 00D | Global World Planning / Generation Contract | **NOT DESIGNED** | `00D_GLOBAL_WORLD_GENERATION.md` | Global geography/roads/utilities/parcels before local detail |
 | 00E | Population / Household / Outbreak / Player Story | **NOT DESIGNED** | `00E_POPULATION_OUTBREAK_PLAYER_STORY.md` | Persistent people/homes/jobs/relationships and causal outbreak |
 | 00F | Streaming / Materialization | **NOT DESIGNED** | `00F_STREAMING_MATERIALIZATION.md` | Performance/storage over one logical world |
@@ -99,17 +100,29 @@ The canonical simulation stack is **WHERE / WHAT / WHEN**, followed by focused d
 - `game/scripts/ci/ActorLocomotionSmoke.gd`
 - `.github/workflows/actor-locomotion.yml`
 
+### 04 Recovered Multi-Atlas Art Catalog
+
+- `game/scripts/art/ArtSource.gd`
+- `game/scripts/art/ArtSelection.gd`
+- `game/scripts/art/ArtBaselineManifest.gd`
+- `game/scripts/art/RoadArtTopology.gd`
+- `game/scripts/art/ArtCatalog.gd`
+- `game/scripts/ci/ArtCatalogSmoke.gd`
+- `.github/workflows/art-catalog.yml`
+
 The canonical modules above remain intentionally separate from frozen `game/scripts/reboot/` reference code. Do not add compatibility adapters simply to make them visible in the old playable build.
 
-## Current downstream contract summary
+## Current contract summary
 
 **Collision** answers hard occupancy. **Movement** owns discrete target/commit semantics and consumes a typed replaceable movement policy. **Actor Locomotion** owns standing/crouched state and actor-specific capability composition. **WHEN** owns the committed schedule but knows none of these mechanic meanings. **WHAT** owns physical placement but not movement legality or stance.
+
+**Art Catalog** owns only semantic-to-art selection. It recovers the golden six-atlas/four-player-sprite vocabulary and road topology but does not draw, read simulation state, or encode physics. World/generator data must not store atlas indices or texture paths.
 
 Movement destinations are not reserved. Actor capability is checked at request and commit. A newly blocked condition can fail the physical commit after elapsed time; a newly slower-but-still-allowed condition affects the next action instead of stretching an already scheduled one.
 
 ## Why generation is not the foundation
 
-Generation is one producer of initial WHAT using WHERE. Construction/destruction/gameplay later mutate the same persistent world. Replacing generation must not require replacing spatial, timing, collision, movement, actor capability, rendering, controls or save semantics.
+Generation is one producer of initial WHAT using WHERE. Construction/destruction/gameplay later mutate the same persistent world. Replacing generation must not require replacing spatial, timing, collision, movement, actor capability, art, rendering, controls or save semantics.
 
 ## Later modular systems
 
@@ -117,11 +130,10 @@ Exact order is refined one approved design at a time.
 
 | System | Status | Notes |
 |---|---|---|
-| Recovered multi-atlas Art Catalog | NOT DESIGNED | **Recommended next discussion**; recover exact golden `TacticalTiles.gd` semantic selection |
-| Ground renderer | NOT DESIGNED | Reads canonical world/spatial data + Art Catalog |
-| Structure renderer | NOT DESIGNED | Walls/doors/windows using WHERE structure-cell/axis contract |
-| Prop/fixture/vegetation renderer | NOT DESIGNED | Whole-cell semantic props/orientation |
-| Player/actor renderer | NOT DESIGNED | Four directional sprites initially; consumes WHAT + stance/facing facts |
+| Ground Layer Renderer | NOT DESIGNED | **Recommended next discussion**; first visible consumer of canonical WHAT terrain + recovered Art Catalog |
+| Structure Layer Renderer | NOT DESIGNED | Walls/doors/windows using WHERE structure-cell/axis + Art Catalog |
+| Prop/fixture/vegetation renderer | NOT DESIGNED | Whole-cell semantic props/orientation + Art Catalog |
+| Player/actor renderer | NOT DESIGNED | Four directional sprites initially; consumes WHAT/facing/stance + Art Catalog |
 | Authored visual test area | NOT DESIGNED | Proves recovered graphics without procedural generation |
 | Tactical camera + zoom | NOT DESIGNED | One canonical zoom owner |
 | Touch/keyboard/Safari input | NOT DESIGNED | Emits semantic movement/stance intents; lifecycle hard-pause integration |
