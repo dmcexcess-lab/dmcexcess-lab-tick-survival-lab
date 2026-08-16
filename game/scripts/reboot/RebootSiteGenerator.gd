@@ -486,7 +486,7 @@ static func _farmhouse(spec: Dictionary, rect: Rect2i, front_south: bool, proper
     var right_split_b := y + 8
 
     _partition_v(spec, split_x, y + 1, rect.end.y - 2, [y + 3, y + 6, y + 10])
-    _partition_h(spec, left_split, x + 1, split_x - 1, [x + 6])
+    _partition_h(spec, left_split, x + 1, split_x - 1, [x + 2])
     _partition_v(spec, utility_x, left_split + 1, rect.end.y - 2, [y + 9])
     _partition_h(spec, right_split_a, split_x + 1, rect.end.x - 2, [split_x + 3])
     _partition_h(spec, right_split_b, split_x + 1, rect.end.x - 2, [split_x + 3])
@@ -542,7 +542,7 @@ static func _country_house(spec: Dictionary, rect: Rect2i, front_south: bool, pr
     _room(spec, bedroom, property_id, "bedroom", Art.G_CARPET)
     _room(spec, bathroom, property_id, "bathroom", Art.G_TILE)
 
-    var door := _front_door(rect, front_south)
+    var door := _front_door(rect, front_south, x + 3)
     _door(spec, door, Art.S_DOOR_CLOSED, "h")
     _add_house_windows(spec, rect, front_south, door)
     _furnish_living(spec, living)
@@ -610,7 +610,7 @@ static func _small_trailer(spec: Dictionary, rect: Rect2i, front_south: bool, pr
     _room(spec, bathroom, property_id, "bathroom", Art.G_TILE)
     _room(spec, bedroom, property_id, "primary_bedroom", Art.G_CARPET)
 
-    var door := _front_door(rect, front_south)
+    var door := _front_door(rect, front_south, x + 2)
     _door(spec, door, Art.S_DOOR_CLOSED, "h")
     _add_house_windows(spec, rect, front_south, door)
     _furnish_living(spec, living)
