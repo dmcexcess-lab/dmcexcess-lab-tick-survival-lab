@@ -258,8 +258,9 @@ func _test_snapshot_restore_and_atomic_rejection() -> void:
 
     var before_bad: Dictionary = restored.snapshot()
     var malformed: Dictionary = before_bad.duplicate(true)
-    malformed["next_event_serial"] = 1
-    _check(not restored.load_snapshot(malformed), "malformed next serial snapshot rejected")
+    malformed["decision_actor_id"] = ""
+    malformed["decision_paused"] = true
+    _check(not restored.load_snapshot(malformed), "internally inconsistent decision-pause snapshot rejected")
     _check(restored.snapshot() == before_bad, "failed snapshot restore is atomic")
 
     var continuation := KernelClass.new()
@@ -274,13 +275,14 @@ func _test_snapshot_restore_and_atomic_rejection() -> void:
 
 func _test_safety_limit() -> void:
     var kernel := KernelClass.new()
-    var fired: int = 0
+    var fired: Array[int] = [0]
     kernel.external_event_due.connect(func(event):
-        fired += 1
+        fired[0] += 1
         kernel.schedule_event(kernel.world_tick(), "loop", &"loop")
     )
     kernel.schedule_event(0, "loop", &"loop")
     var reason: int = kernel.run_until_stop(5)
     _check(reason == Rules.RunStopReason.SAFETY_LIMIT, "pathological same-tick loop hits operation guard")
     _check(kernel.world_tick() == 0, "safety guard never invents time advancement")
-    _check(fired == 5 and kernel.pending_event_count() == 1, "safety guard leaves remaining same-tick work explicit")
+    _check(fired[0] == 5, "safety guard processes exactly the bounded number of events")
+    _check(kernel.pending_event_count() == 1, "safety guard leaves remaining same-tick work explicit")
