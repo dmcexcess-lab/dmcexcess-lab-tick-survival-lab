@@ -1,5 +1,18 @@
 # Changelog
 
+## Extraction Raid Loop 0.6 — 2026-08-15
+
+- Pivoted the 5×5 mini-world from seamless adjacent-region travel into an extraction-survival destination map: base/staging → choose destination → fresh 64×64 raid → reach green extraction → return to base.
+- Added `EXTRACTION_RAID_DESIGN.md` as the durable gameplay contract; it supersedes only the seamless-travel portions of the earlier mini-world design while retaining v5 streetscape/building/art/performance work.
+- Added `ExtractionRaidState.gd` as the authoritative base-vs-raid session owner, including active destination, visit counts, deterministic fresh raid seeds, last raid seed, and successful extraction count.
+- Added `ExtractionWorldPresentation.gd` as the active main-scene harness. The full-screen map stays open at base, destination cells are tap/click deploy targets, and the same destination produces a different deterministic local map on later visits.
+- Commercial destinations are presented as shops/strip malls, downtown as offices/dense streets, residential as homes/duplexes/estate houses, plus woods and rural raid destinations.
+- Removed active gameplay dependence on walking through one local edge into a neighboring macro region. Generated green edge exits now function as extraction cells; stepping onto one costs the normal final movement action and returns to base/staging.
+- The world map remains inspectable during a raid but becomes view-only until extraction, preventing redeployment while a raid is active.
+- Preserved scheduler/calendar/weather/survivor state across raid completion while keeping deployment transit abstract and zero-tick until travel/fuel/vehicle systems actually exist.
+- Strengthened `MiniWorldSmoke.gd` with deterministic extraction-session proofs: cannot redeploy mid-raid, extraction returns to base, same world/visit sequence reproduces raid seeds, repeating one destination rerolls to a new seed, and raid maps retain four extraction cells.
+- Updated `README_CONTEXT.md`, `ROADMAP.md`, and `game/main.tscn` so the extraction loop—not seamless region traversal—is now the canonical gameplay direction.
+
 ## Mini-World / Streetscape v5 — 2026-08-15
 
 - Added `MINI_WORLD_STREETSCAPE_DESIGN.md` as the durable design for the mini-Zomboid pivot: a cheap deterministic macro world connected to detailed local tactical regions rather than one continuously rendered island.
