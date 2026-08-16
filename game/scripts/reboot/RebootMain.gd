@@ -91,8 +91,8 @@ func _draw_tactical() -> void:
             if props.has(p):
                 _draw_prop(int(props[p]), dest)
 
-    var px := player.cell.x - start_x
-    var py := player.cell.y - start_y
+    var px: int = player.cell.x - start_x
+    var py: int = player.cell.y - start_y
     if px >= 0 and py >= 0 and px < cols and py < rows:
         var player_dest := Rect2(origin + Vector2(px * tile, py * tile), Vector2(tile, tile))
         draw_texture_rect(Art.player_texture(player.facing), player_dest, false)
