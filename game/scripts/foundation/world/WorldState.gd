@@ -140,6 +140,7 @@ func _allocate_runtime_id() -> String:
         _next_entity_serial += 1
         if not _entities.has(candidate):
             return candidate
+    return ""
 
 func _entity_ref(entity_id: String) -> WorldEntityRecord:
     return _entities.get_record(entity_id)
