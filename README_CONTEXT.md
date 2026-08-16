@@ -12,6 +12,8 @@ Tick Survival Lab is an original Godot 4 top-down zombie-apocalypse survival/ext
 
 Primary current design/runtime reference: `REBOOT_CORE.md`.
 
+Prefab authoring reference: `PREFAB_WORKSHOP.md`.
+
 `TRAVEL_DEPTH_VEHICLE_GATEWAY_DESIGN.md` remains useful for later macro progression: the survivor begins on the rural outskirts, gains roaming capability toward small towns/suburbs/city, and vehicles eventually act as strategic gateway/stair transitions rather than requiring a seamless rendered island.
 
 ## Current canonical runtime
@@ -22,6 +24,8 @@ The active runtime intentionally contains only:
 
 - retained tactical/environment/player artwork;
 - deterministic **Rural Road generator v4**;
+- the active **Prefab Workshop** for authored 16x14-or-smaller generator inserts;
+- browser/device-local prefab-library persistence;
 - player grid position and cardinal facing;
 - forward/back movement and left/right turning;
 - collision;
@@ -31,19 +35,24 @@ The active runtime intentionally contains only:
 - cheap static roadside power-line rendering;
 - a static strategic progression map.
 
-The current build intentionally does **not** contain tick/calendar, weather, lighting, perception/fog, silent sound, infected, loot/inventory, combat, injuries, vehicles, extraction rewards/loss, off-screen simulation, or save serialization.
+The current build intentionally does **not** contain tick/calendar, weather, lighting, perception/fog, silent sound, infected, loot/inventory, combat, injuries, vehicles, extraction rewards/loss, off-screen simulation, or normal survivor/world save serialization. `user://reboot_prefabs.json` is a developer-authored prefab library, not the future gameplay save system.
 
 ## Current owners
 
-- `game/scripts/reboot/RebootArt.gd` — reboot-only art owner. Canonical structures use the early tactical-atlas vocabulary: walls 16–22, closed/open doors 23/24, window 25, original tactical floors/common props, and the clutter sheet. `world_art` now supplements road topology so straight roads, bends, corners, T junctions and crossroads can use correct cardinal road pieces.
-- `game/scripts/reboot/RebootSiteGenerator.gd` — canonical physical Rural Road generator and all authoritative site/door/road geometry.
+- `game/scripts/reboot/RebootArt.gd` — reboot-only art owner. Canonical structures use the early tactical-atlas vocabulary: walls 16–22, closed/open doors 23/24, window 25, original tactical floors/common props, and the clutter sheet. `world_art` supplements connected road topology.
+- `game/scripts/reboot/RebootSiteGenerator.gd` — canonical physical Rural Road generator and all authoritative procedural site/door/road geometry.
+- `game/scripts/reboot/RebootPrefabLibrary.gd` — authored-prefab data schema, validation, JSON persistence, trimming, deterministic safe-footprint search and stamping.
+- `game/scripts/reboot/RebootPrefabEditor.gd` — touch/mouse-first in-game dev workshop for painting, saving, loading and deleting authored prefabs.
 - `game/scripts/reboot/RebootPlayer.gd` — canonical player cell/facing/movement owner.
-- `game/scripts/reboot/RebootMain.gd` — active presentation/input shell: visible-cell rendering, buttons, zoom, strategic map, touch/mouse de-duplication, site-selection orchestration, and static visible power-line presentation.
+- `game/scripts/reboot/RebootMain.gd` — active presentation/input shell: visible-cell rendering, buttons, zoom, strategic map, touch/mouse de-duplication, site-selection orchestration, local prefab-library handoff/stamping orchestration, and static visible power-line presentation.
 - `game/scripts/ci/RebootSmoke.gd` — deterministic generator/player quality smoke test, including door-axis geometry and road-variety checks.
+- `game/scripts/ci/RebootPrefabSmoke.gd` — authored-prefab validation/round-trip/deterministic-stamping smoke test.
 
 Preferred dependency direction:
 
-**site data -> player/world rules -> presentation/input**
+**site/prefab data -> player/world rules -> presentation/input**
+
+The procedural generator does not own or hardcode user-authored prefab data. `RebootMain` generates the normal site, asks `RebootPrefabLibrary` to attempt a safe deterministic insert, then runs the canonical generator validator over the complete map.
 
 ## Rural generator direction — v4
 
@@ -61,13 +70,16 @@ Every generated 64x64 sample currently contains:
 - frequent roadside utility poles with static connecting power lines;
 - sparse stop signs and **no traffic lights**;
 - broad grass plus trees, bushes, scrub, tall grass, weeds and edge growth;
-- property-specific mailboxes, sheds, barns, fields, propane, firewood and rough-yard clutter.
+- property-specific mailboxes, sheds, barns, fields, propane, firewood and rough-yard clutter;
+- optionally, at most one locally saved authored prefab when a safe destination footprint exists.
 
-Road topology is generated as authoritative connected cells first, then rendered with horizontal/vertical/corner/T/cross/end road sprites. Later yard, field, building-floor and forecourt painting is not allowed to overwrite main-road cells.
+The authored prefab is currently an **extra structure**. It does not replace one of the canonical four residences or the roadside business because user prefabs do not yet carry semantic room/property roles.
+
+Road topology is generated as authoritative connected cells first, then rendered with horizontal/vertical/corner/T/cross/end road sprites. Later yard, field, building-floor, forecourt and prefab painting may not overwrite main-road cells.
 
 ### Room-size rule
 
-All recorded functional rooms are now **at least 3x3 usable cells**. This is both a readability rule and a structural safety rule: tiny sliver rooms made interior partition/door intersections too easy to generate incorrectly.
+All recorded procedural functional rooms are **at least 3x3 usable cells**. This is both a readability rule and a structural safety rule: tiny sliver rooms made interior partition/door intersections too easy to generate incorrectly.
 
 Current residential rooms are compact but functional. The current rural business uses:
 
@@ -83,26 +95,53 @@ The earlier 3x1 office / 2x2 bathroom contract is superseded by the 3x3 minimum.
 
 The reported “wall behind door” problem was generator geometry, not the tile set.
 
-Doors now have authoritative wall-axis metadata:
+Doors have authoritative wall-axis metadata:
 
 - `h` = opening in a horizontal wall; north/south are the clear approaches;
 - `v` = opening in a vertical wall; east/west are the clear approaches.
 
-For every door:
+For every procedural or authored door:
 
 - the door cell itself is reserved from walls, windows, props and blockers;
 - the two approach cells perpendicular to the wall are reserved from structural cells and clutter;
 - later wall placement is forbidden from overwriting a reserved door/approach cell;
 - the two same-axis neighbors must remain structural, proving that the door sits in one continuous wall rather than at a wall intersection;
-- a final normalization pass clears accidental later conflicts before validation.
+- authored exterior-door clearance may extend outside the prefab footprint and must still be safe in the destination map;
+- the completed site must pass `RebootSiteGenerator.validate()`.
 
-This stronger rule caught real prefab bugs during implementation: country-house exterior doors shared an x-axis with an interior divider, and one farmhouse partition door sat too close to a perpendicular junction. The prefab door positions were separated rather than weakening the validator.
+The stronger v4 rule caught real prefab bugs during implementation: country-house exterior doors shared an x-axis with an interior divider, and one farmhouse partition door sat too close to a perpendicular junction. Those floor plans were corrected rather than weakening the validator.
 
 ### Roadside business grammar
 
 The rural band supports only a small roadside **gas station** or **corner/convenience store**. Strip malls are not generated here.
 
 Store clutter follows room purpose: checkout counter, retail shelving, cold case/vending, crates/pallets, manager desk/chair, bathroom fixtures and rear-service clutter. Gas stations add a compact asphalt forecourt, pumps and gas sign; corner stores use modest frontage.
+
+## Prefab Workshop
+
+The active dev workshop is intentionally simple and data-driven.
+
+- Maximum canvas: **16x14 cells**, matching one far-zoom tactical window.
+- Empty outer rows/columns are trimmed on SAVE.
+- Paintable layers: selected ground/floor tiles, canonical walls, windows, horizontal/vertical doors and common props/furniture.
+- Native `LineEdit` is used for naming so Web/Safari gets normal keyboard behavior.
+- Paint by tap/click or drag.
+- CLEAR and DELETE use two-tap confirmation.
+- SAVE validates hard door/overlap rules before writing.
+- Library data persists at `user://reboot_prefabs.json` for the current browser/device profile.
+- Saved prefabs are reloaded immediately by `RebootMain` and become inputs to future random Rural Road generation.
+- Given the same seed and ordered prefab library, prefab selection/origin is deterministic.
+- If no safe footprint exists, the normal procedural map is used unchanged.
+
+Safe stamping rejects roads, side roads, spawn proximity, existing buildings/buffers, structural conflicts, non-vegetation props, incompatible road/asphalt/field ground and doorway-clearance conflicts. A small amount of vegetation may be cleared, after which the full Rural Road validator still decides whether the completed map is valid.
+
+Current workshop access:
+
+- strategic map `PREFABS n` button;
+- tactical `PREFABS` button;
+- desktop F2 convenience.
+
+See `PREFAB_WORKSHOP.md` for the detailed contract and future role/room-tagging/export/import direction.
 
 ## Art / tile-set rule
 
@@ -115,19 +154,19 @@ The user's remembered structural look is pinned to historical early `TacticalTil
 - `final_environment_props_atlas.svg`: limited supplemental vegetation;
 - individual directional player sprites remain canonical.
 
-Do not change structural walls/doors/windows to later `world_art` shell tiles unless the user explicitly asks to change the visual style.
+Do not change structural walls/doors/windows to later `world_art` shell tiles unless the user explicitly asks to change the visual style. The workshop must use this same canonical structural vocabulary.
 
-## Rural quality validation
+## Quality validation
 
 `RebootSiteGenerator.validate()` and `RebootSmoke.gd` exercise eight deterministic seeds and check, among other things:
 
 - deterministic complete generation;
-- exactly five primary sites: four residences + one roadside business;
+- exactly five canonical primary sites: four residences + one roadside business;
 - one farm complex;
 - one or two manufactured homes;
 - multiple substantial residences;
 - exactly one gas station/corner store;
-- every functional room at least 3x3;
+- every procedural functional room at least 3x3;
 - exact business room sizes 7x7 / 3x3 / 3x3 / 3x3 plus rear service;
 - connected main-road and side-road presence;
 - straight + bend + crossroads variants represented across the permanent sample set;
@@ -140,6 +179,17 @@ Do not change structural walls/doors/windows to later `world_art` shell tiles un
 - no door-adjacent clutter;
 - wall-aware installed fixture placement;
 - valid player spawn/movement.
+
+`RebootPrefabSmoke.gd` additionally checks:
+
+- a real authored cabin prefab;
+- 16x14 workshop-content trimming;
+- JSON storage encode/decode round trip;
+- rejection of broken authored door geometry;
+- deterministic safe stamping;
+- door-axis preservation after stamping;
+- authored-use metadata;
+- canonical Rural Road validation after the authored insert.
 
 ## Strategic world direction
 
@@ -162,6 +212,7 @@ Touch controls:
 - TURN L
 - TURN R
 - MAP
+- PREFABS
 - zoom - / +
 
 Keyboard:
@@ -172,20 +223,22 @@ Keyboard:
 - D/Right turn right
 - M map
 - -/+ zoom
+- F2 prefab workshop
 
-Touch is first-class. The active shell suppresses synthetic mouse actions after a real touch instead of using the old Safari autoload.
+Touch is first-class. The active shell and workshop suppress synthetic mouse actions after a real touch. The workshop's native name field is retained for Web/Safari keyboard reliability.
 
 ## Performance contract
 
-The reboot renderer remains event-driven.
+The reboot tactical renderer remains event-driven.
 
 - no idle `_process()` redraw loop;
 - no weather animation;
 - no perception scan;
 - no whole-map tactical draw;
 - only visible camera cells are rendered;
-- redraw happens only after movement, turning, zoom, map toggle, or site load;
-- static power lines are drawn only during those same tactical redraws and only for visible linked poles.
+- redraw happens only after movement, turning, zoom, map toggle, site load or explicit dev-editor input;
+- static power lines are drawn only during those same tactical redraws and only for visible linked poles;
+- the workshop is a bounded 16x14 editor, not a whole-world simulation layer.
 
 ## Legacy code
 
@@ -193,7 +246,7 @@ Many old scripts remain temporarily as historical/reference material, but they a
 
 ## Current next step
 
-Playtest many Rural Road v4 seeds on desktop and Safari. Specifically inspect door openings/partition junctions and compare straight, bent and crossroads layouts. Keep improving this biome until it consistently looks authored before adding Small Town or reintroducing vision/lighting/weather.
+Playtest the Prefab Workshop on desktop and Safari: author several shapes, save/load/delete them, verify native naming input, and generate repeated Rural Road seeds to judge placement quality. Continue inspecting procedural door openings/partition junctions and straight/bent/crossroads layouts. Add semantic prefab roles/room tagging only after the basic author-save-insert loop feels reliable.
 
 ## Source-of-truth order
 
@@ -202,5 +255,6 @@ Playtest many Rural Road v4 seeds on desktop and Safari. Specifically inspect do
 3. `README_SOPS.md`
 4. This file
 5. `REBOOT_CORE.md`
-6. `TRAVEL_DEPTH_VEHICLE_GATEWAY_DESIGN.md` for future macro travel direction
-7. Legacy design docs only when they do not conflict with the reboot
+6. `PREFAB_WORKSHOP.md` for authored-prefab details
+7. `TRAVEL_DEPTH_VEHICLE_GATEWAY_DESIGN.md` for future macro travel direction
+8. Legacy design docs only when they do not conflict with the reboot
