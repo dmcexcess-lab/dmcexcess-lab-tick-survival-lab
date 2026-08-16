@@ -110,19 +110,23 @@ Long-term base-related mechanics may include physical storage, beds, work areas,
 
 ## Space / tactical presentation
 
-Current favored direction:
+Canonical spatial baseline:
 
 - authoritative **invisible tactical grid**;
+- global authoritative positions are integer `Vector2i` cells;
+- one tactical cell has a centralized planning scale of approximately **1 meter**;
 - actors move cell-to-cell;
 - no visible grid lines are required;
-- props/fixtures can occupy one or multiple whole cells;
+- props/fixtures can occupy one or multiple whole cells through arbitrary relative-cell footprints;
 - directional props carry N/E/S/W orientation;
 - renderer may rotate art in 90-degree steps or use authored directional variants where rotation looks wrong;
 - world/generation data stores semantic object + orientation, never renderer-specific atlas assumptions;
 - four-way actor facing is the simple baseline and supports vision cone, vulnerability, attacks and readable graphics;
-- exact wall/door/window representation (wall cells vs cell-edge structures) remains a design question and must be resolved deliberately rather than assumed.
+- walls/doors/windows use **structure cells with explicit horizontal/vertical axis**, not cell-edge walls.
 
 Do not introduce sub-cell positioning/free movement unless a concrete gameplay need justifies the added complexity.
+
+The canonical detailed spatial contract is `SYSTEM_DESIGNS/00A_SPATIAL_MODEL.md`.
 
 ## Turn-based time / interruption safety
 
@@ -182,17 +186,17 @@ The game should feel lonely, dangerous, uncertain and physically grounded withou
 
 Lighting, weather, darkness, line of sight, silence/spatial sound information, abandoned homes, evidence of the outbreak, persistent consequences and the player's personal connections to the world should create atmosphere through systems rather than scripted drama whenever practical.
 
-## Foundational architecture idea
+## Foundational architecture
 
-The current lowest-level design question is not “which generator do we write?” The simulation foundation is expected to separate at least three peer truths:
+The simulation foundation separates three peer truths rather than treating the map generator as the engine:
 
-- **WHERE — spatial model:** global grid coordinates, cells, footprints, facing, structures/openings and spatial queries;
+- **WHERE — spatial model:** global grid coordinates, cells, footprints, facing, structure/opening geometry and pure spatial queries;
 - **WHAT — persistent world/entity state:** what terrain, objects, actors, items, structures and mutations exist;
 - **WHEN — tick/action kernel:** when actors/systems act, action durations, scheduling, auto-pause and hard pause.
 
-Generation later creates initial persistent world state using the spatial contract. Construction, destruction and gameplay later mutate that same world state. Rendering reads it. None of those systems owns the others.
+Generation later creates initial persistent world state using WHERE. Construction, destruction and gameplay later mutate that same world state. Rendering reads it. None of those systems owns the others.
 
-The exact detailed ordering/contracts remain design work and are not approved merely because this North Star names them.
+**WHERE is implemented. WHAT and WHEN still require their own bounded approved designs/implementation slices.** The umbrella relationship remains `SYSTEM_DESIGNS/00_FOUNDATION_WHERE_WHAT_WHEN.md`.
 
 ## Modularity / development rule
 
