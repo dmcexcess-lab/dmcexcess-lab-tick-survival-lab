@@ -78,7 +78,10 @@ func set_placement(
     if previous != null and previous.equivalent(candidate):
         return true
 
-    var before_cells: Array[Vector2i] = previous.world_cells() if previous != null else []
+    var before_cells: Array[Vector2i] = []
+    if previous != null:
+        before_cells = previous.world_cells()
+
     if not _state._set_placement_record(candidate):
         return false
 
