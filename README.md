@@ -1,62 +1,64 @@
 # Tick Survival Lab
 
-An original Godot 4 top-down zombie-apocalypse survival simulation built around an authoritative world tick.
+An original Godot 4 top-down zombie-apocalypse survival/extraction project.
 
-The design shorthand may reference Project Zomboid's systemic-survival scope, but Tick Survival Lab is original in code, art, maps, names, UI, content and implementation. First Fire is a same-owner source project whose reusable tactical/physical-world work may be cleanly adapted where it fits Tick's architecture.
+## Current status: clean reboot
 
-## Core identity
+The project has deliberately restarted from a small runtime core. Existing environment/player artwork is retained; the previous generator/tick/weather/perception/extraction architecture is no longer the active game.
 
-The game is presented as **real time with automatic pause**.
+The current playable foundation contains:
 
-The world pauses when the current player character is ready for an action. The player commits an action; simulation time advances while that action executes; every other actor/world process advances on the same authoritative tick clock; when the player becomes ready again, the game automatically pauses.
+- a new deterministic rural site generator;
+- four site archetypes: farmstead, small trailer, double-wide, and country house;
+- multi-room building prefabs and room-aware furniture/clutter;
+- grid player movement with cardinal facing and left/right turning;
+- collision against generated walls and blocking fixtures;
+- touch-first `FORWARD`, `BACK`, `TURN L`, `TURN R`, `MAP`, and zoom controls;
+- keyboard development controls;
+- three tactical zoom levels;
+- a static strategic progression map from rural outskirts toward the city;
+- an event-driven renderer that draws only visible tactical cells and does no idle redraw work.
 
-The world is the game. There is no separate camp or expedition layer.
+Vision cone, lighting, weather, sound, infected, loot, combat, ticks/calendar, injuries, vehicles, and persistence are intentionally absent for now. They will be redesigned and added back only after the generator/player foundation is strong.
 
-The persistent **world is separate from the player character**. If a player character dies, the world can continue and a new survivor can become the player in the same seed, or the user can start an entirely new world seed.
+## World direction
 
-## Current implementation
+The strategic world progresses geographically:
 
-**Milestone 0.1 — Authoritative Tick Movement** is on `main`.
+**BASE -> RURAL EDGE -> SMALL TOWN -> SUBURBS -> CITY EDGE -> CITY CORE**
 
-Current foundation includes:
+The current build only exposes rural walking-range sites. Deeper nodes are visible but locked for later roaming/vehicle progression.
 
-- Godot 4.7.1 project and permanent GitHub Pages CI;
-- seven authored location families / fourteen variants;
-- walls, ground, doors, windows/glass, props/obstacles, light markers, spawns and exits;
-- structural map validation;
-- authoritative world tick scheduler;
-- one player actor with four-direction facing/movement;
-- walk/run costs plus fatigue/encumbrance-ready modifiers;
-- mutable runtime door state;
-- keyboard plus click/tap developer controls;
-- visible tick/action developer HUD;
-- ported First Fire lighting and tactical-sound helper rules with clean Tick-native dependencies.
+A tactical map represents one detailed place, not a miniature mixed-biome city. Roads and driveways serve the site rather than dominating it.
 
-## Design documents
+## Performance direction
 
-- [Design Document](DESIGN.md) — authoritative long-form game direction and simulation principles.
-- [Roadmap](ROADMAP.md) — ordered milestones from the current tick foundation through island/outbreak simulation.
-- [First Fire Reuse Audit](FIRST_FIRE_REUSE.md) — what has been ported, what should be adapted later, and what must stay out.
-- [GPT/Repository SOP](README_SOPS.md) — coding and repository operating rules.
-- [Current Context](README_CONTEXT.md) — concise current-state context for future development prompts.
+The reboot establishes a cheap baseline:
 
-## Long-term direction
+- no `_process()` redraw loop;
+- only visible camera cells are drawn;
+- sparse walls/props/blockers use dictionary lookups;
+- redraw occurs only after movement, turning, zoom, map toggle, or site generation;
+- no weather/perception/light calculations are running yet.
 
-The intended world is a large cut-off island-like region containing city, suburban, industrial, rural, agricultural and wilderness areas. Destroyed/bombed bridges and failed infrastructure can show that the region once connected to a larger functioning world.
+## Current code
 
-Long-term systems include persistent infected, sound/vision/lighting, detailed-enough injuries and medicine, use-based skills, skill/recipe books and recorded training media, inventory/loot/crafting, destructible/buildable environments, farming, autonomous human survivors and animals, emergent settlements built through free construction plus NPC job assignment, patrols/supply routes, vehicles, infrastructure reclamation, and eventually configurable outbreak epicenters/spread/response conditions plus occupation/family starting context.
+Canonical reboot runtime:
 
-The ambition is large; implementation remains incremental. The next work should strengthen the local action/perception/infected loop rather than racing ahead to island-scale simulation.
+- `game/scripts/reboot/RebootArt.gd`
+- `game/scripts/reboot/RebootSiteGenerator.gd`
+- `game/scripts/reboot/RebootPlayer.gd`
+- `game/scripts/reboot/RebootMain.gd`
+- `game/scripts/ci/RebootSmoke.gd`
 
-## Architecture
+See:
 
-Current dependency direction:
+- `REBOOT_CORE.md` — current implementation contract;
+- `README_CONTEXT.md` — current development context;
+- `README_SOPS.md` — repository/coding rules;
+- `TRAVEL_DEPTH_VEHICLE_GATEWAY_DESIGN.md` — later strategic travel/vehicle direction.
 
-```text
-map/data → persistent world state → authoritative tick scheduler/rules → actor simulation → presentation/input
-```
-
-The UI never owns simulation truth. The map generator owns initial authored physical facts, not gameplay systems.
+Legacy prototype files remain temporarily for historical reference but are not part of the active runtime or CI contract.
 
 ## Run
 
