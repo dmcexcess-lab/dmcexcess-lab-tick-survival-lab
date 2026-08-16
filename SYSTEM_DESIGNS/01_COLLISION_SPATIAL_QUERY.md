@@ -1,8 +1,8 @@
 # Tick Survival Lab — 01 Collision / Spatial Query
 
-Status: **APPROVED — implementation authorized 2026-08-16**
+Status: **IMPLEMENTED — canonical modular source and CI contract present 2026-08-16**
 
-Approval basis: after completing WHERE / WHAT / WHEN, the user explicitly instructed: **“Ok continue on with coding collision and spacial query.”** This authorizes this bounded system only. Movement actions, pathfinding, doors, terrain traversal, AI, rendering, generation and WHEN integration remain separate future slices.
+Approval basis: after completing WHERE / WHAT / WHEN, the user explicitly instructed: **“Ok continue on with coding collision and spacial query.”** This authorized this bounded system only. Movement actions, pathfinding, doors, terrain traversal, AI, rendering, generation and WHEN integration remain separate future slices.
 
 ## 1. Goal
 
@@ -10,7 +10,7 @@ Provide the canonical read-only spatial-world query layer that answers **what oc
 
 This is the first downstream system that deliberately consumes implemented WHERE + WHAT together.
 
-It must let future movement, AI, pathfinding, construction validation and interaction systems ask spatial questions without:
+It lets future movement, AI, pathfinding, construction validation and interaction systems ask spatial questions without:
 
 - reaching into WHAT internals;
 - inferring physics from art;
@@ -36,7 +36,7 @@ This system does **not**:
 - render anything;
 - own input/UI.
 
-Movement will be a later system that combines this query contract with WHEN and WHAT mutation.
+Movement is a later system that combines this query contract with WHEN and WHAT mutation.
 
 ## 3. Why collision is not stored directly in WHAT
 
@@ -288,12 +288,12 @@ Collision itself performs none of those action/timing/mutation steps.
 
 ## 21. Performance
 
-A normal query should be proportional to:
+A normal query is proportional to:
 
 - the number of target footprint cells;
 - the number of entities indexed in those cells.
 
-It must not scan the whole world.
+It does not scan the whole world.
 
 Type profiles are dictionary lookups. Dynamic overrides are sparse dictionary lookups. WHAT occupancy remains the spatial acceleration index.
 
@@ -329,7 +329,7 @@ The new system preserves the useful physical decision while using global WHAT pl
 
 ## 24. Tests / acceptance criteria
 
-Dedicated `CollisionSpatialQuerySmoke.gd` must prove:
+Dedicated `CollisionSpatialQuerySmoke.gd` proves:
 
 1. catalog profiles are explicit and mutation-safe on read;
 2. normal static blockers require no per-entity override;
@@ -366,3 +366,4 @@ The type-profile + sparse-override model directly serves the project's **low-res
 - Missing terrain is UNKNOWN/fail-closed.
 - Terrain traversal capability is deferred to Movement/Traversal rather than conflated with hard occupancy collision.
 - Collision query is read-only; movement and WHAT mutation remain separate systems.
+- Implementation passed dedicated CI contract smoke while WHERE / WHAT / WHEN and the frozen reference remained green.
