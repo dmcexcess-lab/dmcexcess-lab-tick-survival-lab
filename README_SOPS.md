@@ -4,7 +4,7 @@
 
 ## 1. Current status
 
-Tick Survival Lab is in **modular foundation implementation**.
+Tick Survival Lab has completed the canonical **WHERE / WHAT / WHEN simulation foundation triad** and is in staged modular replacement of the frozen playable reference runtime.
 
 Primary game shorthand:
 
@@ -20,7 +20,7 @@ Canonical modular foundation status:
 
 - **00A WHERE / Spatial Model — IMPLEMENTED** under `game/scripts/foundation/spatial/`, dedicated CI contract smoke.
 - **00B WHAT / Persistent World State — IMPLEMENTED** under `game/scripts/foundation/world/`, dedicated CI contract smoke.
-- **00C WHEN / Tick Action Pause — next bounded system; not implemented.**
+- **00C WHEN / Tick Action Pause — IMPLEMENTED** under `game/scripts/foundation/time/`, dedicated CI contract smoke.
 
 Canonical broad modular architecture inventory: `MODULAR_REBUILD_MASTER_DESIGN.md`, but older static-raid/strategic-map assumptions in that file yield to newer North Star/decision entries.
 
@@ -341,7 +341,28 @@ Canonical WHAT rules:
 
 Future health/inventory/door/vehicle/infection/etc. state should normally be explicit typed domain state keyed by the same stable entity IDs rather than appended to a universal foundation dictionary.
 
-## 16. Performance/mobile rules
+## 16. Canonical timing foundation
+
+`SYSTEM_DESIGNS/00C_TICK_ACTION_PAUSE.md` is IMPLEMENTED.
+
+Canonical WHEN rules:
+
+- one non-negative integer world tick is authoritative;
+- wall-clock/frame time never advances simulation implicitly;
+- WHEN does not decide the tick-to-calendar conversion;
+- scheduled work uses deterministic due-tick/priority/owner/serial ordering;
+- all due work at the current tick drains before tactical decision auto-pause;
+- one active action per actor, many actors may act concurrently;
+- action phases/checkpoints are timing facts whose gameplay effects remain external;
+- COMMITTED / RESUMABLE / CANCELABLE interruption policies are timing semantics only;
+- hard application pause is separate from tactical auto-pause and advances zero simulation ticks;
+- explicit run calls jump between due ticks; there is no foundation `_process()` simulation clock;
+- deterministic snapshot/restore is atomic and retains active/resumable work plus queued events;
+- WHEN has no direct WHERE/WHAT/reboot/generator/render/gameplay dependency.
+
+Later mechanics calculate action duration/requirements/effects themselves and submit timed work to WHEN. Do not teach the kernel what movement, damage, doors, weather, infection, inventory or AI mean.
+
+## 17. Performance/mobile rules
 
 Phone/Safari is first-class.
 
@@ -355,7 +376,7 @@ Phone/Safari is first-class.
 - one zoom owner supplies canonical zoom values;
 - real-life interruption requires a hard application pause design; browser/app visibility/focus behavior must never let simulation continue unnoticed when the platform gives us a reliable lifecycle signal.
 
-## 17. Reusable coding/GitHub lessons — living SOP
+## 18. Reusable coding/GitHub lessons — living SOP
 
 This section grows when repeated lessons are discovered.
 
@@ -364,6 +385,7 @@ This section grows when repeated lessons are discovered.
 - Be conservative with `:=` around `Dictionary`/`Variant`; explicit types/conversions avoid strict inference surprises.
 - **Do not initialize a typed array through a ternary whose alternate branch is a bare `[]`.** Godot can produce an untyped `Array` at runtime and reject assignment to `Array[T]`. Initialize `var values: Array[T] = []` first, then assign inside an explicit branch.
 - GDScript static return analysis may still require an explicit fallback return after an apparently infinite `while true` loop in a typed-return function.
+- **Closures should not be used to prove scalar mutation in tests by assigning directly to a captured scalar.** For signal-test counters/state that must mutate inside a lambda, use a deliberately mutable container/object (for example a one-element typed array) or a test-owner field; otherwise closure capture behavior can look like subsystem state corruption.
 - Keep data schemas/API names stable and test them as contracts.
 - Avoid mutation inside draw functions.
 - Prefer deterministic headless tests for generation/simulation.
@@ -390,6 +412,7 @@ This section grows when repeated lessons are discovered.
 - When a bug exposes a missing invariant, add the invariant/test rather than only patching the one seed/case.
 - Historical recovery claims should cite/inspect the historical commit/file, not rely on chat memory.
 - Do not weaken a test merely because implementation fails; decide whether the design or implementation is wrong.
+- A test that demands information the schema fundamentally cannot know is not a stronger invariant. Replace it with a provably invalid state rather than adding redundant production complexity solely to satisfy the test.
 - Source/document guards are contracts too. Keep them synchronized with intentional lifecycle/status changes.
 
 ### Living-document update rule
@@ -402,7 +425,7 @@ If it belongs only to one subsystem, record it in that subsystem design instead.
 
 Do not leave important lessons or decisions only in chat.
 
-## 18. Validation rule
+## 19. Validation rule
 
 For documentation-only changes, preserve the currently deployed reference build and run the existing Pages gate if repository workflow triggers it.
 
@@ -419,7 +442,7 @@ For modular code changes, exact final SHA must pass:
 
 Add one focused CI test per subsystem instead of one giant smoke script that knows every internal detail.
 
-## 19. Communication rule
+## 20. Communication rule
 
 - Surface architectural concerns before coding.
 - Explain when a user request is too broad and propose a smaller sequence.
@@ -430,7 +453,7 @@ Add one focused CI test per subsystem instead of one giant smoke script that kno
 - If current repo docs conflict with the current conversation, do not silently pick one: identify whether the conversation changed the design and update durable memory accordingly.
 - When canonical code is intentionally not wired into the frozen playable reference, say so plainly rather than implying the live game changed.
 
-## 20. Required final footer after repository changes
+## 21. Required final footer after repository changes
 
 End repo-change responses with:
 
