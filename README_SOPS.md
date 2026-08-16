@@ -4,7 +4,7 @@
 
 ## 1. Current status
 
-Tick Survival Lab is in a **full modular redesign/rebuild**.
+Tick Survival Lab is in **modular foundation implementation**.
 
 Primary game shorthand:
 
@@ -15,6 +15,8 @@ Canonical game identity/anti-drift reference: `PROJECT_NORTH_STAR.md`.
 Cross-system decisions/rationale: `DESIGN_DECISIONS.md`.
 
 The deployed `game/scripts/reboot/` runtime is **frozen/deprecated reference code**. Do not extend it as the target architecture.
+
+The first canonical modular foundation subsystem, **00A WHERE / Spatial Model**, is implemented under `game/scripts/foundation/spatial/` and has its own CI contract smoke. WHAT and WHEN remain separate bounded future systems.
 
 Canonical broad modular architecture inventory: `MODULAR_REBUILD_MASTER_DESIGN.md`, but older static-raid/strategic-map assumptions in that file yield to newer North Star/decision entries.
 
@@ -46,6 +48,7 @@ Golden recovery commit for mature pre-clean-rewrite behavior/art archaeology:
 16. Do not claim success without exact-final-SHA validation for code changes.
 17. Direct `main` remains normal unless the user explicitly requests branch/PR workflow.
 18. **When a new discussion materially changes the game's cross-system direction, update North Star/decision/context docs in the same coherent prompt rather than letting chat outrun the repo.**
+19. **During a staged modular replacement, canonical new modules may remain independently tested beside the frozen runtime. Do not create temporary adapters merely to make new work visibly affect the deprecated build.** Wire systems only when the adjacent canonical contracts needed for a real integration exist.
 
 ## 3. North-star drift check
 
@@ -68,7 +71,7 @@ Before implementing, classify the request.
 Proceed through the approved system design and impact declaration.
 
 ### Multi-system request
-If the request requires meaningful work across multiple major domains (for example generator + renderer + player + strategic world), **do not begin coding all of them**.
+If the request requires meaningful work across multiple major domains (for example generator + renderer + player + world state), **do not begin coding all of them**.
 
 Instead:
 
@@ -101,7 +104,7 @@ Ask a concise targeted question before implementation when unresolved ambiguity 
 Examples:
 
 - "restore the old graphics" when several historical renderers exist and archaeology cannot identify which one;
-- "make vehicles work" when this could mean strategic travel abstraction, physical tactical driving, or both;
+- "make vehicles work" when this could mean physical driving, abstract long-distance travel, or both;
 - "rewrite the generator" when it is unclear whether existing semantic/persistent-world contracts must remain compatible;
 - "make the world open" when it is unclear whether partitions are separate realities or only streaming/storage divisions.
 
@@ -145,14 +148,14 @@ Forbidden:
 - gameplay input handling;
 - touch hit testing/button geometry;
 - keyboard mappings;
-- tactical/strategic rendering;
+- world rendering;
 - HUD/control rendering;
 - camera/zoom math;
 - generation;
 - prefab logic;
 - player movement/facing;
 - collision/door rules;
-- travel/extraction rules;
+- world-flow/base rules;
 - art/atlas selection;
 - persistence;
 - ticks/calendar;
@@ -173,7 +176,7 @@ Architecture is acceptable only if these remain plausible:
 - replace prefab DEV tooling without changing normal world/render/generator contracts;
 - add/recover lighting/perception/weather/sound without generator-specific presentation hacks;
 - replace streaming/storage partition strategy without changing the logical global world coordinate model;
-- change extraction/base UI without turning persistent physical world facts into menu-only truth.
+- change base/community UI without turning persistent physical world facts into menu-only truth.
 
 When a feature requires edits on both sides of a contract, determine whether the contract needs an explicit approved revision. Do not silently make modules depend on each other's internals.
 
@@ -245,10 +248,10 @@ Detailed system rules belong under `SYSTEM_DESIGNS/`.
 
 - DRAFT = discussion only; no implementation.
 - APPROVED = implementation allowed.
-- IMPLEMENTED = approved design exists in canonical runtime and is tested.
+- IMPLEMENTED = approved design exists in canonical source and is tested.
 - SUPERSEDED = historical only.
 
-If implementation reveals the APPROVED design cannot work without crossing a forbidden boundary, return the design to DRAFT, explain the conflict, and get approval for the contract change.
+If implementation reveals the APPROVED design cannot work without crossing a forbidden module boundary, return the design to DRAFT, explain the conflict, and get approval for the contract change.
 
 ## 12. No-placeholder / no-fake rule
 
@@ -263,6 +266,7 @@ Examples of unacceptable behavior:
 - fake loot/search before inventory ownership exists;
 - presentation erasure that hides invalid geometry;
 - a temporary monolithic function intended to be "split later";
+- a temporary adapter from new canonical code into a deprecated runtime that has no long-term contract;
 - calling an approximation the recovered original.
 
 If the actual owning system is not designed yet, stop at a clean interface or defer the behavior explicitly.
@@ -292,17 +296,25 @@ Expected separated generation/world-planning responsibilities may include:
 
 Avoid corrective pass chains that repeatedly delete/rebuild earlier output. Compose semantics intentionally, then validate.
 
-## 14. Spatial baseline / unresolved question
+## 14. Canonical spatial foundation
 
-Current favored baseline:
+`SYSTEM_DESIGNS/00A_SPATIAL_MODEL.md` is IMPLEMENTED.
 
-- invisible authoritative tactical grid;
-- cell-to-cell actors;
-- whole-cell prop/fixture footprints;
+Canonical WHERE rules:
+
+- invisible authoritative global tactical grid;
+- integer `Vector2i` cells;
+- centralized planning scale `SpatialModel.CELL_METERS = 1.0`;
+- cell-to-cell actor baseline;
+- arbitrary whole-cell prop/fixture/vehicle footprints;
 - N/E/S/W semantic facing/orientation;
-- no sub-cell/free movement without a concrete gameplay need.
+- deterministic 90-degree footprint rotation;
+- structure cells, not edge walls;
+- explicit HORIZONTAL/VERTICAL structure axis;
+- no sub-cell/free movement without a concrete gameplay need;
+- geometry only: WHERE stores no occupants, door state, collision policy, timing, art or generator facts.
 
-**Wall/door/window representation remains unresolved** (occupied cells vs cell-edge structures). Do not implement a dependent world contract until this is explicitly decided in the Spatial Model design.
+Do not reopen these decisions as accidental implementation details. If a later system exposes a real gameplay requirement to change them, treat it as an explicit cross-system contract revision.
 
 ## 15. Performance/mobile rules
 
@@ -311,7 +323,7 @@ Phone/Safari is first-class.
 - one physical touch = one semantic action;
 - no hover-only interaction;
 - synthetic mouse duplication must be handled by dedicated Safari/input owners;
-- native text inputs should be used where Safari keyboard behavior matters;
+- native text inputs should be used where iOS Safari must summon the keyboard;
 - renderer should draw only visible cells;
 - no idle full tactical redraw if nothing animated requires it;
 - future animated overlays should use bounded redraw cadence and not force unrelated simulation recomputation;
@@ -330,6 +342,13 @@ This section grows when repeated lessons are discovered.
 - Prefer deterministic headless tests for generation/simulation.
 - DEV UI is still a subsystem; do not hide it in Main.
 - Do not make every persistent world object a Godot Node merely because it exists; detailed node/materialization strategy belongs to the approved streaming/render design.
+- Pure foundation/value modules should prefer `RefCounted`/static helpers and deterministic integer/value operations when Nodes/signals/frame callbacks are unnecessary.
+
+### Modular migration
+
+- A new canonical subsystem does **not** need to affect the currently deployed deprecated runtime to count as real progress. Its contract + owning code + dedicated tests can be complete independently.
+- Do not add compatibility glue whose only purpose is to make a new module visibly run through old architecture. Wait until the canonical neighboring contracts exist, then integrate once through the real seam.
+- When a system status changes (for example APPROVED -> IMPLEMENTED), update CI/document guards that assert that status; otherwise the process check itself becomes stale.
 
 ### Web/Safari
 
@@ -344,6 +363,7 @@ This section grows when repeated lessons are discovered.
 - When a bug exposes a missing invariant, add the invariant/test rather than only patching the one seed/case.
 - Historical recovery claims should cite/inspect the historical commit/file, not rely on chat memory.
 - Do not weaken a test merely because implementation fails; decide whether the design or implementation is wrong.
+- Source/document guards are contracts too. Keep them synchronized with intentional lifecycle/status changes.
 
 ### Living-document update rule
 
@@ -359,15 +379,16 @@ Do not leave important lessons or decisions only in chat.
 
 For documentation-only changes, preserve the currently deployed reference build and run the existing Pages gate if repository workflow triggers it.
 
-For future modular code changes, exact final SHA must pass:
+For modular code changes, exact final SHA must pass:
 
 1. source/architecture checks;
 2. Godot import/parse;
 3. owning subsystem contract test(s);
-4. relevant integration test(s);
-5. real startup smoke;
-6. Web export;
-7. Pages deployment when live behavior changed.
+4. relevant integration test(s) when a real integration exists;
+5. frozen-reference smoke(s) during staged replacement, until that runtime is retired;
+6. real startup smoke;
+7. Web export;
+8. Pages deployment under the current workflow.
 
 Add one focused CI test per subsystem instead of one giant smoke script that knows every internal detail.
 
@@ -380,6 +401,7 @@ Add one focused CI test per subsystem instead of one giant smoke script that kno
 - Do not claim something was preserved/recovered unless inspection proves it.
 - If clarification is needed, ask the smallest question that changes the decision.
 - If current repo docs conflict with the current conversation, do not silently pick one: identify whether the conversation changed the design and update durable memory accordingly.
+- When canonical code is intentionally not wired into the frozen playable reference, say so plainly rather than implying the live game changed.
 
 ## 19. Required final footer after repository changes
 
@@ -388,4 +410,4 @@ End repo-change responses with:
 - Changelog: `https://github.com/dmcexcess-lab/dmcexcess-lab-tick-survival-lab/blob/main/CHANGELOG.md`
 - Play: `https://dmcexcess-lab.github.io/dmcexcess-lab-tick-survival-lab/`
 
-For design-only repository changes, make clear that the live play build is still the frozen/deprecated reference runtime.
+Until the modular runtime replaces it, clarify that the Play URL is the frozen/deprecated reference build and may not visibly reflect independently implemented foundation modules.
