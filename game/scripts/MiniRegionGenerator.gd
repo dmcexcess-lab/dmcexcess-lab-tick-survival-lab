@@ -2,6 +2,7 @@ extends RefCounted
 class_name MiniRegionGenerator
 
 const BaseRegion = preload("res://scripts/ProceduralRegionGenerator.gd")
+const FocusPass = preload("res://scripts/MiniRegionFocusPass.gd")
 const Streetscape = preload("res://scripts/StreetscapePass.gd")
 
 const REGION_W := BaseRegion.REGION_W
@@ -20,6 +21,7 @@ static func generate(seed_value: int, width: int = REGION_W, height: int = REGIO
     spec["generator_version"] = GENERATOR_VERSION
     spec["region_focus"] = focus
     spec["display_name"] = _display_name(focus)
+    FocusPass.apply(spec, focus)
     Streetscape.apply(spec, seed_value, focus)
     return spec
 
