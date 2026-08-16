@@ -29,9 +29,16 @@ static func validate(spec: Dictionary) -> Dictionary:
     if not bool(base_result.get("ok", false)):
         for failure_value in base_result.get("failures", []):
             var failure := str(failure_value)
-            # Generator v4 used one minimum footprint for every building. V5
-            # intentionally adds narrow trailers and shallow strip malls, so
-            # size validation is family-aware below instead.
+            # V4 was a one-region whole-world stress map, so it required every
+            # 64x64 seed to contain a substantial patch of every biome. V5 has
+            # a 5x5 macro world whose cells have explicit district identities;
+            # a strongly rural or commercial local map is now valid. Keep all
+            # physical/network failures, but retire that old diversity rule.
+            if failure.begins_with("biome too small"):
+                continue
+            # V4 also used one minimum footprint for every building. V5 adds
+            # intentionally narrow trailers and shallow strip malls, so size
+            # validation is family-aware below instead.
             if failure.begins_with("generated building footprint too small"):
                 continue
             failures.append(failure)
