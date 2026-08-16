@@ -1,25 +1,27 @@
 # Changelog
 
+## Rural Road Generator v2 / Composite Art Restoration — 2026-08-16
+
+- Replaced the reboot-v1 one-property rural archetypes with one coherent **Rural Road** biome grammar. A tactical map is now a sample of rural road containing four roadside properties rather than one giant showcase farmhouse/trailer property.
+- Every bootstrap rural-road sample now contains at least two substantial houses, at least one manufactured-home property (small trailer or double-wide), and at least three property families overall.
+- Reduced residential scale from the oversized reboot-v1 farmhouse. Farmhouses are now roughly 15–17x12–13, country houses 14–16x12, double-wides 13–15x11, and small trailers 8–9x12.
+- Reworked residential floorplans around smaller functional rooms. Substantial houses use separate living, kitchen, bedroom, bathroom, and optional utility spaces; manufactured homes use compact independent living/kitchen/bed/bath layouts.
+- Added roadside-property grammar: individual driveways, mailboxes, sparse utility poles, barns/sheds, field rows/gardens, rough-yard clutter, vegetation, and optional property-line fencing.
+- Added installed-fixture placement rules. Kitchen sinks, stoves, refrigerators, bathroom sinks/toilets/tubs/showers, washers/dryers, and water heaters are tagged and placed adjacent to walls/partitions instead of floating in room centers.
+- Strengthened `RebootSiteGenerator.validate()` around quality rather than mere parseability: four properties, property diversity, multiple substantial houses, manufactured-housing presence, living/kitchen/bath functions across residences, at least 15 functional rooms, a visible road spine, road/gravel below 14% of the map, and wall-aware fixed fixtures.
+- Expanded `RebootSmoke.gd` from one sample per old archetype to eight independent deterministic Rural Road seeds, including composite-art usage plus movement/rotation/spawn checks.
+- Restored the pre-reboot **composite tile vocabulary** inside the new `RebootArt.gd` owner. The artwork had not been deleted; reboot v1 had simply stopped using the old selection logic.
+- Roads, driveways, structural floors, house/rural/interior walls, doors, and windows again use the retained world-art vocabulary where appropriate. Nature/furniture/fixtures continue to draw from the retained final-environment, clutter, and building-prop atlases.
+- Did **not** revive legacy `TacticalTiles.gd` or old gameplay architecture. The clean reboot keeps its event-driven visible-cell renderer and new generator/player owners.
+- Changed the four selectable rural map nodes from direct Farmstead/Trailer/Double-Wide/Country-House buttons into seed streams for the same Rural Road biome: Rural Road, Farm Road, County Road, and Country Lane.
+
 ## Clean Reboot Core / Rural Generator v1 — 2026-08-16
 
 - Replaced the active prototype runtime with a deliberately small clean-reboot core while retaining the existing environment and directional player artwork.
 - Switched `game/main.tscn` to `scripts/reboot/RebootMain.gd`; the running build no longer loads the legacy v4-v6 generator chain, tick/calendar stack, weather, lighting, perception/fog, extraction-session presentation, or the old Safari autoload.
-- Added `RebootArt.gd` as the reboot-only art catalog using the final environment surface/prop atlases and four independent player-facing sprites.
-- Added `RebootSiteGenerator.gd`, a new deterministic 64x64 site generator that does not wrap or repair the legacy generator.
-- Added four first-band rural site archetypes: **Farmstead**, **Small Trailer**, **Double-Wide**, and **Country House**.
-- Farmstead generation now treats the property as the content: a large multi-room farmhouse, barn, shed, fields, fences, driveway, yard clutter, utilities and vegetation rather than a road network with buildings fitted around it.
-- Added functional rural room grammar and matching fixtures. The farmhouse contains living room, kitchen/dining, primary and secondary bedrooms, bathroom and utility/laundry; trailers/double-wides use distinct manufactured-home floor plans rather than relabeled generic houses.
-- Added generator quality validation for required site/building/room functions, valid spawn, deterministic output and a hard maximum of 18% road/gravel coverage so roads cannot dominate a rural tactical map.
-- Added `RebootPlayer.gd` with only grid cell + cardinal facing, left/right rotation, forward/back movement and O(1)-style blocker lookup. No tick/time system is present yet.
-- Added a phone-first control deck with `FORWARD`, `BACK`, `TURN L`, `TURN R`, `MAP`, and `-`/`+` zoom controls plus keyboard development equivalents.
-- Added local touch/mouse de-duplication to preserve one physical Safari tap = one action without restoring the old global input autoload.
-- Added three tactical zoom levels and a player-following camera that renders only the visible cells of the 64x64 site.
-- Established an event-driven performance baseline: no idle `_process()` redraw loop and no whole-map redraw merely because the map exists. Redraw occurs only after movement, turning, zoom, map toggle or site generation.
-- Added a cheap static strategic progression display: **Base -> Rural Edge -> Small Town -> Suburbs -> City Edge -> City Core**. Only rural walking-range sites are selectable in this first slice; deeper nodes are visibly locked for later roaming/vehicle-gateway progression.
-- Added `RebootSmoke.gd` to validate all four rural archetypes deterministically plus player rotation/movement/spawn invariants.
-- Replaced the permanent Pages workflow with a reboot-only gate: canonical reboot source validation -> Godot 4.7.1 import/parse -> reboot core smoke -> real main-scene startup -> Web export -> Pages deployment.
-- Added `REBOOT_CORE.md` and rewrote README/context/SOP documentation so future work extends the new owners rather than accidentally reviving legacy patch layers.
-- Vision cone, lighting, weather, silent sound, infected, loot/inventory, combat, injuries, ticks/calendar, vehicles, extraction consequences and persistence are intentionally deferred until this generator/player foundation is playtested and strong.
+- Added `RebootArt.gd` as the reboot-only art catalog and `RebootSiteGenerator.gd` as a new deterministic 64x64 site generator that does not wrap or repair the legacy generator.
+- Added the minimal player/movement/rotation core, phone-first controls, three tactical zoom levels, event-driven visible-cell renderer, static outskirts-to-city strategic map, reboot-only CI, and clean reboot documentation.
+- Vision cone, lighting, weather, silent sound, infected, loot/inventory, combat, injuries, ticks/calendar, vehicles, extraction consequences and persistence remain intentionally deferred until the generator/player foundation is strong.
 
 ## Prototype era — archived in Git history
 
