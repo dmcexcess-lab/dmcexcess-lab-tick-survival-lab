@@ -1,5 +1,24 @@
 # Changelog
 
+## Project North Star / Persistent-World Anti-Drift Reset — 2026-08-16
+
+- Added `PROJECT_NORTH_STAR.md` as the short canonical game-identity document future work must reread before local subsystem design. Primary shorthand is now **“Ultima-style turn-based mini Zomboid.”**
+- Added the project principle **“Mini means reduced complexity, not reduced consequence or mood.”** Survival systems should preserve meaningful decisions, causality, danger and atmosphere without reproducing unnecessary internal simulation variables.
+- Updated the human `README.md` around the current persistent-open-world direction, turn-based variable-duration action model, real-life hard-pause requirement, invisible tactical grid, simplified-but-consequential health philosophy, extraction-style expedition risk, physical base, outbreak simulation and customizable player stories.
+- Added `DESIGN_DECISIONS.md` as an append/supersede cross-system decision log so later work can recover why a foundational direction was chosen instead of inferring intent from whichever code happens to exist.
+- Explicitly superseded the earlier disconnected **static strategic map -> generated raid -> extraction** world model as the long-term physical foundation. Extraction-shooter influence now means risk/reward expeditions inside a logically continuous persistent world; internal streaming/storage partitions are implementation details rather than separate realities.
+- Recorded the global-world-planning rule: roads, utilities, parcels and other cross-region structures are planned in global coordinates before local materialization so independently loaded chunks cannot invent incompatible seams.
+- Recorded the long-term causal outbreak goal: pre-collapse people/households/jobs/homes/schedules can be simulated through collapse, with coarse deterministic distant simulation permitted for performance as long as persistent causal state is preserved.
+- Recorded the Player Story direction: the player eventually customizes/inhabits a real person embedded in the generated world, including home, occupation/workplace, household/family, relationships, pets/vehicle/resources and outbreak-start circumstances where appropriate.
+- Recorded the base direction: a base is fundamentally a real physical world location, with higher-level UI only summarizing underlying storage/workspaces/power/water/vehicles/residents/etc.
+- Recorded the current spatial baseline: authoritative **invisible tactical grid**, cell-to-cell actors, whole-cell object footprints and semantic N/E/S/W orientation. Renderer owns whether clutter/furniture uses 90-degree rotation or explicit alternate-facing art. Wall/door/window cell-vs-edge representation remains deliberately unresolved for Spatial Model design.
+- Recorded the hard interruption-safety rule: real-life work/customer interruptions must freeze simulation safely and must never count as a tactical mistake.
+- Rewrote `README_CONTEXT.md` as an accurate routing index for the current open-world direction and moved the foundational design order below map generation/rendering: Spatial Model -> Tick/Action/Pause -> Persistent World -> Population/Outbreak/Player Story -> generalized local-world contract.
+- Reordered `SYSTEM_DESIGNS/README.md` accordingly and marked the old raid-specific `RaidMapSpec` draft **SUPERSEDED** rather than silently adapting it to a different world architecture.
+- Strengthened `DESIGN_WORKFLOW.md` and `README_SOPS.md` with a mandatory North-Star drift check, cross-system decision logging, future-seam review, and the rule that chat must not outrun durable repository memory when the game direction materially changes.
+- Added CI guards requiring the North Star and decision log to remain present and checking the current core identity/open-world design statements while the deprecated reference runtime continues to build unchanged.
+- No new modular runtime/gameplay code was implemented in this pass; the deployed Web build remains the frozen clean-reboot reference.
+
 ## Design-First Modular Workflow / System Approval Ledger — 2026-08-16
 
 - Added `DESIGN_WORKFLOW.md` as the mandatory project process: **DESCRIBE -> APPROVE -> IMPLEMENT -> VERIFY** for every major new subsystem or rewrite.
@@ -62,7 +81,7 @@
 - Rebuilt the rural main-road generator as connected topology rather than one hard-coded straight strip. Seeds now produce **straight roads, bent/curved-looking roads, or crossroads**.
 - Added horizontal/vertical/corner/T/cross/end road sprite selection from the retained road-topology artwork.
 - Protected authoritative main-road cells from later field, yard, building-floor, driveway or gas-forecourt painting so generated road connectivity cannot be visually overwritten after the fact.
-- Property connectors now meet the main road using its local alignment, allowing homes/businesses to connect correctly to bent road variants.
+- Property connectors now meet the main road using its local alignment, allowing homes/businesses to connect correctly to bent roads rather than assuming one global y coordinate.
 - Permanent eight-seed smoke now requires all three road variants plus the 3x3 room minimum and axis-correct door geometry, while retaining the rural five-site composition, utility/power, vegetation, tactical-art, determinism and player checks.
 
 ## Rural Road Generator v3 / Original Tactical Tile Restoration — 2026-08-16
