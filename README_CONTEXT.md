@@ -21,7 +21,7 @@ The active main scene is `game/main.tscn` using `game/scripts/reboot/RebootMain.
 The active runtime intentionally contains only:
 
 - retained tactical/environment/player artwork;
-- deterministic **Rural Road generator v3**;
+- deterministic **Rural Road generator v4**;
 - player grid position and cardinal facing;
 - forward/back movement and left/right turning;
 - collision;
@@ -33,113 +33,113 @@ The active runtime intentionally contains only:
 
 The current build intentionally does **not** contain tick/calendar, weather, lighting, perception/fog, silent sound, infected, loot/inventory, combat, injuries, vehicles, extraction rewards/loss, off-screen simulation, or save serialization.
 
-Those systems may be redesigned and reintroduced later, one owner at a time, only after the new generator/player foundation is strong.
-
 ## Current owners
 
-- `game/scripts/reboot/RebootArt.gd` — reboot-only art owner. The canonical structural look is the **early tactical atlas vocabulary** recovered from historical `TacticalTiles.gd`: tactical walls 16–22, closed door 23, open door 24, window 25, original tactical floors/common props, and the clutter sheet. Later `world_art`, building-prop, and final-prop sheets are used only for capabilities the early sheets did not supply cleanly (road topology/gravel/field rows, power/road hardware, selected fixtures and vegetation).
-- `game/scripts/reboot/RebootSiteGenerator.gd` — canonical physical Rural Road generator. New code; it does not wrap the legacy v4-v6 generator chain.
+- `game/scripts/reboot/RebootArt.gd` — reboot-only art owner. Canonical structures use the early tactical-atlas vocabulary: walls 16–22, closed/open doors 23/24, window 25, original tactical floors/common props, and the clutter sheet. `world_art` now supplements road topology so straight roads, bends, corners, T junctions and crossroads can use correct cardinal road pieces.
+- `game/scripts/reboot/RebootSiteGenerator.gd` — canonical physical Rural Road generator and all authoritative site/door/road geometry.
 - `game/scripts/reboot/RebootPlayer.gd` — canonical player cell/facing/movement owner.
 - `game/scripts/reboot/RebootMain.gd` — active presentation/input shell: visible-cell rendering, buttons, zoom, strategic map, touch/mouse de-duplication, site-selection orchestration, and static visible power-line presentation.
-- `game/scripts/ci/RebootSmoke.gd` — deterministic generator/player quality smoke test.
+- `game/scripts/ci/RebootSmoke.gd` — deterministic generator/player quality smoke test, including door-axis geometry and road-variety checks.
 
 Preferred dependency direction:
 
 **site data -> player/world rules -> presentation/input**
 
-Do not move simulation truth into drawing/input helpers when later systems are added.
-
-## Rural generator direction — v3
+## Rural generator direction — v4
 
 A tactical rural map is a **coherent sample of rural road**, not one building and not a miniature city.
 
 Every generated 64x64 sample currently contains:
 
-- one cross-map horizontal rural main road, visually treated as a two-lane road, with dirt shoulders;
-- narrow dirt/gravel property roads/driveways branching from the main road;
+- one dominant rural main road whose topology can be **straight, bent/curved-looking, or a crossroads**;
+- narrow dirt/gravel property roads and driveways branching from it;
 - exactly **four residences**;
 - exactly **one roadside gas station or corner/convenience store**;
 - exactly one farm complex among the residences;
 - one or two manufactured homes (`small_trailer` / `double_wide`);
-- the remaining residential slots filled by substantial country houses as needed;
-- lots of roadside utility poles with static connecting power-line presentation;
-- sparse stop signs and **no traffic lights** in this rural band;
+- the remaining residential slots filled by substantial country houses;
+- frequent roadside utility poles with static connecting power lines;
+- sparse stop signs and **no traffic lights**;
 - broad grass plus trees, bushes, scrub, tall grass, weeds and edge growth;
 - property-specific mailboxes, sheds, barns, fields, propane, firewood and rough-yard clutter.
 
-This composition is a grammar, not a fixed single map. The exact placement, property positions, manufactured-home type, roadside business type and clutter vary by seed.
+Road topology is generated as authoritative connected cells first, then rendered with horizontal/vertical/corner/T/cross/end road sprites. Later yard, field, building-floor and forecourt painting is not allowed to overwrite main-road cells.
 
-### Residential scale
+### Room-size rule
 
-Current primary shells are intentionally moderate rather than mansion-sized:
+All recorded functional rooms are now **at least 3x3 usable cells**. This is both a readability rule and a structural safety rule: tiny sliver rooms made interior partition/door intersections too easy to generate incorrectly.
 
-- farmhouse: 15x12 plus farm outbuildings/field context;
-- country house: 13x11;
-- double-wide: 13x10;
-- small trailer: 8x11.
+Current residential rooms are compact but functional. The current rural business uses:
 
-Interiors use multiple compact functional rooms so the map can contain several useful buildings without any one interior consuming the whole tactical site.
+- storefront: **7x7**;
+- stock room: **3x3**;
+- manager office: **3x3**;
+- bathroom: **3x3**;
+- rear service area: **7x3**.
+
+The earlier 3x1 office / 2x2 bathroom contract is superseded by the 3x3 minimum.
+
+### Door geometry contract
+
+The reported “wall behind door” problem was generator geometry, not the tile set.
+
+Doors now have authoritative wall-axis metadata:
+
+- `h` = opening in a horizontal wall; north/south are the clear approaches;
+- `v` = opening in a vertical wall; east/west are the clear approaches.
+
+For every door:
+
+- the door cell itself is reserved from walls, windows, props and blockers;
+- the two approach cells perpendicular to the wall are reserved from structural cells and clutter;
+- later wall placement is forbidden from overwriting a reserved door/approach cell;
+- the two same-axis neighbors must remain structural, proving that the door sits in one continuous wall rather than at a wall intersection;
+- a final normalization pass clears accidental later conflicts before validation.
+
+This stronger rule caught real prefab bugs during implementation: country-house exterior doors shared an x-axis with an interior divider, and one farmhouse partition door sat too close to a perpendicular junction. The prefab door positions were separated rather than weakening the validator.
 
 ### Roadside business grammar
 
 The rural band supports only a small roadside **gas station** or **corner/convenience store**. Strip malls are not generated here.
 
-The current business shell is 13x11 and preserves these usable room footprints:
-
-- storefront: **7x7**;
-- stock room: **3x3**;
-- manager office: **3x1**;
-- bathroom: **2x2**.
-
-Store clutter follows room purpose: checkout counter, retail shelving, cold case/vending, crates/pallets, manager desk, and bathroom fixtures. Gas stations add a compact asphalt forecourt, pumps and gas sign; corner stores use a modest concrete frontage.
-
-### Door and fixture rules
-
-Doors are structural openings, never walls with a door picture pasted on top.
-
-- Canonical closed-door art is original tactical tile **23**.
-- A generated door cell erases any wall/window/prop/blocker at that exact cell.
-- Props/fixtures cannot be generated in the four cardinal approach cells around a door.
-- A final cleanup pass clears any accidental door-approach prop/blocker.
-- Validation rejects wall/window overlap at a door and rejects clutter immediately blocking a door approach.
-
-Installed fixtures must still read as installed objects. Sinks, stoves, refrigerators, toilets, tubs/showers, washers/water heaters, etc. are placed against a wall/window structural plane and are validated accordingly.
+Store clutter follows room purpose: checkout counter, retail shelving, cold case/vending, crates/pallets, manager desk/chair, bathroom fixtures and rear-service clutter. Gas stations add a compact asphalt forecourt, pumps and gas sign; corner stores use modest frontage.
 
 ## Art / tile-set rule
 
-The previous v2 documentation incorrectly described later `world_art` house walls/doors as the restored old look. Playtesting disproved that.
-
-The remembered prototype look is now explicitly pinned to the historical early `TacticalTiles.gd` mapping:
+The user's remembered structural look is pinned to historical early `TacticalTiles.gd` mapping:
 
 - `tactical_atlas.svg`: canonical common ground/floors, walls 16–22, closed/open doors 23/24, window 25, and common tactical props;
 - `clutter_atlas.svg`: canonical household/street clutter where available;
-- `world_art_atlas.svg`: supplemental road topology, dirt/gravel and field-row surfaces only where useful;
-- `building_props_atlas.svg`: supplemental installed fixtures and civic infrastructure such as utility poles/stop signs when the early sheets lack a clean equivalent;
-- `final_environment_props_atlas.svg`: limited supplemental vegetation variants;
+- `world_art_atlas.svg`: supplemental connected road topology, dirt/gravel and field rows;
+- `building_props_atlas.svg`: supplemental fixtures and civic infrastructure such as utility poles/stop signs;
+- `final_environment_props_atlas.svg`: limited supplemental vegetation;
 - individual directional player sprites remain canonical.
 
-Do not switch structural walls/doors/windows back to the later world-art shell vocabulary unless the user explicitly asks to change the visual style.
+Do not change structural walls/doors/windows to later `world_art` shell tiles unless the user explicitly asks to change the visual style.
 
 ## Rural quality validation
 
-`RebootSiteGenerator.validate()` and `RebootSmoke.gd` now check multiple authored-quality properties across eight deterministic seeds, including:
+`RebootSiteGenerator.validate()` and `RebootSmoke.gd` exercise eight deterministic seeds and check, among other things:
 
+- deterministic complete generation;
 - exactly five primary sites: four residences + one roadside business;
-- exactly one farm complex;
+- one farm complex;
 - one or two manufactured homes;
 - multiple substantial residences;
-- exactly one gas station/corner store and no strip-mall path;
-- business room sizes 7x7 / 3x3 / 3x1 / 2x2;
-- main-road and side-road presence;
+- exactly one gas station/corner store;
+- every functional room at least 3x3;
+- exact business room sizes 7x7 / 3x3 / 3x3 / 3x3 plus rear service;
+- connected main-road and side-road presence;
+- straight + bend + crossroads variants represented across the permanent sample set;
 - dense utility-pole/power-line infrastructure;
 - sparse stop signs and zero traffic lights;
 - substantial vegetation presence;
 - original tactical structural art source;
 - exact tactical closed-door art;
-- no wall/window-door overlap;
-- no clutter in door-approach cells;
+- axis-correct doors with clear approaches and no perpendicular wall intersections;
+- no door-adjacent clutter;
 - wall-aware installed fixture placement;
-- deterministic output and valid player spawn/movement.
+- valid player spawn/movement.
 
 ## Strategic world direction
 
@@ -149,7 +149,7 @@ Progression runs geographically from:
 
 **BASE -> RURAL EDGE -> SMALL TOWN -> SUBURBS -> CITY EDGE -> CITY CORE**
 
-Only rural nodes are selectable in the current reboot slice. The visible rural nodes are different deterministic seed streams for the same Rural Road biome grammar; deeper bands remain locked for later roaming/vehicle systems.
+Only rural nodes are selectable in the current reboot slice. The visible rural nodes are deterministic seed streams for the same Rural Road grammar; deeper bands remain locked for later roaming/vehicle systems.
 
 ## Controls / mobile
 
@@ -187,17 +187,13 @@ The reboot renderer remains event-driven.
 - redraw happens only after movement, turning, zoom, map toggle, or site load;
 - static power lines are drawn only during those same tactical redraws and only for visible linked poles.
 
-Do not regress this baseline casually when expensive systems return.
-
 ## Legacy code
 
-Many old scripts remain in the repository temporarily as historical/reference material, but **they are not current architecture and are not part of the active CI contract**. Historical `TacticalTiles.gd` is now an explicit art-index reference for the recovered look, not an active runtime dependency.
-
-Git history is the rollback/reference path. A later cleanup pass may delete/archive unused legacy scripts after the reboot proves itself.
+Many old scripts remain temporarily as historical/reference material, but they are not current architecture. Historical `TacticalTiles.gd` remains useful as an exact art-index reference only.
 
 ## Current next step
 
-Playtest many Rural Road v3 seeds on desktop and Safari. Judge whether the roads, five-site composition, farm/country/manufactured mix, business interiors, utility infrastructure, vegetation, door clearance and exact recovered tile vocabulary consistently look authored before adding Small Town or reintroducing perception/weather.
+Playtest many Rural Road v4 seeds on desktop and Safari. Specifically inspect door openings/partition junctions and compare straight, bent and crossroads layouts. Keep improving this biome until it consistently looks authored before adding Small Town or reintroducing vision/lighting/weather.
 
 ## Source-of-truth order
 
