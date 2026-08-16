@@ -2,14 +2,14 @@
 
 Status: current canonical implementation contract.
 
-The project has restarted from a deliberately small runtime foundation. Existing art assets are retained. The active game does not depend on the old v4-v6 generator chain, tick/calendar stack, weather, lighting, perception, extraction-session code, or Safari autoload.
+The project has restarted from a deliberately small runtime foundation. Existing art assets are retained. The active game does not depend on the old v4-v6 prototype generator chain, tick/calendar stack, weather, lighting, perception, extraction-session code, or Safari autoload.
 
 ## Current runtime scope
 
 The active build contains only:
 
 - retained environment/player artwork with the original tactical structural vocabulary restored;
-- deterministic Rural Road generator v3;
+- deterministic **Rural Road generator v4**;
 - a minimal grid player with facing, forward/back movement, and left/right turning;
 - collision against generated walls and blocking fixtures;
 - a camera that follows the player;
@@ -20,13 +20,11 @@ The active build contains only:
 - a static strategic progression map from rural outskirts toward the city;
 - touch/mouse de-duplication inside the active presentation layer.
 
-Vision cone, lighting, fog of war, weather, sound, infected, loot, combat, ticks, calendar, injuries, vehicles, and extraction consequences are intentionally absent. They will be reintroduced only after this core is visually and mechanically sound.
+Vision cone, lighting, fog of war, weather, sound, infected, loot, combat, ticks, calendar, injuries, vehicles, and extraction consequences are intentionally absent.
 
 ## Performance rule
 
-The active presentation is event-driven.
-
-There is no idle `_process()` redraw loop. The tactical board redraws only after a player action, turn, zoom change, map toggle, or site load. Only cells inside the current camera window are rendered; the whole 64x64 site is never redrawn merely because it exists. Power lines are static links drawn only during the same event-driven tactical redraw and only when both linked poles are visible.
+The active presentation is event-driven. There is no idle `_process()` redraw loop. The tactical board redraws only after a player action, turn, zoom change, map toggle, or site load. Only cells inside the current camera window are rendered. Power lines are static links drawn only during those same event-driven redraws.
 
 ## Canonical art vocabulary
 
@@ -34,150 +32,110 @@ The remembered pre-reboot structural look is the early `TacticalTiles.gd` vocabu
 
 `RebootArt.gd` owns that mapping without importing the old runtime module:
 
-- `tactical_atlas.svg`: canonical common ground/floors, wall tiles **16–22**, closed door **23**, open door **24**, window **25**, and common tactical props;
-- `clutter_atlas.svg`: canonical household/street clutter where available;
-- `world_art_atlas.svg`: supplemental road topology, dirt/gravel and field rows;
-- `building_props_atlas.svg`: supplemental installed fixtures and civic hardware such as utility poles and stop signs;
+- `tactical_atlas.svg`: common ground/floors, wall tiles **16–22**, closed door **23**, open door **24**, window **25**, common tactical props;
+- `clutter_atlas.svg`: household/street clutter where available;
+- `world_art_atlas.svg`: supplemental connected road topology, dirt/gravel and field rows;
+- `building_props_atlas.svg`: supplemental fixtures and civic hardware such as utility poles and stop signs;
 - `final_environment_props_atlas.svg`: limited supplemental vegetation;
 - four independent directional player sprites.
 
-The previous Rural Road v2 restoration was incomplete because it used later `world_art` shell/door tiles for structures. In particular, the later closed-door art contains a wall-colored background. Rural Road v3 supersedes that mapping: generated walls/doors/windows use the original tactical structural tiles.
-
 ## Generator architecture
 
-`RebootSiteGenerator.gd` is a new generator and does not wrap or repair any legacy generator.
+`RebootSiteGenerator.gd` is a new generator and does not wrap the legacy generator stack.
 
-The current tactical archetype is:
+The current tactical archetype is `rural_road`. A 64x64 map represents a coherent rural-road sample containing exactly four residences and one small roadside gas station/corner store.
 
-- `rural_road`
+The residential mix contains one farm complex, one or two manufactured homes, and substantial country houses. Sites include appropriate barns/sheds/field context, mailboxes, propane/firewood/rough-yard clutter, frequent utility poles, sparse stop signs and substantial vegetation.
 
-A 64x64 tactical map represents **a coherent sample of rural road**, not one farmhouse and not a miniature mixed-biome city.
+## Road topology v4
 
-A generated sample contains:
+The main road no longer has one fixed straight-line shape.
 
-- one horizontal cross-map main road, visually functioning as a rural two-lane road, with dirt shoulders;
-- narrow dirt/gravel roads or driveways branching toward properties;
-- exactly four residences;
-- exactly one small roadside gas station or corner/convenience store;
-- exactly one farm complex;
-- one or two manufactured homes;
-- remaining residential slots filled with substantial country housing;
-- mailboxes, barns/sheds, field context, propane/firewood/rough-yard details as appropriate;
-- dense roadside utility poles with connecting power lines;
-- sparse stop signs and zero traffic lights;
-- substantial grass, tree, bush, scrub and weed coverage without urbanizing the map.
+Every seed selects one of three authoritative road patterns:
 
-### Residential scale
+- **straight** — cross-map rural main road;
+- **bend** — the main road changes alignment through connected corner/jog segments, reading as a curved/bending rural road at this tile scale;
+- **crossroads** — horizontal and vertical road connectivity creates a true intersection.
 
-Current primary shells:
+Road cells are generated first. Their north/east/south/west neighbors select horizontal, vertical, corner, T, cross and end sprites from the retained road-topology atlas. Main-road ground cells are protected against later building-floor, field, yard, driveway or forecourt painting.
 
-- farmhouse: 15x12 plus barn/shed/field context;
-- country house: 13x11;
-- double-wide: 13x10;
-- small trailer: 8x11.
+Property connectors query the road alignment at their x position, so driveways continue to meet bent roads rather than assuming one global y coordinate.
 
-The homes are divided into compact functional spaces instead of huge open rooms. House grammar includes living, kitchen, bedroom, bathroom, and farmhouse utility functions as appropriate.
+## Room-size contract
 
-### Rural business scale
+Every recorded functional room is at least **3x3 usable cells**.
 
-The rural business is deliberately small. Strip malls do not belong to this band.
-
-Current business shell: 13x11.
-
-Usable room contract:
+Current homes use compact but readable living/kitchen/bed/bath/utility spaces. The rural business uses:
 
 - storefront: **7x7**;
 - stock room: **3x3**;
-- manager office: **3x1**;
-- bathroom: **2x2**.
+- manager office: **3x3**;
+- bathroom: **3x3**;
+- rear service: **7x3**.
 
-Room-purpose clutter includes checkout, retail shelves, cold-case/vending, crates/pallets, desk and bathroom fixtures. Gas stations add a compact pump/forecourt/sign arrangement; corner stores receive a small concrete frontage.
+The earlier 3x1 manager-office and 2x2 bathroom experiment is superseded by the 3x3 minimum.
 
 ## Door/opening contract
 
-Doors are true opening cells.
+The reported wall-behind-door defect was a **floor-plan geometry problem**, not a door-art problem.
 
-- Canonical closed-door art is tactical tile 23.
-- `_door()` removes any wall, window, prop and blocker at the door cell before recording the door.
-- `_can_place_prop()` rejects props on or cardinally adjacent to any known door.
-- A final `_clear_all_door_approaches()` pass removes accidental props around all completed door openings.
-- Validation rejects any wall/window-door overlap and any prop on the four cardinal approach cells around a door.
+Every generated door now records which wall axis owns it:
 
-This contract prevents both the wall-background door artifact and clutter physically blocking entrances/interior doorways.
+- `h`: horizontal-wall opening; north and south are clear approach cells;
+- `v`: vertical-wall opening; east and west are clear approach cells.
 
-## Fixture grammar
+Door creation reserves:
 
-Installed fixtures must look installed.
+- the door cell itself;
+- both perpendicular approach cells.
 
-Kitchen sinks, stoves, refrigerators, bathroom sinks/toilets/tubs/showers, washers and water heaters are placed adjacent to a structural wall/window plane. Generator fixture tags allow validation to reject fixed fixtures floating in open floor space.
+Reserved cells cannot later receive walls, windows, fixtures or clutter. Validation additionally requires the two same-axis neighbors to remain structural. A door therefore has to be seated in one continuous wall and cannot survive at a perpendicular partition intersection.
 
-Furniture and commercial clutter are placed from room purpose rather than by global random scatter. Environmental clutter remains separate from future inventory/loot.
+The stronger validator exposed concrete prefab defects during v4 development: country-house front doors were aligned with an interior divider, and one farmhouse door sat too close to another partition junction. Those prefab door locations were moved; the validator was not weakened.
+
+## Fixture and clutter grammar
+
+Installed fixtures must look installed. Kitchen/bath/utility fixtures are placed against structural wall/window planes. Furniture and commercial clutter are placed from room purpose rather than global scatter.
+
+Door-reserved cells override clutter placement, so a shelf, sofa, fixture, tree or other prop cannot occupy an entrance/interior-door approach.
 
 ## Quality validation
 
-Generator validation checks authored structure, not merely successful map creation.
+`RebootSmoke.gd` exercises eight deterministic seeds and verifies:
 
-`RebootSmoke.gd` exercises eight independent deterministic seeds and verifies:
-
-- repeated generation is identical, including roads and power links;
-- exactly five primary properties: four residences and one roadside business;
+- repeat generation is identical;
+- all three road variants appear across the permanent sample set;
+- four residences + one roadside business;
 - one farm complex and one-to-two manufactured homes;
-- exact 7x7 / 3x3 / 3x1 / 2x2 business rooms;
-- original tactical closed-door art and tactical wall source;
-- no wall-door overlap;
-- no door-adjacent clutter;
+- every functional room is at least 3x3;
+- business room sizes are 7x7 / 3x3 / 3x3 / 3x3 with 7x3 rear service;
+- original tactical wall and closed-door art;
+- every door has valid axis metadata;
+- no wall/window on a door cell;
+- no perpendicular wall geometry through a doorway;
+- no clutter on door approaches;
+- each door remains seated between two structural cells on its own wall axis;
 - adequate road/side-road/utility/vegetation structure;
-- wall-aware fixed fixtures;
 - valid player turn/movement/spawn behavior.
 
 ## Player model
 
-The player owns only:
-
-- grid cell;
-- cardinal facing.
-
-Actions:
-
-- turn left;
-- turn right;
-- move forward;
-- move backward.
-
-Turning changes facing without changing position. Movement respects the generated `blocked` lookup. No time cost exists yet because the tick system is intentionally not part of this reboot milestone.
+The player owns grid cell and cardinal facing. Actions are turn left/right and move forward/backward. Movement respects the generated `blocked` lookup. No time cost exists yet because ticks are intentionally absent.
 
 ## Controls
 
-Touch-first controls:
+Touch-first: `FORWARD`, `BACK`, `TURN L`, `TURN R`, `MAP`, zoom `-`/`+`.
 
-- `FORWARD`
-- `BACK`
-- `TURN L`
-- `TURN R`
-- `MAP`
-- zoom `-` / `+`
-
-Keyboard conveniences:
-
-- W / Up = forward
-- S / Down = backward
-- A / Left = turn left
-- D / Right = turn right
-- M = map
-- - / + = zoom
-
-One physical touch is suppressed from becoming a second synthetic mouse action by a local 650 ms touch/mouse de-duplication window.
+Keyboard: W/Up forward, S/Down backward, A/Left turn left, D/Right turn right, M map, -/+ zoom.
 
 ## Strategic map
 
-The current map is a cheap static progression display, not simulated terrain.
-
-It reads left-to-right:
+The current map is a cheap static progression display:
 
 **Base / Rural Edge -> Small Town -> Suburbs -> City Edge -> City Core**
 
-Only rural nodes are selectable in this reboot slice. The visible rural nodes are different deterministic seed streams for the same Rural Road biome grammar. Small Town and deeper nodes remain locked for later vehicle/range progression.
+Only rural nodes are selectable. Small Town and deeper nodes remain locked for later vehicle/range progression.
 
 ## Next rule
 
-Do not restore expensive simulation systems simply because old versions exist. The next step is repeated Rural Road v3 playtesting: road/property composition, exact recovered tile appearance, door clearance, compact room grammar, business clutter, vegetation and infrastructure must consistently look authored before adding Small Town or reintroducing vision/lighting/weather.
+Continue repeated Rural Road v4 playtesting. Door/partition geometry, road variety, property composition, compact room grammar, business clutter, vegetation and infrastructure must consistently look authored before adding Small Town or reintroducing vision/lighting/weather.
