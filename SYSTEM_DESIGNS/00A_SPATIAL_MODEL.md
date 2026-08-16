@@ -1,10 +1,10 @@
 # Tick Survival Lab — 00A Spatial Model (WHERE)
 
-Status: **APPROVED — implementation authorized 2026-08-16**
+Status: **IMPLEMENTED — canonical modular foundation slice**
 
 Parent architecture: `00_FOUNDATION_WHERE_WHAT_WHEN.md`.
 
-User approval basis: after reviewing the WHERE / WHAT / WHEN foundation summary and its highlighted spatial recommendations, the user explicitly instructed: **“using all that go ahead and write the code.”** Per the one-system scope gate, this approval applies to WHERE first; WHAT and WHEN remain separate future implementation slices.
+User approval basis: after reviewing the WHERE / WHAT / WHEN foundation summary and its highlighted spatial recommendations, the user explicitly instructed: **“using all that go ahead and write the code.”** Per the one-system scope gate, this approval applied to WHERE first; WHAT and WHEN remain separate future implementation slices.
 
 ## 1. Goal
 
@@ -58,9 +58,10 @@ Canonical semantic facings are NORTH, EAST, SOUTH, WEST.
 
 - validation;
 - facing -> `Vector2i` vector;
+- vector -> facing for exact cardinals;
 - left/right/opposite;
 - deterministic quarter-turn rotation of relative offsets;
-- stable display/debug name.
+- stable display/debug label.
 
 Art-frame selection is forbidden here.
 
@@ -141,7 +142,7 @@ WHERE must never depend on:
 3. Footprint rotation is clockwise for NORTH -> EAST -> SOUTH -> WEST.
 4. Footprint constructor removes duplicate offsets deterministically while preserving first occurrence order.
 5. An empty supplied footprint falls back to one occupied anchor cell; physical placement never has a zero-cell footprint.
-6. Structure cells are the approved baseline because they reduce generation, collision, LOS, construction and recovered-art complexity.
+6. Structure cells are the canonical baseline because they reduce generation, collision, LOS, construction and recovered-art complexity.
 7. Door/window axis is explicit semantic geometry, never inferred from sprite appearance.
 8. WHERE does not answer `can_enter`. That later query depends on WHAT + mechanic-specific collision/door state.
 9. WHERE does not expose streaming/chunk coordinates. A future streaming system may derive them from global cells without changing this contract.
@@ -149,7 +150,7 @@ WHERE must never depend on:
 
 ## 9. Failure / edge cases
 
-- Invalid facing/axis values are rejectable through explicit validation helpers and must not be silently treated as valid values.
+- Invalid facing/axis values are rejectable through explicit validation helpers and are not silently treated as valid values.
 - Duplicate footprint offsets do not create duplicate occupied world cells.
 - Negative world coordinates and rotated negative relative offsets are valid.
 - Bounds of an empty arbitrary query set return an empty `Rect2i`; footprints themselves are never empty.
@@ -169,7 +170,7 @@ No direct device-specific behavior. The grid contract supports touch input later
 
 ## 12. Tests / acceptance criteria
 
-Dedicated headless `SpatialModelSmoke.gd` must prove:
+Dedicated headless `SpatialModelSmoke.gd` proves:
 
 - exact cardinal vectors and left/right/opposite operations;
 - clockwise relative-offset rotation;
@@ -182,11 +183,11 @@ Dedicated headless `SpatialModelSmoke.gd` must prove:
 - canonical 1.0m cell scale;
 - no dependency on live reboot/runtime classes.
 
-Godot import/parse and the existing frozen-reference tests must continue to pass.
+The owning smoke is permanently wired into Pages CI before the frozen-reference smokes.
 
 ## 13. Recovery sources
 
-Historical `LocalWorldState.gd` and `PlayerActor.gd` demonstrate the useful old cell/facing approach, but their finite-board and player-specific responsibilities are not copied into WHERE.
+Historical `LocalWorldState.gd` and `PlayerActor.gd` demonstrate the useful old cell/facing approach, but their finite-board and player-specific responsibilities were not copied into WHERE.
 
 Golden baseline commit: `1763958f44eb7f855fd49944c00d1ffe608c0abe`.
 
@@ -224,3 +225,16 @@ The invisible integer tactical grid keeps the Ultima-like world readable and det
 - canonical planning scale of 1.0 meter per cell;
 - no sub-cell/free movement baseline;
 - pure geometry only; no persistent world/tick/render/generator ownership.
+
+## 17. Implementation evidence
+
+Implemented 2026-08-16 as five standalone modules plus one owning smoke test:
+
+- `game/scripts/foundation/spatial/SpatialFacing.gd`
+- `game/scripts/foundation/spatial/SpatialFootprint.gd`
+- `game/scripts/foundation/spatial/SpatialStructureGeometry.gd`
+- `game/scripts/foundation/spatial/SpatialLayer.gd`
+- `game/scripts/foundation/spatial/SpatialModel.gd`
+- `game/scripts/ci/SpatialModelSmoke.gd`
+
+No live reboot/gameplay source imports this foundation yet. That isolation is intentional until WHAT and WHEN have their own approved contracts and integration slice.
