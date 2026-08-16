@@ -1,6 +1,6 @@
 # Tick Survival Lab — Project Context / Routing Index
 
-> **MANDATORY:** At the start of every prompt requesting repository/code changes, read current `PROJECT_NORTH_STAR.md`, `README_SOPS.md`, this file, `DESIGN_WORKFLOW.md`, `DESIGN_DECISIONS.md`, current `main` SHA, and the active system design(s). Read `MODULAR_REBUILD_MASTER_DESIGN.md` for architecture work, but newer North Star/decision entries win where older assumptions conflict.
+> **MANDATORY:** At the start of every prompt requesting repository/code changes, read current `PROJECT_NORTH_STAR.md`, `README_SOPS.md`, this file, `DESIGN_WORKFLOW.md`, `DESIGN_DECISIONS.md`, current `main` SHA, and the active system design(s). Read `MODULAR_REBUILD_MASTER_DESIGN.md` for architecture/global direction, but newer North Star/decision entries win where older assumptions conflict.
 
 ## 1. Game identity
 
@@ -19,7 +19,7 @@ Current direction:
 - customizable player story embedded in the pre-collapse world;
 - authoritative invisible tactical grid;
 - variable-duration turn-based tick/actions with mandatory real-life hard pause;
-- mood driven by future vision, lighting, weather, silent spatial sound and persistent consequences.
+- mood driven later by recovered graphics, vision, lighting, weather, silent spatial sound and persistent consequences.
 
 Repository: `dmcexcess-lab/dmcexcess-lab-tick-survival-lab`
 
@@ -44,8 +44,9 @@ Canonical modular progress:
 - **00C WHEN / Tick Action Pause — IMPLEMENTED and CI-gated** under `game/scripts/foundation/time/`.
 - **01 Collision / Spatial Query — IMPLEMENTED and CI-gated** under `game/scripts/simulation/collision/`.
 - **02 Movement Actions — IMPLEMENTED and CI-gated** under `game/scripts/simulation/movement/`.
+- **03 Actor Locomotion State & Movement Capability — IMPLEMENTED and CI-gated** under `game/scripts/simulation/actors/locomotion/`.
 
-The new canonical modules are intentionally tested independently beside the frozen playable reference until enough neighboring canonical systems exist for real composition.
+The canonical modules are intentionally tested beside the frozen playable reference until enough neighboring canonical presentation/input/world-composition systems exist for clean replacement rather than compatibility glue.
 
 ## 3. Foundation architecture
 
@@ -53,9 +54,9 @@ Canonical umbrella: `SYSTEM_DESIGNS/00_FOUNDATION_WHERE_WHAT_WHEN.md`.
 
 The peer truths are:
 
-- **WHERE — Spatial Model:** where things can exist and how cells, facing, footprints and structure geometry are expressed.
-- **WHAT — Persistent World / Entity State:** what terrain, structures, objects, actors, items and durable mutations exist.
-- **WHEN — Tick / Action / Pause Kernel:** when actions/events occur and how simulation time advances.
+- **WHERE:** global grid/facing/footprint/structure geometry.
+- **WHAT:** persistent terrain/entities/placements and durable foundation mutations.
+- **WHEN:** deterministic integer simulation clock, action/event scheduling and pause semantics.
 
 Generation creates initial WHAT using WHERE. Gameplay systems bridge WHERE/WHAT with WHEN. Rendering only presents state.
 
@@ -63,123 +64,130 @@ Generation creates initial WHAT using WHERE. Gameplay systems bridge WHERE/WHAT 
 
 Canonical design: `SYSTEM_DESIGNS/00A_SPATIAL_MODEL.md`.
 
-Locked rules include global integer `Vector2i` cells, N/E/S/W facing, arbitrary whole-cell footprints, centralized `SpatialModel.CELL_METERS = 1.0`, structure cells with explicit HORIZONTAL/VERTICAL axis, and no sub-cell/free movement baseline.
+Locked: global integer `Vector2i` cells, 1m planning scale, N/E/S/W facing, arbitrary whole-cell footprints, structure cells with explicit axis, no sub-cell baseline.
 
 ### 00B WHAT — IMPLEMENTED
 
 Canonical design: `SYSTEM_DESIGNS/00B_PERSISTENT_WORLD_STATE.md`.
 
-Locked rules include one authoritative persistent world, stable opaque string entity IDs, semantic terrain/entity types, WHERE-based placements, derived occupancy, validated mutation through `WorldMutationService`, mutation-safe reads, revision/change events, and deterministic atomic snapshot/restore.
+Locked: one current persistent world, opaque stable IDs, semantic terrain/entities, WHERE placements, derived occupancy, validated `WorldMutationService` writes, safe reads, revisions/change events, deterministic atomic snapshot/restore, no generic mechanic metadata bag.
 
 ### 00C WHEN — IMPLEMENTED
 
 Canonical design: `SYSTEM_DESIGNS/00C_TICK_ACTION_PAUSE.md`.
 
-Locked rules include one integer world tick, deterministic scheduled work, variable-duration concurrent actor actions, semantic phases, COMMITTED/RESUMABLE/CANCELABLE interruption policy, decision auto-pause, hard application pause, same-tick batch draining, and deterministic snapshot/restore.
+Locked: non-negative integer world tick, deterministic scheduled work, variable-duration concurrent actor actions, semantic phases, COMMITTED/RESUMABLE/CANCELABLE interruption, tactical decision pause, separate hard application pause, same-tick batch drain, deterministic snapshot/restore.
+
+## 4. Downstream canonical simulation
 
 ### 01 Collision / Spatial Query — IMPLEMENTED
 
 Canonical design: `SYSTEM_DESIGNS/01_COLLISION_SPATIAL_QUERY.md`.
 
-Locked rules:
-
-- hard movement collision is explicit physics, never inferred from art;
-- normal behavior is type-level through `CollisionCatalog`;
-- dynamic exceptions use sparse stable-ID overrides;
-- STRUCTURE / OBJECT / ACTOR placements require explicit classification;
-- missing classification or terrain is UNKNOWN/fail-closed;
-- queries support arbitrary rotated multi-cell footprints and self-ignore;
-- terrain traversal capability remains outside collision.
+Hard occupancy physics is explicit type-level collision plus sparse per-entity overrides. Required missing classification or missing terrain is UNKNOWN/fail-closed. Collision supports hypothetical rotated footprints/self-ignore and deliberately does not own actor-specific terrain traversal.
 
 ### 02 Movement Actions — IMPLEMENTED
 
 Canonical design: `SYSTEM_DESIGNS/02_MOVEMENT_ACTIONS.md`.
 
-Implemented owners:
-
-- `game/scripts/simulation/movement/MovementActionResult.gd`
-- `game/scripts/simulation/movement/MovementTraversalPolicy.gd`
-- `game/scripts/simulation/movement/MovementActionService.gd`
-- `game/scripts/ci/MovementActionsSmoke.gd`
-- `.github/workflows/movement.yml`
-
 Locked movement rules:
 
-- initial vocabulary is forward, backward, turn left and turn right;
-- no diagonal movement or strafing in this slice;
-- movement validates at request time, spends its WHEN duration, then revalidates at `movement.commit` before WHAT mutation;
-- target cells are **not reserved**; if another actor/object occupies the destination before commit, the move fails after spending its time;
-- a stale action cannot overwrite a placement changed by another mechanic while the action was pending;
-- backward movement preserves facing;
-- turns query the fully rotated footprint, including multi-cell actors;
-- terrain traversal and base movement duration are supplied through a replaceable movement policy, separate from collision and WHEN;
-- basic step/turn actions are COMMITTED; hard application pause still freezes them with zero hidden time advancement;
-- pending movement facts live in WHEN's serializable action payload rather than a second hidden movement-state store.
+- forward/back/turn-left/turn-right only;
+- no diagonal/strafe/run yet;
+- validate -> spend WHEN duration -> revalidate `movement.commit` -> mutate WHAT;
+- no destination reservation;
+- stale origin cannot overwrite newer placement;
+- backward preserves facing;
+- turns query the rotated footprint;
+- typed `MovementPolicyDecision` distinguishes terrain failures from actor/capability failures;
+- policy is reevaluated at commit; newly blocked capability fails, newly slower-but-allowed capability affects the next action instead of stretching the current schedule.
 
-## 4. Open-world / generation direction
+### 03 Actor Locomotion State & Movement Capability — IMPLEMENTED
 
-Generation is not the engine and must not define reality by streaming boundaries.
+Canonical design: `SYSTEM_DESIGNS/03_ACTOR_LOCOMOTION_MOVEMENT_CAPABILITY.md`.
+
+Locked rules:
+
+- explicit locomotion enrollment keyed by stable WHAT actor ID; missing record fails closed;
+- persistent stance is semantic `standing` / `crouched` only;
+- no persistent RUN flag and no run action until real consequences exist;
+- crouch does not alter WHAT footprint/anchor;
+- standing step 1.0x, crouched step 1.4x, turns 1.0x initial tuning;
+- voluntary crouch/stand is a 4-tick base COMMITTED action with final `actor.stance.commit`;
+- per-actor locomotion version prevents stale stance actions overwriting newer state;
+- deterministic atomic locomotion snapshot/restore;
+- future health/needs/inventory/equipment/skills influence mobility only through sorted read-only `ActorMobilityModifierProvider` contracts;
+- capability provider BLOCKED outranks UNKNOWN, allowed BP adjustments combine deterministically;
+- actor-aware Movement policy composes base terrain timing + actor capability without importing condition domains into Movement or WHEN.
+
+Implemented owners include:
+
+- `ActorStance.gd`
+- `ActorLocomotionRecord.gd`
+- `ActorLocomotionState.gd`
+- `ActorLocomotionMutationService.gd`
+- `ActorMovementCapabilityDecision.gd`
+- `ActorMobilityModifierProvider.gd`
+- `ActorMovementCapabilityService.gd`
+- `ActorMovementTraversalPolicy.gd`
+- `ActorStanceActionResult.gd`
+- `ActorStanceActionService.gd`
+- `game/scripts/ci/ActorLocomotionSmoke.gd`
+- `.github/workflows/actor-locomotion.yml`
+
+## 5. Open-world / generation direction
+
+Generation is not the engine and streaming partitions never define logical reality.
 
 Long-term planning order:
 
 **world seed -> geography -> towns/rural districts -> roads -> utilities -> parcels/addresses -> building footprints/types -> households/businesses/population -> local detail/materialization**.
 
-Roads, utilities, rivers, parcels and other cross-region structures are planned in global coordinates before local materialization. Once facts exist, the same persistent WHAT owns subsequent changes.
+Roads, utilities, rivers, parcels and other cross-region structures are planned globally before local materialization. Once facts exist, persistent WHAT owns later changes.
 
-## 5. Outbreak / player-story direction
+## 6. Outbreak / player story / bases
 
-The long-term world supports a populated pre-collapse state with persistent people, households, homes, jobs/workplaces, schedules, vehicles and relationships, then simulates outbreak/collapse causally.
+Long-term world state supports pre-collapse persistent people, households, homes, jobs/workplaces, schedules, vehicles and relationships, then causal outbreak/collapse simulation. Distant populations may use coarser deterministic resolution while preserving causal state.
 
-Distant actors/populations may use coarser deterministic simulation while preserving causal persistent state. The playable survivor eventually inhabits a real generated-world person with identity, occupation/workplace, home/property, family/household, relationships, pets, vehicle/resources and starting circumstances where applicable.
+The playable survivor eventually inhabits a real generated-world person with identity, occupation/workplace, home/property, family/household, relationships, pets, vehicle/resources and starting circumstances where applicable.
 
-## 6. Base direction
-
-A base is not a special map or required mode. The player may build/secure one or many locations anywhere normal construction/occupancy rules permit, relocate, abandon them, or live nomadically. Any later base/community UI summarizes underlying physical facts rather than creating a separate base reality.
+A base is an ordinary physical world location, not a special map/mode. Multiple bases, relocation, abandonment and nomadic play remain valid.
 
 ## 7. Graphics recovery truth
 
-The richer pre-rewrite artwork remains intact. The mature look came from golden `TacticalTiles.gd` combining six atlases plus four directional player sprites.
+The richer pre-rewrite artwork remains intact. Mature presentation came from golden `TacticalTiles.gd` combining six atlases plus four directional player sprites.
 
-Golden semantic renderer blob: `3d8a0a70ac983408bb48f58fc659dfb07e216ed3`.
+Golden semantic renderer blob:
 
-When rendering is rebuilt, it must consume canonical world/spatial data and recover exact semantic art behavior rather than approximate it.
+`3d8a0a70ac983408bb48f58fc659dfb07e216ed3`
 
-## 8. Development process / anti-drift rules
+Visual recovery means reconstructing exact semantic art-selection behavior into standalone canonical art/render systems, not approximating with one atlas or extending reboot presentation.
+
+## 8. Development invariants
 
 Canonical process:
 
 > **DESCRIBE -> USER APPROVES -> IMPLEMENT -> VERIFY.**
 
-Global invariants:
+Global rules:
 
-1. Main/root is composition/wiring only.
-2. Every independently replaceable system has a focused owner/public contract.
+1. Main/root is composition only.
+2. One independently replaceable system = focused owner/public contract.
 3. One major system per implementation slice by default.
-4. No placeholder/fake systems presented as complete.
-5. Generator is an input to world state, not owner of persistent reality.
+4. No fake/placeholder systems presented as complete.
+5. Generator is an input to world state, not persistent reality owner.
 6. Rendering never owns simulation truth.
-7. Input requests semantic actions; it does not implement world rules.
+7. Input emits semantic intent; it does not implement mechanics.
 8. Art is not physics.
-9. Phone/Safari remains first-class.
-10. Important decisions/lessons do not live only in chat.
-11. Do not wire new modules into deprecated runtime through temporary compatibility code.
-12. Persistent mechanics attach typed state through stable entity IDs rather than expanding `WorldEntityRecord` into a generic metadata bag.
-13. Gameplay systems may use WHEN for duration/order but WHEN never absorbs mechanic-specific rules.
-14. Movement legality consumes canonical Collision / Spatial Query rather than duplicating occupancy rules.
+9. Phone/Safari is first-class.
+10. Durable decisions do not live only in chat.
+11. Do not wire canonical modules into deprecated reboot through temporary adapters.
+12. Persistent mechanic state uses typed stable-ID domain stores rather than expanding `WorldEntityRecord` into a metadata bag.
+13. Gameplay systems use WHEN for duration/order; WHEN never learns mechanic meanings.
+14. Movement consumes canonical Collision and typed policy decisions rather than duplicating occupancy/condition rules.
+15. Actor condition domains affect mobility through narrow provider contracts instead of being imported into locomotion/Movement.
 
-## 9. Documentation ownership / source order
-
-- `PROJECT_NORTH_STAR.md` — game identity/philosophy.
-- `DESIGN_DECISIONS.md` — settled cross-system decisions and rationale.
-- `README_CONTEXT.md` — current phase/status/routing only.
-- `README_SOPS.md` — coding/GitHub/Godot/Safari process lessons.
-- `DESIGN_WORKFLOW.md` — approval/scope workflow.
-- `SYSTEM_DESIGNS/*.md` — detailed subsystem contracts.
-- `SYSTEM_DESIGNS/README.md` — approval/status ledger.
-- `MODULAR_REBUILD_MASTER_DESIGN.md` — broad architecture inventory where compatible with newer direction.
-- `CHANGELOG.md` — repository change history.
-
-Source-of-truth order:
+## 9. Documentation source order
 
 1. newest explicit user instruction;
 2. `PROJECT_NORTH_STAR.md`;
@@ -189,14 +197,14 @@ Source-of-truth order:
 6. `DESIGN_WORKFLOW.md`;
 7. this context index;
 8. IMPLEMENTED/APPROVED active `SYSTEM_DESIGNS/*.md`;
-9. DRAFT system designs for current discussion;
-10. compatible master-design material;
+9. current DRAFT designs;
+10. compatible `MODULAR_REBUILD_MASTER_DESIGN.md` material;
 11. golden history for recovered behavior.
 
 ## 10. Recommended next bounded design
 
-**Actor State / Stance & Movement Capability** is the recommended next discussion target, not an authorization to code it.
+**Recovered multi-atlas Art Catalog** is the recommended next discussion target, not authorization to code it.
 
-Why: Movement now deliberately leaves crouch/stance, fatigue, injury, encumbrance and other actor-specific capability facts outside its owner. A focused actor-state/capability contract can establish where those durable facts live and how they feed the replaceable movement policy without teaching WHAT, Collision or WHEN what “crouched,” “injured leg,” or “over-encumbered” means.
+Why now: the canonical simulation stack has real space, persistent state, time, collision, movement and actor locomotion/capability contracts. Recovering the exact golden semantic art-selection vocabulary next creates the stable presentation boundary needed before Ground/Structure/Prop/Actor renderers and an authored visual integration area are designed.
 
-Rendering, input, vision, lighting, weather, sound and generation remain separate later systems unless the user chooses a different next approved slice.
+Do not jump from Art Catalog design into generation, input, weather, lighting or a full playable-runtime replacement in one slice. Those remain separate systems.

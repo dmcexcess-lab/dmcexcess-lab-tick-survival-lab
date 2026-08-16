@@ -1,5 +1,21 @@
 # Changelog
 
+## 03 Actor Locomotion State & Movement Capability — 2026-08-16
+
+- Implemented **03 Actor Locomotion State & Movement Capability** after the user explicitly approved the design with “Approved!”.
+- Added a shared stable-ID locomotion domain rather than rebuilding the golden player-only `PlayerActor` god object. Persistent locomotion state is explicitly enrolled and currently contains semantic `standing` / `crouched` stance plus a per-actor stale-action version.
+- Added deterministic mutation-safe locomotion reads, explicit mutation service, store revision, semantic change signals, deterministic actor-ID-sorted snapshot/restore, and atomic malformed-snapshot rejection. Locomotion may persist while an actor is tactically unplaced; WHAT placement remains independent.
+- Added timed voluntary crouch/stand actions through WHEN. Stance changes use a 4-tick base cost, COMMITTED interruption semantics, a final `actor.stance.commit` phase, safe expected-version/source/target payload data, hard-pause safety, and stale-state revalidation before mutation.
+- Kept crouching on the same WHAT tactical footprint. Initial tuning is standing walk 1.0x, crouched walk 1.4x, standing/crouched turn 1.0x.
+- Deliberately did **not** add running. `run` is not persistent physical state, and a faster run action remains deferred until real fatigue/stamina/sound consequences exist. The capability vocabulary reserves future `movement.run_forward`; crouched actors already report it blocked without implementing the action.
+- Added `ActorMovementCapabilityService` with deterministic integer basis-point scaling and sorted read-only `ActorMobilityModifierProvider` extension points. Future Health, Needs/Fatigue, Inventory/Encumbrance, Equipment and Skills systems can modify/block mobility without exposing their internals to Movement, WHAT, Collision or WHEN.
+- Added deterministic provider rules: duplicate IDs rejected, ALLOWED adjustments combine additively, UNKNOWN fails closed, explicit BLOCKED outranks UNKNOWN, and non-positive combined duration scale is invalid.
+- Implemented the approved narrow revision to 02 Movement: added typed `MovementPolicyDecision`, typed step/turn policy evaluation, and explicit actor/capability statuses in `MovementActionResult` instead of mislabeling condition failures as terrain failures.
+- Added `ActorMovementTraversalPolicy` to compose base terrain/timing policy with actor capability while leaving `MovementActionService` owner of collision, timed submission, commit revalidation and WHAT placement mutation.
+- Movement now reevaluates actor-aware policy at `movement.commit`: newly blocked capability fails after the already-spent duration; newly slower-but-still-allowed capability does not stretch the current action and applies to the next request.
+- Added `ActorLocomotionSmoke.gd` plus a dedicated Godot 4.7.1 `Actor Locomotion contract` workflow. Verification covers enrollment/snapshots, stance timing, hard pause, stale versions, provider aggregation, actor-aware Movement, capability changes mid-action, and the existing Movement regression smoke.
+- The frozen `game/scripts/reboot/` playable reference remains untouched; no input, renderer, health, needs, inventory, sound, perception, generation or run implementation was added.
+
 ## Collision / Spatial Query Implementation — 2026-08-16
 
 - Implemented the first downstream system after the completed WHERE / WHAT / WHEN foundation: **Collision / Spatial Query**.
@@ -88,7 +104,7 @@
 - Added `PROJECT_NORTH_STAR.md` as the short canonical game-identity document future work must reread before local subsystem design. Primary shorthand is now **“Ultima-style turn-based mini Zomboid.”**
 - Added the project principle **“Mini means reduced complexity, not reduced consequence or mood.”** Survival systems should preserve meaningful decisions, causality, danger and atmosphere without reproducing unnecessary internal simulation variables.
 - Updated the human `README.md` around the current persistent-open-world direction, turn-based variable-duration action model, real-life hard-pause requirement, invisible tactical grid, simplified-but-consequential health philosophy, extraction-style expedition risk, physical base, outbreak simulation and customizable player stories.
-- Added `DESIGN_DECISIONS.md` as an append/supersede cross-system decision log so later work can recover why a foundational direction was chosen instead of inferring intent from whichever code happens to exist.
+- Added `DESIGN_DECISIONS.md` as an append/supersede cross-system decision log so later work can recover why a foundational decision was made instead of inferring intent from whichever code happens to exist.
 - Explicitly superseded the earlier disconnected **static strategic map -> generated raid -> extraction** world model as the long-term physical foundation. Extraction-shooter influence now means risk/reward expeditions inside a logically continuous persistent world; internal streaming/storage partitions are implementation details rather than separate realities.
 - Recorded the global-world-planning rule: roads, utilities, parcels and other cross-region structures are planned in global coordinates before local materialization so independently loaded chunks cannot invent incompatible seams.
 - Recorded the long-term causal outbreak goal: pre-collapse people/households/jobs/homes/schedules can be simulated through collapse, with coarse deterministic distant simulation permitted for performance as long as persistent causal state is preserved.
