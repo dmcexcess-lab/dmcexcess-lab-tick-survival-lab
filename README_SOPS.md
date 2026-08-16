@@ -1,19 +1,19 @@
 # GPT CODING / GITHUB SOP — TICK SURVIVAL LAB
 
-> **MANDATORY ENTRY CONDITION FOR GPT:** At the start of every new user prompt requesting code or repository changes, fetch and reread this file and `README_CONTEXT.md` from current `main`, then inspect the current repository state relevant to that prompt. Refresh once per prompt/change request, not before every individual edit.
+> **MANDATORY ENTRY CONDITION FOR GPT:** At the start of every new user prompt requesting code or repository changes, fetch and reread this file and `README_CONTEXT.md` from current `main`, then inspect the current relevant repository files. Refresh once per prompt/change request, not before every edit.
 
 ## 1. Core operating rules
 
 1. **Current repo beats memory.** Fetch first.
 2. **Canonical Godot source is `game/`.**
-3. **Direct `main` is normal** unless the user explicitly requests a branch/PR workflow.
-4. **Batch coherent changes.** One prompt should normally produce one coherent implementation pass.
-5. **One durable owner per rule.** Do not duplicate simulation logic across UI, map, actor, or persistence modules.
-6. **Small blast radius beats cleverness.** Refactor locally when the feature requires it; do not conduct project-wide rewrites without explicit authorization.
-7. **No First Fire creep.** Do not import camp/menu/expedition code merely because it is nearby in the source project.
-8. **No clone-by-copying.** Project Zomboid is a design reference, not a source of code/assets/content.
-9. **Do not claim a build works without actually running the relevant Godot parse/startup checks.**
-10. **Keep the simulation testable without presentation.** Tick/world rules should not require UI nodes to function.
+3. **Direct `main` is normal** unless the user explicitly requests branch/PR workflow.
+4. **Batch coherent changes.**
+5. **One durable owner per rule.**
+6. **Do not revive legacy architecture by accident.** The project is in a clean reboot; old scripts are reference material unless explicitly recovered.
+7. **No First Fire creep.** Reuse only deliberately inspected same-owner concepts/assets when requested.
+8. **No clone-by-copying.** External games are design references only.
+9. **Do not claim a build works without exact-SHA Godot/Pages validation.**
+10. **Keep simulation testable without presentation.**
 
 ## 2. Required pre-code checklist — once per prompt
 
@@ -22,128 +22,134 @@ Before changing code or repository behavior:
 1. Fetch/read `README_SOPS.md`.
 2. Fetch/read `README_CONTEXT.md`.
 3. Fetch current `main` SHA.
-4. Inspect the actual `game/` files relevant to the requested change.
+4. Inspect actual relevant `game/` files.
 5. Identify the permanent subsystem owner and smallest integration surface.
-6. Check whether the change alters persistent world/save shape.
-7. Check whether the change changes tick semantics or ordering.
-8. Fetch current blob SHAs for files that will be replaced through GitHub's Contents API.
-9. Choose the write path before producing large replacements.
+6. Check whether the request changes world/save shape or timing semantics.
+7. Fetch current blob SHAs for files that will be replaced.
+8. Prefer new reboot owners over edits to inactive legacy files.
 
-Do not repeat this checklist between edits inside the same prompt unless another actor changes `main` in a way that affects the work.
+## 3. Current reboot architecture
 
-## 3. Bootstrap architecture
+Canonical active owners:
 
-Current durable owner:
-
-- `TacticalMapGenerator.gd` — authored physical map catalog, map variants, structural map specification, map selection, and map validation.
-
-Current disposable harness:
-
-- `MapPreview.gd` — renders/rerolls maps so the extracted foundation can be tested. It owns no future gameplay rule.
+- `scripts/reboot/RebootArt.gd` — retained artwork indices/resources.
+- `scripts/reboot/RebootSiteGenerator.gd` — physical tactical-site generation.
+- `scripts/reboot/RebootPlayer.gd` — player cell/facing/movement.
+- `scripts/reboot/RebootMain.gd` — rendering/input/zoom/static strategic map orchestration.
+- `scripts/ci/RebootSmoke.gd` — deterministic core validation.
 
 Preferred dependency direction:
 
-**map/data → persistent world state → tick scheduler/rules → actor simulation → presentation/input**
+**site data -> player/world rules -> presentation/input**
 
-When a new rule becomes real, give it one clear owner. Do not put inventory, combat, infected AI, needs, saving, or tick scheduling into `TacticalMapGenerator.gd`.
+When later systems return, add them as new focused owners rather than embedding them in `RebootMain.gd` or resurrecting old multipurpose modules.
 
-## 4. Tick-authority rules
+## 4. Reboot scope discipline
 
-The world tick will become the authoritative simulation time.
+The active reboot currently excludes:
 
-When implemented:
+- tick/calendar;
+- weather;
+- lighting;
+- vision/fog;
+- sound;
+- infected;
+- loot/inventory;
+- combat/injuries;
+- vehicles;
+- save serialization.
 
-- every meaningful action has an explicit tick cost;
-- player and infected actions use the same scheduler model;
-- world timers are expressed against authoritative ticks rather than UI animation duration;
-- rendering interpolation must never silently change simulation outcomes;
-- pausing/input inspection must not advance world time unless an action commits;
-- deterministic ordering rules must be documented and regression-tested.
+Do not restore one of these simply because legacy code exists. Reintroduce only when the user asks and the current foundation has been inspected.
 
-Do not mix real-time `_process(delta)` timing into authoritative simulation because it is convenient for one feature.
+## 5. Generator rules
 
-## 5. Map rules
+A generated tactical map represents **one coherent site**.
 
-The current map system is **authored-layout + randomized selection**, not infinite procedural generation.
+- Generate the site's purpose first.
+- Buildings/fields/yards/outbuildings are primary; roads/driveways serve them.
+- Use purposeful prefab/floor-plan grammar and functional room metadata.
+- Furniture/clutter should reinforce room/site purpose.
+- Avoid giant mixed-biome maps and road-first cross layouts.
+- Maintain O(1)-style collision lookups for runtime movement.
+- Validate quality invariants, not merely successful Dictionary creation.
 
-Preserve one map schema while expanding it. If connected-world generation arrives later, compose/stitch/transform this schema rather than creating a second incompatible physical-world model.
+Current rural generator validation includes required building/room functions and a maximum 18% road/gravel coverage ratio.
 
-Map geometry/data may describe physical facts such as ground, walls, doors, windows, obstacles, props, lights, spawn anchors, and exits. Runtime state such as a broken window, opened door, corpse, dropped item, blood, fire, or actor belongs to persistent world state unless the generator specifically owns its initial placement.
+## 6. Performance rules
 
-## 6. GDScript rules
+The reboot establishes a deliberately cheap baseline:
+
+- no idle redraw loop;
+- render only visible tactical cells;
+- redraw only on meaningful presentation state changes;
+- use dictionary lookups for sparse walls/props/blockers;
+- avoid scanning the full 64x64 site per frame;
+- static strategic map is presentation, not simulated terrain.
+
+Any future animated/perception system must preserve this baseline as much as possible and should own its own bounded work rather than forcing whole-scene redraws.
+
+## 7. Input / mobile rules
+
+Phone/Safari remains first-class.
+
+- one physical touch = one action;
+- large on-screen controls;
+- synthetic mouse duplication must be suppressed;
+- keyboard controls are development convenience;
+- map/zoom are zero-simulation-cost presentation controls until a future timing system explicitly says otherwise.
+
+## 8. GDScript rules
 
 - Godot 4 / GDScript.
-- Be conservative with `:=` when values come from Dictionaries/Variants; use explicit types/conversions when inference is ambiguous.
-- Prefer `maxi`, `maxf`, `clampi`, `clampf` when appropriate.
-- Treat Dictionary schemas, signal names, method names, and save keys as APIs.
-- Keep `_ready()` side effects small and understandable.
-- Prefer deterministic helper tests for map/tick invariants.
-- Do not hide simulation mutation inside draw/input helpers.
+- Be conservative with `:=` around Dictionary/Variant values; use explicit conversion/type when needed.
+- Prefer `maxi`, `mini`, `clampi`, `clampf` where appropriate.
+- Treat Dictionary schemas and method names as APIs.
+- Keep `_ready()` side effects small.
+- Never hide future simulation mutation inside `_draw()`.
+- Prefer deterministic smoke tests for generator/player invariants.
 
-## 7. Persistence policy
+## 9. Legacy policy
 
-Persistent-world design is core, but no save format is sacred during bootstrap.
+Legacy scripts/design docs may remain temporarily in the repository, but they are inactive unless current `README_CONTEXT.md` says otherwise.
 
-Before a public Beta promise exists:
+Do not make new features depend on inactive legacy modules merely to save coding time. Git history is the rollback/reference mechanism. A later razor pass may remove unused legacy code after the reboot stabilizes.
 
-- change schemas when necessary rather than carrying dead compatibility fields;
-- keep explicit schema/version metadata once saves are introduced;
-- do not build a general migration framework until there is an actual compatibility promise.
+## 10. Validation
 
-## 8. GitHub write path
+For meaningful reboot code changes, exact final SHA must pass:
 
-For modest text changes, prefer `fetch_file` + `create_file` / `update_file` / `delete_file`.
+1. canonical reboot-source validation;
+2. Godot 4.7.1 import/parse;
+3. `RebootSmoke.gd`;
+4. real main-scene startup smoke with `REBOOT_BOOT_OK`;
+5. Web export;
+6. Pages artifact upload/deployment.
 
-For coordinated multi-file changes, prefer Git Data blobs/tree/commit with one fast-forward of `main` when available.
-
-Temporary Actions writers are emergency fallback only. If one is ever required, remove it immediately after use and verify the final tree contains no migration/staging junk.
-
-## 9. Validation
-
-At minimum for meaningful GDScript work:
-
-1. Godot import/parse succeeds.
-2. The actual main scene starts headlessly without script/load errors.
-3. Deterministic module smoke tests pass when they exist.
-4. Logs are rejected if they contain `SCRIPT ERROR`, `Parse Error`, or `Failed to load script`.
-
-Permanent Pages CI is present from Bootstrap 0.0 and must remain the default proof path. A code change is CI-good only when the exact final SHA passes canonical validation, Godot import/parse, `MapSmoke.gd`, startup smoke, Web export, artifact upload, and Pages deployment. Inspect logs for meaningful GDScript changes.
-
-Current map bootstrap invariant: every catalog environment/variant must pass `TacticalMapGenerator.validate_layout()`.
-
-## 10. Scope discipline
-
-Do not start by reproducing an entire mature survival game.
-
-Current first-slice priorities are the local physical simulation: one player, ticks, movement/facing, environment interaction, vision, sound, infected, loot/inventory, body state, and persistent local world changes.
-
-Multiplayer, vehicles, NPC companions, factions, settlement management, giant crafting trees, and elaborate narrative systems are outside the bootstrap unless the user explicitly changes scope.
+Logs must be rejected for `SCRIPT ERROR`, `Parse Error`, or `Failed to load script`.
 
 ## 11. Communication
 
-- Implementation-first, not process-first.
-- Keep progress updates short and useful.
-- Surface discovered architectural facts early—for example, the current First Fire “generator” is authored map variants, not an infinite procedural city generator.
-- Avoid unnecessary clarification when repo/context resolves the question.
-- If a required external mutation is impossible with available tooling, say exactly what is blocked and complete everything that can be completed safely.
-- Never claim a GitHub repo, CI run, build, or deployment exists unless verified.
+- Implementation-first.
+- Surface architectural problems early.
+- Do not claim old systems remain active when the reboot has disconnected them.
+- If tooling blocks a mutation, state exactly what is blocked and complete everything else possible.
+- Never claim deployment success without checking it.
 
 ## 12. Final self-check
 
-Before saying a code/repo prompt is done:
+Before calling a repo task done:
 
 - Did I refresh SOP + context once at prompt start?
 - Did I inspect current relevant source?
-- Did I preserve the map module boundary?
-- Did I avoid importing unrelated First Fire systems?
-- Did I account for tick/persistence implications?
-- Did I run relevant validation?
-- Did I leave no temporary artifacts?
-- Did I report any tooling blocker accurately?
+- Did I use the reboot owners rather than legacy patch layers?
+- Did I protect the event-driven/visible-cell performance baseline?
+- Did I add/update deterministic validation where appropriate?
+- Did exact final SHA pass Godot + Pages?
+- Did I leave no temporary writer/tooling artifacts?
 
 ## 13. Required footer after repository changes
 
-When a prompt changes this repository, end the completion response with:
+When a prompt changes this repository, end with:
 
 - Changelog: `https://github.com/dmcexcess-lab/dmcexcess-lab-tick-survival-lab/blob/main/CHANGELOG.md`
 - Play: `https://dmcexcess-lab.github.io/dmcexcess-lab-tick-survival-lab/`
