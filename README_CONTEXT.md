@@ -1,219 +1,192 @@
-# Tick Survival Lab — Project Context
+# Tick Survival Lab — Project Context / Routing Index
 
-> **MANDATORY CONTEXT RULE FOR GPT:** At the start of every new user prompt requesting code or repository changes, fetch and reread both `README_SOPS.md` and this file from current `main`, then inspect the current files relevant to that prompt. Do this once per prompt/change request.
+> **MANDATORY:** At the start of every prompt requesting repository/code changes, read current `README_SOPS.md`, this file, `DESIGN_WORKFLOW.md`, and the active system design(s). Read `MODULAR_REBUILD_MASTER_DESIGN.md` for architecture/global-direction work. Inspect current relevant code and golden recovery files when applicable.
 
-## Identity
+## 1. Game identity
+
+Tick Survival Lab is an original Godot 4 **mini-Zomboid-style systemic zombie survival simulation with extraction-shooter structure**.
+
+Core identity:
+
+- top-down grid tactical survival;
+- physical/spatial systems rather than abstract event rolls where practical;
+- static strategic map for progression and raid selection;
+- generated local tactical locations;
+- extraction separates tactical risk from strategic progression;
+- simulation systems added deliberately, one at a time;
+- phone/Safari is first-class;
+- game remains silent by default: sound is simulated spatial data shown visually unless explicitly changed.
 
 Repository: `dmcexcess-lab/dmcexcess-lab-tick-survival-lab`
 
 Web preview: `https://dmcexcess-lab.github.io/dmcexcess-lab-tick-survival-lab/`
 
-Tick Survival Lab is an original Godot 4 top-down zombie-apocalypse survival/extraction simulation.
+## 2. Current architectural phase
 
-## Current architectural status
+The project is in **Phase 0: modular redesign / architecture freeze**.
 
-The project is entering a **full modular rebuild**.
+The currently deployed runtime under `game/scripts/reboot/` is **frozen/deprecated reference code**. Do not extend it as the target architecture.
 
-The currently deployed clean-reboot runtime under `game/scripts/reboot/` is **frozen/deprecated reference code**. It remains playable and may be mined for useful recent generation/door/prefab lessons, but it is not the architecture to extend.
-
-The canonical implementation target is:
-
-**`MODULAR_REBUILD_MASTER_DESIGN.md`**
-
-Do not add new systems to `RebootMain.gd`. Do not treat the clean-reboot renderer/art catalog as the authentic pre-rewrite graphics implementation.
-
-## Golden recovery baseline
-
-The last mature pre-clean-rewrite visual/system baseline is commit:
+The last mature pre-clean-rewrite system/visual baseline is golden recovery commit:
 
 `1763958f44eb7f855fd49944c00d1ffe608c0abe`
 
-Title: `Document focused raid interiors v6`.
+Use that commit to recover exact solved behavior/art semantics. Do not restore its monolithic presentation inheritance architecture wholesale.
 
-This commit is an **archaeology/recovery source**, not architecture to restore wholesale.
+## 3. Development process
 
-The old visuals came from `TacticalTiles.gd` combining multiple art sources, not from one atlas. Recover its semantic art-selection/draw behavior into modular art/render scripts.
+Canonical process: `DESIGN_WORKFLOW.md`.
 
-### Preserved art baseline
+> **DESCRIBE -> USER APPROVES -> IMPLEMENT -> VERIFY.**
 
-These current asset files are byte-identical to the golden commit and must be preserved unless an explicit art-change prompt says otherwise:
+Major systems are not implemented before their design is APPROVED.
 
-- `tactical_atlas.svg` — `a031ac456a7d92b7fbf2d6e4d625c3a30e749a4f`
-- `clutter_atlas.svg` — `966c9de04ad84d05d6203cc4e078f2fad07c03d4`
-- `world_art_atlas.svg` — `995e52973e14db0ef60f3562c1cfa5ae342d62d2`
-- `building_props_atlas.svg` — `856be2fc90d009d1b4bcc565990b9428323bb4d6`
-- `final_environment_surfaces_atlas.svg` — `a42607858bae04f25fb1c6621a6d9262e81550b1`
-- `final_environment_props_atlas.svg` — `7714d8c95833e20ebca20cfa1374f23eaa5509f1`
-- `player_north.svg` — `dfeb5be1c9cc0b66aec842d969b60b485d3a4f99`
-- `player_east.svg` — `76c3e7e1a3b07712c65b385f1d80e131b45d90b3`
-- `player_south.svg` — `a2e358fd8fe15d497bf9559ae89835af0331d10f`
-- `player_west.svg` — `c2cc192efed4c4a81905eb0d8100cd4776d4731b`
+If a user request spans several major systems, break it into a sequence and push back on implementing all of them at once. Recommend the first dependency/system and obtain approval before coding.
 
-The graphics regression after the clean rewrite was caused by replacing the old semantic renderer/catalog behavior, not by losing the asset files.
+No placeholder/fake systems are presented as completion. If a prerequisite is missing, design it first or explicitly defer the dependent behavior.
 
-## Non-negotiable modular rule
+Ask targeted clarification when a material ambiguity cannot be resolved from repo/history/current conversation. Do not ask about ordinary spelling/typos when intent is clear.
 
-The root/main script is **composition only**.
+## 4. System approval ledger
 
-Main may:
+Canonical subsystem status/index: `SYSTEM_DESIGNS/README.md`.
 
-- obtain child/service references;
-- inject dependencies/configuration;
-- connect high-level signals;
-- select initial controller/mode;
-- do minimal lifecycle bookkeeping.
+Current state:
 
-Main may not own drawing, input handling, button geometry, zoom/camera math, generation, player movement, collision, strategic-map presentation, prefab logic, persistence, extraction, weather, lighting, perception, sound, validation, or subsystem UI.
+- No new modular runtime subsystem has yet been APPROVED/implemented.
+- The modular architecture/global direction is approved as the target.
+- Recommended first detailed system design: **Semantic Tactical Map / `RaidMapSpec` data contract**.
 
-Every named system belongs in its own standalone script/module. Prefer small replaceable composition over inheritance chains or god objects.
+Why first: this is the stable seam that lets generation, rendering, collision, player movement, prefab authoring, and later perception consume the same world meaning without knowing each other's implementation.
 
-The architectural success criterion is that a subsystem can be deleted and rewritten behind a stable data/API contract without modifying unrelated modules.
+## 5. Non-negotiable architecture
 
-## Stable world-data rule
+Canonical master architecture: `MODULAR_REBUILD_MASTER_DESIGN.md`.
 
-Generation outputs **semantic world data**, never atlas indices or draw calls.
+Global invariants:
 
-Example semantic IDs:
+1. **Main/root is composition/wiring only.**
+2. **One named system = one standalone owner at minimum.**
+3. Prefer composition and narrow contracts over deep inheritance.
+4. A subsystem must be replaceable without opportunistically rewriting neighbors.
+5. Generation outputs semantic world data, never atlas indices or draw calls.
+6. Rendering consumes semantic data and never owns simulation/generation truth.
+7. Input emits semantic intents; it does not directly implement movement/world rules.
+8. Art is not physics.
+9. Mobile/Safari remains first-class.
+10. No system is allowed to become a convenient temporary dumping ground.
 
-- `ground.grass_lush`
-- `ground.gravel_driveway`
-- `wall.house_siding`
-- `door.house`
-- `fixture.kitchen_sink`
-- `prop.utility_pole`
+If implementation unexpectedly requires crossing a forbidden module boundary, stop and reassess the design rather than cascading edits.
 
-A separate recovered `ArtCatalog` decides which asset/source/index represents each semantic ID.
+## 6. Graphics recovery truth
 
-**Art is not physics.** Blocking, opacity, door state, interaction and later search/destruction/persistence facts are explicit world data separate from sprites.
+The richer pre-rewrite artwork was **not lost**. Current assets are byte-identical to the golden baseline.
 
-This boundary is what must allow the random generator to be completely rewritten without losing graphics/player/input/map behavior.
+The mature look came from golden `TacticalTiles.gd` combining:
 
-## Current game direction
+- `tactical_atlas.svg`;
+- `clutter_atlas.svg`;
+- `world_art_atlas.svg`;
+- `building_props_atlas.svg`;
+- `final_environment_surfaces_atlas.svg`;
+- `final_environment_props_atlas.svg`;
+- four directional player sprites.
 
-The strategic world is a **static map image/background with interactive destination nodes**, not a generated seamless tactical world.
+Golden semantic renderer blob: `3d8a0a70ac983408bb48f58fc659dfb07e216ed3`.
 
-Progression moves geographically:
+Recover this behavior into a standalone semantic `ArtCatalog` plus separate render-layer owners. Do not approximate and call it recovered behavior.
 
-**BASE / RURAL EDGE → SMALL TOWNS → SUBURBS → CITY EDGE → CITY CENTER**
+## 7. Current strategic/gameplay direction
 
-The survivor starts with limited foot travel. Vehicles later act primarily as strategic gateway/stair transitions to farther travel depths/anchors. They can gain fuel/damage/storage/driving mechanics later without changing that navigation model.
+Strategic geography:
+
+**BASE / RURAL EDGE -> SMALL TOWNS -> SUBURBS -> CITY EDGE -> CITY CENTER**
+
+The strategic map is a static authored background/image with interactive semantic nodes, not a seamless generated tactical surface.
+
+Foot travel initially limits reach. Vehicles later act as strategic gateway/stair transitions to deeper/farther staging areas. Vehicle simulation may gain fuel/damage/storage later without changing that core navigation model.
 
 Core loop:
 
-**STATIC STRATEGIC MAP → REACHABLE DESTINATION → GENERATED TACTICAL RAID → PHYSICAL EXTRACTION → RETURN TO STAGING → EXPAND ROAMING RANGE.**
+**STATIC STRATEGIC MAP -> REACHABLE DESTINATION -> GENERATED TACTICAL RAID -> PHYSICAL EXTRACTION -> RETURN TO STAGING -> EXPAND ROAMING RANGE**
 
-A deeper raid returns to the staging anchor that launched it, such as a parked vehicle later, rather than magically returning all the way home.
+## 8. First biome direction: Rural Edge
 
-## Tactical raid rule
+Do not implement Small Town until Rural Edge repeatedly looks believable.
 
-A tactical map represents **one coherent sample of a place**. It must not try to show every biome or spend most of its space on roads/filler.
+Current approved broad direction (not yet an approved detailed generator design):
 
-Roads serve the site. Properties/buildings/vegetation define the site.
+- rural two-lane main roads;
+- straight, bend/curve-like, crossroads, later T/offset variations;
+- dirt/gravel access roads and driveways;
+- broad grass/open land;
+- trees, bushes, scrub, weeds;
+- many utility poles/power lines along roads;
+- sparse stop signs; few/no traffic lights;
+- roughly 3–4 residential properties as a typical scale, not a hard quota;
+- farms, substantial houses, trailers/double-wides in weighted mixes;
+- normally zero or one small gas/convenience/corner store; maximum two only by intentional composition;
+- no rural strip malls;
+- compact believable interiors;
+- rooms normally >= 3x3 usable cells;
+- public/storefront spaces commonly ~5x5–7x7;
+- support/back rooms commonly ~3x3;
+- fixtures/furniture/clutter placed according to room purpose and circulation;
+- door geometry is physical and validated, never cosmetically hidden.
 
-The first rebuild target is **Rural Edge**. Do not implement Small Town until Rural Edge repeatedly looks authored and believable.
+Detailed Rural Edge design will be split into separate road/property/building/dressing/validation system designs before code.
 
-### Rural Edge direction
+## 9. Prefab direction
 
-Typical rural sample qualities:
+Prefab authoring remains desired but is not the next implementation target.
 
-- one two-lane main road;
-- road topology varies among straight, bend/curve-like, crossroads, later T/offset variants;
-- narrow dirt/gravel roads and driveways branch from it;
-- lots of grass, trees, bushes, scrub, weeds and rural open land;
-- frequent utility poles/power lines along developed road frontage;
-- sparse stop signs;
-- few/no traffic lights;
-- 3–4-ish residential properties as a normal scale, not a rigid quota;
-- property mix may include a farm complex, substantial rural houses, trailers and double-wides;
-- zero or one small gas/convenience/corner store normally, never a rural strip mall; up to two only when a composition intentionally supports it.
+Future prefab data is semantic, not atlas-index data. Builder controller/view/palette/preview/validation/serialization/storage are separate owners, using the same canonical map/art/render contracts as normal gameplay.
 
-Examples are grammar, not hardcoded quotas.
+## 10. Recovered/deferred solved work
 
-### Rural buildings/interiors
+Mine rather than casually reinvent when each system is designed:
 
-- functional rooms normally at least 3x3 usable cells;
-- public spaces such as a storefront generally 5x5–7x7;
-- support rooms generally around 3x3;
-- multiple believable rooms rather than giant empty interiors;
-- sinks/stoves/refrigerators/bathroom fixtures placed against sensible wall/plumbing planes;
-- beds/desks/shelves/counters placed with usable circulation;
-- retail shelving creates aisles;
-- stockroom/service clutter stays clear of entrances.
+- `TacticalTiles.gd` — art selection/render semantics;
+- `LocalWorldState.gd` — collision/door state ideas;
+- `PlayerActor.gd` — movement/facing semantics;
+- `SafariInputGuard.gd` — Safari touch/mouse de-duplication;
+- `TickScheduler.gd` — authoritative ticks/actions/interruption;
+- `WorldCalendar.gd`;
+- `TacticalLighting.gd`;
+- `TacticalPerception.gd`;
+- `TacticalWeather.gd`;
+- `TacticalSound.gd`;
+- `ExtractionRaidState.gd`;
+- old generation/street/interior passes for rules/algorithms only.
 
-Door geometry is a hard physical rule: every door has a wall axis, perpendicular approaches stay clear, same-axis structural neighbors remain, and a door cannot occupy a wall cross/T-junction.
+Vision cone, lighting, weather, silent spatial sound, infected, loot/inventory, combat/body, and richer vehicles return later **one approved subsystem at a time**.
 
-## Prefab direction
+## 11. Documentation ownership
 
-Prefab authoring remains part of the game/dev tooling, but it will be rebuilt modularly.
+- `README_CONTEXT.md` — current routing/status/index only.
+- `README_SOPS.md` — how GPT works on this repo; living coding/GitHub lessons.
+- `DESIGN_WORKFLOW.md` — design/approval/scope process.
+- `MODULAR_REBUILD_MASTER_DESIGN.md` — global architecture/game direction.
+- `SYSTEM_DESIGNS/*.md` — detailed canonical design for each subsystem.
+- `SYSTEM_DESIGNS/README.md` — approval/status ledger.
+- `CHANGELOG.md` — repository change history.
 
-A prefab is semantic data, not code and not atlas indices. It can carry:
+Do not let important system details exist only in chat history.
 
-- ground/structure/prop data;
-- door axes;
-- footprint;
-- frontage/entrance anchors;
-- building/site tags;
-- allowed biome tags;
-- room metadata;
-- road/drive requirements;
-- allowed rotations/mirroring.
-
-Builder controller, builder view, palette, preview renderer, validator, serializer and storage must be separate scripts.
-
-The builder must use the same canonical renderer/art catalog as tactical gameplay so it cannot develop a second visual language.
-
-Maximum authored footprint should be approximately one far-zoom tactical window; resolve exact dimensions from the canonical zoom module during implementation rather than pinning a stale number in multiple places.
-
-## Recovered systems to preserve for later
-
-From the golden pre-rewrite build, inspect/port rather than casually reinvent:
-
-- `TacticalTiles.gd` semantic art behavior — recover now, split into modules;
-- `LocalWorldState.gd` — mutable door/collision ideas;
-- `PlayerActor.gd` — useful movement/facing semantics;
-- `SafariInputGuard.gd` — Safari de-duplication;
-- `TickScheduler.gd` — authoritative tick/action system, deferred but already substantially solved;
-- `WorldCalendar.gd` — deferred;
-- `TacticalLighting.gd` — deferred, user wants lighting later;
-- `TacticalPerception.gd` — deferred, user wants vision cone later;
-- `TacticalWeather.gd` — deferred, user wants weather later;
-- `TacticalSound.gd` — deferred silent spatial sound system;
-- `ExtractionRaidState.gd` — mine extraction state semantics;
-- old generation/street/interior passes — mine rules/algorithms only, do not recreate old patch-chain architecture.
-
-The game remains intentionally **silent** unless explicitly changed: sound is simulation data communicated visually (for example yellow spatial/noise markers), not audible playback.
-
-## Initial modular rebuild sequence
-
-1. **Do not start with random generation.**
-2. Build bootstrap-only Main plus semantic data records.
-3. Recover exact golden art mappings into standalone `ArtCatalog`.
-4. Split tactical rendering into ground/structure/prop/player renderers.
-5. Restore the old rich visuals on a tiny authored test map and verify them visually.
-6. Build separate player state/movement/facing/collision modules.
-7. Build separate camera/zoom modules.
-8. Build separate touch/keyboard/Safari input modules and tactical controls view.
-9. Build separate static strategic map state/view/input.
-10. Only after the old visual baseline is visibly restored, build the new modular Rural Edge generator.
-11. Rebuild prefab tooling on top of the shared semantic data/renderer.
-12. Add travel/extraction state.
-13. Recover tick/perception/lighting/weather/sound one subsystem at a time later.
-
-## Current deployed runtime
-
-The live build at the web preview still runs the clean-reboot code until the modular foundation replaces it. It is useful only for reference/playtesting and should not be mistaken for the target architecture.
-
-Do not delete it during a design-only prompt. Git history plus the golden commit are the rollback/recovery sources.
-
-## Source-of-truth order
+## 12. Source-of-truth order
 
 1. Newest explicit user instruction
 2. Current repository state
 3. `README_SOPS.md`
-4. This context file
-5. **`MODULAR_REBUILD_MASTER_DESIGN.md`**
-6. Golden recovery commit `1763958f44eb7f855fd49944c00d1ffe608c0abe` for exact old code/art archaeology
-7. `TRAVEL_DEPTH_VEHICLE_GATEWAY_DESIGN.md` where compatible with the newer static strategic-map direction
-8. Older design docs only where they do not conflict
+4. `DESIGN_WORKFLOW.md`
+5. This context index
+6. APPROVED active `SYSTEM_DESIGNS/*.md`
+7. `MODULAR_REBUILD_MASTER_DESIGN.md`
+8. Golden recovery commit `1763958f44eb7f855fd49944c00d1ffe608c0abe` for exact historical behavior
+9. Older design documents where compatible
 
-If a user requests a destructive rewrite and the scope is genuinely ambiguous, ask a targeted clarifying question before crossing subsystem boundaries.
+## 13. Current next action
+
+**Design only. Do not code the new runtime yet.**
+
+Next recommended discussion: `SYSTEM_DESIGNS/01_RAID_MAP_DATA.md` — define the semantic tactical world-data contract that all later systems plug into.
