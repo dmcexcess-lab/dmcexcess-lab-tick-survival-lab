@@ -16,7 +16,7 @@ A system is implemented only after its design status is **APPROVED** by the user
 
 | Order | System | Status | Design file | Notes |
 |---|---|---|---|---|
-| 01 | Semantic tactical map / `RaidMapSpec` contract | NOT DESIGNED | `01_RAID_MAP_DATA.md` | Recommended first system; stable seam between generation, physics and rendering |
+| 01 | Semantic tactical map / `RaidMapSpec` contract | **DRAFT** | `01_RAID_MAP_DATA.md` | Current design discussion; user approval required before code |
 | 02 | Recovered multi-atlas Art Catalog | NOT DESIGNED | `02_ART_CATALOG.md` | Recover exact golden `TacticalTiles.gd` semantics; no generation logic |
 | 03 | Ground renderer | NOT DESIGNED | `03_GROUND_RENDERER.md` | Consumes semantic map data + ArtCatalog |
 | 04 | Structure renderer | NOT DESIGNED | `04_STRUCTURE_RENDERER.md` | Walls/doors/windows only |
