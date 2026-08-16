@@ -2,7 +2,7 @@
 
 This is the durable log for **approved or clearly settled cross-cutting decisions** that affect more than one subsystem.
 
-It is not a brainstorming file. Detailed mechanics belong in `SYSTEM_DESIGNS/`. Current work status belongs in `README_CONTEXT.md`. This log exists so later work can recover the reason behind a major direction instead of inferring intent from implementation.
+It is not a brainstorming file. Detailed mechanics belong in `SYSTEM_DESIGNS/`. Current work status belongs in `README_CONTEXT.md`. This log exists so later work can recover the reason behind a major direction instead of inferring it from implementation.
 
 If a later discussion changes a decision, do not erase history. Add a newer entry that explicitly supersedes the old one.
 
@@ -108,7 +108,7 @@ Higher-level base/community UI may summarize physical facts later, but should no
 
 **Affected systems:** spatial model, art catalog, renderers, movement, collision, generation, construction, AI, perception.
 
-**Unresolved:** whether walls/doors/windows are represented as occupied cells or cell-edge structures. Resolve in Spatial Model design before implementation.
+**Follow-up resolved below:** wall/door/window representation and canonical cell scale were settled during WHERE implementation.
 
 ---
 
@@ -150,4 +150,24 @@ Generation is a producer of initial WHAT using WHERE. Construction/destruction/g
 
 **Detailed design:** `SYSTEM_DESIGNS/00_FOUNDATION_WHERE_WHAT_WHEN.md`.
 
-**Approval note:** The three-part decomposition is settled in concept. Detailed recommendations inside the design document remain DRAFT until explicitly reviewed/approved, including structure-cell vs edge-wall representation and exact cell physical scale.
+---
+
+## 2026-08-16 — WHERE spatial representation locked for the first modular implementation
+
+**Decision:** The canonical Spatial Model now uses:
+
+- global integer `Vector2i` cells;
+- N/E/S/W semantic facing;
+- whole-cell arbitrary-mask footprints rotated around a stable anchor;
+- a centralized planning scale of **1.0 meter per tactical cell**;
+- **structure cells** rather than cell-edge walls;
+- explicit HORIZONTAL/VERTICAL structure axis for walls/openings;
+- layered spatial channel vocabulary without storing occupants in WHERE.
+
+**Why:** This is the simplest model that preserves the intended Ultima-like readability, deterministic turn-based movement, rotated clutter/vehicle footprints, recovered-art compatibility, doorway geometry, construction, LOS and future persistent-world use. Edge-wall/sub-cell models add complexity without a currently identified gameplay or mood benefit.
+
+**Supersedes/resolves:** the earlier unresolved wall-cell-vs-edge-wall and exact cell-scale questions.
+
+**Affected systems:** WHAT placement/indexes, generator, construction, renderer, collision/pathfinding, perception/LOS, vehicles, streaming calculations and validation.
+
+**Implementation:** `SYSTEM_DESIGNS/00A_SPATIAL_MODEL.md` and `game/scripts/foundation/spatial/`.
