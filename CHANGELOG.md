@@ -1,5 +1,18 @@
 # Changelog
 
+## Focused Raid Interiors / Generator v6 — 2026-08-15
+
+- Upgraded `MiniRegionGenerator.gd` to generator version 6 around the extraction-game assumption that each raid destination may commit strongly to one environment instead of reproducing all five biome families inside every 64×64 map.
+- Added `DestinationFocusCleanupPass.gd` to remove legacy v4 structures incompatible with the selected destination before focused generation; non-commercial raids also discard old commercial parking parcels rather than carrying them into residential/rural/woods maps.
+- Reworked `MiniRegionFocusPass.gd` to normalize broad biome identity to the selected raid focus and search for substantially larger destination-appropriate shells: residential up to roughly 14×11, commercial/downtown anchors up to 18×12, rural up to 13×10, and woodland/cabin shells up to 11×9 where road/spawn/geometry constraints permit.
+- Large standalone stores now have purposeful sales-floor, manager-office, and back-stockroom space with retail/storage fixtures instead of only front/back room subdivision.
+- Large office anchors now support reception, open-office, manager-office, storage/file, and meeting-room zones with desks, computers, cubicles, and filing furniture.
+- Larger ordinary houses now use recognizable living-room, kitchen, bedroom, and bathroom functions with matching domestic fixtures.
+- Added `DestinationInteriorPass.gd` to deepen special families after Streetscape selects them: mansions gain living/kitchen/primary-bedroom/secondary-bedroom/bath depth; duplex units gain living-kitchen and bed-bath zones; strip-mall storefronts gain public sales + rear manager/stock space; trailers retain compact living-kitchen + bed-bath organization.
+- Added composed v6 validation for focused biome identity, off-theme legacy structure cleanup, non-commercial parking cleanup, functional room vocabulary, larger developed-destination anchors, existing streetscape invariants, and family-aware footprints. `MiniWorldSmoke.gd` exercises that validation across all 25 deterministic destination sites.
+- Added `FOCUSED_RAID_INTERIORS.md` as the durable local-generation depth contract and updated extraction/context documentation plus permanent CI source checks for the new generation passes.
+- Kept this pass generation-only and single-story: no loot/search behavior, infected, combat, body simulation, physical base, audible sound, or runtime persistence was added.
+
 ## Extraction Raid Loop 0.6 — 2026-08-15
 
 - Pivoted the 5×5 mini-world from seamless adjacent-region travel into an extraction-survival destination map: base/staging → choose destination → fresh 64×64 raid → reach green extraction → return to base.
@@ -204,7 +217,7 @@
 - Added committed, resumable, canceled, and forced-failure interruption behavior.
 - Added damage interruption hooks; committed actions continue through ordinary damage while resumable actions preserve exact elapsed/phase state.
 - Added `TimingDummy.gd`, a minimal autonomous scheduled actor used to prove multiple actors can advance during one player action.
-- Added deterministic tie ordering by next action tick then actor ID.
+- Added deterministic tie ordering by next tick then actor ID.
 - Expanded scheduler CI to prove a 10-tick action permits two 4-tick dummy actions while a 3-tick action permits none.
 - Added a phased reload proof that interrupts at tick 5, preserves the `mag_in` phase, then resumes to completion.
 - Added a committed axe-swing proof that ordinary damage does not cancel execution.
@@ -218,7 +231,7 @@
 - Made player/world separation an explicit design rule: player death can leave the same persistent world available for a new playable survivor.
 - Defined real-time-with-auto-pause action execution and committed/resumable/canceled/forced-failure interruption policies.
 - Added use-based skills, occupations as starting knowledge, and physical books/manuals/recorded training media to the design.
-- Added detailed-enough injury goals including deep wounds, sutures, fractures, splints, crutches, fatal trauma and time-sensitive extremity amputation.
+- Added detailed-enough injury goals including deep wounds, sutures, fractures, splints/crutches, fatal trauma and time-sensitive extremity amputation.
 - Defined the long-term large island world, destroyed/bombed bridge boundaries, outbreak epicenter/spread settings, family/occupation starts, autonomous survivors/animals, emergent settlements, patrols, logistics and infrastructure reclamation.
 - Ported First Fire's dependency-free tactical lighting rules into `TacticalLighting.gd` without importing First Fire inventory/UI/camp dependencies.
 - Ported First Fire's tactical sound/localization helpers into `TacticalSound.gd` without faking propagation or AI ownership early.
