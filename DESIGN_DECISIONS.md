@@ -191,3 +191,23 @@ Cell/channel occupancy is a derived lookup index and does not decide collision l
 **Affected systems:** generation, persistence/save storage, streaming, rendering, collision/pathfinding, construction, actors/population/outbreak, inventory, vehicles, health, doors, bases and all durable mechanics.
 
 **Implementation:** `SYSTEM_DESIGNS/00B_PERSISTENT_WORLD_STATE.md` and `game/scripts/foundation/world/`.
+
+---
+
+## 2026-08-16 — WHEN owns one deterministic simulation clock
+
+**Decision:** The canonical Tick / Action / Pause foundation uses one non-negative integer `world_tick` for all simulation scheduling. Render frame rate and wall-clock time never advance simulation implicitly, and WHEN does not decide how ticks map to calendar minutes/hours.
+
+Actor actions and world-system events share one deterministic scheduled-event queue. Ordering is explicit: due tick, then narrow priority, then owner/source key, then insertion serial. Once tick T begins resolving, **all work due at T—including work scheduled for T by another T event—drains before player-decision auto-pause may engage.**
+
+One actor may have one active action at a time, while many actors may have concurrent actions. Action phases are semantic timing checkpoints only; movement, damage, doors, healing, weather, AI and other physical meanings remain owned by their own systems.
+
+The canonical interruption policies are COMMITTED, RESUMABLE and CANCELABLE. Hard application pause is a separate product/lifecycle mechanism that freezes all simulation advancement immediately and advances zero ticks, including during an in-progress action.
+
+The timing kernel stores serializable action/event records rather than live actor Nodes/callback objects. Long-horizon or coarse distant events therefore use the same clock without requiring the corresponding world entity to remain materialized as a Godot object.
+
+**Why:** This makes turn-based exposure deterministic and shared across the whole simulation while keeping the scheduler mechanic-agnostic, saveable, testable, and compatible with coarse distant population/outbreak simulation.
+
+**Affected systems:** movement, AI, combat, health, inventory/search, doors, construction, weather, utilities, vehicles, crops, population/outbreak, save/load, input decision flow and app/Safari pause lifecycle.
+
+**Implementation:** `SYSTEM_DESIGNS/00C_TICK_ACTION_PAUSE.md` and `game/scripts/foundation/time/`.
