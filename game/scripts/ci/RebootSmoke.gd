@@ -14,6 +14,7 @@ func _init() -> void:
         var b: Dictionary = Generator.generate("rural_road", seed)
         var result: Dictionary = Generator.validate(a)
         if not bool(result.get("ok", false)):
+            _debug_invalid_doors(a, seed)
             push_error("REBOOT_SMOKE_INVALID seed=%d %s" % [seed, str(result.get("failures", []))])
             quit(1)
             return
@@ -52,10 +53,6 @@ func _init() -> void:
             quit(1)
             return
 
-        # Doors must now be openings in exactly one wall axis. A horizontal-wall
-        # door has clear north/south approaches and structural neighbors left/right;
-        # a vertical-wall door has the inverse. This catches partition-cross doors
-        # that same-cell overlap checks missed.
         var doors: Dictionary = a.get("doors", {})
         var walls: Dictionary = a.get("walls", {})
         var windows: Dictionary = a.get("windows", {})
@@ -159,3 +156,30 @@ func _init() -> void:
 
     print("REBOOT_CORE_SMOKE_OK")
     quit(0)
+
+func _debug_invalid_doors(spec: Dictionary, seed: int) -> void:
+    var walls: Dictionary = spec.get("walls", {})
+    var windows: Dictionary = spec.get("windows", {})
+    var props: Dictionary = spec.get("props", {})
+    var doors: Dictionary = spec.get("doors", {})
+    var axes: Dictionary = spec.get("door_axes", {})
+    var buildings: Array = spec.get("buildings", [])
+    for door_value in doors.keys():
+        var door: Vector2i = door_value
+        var axis := str(axes.get(door, ""))
+        if axis not in ["h", "v"]:
+            continue
+        var approach_a := door + (Vector2i.UP if axis == "h" else Vector2i.LEFT)
+        var approach_b := door + (Vector2i.DOWN if axis == "h" else Vector2i.RIGHT)
+        var wall_a := door + (Vector2i.LEFT if axis == "h" else Vector2i.UP)
+        var wall_b := door + (Vector2i.RIGHT if axis == "h" else Vector2i.DOWN)
+        var bad := walls.has(approach_a) or windows.has(approach_a) or walls.has(approach_b) or windows.has(approach_b) or props.has(approach_a) or props.has(approach_b) or not (walls.has(wall_a) or windows.has(wall_a)) or not (walls.has(wall_b) or windows.has(wall_b))
+        if not bad:
+            continue
+        var owners: Array[String] = []
+        for building_value in buildings:
+            var building: Dictionary = building_value
+            var rect: Rect2i = building.get("rect", Rect2i())
+            if rect.has_point(door):
+                owners.append("%s/%s/%s" % [str(building.get("kind", "?")), str(building.get("property_id", "?")), str(rect)])
+        print("DOOR_DEBUG seed=%d door=%s axis=%s owners=%s wallA=%s wallB=%s approachA_struct=%s approachB_struct=%s approachA_prop=%s approachB_prop=%s" % [seed, str(door), axis, str(owners), str(wall_a), str(wall_b), str(walls.has(approach_a) or windows.has(approach_a)), str(walls.has(approach_b) or windows.has(approach_b)), str(props.has(approach_a)), str(props.has(approach_b))])
