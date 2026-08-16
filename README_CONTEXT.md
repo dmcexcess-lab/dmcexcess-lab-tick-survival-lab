@@ -1,22 +1,27 @@
 # Tick Survival Lab — Project Context / Routing Index
 
-> **MANDATORY:** At the start of every prompt requesting repository/code changes, read current `PROJECT_NORTH_STAR.md`, `README_SOPS.md`, this file, `DESIGN_WORKFLOW.md`, `DESIGN_DECISIONS.md`, and the active system design(s). Read `MODULAR_REBUILD_MASTER_DESIGN.md` for architecture work, but newer North Star/decision entries win where older assumptions conflict.
+> **MANDATORY:** At the start of every prompt requesting repository/code changes, read current `PROJECT_NORTH_STAR.md`, `README_SOPS.md`, this file, `DESIGN_WORKFLOW.md`, `DESIGN_DECISIONS.md`, current `main` SHA, and the active system design(s). Read `MODULAR_REBUILD_MASTER_DESIGN.md` for architecture work, but newer North Star/decision entries win where older assumptions conflict.
 
 ## 1. Game identity
 
-Primary shorthand:
-
 > **Ultima-style turn-based mini Zomboid.**
-
-Canonical identity/philosophy: `PROJECT_NORTH_STAR.md`.
 
 Core principle:
 
 > **Mini means reduced complexity, not reduced consequence or mood.**
 
-The target is a readable top-down tile/grid survival world with persistent systemic consequences, variable-duration tick actions, strong atmosphere, simplified-but-meaningful survival mechanics, a causal outbreak simulation, customizable player stories and player-built bases anywhere the world rules allow.
+Current game direction:
 
-**Extraction-shooter framing has been removed.** There is no required raid/extraction/staging loop in the current design.
+- one persistent logically continuous open world;
+- no raid/extraction/staging loop;
+- player-built/secured bases anywhere ordinary world rules permit;
+- causal outbreak/population simulation goal;
+- customizable player story embedded in the pre-collapse world;
+- authoritative invisible tactical grid;
+- variable-duration turn-based tick/actions with mandatory real-life hard pause;
+- mood driven by future vision, lighting, weather, sound and persistent consequences.
+
+Canonical identity: `PROJECT_NORTH_STAR.md`.
 
 Repository: `dmcexcess-lab/dmcexcess-lab-tick-survival-lab`
 
@@ -24,167 +29,107 @@ Web preview: `https://dmcexcess-lab.github.io/dmcexcess-lab-tick-survival-lab/`
 
 ## 2. Current architectural phase
 
-The project remains in **Phase 0: modular design / architecture freeze**.
+The project is now in **Phase 1: modular foundation implementation**.
 
-The currently deployed runtime under `game/scripts/reboot/` is **frozen/deprecated reference code**. Do not extend it as the target architecture.
+The currently deployed runtime under `game/scripts/reboot/` remains **frozen/deprecated reference code**. Do not extend it as the target architecture.
 
-The last mature pre-clean-rewrite visual/system baseline remains golden recovery commit:
+Golden recovery commit for mature pre-clean-rewrite behavior/art:
 
 `1763958f44eb7f855fd49944c00d1ffe608c0abe`
 
-Use that commit to recover exact solved behavior/art semantics where relevant. Do not restore its monolithic presentation inheritance architecture wholesale.
+The first canonical modular foundation slice, **00A WHERE / Spatial Model, is implemented and CI-gated** under `game/scripts/foundation/spatial/`.
 
-No new modular runtime system has yet been approved for implementation.
+The live playable scene does not import the new foundation yet. This is intentional: no temporary adapter layer will connect WHERE to the deprecated runtime merely to make new code visibly run.
 
-## 3. Persistent open-world direction
+## 3. Foundation architecture
 
-Current direction:
+Canonical umbrella:
 
-- one logically continuous **persistent open world**;
-- streaming/loading partitions may exist internally, but are implementation/storage details;
-- roads, utilities, parcels and other large structures are planned globally so local boundaries cannot invent mismatched geometry;
-- generation creates/materializes initial world data, then persistent world state owns changes;
-- no raid-instance or extraction boundary is required;
-- the player may roam indefinitely, relocate, live nomadically, or maintain multiple safe places;
-- bases are player-built/secured physical places anywhere ordinary construction/occupancy rules permit.
+`SYSTEM_DESIGNS/00_FOUNDATION_WHERE_WHAT_WHEN.md`
 
-Cross-system decisions and rationale: `DESIGN_DECISIONS.md`.
+The three peer truths are:
 
-## 4. Persistent world / outbreak direction
+- **WHERE — Spatial Model:** where things can exist and how cells, facing, footprints and structure geometry are expressed.
+- **WHAT — Persistent World / Entity State:** what terrain, structures, objects, actors, items and durable mutations exist.
+- **WHEN — Tick / Action / Pause Kernel:** when actions/events occur and how simulation time advances.
 
-Long-term world planning should be top-down:
+Generation is downstream: it creates initial WHAT using WHERE. Construction/destruction/gameplay later mutate WHAT. Gameplay systems bridge WHERE/WHAT with WHEN. Rendering only presents state.
+
+### 00A WHERE — IMPLEMENTED
+
+Canonical design: `SYSTEM_DESIGNS/00A_SPATIAL_MODEL.md`.
+
+Implemented owners:
+
+- `game/scripts/foundation/spatial/SpatialFacing.gd`
+- `game/scripts/foundation/spatial/SpatialFootprint.gd`
+- `game/scripts/foundation/spatial/SpatialStructureGeometry.gd`
+- `game/scripts/foundation/spatial/SpatialLayer.gd`
+- `game/scripts/foundation/spatial/SpatialModel.gd`
+- test: `game/scripts/ci/SpatialModelSmoke.gd`
+
+Locked spatial rules:
+
+- global integer `Vector2i` cells;
+- N/E/S/W semantic facing;
+- whole-cell arbitrary-mask footprints with deterministic 90-degree rotation;
+- centralized planning scale `SpatialModel.CELL_METERS = 1.0`;
+- structure cells rather than edge walls;
+- explicit HORIZONTAL/VERTICAL structure axis;
+- no sub-cell/free movement baseline;
+- WHERE owns geometry only, no occupants/world state/collision policy/rendering/timing/generation.
+
+### 00B WHAT — NOT YET APPROVED FOR CODE
+
+Umbrella draft covers stable IDs, persistent entity/state stores, placement/occupancy indexes, initial-vs-current world truth, mutations and scene-tree independence.
+
+Before implementation, create/refine a standalone `00B_PERSISTENT_WORLD_STATE.md`, review it against the implemented WHERE contract, and get explicit bounded approval.
+
+### 00C WHEN — NOT YET APPROVED FOR CODE
+
+Umbrella draft covers integer world ticks, variable-duration actions, scheduled events, phases/interruption, deterministic ordering, tactical auto-pause, hard real-life pause and coarse distant simulation seams.
+
+Before implementation, create/refine a standalone `00C_TICK_ACTION_PAUSE.md` and get explicit bounded approval.
+
+## 4. Open-world / generation direction
+
+Generation is not the engine and must not define reality by chunk boundaries.
+
+Long-term top-down planning:
 
 **world seed -> geography -> towns/rural districts -> roads -> utilities -> parcels/addresses -> building footprints/types -> households/businesses/population -> local detail/materialization**.
 
-A local streaming region must not independently decide how a world-spanning road connects. It asks the global plan what exists at those coordinates.
+Roads, utilities, rivers, parcels and other cross-region structures are planned in global coordinates before streaming/materialization. A local region may load part of a road; it does not invent how that road connects.
 
-The world should eventually support a **causal outbreak simulation**:
+Once world state exists, persistent WHAT owns changes. Replacing generation later must not reset looted containers, destroyed structures, construction, vehicles, corpses or other saved state.
 
-- pre-collapse population and households;
-- homes/jobs/workplaces/schedules/relationships;
-- infection/spread;
-- awareness/emergency response;
-- evacuation/population movement;
-- infrastructure degradation/collapse.
+## 5. Outbreak / player-story direction
 
-Simulation resolution may become coarser at distance for performance. Persistent causality matters more than calculating every invisible footstep.
+The long-term world should support a populated pre-collapse state with persistent people, households, homes, jobs/workplaces, schedules, vehicles and relationships, then simulate outbreak/collapse causally.
 
-## 5. Player story direction
+Distant simulation may use coarser deterministic resolution for performance while preserving causal persistent state.
 
-The player character should eventually be a real person embedded in that generated pre-outbreak world.
+The player should eventually customize/inhabit a real person already embedded in that world: identity, occupation/workplace, home/property, family/household, relationships, pets, vehicle/resources, traits/skills and outbreak start circumstances.
 
-Customizable/derived starting context may include:
+## 6. Base direction
 
-- identity/appearance;
-- occupation and actual workplace;
-- home/property;
-- spouse/partner, children, parents, roommates or other household members;
-- friends/coworkers/important relationships;
-- pets;
-- vehicle/resources consistent with the story;
-- skills/traits/background;
-- outbreak start timing/scenario.
+A base is not a special map or required mode.
 
-Family/known people should be persistent actors whose situation comes from the outbreak simulation, not only scripted quest markers.
+The player may build/secure one or many locations anywhere normal construction/occupancy rules permit, abandon them, relocate, or live nomadically. Any later base/community UI must summarize underlying physical world facts rather than create a separate base reality.
 
-## 6. Current spatial direction
+## 7. Graphics recovery truth
 
-The project currently favors an **invisible authoritative tactical grid** for simplicity and determinism.
+The richer pre-rewrite artwork remains intact. The mature look came from golden `TacticalTiles.gd` combining six atlases plus four directional player sprites.
 
-Current cross-system decisions:
+Golden semantic renderer blob:
 
-- actors move cell-to-cell;
-- grid lines need not be visible;
-- props/fixtures occupy one or more whole cells;
-- directional objects carry N/E/S/W orientation;
-- renderer may rotate suitable art in 90-degree increments or use explicit facing variants when rotation looks wrong;
-- world/generation data stores semantic object + facing, never atlas-specific orientation assumptions;
-- four-way actor facing is the simple baseline for graphics, vision, vulnerability and interactions;
-- sub-cell/free movement is rejected unless a concrete gameplay need later justifies the extra complexity.
+`3d8a0a70ac983408bb48f58fc659dfb07e216ed3`
 
-The new foundation draft recommends **structure cells with explicit wall/door/window axis** rather than edge structures because they are simpler and fit the recovered art. This recommendation is still DRAFT and must be explicitly reviewed before WHERE implementation.
+Rendering is not being rebuilt in this foundation slice. When designed, it must consume WHERE/WHAT and recover exact semantic art behavior rather than approximate it.
 
-## 7. Tick/action / pause direction
+## 8. Development process / anti-drift rules
 
-The core gameplay is **turn-based through authoritative variable-duration ticks/actions**.
-
-Intent:
-
-1. simulation pauses while the player is choosing;
-2. player commits one action;
-3. action consumes explicit world ticks;
-4. other scheduled actors/systems may act during those elapsed ticks;
-5. when the player is ready for another choice, simulation automatically pauses again.
-
-Slow actions create exposure. Injuries, fatigue, equipment and skill can change action duration/capability.
-
-Held movement may repeatedly request discrete movement actions; releasing input means no further action is queued and the game returns to auto-pause.
-
-The current foundation draft generalizes the golden `TickScheduler` ideas into one deterministic scheduled-event/action queue for actors **and** future systems such as weather, healing, fire, power and coarse distant simulation. The scheduler owns timing/status, not mechanic meaning.
-
-### Real-life interruption requirement
-
-The user must be able to put the game down immediately if work/customer attention is required.
-
-A hard application pause must freeze simulation safely and must not count as a tactical failure. Explicit pause/menu and mobile/browser lifecycle handling should be designed around that requirement.
-
-## 8. Mini-Zomboid simplification rule
-
-For every survival system ask:
-
-> What meaningful player decision does the deeper simulation create?
-
-Implement the smallest causal model that preserves that decision, its consequence and its mood.
-
-Current health example:
-
-- injury type;
-- body region;
-- coarse severity;
-- treatment/stabilization required by type/severity;
-- healing/worsening state;
-- derived action/mobility/use penalties.
-
-Do not simulate blood volume merely because a deeper game does if severity/treatment consequences preserve the important decision.
-
-Systems likely deserving comparatively more depth because they define the game include tick/action timing, persistence, perception/vision, lighting, spatial sound, coherent world generation and outbreak/population simulation.
-
-## 9. Base direction
-
-A base is not a special map or required game mode.
-
-The player may construct/secure a base anywhere in the persistent world where normal construction and occupancy rules allow it. Existing structures can be fortified; open land can be developed; multiple bases/safe sites may coexist; any can be abandoned.
-
-Higher-level base/community screens may summarize physical facts later, but storage/workspaces/power/water/vehicles/residents/etc. should remain grounded in world state.
-
-## 10. Foundational architecture — current active DRAFT
-
-Canonical foundation draft:
-
-**`SYSTEM_DESIGNS/00_FOUNDATION_WHERE_WHAT_WHEN.md`**
-
-The three-part decomposition is settled in concept:
-
-- **WHERE — Spatial Model:** global grid coordinates, cells, facing, footprints, structures/openings and spatial value/query language.
-- **WHAT — Persistent World / Entity State:** what terrain, structures, props, actors, items, containers, construction and durable mutations exist.
-- **WHEN — Tick / Action / Pause Kernel:** authoritative world ticks, action durations, deterministic scheduling, action phases/interruption, auto-pause and hard pause.
-
-Important dependency direction:
-
-- WHERE is pure spatial language;
-- WHAT uses WHERE values to place persistent facts;
-- WHEN runs in parallel and knows time/IDs, not mechanic-specific world internals;
-- movement, doors, health, AI, construction and other gameplay systems sit above the foundation and bridge the contracts;
-- generation later creates initial WHAT using WHERE;
-- construction/destruction/gameplay mutate the same WHAT;
-- rendering reads it;
-- streaming materializes it without redefining it.
-
-The umbrella document is **DRAFT**. Detailed proposals such as structure cells vs edge walls, exact cell scale, footprint representation, scheduler phase behavior and persistence strategy must be reviewed before implementation.
-
-## 11. Modularity / development process
-
-Canonical process: `DESIGN_WORKFLOW.md`.
+Canonical process:
 
 > **DESCRIBE -> USER APPROVES -> IMPLEMENT -> VERIFY.**
 
@@ -202,63 +147,36 @@ Global invariants:
 10. Art is not physics.
 11. Phone/Safari remains first-class.
 12. Important decisions/lessons do not live only in chat.
+13. Do not wire new modules into deprecated runtime through temporary compatibility code merely to make progress visible.
 
-## 12. Documentation ownership / anti-drift structure
+## 9. Documentation ownership
 
-- `PROJECT_NORTH_STAR.md` — short permanent game identity/philosophy; read frequently.
-- `DESIGN_DECISIONS.md` — cross-system decisions and rationale; append/supersede rather than erase history.
-- `README_CONTEXT.md` — current phase/status/routing index only.
-- `README_SOPS.md` — how GPT works on this repo; living coding/GitHub/Godot/Safari lessons.
-- `DESIGN_WORKFLOW.md` — approval/scope/clarification process.
-- `MODULAR_REBUILD_MASTER_DESIGN.md` — broad architecture inventory; older raid/extraction assumptions are superseded.
-- `SYSTEM_DESIGNS/*.md` — detailed canonical design for each subsystem.
+- `PROJECT_NORTH_STAR.md` — game identity/philosophy.
+- `DESIGN_DECISIONS.md` — cross-system settled decisions and rationale.
+- `README_CONTEXT.md` — current phase/status/routing only.
+- `README_SOPS.md` — coding/GitHub/Godot/Safari process lessons.
+- `DESIGN_WORKFLOW.md` — approval/scope workflow.
+- `SYSTEM_DESIGNS/*.md` — detailed subsystem contracts.
 - `SYSTEM_DESIGNS/README.md` — approval/status ledger.
+- `MODULAR_REBUILD_MASTER_DESIGN.md` — broad historical architecture inventory; newer docs supersede stale raid/extraction assumptions.
 - `CHANGELOG.md` — repository change history.
 
-## 13. Current design sequence
-
-Do not jump to map generation.
-
-Current sequence:
-
-1. **Review the WHERE / WHAT / WHEN umbrella draft** and revise/approve its foundational contracts.
-2. **Spatial Model (WHERE)** — refine into an implementation-ready child design and explicitly settle structure representation/cell scale.
-3. **Persistent World / Entity State (WHAT)** — refine identity, stores, mutation, occupancy and snapshot contracts.
-4. **Tick / Action / Pause Kernel (WHEN)** — refine deterministic queue, phases, interruptions, pause and snapshot contracts.
-5. **Foundation integration harness** — synthetic headless tests only, not fake gameplay.
-6. **Global World Planning / Generation Contract** — coherent geography/roads/utilities/parcels/building footprints; generator feeds initial WHAT.
-7. **Population / Household / Outbreak / Player-Story foundations**.
-8. Then streaming/materialization, rendering/input and detailed local generation can be designed against those foundations.
-
-This is a recommended design order, not permission to implement several systems together.
-
-## 14. Graphics recovery truth
-
-The richer pre-rewrite artwork remains intact. The mature visual stack came from golden `TacticalTiles.gd` combining six atlases plus four directional player sprites.
-
-Golden semantic renderer blob:
-
-`3d8a0a70ac983408bb48f58fc659dfb07e216ed3`.
-
-When art/rendering is designed, recover exact semantic selection behavior into standalone catalog/render modules. Directional clutter/furniture support should allow semantic N/E/S/W orientation with renderer-owned rotation or explicit alternate-facing images.
-
-## 15. Source-of-truth order
+## 10. Source-of-truth order
 
 1. Newest explicit user instruction
 2. `PROJECT_NORTH_STAR.md`
-3. `DESIGN_DECISIONS.md` (newer entries supersede older ones)
+3. `DESIGN_DECISIONS.md`
 4. Current repository state
 5. `README_SOPS.md`
 6. `DESIGN_WORKFLOW.md`
 7. This context index
-8. APPROVED active `SYSTEM_DESIGNS/*.md`
-9. DRAFT active system designs for current discussion only
-10. `MODULAR_REBUILD_MASTER_DESIGN.md` where compatible with newer direction
-11. Golden recovery commit for exact historical behavior
-12. Older design documents where compatible
+8. IMPLEMENTED/APPROVED active `SYSTEM_DESIGNS/*.md`
+9. DRAFT system designs for current discussion only
+10. `MODULAR_REBUILD_MASTER_DESIGN.md` where compatible
+11. Golden recovery commit for historical behavior
 
-## 16. Current next action
+## 11. Current next action
 
-**Design only. Do not code the new runtime yet.**
+**Do not jump to generation or rendering.**
 
-Current discussion target: **review `SYSTEM_DESIGNS/00_FOUNDATION_WHERE_WHAT_WHEN.md`**. The next implementation-target design should be WHERE only, after the umbrella's spatial recommendations are approved/revised.
+Next recommended bounded design/implementation target: **00B WHAT — Persistent World / Entity State**, built against the already-implemented WHERE contract. WHEN follows as its own later slice.
