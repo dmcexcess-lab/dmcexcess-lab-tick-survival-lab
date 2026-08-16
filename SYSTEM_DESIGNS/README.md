@@ -4,52 +4,76 @@ This directory is the detailed durable memory for individual systems.
 
 A system is implemented only after its design status is **APPROVED** by the user.
 
+Before using this ledger, read `PROJECT_NORTH_STAR.md` and `DESIGN_DECISIONS.md`. The ledger tracks system detail/status; it does not replace whole-game intent.
+
 ## Status meanings
 
+- **NOT DESIGNED** — known future system, no detailed design yet.
 - **DRAFT** — being discussed; do not implement.
 - **APPROVED** — user approved the design; implementation may begin.
 - **IMPLEMENTED** — approved design is present in the canonical modular runtime and tested.
-- **SUPERSEDED** — retained for history but replaced by a newer approved design.
+- **SUPERSEDED** — retained for history but replaced by newer direction.
 - **RECOVERY SOURCE** — historical behavior worth mining, not current architecture.
 
-## Current rebuild ledger
+## Current foundational sequence
+
+The earlier attempt to start with a tactical `RaidMapSpec` was too high-level and assumed a disconnected raid architecture that has since changed.
+
+The current design order starts below generation/rendering:
 
 | Order | System | Status | Design file | Notes |
 |---|---|---|---|---|
-| 01 | Semantic tactical map / `RaidMapSpec` contract | **DRAFT** | `01_RAID_MAP_DATA.md` | Current design discussion; user approval required before code |
-| 02 | Recovered multi-atlas Art Catalog | NOT DESIGNED | `02_ART_CATALOG.md` | Recover exact golden `TacticalTiles.gd` semantics; no generation logic |
-| 03 | Ground renderer | NOT DESIGNED | `03_GROUND_RENDERER.md` | Consumes semantic map data + ArtCatalog |
-| 04 | Structure renderer | NOT DESIGNED | `04_STRUCTURE_RENDERER.md` | Walls/doors/windows only |
-| 05 | Prop/fixture/vegetation renderer | NOT DESIGNED | `05_PROP_RENDERER.md` | World props only |
-| 06 | Player renderer | NOT DESIGNED | `06_PLAYER_RENDERER.md` | Four directional player sprites |
-| 07 | Authored visual test map | NOT DESIGNED | `07_VISUAL_TEST_MAP.md` | Proves recovered graphics before procedural generation |
-| 08 | Player state + facing | NOT DESIGNED | `08_PLAYER_STATE_FACING.md` | State only; no UI |
-| 09 | Collision/local world query | NOT DESIGNED | `09_COLLISION_WORLD.md` | Movement/door/blocking query boundary |
-| 10 | Player movement | NOT DESIGNED | `10_PLAYER_MOVEMENT.md` | Consumes semantic intents + collision query |
-| 11 | Tactical camera + zoom | NOT DESIGNED | `11_CAMERA_ZOOM.md` | One canonical zoom owner |
-| 12 | Touch/keyboard/Safari input | NOT DESIGNED | `12_INPUT.md` | Emits semantic intents only |
-| 13 | Tactical controls UI | NOT DESIGNED | `13_TACTICAL_CONTROLS.md` | Button presentation/hit regions, no movement rules |
-| 14 | Static strategic map | NOT DESIGNED | `14_STRATEGIC_MAP.md` | Background/nodes/view/input separated from travel rules |
-| 15 | Rural Edge generation coordinator/contracts | NOT DESIGNED | `15_RURAL_GENERATION.md` | Begins only after visual foundation is verified |
-| 16 | Road topology generator | NOT DESIGNED | `16_ROADS.md` | Straight/bend/cross/T/etc. semantics |
-| 17 | Rural property planner | NOT DESIGNED | `17_RURAL_PROPERTIES.md` | Parcels/frontage/access/site mix |
-| 18 | Building/prefab placement | NOT DESIGNED | `18_BUILDING_PLACEMENT.md` | Semantic placement and transforms |
-| 19 | Procedural room/layout system | NOT DESIGNED | `19_ROOM_LAYOUT.md` | Room graph, size, circulation, doors |
-| 20 | Furniture/fixture/clutter dressing | NOT DESIGNED | `20_DRESSING.md` | Separate purpose-aware planners |
-| 21 | Vegetation/utilities/civic dressing | NOT DESIGNED | `21_RURAL_ENVIRONMENT.md` | Trees/bushes/power/stop signs/etc. |
-| 22 | Generator validation/quality | NOT DESIGNED | `22_GENERATOR_VALIDATION.md` | Independent quality gate |
-| 23 | Prefab authoring tools | NOT DESIGNED | `23_PREFAB_AUTHORING.md` | Rebuilt only after generator/data contracts stabilize |
-| 24 | Travel/deployment/extraction | NOT DESIGNED | `24_TRAVEL_EXTRACTION.md` | Static map reachability and raid return semantics |
-| 25 | Tick/action scheduler recovery | DEFERRED | `25_TICKS.md` | Mine golden solved system later |
-| 26 | Vision/perception recovery | DEFERRED | `26_PERCEPTION.md` | Later |
-| 27 | Lighting recovery | DEFERRED | `27_LIGHTING.md` | Later |
-| 28 | Weather recovery | DEFERRED | `28_WEATHER.md` | Later |
-| 29 | Silent sound system | DEFERRED | `29_SOUND.md` | Later |
-| 30 | Infected AI | DEFERRED | `30_INFECTED.md` | Later |
-| 31 | Loot/inventory/search | DEFERRED | `31_INVENTORY.md` | Later |
-| 32 | Combat/body/injury | DEFERRED | `32_COMBAT_BODY.md` | Later |
+| 00A | Spatial Model | **NOT DESIGNED** | `00A_SPATIAL_MODEL.md` | Next recommended design: invisible tactical grid, cell footprints/facing, global coordinates, resolve wall/door/window representation |
+| 00B | Tick / Action / Pause Kernel | **NOT DESIGNED** | `00B_TICK_ACTION_PAUSE.md` | Variable action duration, scheduling, auto-pause, held movement semantics, hard real-life pause |
+| 00C | Persistent World Identity / State | **NOT DESIGNED** | `00C_PERSISTENT_WORLD.md` | Logical global world, persistent mutations/entities, generation ownership boundary, streaming/storage as implementation detail |
+| 00D | Population / Household / Outbreak / Player Story foundations | **NOT DESIGNED** | `00D_POPULATION_OUTBREAK_PLAYER_STORY.md` | Persistent people/homes/jobs/relationships, scalable simulation resolution, player embedded in generated world |
+| 01 | Generalized Local World Data Contract | **NOT DESIGNED** | `01_WORLD_AREA_DATA.md` | Replaces old raid-specific map concept after 00A–00D establish lower-level truths |
+| old-01 | Semantic tactical map / `RaidMapSpec` | **SUPERSEDED** | `01_RAID_MAP_DATA.md` | Useful design mine only; assumed separate raid maps and began above the now-required world foundations |
 
-This order is a planning sequence, not permission to implement several systems together.
+No foundational system is approved for code yet.
+
+## Later modular systems
+
+Exact order may change after the foundation designs, but these remain known domains rather than permission to implement them together.
+
+| System | Status | Notes |
+|---|---|---|
+| Recovered multi-atlas Art Catalog | NOT DESIGNED | Recover exact golden `TacticalTiles.gd` semantics; support semantic N/E/S/W prop orientation with rotation or explicit variants |
+| Ground renderer | NOT DESIGNED | Reads canonical world/spatial data + ArtCatalog |
+| Structure renderer | NOT DESIGNED | Walls/doors/windows only, after Spatial Model settles their representation |
+| Prop/fixture/vegetation renderer | NOT DESIGNED | Whole-cell footprints/orientation; world props only |
+| Player renderer | NOT DESIGNED | Four directional player sprites initially |
+| Authored visual test area | NOT DESIGNED | Proves recovered graphics independently of procedural generation |
+| Actor/player state + facing | NOT DESIGNED | Actor foundation should not become player-only if NPC/zombie actors can share it |
+| Collision/local world query | NOT DESIGNED | Reads spatial/world state; no UI/generator ownership |
+| Player movement | NOT DESIGNED | Requests/executes discrete movement through tick/action + collision contracts |
+| Tactical camera + zoom | NOT DESIGNED | One canonical zoom owner |
+| Touch/keyboard/Safari input | NOT DESIGNED | Emits semantic intents; hard-pause lifecycle requirements later |
+| Tactical controls UI | NOT DESIGNED | Presentation/hit regions only |
+| Global world planner | NOT DESIGNED | Geography/roads/utilities/parcels/addresses/building footprints before local materialization |
+| World streaming/materialization | NOT DESIGNED | Performance mechanism over global logical world, never source of world truth |
+| Local procedural materialization/generation | NOT DESIGNED | Detailed rooms/furniture/clutter/etc. respecting the global plan |
+| Road network/topology | NOT DESIGNED | Global coherent network rather than independent chunk exits |
+| Property/parcel planner | NOT DESIGNED | Parcels/frontage/access/site mix |
+| Building/prefab placement | NOT DESIGNED | Semantic placement/transforms respecting global facts |
+| Procedural room/layout | NOT DESIGNED | Room graph, circulation, doors |
+| Furniture/fixture/clutter dressing | NOT DESIGNED | Purpose-aware planners, directional art semantics |
+| Vegetation/utilities/civic dressing | NOT DESIGNED | Local detail respecting global utility/network facts |
+| World/generator validation | NOT DESIGNED | Independent coherence/quality gates |
+| Prefab authoring tools | NOT DESIGNED | Shared canonical semantic data/art renderer; separate controller/view/storage/validation |
+| Base/claim/community layer | NOT DESIGNED | Thin higher-level layer over real persistent physical world locations |
+| Expedition/extraction loop | NOT DESIGNED | Risk/reward return-to-safety behavior inside open world, not necessarily instanced raids |
+| Health/body/first aid | NOT DESIGNED | Mini-Zomboid severity/treatment model; reduced physiology, preserved consequence |
+| Needs/fatigue/temperature | NOT DESIGNED | Coarse meaningful states, real consequences |
+| Vision/perception | DEFERRED | Major mood/gameplay system; mine golden solved work |
+| Lighting | DEFERRED | Major mood/gameplay system; mine golden solved work |
+| Weather | DEFERRED | State/system + separate VFX; major mood contributor |
+| Silent spatial sound | DEFERRED | Physical sound events/localization; no default audible playback |
+| Infected AI | DEFERRED | Uses shared actor/action/perception/sound/world contracts |
+| Loot/inventory/search | DEFERRED | Persistent physical containers/items; expedition risk/reward consumer |
+| Combat | DEFERRED | Tick/action-based exposure and injury consequences |
+| Vehicles | DEFERRED | Physical world objects/travel/logistics later; exact driving abstraction not yet decided |
+| Construction/destruction | DEFERRED | Persistent world mutation/base-building consumer |
 
 ## Design template
 
@@ -88,10 +112,10 @@ Rules and semantics.
 Invalid states and expected handling.
 
 ## 10. Performance
-Complexity, redraw/update constraints, mobile requirements.
+Complexity, update constraints, mobile requirements.
 
 ## 11. Safari/mobile
-Touch/input/layout requirements where relevant.
+Touch/input/lifecycle requirements where relevant.
 
 ## 12. Tests / acceptance criteria
 Concrete proof that the system is finished.
@@ -100,9 +124,12 @@ Concrete proof that the system is finished.
 Historical commit/files/algorithms worth inspecting.
 
 ## 14. Future extension seams
-How known future systems can attach without rewriting this one.
+Known later systems that must be able to connect without rewriting this system.
 
-## 15. Approved decisions
+## 15. North-star fit
+How this system serves Ultima-style turn-based mini Zomboid without owning unrelated future behavior.
+
+## 16. Approved decisions
 User-approved choices with dates/brief rationale.
 ```
 
