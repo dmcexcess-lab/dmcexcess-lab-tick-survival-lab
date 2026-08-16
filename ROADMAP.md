@@ -4,154 +4,153 @@ This is implementation order, not a promise to build distant systems before play
 
 ## Milestone 0.1 — Authoritative Tick Movement — COMPLETE
 
-Authoritative world tick, player movement/facing, walk/run timing, fatigue/encumbrance-ready modifiers, physical doors, keyboard + pointer/touch controls, developer HUD, and deterministic smoke coverage.
+Authoritative world tick, player movement/facing, walk/run timing, timing modifiers, physical doors, keyboard/touch controls, developer HUD, and deterministic smoke coverage.
 
 ## Milestone 0.2 — Action Execution Model — COMPLETE
 
+Player-ready auto-pause, explicit action windows, phased actions, committed/resumable/canceled/forced-failure interruption, deterministic actor ordering, scheduler proof actors, and CI coverage.
+
+## Milestone 0.25 — Extraction Raid Shell — COMPLETE / PLAYTEST NEXT
+
+The original seamless-mini-world experiment has been replaced by an extraction structure.
+
 Implemented:
 
-- explicit player-ready auto-pause state;
-- actions with start/end tick, elapsed/remaining progress, payload and status;
-- phased actions;
-- committed/resumable/canceled interruption policies;
-- forced-failure hook for hard invalidation;
-- damage interruption hook;
-- no normal mid-action player cancellation;
-- multiple scheduled actors advancing during one player action;
-- deterministic ordering by next tick then actor ID;
-- exact resumable phase/progress snapshots;
-- developer diagnostics and light/heavy/reload timing proofs;
-- deterministic CI proving concurrent actions, committed-through-damage behavior, and interrupted/resumed reloads.
+- full-screen 5×5 destination map;
+- destination types: commercial/strip-mall, downtown/office, residential, woods, rural;
+- safe base/staging map state;
+- tap/click destination to deploy;
+- fresh deterministic raid seed for every visit to a destination;
+- one active 64×64 tactical raid at a time;
+- generated green edge exits act as extraction points;
+- final extraction step costs normal movement ticks;
+- extraction returns to base/staging instead of entering an adjacent region;
+- map is view-only during an active raid;
+- repeat deployment to the same destination creates a different local map while remaining reproducible for a fixed world/visit sequence;
+- v5 streetscape/building-family generation remains intact.
+
+Immediate priority: **playtest this loop before adding more scope.**
 
 ## Milestone 0.3 — Physical Perception Foundation — IN PROGRESS
 
 ### 0.3A Visual perception — COMPLETE
 
-- First Fire tactical atlas presentation restored as Tick-native reusable assets/rendering;
-- ground/walls/doors/windows/props/barrels plus survivor sprite;
-- runtime light sources from authored map markers;
-- powered/unpowered environment lights;
-- indoor/outdoor ambient lighting;
-- window daylight;
-- directional carried-light/flashlight profile;
-- walls, closed doors and opaque props block LOS/light;
-- windows transmit sight/daylight;
-- four-direction facing cone;
-- darkness-limited recognition;
-- visible-cell state plus remembered-cell fog of war;
-- deterministic perception smoke coverage.
+Lighting, LOS, four-direction facing cone, windows/daylight, powered lights, directional flashlight, darkness-limited recognition, opaque props, sealed-corner LOS, visible cells and remembered fog.
 
-### 0.3B Weather foundation — NEXT
+### 0.3B Weather foundation — FUNCTIONALLY PRESENT
 
-Keep this deliberately small and simulation-first:
+Current fixed clear/rain/storm/fog/wind/snow profiles already modify presentation/perception and support silent sound-masking hooks. Weather-pattern evolution remains deferred.
 
-- deterministic tick-owned weather state seeded from world/calendar inputs;
-- clear/cloudy/rain/heavy-rain/storm/fog baseline states;
-- precipitation intensity, cloud cover, wind direction/speed, and temperature fields;
-- cloud/fog hooks into ambient light and visibility;
-- rain/storm hooks into sound masking calculations;
-- presentation-only rain, drifting fog, and windblown debris animation;
-- weather **simulation state freezes whenever the world is paused**, while presentation particles/visual motion may continue animating using non-authoritative real time;
-- weather visuals never advance world state or alter deterministic outcomes on their own.
+### 0.3C Spatial sound visualization — NEXT SYSTEM AFTER EXTRACTION PLAYTEST
 
-Do not add wet clothing, puddles, hypothermia, crop watering, snow accumulation, lightning fires, mud, or vehicle traction yet.
+There is **no audible sound playback**.
 
-### 0.3C Spatial sound visualization
-
-There will be **no audible sound playback**. Sound remains a simulated physical/perception system represented visually.
-
-- sound event records tied to world tick;
-- propagation and attenuation through physical cells;
-- door/window/wall occlusion costs;
-- rain/storm masking where appropriate;
-- uncertain source locations outside vision;
-- yellow sound boxes/markers as the player-facing representation;
-- no UI-owned sound truth;
-- infected hearing consumes the same event model even though the game itself stays silent.
-
-Already present as clean helpers: `TacticalLighting.gd` and `TacticalSound.gd`.
+- tick-owned sound event records;
+- propagation/attenuation through physical cells;
+- wall/door/window effects;
+- rain/storm masking;
+- uncertain localization outside vision;
+- yellow spatial sound markers;
+- infected hearing later consumes the same event model.
 
 ## Milestone 0.4 — Persistent Infected
 
-Infected actor records/timing profiles, persistent placement, idle/wander/investigate/chase, sight/sound acquisition, memory, facing, occupancy/pathing, pace variation, basic contact attacks and interruption, corpses, and local persistence. No drama-director edge spawning.
+Infected actor timing, local persistent placement, idle/wander/investigate/chase, sight/sound acquisition, memory, facing, occupancy/pathing, pace variation, basic contact attacks and corpses. No drama-director edge spawning.
 
-## Milestone 0.5 — Core Combat Commitments
+This milestone should make each extraction raid dangerous without changing the deploy/extract structure.
 
-Melee reach/facing, light vs heavy timing, committed swing phases, hit/damage resolution, multiple attackers during long swings, stealth, weapon noise, firearm baseline, phased reload state, and interruption/hard-failure integration.
+## Milestone 0.5 — Search / Loot / Inventory / Extraction Stakes
 
-## Milestone 0.6 — Body and Survival
+Bring the extraction loop its first meaningful reward/risk economy:
 
-Body regions; scratches/lacerations/bites; deep wounds; bleeding; bandages/sutures; fractures; splints/crutches; pain/impairment; wound vs zombie infection; fatal trauma; hunger/thirst; fatigue/endurance; encumbrance; stress/panic; sleep; basic exposure; time-sensitive extremity amputation and permanent missing-limb consequences.
+- searchable containers and fixtures;
+- persistent item records;
+- carrying capacity;
+- clothing/equipment/tools/weapons/ammo/food/water/medicine;
+- destination-biased loot probabilities;
+- extraction retains acquired items;
+- failure/death rules define what does not return;
+- no loose-world sprite requirement for ordinary inventory items.
 
-## Milestone 0.7 — Inventory, Loot, Equipment, Learning
+## Milestone 0.6 — Core Combat Commitments
 
-Persistent items/containers, carrying capacity, clothing/equipment, tools/weapons/ammo, food/water/medicine, useful condition/spoilage, tick-cost manipulation/search, use-based skills, occupations as starting knowledge, books/manuals, recorded/VHS-like training media, and recipe/technique learning.
+Melee reach/facing, light/heavy timing, committed swing phases, hit/damage resolution, stealth, weapon noise, firearm baseline, phased reload state, and interruption integration.
 
-## Milestone 0.8 — Mutable Local World
+## Milestone 0.7 — Body and Survival
 
-Breakable doors/windows, material durability, barricades, furniture movement, dismantling, fire, debris/corpses, persistent destruction, free construction, and convergence of authored vs player-built physical structures.
+Body regions, scratches/lacerations/bites, deep wounds, bleeding, bandages/sutures, fractures, splints/crutches, pain/impairment, wound vs zombie infection, fatal trauma, hunger/thirst, fatigue/endurance, encumbrance, stress/panic, sleep, exposure, and severe-limb consequences where worthwhile.
 
-## Milestone 0.9 — Local Homesteading
+## Milestone 0.8 — Raid Objectives / Destination Identity
 
-Storage, cooking, water collection, farming, generators/electricity, repairs, crafting stations, traps where useful, and enough renewable production to survive long-term in one region.
+Layer objectives onto the same extraction loop:
 
-## Alpha 1 — Persistent World Save / Player Separation
+- recover a specific item;
+- rescue/retrieve a survivor;
+- investigate a site;
+- repair/activate infrastructure;
+- deliver/place something;
+- recover a failed-raid cache/corpse where persistence supports it;
+- destination-specific population/loot/structure weighting.
 
-World seed/ID, calendar, versioned world state, player records separate from world identity, permanent character death, new playable survivor in the same world, old corpse/stash/base persistence, independent new-world option, and area unload/reload without reset.
+Objectives should pull the player deeper into danger rather than replace extraction.
 
-## Alpha 2 — Island World Generation
+## Milestone 0.9 — Physical Base / Progression Hub
 
-Large isolated region with city/suburb/commercial/industrial/rural/farm/forest biomes; plausible roads/towns/industry; coast barriers; bombed bridges/quarantine cutoffs; infrastructure corridors; hierarchical generation using the existing physical map language; streaming and deterministic regeneration.
+Only after loot, injury and survivor progression justify it:
+
+- persistent storage;
+- loadout preparation;
+- healing/recovery;
+- crafting/repair stations where useful;
+- water/food/power support;
+- survivor roster functions if/when human survivors exist;
+- optional physical hideout map replacing the temporary map-only staging representation.
+
+Do not turn this into First Fire's menu/camp architecture.
+
+## Alpha 1 — Persistent Save / Player Separation
+
+World seed/ID, calendar, versioned state, survivor records separate from world identity, permanent death, new survivor in the continuing world, base/stash persistence, active-raid save policy, and deterministic destination history.
+
+## Alpha 2 — Rich Raid Generation
+
+Broader destination catalogs, larger grammar libraries, coherent roads/buildings/woods/rural spaces, destination modifiers, special landmarks, extraction variants, and optional larger destination maps if performance supports them.
 
 ## Alpha 3 — Autonomous Human Survivors
 
-Autonomous actors with traits/skills/needs, self-preservation, equipment use, combat/scavenging, memories/relationships, trust/conflict, recruitment/departure, and player orders expressed as goals/jobs/constraints rather than puppet control.
+Autonomous actors with traits/skills/needs, self-preservation, equipment use, combat/scavenging, relationships, recruitment/departure, and goal/job-oriented orders.
 
 ## Alpha 4 — Animals
 
-Dogs, cats, chickens/roosters and later livestock using the same world as practical: feeding, bonding, roaming, warning/utility behaviors, enclosure, injury/illness, reproduction where appropriate, and zombie/noise interaction.
+Dogs, cats, chickens/roosters and later livestock where they create survival gameplay: feeding, bonding, warning/utility, roaming/enclosure, injury/illness, reproduction where appropriate, and zombie/noise interaction.
 
 ## Alpha 5 — Emergent Settlements
 
-**free building + resources + autonomous survivors + assignable jobs = settlement**
+Free building + resources + autonomous survivors + assignable jobs = settlement. Multiple bases, guard posts, patrols, scavenging parties, supply routes, farming/cooking/building/repair/logistics, and settlement change emerging from actual simulation.
 
-Multiple bases, NPC bases, work assignments, guard posts, patrol routes, scavenging parties, supply routes, farming/cooking/building/repair/logistics jobs, settlement needs, growth/fracture/relocation/abandonment, and safety emerging from actual people/fortifications.
+## Alpha 6 — Vehicles and Raid Travel
 
-## Alpha 6 — Vehicles and Logistics
-
-Tick-driven driving, committed multi-tile movement, momentum, collisions, noise, fuel/battery, component repair, cargo, seat actions, NPC driving, patrol/supply/scavenging use, and later towing if worthwhile.
+Vehicles finally make abstract deployment travel physical/economic: fuel/battery, cargo, seat actions, noise, repair, travel cost, destination access, extraction variants and later NPC logistics.
 
 ## Alpha 7 — Infrastructure Reclamation
 
-Power generation/substations/grid segments, water simplification, communications, fuel/logistics sites, repair projects requiring skills/materials/time, guards/patrols, and infrastructure that creates actual light/noise/traffic/value/danger.
+Power/water/communications/fuel/logistics sites and repair projects that create light/noise/value/danger and can become raid objectives.
 
-## Beta 1 — Outbreak Scenario Generator
+## Beta — Outbreak / World Depth
 
-Epicenter(s), transmission/incubation, initial population/infected distribution, awareness/response, evacuation/quarantine, bridge destruction, utility resilience, season/weather/start date, loot/vehicle abundance, and deterministic generated history for post-collapse starts.
-
-## Beta 2 — Personal Pre-Outbreak Context
-
-Starting occupation, home/work/school locations, family/household, friends, pets, plausible property/vehicles/resources, and autonomous family members who act according to information and circumstance rather than waiting as quest tokens.
-
-## Beta 3 — Live Collapse / Outbreak Start
-
-Long-term crown jewel: functioning civilian world, simulated spread, emergency response, hospitals/roads/refuges stressed by population movement, quarantines/checkpoints/isolation, causal utility failure/survival, and infected produced by the simulated outbreak. Requires aggressive coarse simulation/LOD.
-
-## Beta 4 — Long-Term World Depth
-
-Seasons/weather depth, farming/ecology, degradation, zombie redistribution/migration from stimuli, richer community politics without a menu strategy layer, trade/logistics, and advanced crafting/construction only where it creates decisions.
+Later work may add outbreak-history generation, personal pre-outbreak context, live-collapse scenarios, seasons, degradation, richer communities, trade/logistics and advanced construction. Those systems must serve the extraction-survival game rather than force a return to a giant continuously simulated map.
 
 ## Permanent constraints
 
-- world state is authoritative, not UI;
-- player and world remain conceptually separate;
-- every meaningful physical action uses ticks;
-- normal input occurs at player-ready auto-pause points;
-- interruption is explicit and rule driven;
+- world/session state is authoritative, not UI;
+- the player and persistent world remain conceptually separate;
+- every meaningful tactical physical action uses ticks;
+- normal input occurs at player-ready points;
+- interruption is explicit and rule-driven;
 - no AI drama director spawning threats for tension;
 - no audible game sound; simulated sound is communicated visually;
 - presentation animation may continue while paused only when it cannot advance simulation state;
-- persistent physical consequences beat summary event rolls;
-- reuse compatible original Tick/First Fire work rather than rebuilding solved systems;
-- never import First Fire camp/expedition/menu architecture;
+- destination selection may remain abstract until transit systems actually exist;
+- the destination map chooses risk, the tactical raid contains risk, extraction brings progress home;
+- reuse compatible original Tick/First Fire work without importing First Fire camp/expedition/menu architecture;
 - build vertically and playtest before racing down the roadmap.

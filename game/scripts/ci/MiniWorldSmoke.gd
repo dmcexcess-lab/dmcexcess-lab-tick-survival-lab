@@ -2,6 +2,7 @@ extends SceneTree
 
 const MiniWorldStateClass = preload("res://scripts/MiniWorldState.gd")
 const MiniRegionGen = preload("res://scripts/MiniRegionGenerator.gd")
+const ExtractionRaidStateClass = preload("res://scripts/ExtractionRaidState.gd")
 
 func _init() -> void:
     var world_a = MiniWorldStateClass.new()
@@ -28,13 +29,12 @@ func _init() -> void:
             quit(1)
             return
 
-    world_a.current_region = Vector2i.ZERO
-    if world_a.can_move(Vector2i.LEFT) or world_a.can_move(Vector2i.UP):
-        push_error("MINI_WORLD_SMOKE_WORLD_EDGE_OPEN")
+    if world_a.inside(Vector2i(-1, 0)) or world_a.inside(Vector2i(0, -1)):
+        push_error("MINI_WORLD_SMOKE_NEGATIVE_COORD_ACCEPTED")
         quit(1)
         return
-    if not world_a.can_move(Vector2i.RIGHT) or not world_a.can_move(Vector2i.DOWN):
-        push_error("MINI_WORLD_SMOKE_VALID_NEIGHBOR_BLOCKED")
+    if world_a.inside(Vector2i(MiniWorldStateClass.WORLD_W, 0)) or world_a.inside(Vector2i(0, MiniWorldStateClass.WORLD_H)):
+        push_error("MINI_WORLD_SMOKE_OUTSIDE_COORD_ACCEPTED")
         quit(1)
         return
 
@@ -55,8 +55,6 @@ func _init() -> void:
             quit(1)
             return
 
-        # One deterministic replay per focus is enough to prove local generation
-        # stability without doubling the cost of all 25 region validations.
         if not validated_focus.has(focus):
             var again: Dictionary = MiniRegionGen.generate(seed_value, MiniRegionGen.REGION_W, MiniRegionGen.REGION_H, focus)
             if (
@@ -91,8 +89,61 @@ func _init() -> void:
         quit(1)
         return
 
+    var target: Vector2i = _first_region_of_kind(world_a, "commercial")
+    var raid_a = ExtractionRaidStateClass.new()
+    var raid_b = ExtractionRaidStateClass.new()
+    raid_a.reset()
+    raid_b.reset()
+    if not raid_a.at_base() or raid_a.raid_active():
+        push_error("MINI_WORLD_SMOKE_RAID_NOT_BASE_AFTER_RESET")
+        quit(1)
+        return
+
+    var first_a: int = raid_a.begin_raid(world_a.world_seed, target, world_a.seed_at(target))
+    var first_b: int = raid_b.begin_raid(world_b.world_seed, target, world_b.seed_at(target))
+    if first_a <= 0 or first_a != first_b or not raid_a.raid_active():
+        push_error("MINI_WORLD_SMOKE_RAID_FIRST_SEED_INVALID")
+        quit(1)
+        return
+    if raid_a.begin_raid(world_a.world_seed, target, world_a.seed_at(target)) != 0:
+        push_error("MINI_WORLD_SMOKE_REDEPLOY_ALLOWED_DURING_ACTIVE_RAID")
+        quit(1)
+        return
+    if not raid_a.extract_to_base() or not raid_b.extract_to_base():
+        push_error("MINI_WORLD_SMOKE_EXTRACTION_FAILED")
+        quit(1)
+        return
+    if not raid_a.at_base() or raid_a.extracts_completed != 1:
+        push_error("MINI_WORLD_SMOKE_EXTRACTION_DID_NOT_RETURN_BASE")
+        quit(1)
+        return
+
+    var second_a: int = raid_a.begin_raid(world_a.world_seed, target, world_a.seed_at(target))
+    var second_b: int = raid_b.begin_raid(world_b.world_seed, target, world_b.seed_at(target))
+    if second_a <= 0 or second_a == first_a:
+        push_error("MINI_WORLD_SMOKE_REPEAT_RAID_DID_NOT_REROLL")
+        quit(1)
+        return
+    if second_a != second_b or raid_a.deployment_count(target) != 2:
+        push_error("MINI_WORLD_SMOKE_RAID_SEQUENCE_NONDETERMINISTIC")
+        quit(1)
+        return
+
+    var raid_spec: Dictionary = MiniRegionGen.generate(second_a, MiniRegionGen.REGION_W, MiniRegionGen.REGION_H, world_a.kind_at(target))
+    if raid_spec.get("exit_cells", []).size() != 4:
+        push_error("MINI_WORLD_SMOKE_RAID_EXTRACTIONS_MISSING")
+        quit(1)
+        return
+
     print("TICK_SURVIVAL_MINI_WORLD_SMOKE_OK")
     quit(0)
+
+func _first_region_of_kind(world, kind: String) -> Vector2i:
+    for coord_value in world.regions.keys():
+        var coord: Vector2i = coord_value
+        if world.kind_at(coord) == kind:
+            return coord
+    return MiniWorldStateClass.CENTER
 
 func _has_prop(spec: Dictionary, kind: String) -> bool:
     for prop_value in spec.get("props", []):
