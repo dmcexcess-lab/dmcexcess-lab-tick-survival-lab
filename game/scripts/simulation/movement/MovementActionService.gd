@@ -5,6 +5,7 @@ const Facing = preload("res://scripts/foundation/spatial/SpatialFacing.gd")
 const Layers = preload("res://scripts/foundation/spatial/SpatialLayer.gd")
 const PlacementClass = preload("res://scripts/foundation/world/WorldPlacement.gd")
 const ResultClass = preload("res://scripts/simulation/movement/MovementActionResult.gd")
+const PolicyDecisionClass = preload("res://scripts/simulation/movement/MovementPolicyDecision.gd")
 const QueryResultClass = preload("res://scripts/simulation/collision/SpatialQueryResult.gd")
 const PhaseClass = preload("res://scripts/foundation/time/ActionPhase.gd")
 const TickRulesClass = preload("res://scripts/foundation/time/TickRules.gd")
@@ -122,21 +123,22 @@ func _request(actor_id: String, action_type: StringName) -> MovementActionResult
         result.reason = "target_unknown"
         return result
 
-    var duration_ticks: int = 0
+    var policy_decision: MovementPolicyDecision = null
     if _is_step(action_type):
-        var terrain_decision: Dictionary = _evaluate_step_policy(normalized_actor, query_result.cells)
-        if not bool(terrain_decision.get("known", false)):
-            result.status = ResultClass.Status.TERRAIN_UNCLASSIFIED
-            result.reason = "terrain_unclassified"
-            return result
-        if not bool(terrain_decision.get("allowed", false)):
-            result.status = ResultClass.Status.TERRAIN_BLOCKED
-            result.reason = String(terrain_decision.get("reason", "terrain_blocked"))
-            return result
-        duration_ticks = int(terrain_decision.get("duration_ticks", 0))
+        policy_decision = _evaluate_step_policy(normalized_actor, action_type, query_result.cells)
     else:
-        duration_ticks = _policy.turn_duration(normalized_actor)
+        policy_decision = _policy.evaluate_turn(normalized_actor, action_type)
 
+    if policy_decision == null:
+        result.status = ResultClass.Status.NOT_READY
+        result.reason = "movement_policy_not_ready"
+        return result
+    if not policy_decision.is_allowed():
+        result.status = _result_status_for_policy(policy_decision.status)
+        result.reason = _policy_reason(policy_decision)
+        return result
+
+    var duration_ticks: int = policy_decision.duration_ticks
     if duration_ticks < 1:
         result.status = ResultClass.Status.INVALID_DURATION
         result.reason = "invalid_duration"
@@ -226,14 +228,18 @@ func _commit_action(action: TimedAction) -> void:
         _fail_commit(action, "target_unknown")
         return
 
+    var policy_decision: MovementPolicyDecision = null
     if _is_step(action.action_type):
-        var terrain_decision: Dictionary = _evaluate_step_policy(action.actor_id, query_result.cells)
-        if not bool(terrain_decision.get("known", false)):
-            _fail_commit(action, "terrain_unclassified")
-            return
-        if not bool(terrain_decision.get("allowed", false)):
-            _fail_commit(action, String(terrain_decision.get("reason", "terrain_blocked")))
-            return
+        policy_decision = _evaluate_step_policy(action.actor_id, action.action_type, query_result.cells)
+    else:
+        policy_decision = _policy.evaluate_turn(action.actor_id, action.action_type)
+
+    if policy_decision == null:
+        _fail_commit(action, "movement_policy_not_ready")
+        return
+    if not policy_decision.is_allowed():
+        _fail_commit(action, _policy_reason(policy_decision))
+        return
 
     if not _mutations.set_placement(
         action.actor_id,
@@ -260,18 +266,58 @@ func _fail_commit(action: TimedAction, reason: String) -> void:
     _kernel.fail_action(action.serial, reason)
     movement_failed.emit(action.actor_id, action.serial, action.action_type, reason)
 
-func _evaluate_step_policy(actor_id: String, cells: Array[Vector2i]) -> Dictionary:
+func _evaluate_step_policy(
+    actor_id: String,
+    action_type: StringName,
+    cells: Array[Vector2i]
+) -> MovementPolicyDecision:
     var terrain_types: Array[StringName] = []
     for cell: Vector2i in cells:
         if not _query.has_terrain(cell):
-            return {
-                "known": false,
-                "allowed": false,
-                "duration_ticks": 0,
-                "reason": "terrain_unclassified",
-            }
+            return PolicyDecisionClass.denied(
+                PolicyDecisionClass.Status.TERRAIN_UNCLASSIFIED,
+                "terrain_unclassified"
+            )
         terrain_types.append(_query.terrain_at(cell))
-    return _policy.evaluate_step(actor_id, terrain_types)
+    return _policy.evaluate_step(actor_id, action_type, terrain_types)
+
+static func _result_status_for_policy(policy_status: int) -> int:
+    match policy_status:
+        PolicyDecisionClass.Status.TERRAIN_UNCLASSIFIED:
+            return ResultClass.Status.TERRAIN_UNCLASSIFIED
+        PolicyDecisionClass.Status.TERRAIN_BLOCKED:
+            return ResultClass.Status.TERRAIN_BLOCKED
+        PolicyDecisionClass.Status.ACTOR_UNCLASSIFIED:
+            return ResultClass.Status.ACTOR_UNCLASSIFIED
+        PolicyDecisionClass.Status.CAPABILITY_UNKNOWN:
+            return ResultClass.Status.CAPABILITY_UNKNOWN
+        PolicyDecisionClass.Status.CAPABILITY_BLOCKED:
+            return ResultClass.Status.CAPABILITY_BLOCKED
+        PolicyDecisionClass.Status.INVALID_DURATION:
+            return ResultClass.Status.INVALID_DURATION
+        _:
+            return ResultClass.Status.NOT_READY
+
+static func _policy_reason(decision: MovementPolicyDecision) -> String:
+    if decision == null:
+        return "movement_policy_not_ready"
+    if not decision.reason.is_empty():
+        return decision.reason
+    match decision.status:
+        PolicyDecisionClass.Status.TERRAIN_UNCLASSIFIED:
+            return "terrain_unclassified"
+        PolicyDecisionClass.Status.TERRAIN_BLOCKED:
+            return "terrain_blocked"
+        PolicyDecisionClass.Status.ACTOR_UNCLASSIFIED:
+            return "actor_unclassified"
+        PolicyDecisionClass.Status.CAPABILITY_UNKNOWN:
+            return "capability_unknown"
+        PolicyDecisionClass.Status.CAPABILITY_BLOCKED:
+            return "capability_blocked"
+        PolicyDecisionClass.Status.INVALID_DURATION:
+            return "invalid_duration"
+        _:
+            return "movement_policy_rejected"
 
 static func _target_for(current: WorldPlacement, action_type: StringName) -> Dictionary:
     if current == null or not Facing.is_valid(current.facing):

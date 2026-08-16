@@ -1,9 +1,11 @@
 extends RefCounted
 class_name MovementTraversalPolicy
 
+const DecisionClass = preload("res://scripts/simulation/movement/MovementPolicyDecision.gd")
+
 ## Replaceable terrain traversal / base timing policy.
 ## Dynamic health, fatigue, encumbrance, equipment, stance, etc. belong in later
-## policy implementations, not in MovementActionService or WHEN.
+## policy adapters/providers, not in MovementActionService or WHEN.
 
 const GOLDEN_TURN_TICKS: int = 3
 
@@ -53,46 +55,33 @@ func registered_terrain_types() -> Array[String]:
     result.sort()
     return result
 
-func evaluate_step(actor_id: String, terrain_types: Array) -> Dictionary:
-    if actor_id.strip_edges().is_empty() or terrain_types.is_empty():
-        return {
-            "known": false,
-            "allowed": false,
-            "duration_ticks": 0,
-            "reason": "terrain_unclassified",
-        }
+func evaluate_step(actor_id: String, action_type: StringName, terrain_types: Array) -> MovementPolicyDecision:
+    if actor_id.strip_edges().is_empty():
+        return DecisionClass.denied(DecisionClass.Status.ACTOR_UNCLASSIFIED, "actor_unclassified")
+    if String(action_type).strip_edges().is_empty():
+        return DecisionClass.denied(DecisionClass.Status.CAPABILITY_UNKNOWN, "movement_action_unclassified")
+    if terrain_types.is_empty():
+        return DecisionClass.denied(DecisionClass.Status.TERRAIN_UNCLASSIFIED, "terrain_unclassified")
 
     var duration_ticks: int = 0
     for terrain_value: Variant in terrain_types:
         var terrain_key: String = String(terrain_value).strip_edges()
         if terrain_key.is_empty() or not _terrain_rules.has(terrain_key):
-            return {
-                "known": false,
-                "allowed": false,
-                "duration_ticks": 0,
-                "reason": "terrain_unclassified",
-            }
+            return DecisionClass.denied(DecisionClass.Status.TERRAIN_UNCLASSIFIED, "terrain_unclassified")
         var rule: Dictionary = _terrain_rules[terrain_key]
         if not bool(rule.get("traversable", false)):
-            return {
-                "known": true,
-                "allowed": false,
-                "duration_ticks": 0,
-                "reason": "terrain_blocked",
-            }
+            return DecisionClass.denied(DecisionClass.Status.TERRAIN_BLOCKED, "terrain_blocked")
         duration_ticks = maxi(duration_ticks, int(rule.get("step_ticks", 0)))
 
     if duration_ticks < 1:
-        return {
-            "known": true,
-            "allowed": false,
-            "duration_ticks": 0,
-            "reason": "invalid_duration",
-        }
+        return DecisionClass.denied(DecisionClass.Status.INVALID_DURATION, "invalid_duration")
+    return DecisionClass.allowed(duration_ticks)
 
-    return {
-        "known": true,
-        "allowed": true,
-        "duration_ticks": duration_ticks,
-        "reason": "",
-    }
+func evaluate_turn(actor_id: String, action_type: StringName) -> MovementPolicyDecision:
+    if actor_id.strip_edges().is_empty():
+        return DecisionClass.denied(DecisionClass.Status.ACTOR_UNCLASSIFIED, "actor_unclassified")
+    if String(action_type).strip_edges().is_empty():
+        return DecisionClass.denied(DecisionClass.Status.CAPABILITY_UNKNOWN, "movement_action_unclassified")
+    if _turn_ticks < 1:
+        return DecisionClass.denied(DecisionClass.Status.INVALID_DURATION, "invalid_duration")
+    return DecisionClass.allowed(_turn_ticks)
