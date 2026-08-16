@@ -28,9 +28,14 @@ jobs:
           test -f README.md
           test -f README_CONTEXT.md
           test -f README_SOPS.md
+          test -f REBOOT_CORE.md
           test -f game/project.godot
           test -f game/export_presets.cfg
           test -f game/main.tscn
+          test -f game/assets/tactical_atlas.svg
+          test -f game/assets/clutter_atlas.svg
+          test -f game/assets/world_art_atlas.svg
+          test -f game/assets/building_props_atlas.svg
           test -f game/assets/final_environment_surfaces_atlas.svg
           test -f game/assets/final_environment_props_atlas.svg
           test -f game/assets/player_north.svg
@@ -42,7 +47,9 @@ jobs:
           test -f game/scripts/reboot/RebootPlayer.gd
           test -f game/scripts/reboot/RebootMain.gd
           test -f game/scripts/ci/RebootSmoke.gd
+          grep -q 'class_name RebootArt' game/scripts/reboot/RebootArt.gd
           grep -q 'class_name RebootSiteGenerator' game/scripts/reboot/RebootSiteGenerator.gd
+          grep -q '"rural_road"' game/scripts/reboot/RebootSiteGenerator.gd
           grep -q 'class_name RebootPlayer' game/scripts/reboot/RebootPlayer.gd
           grep -q 'class_name RebootMain' game/scripts/reboot/RebootMain.gd
           grep -q 'run/main_scene="res://main.tscn"' game/project.godot
