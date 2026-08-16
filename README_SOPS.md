@@ -32,11 +32,11 @@ Before changing code or repository behavior:
 
 Canonical active owners:
 
-- `scripts/reboot/RebootArt.gd` — retained artwork indices/resources.
-- `scripts/reboot/RebootSiteGenerator.gd` — physical tactical-site generation.
+- `scripts/reboot/RebootArt.gd` — retained artwork indices/resources and canonical tactical tile vocabulary.
+- `scripts/reboot/RebootSiteGenerator.gd` — physical tactical-site/biome-sample generation.
 - `scripts/reboot/RebootPlayer.gd` — player cell/facing/movement.
-- `scripts/reboot/RebootMain.gd` — rendering/input/zoom/static strategic map orchestration.
-- `scripts/ci/RebootSmoke.gd` — deterministic core validation.
+- `scripts/reboot/RebootMain.gd` — rendering/input/zoom/static strategic map orchestration and cheap static tactical presentation such as power lines.
+- `scripts/ci/RebootSmoke.gd` — deterministic core/quality validation.
 
 Preferred dependency direction:
 
@@ -63,19 +63,46 @@ Do not restore one of these simply because legacy code exists. Reintroduce only 
 
 ## 5. Generator rules
 
-A generated tactical map represents **one coherent site**.
+A generated tactical map represents **one coherent local biome sample**. A sample may contain several related properties/buildings/businesses when that is the natural scale of the biome; it should not become a giant mixed-biome city map.
 
-- Generate the site's purpose first.
-- Buildings/fields/yards/outbuildings are primary; roads/driveways serve them.
+- Generate the biome/site purpose and composition first.
+- Roads/driveways must serve believable destinations rather than exist as filler.
 - Use purposeful prefab/floor-plan grammar and functional room metadata.
 - Furniture/clutter should reinforce room/site purpose.
-- Avoid giant mixed-biome maps and road-first cross layouts.
 - Maintain O(1)-style collision lookups for runtime movement.
 - Validate quality invariants, not merely successful Dictionary creation.
+- Reserve doors and their immediate approach cells from furniture/clutter.
+- Keep installed fixtures structurally placed against appropriate walls/partitions.
 
-Current rural generator validation includes required building/room functions and a maximum 18% road/gravel coverage ratio.
+Current Rural Road v3 composition is intentionally constrained:
 
-## 6. Performance rules
+- one cross-map rural two-lane main road plus narrow dirt/gravel connectors;
+- exactly four residences and one roadside gas station/corner store;
+- exactly one farm complex;
+- one or two manufactured homes;
+- remaining residences as substantial country/farm housing;
+- dense utility poles/power lines, sparse stop signs, zero traffic lights;
+- broad grass/tree/bush/scrub vegetation;
+- compact commercial interior contract: 7x7 storefront, 3x3 stock room, 3x1 office, 2x2 bathroom.
+
+Current validation rejects compositions that violate these authored constraints, allows at most 13% road/gravel/asphalt coverage, and rejects wall-door overlap or door-adjacent clutter.
+
+## 6. Art / tile-set rules
+
+The remembered old structural look is **not** the later world-art house shell vocabulary.
+
+Canonical reboot structural art is pinned to historical early `TacticalTiles.gd` indices:
+
+- tactical walls 16–22;
+- tactical closed/open doors 23/24;
+- tactical window 25;
+- original tactical ground/floors/common props and clutter sheet where available.
+
+Use later atlases only to supplement capabilities the early sheets did not provide cleanly, such as road topology/gravel/fields, utility poles/stop signs, selected installed fixtures and vegetation variants.
+
+Do not silently swap structural walls/doors/windows to later `world_art` tiles. The later closed-door art includes its own wall-colored backing and does not reproduce the user's remembered tile set.
+
+## 7. Performance rules
 
 The reboot establishes a deliberately cheap baseline:
 
@@ -84,11 +111,12 @@ The reboot establishes a deliberately cheap baseline:
 - redraw only on meaningful presentation state changes;
 - use dictionary lookups for sparse walls/props/blockers;
 - avoid scanning the full 64x64 site per frame;
-- static strategic map is presentation, not simulated terrain.
+- static strategic map is presentation, not simulated terrain;
+- cheap static overlays such as power lines may render only during existing event-driven redraws and should be bounded to visible content.
 
 Any future animated/perception system must preserve this baseline as much as possible and should own its own bounded work rather than forcing whole-scene redraws.
 
-## 7. Input / mobile rules
+## 8. Input / mobile rules
 
 Phone/Safari remains first-class.
 
@@ -98,7 +126,7 @@ Phone/Safari remains first-class.
 - keyboard controls are development convenience;
 - map/zoom are zero-simulation-cost presentation controls until a future timing system explicitly says otherwise.
 
-## 8. GDScript rules
+## 9. GDScript rules
 
 - Godot 4 / GDScript.
 - Be conservative with `:=` around Dictionary/Variant values; use explicit conversion/type when needed.
@@ -108,13 +136,13 @@ Phone/Safari remains first-class.
 - Never hide future simulation mutation inside `_draw()`.
 - Prefer deterministic smoke tests for generator/player invariants.
 
-## 9. Legacy policy
+## 10. Legacy policy
 
 Legacy scripts/design docs may remain temporarily in the repository, but they are inactive unless current `README_CONTEXT.md` says otherwise.
 
-Do not make new features depend on inactive legacy modules merely to save coding time. Git history is the rollback/reference mechanism. A later razor pass may remove unused legacy code after the reboot stabilizes.
+Do not make new features depend on inactive legacy modules merely to save coding time. Historical files may be inspected to recover exact art indices or deliberately selected algorithms, but the active implementation belongs in reboot owners. Git history is the rollback/reference mechanism.
 
-## 10. Validation
+## 11. Validation
 
 For meaningful reboot code changes, exact final SHA must pass:
 
@@ -127,7 +155,7 @@ For meaningful reboot code changes, exact final SHA must pass:
 
 Logs must be rejected for `SCRIPT ERROR`, `Parse Error`, or `Failed to load script`.
 
-## 11. Communication
+## 12. Communication
 
 - Implementation-first.
 - Surface architectural problems early.
@@ -135,7 +163,7 @@ Logs must be rejected for `SCRIPT ERROR`, `Parse Error`, or `Failed to load scri
 - If tooling blocks a mutation, state exactly what is blocked and complete everything else possible.
 - Never claim deployment success without checking it.
 
-## 12. Final self-check
+## 13. Final self-check
 
 Before calling a repo task done:
 
@@ -143,11 +171,12 @@ Before calling a repo task done:
 - Did I inspect current relevant source?
 - Did I use the reboot owners rather than legacy patch layers?
 - Did I protect the event-driven/visible-cell performance baseline?
+- Did I preserve the pinned original tactical structural vocabulary unless explicitly asked otherwise?
 - Did I add/update deterministic validation where appropriate?
 - Did exact final SHA pass Godot + Pages?
 - Did I leave no temporary writer/tooling artifacts?
 
-## 13. Required footer after repository changes
+## 14. Required footer after repository changes
 
 When a prompt changes this repository, end with:
 
