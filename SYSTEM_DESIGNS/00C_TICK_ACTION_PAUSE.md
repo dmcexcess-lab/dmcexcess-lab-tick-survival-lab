@@ -1,10 +1,10 @@
 # Tick Survival Lab — 00C Tick / Action / Pause Kernel (WHEN)
 
-Status: **APPROVED — implementation authorized 2026-08-16**
+Status: **IMPLEMENTED — canonical foundation module as of 2026-08-16**
 
 Parent architecture: `00_FOUNDATION_WHERE_WHAT_WHEN.md`.
 
-Approval basis: after WHERE and WHAT were implemented, the user explicitly instructed: **“Now go when. I assume this is the tic system.”** This authorizes the bounded WHEN system only. Calendar/date presentation, movement, AI, health, weather, rendering, input/lifecycle adapters and live-runtime integration remain separate future slices.
+Approval basis: after WHERE and WHAT were implemented, the user explicitly instructed: **“Now go when. I assume this is the tic system.”** This authorized the bounded WHEN system only. Calendar/date presentation, movement, AI, health, weather, rendering, input/lifecycle adapters and live-runtime integration remain separate future slices.
 
 ## 1. Goal
 
@@ -429,7 +429,7 @@ Known future consumers can attach without changing WHEN's mechanic meaning:
 
 ## 26. Tests / acceptance criteria
 
-Dedicated `TickKernelSmoke.gd` must prove:
+Dedicated `TickKernelSmoke.gd` proves:
 
 1. integer world tick starts/restores correctly;
 2. deterministic queue ordering by tick/priority/owner/serial;
@@ -481,3 +481,17 @@ The kernel stays small in meaning even though many future systems use it: **it o
 - bounded debug trace;
 - opaque payload transport is serializable copied data, not a domain-state metadata store;
 - no direct WHERE/WHAT/gameplay/reboot dependency inside WHEN.
+
+## 29. Implementation verification
+
+Implemented owners:
+
+- `game/scripts/foundation/time/TickRules.gd`
+- `game/scripts/foundation/time/ActionPhase.gd`
+- `game/scripts/foundation/time/TimedAction.gd`
+- `game/scripts/foundation/time/ScheduledEvent.gd`
+- `game/scripts/foundation/time/TickEventQueue.gd`
+- `game/scripts/foundation/time/TickKernel.gd`
+- `game/scripts/ci/TickKernelSmoke.gd`
+
+The dedicated WHEN contract smoke passed under Godot 4.7.1 together with WHERE and WHAT contract smokes, frozen-reference smokes, startup and Web export before this status was promoted. The canonical WHEN implementation remains intentionally unwired from the deprecated playable reboot runtime.
