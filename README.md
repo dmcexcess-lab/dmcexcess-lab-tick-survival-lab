@@ -10,11 +10,13 @@ The guiding idea is:
 
 The game should preserve the decisions, danger, causality and atmosphere created by deeper survival simulations without reproducing every internal variable those games track.
 
-## Current status: modular design freeze
+## Current status: modular foundation implementation
 
-The project is being re-conceptualized around **strict replaceable modules** before the new runtime is written.
+The project is being rebuilt around **strict replaceable modules**.
 
 The currently deployed clean-reboot build remains playable as a reference, but `game/scripts/reboot/` is **frozen/deprecated architecture**. It is not the long-term game.
+
+The first canonical new subsystem is now implemented: **00A WHERE / Spatial Model** under `game/scripts/foundation/spatial/`, with its own permanent headless CI contract test.
 
 Important design references:
 
@@ -55,16 +57,19 @@ A separate **hard application pause** is also a product requirement: if real lif
 
 ### Invisible tactical grid
 
-The current spatial direction keeps an authoritative but invisible grid because it makes graphics, generation, collision, pathfinding, AI, saving and deterministic movement much simpler.
+The spatial foundation is now implemented and uses:
 
-- actors move cell-to-cell;
-- grid lines do not need to be shown;
-- props and fixtures use whole-cell footprints;
-- directional objects carry N/E/S/W orientation;
-- suitable art may be rotated in 90-degree increments, while objects that look wrong when rotated can use explicit alternate-facing images;
-- world/generation data stores semantic object + facing, not atlas-specific draw instructions.
+- authoritative global integer `Vector2i` cells;
+- a centralized planning scale of roughly **1 meter per tactical cell**;
+- cell-to-cell actors;
+- no required visible grid lines;
+- arbitrary one-or-more whole-cell object footprints;
+- N/E/S/W semantic orientation;
+- deterministic 90-degree footprint rotation around a stable anchor;
+- **structure cells with explicit horizontal/vertical axis** for walls/openings;
+- semantic world geometry only — no atlas or sprite assumptions.
 
-The exact wall/door/window representation is still being designed rather than assumed.
+Suitable art may later be rotated in 90-degree increments, while objects that look wrong when rotated can use explicit alternate-facing images. Rendering owns that choice; WHERE does not.
 
 ### Mini-Zomboid simulation
 
@@ -100,11 +105,11 @@ Known people are intended to be persistent actors, not merely scripted quest mar
 
 ## Foundational architecture
 
-The current lowest-level model is **WHERE / WHAT / WHEN**:
+The lowest-level model is **WHERE / WHAT / WHEN**:
 
-1. **WHERE — Spatial Model:** global grid coordinates, cells, footprints, facing and structures/openings.
-2. **WHAT — Persistent World / Entity State:** what terrain, objects, actors, items, construction and mutations actually exist.
-3. **WHEN — Tick / Action / Pause Kernel:** who acts when, how long actions take, auto-pause and hard pause.
+1. **WHERE — Spatial Model:** global grid coordinates, facing, footprints and structure/opening geometry. **Implemented.**
+2. **WHAT — Persistent World / Entity State:** what terrain, objects, actors, items, construction and mutations actually exist. **Next bounded foundation system.**
+3. **WHEN — Tick / Action / Pause Kernel:** who acts when, how long actions take, auto-pause and hard pause. **Later bounded foundation system.**
 
 The map/world generator comes **after these contracts**. It creates the initial world using the same spatial/state language that construction and gameplay later mutate. It does not own reality.
 
@@ -120,17 +125,15 @@ The richer old look came from historical `TacticalTiles.gd`, which semantically 
 
 ## Current development process
 
-No new major runtime system is coded merely because it has been discussed.
-
 The project follows:
 
 > **DESCRIBE → USER APPROVES → IMPLEMENT → VERIFY**
 
-If a request spans several major systems, it should be broken into smaller pieces instead of attempting the whole game at once. Small scope does **not** mean placeholder scope: a small implemented slice should be real and finished to its approved contract.
+If a request spans several major systems, it is broken into smaller pieces instead of attempting the whole game at once. Small scope does **not** mean placeholder scope: a small implemented slice should be real and finished to its approved contract.
 
-Current foundation design order is:
+Current foundation order:
 
-1. Spatial Model (WHERE)
+1. Spatial Model (WHERE) — **implemented**
 2. Persistent World / Entity State (WHAT)
 3. Tick / Action / Pause Kernel (WHEN)
 4. Global world planning / generation contract
@@ -141,7 +144,7 @@ Current foundation design order is:
 
 https://dmcexcess-lab.github.io/dmcexcess-lab-tick-survival-lab/
 
-The live build still runs the deprecated clean-reboot runtime until the new modular foundation is designed, approved and proven.
+The live build still runs the deprecated clean-reboot runtime until enough of the new modular foundation exists to replace it cleanly. The new WHERE code is intentionally not wired into the deprecated runtime through a temporary compatibility layer.
 
 ## Run current reference locally
 
