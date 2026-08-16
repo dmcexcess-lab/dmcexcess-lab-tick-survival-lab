@@ -15,8 +15,8 @@ const DEFAULT_ZOOM := 1
 const MAP_BUTTON := Rect2(516, 10, 112, 38)
 const ZOOM_OUT_BUTTON := Rect2(422, 10, 42, 38)
 const ZOOM_IN_BUTTON := Rect2(468, 10, 42, 38)
-const PREFAB_BUTTON := Rect2(18, 620, 154, 62)
-const MAP_PREFAB_BUTTON := Rect2(448, 104, 156, 38)
+const PREFAB_BUTTON := Rect2(18, 620, 210, 62)
+const MAP_PREFAB_BUTTON := Rect2(180, 700, 280, 60)
 const TURN_LEFT_BUTTON := Rect2(18, 690, 154, 62)
 const FORWARD_BUTTON := Rect2(468, 620, 154, 62)
 const TURN_RIGHT_BUTTON := Rect2(468, 690, 154, 62)
@@ -130,9 +130,9 @@ func _draw_tactical() -> void:
         _draw_label(Vector2(14, 47), "Authored prefab: %s" % str(placed.get("name", "Prefab")), 12, Color("e5d785"))
     _draw_top_buttons()
     _draw_control_buttons()
-    _draw_label(Vector2(190, 722), "W/UP forward   S/DOWN back", 14, Color("c7cbd0"))
-    _draw_label(Vector2(190, 744), "A/D or LEFT/RIGHT turn", 14, Color("c7cbd0"))
-    _draw_label(Vector2(190, 775), "F2 prefab workshop", 13, Color("8d949c"))
+    _draw_label(Vector2(240, 722), "W/UP forward   S/DOWN back", 14, Color("c7cbd0"))
+    _draw_label(Vector2(240, 744), "A/D or LEFT/RIGHT turn", 14, Color("c7cbd0"))
+    _draw_label(Vector2(240, 775), "Tap PREFAB BUILDER or press F2", 13, Color("8d949c"))
 
 func _draw_power_lines(start_x: int, start_y: int, cols: int, rows: int, tile: int, origin: Vector2) -> void:
     var links: Array = spec.get("power_links", [])
@@ -154,7 +154,6 @@ func _draw_strategic_map() -> void:
     draw_rect(Rect2(18, 62, 604, 742), Color("171d22"), true)
     _draw_label(Vector2(34, 92), "OUTSKIRTS -> CITY", 27, Color.WHITE)
     _draw_label(Vector2(34, 120), "Walking range: rural edge.", 14, Color("c7cbd0"))
-    _draw_button(MAP_PREFAB_BUTTON, "PREFABS %d" % saved_prefabs.size(), false)
 
     var rural := Rect2(52, 154, 182, 590)
     var town := Rect2(234, 154, 116, 590)
@@ -195,7 +194,8 @@ func _draw_strategic_map() -> void:
     _draw_locked_node(Vector2(493, 545), "WAREHOUSES")
     _draw_locked_node(Vector2(564, 425), "CITY CENTER")
 
-    _draw_label(Vector2(68, 775), "Saved prefabs can appear as extra authored structures in generated rural maps.", 12, Color("d4dad2"))
+    _draw_button(MAP_PREFAB_BUTTON, "PREFAB BUILDER (%d)" % saved_prefabs.size(), false)
+    _draw_label(Vector2(78, 792), "Tap the builder to author structures for future rural maps.", 12, Color("d4dad2"))
     if not active_site.is_empty():
         _draw_button(MAP_BUTTON, "CLOSE MAP", false)
 
@@ -211,7 +211,7 @@ func _draw_top_buttons() -> void:
     _draw_button(MAP_BUTTON, "MAP", false)
 
 func _draw_control_buttons() -> void:
-    _draw_button(PREFAB_BUTTON, "PREFABS", false)
+    _draw_button(PREFAB_BUTTON, "PREFAB BUILDER", false)
     _draw_button(TURN_LEFT_BUTTON, "TURN L", false)
     _draw_button(FORWARD_BUTTON, "FORWARD", false)
     _draw_button(TURN_RIGHT_BUTTON, "TURN R", false)
