@@ -8,7 +8,7 @@ Repository: `dmcexcess-lab/dmcexcess-lab-tick-survival-lab`
 
 Web preview: `https://dmcexcess-lab.github.io/dmcexcess-lab-tick-survival-lab/`
 
-Tick Survival Lab is an original Godot 4 top-down zombie-apocalypse survival/extraction project. The project has entered a **clean reboot**. Existing artwork is retained; the old gameplay/generator architecture is no longer canonical.
+Tick Survival Lab is an original Godot 4 top-down zombie-apocalypse survival/extraction project in a **clean reboot**. Existing artwork is retained; the old gameplay/generator architecture is no longer canonical.
 
 Primary current design/runtime reference: `REBOOT_CORE.md`.
 
@@ -20,8 +20,8 @@ The active main scene is `game/main.tscn` using `game/scripts/reboot/RebootMain.
 
 The active runtime intentionally contains only:
 
-- retained art assets;
-- deterministic rural site generation;
+- retained composite environment/player artwork;
+- deterministic **Rural Road generator v2**;
 - player grid position and cardinal facing;
 - forward/back movement and left/right turning;
 - collision;
@@ -30,17 +30,17 @@ The active runtime intentionally contains only:
 - an event-driven visible-cell renderer;
 - a static strategic progression map.
 
-The current build intentionally does **not** contain the old tick/calendar, weather, lighting, perception/fog, silent sound, infected, loot/inventory, combat, injuries, vehicles, extraction rewards/loss, off-screen simulation, or save system.
+The current build intentionally does **not** contain tick/calendar, weather, lighting, perception/fog, silent sound, infected, loot/inventory, combat, injuries, vehicles, extraction rewards/loss, off-screen simulation, or save serialization.
 
 Those systems may be redesigned and reintroduced later, one owner at a time, only after the new generator/player foundation is strong.
 
 ## Current owners
 
-- `game/scripts/reboot/RebootArt.gd` — retained atlas/player-art index contract for the reboot runtime.
-- `game/scripts/reboot/RebootSiteGenerator.gd` — canonical physical site generator. It is new code and does not wrap the legacy v4-v6 generator chain.
+- `game/scripts/reboot/RebootArt.gd` — reboot-only composite art owner. It deliberately restores the prototype-era tactical visual vocabulary by selecting from `tactical_atlas.svg`, `world_art_atlas.svg`, `clutter_atlas.svg`, `building_props_atlas.svg`, `final_environment_surfaces_atlas.svg`, `final_environment_props_atlas.svg`, and the four directional player sprites. It does **not** depend on legacy `TacticalTiles.gd`.
+- `game/scripts/reboot/RebootSiteGenerator.gd` — canonical physical site generator. New code; does not wrap the legacy v4-v6 generator chain.
 - `game/scripts/reboot/RebootPlayer.gd` — canonical player cell/facing/movement owner.
 - `game/scripts/reboot/RebootMain.gd` — active presentation/input shell: visible-cell rendering, buttons, zoom, strategic map, touch/mouse de-duplication, and site-selection orchestration.
-- `game/scripts/ci/RebootSmoke.gd` — deterministic generator/player smoke test.
+- `game/scripts/ci/RebootSmoke.gd` — deterministic generator/player quality smoke test.
 
 Preferred dependency direction:
 
@@ -48,20 +48,72 @@ Preferred dependency direction:
 
 Do not move simulation truth into drawing/input helpers when later systems are added.
 
-## Generator direction
+## Rural generator direction — v2
 
-A tactical map represents **one place**, not a miniature city or a mixed-biome stress map.
+The current tactical rural map is **not one farmhouse/trailer property**. It is a **sample of rural road**.
 
-Current rural archetypes:
+Every generated 64x64 Rural Road sample contains:
 
-- Farmstead — large multi-room farmhouse, barn, shed, fields, fences, driveway, clutter and vegetation.
-- Small Trailer — narrow trailer floor plan, rough homestead, shed and exterior clutter.
-- Double-Wide — wider multi-room manufactured home with distinct property grammar.
-- Country House — substantial rural house plus garden/field/outbuilding context.
+- one restrained horizontal rural road with dirt shoulders;
+- four roadside property lots;
+- at least two substantial houses (`farmhouse` / `country_house`);
+- at least one manufactured-home property (`small_trailer` / `double_wide`);
+- at least three distinct property kinds overall;
+- individual driveways and roadside mailboxes;
+- sparse utility poles;
+- barns/sheds/gardens/fields or rough-yard clutter according to property type;
+- vegetation and edge growth without turning the whole map into empty grass.
 
-Site generation uses purpose-built prefabs and functional room names. Roads/driveways serve the site rather than dominating it. Current validation rejects required-room/building omissions and rejects road/gravel coverage above 18% of the 64x64 site.
+Houses are intentionally smaller than the reboot-v1 showcase farmhouse. Current approximate residential shells are:
 
-The next generator work should improve these rural sites until they consistently look authored before adding Small Town/Suburb/City families.
+- farmhouse: 15–17 x 12–13;
+- country house: 14–16 x 12;
+- double-wide: 13–15 x 11;
+- small trailer: 8–9 x 12.
+
+Rooms are correspondingly smaller and more numerous across the road sample. Substantial houses use separate living, kitchen, bedrooms, bathroom, and (for farmhouses) utility space. Manufactured homes use compact but distinct living/kitchen/bed/bath layouts.
+
+### Fixture-placement rule
+
+Fixed fixtures must read as installed objects, not random loot or center-room clutter.
+
+Kitchen sinks, stoves, refrigerators, bathroom sinks/toilets/tubs/showers, washers/dryers, and water heaters are placed in cells adjacent to walls/partitions. Generator validation explicitly rejects tested samples if a tagged wall fixture floats away from a wall.
+
+Environmental props remain separate from future inventory/loot data.
+
+### Rural quality validation
+
+`RebootSiteGenerator.validate()` and `RebootSmoke.gd` now check multiple quality properties, including:
+
+- four roadside properties;
+- property-family diversity;
+- multiple substantial houses;
+- manufactured-housing presence;
+- readable living/kitchen/bathroom functions across all residences;
+- at least 15 functional rooms across the sample;
+- visible but restrained road coverage;
+- road/gravel below 14% of the 64x64 map;
+- wall-aware installed fixture placement;
+- deterministic output.
+
+The permanent smoke samples eight independent seeds rather than only one selected map.
+
+## Art / tile-set rule
+
+The old visual style was never a single tile atlas. The previous renderer composed several retained atlases depending on object type.
+
+The reboot initially lost that appearance because `RebootArt.gd` rendered almost everything from the final-environment atlases. The assets were **not deleted**.
+
+Generator v2 restores the composite presentation while keeping the clean reboot architecture:
+
+- rural road / driveway / structural floors: world-art atlas where appropriate;
+- house/rural/interior walls, doors, and windows: world-art shell/opening vocabulary;
+- nature and selected furniture: final environment props;
+- installed fixtures/tools: building-props atlas where appropriate;
+- household/street clutter: clutter atlas where appropriate;
+- directional player: retained individual facing sprites.
+
+Do not revive legacy `TacticalTiles.gd` merely for rendering. The new art owner recreates only the retained visual vocabulary.
 
 ## Strategic world direction
 
@@ -71,7 +123,7 @@ Progression runs geographically from:
 
 **BASE -> RURAL EDGE -> SMALL TOWN -> SUBURBS -> CITY EDGE -> CITY CORE**
 
-Only rural sites are selectable in the current reboot slice. Deeper bands are visible but locked. Later roaming/vehicle systems will unlock deeper access.
+Only rural nodes are selectable in the current reboot slice. The current rural nodes all generate the same Rural Road biome grammar with different deterministic seed streams; they do not correspond to a single farmhouse/trailer prefab. Deeper bands remain visibly locked for later roaming/vehicle systems.
 
 ## Controls / mobile
 
@@ -99,7 +151,7 @@ Touch is first-class. The active shell suppresses synthetic mouse actions after 
 
 ## Performance contract
 
-The reboot renderer is event-driven.
+The reboot renderer remains event-driven.
 
 - no idle `_process()` redraw loop;
 - no weather animation;
@@ -108,7 +160,7 @@ The reboot renderer is event-driven.
 - only visible camera cells are rendered;
 - redraw happens only after movement, turning, zoom, map toggle, or site load.
 
-Do not regress this baseline casually when expensive systems return.
+The restored composite art selection must not regress this performance baseline.
 
 ## Legacy code
 
@@ -118,7 +170,7 @@ Git history is the rollback path. A later cleanup pass may delete/archive unused
 
 ## Current next step
 
-Playtest the new rural generator and core controls on desktop and Safari. Improve site grammar/prefabs/clutter before adding vision, lighting, weather, sound, infected, or deeper city bands.
+Playtest many Rural Road seeds on desktop and Safari. Improve roadside composition, property grammar, floorplans, fixture/furniture placement, clutter and visual coherence until the rural biome consistently feels authored before adding Small Town/Suburb/City families or reintroducing perception/weather.
 
 ## Source-of-truth order
 
