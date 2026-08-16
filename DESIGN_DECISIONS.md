@@ -171,3 +171,23 @@ Generation is a producer of initial WHAT using WHERE. Construction/destruction/g
 **Affected systems:** WHAT placement/indexes, generator, construction, renderer, collision/pathfinding, perception/LOS, vehicles, streaming calculations and validation.
 
 **Implementation:** `SYSTEM_DESIGNS/00A_SPATIAL_MODEL.md` and `game/scripts/foundation/spatial/`.
+
+---
+
+## 2026-08-16 — WHAT owns one current persistent world truth
+
+**Decision:** The canonical Persistent World / Entity State foundation stores **one authoritative current world**, not parallel “generated/original” and “modified/current” gameplay realities.
+
+Generation may populate virgin terrain/entities through the same world contract used by later construction/destruction/gameplay. Once a fact exists, subsequent state is owned by the current persistent world. A future save layer may use deterministic baselines, mutation journals or region snapshots as storage optimizations, but gameplay systems never choose between competing world truths.
+
+Durable entities use opaque stable string IDs independent of Godot Nodes, rendering, store ordering and tactical placement. An entity may remain persistent while unplaced, allowing future container-held items or coarse/distant actors to retain identity without inventing a fake tactical cell.
+
+Foundation WHAT stores explicit semantic entity identity, semantic terrain and WHERE-based placement. It deliberately does **not** use a generic metadata dictionary; future health, inventory, door, vehicle, construction, infection and similar mechanics attach typed state keyed by the same stable entity IDs.
+
+Cell/channel occupancy is a derived lookup index and does not decide collision legality. WHAT records overlap; later collision/construction/movement systems decide whether a requested state transition is legal.
+
+**Why:** This keeps the open world causally persistent while preventing world state from becoming a second gameplay engine or a grab bag of every mechanic. It also makes generation, rendering and streaming independently replaceable.
+
+**Affected systems:** generation, persistence/save storage, streaming, rendering, collision/pathfinding, construction, actors/population/outbreak, inventory, vehicles, health, doors, bases and all durable mechanics.
+
+**Implementation:** `SYSTEM_DESIGNS/00B_PERSISTENT_WORLD_STATE.md` and `game/scripts/foundation/world/`.
