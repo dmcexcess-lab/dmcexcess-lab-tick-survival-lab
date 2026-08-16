@@ -2,6 +2,7 @@ extends RefCounted
 class_name MiniRegionGenerator
 
 const BaseRegion = preload("res://scripts/ProceduralRegionGenerator.gd")
+const CleanupPass = preload("res://scripts/DestinationFocusCleanupPass.gd")
 const FocusPass = preload("res://scripts/MiniRegionFocusPass.gd")
 const Streetscape = preload("res://scripts/StreetscapePass.gd")
 const InteriorPass = preload("res://scripts/DestinationInteriorPass.gd")
@@ -22,6 +23,7 @@ static func generate(seed_value: int, width: int = REGION_W, height: int = REGIO
     spec["generator_version"] = GENERATOR_VERSION
     spec["region_focus"] = focus
     spec["display_name"] = _display_name(focus)
+    CleanupPass.apply(spec, focus)
     FocusPass.apply(spec, focus)
     Streetscape.apply(spec, seed_value, focus)
     InteriorPass.apply(spec, seed_value, focus)
@@ -43,6 +45,11 @@ static func validate(spec: Dictionary) -> Dictionary:
             if failure.begins_with("generated building footprint too small"):
                 continue
             failures.append(failure)
+
+    var cleanup_result: Dictionary = CleanupPass.validate(spec)
+    if not bool(cleanup_result.get("ok", false)):
+        for failure_value in cleanup_result.get("failures", []):
+            failures.append(str(failure_value))
 
     var street_result: Dictionary = Streetscape.validate(spec)
     if not bool(street_result.get("ok", false)):
