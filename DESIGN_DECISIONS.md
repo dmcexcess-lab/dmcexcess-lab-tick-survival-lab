@@ -2,7 +2,7 @@
 
 This is the durable log for **approved or clearly settled cross-cutting decisions** that affect more than one subsystem.
 
-It is not a brainstorming file. Detailed mechanics belong in `SYSTEM_DESIGNS/`. Current work status belongs in `README_CONTEXT.md`. This log exists so later work can recover the reason behind a major direction instead of inferring it from implementation.
+It is not a brainstorming file. Detailed mechanics belong in `SYSTEM_DESIGNS/`. Current work status belongs in `README_CONTEXT.md`. This log exists so later work can recover the reason behind a major direction instead of inferring intent from implementation.
 
 If a later discussion changes a decision, do not erase history. Add a newer entry that explicitly supersedes the old one.
 
@@ -131,3 +131,23 @@ Higher-level base/community UI may summarize physical facts later, but should no
 **Affected systems:** health/body, first aid, movement/action costs, combat, UI.
 
 **Unresolved:** exact severity names, body-region granularity, worsening/healing/infection rules.
+
+---
+
+## 2026-08-16 — WHERE / WHAT / WHEN is the simulation-foundation decomposition
+
+**Decision:** The lowest-level simulation architecture is organized around three narrowly owned truths rather than around the map generator:
+
+- **WHERE — Spatial Model:** the global tactical-grid coordinate language, directions, footprints and structure/opening geometry;
+- **WHAT — Persistent World / Entity State:** what terrain, structures, objects, actors, items and durable mutations exist at those coordinates;
+- **WHEN — Tick / Action / Pause Kernel:** authoritative world ticks, action durations, scheduled execution, auto-pause and hard real-life pause.
+
+Generation is a producer of initial WHAT using WHERE. Construction/destruction/gameplay mutate WHAT. Rendering reads WHAT through WHERE. Gameplay/action systems bridge WHERE/WHAT with WHEN; the scheduler does not learn mechanic-specific meanings.
+
+**Why:** This keeps world generation replaceable, keeps persistent state independent of rendering/streaming, allows all gameplay to share one time model, and gives future systems such as health, AI, weather, vision, vehicles, construction and outbreak simulation stable extension seams.
+
+**Affected systems:** all simulation/gameplay systems.
+
+**Detailed design:** `SYSTEM_DESIGNS/00_FOUNDATION_WHERE_WHAT_WHEN.md`.
+
+**Approval note:** The three-part decomposition is settled in concept. Detailed recommendations inside the design document remain DRAFT until explicitly reviewed/approved, including structure-cell vs edge-wall representation and exact cell physical scale.
