@@ -1,10 +1,10 @@
 # Tick Survival Lab — 00B Persistent World / Entity State (WHAT)
 
-Status: **APPROVED — implementation authorized 2026-08-16**
+Status: **IMPLEMENTED — canonical modular foundation, 2026-08-16**
 
 Parent architecture: `00_FOUNDATION_WHERE_WHAT_WHEN.md`.
 
-Approval basis: after 00A WHERE was implemented and the next bounded target was identified as WHAT, the user explicitly instructed: **“good call. ok go for what.”** This authorizes WHAT only. WHEN, generation, rendering, streaming, gameplay mechanics and live-runtime integration remain separate future slices.
+Approval basis: after 00A WHERE was implemented and the next bounded target was identified as WHAT, the user explicitly instructed: **“good call. ok go for what.”** This authorized WHAT only. WHEN, generation, rendering, streaming, gameplay mechanics and live-runtime integration remain separate future slices.
 
 ## 1. Goal
 
@@ -255,7 +255,7 @@ Restore rules:
 - duplicate entity/placement IDs are rejected;
 - after successful validation, replace canonical stores and rebuild occupancy;
 - runtime ID serial continues from the restored value;
-- emit `reset` after the complete state swap.
+- emit `world_reset` after the complete state swap.
 
 Snapshots use explicit primitive representations (`String`, `int`, `[x,y]`, arrays/dictionaries) so a later save codec can serialize them without depending on live Godot Nodes.
 
@@ -280,7 +280,7 @@ Foundation WHAT is event/query driven:
 - placement index updates are proportional to footprint size;
 - entity/placement lookup is keyed by stable ID.
 
-The first implementation may use in-memory Dictionaries behind these contracts. Future region-backed storage may replace store internals without changing global world coordinates or public WHAT semantics.
+The implementation currently uses in-memory Dictionaries behind these contracts. Future region-backed storage may replace store internals without changing global world coordinates or public WHAT semantics.
 
 Streaming partition size/policy is explicitly not decided here.
 
@@ -332,7 +332,7 @@ Golden baseline commit: `1763958f44eb7f855fd49944c00d1ffe608c0abe`.
 
 ## 21. Tests / acceptance criteria
 
-Dedicated headless `WorldStateSmoke.gd` must prove:
+Dedicated headless `WorldStateSmoke.gd` proves:
 
 1. unique runtime IDs and caller-supplied stable IDs;
 2. duplicate/invalid ID rejection;
@@ -351,11 +351,11 @@ Dedicated headless `WorldStateSmoke.gd` must prove:
 15. restored runtime ID allocation does not collide;
 16. no dependency on reboot, renderer, generator or WHEN classes.
 
-Existing `SpatialModelSmoke.gd` and frozen-reference smokes must continue to pass.
+`SpatialModelSmoke.gd`, frozen reference smokes, startup and Web export continue to run independently.
 
 ## 22. North-star fit
 
-This design makes the persistent open world a data reality rather than a scene-tree illusion. Houses, vehicles, family members, corpses, player construction and future outbreak consequences can remain the same entities whether nearby, distant, rendered or unloaded.
+This implementation makes the persistent open world a data reality rather than a scene-tree illusion. Houses, vehicles, family members, corpses, player construction and future outbreak consequences can remain the same entities whether nearby, distant, rendered or unloaded.
 
 It preserves **reduced complexity, not reduced consequence or mood** by keeping the foundation small and explicit while giving later systems durable causal state instead of fake regenerated outcomes.
 
@@ -377,3 +377,23 @@ It preserves **reduced complexity, not reduced consequence or mood** by keeping 
 - no generic metadata bag;
 - snapshot/restore is an in-memory canonical-state boundary, not the final disk-save implementation;
 - no gameplay collision, mechanics, generation, rendering, streaming or WHEN behavior inside WHAT.
+
+## 24. Implementation verification
+
+Implemented owners:
+
+- `game/scripts/foundation/world/WorldEntityId.gd`
+- `game/scripts/foundation/world/WorldEntityRecord.gd`
+- `game/scripts/foundation/world/WorldPlacement.gd`
+- `game/scripts/foundation/world/TerrainStore.gd`
+- `game/scripts/foundation/world/EntityStore.gd`
+- `game/scripts/foundation/world/PlacementStore.gd`
+- `game/scripts/foundation/world/OccupancyIndex.gd`
+- `game/scripts/foundation/world/WorldChange.gd`
+- `game/scripts/foundation/world/WorldState.gd`
+- `game/scripts/foundation/world/WorldMutationService.gd`
+- `game/scripts/ci/WorldStateSmoke.gd`
+
+The module is intentionally not wired into `game/scripts/reboot/` or the live scene. It is canonical foundation source proven independently until the real neighboring canonical systems exist.
+
+Implementation debugging exposed two GDScript strictness details without changing the design contract: functions with an apparently infinite `while true` still need an explicit fallback return for static return analysis, and typed arrays must not be initialized through ternaries whose alternate branch is a bare untyped `[]`.
