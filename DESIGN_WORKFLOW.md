@@ -53,7 +53,7 @@ It answers:
 It should not become an encyclopedia.
 
 ### `SYSTEM_DESIGNS/*.md` — HOW THIS ONE SYSTEM WORKS
-Detailed canonical contract/rules for one subsystem.
+Detailed canonical contract/rules for one subsystem or an explicitly named foundation umbrella that will be split into bounded implementation designs before coding.
 
 ### `README_SOPS.md` — HOW GPT SHOULD WORK
 Coding/GitHub/Godot/Safari/process lessons and mandatory repository workflow.
@@ -151,6 +151,8 @@ Each design should contain:
 
 The system design is canonical detailed memory for that subsystem.
 
+A broad umbrella design may define relationships among several foundation domains during architecture discussion, but each independently implementable subsystem must still have an explicit bounded approval before code begins.
+
 ## 8. Approval state
 
 - **DRAFT** — discussion only; no implementation.
@@ -165,7 +167,7 @@ If later user direction invalidates a draft, mark/supersede it instead of quietl
 
 ## 9. Cross-system decision logging
 
-When a discussion settles something that affects several systems—such as open-world persistence, tactical grid semantics, hard-pause requirements, player-story philosophy, or art/physics separation—record it in `DESIGN_DECISIONS.md`.
+When a discussion settles something that affects several systems—such as open-world persistence, tactical grid semantics, hard-pause requirements, player-story philosophy, WHERE/WHAT/WHEN decomposition, or art/physics separation—record it in `DESIGN_DECISIONS.md`.
 
 Do not copy every minor implementation fact into the decision log.
 
@@ -259,16 +261,16 @@ And:
 
 Current broad direction includes:
 
-- persistent logically continuous open world;
+- one persistent logically continuous open world;
 - invisible tactical grid / discrete action timing;
 - hard real-life interruption safety;
 - globally coherent world planning before local materialization;
-- physical base/home in the world;
-- extraction-style expedition risk/reward rather than mandatory disconnected raid instances;
+- player-built/secured bases anywhere ordinary world rules permit;
 - causal outbreak/population simulation using scalable simulation resolution;
 - customizable player story embedded in generated households/jobs/homes/relationships;
 - strong vision/lighting/weather/spatial-sound mood systems later;
 - simplified health/needs where deep physiology does not add enough meaningful decision;
+- no raid/extraction/staging loop;
 - no placeholder systems presented as final mechanics.
 
 See `PROJECT_NORTH_STAR.md` for canonical details.
@@ -277,4 +279,6 @@ See `PROJECT_NORTH_STAR.md` for canonical details.
 
 The authoritative approval/status index lives in `SYSTEM_DESIGNS/README.md`.
 
-The current foundational design sequence begins below the old RaidMapSpec level: Spatial Model, Tick/Action/Pause, Persistent World Identity/State, then Population/Outbreak/Player-Story foundations before generalized local world data/render/materialization.
+The current active architecture discussion is `SYSTEM_DESIGNS/00_FOUNDATION_WHERE_WHAT_WHEN.md`.
+
+The three-part decomposition is settled in concept, but the umbrella remains DRAFT. Implementation must still proceed one bounded system at a time: WHERE, then WHAT, then WHEN, each after explicit review/approval.
