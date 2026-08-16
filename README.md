@@ -8,9 +8,11 @@ The project has deliberately restarted from a small runtime core. Existing envir
 
 The current playable foundation contains:
 
-- a new deterministic rural site generator;
-- four site archetypes: farmstead, small trailer, double-wide, and country house;
-- multi-room building prefabs and room-aware furniture/clutter;
+- deterministic **Rural Road generator v2**;
+- four roadside properties per tactical sample rather than one giant showcase property;
+- several medium/large houses plus trailer/double-wide presence;
+- smaller functional interior rooms and wall-aware installed fixtures;
+- the restored composite tactical art vocabulary from the retained world/tactical/clutter/building/final atlases;
 - grid player movement with cardinal facing and left/right turning;
 - collision against generated walls and blocking fixtures;
 - touch-first `FORWARD`, `BACK`, `TURN L`, `TURN R`, `MAP`, and zoom controls;
@@ -21,15 +23,29 @@ The current playable foundation contains:
 
 Vision cone, lighting, weather, sound, infected, loot, combat, ticks/calendar, injuries, vehicles, and persistence are intentionally absent for now. They will be redesigned and added back only after the generator/player foundation is strong.
 
+## Current rural slice
+
+A tactical map now represents a **sample of rural road**.
+
+Each sample has one restrained road spine with roadside lots. The generator guarantees multiple substantial houses, at least one manufactured-home property, individual driveways/mailboxes, sparse utility infrastructure, outbuildings, vegetation and property-specific farm/yard clutter.
+
+The tactical map is no longer a direct `Farmstead` / `Trailer` / `Double-Wide` button. The selectable rural strategic nodes are different deterministic seed streams for the same rural biome grammar.
+
+Installed plumbing/appliances are generated against walls or partitions. This is validated in CI so sinks/stoves/bath fixtures cannot simply drift into the middle of rooms.
+
+## Artwork
+
+The old look was a composite of several retained atlases rather than one tile sheet. The clean reboot initially looked different because it only used the final-environment atlases for most content; the old art was never deleted.
+
+`RebootArt.gd` now restores the composite visual vocabulary while remaining independent of the legacy renderer.
+
 ## World direction
 
 The strategic world progresses geographically:
 
 **BASE -> RURAL EDGE -> SMALL TOWN -> SUBURBS -> CITY EDGE -> CITY CORE**
 
-The current build only exposes rural walking-range sites. Deeper nodes are visible but locked for later roaming/vehicle progression.
-
-A tactical map represents one detailed place, not a miniature mixed-biome city. Roads and driveways serve the site rather than dominating it.
+The current build only exposes rural walking-range samples. Deeper nodes are visible but locked for later roaming/vehicle progression.
 
 ## Performance direction
 
