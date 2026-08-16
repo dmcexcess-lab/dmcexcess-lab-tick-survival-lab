@@ -1,5 +1,21 @@
 # Changelog
 
+## Collision / Spatial Query Implementation — 2026-08-16
+
+- Implemented the first downstream system after the completed WHERE / WHAT / WHEN foundation: **Collision / Spatial Query**.
+- Added `SYSTEM_DESIGNS/01_COLLISION_SPATIAL_QUERY.md` as the canonical contract and promoted it to IMPLEMENTED after dedicated Godot verification.
+- Added `CollisionProfile.gd` and `CollisionCatalog.gd` so hard movement collision is explicit physics keyed by semantic entity type rather than inferred from art, WHERE channel alone, or duplicated per world entity.
+- Added `CollisionOverrideState.gd` as a sparse durable per-entity override store keyed by stable WHAT entity IDs. Static entities normally consume no collision state beyond their shared type profile; dynamic exceptions such as an open door can override the default and later return to it.
+- Added deterministic atomic snapshot/restore and revision tracking for collision overrides without making the collision store own WHAT.
+- Added `SpatialQueryResult.gd` with explicit **CLEAR / BLOCKED / UNKNOWN** outcomes. UNKNOWN is fail-closed for missing terrain or required unclassified STRUCTURE/OBJECT/ACTOR entities, preventing unmaterialized void or missing physics configuration from silently becoming passable.
+- Added `SpatialQueryService.gd` as a read-only WHERE + WHAT query facade for occupants, placements, terrain presence, arbitrary cell sets, rotated whole-cell footprints and hypothetical entity relocation with self-ignore.
+- Kept terrain traversal capability out of collision. Existing terrain must be present for a normal occupancy query, but future Movement/Traversal owns actor-specific rules such as water, mud, climbing or vehicle restrictions.
+- Added collision coverage diagnostics for missing required type profiles and orphan per-entity overrides so future generator/content validation can catch physics omissions at creation/CI time rather than during play.
+- Recovered the useful decision from golden `LocalWorldState.gd` (`f8fd11ebbf0ff2b3958fd46000404cbb12142fc5`)—walls/obstacles/closed doors block while open doors do not—without restoring fixed local-map bounds, category dictionaries or door state inside collision.
+- Added permanent headless `CollisionSpatialQuerySmoke.gd` coverage for mutation-safe catalog reads, static blockers, explicit non-blockers, fail-closed unknowns, loose-item behavior, dynamic overrides, missing terrain, self-ignore, overlapping blockers, rotated multi-cell footprints, coverage diagnostics and atomic override restore.
+- CI now gates `COLLISION_SPATIAL_QUERY_SMOKE_OK` after WHERE / WHAT / WHEN and includes source guards proving collision does not import the reboot runtime or WHEN.
+- Deliberately did **not** implement Movement Actions, pathfinding, door behavior, terrain traversal, generation or rendering in this slice. The frozen playable reference remains visually unchanged.
+
 ## 00C WHEN / Tick Action Pause Implementation — 2026-08-16
 
 - Implemented the third bounded WHERE / WHAT / WHEN foundation slice, **00C Tick / Action / Pause Kernel (WHEN)**, after the user explicitly authorized the timing system with “Now go when.”
