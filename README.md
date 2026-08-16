@@ -8,11 +8,15 @@ The project has deliberately restarted from a small runtime core. Existing envir
 
 The current playable foundation contains:
 
-- deterministic **Rural Road generator v2**;
-- four roadside properties per tactical sample rather than one giant showcase property;
-- several medium/large houses plus trailer/double-wide presence;
-- smaller functional interior rooms and wall-aware installed fixtures;
-- the restored composite tactical art vocabulary from the retained world/tactical/clutter/building/final atlases;
+- deterministic **Rural Road generator v3**;
+- one rural main road with dirt/gravel property connectors;
+- exactly four residences plus one gas station or corner/convenience store per tactical sample;
+- one farm complex, one or two trailers/double-wides, and substantial country housing;
+- compact functional interiors and wall-aware installed fixtures;
+- the **actual original tactical structural tile vocabulary** recovered from historical `TacticalTiles.gd`;
+- hard door/door-approach clearance against walls and clutter;
+- dense roadside utility poles with static power-line presentation, sparse stop signs and no traffic lights;
+- broad grass/tree/bush/scrub vegetation;
 - grid player movement with cardinal facing and left/right turning;
 - collision against generated walls and blocking fixtures;
 - touch-first `FORWARD`, `BACK`, `TURN L`, `TURN R`, `MAP`, and zoom controls;
@@ -25,19 +29,36 @@ Vision cone, lighting, weather, sound, infected, loot, combat, ticks/calendar, i
 
 ## Current rural slice
 
-A tactical map now represents a **sample of rural road**.
+A tactical map represents a **sample of rural road** rather than one giant property or a miniature city.
 
-Each sample has one restrained road spine with roadside lots. The generator guarantees multiple substantial houses, at least one manufactured-home property, individual driveways/mailboxes, sparse utility infrastructure, outbuildings, vegetation and property-specific farm/yard clutter.
+Each seed produces one cross-map rural main road, small dirt/gravel access roads, four residential properties and one roadside business. The residence grammar includes one farm complex, one or two manufactured homes and the remaining substantial houses. The business is either a gas station or corner/convenience store; there is no rural strip-mall generator.
 
-The tactical map is no longer a direct `Farmstead` / `Trailer` / `Double-Wide` button. The selectable rural strategic nodes are different deterministic seed streams for the same rural biome grammar.
+The current small-business interior contract is:
 
-Installed plumbing/appliances are generated against walls or partitions. This is validated in CI so sinks/stoves/bath fixtures cannot simply drift into the middle of rooms.
+- storefront: **7x7**;
+- stock room: **3x3**;
+- manager office: **3x1**;
+- bathroom: **2x2**.
+
+Clutter is room-purpose driven: checkout/shelves/cold-case or vending in the sales floor, crates/pallets in stock, desk in the office, and normal bathroom fixtures. Gas stations get a compact pump/forecourt/sign setup rather than a giant parking lot.
+
+Roadside infrastructure is intentionally rural: frequent utility poles and visible static power lines, a few stop signs, and no traffic lights. Grass, trees, bushes, scrub and weeds fill the negative space around properties and road shoulders.
 
 ## Artwork
 
-The old look was a composite of several retained atlases rather than one tile sheet. The clean reboot initially looked different because it only used the final-environment atlases for most content; the old art was never deleted.
+The old tile set was not lost. The reboot initially restored the wrong structural layer.
 
-`RebootArt.gd` now restores the composite visual vocabulary while remaining independent of the legacy renderer.
+The remembered look came from the early tactical renderer:
+
+- tactical walls **16–22**;
+- closed door **23**;
+- open door **24**;
+- window **25**;
+- original tactical ground/floor/common-prop tiles plus the clutter sheet.
+
+The later `world_art` closed-door tile contains its own wall-colored background, which caused the visible "wall behind doors" effect during the earlier reboot pass. `RebootArt.gd` now pins the original tactical structural indices and uses later atlases only as supplements for road topology, utility hardware, selected fixtures and vegetation.
+
+Doors are true opening cells. Generator rules erase any wall/window/prop at the door itself, reserve cardinal approach cells from clutter, and run a final approach cleanup before validation.
 
 ## World direction
 
@@ -55,6 +76,7 @@ The reboot establishes a cheap baseline:
 - only visible camera cells are drawn;
 - sparse walls/props/blockers use dictionary lookups;
 - redraw occurs only after movement, turning, zoom, map toggle, or site generation;
+- static power lines draw only during those existing tactical redraws;
 - no weather/perception/light calculations are running yet.
 
 ## Current code
@@ -74,7 +96,7 @@ See:
 - `README_SOPS.md` — repository/coding rules;
 - `TRAVEL_DEPTH_VEHICLE_GATEWAY_DESIGN.md` — later strategic travel/vehicle direction.
 
-Legacy prototype files remain temporarily for historical reference but are not part of the active runtime or CI contract.
+Legacy prototype files remain temporarily for historical/reference use but are not active runtime dependencies.
 
 ## Run
 
