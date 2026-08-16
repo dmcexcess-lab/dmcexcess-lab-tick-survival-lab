@@ -102,7 +102,7 @@ Current cross-system decisions:
 - four-way actor facing is the simple baseline for graphics, vision, vulnerability and interactions;
 - sub-cell/free movement is rejected unless a concrete gameplay need later justifies the extra complexity.
 
-**Still unresolved:** wall/door/window representation as occupied cells versus cell-edge structures. This must be decided in the Spatial Model design before implementation.
+The new foundation draft recommends **structure cells with explicit wall/door/window axis** rather than edge structures because they are simpler and fit the recovered art. This recommendation is still DRAFT and must be explicitly reviewed before WHERE implementation.
 
 ## 7. Tick/action / pause direction
 
@@ -119,6 +119,8 @@ Intent:
 Slow actions create exposure. Injuries, fatigue, equipment and skill can change action duration/capability.
 
 Held movement may repeatedly request discrete movement actions; releasing input means no further action is queued and the game returns to auto-pause.
+
+The current foundation draft generalizes the golden `TickScheduler` ideas into one deterministic scheduled-event/action queue for actors **and** future systems such as weather, healing, fire, power and coarse distant simulation. The scheduler owns timing/status, not mechanic meaning.
 
 ### Real-life interruption requirement
 
@@ -155,17 +157,30 @@ The player may construct/secure a base anywhere in the persistent world where no
 
 Higher-level base/community screens may summarize physical facts later, but storage/workspaces/power/water/vehicles/residents/etc. should remain grounded in world state.
 
-## 10. Foundational architecture idea
+## 10. Foundational architecture — current active DRAFT
 
-Current conceptual foundation is **WHERE / WHAT / WHEN** rather than “the map generator is the engine”:
+Canonical foundation draft:
 
-- **WHERE — Spatial Model:** global grid coordinates, cells, facing, footprints, structures/openings, occupancy/spatial queries.
-- **WHAT — Persistent World / Entity State:** what terrain, structures, props, actors, items, containers, construction and mutations exist.
-- **WHEN — Tick / Action / Pause Kernel:** when actors/systems act, action durations, scheduling, auto-pause and hard pause.
+**`SYSTEM_DESIGNS/00_FOUNDATION_WHERE_WHAT_WHEN.md`**
 
-Generation later creates initial WHAT using the WHERE contract. Construction/destruction/gameplay mutate the same world state. Rendering reads it. These are peer contracts, not one god system.
+The three-part decomposition is settled in concept:
 
-Detailed ordering among these foundations is still being designed; naming them here is not approval to implement them.
+- **WHERE — Spatial Model:** global grid coordinates, cells, facing, footprints, structures/openings and spatial value/query language.
+- **WHAT — Persistent World / Entity State:** what terrain, structures, props, actors, items, containers, construction and durable mutations exist.
+- **WHEN — Tick / Action / Pause Kernel:** authoritative world ticks, action durations, deterministic scheduling, action phases/interruption, auto-pause and hard pause.
+
+Important dependency direction:
+
+- WHERE is pure spatial language;
+- WHAT uses WHERE values to place persistent facts;
+- WHEN runs in parallel and knows time/IDs, not mechanic-specific world internals;
+- movement, doors, health, AI, construction and other gameplay systems sit above the foundation and bridge the contracts;
+- generation later creates initial WHAT using WHERE;
+- construction/destruction/gameplay mutate the same WHAT;
+- rendering reads it;
+- streaming materializes it without redefining it.
+
+The umbrella document is **DRAFT**. Detailed proposals such as structure cells vs edge walls, exact cell scale, footprint representation, scheduler phase behavior and persistence strategy must be reviewed before implementation.
 
 ## 11. Modularity / development process
 
@@ -202,16 +217,18 @@ Global invariants:
 
 ## 13. Current design sequence
 
-The old `RaidMapSpec` draft is superseded. The next design should start below generation/rendering.
+Do not jump to map generation.
 
-Current foundation topics to settle one at a time:
+Current sequence:
 
-1. **Spatial Model (WHERE)** — grid/cells, facing, footprints, global coordinates, structures/openings.
-2. **Persistent World / Entity State (WHAT)** — persistent IDs/entities/mutations and initial-vs-current state.
-3. **Tick / Action / Pause Kernel (WHEN)** — variable action time, scheduling, auto-pause, hard real-life pause.
-4. **Global World Planning / Generation Contract** — globally coherent geography/roads/utilities/parcels/building footprints; generator feeds initial world state.
-5. **Population / Household / Outbreak / Player-Story foundations**.
-6. Then streaming/materialization, rendering/input and detailed local generation can be designed against those foundations.
+1. **Review the WHERE / WHAT / WHEN umbrella draft** and revise/approve its foundational contracts.
+2. **Spatial Model (WHERE)** — refine into an implementation-ready child design and explicitly settle structure representation/cell scale.
+3. **Persistent World / Entity State (WHAT)** — refine identity, stores, mutation, occupancy and snapshot contracts.
+4. **Tick / Action / Pause Kernel (WHEN)** — refine deterministic queue, phases, interruptions, pause and snapshot contracts.
+5. **Foundation integration harness** — synthetic headless tests only, not fake gameplay.
+6. **Global World Planning / Generation Contract** — coherent geography/roads/utilities/parcels/building footprints; generator feeds initial WHAT.
+7. **Population / Household / Outbreak / Player-Story foundations**.
+8. Then streaming/materialization, rendering/input and detailed local generation can be designed against those foundations.
 
 This is a recommended design order, not permission to implement several systems together.
 
@@ -235,12 +252,13 @@ When art/rendering is designed, recover exact semantic selection behavior into s
 6. `DESIGN_WORKFLOW.md`
 7. This context index
 8. APPROVED active `SYSTEM_DESIGNS/*.md`
-9. `MODULAR_REBUILD_MASTER_DESIGN.md` where compatible with newer direction
-10. Golden recovery commit for exact historical behavior
-11. Older design documents where compatible
+9. DRAFT active system designs for current discussion only
+10. `MODULAR_REBUILD_MASTER_DESIGN.md` where compatible with newer direction
+11. Golden recovery commit for exact historical behavior
+12. Older design documents where compatible
 
 ## 16. Current next action
 
 **Design only. Do not code the new runtime yet.**
 
-Next recommended discussion: **Spatial Model (WHERE)**, beginning with the invisible tactical grid and explicitly resolving wall/door/window representation before persistent world data depends on it.
+Current discussion target: **review `SYSTEM_DESIGNS/00_FOUNDATION_WHERE_WHAT_WHEN.md`**. The next implementation-target design should be WHERE only, after the umbrella's spatial recommendations are approved/revised.
