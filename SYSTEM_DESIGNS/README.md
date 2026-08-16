@@ -29,9 +29,9 @@ The three-part decomposition is settled in concept. Implementation proceeds one 
 
 | Order | System | Status | Design source | Notes |
 |---|---|---|---|---|
-| 00 | WHERE / WHAT / WHEN Simulation Foundation | **DRAFT** | `00_FOUNDATION_WHERE_WHAT_WHEN.md` | Umbrella architecture; WHAT/WHEN details remain subject to bounded approval |
+| 00 | WHERE / WHAT / WHEN Simulation Foundation | **DRAFT** | `00_FOUNDATION_WHERE_WHAT_WHEN.md` | Umbrella architecture; WHEN details remain subject to bounded approval |
 | 00A | Spatial Model — WHERE | **IMPLEMENTED** | `00A_SPATIAL_MODEL.md` | Canonical global `Vector2i` grid, N/E/S/W facing, arbitrary whole-cell footprints, structure cells with explicit axis, pure geometry contract |
-| 00B | Persistent World / Entity State — WHAT | **DRAFT (umbrella only)** | Sections 10–22 of foundation doc | Persistent IDs/entities/mutations; world truth independent of renderer/nodes/generator; needs standalone approval before code |
+| 00B | Persistent World / Entity State — WHAT | **IMPLEMENTED** | `00B_PERSISTENT_WORLD_STATE.md` | Stable IDs, semantic terrain/entities, WHERE placement, derived occupancy, validated mutations, revision/change events, deterministic snapshot/restore |
 | 00C | Tick / Action / Pause Kernel — WHEN | **DRAFT (umbrella only)** | Sections 23–36 of foundation doc | Variable-duration actions, scheduled events, phases, interruptions, auto-pause, hard pause; needs standalone approval before code |
 | 00D | Global World Planning / Generation Contract | **NOT DESIGNED** | `00D_GLOBAL_WORLD_GENERATION.md` | Geography/roads/utilities/parcels/building footprints planned coherently; generator feeds initial WHAT using WHERE |
 | 00E | Population / Household / Outbreak / Player Story | **NOT DESIGNED** | `00E_POPULATION_OUTBREAK_PLAYER_STORY.md` | Persistent people/homes/jobs/relationships, scalable simulation resolution, player embedded in generated world |
@@ -47,7 +47,21 @@ The three-part decomposition is settled in concept. Implementation proceeds one 
 - `game/scripts/foundation/spatial/SpatialModel.gd`
 - `game/scripts/ci/SpatialModelSmoke.gd`
 
-WHERE is intentionally not wired into the frozen playable reference runtime yet. Integration waits for adjacent approved foundation contracts rather than creating temporary adapters.
+### Implemented WHAT owners
+
+- `game/scripts/foundation/world/WorldEntityId.gd`
+- `game/scripts/foundation/world/WorldEntityRecord.gd`
+- `game/scripts/foundation/world/WorldPlacement.gd`
+- `game/scripts/foundation/world/TerrainStore.gd`
+- `game/scripts/foundation/world/EntityStore.gd`
+- `game/scripts/foundation/world/PlacementStore.gd`
+- `game/scripts/foundation/world/OccupancyIndex.gd`
+- `game/scripts/foundation/world/WorldChange.gd`
+- `game/scripts/foundation/world/WorldState.gd`
+- `game/scripts/foundation/world/WorldMutationService.gd`
+- `game/scripts/ci/WorldStateSmoke.gd`
+
+WHERE and WHAT are intentionally not wired into the frozen playable reference runtime yet. Integration waits for adjacent approved canonical contracts rather than creating temporary adapters.
 
 ## Why generation is not the foundation
 
@@ -60,7 +74,7 @@ Generation is one producer of initial world state. It must use the same spatial/
 - save/load restores the resulting persistent state;
 - rendering only reads that state.
 
-Replacing the generator must not require replacing the spatial model, tick kernel, renderer, player controls or saved world format.
+Replacing the generator must not require replacing the spatial model, tick kernel, renderer, player controls or saved world contract.
 
 ## Later modular systems
 
@@ -97,9 +111,9 @@ Exact order will be refined after the foundations are designed.
 | Weather | DEFERRED | State/system scheduled through WHEN + separate VFX |
 | Silent spatial sound | DEFERRED | Spatial events using WHERE + WHAT + WHEN; no default audible playback |
 | Infected AI | DEFERRED | Emits actions using shared actor/action/perception/world contracts |
-| Loot/inventory/search | DEFERRED | Persistent physical containers/items in WHAT; timed actions through WHEN |
+| Loot/inventory/search | DEFERRED | Persistent physical containers/items keyed by WHAT entity IDs; timed actions through WHEN |
 | Combat | DEFERRED | Generic action timing + health consequences; no combat rules inside WHEN |
-| Vehicles | DEFERRED | Persistent multi-cell entities using WHERE/WHAT; timed travel/actions through WHEN |
+| Vehicles | DEFERRED | Persistent multi-cell entities using WHERE/WHAT; timed actions through WHEN |
 | Old raid/extraction/session architecture | **SUPERSEDED** | No required raid/extraction/staging loop in current design |
 
 ## Design template
