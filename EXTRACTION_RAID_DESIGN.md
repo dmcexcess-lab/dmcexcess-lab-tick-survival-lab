@@ -1,10 +1,10 @@
 # Extraction Raid Loop 0.6 Design
 
-Status: current gameplay-direction contract. This document supersedes the seamless adjacent-region travel portions of `MINI_WORLD_STREETSCAPE_DESIGN.md` while retaining its generator, streetscape, building-family, art, and performance rules.
+Status: current gameplay-direction contract. This document supersedes the seamless adjacent-region travel portions of `MINI_WORLD_STREETSCAPE_DESIGN.md` while retaining its compatible streetscape, building-family, art, and performance rules. `FOCUSED_RAID_INTERIORS.md` is the detailed current contract for local generator v6.
 
 ## 1. Core identity
 
-Tick Survival Lab is now structured as a **systemic extraction-survival game** rather than a seamless open-world walking simulation.
+Tick Survival Lab is structured as a **systemic extraction-survival game** rather than a seamless open-world walking simulation.
 
 The player operates from a safe base/staging layer, chooses a broad destination from the full-screen world map, deploys into one fresh procedural tactical raid, completes whatever scavenging/objective/survival work exists there, and must physically reach an extraction point to return safely to base.
 
@@ -24,7 +24,8 @@ This solves several design and technical problems at once:
 - the game can generate dense, interesting locations without needing a giant persistent terrain surface;
 - mobile Safari only renders the active local raid;
 - persistent simulation can remain focused on meaningful actors/items rather than thousands of unloaded map tiles;
-- destination type becomes an intentional strategic choice instead of a biome the player happens to walk into.
+- destination type becomes an intentional strategic choice instead of a biome the player happens to walk into;
+- because breadth is chosen on the destination map, the tactical generator can spend its limited 64×64 footprint on deeper structures and interiors rather than proving all biome types exist at once.
 
 This is closer to an extraction shooter structurally, but combat is not required to be the only or even primary activity. Stealth, scavenging, rescue, investigation, survival, and objective completion can all use the same deploy/extract loop.
 
@@ -45,7 +46,7 @@ A physical home/base map can be added later without changing the raid-session st
 
 ## 4. Destination map
 
-The existing 5×5 mini-world remains, but its cells are now **raid sites**, not adjacent traversable regions.
+The existing 5×5 mini-world remains, but its cells are **raid sites**, not adjacent traversable regions.
 
 Current destination identities:
 
@@ -80,7 +81,13 @@ Therefore:
 - starting a new world seed changes the destination catalog and raid sequence;
 - CI can reproduce an exact raid by seed.
 
-`MiniRegionGenerator` v5 remains the local map generator. The selected destination identity is passed in as the generation focus.
+`MiniRegionGenerator` **v6** is the current local raid generator. The selected destination identity is passed in as the generation focus.
+
+The v6 pipeline is:
+
+**v4 physical/road baseline → destination-focus cleanup → large focused shell composition → streetscape/building-family specialization → functional interior depth**
+
+The old v4 mixed-biome structure population is not the final content authority anymore. Incompatible legacy buildings are removed before focused content is added, and the broad biome identity is normalized to the selected destination.
 
 ## 6. Raid-session state owner
 
@@ -137,7 +144,7 @@ The player may open the destination map during a raid, but it is view-only until
 
 ## 9. Failure / death direction
 
-Not implemented in this milestone, but the intended extraction logic is:
+Not implemented yet, but the intended extraction logic is:
 
 - successful extraction carries acquired persistent results back to base;
 - death or catastrophic failure does not count as extraction;
@@ -148,20 +155,79 @@ No fake inventory/loot loss is added before inventory exists.
 
 ## 10. Tactical map requirements
 
-The current v5 streetscape rules remain active inside raids:
+Generator v6 retains the useful v5 streetscape rules while making the raid much more destination-specific.
 
-- traffic lights and stop signs actually appear;
+Current global physical/content rules:
+
+- traffic controls/street furniture use the existing streetscape system;
 - commercial parking has destinations;
 - strip malls have separated units/doors;
-- residential areas can produce houses, duplexes and estate houses;
-- rural/woods generation can produce trailers, farmhouses and sparse infrastructure;
+- residential destinations can produce houses, duplexes and estate houses;
+- rural/woods generation can produce trailers/farmhouses/cabin-like structures and sparse infrastructure;
 - no three-door procedural runs;
-- all buildings remain single-story for now;
+- all buildings remain single-story;
 - tactical zoom remains 14×12 / 12×10 / 10×9 performance-safe local detail.
 
 The extraction loop changes navigation semantics, not the physical map schema.
 
-## 11. Future destination weighting
+## 11. Focused destination depth
+
+A raid no longer needs to contain a little bit of every world environment. The destination map already gives the player that choice between raids.
+
+V6 therefore prefers fewer, larger focus-appropriate interiors when free geometry allows it. Current candidate anchor sizes reach roughly 14×11 for residential and 18×12 for commercial/office destinations.
+
+Functional room vocabulary currently includes:
+
+### Commercial / store
+
+- sales floor;
+- checkout/retail fixtures;
+- **manager office**;
+- **back stockroom**;
+- refrigeration/shelving/storage fixtures.
+
+### Downtown / office
+
+- reception;
+- open office;
+- **manager office**;
+- storage/file room;
+- meeting room;
+- desks/computers/cubicles/filing fixtures.
+
+### Residential
+
+- living room;
+- kitchen;
+- primary bedroom;
+- bathroom;
+- appropriate domestic furniture/fixtures.
+
+### Mansion / estate house
+
+- living room;
+- kitchen;
+- primary bedroom;
+- secondary bedroom where footprint supports it;
+- bathroom.
+
+### Duplex
+
+Each sealed unit contains internal living/kitchen and bed/bath zones instead of being one undifferentiated rectangle.
+
+### Strip mall
+
+Each storefront has a public sales zone plus rear depth. One unit supplies a manager office; other units can contain rear stockrooms.
+
+### Trailer
+
+Compact living/kitchen and bed/bath zones.
+
+These room names are generation/content facts only. Loot/searchability does not exist until the later loot/inventory owner consumes this vocabulary.
+
+The detailed contract is in `FOCUSED_RAID_INTERIORS.md`.
+
+## 12. Future destination weighting
 
 The broad destination type should eventually affect **probability**, not hard guarantees for every item/event.
 
@@ -175,7 +241,7 @@ Examples:
 
 Those loot/population rules do not belong in the generator until their owning systems exist.
 
-## 12. Objective direction
+## 13. Objective direction
 
 Extraction alone is enough for the current proof. Later raids can layer objectives on top of the same loop:
 
@@ -189,11 +255,11 @@ Extraction alone is enough for the current proof. Later raids can layer objectiv
 - deliver or place something;
 - survive a timed task.
 
-Objectives should create reasons to penetrate deeper into the map rather than merely sprint from spawn to extraction.
+Objectives should create reasons to penetrate deeper into the map rather than merely sprint from spawn to extraction. Functional back rooms, manager offices, storage rooms and bedrooms provide natural future objective/search destinations.
 
-## 13. Persistence direction
+## 14. Persistence direction
 
-The new architecture reduces the immediate need for 25 simultaneously persistent terrain regions.
+The architecture reduces the immediate need for 25 simultaneously persistent terrain regions.
 
 Near-term persistence can focus on:
 
@@ -206,13 +272,19 @@ Near-term persistence can focus on:
 
 Long-term persistent raid deltas are optional and should be added only when they create gameplay value.
 
-## 14. Validation contract
+## 15. Validation contract
 
 Permanent CI must prove:
 
 - deterministic 5×5 destination catalog;
 - all five destination identities exist;
-- local v5 generation remains valid;
+- local v6 generation remains valid;
+- focused raid biome identity does not leak back into the old five-biome mixture;
+- incompatible legacy building themes are removed;
+- developed raids contain the current larger anchor requirement;
+- commercial room grammar includes manager-office + stockroom depth;
+- downtown room grammar includes office/reception + manager-office depth;
+- residential room grammar includes living + kitchen + bedroom + bathroom purpose;
 - extraction session resets to base;
 - a raid cannot be redeployed while another raid is active;
 - same world + same visit sequence yields the same raid seeds;
@@ -220,24 +292,25 @@ Permanent CI must prove:
 - generated raid maps expose four edge extraction cells;
 - all existing map/tick/calendar/environment/perception tests remain green.
 
-## 15. Acceptance criteria
+## 16. Acceptance criteria
 
-This pivot is functionally present when the player can:
+The current extraction shell is functionally present when the player can:
 
 1. launch into a safe destination-map state;
 2. tap a commercial, downtown/office, residential, woods, or rural site;
-3. receive a freshly generated tactical raid matching that broad destination focus;
-4. move normally inside the raid;
-5. open the map during the raid only for inspection;
-6. reach a green extraction cell;
-7. step onto it and return to the safe destination map;
-8. choose another destination or choose the same destination again;
-9. get a newly seeded tactical map on the next deployment;
-10. never walk directly from one raid map into an adjacent destination.
+3. receive a freshly generated tactical raid matching that destination rather than a five-biome sampler;
+4. encounter larger and more purposeful destination interiors where geometry permits;
+5. move normally inside the raid;
+6. open the map during the raid only for inspection;
+7. reach a green extraction cell;
+8. step onto it and return to the safe destination map;
+9. choose another destination or choose the same destination again;
+10. get a newly seeded tactical map on the next deployment;
+11. never walk directly from one raid map into an adjacent destination.
 
-## 16. Next gameplay work
+## 17. Next gameplay work
 
-Once this deploy/extract loop is playtested, the next systems should make the loop meaningful rather than make the world larger:
+Once this deploy/extract + focused-generation loop is playtested, the next systems should make the loop meaningful rather than make the world larger:
 
 1. spatial silent sound visualization;
 2. infected actors using sight + sound;
@@ -247,6 +320,6 @@ Once this deploy/extract loop is playtested, the next systems should make the lo
 6. richer raid objectives and destination-specific content;
 7. physical base/hideout only when there is enough inventory/survivor progression to justify it.
 
-The key rule is now fixed:
+The key rule remains:
 
 **The world map chooses risk. The tactical map contains the risk. Extraction is how progress comes home.**
