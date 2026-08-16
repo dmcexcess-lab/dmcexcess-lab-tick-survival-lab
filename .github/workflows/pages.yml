@@ -36,6 +36,7 @@ jobs:
           test -f SYSTEM_DESIGNS/00A_SPATIAL_MODEL.md
           test -f SYSTEM_DESIGNS/00B_PERSISTENT_WORLD_STATE.md
           test -f SYSTEM_DESIGNS/00C_TICK_ACTION_PAUSE.md
+          test -f SYSTEM_DESIGNS/01_COLLISION_SPATIAL_QUERY.md
           test -f MODULAR_REBUILD_MASTER_DESIGN.md
           test -f REBOOT_CORE.md
           test -f PREFAB_WORKSHOP.md
@@ -115,6 +116,20 @@ jobs:
           ! grep -R -q 'scripts/reboot' game/scripts/foundation/time
           ! grep -R -q 'foundation/world' game/scripts/foundation/time
           ! grep -R -q 'foundation/spatial' game/scripts/foundation/time
+          # Canonical downstream collision / spatial query system.
+          test -f game/scripts/simulation/collision/CollisionProfile.gd
+          test -f game/scripts/simulation/collision/CollisionCatalog.gd
+          test -f game/scripts/simulation/collision/CollisionOverrideState.gd
+          test -f game/scripts/simulation/collision/SpatialQueryResult.gd
+          test -f game/scripts/simulation/collision/SpatialQueryService.gd
+          test -f game/scripts/ci/CollisionSpatialQuerySmoke.gd
+          grep -q 'class_name CollisionProfile' game/scripts/simulation/collision/CollisionProfile.gd
+          grep -q 'class_name CollisionCatalog' game/scripts/simulation/collision/CollisionCatalog.gd
+          grep -q 'class_name CollisionOverrideState' game/scripts/simulation/collision/CollisionOverrideState.gd
+          grep -q 'class_name SpatialQueryResult' game/scripts/simulation/collision/SpatialQueryResult.gd
+          grep -q 'class_name SpatialQueryService' game/scripts/simulation/collision/SpatialQueryService.gd
+          ! grep -R -q 'scripts/reboot' game/scripts/simulation/collision
+          ! grep -R -q 'foundation/time' game/scripts/simulation/collision
           # Current live reference remains the deprecated clean-reboot runtime until
           # the modular replacement lands. Keep proving it still builds while the
           # modular foundation is introduced beside it.
@@ -178,6 +193,14 @@ jobs:
           ./Godot_v4.7.1-stable_linux.x86_64 --headless --path "$GITHUB_WORKSPACE/game" --script res://scripts/ci/TickKernelSmoke.gd 2>&1 | tee "$RUNNER_TEMP/tick-kernel-smoke.log"
           grep -q 'TICK_KERNEL_SMOKE_OK' "$RUNNER_TEMP/tick-kernel-smoke.log"
           if grep -Eqi 'SCRIPT ERROR|Parse Error|Failed to load script' "$RUNNER_TEMP/tick-kernel-smoke.log"; then exit 1; fi
+
+      - name: Collision spatial query contract smoke
+        shell: bash
+        run: |
+          set -euxo pipefail
+          ./Godot_v4.7.1-stable_linux.x86_64 --headless --path "$GITHUB_WORKSPACE/game" --script res://scripts/ci/CollisionSpatialQuerySmoke.gd 2>&1 | tee "$RUNNER_TEMP/collision-spatial-smoke.log"
+          grep -q 'COLLISION_SPATIAL_QUERY_SMOKE_OK' "$RUNNER_TEMP/collision-spatial-smoke.log"
+          if grep -Eqi 'SCRIPT ERROR|Parse Error|Failed to load script' "$RUNNER_TEMP/collision-spatial-smoke.log"; then exit 1; fi
 
       - name: Reboot reference core smoke
         shell: bash
