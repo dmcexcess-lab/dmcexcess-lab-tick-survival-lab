@@ -35,7 +35,6 @@ func _initialize() -> void:
     _test_large_farmhouse_generation(generator, validator)
     _test_small_farmhouse_fixture()
     _test_large_farmhouse_fixture()
-
     if failures.is_empty():
         print("LOCAL_BUILDING_GENERATION_SMOKE_OK")
         quit(0)
@@ -111,19 +110,18 @@ func _test_large_farmhouse_generation(generator: LocalBuildingGenerator, validat
         var runner_cell := Vector2i(x, 73)
         _check(_ground_semantic_at(plan_a, runner_cell) == &"ground.laminate_light", "kitchen wood runner remains at %s" % str(runner_cell))
         _check(not _has_prop_at(plan_a, runner_cell), "kitchen wood runner stays clutter-free at %s" % str(runner_cell))
-
     _check(plan_a.props.size() == 24, "large farmhouse uses more small clustered props instead of stretched sparse dressing")
     _check(_prop_role_cell(plan_a, "prop.living.bookshelf") == Vector2i(61, 71), "living cluster gains wall bookshelf")
     _check(_prop_role_cell(plan_a, "prop.living.end_table") == Vector2i(62, 71), "living cluster gains nearby end table")
     _check(_prop_role_cell(plan_a, "prop.living.coffee_table") == Vector2i(62, 72), "coffee table sits inside seating cluster")
     _check(_prop_role_cell(plan_a, "prop.living.sofa") == Vector2i(61, 73), "sofa remains in compact living cluster")
-    _check(_prop_role_cell(plan_a, "prop.living.armchair") == Vector2i(63, 73), "armchair moves into compact living cluster")
+    _check(_prop_role_cell(plan_a, "prop.living.armchair") == Vector2i(63, 72), "armchair stays clustered while leaving bedroom approach open")
+    _check(not _has_prop_at(plan_a, Vector2i(62, 73)), "bedroom 1 approach cell remains clear of clustered props")
     _check(_prop_role_cell(plan_a, "prop.living.entry_rug") == Vector2i(65, 71), "front door gains throw rug")
     _check(not _prop_blocking_for_role(plan_a, "prop.living.entry_rug"), "entry rug is decorative and nonblocking")
     _check(_manhattan(_prop_role_cell(plan_a, "prop.living.sofa"), _prop_role_cell(plan_a, "prop.living.coffee_table")) <= 2, "sofa stays within two tiles of coffee table")
     _check(_manhattan(_prop_role_cell(plan_a, "prop.living.armchair"), _prop_role_cell(plan_a, "prop.living.coffee_table")) <= 2, "armchair stays within two tiles of coffee table")
     _check(_manhattan(_prop_role_cell(plan_a, "prop.living.bookshelf"), _prop_role_cell(plan_a, "prop.living.end_table")) <= 2, "living wall clutter stays clustered")
-
     _check(_prop_role_cell(plan_a, "prop.kitchen.fridge") == Vector2i(73, 71), "kitchen fridge remains on north appliance wall")
     _check(_prop_role_cell(plan_a, "prop.kitchen.counter") == Vector2i(74, 71), "counter fills appliance run between fridge and sink")
     _check(_prop_role_cell(plan_a, "prop.kitchen.sink") == Vector2i(75, 71), "sink remains on north appliance wall")
@@ -132,7 +130,6 @@ func _test_large_farmhouse_generation(generator: LocalBuildingGenerator, validat
     _check(_prop_role_cell(plan_a, "prop.kitchen.chair") == Vector2i(77, 72), "breakfast table gains adjacent chair")
     _check(_prop_role_cell(plan_a, "prop.kitchen.table") == Vector2i(78, 72), "breakfast table remains near east wall")
     _check(_manhattan(_prop_role_cell(plan_a, "prop.kitchen.chair"), _prop_role_cell(plan_a, "prop.kitchen.table")) == 1, "breakfast table and chair form a tight cluster")
-
     _check(_prop_semantic_for_role(plan_a, "prop.living.bookshelf") == &"prop.bookshelf_tall", "living bookshelf uses supported semantic")
     _check(_prop_semantic_for_role(plan_a, "prop.kitchen.counter") == &"prop.counter_straight", "kitchen filler uses supported counter semantic")
     _check(_prop_semantic_for_role(plan_a, "prop.kitchen.chair") == &"prop.dining_chair", "breakfast chair uses supported semantic")
@@ -140,7 +137,6 @@ func _test_large_farmhouse_generation(generator: LocalBuildingGenerator, validat
     _check(_prop_facing_for_role(plan_a, "prop.living.end_table") == Facing.Value.SOUTH, "end table faces south")
     _check(_prop_facing_for_role(plan_a, "prop.living.coffee_table") == Facing.Value.SOUTH, "coffee table faces south")
     _check(_prop_facing_for_role(plan_a, "prop.kitchen.table") == Facing.Value.WEST, "breakfast table faces west")
-
     var east_request := RequestClass.new("building.test.farmhouse.large.east", LargeFarmhouseClass.ARCHETYPE_ID, 19003, Rect2i(100, 110, 9, 21), Facing.Value.EAST, Facing.Value.EAST)
     var east_plan: GeneratedBuildingPlan = generator.generate(east_request)
     _check(east_plan.is_generated() and east_plan.footprint_rect.size == Vector2i(9, 21), "compact large farmhouse rotates to 9x21")

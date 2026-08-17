@@ -157,10 +157,10 @@ Canonical NORTH living dressing:
 - `prop.end_table` at `(2,1)`, SOUTH;
 - `prop.coffee_table` at `(2,2)`, SOUTH;
 - sofa at `(1,3)`, EAST;
-- armchair at `(3,3)`, WEST;
+- armchair at `(3,2)`, WEST;
 - nonblocking `prop.rug` at `(5,1)` directly inside the primary front door.
 
-The sofa, coffee table and armchair form a compact seating group rather than spanning the room. Bookshelf/end table remain beside the same cluster. The rug is a door-anchored decorative object and must not block entry movement.
+The sofa, coffee table and armchair form a compact seating group rather than spanning the room. Bookshelf/end table remain beside the same cluster. Local `(2,3)` is deliberately kept free so the cluster does not box off the Bedroom 1 doorway approach. The rug is a door-anchored decorative object and must not block entry movement.
 
 ### 7.5 Kitchen clusters
 
@@ -239,7 +239,7 @@ Canonical WHERE remains 1m/cell. No camera subsystem is introduced for this crit
 4. Large Farmhouse v4 is deterministic;
 5. structure/floor geometry remains Candidate 003: 21×9, same room sizes, same 7 doors/11 windows, same divider/open passage and same clear wood runner;
 6. large farmhouse emits exactly 24 props;
-7. living seating and wall clutter are placed in the approved compact local cluster;
+7. living seating and wall clutter are placed in the approved compact local cluster while the Bedroom 1 approach remains open;
 8. entry rug exists directly inside the front door and is nonblocking;
 9. kitchen appliance run is stove + fridge + counter + sink with adjacent cells;
 10. breakfast chair is adjacent to breakfast table and exterior-door approach stays clear;
