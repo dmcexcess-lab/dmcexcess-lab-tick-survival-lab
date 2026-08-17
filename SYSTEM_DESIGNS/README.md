@@ -15,18 +15,19 @@ A major system moves through **NOT DESIGNED -> DRAFT -> APPROVED -> IMPLEMENTED*
 
 ## Current canonical architecture
 
-The canonical simulation stack is **WHERE / WHAT / WHEN**, followed by focused downstream physics/action/actor systems and independently replaceable presentation systems. Generation is not the engine.
+The canonical simulation stack is **WHERE / WHAT / WHEN**, followed by focused physics/action/actor systems and independently replaceable presentation systems. Generation is not the engine.
 
 | Order | System | Status | Design source | Notes |
 |---|---|---|---|---|
-| 00 | WHERE / WHAT / WHEN Simulation Foundation | **IMPLEMENTED via child contracts** | `00_FOUNDATION_WHERE_WHAT_WHEN.md` | Umbrella relationship realized by 00A/00B/00C |
+| 00 | WHERE / WHAT / WHEN Simulation Foundation | **IMPLEMENTED via child contracts** | `00_FOUNDATION_WHERE_WHAT_WHEN.md` | Umbrella realized by 00A/00B/00C |
 | 00A | Spatial Model — WHERE | **IMPLEMENTED** | `00A_SPATIAL_MODEL.md` | Global grid/facing/whole-cell footprints/structure axis |
 | 00B | Persistent World / Entity State — WHAT | **IMPLEMENTED** | `00B_PERSISTENT_WORLD_STATE.md` | Stable IDs, semantic world facts, placement, mutation, snapshot |
 | 00C | Tick / Action / Pause Kernel — WHEN | **IMPLEMENTED** | `00C_TICK_ACTION_PAUSE.md` | Integer ticks, deterministic actions/events, tactical + hard pause |
-| 01 | Collision / Spatial Query | **IMPLEMENTED** | `01_COLLISION_SPATIAL_QUERY.md` | Explicit type collision + sparse overrides; CLEAR/BLOCKED/UNKNOWN queries |
-| 02 | Movement Actions | **IMPLEMENTED** | `02_MOVEMENT_ACTIONS.md` | Forward/back/turn bridge; typed movement policy; commit-time revalidation |
-| 03 | Actor Locomotion State & Movement Capability | **IMPLEMENTED** | `03_ACTOR_LOCOMOTION_MOVEMENT_CAPABILITY.md` | Standing/crouched state, timed stance, capability providers, actor-aware Movement policy |
-| 04 | Recovered Multi-Atlas Art Catalog | **IMPLEMENTED** | `04_RECOVERED_MULTI_ATLAS_ART_CATALOG.md` | Golden six-atlas + four-facing selection descriptors, topology and asset-integrity gate |
+| 01 | Collision / Spatial Query | **IMPLEMENTED** | `01_COLLISION_SPATIAL_QUERY.md` | Explicit collision + sparse overrides; CLEAR/BLOCKED/UNKNOWN |
+| 02 | Movement Actions | **IMPLEMENTED** | `02_MOVEMENT_ACTIONS.md` | Forward/back/turn; typed policy; commit revalidation |
+| 03 | Actor Locomotion State & Movement Capability | **IMPLEMENTED** | `03_ACTOR_LOCOMOTION_MOVEMENT_CAPABILITY.md` | Standing/crouched, timed stance, capability providers |
+| 04 | Recovered Multi-Atlas Art Catalog | **IMPLEMENTED** | `04_RECOVERED_MULTI_ATLAS_ART_CATALOG.md` | Golden semantic art descriptors/topology/asset gate |
+| 05 | Ground Layer Renderer | **IMPLEMENTED** | `05_GROUND_LAYER_RENDERER.md` | WHAT terrain -> Art Catalog -> visible-window CanvasItem ground drawing |
 | 00D | Global World Planning / Generation Contract | **NOT DESIGNED** | `00D_GLOBAL_WORLD_GENERATION.md` | Global geography/roads/utilities/parcels before local detail |
 | 00E | Population / Household / Outbreak / Player Story | **NOT DESIGNED** | `00E_POPULATION_OUTBREAK_PLAYER_STORY.md` | Persistent people/homes/jobs/relationships and causal outbreak |
 | 00F | Streaming / Materialization | **NOT DESIGNED** | `00F_STREAMING_MATERIALIZATION.md` | Performance/storage over one logical world |
@@ -34,73 +35,18 @@ The canonical simulation stack is **WHERE / WHAT / WHEN**, followed by focused d
 
 ## Implemented source owners
 
-### 00A WHERE
+### Foundation and simulation
 
-- `game/scripts/foundation/spatial/SpatialFacing.gd`
-- `game/scripts/foundation/spatial/SpatialFootprint.gd`
-- `game/scripts/foundation/spatial/SpatialStructureGeometry.gd`
-- `game/scripts/foundation/spatial/SpatialLayer.gd`
-- `game/scripts/foundation/spatial/SpatialModel.gd`
-- `game/scripts/ci/SpatialModelSmoke.gd`
+- **00A WHERE:** `game/scripts/foundation/spatial/` + `SpatialModelSmoke.gd`
+- **00B WHAT:** `game/scripts/foundation/world/` + `WorldStateSmoke.gd`
+- **00C WHEN:** `game/scripts/foundation/time/` + `TickKernelSmoke.gd`
+- **01 Collision:** `game/scripts/simulation/collision/` + `CollisionSpatialQuerySmoke.gd`
+- **02 Movement:** `game/scripts/simulation/movement/` + `MovementActionsSmoke.gd` + `.github/workflows/movement.yml`
+- **03 Actor Locomotion:** `game/scripts/simulation/actors/locomotion/` + `ActorLocomotionSmoke.gd` + `.github/workflows/actor-locomotion.yml`
 
-### 00B WHAT
+### Presentation
 
-- `game/scripts/foundation/world/WorldEntityId.gd`
-- `game/scripts/foundation/world/WorldEntityRecord.gd`
-- `game/scripts/foundation/world/WorldPlacement.gd`
-- `game/scripts/foundation/world/TerrainStore.gd`
-- `game/scripts/foundation/world/EntityStore.gd`
-- `game/scripts/foundation/world/PlacementStore.gd`
-- `game/scripts/foundation/world/OccupancyIndex.gd`
-- `game/scripts/foundation/world/WorldChange.gd`
-- `game/scripts/foundation/world/WorldState.gd`
-- `game/scripts/foundation/world/WorldMutationService.gd`
-- `game/scripts/ci/WorldStateSmoke.gd`
-
-### 00C WHEN
-
-- `game/scripts/foundation/time/TickRules.gd`
-- `game/scripts/foundation/time/ActionPhase.gd`
-- `game/scripts/foundation/time/TimedAction.gd`
-- `game/scripts/foundation/time/ScheduledEvent.gd`
-- `game/scripts/foundation/time/TickEventQueue.gd`
-- `game/scripts/foundation/time/TickKernel.gd`
-- `game/scripts/ci/TickKernelSmoke.gd`
-
-### 01 Collision / Spatial Query
-
-- `game/scripts/simulation/collision/CollisionProfile.gd`
-- `game/scripts/simulation/collision/CollisionCatalog.gd`
-- `game/scripts/simulation/collision/CollisionOverrideState.gd`
-- `game/scripts/simulation/collision/SpatialQueryResult.gd`
-- `game/scripts/simulation/collision/SpatialQueryService.gd`
-- `game/scripts/ci/CollisionSpatialQuerySmoke.gd`
-
-### 02 Movement Actions
-
-- `game/scripts/simulation/movement/MovementPolicyDecision.gd`
-- `game/scripts/simulation/movement/MovementActionResult.gd`
-- `game/scripts/simulation/movement/MovementTraversalPolicy.gd`
-- `game/scripts/simulation/movement/MovementActionService.gd`
-- `game/scripts/ci/MovementActionsSmoke.gd`
-- `.github/workflows/movement.yml`
-
-### 03 Actor Locomotion State & Movement Capability
-
-- `game/scripts/simulation/actors/locomotion/ActorStance.gd`
-- `game/scripts/simulation/actors/locomotion/ActorLocomotionRecord.gd`
-- `game/scripts/simulation/actors/locomotion/ActorLocomotionState.gd`
-- `game/scripts/simulation/actors/locomotion/ActorLocomotionMutationService.gd`
-- `game/scripts/simulation/actors/locomotion/ActorMovementCapabilityDecision.gd`
-- `game/scripts/simulation/actors/locomotion/ActorMobilityModifierProvider.gd`
-- `game/scripts/simulation/actors/locomotion/ActorMovementCapabilityService.gd`
-- `game/scripts/simulation/actors/locomotion/ActorMovementTraversalPolicy.gd`
-- `game/scripts/simulation/actors/locomotion/ActorStanceActionResult.gd`
-- `game/scripts/simulation/actors/locomotion/ActorStanceActionService.gd`
-- `game/scripts/ci/ActorLocomotionSmoke.gd`
-- `.github/workflows/actor-locomotion.yml`
-
-### 04 Recovered Multi-Atlas Art Catalog
+**04 Art Catalog**
 
 - `game/scripts/art/ArtSource.gd`
 - `game/scripts/art/ArtSelection.gd`
@@ -110,19 +56,26 @@ The canonical simulation stack is **WHERE / WHAT / WHEN**, followed by focused d
 - `game/scripts/ci/ArtCatalogSmoke.gd`
 - `.github/workflows/art-catalog.yml`
 
-The canonical modules above remain intentionally separate from frozen `game/scripts/reboot/` reference code. Do not add compatibility adapters simply to make them visible in the old playable build.
+**05 Ground Layer Renderer**
+
+- `game/scripts/render/GroundDrawCommand.gd`
+- `game/scripts/render/GroundLayerRenderer.gd`
+- `game/scripts/ci/GroundLayerRendererSmoke.gd`
+- `.github/workflows/ground-renderer.yml`
+
+The canonical modules remain intentionally separate from frozen `game/scripts/reboot/` reference code. Do not add compatibility adapters merely to make them visible in the old playable build.
 
 ## Current contract summary
 
-**Collision** answers hard occupancy. **Movement** owns discrete target/commit semantics and consumes a typed replaceable movement policy. **Actor Locomotion** owns standing/crouched state and actor-specific capability composition. **WHEN** owns the committed schedule but knows none of these mechanic meanings. **WHAT** owns physical placement but not movement legality or stance.
+**WHERE** owns geometry. **WHAT** owns persistent semantic terrain/entities/placement. **WHEN** owns time/order. **Collision** answers hard occupancy. **Movement** owns discrete target/commit semantics. **Actor Locomotion** owns standing/crouched state and movement capability composition.
 
-**Art Catalog** owns only semantic-to-art selection. It recovers the golden six-atlas/four-player-sprite vocabulary and road topology but does not draw, read simulation state, or encode physics. World/generator data must not store atlas indices or texture paths.
+**Art Catalog** owns semantic-to-art selection only. World/generator data contains no atlas indices/texture paths.
 
-Movement destinations are not reserved. Actor capability is checked at request and commit. A newly blocked condition can fail the physical commit after elapsed time; a newly slower-but-still-allowed condition affects the next action instead of stretching an already scheduled one.
+**Ground Renderer** is the first actual canonical CanvasItem layer. It reads WHAT terrain, uses Art Catalog selections, draws only a supplied visible global-cell window, derives generic local road/dirt-road/sidewalk presentation topology from semantic neighboring terrain, and reacts only to view/world-reset/topology-relevant terrain invalidation. It does not own camera, road-network truth, generation, physics or other visual layers.
 
 ## Why generation is not the foundation
 
-Generation is one producer of initial WHAT using WHERE. Construction/destruction/gameplay later mutate the same persistent world. Replacing generation must not require replacing spatial, timing, collision, movement, actor capability, art, rendering, controls or save semantics.
+Generation is one producer of initial WHAT using WHERE. Construction/destruction/gameplay later mutate the same persistent world. Replacing generation must not require replacing spatial, timing, collision, movement, actor capability, art, rendering, controls, or save semantics.
 
 ## Later modular systems
 
@@ -130,15 +83,15 @@ Exact order is refined one approved design at a time.
 
 | System | Status | Notes |
 |---|---|---|
-| Ground Layer Renderer | NOT DESIGNED | **Recommended next discussion**; first visible consumer of canonical WHAT terrain + recovered Art Catalog |
-| Structure Layer Renderer | NOT DESIGNED | Walls/doors/windows using WHERE structure-cell/axis + Art Catalog |
+| Structure Layer Renderer | NOT DESIGNED | **Recommended next discussion**; walls/doors/windows using WHERE structure cells + WHAT + Art Catalog |
 | Prop/fixture/vegetation renderer | NOT DESIGNED | Whole-cell semantic props/orientation + Art Catalog |
 | Player/actor renderer | NOT DESIGNED | Four directional sprites initially; consumes WHAT/facing/stance + Art Catalog |
 | Authored visual test area | NOT DESIGNED | Proves recovered graphics without procedural generation |
-| Tactical camera + zoom | NOT DESIGNED | One canonical zoom owner |
+| Tactical renderer/orchestration | NOT DESIGNED | Composes focused render layers only; no layer internals |
+| Tactical camera + zoom | NOT DESIGNED | Supplies visible cell window/scale; one zoom owner |
 | Touch/keyboard/Safari input | NOT DESIGNED | Emits semantic movement/stance intents; lifecycle hard-pause integration |
 | Tactical controls UI | NOT DESIGNED | Presentation/hit regions only |
-| Road network/topology | NOT DESIGNED | Global coherent network |
+| Road network/topology | NOT DESIGNED | Global coherent road truth; future road-class metadata seam |
 | Property/parcel planner | NOT DESIGNED | Parcels/frontage/access/site mix |
 | Building/prefab placement | NOT DESIGNED | Semantic placement respecting global facts |
 | Procedural room/layout | NOT DESIGNED | Room graph/circulation/doors |
@@ -155,7 +108,7 @@ Exact order is refined one approved design at a time.
 | Weather | DEFERRED | WHEN-scheduled state + separate VFX |
 | Silent spatial sound | DEFERRED | Spatial events; no default audible playback |
 | Infected AI | DEFERRED | Emits shared actions via actor/perception/world contracts |
-| Loot/inventory/search | DEFERRED | Stable-ID physical state; timed actions through WHEN; future encumbrance provider |
+| Loot/inventory/search | DEFERRED | Stable-ID physical state; timed actions; future encumbrance provider |
 | Combat | DEFERRED | Timed actions + health consequences |
 | Vehicles | DEFERRED | Persistent multi-cell entities; timed movement/travel |
 | Old raid/extraction/session architecture | **SUPERSEDED** | No required raid/extraction/staging loop |
