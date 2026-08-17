@@ -1,5 +1,19 @@
 # Changelog
 
+## 09 Actor Hand Equipment State — 2026-08-16
+
+- Implemented **09 Actor Hand Equipment State** after the user explicitly approved the two-hand mechanic-state contract.
+- Added canonical anatomical slots `PRIMARY_RIGHT` and `SECONDARY_LEFT`; primary/secondary never swap semantic meaning when actor facing changes.
+- Added stable-ID `ActorHandEquipmentRecord`, `ActorHandEquipmentState`, and `ActorHandEquipmentMutationService` under `game/scripts/simulation/actors/equipment/`.
+- Survivor hand assignments reference real stable WHAT `item.*` entities rather than item-name strings copied into actor dictionaries.
+- New assignments require the referenced item to exist and be tactically unplaced. One physical item cannot occupy both hands or multiple actors simultaneously; a derived reverse assignment index enforces that invariant.
+- Missing hand-state enrollment remains distinct from an explicitly enrolled actor with empty hands. Reads are copy-safe; state has global revision plus per-actor monotonic versions for future stale equip-action checks.
+- Same-item/same-slot assignment is a successful no-op with no revision/version/signal. Explicit `clear_slot` removes the assignment and reverse index cleanly.
+- Hand state may persist while the actor is tactically unplaced or after WHAT removal until explicit lifecycle cleanup; removal + re-enrollment never reuses a stale actor version.
+- Added deterministic schema-versioned snapshot/restore with stable actor-ID ordering, duplicate actor/item rejection, atomic malformed-state rejection, reverse-index rebuild, and one reset signal on successful restore.
+- Added `ActorHandEquipmentSmoke.gd` and dedicated Godot 4.7.1 **Actor Hand Equipment contract** workflow. Code head `c108083744f474c80b06f8dc02673b60f1dca7cd` passed source-boundary checks, project parse, WHAT regression, and the full 09 smoke with no production repair.
+- Kept Art/Render/Inventory/Combat/Health/WHEN/AI/Input/UI/Reboot out of 09. Next bounded design is **Actor Hand Equipment Presentation** using recovered held-item art, facing rotation, and east/west back-hand/body/front-hand occlusion.
+
 ## 08 Player / Living Actor Renderer — 2026-08-16
 
 - Implemented **08 Player / Living Actor Renderer** after the user explicitly approved the detailed living-actor contract.
