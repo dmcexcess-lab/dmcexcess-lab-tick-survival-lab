@@ -42,6 +42,7 @@ Canonical progress:
 - **05 Ground Layer Renderer — IMPLEMENTED + CI**
 - **06A Door State — IMPLEMENTED + CI**
 - **06 Structure Layer Renderer — IMPLEMENTED + CI**
+- **07 Prop / Fixture / Vegetation Renderer — DRAFT; active design review**
 
 ## 3. Foundation and simulation truth
 
@@ -124,6 +125,26 @@ Locked rules:
 - terrain and initial non-structure changes do not redraw Structure;
 - no generator/reboot/camera/input/WHEN/Collision ownership.
 
+### 07 Prop / Fixture / Vegetation Renderer — ACTIVE DRAFT
+
+Canonical draft: `SYSTEM_DESIGNS/07_PROP_FIXTURE_VEGETATION_RENDERER.md`.
+
+Proposed locked boundary for review:
+
+- consumes WHAT `OBJECT` occupancy only + 04 Art Catalog;
+- semantic families `prop.*`, `fixture.*`, `vegetation.*`;
+- all art delegates to `ArtCatalog.resolve_prop()` and preserves final -> alias -> building -> clutter -> tactical precedence;
+- multi-cell occupancy deduplicates to one draw command per stable entity;
+- command preserves anchor, facing, and footprint/world cells;
+- current recovered one-cell art draws once at the entity anchor rather than repeating or stretching across the physical footprint;
+- current recovered prop art remains unrotated because golden `draw_prop()` defined no native facing/rotation convention; facing is preserved for a future explicit presentation orientation policy;
+- overlapping OBJECT occupants draw deterministically rather than becoming renderer-owned collision errors;
+- fail-visible semantic/art/placement/texture diagnostics;
+- visible-window only, cached textures, event-driven redraw;
+- no Collision/WHEN/generation/inventory/state/camera/input/reboot ownership.
+
+Runtime implementation is blocked until explicit approval of the 07 draft.
+
 ## 5. Graphics recovery status
 
 Canonical graphics now include:
@@ -132,9 +153,9 @@ Canonical graphics now include:
 2. actual Ground drawing;
 3. actual wall/door/window Structure drawing with persistent Door State.
 
-Visible full-scene recovery is still incomplete because Prop/Fixture/Vegetation, Player/Actor, composition/test-area, and camera systems do not yet exist canonically.
+Prop/Fixture/Vegetation is the active next draft. Visible full-scene recovery is still incomplete because 07, Player/Actor, composition/test-area, and camera systems do not yet all exist canonically.
 
-The deployed Web page still intentionally runs the frozen reboot reference. Do not claim it demonstrates canonical 05/06 until the new presentation stack has an approved composition path.
+The deployed Web page still intentionally runs the frozen reboot reference. Do not claim it demonstrates canonical 05/06/07 until the new presentation stack has an approved composition path.
 
 ## 6. Open-world/generation direction
 
@@ -185,10 +206,10 @@ Key rules:
 10. compatible master-design material;
 11. golden history for recovered behavior.
 
-## 9. Recommended next bounded design
+## 9. Recommended next bounded step
 
-**Prop / Fixture / Vegetation Renderer** is the recommended next presentation discussion.
+**Review/approve `07_PROP_FIXTURE_VEGETATION_RENDERER.md`.**
 
-Why next: Ground + Structure now establish the canonical visible-window draw path and real persistent opening state. Prop rendering can consume WHAT OBJECT placements, footprints/facing, and recovered 04 prop mappings without requiring camera/input/generation or actor rendering.
+If approved, implement the Prop renderer with its own Godot 4.7.1 contract and regress Art Catalog + Ground + Structure on the exact implementation/final SHA.
 
-Keep Player/Actor Renderer, Tactical composition, Authored Visual Test Area, camera/zoom, and door interaction/physical transition as separate approved systems.
+Keep Player/Actor Renderer, Tactical composition, Authored Visual Test Area, camera/zoom, loose-item rendering, stateful fixture visuals, vehicles, and door interaction/physical transition as separate approved systems.
