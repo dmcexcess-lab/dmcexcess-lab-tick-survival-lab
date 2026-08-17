@@ -34,6 +34,13 @@ Major systems move through **NOT DESIGNED -> DRAFT -> APPROVED -> IMPLEMENTED** 
 | 10 | Actor Hand Equipment Presentation | **IMPLEMENTED** | `10_ACTOR_HAND_EQUIPMENT_PRESENTATION.md` | Recovered held art, facing rotation, BACK/body/FRONT seam |
 | 11 | Inventory / Containment | **IMPLEMENTED** | `11_INVENTORY_CONTAINMENT.md` | Stable direct containment, explicit containers, nested acyclic graph |
 | 12 | Item Transfer / Pickup / Drop / Equip Actions | **IMPLEMENTED** | `12_ITEM_TRANSFER_ACTIONS.md` | Timed floor/hand/personal-containment transitions + derived disposition query |
+| 13 | Actor Stats / Status Architecture | **APPROVED umbrella** | `13_ACTOR_STATS_STATUS_ARCHITECTURE.md` | Modular Health/Needs/Skills/Item Properties/Carry/Moodlets; no universal ActorStats bag |
+| 13A | Actor Health / Injury | **NOT DESIGNED** | parent 13 | HP + injury-capable health truth |
+| 13B | Actor Needs / Rest | **NOT DESIGNED** | parent 13 | Fatigue, hunger, thirst, sleep pressure |
+| 13C | Actor Skills | **DRAFT** | `13C_ACTOR_SKILLS.md` | Recovery-backed six-skill level/XP contract awaiting explicit approval |
+| 13D | Item Physical Properties | **NOT DESIGNED** | parent 13 | Real item weight first; shared physical item facts only |
+| 13E | Carry / Encumbrance | **NOT DESIGNED** | parent 13 | Derived carried weight/capacity/consequence; no duplicate inventory total |
+| 13F | Moodlets / Status Derivation | **NOT DESIGNED** | parent 13 | Derived readable statuses from real source domains |
 | 00D | Global World Planning / Generation Contract | **NOT DESIGNED** | `00D_GLOBAL_WORLD_GENERATION.md` | Global geography/roads/utilities/parcels before local detail |
 | 00E | Population / Household / Outbreak / Player Story | **NOT DESIGNED** | `00E_POPULATION_OUTBREAK_PLAYER_STORY.md` | Persistent people/homes/jobs/relationships and causal outbreak |
 | 00F | Streaming / Materialization | **NOT DESIGNED** | `00F_STREAMING_MATERIALIZATION.md` | Performance/storage over one logical world |
@@ -77,6 +84,10 @@ The canonical modules remain intentionally separate from frozen `game/scripts/re
 
 **12 Item Transfer Actions** is the timed coordinator over WHAT + 09 + 11 + WHEN. It adds read-only `ItemDispositionQuery`, explicit action timing policy, floor/hand/personal-container pickup/drop/equip/unequip/transfer requests, exact commit revalidation, no reservations, CANCELABLE pre-commit behavior, and public-API compensation for exceptional second-write failure. V1 rejects arbitrary world cabinets/trunks/corpses/vehicles until a real access/search/open/lock policy exists. A verified reentrant-destination guard rechecks the destination immediately after source removal so permissive low-level APIs cannot overwrite newly changed truth.
 
+**13 Actor Stats / Status Architecture** is an approved umbrella, not a monolithic implementation. The requested player-visible set is HP, fatigue, hunger, thirst, sleep, carry weight, skills/levels and moodlets. Health, Needs, Skills, Item Physical Properties, Carry/Encumbrance and Moodlets remain peer child domains keyed/read through stable contracts. Moodlets are primarily derived; carried weight is derived from physical possession plus item weight; future Stats/HUD is a reader/composer rather than a simulation owner.
+
+**13C Actor Skills is DRAFT only.** It proposes recovery-backed Combat/Scavenging/Survival/Medical/Technical/Social semantic skills, levels 0–10, persistent XP and First Fire's `20 + current_level * 15` threshold. Those detailed mechanics still require explicit user approval before code.
+
 **04 Art Catalog** owns semantic-to-art selection only. **05 Ground**, **06 Structure**, **07 Prop**, and **08 Living Actor** independently present focused WHAT layers.
 
 **10 Actor Hand Equipment Presentation** reads WHAT + 09 + 04 and renders held items through explicit BACK and FRONT passes around the actor body.
@@ -89,22 +100,34 @@ Completed prerequisites:
 2. **10 Actor Hand Equipment Presentation — IMPLEMENTED.**
 3. **11 Inventory / Containment — IMPLEMENTED.**
 4. **12 Item Transfer / Pickup / Drop / Equip Actions — IMPLEMENTED.**
+5. **13 Actor Stats / Status Architecture — APPROVED umbrella.**
 
-Remaining honest-demo prerequisites:
+Active child design gate:
+
+6. **13C Actor Skills — DRAFT, awaiting detailed approval.** It is recommended first because its exact same-owner recovery is strongest and it has no dependency on Health/Needs/Carry.
+
+Remaining stat children:
 
 | System | Status | Notes |
 |---|---|---|
-| Actor stat domains required for inspector | NOT DESIGNED | Use only canonical real state; no fake HP/stamina/etc. |
+| 13B Needs / Rest | NOT DESIGNED | Fatigue, hunger, thirst, sleep |
+| 13A Health / Injury | NOT DESIGNED | HP plus injury-capable state |
+| 13D Item Physical Properties | NOT DESIGNED | Item weight |
+| 13E Carry / Encumbrance | NOT DESIGNED | Derived weight/capacity/consequence |
+| 13F Moodlets / Status Derivation | NOT DESIGNED | Derived statuses after source domains exist |
+
+Then remaining honest-demo prerequisites:
+
+| System | Status | Notes |
+|---|---|---|
 | Authored Visual Test Area | NOT DESIGNED | Real canonical WHAT fixture |
 | Tactical Renderer / Orchestration | NOT DESIGNED | Ground/Structure/Prop/10-BACK/08/10-FRONT composition |
 | Tactical Camera + Zoom | NOT DESIGNED | Supplies visible window/scale |
 | Touch / Keyboard / Safari Input | NOT DESIGNED | Semantic intents + lifecycle hard pause |
 | Tactical Controls UI | NOT DESIGNED | Real touch Button/Control nodes |
 | HUD / Facing Inspection | NOT DESIGNED | Canonical `Looking at:` query |
-| Stats / Inventory Inspector UI | NOT DESIGNED | Real data only; safe pause |
+| Stats / Inventory Inspector UI | NOT DESIGNED | Real data only; safe pause; composes stat providers |
 | Pause / Menu UI | NOT DESIGNED | Resume + Leave Game |
-
-Recommended next design for the requested honest demo is **Actor stat domains required for inspector**, unless the user explicitly chooses to prioritize visual composition first. Existing locomotion/equipment/inventory facts should be reused; Health/Needs should only be designed to the extent real displayed stats require them.
 
 ## Other later modular systems
 
@@ -115,8 +138,7 @@ Recommended next design for the requested honest demo is **Actor stat domains re
 | Door interaction / physical transition | NOT DESIGNED | WHEN + Door State + Collision coordination |
 | Actor Appearance / character creator integration | NOT DESIGNED | Persistent visual identity |
 | Loose-item renderer | NOT DESIGNED | Separate LOOSE_ITEM presentation |
-| Item definitions / quantity / condition | NOT DESIGNED | Physical item properties and divisible-resource semantics |
-| Capacity / weight / bulk / encumbrance | NOT DESIGNED | Transfer policy + locomotion capability seam |
+| Item definitions / quantity / condition beyond 13D weight | NOT DESIGNED | Physical item properties and divisible-resource semantics |
 | Road network/topology | NOT DESIGNED | Global coherent road truth |
 | Property/parcel planner | NOT DESIGNED | Parcels/frontage/access/site mix |
 | Building/prefab placement | NOT DESIGNED | Semantic placement respecting global facts |
@@ -127,8 +149,6 @@ Recommended next design for the requested honest demo is **Actor stat domains re
 | Prefab authoring tools | NOT DESIGNED | Separate DEV tooling |
 | Construction/destruction | DEFERRED | Persistent WHAT mutation; bases anywhere legal |
 | Base/community summary | NOT DESIGNED | Thin summary over physical world facts |
-| Health/body/first aid | NOT DESIGNED | Mini-Zomboid injury/treatment |
-| Needs/fatigue/temperature | NOT DESIGNED | Coarse consequential states |
 | Vision/perception | DEFERRED | Major mood/gameplay system |
 | Lighting | DEFERRED | Major mood/gameplay system |
 | Weather | DEFERRED | WHEN state + VFX |
@@ -141,6 +161,8 @@ Recommended next design for the requested honest demo is **Actor stat domains re
 ## Requested future demo UI target
 
 The eventual canonical demo must include Safari/iPhone touch navigation, desktop keyboard equivalents, recovered-style `Looking at:`, concise real actor stats, `STATS`, `INVENTORY`, and `MENU` buttons, safe pause during inspection/menu, Resume + Leave Game, and no fabricated values before their owning systems exist.
+
+The requested Stats target is now explicitly: **moodlets, HP, fatigue, hunger, thirst, sleep, carry weight, and skills with levels**. The inspector must compose these from real modular domains and remain open to later provider modules without a god actor dictionary.
 
 ## Design rule
 
