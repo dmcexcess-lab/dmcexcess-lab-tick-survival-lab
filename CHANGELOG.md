@@ -1,5 +1,34 @@
 # Changelog
 
+## 11 Inventory / Containment — 2026-08-16
+
+- Implemented **11 Inventory / Containment** after explicit user approval of the bounded persistent direct-containment contract.
+- Added `InventoryContainerRecord.gd`, `InventoryContainmentState.gd`, and `InventoryContainmentMutationService.gd` under `game/scripts/simulation/inventory/`.
+- Container capability is explicit typed enrollment and is never inferred from art, semantic names, collision, or WHAT spatial channel.
+- Canonical containment truth is one stable `item_id -> direct_container_id` relation per contained item, with a derived reverse direct-contents index.
+- Normal new containment accepts only existing, tactically unplaced WHAT `item.*` entities; 11 reads WHAT but never mutates placement.
+- Nested item-containers are supported. Self-containment and ancestry cycles are rejected without partial mutation.
+- Direct A -> B moves are atomic inside 11, increment both affected parent container versions, and emit deterministic relation/source/destination signals.
+- Moving an item-container between parents deliberately does not change that item's own direct-contents version.
+- Same-parent assignment is a successful no-op with no revision/version/signal. Non-empty containers cannot be unenrolled.
+- Explicit stale cleanup remains possible after WHAT item/container deletion; WHAT deletion does not silently cascade typed inventory state.
+- Added deterministic schema-v1 snapshot/restore with sorted containers/relations, duplicate/cycle/version validation, reverse-index rebuild, atomic failure, and exactly one reset signal on success.
+- Added `InventoryContainmentSmoke.gd` and dedicated Godot 4.7.1 **Inventory Containment contract** workflow. Initial complete code head `1218c62cd04b3821991400918ffa43b29d621181` passed source isolation, project parse, WHAT regression, 09 hand-equipment regression, and the full 11 smoke in run `31988099341` with no production repair.
+- Kept 09 hands, 10 presentation, WHEN, Collision, Movement, Locomotion, Art/Render, generation/reboot, and UI untouched.
+- Next bounded design is **Item Transfer / Pickup / Drop / Equip Actions**, coordinating WHAT + 09 + 11 + WHEN through public contracts.
+
+## 10 Actor Hand Equipment Presentation — 2026-08-16
+
+- Implemented **10 Actor Hand Equipment Presentation** after explicit approval of recovered held-item visuals and east/west body occlusion.
+- Added a separate recovered `held_item_atlas.svg` containing same-owner First Fire knife/club/hammer/spear/crowbar/hatchet/pistol/shotgun plus flashlight/headlamp/lantern/glow-stick/road-flare art.
+- Added additive Art Catalog held-item selection/scale/native-facing metadata without changing existing environment/player/living-actor resolver semantics.
+- Added `ActorHandDrawCommand.gd` and two-pass `ActorHandEquipmentLayerRenderer.gd` with future composition `BACK -> actor body -> FRONT`.
+- Preserved anatomical roles: primary = right hand, secondary = left hand. Recovered art is EAST-native and rotates for N/E/S/W.
+- NORTH/SOUTH keep both held objects FRONT; EAST puts secondary/left BACK and primary/right FRONT; WEST puts primary/right BACK and secondary/left FRONT.
+- Item scale follows item kind rather than slot; historical First Fire hand offsets/readability backdrop were retained proportionally.
+- Added diagnostics for missing enrollment, stale/missing/placed item truth, unknown art, and invalid selection metadata without mutating 08/09.
+- Dedicated Actor Hand Equipment Presentation and Art Catalog contracts passed on final 10 head before promotion; no production repair was required.
+
 ## 09 Actor Hand Equipment State — 2026-08-16
 
 - Implemented **09 Actor Hand Equipment State** after the user explicitly approved the two-hand mechanic-state contract.
@@ -134,7 +163,7 @@
 - Added `game/scripts/foundation/world/WorldEntityId.gd` and `WorldEntityRecord.gd` for stable opaque persistent IDs plus semantic entity types independent of Godot Nodes, rendering, storage order and tactical placement.
 - Added `WorldPlacement.gd` as the WHAT/WHERE seam: spatial channel, global anchor, N/E/S/W facing, arbitrary whole-cell footprint and optional HORIZONTAL/VERTICAL structure axis. Entities may intentionally remain persistent while unplaced.
 - Added separate `TerrainStore.gd`, `EntityStore.gd` and `PlacementStore.gd` owners rather than one giant world dictionary or generic metadata bag.
-- Added `OccupancyIndex.gd` as a **derived** global-cell/channel lookup rebuilt from placements. WHAT permits overlap and does not invent collision/construction legality; those decisions remain with later owning systems.
+- Added `OccupancyIndex.gd` as a **derived** global-cell/channel lookup rebuilt from placements. WHAT permits overlap and does not invent collision/construction legality; those decisions remain with later collision/construction/movement systems.
 - Added `WorldMutationService.gd` as the validated normal write path for entity create/remove, place/unplace and terrain set/clear. `WorldState.gd` exposes mutation-safe reads instead of leaking internal dictionaries/records.
 - Added `WorldChange.gd` plus monotonic world revisions so later rendering, caches, persistence adapters and simulation systems can observe foundation-level entity/placement/terrain changes without WHAT learning mechanic-specific meanings.
 - Added deterministic, atomic in-memory snapshot/restore to `WorldState.gd`, including runtime-ID serial and revision. Occupancy is intentionally not serialized and is rebuilt from canonical placement truth. This is a state boundary, not the final browser/disk save implementation.

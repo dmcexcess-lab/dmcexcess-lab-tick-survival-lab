@@ -2,14 +2,14 @@
 
 This directory is the durable detailed memory for individual systems.
 
-A major system moves through **NOT DESIGNED -> DRAFT -> APPROVED -> IMPLEMENTED** through `DESIGN_WORKFLOW.md`. Read `PROJECT_NORTH_STAR.md` and `DESIGN_DECISIONS.md` first.
+Major systems move through **NOT DESIGNED -> DRAFT -> APPROVED -> IMPLEMENTED** under `DESIGN_WORKFLOW.md`. Read `PROJECT_NORTH_STAR.md` and `DESIGN_DECISIONS.md` first.
 
 ## Status meanings
 
-- **NOT DESIGNED** — known future system, no detailed design yet.
-- **DRAFT** — under discussion; do not implement.
+- **NOT DESIGNED** — known future system, no detailed contract yet.
+- **DRAFT** — discussion only; do not implement.
 - **APPROVED** — user approved; implementation may begin.
-- **IMPLEMENTED** — approved design exists in canonical modular source and is tested.
+- **IMPLEMENTED** — approved design is present in canonical modular source and tested.
 - **SUPERSEDED** — historical design replaced by newer direction.
 - **RECOVERY SOURCE** — historical behavior worth mining, not current architecture.
 
@@ -24,15 +24,15 @@ A major system moves through **NOT DESIGNED -> DRAFT -> APPROVED -> IMPLEMENTED*
 | 01 | Collision / Spatial Query | **IMPLEMENTED** | `01_COLLISION_SPATIAL_QUERY.md` | Explicit collision + sparse overrides |
 | 02 | Movement Actions | **IMPLEMENTED** | `02_MOVEMENT_ACTIONS.md` | Forward/back/turn; commit revalidation |
 | 03 | Actor Locomotion State & Movement Capability | **IMPLEMENTED** | `03_ACTOR_LOCOMOTION_MOVEMENT_CAPABILITY.md` | Standing/crouched, timed stance, capability providers |
-| 04 | Recovered Multi-Atlas Art Catalog | **IMPLEMENTED** | `04_RECOVERED_MULTI_ATLAS_ART_CATALOG.md` | Environment/player/living-actor + additive held-item art selection |
+| 04 | Recovered Multi-Atlas Art Catalog | **IMPLEMENTED** | `04_RECOVERED_MULTI_ATLAS_ART_CATALOG.md` | Environment/player/living-actor + held-item art selection |
 | 05 | Ground Layer Renderer | **IMPLEMENTED** | `05_GROUND_LAYER_RENDERER.md` | WHAT terrain -> Art Catalog |
 | 06A | Door State | **IMPLEMENTED** | `06A_DOOR_STATE.md` | Stable-ID OPEN/CLOSED state |
 | 06 | Structure Layer Renderer | **IMPLEMENTED** | `06_STRUCTURE_LAYER_RENDERER.md` | Walls/doors/windows + Door State |
 | 07 | Prop / Fixture / Vegetation Renderer | **IMPLEMENTED** | `07_PROP_FIXTURE_VEGETATION_RENDERER.md` | Visible OBJECT entities |
 | 08 | Player / Living Actor Renderer | **IMPLEMENTED** | `08_PLAYER_LIVING_ACTOR_RENDERER.md` | Controlled survivor + NPC survivors + infected |
-| 09 | Actor Hand Equipment State | **IMPLEMENTED** | `09_ACTOR_HAND_EQUIPMENT_STATE.md` | Stable physical primary/right + secondary/left item assignments |
-| 10 | Actor Hand Equipment Presentation | **IMPLEMENTED** | `10_ACTOR_HAND_EQUIPMENT_PRESENTATION.md` | Recovered held art, facing rotation, BACK/body/FRONT occlusion seam |
-| 11 | Inventory / Containment | **DRAFT** | `11_INVENTORY_CONTAINMENT.md` | Stable physical contained-item graph; awaiting explicit approval |
+| 09 | Actor Hand Equipment State | **IMPLEMENTED** | `09_ACTOR_HAND_EQUIPMENT_STATE.md` | Stable primary/right + secondary/left item assignments |
+| 10 | Actor Hand Equipment Presentation | **IMPLEMENTED** | `10_ACTOR_HAND_EQUIPMENT_PRESENTATION.md` | Recovered held art, facing rotation, BACK/body/FRONT seam |
+| 11 | Inventory / Containment | **IMPLEMENTED** | `11_INVENTORY_CONTAINMENT.md` | Stable direct containment, explicit containers, nested acyclic graph |
 | 00D | Global World Planning / Generation Contract | **NOT DESIGNED** | `00D_GLOBAL_WORLD_GENERATION.md` | Global geography/roads/utilities/parcels before local detail |
 | 00E | Population / Household / Outbreak / Player Story | **NOT DESIGNED** | `00E_POPULATION_OUTBREAK_PLAYER_STORY.md` | Persistent people/homes/jobs/relationships and causal outbreak |
 | 00F | Streaming / Materialization | **NOT DESIGNED** | `00F_STREAMING_MATERIALIZATION.md` | Performance/storage over one logical world |
@@ -49,7 +49,8 @@ A major system moves through **NOT DESIGNED -> DRAFT -> APPROVED -> IMPLEMENTED*
 - **02 Movement:** `game/scripts/simulation/movement/` + `MovementActionsSmoke.gd`
 - **03 Actor Locomotion:** `game/scripts/simulation/actors/locomotion/` + `ActorLocomotionSmoke.gd`
 - **06A Door State:** `game/scripts/simulation/doors/` + `DoorStateSmoke.gd`
-- **09 Actor Hand Equipment:** `game/scripts/simulation/actors/equipment/` + `ActorHandEquipmentSmoke.gd` + `.github/workflows/actor-hand-equipment.yml`
+- **09 Actor Hand Equipment:** `game/scripts/simulation/actors/equipment/` + `ActorHandEquipmentSmoke.gd`
+- **11 Inventory / Containment:** `game/scripts/simulation/inventory/` + `InventoryContainmentSmoke.gd` + `.github/workflows/inventory-containment.yml`
 
 ### Presentation
 
@@ -57,8 +58,8 @@ A major system moves through **NOT DESIGNED -> DRAFT -> APPROVED -> IMPLEMENTED*
 - **05 Ground:** `GroundDrawCommand.gd`, `GroundLayerRenderer.gd`, `GroundLayerRendererSmoke.gd`
 - **06 Structure:** `StructureDrawCommand.gd`, `StructureLayerRenderer.gd`, `StructureLayerRendererSmoke.gd`
 - **07 Prop / Fixture / Vegetation:** `PropDrawCommand.gd`, `PropLayerRenderer.gd`, `PropLayerRendererSmoke.gd`
-- **08 Player / Living Actor:** `game/assets/actor_atlas.svg`, `ActorDrawCommand.gd`, `ActorLayerRenderer.gd`, `ActorLayerRendererSmoke.gd`
-- **10 Actor Hand Equipment Presentation:** `game/assets/held_item_atlas.svg`, `ActorHandDrawCommand.gd`, `ActorHandEquipmentLayerRenderer.gd`, `ActorHandEquipmentPresentationSmoke.gd`
+- **08 Player / Living Actor:** `actor_atlas.svg`, `ActorDrawCommand.gd`, `ActorLayerRenderer.gd`, `ActorLayerRendererSmoke.gd`
+- **10 Actor Hand Equipment Presentation:** `held_item_atlas.svg`, `ActorHandDrawCommand.gd`, `ActorHandEquipmentLayerRenderer.gd`, `ActorHandEquipmentPresentationSmoke.gd`
 
 The canonical modules remain intentionally separate from frozen `game/scripts/reboot/` reference code.
 
@@ -68,54 +69,50 @@ The canonical modules remain intentionally separate from frozen `game/scripts/re
 
 **Door State** owns persistent OPEN/CLOSED truth for doors.
 
-**09 Actor Hand Equipment State** owns explicit survivor primary/right and secondary/left hand assignments using stable WHAT `item.*` IDs. One physical item cannot occupy multiple hands/actors. Missing enrollment differs from explicit empty hands. 09 does not own Inventory, drawing, combat, lighting, timing, AI, input, or UI.
+**09 Actor Hand Equipment State** owns explicit survivor primary/right and secondary/left stable `item.*` assignments. One physical item cannot occupy multiple 09 hand assignments. 09 owns no containment, rendering, combat, lighting, timing, AI, input, or UI.
 
-**04 Art Catalog** owns semantic-to-art selection only. It now includes the separately recovered `actor_atlas.svg` and `held_item_atlas.svg` alongside the protected environmental/player baseline. The held-item mapping is presentation metadata only and defines no gameplay item stats.
+**11 Inventory / Containment** owns only direct persistent containment: `item_id -> direct_container_id`. Container capability is explicit typed enrollment. One item has at most one direct parent; nested item-containers are supported; self/ancestry cycles are rejected; direct-content versions plus global revision support stale transfer revalidation. Normal new containment requires an existing unplaced WHAT `item.*`. 11 does not import 09 and does not own pickup/drop/equip timing, capacity/encumbrance, stacking/quantity, item stats, rendering, or UI.
 
-**05 Ground**, **06 Structure**, **07 Prop**, and **08 Living Actor** renderers independently present focused WHAT layers.
+**04 Art Catalog** owns semantic-to-art selection only. **05 Ground**, **06 Structure**, **07 Prop**, and **08 Living Actor** independently present focused WHAT layers.
 
-**10 Actor Hand Equipment Presentation** reads WHAT + 09 + 04 and draws stable held items through explicit `BACK` and `FRONT` passes. It preserves anatomical primary/right and secondary/left roles, EAST-native recovered art rotation, historical proportional hand offsets, and E/W far-hand occlusion. It does not modify 08 or 09.
+**10 Actor Hand Equipment Presentation** reads WHAT + 09 + 04 and renders held items through explicit BACK and FRONT passes around the actor body.
 
-**11 Inventory / Containment is DRAFT only.** Proposed containment truth is a stable `item_id -> direct_container_id` relationship with explicit container enrollment, one parent per item, nested item-containers, cycle rejection, deterministic versioned snapshot state, and normal validation that newly contained items are tactically unplaced. It deliberately does not import 09 or own cross-domain pickup/drop/equip actions, weight/capacity, stacking/quantity, UI, or item gameplay stats.
-
-## Immediate dependency path from the requested canonical demo
-
-The user wants the eventual visible canonical demo to include real held equipment, Safari/iPhone navigation buttons, `Looking at:`, real concise stats, detailed Stats/Inventory inspection, and a hard-pause Menu with Resume/Leave Game.
+## Immediate dependency path toward the requested canonical demo
 
 Completed prerequisites:
 
 1. **09 Actor Hand Equipment State — IMPLEMENTED.**
 2. **10 Actor Hand Equipment Presentation — IMPLEMENTED.**
+3. **11 Inventory / Containment — IMPLEMENTED.**
 
-Current design gate:
+Recommended next bounded design:
 
-3. **11 Inventory / Containment — DRAFT, awaiting explicit approval.** It is the real persistent holdings prerequisite. Implementation is prohibited until approved.
+4. **Item Transfer / Pickup / Drop / Equip Actions — NOT DESIGNED / NEXT.** It should coordinate WHAT + 09 + 11 + WHEN so one stable physical item cannot finish a gameplay transition simultaneously loose, contained, and hand-equipped.
 
-After 11 is implemented, likely bounded follow-ups include an explicit **Item Transfer / Pickup / Drop / Equip Actions** coordinator using WHAT + 09 + 11 + WHEN, then the remaining honest-demo prerequisites below.
+Remaining honest-demo prerequisites after that:
 
 | System | Status | Notes |
 |---|---|---|
-| Actor stat domains required for inspector | NOT DESIGNED | Use only canonical real state; do not fabricate HP/stamina/etc. |
-| Authored visual test area | NOT DESIGNED | Real canonical WHAT fixture |
-| Tactical renderer/orchestration | NOT DESIGNED | Composes focused layers including 10 BACK -> 08 Actor -> 10 FRONT |
-| Tactical camera + zoom | NOT DESIGNED | Supplies visible window/scale |
-| Touch/keyboard/Safari input | NOT DESIGNED | Semantic movement/stance intents + lifecycle hard pause |
-| Tactical controls UI | NOT DESIGNED | Real touch Button/Control nodes |
-| HUD / Facing Inspection | NOT DESIGNED | Recover `Looking at:` as canonical WHAT query |
-| Stats / Inventory Inspector UI | NOT DESIGNED | Real data only; opening pauses safely |
-| Pause / Menu UI | NOT DESIGNED | Resume + Leave Game; Web best-effort history return with safe fallback |
-
-Later slices may combine only when their explicit contracts prove they are truly one coherent owner. None should be hidden inside a monolithic demo scene.
+| Actor stat domains required for inspector | NOT DESIGNED | Use only canonical real state; no fake HP/stamina/etc. |
+| Authored Visual Test Area | NOT DESIGNED | Real canonical WHAT fixture |
+| Tactical Renderer / Orchestration | NOT DESIGNED | Ground/Structure/Prop/10-BACK/08/10-FRONT composition |
+| Tactical Camera + Zoom | NOT DESIGNED | Supplies visible window/scale |
+| Touch / Keyboard / Safari Input | NOT DESIGNED | Semantic intents + lifecycle hard pause |
+| Tactical Controls UI | NOT DESIGNED | Real touch Button/Control nodes |
+| HUD / Facing Inspection | NOT DESIGNED | Canonical `Looking at:` query |
+| Stats / Inventory Inspector UI | NOT DESIGNED | Real data only; safe pause |
+| Pause / Menu UI | NOT DESIGNED | Resume + Leave Game |
 
 ## Other later modular systems
 
 | System | Status | Notes |
 |---|---|---|
-| Item Transfer / Pickup / Drop / Equip Actions | NOT DESIGNED | Future cross-domain physical transition coordinator over WHAT + 09 + 11 + WHEN |
 | Corpse / Decay / Contamination | NOT DESIGNED | Approved persistent corpse/contamination direction only |
 | Door interaction / physical transition | NOT DESIGNED | WHEN + Door State + Collision coordination |
 | Actor Appearance / character creator integration | NOT DESIGNED | Persistent visual identity |
 | Loose-item renderer | NOT DESIGNED | Separate LOOSE_ITEM presentation |
+| Item definitions / quantity / condition | NOT DESIGNED | Physical item properties and divisible-resource semantics |
+| Capacity / weight / bulk / encumbrance | NOT DESIGNED | Transfer policy + locomotion capability seam |
 | Road network/topology | NOT DESIGNED | Global coherent road truth |
 | Property/parcel planner | NOT DESIGNED | Parcels/frontage/access/site mix |
 | Building/prefab placement | NOT DESIGNED | Semantic placement respecting global facts |
@@ -123,10 +120,10 @@ Later slices may combine only when their explicit contracts prove they are truly
 | Furniture/fixture/clutter dressing | NOT DESIGNED | Purpose-aware local detail |
 | Vegetation/utilities/civic dressing | NOT DESIGNED | Local detail respecting global networks |
 | World/generator validation | NOT DESIGNED | Independent coherence/quality gates |
-| Prefab authoring tools | NOT DESIGNED | Canonical semantic data/art renderer with separate DEV tooling |
+| Prefab authoring tools | NOT DESIGNED | Separate DEV tooling |
 | Construction/destruction | DEFERRED | Persistent WHAT mutation; bases anywhere legal |
 | Base/community summary | NOT DESIGNED | Thin summary over physical world facts |
-| Health/body/first aid | NOT DESIGNED | Mini-Zomboid injury/treatment; future capability provider |
+| Health/body/first aid | NOT DESIGNED | Mini-Zomboid injury/treatment |
 | Needs/fatigue/temperature | NOT DESIGNED | Coarse consequential states |
 | Vision/perception | DEFERRED | Major mood/gameplay system |
 | Lighting | DEFERRED | Major mood/gameplay system |
@@ -139,21 +136,10 @@ Later slices may combine only when their explicit contracts prove they are truly
 
 ## Requested future demo UI target
 
-When canonical composition reaches UI, it must include:
-
-- Safari/iPhone touch navigation, not keyboard-only controls;
-- desktop keyboard equivalents;
-- recovered-style `Looking at:` HUD line;
-- concise real actor stats only;
-- `STATS`, `INVENTORY`, and `MENU` buttons;
-- Stats/Inventory/Menu paths that hard-pause safely;
-- Menu with Resume and Leave Game;
-- no fake HP/stamina/carry/inventory values before their owning systems exist.
-
-First Fire tactical visuals/art are valid same-owner recovery sources for held-item art. Golden Tick `MapPreview.gd` remains a recovery source for `Looking at:` and pause-menu behavior. First Fire `FFInspector.gd` remains a recovery source for touch-friendly scrollable inspection patterns. Do not restore those runtime architectures.
+The eventual canonical demo must include Safari/iPhone touch navigation, desktop keyboard equivalents, recovered-style `Looking at:`, concise real actor stats, `STATS`, `INVENTORY`, and `MENU` buttons, safe pause during inspection/menu, Resume + Leave Game, and no fabricated values before their owning systems exist.
 
 ## Design rule
 
 Every major system design must define status, goal, non-goals, owners, public contract, data ownership, dependencies, forbidden dependencies, behavior, edge cases, performance/mobile requirements, tests, recovery sources, future seams, North-star fit, and approved decisions.
 
-If an approved implementation unexpectedly requires crossing a forbidden boundary, stop and return it to DRAFT instead of cascading changes.
+If an approved implementation unexpectedly requires crossing a forbidden boundary, stop and return the design to DRAFT instead of cascading changes.

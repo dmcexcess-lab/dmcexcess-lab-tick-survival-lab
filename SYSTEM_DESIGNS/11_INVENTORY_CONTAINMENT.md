@@ -1,281 +1,210 @@
 # Tick Survival Lab — 11 Inventory / Containment
 
-Status: **DRAFT — discussion only; do not implement until explicitly approved**
+Status: **IMPLEMENTED — canonical persistent direct-containment state with dedicated Godot CI, 2026-08-16**
 
-Discussion basis: after 09 Actor Hand Equipment State and 10 Actor Hand Equipment Presentation were implemented, the user directed **“Ok go for inventory containment”** on 2026-08-16. Per the mandatory project workflow, this document defines the bounded persistent containment contract before implementation approval.
+Approval basis: after 09 Actor Hand Equipment State and 10 Actor Hand Equipment Presentation were implemented, the user requested Inventory / Containment and explicitly approved this bounded contract on 2026-08-16.
+
+Initial complete code head: `1218c62cd04b3821991400918ffa43b29d621181`.
+Dedicated **Inventory Containment contract** run: `31988099341` — SUCCESS with no production repair commit.
 
 ## 1. Goal
 
-Own the durable mechanic truth for **which stable physical item entity is directly contained by which stable container entity**.
+Own the durable mechanic truth for **which stable physical `item.*` entity is directly contained by which explicitly enrolled stable container entity**.
 
-11 answers one narrow question:
+11 answers only:
 
-> For a persistent WHAT `item.*` entity that is not tactically placed, is it directly inside an explicitly enrolled container, and if so, which one?
+> Is this persistent item directly inside a container, and if so, which container?
 
-This gives the game real persistent holdings for survivor inventories, cabinets, trunks, bags, backpacks and other future container-capable entities without turning WHAT into a generic gameplay metadata store and without making 09 hand equipment into an inventory.
+It does not become a universal item-disposition, item-stat, transfer-action, or UI system.
 
-## 2. North-star interpretation
+## 2. Owners
 
-Inventory must represent physical persistent survival facts rather than abstract menu-only counts.
+Production:
 
-The smallest useful causal model is:
-
-- items have stable WHAT identity;
-- a contained item has exactly one direct parent container inside this domain;
-- containers are explicit mechanic state rather than inferred from art/name;
-- container-items may themselves be contained, allowing bags/backpacks inside actors, vehicles or other storage;
-- containment cycles are impossible;
-- identical-looking items remain distinct physical entities unless a future item-quantity system explicitly defines a quantity-bearing item entity.
-
-This preserves meaningful possession/storage truth without prematurely inventing weight, volume, pocket grids, stack limits or item statistics.
-
-## 3. Non-goals
-
-11 does **not** own:
-
-- 09 primary/right or secondary/left hand assignments;
-- tactical WHAT placement / LOOSE_ITEM rendering;
-- pickup reach, search actions, transfer action duration or WHEN scheduling;
-- cross-domain pickup/drop/equip atomicity;
-- equipment legality, two-handed rules or attack selection;
-- item definitions, damage, ammunition, durability, quality or condition;
-- weight, bulk, volume, encumbrance, capacity or movement penalties;
-- stack/quantity semantics;
-- container locks, doors, opening state, searchability or visibility;
-- corpse looting;
-- vehicle cargo rules;
-- AI inventory behavior;
-- generation of loot or contents;
-- Inventory UI / inspector;
-- save-file orchestration across WHAT/09/11;
-- rendering, art, input, camera or frozen reboot behavior.
-
-Those systems may consume 11 later through public contracts.
-
-## 4. Owners
-
-Planned production owner directory:
-
-`game/scripts/simulation/inventory/`
-
-Planned focused modules:
-
-- `InventoryContainerRecord.gd` — explicit enrolled container ID + monotonic version;
-- `InventoryContainmentState.gd` — canonical container records and item -> direct-container relation;
-- `InventoryContainmentMutationService.gd` — validated normal low-level writes;
-- optional small internal validation helper only if cycle/snapshot validation would otherwise duplicate substantial logic.
+- `game/scripts/simulation/inventory/InventoryContainerRecord.gd`
+- `game/scripts/simulation/inventory/InventoryContainmentState.gd`
+- `game/scripts/simulation/inventory/InventoryContainmentMutationService.gd`
 
 Testing:
 
 - `game/scripts/ci/InventoryContainmentSmoke.gd`
 - `.github/workflows/inventory-containment.yml`
 
-No Main/reboot wiring in this slice.
+No Main/reboot wiring exists in this slice.
 
-## 5. Entity model
+## 3. Entity model
 
-### 5.1 Items
+### Items
 
-Only stable WHAT entities whose semantic type begins with non-empty `item.` may become contained children in 11.
+Only stable WHAT entities with a non-empty `item.*` semantic type may be newly contained through normal mutation.
 
-Examples:
+Contained items are referenced by stable ID, never copied item names, art IDs, or UI stack records.
 
-- `item.flashlight`
-- `item.pistol`
-- `item.backpack`
-- future food/medicine/tool/resource item entities
+### Containers
 
-11 stores only stable item IDs, never copied display names or art indices.
+Container capability is explicit typed enrollment in 11. It is never inferred from:
 
-### 5.2 Containers
-
-Container capability is **explicit enrollment in 11**.
-
-Enrollment does not infer containment capability from:
-
-- sprite/art;
-- collision;
-- semantic words such as `cabinet`, `car`, or `backpack`;
+- art or sprite appearance;
+- semantic words such as cabinet/backpack/trunk;
+- collision profile;
 - WHAT spatial channel.
 
-Any valid persistent WHAT entity may be explicitly enrolled as a container when a future owning system/content rule determines it should contain items. This intentionally permits:
+Any existing persistent WHAT entity may be explicitly enrolled when a future owning rule/content system determines it is container-capable. This supports survivor inventory roots, cabinets/lockers, vehicles later, item-backpacks, distant/unplaced containers, and future corpse containers without changing the core graph.
 
-- an `actor.survivor` as the survivor's carried-inventory root;
-- a placed cabinet/locker/trunk/vehicle entity;
-- an `item.backpack` or other item-container;
-- a future corpse/container entity;
-- an unplaced/distant persistent container.
+## 4. Containment graph
 
-An enrolled container has mechanic capability because 11 says so, not because its art looks hollow.
-
-## 6. Containment graph
-
-11 owns a directed forest-like containment relation:
+Canonical relation:
 
 `item_id -> direct_container_id`
 
 Rules:
 
-1. one item may have **at most one** direct container;
-2. a container may have zero or many direct child items;
-3. an item that is itself an enrolled container may also be contained by another container;
-4. no item/container may contain itself;
-5. no operation may create an ancestry cycle;
-6. direct contents are authoritative; recursive contents are derived by walking direct relationships;
-7. dictionary/storage ordering never defines gameplay ordering.
+1. one item has at most one direct parent inside 11;
+2. one container may have zero or many direct child items;
+3. an item-container may itself be contained;
+4. self-containment is invalid;
+5. ancestry cycles are invalid;
+6. direct contents are canonical; recursive contents are derived;
+7. storage/dictionary order never defines gameplay order.
 
-Example valid structure:
+Valid example:
 
-`actor.survivor -> item.backpack -> item.flashlight`
+`actor survivor -> item.backpack -> item.flashlight`
 
-Example invalid structure:
+Invalid example:
 
-`item.backpack_A -> item.backpack_B -> item.backpack_A`
+`bag_a -> bag_b -> bag_a`
 
-Cycle detection walks the proposed parent's containment ancestry and rejects the mutation if the child item is encountered.
+Cycle validation follows only the proposed ancestry chain, not the whole world.
 
-## 7. Relationship to WHAT placement
+## 5. Relationship to WHAT placement
 
-A normally newly contained item must exist in WHAT and be **tactically unplaced**.
+Normal `set_container` requires the child item to exist in WHAT and be tactically unplaced.
 
-This preserves the existing project rule that persistent entities may exist without tactical placement and prevents 11 itself from declaring an item simultaneously loose on the floor and inside a container.
+11 reads WHAT for this validation but never mutates WHAT.
 
-11 reads WHAT for normal mutation validation but does not mutate WHAT placement.
+Persistent unplaced entities are therefore the physical seam for:
 
-A future Pickup / Drop / Item Transfer action coordinator will prevalidate and coordinate the transition between:
+- contained items;
+- carried/distant inventories;
+- nested bags;
+- later coarse simulation.
 
-- WHAT tactical placement;
-- 11 containment;
-- 09 hand equipment;
-- WHEN action timing where gameplay time is required.
+Snapshot restore remains domain-local and does not require WHAT to be loaded inside the same method.
 
-11 must not absorb that coordinator merely to eliminate a temporary cross-domain transition state.
+## 6. Relationship to 09 hand equipment
 
-Snapshot restore is domain-local and therefore does not require WHAT to have already been restored, matching the established typed-state pattern used by 09 and Door State.
+09 remains sole owner of primary/right and secondary/left hand assignment.
 
-## 8. Relationship to 09 hand equipment
+11 deliberately does **not** import 09.
 
-09 remains the sole owner of explicit primary/right and secondary/left hand assignments.
+This means low-level domains can be tested independently. A later **Item Transfer / Pickup / Drop / Equip Actions** coordinator must coordinate WHAT placement + 09 hands + 11 containment + WHEN so gameplay transitions cannot finish with one physical item simultaneously loose, contained, and equipped.
 
-11 does **not** import 09 and does not decide whether an item is equipped.
-
-This means the low-level domains intentionally remain independently testable. The later Item Transfer / Equip coordinator is responsible for preventing a gameplay transition from ending with the same physical item both contained and hand-assigned.
-
-This follows the same architectural principle already used for Door State versus Collision: related truths stay in their owning domains; a higher-level physical transition system coordinates them at semantic commit.
-
-## 9. Record/version contract
+## 7. Record/version contract
 
 `InventoryContainerRecord` contains:
 
 - `container_id: String`
 - `version: int`
 
-Versions are positive and monotonic across real direct-content mutations and lifecycle changes.
+The state owns a global non-negative revision.
 
-The state also owns a global non-negative revision.
+Container version changes when:
 
-A container's version changes when:
+- the container is enrolled;
+- a direct child enters;
+- a direct child leaves;
+- a direct child transfers in/out.
 
-- it is enrolled;
-- a direct child item enters it;
-- a direct child item leaves it;
-- a direct child transfers into/out of it.
+A direct A -> B move increments both A and B versions in one 11 mutation.
 
-Moving a contained item from container A to container B increments both A and B container versions in one 11 mutation.
+An item-container's own version does **not** change merely because that container item moves between parents. Its version represents **its direct contents**, not its own physical parent.
 
-Removing and later re-enrolling the same container ID must receive a newer version than its prior lifecycle so future timed transfer actions cannot accidentally accept stale expectations.
+Removal + re-enrollment always receives a fresher version than the prior lifecycle by deriving enrollment version from the global revision.
 
-An item-container's own version does **not** change merely because the container item itself moves between parents; its version represents its direct contents, not its physical parent.
+## 8. Public read contract
 
-## 10. Read contract
-
-Planned `InventoryContainmentState` public reads:
+`InventoryContainmentState` exposes:
 
 - `revision() -> int`
 - `has_container(container_id) -> bool`
-- `container_ids() -> Array[String]` in stable sorted order
+- `container_ids() -> Array[String]` sorted
 - `container(container_id) -> InventoryContainerRecord` copy or null
 - `container_version(container_id) -> int`
 - `is_contained(item_id) -> bool`
 - `container_of(item_id) -> String`
-- `direct_contents(container_id) -> Array[String]` in stable sorted item-ID order
+- `direct_contents(container_id) -> Array[String]` sorted
 - `contains_directly(container_id, item_id) -> bool`
 - `snapshot() -> Dictionary`
 - `load_snapshot(data) -> bool`
 
-The public contract intentionally exposes **direct** contents rather than baking UI grouping or recursive flattening semantics into storage truth. Future UI/transfer systems can walk the stable graph as needed.
+`container_of` is dictionary-backed O(1)-style lookup. Direct-child reads use a maintained reverse index and return mutation-safe sorted copies.
 
-All records/arrays returned to callers are mutation-safe copies.
+## 9. Mutation contract
 
-## 11. Mutation contract
+Normal writes use `InventoryContainmentMutationService`.
 
-Planned `InventoryContainmentMutationService` primitives:
+### `enroll_container(container_id)`
 
-### `enroll_container(container_id) -> bool`
+Requires:
 
-Normal enrollment requires:
-
-- ready state + WHAT dependency;
+- ready state + WHAT;
 - valid stable ID;
-- corresponding WHAT entity exists;
-- container is not already enrolled.
+- matching WHAT entity exists;
+- not already enrolled.
 
-No semantic/art-based capability inference occurs.
+No semantic/art capability inference occurs.
 
-### `remove_container(container_id) -> bool`
+### `remove_container(container_id)`
 
-Explicit lifecycle cleanup.
+Requires:
 
-Rules:
+- enrolled container;
+- zero direct contents.
 
-- container must be enrolled;
-- direct contents must be empty;
-- may clean the typed state even if the WHAT entity has already been removed;
-- removing container capability does not automatically remove the container entity's own parent relation if that entity is an `item.*` currently contained somewhere else.
+It may remove stale typed state after the WHAT entity itself has already been deleted.
 
-### `set_container(item_id, container_id) -> bool`
+Removing container capability does not remove that entity's own parent relation if the entity is an `item.*` contained elsewhere.
 
-Creates or changes the item's direct containment relation atomically inside 11.
+### `set_container(item_id, container_id)`
 
-Normal validation requires:
+Creates or atomically changes direct containment.
 
-- target container is enrolled and still exists in WHAT;
+Requires:
+
+- target is enrolled and still exists in WHAT;
 - item exists in WHAT;
-- item semantic type is valid `item.*`;
-- item has no WHAT tactical placement;
-- target differs from item ID;
-- proposed relationship creates no ancestry cycle.
+- item semantic type is valid non-empty `item.*`;
+- item is tactically unplaced;
+- target differs from item;
+- proposed ancestry is acyclic.
 
-If the item already has exactly that direct container, the call is a successful no-op with no revision/version/signal.
+Same item + same direct parent is a successful no-op with no revision/version/signal.
 
-If the item moves A -> B, the relation changes without an externally visible intermediate uncontained state inside 11.
+A -> B movement has no externally visible intermediate uncontained state inside 11.
 
-### `clear_container(item_id) -> bool`
+### `clear_container(item_id)`
 
-Removes an existing containment relation.
+Removes an existing direct parent relation.
 
-This is a low-level coordination/cleanup primitive and does not place the item into the world or a hand. It may clean stale 11 state even if the WHAT item has already been removed.
+This is a low-level coordination/cleanup primitive only. It does not place the item into WHAT or equip it in 09. It may clean stale state after the WHAT item has already been deleted.
 
-Gameplay pickup/drop/equip flows must use a later coordinator rather than invoking these primitives as if they were complete player actions.
-
-## 12. Derived indexes
+## 10. Derived index
 
 Canonical snapshot truth is:
 
 - enrolled container records;
 - `item_id -> direct_container_id` relations.
 
-The state may maintain a derived reverse index:
+A derived reverse index stores:
 
 `container_id -> direct child item IDs`
 
-for efficient UI/query usage.
+It is rebuilt from canonical truth on snapshot load and is never serialized as competing state.
 
-The reverse index is rebuilt and validated from canonical snapshot truth and is never serialized as an independent competing reality.
+## 11. Signal contract
 
-## 13. Signals
-
-Planned semantic signals:
+Signals:
 
 - `container_enrolled(container_id, version)`
 - `container_removed(container_id, previous_version)`
@@ -283,165 +212,124 @@ Planned semantic signals:
 - `container_contents_changed(container_id, version)`
 - `containment_reset`
 
-A direct A -> B transfer emits one item relationship change plus one contents-changed event for each affected container.
+For A -> B transfer, deterministic order is:
 
-No-op same-parent assignment emits nothing.
+1. item relationship change;
+2. source contents/version change;
+3. destination contents/version change.
 
-Signal ordering must be deterministic and specified in tests so future UI/cache consumers cannot depend on connection order or dictionary iteration.
+Same-parent no-op emits nothing.
 
-## 14. Snapshot / determinism
+Successful snapshot restore emits exactly one `containment_reset`; failed restore emits none.
 
-V1 snapshot is schema-versioned and deterministic.
+## 12. Snapshot / determinism
 
-Requirements:
+Snapshot schema version: `1`.
 
-- container records serialized by stable container ID;
-- containment relations serialized by stable item ID;
-- global revision retained;
-- container versions positive and never greater than restored revision;
-- duplicate container IDs rejected;
-- duplicate item relations rejected;
-- relation target must name an enrolled container in the candidate snapshot;
-- self-containment rejected;
-- all ancestry cycles rejected;
-- malformed IDs rejected;
-- full candidate payload validated before replacing live state;
-- derived reverse contents index rebuilt from accepted truth;
-- successful restore emits exactly one `containment_reset`;
-- failed restore leaves live state unchanged.
+Snapshot contains:
 
-Snapshot restore does not require WHAT/09 to be restored inside the same method. Cross-domain save/load ordering belongs to future save orchestration.
+- global revision;
+- container records sorted by stable container ID;
+- containment relations sorted by stable item ID.
 
-## 15. Stacking / quantity rule
+Load validation rejects before live mutation:
 
-11 stores physical **entity containment**, not UI stacks.
+- wrong schema or negative revision;
+- malformed records/IDs;
+- non-positive container versions;
+- container version greater than revision;
+- duplicate container IDs;
+- duplicate item relations;
+- relation targets that are not enrolled in candidate state;
+- self-containment;
+- any ancestry cycle.
 
-V1 does not decide whether ten visually identical objects are:
+Accepted state rebuilds the reverse child index atomically.
 
-- ten distinct item entities;
-- one quantity-bearing item entity;
-- one package/container entity holding smaller units.
+Snapshot restore intentionally does not validate WHAT semantics because cross-domain restore ordering belongs to future save orchestration.
 
-A future Item Definition / Quantity state may choose the smallest model appropriate to ammunition, liquids, food portions and other divisible resources.
-
-Inventory UI may later visually group identical physical entities without changing containment truth.
-
-This avoids prematurely requiring one persistent WHAT entity for every individual bullet while still preserving stable identity for equipment and meaningful objects.
-
-## 16. Capacity / weight / encumbrance rule
-
-11 deliberately contains **no arbitrary capacity values**.
-
-It does not yet define:
-
-- actor carry mass;
-- bag volume;
-- number of pockets;
-- grid packing;
-- container weight limits;
-- movement penalties.
-
-Those constraints require real item property/state and actor capability decisions. A later transfer-policy/encumbrance system can reject a proposed transfer before calling 11 and can feed the existing Actor Movement Capability seam without changing containment storage.
-
-Until such gameplay is wired, 11 remains persistent physical storage truth rather than an unlimited-capacity player mechanic presented as final balance.
-
-## 17. Lifecycle rules
+## 13. Lifecycle rules
 
 11 state may persist while:
 
 - a container is tactically unplaced;
-- a contained item is inside a distant/unmaterialized container;
-- the containing actor is tactically unplaced.
+- a containing actor is tactically unplaced;
+- a contained item is inside a distant/unmaterialized container.
 
-WHAT deletion does not silently cascade typed inventory state. Explicit lifecycle/save/death systems coordinate cleanup or transfer.
+WHAT deletion does not silently cascade mechanic state.
 
-A non-empty container cannot simply be unenrolled, preventing accidental orphaning of its direct contents.
+Non-empty containers cannot be unenrolled, preventing accidental orphaning of direct contents.
 
-Future death should transfer/preserve a survivor's contained items through the dedicated corpse/death design rather than silently deleting inventory.
+Future death/corpse handling must preserve or transfer survivor contents explicitly rather than silently deleting them.
 
-## 18. Performance / mobile requirements
+## 14. Explicit non-goals
 
-Phone/Safari is first-class even though 11 has no UI.
+11 does not own:
 
-Requirements:
+- 09 hand assignment;
+- WHAT pickup/drop placement mutation;
+- WHEN timing;
+- pickup reach/search/equip action legality;
+- cross-domain atomic gameplay actions;
+- item definitions or stats;
+- damage/ammo/durability/quality/condition;
+- weight/bulk/volume/capacity/encumbrance;
+- pockets/grid packing;
+- stacking/quantity semantics;
+- locks/open/searchable container state;
+- corpse looting;
+- vehicle cargo policy;
+- AI inventory behavior;
+- loot generation;
+- Inventory UI;
+- rendering/art/input/camera;
+- save orchestration;
+- frozen reboot behavior.
 
-- stable-ID dictionary/index reads; no world scan to find contents;
-- `container_of(item)` expected O(1);
-- direct contents lookup expected O(number of direct children) to copy/sort or better with maintained sorted/cache policy;
-- cycle validation proportional to ancestry depth, not total world item count;
+## 15. Stacking / quantity boundary
+
+11 stores **entity containment**, not UI stacks.
+
+It intentionally does not decide whether divisible resources such as ammunition/liquids are represented by many physical entities, a quantity-bearing entity, or package/container entities. That belongs to a future item-definition/quantity contract.
+
+UI may later visually group equivalent physical items without changing containment truth.
+
+## 16. Capacity / weight / encumbrance boundary
+
+No arbitrary capacity values were introduced.
+
+A later item-property / transfer-policy / encumbrance system can reject transfers and feed Actor Movement Capability without rewriting containment storage.
+
+Until that policy exists, 11 is persistent storage truth—not a claim that unlimited carrying is final gameplay balance.
+
+## 17. Performance / mobile
+
+Phone/Safari requirements are satisfied structurally:
+
+- dictionary-backed stable-ID reads;
+- no full-world containment scan for parent lookup;
+- reverse direct-child index;
+- ancestry-depth cycle checks;
 - no Node per inventory item;
 - no `_process()` polling;
-- no renderer redraw ownership;
-- snapshot ordering deterministic independent of dictionary order.
+- deterministic snapshot ordering;
+- no renderer/UI ownership.
 
-The system must remain usable for distant/unmaterialized inventories because persistent containment is not a tactical-render-only concept.
+Persistent/distant inventory state does not depend on tactical materialization.
 
-## 19. Failure / edge cases
-
-Acceptance behavior must explicitly cover:
-
-- duplicate container enrollment;
-- missing/nonexistent container enrollment;
-- empty container removal;
-- non-empty container removal rejection;
-- item enters empty container;
-- item transfers A -> B;
-- same-parent no-op;
-- item leaves containment;
-- one item never has two parents;
-- nested item-container;
-- self-containment rejection;
-- two-node and deeper cycle rejection;
-- tactically placed item rejected for normal containment;
-- non-`item.*` child rejected;
-- unplaced/distant container valid;
-- item-container can move between parents without changing its own direct-contents version;
-- cleanup after WHAT deletion;
-- deterministic sorted reads;
-- copy-safe records;
-- snapshot round-trip;
-- atomic malformed snapshot rejection;
-- duplicate/cyclic snapshot rejection;
-- removal/re-enrollment version monotonicity.
-
-## 20. Tests / acceptance criteria
-
-Dedicated Godot smoke should prove at minimum:
-
-1. explicit enrollment of survivor, fixture/object and item-container IDs;
-2. no semantic/art inference is required after explicit enrollment;
-3. stable `item.*` direct containment;
-4. O(1)-style parent lookup contract and deterministic direct-child ordering;
-5. A -> B move updates relation and both container versions;
-6. same-parent set is a successful no-op;
-7. nested backpack-style containment;
-8. self/cyclic containment rejected without partial mutation;
-9. placed/non-item/missing item rejected for normal new containment;
-10. non-empty container cannot be removed;
-11. explicit stale cleanup after WHAT removal;
-12. removal/re-enrollment version freshness;
-13. snapshot determinism and round-trip;
-14. malformed, duplicate and cyclic candidate snapshots rejected atomically;
-15. exactly one reset signal after successful restore;
-16. no dependency on reboot/render/art/UI/input/WHEN/09 internals;
-17. 00B WHAT regression remains green;
-18. 09 Actor Hand Equipment regression remains green even though 11 does not import or modify it.
-
-## 21. Dependencies
+## 18. Dependencies
 
 Allowed production dependencies:
 
 - `WorldEntityId` validation;
-- read-only `WorldState` entity/placement facts for normal mutations;
+- read-only `WorldState` entity/placement facts;
 - Godot RefCounted/data primitives.
 
-11 may use WHERE/WHAT types only where needed to establish that an item is tactically unplaced; it does not own spatial rules.
+## 19. Forbidden dependencies
 
-## 22. Forbidden dependencies
+Production 11 does not import:
 
-Production 11 must not import:
-
-- 09 Actor Hand Equipment implementation/state;
+- 09 Actor Hand Equipment;
 - 10 held-item presentation;
 - Art Catalog/renderers;
 - WHEN;
@@ -452,107 +340,88 @@ Production 11 must not import:
 - generation;
 - camera/input/UI;
 - corpse mechanics;
-- frozen `game/scripts/reboot/`.
+- reboot.
 
-A future cross-domain Item Transfer / Equip system may depend on the public APIs of WHAT + 09 + 11 + WHEN; that is a separate owner and approval slice.
+## 20. Verification
 
-## 23. Recovery / archaeology
+Initial complete implementation head:
 
-No existing implemented canonical module currently owns general physical containment.
+`1218c62cd04b3821991400918ffa43b29d621181`
 
-Useful historical projects treated equipment/inventory largely as copied names/dictionaries rather than stable physical world entities. Those structures are **not** suitable to restore as canonical containment truth.
+Dedicated **Inventory Containment contract** run `31988099341` passed on that exact code head with:
 
-The useful concepts already recovered are instead:
+- source-boundary validation;
+- Godot 4.7.1 import/parse;
+- 00B WHAT regression;
+- 09 Actor Hand Equipment regression;
+- full 11 smoke.
 
-- 00B: persistent unplaced entities retain stable identity;
-- 09: hands reference stable `item.*` entities and enforce within-domain physical uniqueness;
-- 10: presentation reads the stable item identity without becoming inventory.
+The 11 smoke proves:
 
-11 extends that same stable-identity architecture rather than reconstructing old dictionary inventory state.
+- survivor, world-fixture and item-container explicit enrollment;
+- sorted/copy-safe reads;
+- stable direct containment and parent lookup;
+- same-parent no-op;
+- A -> B atomic relation movement;
+- deterministic signal ordering;
+- both affected parent versions update;
+- nested backpack-style containment;
+- moving an item-container does not alter its own contents version;
+- self/two-node ancestry cycles fail without partial mutation;
+- placed/non-item/missing child rejection;
+- non-empty container removal rejection;
+- stale item/container cleanup after WHAT deletion;
+- removal/re-enrollment version freshness;
+- deterministic nested snapshot round-trip;
+- duplicate relation/container, cyclic and bad-version snapshot rejection atomically;
+- exactly one reset after successful restore.
 
-## 24. Future seams
+No production repair commit was required.
 
-Known downstream consumers/extensions:
+## 21. Future seams
 
-- Item Transfer / Pickup / Drop / Equip Actions — cross-domain coordinator using WHAT + 09 + 11 + WHEN;
-- Inventory Inspector UI — real tree/contents, plus held items from 09;
+Next direct consumer:
+
+**Item Transfer / Pickup / Drop / Equip Actions — NOT DESIGNED.**
+
+It should coordinate WHAT + 09 + 11 + WHEN and own physical transition timing/revalidation without changing any low-level owner.
+
+Other future consumers:
+
+- Inventory Inspector UI;
 - item definitions/properties;
-- capacity/weight/bulk/encumbrance policy;
-- searchable/openable world containers;
+- capacity/weight/bulk/encumbrance;
+- searchable world containers;
 - loot generation/materialization;
-- corpse inventories and death transfer;
+- corpse inventories/death transfer;
 - vehicle cargo;
-- AI survivor inventories;
-- food/water/medicine quantity/condition state;
-- crafting consumption/output;
+- AI inventories;
+- food/water/medicine quantity/condition;
+- crafting;
 - ammunition/magazines;
 - construction material use;
 - save/load orchestration;
-- distant actor/population simulation.
+- distant actor simulation.
 
-These consumers should not require changing the core one-parent acyclic direct-containment model.
+## 22. North-star fit
 
-## 25. Expected implementation impact surface after approval
+Physical persistent inventories are central to the intended Ultima-style mini-Zomboid world. A flashlight in a backpack, food in a cabinet, or supplies carried by a survivor remain real stable world facts even when tactically unplaced or distant.
 
-Expected new production files:
+The model stays intentionally small—stable IDs, explicit container capability, one direct parent, nested acyclic containment—while preserving the consequences future looting/storage/death/equipment/encumbrance systems need.
 
-- `game/scripts/simulation/inventory/InventoryContainerRecord.gd`
-- `game/scripts/simulation/inventory/InventoryContainmentState.gd`
-- `game/scripts/simulation/inventory/InventoryContainmentMutationService.gd`
+## 23. Approved decisions
 
-Expected new tests/workflow:
+Approved 2026-08-16:
 
-- `game/scripts/ci/InventoryContainmentSmoke.gd`
-- `.github/workflows/inventory-containment.yml`
-
-Expected documentation updates after implementation:
-
-- this design -> IMPLEMENTED;
-- `SYSTEM_DESIGNS/README.md`;
-- `README_CONTEXT.md`;
-- `CHANGELOG.md`;
-- `DESIGN_DECISIONS.md` only if approval settles a truly cross-system item-disposition decision worth recording.
-
-Must remain untouched during 11 implementation unless an approved contract conflict is discovered:
-
-- WHERE / WHAT / WHEN production;
-- Collision / Movement / Actor Locomotion;
-- Door State;
-- 04 Art Catalog;
-- 05/06/07/08/10 rendering;
-- all 09 production files;
-- protected/recovered art assets;
-- generation/reboot/UI/input/camera.
-
-## 26. Contract impact
-
-11 is additive.
-
-No existing public production API needs revision for the proposed v1 containment state.
-
-The important deliberate limitation is that 09 and 11 remain independent low-level typed truths. Cross-domain exclusivity and physical transitions are enforced by the later Item Transfer / Equip coordinator, not by making either state system import the other.
-
-## 27. North-star fit
-
-Physical persistent inventories are central to an Ultima-style mini-Zomboid world: a flashlight in a backpack, food in a cabinet, supplies in a vehicle, and possessions carried by a survivor must remain real world facts when the player travels away and returns.
-
-This design keeps the model small—stable IDs, explicit containers, one direct parent, acyclic nesting—while preserving the consequences needed for looting, storage, death, equipment, encumbrance and survival logistics later.
-
-It deliberately avoids detailed pocket grids/weight math until those details create a real gameplay decision and have real item/stat owners.
-
-## 28. Decisions proposed for approval
-
-Proposed 2026-08-16 decisions:
-
-1. **11 owns containment only**, not all item disposition or transfer gameplay.
-2. Only stable WHAT `item.*` entities may be contained children.
-3. Container capability is explicit typed enrollment and is never inferred from art or semantic names.
-4. Survivor actors, world entities and item-containers may all be explicitly enrolled containers.
-5. One item has at most one direct container inside 11.
+1. 11 owns containment only, not universal item disposition or transfer gameplay.
+2. Only stable WHAT `item.*` entities are normal contained children.
+3. Container capability is explicit typed enrollment, never inferred from art/name/channel.
+4. Survivors, world entities and item-containers may be enrolled.
+5. One item has at most one direct container in 11.
 6. Nested item-containers are supported; self/ancestry cycles are forbidden.
-7. Normally newly contained items must be tactically unplaced in WHAT.
-8. 11 does not import 09; later Item Transfer / Equip coordination owns cross-domain hand/containment/world transitions.
+7. Normal newly contained items must be tactically unplaced in WHAT.
+8. 11 does not import 09; later transfer/equip coordination owns cross-domain transitions.
 9. No capacity/weight/bulk/stack/quantity values are invented in 11.
-10. Container direct-content versions plus global revision support future stale timed-transfer revalidation.
+10. Direct-content versions + global revision support future stale transfer revalidation.
 11. Non-empty containers cannot be unenrolled.
 12. Persistent containment may exist for tactically unplaced/distant actors and containers.
