@@ -20,7 +20,7 @@ Golden recovery commit: `1763958f44eb7f855fd49944c00d1ffe608c0abe`.
 
 ## 2. Current architectural phase
 
-**Systems 14–16 are now the live canonical demo/presentation path.** `game/main.tscn` launches the canonical playable demo with real HUD, stance control, Stats/Inventory inspectors and Menu/hard pause. `game/scripts/reboot/` remains frozen/deprecated recovery/reference code and must not be extended or used as a compatibility adapter.
+**Systems 14–16 are the live canonical demo/presentation path.** `game/main.tscn` launches the canonical playable demo with real HUD, stance control, Stats/Inventory inspectors and Menu/hard pause. `game/scripts/reboot/` remains frozen/deprecated recovery/reference code and must not be extended or used as a compatibility adapter.
 
 Implemented + CI:
 
@@ -50,19 +50,24 @@ Implemented + CI:
 - 15 Canonical HUD / Facing Inspection
 - **16 Canonical Player Shell / Inspectors / Stance Integration**
 
+Active design:
+
+- **17 Run / Damage-Interruptible Walking — DRAFT; awaiting explicit approval.**
+
 Current designs:
 
 - `SYSTEM_DESIGNS/14_CANONICAL_PLAYABLE_DEMO.md`
 - `SYSTEM_DESIGNS/15_CANONICAL_HUD_FACING_INSPECTION.md`
 - `SYSTEM_DESIGNS/16_CANONICAL_PLAYER_SHELL.md`
+- `SYSTEM_DESIGNS/17_RUN_DAMAGE_INTERRUPTIBLE_WALKING.md`
 
-Dedicated workflows:
+Dedicated live-demo workflows:
 
 - `.github/workflows/canonical-demo.yml`
 - `.github/workflows/canonical-hud.yml`
 - `.github/workflows/canonical-player-shell.yml`
 
-System 16 hardened code head `dce48115f35ef6487bcbe8811fe945d2e5012cff` passed dedicated run `31996425080` after one lifecycle-only hardening of touch-button initialization. All protected Locomotion/actor-status/Hands/Inventory/System14/System15 regressions were green.
+System 16 hardened code head `dce48115f35ef6487bcbe8811fe945d2e5012cff` passed dedicated run `31996425080`; the exact promoted final SHA `3a9faec4219b08c92b6530e9e02253b7f37847c9` subsequently passed the System 16, System 14, System 15 and Pages/deploy gates.
 
 ## 3. Foundation / mechanic truth
 
@@ -78,18 +83,25 @@ One authoritative persistent current world with semantic terrain/entities, stabl
 
 One deterministic non-negative integer world tick; variable-duration actions/events; same-tick batch drain; committed/resumable/cancelable interruption; tactical decision pause plus separate hard application pause.
 
-### Collision / Movement / Locomotion
+### Collision / Movement / Locomotion — current implemented truth
 
 Collision owns hard occupancy. Movement owns forward/back/turn request -> time -> commit semantics. Actor Locomotion owns standing/crouched state and movement-capability composition.
 
-System 03 owns real timed stance actions:
+Current System 02 still implements:
+
+- walk forward/back one cell;
+- turn left/right;
+- all accepted Movement actions COMMITTED.
+
+Current System 03 owns real timed stance actions:
 
 - crouch/stand base action = 4 ticks before existing modifiers;
 - standing step baseline on demo terrain = 10 ticks;
 - crouched step on that same terrain = 14 ticks;
-- turn baseline = 3 ticks.
+- turn baseline = 3 ticks;
+- `movement.run_forward` is only a reserved capability seam and is currently not a real Movement action.
 
-Running remains deferred until it has real downside.
+System 17 DRAFT intentionally proposes revising those movement semantics; until approved/implemented, current code remains authoritative.
 
 ### Physical item truth
 
@@ -107,6 +119,8 @@ System 16 Inventory is read-only and does not become another possession truth.
 ### 13A Health
 
 100 HP baseline plus broad real injury records: type, body region, MINOR/SERIOUS/CRITICAL, stabilized/treated. HP zero does not itself implement corpse/death transition.
+
+Existing `apply_damage(actor_id, amount)` mutates real HP but currently exposes only generic HP-change observation. System 17 DRAFT proposes an additive `damage_applied` signal so damage-triggered movement interruption does not confuse healing/max-HP bookkeeping with damage.
 
 ### 13B Needs
 
@@ -132,13 +146,13 @@ Current live renderer composition remains:
 
 `Ground -> Structure -> Prop -> Living Actor`
 
-The demo still has no real equipped items, so System 10 BACK/FRONT hand layers are not yet inserted into live composition. They are ready for the next item-interaction slice.
+The demo still has no real equipped items, so System 10 BACK/FRONT hand layers are not yet inserted into live composition. They are ready for the later item-interaction slice.
 
-System 15 owns a separate CanvasLayer HUD. System 16 owns separate inspector/menu presentation. Neither becomes simulation truth.
+System 15 owns the HUD. System 16 owns inspector/menu presentation. Neither becomes simulation truth.
 
 ## 6. Live canonical demo
 
-Current live demo:
+Current deployed demo:
 
 - authored 13x13 real WHAT map;
 - grass + cross-road, small house shell, trees, bench, mailbox, streetlight;
@@ -147,67 +161,50 @@ Current live demo:
 - real Collision / Movement / Locomotion / WHEN;
 - W/Up forward, S/Down backward, A/Left turn left, D/Right turn right;
 - C = Crouch/Stand semantic toggle;
-- native touch buttons for Forward, Back, Turn L, Turn R, Crouch/Stand;
-- fixed one-screen view at 38 px/cell; no camera yet because the test area fits;
+- native Godot touch buttons for Forward, Back, Turn L, Turn R, Crouch/Stand;
+- fixed one-screen view at 38 px/cell;
 - System 15 HUD shows tick, facing, latest action, one-cell-ahead `Looking at:`, HP, fatigue, hunger, thirst, sleep pressure, carry and moodlets;
-- System 16 top buttons: Stats, Inventory, Menu.
+- System 16 top buttons: Stats, Inventory, Menu;
+- Stats/Inventory/Menu acquire WHEN hard pause and restore the prior state exactly;
+- gameplay keyboard/touch input is blocked while a modal is open.
 
-The old controls help line and second controls-owned tick/action label are gone. System 15 is the sole tick/action HUD surface.
+The old controls help line and second controls-owned tick/action label remain gone.
 
-## 7. System 16 player shell truth
+## 7. Active System 17 DRAFT
 
-### Stance
+`SYSTEM_DESIGNS/17_RUN_DAMAGE_INTERRUPTIBLE_WALKING.md` is the active design and must not be implemented until explicit user approval.
 
-- semantic `STANCE_TOGGLE` only;
-- controller reads canonical stance and calls existing `request_crouch` / `request_stand`;
-- touch label derives from canonical stance: `CROUCH` while standing, `STAND` while crouched;
-- no duplicate stance state.
+Proposed locked direction from the current user instruction:
 
-### Stats
+- Run becomes explicit `movement.run_forward`, not persistent run mode;
+- one Run action covers two straight cells;
+- Run is COMMITTED;
+- walking becomes damage-interruptible;
+- crouched running remains blocked.
 
-Read-only modal shows:
+Proposed detailed tuning/architecture awaiting approval:
 
-- stance;
-- HP;
-- fatigue/hunger/thirst/sleep pressure;
-- carry current/capacity;
-- moodlets;
-- real injuries or `None`;
-- all six real Skills with level and XP/next threshold.
+- recover golden healthy Run baseline = 6 total ticks against current 10-tick walk terrain;
+- represent the two-cell run as two physical stride phases at half-duration/final-duration (3 and 6 ticks at baseline) rather than final-tick teleportation;
+- derive base run timing as 60% of slowest relevant walk terrain cost, then apply existing 03 Needs/Carry modifiers;
+- forward/back walk use WHEN CANCELABLE; turns remain COMMITTED;
+- add semantic Health `damage_applied` observation plus `MovementDamageInterruptionService` so MovementActionService never imports Health;
+- on damage, coordinator asks WHEN to interrupt active Movement action; CANCELABLE walk stops, COMMITTED run/turn ignores interruption;
+- request and each run stride revalidate collision/terrain with no reservation;
+- Shift+W/Shift+Up = Run on desktop;
+- native RUN touch button uses the currently empty bottom-right control slot beneath Turn R.
 
-The live demo survivor is explicitly enrolled in 13C, so boot Skills are honest level-0/XP-0 records. Traits/stress/temperature/etc. are not displayed because those systems do not exist.
-
-### Inventory
-
-Read-only modal shows:
-
-- Right/Primary hand;
-- Left/Secondary hand;
-- actor-root contents;
-- nested containment recursively;
-- stable physical item IDs;
-- known weight or explicit `Weight: Unknown`;
-- real carry current/capacity.
-
-The current itemless demo honestly says Empty and reports 0.0/18.0 kg. No starter gear was fabricated.
-
-### Menu / hard pause
-
-Stats, Inventory and Menu acquire WHEN hard application pause. The shell captures the pre-existing hard-pause state once per modal lifetime, keeps it while switching modals, and restores it exactly on final Close/Resume.
-
-The full-screen overlay blocks pointer input and the shell explicitly disables keyboard/touch gameplay adapters while open.
-
-Menu contains Resume + Leave Game. Web Leave Game tries browser history first and otherwise falls back to Google; native fallback quits normally.
+No stamina, sound, fatigue accumulation or AI run behavior is added in this slice.
 
 ## 8. Death / corpse direction
 
-Approved direction remains: death leaves a persistent physical corpse/world consequence rather than an ordinary living ACTOR or disappearance. Exact corpse representation/decay/disposal/rendering remain NOT DESIGNED. System 13/16 do not implement this transition.
+Approved direction remains: death leaves a persistent physical corpse/world consequence rather than an ordinary living ACTOR or disappearance. Exact corpse representation/decay/disposal/rendering remain NOT DESIGNED. System 13/16/17 do not implement this transition.
 
-## 9. Immediate path after System 16
+## 9. Immediate path
 
-Do **not** rebuild the existing renderers, player shell, actor-state domains or item-transfer rules.
+First gate: user approves or revises System 17.
 
-Next useful bounded slice is the **real item interaction demo**:
+After System 17, return to the planned real item interaction demo:
 
 1. put a few real stable WHAT `item.*` entities with explicit 13D weights into the authored map;
 2. implement the missing loose-item renderer;
@@ -215,7 +212,7 @@ Next useful bounded slice is the **real item interaction demo**:
 4. expose real System 12 pickup/drop/equip/unequip through semantic touch/keyboard interaction UI;
 5. refresh existing HUD/Inventory after committed transfers.
 
-Door open/close interaction remains a separate later bounded system.
+Door interaction remains separate.
 
 ## 10. Other later systems
 
@@ -224,7 +221,7 @@ Door open/close interaction remains a separate later bounded system.
 - Door interaction / physical transition — NOT DESIGNED
 - Actor Appearance / character creator integration — NOT DESIGNED
 - Loose-item renderer — NOT DESIGNED
-- quantity/stack/durability/richer item properties — NOT DESIGNED
+- richer item quantity/condition/bulk — NOT DESIGNED
 - first aid / health progression / sickness — NOT DESIGNED beyond 13A
 - eating/drinking/rest/sleep progression — NOT DESIGNED beyond 13B
 - global world generation / roads / parcels / buildings / rooms / dressing — NOT DESIGNED
@@ -250,6 +247,7 @@ Door open/close interaction remains a separate later bounded system.
 13. Needs/Carry affect locomotion only through 03’s provider contract.
 14. HUD/inspectors are readers/composers; they do not mutate mechanic truth.
 15. Hard application pause uses WHEN, not SceneTree pause.
+16. Running, if approved, is an explicit action rather than persistent locomotion mode.
 
 ## 12. Documentation source order
 
@@ -267,4 +265,4 @@ Door open/close interaction remains a separate later bounded system.
 
 ## 13. Recommended next action
 
-Playtest the live System 16 shell on Safari/phone. Unless playtesting reveals a shell defect, design the bounded **real item interaction demo** next: loose item presentation + existing held-item layer composition + real System 12 pickup/drop/equip controls.
+Review and explicitly approve/revise **System 17 Run / Damage-Interruptible Walking**. On approval, implement only that bounded movement/interruption slice and exact-final-SHA verify it through Godot/CI/Web deployment.
