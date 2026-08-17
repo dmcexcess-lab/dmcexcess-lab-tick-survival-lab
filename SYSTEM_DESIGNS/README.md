@@ -36,6 +36,8 @@ Major systems move through **NOT DESIGNED -> DRAFT -> APPROVED -> IMPLEMENTED** 
 | 17 | Run / Damage-Interruptible Walking | **IMPLEMENTED** | `17_RUN_DAMAGE_INTERRUPTIBLE_WALKING.md` |
 | 17A | Movement Exertion / Encumbrance / Run Impact Revision | **IMPLEMENTED** | `17A_MOVEMENT_EXERTION_ENCUMBRANCE_RUN_IMPACT.md` |
 | 17A.1 | Overweight Walk Fatigue / Absolute Carry Ceiling Correction | **IMPLEMENTED** | `17A1_OVERWEIGHT_WALK_FATIGUE_HARD_CARRY_LIMIT.md` |
+| 18 | Door Interaction / Automatic Passage | **DRAFT** | `18_DOOR_INTERACTION_PASSAGE.md` |
+| 19 | Local Building Generation / Archetype Critique Lab | **DRAFT** | `19_LOCAL_BUILDING_GENERATION_ARCHETYPE_LAB.md` |
 | 00D | Global World Planning / Generation | **NOT DESIGNED** | `00D_GLOBAL_WORLD_GENERATION.md` |
 | 00E | Population / Household / Outbreak / Player Story | **NOT DESIGNED** | `00E_POPULATION_OUTBREAK_PLAYER_STORY.md` |
 | 00F | Streaming / Materialization | **NOT DESIGNED** | `00F_STREAMING_MATERIALIZATION.md` |
@@ -61,6 +63,7 @@ Foundation and simulation remain separated by domain:
 - neutral item acquisition-capacity seam: `game/scripts/simulation/items/ItemAcquisitionCapacityPolicy.gd`
 - Item physical properties: `game/scripts/simulation/items/properties/`
 - Moodlets: `game/scripts/simulation/actors/moodlets/`
+- Door State: `game/scripts/simulation/doors/`
 
 Presentation/application remains separate:
 
@@ -96,30 +99,46 @@ Carry truth:
 - incoming container contents count toward projected pickup weight;
 - System 12 consumes a neutral capacity policy rather than importing Carry internals.
 
-The live authored demo still has no physical item entities, so the hard pickup ceiling is currently canonical/tested simulation behavior awaiting the real item-interaction demo composition.
+The live authored demo still has no physical item entities, so the hard pickup ceiling is currently canonical/tested simulation behavior awaiting later item-interaction composition.
 
 System 16 Web Leave Game navigates directly to Google rather than attempting browser history.
 
-Dedicated verification:
+## Active design drafts — 2026-08-16
 
-- `.github/workflows/movement-exertion-encumbrance.yml`
-- `.github/workflows/item-transfer-actions.yml`
-- `game/scripts/ci/MovementExertionEncumbranceSmoke.gd`
-- `game/scripts/ci/ActorCarryAcquisitionSmoke.gd`
+### System 18 — Door Interaction / Automatic Passage
 
-Correction candidate `67a130b36fe35189651e942a386248352027a8d5` passed System 17A run `32002310686` and Item Transfer Actions run `32002310787` before documentation promotion.
+Proposed player behavior:
 
-## Immediate next path
+- Walk through a normal CLOSED door -> it opens automatically at Walk commit and movement continues;
+- Run through a normal CLOSED door -> it opens during the committed stride, movement continues, and a LOUD semantic door event is emitted;
+- short click/tap on a nearby OPEN door -> timed manual close;
+- future long-tap/right-click interaction menu is reserved but deferred.
 
-Do not rebuild movement/player shell/renderers. Return to the real item-interaction demo:
+Architecture uses existing 06A Door State plus Collision overrides and a narrow generic Movement passage-resolver seam so Movement never imports door rules.
 
-1. add a few real stable WHAT `item.*` entities with 13D weights;
-2. add the missing loose-item presentation;
-3. compose existing System 10 BACK -> actor body -> FRONT held-item layers in the live stack;
-4. compose System 12 with the real 13E `ActorCarryAcquisitionPolicy` and expose pickup/drop/equip/unequip through semantic keyboard/touch interaction;
-5. let existing HUD/Inventory read the committed truth.
+### System 19 — Local Building Generation / Archetype Critique Lab
 
-Door interaction remains a separate later system.
+Proposed first archetype:
+
+`residential.trailer.singlewide`
+
+System 19 is intentionally below future global world planning. A caller supplies a legal envelope/orientation/frontage/seed; System 19 produces a validated semantic building plan and materializes initial physical WHAT + explicitly CLOSED Door State.
+
+Development loop:
+
+> spawn deterministic trailer -> user critiques -> refine trailer rules -> then add small house/ranch archetype under the same contract.
+
+The first trailer target has distinct living/kitchen, bathroom, bedroom, physical doors/windows, functional furniture, and validated one-cell circulation.
+
+## Recommended approval / implementation order
+
+1. **System 18 Door Interaction** first — small prerequisite that makes generated buildings naturally enterable.
+2. **System 19 Local Building Generation** second — implement generator contract + Trailer Candidate 001 in a one-screen critique lot.
+3. User critiques generated trailer and generator rules are refined.
+4. Add small ordinary house/ranch archetype under the same generator contract.
+5. Add camera / larger local play space only once multiple structures create a real need to see beyond one screen.
+
+The item-interaction demo remains valid future work, but current explicit direction prioritizes doors + building generation before expanding camera/map scale.
 
 ## Design rule
 

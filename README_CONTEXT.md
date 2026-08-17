@@ -31,6 +31,13 @@ Implemented + CI through:
 - System 17A Movement Exertion / Encumbrance / Run Impact Revision
 - **17A.1 Overweight Walk Fatigue / Absolute Carry Ceiling correction**
 
+Active DRAFT designs:
+
+- **System 18 — Door Interaction / Automatic Passage**
+- **System 19 — Local Building Generation / Archetype Critique Lab**
+
+No System 18/19 gameplay code is implemented yet.
+
 ## 3. Foundation truth
 
 ### WHERE
@@ -142,6 +149,8 @@ At stride resolution:
 
 Normal Health `damage_applied` still cancels Walk through `MovementDamageInterruptionService`; COMMITTED Run ignores ordinary interruption. Impact then explicitly fails the physical Run after resolving the collision consequence, so no rollback occurs.
 
+System 18 DRAFT proposes a narrow Movement passage-resolver seam so eligible CLOSED doors can be opened at the actual Walk commit / Run stride before the ordinary blocked/impact result is finalized. Movement itself would remain door-agnostic.
+
 ## 8. Physical items
 
 - WHAT placement owns loose world location;
@@ -183,36 +192,101 @@ Web Leave Game directly assigns `https://www.google.com/`; browser history is no
 
 ## 10. Verification state
 
-System 17 promoted SHA `2e54ef3edc0616727258974e0b4c9d046322afdc` passed dedicated run `31998976669` and Pages run `31998976603`.
+Current main before Systems 18/19 design drafting:
 
-System 17A original promotion SHA `cb6e5b7058bf9a3a68aac4751b999f4ad826f410` passed dedicated 17A, System 17, Web export and Pages deployment.
+`019926ba4e53df0e47c2df5e9447371ffe252d1b`
 
-17A.1 correction candidate:
+That promoted System 17A.1 head passed:
 
-- SHA `67a130b36fe35189651e942a386248352027a8d5`;
-- System 17A contract run `32002310686`: SUCCESS;
-- Item Transfer Actions contract run `32002310787`: SUCCESS;
-- passed project parse, protected simulations, overweight-only Walk-fatigue tests, hard-ceiling derivation, exact-limit acceptance, over-limit zero-tick rejection, recursive incoming weight, commit revalidation, post-source reentrant compensation, demo/HUD/player-shell regression, and startup.
+- System 17A movement/exertion contract run `32002568350`;
+- Item Transfer Actions / hard carry ceiling run `32002568406`;
+- Actor Stats Domains run `32002568361`;
+- System 17 movement regression run `32002568429`;
+- Web build + Pages deployment run `32002568376`.
 
-Exact documentation-promotion SHA must pass the same relevant contracts plus Web/Pages before completion is claimed.
+Systems 18 and 19 are design-only drafts after this point; they require explicit approval before implementation.
 
-## 11. Immediate next path
+## 11. Active DRAFT — System 18 Door Interaction / Automatic Passage
 
-Return to the real item interaction demo:
+Design source:
 
-1. add real stable WHAT `item.*` entities with explicit 13D weights;
-2. implement loose-item presentation;
-3. insert existing System 10 BACK -> actor body -> FRONT hand layers into live composition;
-4. compose System 12 with real `ActorCarryAcquisitionPolicy` and expose pickup/drop/equip/unequip through semantic keyboard/touch interaction;
-5. refresh existing HUD/Inventory from committed transfer truth.
+`SYSTEM_DESIGNS/18_DOOR_INTERACTION_PASSAGE.md`
 
-Door interaction remains separate.
+Current proposal:
 
-## 12. Later systems
+- normal CLOSED door is blocking persistent physical truth;
+- Walk Forward/Back into an eligible CLOSED door accepts conditional passage, opens it only at actual movement commit, then moves through if clear;
+- damage-canceled Walk before commit leaves door closed;
+- Run into eligible CLOSED door opens it at the stride, continues, causes no normal 5 HP hard-obstacle impact, and emits a semantic **LOUD** door event;
+- future non-openable locked/jammed/barricaded door can decline passage and retain current Run-impact consequence;
+- short click/tap on nearby OPEN door requests manual close;
+- proposed manual close = 3 ticks, CANCELABLE;
+- doorway actor prevents closing;
+- long tap/right-click is reserved for future interaction menu, not V1;
+- Door State + Collision synchronization belongs to a focused Door physical-transition coordinator;
+- Movement only sees a generic optional passage-resolver interface and never imports Door State.
 
-Container access/search/locks, corpse/decay/contamination, door interaction, actor appearance/creator, richer item quantity/condition/bulk, first aid/sickness, eating/drinking/rest/sleep progression, global world generation/streaming, construction, perception/lighting/weather/spatial sound, infected AI/combat/vehicles remain future work.
+## 12. Active DRAFT — System 19 Local Building Generation / Archetype Critique Lab
 
-## 13. Invariants
+Design source:
+
+`SYSTEM_DESIGNS/19_LOCAL_BUILDING_GENERATION_ARCHETYPE_LAB.md`
+
+System 19 is **not** the future global world planner.
+
+A caller supplies:
+
+- stable building instance namespace;
+- archetype ID;
+- global-space envelope;
+- orientation/frontage constraint;
+- deterministic seed.
+
+System 19 returns a pure validated semantic building plan, then a separate materializer creates initial WHAT terrain/entities/placements and explicitly enrolls generated doors CLOSED in 06A.
+
+First archetype proposal:
+
+`residential.trailer.singlewide`
+
+First candidate target:
+
+- roughly 5–6 exterior cells wide × 10–12 long before rotation, subject to envelope fit;
+- living/kitchen;
+- distinct bathroom;
+- distinct bedroom;
+- one main side exterior entrance into living/kitchen;
+- interior doors where needed;
+- small believable window set;
+- restrained functional furniture;
+- guaranteed one-cell circulation to every room.
+
+The old golden trailer's two-zone `living_kitchen` + `bed_bath` rule is a recovery source but deliberately considered too coarse for the new candidate.
+
+Critique loop:
+
+> implement generator + Trailer Candidate 001 -> user critiques -> refine rules -> freeze good trailer version -> add small ordinary house/ranch archetype -> repeat
+
+A one-screen single-building critique lot is proposed so camera remains deferred until multiple buildings create a real need for larger visible space.
+
+## 13. Immediate next path
+
+Recommended sequence under mandatory design approval:
+
+1. review/adjust **System 18 Door Interaction** DRAFT;
+2. approve System 18, then implement/verify it as the small prerequisite;
+3. review/adjust **System 19 Local Building Generation** DRAFT;
+4. approve System 19, then implement generator contract + Trailer Candidate 001;
+5. playtest/critique the trailer and tune its archetype rules;
+6. add small ordinary house/ranch archetype under the same generator contract;
+7. add camera / larger map when multiple structures make the one-screen critique lot insufficient.
+
+The earlier real-item interaction demo remains valid future work, but the newest explicit direction prioritizes doors + building generation first.
+
+## 14. Later systems
+
+Container access/search/locks, corpse/decay/contamination, actor appearance/creator, richer item quantity/condition/bulk, first aid/sickness, eating/drinking/rest/sleep progression, global world generation/streaming, construction, perception/lighting/weather/spatial sound, infected AI/combat/vehicles and camera/zoom remain future work unless pulled forward by a newer explicit direction.
+
+## 15. Invariants
 
 1. Main/root is composition only.
 2. Focused owners/public contracts; no god state.
@@ -231,8 +305,10 @@ Container access/search/locks, corpse/decay/contamination, door interaction, act
 15. Soft capacity is the encumbrance/Run threshold; the absolute normal-acquisition ceiling is 2x soft capacity.
 16. Walk fatigue is zero through soft capacity; once overweight it is terrain-driven and does not scale with the amount of overage.
 17. Timed two-step acquisition rechecks capacity after source removal before destination mutation so reentrant newer truth cannot be overwritten.
+18. Door Interaction, if approved, must coordinate existing Door State + Collision rather than invent another door truth.
+19. Local building generation must consume caller-decided placement/envelope facts and must not become the global world planner.
 
-## 14. Documentation source order
+## 16. Documentation source order
 
 1. newest explicit user instruction;
 2. `PROJECT_NORTH_STAR.md`;
