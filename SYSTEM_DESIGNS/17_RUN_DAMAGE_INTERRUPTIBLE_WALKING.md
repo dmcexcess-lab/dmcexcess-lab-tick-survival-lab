@@ -2,26 +2,30 @@
 
 Status: **DRAFT — discussion only; do not implement until explicitly approved**
 
-Drafted from the user direction on 2026-08-16:
+Drafted from the user direction on 2026-08-16 and revised after clarification:
 
 > “Lets add a run mechanic. More movement less tics, its a committed action vs walk which can be interrupted by dmg. Run has a move of two squares.”
+>
+> “Fewer tics per square, but more tics over all move. higher fatigue drain, fatigue min requires to run”
 
 ## 1. Goal
 
-Add a physically distinct forward sprint action that trades precision/flexibility for rapid displacement, while revising ordinary walking so real damage can interrupt it.
+Add a physically distinct forward sprint action that trades precision and endurance for faster displacement per square, while revising ordinary walking so real damage can interrupt it.
 
 Core player-facing distinction:
 
-- **Walk:** one cell, slower, damage-interruptible.
-- **Run:** two cells forward, faster, committed once started.
+- **Walk:** one cell, 10-tick healthy baseline, damage-interruptible.
+- **Run:** two cells forward, **6 ticks per square / 12 ticks total** on current demo terrain, fatigue-gated, extra fatigue cost, COMMITTED once started.
 
-This is intended to make movement choice tactically meaningful without introducing a persistent run-mode flag, stamina bar, fake sound system, or unrelated combat mechanics.
+Run therefore costs **more total time than one walk action** (12 > 10), but crosses ground substantially faster than walking the same two-cell distance (12 < 20).
+
+No persistent run-mode flag or separate stamina bar is introduced.
 
 ## 2. Existing contracts intentionally revised
 
 Current System 02 makes every movement action COMMITTED. If System 17 is approved, that statement is superseded for ordinary walk steps only.
 
-Approved implementation would revise the movement interruption split to:
+Approved implementation would revise the interruption split to:
 
 - `movement.step_forward` — **CANCELABLE** by damage interruption;
 - `movement.step_backward` — **CANCELABLE** by damage interruption;
@@ -29,7 +33,7 @@ Approved implementation would revise the movement interruption split to:
 - `movement.turn_left` — **COMMITTED**;
 - `movement.turn_right` — **COMMITTED**.
 
-System 03 already reserved `movement.run_forward` as a future capability action and already blocks it while crouched. System 17 activates that seam rather than adding persistent `run` locomotion state.
+System 03 already reserves `movement.run_forward` as a capability action and already blocks it while crouched. System 17 activates that seam rather than adding persistent `run` locomotion state.
 
 ## 3. Non-goals
 
@@ -39,19 +43,21 @@ System 17 does **not** add:
 - running backward;
 - diagonal sprinting;
 - strafing;
-- stamina as a new state domain;
-- automatic fatigue accumulation;
+- a separate stamina state/domain;
+- general hunger/thirst/sleep progression;
+- general walking fatigue progression;
+- fatigue recovery/rest actions;
 - sound/noise propagation;
 - zombie attraction;
 - combat attacks;
-- knockback/dodge/interruption reactions;
+- knockback/dodge/reaction mechanics;
 - vaulting over obstacles;
 - movement animation ownership;
-- pathfinding/AI running policy;
+- pathfinding/AI run policy;
 - new terrain categories;
 - camera behavior.
 
-Existing Needs/Fatigue and Carry modifiers may affect run duration through System 03’s current mobility-provider seam. No new fake fatigue or sound consequence is invented merely to justify running.
+System 17 adds only the **acute extra fatigue cost of successful run strides** plus the fatigue threshold required to begin a run. Broader Needs progression/rest remains a later 13B consumer of WHEN/calendar policy.
 
 ## 4. Historical tuning recovered
 
@@ -63,7 +69,9 @@ Golden `PlayerActor.gd` blob `2f839f1a50041c8bd00e144c1a9389d0a33d1401` used:
 - Turn = 3 ticks;
 - Stance = 4 ticks.
 
-The golden implementation used a persistent run-mode flag, which the canonical architecture intentionally rejected. System 17 recovers the useful **6-tick run tuning** but expresses running as one explicit semantic action.
+The golden implementation used a persistent run-mode flag, which the canonical architecture rejected.
+
+System 17 recovers the useful **6-tick run pace as a per-square sprint pace**, while the new canonical Run action covers two cells. Therefore the healthy current-terrain baseline is **12 ticks total**, not 6 total.
 
 ## 5. Run action contract
 
@@ -80,49 +88,52 @@ V1 run behavior:
 - standing only;
 - exactly straight ahead along current facing;
 - covers **two tactical cells** in one action;
-- healthy/unencumbered demo baseline = **6 total ticks**;
-- existing System 03 duration modifiers still apply to that base duration;
+- current 10-tick walk terrain resolves to **6 ticks per run stride / 12 ticks total** before actor modifiers;
+- existing System 03 Needs/Carry duration modifiers still apply at action start;
 - uses WHEN `COMMITTED` interruption policy;
 - ordinary damage interruption requests do not cancel it;
-- no destination reservation.
-
-The 6-tick baseline is balance policy, not a WHEN constant.
+- no destination reservation;
+- requires fatigue below the Run cutoff at request time;
+- successful run movement adds acute fatigue.
 
 ## 6. Two-cell physical execution
 
-Run is represented as two rapid physical strides under one committed action rather than teleporting two cells only at the end.
+Run is two physical strides under one committed action, not a two-cell teleport at the final tick.
 
-For total resolved duration `D`:
+Each stride gets its own base traversal duration from the terrain it enters.
 
-- first stride phase due at `ceil(D / 2)`;
-- second/final stride phase due at `D`.
+On the current 10-tick walk terrain:
 
-For the unmodified 6-tick baseline:
+- tick +6: attempt/commit stride 1 into cell +1;
+- tick +12: attempt/commit stride 2 into cell +2.
 
-- tick +3: attempt first cell;
-- tick +6: attempt second cell.
-
-This preserves causal physical position while other actors/events may act during the sprint.
+For mixed terrain, each stride may have a different base cost. The final action duration is the sum of the two resolved stride durations captured when the Run starts.
 
 ### First stride
 
-At the first stride phase:
+At stride 1:
 
 - expected original placement must still match;
-- the intermediate cell/footprint is revalidated through Collision and traversal policy;
-- if valid, WHAT placement advances one cell without changing facing.
+- target footprint must still be Collision CLEAR;
+- current terrain semantic truth for the stride must still match the validated request-time terrain truth;
+- if valid, WHAT advances one cell without changing facing;
+- the run-exertion coordinator applies the stride’s fatigue cost after successful physical movement.
 
 ### Second stride
 
-At the final stride phase:
+At stride 2:
 
 - expected intermediate placement must still match;
-- final cell/footprint is revalidated;
-- if valid, WHAT placement advances the second cell.
+- target footprint must still be Collision CLEAR;
+- current terrain semantic truth for the stride must still match the validated request-time terrain truth;
+- if valid, WHAT advances the second cell;
+- the run-exertion coordinator applies the second stride’s fatigue cost.
 
-If the final cell becomes blocked after the first stride, the actor remains at the intermediate cell after the committed exposure already spent.
+If stride 2 becomes blocked after stride 1 succeeds, the actor remains at the intermediate cell. No rollback occurs.
 
-If the first stride becomes impossible before its phase, the run fails at that phase and the actor remains at the original cell. COMMITTED means damage cannot voluntarily cancel the sprint; it does not force an actor through newly impossible geometry.
+If stride 1 becomes impossible before its phase, the actor remains at origin.
+
+COMMITTED means the actor does not voluntarily stop because of damage or because their fatigue crosses the run-start threshold after the sprint has already begun. It never means moving through impossible geometry.
 
 ## 7. Request-time path validation
 
@@ -133,52 +144,113 @@ For each stride:
 - full actor footprint at that anchor/facing must be Collision CLEAR;
 - required terrain must exist;
 - terrain must be traversable;
-- actor capability must allow `movement.run_forward`.
+- actor capability must allow `movement.run_forward`;
+- fatigue start requirement must be satisfied.
 
-If either cell is BLOCKED/UNKNOWN/untraversable, the request is rejected with zero ticks spent.
+If either cell is BLOCKED/UNKNOWN/untraversable or actor capability/Run eligibility rejects the action, the request consumes zero ticks.
 
-This prevents a two-cell action from passing through a wall, closed hard blocker, or unknown/unmaterialized space simply because the final square is clear.
+The request stores the validated terrain semantics and expected placements in WHEN-safe payload data so each committed stride can verify that the physical path has not changed underneath the actor.
 
 ## 8. Run timing policy
 
-System 02’s terrain policy continues to own base traversal timing.
+System 02 terrain policy continues to own base traversal timing.
 
-V1 run timing uses the recovered relationship between the current 10-tick walk and 6-tick run:
+For each run stride independently:
 
-- run scale = **60% of the slowest relevant walk terrain cost** across the two-stride path;
-- deterministic integer ceiling keeps duration positive;
-- demo road/grass currently using 10-tick walking therefore resolve to the recovered **6-tick base run**.
+- base run-stride cost = **60% of that stride’s normal walk-terrain cost**;
+- use deterministic integer ceiling;
+- System 03 then applies actor mobility duration modifiers using the actor state at Run start.
 
-Then System 03 applies stance/provider mobility modifiers to the run action exactly as it already does for other movement actions.
+Examples before actor modifiers:
 
-Examples before external modifiers:
+- walk cost 10 -> run stride 6;
+- two 10-cost cells -> Run total 12;
+- hypothetical 14-cost terrain -> run stride 9;
+- 10-cost then 14-cost cells -> Run total 15.
 
-- walk terrain 10 -> run base 6;
-- hypothetical walk terrain 14 -> run base 9.
+This is the intended relationship:
 
-This keeps terrain timing ownership in Movement policy and avoids requiring every terrain entry to duplicate a separate manually registered run cost.
+- fewer ticks **per square** than walking;
+- more ticks **for the whole two-square action** than one walk step;
+- fewer ticks than walking those same two squares as two separate actions.
 
-## 9. Stance / capability
+The scheduled stride times are fixed when the committed Run begins. Later fatigue/carry changes do not stretch an already-started Run.
+
+## 9. Fatigue requirement to start Run
+
+13B Fatigue is a **pressure scale**:
+
+- 0 = fresh;
+- 100 = severe fatigue/exhaustion.
+
+So the user concept “minimum fatigue required to run” is represented canonically as a **maximum fatigue pressure allowed to start**.
+
+V1 proposed cutoff:
+
+- fatigue **0..79** -> Run may start if all other capability checks pass;
+- fatigue **80..100** -> Run is CAPABILITY_BLOCKED with reason `too_exhausted_to_run`.
+
+This deliberately aligns with the existing 13F **Exhausted** moodlet threshold at fatigue 80.
+
+A Run that starts at fatigue 79 remains COMMITTED even when its first successful stride raises fatigue to 80+. The start requirement is not reinterpreted as a mid-sprint cancel condition.
+
+Crouched stance remains separately blocking regardless of fatigue.
+
+## 10. Acute Run fatigue cost
+
+Running should have a real endurance consequence now rather than waiting for a future stamina placeholder.
+
+V1 proposed tuning:
+
+- successful run stride: **+1 fatigue**;
+- full two-cell Run: **+2 fatigue total**;
+- failed stride that causes no physical movement adds no stride fatigue;
+- ordinary walk/turn/stance actions receive **no new acute fatigue surcharge in System 17**.
+
+This makes Run explicitly more fatiguing than Walk in this slice while keeping the coarse 0..100 Needs scale usable. General long-distance walking/time-awake fatigue accumulation and fatigue recovery remain future Needs-progression/rest behavior rather than being guessed here.
+
+### Ownership
+
+Movement must not import Needs, and Needs must not learn Movement internals.
+
+System 17 therefore adds a narrow stateless coordinator:
+
+`MovementRunExertionService.gd`
+
+It observes successful Run stride facts and calls the existing public `ActorNeedsState.change_need(actor_id, FATIGUE, +1)` mutation API.
+
+It owns no persistent fatigue state and does not calculate movement timing.
+
+## 11. Committed capability semantics
 
 System 03 remains the actor mobility owner.
 
-Existing reserved behavior becomes active:
+At Run request:
 
-- standing may evaluate `movement.run_forward`;
-- crouched returns CAPABILITY_BLOCKED;
-- missing locomotion/capability remains fail-closed;
-- Needs/Fatigue and Carry providers continue to contribute through their existing generic action-type contract;
-- newly slower-but-still-allowed capability does not stretch a run action already scheduled; it affects the next request, matching existing Movement semantics.
+- standing/crouched capability is evaluated;
+- current Needs/Carry providers contribute duration/capability;
+- fatigue 80+ blocks Run start;
+- missing capability truth fails closed.
+
+Once accepted, **actor capability is latched for that committed Run**. Individual stride phases revalidate physical placement/collision/terrain truth, but do not cancel the Run solely because actor condition changed after commitment.
+
+This is intentional:
+
+- damage does not interrupt Run;
+- Run-generated fatigue crossing 80 does not interrupt Run;
+- newly worse fatigue/carry affects the **next** action.
+
+Future mechanics that truly force physical interruption/knockdown can add an explicit forced-failure path rather than quietly turning COMMITTED back into CANCELABLE.
 
 No persistent `is_running` state is added.
 
-## 10. Damage-interruptible walking
+## 12. Damage-interruptible walking
 
 ### Why a separate coordinator
 
 MovementActionService must not import Health. Health must not learn movement rules.
 
-System 17 therefore adds a narrow coordination owner:
+System 17 adds:
 
 `MovementDamageInterruptionService.gd`
 
@@ -192,7 +264,7 @@ It stores no persistent state.
 
 ### Health semantic damage signal
 
-13A currently exposes `apply_damage()` but only emits generic HP-change facts. To distinguish actual damage from healing or max-HP bookkeeping, System 17 proposes one additive Health observation signal:
+13A currently exposes `apply_damage()` but only generic HP-change observation. System 17 proposes one additive Health signal:
 
 `damage_applied(actor_id, amount, previous_hp, current_hp, version)`
 
@@ -200,10 +272,8 @@ Rules:
 
 - emitted only after successful `apply_damage()` with a real HP decrease;
 - healing does not emit it;
-- direct max-HP clamping does not emit it;
-- it adds no new Health state and changes no Health calculation.
-
-Future combat/environmental damage should use the existing `apply_damage()` path when it intends to produce canonical HP damage.
+- max-HP clamping does not emit it;
+- no Health calculation or state shape changes.
 
 ### Interruption behavior
 
@@ -215,74 +285,69 @@ When `damage_applied` fires:
 
 Result:
 
-- walk step CANCELABLE -> action becomes canceled immediately, remaining movement phase is removed, elapsed ticks stay spent, WHAT placement remains at its pre-walk cell;
-- run COMMITTED -> interruption request is ignored by WHEN and the sprint continues;
-- turn COMMITTED -> interruption request is ignored and turn continues.
+- Walk CANCELABLE -> canceled immediately; elapsed ticks remain spent; no walk placement commit occurs.
+- Run COMMITTED -> damage interruption request is ignored and Run continues.
+- Turn COMMITTED -> interruption request is ignored and turn continues.
 
-The coordinator does not mutate WHAT, Health, Locomotion or Movement state.
+## 13. Same-tick ordering
 
-## 11. Same-tick ordering
+Damage and movement phases use existing deterministic WHEN ordering.
 
-Damage and movement phases use existing deterministic WHEN event ordering.
+If damage resolves before a walk commit at the same tick, it cancels the walk before movement commits.
 
-If damage is resolved before a walk commit at the same world tick, the damage signal cancels the walk before its movement phase can commit.
+If the walk already committed first at that tick, later damage does not retroactively undo it.
 
-If the walk commit already resolved first at that tick, later damage does not retroactively undo the movement.
+No hidden System-17-only scheduler priority is introduced.
 
-No special hidden priority is introduced solely for System 17.
-
-## 12. No reservation / races
+## 14. No reservation / races
 
 Run reserves neither intermediate nor final cell.
 
-A cell may become occupied after request validation.
+Each stride revalidates current physical truth:
 
-Each stride revalidates at its own phase:
-
-- first stride can fail against a new blocker;
-- second stride can fail after first stride succeeded;
+- stride 1 can fail against a new blocker;
+- stride 2 can fail after stride 1 succeeds;
 - concurrent actor ordering remains deterministic through WHEN + Collision revalidation.
 
-No rollback moves the actor back from a legitimately committed first stride merely because the second stride later fails.
+No rollback moves an actor back from a valid first stride merely because the second later fails.
 
-## 13. Input contract
+## 15. Input contract
 
-System 17 adds semantic player intent:
+System 17 adds semantic intent:
 
 - `RUN_FORWARD`
 
 Desktop:
 
-- `Shift+W` or `Shift+Up` -> one run-forward intent;
-- plain W/Up remains one walk-forward intent.
+- `Shift+W` or `Shift+Up` -> one Run intent;
+- plain W/Up -> ordinary walk.
 
 Touch/Safari:
 
-- one native Godot `RUN` button;
-- placed in the currently unused bottom-right control slot beneath `TURN R`;
-- one physical press emits one semantic `RUN_FORWARD` intent;
-- no hold-mode or toggle state required.
+- native `RUN` button in the unused bottom-right slot beneath `TURN R`;
+- one physical press -> one `RUN_FORWARD` intent;
+- no hold mode or run toggle.
 
-Modal input blocking from System 16 remains unchanged.
+System 16 modal input blocking remains unchanged.
 
-## 14. Player controller integration
+## 16. Player controller integration
 
-`DemoPlayerActionController` may route `RUN_FORWARD` to `MovementActionService.request_run_forward()` exactly as it already routes walk/turn intents.
+`DemoPlayerActionController` routes `RUN_FORWARD` to `MovementActionService.request_run_forward()` just as it routes other movement intents.
 
-It does not calculate run distance, timing, interruption policy, collision, damage semantics or stance legality.
+It does not calculate distance, timing, fatigue, collision, damage interruption, or stance legality.
 
-The controller still runs accepted actions through WHEN to the next stop and reports the semantic result to the existing HUD.
-
-## 15. Expected implementation surface after approval
+## 17. Expected implementation surface after approval
 
 Production changes expected:
 
 - `game/scripts/simulation/movement/MovementActionService.gd`
 - `game/scripts/simulation/movement/MovementTraversalPolicy.gd`
-- likely small typed result/policy helpers only if needed by path diagnostics
+- likely small typed result/policy helpers if required by two-stride diagnostics
 - new `game/scripts/simulation/movement/MovementDamageInterruptionService.gd`
+- new `game/scripts/simulation/movement/MovementRunExertionService.gd`
 - additive `damage_applied` signal in `game/scripts/simulation/actors/health/ActorHealthState.gd`
-- bounded System 03 capability/document revision activating reserved run seam
+- bounded System 03 capability revision activating the reserved Run seam and fatigue-start block
+- bounded System 13B provider/document revision for Run-start fatigue eligibility; persistent Needs state/API remains unchanged
 - `game/scripts/input/PlayerActionIntent.gd`
 - `game/scripts/input/KeyboardInputAdapter.gd`
 - `game/scripts/ui/DemoMovementControls.gd`
@@ -291,15 +356,17 @@ Production changes expected:
 - dedicated System 17 smoke/workflow plus protected regressions
 - docs/ledger/context/changelog.
 
-## 16. Modules that must remain behaviorally untouched
+## 18. Modules that remain behaviorally untouched
 
 System 17 must not redesign:
 
 - WHERE or WHAT foundations;
-- Collision classification rules;
+- Collision classification;
 - WHEN internals/policies;
 - persistent locomotion stance representation;
-- Needs, Carry or Skills semantics;
+- Health HP/injury calculations;
+- Needs persistent record shape or 0..100 semantics;
+- Carry or Skills semantics;
 - Inventory/Hands/Item Transfer;
 - renderer/art stack;
 - HUD/Stats/Inventory/Menu truth;
@@ -307,69 +374,74 @@ System 17 must not redesign:
 - generation/streaming;
 - Reboot.
 
-13A Health receives only the additive damage observation signal described above; its HP/injury truth remains unchanged.
+13A receives only an additive damage-observation signal. 13B receives only a narrow Run capability rule through its existing mobility seam; acute Run fatigue is coordinated through the existing public Needs mutation API.
 
-## 17. Acceptance tests
+## 19. Acceptance tests
 
 Dedicated System 17 verification should prove:
 
-1. existing Movement/Locomotion/Health/System14–16 regressions remain green;
-2. plain forward walk remains one-cell movement at 10 demo ticks;
+1. existing Movement/Locomotion/Health/Needs/System14–16 regressions remain green;
+2. plain forward walk remains one-cell movement at 10 healthy demo ticks;
 3. forward/back walk actions use CANCELABLE timing policy;
 4. real `apply_damage()` during an in-progress walk cancels it before commit;
 5. canceled walk keeps elapsed ticks spent and leaves WHAT placement unchanged;
-6. healing does not interrupt walking;
-7. max-HP bookkeeping does not masquerade as damage interruption;
-8. run request is rejected when crouched;
-9. run request validates both intermediate and final cells before spending time;
-10. standing healthy/unencumbered run on current 10-tick terrain resolves to 6 total ticks;
-11. first run stride reaches cell +1 at tick 3;
-12. second run stride reaches cell +2 at tick 6;
-13. damage between run strides does not cancel the COMMITTED run;
-14. a blocker appearing in the final cell after stride one leaves the actor at the intermediate cell;
-15. a blocker appearing before stride one prevents that stride and fails safely;
-16. Needs/Carry duration modifiers still affect run through System 03’s provider seam;
-17. Shift+W/Shift+Up emits one semantic RUN_FORWARD; plain W/Up remains walk;
-18. touch RUN emits one semantic RUN_FORWARD and remains blocked under System 16 modals;
-19. no persistent run-mode state exists;
-20. no Health dependency enters MovementActionService;
-21. no sound/stamina/fatigue-progression placeholder is introduced;
-22. exact-final-SHA Godot parse/startup, System 17 CI, Web export and Pages deploy succeed.
+6. healing/max-HP bookkeeping does not masquerade as damage interruption;
+7. Run is rejected while crouched;
+8. fatigue 79 permits Run start; fatigue 80 blocks Run start with explicit reason;
+9. Run request validates both intermediate and final cells before spending time;
+10. two current 10-tick walk cells resolve to **12 total Run ticks**;
+11. stride 1 reaches cell +1 at tick 6;
+12. stride 2 reaches cell +2 at tick 12;
+13. Run is still faster over two cells than two 10-tick walks;
+14. damage between Run strides does not cancel the COMMITTED Run;
+15. fatigue crossing 80 after stride 1 does not cancel stride 2;
+16. successful stride 1 adds +1 fatigue and successful stride 2 adds another +1;
+17. a blocked/failed stride that produces no movement adds no stride fatigue;
+18. blocker appearing in final cell after stride 1 leaves actor at intermediate cell;
+19. blocker appearing before stride 1 prevents that stride and fails safely;
+20. Needs/Carry duration modifiers still affect Run scheduling from start-state truth;
+21. Shift+W/Shift+Up emits one RUN_FORWARD; plain W/Up remains walk;
+22. touch RUN emits one RUN_FORWARD and remains blocked under System 16 modals;
+23. no persistent run-mode or stamina state exists;
+24. no Health or Needs dependency enters MovementActionService;
+25. exact-final-SHA Godot parse/startup, System 17 CI, Web export and Pages deploy succeed.
 
-## 18. Future seams
+## 20. Future seams
 
 Later systems may extend running without changing its core ownership:
 
-- Needs may add real fatigue accumulation from completed/partial run strides;
-- sound may emit louder spatial noise per run stride;
-- injuries/equipment/skills may block or alter run through System 03 providers;
-- AI may request the same semantic run action;
-- slippery terrain/tripping can later become an explicit consequence rather than hidden randomness;
-- animation may visualize the two stride phases without owning physical movement.
+- broader Needs progression/rest can add walking fatigue, recovery, sleep interactions and calendar-aware exertion;
+- sound can emit louder spatial noise per Run stride;
+- injuries/equipment/skills may alter whether a Run may **start** through capability providers;
+- AI may request the same semantic Run action;
+- explicit knockdown/trip/forced-failure mechanics may later terminate a committed Run through a dedicated physical-interruption contract;
+- animation may visualize stride phases without owning movement.
 
-None of those are required to make the current run-vs-walk commitment choice real.
-
-## 19. North-star fit
+## 21. North-star fit
 
 This preserves **Ultima-style turn-based mini Zomboid** by making sprinting a simple but consequential tactical choice:
 
 - walking is slower and cautious enough to be interrupted by damage;
-- running crosses ground dramatically faster but commits the survivor to momentum;
+- running uses fewer ticks per square, but the two-square commitment costs more total ticks than one walk action;
+- running has an immediate endurance cost and cannot be started while Exhausted;
 - the world remains grid-based and deterministic;
-- damage, movement, capability and time remain separate owners connected through narrow public contracts.
+- Health, Needs, Movement, capability and WHEN remain separate owners connected through narrow public contracts.
 
-The design adds consequence, not simulation clutter.
+The design adds consequence rather than a second stamina simulation.
 
-## 20. Draft decisions requiring explicit approval
+## 22. Draft decisions requiring explicit approval
 
 1. Run is one explicit `movement.run_forward` action, never persistent run mode.
 2. Run moves two straight cells through two physical stride phases.
-3. Healthy standing baseline is the recovered **6 ticks total**: stride one at tick 3, stride two at tick 6.
-4. Run timing derives as 60% of the slowest relevant walk-terrain cost before actor mobility modifiers.
-5. Crouched running remains blocked through existing System 03 capability.
-6. Forward/back walking changes from COMMITTED to **CANCELABLE**; turns stay COMMITTED.
-7. Existing `apply_damage()` gains an additive semantic `damage_applied` signal; a separate coordinator asks WHEN to interrupt current Movement work.
-8. Damage cancels walk but does not cancel committed run/turn.
-9. Run performs request-time and per-stride collision/terrain revalidation with no reservation.
-10. If stride one succeeds but stride two later fails, the actor remains on the intermediate cell.
-11. Desktop Run is Shift+W / Shift+Up; touch Run uses the empty bottom-right slot beneath Turn R.
+3. Healthy current-terrain pace is **6 ticks per square / 12 ticks total**: stride 1 at tick 6, stride 2 at tick 12.
+4. Each stride derives as 60% of that stride’s normal walk terrain cost before actor modifiers; total Run duration is the sum of the two resolved strides.
+5. Crouched running remains blocked.
+6. Run may start only below fatigue 80; 80+ (`Exhausted`) blocks Run.
+7. Each successful Run stride adds **+1 fatigue**; full Run therefore adds +2.
+8. Run-start capability is latched for the committed action; self-generated fatigue crossing 80 does not cancel the second stride.
+9. Forward/back walking changes from COMMITTED to CANCELABLE; turns stay COMMITTED.
+10. `apply_damage()` gains additive `damage_applied`; a separate coordinator asks WHEN to interrupt current Movement work.
+11. Damage cancels walk but does not cancel committed Run/turn.
+12. Run performs request-time and per-stride physical collision/terrain revalidation with no reservation.
+13. If stride 1 succeeds but stride 2 later fails, actor remains on intermediate cell.
+14. Desktop Run is Shift+W / Shift+Up; touch Run uses the empty bottom-right slot beneath Turn R.
