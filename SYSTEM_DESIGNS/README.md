@@ -33,7 +33,7 @@ Major systems move through **NOT DESIGNED -> DRAFT -> APPROVED -> IMPLEMENTED** 
 | 09 | Actor Hand Equipment State | **IMPLEMENTED** | `09_ACTOR_HAND_EQUIPMENT_STATE.md` | Stable primary/right + secondary/left item assignments |
 | 10 | Actor Hand Equipment Presentation | **IMPLEMENTED** | `10_ACTOR_HAND_EQUIPMENT_PRESENTATION.md` | Recovered held art, facing rotation, BACK/body/FRONT seam |
 | 11 | Inventory / Containment | **IMPLEMENTED** | `11_INVENTORY_CONTAINMENT.md` | Stable direct containment, explicit containers, nested acyclic graph |
-| 12 | Item Transfer / Pickup / Drop / Equip Actions | **DRAFT** | `12_ITEM_TRANSFER_ACTIONS.md` | Direction approved; detailed timed cross-domain transition contract awaiting explicit approval |
+| 12 | Item Transfer / Pickup / Drop / Equip Actions | **IMPLEMENTED** | `12_ITEM_TRANSFER_ACTIONS.md` | Timed floor/hand/personal-containment transitions + derived disposition query |
 | 00D | Global World Planning / Generation Contract | **NOT DESIGNED** | `00D_GLOBAL_WORLD_GENERATION.md` | Global geography/roads/utilities/parcels before local detail |
 | 00E | Population / Household / Outbreak / Player Story | **NOT DESIGNED** | `00E_POPULATION_OUTBREAK_PLAYER_STORY.md` | Persistent people/homes/jobs/relationships and causal outbreak |
 | 00F | Streaming / Materialization | **NOT DESIGNED** | `00F_STREAMING_MATERIALIZATION.md` | Performance/storage over one logical world |
@@ -52,6 +52,7 @@ Major systems move through **NOT DESIGNED -> DRAFT -> APPROVED -> IMPLEMENTED** 
 - **06A Door State:** `game/scripts/simulation/doors/` + `DoorStateSmoke.gd`
 - **09 Actor Hand Equipment:** `game/scripts/simulation/actors/equipment/` + `ActorHandEquipmentSmoke.gd`
 - **11 Inventory / Containment:** `game/scripts/simulation/inventory/` + `InventoryContainmentSmoke.gd` + `.github/workflows/inventory-containment.yml`
+- **12 Item Transfer Actions:** `game/scripts/simulation/items/transfer/` + `ItemTransferActionsSmoke.gd` + `.github/workflows/item-transfer-actions.yml`
 
 ### Presentation
 
@@ -74,7 +75,7 @@ The canonical modules remain intentionally separate from frozen `game/scripts/re
 
 **11 Inventory / Containment** owns only direct persistent containment: `item_id -> direct_container_id`. Container capability is explicit typed enrollment. One item has at most one direct parent; nested item-containers are supported; self/ancestry cycles are rejected; direct-content versions plus global revision support stale transfer revalidation. Normal new containment requires an existing unplaced WHAT `item.*`. 11 does not import 09 and does not own pickup/drop/equip timing, capacity/encumbrance, stacking/quantity, item stats, rendering, or UI.
 
-**12 Item Transfer Actions is DRAFT only.** It proposes a read-only derived item-disposition query plus a timed coordinator over WHAT + 09 + 11 + WHEN. V1 is personal-survivor handling only: loose items at the actor/one-cell-forward reach, actor-root/nested/held personal containers, hands, and at-feet drops. Arbitrary cabinets/trunks/corpses remain deferred until real access/search/open/lock rules exist. Transfer costs are explicit policy data rather than invented defaults.
+**12 Item Transfer Actions** is the timed coordinator over WHAT + 09 + 11 + WHEN. It adds read-only `ItemDispositionQuery`, explicit action timing policy, floor/hand/personal-container pickup/drop/equip/unequip/transfer requests, exact commit revalidation, no reservations, CANCELABLE pre-commit behavior, and public-API compensation for exceptional second-write failure. V1 rejects arbitrary world cabinets/trunks/corpses/vehicles until a real access/search/open/lock policy exists. A verified reentrant-destination guard rechecks the destination immediately after source removal so permissive low-level APIs cannot overwrite newly changed truth.
 
 **04 Art Catalog** owns semantic-to-art selection only. **05 Ground**, **06 Structure**, **07 Prop**, and **08 Living Actor** independently present focused WHAT layers.
 
@@ -87,12 +88,9 @@ Completed prerequisites:
 1. **09 Actor Hand Equipment State — IMPLEMENTED.**
 2. **10 Actor Hand Equipment Presentation — IMPLEMENTED.**
 3. **11 Inventory / Containment — IMPLEMENTED.**
+4. **12 Item Transfer / Pickup / Drop / Equip Actions — IMPLEMENTED.**
 
-Current design gate:
-
-4. **12 Item Transfer / Pickup / Drop / Equip Actions — DRAFT, awaiting detailed approval.** It coordinates real timed physical movement among WHAT loose placement, 09 hands, and 11 personal containment without creating a fourth item-location store.
-
-Remaining honest-demo prerequisites after 12:
+Remaining honest-demo prerequisites:
 
 | System | Status | Notes |
 |---|---|---|
@@ -105,6 +103,8 @@ Remaining honest-demo prerequisites after 12:
 | HUD / Facing Inspection | NOT DESIGNED | Canonical `Looking at:` query |
 | Stats / Inventory Inspector UI | NOT DESIGNED | Real data only; safe pause |
 | Pause / Menu UI | NOT DESIGNED | Resume + Leave Game |
+
+Recommended next design for the requested honest demo is **Actor stat domains required for inspector**, unless the user explicitly chooses to prioritize visual composition first. Existing locomotion/equipment/inventory facts should be reused; Health/Needs should only be designed to the extent real displayed stats require them.
 
 ## Other later modular systems
 
