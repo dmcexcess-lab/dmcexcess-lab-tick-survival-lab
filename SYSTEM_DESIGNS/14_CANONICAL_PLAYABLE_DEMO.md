@@ -1,6 +1,6 @@
 # 14 Canonical Playable Demo Integration
 
-Status: **APPROVED**
+Status: **IMPLEMENTED**
 
 Approved by the user on 2026-08-16 with the explicit request to build the demo as a small sample map containing one controllable survivor and no NPCs.
 
@@ -85,6 +85,7 @@ It does not calculate destinations, collision, facing changes, or movement durat
 - `configure(world, art_catalog, door_state, controlled_actor_id) -> bool`
 - `set_visible_window(origin, size_cells, cell_pixels) -> bool`
 - `layer_command_counts() -> Dictionary` for deterministic integration diagnostics/tests.
+- `planned_diagnostic_counts() -> Dictionary` for fixture-level art/presentation validation.
 
 ### Input adapters
 - signal `action_intent(intent: StringName)`
@@ -134,7 +135,7 @@ The deprecated Reboot scripts remain untouched as recovery/reference code, but `
 
 ## 9. Acceptance tests
 
-Dedicated demo smoke/CI must prove:
+Dedicated demo smoke/CI proves:
 
 1. project parses in Godot 4.7.1;
 2. `main.tscn` launches canonical demo code and not `RebootMain.gd`;
@@ -142,14 +143,16 @@ Dedicated demo smoke/CI must prove:
 4. no NPC or infected actor is created;
 5. all 169 map cells have real terrain;
 6. collision coverage is explicit for every placed STRUCTURE / OBJECT / ACTOR;
-7. renderer stack produces 169 ground commands, authored structure/prop commands, and exactly one actor command with no diagnostics for the fixture;
-8. forward movement is accepted, advances WHEN by the recovered walking duration, and commits the expected new cell;
-9. a turn uses the existing turn duration and commits facing;
-10. an authored wall/prop cell is collision-blocked;
+7. renderer stack produces 169 ground commands, 11 structure commands, 6 prop commands, and exactly one actor command with zero planned diagnostics;
+8. forward movement is accepted, advances WHEN by the recovered 10-tick walking duration, and commits `(6,10) -> (6,9)`;
+9. turn-right uses the existing 3-tick turn duration and commits EAST facing;
+10. an authored wall cell is collision-blocked;
 11. keyboard/touch owners depend only on semantic intent, not world/movement internals;
 12. protected WHAT/WHEN/Collision/Movement/Locomotion/Art/renderer regressions remain green;
 13. startup prints `CANONICAL_DEMO_BOOT_OK`;
 14. exact-final-SHA Web export and GitHub Pages deploy succeed.
+
+Initial complete integration head `41ccfedd658082f5d249b5107363658705ea4b03` passed dedicated **Canonical Playable Demo contract** run `31993465800` with no production repair after the complete candidate reached CI. Final promotion-head validation is recorded by the exact-SHA workflow runs.
 
 ## 10. Future seams
 
