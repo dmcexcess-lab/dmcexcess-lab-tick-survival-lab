@@ -1,5 +1,21 @@
 # Changelog
 
+## 05 Ground Layer Renderer — 2026-08-16
+
+- Implemented **05 Ground Layer Renderer** after the user explicitly approved the focused renderer design.
+- Added `GroundDrawCommand.gd` as a deterministic immutable-style presentation record containing global cell, local destination rectangle, semantic terrain ID, and copied Art Catalog selection.
+- Added standalone `GroundLayerRenderer.gd` as the first canonical CanvasItem presentation layer. It reads canonical WHAT terrain and 04 Art Catalog selections only; it mutates no simulation state and has no generator/reboot/camera/input dependency.
+- Visible-world input is explicit: global top-left cell, whole-cell visible dimensions, and positive display cell size. Global cells map to local draw rectangles relative to the visible origin, preserving large/negative persistent-world coordinates without giant CanvasItem positions.
+- Recovered the golden ground draw path using lazy/cached textures from ArtSelection descriptors, `ArtSelection.region()`, `draw_texture_rect_region`, transpose=false, and clip_uv=true. No atlas path or index was copied into the renderer.
+- Generic `road`, `dirt_road`, and `sidewalk` terrain now derive cardinal display topology from neighboring canonical semantic terrain. Paved and dirt roads share connectivity, while explicit recovered topology variants remain literal Art Catalog requests.
+- Deliberately did not invent arterial/local/trail world truth. Generic paved roads use local/default topology until a future canonical Road Network system owns road classification.
+- Added visible diagnostic cells for missing WHAT terrain, UNKNOWN art, invalid selections, and texture-load failure instead of silently substituting plausible grass/asphalt/concrete.
+- Added event-driven redraw invalidation with no `_process()` redraw loop: configuration/view/world-reset and terrain changes in the visible window or one-cell cardinal topology halo redraw Ground; non-terrain, distant, and diagonal-only offscreen changes do not.
+- Added `GroundLayerRendererSmoke.gd` and dedicated Godot 4.7.1 `Ground Layer Renderer contract`, covering source boundaries, Art Catalog regression, visible culling/order, negative coordinates, local rectangles, recovered surface precedence, all road topology families, mixed paved/dirt roads, dirt orientation, sidewalk curbs, explicit variants, diagnostics, texture loading, and redraw invalidation.
+- Initial complete implementation head `0b1460a89140d0a9d84478c9300dacb84d991a11` passed the dedicated Ground contract with no production repair required.
+- Preserved all golden art assets byte-for-byte and left WHAT/WHERE/WHEN, Collision, Movement, Actor Locomotion, generator, camera, input/UI, Structure/Prop/Actor renderers, lighting/weather/perception, and frozen reboot runtime untouched.
+- Next bounded visual system: **Structure Layer Renderer**.
+
 ## 04 Recovered Multi-Atlas Art Catalog — 2026-08-16
 
 - Recovered the mature golden `TacticalTiles.gd` semantic art-selection system into the canonical modular `game/scripts/art/` layer rather than creating or approximating new artwork.
@@ -130,7 +146,7 @@
 - Recorded the hard interruption-safety rule: real-life work/customer interruptions must freeze simulation safely and must never count as a tactical mistake.
 - Rewrote `README_CONTEXT.md` as an accurate routing index for the current open-world direction and moved the foundational design order below map generation/rendering: Spatial Model -> Tick/Action/Pause -> Persistent World -> Population/Outbreak/Player Story -> generalized local-world contract.
 - Reordered `SYSTEM_DESIGNS/README.md` accordingly and marked the old raid-specific `RaidMapSpec` draft **SUPERSEDED** rather than silently adapting it to a different world architecture.
-- Strengthened `DESIGN_WORKFLOW.md` and `README_SOPS.md` with a mandatory North-Star drift check, cross-system decision logging, future-seam review, and the rule that chat must not outrun durable repository memory when the game direction materially changes.
+- Strengthened `DESIGN_WORKFLOW.md` and `README_SOPS.md` with a mandatory North-Star drift check, cross-system decision logging, future-seam review, and the rule that chat must not outrun the repo when the game direction materially changes.
 - Added CI guards requiring the North Star and decision log to remain present and checking the current core identity/open-world design statements while the deprecated reference runtime continues to build unchanged.
 - No new modular runtime/gameplay code was implemented in this pass; the deployed Web build remains the frozen clean-reboot reference.
 
