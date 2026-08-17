@@ -66,18 +66,22 @@ Foundation and simulation remain separated by domain:
 
 `game/scripts/reboot/` remains frozen reference only. `game/main.tscn` launches the canonical modular demo.
 
-## Live demo after System 19
+## Live demo after System 19 — Trailer critique iteration 2
 
-The live canonical demo is now the **Trailer Candidate 001 critique lot**:
+The live canonical demo is now **Trailer Candidate 002**:
 
 - one controlled survivor, no NPCs/infected/loot;
 - fixed 13×13 one-screen view, still no camera;
-- one deterministic generated 6×12 single-wide trailer;
-- real walls/windows/furniture and three real CLOSED doors;
-- distinct living/kitchen, bathroom and bedroom;
+- deterministic `residential.trailer.singlewide` **archetype v2**;
+- **5×12 exterior shell / 3-cell usable interior width**;
+- 3×4 living/kitchen, 3×2 bathroom, 3×2 bedroom;
+- light `wall.plaster` exterior shell instead of brown rural wood;
+- kitchen fixtures on one side and sofa/loveseat against the opposite wall facing inward;
+- two centered interior doors preserve a middle-column circulation spine;
+- four exterior windows and three real CLOSED doors;
 - real System 18 door passage.
 
-Door interaction truth:
+Door interaction truth remains:
 
 - Walk through an eligible CLOSED door -> opens at Walk commit with no extra door ticks;
 - damage-canceled Walk -> door remains CLOSED;
@@ -90,8 +94,8 @@ Movement / carry truth from Systems 17–17A.1 remains unchanged.
 
 ## Immediate next path
 
-1. **User playtests/critiques Trailer Candidate 001.**
-2. Convert critique into reusable `residential.trailer.singlewide` archetype rules rather than hand-editing the showcase instance.
+1. **User playtests/critiques Trailer Candidate 002.**
+2. Convert any further critique into reusable `residential.trailer.singlewide` rules.
 3. Once trailer density/proportions feel right, add `residential.house.small_ranch` under the existing System 19 contract.
 4. Repeat the critique loop for the house.
 5. Add camera / larger local play space when multiple properties create an actual need to see beyond one screen.
@@ -100,13 +104,18 @@ The real item-interaction demo remains valid future work and can be layered into
 
 ## Verification
 
-First fully green Systems 18+19 candidate:
+Original fully green Systems 18+19 candidate:
 
 - SHA `c035fe7b3f5d0badab6c5b598996010e92d852b2`;
 - Door Interaction run `32005363005`: SUCCESS;
 - Local Building Generation run `32005363051`: SUCCESS.
 
-Exact documentation-promotion SHA must pass the same dedicated contracts plus Pages before completion is claimed.
+Trailer Candidate 002 first green code candidate:
+
+- SHA `30aa8d1af7ca3d694a4085d4ec2a173a783d0dcb`;
+- Local Building Generation run `32006433070`: SUCCESS.
+
+Exact documentation-promotion SHA must pass the dedicated contract plus Pages before completion is claimed.
 
 ## Design rule
 
