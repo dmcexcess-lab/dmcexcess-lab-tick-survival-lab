@@ -41,6 +41,7 @@ Canonical progress:
 - **09 Actor Hand Equipment State — IMPLEMENTED + CI**
 - **10 Actor Hand Equipment Presentation — IMPLEMENTED + CI**
 - **11 Inventory / Containment — IMPLEMENTED + CI**
+- **12 Item Transfer / Pickup / Drop / Equip Actions — DRAFT; direction approved, detailed contract awaiting explicit approval**
 
 11 initial complete code head `1218c62cd04b3821991400918ffa43b29d621181` passed dedicated run `31988099341` with no production repair.
 
@@ -104,9 +105,22 @@ Current low-level owners intentionally remain separate:
 
 These systems do not import each other merely to enforce final gameplay transitions.
 
-The next dedicated **Item Transfer / Pickup / Drop / Equip Actions** system should coordinate the public APIs of WHAT + 09 + 11 + WHEN, validate expected versions/state, spend time where appropriate, and commit a coherent physical transition.
+Active DRAFT: `SYSTEM_DESIGNS/12_ITEM_TRANSFER_ACTIONS.md`.
 
-Do not hide this coordination inside UI, Inventory state, hand state, or WHAT.
+12 proposes:
+
+- a **read-only** cross-domain `ItemDispositionQuery` that derives loose-world / hand / contained / unclaimed / conflict status without becoming persistent truth;
+- a timed coordinator using WHAT + 09 + 11 + WHEN public contracts;
+- request -> validate -> spend time -> commit revalidation -> coordinated mutation;
+- `CANCELABLE` transfer actions with no partial physical effect before final commit;
+- no item/hand/container reservation; deterministic first valid commit wins races;
+- personal-survivor v1 access only: floor items at the actor/one-cell-forward fringe, actor-root inventory, nested personal containers, and held item-containers;
+- arbitrary cabinets/trunks/corpses/vehicle cargo deferred until real access/search/open/lock rules exist;
+- normal drop at the actor's feet as one single-cell `LOOSE_ITEM` placement;
+- explicit timing policy registration rather than invented pickup/drop/equip costs;
+- exceptional compensation if a second low-level mutation unexpectedly fails after source removal.
+
+The user's latest “approved” establishes 12 as the next system direction, but does not bypass review of these new detailed mechanics. Do not implement until the detailed DRAFT is explicitly approved.
 
 ## 5. Death / corpse direction
 
@@ -176,9 +190,9 @@ Completed:
 2. **10 Actor Hand Equipment Presentation — IMPLEMENTED.**
 3. **11 Inventory / Containment — IMPLEMENTED.**
 
-Recommended next bounded system:
+Active design gate:
 
-4. **Item Transfer / Pickup / Drop / Equip Actions — NOT DESIGNED / NEXT.** Cross-domain physical transition coordinator over WHAT + 09 + 11 + WHEN.
+4. **12 Item Transfer / Pickup / Drop / Equip Actions — DRAFT.** Review/approve the detailed personal-access, reach/drop, timing, interruption, no-reservation and compensation rules before code.
 
 Then remaining prerequisites toward the requested honest demo:
 
@@ -225,6 +239,7 @@ Canonical process:
 15. Hand equipment truth remains separate from held-item presentation and Inventory/Containment.
 16. Inventory containment must not become universal item disposition or item-stat ownership.
 17. Cross-domain physical transitions get a dedicated coordinator instead of mutual imports among low-level state owners.
+18. A derived item-disposition query may summarize WHAT/09/11 but must never become a fourth serialized item-location truth.
 
 ## 11. Documentation source order
 
@@ -242,4 +257,4 @@ Canonical process:
 
 ## 12. Recommended next action
 
-Design **Item Transfer / Pickup / Drop / Equip Actions** as the next bounded mechanic before building an Inventory screen. It should make the existing WHAT/09/11 truths interact through real timed physical transitions without merging their ownership.
+Review and explicitly approve or revise `SYSTEM_DESIGNS/12_ITEM_TRANSFER_ACTIONS.md`. Once approved, implement only the timed personal item-transfer coordinator + disposition query + timing policy + tests, leaving WHAT/WHEN/09/11 production unchanged.
