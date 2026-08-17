@@ -15,6 +15,7 @@ const SOURCE_WORLD: StringName = &"world"
 const SOURCE_BUILDING: StringName = &"building_props"
 const SOURCE_FINAL_SURFACES: StringName = &"final_surfaces"
 const SOURCE_FINAL_PROPS: StringName = &"final_props"
+const SOURCE_ACTORS: StringName = &"actors"
 const SOURCE_PLAYER_NORTH: StringName = &"player_north"
 const SOURCE_PLAYER_EAST: StringName = &"player_east"
 const SOURCE_PLAYER_SOUTH: StringName = &"player_south"
@@ -22,6 +23,7 @@ const SOURCE_PLAYER_WEST: StringName = &"player_west"
 
 const ATLAS_CELL_PIXELS: int = 32
 const ATLAS_COLUMNS: int = 16
+const LIVING_ACTOR_VARIANTS: int = 8
 
 const GROUND := {
     "asphalt": 0, "road": 1, "sidewalk": 2, "concrete": 3, "tile": 4,
@@ -50,66 +52,23 @@ const WORLD_GROUND := {
 }
 
 const FINAL_GROUND := {
-    "grass_lush": 0,
-    "grass_dry": 1,
-    "grass_weedy": 2,
-    "forest_floor": 3,
-    "mud": 4,
-    "sand": 5,
-    "beach_sand": 6,
-    "moss_ground": 7,
-    "marsh_ground": 8,
-    "rocky_ground": 9,
-    "dirt_dark": 10,
-    "dirt_light": 11,
-    "gravel_dark": 12,
-    "gravel_light": 13,
-    "field_green": 14,
-    "field_dry": 15,
-    "asphalt_patch": 16,
-    "pothole": 17,
-    "road_white_line_h": 18,
-    "road_white_line_v": 19,
-    "road_yellow_line_h": 20,
-    "road_yellow_line_v": 21,
-    "shoulder_gravel": 22,
-    "curb_ramp": 23,
-    "patio_pavers": 24,
-    "brick_pavers": 25,
-    "concrete_clean": 26,
-    "concrete_cracked": 27,
-    "concrete_oil": 28,
-    "driveway_gravel": 29,
-    "parking_faded": 30,
-    "alley_stained": 31,
-    "laminate_light": 32,
-    "laminate_dark": 33,
-    "wood_parquet": 34,
-    "carpet_blue": 35,
-    "carpet_beige": 36,
-    "carpet_green": 37,
-    "tile_white": 38,
-    "tile_blackwhite": 39,
-    "tile_mosaic": 40,
-    "linoleum_green": 41,
-    "linoleum_yellow": 42,
-    "garage_floor": 43,
-    "basement_floor": 44,
-    "restaurant_floor": 45,
-    "hospital_floor": 46,
-    "classroom_floor": 47,
+    "grass_lush": 0, "grass_dry": 1, "grass_weedy": 2, "forest_floor": 3,
+    "mud": 4, "sand": 5, "beach_sand": 6, "moss_ground": 7,
+    "marsh_ground": 8, "rocky_ground": 9, "dirt_dark": 10, "dirt_light": 11,
+    "gravel_dark": 12, "gravel_light": 13, "field_green": 14, "field_dry": 15,
+    "asphalt_patch": 16, "pothole": 17, "road_white_line_h": 18, "road_white_line_v": 19,
+    "road_yellow_line_h": 20, "road_yellow_line_v": 21, "shoulder_gravel": 22, "curb_ramp": 23,
+    "patio_pavers": 24, "brick_pavers": 25, "concrete_clean": 26, "concrete_cracked": 27,
+    "concrete_oil": 28, "driveway_gravel": 29, "parking_faded": 30, "alley_stained": 31,
+    "laminate_light": 32, "laminate_dark": 33, "wood_parquet": 34, "carpet_blue": 35,
+    "carpet_beige": 36, "carpet_green": 37, "tile_white": 38, "tile_blackwhite": 39,
+    "tile_mosaic": 40, "linoleum_green": 41, "linoleum_yellow": 42, "garage_floor": 43,
+    "basement_floor": 44, "restaurant_floor": 45, "hospital_floor": 46, "classroom_floor": 47,
 }
 
 const FINAL_GROUND_ALIAS := {
-    "grass": 0,
-    "dirt": 11,
-    "asphalt": 16,
-    "concrete": 26,
-    "tile": 38,
-    "wood": 32,
-    "carpet": 36,
-    "linoleum": 41,
-    "wash_concrete": 27,
+    "grass": 0, "dirt": 11, "asphalt": 16, "concrete": 26, "tile": 38,
+    "wood": 32, "carpet": 36, "linoleum": 41, "wash_concrete": 27,
 }
 
 const WALL_BY_THEME := {
@@ -122,23 +81,13 @@ const WORLD_WALL_BY_THEME := {
     "apartment": 41, "brick": 41, "store": 41,
     "industrial": 42, "cinder": 42,
     "interior": 43, "drywall": 43,
-    "office": 44,
-    "warehouse": 45,
-    "rural_wood": 46,
-    "storefront": 47,
+    "office": 44, "warehouse": 45, "rural_wood": 46, "storefront": 47,
 }
 
 const FINAL_WALL_BY_THEME := {
-    "wallpaper": 48,
-    "paneling": 49,
-    "red_brick": 50,
-    "white_brick": 51,
-    "stone": 52,
-    "tile": 53, "tile_wall": 53,
-    "glass_partition": 54,
-    "plaster": 55,
-    "concrete": 56, "concrete_wall": 56,
-    "metal_panel": 57,
+    "wallpaper": 48, "paneling": 49, "red_brick": 50, "white_brick": 51,
+    "stone": 52, "tile": 53, "tile_wall": 53, "glass_partition": 54,
+    "plaster": 55, "concrete": 56, "concrete_wall": 56, "metal_panel": 57,
 }
 
 const PROP := {
@@ -207,26 +156,10 @@ const FINAL_PROP := {
 }
 
 const FINAL_PROP_ALIAS := {
-    "tree": 1,
-    "bush": 8,
-    "road_sign": 35,
-    "fence": 44,
-    "mailbox": 61,
-    "chair": 75,
-    "desk": 91,
-    "toilet": 94,
-    "sink": 95,
-    "cabinet": 70,
-    "bookshelf": 83,
-    "tv": 80,
-    "laundry": 93,
-    "couch": 76,
-    "table": 74,
-    "bed": 86,
-    "kitchen": 68,
-    "fridge": 64,
-    "washer": 101,
-    "store_shelf": 104,
+    "tree": 1, "bush": 8, "road_sign": 35, "fence": 44, "mailbox": 61,
+    "chair": 75, "desk": 91, "toilet": 94, "sink": 95, "cabinet": 70,
+    "bookshelf": 83, "tv": 80, "laundry": 93, "couch": 76, "table": 74,
+    "bed": 86, "kitchen": 68, "fridge": 64, "washer": 101, "store_shelf": 104,
 }
 
 const DOOR_CLOSED := {
@@ -252,6 +185,11 @@ const WINDOW_BY_THEME := {
     "office": 61, "apartment": 61,
 }
 
+const LIVING_ACTOR_BASE := {
+    "survivor": 0,
+    "infected": 32,
+}
+
 var _sources: Dictionary = {}
 
 func _init() -> void:
@@ -261,6 +199,7 @@ func _init() -> void:
     _register_source(SOURCE_BUILDING, "res://assets/building_props_atlas.svg", true)
     _register_source(SOURCE_FINAL_SURFACES, "res://assets/final_environment_surfaces_atlas.svg", true)
     _register_source(SOURCE_FINAL_PROPS, "res://assets/final_environment_props_atlas.svg", true)
+    _register_source(SOURCE_ACTORS, "res://assets/actor_atlas.svg", true)
     _register_source(SOURCE_PLAYER_NORTH, "res://assets/player_north.svg", false)
     _register_source(SOURCE_PLAYER_EAST, "res://assets/player_east.svg", false)
     _register_source(SOURCE_PLAYER_SOUTH, "res://assets/player_south.svg", false)
@@ -293,6 +232,8 @@ func mapping_counts() -> Dictionary:
         "prop_building": BUILDING_PROP.size(),
         "prop_final": FINAL_PROP.size(),
         "prop_final_alias": FINAL_PROP_ALIAS.size(),
+        "actor_survivor": LIVING_ACTOR_VARIANTS * 4,
+        "actor_infected": LIVING_ACTOR_VARIANTS * 4,
     }
 
 func resolve_ground(semantic_id: StringName) -> ArtSelection:
@@ -372,6 +313,21 @@ func resolve_player(facing: int) -> ArtSelection:
             return _found(&"actor.player.west", SOURCE_PLAYER_WEST, -1)
     return _unknown(&"actor.player", "facing_unclassified")
 
+func resolve_living_actor(actor_family: StringName, facing: int, variant: int) -> ArtSelection:
+    var token: String = _leaf_token(actor_family)
+    var requested := StringName("actor.%s.variant_%d" % [token if not token.is_empty() else "unknown", variant])
+    if not LIVING_ACTOR_BASE.has(token):
+        return _unknown(requested, "actor_family_unclassified")
+    if not Facing.is_valid(facing):
+        return _unknown(requested, "facing_unclassified")
+    if variant < 0 or variant >= LIVING_ACTOR_VARIANTS:
+        return _unknown(requested, "actor_variant_unclassified")
+    var facing_index: int = _facing_index(facing)
+    if facing_index < 0:
+        return _unknown(requested, "facing_unclassified")
+    var atlas_index: int = int(LIVING_ACTOR_BASE[token]) + variant * 4 + facing_index
+    return _found(requested, SOURCE_ACTORS, atlas_index)
+
 func resolve_road(
     mask: int,
     road_class: StringName = &"local",
@@ -419,3 +375,15 @@ func _leaf_token(value: StringName) -> String:
     if dot_index >= 0 and dot_index < raw.length() - 1:
         return raw.substr(dot_index + 1)
     return raw
+
+func _facing_index(facing: int) -> int:
+    match facing:
+        Facing.Value.NORTH:
+            return 0
+        Facing.Value.EAST:
+            return 1
+        Facing.Value.SOUTH:
+            return 2
+        Facing.Value.WEST:
+            return 3
+    return -1

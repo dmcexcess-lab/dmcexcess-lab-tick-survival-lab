@@ -1,0 +1,124 @@
+name: Player Living Actor Renderer contract
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: player-living-actor-renderer-contract
+  cancel-in-progress: true
+
+jobs:
+  actor-renderer:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate actor renderer source boundary
+        shell: bash
+        run: |
+          set -euxo pipefail
+          test -f SYSTEM_DESIGNS/08_PLAYER_LIVING_ACTOR_RENDERER.md
+          test -f game/assets/actor_atlas.svg
+          test -f game/scripts/render/ActorDrawCommand.gd
+          test -f game/scripts/render/ActorLayerRenderer.gd
+          test -f game/scripts/ci/ActorLayerRendererSmoke.gd
+          grep -q 'class_name ActorDrawCommand' game/scripts/render/ActorDrawCommand.gd
+          grep -q 'class_name ActorLayerRenderer' game/scripts/render/ActorLayerRenderer.gd
+          grep -q 'plan_visible_commands' game/scripts/render/ActorLayerRenderer.gd
+          grep -q 'Channel.ACTOR' game/scripts/render/ActorLayerRenderer.gd
+          grep -q 'resolve_player' game/scripts/render/ActorLayerRenderer.gd
+          grep -q 'resolve_living_actor' game/scripts/render/ActorLayerRenderer.gd
+          grep -q 'draw_texture_rect_region' game/scripts/render/ActorLayerRenderer.gd
+          ! grep -R -q 'scripts/reboot' game/scripts/render/Actor*.gd
+          ! grep -R -q 'scripts/generation' game/scripts/render/Actor*.gd
+          ! grep -R -q 'scripts/simulation' game/scripts/render/Actor*.gd
+          ! grep -R -q 'scripts/foundation/time' game/scripts/render/Actor*.gd
+          ! grep -R -q 'scripts/camera' game/scripts/render/Actor*.gd
+          ! grep -R -q 'scripts/input' game/scripts/render/Actor*.gd
+          ! grep -R -q 'scripts/ui' game/scripts/render/Actor*.gd
+          ! grep -R -q 'scripts/perception' game/scripts/render/Actor*.gd
+          ! grep -R -q 'scripts/inventory' game/scripts/render/Actor*.gd
+          ! grep -R -q 'scripts/health' game/scripts/render/Actor*.gd
+          ! grep -R -q 'scripts/corpse' game/scripts/render/Actor*.gd
+          ! grep -R -q 'GroundLayerRenderer' game/scripts/render/Actor*.gd
+          ! grep -R -q 'StructureLayerRenderer' game/scripts/render/Actor*.gd
+          ! grep -R -q 'PropLayerRenderer' game/scripts/render/Actor*.gd
+          ! grep -R -q '_process' game/scripts/render/ActorLayerRenderer.gd
+          ! grep -E -q 'actor_atlas|tactical_atlas|player_north|player_east|player_south|player_west' game/scripts/render/Actor*.gd
+
+      - name: Verify protected and recovered actor art identities
+        shell: bash
+        run: |
+          set -euxo pipefail
+          test "$(git hash-object game/assets/tactical_atlas.svg)" = "a031ac456a7d92b7fbf2d6e4d625c3a30e749a4f"
+          test "$(git hash-object game/assets/clutter_atlas.svg)" = "966c9de04ad84d05d6203cc4e078f2fad07c03d4"
+          test "$(git hash-object game/assets/world_art_atlas.svg)" = "995e52973e14db0ef60f3562c1cfa5ae342d62d2"
+          test "$(git hash-object game/assets/building_props_atlas.svg)" = "856be2fc90d009d1b4bcc565990b9428323bb4d6"
+          test "$(git hash-object game/assets/final_environment_surfaces_atlas.svg)" = "a42607858bae04f25fb1c6621a6d9262e81550b1"
+          test "$(git hash-object game/assets/final_environment_props_atlas.svg)" = "7714d8c95833e20ecfa20cfa1374f23eaa5509f1"
+          test "$(git hash-object game/assets/player_north.svg)" = "dfeb5be1c9cc0b66aec842d969b60b485d3a4f99"
+          test "$(git hash-object game/assets/player_east.svg)" = "76c3e7e1a3b07712c65b385f1d80e131b45d90b3"
+          test "$(git hash-object game/assets/player_south.svg)" = "a2e358fd8fe15d497bf9559ae89835af0331d10f"
+          test "$(git hash-object game/assets/player_west.svg)" = "c2cc192efed4c4a81905eb0d8100cd4776d4731b"
+          test "$(git hash-object game/assets/actor_atlas.svg)" = "205036fff8ffb24f828a09cf033abcf615ce6fe0"
+
+      - name: Install Godot 4.7.1
+        shell: bash
+        run: |
+          set -euxo pipefail
+          curl -L -o godot.zip https://github.com/godotengine/godot-builds/releases/download/4.7.1-stable/Godot_v4.7.1-stable_linux.x86_64.zip
+          unzip -q godot.zip
+          chmod +x Godot_v4.7.1-stable_linux.x86_64
+
+      - name: Import and parse project
+        shell: bash
+        run: |
+          set -euxo pipefail
+          ./Godot_v4.7.1-stable_linux.x86_64 --headless --editor --path "$GITHUB_WORKSPACE/game" --quit 2>&1 | tee "$RUNNER_TEMP/import.log"
+          if grep -Eqi 'SCRIPT ERROR|Parse Error|Failed to load script' "$RUNNER_TEMP/import.log"; then exit 1; fi
+
+      - name: Recovered art catalog regression smoke
+        shell: bash
+        run: |
+          set -euxo pipefail
+          ./Godot_v4.7.1-stable_linux.x86_64 --headless --path "$GITHUB_WORKSPACE/game" --script res://scripts/ci/ArtCatalogSmoke.gd 2>&1 | tee "$RUNNER_TEMP/art-catalog-smoke.log"
+          grep -q 'ART_CATALOG_SMOKE_OK' "$RUNNER_TEMP/art-catalog-smoke.log"
+          if grep -Eqi 'SCRIPT ERROR|Parse Error|Failed to load script' "$RUNNER_TEMP/art-catalog-smoke.log"; then exit 1; fi
+
+      - name: Ground renderer regression smoke
+        shell: bash
+        run: |
+          set -euxo pipefail
+          ./Godot_v4.7.1-stable_linux.x86_64 --headless --path "$GITHUB_WORKSPACE/game" --script res://scripts/ci/GroundLayerRendererSmoke.gd 2>&1 | tee "$RUNNER_TEMP/ground-smoke.log"
+          grep -q 'GROUND_LAYER_RENDERER_SMOKE_OK' "$RUNNER_TEMP/ground-smoke.log"
+          if grep -Eqi 'SCRIPT ERROR|Parse Error|Failed to load script' "$RUNNER_TEMP/ground-smoke.log"; then exit 1; fi
+
+      - name: Structure renderer regression smoke
+        shell: bash
+        run: |
+          set -euxo pipefail
+          ./Godot_v4.7.1-stable_linux.x86_64 --headless --path "$GITHUB_WORKSPACE/game" --script res://scripts/ci/StructureLayerRendererSmoke.gd 2>&1 | tee "$RUNNER_TEMP/structure-smoke.log"
+          grep -q 'STRUCTURE_LAYER_RENDERER_SMOKE_OK' "$RUNNER_TEMP/structure-smoke.log"
+          if grep -Eqi 'SCRIPT ERROR|Parse Error|Failed to load script' "$RUNNER_TEMP/structure-smoke.log"; then exit 1; fi
+
+      - name: Prop renderer regression smoke
+        shell: bash
+        run: |
+          set -euxo pipefail
+          ./Godot_v4.7.1-stable_linux.x86_64 --headless --path "$GITHUB_WORKSPACE/game" --script res://scripts/ci/PropLayerRendererSmoke.gd 2>&1 | tee "$RUNNER_TEMP/prop-smoke.log"
+          grep -q 'PROP_LAYER_RENDERER_SMOKE_OK' "$RUNNER_TEMP/prop-smoke.log"
+          if grep -Eqi 'SCRIPT ERROR|Parse Error|Failed to load script' "$RUNNER_TEMP/prop-smoke.log"; then exit 1; fi
+
+      - name: Player living actor renderer contract smoke
+        shell: bash
+        run: |
+          set -euxo pipefail
+          ./Godot_v4.7.1-stable_linux.x86_64 --headless --path "$GITHUB_WORKSPACE/game" --script res://scripts/ci/ActorLayerRendererSmoke.gd 2>&1 | tee "$RUNNER_TEMP/actor-smoke.log"
+          grep -q 'ACTOR_LAYER_RENDERER_SMOKE_OK' "$RUNNER_TEMP/actor-smoke.log"
+          if grep -Eqi 'SCRIPT ERROR|Parse Error|Failed to load script' "$RUNNER_TEMP/actor-smoke.log"; then exit 1; fi

@@ -1,11 +1,12 @@
 extends RefCounted
 class_name ArtBaselineManifest
 
-## Code-visible provenance for the preserved golden visual baseline.
-## CI verifies the Git blob identities; runtime renderers consume only paths.
+## Code-visible provenance for the preserved golden visual baseline plus separately
+## recovered same-owner actor art. CI verifies Git blob identities; renderers consume paths.
 
 const GOLDEN_COMMIT := "1763958f44eb7f855fd49944c00d1ffe608c0abe"
 const GOLDEN_TACTICAL_TILES_BLOB := "3d8a0a70ac983408bb48f58fc659dfb07e216ed3"
+const FIRST_FIRE_TACTICAL_ATLAS_BLOB := "2caff9a1c2ec84fc7d56e6b2c64bce953c575029"
 
 const ASSET_BLOB_SHA_BY_PATH := {
     "game/assets/tactical_atlas.svg": "a031ac456a7d92b7fbf2d6e4d625c3a30e749a4f",
@@ -20,8 +21,15 @@ const ASSET_BLOB_SHA_BY_PATH := {
     "game/assets/player_west.svg": "c2cc192efed4c4a81905eb0d8100cd4776d4731b",
 }
 
+const RECOVERED_ACTOR_ASSET_BLOB_SHA_BY_PATH := {
+    "game/assets/actor_atlas.svg": "205036fff8ffb24f828a09cf033abcf615ce6fe0",
+}
+
 static func expected_asset_blob_shas() -> Dictionary:
     return ASSET_BLOB_SHA_BY_PATH.duplicate(true)
+
+static func expected_recovered_actor_blob_shas() -> Dictionary:
+    return RECOVERED_ACTOR_ASSET_BLOB_SHA_BY_PATH.duplicate(true)
 
 static func res_path(repository_path: String) -> String:
     const PREFIX := "game/"

@@ -24,6 +24,7 @@ jobs:
         run: |
           set -euxo pipefail
           test -f SYSTEM_DESIGNS/04_RECOVERED_MULTI_ATLAS_ART_CATALOG.md
+          test -f game/assets/actor_atlas.svg
           test -f game/scripts/art/ArtSource.gd
           test -f game/scripts/art/ArtSelection.gd
           test -f game/scripts/art/ArtBaselineManifest.gd
@@ -33,6 +34,8 @@ jobs:
           grep -q 'class_name ArtCatalog' game/scripts/art/ArtCatalog.gd
           grep -q 'class_name ArtSelection' game/scripts/art/ArtSelection.gd
           grep -q 'class_name RoadArtTopology' game/scripts/art/RoadArtTopology.gd
+          grep -q 'resolve_living_actor' game/scripts/art/ArtCatalog.gd
+          grep -q 'SOURCE_ACTORS' game/scripts/art/ArtCatalog.gd
           ! grep -R -q 'scripts/reboot' game/scripts/art
           ! grep -R -q 'scripts/generation' game/scripts/art
           ! grep -R -q 'scripts/simulation/collision' game/scripts/art
@@ -50,11 +53,17 @@ jobs:
           test "$(git hash-object game/assets/world_art_atlas.svg)" = "995e52973e14db0ef60f3562c1cfa5ae342d62d2"
           test "$(git hash-object game/assets/building_props_atlas.svg)" = "856be2fc90d009d1b4bcc565990b9428323bb4d6"
           test "$(git hash-object game/assets/final_environment_surfaces_atlas.svg)" = "a42607858bae04f25fb1c6621a6d9262e81550b1"
-          test "$(git hash-object game/assets/final_environment_props_atlas.svg)" = "7714d8c95833e20ebca20cfa1374f23eaa5509f1"
+          test "$(git hash-object game/assets/final_environment_props_atlas.svg)" = "7714d8c95833e20ecfa20cfa1374f23eaa5509f1"
           test "$(git hash-object game/assets/player_north.svg)" = "dfeb5be1c9cc0b66aec842d969b60b485d3a4f99"
           test "$(git hash-object game/assets/player_east.svg)" = "76c3e7e1a3b07712c65b385f1d80e131b45d90b3"
           test "$(git hash-object game/assets/player_south.svg)" = "a2e358fd8fe15d497bf9559ae89835af0331d10f"
           test "$(git hash-object game/assets/player_west.svg)" = "c2cc192efed4c4a81905eb0d8100cd4776d4731b"
+
+      - name: Verify recovered actor art byte-for-byte
+        shell: bash
+        run: |
+          set -euxo pipefail
+          test "$(git hash-object game/assets/actor_atlas.svg)" = "205036fff8ffb24f828a09cf033abcf615ce6fe0"
 
       - name: Install Godot 4.7.1
         shell: bash

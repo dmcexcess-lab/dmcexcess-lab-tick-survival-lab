@@ -17,6 +17,7 @@ func _initialize() -> void:
     _test_prop_recovery(catalog)
     _test_road_recovery(catalog)
     _test_player_recovery(catalog)
+    _test_living_actor_recovery(catalog)
     _test_unknowns(catalog)
 
     if _failures.is_empty():
@@ -29,14 +30,21 @@ func _initialize() -> void:
     quit(1)
 
 func _test_sources_and_manifest(catalog: ArtCatalog) -> void:
-    _check(catalog.source_ids().size() == 10, "catalog exposes six atlases plus four player sprites")
+    _check(catalog.source_ids().size() == 11, "catalog exposes seven atlases plus four player sprites")
     var expected: Dictionary = Manifest.expected_asset_blob_shas()
-    _check(expected.size() == 10, "baseline manifest protects ten golden assets")
+    _check(expected.size() == 10, "baseline manifest still protects ten golden Tick assets")
     for repository_path: Variant in expected.keys():
         var res_path: String = Manifest.res_path(String(repository_path))
         _check(ResourceLoader.exists(res_path), "baseline asset exists: %s" % res_path)
         var loaded: Resource = ResourceLoader.load(res_path)
         _check(loaded is Texture2D, "baseline asset loads as Texture2D: %s" % res_path)
+    var recovered_actor: Dictionary = Manifest.expected_recovered_actor_blob_shas()
+    _check(recovered_actor.size() == 1, "manifest protects one separately recovered actor asset")
+    for repository_path: Variant in recovered_actor.keys():
+        var res_path: String = Manifest.res_path(String(repository_path))
+        _check(ResourceLoader.exists(res_path), "recovered actor asset exists: %s" % res_path)
+        var loaded: Resource = ResourceLoader.load(res_path)
+        _check(loaded is Texture2D, "recovered actor asset loads as Texture2D: %s" % res_path)
 
 func _test_region_math(catalog: ArtCatalog) -> void:
     var source: ArtSource = catalog.source(CatalogClass.SOURCE_WORLD)
@@ -45,6 +53,10 @@ func _test_region_math(catalog: ArtCatalog) -> void:
         _check(source.region(0) == Rect2(0, 0, 32, 32), "atlas index zero region")
         _check(source.region(17) == Rect2(32, 32, 32, 32), "atlas row/column region math")
         _check(source.region(127) == Rect2(480, 224, 32, 32), "atlas high-index region math")
+    var actor_source: ArtSource = catalog.source(CatalogClass.SOURCE_ACTORS)
+    _check(actor_source != null and actor_source.atlas, "actor source is atlas-backed")
+    if actor_source != null:
+        _check(actor_source.region(63) == Rect2(480, 96, 32, 32), "actor atlas final living cell region")
 
 func _test_ground_recovery(catalog: ArtCatalog) -> void:
     _expect(catalog.resolve_ground(&"ground.grass"), CatalogClass.SOURCE_FINAL_SURFACES, 0, "generic grass uses final alias")
@@ -126,6 +138,26 @@ func _test_player_recovery(catalog: ArtCatalog) -> void:
     _expect_path(catalog.resolve_player(Facing.Value.SOUTH), "res://assets/player_south.svg", "south player sprite")
     _expect_path(catalog.resolve_player(Facing.Value.WEST), "res://assets/player_west.svg", "west player sprite")
 
+func _test_living_actor_recovery(catalog: ArtCatalog) -> void:
+    var facings: Array[int] = [Facing.Value.NORTH, Facing.Value.EAST, Facing.Value.SOUTH, Facing.Value.WEST]
+    for variant in range(CatalogClass.LIVING_ACTOR_VARIANTS):
+        for facing_index in range(facings.size()):
+            _expect(
+                catalog.resolve_living_actor(&"actor.survivor", facings[facing_index], variant),
+                CatalogClass.SOURCE_ACTORS,
+                variant * 4 + facing_index,
+                "survivor variant %d facing %d" % [variant, facing_index]
+            )
+            _expect(
+                catalog.resolve_living_actor(&"actor.infected", facings[facing_index], variant),
+                CatalogClass.SOURCE_ACTORS,
+                32 + variant * 4 + facing_index,
+                "infected variant %d facing %d" % [variant, facing_index]
+            )
+    var counts: Dictionary = catalog.mapping_counts()
+    _check(int(counts.get("actor_survivor", 0)) == 32, "32 survivor living actor mappings recovered")
+    _check(int(counts.get("actor_infected", 0)) == 32, "32 infected living actor mappings recovered")
+
 func _test_unknowns(catalog: ArtCatalog) -> void:
     _check(catalog.resolve_ground(&"ground.does_not_exist").status == SelectionClass.Status.UNKNOWN, "unknown ground fails visibly")
     _check(catalog.resolve_wall(&"wall.does_not_exist").status == SelectionClass.Status.UNKNOWN, "unknown wall fails visibly")
@@ -133,6 +165,9 @@ func _test_unknowns(catalog: ArtCatalog) -> void:
     _check(catalog.resolve_door(&"does_not_exist", false).status == SelectionClass.Status.UNKNOWN, "unknown door theme fails visibly")
     _check(catalog.resolve_window(&"does_not_exist").status == SelectionClass.Status.UNKNOWN, "unknown window theme fails visibly")
     _check(catalog.resolve_player(99).status == SelectionClass.Status.UNKNOWN, "invalid player facing fails visibly")
+    _check(catalog.resolve_living_actor(&"actor.animal", Facing.Value.NORTH, 0).status == SelectionClass.Status.UNKNOWN, "unknown living actor family fails visibly")
+    _check(catalog.resolve_living_actor(&"actor.survivor", Facing.Value.NORTH, 8).status == SelectionClass.Status.UNKNOWN, "invalid living actor variant fails visibly")
+    _check(catalog.resolve_living_actor(&"actor.survivor", 99, 0).status == SelectionClass.Status.UNKNOWN, "invalid living actor facing fails visibly")
     _check(catalog.resolve_road(99).status == SelectionClass.Status.UNKNOWN, "invalid road mask fails visibly")
 
 func _expect(selection: ArtSelection, source_id: StringName, index: int, message: String) -> void:

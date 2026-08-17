@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="128" viewBox="0 0 512 128" shape-rendering="crispEdges">
+<defs>
+  <g id="survivor">
+    <ellipse cx="16" cy="24" rx="10" ry="4" fill="#000" opacity=".35"/>
+    <rect x="10" y="19" width="5" height="8" fill="#253039"/><rect x="17" y="19" width="5" height="8" fill="#253039"/>
+    <rect x="8" y="11" width="16" height="10" rx="2" fill="currentColor" stroke="#11191c" stroke-width="1"/>
+    <rect x="5" y="13" width="4" height="7" fill="#d4a17d"/><rect x="23" y="13" width="4" height="7" fill="#d4a17d"/>
+    <circle cx="16" cy="8" r="5" fill="#2a2019"/><circle cx="16" cy="9" r="4" fill="#d4a17d"/>
+    <rect x="12" y="4" width="8" height="3" fill="#2a2019"/><rect x="14" y="12" width="4" height="3" fill="#d7a33d"/>
+    <rect x="15" y="2" width="2" height="3" fill="#f3f5e7"/>
+  </g>
+  <g id="zombie">
+    <ellipse cx="16" cy="24" rx="10" ry="4" fill="#000" opacity=".35"/>
+    <rect x="10" y="19" width="5" height="8" fill="#2c302e"/><rect x="17" y="19" width="5" height="8" fill="#2c302e"/>
+    <rect x="8" y="11" width="16" height="10" rx="2" fill="currentColor" stroke="#161b1a" stroke-width="1"/>
+    <rect x="4" y="12" width="5" height="8" fill="#7a816d"/><rect x="23" y="12" width="5" height="8" fill="#7a816d"/>
+    <circle cx="16" cy="8" r="5" fill="#354036"/><circle cx="16" cy="9" r="4" fill="#7a816d"/>
+    <rect x="12" y="15" width="4" height="4" fill="#6d2b28"/><rect x="15" y="2" width="2" height="3" fill="#c9d7c1"/>
+  </g>
+</defs>
+<g style="color:#334f65"><use href="#survivor" x="0" y="0"/><use href="#survivor" x="32" y="0" transform="rotate(90 48 16)"/><use href="#survivor" x="64" y="0" transform="rotate(180 80 16)"/><use href="#survivor" x="96" y="0" transform="rotate(270 112 16)"/></g>
+<g style="color:#6b4635"><use href="#survivor" x="128" y="0"/><use href="#survivor" x="160" y="0" transform="rotate(90 176 16)"/><use href="#survivor" x="192" y="0" transform="rotate(180 208 16)"/><use href="#survivor" x="224" y="0" transform="rotate(270 240 16)"/></g>
+<g style="color:#4f6348"><use href="#survivor" x="256" y="0"/><use href="#survivor" x="288" y="0" transform="rotate(90 304 16)"/><use href="#survivor" x="320" y="0" transform="rotate(180 336 16)"/><use href="#survivor" x="352" y="0" transform="rotate(270 368 16)"/></g>
+<g style="color:#694b63"><use href="#survivor" x="384" y="0"/><use href="#survivor" x="416" y="0" transform="rotate(90 432 16)"/><use href="#survivor" x="448" y="0" transform="rotate(180 464 16)"/><use href="#survivor" x="480" y="0" transform="rotate(270 496 16)"/></g>
+<g style="color:#7a5639"><use href="#survivor" x="0" y="32"/><use href="#survivor" x="32" y="32" transform="rotate(90 48 48)"/><use href="#survivor" x="64" y="32" transform="rotate(180 80 48)"/><use href="#survivor" x="96" y="32" transform="rotate(270 112 48)"/></g>
+<g style="color:#355e5b"><use href="#survivor" x="128" y="32"/><use href="#survivor" x="160" y="32" transform="rotate(90 176 48)"/><use href="#survivor" x="192" y="32" transform="rotate(180 208 48)"/><use href="#survivor" x="224" y="32" transform="rotate(270 240 48)"/></g>
+<g style="color:#4d4f55"><use href="#survivor" x="256" y="32"/><use href="#survivor" x="288" y="32" transform="rotate(90 304 48)"/><use href="#survivor" x="320" y="32" transform="rotate(180 336 48)"/><use href="#survivor" x="352" y="32" transform="rotate(270 368 48)"/></g>
+<g style="color:#755044"><use href="#survivor" x="384" y="32"/><use href="#survivor" x="416" y="32" transform="rotate(90 432 48)"/><use href="#survivor" x="448" y="32" transform="rotate(180 464 48)"/><use href="#survivor" x="480" y="32" transform="rotate(270 496 48)"/></g>
+<g style="color:#4a4e45"><use href="#zombie" x="0" y="64"/><use href="#zombie" x="32" y="64" transform="rotate(90 48 80)"/><use href="#zombie" x="64" y="64" transform="rotate(180 80 80)"/><use href="#zombie" x="96" y="64" transform="rotate(270 112 80)"/></g>
+<g style="color:#5a4038"><use href="#zombie" x="128" y="64"/><use href="#zombie" x="160" y="64" transform="rotate(90 176 80)"/><use href="#zombie" x="192" y="64" transform="rotate(180 208 80)"/><use href="#zombie" x="224" y="64" transform="rotate(270 240 80)"/></g>
+<g style="color:#3f4d54"><use href="#zombie" x="256" y="64"/><use href="#zombie" x="288" y="64" transform="rotate(90 304 80)"/><use href="#zombie" x="320" y="64" transform="rotate(180 336 80)"/><use href="#zombie" x="352" y="64" transform="rotate(270 368 80)"/></g>
+<g style="color:#625648"><use href="#zombie" x="384" y="64"/><use href="#zombie" x="416" y="64" transform="rotate(90 432 80)"/><use href="#zombie" x="448" y="64" transform="rotate(180 464 80)"/><use href="#zombie" x="480" y="64" transform="rotate(270 496 80)"/></g>
+<g style="color:#3a3d37"><use href="#zombie" x="0" y="96"/><use href="#zombie" x="32" y="96" transform="rotate(90 48 112)"/><use href="#zombie" x="64" y="96" transform="rotate(180 80 112)"/><use href="#zombie" x="96" y="96" transform="rotate(270 112 112)"/></g>
+<g style="color:#59604f"><use href="#zombie" x="128" y="96"/><use href="#zombie" x="160" y="96" transform="rotate(90 176 112)"/><use href="#zombie" x="192" y="96" transform="rotate(180 208 112)"/><use href="#zombie" x="224" y="96" transform="rotate(270 240 112)"/></g>
+<g style="color:#4c5560"><use href="#zombie" x="256" y="96"/><use href="#zombie" x="288" y="96" transform="rotate(90 304 112)"/><use href="#zombie" x="320" y="96" transform="rotate(180 336 112)"/><use href="#zombie" x="352" y="96" transform="rotate(270 368 112)"/></g>
+<g style="color:#563c42"><use href="#zombie" x="384" y="96"/><use href="#zombie" x="416" y="96" transform="rotate(90 432 112)"/><use href="#zombie" x="448" y="96" transform="rotate(180 464 112)"/><use href="#zombie" x="480" y="96" transform="rotate(270 496 112)"/></g>
+</svg>
