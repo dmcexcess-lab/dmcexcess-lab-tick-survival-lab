@@ -6,6 +6,7 @@ const Layers = preload("res://scripts/foundation/spatial/SpatialLayer.gd")
 const Footprint = preload("res://scripts/foundation/spatial/SpatialFootprint.gd")
 const PlacementClass = preload("res://scripts/foundation/world/WorldPlacement.gd")
 const Slots = preload("res://scripts/simulation/actors/equipment/ActorHandSlot.gd")
+const CapacityPolicyClass = preload("res://scripts/simulation/items/ItemAcquisitionCapacityPolicy.gd")
 const ActionTypes = preload("res://scripts/simulation/items/transfer/ItemTransferActionType.gd")
 const DispositionClass = preload("res://scripts/simulation/items/transfer/ItemDispositionResult.gd")
 const DispositionQueryClass = preload("res://scripts/simulation/items/transfer/ItemDispositionQuery.gd")
@@ -31,6 +32,7 @@ var _containment_mutations: InventoryContainmentMutationService = null
 var _kernel: TickKernel = null
 var _policy: ItemTransferTimingPolicy = null
 var _disposition: ItemDispositionQuery = null
+var _capacity_policy: ItemAcquisitionCapacityPolicy = null
 var _diagnostics: Array[Dictionary] = []
 
 func _init(
@@ -42,7 +44,8 @@ func _init(
     containment_mutation_service: InventoryContainmentMutationService = null,
     tick_kernel: TickKernel = null,
     timing_policy: ItemTransferTimingPolicy = null,
-    disposition_query: ItemDispositionQuery = null
+    disposition_query: ItemDispositionQuery = null,
+    capacity_policy: ItemAcquisitionCapacityPolicy = null
 ) -> void:
     _world = world_state
     _world_mutations = world_mutation_service
@@ -53,6 +56,7 @@ func _init(
     _kernel = tick_kernel
     _policy = timing_policy
     _disposition = disposition_query
+    _capacity_policy = capacity_policy
     if _disposition == null and _world != null and _hands != null and _containment != null:
         _disposition = DispositionQueryClass.new(_world, _hands, _containment)
     if _kernel != null:
@@ -70,7 +74,8 @@ func is_ready() -> bool:
         and _containment_mutations != null and _containment_mutations.is_ready() \
         and _kernel != null \
         and _policy != null \
-        and _disposition != null and _disposition.is_ready()
+        and _disposition != null and _disposition.is_ready() \
+        and _capacity_policy != null and _capacity_policy.is_ready()
 
 func recent_diagnostics() -> Array[Dictionary]:
     return _diagnostics.duplicate(true)
@@ -91,6 +96,8 @@ func request_pickup_to_container(
         return _reject(result, ResultClass.Status.OUT_OF_REACH, "out_of_reach")
     if not _validate_destination_container(result, result.actor_id, destination_container_id):
         return result
+    if not _validate_capacity_for_acquisition(result):
+        return result
     var extra: Dictionary = {
         "destination_container_id": destination_container_id,
         "destination_container_version": _containment.container_version(destination_container_id),
@@ -109,6 +116,8 @@ func request_pickup_to_hand(actor_id: String, item_id: String, slot: int) -> Ite
     if not _loose_item_reachable(actor_placement, source.placement):
         return _reject(result, ResultClass.Status.OUT_OF_REACH, "out_of_reach")
     if not _validate_target_hand(result, result.actor_id, slot):
+        return result
+    if not _validate_capacity_for_acquisition(result):
         return result
     var extra: Dictionary = {
         "destination_slot": slot,
@@ -336,6 +345,21 @@ func _validate_source_container_access(
         return false
     return true
 
+func _validate_capacity_for_acquisition(result: ItemTransferActionResult) -> bool:
+    var capacity: Dictionary = _capacity_policy.evaluate(result.actor_id, result.item_id)
+    var status: int = int(capacity.get("status", -1))
+    if not CapacityPolicyClass.is_valid_status(status):
+        _reject(result, ResultClass.Status.CAPABILITY_UNKNOWN, "capacity_policy_invalid_result")
+        return false
+    if status == CapacityPolicyClass.Status.ALLOWED:
+        return true
+    var reason: String = _capacity_reason(capacity)
+    if status == CapacityPolicyClass.Status.BLOCKED:
+        _reject(result, ResultClass.Status.CARRY_LIMIT_EXCEEDED, reason)
+    else:
+        _reject(result, ResultClass.Status.CAPABILITY_UNKNOWN, reason)
+    return false
+
 func _begin_transfer(
     result: ItemTransferActionResult,
     actor_placement: WorldPlacement,
@@ -537,6 +561,12 @@ func _commit_action(action: TimedAction) -> void:
             _fail_action(action, "containment_rejected")
             return
 
+    if _is_personal_acquisition(action.action_type):
+        var capacity: Dictionary = _capacity_policy.evaluate(action.actor_id, item_id)
+        if not _capacity_allows(capacity):
+            _fail_action(action, _capacity_reason(capacity))
+            return
+
     var timing: ItemTransferTimingDecision = _policy.evaluate(action.actor_id, action.action_type)
     if timing == null or not timing.is_allowed():
         _fail_action(action, _timing_reason(timing))
@@ -582,6 +612,20 @@ func _perform_commit(action: TimedAction, actor_placement: WorldPlacement) -> vo
     if not _remove_source(action.action_type, payload, item_id):
         _fail_action(action, "source_mutation_failed")
         return
+
+    # Source-removal signals may synchronously change carried mass or capacity.
+    # Recheck acquisition legality before destination mutation so newer Carry truth
+    # is never overwritten by a stale prevalidation.
+    if _is_personal_acquisition(action.action_type):
+        var capacity: Dictionary = _capacity_policy.evaluate(action.actor_id, item_id)
+        if not _capacity_allows(capacity):
+            var compensated_capacity: bool = _restore_source(payload, item_id)
+            if compensated_capacity:
+                _fail_action(action, _capacity_reason(capacity))
+            else:
+                _append_diagnostic(action, item_id, "critical_consistency_failure", true)
+                _fail_action(action, "critical_consistency_failure")
+            return
 
     if not _add_destination(action.action_type, payload, item_id, actor_placement, action.actor_id):
         var compensated: bool = _restore_source(payload, item_id)
@@ -766,6 +810,22 @@ func _append_diagnostic(action: TimedAction, item_id: String, reason: String, cr
     })
     while _diagnostics.size() > DIAGNOSTIC_LIMIT:
         _diagnostics.pop_front()
+
+static func _is_personal_acquisition(action_type: StringName) -> bool:
+    return action_type == ActionTypes.WORLD_TO_CONTAINER or action_type == ActionTypes.WORLD_TO_HAND
+
+static func _capacity_allows(capacity: Dictionary) -> bool:
+    var status: int = int(capacity.get("status", -1))
+    return CapacityPolicyClass.is_valid_status(status) and status == CapacityPolicyClass.Status.ALLOWED
+
+static func _capacity_reason(capacity: Dictionary) -> String:
+    var reason: String = String(capacity.get("reason", "")).strip_edges()
+    if not reason.is_empty():
+        return reason
+    var status: int = int(capacity.get("status", -1))
+    if status == CapacityPolicyClass.Status.BLOCKED:
+        return "absolute_carry_limit_exceeded"
+    return "carry_capacity_unknown"
 
 static func _timing_reason(timing: ItemTransferTimingDecision) -> String:
     if timing == null:

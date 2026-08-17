@@ -64,6 +64,7 @@ func _test_carry_contract() -> void:
     var carry_state: ActorCarryState = fixture["carry_state"]
     var carry_query: ActorCarryQuery = fixture["carry_query"]
     _check(carry_state.capacity_grams("actor.a") == 18000, "recovered base capacity is 18 kg")
+    _check(carry_state.hard_limit_grams("actor.a") == 36000, "derived absolute carry ceiling is 36 kg")
 
     wm.create_entity(&"item.backpack", "item.pack")
     wm.create_entity(&"item.food", "item.food")
@@ -81,9 +82,14 @@ func _test_carry_contract() -> void:
     _check(hand_mutations.set_item("actor.a", Slots.Value.SECONDARY_LEFT, "item.hammer"), "hammer held in secondary hand")
     _check(inventory_mutations.set_container("item.bottle", "actor.a"), "actor-root item contained")
 
+    var subtree: Dictionary = carry_query.query_item_tree("item.pack")
+    _check(int(subtree.get("status", -1)) == CarryQueryClass.Status.KNOWN, "item subtree weight known")
+    _check(int(subtree.get("weight_grams", -1)) == 1500, "item subtree includes container plus nested contents")
+
     var carry: Dictionary = carry_query.query("actor.a")
     _check(int(carry.get("status", -1)) == CarryQueryClass.Status.KNOWN, "carry total known when all weights classified")
     _check(int(carry.get("weight_grams", -1)) == 3000, "hand + held-container contents + actor-root item summed")
+    _check(int(carry.get("hard_limit_grams", -1)) == 36000, "carry result exposes derived hard ceiling")
     var ids: Array = carry.get("item_ids", [])
     _check(ids.size() == 4 and ids.has("item.pack") and ids.has("item.food") and ids.has("item.hammer") and ids.has("item.bottle"), "all personally possessed physical items counted")
 
@@ -98,8 +104,10 @@ func _test_carry_contract() -> void:
     inventory_mutations.clear_container("item.mystery")
 
     _check(carry_state.set_capacity_grams("actor.a", 3000), "capacity can be changed through 13E")
+    _check(carry_state.hard_limit_grams("actor.a") == 6000, "hard ceiling tracks capacity at exactly 2x")
     var exact: Dictionary = carry_query.query("actor.a")
     _check(int(exact.get("load_ratio_bp", -1)) == 10000, "load ratio uses 10,000 basis points at capacity")
+    _check(int(exact.get("hard_limit_grams", -1)) == 6000, "query hard ceiling updates with capacity")
     var provider := CarryProviderClass.new(carry_query)
     var provider_result: Dictionary = provider.evaluate("actor.a", &"movement.step_forward")
     _check(int(provider_result.get("status", -1)) == ProviderBase.Status.ALLOWED and int(provider_result.get("duration_adjustment_bp", -1)) == 7500, "100 percent capacity recovers +75 percent timing pressure")
@@ -114,10 +122,13 @@ func _test_snapshot_contract() -> void:
     var fixture: Dictionary = _fixture()
     var carry_state: ActorCarryState = fixture["carry_state"]
     carry_state.set_capacity_grams("actor.a", 22000)
+    _check(carry_state.hard_limit_grams("actor.a") == 44000, "hard ceiling is derived rather than separately persisted")
     var saved: Dictionary = carry_state.snapshot()
+    _check(not saved.has("hard_limit_grams"), "snapshot does not persist a second hard-limit truth")
     var restored := CarryStateClass.new()
     _check(restored.load_snapshot(saved), "capacity snapshot restores")
     _check(restored.snapshot() == saved, "capacity snapshot deterministic")
+    _check(restored.hard_limit_grams("actor.a") == 44000, "restored capacity re-derives hard ceiling")
     var before_bad: Dictionary = restored.snapshot()
     var bad: Dictionary = before_bad.duplicate(true)
     bad["records"][0]["capacity_grams"] = 0

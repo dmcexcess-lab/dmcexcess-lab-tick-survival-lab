@@ -38,7 +38,7 @@ var failures: Array[String] = []
 func _initialize() -> void:
     _test_baselines_and_multiplication()
     _test_encumbrance_run_gate_and_overweight_walk()
-    _test_walk_fatigue_is_terrain_only()
+    _test_walk_fatigue_only_when_overweight()
     _test_run_fatigue_uses_terrain_and_load()
     _test_first_stride_impact()
     _test_second_stride_impact()
@@ -164,22 +164,38 @@ func _test_encumbrance_run_gate_and_overweight_walk() -> void:
     var walk: MovementActionResult = over_f["movement"].request_step_forward("actor.over")
     _check(walk.is_accepted() and walk.duration_ticks == 19, "over-capacity Walk remains legal and slower")
 
-func _test_walk_fatigue_is_terrain_only() -> void:
-    var light_f := _fixture("actor.walk_light", 5000, 10000)
-    var light_mutations: WorldMutationService = light_f["mutations"]
-    _check(light_mutations.set_terrain(Vector2i(3, 2), &"ground.slow"), "light walk slow terrain")
-    var light_walk: MovementActionResult = light_f["movement"].request_step_forward("actor.walk_light")
-    _check(light_walk.is_accepted(), "light slow walk accepted")
-    _check(light_f["kernel"].run_until_stop() == TickRules.RunStopReason.IDLE, "light walk drains")
-    _check(light_f["needs"].fatigue("actor.walk_light") == 2, "14-tick terrain adds two walk fatigue")
+func _test_walk_fatigue_only_when_overweight() -> void:
+    var under_f := _fixture("actor.walk_under", 5000, 10000)
+    var under_mutations: WorldMutationService = under_f["mutations"]
+    _check(under_mutations.set_terrain(Vector2i(3, 2), &"ground.slow"), "underweight walk slow terrain")
+    var under_walk: MovementActionResult = under_f["movement"].request_step_forward("actor.walk_under")
+    _check(under_walk.is_accepted(), "underweight slow walk accepted")
+    _check(under_f["kernel"].run_until_stop() == TickRules.RunStopReason.IDLE, "underweight walk drains")
+    _check(under_f["needs"].fatigue("actor.walk_under") == 0, "walking at 50 percent capacity adds no fatigue")
 
-    var heavy_f := _fixture("actor.walk_heavy", 9000, 10000)
-    var heavy_mutations: WorldMutationService = heavy_f["mutations"]
-    _check(heavy_mutations.set_terrain(Vector2i(3, 2), &"ground.slow"), "heavy walk slow terrain")
-    var heavy_walk: MovementActionResult = heavy_f["movement"].request_step_forward("actor.walk_heavy")
-    _check(heavy_walk.is_accepted(), "heavy slow walk accepted")
-    _check(heavy_f["kernel"].run_until_stop() == TickRules.RunStopReason.IDLE, "heavy walk drains")
-    _check(heavy_f["needs"].fatigue("actor.walk_heavy") == 2, "walk fatigue ignores carry load")
+    var exact_f := _fixture("actor.walk_exact", 10000, 10000)
+    var exact_mutations: WorldMutationService = exact_f["mutations"]
+    _check(exact_mutations.set_terrain(Vector2i(3, 2), &"ground.slow"), "exact-capacity walk slow terrain")
+    var exact_walk: MovementActionResult = exact_f["movement"].request_step_forward("actor.walk_exact")
+    _check(exact_walk.is_accepted(), "exact-capacity slow walk accepted")
+    _check(exact_f["kernel"].run_until_stop() == TickRules.RunStopReason.IDLE, "exact-capacity walk drains")
+    _check(exact_f["needs"].fatigue("actor.walk_exact") == 0, "walking at exactly capacity adds no fatigue")
+
+    var slight_over_f := _fixture("actor.walk_over_110", 11000, 10000)
+    var slight_mutations: WorldMutationService = slight_over_f["mutations"]
+    _check(slight_mutations.set_terrain(Vector2i(3, 2), &"ground.slow"), "slightly overweight walk slow terrain")
+    var slight_walk: MovementActionResult = slight_over_f["movement"].request_step_forward("actor.walk_over_110")
+    _check(slight_walk.is_accepted(), "slightly overweight slow walk accepted")
+    _check(slight_over_f["kernel"].run_until_stop() == TickRules.RunStopReason.IDLE, "slightly overweight walk drains")
+    _check(slight_over_f["needs"].fatigue("actor.walk_over_110") == 2, "overweight 14-tick walk adds two terrain fatigue")
+
+    var heavy_over_f := _fixture("actor.walk_over_190", 19000, 10000)
+    var heavy_mutations: WorldMutationService = heavy_over_f["mutations"]
+    _check(heavy_mutations.set_terrain(Vector2i(3, 2), &"ground.slow"), "heavily overweight walk slow terrain")
+    var heavy_walk: MovementActionResult = heavy_over_f["movement"].request_step_forward("actor.walk_over_190")
+    _check(heavy_walk.is_accepted(), "heavily overweight slow walk accepted")
+    _check(heavy_over_f["kernel"].run_until_stop() == TickRules.RunStopReason.IDLE, "heavily overweight walk drains")
+    _check(heavy_over_f["needs"].fatigue("actor.walk_over_190") == 2, "degree of overweight does not increase Walk fatigue")
 
 func _test_run_fatigue_uses_terrain_and_load() -> void:
     var baseline_f := _fixture("actor.run_effort_base")

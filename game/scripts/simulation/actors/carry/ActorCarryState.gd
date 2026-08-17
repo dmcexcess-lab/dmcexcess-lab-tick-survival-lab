@@ -4,7 +4,7 @@ class_name ActorCarryState
 const EntityIdRules = preload("res://scripts/foundation/world/WorldEntityId.gd")
 
 ## 13E persistent survivor carrying-capacity configuration.
-## Current carried weight is deliberately not stored here.
+## Current carried weight and the derived absolute ceiling are deliberately not stored here.
 
 signal actor_enrolled(actor_id, capacity_grams, version)
 signal actor_removed(actor_id, version)
@@ -13,6 +13,7 @@ signal carry_state_reset
 
 const SNAPSHOT_SCHEMA_VERSION: int = 1
 const DEFAULT_CAPACITY_GRAMS: int = 18000
+const HARD_LIMIT_MULTIPLIER: int = 2
 
 var _world: WorldState = null
 var _records: Dictionary = {}
@@ -45,6 +46,12 @@ func capacity_grams(actor_id: String) -> int:
         return -1
     var record: Dictionary = _records[actor_id]
     return int(record.get("capacity_grams", -1))
+
+func hard_limit_grams(actor_id: String) -> int:
+    var capacity: int = capacity_grams(actor_id)
+    if capacity <= 0:
+        return -1
+    return capacity * HARD_LIMIT_MULTIPLIER
 
 func enroll_actor(actor_id: String, initial_capacity_grams: int = DEFAULT_CAPACITY_GRAMS) -> bool:
     if _world == null or not EntityIdRules.is_valid(actor_id) or initial_capacity_grams <= 0:

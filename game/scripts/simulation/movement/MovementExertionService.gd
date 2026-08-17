@@ -2,7 +2,8 @@ extends RefCounted
 class_name MovementExertionService
 
 ## Stateless Movement -> Needs coordination for System 17A.
-## Walk fatigue depends on terrain only. Run fatigue depends on terrain + derived Carry load.
+## Walk fatigue occurs only while above soft carry capacity and then depends on
+## terrain only. Run fatigue depends on terrain + derived Carry load.
 
 const STEP_FORWARD: StringName = &"movement.step_forward"
 const STEP_BACKWARD: StringName = &"movement.step_backward"
@@ -40,11 +41,21 @@ func _on_movement_exertion_resolved(
         return
     var fatigue_gain: int = 0
     if action_type == STEP_FORWARD or action_type == STEP_BACKWARD:
-        fatigue_gain = _walk_fatigue_gain(terrain_walk_ticks)
+        fatigue_gain = _overweight_walk_fatigue_gain(actor_id, terrain_walk_ticks)
     elif action_type == RUN_FORWARD:
         fatigue_gain = _run_fatigue_gain(actor_id, terrain_walk_ticks)
     if fatigue_gain > 0:
         _needs.change_need(actor_id, ActorNeedsState.FATIGUE, fatigue_gain)
+
+func _overweight_walk_fatigue_gain(actor_id: String, terrain_walk_ticks: int) -> int:
+    var carry: Dictionary = _carry_query.query(actor_id)
+    if int(carry.get("status", -1)) != ActorCarryQuery.Status.KNOWN:
+        return 0
+    var weight_grams: int = int(carry.get("weight_grams", 0))
+    var capacity_grams: int = int(carry.get("capacity_grams", 0))
+    if capacity_grams <= 0 or weight_grams <= capacity_grams:
+        return 0
+    return _walk_terrain_fatigue_gain(terrain_walk_ticks)
 
 func _run_fatigue_gain(actor_id: String, terrain_walk_ticks: int) -> int:
     var carry: Dictionary = _carry_query.query(actor_id)
@@ -57,7 +68,7 @@ func _run_fatigue_gain(actor_id: String, terrain_walk_ticks: int) -> int:
     var rounded: int = int((numerator + (denominator / 2)) / denominator)
     return maxi(1, rounded)
 
-static func _walk_fatigue_gain(terrain_walk_ticks: int) -> int:
+static func _walk_terrain_fatigue_gain(terrain_walk_ticks: int) -> int:
     if terrain_walk_ticks < 1:
         return 0
     return maxi(1, int((terrain_walk_ticks + NORMAL_TERRAIN_WALK_TICKS - 1) / NORMAL_TERRAIN_WALK_TICKS))

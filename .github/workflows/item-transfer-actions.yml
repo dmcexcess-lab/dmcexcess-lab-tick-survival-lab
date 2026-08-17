@@ -24,6 +24,8 @@ jobs:
         run: |
           set -euxo pipefail
           test -f SYSTEM_DESIGNS/12_ITEM_TRANSFER_ACTIONS.md
+          test -f game/scripts/simulation/items/ItemAcquisitionCapacityPolicy.gd
+          test -f game/scripts/simulation/actors/carry/ActorCarryAcquisitionPolicy.gd
           test -f game/scripts/simulation/items/transfer/ItemTransferActionType.gd
           test -f game/scripts/simulation/items/transfer/ItemDispositionResult.gd
           test -f game/scripts/simulation/items/transfer/ItemDispositionQuery.gd
@@ -31,11 +33,16 @@ jobs:
           test -f game/scripts/simulation/items/transfer/ItemTransferTimingPolicy.gd
           test -f game/scripts/simulation/items/transfer/ItemTransferActionResult.gd
           test -f game/scripts/simulation/items/transfer/ItemTransferActionService.gd
+          test -f game/scripts/ci/ItemTransferTestCapacityPolicy.gd
           test -f game/scripts/ci/ItemTransferActionsSmoke.gd
+          test -f game/scripts/ci/ActorCarryAcquisitionSmoke.gd
+          grep -q 'class_name ItemAcquisitionCapacityPolicy' game/scripts/simulation/items/ItemAcquisitionCapacityPolicy.gd
           grep -q 'class_name ItemDispositionQuery' game/scripts/simulation/items/transfer/ItemDispositionQuery.gd
           grep -q 'class_name ItemTransferActionService' game/scripts/simulation/items/transfer/ItemTransferActionService.gd
           grep -q 'item_transfer.commit' game/scripts/simulation/items/transfer/ItemTransferActionService.gd
           grep -q 'InterruptionPolicy.CANCELABLE' game/scripts/simulation/items/transfer/ItemTransferActionService.gd
+          grep -q 'CARRY_LIMIT_EXCEEDED' game/scripts/simulation/items/transfer/ItemTransferActionResult.gd
+          grep -q '_capacity_policy.evaluate' game/scripts/simulation/items/transfer/ItemTransferActionService.gd
           grep -q 'request_pickup_to_container' game/scripts/simulation/items/transfer/ItemTransferActionService.gd
           grep -q 'request_pickup_to_hand' game/scripts/simulation/items/transfer/ItemTransferActionService.gd
           grep -q 'request_drop_from_container' game/scripts/simulation/items/transfer/ItemTransferActionService.gd
@@ -55,6 +62,7 @@ jobs:
           ! grep -R -q 'scripts/simulation/movement' game/scripts/simulation/items/transfer
           ! grep -R -q 'scripts/simulation/collision' game/scripts/simulation/items/transfer
           ! grep -R -q 'scripts/simulation/actors/locomotion' game/scripts/simulation/items/transfer
+          ! grep -R -q 'scripts/simulation/actors/carry' game/scripts/simulation/items/transfer
 
       - name: Install Godot 4.7.1
         shell: bash
@@ -103,6 +111,14 @@ jobs:
           grep -q 'INVENTORY_CONTAINMENT_SMOKE_OK' "$RUNNER_TEMP/inventory-containment-smoke.log"
           if grep -Eqi 'SCRIPT ERROR|Parse Error|Failed to load script' "$RUNNER_TEMP/inventory-containment-smoke.log"; then exit 1; fi
 
+      - name: Actor carry regression smoke
+        shell: bash
+        run: |
+          set -euxo pipefail
+          ./Godot_v4.7.1-stable_linux.x86_64 --headless --path "$GITHUB_WORKSPACE/game" --script res://scripts/ci/ActorCarrySmoke.gd 2>&1 | tee "$RUNNER_TEMP/actor-carry-smoke.log"
+          grep -q 'ACTOR_CARRY_SMOKE_OK' "$RUNNER_TEMP/actor-carry-smoke.log"
+          if grep -Eqi 'SCRIPT ERROR|Parse Error|Failed to load script' "$RUNNER_TEMP/actor-carry-smoke.log"; then exit 1; fi
+
       - name: Item transfer actions contract smoke
         shell: bash
         run: |
@@ -110,3 +126,11 @@ jobs:
           ./Godot_v4.7.1-stable_linux.x86_64 --headless --path "$GITHUB_WORKSPACE/game" --script res://scripts/ci/ItemTransferActionsSmoke.gd 2>&1 | tee "$RUNNER_TEMP/item-transfer-actions-smoke.log"
           grep -q 'ITEM_TRANSFER_ACTIONS_SMOKE_OK' "$RUNNER_TEMP/item-transfer-actions-smoke.log"
           if grep -Eqi 'SCRIPT ERROR|Parse Error|Failed to load script' "$RUNNER_TEMP/item-transfer-actions-smoke.log"; then exit 1; fi
+
+      - name: Carry acquisition hard ceiling smoke
+        shell: bash
+        run: |
+          set -euxo pipefail
+          ./Godot_v4.7.1-stable_linux.x86_64 --headless --path "$GITHUB_WORKSPACE/game" --script res://scripts/ci/ActorCarryAcquisitionSmoke.gd 2>&1 | tee "$RUNNER_TEMP/actor-carry-acquisition-smoke.log"
+          grep -q 'ACTOR_CARRY_ACQUISITION_SMOKE_OK' "$RUNNER_TEMP/actor-carry-acquisition-smoke.log"
+          if grep -Eqi 'SCRIPT ERROR|Parse Error|Failed to load script' "$RUNNER_TEMP/actor-carry-acquisition-smoke.log"; then exit 1; fi

@@ -18,6 +18,7 @@ const DispositionQueryClass = preload("res://scripts/simulation/items/transfer/I
 const TimingPolicyClass = preload("res://scripts/simulation/items/transfer/ItemTransferTimingPolicy.gd")
 const ActionResult = preload("res://scripts/simulation/items/transfer/ItemTransferActionResult.gd")
 const TransferServiceClass = preload("res://scripts/simulation/items/transfer/ItemTransferActionService.gd")
+const TestCapacityPolicyClass = preload("res://scripts/ci/ItemTransferTestCapacityPolicy.gd")
 
 const TEST_TICKS: int = 5
 
@@ -58,9 +59,11 @@ func _fixture(register_all: bool = true) -> Dictionary:
         for action_type: StringName in ActionTypes.ALL:
             _check(policy.register_duration(action_type, TEST_TICKS), "register duration %s" % String(action_type))
     var disposition := DispositionQueryClass.new(world, hands, containment)
+    var capacity_policy := TestCapacityPolicyClass.new()
     var service := TransferServiceClass.new(
         world, world_mutations, hands, hand_mutations,
-        containment, containment_mutations, kernel, policy, disposition
+        containment, containment_mutations, kernel, policy, disposition,
+        capacity_policy
     )
     return {
         "world": world,
@@ -72,6 +75,7 @@ func _fixture(register_all: bool = true) -> Dictionary:
         "kernel": kernel,
         "policy": policy,
         "disposition": disposition,
+        "capacity_policy": capacity_policy,
         "service": service,
     }
 

@@ -2,6 +2,8 @@ extends RefCounted
 class_name ActorCarryQuery
 
 ## 13E read-only derived carry query over 09 Hands + 11 Containment + 13D weight.
+## Also exposes item-subtree weight so acquisition policies can project carried mass
+## without duplicating recursive containment/weight logic.
 
 enum Status {
     KNOWN,
@@ -32,32 +34,79 @@ func _init(
 
 func query(actor_id: String) -> Dictionary:
     if _world == null or _hands == null or _inventory == null or _weight_query == null or _carry_state == null:
-        return result(Status.UNKNOWN, 0, 0, 0, [], "carry_query_unconfigured")
+        return result(Status.UNKNOWN, 0, 0, 0, 0, [], "carry_query_unconfigured")
     if not _world.has_entity(actor_id):
-        return result(Status.UNKNOWN, 0, 0, 0, [], "actor_missing")
+        return result(Status.UNKNOWN, 0, 0, 0, 0, [], "actor_missing")
     var entity: WorldEntityRecord = _world.entity(actor_id)
     if entity == null or String(entity.semantic_type).strip_edges() != "actor.survivor":
-        return result(Status.INVALID, 0, 0, 0, [], "not_survivor")
+        return result(Status.INVALID, 0, 0, 0, 0, [], "not_survivor")
     if not _carry_state.has_actor(actor_id):
-        return result(Status.UNKNOWN, 0, 0, 0, [], "carry_state_unclassified")
-    if not _hands.has_actor(actor_id):
-        return result(Status.UNKNOWN, 0, _carry_state.capacity_grams(actor_id), 0, [], "hands_unclassified")
-    if not _inventory.has_container(actor_id):
-        return result(Status.UNKNOWN, 0, _carry_state.capacity_grams(actor_id), 0, [], "personal_container_unclassified")
+        return result(Status.UNKNOWN, 0, 0, 0, 0, [], "carry_state_unclassified")
 
     var capacity: int = _carry_state.capacity_grams(actor_id)
-    if capacity <= 0:
-        return result(Status.INVALID, 0, capacity, 0, [], "capacity_invalid")
+    var hard_limit: int = _carry_state.hard_limit_grams(actor_id)
+    if not _hands.has_actor(actor_id):
+        return result(Status.UNKNOWN, 0, capacity, hard_limit, 0, [], "hands_unclassified")
+    if not _inventory.has_container(actor_id):
+        return result(Status.UNKNOWN, 0, capacity, hard_limit, 0, [], "personal_container_unclassified")
+    if capacity <= 0 or hard_limit <= 0:
+        return result(Status.INVALID, 0, capacity, hard_limit, 0, [], "capacity_invalid")
 
-    var stack: Array[String] = []
+    var roots: Array[String] = []
     var primary: String = _hands.primary_item(actor_id)
     var secondary: String = _hands.secondary_item(actor_id)
     if not primary.is_empty():
-        stack.append(primary)
+        roots.append(primary)
     if not secondary.is_empty():
-        stack.append(secondary)
+        roots.append(secondary)
     for item_id: String in _inventory.direct_contents(actor_id):
-        stack.append(item_id)
+        roots.append(item_id)
+
+    var summed: Dictionary = _sum_item_roots(roots)
+    var summed_status: int = int(summed.get("status", -1))
+    if summed_status != Status.KNOWN:
+        return result(
+            summed_status,
+            0,
+            capacity,
+            hard_limit,
+            0,
+            summed.get("item_ids", []),
+            String(summed.get("reason", "carry_unknown"))
+        )
+
+    var total_weight: int = int(summed.get("weight_grams", 0))
+    var ratio_bp: int = int((total_weight * 10000) / capacity)
+    return result(
+        Status.KNOWN,
+        total_weight,
+        capacity,
+        hard_limit,
+        ratio_bp,
+        summed.get("item_ids", []),
+        ""
+    )
+
+func query_item_tree(item_id: String) -> Dictionary:
+    if _world == null or _inventory == null or _weight_query == null:
+        return item_tree_result(Status.UNKNOWN, 0, [], "carry_query_unconfigured")
+    var normalized: String = item_id.strip_edges()
+    if normalized.is_empty() or not _world.has_entity(normalized):
+        return item_tree_result(Status.UNKNOWN, 0, [], "item_missing")
+    var roots: Array[String] = [normalized]
+    var summed: Dictionary = _sum_item_roots(roots)
+    return item_tree_result(
+        int(summed.get("status", Status.UNKNOWN)),
+        int(summed.get("weight_grams", 0)),
+        summed.get("item_ids", []),
+        String(summed.get("reason", ""))
+    )
+
+func _sum_item_roots(roots: Array[String]) -> Dictionary:
+    var stack: Array[String] = []
+    for root_id: String in roots:
+        if not root_id.is_empty():
+            stack.append(root_id)
 
     var visited: Dictionary = {}
     var counted: Array[String] = []
@@ -69,17 +118,21 @@ func query(actor_id: String) -> Dictionary:
             continue
         visited[item_id] = true
         if visited.size() > MAX_TRAVERSED_ITEMS:
-            return result(Status.INVALID, 0, capacity, 0, counted, "carry_traversal_limit")
+            counted.sort()
+            return item_tree_result(Status.INVALID, 0, counted, "carry_traversal_limit")
 
         var weight_result: Dictionary = _weight_query.query(item_id)
         var weight_status: int = int(weight_result.get("status", -1))
         if weight_status == ItemWeightQuery.Status.UNKNOWN:
-            return result(Status.UNKNOWN, 0, capacity, 0, counted, "item_weight_unknown:%s" % item_id)
+            counted.sort()
+            return item_tree_result(Status.UNKNOWN, 0, counted, "item_weight_unknown:%s" % item_id)
         if weight_status != ItemWeightQuery.Status.KNOWN:
-            return result(Status.INVALID, 0, capacity, 0, counted, "item_weight_invalid:%s" % item_id)
+            counted.sort()
+            return item_tree_result(Status.INVALID, 0, counted, "item_weight_invalid:%s" % item_id)
         var item_weight: int = int(weight_result.get("weight_grams", 0))
         if item_weight <= 0:
-            return result(Status.INVALID, 0, capacity, 0, counted, "item_weight_nonpositive:%s" % item_id)
+            counted.sort()
+            return item_tree_result(Status.INVALID, 0, counted, "item_weight_nonpositive:%s" % item_id)
 
         total_weight += item_weight
         counted.append(item_id)
@@ -89,13 +142,13 @@ func query(actor_id: String) -> Dictionary:
                 stack.append(child_id)
 
     counted.sort()
-    var ratio_bp: int = int((total_weight * 10000) / capacity)
-    return result(Status.KNOWN, total_weight, capacity, ratio_bp, counted, "")
+    return item_tree_result(Status.KNOWN, total_weight, counted, "")
 
 static func result(
     status: int,
     weight_grams: int,
     capacity_grams: int,
+    hard_limit_grams: int,
     load_ratio_bp: int,
     item_ids: Array,
     reason: String
@@ -104,7 +157,16 @@ static func result(
         "status": status,
         "weight_grams": weight_grams,
         "capacity_grams": capacity_grams,
+        "hard_limit_grams": hard_limit_grams,
         "load_ratio_bp": load_ratio_bp,
+        "item_ids": item_ids.duplicate(),
+        "reason": reason,
+    }
+
+static func item_tree_result(status: int, weight_grams: int, item_ids: Array, reason: String) -> Dictionary:
+    return {
+        "status": status,
+        "weight_grams": weight_grams,
         "item_ids": item_ids.duplicate(),
         "reason": reason,
     }
