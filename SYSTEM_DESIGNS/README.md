@@ -32,6 +32,7 @@ A major system moves through **NOT DESIGNED -> DRAFT -> APPROVED -> IMPLEMENTED*
 | 08 | Player / Living Actor Renderer | **IMPLEMENTED** | `08_PLAYER_LIVING_ACTOR_RENDERER.md` | Controlled survivor + NPC survivors + infected |
 | 09 | Actor Hand Equipment State | **IMPLEMENTED** | `09_ACTOR_HAND_EQUIPMENT_STATE.md` | Stable physical primary/right + secondary/left item assignments |
 | 10 | Actor Hand Equipment Presentation | **IMPLEMENTED** | `10_ACTOR_HAND_EQUIPMENT_PRESENTATION.md` | Recovered held art, facing rotation, BACK/body/FRONT occlusion seam |
+| 11 | Inventory / Containment | **DRAFT** | `11_INVENTORY_CONTAINMENT.md` | Stable physical contained-item graph; awaiting explicit approval |
 | 00D | Global World Planning / Generation Contract | **NOT DESIGNED** | `00D_GLOBAL_WORLD_GENERATION.md` | Global geography/roads/utilities/parcels before local detail |
 | 00E | Population / Household / Outbreak / Player Story | **NOT DESIGNED** | `00E_POPULATION_OUTBREAK_PLAYER_STORY.md` | Persistent people/homes/jobs/relationships and causal outbreak |
 | 00F | Streaming / Materialization | **NOT DESIGNED** | `00F_STREAMING_MATERIALIZATION.md` | Performance/storage over one logical world |
@@ -75,6 +76,8 @@ The canonical modules remain intentionally separate from frozen `game/scripts/re
 
 **10 Actor Hand Equipment Presentation** reads WHAT + 09 + 04 and draws stable held items through explicit `BACK` and `FRONT` passes. It preserves anatomical primary/right and secondary/left roles, EAST-native recovered art rotation, historical proportional hand offsets, and E/W far-hand occlusion. It does not modify 08 or 09.
 
+**11 Inventory / Containment is DRAFT only.** Proposed containment truth is a stable `item_id -> direct_container_id` relationship with explicit container enrollment, one parent per item, nested item-containers, cycle rejection, deterministic versioned snapshot state, and normal validation that newly contained items are tactically unplaced. It deliberately does not import 09 or own cross-domain pickup/drop/equip actions, weight/capacity, stacking/quantity, UI, or item gameplay stats.
+
 ## Immediate dependency path from the requested canonical demo
 
 The user wants the eventual visible canonical demo to include real held equipment, Safari/iPhone navigation buttons, `Looking at:`, real concise stats, detailed Stats/Inventory inspection, and a hard-pause Menu with Resume/Leave Game.
@@ -84,11 +87,14 @@ Completed prerequisites:
 1. **09 Actor Hand Equipment State — IMPLEMENTED.**
 2. **10 Actor Hand Equipment Presentation — IMPLEMENTED.**
 
-Next bounded systems remain:
+Current design gate:
+
+3. **11 Inventory / Containment — DRAFT, awaiting explicit approval.** It is the real persistent holdings prerequisite. Implementation is prohibited until approved.
+
+After 11 is implemented, likely bounded follow-ups include an explicit **Item Transfer / Pickup / Drop / Equip Actions** coordinator using WHAT + 09 + 11 + WHEN, then the remaining honest-demo prerequisites below.
 
 | System | Status | Notes |
 |---|---|---|
-| Inventory / Containment | DEFERRED / NOT DESIGNED | Real physical holdings and equip coordination; required before honest inventory UI |
 | Actor stat domains required for inspector | NOT DESIGNED | Use only canonical real state; do not fabricate HP/stamina/etc. |
 | Authored visual test area | NOT DESIGNED | Real canonical WHAT fixture |
 | Tactical renderer/orchestration | NOT DESIGNED | Composes focused layers including 10 BACK -> 08 Actor -> 10 FRONT |
@@ -105,6 +111,7 @@ Later slices may combine only when their explicit contracts prove they are truly
 
 | System | Status | Notes |
 |---|---|---|
+| Item Transfer / Pickup / Drop / Equip Actions | NOT DESIGNED | Future cross-domain physical transition coordinator over WHAT + 09 + 11 + WHEN |
 | Corpse / Decay / Contamination | NOT DESIGNED | Approved persistent corpse/contamination direction only |
 | Door interaction / physical transition | NOT DESIGNED | WHEN + Door State + Collision coordination |
 | Actor Appearance / character creator integration | NOT DESIGNED | Persistent visual identity |
