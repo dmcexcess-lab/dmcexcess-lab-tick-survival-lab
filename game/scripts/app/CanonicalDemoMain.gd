@@ -42,7 +42,7 @@ const DoorTransitionClass = preload("res://scripts/simulation/doors/DoorPhysical
 const DoorPassageClass = preload("res://scripts/simulation/doors/DoorMovementPassageResolver.gd")
 const DoorActionClass = preload("res://scripts/simulation/doors/DoorInteractionActionService.gd")
 const DoorDamageInterruptionClass = preload("res://scripts/simulation/doors/DoorDamageInterruptionService.gd")
-const FixtureClass = preload("res://scripts/demo/TrailerCritiqueFixture.gd")
+const FixtureClass = preload("res://scripts/demo/FarmhouseCritiqueFixture.gd")
 const ControllerClass = preload("res://scripts/player/DemoPlayerActionController.gd")
 const DoorControllerClass = preload("res://scripts/player/DoorPlayerInteractionController.gd")
 
@@ -173,9 +173,9 @@ func _boot_canonical_demo() -> bool:
     _art_catalog = ArtCatalogClass.new()
     if not _world_view.configure(_world, _art_catalog, _door_state, FixtureClass.PLAYER_ID):
         return false
-    if not _world_view.set_visible_window(FixtureClass.MAP_ORIGIN, FixtureClass.MAP_SIZE, 38.0):
+    if not _world_view.set_visible_window(FixtureClass.MAP_ORIGIN, FixtureClass.MAP_SIZE, FixtureClass.CELL_PIXELS):
         return false
-    if not _door_pointer.configure(_world_view.position, FixtureClass.MAP_ORIGIN, FixtureClass.MAP_SIZE, 38.0):
+    if not _door_pointer.configure(_world_view.position, FixtureClass.MAP_ORIGIN, FixtureClass.MAP_SIZE, FixtureClass.CELL_PIXELS):
         return false
 
     _status_summary = StatusSummaryClass.new(_health_state, _needs_state, _carry_query, _moodlet_service)

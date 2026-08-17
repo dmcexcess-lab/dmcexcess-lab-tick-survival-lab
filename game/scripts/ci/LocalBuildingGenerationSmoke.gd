@@ -4,7 +4,8 @@ const RequestClass = preload("res://scripts/generation/buildings/BuildingGenerat
 const GeneratorClass = preload("res://scripts/generation/buildings/LocalBuildingGenerator.gd")
 const ValidatorClass = preload("res://scripts/generation/buildings/GeneratedBuildingValidator.gd")
 const TrailerClass = preload("res://scripts/generation/buildings/archetypes/TrailerBuildingGenerator.gd")
-const FixtureClass = preload("res://scripts/demo/TrailerCritiqueFixture.gd")
+const FarmhouseClass = preload("res://scripts/generation/buildings/archetypes/FarmhouseBuildingGenerator.gd")
+const FixtureClass = preload("res://scripts/demo/FarmhouseCritiqueFixture.gd")
 const WorldStateClass = preload("res://scripts/foundation/world/WorldState.gd")
 const WorldMutationClass = preload("res://scripts/foundation/world/WorldMutationService.gd")
 const CollisionCatalogClass = preload("res://scripts/simulation/collision/CollisionCatalog.gd")
@@ -27,6 +28,19 @@ var failures: Array[String] = []
 func _initialize() -> void:
     var generator := GeneratorClass.new()
     var validator := ValidatorClass.new()
+    _test_trailer_preserved(generator, validator)
+    _test_farmhouse_generation(generator, validator)
+    _test_farmhouse_fixture()
+
+    if failures.is_empty():
+        print("LOCAL_BUILDING_GENERATION_SMOKE_OK")
+        quit(0)
+        return
+    for failure: String in failures:
+        push_error("LOCAL_BUILDING_GENERATION_SMOKE_FAIL: %s" % failure)
+    quit(1)
+
+func _test_trailer_preserved(generator: LocalBuildingGenerator, validator: GeneratedBuildingValidator) -> void:
     var request := RequestClass.new(
         "building.test.trailer",
         TrailerClass.ARCHETYPE_ID,
@@ -37,45 +51,79 @@ func _initialize() -> void:
     )
     var plan_a: GeneratedBuildingPlan = generator.generate(request)
     var plan_b: GeneratedBuildingPlan = generator.generate(request)
-    _check(plan_a.is_generated() and plan_a.signature() == plan_b.signature(), "same request+seed produces identical semantic plan")
-    _check(plan_a.archetype_version == 2, "narrow trailer is archetype version 2")
-    _check(bool(validator.validate(plan_a).get("ok", false)), "north trailer plan validates")
-    _check(plan_a.footprint_rect == Rect2i(20, 30, 5, 12), "north trailer uses expected 5x12 footprint")
+    _check(plan_a.is_generated() and plan_a.signature() == plan_b.signature(), "trailer v2 remains deterministic")
+    _check(plan_a.archetype_version == 2, "saved trailer baseline remains archetype version 2")
+    _check(bool(validator.validate(plan_a).get("ok", false)), "saved trailer v2 still validates")
+    _check(plan_a.footprint_rect == Rect2i(20, 30, 5, 12), "saved trailer remains 5x12")
+    _check(_room_cell_count(plan_a, "living_kitchen") == 12, "saved trailer living/kitchen remains 3x4")
+    _check(_room_cell_count(plan_a, "bathroom") == 6, "saved trailer bathroom remains 3x2")
+    _check(_room_cell_count(plan_a, "bedroom") == 6, "saved trailer bedroom remains 3x2")
     var saw_light_shell: bool = false
     var saw_wood_shell: bool = false
     for structure: Dictionary in plan_a.structures:
         if String(structure.get("role", "")).begins_with("wall.exterior"):
             saw_light_shell = saw_light_shell or structure.get("semantic", &"") == &"wall.plaster"
             saw_wood_shell = saw_wood_shell or structure.get("semantic", &"") == &"wall.rural_wood"
-    _check(saw_light_shell and not saw_wood_shell, "trailer exterior uses light plaster walls instead of rural wood")
+    _check(saw_light_shell and not saw_wood_shell, "saved trailer keeps light plaster shell")
     var saw_sofa_opposite_kitchen: bool = false
     for prop: Dictionary in plan_a.props:
         if String(prop.get("role", "")) == "prop.living.sofa":
             saw_sofa_opposite_kitchen = prop.get("cell", Vector2i(-1, -1)) == Vector2i(23, 31) and int(prop.get("facing", -1)) == Facing.Value.WEST
-    _check(saw_sofa_opposite_kitchen, "sofa sits against wall opposite kitchen run and faces inward")
+    _check(saw_sofa_opposite_kitchen, "saved trailer keeps opposite-wall sofa placement")
+
+func _test_farmhouse_generation(generator: LocalBuildingGenerator, validator: GeneratedBuildingValidator) -> void:
+    var supported: Array[StringName] = generator.supported_archetypes()
+    _check(supported.has(TrailerClass.ARCHETYPE_ID) and supported.has(FarmhouseClass.ARCHETYPE_ID), "registry exposes preserved trailer and new farmhouse")
+
+    var request := RequestClass.new(
+        "building.test.farmhouse",
+        FarmhouseClass.ARCHETYPE_ID,
+        19002,
+        Rect2i(60, 70, 13, 13),
+        Facing.Value.NORTH,
+        Facing.Value.NORTH
+    )
+    var plan_a: GeneratedBuildingPlan = generator.generate(request)
+    var plan_b: GeneratedBuildingPlan = generator.generate(request)
+    _check(plan_a.is_generated() and plan_a.signature() == plan_b.signature(), "farmhouse same request+seed is deterministic")
+    _check(plan_a.archetype_version == 1, "farmhouse begins at archetype version 1")
+    _check(bool(validator.validate(plan_a).get("ok", false)), "north farmhouse plan validates")
+    _check(plan_a.footprint_rect == Rect2i(60, 70, 13, 13), "farmhouse uses approved 13x13 shell")
+    _check(_room_cell_count(plan_a, "living_room") == 25, "farmhouse living room is exact 5x5")
+    _check(_room_cell_count(plan_a, "kitchen") == 9, "farmhouse kitchen is exact 3x3")
+    _check(_room_cell_count(plan_a, "bedroom_1") == 9, "farmhouse bedroom 1 is exact 3x3")
+    _check(_room_cell_count(plan_a, "bathroom") == 9, "farmhouse bathroom is exact 3x3")
+    _check(_room_cell_count(plan_a, "bedroom_2") == 9, "farmhouse bedroom 2 is exact 3x3")
+    _check(_structure_kind_count(plan_a, "door") == 5, "farmhouse has two exterior plus three private-room doors")
+    _check(_structure_kind_count(plan_a, "window") == 7, "farmhouse has approved first-pass seven-window set")
+    _check(_all_exterior_walls_are(plan_a, &"wall.plaster"), "farmhouse uses light plaster exterior walls")
+    _check(_role_cell(plan_a, "door.exterior.primary") == Vector2i(63, 70), "farmhouse front door opens into living-room side")
+    _check(_role_cell(plan_a, "door.exterior.kitchen") == Vector2i(72, 72), "farmhouse side kitchen door lands directly on kitchen")
 
     var east_request := RequestClass.new(
-        "building.test.trailer.east",
-        TrailerClass.ARCHETYPE_ID,
-        19001,
-        Rect2i(40, 50, 12, 5),
+        "building.test.farmhouse.east",
+        FarmhouseClass.ARCHETYPE_ID,
+        19002,
+        Rect2i(90, 100, 13, 13),
         Facing.Value.EAST,
-        Facing.Value.SOUTH
-    )
-    var east_plan: GeneratedBuildingPlan = generator.generate(east_request)
-    _check(east_plan.is_generated() and east_plan.footprint_rect.size == Vector2i(12, 5), "east orientation rotates footprint")
-    _check(bool(validator.validate(east_plan).get("ok", false)), "rotated trailer validates")
-
-    var too_small := RequestClass.new(
-        "building.test.small",
-        TrailerClass.ARCHETYPE_ID,
-        1,
-        Rect2i(0, 0, 4, 11),
-        Facing.Value.NORTH,
         Facing.Value.EAST
     )
-    _check(not generator.generate(too_small).is_generated(), "too-small envelope fails explicitly")
+    var east_plan: GeneratedBuildingPlan = generator.generate(east_request)
+    _check(east_plan.is_generated() and east_plan.footprint_rect.size == Vector2i(13, 13), "square farmhouse rotates inside same 13x13 extent")
+    _check(bool(validator.validate(east_plan).get("ok", false)), "rotated farmhouse validates")
+    _check(_role_cell(east_plan, "door.exterior.primary") == Vector2i(102, 103), "farmhouse doorway geometry rotates deterministically")
 
+    var too_small := RequestClass.new(
+        "building.test.farmhouse.small",
+        FarmhouseClass.ARCHETYPE_ID,
+        1,
+        Rect2i(0, 0, 12, 13),
+        Facing.Value.NORTH,
+        Facing.Value.NORTH
+    )
+    _check(not generator.generate(too_small).is_generated(), "too-small farmhouse envelope fails explicitly")
+
+func _test_farmhouse_fixture() -> void:
     var world := WorldStateClass.new()
     var mutations := WorldMutationClass.new(world)
     var collision_catalog := CollisionCatalogClass.new()
@@ -83,15 +131,15 @@ func _initialize() -> void:
     var traversal := BaseTraversalClass.new()
     var doors := DoorStateClass.new()
     var door_mutations := DoorMutationClass.new(doors, world)
-    _check(FixtureClass.build(world, mutations, collision_catalog, traversal, doors, door_mutations), "trailer critique fixture materializes")
-    _check(world.has_entity(FixtureClass.EXTERIOR_DOOR_ID), "generated stable exterior door exists")
-    _check(doors.door_ids().size() == 3, "all three generated doors explicitly enrolled")
+    _check(FixtureClass.build(world, mutations, collision_catalog, traversal, doors, door_mutations), "farmhouse critique fixture materializes")
+    _check(world.has_entity(FixtureClass.EXTERIOR_DOOR_ID), "farmhouse stable exterior door exists")
+    _check(doors.door_ids().size() == 5, "all five farmhouse doors explicitly enrolled")
     for door_id: String in doors.door_ids():
-        _check(doors.state(door_id) == DoorValue.CLOSED, "generated door begins closed")
+        _check(doors.state(door_id) == DoorValue.CLOSED, "generated farmhouse door begins closed")
 
     var coverage_query := SpatialQueryClass.new(world, collision_catalog, collision_overrides)
     var coverage: Dictionary = coverage_query.collision_coverage_report()
-    _check((coverage.get("missing_required_profiles", []) as Array).is_empty(), "generated structure/prop collision coverage complete")
+    _check((coverage.get("missing_required_profiles", []) as Array).is_empty(), "farmhouse structure/prop collision coverage complete")
 
     var art := ArtCatalogClass.new()
     for entity_id: String in world.entity_ids():
@@ -100,43 +148,65 @@ func _initialize() -> void:
             continue
         var semantic: String = String(entity.semantic_type)
         if semantic.begins_with("wall."):
-            _check(art.resolve_wall(entity.semantic_type).is_found(), "generated wall has art")
+            _check(art.resolve_wall(entity.semantic_type).is_found(), "farmhouse wall has art")
         elif semantic.begins_with("door."):
-            _check(art.resolve_door(entity.semantic_type, false).is_found(), "generated door has art")
+            _check(art.resolve_door(entity.semantic_type, false).is_found(), "farmhouse door has art")
         elif semantic.begins_with("window."):
-            _check(art.resolve_window(entity.semantic_type).is_found(), "generated window has art")
+            _check(art.resolve_window(entity.semantic_type).is_found(), "farmhouse window has art")
         elif semantic.begins_with("prop."):
-            _check(art.resolve_prop(entity.semantic_type).is_found(), "generated prop has art")
+            _check(art.resolve_prop(entity.semantic_type).is_found(), "farmhouse prop has art")
     for y in range(FixtureClass.MAP_SIZE.y):
         for x in range(FixtureClass.MAP_SIZE.x):
             var cell := Vector2i(x, y)
-            _check(art.resolve_ground(world.terrain_at(cell)).is_found(), "critique lot terrain has art")
+            _check(art.resolve_ground(world.terrain_at(cell)).is_found(), "farmhouse critique lot terrain has art")
 
     var transition := DoorTransitionClass.new(world, doors, door_mutations, collision_overrides)
     var passage := DoorPassageClass.new(world, doors, transition)
     var kernel := TickKernelClass.new(FixtureClass.PLAYER_ID)
     var movement := MovementClass.new(world, mutations, coverage_query, kernel, traversal, passage)
     var enter = movement.request_step_forward(FixtureClass.PLAYER_ID)
-    _check(enter != null and enter.is_accepted(), "generated exterior door accepts automatic Walk passage")
+    _check(enter != null and enter.is_accepted(), "farmhouse front door accepts automatic Walk passage")
     kernel.run_until_stop()
-    _check(doors.state(FixtureClass.EXTERIOR_DOOR_ID) == DoorValue.OPEN, "generated exterior door opens through System 18")
-    _check(world.placement(FixtureClass.PLAYER_ID).anchor == Vector2i(6, 3), "player enters generated exterior doorway")
+    _check(doors.state(FixtureClass.EXTERIOR_DOOR_ID) == DoorValue.OPEN, "farmhouse front door opens through System 18")
+    _check(world.placement(FixtureClass.PLAYER_ID).anchor == Vector2i(4, 1), "player enters farmhouse front doorway")
 
     var stack := RendererStackClass.new()
     get_root().add_child(stack)
-    _check(stack.configure(world, art, doors, FixtureClass.PLAYER_ID), "renderer stack configures generated critique lot")
-    _check(stack.set_visible_window(FixtureClass.MAP_ORIGIN, FixtureClass.MAP_SIZE, 38.0), "renderer uses fixed one-screen critique window")
+    _check(stack.configure(world, art, doors, FixtureClass.PLAYER_ID), "renderer stack configures farmhouse critique lot")
+    _check(stack.set_visible_window(FixtureClass.MAP_ORIGIN, FixtureClass.MAP_SIZE, FixtureClass.CELL_PIXELS), "15x15 farmhouse lot remains one-screen without camera")
     var diagnostics: Dictionary = stack.planned_diagnostic_counts()
-    _check(int(diagnostics.get("ground", -1)) == 0 and int(diagnostics.get("structure", -1)) == 0 and int(diagnostics.get("prop", -1)) == 0 and int(diagnostics.get("actor", -1)) == 0, "generated critique lot renders without diagnostics")
+    _check(int(diagnostics.get("ground", -1)) == 0 and int(diagnostics.get("structure", -1)) == 0 and int(diagnostics.get("prop", -1)) == 0 and int(diagnostics.get("actor", -1)) == 0, "farmhouse critique lot renders without diagnostics")
     stack.queue_free()
 
-    if failures.is_empty():
-        print("LOCAL_BUILDING_GENERATION_SMOKE_OK")
-        quit(0)
-        return
-    for failure: String in failures:
-        push_error("LOCAL_BUILDING_GENERATION_SMOKE_FAIL: %s" % failure)
-    quit(1)
+func _room_cell_count(plan: GeneratedBuildingPlan, purpose: String) -> int:
+    for room: Dictionary in plan.rooms:
+        if String(room.get("purpose", "")) == purpose:
+            var cells: Array = room.get("cells", [])
+            return cells.size()
+    return 0
+
+func _structure_kind_count(plan: GeneratedBuildingPlan, kind: String) -> int:
+    var count: int = 0
+    for structure: Dictionary in plan.structures:
+        if String(structure.get("kind", "")) == kind:
+            count += 1
+    return count
+
+func _all_exterior_walls_are(plan: GeneratedBuildingPlan, semantic: StringName) -> bool:
+    var saw_wall: bool = false
+    for structure: Dictionary in plan.structures:
+        if not String(structure.get("role", "")).begins_with("wall.exterior"):
+            continue
+        saw_wall = true
+        if structure.get("semantic", &"") != semantic:
+            return false
+    return saw_wall
+
+func _role_cell(plan: GeneratedBuildingPlan, role: String) -> Vector2i:
+    for structure: Dictionary in plan.structures:
+        if String(structure.get("role", "")) == role:
+            return structure.get("cell", Vector2i(-1, -1))
+    return Vector2i(-1, -1)
 
 func _check(condition: bool, message: String) -> void:
     if not condition:

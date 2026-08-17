@@ -57,20 +57,20 @@ func validate(plan: GeneratedBuildingPlan) -> Dictionary:
             failures.append("ground_outside_footprint")
         ground_cells[cell] = true
 
+    if plan.rooms.is_empty():
+        failures.append("rooms_missing")
     var room_purposes: Dictionary = {}
     for room: Dictionary in plan.rooms:
         var purpose: String = String(room.get("purpose", ""))
         var cells: Array = room.get("cells", [])
         if purpose.is_empty() or cells.is_empty() or room_purposes.has(purpose):
             failures.append("invalid_room")
-        room_purposes[purpose] = true
+        else:
+            room_purposes[purpose] = true
         for cell_value: Variant in cells:
             var cell: Vector2i = cell_value
             if not ground_cells.has(cell):
                 failures.append("room_cell_missing_ground")
-    for required: String in ["living_kitchen", "bathroom", "bedroom"]:
-        if not room_purposes.has(required):
-            failures.append("missing_room_%s" % required)
 
     for cell: Variant in door_cells.keys():
         if prop_cells.has(cell) and bool(prop_cells[cell]):

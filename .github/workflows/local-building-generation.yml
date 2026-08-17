@@ -30,7 +30,9 @@ jobs:
           test -f game/scripts/generation/buildings/GeneratedBuildingValidator.gd
           test -f game/scripts/generation/buildings/GeneratedBuildingMaterializer.gd
           test -f game/scripts/generation/buildings/archetypes/TrailerBuildingGenerator.gd
+          test -f game/scripts/generation/buildings/archetypes/FarmhouseBuildingGenerator.gd
           test -f game/scripts/demo/TrailerCritiqueFixture.gd
+          test -f game/scripts/demo/FarmhouseCritiqueFixture.gd
           test -f game/scripts/ci/LocalBuildingGenerationSmoke.gd
           ! grep -R -q 'assets/\|atlas_index\|Texture2D\|Camera2D' game/scripts/generation/buildings
           ! grep -R -q 'inventory\|loot\|infected' game/scripts/generation/buildings
