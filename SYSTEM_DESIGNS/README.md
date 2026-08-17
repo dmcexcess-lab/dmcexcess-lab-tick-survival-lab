@@ -41,6 +41,7 @@ This directory is the durable detailed memory for individual systems. Major syst
 | 15 | Canonical HUD / Facing Inspection | **IMPLEMENTED** | `15_CANONICAL_HUD_FACING_INSPECTION.md` |
 | 16 | Canonical Player Shell / Inspectors / Stance Integration | **IMPLEMENTED** | `16_CANONICAL_PLAYER_SHELL.md` |
 | 17 | Run / Damage-Interruptible Walking | **IMPLEMENTED** | `17_RUN_DAMAGE_INTERRUPTIBLE_WALKING.md` |
+| 17A | Movement Exertion / Encumbrance / Run Impact Revision | **DRAFT** | `17A_MOVEMENT_EXERTION_ENCUMBRANCE_RUN_IMPACT.md` |
 | 00D | Global World Planning / Generation | **NOT DESIGNED** | `00D_GLOBAL_WORLD_GENERATION.md` |
 | 00E | Population / Household / Outbreak / Player Story | **NOT DESIGNED** | `00E_POPULATION_OUTBREAK_PLAYER_STORY.md` |
 | 00F | Streaming / Materialization | **NOT DESIGNED** | `00F_STREAMING_MATERIALIZATION.md` |
@@ -53,7 +54,7 @@ This directory is the durable detailed memory for individual systems. Major syst
 - 00B: `game/scripts/foundation/world/`
 - 00C: `game/scripts/foundation/time/`
 - 01: `game/scripts/simulation/collision/`
-- 02: `game/scripts/simulation/movement/`
+- 02/17: `game/scripts/simulation/movement/` plus narrow locomotion/Health/Needs seams
 - 03: `game/scripts/simulation/actors/locomotion/`
 - 06A: `game/scripts/simulation/doors/`
 - 09: `game/scripts/simulation/actors/equipment/`
@@ -65,7 +66,6 @@ This directory is the durable detailed memory for individual systems. Major syst
 - 13D: `game/scripts/simulation/items/properties/`
 - 13E: `game/scripts/simulation/actors/carry/`
 - 13F: `game/scripts/simulation/actors/moodlets/`
-- 17: Movement additions plus `MovementDamageInterruptionService.gd` and `MovementRunExertionService.gd`; narrow 03/13A/13B public-seam revisions.
 
 ### Presentation / application
 - 04: `game/scripts/art/`
@@ -73,44 +73,46 @@ This directory is the durable detailed memory for individual systems. Major syst
 - 14: canonical app/demo/render-stack/input/player-control integration
 - 15: HUD/facing/status query layer
 - 16: Stats/Inventory/Menu shell + stance input integration
-- 17: additive semantic Run input/controller/demo composition only; no renderer rewrite.
+- 17: semantic Run input/controller/demo composition only; no renderer rewrite
 
 Canonical modules remain separate from frozen `game/scripts/reboot/` reference code. `game/main.tscn` launches the canonical demo.
 
 ## Current live demo shell
 
-The deployed canonical demo has:
+The deployed canonical demo has one authored 13x13 WHAT map, exactly one controlled survivor, no NPCs/infected, real Collision/Movement/Locomotion/WHEN, canonical renderer stack, HUD, Stats/Inventory/Menu/hard pause, Crouch/Stand, and explicit Run Forward.
 
-- one authored 13x13 WHAT map;
-- exactly one controlled survivor, no NPCs/infected;
-- Ground -> Structure -> Prop -> Living Actor renderer stack;
-- real Collision + Movement + Locomotion + WHEN;
-- System 15 real HUD;
-- System 16 Crouch/Stand + Stats/Inventory/Menu/hard pause;
-- **System 17 explicit Run Forward**.
+Implemented System 17 behavior:
 
-System 17 movement behavior:
-
-- Walk Forward/Back: one cell, healthy 10-tick demo baseline, CANCELABLE by real damage;
-- Run Forward: two cells, healthy 6 ticks/stride / 12 total on demo terrain, COMMITTED;
+- Walk Forward/Back: one cell, healthy 10-tick normal-terrain baseline, CANCELABLE by real damage;
+- Run Forward: two cells, healthy 6 ticks/stride / 12 total on normal terrain, COMMITTED;
 - fatigue 80+ blocks Run start;
-- each successful Run stride adds +1 real fatigue;
+- each successful Run stride currently adds +1 real fatigue;
 - crouched Run blocked;
 - damage does not cancel Run or turns;
 - Shift+W/Shift+Up and native touch RUN submit semantic Run intent.
 
-Dedicated verification:
+Promoted System 17 SHA `2e54ef3edc0616727258974e0b4c9d046322afdc` passed dedicated run `31998976669` and Pages/deploy run `31998976603`.
 
-- `.github/workflows/run-damage-walking.yml`
-- `game/scripts/ci/RunDamageWalkingSmoke.gd`
+## Active design — System 17A
 
-Initial System 17 code candidate `33580c2e9016c15591005536707b2729e580876e` passed dedicated run `31998617639` without production repair.
+`17A_MOVEMENT_EXERTION_ENCUMBRANCE_RUN_IMPACT.md` is **DRAFT** and awaits explicit user approval.
 
-## Immediate path after System 17
+Proposed bounded revision:
 
-Do not rebuild movement/player shell/renderers.
+1. terrain remains the base movement cost while stance/fatigue/encumbrance become true multiplicative duration scales;
+2. existing carry factor remains +75% timing at exactly capacity;
+3. 100%+ capacity blocks Run but not Walk;
+4. successful Walk gains fatigue from terrain only, never directly from carry weight;
+5. Run fatigue is multiplied by terrain difficulty and encumbrance;
+6. a known hard blocker during Run becomes a physical impact, stops the sprint at the last legal cell, and applies proposed 5 HP damage through a stateless Health coordinator;
+7. UNKNOWN/untraversable space still fails closed rather than becoming impact damage;
+8. System 16 Leave Game Web behavior is simplified to direct Google navigation with no history/back attempt.
 
-Next useful bounded integration is the **real item interaction demo**:
+**Do not implement 17A until explicit approval.**
+
+## Immediate path after 17A
+
+Once 17A is approved/implemented, return to the real item interaction demo:
 
 1. add real stable WHAT `item.*` entities and explicit 13D weights;
 2. implement loose-item presentation;
