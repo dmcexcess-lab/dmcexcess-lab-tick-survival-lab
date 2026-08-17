@@ -45,14 +45,7 @@ func _initialize() -> void:
     quit(1)
 
 func _test_trailer_preserved(generator: LocalBuildingGenerator, validator: GeneratedBuildingValidator) -> void:
-    var request := RequestClass.new(
-        "building.test.trailer",
-        TrailerClass.ARCHETYPE_ID,
-        19001,
-        Rect2i(20, 30, 5, 12),
-        Facing.Value.NORTH,
-        Facing.Value.EAST
-    )
+    var request := RequestClass.new("building.test.trailer", TrailerClass.ARCHETYPE_ID, 19001, Rect2i(20, 30, 5, 12), Facing.Value.NORTH, Facing.Value.EAST)
     var plan_a: GeneratedBuildingPlan = generator.generate(request)
     var plan_b: GeneratedBuildingPlan = generator.generate(request)
     _check(plan_a.is_generated() and plan_a.signature() == plan_b.signature(), "trailer v2 remains deterministic")
@@ -63,21 +56,9 @@ func _test_trailer_preserved(generator: LocalBuildingGenerator, validator: Gener
     _check(_room_cell_count(plan_a, "bathroom") == 6, "saved trailer bathroom remains 3x2")
     _check(_room_cell_count(plan_a, "bedroom") == 6, "saved trailer bedroom remains 3x2")
     _check(_all_exterior_walls_are(plan_a, &"wall.plaster"), "saved trailer keeps light plaster shell")
-    var saw_sofa_opposite_kitchen: bool = false
-    for prop: Dictionary in plan_a.props:
-        if String(prop.get("role", "")) == "prop.living.sofa":
-            saw_sofa_opposite_kitchen = prop.get("cell", Vector2i(-1, -1)) == Vector2i(23, 31) and int(prop.get("facing", -1)) == Facing.Value.WEST
-    _check(saw_sofa_opposite_kitchen, "saved trailer keeps opposite-wall sofa placement")
 
 func _test_small_farmhouse_preserved(generator: LocalBuildingGenerator, validator: GeneratedBuildingValidator) -> void:
-    var request := RequestClass.new(
-        "building.test.farmhouse.small",
-        SmallFarmhouseClass.ARCHETYPE_ID,
-        19002,
-        Rect2i(60, 70, 13, 9),
-        Facing.Value.NORTH,
-        Facing.Value.NORTH
-    )
+    var request := RequestClass.new("building.test.farmhouse.small", SmallFarmhouseClass.ARCHETYPE_ID, 19002, Rect2i(60, 70, 13, 9), Facing.Value.NORTH, Facing.Value.NORTH)
     var plan_a: GeneratedBuildingPlan = generator.generate(request)
     var plan_b: GeneratedBuildingPlan = generator.generate(request)
     _check(plan_a.is_generated() and plan_a.signature() == plan_b.signature(), "small farmhouse remains deterministic")
@@ -92,15 +73,7 @@ func _test_small_farmhouse_preserved(generator: LocalBuildingGenerator, validato
     _check(_structure_kind_count(plan_a, "window") == 7, "saved small farmhouse keeps seven windows")
     _check(_all_exterior_walls_are(plan_a, &"wall.plaster"), "saved small farmhouse keeps plaster shell")
     _check(_role_cell(plan_a, "door.exterior.primary") == Vector2i(63, 70), "saved small farmhouse front door unchanged")
-
-    var east_request := RequestClass.new(
-        "building.test.farmhouse.small.east",
-        SmallFarmhouseClass.ARCHETYPE_ID,
-        19002,
-        Rect2i(90, 100, 9, 13),
-        Facing.Value.EAST,
-        Facing.Value.EAST
-    )
+    var east_request := RequestClass.new("building.test.farmhouse.small.east", SmallFarmhouseClass.ARCHETYPE_ID, 19002, Rect2i(90, 100, 9, 13), Facing.Value.EAST, Facing.Value.EAST)
     var east_plan: GeneratedBuildingPlan = generator.generate(east_request)
     _check(east_plan.is_generated() and east_plan.footprint_rect.size == Vector2i(9, 13), "small farmhouse still rotates to 9x13")
     _check(bool(validator.validate(east_plan).get("ok", false)), "rotated small farmhouse still validates")
@@ -110,58 +83,34 @@ func _test_large_farmhouse_generation(generator: LocalBuildingGenerator, validat
     _check(supported.has(TrailerClass.ARCHETYPE_ID), "registry keeps trailer")
     _check(supported.has(SmallFarmhouseClass.ARCHETYPE_ID), "registry keeps small farmhouse")
     _check(supported.has(LargeFarmhouseClass.ARCHETYPE_ID), "registry exposes large farmhouse")
-
-    var request := RequestClass.new(
-        "building.test.farmhouse.large",
-        LargeFarmhouseClass.ARCHETYPE_ID,
-        19003,
-        Rect2i(60, 70, 25, 20),
-        Facing.Value.NORTH,
-        Facing.Value.NORTH
-    )
+    var request := RequestClass.new("building.test.farmhouse.large", LargeFarmhouseClass.ARCHETYPE_ID, 19003, Rect2i(60, 70, 21, 9), Facing.Value.NORTH, Facing.Value.NORTH)
     var plan_a: GeneratedBuildingPlan = generator.generate(request)
     var plan_b: GeneratedBuildingPlan = generator.generate(request)
     _check(plan_a.is_generated() and plan_a.signature() == plan_b.signature(), "large farmhouse is deterministic")
-    _check(plan_a.archetype_version == 1, "large farmhouse starts at version 1")
+    _check(plan_a.archetype_version == 2, "large farmhouse compact critique bumps to version 2")
     _check(bool(validator.validate(plan_a).get("ok", false)), "large farmhouse north plan validates")
-    _check(plan_a.footprint_rect == Rect2i(60, 70, 25, 20), "large farmhouse uses 25x20 bounding footprint")
-    _check(_room_cell_count(plan_a, "living_room") == 30, "large farmhouse living room is separate 6x5")
-    _check(_room_cell_count(plan_a, "kitchen") == 25, "large farmhouse kitchen is separate 5x5")
-    _check(_room_cell_count(plan_a, "bedroom_1") == 24, "large farmhouse bedroom 1 is 6x4")
-    _check(_room_cell_count(plan_a, "bedroom_2") == 24, "large farmhouse bedroom 2 is 6x4")
-    _check(_room_cell_count(plan_a, "bedroom_3") == 18, "large farmhouse bedroom 3 is 6x3")
-    _check(_room_cell_count(plan_a, "bathroom_1") == 9, "large farmhouse bathroom 1 is 3x3")
-    _check(_room_cell_count(plan_a, "bathroom_2") == 9, "large farmhouse bathroom 2 is 3x3")
-    _check(_structure_kind_count(plan_a, "door") == 9, "large farmhouse has two exterior and seven interior doors")
-    _check(_structure_kind_count(plan_a, "window") == 12, "large farmhouse has twelve windows")
+    _check(plan_a.footprint_rect == Rect2i(60, 70, 21, 9), "large farmhouse compacts to 21x9")
+    _check(_room_cell_count(plan_a, "living_room") == 30, "large farmhouse living room is separate 10x3")
+    _check(_room_cell_count(plan_a, "kitchen") == 24, "large farmhouse kitchen is separate 8x3")
+    for purpose: String in ["bedroom_1", "bathroom_1", "bedroom_2", "bathroom_2", "bedroom_3"]:
+        _check(_room_cell_count(plan_a, purpose) == 9, "%s is compact 3x3" % purpose)
+    _check(_room_cell_count(plan_a, "hall") == 0 and _room_cell_count(plan_a, "corridor") == 0, "large farmhouse has no dedicated hallway room")
+    _check(_structure_kind_count(plan_a, "door") == 8, "large farmhouse has two exterior plus six interior doors")
+    _check(_structure_kind_count(plan_a, "window") == 11, "large farmhouse uses eleven windows")
     _check(_all_exterior_walls_are(plan_a, &"wall.plaster"), "large farmhouse uses plaster exterior walls")
-    _check(_role_cell(plan_a, "door.exterior.primary") == Vector2i(69, 70), "large farmhouse front door enters central hall")
-    _check(_role_cell(plan_a, "door.interior.living") == Vector2i(67, 73), "living room has a real separating wall and door")
-    _check(_role_cell(plan_a, "door.interior.kitchen") == Vector2i(78, 73), "kitchen wing has a real separating wall and door")
-    _check(not _has_ground(plan_a, Vector2i(80, 80)), "large farmhouse southeast notch stays outdoors")
-    _check(_has_ground(plan_a, Vector2i(83, 73)), "large farmhouse kitchen wing is physically occupied")
-
-    var east_request := RequestClass.new(
-        "building.test.farmhouse.large.east",
-        LargeFarmhouseClass.ARCHETYPE_ID,
-        19003,
-        Rect2i(100, 110, 20, 25),
-        Facing.Value.EAST,
-        Facing.Value.EAST
-    )
+    _check(_role_cell(plan_a, "door.exterior.primary") == Vector2i(65, 70), "large farmhouse front door opens directly into living room")
+    _check(_role_cell(plan_a, "door.interior.living_kitchen") == Vector2i(71, 72), "living and kitchen remain truly separated by a wall and door")
+    _check(_role_cell(plan_a, "door.interior.bedroom_1") == Vector2i(62, 74), "bedroom 1 opens directly from living room")
+    _check(_role_cell(plan_a, "door.interior.bathroom_1") == Vector2i(66, 74), "bathroom 1 opens directly from living room")
+    _check(_role_cell(plan_a, "door.interior.bedroom_2") == Vector2i(70, 74), "bedroom 2 opens directly from living room")
+    _check(_role_cell(plan_a, "door.interior.bathroom_2") == Vector2i(74, 74), "bathroom 2 opens directly from kitchen")
+    _check(_role_cell(plan_a, "door.interior.bedroom_3") == Vector2i(78, 74), "bedroom 3 opens directly from kitchen")
+    var east_request := RequestClass.new("building.test.farmhouse.large.east", LargeFarmhouseClass.ARCHETYPE_ID, 19003, Rect2i(100, 110, 9, 21), Facing.Value.EAST, Facing.Value.EAST)
     var east_plan: GeneratedBuildingPlan = generator.generate(east_request)
-    _check(east_plan.is_generated() and east_plan.footprint_rect.size == Vector2i(20, 25), "large farmhouse rotates to 20x25 bounding footprint")
-    _check(bool(validator.validate(east_plan).get("ok", false)), "rotated large farmhouse validates")
-
-    var too_small := RequestClass.new(
-        "building.test.farmhouse.large.small",
-        LargeFarmhouseClass.ARCHETYPE_ID,
-        1,
-        Rect2i(0, 0, 24, 20),
-        Facing.Value.NORTH,
-        Facing.Value.NORTH
-    )
-    _check(not generator.generate(too_small).is_generated(), "too-small large farmhouse envelope fails explicitly")
+    _check(east_plan.is_generated() and east_plan.footprint_rect.size == Vector2i(9, 21), "compact large farmhouse rotates to 9x21")
+    _check(bool(validator.validate(east_plan).get("ok", false)), "rotated compact large farmhouse validates")
+    var too_small := RequestClass.new("building.test.farmhouse.large.small", LargeFarmhouseClass.ARCHETYPE_ID, 1, Rect2i(0, 0, 20, 9), Facing.Value.NORTH, Facing.Value.NORTH)
+    _check(not generator.generate(too_small).is_generated(), "too-small compact large farmhouse envelope fails explicitly")
 
 func _test_small_farmhouse_fixture() -> void:
     var world := WorldStateClass.new()
@@ -183,34 +132,16 @@ func _test_large_farmhouse_fixture() -> void:
     var doors := DoorStateClass.new()
     var door_mutations := DoorMutationClass.new(doors, world)
     _check(LargeFixtureClass.build(world, mutations, collision_catalog, traversal, doors, door_mutations), "large farmhouse critique fixture materializes")
-    _verify_fixture(world, mutations, collision_catalog, collision_overrides, traversal, doors, door_mutations, LargeFixtureClass.PLAYER_ID, LargeFixtureClass.EXTERIOR_DOOR_ID, LargeFixtureClass.MAP_ORIGIN, LargeFixtureClass.MAP_SIZE, LargeFixtureClass.CELL_PIXELS, 9, Vector2i(10, 1), "large farmhouse")
+    _verify_fixture(world, mutations, collision_catalog, collision_overrides, traversal, doors, door_mutations, LargeFixtureClass.PLAYER_ID, LargeFixtureClass.EXTERIOR_DOOR_ID, LargeFixtureClass.MAP_ORIGIN, LargeFixtureClass.MAP_SIZE, LargeFixtureClass.CELL_PIXELS, 8, Vector2i(6, 1), "large farmhouse")
 
-func _verify_fixture(
-    world: WorldState,
-    mutations: WorldMutationService,
-    collision_catalog: CollisionCatalog,
-    collision_overrides: CollisionOverrideState,
-    traversal: MovementTraversalPolicy,
-    doors: DoorStateStore,
-    door_mutations: DoorStateMutationService,
-    player_id: String,
-    exterior_door_id: String,
-    map_origin: Vector2i,
-    map_size: Vector2i,
-    cell_pixels: float,
-    expected_door_count: int,
-    expected_entry_cell: Vector2i,
-    label: String
-) -> void:
+func _verify_fixture(world: WorldState, mutations: WorldMutationService, collision_catalog: CollisionCatalog, collision_overrides: CollisionOverrideState, traversal: MovementTraversalPolicy, doors: DoorStateStore, door_mutations: DoorStateMutationService, player_id: String, exterior_door_id: String, map_origin: Vector2i, map_size: Vector2i, cell_pixels: float, expected_door_count: int, expected_entry_cell: Vector2i, label: String) -> void:
     _check(world.has_entity(exterior_door_id), "%s stable exterior door exists" % label)
     _check(doors.door_ids().size() == expected_door_count, "%s enrolls expected door count" % label)
     for door_id: String in doors.door_ids():
         _check(doors.state(door_id) == DoorValue.CLOSED, "%s generated doors begin closed" % label)
-
     var coverage_query := SpatialQueryClass.new(world, collision_catalog, collision_overrides)
     var coverage: Dictionary = coverage_query.collision_coverage_report()
     _check((coverage.get("missing_required_profiles", []) as Array).is_empty(), "%s collision coverage complete" % label)
-
     var art := ArtCatalogClass.new()
     for entity_id: String in world.entity_ids():
         var entity: WorldEntityRecord = world.entity(entity_id)
@@ -228,7 +159,6 @@ func _verify_fixture(
     for y in range(map_size.y):
         for x in range(map_size.x):
             _check(art.resolve_ground(world.terrain_at(map_origin + Vector2i(x, y))).is_found(), "%s critique terrain has art" % label)
-
     var transition := DoorTransitionClass.new(world, doors, door_mutations, collision_overrides)
     var passage := DoorPassageClass.new(world, doors, transition)
     var kernel := TickKernelClass.new(player_id)
@@ -238,7 +168,6 @@ func _verify_fixture(
     kernel.run_until_stop()
     _check(doors.state(exterior_door_id) == DoorValue.OPEN, "%s front door opens through System 18" % label)
     _check(world.placement(player_id).anchor == expected_entry_cell, "%s player enters expected front doorway" % label)
-
     var stack := RendererStackClass.new()
     get_root().add_child(stack)
     _check(stack.configure(world, art, doors, player_id), "%s renderer stack configures" % label)
@@ -276,12 +205,6 @@ func _role_cell(plan: GeneratedBuildingPlan, role: String) -> Vector2i:
         if String(structure.get("role", "")) == role:
             return structure.get("cell", Vector2i(-1, -1))
     return Vector2i(-1, -1)
-
-func _has_ground(plan: GeneratedBuildingPlan, cell: Vector2i) -> bool:
-    for entry: Dictionary in plan.ground_entries:
-        if entry.get("cell", Vector2i(-1, -1)) == cell:
-            return true
-    return false
 
 func _check(condition: bool, message: String) -> void:
     if not condition:

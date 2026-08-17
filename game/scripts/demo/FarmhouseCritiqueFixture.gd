@@ -11,14 +11,14 @@ const MaterializerClass = preload("res://scripts/generation/buildings/GeneratedB
 const LargeFarmhouseClass = preload("res://scripts/generation/buildings/archetypes/LargeFarmhouseBuildingGenerator.gd")
 
 const MAP_ORIGIN: Vector2i = Vector2i.ZERO
-const MAP_SIZE: Vector2i = Vector2i(27, 22)
-const CELL_PIXELS: float = 19.0
+const MAP_SIZE: Vector2i = Vector2i(23, 11)
+const CELL_PIXELS: float = 23.0
 const PLAYER_ID: String = "actor.player.demo"
-const PLAYER_START: Vector2i = Vector2i(10, 0)
+const PLAYER_START: Vector2i = Vector2i(6, 0)
 const BASE_WALK_TICKS: int = 10
 const BUILDING_ID: String = "building.demo.farmhouse.large.001"
 const EXTERIOR_DOOR_ID: String = "building.demo.farmhouse.large.001.door.exterior.primary"
-const FARMHOUSE_ENVELOPE: Rect2i = Rect2i(1, 1, 25, 20)
+const FARMHOUSE_ENVELOPE: Rect2i = Rect2i(1, 1, 21, 9)
 const FARMHOUSE_SEED: int = 19003
 
 const GRASS: StringName = &"ground.grass_lush"
