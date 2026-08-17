@@ -42,7 +42,7 @@ Canonical progress:
 - **05 Ground Layer Renderer — IMPLEMENTED + CI**
 - **06A Door State — IMPLEMENTED + CI**
 - **06 Structure Layer Renderer — IMPLEMENTED + CI**
-- **07 Prop / Fixture / Vegetation Renderer — DRAFT; active design review**
+- **07 Prop / Fixture / Vegetation Renderer — IMPLEMENTED + CI**
 
 ## 3. Foundation and simulation truth
 
@@ -62,88 +62,50 @@ One deterministic non-negative integer world tick; variable-duration actions/eve
 
 Collision owns hard occupancy, not door state. Movement owns forward/back/turn target/commit semantics with no destination reservation and typed policy decisions. Actor Locomotion owns standing/crouched state, timed stance changes, and future mobility-provider composition. Running remains deferred until it has real consequences.
 
-### 06A Door State — IMPLEMENTED
+### Door State
 
-Canonical design: `SYSTEM_DESIGNS/06A_DOOR_STATE.md`.
-
-Owners:
-
-- `game/scripts/simulation/doors/DoorStateValue.gd`
-- `DoorStateRecord.gd`
-- `DoorStateStore.gd`
-- `DoorStateMutationService.gd`
-- `game/scripts/ci/DoorStateSmoke.gd`
-- `.github/workflows/door-state.yml`
-
-Locked rules:
-
-- stable WHAT door ID -> explicit OPEN / CLOSED persistent state;
-- missing record -> UNKNOWN, never implicit CLOSED;
-- no default initial enrollment state;
-- mutation-safe records with per-door stale-action versions;
-- deterministic atomic snapshot/restore + store revision;
-- explicit lifecycle cleanup; unplaced doors may retain state;
-- normal writes validate WHAT door identity where applicable;
-- no Collision, WHEN, renderer, interaction, AI, sound, lock, or generation ownership.
+06A owns persistent OPEN/CLOSED truth keyed by stable WHAT door ID. Missing state is UNKNOWN. Door State does not infer from or mutate Collision/WHEN.
 
 ## 4. Canonical presentation
 
-### 04 Recovered Multi-Atlas Art Catalog — IMPLEMENTED
+### 04 Art Catalog — IMPLEMENTED
 
-Canonical design: `SYSTEM_DESIGNS/04_RECOVERED_MULTI_ATLAS_ART_CATALOG.md`.
-
-Six preserved atlas families + four player sprites; protected baseline assets; recovered ground/wall/prop precedence; themed doors/windows; road topology; directional player mapping; explicit UNKNOWN behavior. Art Catalog selects descriptors only.
+Recovered six atlas families + four player sprites, exact semantic precedence, themed openings, road topology, and typed UNKNOWN behavior. Art Catalog selects descriptors only.
 
 ### 05 Ground Layer Renderer — IMPLEMENTED
 
-Canonical design: `SYSTEM_DESIGNS/05_GROUND_LAYER_RENDERER.md`.
-
-Standalone ground-only `Node2D`; read-only WHAT terrain + Art Catalog; supplied visible global-cell window; local draw coordinates; deterministic visible-only planning; event-driven redraw; recovered road/dirt-road/sidewalk topology; explicit diagnostics; lazy texture cache; no camera/generation/physics/input ownership.
+Standalone ground-only `Node2D`; visible WHAT terrain -> Art Catalog; local visible-window coordinates; event-driven redraw; recovered road/dirt-road/sidewalk topology; explicit diagnostics; no camera/generation/physics/input ownership.
 
 ### 06 Structure Layer Renderer — IMPLEMENTED
 
-Canonical design: `SYSTEM_DESIGNS/06_STRUCTURE_LAYER_RENDERER.md`.
+Visible WHAT `STRUCTURE` occupancy -> Art Catalog + Door State. Supports `wall.<theme>`, `door.<theme>`, `window.<theme>`, preserves H/V axis, uses distinct OPEN/CLOSED door art, and fails visibly for unknown state/content.
+
+### 07 Prop / Fixture / Vegetation Renderer — IMPLEMENTED
+
+Canonical design: `SYSTEM_DESIGNS/07_PROP_FIXTURE_VEGETATION_RENDERER.md`.
 
 Owners:
 
-- `game/scripts/render/StructureDrawCommand.gd`
-- `StructureLayerRenderer.gd`
-- `game/scripts/ci/StructureLayerRendererSmoke.gd`
-- `.github/workflows/structure-renderer.yml`
+- `game/scripts/render/PropDrawCommand.gd`
+- `game/scripts/render/PropLayerRenderer.gd`
+- `game/scripts/ci/PropLayerRendererSmoke.gd`
+- `.github/workflows/prop-renderer.yml`
 
 Locked rules:
 
-- visible WHAT `STRUCTURE` occupancy only;
-- semantic `wall.<theme>` / `door.<theme>` / `window.<theme>` categories;
-- valid canonical H/V structure axis required and retained;
-- current golden wall/opening art is not rotated solely by axis;
-- walls/windows resolve through 04 Art Catalog;
-- doors read 06A Door State: OPEN and CLOSED use distinct recovered art; UNKNOWN is diagnostic;
-- no Collision-as-door-truth shortcut;
-- fail-visible overlap/axis/category/theme/state/texture problems;
-- visible-window local coordinates, cached textures, event-driven redraw;
-- terrain and initial non-structure changes do not redraw Structure;
-- no generator/reboot/camera/input/WHEN/Collision ownership.
-
-### 07 Prop / Fixture / Vegetation Renderer — ACTIVE DRAFT
-
-Canonical draft: `SYSTEM_DESIGNS/07_PROP_FIXTURE_VEGETATION_RENDERER.md`.
-
-Proposed locked boundary for review:
-
-- consumes WHAT `OBJECT` occupancy only + 04 Art Catalog;
-- semantic families `prop.*`, `fixture.*`, `vegetation.*`;
-- all art delegates to `ArtCatalog.resolve_prop()` and preserves final -> alias -> building -> clutter -> tactical precedence;
+- reads WHAT `OBJECT` occupancy only + 04 Art Catalog;
+- recognized families are `prop.*`, `fixture.*`, `vegetation.*`;
+- all recovered art selection delegates to `ArtCatalog.resolve_prop()`;
 - multi-cell occupancy deduplicates to one draw command per stable entity;
-- command preserves anchor, facing, and footprint/world cells;
-- current recovered one-cell art draws once at the entity anchor rather than repeating or stretching across the physical footprint;
-- current recovered prop art remains unrotated because golden `draw_prop()` defined no native facing/rotation convention; facing is preserved for a future explicit presentation orientation policy;
+- command retains anchor, N/E/S/W facing, copied footprint, and rotated world cells;
+- current recovered one-cell prop art draws once at the physical anchor;
+- current prop art is not automatically rotated because golden `draw_prop()` defined no native-facing transform;
 - overlapping OBJECT occupants draw deterministically rather than becoming renderer-owned collision errors;
-- fail-visible semantic/art/placement/texture diagnostics;
-- visible-window only, cached textures, event-driven redraw;
-- no Collision/WHEN/generation/inventory/state/camera/input/reboot ownership.
+- unknown family/art/selection/texture facts fail visibly;
+- visible-window only, lazy texture cache, event-driven redraw, no `_process()` polling;
+- no Collision/WHEN/Movement/Locomotion/Door State/generation/inventory/camera/input/reboot ownership.
 
-Runtime implementation is blocked until explicit approval of the 07 draft.
+Initial implementation head `5c2df6439678abaf8c9a031f5b6ed7bb8fb68a86` passed dedicated run `31983182247` with Art Catalog + Ground + Structure regressions and no production repair.
 
 ## 5. Graphics recovery status
 
@@ -151,9 +113,10 @@ Canonical graphics now include:
 
 1. recovered multi-atlas semantic art selection;
 2. actual Ground drawing;
-3. actual wall/door/window Structure drawing with persistent Door State.
+3. actual wall/door/window Structure drawing with persistent Door State;
+4. actual Prop/Fixture/Vegetation drawing from persistent OBJECT entities.
 
-Prop/Fixture/Vegetation is the active next draft. Visible full-scene recovery is still incomplete because 07, Player/Actor, composition/test-area, and camera systems do not yet all exist canonically.
+Visible full-scene recovery is still incomplete because Player/Actor, composition/test-area, and camera systems do not yet all exist canonically.
 
 The deployed Web page still intentionally runs the frozen reboot reference. Do not claim it demonstrates canonical 05/06/07 until the new presentation stack has an approved composition path.
 
@@ -177,7 +140,7 @@ Key rules:
 
 1. Main/root is composition only.
 2. One independently replaceable system = focused owner/public contract.
-3. One major system per implementation slice by default; tightly coupled prerequisite + dependent work may be explicitly authorized together by the user.
+3. One major system per implementation slice by default.
 4. No placeholder/fake completion.
 5. Generator creates initial WHAT; it does not own persistent reality.
 6. Rendering presents world truth; it does not become simulation truth.
@@ -191,6 +154,7 @@ Key rules:
 14. Render layers consume semantic world facts through 04 Art Catalog.
 15. Camera/viewport owns visible-window calculation; focused renderers only consume it.
 16. Door State owns door OPEN/CLOSED truth; Collision owns blocking truth; neither infers the other.
+17. Physical WHAT footprints/facing remain world truth; presentation-specific large-object geometry/orientation must be explicit rather than inferred from physics.
 
 ## 8. Documentation source order
 
@@ -206,10 +170,10 @@ Key rules:
 10. compatible master-design material;
 11. golden history for recovered behavior.
 
-## 9. Recommended next bounded step
+## 9. Recommended next bounded design
 
-**Review/approve `07_PROP_FIXTURE_VEGETATION_RENDERER.md`.**
+**Player / Actor Renderer** is the recommended next presentation discussion.
 
-If approved, implement the Prop renderer with its own Godot 4.7.1 contract and regress Art Catalog + Ground + Structure on the exact implementation/final SHA.
+Why next: Ground, Structure, and Prop now establish the non-actor world layers. Player/Actor can consume WHAT ACTOR placement/facing, current Actor Locomotion stance where relevant, and the recovered four-direction player art without pulling in camera/input/AI/perception or tactical orchestration.
 
-Keep Player/Actor Renderer, Tactical composition, Authored Visual Test Area, camera/zoom, loose-item rendering, stateful fixture visuals, vehicles, and door interaction/physical transition as separate approved systems.
+Keep Authored Visual Test Area, Tactical composition, camera/zoom, touch/keyboard/Safari input, loose-item rendering, vehicles, stateful prop variants, and Door Interaction as separate approved systems.

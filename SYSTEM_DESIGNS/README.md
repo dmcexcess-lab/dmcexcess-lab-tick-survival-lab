@@ -30,7 +30,7 @@ The canonical simulation stack is **WHERE / WHAT / WHEN**, followed by focused p
 | 05 | Ground Layer Renderer | **IMPLEMENTED** | `05_GROUND_LAYER_RENDERER.md` | WHAT terrain -> Art Catalog -> visible-window ground drawing |
 | 06A | Door State | **IMPLEMENTED** | `06A_DOOR_STATE.md` | Explicit stable-ID OPEN/CLOSED state, UNKNOWN on missing, versioned persistence |
 | 06 | Structure Layer Renderer | **IMPLEMENTED** | `06_STRUCTURE_LAYER_RENDERER.md` | Visible walls/doors/windows; H/V axis; Door State-driven open/closed art |
-| 07 | Prop / Fixture / Vegetation Renderer | **DRAFT** | `07_PROP_FIXTURE_VEGETATION_RENDERER.md` | OBJECT-only visible rendering; recovered prop art; one draw per entity anchor |
+| 07 | Prop / Fixture / Vegetation Renderer | **IMPLEMENTED** | `07_PROP_FIXTURE_VEGETATION_RENDERER.md` | Visible OBJECT entities; recovered prop art; one anchor draw per stable entity |
 | 00D | Global World Planning / Generation Contract | **NOT DESIGNED** | `00D_GLOBAL_WORLD_GENERATION.md` | Global geography/roads/utilities/parcels before local detail |
 | 00E | Population / Household / Outbreak / Player Story | **NOT DESIGNED** | `00E_POPULATION_OUTBREAK_PLAYER_STORY.md` | Persistent people/homes/jobs/relationships and causal outbreak |
 | 00F | Streaming / Materialization | **NOT DESIGNED** | `00F_STREAMING_MATERIALIZATION.md` | Performance/storage over one logical world |
@@ -46,39 +46,14 @@ The canonical simulation stack is **WHERE / WHAT / WHEN**, followed by focused p
 - **01 Collision:** `game/scripts/simulation/collision/` + `CollisionSpatialQuerySmoke.gd`
 - **02 Movement:** `game/scripts/simulation/movement/` + `MovementActionsSmoke.gd` + `.github/workflows/movement.yml`
 - **03 Actor Locomotion:** `game/scripts/simulation/actors/locomotion/` + `ActorLocomotionSmoke.gd` + `.github/workflows/actor-locomotion.yml`
-- **06A Door State:**
-  - `game/scripts/simulation/doors/DoorStateValue.gd`
-  - `DoorStateRecord.gd`
-  - `DoorStateStore.gd`
-  - `DoorStateMutationService.gd`
-  - `game/scripts/ci/DoorStateSmoke.gd`
-  - `.github/workflows/door-state.yml`
+- **06A Door State:** `game/scripts/simulation/doors/` + `DoorStateSmoke.gd` + `.github/workflows/door-state.yml`
 
 ### Presentation
 
-**04 Art Catalog**
-
-- `game/scripts/art/ArtSource.gd`
-- `game/scripts/art/ArtSelection.gd`
-- `game/scripts/art/ArtBaselineManifest.gd`
-- `game/scripts/art/RoadArtTopology.gd`
-- `game/scripts/art/ArtCatalog.gd`
-- `game/scripts/ci/ArtCatalogSmoke.gd`
-- `.github/workflows/art-catalog.yml`
-
-**05 Ground Layer Renderer**
-
-- `game/scripts/render/GroundDrawCommand.gd`
-- `game/scripts/render/GroundLayerRenderer.gd`
-- `game/scripts/ci/GroundLayerRendererSmoke.gd`
-- `.github/workflows/ground-renderer.yml`
-
-**06 Structure Layer Renderer**
-
-- `game/scripts/render/StructureDrawCommand.gd`
-- `game/scripts/render/StructureLayerRenderer.gd`
-- `game/scripts/ci/StructureLayerRendererSmoke.gd`
-- `.github/workflows/structure-renderer.yml`
+- **04 Art Catalog:** `game/scripts/art/` + `ArtCatalogSmoke.gd` + `.github/workflows/art-catalog.yml`
+- **05 Ground:** `GroundDrawCommand.gd`, `GroundLayerRenderer.gd`, `GroundLayerRendererSmoke.gd`, `.github/workflows/ground-renderer.yml`
+- **06 Structure:** `StructureDrawCommand.gd`, `StructureLayerRenderer.gd`, `StructureLayerRendererSmoke.gd`, `.github/workflows/structure-renderer.yml`
+- **07 Prop / Fixture / Vegetation:** `PropDrawCommand.gd`, `PropLayerRenderer.gd`, `PropLayerRendererSmoke.gd`, `.github/workflows/prop-renderer.yml`
 
 The canonical modules remain intentionally separate from frozen `game/scripts/reboot/` reference code. Do not add compatibility adapters merely to make them visible in the old playable build.
 
@@ -86,15 +61,15 @@ The canonical modules remain intentionally separate from frozen `game/scripts/re
 
 **WHERE** owns geometry. **WHAT** owns persistent semantic terrain/entities/placement. **WHEN** owns time/order. **Collision** answers hard occupancy. **Movement** owns discrete target/commit semantics. **Actor Locomotion** owns standing/crouched state and movement capability composition.
 
-**Door State** owns the persistent OPEN/CLOSED fact for canonical `door.<theme>` entities. Missing state is UNKNOWN, initial state must be explicit, records are stable-ID keyed/versioned/snapshot-safe, and Door State does not mutate Collision or WHEN.
+**Door State** owns persistent OPEN/CLOSED truth for `door.<theme>` entities. Missing state is UNKNOWN; Door State does not mutate Collision or WHEN.
 
-**Art Catalog** owns semantic-to-art selection only. World/generator data contains no atlas indices/texture paths.
+**Art Catalog** owns semantic-to-art selection only. World/generator data contains no atlas indices or texture paths.
 
-**Ground Renderer** reads WHAT terrain, uses Art Catalog selections, draws only a supplied visible global-cell window, derives generic local road/dirt-road/sidewalk presentation topology, and reacts only to topology-relevant terrain/view/reset invalidation.
+**Ground Renderer** draws visible WHAT terrain through Art Catalog and owns only ground presentation/topology.
 
-**Structure Renderer** reads visible WHAT STRUCTURE occupancy, Art Catalog, and Door State. It renders `wall.<theme>`, `door.<theme>`, and `window.<theme>`, requires canonical H/V structure axis, uses distinct OPEN/CLOSED door art, and treats missing Door State/invalid content as diagnostics rather than plausible fallback.
+**Structure Renderer** draws visible WHAT STRUCTURE entities through Art Catalog + Door State, retaining H/V structure geometry while keeping door physics separate.
 
-**07 Prop / Fixture / Vegetation Renderer is DRAFT.** Proposed contract: read only visible WHAT `OBJECT` occupancy; recognize `prop.*`, `fixture.*`, and `vegetation.*`; resolve all through recovered `ArtCatalog.resolve_prop()`; deduplicate multi-cell occupancy to one command per stable entity; preserve facing/footprint facts without inventing current rotation or multi-cell art; draw the recovered one-cell sprite at the entity anchor; and keep collision, state, generation, inventory, camera/input, and other render layers out.
+**Prop Renderer** draws visible WHAT OBJECT entities whose semantic families are `prop.*`, `fixture.*`, or `vegetation.*`. Multi-cell occupancy deduplicates to one command per stable entity. Current recovered art draws once at the physical anchor and remains unrotated; facing/footprint/world cells are preserved for future explicit presentation geometry/orientation contracts. Overlap order is deterministic and does not become collision legality.
 
 ## Why generation is not the foundation
 
@@ -106,13 +81,14 @@ Exact order is refined one approved design at a time.
 
 | System | Status | Notes |
 |---|---|---|
+| Player / Actor Renderer | NOT DESIGNED | **Recommended next presentation discussion**; WHAT ACTOR placement/facing + locomotion stance + Art Catalog player sprites |
 | Door interaction / physical transition | NOT DESIGNED | Future WHEN action coordinating Door State + Collision at commit |
-| Player/actor renderer | NOT DESIGNED | Four directional sprites initially; consumes WHAT/facing/stance + Art Catalog |
-| Authored visual test area | NOT DESIGNED | Proves recovered graphics without procedural generation |
+| Authored visual test area | NOT DESIGNED | Proves canonical Ground + Structure + Prop + Actor stack without procedural generation |
 | Tactical renderer/orchestration | NOT DESIGNED | Composes focused render layers only; no layer internals |
 | Tactical camera + zoom | NOT DESIGNED | Supplies visible cell window/scale; one zoom owner |
 | Touch/keyboard/Safari input | NOT DESIGNED | Emits semantic movement/stance intents; lifecycle hard-pause integration |
 | Tactical controls UI | NOT DESIGNED | Presentation/hit regions only |
+| Loose-item renderer | NOT DESIGNED | Separate LOOSE_ITEM presentation; does not belong in Prop |
 | Road network/topology | NOT DESIGNED | Global coherent road truth; future road-class metadata seam |
 | Property/parcel planner | NOT DESIGNED | Parcels/frontage/access/site mix |
 | Building/prefab placement | NOT DESIGNED | Semantic placement respecting global facts |
@@ -132,7 +108,7 @@ Exact order is refined one approved design at a time.
 | Infected AI | DEFERRED | Emits shared actions via actor/perception/world contracts |
 | Loot/inventory/search | DEFERRED | Stable-ID physical state; timed actions; future encumbrance provider |
 | Combat | DEFERRED | Timed actions + health consequences |
-| Vehicles | DEFERRED | Persistent multi-cell entities; timed movement/travel |
+| Vehicles | DEFERRED | Persistent multi-cell entities; separate vehicle rendering/behavior |
 | Old raid/extraction/session architecture | **SUPERSEDED** | No required raid/extraction/staging loop |
 
 ## Design template

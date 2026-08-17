@@ -1,5 +1,19 @@
 # Changelog
 
+## 07 Prop / Fixture / Vegetation Renderer — 2026-08-16
+
+- Implemented **07 Prop / Fixture / Vegetation Renderer** after the user explicitly approved the refreshed focused design.
+- Added `PropDrawCommand.gd` retaining stable entity ID, semantic family/type, anchor, N/E/S/W facing, copied footprint/world cells, local destination, and copied ArtSelection.
+- Added standalone `PropLayerRenderer.gd` reading only visible WHAT `OBJECT` occupancy plus 04 Art Catalog.
+- Recognizes `prop.*`, `fixture.*`, and `vegetation.*`; all delegate to `ArtCatalog.resolve_prop()` and preserve final exact -> final alias -> building -> clutter -> tactical precedence.
+- Multi-cell physical occupancy deduplicates to one command/draw per stable entity. Current recovered one-cell art draws once at the physical anchor rather than repeating or stretching across the footprint.
+- Preserves WHAT facing but deliberately performs no current prop-art rotation because golden `TacticalTiles.draw_prop()` defined no native-facing transform.
+- Supports visible footprint intersection with an offscreen anchor, deterministic anchor-Y/X/stable-ID ordering, overlapping OBJECT draws, lazy texture caching, and event-driven redraw.
+- Unknown semantic family/art/selection/texture facts fail visibly rather than falling back to plausible crate/tree/chair art.
+- Added `PropLayerRendererSmoke.gd` and dedicated Godot 4.7.1 `Prop Fixture Vegetation Renderer contract`; initial implementation head `5c2df6439678abaf8c9a031f5b6ed7bb8fb68a86` passed Art Catalog + Ground + Structure regressions and the Prop contract with no production repair.
+- Left WHAT/WHERE/WHEN, Collision, Movement, Actor Locomotion, Door State, Art Catalog, Ground, Structure, preserved assets, generation, camera/input/UI, and frozen reboot unchanged.
+- Next bounded visual system: **Player / Actor Renderer**.
+
 ## 05 Ground Layer Renderer — 2026-08-16
 
 - Implemented **05 Ground Layer Renderer** after the user explicitly approved the focused renderer design.
@@ -123,7 +137,7 @@
 - Defined WHAT as durable world truth independent of procedural generators, Godot Nodes, renderers and streaming partitions. Proposed stable opaque entity IDs, semantic world types, explicit stores/mutation paths, derived occupancy indexes, generated-initial-state versus current-persistent-state separation, and ordinary persistent physical state as the basis for player-built bases anywhere.
 - Defined WHEN as one integer world-tick/action/event kernel for player actions, other actors and future scheduled systems. Preserved useful golden `TickScheduler.gd` concepts—explicit costs, deterministic ordering, phases, committed/resumable/cancelable interruption, resumable snapshots and player-ready auto-pause—while generalizing beyond a player-centric actor list to a deterministic scheduled-event queue.
 - Separated normal tactical auto-pause from **hard real-life application pause**. Hard pause advances zero simulation ticks and must preserve in-progress action state across work/customer/browser/mobile interruptions.
-- Designed one world tick to support both detailed nearby actions and coarse distant population/outbreak events, allowing causal open-world simulation without executing every invisible footstep.
+- Designed one world tick to support both detailed nearby actions and coarse distant population/outbreak events, allowing causal open-world simulation without executing every invisible individual footstep.
 - Added explicit cross-system examples for movement, doors, simplified serious injuries, construction/base building, global world generation and outbreak simulation, plus compatibility checks for rendering, vision, lighting, weather, silent spatial sound, inventory, AI, vehicles, construction and streaming.
 - Added shared determinism/performance rules: integer coordinates/ticks, stable IDs, deterministic event tie-breaking, named/sub-seeded RNG streams, event-driven world-change notifications, no full-world per-tick scans, no permanent Node per persistent object, visible/detail simulation only where relevant.
 - Recorded the **WHERE / WHAT / WHEN decomposition as settled in concept** in `DESIGN_DECISIONS.md`; the detailed umbrella remains DRAFT and does not authorize code.
