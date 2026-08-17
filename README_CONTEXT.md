@@ -20,7 +20,7 @@ Web preview: `https://dmcexcess-lab.github.io/dmcexcess-lab-tick-survival-lab/`
 
 The project is in staged modular replacement of the deprecated playable runtime.
 
-`game/scripts/reboot/` is **frozen/deprecated reference code**. Do not extend it or add temporary adapters just to make canonical systems appear in the old playable build.
+`game/scripts/reboot/` is **frozen/deprecated reference code**. Do not extend it or add temporary adapters merely to make canonical modules visible in that old build.
 
 Golden recovery commit: `1763958f44eb7f855fd49944c00d1ffe608c0abe`.
 
@@ -39,7 +39,7 @@ Canonical progress:
 - **07 Prop / Fixture / Vegetation Renderer — IMPLEMENTED + CI**
 - **08 Player / Living Actor Renderer — IMPLEMENTED + CI**
 - **09 Actor Hand Equipment State — IMPLEMENTED + CI**
-- **10 Actor Hand Equipment Presentation — APPROVED / implementation in progress**
+- **10 Actor Hand Equipment Presentation — IMPLEMENTED + CI**
 
 ## 3. Foundation / mechanic truth
 
@@ -58,22 +58,17 @@ Collision owns hard occupancy. Movement owns forward/back/turn request -> time -
 ### Door State
 06A owns persistent OPEN/CLOSED truth keyed by stable WHAT door ID. Missing state is UNKNOWN. Door State does not infer from or mutate Collision/WHEN.
 
-### Actor Hand Equipment State
+### 09 Actor Hand Equipment State
+
 Canonical design: `SYSTEM_DESIGNS/09_ACTOR_HAND_EQUIPMENT_STATE.md`.
 
-Locked implemented rules:
-
 - explicit `actor.survivor` enrollment;
-- `PRIMARY_RIGHT` = anatomical right hand;
-- `SECONDARY_LEFT` = anatomical left hand;
-- assignments reference stable WHAT `item.*` entities, not item-name strings;
-- held items must be tactically unplaced when newly assigned;
-- one physical item cannot occupy two hands or two actors simultaneously;
-- missing hand-state record is distinct from enrolled empty hands;
-- copy-safe reads, reverse assignment lookup, global revision, per-actor versions;
-- deterministic schema-versioned atomic snapshot/restore;
-- explicit lifecycle cleanup after WHAT removal;
-- no Art/Render/Inventory/Combat/Health/WHEN/AI/Input/UI/Reboot ownership.
+- primary = anatomical right hand; secondary = anatomical left;
+- stable WHAT `item.*` assignments;
+- one physical item cannot occupy multiple hands/actors;
+- missing record differs from enrolled empty hands;
+- versioned/copy-safe/deterministic snapshot state;
+- no Inventory/Render/Combat/Lighting/WHEN/UI ownership.
 
 ## 4. Death / corpse direction
 
@@ -82,7 +77,14 @@ Approved cross-system direction: death leaves a persistent physical corpse/world
 ## 5. Canonical presentation
 
 ### 04 Art Catalog
-Recovered environmental multi-atlas selection plus protected player textures and a separately recovered living-actor atlas. Art Catalog selects descriptors only.
+Recovered environmental multi-atlas selection plus protected player textures, separate recovered living-actor atlas, and separate recovered held-item atlas. Art Catalog selects presentation descriptors/metadata only.
+
+Current extra recovered assets:
+
+- `game/assets/actor_atlas.svg` — 8 survivor variants × four facings + 8 infected variants × four facings;
+- `game/assets/held_item_atlas.svg` — recovered First Fire knife/club/hammer/spear/crowbar/hatchet/pistol/shotgun + flashlight/headlamp/lantern/glow-stick/road-flare art.
+
+The original ten Tick baseline assets remain byte-identical.
 
 ### 05 Ground
 Visible WHAT terrain -> Art Catalog; event-driven visible-window rendering.
@@ -94,29 +96,32 @@ Visible WHAT STRUCTURE occupancy -> Art Catalog + Door State; walls/doors/window
 Visible WHAT OBJECT occupancy for `prop.*`, `fixture.*`, `vegetation.*`; one visual per stable entity.
 
 ### 08 Player / Living Actor
-Visible WHAT ACTOR entities for `actor.survivor` and `actor.infected`. Controlled status is stable-ID presentation/session state; NPC survivor/infected art is real recovered same-owner artwork. Corpses are outside 08.
+Visible WHAT ACTOR entities for `actor.survivor` and `actor.infected`. Controlled status is stable-ID presentation/session state; NPC survivor/infected art is real recovered same-owner artwork. Corpses remain outside 08.
 
-## 6. Active approved system — 10 Actor Hand Equipment Presentation
+### 10 Actor Hand Equipment Presentation
 
-Canonical design:
+Canonical design: `SYSTEM_DESIGNS/10_ACTOR_HAND_EQUIPMENT_PRESENTATION.md`.
 
-`SYSTEM_DESIGNS/10_ACTOR_HAND_EQUIPMENT_PRESENTATION.md`
+Locked implemented rules:
 
-Approved direction:
-
-- recover exact same-owner First Fire weapon silhouettes and utility icons into a separate held-item atlas;
-- read visible survivor placement/facing from WHAT and stable hand assignments from 09;
-- resolve item semantics through additive 04 Art Catalog mapping;
-- preserve primary = anatomical right and secondary = anatomical left;
-- rotate held art from EAST-native source orientation into N/E/S/W actor facing;
-- preserve historical proportional hand offsets;
+- one focused renderer class instantiated as `BACK` or `FRONT`;
+- future composition uses `10 BACK -> 08 actor body -> 10 FRONT`;
+- reads visible survivor placement/facing from WHAT and stable hand assignments from 09;
+- primary remains anatomical right; secondary remains anatomical left;
+- recovered held art is EAST-native and rotates N/E/S/W;
+- historical First Fire hand offsets retained proportionally;
+- NORTH/SOUTH: both hands FRONT;
 - EAST: secondary/left BACK, primary/right FRONT;
 - WEST: primary/right BACK, secondary/left FRONT;
-- NORTH/SOUTH: both FRONT and clearly visible;
-- use two instances of one focused renderer owner so future canonical composition can order `BACK hands -> 08 actor body -> FRONT hands`;
-- no Inventory/Combat/Lighting/WHEN/UI/Input/Camera/Reboot ownership.
+- weapon art scale 14/32 cell, utility scale 12/32 cell, based on item kind rather than slot;
+- missing enrollment/stale item/unknown art/contradictory tactical placement are diagnostics;
+- event-driven visible work only;
+- no Inventory/Combat/Lighting/WHEN/UI/Input/Camera/Reboot ownership;
+- 08 and 09 production remain untouched.
 
-## 7. Canonical demo/UI target requested by the user
+Initial code head `fb875e5515a0a13ec6578a8ed72cb4d6af172cd2` passed dedicated 10 run `31987226709` and Art Catalog run `31987226704` without a production repair commit.
+
+## 6. Canonical demo/UI target requested by the user
 
 The next visible canonical demo must not be keyboard-only. Safari/iPhone is first-class.
 
@@ -135,21 +140,27 @@ Requested eventual target:
 
 Web note: a webpage cannot reliably open the user's configured browser homepage. Future Leave Game should prefer useful browser-history return, with a safe fallback such as Google.
 
-## 8. Dependency order from the latest request
+## 7. Dependency order from the latest request
+
+Completed:
 
 1. **09 Actor Hand Equipment State — IMPLEMENTED.**
-2. **10 Actor Hand Equipment Presentation — APPROVED / IMPLEMENTING.**
-3. Inventory / Containment and any actor-stat domains required for honest inspector data — NOT DESIGNED / DEFERRED.
-4. Authored Visual Test Area — NOT DESIGNED.
-5. Tactical renderer/orchestration — NOT DESIGNED.
-6. Tactical camera + zoom — NOT DESIGNED.
-7. Touch/keyboard/Safari input — NOT DESIGNED.
-8. Tactical Controls UI — NOT DESIGNED.
-9. HUD / Facing Inspection / Stats & Inventory Inspector / Pause Menu — NOT DESIGNED.
+2. **10 Actor Hand Equipment Presentation — IMPLEMENTED.**
 
-Later slices may combine only if their approved contracts prove they are truly one coherent owner. Do not hide them inside a monolithic demo scene.
+Next bounded prerequisites toward the requested honest demo:
 
-## 9. Open-world / generation direction
+3. **Inventory / Containment — NOT DESIGNED / DEFERRED.** Real persistent holdings and equip coordination before an Inventory screen claims contents.
+4. **Actor stat domains required for the inspector — NOT DESIGNED.** Reuse implemented state where it exists; design Health/Needs/etc. only as needed rather than fabricate numbers.
+5. **Authored Visual Test Area — NOT DESIGNED.** Real canonical WHAT fixture.
+6. **Tactical renderer/orchestration — NOT DESIGNED.** Compose Ground/Structure/Prop/10-BACK/08/10-FRONT.
+7. **Tactical camera + zoom — NOT DESIGNED.**
+8. **Touch/keyboard/Safari input — NOT DESIGNED.**
+9. **Tactical Controls UI — NOT DESIGNED.**
+10. **HUD / Facing Inspection / Stats & Inventory Inspector / Pause Menu — NOT DESIGNED.**
+
+Later slices may combine only when their explicit contracts prove they are genuinely one coherent owner. Do not hide them inside a monolithic demo scene.
+
+## 8. Open-world / generation direction
 
 Generation is not the engine and streaming partitions never define logical reality.
 
@@ -159,13 +170,11 @@ Long-term planning order:
 
 Cross-region facts are planned globally. Once world facts exist, persistent WHAT owns later mutations.
 
-## 10. Development invariants
+## 9. Development invariants
 
 Canonical process:
 
 > **DESCRIBE -> USER APPROVES -> IMPLEMENT -> VERIFY.**
-
-Key rules:
 
 1. Main/root is composition only.
 2. One independently replaceable system = focused owner/public contract.
@@ -181,9 +190,9 @@ Key rules:
 12. Gameplay durations/order use WHEN while mechanic meanings remain external.
 13. Controlled-player role is not persistent actor identity.
 14. Corpses are persistent future world/mechanic consequences, not living ACTOR presentation state.
-15. Hand equipment truth is separate from held-item presentation and Inventory/Containment.
+15. Hand equipment truth remains separate from held-item presentation and Inventory/Containment.
 
-## 11. Documentation source order
+## 10. Documentation source order
 
 1. newest explicit user instruction;
 2. `PROJECT_NORTH_STAR.md`;
@@ -197,6 +206,6 @@ Key rules:
 10. compatible master-design material;
 11. golden/same-owner history for recovered behavior.
 
-## 12. Recommended next action
+## 11. Recommended next action
 
-Implement and verify **10 Actor Hand Equipment Presentation** exactly as approved. After 10 closes, return to the canonical visible-demo dependency chain rather than extending the frozen reboot.
+Design the next honest prerequisite for the requested Safari-first canonical demo rather than extending frozen reboot. Current routing recommends **Inventory / Containment** first because the requested Inventory inspector must display real persistent contents, not a demo-only loadout dictionary.
