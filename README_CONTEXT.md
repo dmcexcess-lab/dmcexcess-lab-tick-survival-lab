@@ -17,7 +17,7 @@ Live Web build: `https://dmcexcess-lab.github.io/dmcexcess-lab-tick-survival-lab
 
 ## 2. Current architectural phase
 
-**Systems 14–15 are now the live canonical entry/presentation path.** `game/main.tscn` launches the canonical playable demo with the real status HUD; `game/scripts/reboot/` remains frozen/deprecated recovery/reference code and must not be extended or used as a compatibility adapter.
+**Systems 14–15 are the live canonical entry/presentation path.** `game/main.tscn` launches the canonical playable demo with the real status HUD; `game/scripts/reboot/` remains frozen/deprecated recovery/reference code and must not be extended or used as a compatibility adapter.
 
 Golden recovery commit: `1763958f44eb7f855fd49944c00d1ffe608c0abe`.
 
@@ -47,9 +47,13 @@ Implemented + CI:
 - 14 Canonical Playable Demo Integration
 - **15 Canonical HUD / Facing Inspection**
 
+Active design:
+- **16 Canonical Player Shell / Inspectors / Stance Integration — DRAFT; awaiting explicit approval.**
+
 System 13 umbrella: `SYSTEM_DESIGNS/13_ACTOR_STATS_STATUS_ARCHITECTURE.md`.
 System 14 design: `SYSTEM_DESIGNS/14_CANONICAL_PLAYABLE_DEMO.md`.
 System 15 design: `SYSTEM_DESIGNS/15_CANONICAL_HUD_FACING_INSPECTION.md`.
+System 16 draft: `SYSTEM_DESIGNS/16_CANONICAL_PLAYER_SHELL.md`.
 Dedicated demo workflow: `.github/workflows/canonical-demo.yml`.
 Dedicated HUD workflow: `.github/workflows/canonical-hud.yml`.
 System 15 hardened code head `fb19c7b86569c388dcb251b2b61210e745f3909a` passed Canonical HUD Facing Inspection run `31994628336`; the only earlier failure was a CI boundary regex matching an explanatory comment, not production code.
@@ -67,6 +71,8 @@ One deterministic non-negative integer world tick; variable-duration actions/eve
 
 ### Collision / Movement / Locomotion
 Collision owns hard occupancy. Movement owns forward/back/turn request -> time -> commit semantics. Actor Locomotion owns standing/crouched state and movement-capability composition. Running remains deferred until it has real downside.
+
+System 03 already includes the real timed stance-action owner: voluntary crouch/stand uses a 4-tick base action before existing mobility modifiers, and crouched walking already resolves at the implemented 1.4x step-duration scale.
 
 ### Door State
 06A owns persistent OPEN/CLOSED truth. Missing is UNKNOWN. Door State does not infer from Collision or rendering.
@@ -149,20 +155,25 @@ Current live demo:
 - fixed one-screen view at 38 px/cell; no camera because the whole test area fits;
 - real HUD shows tick, facing, action result, one-cell-ahead `Looking at:`, HP, fatigue, hunger, thirst, sleep pressure, carry, and derived moodlets.
 
-The live demo survivor is now honestly enrolled in canonical Health, Needs, Hands, actor-root Inventory, Carry, and Moodlet state. At boot this means **100/100 HP, all need pressures 0, carry 0.0/18.0 kg, Well Rested**. These are domain defaults/derived facts, not UI placeholders.
+The live demo survivor is honestly enrolled in canonical Health, Needs, Hands, actor-root Inventory, Carry, and Moodlet state. At boot this means **100/100 HP, all need pressures 0, carry 0.0/18.0 kg, Well Rested**. These are domain defaults/derived facts, not UI placeholders.
 
 `Looking at:` is currently a direct physical WHAT inspection of the cell in front. It is deliberately **not perception-aware**. Future LOS/vision/darkness logic may filter that information before presentation.
 
-## 8. Immediate path after HUD
+Post-System-15 playtesting identified two duplicated legacy overlays underneath the HUD: the old controls help line and the controls-owned second tick/action label. These are vestigial and should remain removed; System 15 is the sole tick/action HUD surface.
 
-Do **not** rebuild the already-proven renderers, actor-state domains, or HUD queries.
+## 8. Active System 16 draft
 
-When requested, extend the live canonical demo directly with bounded additions such as:
-1. crouch/stand control plus `STATS`, `INVENTORY`, and `MENU`/hard-pause UI;
-2. demo items/loose-item presentation, System 10 BACK/body/FRONT composition, and real 09/11/12 pickup/drop/equip;
-3. door open/close interaction;
-4. camera/zoom only once a larger world actually exceeds the one-screen authored view;
-5. larger authored/generated content behind the same canonical contracts.
+`SYSTEM_DESIGNS/16_CANONICAL_PLAYER_SHELL.md` is **DRAFT** and must not be implemented until explicit user approval.
+
+Proposed bounded integration:
+1. Crouch/Stand control using existing timed System 03 stance actions;
+2. `STATS` modal reading real status, injuries, Skills and stance;
+3. `INVENTORY` modal reading real Hands, Containment, item identity/known weight and Carry;
+4. `MENU` using WHEN hard pause with correct previous-state restoration;
+5. full modal pointer blocking plus gameplay-input gating;
+6. Resume and Web Leave Game using browser history when useful, otherwise Google fallback.
+
+This slice adds no new simulation mechanic. Empty inventory, level-0 skills and no injuries remain valid real state rather than placeholders.
 
 ## 9. Other later systems
 - Container Access / Search / Open / Lock — NOT DESIGNED
@@ -210,4 +221,4 @@ When requested, extend the live canonical demo directly with bounded additions s
 11. golden/same-owner history.
 
 ## 12. Recommended next action
-Playtest the live **System 15 HUD build** on phone/Safari. The next useful integration slice is likely crouch/stand plus the real `STATS`, `INVENTORY`, and `MENU` shell, unless playtesting exposes a more immediate HUD/control defect.
+Review and explicitly approve or revise **System 16 Canonical Player Shell / Inspectors / Stance Integration**. After approval, implement only that bounded integration and exact-final-SHA verify it through Godot/CI/Web deployment.

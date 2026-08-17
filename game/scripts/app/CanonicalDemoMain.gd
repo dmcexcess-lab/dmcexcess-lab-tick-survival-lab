@@ -157,7 +157,6 @@ func _boot_canonical_demo() -> bool:
 
     _keyboard.action_intent.connect(Callable(_controller, "submit_intent"))
     _controls.action_intent.connect(Callable(_controller, "submit_intent"))
-    _controller.action_resolved.connect(Callable(_controls, "present_action_result"))
     _controller.action_resolved.connect(Callable(_hud, "present_action_result"))
     return true
 

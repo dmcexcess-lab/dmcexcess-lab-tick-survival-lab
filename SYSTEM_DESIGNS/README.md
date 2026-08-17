@@ -39,6 +39,7 @@ This directory is the durable detailed memory for individual systems. Major syst
 | 13F | Actor Moodlets / Status Derivation | **IMPLEMENTED** | `13F_ACTOR_MOODLETS.md` |
 | 14 | Canonical Playable Demo Integration | **IMPLEMENTED** | `14_CANONICAL_PLAYABLE_DEMO.md` |
 | 15 | Canonical HUD / Facing Inspection | **IMPLEMENTED** | `15_CANONICAL_HUD_FACING_INSPECTION.md` |
+| 16 | Canonical Player Shell / Inspectors / Stance Integration | **DRAFT** | `16_CANONICAL_PLAYER_SHELL.md` |
 | 00D | Global World Planning / Generation | **NOT DESIGNED** | `00D_GLOBAL_WORLD_GENERATION.md` |
 | 00E | Population / Household / Outbreak / Player Story | **NOT DESIGNED** | `00E_POPULATION_OUTBREAK_PLAYER_STORY.md` |
 | 00F | Streaming / Materialization | **NOT DESIGNED** | `00F_STREAMING_MATERIALIZATION.md` |
@@ -70,6 +71,8 @@ This directory is the durable detailed memory for individual systems. Major syst
 - 14: `game/scripts/app/CanonicalDemoMain.gd`, `game/scripts/demo/CanonicalDemoFixture.gd`, `game/scripts/render/TacticalRendererStack.gd`, `game/scripts/input/`, `game/scripts/player/DemoPlayerActionController.gd`, and `game/scripts/ui/DemoMovementControls.gd`
 - 15: `game/scripts/ui/FacingInspectionQuery.gd`, `ActorStatusSummaryQuery.gd`, and `CanonicalStatusHud.gd`; live wiring remains composition-only in `CanonicalDemoMain.gd`
 
+System 16 is **DRAFT only**. Proposed owners are `ActorStatsInspectorQuery.gd`, `ActorInventoryInspectorQuery.gd`, `CanonicalPlayerShell.gd`, plus bounded additions to the existing input/player-action integration. No System 16 production code may be implemented until explicit approval.
+
 The canonical modules remain separate from frozen `game/scripts/reboot/` reference code. As of System 14, `game/main.tscn` launches the canonical demo instead of Reboot.
 
 ## Current System 13 contract summary
@@ -100,17 +103,23 @@ System 15 adds the first real survival-status presentation to that same live bui
 - real derived moodlets;
 - no perception claim, no fake values, no frame polling.
 
+The duplicate pre-System-15 help line and second controls-owned tick/action label are vestigial and are being removed so the HUD is the sole action/tick status surface.
+
 Dedicated System 15 verification: `.github/workflows/canonical-hud.yml` and `game/scripts/ci/CanonicalHudSmoke.gd`. Hardened code head `fb19c7b86569c388dcb251b2b61210e745f3909a` passed run `31994628336`; the only earlier failure was an over-broad CI text match, not production behavior.
 
 ## Immediate path after HUD
 
-The next work should extend the live canonical demo rather than rebuild already-proven renderers or actor-state domains. Likely bounded additions, only when requested:
+System 16 is now the active **DRAFT** design. It proposes one integration slice that reuses already-real systems for:
 
-1. crouch/stand control plus `STATS`, `INVENTORY`, and `MENU`/hard-pause UI using already-real systems;
-2. demo items/loose-item presentation plus System 10 BACK/body/FRONT held-item composition and real 09/11/12 transfers;
-3. door interaction;
-4. camera/zoom only when world content expands beyond one screen;
-5. larger authored/generated world content behind the same canonical simulation/render contracts.
+1. timed Crouch/Stand through existing System 03;
+2. read-only `STATS` over real status/injury/skill/stance state;
+3. read-only `INVENTORY` over real Hands/Containment/Carry state;
+4. `MENU` plus modal hard-pause ownership and Resume/Leave Game;
+5. gameplay input blocking while modal UI is open.
+
+The next gate is explicit user approval or revision of `16_CANONICAL_PLAYER_SHELL.md`. Do not implement it while DRAFT.
+
+After System 16, likely bounded additions are demo items/loose-item presentation + System 10 held-item composition and real System 12 interaction UI, then door interaction.
 
 ## Other later modular systems
 - Container Access / Search / Open / Lock — NOT DESIGNED
@@ -128,7 +137,7 @@ The next work should extend the live canonical demo rather than rebuild already-
 - Infected AI, combat, vehicles — DEFERRED
 
 ## Requested future demo UI target
-The canonical demo now has phone/keyboard navigation plus real HUD/`Looking at:`/status. Remaining target UI includes `STATS`, `INVENTORY`, and `MENU` buttons, safe hard pause during inspection/menu, Resume + Leave Game, and no fabricated values.
+The canonical demo now has phone/keyboard navigation plus real HUD/`Looking at:`/status. System 16 DRAFT defines the remaining first-shell target: Crouch/Stand, `STATS`, `INVENTORY`, `MENU`, safe hard pause during modal inspection/menu, Resume + Leave Game, and no fabricated values.
 
 ## Design rule
 Every major system keeps a focused owner/public contract. If implementation unexpectedly requires crossing a forbidden boundary, return the design to review rather than cascading a patch.

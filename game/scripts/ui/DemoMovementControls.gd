@@ -3,34 +3,17 @@ class_name DemoMovementControls
 
 const Intents = preload("res://scripts/input/PlayerActionIntent.gd")
 
-## Touch-first demo controls and lightweight action feedback.
-## Emits semantic intent only; owns no simulation dependency.
+## Touch-first demo movement controls.
+## Emits semantic intent only; owns no simulation dependency or status presentation.
 
 signal action_intent(intent: StringName)
 
-var _status_label: Label = null
-
 func _ready() -> void:
     layer = 20
-    _build_labels()
+    _build_title()
     _build_buttons()
 
-func present_action_result(
-    intent: StringName,
-    success: bool,
-    reason: String,
-    world_tick: int
-) -> void:
-    if _status_label == null:
-        return
-    var action_label: String = Intents.label(intent)
-    if success:
-        _status_label.text = "Tick %d  •  %s" % [world_tick, action_label]
-    else:
-        var readable_reason: String = reason.replace("_", " ").capitalize()
-        _status_label.text = "Tick %d  •  %s — %s" % [world_tick, action_label, readable_reason]
-
-func _build_labels() -> void:
+func _build_title() -> void:
     var title := Label.new()
     title.text = "TICK SURVIVAL LAB — CANONICAL DEMO"
     title.position = Vector2(73, 18)
@@ -38,22 +21,6 @@ func _build_labels() -> void:
     title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
     title.add_theme_font_size_override("font_size", 18)
     add_child(title)
-
-    var help := Label.new()
-    help.text = "WASD / arrows or touch • turn-based movement"
-    help.position = Vector2(73, 578)
-    help.size = Vector2(494, 26)
-    help.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-    help.add_theme_font_size_override("font_size", 14)
-    add_child(help)
-
-    _status_label = Label.new()
-    _status_label.text = "Tick 0  •  Ready"
-    _status_label.position = Vector2(73, 604)
-    _status_label.size = Vector2(494, 28)
-    _status_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-    _status_label.add_theme_font_size_override("font_size", 16)
-    add_child(_status_label)
 
 func _build_buttons() -> void:
     _add_button("FORWARD", Vector2(255, 638), Vector2(130, 52), Intents.FORWARD)
