@@ -33,6 +33,7 @@ Major systems move through **NOT DESIGNED -> DRAFT -> APPROVED -> IMPLEMENTED** 
 | 09 | Actor Hand Equipment State | **IMPLEMENTED** | `09_ACTOR_HAND_EQUIPMENT_STATE.md` | Stable primary/right + secondary/left item assignments |
 | 10 | Actor Hand Equipment Presentation | **IMPLEMENTED** | `10_ACTOR_HAND_EQUIPMENT_PRESENTATION.md` | Recovered held art, facing rotation, BACK/body/FRONT seam |
 | 11 | Inventory / Containment | **IMPLEMENTED** | `11_INVENTORY_CONTAINMENT.md` | Stable direct containment, explicit containers, nested acyclic graph |
+| 12 | Item Transfer / Pickup / Drop / Equip Actions | **DRAFT** | `12_ITEM_TRANSFER_ACTIONS.md` | Direction approved; detailed timed cross-domain transition contract awaiting explicit approval |
 | 00D | Global World Planning / Generation Contract | **NOT DESIGNED** | `00D_GLOBAL_WORLD_GENERATION.md` | Global geography/roads/utilities/parcels before local detail |
 | 00E | Population / Household / Outbreak / Player Story | **NOT DESIGNED** | `00E_POPULATION_OUTBREAK_PLAYER_STORY.md` | Persistent people/homes/jobs/relationships and causal outbreak |
 | 00F | Streaming / Materialization | **NOT DESIGNED** | `00F_STREAMING_MATERIALIZATION.md` | Performance/storage over one logical world |
@@ -73,6 +74,8 @@ The canonical modules remain intentionally separate from frozen `game/scripts/re
 
 **11 Inventory / Containment** owns only direct persistent containment: `item_id -> direct_container_id`. Container capability is explicit typed enrollment. One item has at most one direct parent; nested item-containers are supported; self/ancestry cycles are rejected; direct-content versions plus global revision support stale transfer revalidation. Normal new containment requires an existing unplaced WHAT `item.*`. 11 does not import 09 and does not own pickup/drop/equip timing, capacity/encumbrance, stacking/quantity, item stats, rendering, or UI.
 
+**12 Item Transfer Actions is DRAFT only.** It proposes a read-only derived item-disposition query plus a timed coordinator over WHAT + 09 + 11 + WHEN. V1 is personal-survivor handling only: loose items at the actor/one-cell-forward reach, actor-root/nested/held personal containers, hands, and at-feet drops. Arbitrary cabinets/trunks/corpses remain deferred until real access/search/open/lock rules exist. Transfer costs are explicit policy data rather than invented defaults.
+
 **04 Art Catalog** owns semantic-to-art selection only. **05 Ground**, **06 Structure**, **07 Prop**, and **08 Living Actor** independently present focused WHAT layers.
 
 **10 Actor Hand Equipment Presentation** reads WHAT + 09 + 04 and renders held items through explicit BACK and FRONT passes around the actor body.
@@ -85,11 +88,11 @@ Completed prerequisites:
 2. **10 Actor Hand Equipment Presentation — IMPLEMENTED.**
 3. **11 Inventory / Containment — IMPLEMENTED.**
 
-Recommended next bounded design:
+Current design gate:
 
-4. **Item Transfer / Pickup / Drop / Equip Actions — NOT DESIGNED / NEXT.** It should coordinate WHAT + 09 + 11 + WHEN so one stable physical item cannot finish a gameplay transition simultaneously loose, contained, and hand-equipped.
+4. **12 Item Transfer / Pickup / Drop / Equip Actions — DRAFT, awaiting detailed approval.** It coordinates real timed physical movement among WHAT loose placement, 09 hands, and 11 personal containment without creating a fourth item-location store.
 
-Remaining honest-demo prerequisites after that:
+Remaining honest-demo prerequisites after 12:
 
 | System | Status | Notes |
 |---|---|---|
@@ -107,6 +110,7 @@ Remaining honest-demo prerequisites after that:
 
 | System | Status | Notes |
 |---|---|---|
+| Container Access / Search / Open / Lock | NOT DESIGNED | Extends 12 beyond personal containers to real world storage access |
 | Corpse / Decay / Contamination | NOT DESIGNED | Approved persistent corpse/contamination direction only |
 | Door interaction / physical transition | NOT DESIGNED | WHEN + Door State + Collision coordination |
 | Actor Appearance / character creator integration | NOT DESIGNED | Persistent visual identity |
