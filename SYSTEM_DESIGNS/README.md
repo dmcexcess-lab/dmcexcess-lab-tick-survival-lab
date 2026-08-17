@@ -28,6 +28,8 @@ The canonical simulation stack is **WHERE / WHAT / WHEN**, followed by focused p
 | 03 | Actor Locomotion State & Movement Capability | **IMPLEMENTED** | `03_ACTOR_LOCOMOTION_MOVEMENT_CAPABILITY.md` | Standing/crouched, timed stance, capability providers |
 | 04 | Recovered Multi-Atlas Art Catalog | **IMPLEMENTED** | `04_RECOVERED_MULTI_ATLAS_ART_CATALOG.md` | Golden semantic art descriptors/topology/asset gate |
 | 05 | Ground Layer Renderer | **IMPLEMENTED** | `05_GROUND_LAYER_RENDERER.md` | WHAT terrain -> Art Catalog -> visible-window CanvasItem ground drawing |
+| 06A | Door State | **DRAFT** | `06A_DOOR_STATE.md` | Explicit stable-ID OPEN/CLOSED state; prerequisite concept approved; detailed contract awaiting approval |
+| 06 | Structure Layer Renderer | **DRAFT / BLOCKED** | `06_STRUCTURE_LAYER_RENDERER.md` | Walls/doors/windows; implementation waits for 06A Door State implementation |
 | 00D | Global World Planning / Generation Contract | **NOT DESIGNED** | `00D_GLOBAL_WORLD_GENERATION.md` | Global geography/roads/utilities/parcels before local detail |
 | 00E | Population / Household / Outbreak / Player Story | **NOT DESIGNED** | `00E_POPULATION_OUTBREAK_PLAYER_STORY.md` | Persistent people/homes/jobs/relationships and causal outbreak |
 | 00F | Streaming / Materialization | **NOT DESIGNED** | `00F_STREAMING_MATERIALIZATION.md` | Performance/storage over one logical world |
@@ -73,6 +75,10 @@ The canonical modules remain intentionally separate from frozen `game/scripts/re
 
 **Ground Renderer** is the first actual canonical CanvasItem layer. It reads WHAT terrain, uses Art Catalog selections, draws only a supplied visible global-cell window, derives generic local road/dirt-road/sidewalk presentation topology from semantic neighboring terrain, and reacts only to view/world-reset/topology-relevant terrain invalidation. It does not own camera, road-network truth, generation, physics or other visual layers.
 
+**Door State 06A is currently DRAFT.** The prerequisite concept is settled: door openness is typed persistent state keyed by stable WHAT door IDs and must not be inferred from Collision, WHAT placement, or art. The detailed 06A contract still requires explicit user approval before implementation.
+
+**Structure Renderer 06 remains DRAFT/BLOCKED** until Door State is implemented, because correct open/closed door art requires authoritative state rather than a closed-by-default rendering shortcut.
+
 ## Why generation is not the foundation
 
 Generation is one producer of initial WHAT using WHERE. Construction/destruction/gameplay later mutate the same persistent world. Replacing generation must not require replacing spatial, timing, collision, movement, actor capability, art, rendering, controls, or save semantics.
@@ -83,7 +89,7 @@ Exact order is refined one approved design at a time.
 
 | System | Status | Notes |
 |---|---|---|
-| Structure Layer Renderer | NOT DESIGNED | **Recommended next discussion**; walls/doors/windows using WHERE structure cells + WHAT + Art Catalog |
+| Door interaction / physical transition | NOT DESIGNED | Future WHEN action coordinating Door State + Collision at commit; not part of 06A |
 | Prop/fixture/vegetation renderer | NOT DESIGNED | Whole-cell semantic props/orientation + Art Catalog |
 | Player/actor renderer | NOT DESIGNED | Four directional sprites initially; consumes WHAT/facing/stance + Art Catalog |
 | Authored visual test area | NOT DESIGNED | Proves recovered graphics without procedural generation |
