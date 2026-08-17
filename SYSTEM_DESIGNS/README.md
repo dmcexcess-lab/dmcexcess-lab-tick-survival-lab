@@ -18,6 +18,7 @@ Major systems move through **NOT DESIGNED -> DRAFT -> APPROVED -> IMPLEMENTED** 
 | 06A | Door State | **IMPLEMENTED** | `06A_DOOR_STATE.md` |
 | 06 | Structure Layer Renderer | **IMPLEMENTED** | `06_STRUCTURE_LAYER_RENDERER.md` |
 | 07 | Prop / Fixture / Vegetation Renderer | **IMPLEMENTED** | `07_PROP_FIXTURE_VEGETATION_RENDERER.md` |
+| 07A | Prop Art Orientation / Facing-Aware Rotation | **IMPLEMENTED** | `07A_PROP_ART_ORIENTATION.md` |
 | 08 | Player / Living Actor Renderer | **IMPLEMENTED** | `08_PLAYER_LIVING_ACTOR_RENDERER.md` |
 | 09 | Actor Hand Equipment State | **IMPLEMENTED** | `09_ACTOR_HAND_EQUIPMENT_STATE.md` |
 | 10 | Actor Hand Equipment Presentation | **IMPLEMENTED** | `10_ACTOR_HAND_EQUIPMENT_PRESENTATION.md` |
@@ -42,6 +43,17 @@ Major systems move through **NOT DESIGNED -> DRAFT -> APPROVED -> IMPLEMENTED** 
 | 00E | Population / Household / Outbreak / Player Story | **NOT DESIGNED** | `00E_POPULATION_OUTBREAK_PLAYER_STORY.md` |
 | 00F | Streaming / Materialization | **NOT DESIGNED** | `00F_STREAMING_MATERIALIZATION.md` |
 | old-01 | Raid-map / extraction physical-world model | **SUPERSEDED** | `01_RAID_MAP_DATA.md` |
+
+## Prop art orientation truth
+
+System 07A now consumes the N/E/S/W facing already preserved in WHAT object placement.
+
+- recovered indoor/furniture/retail/industrial prop art has presentation-only native-facing metadata;
+- current recovered directional groups are authored native SOUTH/down;
+- Prop Renderer rotates those sprites in 90-degree increments around the cell center to match WHAT facing;
+- sinks, shelves, beds, sofas, counters, appliances and similar furniture therefore face their semantic placement direction;
+- nondirectional art such as vegetation remains unrotated;
+- generator/world/collision truth is unchanged.
 
 ## System 19 current archetype library
 
@@ -81,7 +93,7 @@ The live caller is a fixed **15×15 one-screen** lot at **32 px/cell**. Camera r
 
 ## Immediate next path
 
-1. User critiques Farmhouse Candidate 001.
+1. User critiques Farmhouse Candidate 001, now with facing-aware furniture presentation.
 2. Convert useful critique into farmhouse archetype rules.
 3. Keep accepted Trailer v2 unchanged.
 4. Add further building archetypes under System 19.
@@ -94,8 +106,13 @@ Farmhouse Candidate 001 first green code candidate:
 - SHA `65a951bc1d38c055c17cbcfcd496a59cb30727c9`;
 - Local Building Generation run `32007785922`: SUCCESS.
 
-Exact documentation-promotion SHA must pass the dedicated System 19 contract plus Pages before completion is claimed.
+System 07A first green code candidate:
+
+- SHA `6a41dd24a2fa0a594c14ef83ea2ba1015b333124`;
+- Prop Fixture Vegetation Renderer run `32008973352`: SUCCESS.
+
+Exact documentation-promotion SHA must pass the dedicated Prop/07A contract, System 19 contract and Pages before completion is claimed.
 
 ## Design rule
 
-Every major system keeps a focused owner/public contract. System 19 shared validation is structural/generic; archetype-specific room programs belong to focused archetype owners/tests. If implementation unexpectedly requires crossing a forbidden boundary, return the design to review rather than cascading a patch.
+Every major system keeps a focused owner/public contract. System 19 shared validation is structural/generic; archetype-specific room programs belong to focused archetype owners/tests. Art-native orientation metadata is presentation truth only; generator/world facing remains semantic world truth. If implementation unexpectedly requires crossing a forbidden boundary, return the design to review rather than cascading a patch.

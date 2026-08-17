@@ -23,6 +23,7 @@ Implemented + dedicated validation includes:
 - WHERE / WHAT / WHEN foundation;
 - Collision / Movement / Locomotion;
 - recovered Art + Ground/Structure/Prop/Living Actor/Hand renderers;
+- **System 07A facing-aware Prop Art Orientation**;
 - Door State + System 18 automatic/manual door interaction;
 - Hands / Inventory / Item Transfer;
 - Health / Needs / Skills / Item Weight / Carry / Moodlets;
@@ -43,7 +44,29 @@ One authoritative persistent current world with stable IDs, semantic types/terra
 ### WHEN
 One deterministic integer world tick, variable-duration actions/events, same-tick draining, COMMITTED/RESUMABLE/CANCELABLE policies, tactical decision pause plus separate hard application pause.
 
-## 4. Movement / fatigue / carry truth
+## 4. Prop art orientation truth — System 07A
+
+Design: `SYSTEM_DESIGNS/07A_PROP_ART_ORIENTATION.md`
+
+WHAT placement facing remains authoritative. Generation/world state continue to store semantic N/E/S/W orientation with no art-specific values.
+
+Presentation now additionally knows the native facing of recovered directional prop art:
+
+- recovered indoor/furniture/retail/industrial one-cell art is authored native SOUTH/down;
+- Prop Renderer computes 0/1/2/3 quarter turns from native facing to WHAT facing;
+- rotation occurs around the center of the existing one-cell draw destination;
+- sinks, shelves, sofas, beds, counters, appliances and similar furniture now visually face their semantic direction;
+- vegetation/outdoor nondirectional art remains unrotated;
+- no generator geometry, collision, interaction, item or persistent-state rule changed.
+
+Current native-SOUTH coverage:
+
+- final props atlas cells 64–127;
+- building props 0–19;
+- directional clutter 0–6 and 18;
+- tactical indoor fixtures 37–47.
+
+## 5. Movement / fatigue / carry truth
 
 - Walk Forward/Back: one cell, damage-CANCELABLE.
 - Run Forward: two physical strides, COMMITTED.
@@ -57,7 +80,7 @@ One deterministic integer world tick, variable-duration actions/events, same-tic
 - normal acquisition hard ceiling is 2× soft capacity, 36 kg by default.
 - known hard Run blockers cause attempted-stride exertion + 5 HP impact unless a passage resolver resolves them first.
 
-## 5. Door Interaction truth
+## 6. Door Interaction truth
 
 Design: `SYSTEM_DESIGNS/18_DOOR_INTERACTION_PASSAGE.md`
 
@@ -71,7 +94,7 @@ Design: `SYSTEM_DESIGNS/18_DOOR_INTERACTION_PASSAGE.md`
 - future right-click/long-touch interaction menu remains reserved.
 - future special 180° turn fatigue remains deferred to Locomotion.
 
-## 6. System 19 truth
+## 7. System 19 truth
 
 Design: `SYSTEM_DESIGNS/19_LOCAL_BUILDING_GENERATION_ARCHETYPE_LAB.md`
 
@@ -117,9 +140,9 @@ Approved exact program:
 - restrained living/kitchen/bedroom/bath furniture;
 - deterministic rotation and one-cell circulation to every room.
 
-## 7. Live canonical demo
+## 8. Live canonical demo
 
-The current live target is **Farmhouse Candidate 001**.
+The current live target is **Farmhouse Candidate 001**, now presented with System 07A facing-aware furniture rotation.
 
 - fixed **15×15** one-screen critique lot;
 - **32 px/cell** presentation so camera remains deferred;
@@ -136,34 +159,41 @@ Touch: Forward/Back/Turn L/Turn R/Crouch-Stand/Run plus short world tap for elig
 
 Web Leave Game goes directly to Google.
 
-## 8. Physical items
+## 9. Physical items
 
 The live critique lot still has no loose demo items. Canonical ownership remains WHAT loose placement -> 09 hands -> 11 containment -> 12 timed transfer -> 13D weight -> 13E carry/capacity policy. System 10 held-item presentation and item-interaction composition remain future work.
 
-## 9. Verification routing
+System 07A rotates world OBJECT presentation only; it does not change held-item orientation or inventory semantics.
+
+## 10. Verification routing
 
 Farmhouse Candidate 001 first green code candidate:
 
 - SHA `65a951bc1d38c055c17cbcfcd496a59cb30727c9`;
 - Local Building Generation run `32007785922`: SUCCESS.
 
-That run passed Godot parse, protected foundation/art/door regressions, preserved Trailer v2 contract assertions, exact farmhouse room-size/door/window/rotation checks, collision/art coverage, generated front-door traversal, renderer diagnostics and actual canonical startup.
+System 07A first green code candidate:
 
-Exact documentation-promotion SHA must pass the same System 19 contract plus Web/Pages before completion is claimed.
+- SHA `6a41dd24a2fa0a594c14ef83ea2ba1015b333124`;
+- Prop Fixture Vegetation Renderer run `32008973352`: SUCCESS.
 
-## 10. Immediate next path
+That 07A run passed source boundaries, Godot parse, Art/Ground/Structure regressions, dedicated orientation assertions, and the existing Prop renderer regression.
 
-1. User playtests/critiques **Farmhouse Candidate 001**.
+Exact documentation-promotion SHA must pass Prop/07A, System 19 and Web/Pages before completion is claimed.
+
+## 11. Immediate next path
+
+1. User playtests/critiques **Farmhouse Candidate 001** with correctly oriented furniture.
 2. Convert critique into reusable farmhouse archetype rules if needed.
 3. Keep accepted Trailer v2 unchanged.
 4. Add another building archetype under System 19 after farmhouse refinement.
 5. Add camera/larger local play space once multiple simultaneous properties create an actual need beyond one screen.
 
-## 11. Later systems
+## 12. Later systems
 
 Container access/search/locks, corpse/decay/contamination, actor appearance/creator, richer item quantity/condition/bulk, first aid/sickness, eating/drinking/rest/sleep progression, global world generation/streaming, construction, perception/lighting/weather/spatial sound, infected AI/combat/vehicles, item interaction composition and camera/zoom remain future work unless newer direction pulls them forward.
 
-## 12. Invariants
+## 13. Invariants
 
 1. Main/root is composition only.
 2. Focused owners/public contracts; no god state.
@@ -180,8 +210,9 @@ Container access/search/locks, corpse/decay/contamination, actor appearance/crea
 13. Once generated/materialized, WHAT/Door State own later mutations.
 14. Intentional same-seed archetype-rule changes bump that archetype version.
 15. Shared building validation remains structural/generic; archetype program rules stay with focused archetype contracts/tests.
+16. Directional prop facing is WHAT truth; native sprite facing/rotation policy is presentation truth only.
 
-## 13. Documentation source order
+## 14. Documentation source order
 
 1. newest explicit user instruction;
 2. `PROJECT_NORTH_STAR.md`;
