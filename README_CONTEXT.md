@@ -43,6 +43,7 @@ Canonical progress:
 - **06A Door State — IMPLEMENTED + CI**
 - **06 Structure Layer Renderer — IMPLEMENTED + CI**
 - **07 Prop / Fixture / Vegetation Renderer — IMPLEMENTED + CI**
+- **08 Player / Living Actor Renderer — DRAFT; active design review**
 
 ## 3. Foundation and simulation truth
 
@@ -65,6 +66,10 @@ Collision owns hard occupancy, not door state. Movement owns forward/back/turn t
 ### Door State
 
 06A owns persistent OPEN/CLOSED truth keyed by stable WHAT door ID. Missing state is UNKNOWN. Door State does not infer from or mutate Collision/WHEN.
+
+### Approved corpse direction
+
+Corpses are persistent post-death world consequences, not living ACTOR render entries. Future Corpse / Decay / Contamination design should preserve the deceased identity relationship, corpse age/decay, and a simplified accumulated contamination/filth pressure that can create health/sickness consequences when bodies accumulate or remain too long. Exact representation, formula, disposal actions, and corpse channel are not yet designed.
 
 ## 4. Canonical presentation
 
@@ -107,6 +112,26 @@ Locked rules:
 
 Initial implementation head `5c2df6439678abaf8c9a031f5b6ed7bb8fb68a86` passed dedicated run `31983182247` with Art Catalog + Ground + Structure regressions and no production repair.
 
+### 08 Player / Living Actor Renderer — ACTIVE DRAFT
+
+Canonical draft: `SYSTEM_DESIGNS/08_PLAYER_LIVING_ACTOR_RENDERER.md`.
+
+Settled boundary:
+
+- renders living WHAT `ACTOR` entities only;
+- includes the controlled survivor, non-player survivors/humans, and infected;
+- controlled-player role is a stable-ID presentation/session role rather than a permanent `actor.player` world type;
+- corpses are excluded and belong to the future Corpse / Decay / Contamination system.
+
+Recovery discovery:
+
+- protected Tick art already contains one real four-facing survivor variant;
+- current same-owner First Fire tactical art contains 8 survivor variants × 4 facings and 8 infected variants × 4 facings, plus separate corpse/weapon art;
+- 08 proposes extracting living actor art into a new narrow actor atlas without modifying protected Tick assets;
+- corpse art remains reserved for the future corpse renderer/mechanic.
+
+Still awaiting explicit approval with the detailed 08 draft: additive Art Catalog actor resolver, deterministic stable-ID default non-player variant selection, exact actor draw geometry, and the rule that 08 does not fake crouch art before authored stance visuals exist.
+
 ## 5. Graphics recovery status
 
 Canonical graphics now include:
@@ -116,9 +141,9 @@ Canonical graphics now include:
 3. actual wall/door/window Structure drawing with persistent Door State;
 4. actual Prop/Fixture/Vegetation drawing from persistent OBJECT entities.
 
-Visible full-scene recovery is still incomplete because Player/Actor, composition/test-area, and camera systems do not yet all exist canonically.
+Living Actor rendering is now the active draft. Visible full-scene recovery remains incomplete until Actor plus composition/test-area and camera systems exist canonically.
 
-The deployed Web page still intentionally runs the frozen reboot reference. Do not claim it demonstrates canonical 05/06/07 until the new presentation stack has an approved composition path.
+The deployed Web page still intentionally runs the frozen reboot reference. Do not claim it demonstrates canonical 05/06/07/08 until the new presentation stack has an approved composition path.
 
 ## 6. Open-world/generation direction
 
@@ -155,6 +180,7 @@ Key rules:
 15. Camera/viewport owns visible-window calculation; focused renderers only consume it.
 16. Door State owns door OPEN/CLOSED truth; Collision owns blocking truth; neither infers the other.
 17. Physical WHAT footprints/facing remain world truth; presentation-specific large-object geometry/orientation must be explicit rather than inferred from physics.
+18. Living ACTOR rendering and corpse persistence/decay are separate concerns; death must not be represented by leaving a dead body as an ordinary living ACTOR.
 
 ## 8. Documentation source order
 
@@ -170,10 +196,10 @@ Key rules:
 10. compatible master-design material;
 11. golden history for recovered behavior.
 
-## 9. Recommended next bounded design
+## 9. Recommended next bounded step
 
-**Player / Actor Renderer** is the recommended next presentation discussion.
+**Review/approve `08_PLAYER_LIVING_ACTOR_RENDERER.md`.**
 
-Why next: Ground, Structure, and Prop now establish the non-actor world layers. Player/Actor can consume WHAT ACTOR placement/facing, current Actor Locomotion stance where relevant, and the recovered four-direction player art without pulling in camera/input/AI/perception or tactical orchestration.
+The draft covers player + non-player survivors + infected using real recovered same-owner art while keeping AI, combat, health, inventory, corpses, camera/input, and tactical composition outside the renderer.
 
-Keep Authored Visual Test Area, Tactical composition, camera/zoom, touch/keyboard/Safari input, loose-item rendering, vehicles, stateful prop variants, and Door Interaction as separate approved systems.
+Keep Corpse / Decay / Contamination, Authored Visual Test Area, Tactical composition, camera/zoom, touch/keyboard/Safari input, loose-item rendering, vehicles, stateful prop variants, and Door Interaction as separate approved systems.
