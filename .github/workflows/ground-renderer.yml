@@ -1,0 +1,74 @@
+name: Ground Layer Renderer contract
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ground-layer-renderer-contract
+  cancel-in-progress: true
+
+jobs:
+  ground-renderer:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate ground renderer source boundary
+        shell: bash
+        run: |
+          set -euxo pipefail
+          test -f SYSTEM_DESIGNS/05_GROUND_LAYER_RENDERER.md
+          test -f game/scripts/render/GroundDrawCommand.gd
+          test -f game/scripts/render/GroundLayerRenderer.gd
+          test -f game/scripts/ci/GroundLayerRendererSmoke.gd
+          grep -q 'class_name GroundDrawCommand' game/scripts/render/GroundDrawCommand.gd
+          grep -q 'class_name GroundLayerRenderer' game/scripts/render/GroundLayerRenderer.gd
+          grep -q 'plan_visible_commands' game/scripts/render/GroundLayerRenderer.gd
+          grep -q 'draw_texture_rect_region' game/scripts/render/GroundLayerRenderer.gd
+          ! grep -R -q 'scripts/reboot' game/scripts/render/Ground*.gd
+          ! grep -R -q 'scripts/generation' game/scripts/render/Ground*.gd
+          ! grep -R -q 'scripts/simulation' game/scripts/render/Ground*.gd
+          ! grep -R -q 'scripts/foundation/time' game/scripts/render/Ground*.gd
+          ! grep -R -q 'scripts/camera' game/scripts/render/Ground*.gd
+          ! grep -R -q 'scripts/input' game/scripts/render/Ground*.gd
+          ! grep -R -q 'scripts/ui' game/scripts/render/Ground*.gd
+          ! grep -R -q 'scripts/perception' game/scripts/render/Ground*.gd
+          ! grep -R -q '_process' game/scripts/render/GroundLayerRenderer.gd
+          ! grep -E -q 'tactical_atlas|clutter_atlas|world_art_atlas|building_props_atlas|final_environment' game/scripts/render/Ground*.gd
+
+      - name: Install Godot 4.7.1
+        shell: bash
+        run: |
+          set -euxo pipefail
+          curl -L -o godot.zip https://github.com/godotengine/godot-builds/releases/download/4.7.1-stable/Godot_v4.7.1-stable_linux.x86_64.zip
+          unzip -q godot.zip
+          chmod +x Godot_v4.7.1-stable_linux.x86_64
+
+      - name: Import and parse project
+        shell: bash
+        run: |
+          set -euxo pipefail
+          ./Godot_v4.7.1-stable_linux.x86_64 --headless --editor --path "$GITHUB_WORKSPACE/game" --quit 2>&1 | tee "$RUNNER_TEMP/import.log"
+          if grep -Eqi 'SCRIPT ERROR|Parse Error|Failed to load script' "$RUNNER_TEMP/import.log"; then exit 1; fi
+
+      - name: Recovered art catalog regression smoke
+        shell: bash
+        run: |
+          set -euxo pipefail
+          ./Godot_v4.7.1-stable_linux.x86_64 --headless --path "$GITHUB_WORKSPACE/game" --script res://scripts/ci/ArtCatalogSmoke.gd 2>&1 | tee "$RUNNER_TEMP/art-catalog-smoke.log"
+          grep -q 'ART_CATALOG_SMOKE_OK' "$RUNNER_TEMP/art-catalog-smoke.log"
+          if grep -Eqi 'SCRIPT ERROR|Parse Error|Failed to load script' "$RUNNER_TEMP/art-catalog-smoke.log"; then exit 1; fi
+
+      - name: Ground layer renderer contract smoke
+        shell: bash
+        run: |
+          set -euxo pipefail
+          ./Godot_v4.7.1-stable_linux.x86_64 --headless --path "$GITHUB_WORKSPACE/game" --script res://scripts/ci/GroundLayerRendererSmoke.gd 2>&1 | tee "$RUNNER_TEMP/ground-renderer-smoke.log"
+          grep -q 'GROUND_LAYER_RENDERER_SMOKE_OK' "$RUNNER_TEMP/ground-renderer-smoke.log"
+          if grep -Eqi 'SCRIPT ERROR|Parse Error|Failed to load script' "$RUNNER_TEMP/ground-renderer-smoke.log"; then exit 1; fi
