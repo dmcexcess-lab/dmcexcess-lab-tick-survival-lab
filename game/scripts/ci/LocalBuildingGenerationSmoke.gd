@@ -87,24 +87,33 @@ func _test_large_farmhouse_generation(generator: LocalBuildingGenerator, validat
     var plan_a: GeneratedBuildingPlan = generator.generate(request)
     var plan_b: GeneratedBuildingPlan = generator.generate(request)
     _check(plan_a.is_generated() and plan_a.signature() == plan_b.signature(), "large farmhouse is deterministic")
-    _check(plan_a.archetype_version == 2, "large farmhouse compact critique bumps to version 2")
+    _check(plan_a.archetype_version == 3, "large farmhouse kitchen-flow critique bumps to version 3")
     _check(bool(validator.validate(plan_a).get("ok", false)), "large farmhouse north plan validates")
-    _check(plan_a.footprint_rect == Rect2i(60, 70, 21, 9), "large farmhouse compacts to 21x9")
-    _check(_room_cell_count(plan_a, "living_room") == 30, "large farmhouse living room is separate 10x3")
-    _check(_room_cell_count(plan_a, "kitchen") == 24, "large farmhouse kitchen is separate 8x3")
+    _check(plan_a.footprint_rect == Rect2i(60, 70, 21, 9), "large farmhouse remains compact 21x9")
+    _check(_room_cell_count(plan_a, "living_room") == 30, "large farmhouse living room remains separate 10x3")
+    _check(_room_cell_count(plan_a, "kitchen") == 24, "large farmhouse kitchen remains separate 8x3")
     for purpose: String in ["bedroom_1", "bathroom_1", "bedroom_2", "bathroom_2", "bedroom_3"]:
-        _check(_room_cell_count(plan_a, purpose) == 9, "%s is compact 3x3" % purpose)
-    _check(_room_cell_count(plan_a, "hall") == 0 and _room_cell_count(plan_a, "corridor") == 0, "large farmhouse has no dedicated hallway room")
-    _check(_structure_kind_count(plan_a, "door") == 8, "large farmhouse has two exterior plus six interior doors")
-    _check(_structure_kind_count(plan_a, "window") == 11, "large farmhouse uses eleven windows")
+        _check(_room_cell_count(plan_a, purpose) == 9, "%s remains compact 3x3" % purpose)
+    _check(_room_cell_count(plan_a, "hall") == 0 and _room_cell_count(plan_a, "corridor") == 0, "large farmhouse still has no dedicated hallway room")
+    _check(_structure_kind_count(plan_a, "door") == 7, "large farmhouse now has two exterior plus five private-room doors")
+    _check(_structure_kind_count(plan_a, "window") == 11, "large farmhouse keeps eleven windows")
     _check(_all_exterior_walls_are(plan_a, &"wall.plaster"), "large farmhouse uses plaster exterior walls")
     _check(_role_cell(plan_a, "door.exterior.primary") == Vector2i(65, 70), "large farmhouse front door opens directly into living room")
-    _check(_role_cell(plan_a, "door.interior.living_kitchen") == Vector2i(71, 72), "living and kitchen remain truly separated by a wall and door")
+    _check(_role_cell(plan_a, "door.interior.living_kitchen") == Vector2i(-1, -1), "living/kitchen divider no longer owns a door")
+    _check(_structure_kind_at(plan_a, Vector2i(71, 72)) == "wall", "former living/kitchen door cell is solid wall")
+    _check(not _has_structure_at(plan_a, Vector2i(71, 73)), "lower living/kitchen divider cell is completely open")
     _check(_role_cell(plan_a, "door.interior.bedroom_1") == Vector2i(62, 74), "bedroom 1 opens directly from living room")
     _check(_role_cell(plan_a, "door.interior.bathroom_1") == Vector2i(66, 74), "bathroom 1 opens directly from living room")
     _check(_role_cell(plan_a, "door.interior.bedroom_2") == Vector2i(70, 74), "bedroom 2 opens directly from living room")
     _check(_role_cell(plan_a, "door.interior.bathroom_2") == Vector2i(74, 74), "bathroom 2 opens directly from kitchen")
     _check(_role_cell(plan_a, "door.interior.bedroom_3") == Vector2i(78, 74), "bedroom 3 opens directly from kitchen")
+    for x in range(72, 80):
+        var runner_cell := Vector2i(x, 73)
+        _check(_ground_semantic_at(plan_a, runner_cell) == &"ground.laminate_light", "kitchen bottom row becomes wood runner at %s" % str(runner_cell))
+        _check(not _has_prop_at(plan_a, runner_cell), "kitchen wood runner stays clutter-free at %s" % str(runner_cell))
+    _check(_prop_role_cell(plan_a, "prop.kitchen.sink") == Vector2i(74, 71), "kitchen sink moves onto same north wall as fridge")
+    _check(_prop_role_cell(plan_a, "prop.kitchen.table") == Vector2i(78, 72), "breakfast table sits near east wall without blocking runner")
+    _check(_prop_semantic_for_role(plan_a, "prop.kitchen.table") == &"prop.breakfast_table", "kitchen table uses real breakfast-table art semantic")
     var east_request := RequestClass.new("building.test.farmhouse.large.east", LargeFarmhouseClass.ARCHETYPE_ID, 19003, Rect2i(100, 110, 9, 21), Facing.Value.EAST, Facing.Value.EAST)
     var east_plan: GeneratedBuildingPlan = generator.generate(east_request)
     _check(east_plan.is_generated() and east_plan.footprint_rect.size == Vector2i(9, 21), "compact large farmhouse rotates to 9x21")
@@ -132,7 +141,7 @@ func _test_large_farmhouse_fixture() -> void:
     var doors := DoorStateClass.new()
     var door_mutations := DoorMutationClass.new(doors, world)
     _check(LargeFixtureClass.build(world, mutations, collision_catalog, traversal, doors, door_mutations), "large farmhouse critique fixture materializes")
-    _verify_fixture(world, mutations, collision_catalog, collision_overrides, traversal, doors, door_mutations, LargeFixtureClass.PLAYER_ID, LargeFixtureClass.EXTERIOR_DOOR_ID, LargeFixtureClass.MAP_ORIGIN, LargeFixtureClass.MAP_SIZE, LargeFixtureClass.CELL_PIXELS, 8, Vector2i(6, 1), "large farmhouse")
+    _verify_fixture(world, mutations, collision_catalog, collision_overrides, traversal, doors, door_mutations, LargeFixtureClass.PLAYER_ID, LargeFixtureClass.EXTERIOR_DOOR_ID, LargeFixtureClass.MAP_ORIGIN, LargeFixtureClass.MAP_SIZE, LargeFixtureClass.CELL_PIXELS, 7, Vector2i(6, 1), "large farmhouse")
 
 func _verify_fixture(world: WorldState, mutations: WorldMutationService, collision_catalog: CollisionCatalog, collision_overrides: CollisionOverrideState, traversal: MovementTraversalPolicy, doors: DoorStateStore, door_mutations: DoorStateMutationService, player_id: String, exterior_door_id: String, map_origin: Vector2i, map_size: Vector2i, cell_pixels: float, expected_door_count: int, expected_entry_cell: Vector2i, label: String) -> void:
     _check(world.has_entity(exterior_door_id), "%s stable exterior door exists" % label)
@@ -205,6 +214,41 @@ func _role_cell(plan: GeneratedBuildingPlan, role: String) -> Vector2i:
         if String(structure.get("role", "")) == role:
             return structure.get("cell", Vector2i(-1, -1))
     return Vector2i(-1, -1)
+
+func _structure_kind_at(plan: GeneratedBuildingPlan, cell: Vector2i) -> String:
+    for structure: Dictionary in plan.structures:
+        if structure.get("cell", Vector2i(-1, -1)) == cell:
+            return String(structure.get("kind", ""))
+    return ""
+
+func _has_structure_at(plan: GeneratedBuildingPlan, cell: Vector2i) -> bool:
+    return not _structure_kind_at(plan, cell).is_empty()
+
+func _ground_semantic_at(plan: GeneratedBuildingPlan, cell: Vector2i) -> StringName:
+    for entry: Dictionary in plan.ground_entries:
+        if entry.get("cell", Vector2i(-1, -1)) == cell:
+            var semantic: StringName = entry.get("semantic", &"")
+            return semantic
+    return &""
+
+func _has_prop_at(plan: GeneratedBuildingPlan, cell: Vector2i) -> bool:
+    for prop: Dictionary in plan.props:
+        if prop.get("cell", Vector2i(-1, -1)) == cell:
+            return true
+    return false
+
+func _prop_role_cell(plan: GeneratedBuildingPlan, role: String) -> Vector2i:
+    for prop: Dictionary in plan.props:
+        if String(prop.get("role", "")) == role:
+            return prop.get("cell", Vector2i(-1, -1))
+    return Vector2i(-1, -1)
+
+func _prop_semantic_for_role(plan: GeneratedBuildingPlan, role: String) -> StringName:
+    for prop: Dictionary in plan.props:
+        if String(prop.get("role", "")) == role:
+            var semantic: StringName = prop.get("semantic", &"")
+            return semantic
+    return &""
 
 func _check(condition: bool, message: String) -> void:
     if not condition:

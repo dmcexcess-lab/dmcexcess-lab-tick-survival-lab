@@ -1,6 +1,6 @@
 # Tick Survival Lab — System 19 Local Building Generation / Archetype Critique Lab
 
-Status: **IMPLEMENTED — shared local-building contract with accepted Trailer v2, accepted Small Farmhouse v2, and Large Farmhouse Candidate 002**
+Status: **IMPLEMENTED — shared local-building contract with accepted Trailer v2, accepted Small Farmhouse v2, and Large Farmhouse Candidate 003**
 
 Date: 2026-08-16; farmhouse archetype work current through 2026-08-17.
 
@@ -102,41 +102,48 @@ Canonical program:
 
 This is a protected accepted baseline.
 
-## 7. Large Farmhouse Candidate 002 — current
+## 7. Large Farmhouse Candidate 003 — current
 
 Archetype: `residential.house.farm_large`
 
-Version: **2**.
+Version: **3**.
 
-Original request required 3 bedrooms, 2 bathrooms, separate living room and kitchen, with non-square shape as a bonus.
+Original requirement remains 3 bedrooms, 2 bathrooms, separate living room and kitchen, with compactness taking precedence over decorative irregularity.
 
-### 7.1 Rejected Candidate 001
+### 7.1 Historical critique path
 
-Candidate 001 used a 25×20 L-shaped footprint with large rooms and a dedicated central hall. On 2026-08-17 the user rejected it:
+Candidate 001 used a 25×20 L-shaped footprint with large rooms and a central hall and was rejected as too large/hallway-heavy.
 
-> “Too big. Too many hallways. Try again. Look how compact mine are”
+Candidate 002 established the accepted direction for density:
 
-That critique supersedes Candidate 001 geometry. Its L-shape demonstrated irregular support but is not an accepted large-house rule.
+- 21×9 shell;
+- 10×3 living room;
+- 8×3 kitchen;
+- three 3×3 bedrooms;
+- two 3×3 bathrooms;
+- no hall/corridor room;
+- all private rooms directly behind common rooms.
 
-### 7.2 Candidate 002 compactness rule
+Candidate 003 preserves that compact shell and room program while revising living/kitchen circulation and kitchen dressing.
 
-Candidate 002 deliberately mirrors the accepted small farmhouse's density:
+### 7.2 Living/kitchen divider
 
-- **21×9 shell**, exactly the same depth as the accepted small farmhouse;
-- size increase comes primarily from width and room count, not inflated room dimensions;
-- **zero dedicated hall/corridor room cells**;
-- the primary front door enters the living room directly;
-- common rooms perform normal household circulation rather than spending cells on hallway-only space.
+The former `door.interior.living_kitchen` is removed.
 
-The earlier irregular-shape bonus is deprioritized here because compactness is the stronger explicit critique. The 21×9 footprint remains non-square without adding gratuitous geometry.
+Canonical NORTH divider behavior:
+
+- local `(11,1)` remains `wall.interior`;
+- local `(11,2)` — formerly the living/kitchen door — is now `wall.interior`;
+- local `(11,3)` has **no structure at all**, creating a doorless lower passage between living and kitchen.
+
+The rooms remain separate room-purpose regions and are visually/physically divided across the upper two rows, but ordinary circulation uses the open south/lower passage instead of a closable interior door.
 
 ### 7.3 Room program
 
 Front common band:
 
 - `living_room`: **10×3 / 30 cells**;
-- `kitchen`: **8×3 / 24 cells**;
-- a real vertical partition separates them, with `door.interior.living_kitchen` connecting them.
+- `kitchen`: **8×3 / 24 cells**.
 
 Rear private band immediately behind one horizontal partition:
 
@@ -146,41 +153,43 @@ Rear private band immediately behind one horizontal partition:
 - `bathroom_2`: **3×3 / 9 cells**;
 - `bedroom_3`: **3×3 / 9 cells**.
 
-All five private rooms open directly into living/kitchen through the single partition row. No private room must be traversed to reach another.
+All five private rooms continue to open directly into living/kitchen through the single partition row. No private room is used as circulation to another.
 
-### 7.4 Doors / windows
+### 7.4 Kitchen floor / runner
 
-Candidate 002 uses:
+Kitchen rows local y=1 and y=2 remain `ground.linoleum_yellow`.
 
-- 2 exterior doors — primary living-room front door + kitchen side door;
-- 1 living/kitchen interior door;
-- 5 direct private-room doors;
-- **8 total doors**;
+The complete kitchen bottom row, local x=12..19 at y=3, becomes `ground.laminate_light`.
+
+That row is a deliberate wood-floor circulation runner connecting the lower living/kitchen passage to the east side of the kitchen. **No generated prop may occupy any of those eight runner cells.**
+
+### 7.5 Kitchen furniture
+
+Candidate 003 reuses existing art/collision semantics only:
+
+- stove at local `(12,1)`, facing SOUTH;
+- refrigerator at `(13,1)`, facing SOUTH;
+- sink moved from `(19,3)` to `(14,1)`, facing SOUTH, so all three primary appliances share the north wall;
+- `prop.breakfast_table` added at `(18,2)`, near the east exterior wall but one cell clear of the exterior-door approach and off the wood runner.
+
+No renderer-specific transform or atlas knowledge enters the generator. System 07A remains responsible for presentation rotation where appropriate.
+
+### 7.6 Doors / windows
+
+Candidate 003 uses:
+
+- 2 exterior doors — primary living-room front + kitchen east-side exterior;
+- 5 private-room interior doors;
+- **7 total doors**;
 - **11 windows**.
+
+There is no living/kitchen interior door in v3.
 
 Generated doors begin CLOSED; System 18 owns runtime state.
 
-### 7.5 Floors / furniture
+### 7.7 Rotation
 
-Floors:
-
-- living/common structural gaps: `ground.laminate_light`;
-- kitchen: `ground.linoleum_yellow`;
-- bathrooms: `ground.tile_white`;
-- bedrooms: beige/blue carpet with deterministic seed variation.
-
-Furniture reuses existing supported semantic vocabulary:
-
-- living: sofa, armchair, coffee table;
-- kitchen: stove, refrigerator, sink;
-- each bedroom: double bed + dresser;
-- each bathroom: toilet, vanity, clawfoot tub.
-
-Furniture preserves a one-cell route from the exterior entry through the living/kitchen and into all five private-room doors.
-
-### 7.6 Rotation
-
-Canonical NORTH size 21×9 rotates to 9×21 for EAST/WEST. Structures, axes and prop facings use the same deterministic helpers as other System 19 archetypes.
+Canonical NORTH size 21×9 rotates to 9×21 for EAST/WEST. Structures, open passage geometry, floor runner and prop facings rotate through the same deterministic helpers as other System 19 archetypes.
 
 ## 8. Critique fixtures / live demo
 
@@ -192,7 +201,7 @@ Canonical NORTH size 21×9 rotates to 9×21 for EAST/WEST. Structures, axes and 
 
 `FarmhouseCritiqueFixture.gd` remains the large-house critique caller.
 
-Candidate 002 configuration:
+Candidate 003 configuration:
 
 - **23×11** critique lot;
 - **23 px/cell** presentation;
@@ -201,7 +210,8 @@ Candidate 002 configuration:
 - seed `19003`;
 - NORTH orientation/frontage;
 - player `(6,0)` facing SOUTH toward the primary door;
-- no NPCs/infected/loot.
+- no NPCs/infected/loot;
+- collision catalog includes existing `prop.breakfast_table` for the new blocking kitchen table.
 
 Canonical WHERE remains 1m/cell. No camera subsystem is introduced for this critique.
 
@@ -212,25 +222,30 @@ Canonical WHERE remains 1m/cell. No camera subsystem is introduced for this crit
 1. accepted Trailer v2 is unchanged;
 2. accepted Small Farmhouse v2 remains unchanged and rotationally valid;
 3. registry exposes trailer + small farmhouse + large farmhouse;
-4. Large Farmhouse v2 is deterministic;
-5. large NORTH footprint is exactly 21×9;
-6. living is exactly 10×3 and kitchen exactly 8×3;
-7. all three bedrooms and both bathrooms are exactly 3×3;
+4. Large Farmhouse v3 is deterministic;
+5. large NORTH footprint remains exactly 21×9;
+6. living remains 10×3 and kitchen remains 8×3;
+7. all three bedrooms and both bathrooms remain exactly 3×3;
 8. no hall/corridor room-purpose record exists;
-9. living and kitchen remain physically separate through real partition geometry + door;
-10. all five private doors occupy the single partition row and open directly from living/kitchen;
-11. large house has exactly 8 doors and 11 windows;
-12. shared validator reaches every declared room from the primary door;
-13. EAST rotation yields valid 9×21 geometry;
-14. undersized large envelopes fail explicitly;
-15. saved-small and live-large fixtures materialize into WHAT + CLOSED Door State;
-16. all generated blockers have Collision coverage;
-17. all generated ground/structure/prop semantics resolve through Art Catalog;
-18. System 18 can automatically Walk through each fixture's front door;
-19. both critique views render with zero planned diagnostics;
-20. canonical demo startup remains green.
+9. `door.interior.living_kitchen` no longer exists;
+10. former living/kitchen door cell is a real wall;
+11. lower divider cell has no structure and is the open connection between common rooms;
+12. all eight kitchen bottom-row cells are `ground.laminate_light` and prop-free;
+13. sink sits on the same north wall as stove/fridge;
+14. breakfast table uses `prop.breakfast_table` near the east wall without occupying the runner;
+15. all five private doors remain on the single partition row;
+16. large house has exactly 7 doors and 11 windows;
+17. shared validator reaches every declared room from the primary door;
+18. EAST rotation yields valid 9×21 geometry;
+19. undersized large envelopes fail explicitly;
+20. saved-small and live-large fixtures materialize into WHAT + CLOSED Door State;
+21. all generated blockers have Collision coverage;
+22. all generated ground/structure/prop semantics resolve through Art Catalog;
+23. System 18 can automatically Walk through each fixture's front door;
+24. both critique views render with zero planned diagnostics;
+25. canonical demo startup remains green.
 
-Candidate 002 requires exact-final-head verification before completion is claimed.
+Candidate 003 requires exact-final-head verification before completion is claimed.
 
 ## 10. Performance / mobile
 
@@ -251,7 +266,7 @@ Small and large farmhouse generators are peer archetype owners and must not impo
 
 ## 12. Future seams / next loop
 
-- playtest/critiqe Large Farmhouse Candidate 002;
+- playtest/critiqe Large Farmhouse Candidate 003;
 - turn critique into `farm_large` versioned rules without touching accepted `farm_small` v2;
 - preserve Trailer v2 and Small Farmhouse v2 unless explicitly reopened;
 - continue adding residential/commercial archetypes through pure-plan -> validation -> materialization;
@@ -268,7 +283,7 @@ Approved by the user through 2026-08-17:
 5. Trailer v2 is an accepted protected baseline.
 6. `residential.house.farm_small` v2 is the accepted Small Farmhouse baseline.
 7. Large farmhouse is a separate `residential.house.farm_large` archetype.
-8. Large farmhouse requires 3 bedrooms, 2 bathrooms, and truly separate living and kitchen rooms.
+8. Large farmhouse requires 3 bedrooms, 2 bathrooms, and separate living/kitchen rooms.
 9. Candidate 001's 25×20 L-shape + central hall is rejected as too big/hallway-heavy.
-10. Candidate 002 follows the compact small-house pattern: 21×9, five 3×3 private rooms directly behind living/kitchen, no dedicated hall.
-11. Compactness takes precedence over irregular-shape complexity for this critique iteration.
+10. Candidate 002 established the compact 21×9 / no-dedicated-hall direction.
+11. Candidate 003 keeps Candidate 002 dimensions while replacing the living/kitchen door with upper wall + lower open passage, converting the kitchen bottom row to a clutter-free wood runner, moving the sink to the north appliance wall, and adding a breakfast table near the east wall.

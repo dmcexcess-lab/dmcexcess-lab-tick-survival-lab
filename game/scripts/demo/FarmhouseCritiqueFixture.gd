@@ -77,7 +77,7 @@ static func _configure_rules(collision_catalog: CollisionCatalog, traversal_poli
         &"wall.plaster", &"wall.interior",
         &"door.house", &"window.house",
         &"prop.sofa", &"prop.armchair", &"prop.coffee_table",
-        &"prop.stove_range", &"prop.refrigerator_white", &"prop.kitchen_sink",
+        &"prop.stove_range", &"prop.refrigerator_white", &"prop.kitchen_sink", &"prop.breakfast_table",
         &"prop.bed_double", &"prop.dresser_wide",
         &"prop.toilet_modern", &"prop.bathroom_vanity", &"prop.bathtub_clawfoot",
     ]

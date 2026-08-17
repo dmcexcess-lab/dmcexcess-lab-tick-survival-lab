@@ -6,7 +6,7 @@ const StructureGeometry = preload("res://scripts/foundation/spatial/SpatialStruc
 const PlanClass = preload("res://scripts/generation/buildings/GeneratedBuildingPlan.gd")
 
 const ARCHETYPE_ID: StringName = &"residential.house.farm_large"
-const ARCHETYPE_VERSION: int = 2
+const ARCHETYPE_VERSION: int = 3
 const BASE_WIDTH: int = 21
 const BASE_HEIGHT: int = 9
 
@@ -63,7 +63,7 @@ func _add_ground_and_rooms(plan: GeneratedBuildingPlan, request: BuildingGenerat
             var local := Vector2i(x, y)
             var semantic: StringName = &"ground.laminate_light"
             if kitchen_rect.has_point(local):
-                semantic = &"ground.linoleum_yellow"
+                semantic = &"ground.laminate_light" if local.y == 3 else &"ground.linoleum_yellow"
             elif bathroom_1_rect.has_point(local) or bathroom_2_rect.has_point(local):
                 semantic = &"ground.tile_white"
             elif bedroom_1_rect.has_point(local):
@@ -133,13 +133,9 @@ func _add_exterior_structure(plan: GeneratedBuildingPlan, request: BuildingGener
 
 func _add_interior_partitions(plan: GeneratedBuildingPlan, request: BuildingGenerationRequest) -> void:
     var wall_index: int = 1
-    for y in range(1, 4):
-        var local := Vector2i(11, y)
-        if y == 2:
-            _structure(plan, request, "door.interior.living_kitchen", local, &"door.house", StructureGeometry.Axis.VERTICAL, "door", Facing.Value.EAST)
-        else:
-            _structure(plan, request, "wall.interior.%03d" % wall_index, local, &"wall.interior", StructureGeometry.Axis.VERTICAL, "wall", Facing.Value.NORTH)
-            wall_index += 1
+    for y in range(1, 3):
+        _structure(plan, request, "wall.interior.%03d" % wall_index, Vector2i(11, y), &"wall.interior", StructureGeometry.Axis.VERTICAL, "wall", Facing.Value.NORTH)
+        wall_index += 1
 
     var private_doors: Dictionary = {
         2: "door.interior.bedroom_1",
@@ -168,7 +164,8 @@ func _add_props(plan: GeneratedBuildingPlan, request: BuildingGenerationRequest)
         ["prop.living.coffee_table", Vector2i(4, 2), &"prop.coffee_table", Facing.Value.NORTH],
         ["prop.kitchen.stove", Vector2i(12, 1), &"prop.stove_range", Facing.Value.SOUTH],
         ["prop.kitchen.fridge", Vector2i(13, 1), &"prop.refrigerator_white", Facing.Value.SOUTH],
-        ["prop.kitchen.sink", Vector2i(19, 3), &"prop.kitchen_sink", Facing.Value.WEST],
+        ["prop.kitchen.sink", Vector2i(14, 1), &"prop.kitchen_sink", Facing.Value.SOUTH],
+        ["prop.kitchen.table", Vector2i(18, 2), &"prop.breakfast_table", Facing.Value.NORTH],
         ["prop.bedroom_1.bed", Vector2i(1, 6), &"prop.bed_double", Facing.Value.EAST],
         ["prop.bedroom_1.dresser", Vector2i(3, 6), &"prop.dresser_wide", Facing.Value.WEST],
         ["prop.bathroom_1.toilet", Vector2i(5, 6), &"prop.toilet_modern", Facing.Value.EAST],

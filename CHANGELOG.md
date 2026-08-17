@@ -1,18 +1,29 @@
 # Changelog
 
+## System 19 Large Farmhouse Candidate 003 — 2026-08-17
+
+- Preserved accepted Trailer v2 and accepted Small Farmhouse v2 unchanged.
+- Bumped `residential.house.farm_large` to archetype version 3 after the next large-house playtest critique.
+- Kept Candidate 002's compact **21×9** shell, 10×3 living room, 8×3 kitchen, three 3×3 bedrooms, two 3×3 bathrooms and zero dedicated hallway rooms.
+- Removed `door.interior.living_kitchen`: its former middle divider cell is now solid `wall.interior`, while the lower divider cell is completely open for a doorless passage between living and kitchen.
+- Changed the full bottom row of kitchen tiles to `ground.laminate_light`, creating an eight-cell wood-floor runner from the living/kitchen passage toward the east side.
+- Locked the new wood runner as generated-clutter-free: no prop may occupy any of those eight cells.
+- Moved the kitchen sink from the lower/east side onto the north wall beside the stove and refrigerator.
+- Added a real `prop.breakfast_table` in the open linoleum area near the east exterior wall, positioned off the runner and clear of the exterior-door approach.
+- Door count drops from eight to **seven**: two exterior doors plus five private-room doors. Eleven windows remain unchanged.
+- Updated the large-house critique fixture collision catalog for the existing breakfast-table semantic; no renderer, art, movement, door-system or public System 19 contract changed.
+- Expanded focused System 19 CI to lock the removed living/kitchen door, replacement wall, open lower passage, wood-runner terrain/clearance, sink/table positions, collision/art coverage, rotation, materialization and canonical startup.
+
 ## System 19 Large Farmhouse Candidate 002 — 2026-08-17
 
 - Rejected Large Farmhouse Candidate 001 after playtest feedback: **too big and too hallway-heavy**.
 - Preserved accepted Trailer v2 and accepted Small Farmhouse v2 unchanged.
 - Bumped `residential.house.farm_large` to archetype version 2.
 - Rebuilt the large farmhouse from 25×20 down to **21×9**, matching the accepted small farmhouse's depth instead of scaling every room up.
-- Removed the dedicated central hall entirely. The primary exterior door now enters the living room directly, and all five private rooms open directly from living/kitchen through one partition row.
-- Kept the required separate common rooms: living is **10×3**, kitchen is **8×3**, separated by real wall structure and `door.interior.living_kitchen`.
+- Removed the dedicated central hall entirely. The primary exterior door enters the living room directly, and all five private rooms open directly from living/kitchen through one partition row.
+- Kept the required separate common rooms: living is **10×3**, kitchen is **8×3**.
 - Kept all private rooms compact: three **3×3 bedrooms** and two **3×3 bathrooms**.
-- Candidate 002 has two exterior doors, six interior doors and eleven windows.
-- Retained existing recovered prop semantics and System 07A facing-aware furniture orientation; no renderer/art/collision contract changed.
-- Reduced the live critique lot to **23×11 at 23 px/cell**, improving readability without adding a camera subsystem.
-- Updated System 19 focused CI to lock the compact room dimensions, zero dedicated hallway room records, direct private-door row, deterministic rotation, materialization, Door State, Collision/Art coverage, renderer diagnostics and canonical startup.
+- Candidate 002 had two exterior doors, six interior doors and eleven windows.
 - The previous L-shaped Candidate 001 remains historical only; compactness now takes precedence over irregular-shape complexity for the large-house critique loop.
 
 ## System 19 Large Farmhouse Candidate 001 — 2026-08-17
