@@ -1,13 +1,6 @@
 # Tick Survival Lab — System Design Index / Approval Ledger
 
-This directory is the durable detailed memory for individual systems. Major systems move through **NOT DESIGNED -> DRAFT -> APPROVED -> IMPLEMENTED** under `DESIGN_WORKFLOW.md`. Read `PROJECT_NORTH_STAR.md` and `DESIGN_DECISIONS.md` first.
-
-## Status meanings
-- **NOT DESIGNED** — known future system, no detailed contract yet.
-- **DRAFT** — discussion only; do not implement.
-- **APPROVED** — user approved; implementation may begin.
-- **IMPLEMENTED** — approved design exists in canonical modular source and is tested.
-- **SUPERSEDED** — historical design replaced by newer direction.
+Major systems move through **NOT DESIGNED -> DRAFT -> APPROVED -> IMPLEMENTED** under `DESIGN_WORKFLOW.md`. Read `PROJECT_NORTH_STAR.md` and `DESIGN_DECISIONS.md` first.
 
 ## Current canonical architecture
 
@@ -39,101 +32,80 @@ This directory is the durable detailed memory for individual systems. Major syst
 | 13F | Actor Moodlets / Status Derivation | **IMPLEMENTED** | `13F_ACTOR_MOODLETS.md` |
 | 14 | Canonical Playable Demo Integration | **IMPLEMENTED** | `14_CANONICAL_PLAYABLE_DEMO.md` |
 | 15 | Canonical HUD / Facing Inspection | **IMPLEMENTED** | `15_CANONICAL_HUD_FACING_INSPECTION.md` |
-| 16 | Canonical Player Shell / Inspectors / Stance Integration | **IMPLEMENTED** | `16_CANONICAL_PLAYER_SHELL.md` |
+| 16 | Canonical Player Shell / Inspectors / Stance | **IMPLEMENTED** | `16_CANONICAL_PLAYER_SHELL.md` |
 | 17 | Run / Damage-Interruptible Walking | **IMPLEMENTED** | `17_RUN_DAMAGE_INTERRUPTIBLE_WALKING.md` |
-| 17A | Movement Exertion / Encumbrance / Run Impact Revision | **DRAFT** | `17A_MOVEMENT_EXERTION_ENCUMBRANCE_RUN_IMPACT.md` |
+| 17A | Movement Exertion / Encumbrance / Run Impact Revision | **IMPLEMENTED** | `17A_MOVEMENT_EXERTION_ENCUMBRANCE_RUN_IMPACT.md` |
 | 00D | Global World Planning / Generation | **NOT DESIGNED** | `00D_GLOBAL_WORLD_GENERATION.md` |
 | 00E | Population / Household / Outbreak / Player Story | **NOT DESIGNED** | `00E_POPULATION_OUTBREAK_PLAYER_STORY.md` |
 | 00F | Streaming / Materialization | **NOT DESIGNED** | `00F_STREAMING_MATERIALIZATION.md` |
 | old-01 | Raid-map / extraction physical-world model | **SUPERSEDED** | `01_RAID_MAP_DATA.md` |
 
-## Implemented source owners
+## Implemented source ownership
 
-### Foundation / simulation
-- 00A: `game/scripts/foundation/spatial/`
-- 00B: `game/scripts/foundation/world/`
-- 00C: `game/scripts/foundation/time/`
-- 01: `game/scripts/simulation/collision/`
-- 02/17: `game/scripts/simulation/movement/` plus narrow locomotion/Health/Needs seams
-- 03: `game/scripts/simulation/actors/locomotion/`
-- 06A: `game/scripts/simulation/doors/`
-- 09: `game/scripts/simulation/actors/equipment/`
-- 11: `game/scripts/simulation/inventory/`
-- 12: `game/scripts/simulation/items/transfer/`
-- 13A: `game/scripts/simulation/actors/health/`
-- 13B: `game/scripts/simulation/actors/needs/`
-- 13C: `game/scripts/simulation/actors/skills/`
-- 13D: `game/scripts/simulation/items/properties/`
-- 13E: `game/scripts/simulation/actors/carry/`
-- 13F: `game/scripts/simulation/actors/moodlets/`
+Foundation and simulation remain separated by domain:
 
-### Presentation / application
-- 04: `game/scripts/art/`
-- 05/06/07/08/10: focused files under `game/scripts/render/`
-- 14: canonical app/demo/render-stack/input/player-control integration
-- 15: HUD/facing/status query layer
-- 16: Stats/Inventory/Menu shell + stance input integration
-- 17: semantic Run input/controller/demo composition only; no renderer rewrite
+- WHERE: `game/scripts/foundation/spatial/`
+- WHAT: `game/scripts/foundation/world/`
+- WHEN: `game/scripts/foundation/time/`
+- Collision: `game/scripts/simulation/collision/`
+- Movement / 17 / 17A physical actions and stateless coordinators: `game/scripts/simulation/movement/`
+- Locomotion/capability: `game/scripts/simulation/actors/locomotion/`
+- Health: `game/scripts/simulation/actors/health/`
+- Needs: `game/scripts/simulation/actors/needs/`
+- Skills: `game/scripts/simulation/actors/skills/`
+- Carry: `game/scripts/simulation/actors/carry/`
+- Hands: `game/scripts/simulation/actors/equipment/`
+- Inventory: `game/scripts/simulation/inventory/`
+- Item transfer: `game/scripts/simulation/items/transfer/`
+- Item physical properties: `game/scripts/simulation/items/properties/`
+- Moodlets: `game/scripts/simulation/actors/moodlets/`
 
-Canonical modules remain separate from frozen `game/scripts/reboot/` reference code. `game/main.tscn` launches the canonical demo.
+Presentation/application remains separate:
 
-## Current live demo shell
+- Art: `game/scripts/art/`
+- existing canonical renderers: `game/scripts/render/`
+- canonical demo/bootstrap/input/player-control under focused app/demo/input/player/UI owners.
 
-The deployed canonical demo has one authored 13x13 WHAT map, exactly one controlled survivor, no NPCs/infected, real Collision/Movement/Locomotion/WHEN, canonical renderer stack, HUD, Stats/Inventory/Menu/hard pause, Crouch/Stand, and explicit Run Forward.
+`game/scripts/reboot/` remains frozen reference only. `game/main.tscn` launches the canonical demo.
 
-Implemented System 17 behavior:
+## Live demo after System 17A
 
-- Walk Forward/Back: one cell, healthy 10-tick normal-terrain baseline, CANCELABLE by real damage;
-- Run Forward: two cells, healthy 6 ticks/stride / 12 total on normal terrain, COMMITTED;
-- fatigue 80+ blocks Run start;
-- each successful Run stride currently adds +1 real fatigue;
-- crouched Run blocked;
-- damage does not cancel Run or turns;
-- Shift+W/Shift+Up and native touch RUN submit semantic Run intent.
+The canonical demo has one controlled survivor, no NPCs/infected, the authored 13x13 sample map, existing renderer stack, real HUD, Stats/Inventory/Menu, Crouch/Stand and Run.
 
-Promoted System 17 SHA `2e54ef3edc0616727258974e0b4c9d046322afdc` passed dedicated run `31998976669` and Pages/deploy run `31998976603`.
+Movement truth:
 
-## Active design — System 17A
+- Walk: one cell, terrain base cost, damage-CANCELABLE;
+- Run: two committed forward strides at 60% of each stride's Walk terrain pace before actor factors;
+- terrain × stance × fatigue × encumbrance multiply movement duration;
+- fatigue 80+ blocks Run;
+- 100%+ carry capacity blocks Run;
+- over-capacity Walk remains legal/slower;
+- successful Walk fatigue depends on terrain only;
+- Run fatigue depends on terrain + encumbrance;
+- known hard Run blockers cause physical impact, attempted-stride fatigue, 5 HP damage, and stop the sprint;
+- UNKNOWN space still fails closed.
 
-`17A_MOVEMENT_EXERTION_ENCUMBRANCE_RUN_IMPACT.md` is **DRAFT** and awaits explicit user approval.
+System 16 Web Leave Game now navigates directly to Google rather than attempting browser history.
 
-Proposed bounded revision:
+Dedicated System 17A verification:
 
-1. terrain remains the base movement cost while stance/fatigue/encumbrance become true multiplicative duration scales;
-2. existing carry factor remains +75% timing at exactly capacity;
-3. 100%+ capacity blocks Run but not Walk;
-4. successful Walk gains fatigue from terrain only, never directly from carry weight;
-5. Run fatigue is multiplied by terrain difficulty and encumbrance;
-6. a known hard blocker during Run becomes a physical impact, stops the sprint at the last legal cell, and applies proposed 5 HP damage through a stateless Health coordinator;
-7. UNKNOWN/untraversable space still fails closed rather than becoming impact damage;
-8. System 16 Leave Game Web behavior is simplified to direct Google navigation with no history/back attempt.
+- `.github/workflows/movement-exertion-encumbrance.yml`
+- `game/scripts/ci/MovementExertionEncumbranceSmoke.gd`
 
-**Do not implement 17A until explicit approval.**
+Hardened implementation candidate `eeb5eb421337df3067f45b41fb4837fdb9b8875b` passed dedicated run `32000627706` after a test-fixture-only retention correction; production required no repair.
 
-## Immediate path after 17A
+## Immediate next path
 
-Once 17A is approved/implemented, return to the real item interaction demo:
+Do not rebuild movement/player shell/renderers. Return to the real item-interaction demo:
 
-1. add real stable WHAT `item.*` entities and explicit 13D weights;
-2. implement loose-item presentation;
-3. compose existing System 10 BACK -> actor body -> FRONT hand layers;
-4. expose System 12 pickup/drop/equip/unequip through semantic UI.
+1. add a few real stable WHAT `item.*` entities with 13D weights;
+2. add the missing loose-item presentation;
+3. compose existing System 10 BACK -> actor body -> FRONT held-item layers in the live stack;
+4. expose real System 12 pickup/drop/equip/unequip through semantic keyboard/touch interaction;
+5. let existing HUD/Inventory read the committed truth.
 
-Door interaction remains separate.
-
-## Other later modular systems
-- Container Access / Search / Open / Lock — NOT DESIGNED
-- Corpse / Decay / Contamination — NOT DESIGNED, direction approved
-- Door interaction / physical transition — NOT DESIGNED
-- Actor Appearance / character creator integration — NOT DESIGNED
-- Loose-item renderer — NOT DESIGNED
-- richer item quantity/condition/bulk — NOT DESIGNED
-- first aid / health progression / sickness — NOT DESIGNED beyond 13A
-- eating/drinking/rest/sleep progression — NOT DESIGNED beyond 13B
-- global world generation — NOT DESIGNED
-- construction/destruction — DEFERRED
-- vision/perception, lighting, weather, silent spatial sound — DEFERRED
-- infected AI, combat, vehicles — DEFERRED
+Door interaction remains a separate later system.
 
 ## Design rule
+
 Every major system keeps a focused owner/public contract. If implementation unexpectedly requires crossing a forbidden boundary, return the design to review rather than cascading a patch.
