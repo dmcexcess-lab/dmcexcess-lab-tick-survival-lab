@@ -13,11 +13,11 @@ Core principle:
 Current direction: one persistent logically continuous open world, invisible tactical grid, variable-duration turn-based actions, hard real-life pause, emergent physical bases, causal outbreak/population simulation, embedded player story, and recovered readable top-down graphics.
 
 Repository: `dmcexcess-lab/dmcexcess-lab-tick-survival-lab`
-Web preview/reference: `https://dmcexcess-lab.github.io/dmcexcess-lab-tick-survival-lab/`
+Live Web build: `https://dmcexcess-lab.github.io/dmcexcess-lab-tick-survival-lab/`
 
 ## 2. Current architectural phase
 
-The project is in staged modular replacement of the deprecated playable runtime. `game/scripts/reboot/` is **frozen/deprecated reference code**. Do not extend it or add temporary adapters merely to make canonical modules visible.
+**System 14 is now the live canonical entry point.** `game/main.tscn` launches the canonical playable demo; `game/scripts/reboot/` remains frozen/deprecated recovery/reference code and must not be extended or used as a compatibility adapter.
 
 Golden recovery commit: `1763958f44eb7f855fd49944c00d1ffe608c0abe`.
 
@@ -38,16 +38,19 @@ Implemented + CI:
 - 10 Actor Hand Equipment Presentation
 - 11 Inventory / Containment
 - 12 Item Transfer / Pickup / Drop / Equip Actions
-- **13A Health / Injury**
-- **13B Needs / Rest**
-- **13C Skills**
-- **13D Item Physical Properties**
-- **13E Carry / Encumbrance**
-- **13F Moodlets / Status Derivation**
+- 13A Health / Injury
+- 13B Needs / Rest
+- 13C Skills
+- 13D Item Physical Properties
+- 13E Carry / Encumbrance
+- 13F Moodlets / Status Derivation
+- **14 Canonical Playable Demo Integration**
 
 System 13 umbrella: `SYSTEM_DESIGNS/13_ACTOR_STATS_STATUS_ARCHITECTURE.md`.
-Dedicated workflow: `.github/workflows/actor-stats.yml`.
-Initial complete code candidate `78ed167678257749b093acd54e53e9f065cd8ce5` passed Actor Stats Domains run `31992365565` with all child smokes plus WHAT/Locomotion/Hands/Inventory regressions and no production repair.
+System 14 design: `SYSTEM_DESIGNS/14_CANONICAL_PLAYABLE_DEMO.md`.
+System 14 implementation log: `SYSTEM_DESIGNS/14_IMPLEMENTATION_CHANGELOG.md`.
+Dedicated demo workflow: `.github/workflows/canonical-demo.yml`.
+Initial complete demo candidate `41ccfedd658082f5d249b5107363658705ea4b03` passed Canonical Playable Demo run `31993465800` with no production repair after the complete candidate reached CI.
 
 ## 3. Foundation / mechanic truth
 
@@ -119,35 +122,43 @@ Approved cross-system direction remains: death leaves persistent physical corpse
 
 ## 6. Canonical presentation
 
-04 selects recovered environment/player/living-actor/held-item art. 05 Ground, 06 Structure, 07 Prop, 08 Living Actor, and 10 Hand Equipment Presentation are independently implemented. Future composition is `Ground -> Structure/Props as designed -> 10 BACK -> 08 body -> 10 FRONT` with exact z-order decided by Tactical Renderer design.
+04 selects recovered environment/player/living-actor/held-item art. 05 Ground, 06 Structure, 07 Prop, 08 Living Actor, and 10 Hand Equipment Presentation are independently implemented.
 
-## 7. Requested canonical demo target
+System 14 currently composes the visible walking-demo stack as:
 
-The user wants to reach the real playable canonical demo quickly. It must not be keyboard-only. Safari/iPhone is first-class.
+`Ground -> Structure -> Prop -> Living Actor`
 
-Target:
-- touch Forward, Back, Turn Left, Turn Right and implemented stance/navigation actions;
-- desktop keyboard equivalents;
-- recovered-style `Looking at: ...` HUD;
-- concise **real** actor status from System 13;
-- `STATS` inspector displaying real HP/needs/skills/carry/moodlets;
-- `INVENTORY` using real 09/11/12 item truth;
-- `MENU` invoking hard application pause;
-- Stats/Inventory inspection pauses safely;
-- Resume + Leave Game;
-- no fabricated names/items/stats.
+The demo actor has no held items, so System 10 BACK/FRONT layers are intentionally not instantiated yet. They remain ready to insert around the actor body when demo item equipment is added.
 
-## 8. Immediate dependency path to demo
+## 7. Live canonical walking demo
 
-Actor/data prerequisites are now complete through System 13. Recommended next bounded path:
-1. **Authored Visual Test Area — NOT DESIGNED.** Construct real canonical WHAT + 09/11/13 fixture; no fake generator.
-2. **Tactical Renderer / Orchestration — NOT DESIGNED.** Compose existing render layers.
-3. **Tactical Camera + Zoom — NOT DESIGNED.**
-4. **Touch / Keyboard / Safari Input — NOT DESIGNED.**
-5. **Tactical Controls UI — NOT DESIGNED.**
-6. **HUD / Facing Inspection / Stats & Inventory Inspector / Pause Menu — NOT DESIGNED.**
+System 14 deliberately collapsed the previously listed multi-step demo roadmap into one real integration slice.
 
-Favor the smallest real composition path. Do not reopen completed mechanics merely to make the demo visible.
+Current live demo:
+- real authored 13x13 WHAT map, fully terrain-populated;
+- grass + cross-road, small house shell, trees, bench, mailbox, streetlight;
+- exactly one controlled `actor.survivor`; no NPCs/infected;
+- player starts `(6,10)` facing NORTH;
+- real Collision coverage for every placed actor/structure/object;
+- real Movement + Locomotion + WHEN actions;
+- recovered 10-tick walking baseline and existing 3-tick turn baseline;
+- W/Up forward, S/Down backward, A/Left turn left, D/Right turn right;
+- native Godot touch buttons emit the same semantic intents for Safari/iPhone;
+- fixed one-screen view at 38 px/cell; no camera because the whole test area fits;
+- small action/tick feedback only; no fake Stats/Inventory values.
+
+Dedicated integration smoke proves 169 ground commands, 11 structure commands, 6 prop commands, exactly 1 actor command, zero planned presentation diagnostics, real forward commit, real turn commit, and blocked authored walls.
+
+## 8. Immediate path after the walking demo
+
+Do **not** rebuild the already-proven renderers or invent extra demo prerequisite systems.
+
+When requested, extend the live canonical demo directly with bounded additions such as:
+1. recovered-style `Looking at:` plus real System-13 summary/status display;
+2. `STATS`, `INVENTORY`, and `MENU`/hard-pause UI;
+3. demo items/held-item BACK/body/FRONT composition and real 09/11/12 transfers;
+4. camera/zoom only once a larger world actually exceeds the one-screen authored view;
+5. larger authored or generated content behind the same simulation/render contracts.
 
 ## 9. Other later systems
 - Container Access / Search / Open / Lock — NOT DESIGNED
@@ -178,6 +189,7 @@ Favor the smallest real composition path. Do not reopen completed mechanics mere
 11. Controlled-player role is not persistent actor identity.
 12. Carry totals and moodlets are derived; do not persist duplicate truth.
 13. Needs/Carry affect locomotion only through 03's provider contract.
+14. Reboot remains recoverable reference code, but live composition belongs to canonical owners.
 
 ## 11. Documentation source order
 1. newest explicit user instruction;
@@ -193,4 +205,4 @@ Favor the smallest real composition path. Do not reopen completed mechanics mere
 11. golden/same-owner history.
 
 ## 12. Recommended next action
-Design the **Authored Visual Test Area** as the first real composition/demo fixture now that canonical actor/item/stat truth exists. Then move directly through renderer composition, camera, input, controls, and inspector/menu rather than inventing more simulation prerequisites.
+Playtest the live **System 14 canonical walking demo**. Future work should extend that live composition directly rather than returning to the old staged renderer/demo roadmap.
