@@ -30,6 +30,7 @@ The canonical simulation stack is **WHERE / WHAT / WHEN**, followed by focused p
 | 05 | Ground Layer Renderer | **IMPLEMENTED** | `05_GROUND_LAYER_RENDERER.md` | WHAT terrain -> Art Catalog -> visible-window ground drawing |
 | 06A | Door State | **IMPLEMENTED** | `06A_DOOR_STATE.md` | Explicit stable-ID OPEN/CLOSED state, UNKNOWN on missing, versioned persistence |
 | 06 | Structure Layer Renderer | **IMPLEMENTED** | `06_STRUCTURE_LAYER_RENDERER.md` | Visible walls/doors/windows; H/V axis; Door State-driven open/closed art |
+| 07 | Prop / Fixture / Vegetation Renderer | **DRAFT** | `07_PROP_FIXTURE_VEGETATION_RENDERER.md` | OBJECT-only visible rendering; recovered prop art; one draw per entity anchor |
 | 00D | Global World Planning / Generation Contract | **NOT DESIGNED** | `00D_GLOBAL_WORLD_GENERATION.md` | Global geography/roads/utilities/parcels before local detail |
 | 00E | Population / Household / Outbreak / Player Story | **NOT DESIGNED** | `00E_POPULATION_OUTBREAK_PLAYER_STORY.md` | Persistent people/homes/jobs/relationships and causal outbreak |
 | 00F | Streaming / Materialization | **NOT DESIGNED** | `00F_STREAMING_MATERIALIZATION.md` | Performance/storage over one logical world |
@@ -93,6 +94,8 @@ The canonical modules remain intentionally separate from frozen `game/scripts/re
 
 **Structure Renderer** reads visible WHAT STRUCTURE occupancy, Art Catalog, and Door State. It renders `wall.<theme>`, `door.<theme>`, and `window.<theme>`, requires canonical H/V structure axis, uses distinct OPEN/CLOSED door art, and treats missing Door State/invalid content as diagnostics rather than plausible fallback.
 
+**07 Prop / Fixture / Vegetation Renderer is DRAFT.** Proposed contract: read only visible WHAT `OBJECT` occupancy; recognize `prop.*`, `fixture.*`, and `vegetation.*`; resolve all through recovered `ArtCatalog.resolve_prop()`; deduplicate multi-cell occupancy to one command per stable entity; preserve facing/footprint facts without inventing current rotation or multi-cell art; draw the recovered one-cell sprite at the entity anchor; and keep collision, state, generation, inventory, camera/input, and other render layers out.
+
 ## Why generation is not the foundation
 
 Generation is one producer of initial WHAT using WHERE. Construction/destruction/gameplay later mutate the same persistent world. Replacing generation must not require replacing spatial, timing, collision, movement, actor capability, door state, art, rendering, controls, or save semantics.
@@ -103,7 +106,6 @@ Exact order is refined one approved design at a time.
 
 | System | Status | Notes |
 |---|---|---|
-| Prop/fixture/vegetation renderer | NOT DESIGNED | **Recommended next presentation discussion**; WHAT OBJECT placements/facing/footprints + Art Catalog |
 | Door interaction / physical transition | NOT DESIGNED | Future WHEN action coordinating Door State + Collision at commit |
 | Player/actor renderer | NOT DESIGNED | Four directional sprites initially; consumes WHAT/facing/stance + Art Catalog |
 | Authored visual test area | NOT DESIGNED | Proves recovered graphics without procedural generation |
