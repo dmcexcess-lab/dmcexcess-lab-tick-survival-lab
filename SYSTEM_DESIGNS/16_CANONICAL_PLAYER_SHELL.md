@@ -1,43 +1,41 @@
 # 16 Canonical Player Shell / Inspectors / Stance Integration
 
-Status: **DRAFT — discussion only; do not implement until explicitly approved**
+Status: **APPROVED — implementation authorized by the user on 2026-08-16**
 
-Drafted after the user playtested System 15, identified the duplicated legacy control/tick text under the HUD, and approved moving next toward crouch/stand plus `STATS`, `INVENTORY`, and `MENU`.
+Approval basis: after reviewing the detailed System 16 draft, the user explicitly instructed **“16 approved for code.”**
 
 ## 1. Goal
 
-Complete the first useful player-facing shell around the live canonical demo by integrating already-implemented mechanics and state into phone/Safari-first controls and inspection screens.
+Complete the first useful player-facing shell around the live canonical demo by exposing already-implemented canonical mechanics/state through phone/Safari-first controls and read-only inspection screens.
 
-Player-visible target:
+Player-visible v1:
 
-- Crouch/Stand control using the real System 03 timed stance action;
-- `STATS` button and modal showing only real actor state;
-- `INVENTORY` button and modal showing only real 09/11 item disposition/container state;
-- `MENU` button and modal using WHEN hard application pause;
-- Resume / Close behavior that restores the prior hard-pause state correctly;
-- Leave Game behavior suitable for the Web build;
+- Crouch/Stand using the real System 03 timed stance action;
+- `STATS` modal showing only real actor state;
+- `INVENTORY` modal showing only real 09/11/13D/13E possession facts;
+- `MENU` using WHEN hard application pause;
+- Resume/Close restoring the exact prior hard-pause state;
+- Web/native Leave Game behavior;
 - no duplicate legacy help/tick text underneath the System 15 HUD.
 
-This is an integration/presentation system. It creates no new survival mechanic truth.
+System 16 is integration/presentation. It creates no new survival-mechanic truth.
 
-## 2. Why this can be one integration slice
+## 2. Why this is one bounded integration slice
 
-Crouch, Health/Needs/Skills/Carry/Moodlets, Hands, Containment, and hard pause already have canonical owners and tests. System 16 does not redesign any of them.
+The owning simulation systems already exist and are independently tested: System 03 stance/capability, 09 Hands, 11 Containment, 13A Health, 13B Needs, 13C Skills, 13D item weight, 13E Carry, 13F Moodlets, and WHEN hard pause.
 
-The new work is one coherent application responsibility: expose those existing public contracts through the live player's control/inspection shell. The implementation remains split into focused query/presentation/input helpers so Stats, Inventory, Menu, and stance presentation can still change independently.
+System 16 only composes their public contracts. Its read/query/UI owners remain focused so Stats, Inventory, Menu, and device input can evolve independently.
 
-If implementation discovers that a requested screen requires a new simulation rule or a stable-contract rewrite, that part returns to design review instead of being patched into System 16.
+If a requested screen later requires a new mechanic or stable simulation-contract rewrite, that change must receive its own design rather than being hidden inside this shell.
 
 ## 3. Non-goals
 
 System 16 does **not** add:
 
-- new inventory transfer rules;
-- pickup/drop/equip controls;
-- demo items or item spawning;
-- loose-item rendering;
-- item use/consumption;
-- item capacity/bulk rules;
+- pickup/drop/equip/move/use controls or new transfer rules;
+- demo items, starter gear, or item spawning;
+- loose-item rendering or held-item composition changes;
+- capacity/bulk/stack/quantity/durability rules;
 - new Health/Needs/Skills progression;
 - traits, stress, temperature, infection, or other nonexistent stats;
 - door interaction;
@@ -45,132 +43,122 @@ System 16 does **not** add:
 - camera/zoom;
 - save/load;
 - browser visibility/focus lifecycle pause automation;
-- procedural generation.
+- generation.
 
-An empty inventory, zero-level skills, no injuries, or other current real defaults must be displayed honestly rather than filled with placeholders.
+Empty inventory, level-0 skills, no injuries, and other current defaults are valid real state and must be displayed honestly.
 
 ## 4. Existing canonical systems reused unchanged
 
 ### 03 Actor Locomotion
-Already owns standing/crouched state and `ActorStanceActionService`.
 
-- crouch/stand costs the existing base 4 ticks before existing mobility modifiers;
-- crouched walking already resolves through 03 at 1.4x the normal step duration;
-- stance changes mutate only at the real timed commit.
+System 03 remains the owner of standing/crouched state and `ActorStanceActionService`.
 
-System 16 only exposes that existing action through player input.
+- voluntary crouch/stand base cost remains 4 ticks before existing capability modifiers;
+- crouched walking remains 1.4x the ordinary step duration (14 ticks against the current 10-tick demo terrain);
+- stance mutates only at the existing timed commit.
 
 ### 09 Hands + 11 Inventory / Containment
-Remain the canonical physical possession state for held and contained items.
 
-System 16 Inventory reads them; it does not mutate them.
+Remain the physical hand/direct-containment truth. System 16 only reads them.
 
-### 12 Item Transfer Actions
-Remains the future owner for actual pickup/drop/equip/container moves. System 16 does not bypass it.
+### 12 Item Transfer
 
-### 13 Actor Status domains
-Health, Needs, Skills, Carry and Moodlets remain separate canonical truths. System 16 composes reads only.
+Remains the owner of timed pickup/drop/equip/container transitions. System 16 does not bypass it.
 
-### WHEN hard pause
-`TickKernel.set_hard_paused()` remains the only pause truth used by modal/menu UI.
+### 13 Actor Status
 
-## 5. Proposed owners
+Health, Needs, Skills, Item Physical Properties, Carry and Moodlets remain peer canonical domains. System 16 composes reads only.
+
+### WHEN
+
+`TickKernel.set_hard_paused()` / `is_hard_paused()` remain the pause truth used by the shell.
+
+## 5. Owners
 
 ### `game/scripts/ui/ActorStatsInspectorQuery.gd`
-Read-only composer for the detailed Stats modal.
 
-Dependencies:
+Read-only detailed actor-status composer over:
 
-- existing `ActorStatusSummaryQuery`;
-- `ActorHealthState` for injury list;
-- `ActorSkillState` for skills/XP;
-- `ActorLocomotionState` for current stance.
+- `ActorStatusSummaryQuery`;
+- `ActorHealthState` injury reads;
+- `ActorSkillState`;
+- `ActorLocomotionState`.
 
-It returns presentation-ready typed facts but owns no actor state.
+It returns status, stance, injuries and dynamic skill entries. It owns no persistent state and performs no mutations.
 
 ### `game/scripts/ui/ActorInventoryInspectorQuery.gd`
-Read-only inventory/loadout query.
 
-Dependencies:
+Read-only inventory/loadout query over:
 
-- WHAT for item semantic identity;
-- 09 Hand Equipment;
-- 11 Inventory / Containment;
-- 13D `ItemWeightQuery` where a real weight profile exists;
-- 13E Carry Query for total carried weight/capacity.
+- WHAT item identity;
+- 09 Hands;
+- 11 Containment;
+- 13D `ItemWeightQuery`;
+- 13E `ActorCarryQuery`.
 
-It reports:
-
-- anatomical right/primary hand;
-- anatomical left/secondary hand;
-- actor-root contained items;
-- nested container contents recursively;
-- stable item ID + semantic type + readable label;
-- known weight when classified, otherwise explicit unknown weight;
-- real carry total/capacity.
-
-No UI grouping may erase stable physical identity. A visual list may group nothing unless a future quantity/stack system explicitly owns that meaning.
+It preserves stable physical item IDs, reports hand slots, recursively reports actor-root/nested containment, exposes known weight where classified and explicit unknown weight otherwise, and reports the real carry result.
 
 ### `game/scripts/ui/CanonicalPlayerShell.gd`
+
 CanvasLayer owner for:
 
 - `STATS`, `INVENTORY`, `MENU` buttons;
-- modal overlay/panel geometry;
-- Stats modal presentation;
-- Inventory modal presentation;
-- Menu presentation;
-- hard-pause acquisition/restoration for modal lifetime;
-- Web/native Leave Game presentation behavior.
+- full-screen blocking modal overlay;
+- Stats/Inventory/Menu presentation;
+- hard-pause acquisition/restoration;
+- Resume/Close;
+- Leave Game presentation behavior.
 
 It does not mutate actor/world/inventory/stat truth.
 
-### Existing `DemoMovementControls.gd`
-Remains touch navigation input only.
+### Existing input/control owners
 
-System 16 may add one Crouch/Stand button beneath Turn Left, matching the existing mobile control area. It continues to emit semantic intent only.
+`PlayerActionIntent.gd` gains one semantic `STANCE_TOGGLE` intent.
 
-### Existing `KeyboardInputAdapter.gd`
-May add the desktop stance key and an explicit enabled/disabled gate. It still maps device input to semantic intent only.
+`KeyboardInputAdapter.gd` may map C to that semantic intent and exposes an enable gate for modal blocking.
+
+`DemoMovementControls.gd` may expose one Crouch/Stand touch button and an enable gate. It observes canonical locomotion state only to choose presentation text.
 
 ### Existing `DemoPlayerActionController.gd`
-May widen from Movement-only coordination to **player navigation/stance action coordination** by accepting the already-implemented `ActorStanceActionService` and locomotion state.
 
-It still owns no destination, collision, stance timing, or locomotion mutation rule; it only chooses the existing canonical action service and runs WHEN to the next stop.
+May widen from Movement-only coordination to navigation + existing stance-action coordination. It selects the existing Movement or Stance service, runs WHEN to the next stop, and reports the outcome. It owns no destination, collision, stance mutation, or timing rule.
+
+### `CanonicalDemoMain.gd`
+
+Composition only: construct/inject the new read/query owners, enroll Skills for the demo survivor, construct the existing stance service, and wire shell blocking to input enable gates.
 
 ## 6. Stance input contract
 
-V1 player intent adds one semantic UI action:
+Semantic intent:
 
-- `STANCE_TOGGLE`
+`STANCE_TOGGLE = player.stance_toggle`
 
-The controller reads current canonical stance and translates that player request to exactly one existing System 03 call:
+Controller translation from canonical locomotion state:
 
 - standing -> `request_crouch(actor_id)`;
 - crouched -> `request_stand(actor_id)`.
 
-Why toggle at the input layer: one physical mobile button and the C key represent the player's intent to switch stance, while System 03 remains the owner of the actual target stance, timing, validation and commit.
-
-The Crouch/Stand button text is presentation state only and must be refreshed from canonical `ActorLocomotionState` / `stance_changed` observation, not trusted as simulation truth.
-
 Desktop:
 
-- `C` = stance toggle.
+- `C` emits exactly one stance-toggle intent.
 
 Touch:
 
-- one native Godot Button below Turn Left;
-- label is `CROUCH` while standing and `STAND` while crouched;
-- one press emits one semantic stance-toggle intent.
+- one native Godot button below Turn Left;
+- text is `CROUCH` while canonical stance is standing;
+- text is `STAND` while canonical stance is crouched;
+- one press emits exactly one stance-toggle intent.
 
-System 15 HUD receives the resolved action like other player actions and refreshes after the stance commit.
+Button text is presentation only and must follow `ActorLocomotionState`; it is never trusted as stance truth.
+
+System 15 receives the resolved stance action and refreshes like other player actions.
 
 ## 7. Stats modal contract
 
-The Stats screen is a **read-only inspector**.
-
-V1 sections:
+Stats is read-only.
 
 ### Condition
+
 - stance;
 - HP current/max;
 - fatigue;
@@ -181,11 +169,20 @@ V1 sections:
 - derived moodlets.
 
 ### Injuries
-- current real 13A injury records with type, body region, severity, stabilized/treated state;
-- `None` when the real injury list is empty.
+
+Each real 13A injury shows:
+
+- injury type;
+- body region;
+- Minor/Serious/Critical severity;
+- stabilized state;
+- treated state.
+
+If none exist, display `None`.
 
 ### Skills
-Enumerate the 13C catalog dynamically rather than hardcoding UI fields:
+
+Enumerate the 13C catalog dynamically rather than hardcoding actor fields:
 
 - Combat;
 - Scavenging;
@@ -193,65 +190,66 @@ Enumerate the 13C catalog dynamically rather than hardcoding UI fields:
 - Medical;
 - Technical;
 - Social;
-- current level;
-- current XP / next threshold when below max level.
+- level;
+- current XP / next threshold below max level;
+- MAX at level 10.
 
-The live demo must explicitly enroll its survivor in 13C before the inspector is enabled. Current default levels/XP are real zero values, not placeholders.
+The demo survivor is explicitly enrolled in 13C. Current level-0/XP-0 values are real canonical defaults.
 
-Do not display traits, stress, temperature or other concepts until their owning systems exist.
+Do not show traits, stress, temperature, infection or other domains until their owners exist.
 
 ## 8. Inventory modal contract
 
-The Inventory screen is read-only in System 16.
-
-V1 sections:
+Inventory is read-only in System 16.
 
 ### Hands / Loadout
-- Right Hand (primary/anatomical right);
-- Left Hand (secondary/anatomical left).
+
+- Right Hand = primary/anatomical right;
+- Left Hand = secondary/anatomical left.
 
 ### Carried Inventory
-- direct actor-root contents;
-- nested item-container contents indented beneath their parent;
-- deterministic item order by stable ID unless a later presentation sorting rule is explicitly designed.
 
-### Carry
-- real derived current weight;
-- real persistent capacity.
+- actor-root direct contents;
+- nested item-container contents recursively;
+- deterministic stable-ID order from 11;
+- stable item ID and semantic/readable identity remain visible in query truth.
 
-Empty current demo state must visibly say `Empty` rather than inventing starter gear.
+No visual grouping may invent stacks or erase physical identity.
 
-Item labels are presentation humanization of semantic IDs only, e.g. `item.baseball_bat` -> `Baseball Bat`; the semantic type and stable ID remain available in the inspector result.
+### Weight / Carry
 
-A missing 13D weight profile displays `Weight: Unknown`, never 0.
+- known 13D item weight is displayed;
+- an unclassified profile displays `Weight: Unknown`, never zero;
+- Carry uses the real 13E result.
 
-The modal exposes no Move/Drop/Equip/Use button in this slice. Those operations belong to a later interaction UI over System 12.
+Current itemless demo must show Empty hands/root inventory and real `0.0 / 18.0 kg` carry rather than starter gear.
 
-## 9. Menu / hard-pause contract
+No Move/Drop/Equip/Use actions are exposed in this slice.
 
-Opening **Stats, Inventory, or Menu** acquires hard application pause.
+## 9. Menu and hard-pause contract
 
-On the transition from no modal -> modal:
+Opening Stats, Inventory, or Menu acquires hard application pause.
 
-1. remember whether WHEN was already hard paused;
+On first transition from no modal to any modal:
+
+1. capture whether WHEN was already hard paused;
 2. call `set_hard_paused(true)`;
-3. show the modal.
+3. show the requested modal;
+4. emit interaction blocking.
 
-Switching directly between Stats/Inventory/Menu keeps the same hard pause and does not overwrite the remembered prior state.
+Switching directly among Stats/Inventory/Menu retains that same pause lifetime and does not recapture prior state.
 
-On final modal close / Resume:
+On final Close/Resume:
 
-- restore the hard-pause state that existed before the shell opened.
+- hide the modal;
+- restore exactly the hard-pause state captured before the shell opened;
+- unblock gameplay input exactly once.
 
-This prevents a UI screen from accidentally unpausing an application that was already paused for another reason.
+This prevents the shell from accidentally unpausing a pause acquired by another owner.
 
-### Touch/input blocking
+### Input blocking
 
-A full-screen modal overlay consumes pointer input so movement buttons underneath cannot receive touches.
-
-System 16 also adds an explicit enabled gate to the keyboard input adapter (and touch controls if necessary) so gameplay intents are not emitted while an inspector/menu is open.
-
-Main only wires the shell's `interaction_blocked_changed` signal to those adapters; it does not own modal logic.
+The modal overlay consumes pointer input, and keyboard/touch gameplay adapters are explicitly disabled while a modal is active. Main only wires the shell’s `interaction_blocked_changed` signal to those enable gates.
 
 ### Menu contents
 
@@ -260,29 +258,26 @@ Main only wires the shell's `interaction_blocked_changed` signal to those adapte
 
 ### Leave Game
 
-Web build:
+Web:
 
-1. use browser history/back when there is a useful prior page;
-2. otherwise fall back to Google, preserving the earlier demo behavior rather than pretending a webpage can invoke Safari's configured home page.
+1. attempt browser history/back when a prior history entry exists;
+2. otherwise navigate to Google as the approved safe fallback.
 
-Non-Web/native fallback may call the normal Godot quit path.
+The implementation does not claim a web page can invoke Safari’s configured home page.
 
-## 10. Header / layout direction
+Native fallback may quit through normal Godot application behavior.
 
-System 15 owns the 568..632 HUD band exclusively. The old controls help text and second tick/action label are removed.
+## 10. Layout / mobile requirements
 
-For System 16 implementation:
-
-- keep the 13x13 world view unchanged;
-- keep System 15 HUD unchanged except ordinary refresh after stance actions;
-- keep existing Forward/Back/Turn buttons;
-- add Crouch/Stand below Turn Left;
-- place Stats / Inventory / Menu in the top/header area with touch-sized native Godot Buttons;
-- adjust/remove the decorative demo title as needed so buttons do not overlap;
-- modal inspector uses a full-screen blocking overlay plus scrollable content where needed;
-- no hover-only interaction.
-
-Exact button rectangles belong to the UI owner and may be tuned during implementation as long as the world/HUD/control bands remain non-overlapping and Safari-friendly.
+- retain the existing 13x13 world view;
+- System 15 exclusively owns the 568..632 HUD band;
+- retain Forward/Back/Turn buttons;
+- Crouch/Stand sits below Turn Left;
+- Stats/Inventory/Menu use touch-sized native Buttons in the top/header area;
+- the old decorative title may be removed to make room;
+- modal uses a full-screen pointer-blocking overlay and scrollable content;
+- no hover-only interactions;
+- input is one physical press -> one semantic intent.
 
 ## 11. Public contracts
 
@@ -290,119 +285,112 @@ Exact button rectangles belong to the UI owner and may be tuned during implement
 
 `query(actor_id: String) -> Dictionary`
 
-Result includes:
-
-- `ok` / `reason`;
-- status summary;
-- stance;
-- injury entries;
-- skill entries.
+Includes `ok/reason`, status summary, stance, injury entries and skill entries.
 
 ### Inventory query
 
 `query(actor_id: String) -> Dictionary`
 
-Result includes:
-
-- `ok` / `reason`;
-- primary/right hand item or empty;
-- secondary/left hand item or empty;
-- recursive actor-root inventory entries;
-- carry result.
+Includes `ok/reason`, primary/right hand, secondary/left hand, recursive actor-root inventory and carry result.
 
 ### Player shell
 
 - `configure(kernel, stats_query, inventory_query, actor_id) -> bool`
-- signal `interaction_blocked_changed(blocked: bool)`
+- `interaction_blocked_changed(blocked)` signal
 - `open_stats()`
 - `open_inventory()`
 - `open_menu()`
-- `close_modal()` / Resume
+- `close_modal()`
 - `active_modal() -> StringName`
-- `presentation_snapshot() -> Dictionary` for deterministic UI contract tests.
+- `presentation_snapshot() -> Dictionary`
 
 ### Input owners
 
-- retain signal `action_intent(intent)`;
-- add `set_enabled(enabled: bool)` where required by modal blocking.
+Retain `action_intent(intent)` and add `set_enabled(enabled)` where required.
 
 ## 12. Failure / edge cases
 
-- Missing Health/Needs/Skills/Carry truth => Stats fails visibly instead of supplying defaults.
-- Missing hand/container enrollment => Inventory fails visibly instead of assuming empty.
-- Missing WHAT item referenced by 09/11 => inventory row is explicit invalid/stale diagnostic; UI does not silently erase it.
-- Containment recursion is bounded and cycle-guarded even though 11 already forbids cycles.
-- Opening a second modal while one is open does not capture a second pause restore state.
-- Closing a modal restores prior hard-pause state exactly once.
-- Gameplay input is blocked while modal is active.
-- Leave Game failure does not mutate simulation state.
+- Missing Health/Needs/Skills/Carry truth => Stats reports unavailable, no default fabrication.
+- Missing hand/root-container enrollment => Inventory reports unavailable, not assumed empty.
+- Missing WHAT item referenced by 09/11 => explicit invalid/stale inventory entry.
+- Containment traversal is bounded and cycle/duplicate guarded even though 11 normally prevents cycles.
+- Missing item weight => explicit unknown weight.
+- Direct modal switching does not overwrite the one prior-pause capture.
+- Final close restores prior pause exactly once.
+- Gameplay input is blocked while a modal is open.
+- Leave Game does not mutate simulation truth.
 
 ## 13. Forbidden dependencies
 
 New inspector/query/UI owners must not:
 
 - call World/Health/Needs/Skills/Hands/Inventory mutation services;
-- call System 12 transfer mutation/action paths;
-- implement movement/stance duration or collision rules;
+- call System 12 transfer actions;
+- implement movement, collision or stance-duration rules;
 - import renderer/art selection;
 - import Reboot;
 - invent perception knowledge;
 - invent item/stat values;
-- advance WHEN directly except the existing player action coordinator running an accepted action and the shell owning hard application pause.
+- use SceneTree pause as a substitute for WHEN hard pause.
+
+The only WHEN interactions owned here are player-action coordination through the existing controller and hard application pause in the shell.
 
 ## 14. Acceptance tests
 
-Dedicated System 16 CI should prove:
+Dedicated System 16 CI must prove:
 
-1. Godot project parses;
-2. current System 14 and 15 regressions remain green;
-3. legacy help text and duplicate controls tick label are absent from the live scene;
-4. C key and touch stance button emit one semantic request each;
-5. standing -> crouched spends the existing 4 stance ticks and commits real 03 state;
-6. the stance button then presents `STAND` from real stance observation;
-7. a crouched forward step uses the already-existing 14-tick movement result;
-8. crouched -> standing spends the existing 4 stance ticks;
-9. Stats shows real HP/needs/carry/moodlets/stance and all six real Skills records;
-10. Stats shows no nonexistent traits/stress/etc.;
-11. Inventory shows real empty hands/root inventory in the current itemless demo and real 0/18 kg carry;
-12. synthetic nested inventory test renders stable recursive containment and unknown weight explicitly;
-13. Stats/Inventory/Menu acquire hard pause and closing restores the previous hard-pause state;
-14. switching modals does not incorrectly unpause or overwrite restore state;
-15. gameplay keyboard/touch input is blocked while a modal is active;
-16. Menu has Resume and Leave Game;
-17. no new mutation dependency appears in inspector/query owners;
-18. exact-final-SHA startup, Web export, and Pages deploy succeed.
+1. Godot 4.7.1 parses the project;
+2. System 14 and 15 regressions remain green;
+3. legacy help text and duplicate controls tick label remain absent;
+4. C key and touch stance button each emit one semantic stance-toggle request;
+5. standing -> crouched spends existing 4 stance ticks and commits real 03 state;
+6. stance button then presents `STAND` from real locomotion observation;
+7. crouched forward movement uses the existing 14-tick result;
+8. crouched -> standing spends existing 4 stance ticks;
+9. Stats shows real condition, stance, carry, moodlets and all six Skill records;
+10. Stats shows no fake traits/stress/etc.;
+11. Inventory shows real empty hands/root and 0/18 kg in the itemless demo;
+12. synthetic nested containment exposes stable IDs recursively and unknown weights explicitly;
+13. Stats/Inventory/Menu acquire hard pause and restore prior pause correctly;
+14. direct modal switching does not recapture/unpause;
+15. gameplay keyboard/touch input is blocked while modal active;
+16. Menu exposes Resume and Leave Game;
+17. inspector/query owners have no mutation/transfer/render/Reboot dependency;
+18. exact-final-SHA startup, Web export and Pages deployment succeed.
 
 ## 15. Recovery sources
 
-Useful UX recovery evidence:
+UX evidence only:
 
-- golden Tick `MapPreview.gd` blob `8ef5d900e5f56bb557bba496d10acc47438b38de`: Crouch button, Menu overlay, hard pause, Resume, Exit-to-Google behavior;
-- same-owner First Fire `FFInspector.gd` blob `8eed5e9d6f768c0d23350e99c79ad0c0844b18ff`: full-screen scrolling character inspector and pause-on-inspection UX.
+- golden Tick `MapPreview.gd` blob `8ef5d900e5f56bb557bba496d10acc47438b38de`: Crouch button, Menu/Resume, exit behavior;
+- same-owner First Fire `FFInspector.gd` blob `8eed5e9d6f768c0d23350e99c79ad0c0844b18ff`: full-screen scrolling inspector and previous-pause restoration pattern.
 
-Recover the useful UX behavior only. Do not restore either monolithic architecture or nonexistent stats.
+Do not restore either monolithic architecture or nonexistent gameplay state.
 
 ## 16. Future seams
 
 After System 16:
 
-- item/loose-item presentation can make Inventory visibly nonempty without changing inspector ownership;
-- System 12 interaction UI can add pickup/drop/equip controls without moving containment/hand truth into the screen;
-- future traits/stress/temperature domains can extend Stats through explicit new query dependencies;
-- browser visibility/focus lifecycle can acquire the same WHEN hard-pause mechanism through a separate application-lifecycle owner;
-- save/load can preserve simulation state independently of modal state.
+- loose-item presentation can make Inventory visibly nonempty without changing inspector ownership;
+- System 12 UI may add pickup/drop/equip actions without moving possession truth into UI;
+- System 10 held-item layers can be composed when the demo has real equipped items;
+- future stat domains can extend Stats explicitly;
+- browser/app lifecycle can acquire WHEN hard pause through a separate lifecycle owner;
+- save/load remains independent of modal state.
 
 ## 17. North-star fit
 
-System 16 turns the current walking/HUD demo into a usable survival-game shell without creating fake survival mechanics. It exposes real stance cost, real condition, real inventory truth, and safe real-life pause through small read/composition owners, preserving **Ultima-style turn-based mini Zomboid** and the rule that mini means reduced complexity rather than reduced consequence.
+System 16 turns the walking/HUD demo into a usable survival-game shell without fake mechanics. It exposes real stance cost, real actor condition, real physical inventory truth and real-life-safe hard pause through replaceable owners, fitting **Ultima-style turn-based mini Zomboid** and the rule that mini means reduced complexity rather than reduced consequence.
 
-## 18. Draft decisions requiring explicit approval
+## 18. Approved decisions
 
-1. Treat Crouch/Stand + Stats + Inventory + Menu as one bounded **integration** system because all owning simulation domains already exist; keep its internals independently replaceable.
-2. Use a single semantic `STANCE_TOGGLE` input; controller translates current canonical stance into the existing System 03 crouch/stand action.
-3. Stats is read-only and shows stance, HP, needs, carry, moodlets, injuries and all six Skills; no nonexistent traits/stress values.
-4. Inventory is read-only in this slice and shows Hands + actor-root/nested Containment + Carry; no pickup/drop/equip/use buttons yet.
-5. Any modal acquires WHEN hard pause and restores the exact prior hard-pause state on final close.
-6. Modal UI blocks gameplay touch/keyboard input while open.
-7. Web Leave Game tries useful browser history first and falls back to Google; it does not claim it can open Safari's configured home page.
-8. The System 15 HUD becomes the sole tick/action status surface; legacy control help/action labels are vestigial and removed.
+Approved by the user on 2026-08-16:
+
+1. Crouch/Stand + Stats + Inventory + Menu are one bounded integration system because their simulation owners already exist.
+2. One semantic `STANCE_TOGGLE` intent maps current canonical stance to the existing System 03 crouch/stand action.
+3. Stats is read-only: stance, HP, needs, carry, moodlets, injuries and six Skills only.
+4. Inventory is read-only: Hands + actor-root/nested Containment + Carry; no pickup/drop/equip/use yet.
+5. Any modal acquires WHEN hard pause and final close restores exact prior hard-pause state.
+6. Modal UI blocks gameplay keyboard/touch input.
+7. Web Leave Game tries browser history first and falls back to Google; no Safari-homepage claim.
+8. System 15 remains the sole tick/action HUD surface; legacy help/action overlays remain removed.
