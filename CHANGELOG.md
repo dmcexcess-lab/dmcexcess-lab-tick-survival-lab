@@ -1,5 +1,25 @@
 # Changelog
 
+## 12 Item Transfer / Pickup / Drop / Equip Actions — 2026-08-16
+
+- Implemented **12 Item Transfer Actions** after explicit approval of the detailed cross-domain contract.
+- Added `ItemTransferActionType.gd`, `ItemDispositionResult.gd`, `ItemDispositionQuery.gd`, `ItemTransferTimingDecision.gd`, `ItemTransferTimingPolicy.gd`, `ItemTransferActionResult.gd`, and `ItemTransferActionService.gd` under `game/scripts/simulation/items/transfer/`.
+- Added a read-only derived `ItemDispositionQuery` over WHAT + 09 + 11 with `LOOSE_WORLD`, `HAND`, `CONTAINED`, `UNCLAIMED`, `INVALID_PLACEMENT`, `CONFLICT`, and `UNKNOWN`; it is never persisted as a fourth item-location truth.
+- V1 handles real personal-survivor transitions among floor, actor-root inventory, nested personal item-containers, held item-containers, and anatomical hands. Arbitrary cabinets/trunks/corpses/vehicle cargo remain deferred until real access/search/open/lock rules exist.
+- Added all seven approved paths: world→container, world→hand, container→world, hand→world, container→hand, hand→container, and container→container.
+- Pickup reach is actor footprint plus the one-cell-forward fringe. Normal drop is a single-cell WHAT `LOOSE_ITEM` at the survivor's anchor/facing.
+- Occupied target hands fail without magical auto-swap. Containment cycles and inaccessible destinations fail before time is spent.
+- Transfer duration is explicit policy data; no unrecovered pickup/drop/equip defaults were invented. Accepted actions use one final `item_transfer.commit` phase and WHEN `CANCELABLE` semantics.
+- Pending expected state lives only in WHEN payload. Commit revalidates actor placement/facing, stable item identity, exact source disposition, reach, hand version/slot, source/destination container versions, personal access, destination hand state, and timing policy.
+- Added no source/destination reservation: concurrent races are allowed and deterministic first valid commit wins while a later stale action loses its already-spent time.
+- Coordinated two-step transitions use the existing public WHAT/09/11 mutation services and exceptional public-API compensation if the destination write fails after source removal.
+- Initial implementation head `7ea53e0d300fb0d7aad2802b11d4da930b802a49` passed source boundaries, Godot parse, WHAT, WHEN, 09, and 11 regressions, but the new 12 smoke exposed a real reentrant destination-overwrite edge case.
+- Hardened `ItemTransferActionService` so destination truth is revalidated immediately after source removal and immediately before the second mutation. This prevents synchronous low-level signal callbacks from causing 12 to overwrite a newly occupied hand/stale container/changed actor placement.
+- Hardened code head `c3139466c26cbb8367b4509f107a48916a323916` passed dedicated **Item Transfer Actions contract** run `31990020356`, including successful compensation and explicit `critical_consistency_failure` coverage when compensation itself is made impossible.
+- WHAT, WHEN, 09 Hand Equipment, and 11 Inventory / Containment production/public contracts remained unchanged.
+- Recorded the reusable reentrant cross-domain transaction lesson in `README_SOPS.md`.
+- Next honest-demo prerequisite is **Actor stat domains required for the Stats/HUD inspector**, unless visual composition is explicitly prioritized first.
+
 ## 11 Inventory / Containment — 2026-08-16
 
 - Implemented **11 Inventory / Containment** after explicit user approval of the bounded persistent direct-containment contract.
@@ -114,7 +134,7 @@
 - Added `ActorMovementCapabilityService` with deterministic integer basis-point scaling and sorted read-only `ActorMobilityModifierProvider` extension points. Future Health, Needs/Fatigue, Inventory/Encumbrance, Equipment and Skills systems can modify/block mobility without exposing their internals to Movement, WHAT, Collision or WHEN.
 - Added deterministic provider rules: duplicate IDs rejected, ALLOWED adjustments combine additively, UNKNOWN fails closed, explicit BLOCKED outranks UNKNOWN, and non-positive combined duration scale is invalid.
 - Implemented the approved narrow revision to 02 Movement: added typed `MovementPolicyDecision`, typed step/turn policy evaluation, and explicit actor/capability statuses in `MovementActionResult` instead of mislabeling condition failures as terrain failures.
-- Added `ActorMovementTraversalPolicy` to compose base terrain/timing policy with actor capability while leaving `MovementActionService` owner of collision, timed submission, commit revalidation and WHAT placement mutation.
+- Added `ActorMovementTraversalPolicy` to compose the simple base policy with actor locomotion/capability while leaving `MovementActionService` owner of collision, timed submission, commit revalidation and WHAT placement mutation.
 - Movement now reevaluates actor-aware policy at `movement.commit`: newly blocked capability fails after the already-spent duration; newly slower-but-still-allowed capability does not stretch the current action and applies to the next request.
 - Added `ActorLocomotionSmoke.gd` plus a dedicated Godot 4.7.1 `Actor Locomotion contract` workflow. Verification covers enrollment/snapshots, stance timing, hard pause, stale versions, provider aggregation, actor-aware Movement, capability changes mid-action, and the existing Movement regression smoke.
 - The frozen `game/scripts/reboot/` playable reference remains untouched; no input, renderer, health, needs, inventory, sound, perception, generation or run implementation was added.
@@ -160,7 +180,7 @@
 
 - Implemented the second bounded WHERE / WHAT / WHEN foundation slice, **00B Persistent World / Entity State (WHAT)**, after the user explicitly authorized WHAT as the next system.
 - Added `SYSTEM_DESIGNS/00B_PERSISTENT_WORLD_STATE.md` and locked one authoritative **current persistent world** rather than parallel generated/original and modified/current gameplay realities. Future save storage may optimize with baselines/journals/regions, but gameplay sees one truth.
-- Added `game/scripts/foundation/world/WorldEntityId.gd` and `WorldEntityRecord.gd` for stable opaque persistent IDs plus semantic entity types independent of Godot Nodes, rendering, storage order and tactical placement.
+- Added `game/scripts/foundation/world/WorldEntityId.gd` and `WorldEntityRecord.gd` for stable opaque persistent IDs plus semantic entity types independent of Godot Nodes, rendering, store ordering and tactical placement.
 - Added `WorldPlacement.gd` as the WHAT/WHERE seam: spatial channel, global anchor, N/E/S/W facing, arbitrary whole-cell footprint and optional HORIZONTAL/VERTICAL structure axis. Entities may intentionally remain persistent while unplaced.
 - Added separate `TerrainStore.gd`, `EntityStore.gd` and `PlacementStore.gd` owners rather than one giant world dictionary or generic metadata bag.
 - Added `OccupancyIndex.gd` as a **derived** global-cell/channel lookup rebuilt from placements. WHAT permits overlap and does not invent collision/construction legality; those decisions remain with later collision/construction/movement systems.
