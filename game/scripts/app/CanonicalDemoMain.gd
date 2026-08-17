@@ -13,12 +13,14 @@ const LocomotionStateClass = preload("res://scripts/simulation/actors/locomotion
 const LocomotionMutationClass = preload("res://scripts/simulation/actors/locomotion/ActorLocomotionMutationService.gd")
 const MovementCapabilityClass = preload("res://scripts/simulation/actors/locomotion/ActorMovementCapabilityService.gd")
 const ActorTraversalPolicyClass = preload("res://scripts/simulation/actors/locomotion/ActorMovementTraversalPolicy.gd")
+const StanceActionClass = preload("res://scripts/simulation/actors/locomotion/ActorStanceActionService.gd")
 const HandStateClass = preload("res://scripts/simulation/actors/equipment/ActorHandEquipmentState.gd")
 const HandMutationClass = preload("res://scripts/simulation/actors/equipment/ActorHandEquipmentMutationService.gd")
 const InventoryStateClass = preload("res://scripts/simulation/inventory/InventoryContainmentState.gd")
 const InventoryMutationClass = preload("res://scripts/simulation/inventory/InventoryContainmentMutationService.gd")
 const HealthStateClass = preload("res://scripts/simulation/actors/health/ActorHealthState.gd")
 const NeedsStateClass = preload("res://scripts/simulation/actors/needs/ActorNeedsState.gd")
+const SkillStateClass = preload("res://scripts/simulation/actors/skills/ActorSkillState.gd")
 const PhysicalCatalogClass = preload("res://scripts/simulation/items/properties/ItemPhysicalPropertyCatalog.gd")
 const WeightQueryClass = preload("res://scripts/simulation/items/properties/ItemWeightQuery.gd")
 const CarryStateClass = preload("res://scripts/simulation/actors/carry/ActorCarryState.gd")
@@ -26,6 +28,8 @@ const CarryQueryClass = preload("res://scripts/simulation/actors/carry/ActorCarr
 const MoodletServiceClass = preload("res://scripts/simulation/actors/moodlets/ActorMoodletService.gd")
 const StatusSummaryClass = preload("res://scripts/ui/ActorStatusSummaryQuery.gd")
 const InspectionQueryClass = preload("res://scripts/ui/FacingInspectionQuery.gd")
+const StatsInspectorClass = preload("res://scripts/ui/ActorStatsInspectorQuery.gd")
+const InventoryInspectorClass = preload("res://scripts/ui/ActorInventoryInspectorQuery.gd")
 const ArtCatalogClass = preload("res://scripts/art/ArtCatalog.gd")
 const DoorStateClass = preload("res://scripts/simulation/doors/DoorStateStore.gd")
 const FixtureClass = preload("res://scripts/demo/CanonicalDemoFixture.gd")
@@ -38,6 +42,7 @@ const ControllerClass = preload("res://scripts/player/DemoPlayerActionController
 @onready var _keyboard: KeyboardInputAdapter = $KeyboardInput
 @onready var _controls: DemoMovementControls = $Controls
 @onready var _hud: CanonicalStatusHud = $Hud
+@onready var _shell: CanonicalPlayerShell = $PlayerShell
 
 var _world: WorldState = null
 var _world_mutations: WorldMutationService = null
@@ -51,12 +56,14 @@ var _locomotion_mutations: ActorLocomotionMutationService = null
 var _movement_capability: ActorMovementCapabilityService = null
 var _actor_traversal: ActorMovementTraversalPolicy = null
 var _movement: MovementActionService = null
+var _stance_actions: ActorStanceActionService = null
 var _hand_state: ActorHandEquipmentState = null
 var _hand_mutations: ActorHandEquipmentMutationService = null
 var _inventory_state: InventoryContainmentState = null
 var _inventory_mutations: InventoryContainmentMutationService = null
 var _health_state: ActorHealthState = null
 var _needs_state: ActorNeedsState = null
+var _skill_state: ActorSkillState = null
 var _physical_catalog: ItemPhysicalPropertyCatalog = null
 var _weight_query: ItemWeightQuery = null
 var _carry_state: ActorCarryState = null
@@ -64,6 +71,8 @@ var _carry_query: ActorCarryQuery = null
 var _moodlet_service: ActorMoodletService = null
 var _status_summary: ActorStatusSummaryQuery = null
 var _inspection_query: FacingInspectionQuery = null
+var _stats_inspector: ActorStatsInspectorQuery = null
+var _inventory_inspector: ActorInventoryInspectorQuery = null
 var _art_catalog: ArtCatalog = null
 var _door_state: DoorStateStore = null
 var _controller: DemoPlayerActionController = null
@@ -116,6 +125,16 @@ func _boot_canonical_demo() -> bool:
     if not _movement.is_ready():
         return false
 
+    _stance_actions = StanceActionClass.new(
+        _world,
+        _locomotion_state,
+        _locomotion_mutations,
+        _kernel,
+        _movement_capability
+    )
+    if not _stance_actions.is_ready():
+        return false
+
     _art_catalog = ArtCatalogClass.new()
     _door_state = DoorStateClass.new()
     if not _world_view.configure(
@@ -147,17 +166,43 @@ func _boot_canonical_demo() -> bool:
     ):
         return false
 
+    _stats_inspector = StatsInspectorClass.new(
+        _status_summary,
+        _health_state,
+        _skill_state,
+        _locomotion_state
+    )
+    _inventory_inspector = InventoryInspectorClass.new(
+        _world,
+        _hand_state,
+        _inventory_state,
+        _weight_query,
+        _carry_query
+    )
+    if not _shell.configure(
+        _kernel,
+        _stats_inspector,
+        _inventory_inspector,
+        FixtureClass.PLAYER_ID
+    ):
+        return false
+    if not _controls.configure_stance(_locomotion_state, FixtureClass.PLAYER_ID):
+        return false
+
     _controller = ControllerClass.new(
         _movement,
         _kernel,
-        FixtureClass.PLAYER_ID
+        FixtureClass.PLAYER_ID,
+        _stance_actions,
+        _locomotion_state
     )
-    if not _controller.is_ready():
+    if not _controller.is_ready() or not _controller.stance_ready():
         return false
 
     _keyboard.action_intent.connect(Callable(_controller, "submit_intent"))
     _controls.action_intent.connect(Callable(_controller, "submit_intent"))
     _controller.action_resolved.connect(Callable(_hud, "present_action_result"))
+    _shell.interaction_blocked_changed.connect(_on_interaction_blocked_changed)
     return true
 
 func _boot_actor_status() -> bool:
@@ -179,6 +224,10 @@ func _boot_actor_status() -> bool:
     if not _needs_state.enroll_actor(FixtureClass.PLAYER_ID):
         return false
 
+    _skill_state = SkillStateClass.new(_world)
+    if not _skill_state.enroll_actor(FixtureClass.PLAYER_ID):
+        return false
+
     _physical_catalog = PhysicalCatalogClass.new()
     _weight_query = WeightQueryClass.new(_world, _physical_catalog)
     _carry_state = CarryStateClass.new(_world)
@@ -198,3 +247,7 @@ func _boot_actor_status() -> bool:
         _carry_query
     )
     return true
+
+func _on_interaction_blocked_changed(blocked: bool) -> void:
+    _keyboard.set_enabled(not blocked)
+    _controls.set_enabled(not blocked)
