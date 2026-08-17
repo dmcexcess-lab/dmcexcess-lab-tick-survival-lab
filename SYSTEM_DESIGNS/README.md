@@ -43,80 +43,59 @@ Major systems move through **NOT DESIGNED -> DRAFT -> APPROVED -> IMPLEMENTED** 
 | 00F | Streaming / Materialization | **NOT DESIGNED** | `00F_STREAMING_MATERIALIZATION.md` |
 | old-01 | Raid-map / extraction physical-world model | **SUPERSEDED** | `01_RAID_MAP_DATA.md` |
 
-## Implemented source ownership
+## System 19 current archetype library
 
-Foundation and simulation remain separated by domain:
+### Accepted saved baseline
 
-- WHERE: `game/scripts/foundation/spatial/`
-- WHAT: `game/scripts/foundation/world/`
-- WHEN: `game/scripts/foundation/time/`
-- Collision: `game/scripts/simulation/collision/`
-- Movement / Run / passage seams: `game/scripts/simulation/movement/`
-- Door State + Door Interaction: `game/scripts/simulation/doors/`
-- Locomotion/capability: `game/scripts/simulation/actors/locomotion/`
-- Health / Needs / Skills / Carry / Moodlets: focused actor-domain folders under `game/scripts/simulation/actors/`
-- Hands: `game/scripts/simulation/actors/equipment/`
-- Inventory: `game/scripts/simulation/inventory/`
-- Item transfer: `game/scripts/simulation/items/transfer/`
-- Item physical properties: `game/scripts/simulation/items/properties/`
-- Local building generation: `game/scripts/generation/buildings/`
-- Art: `game/scripts/art/`
-- canonical renderers: `game/scripts/render/`
-- demo/bootstrap/input/player/UI: focused owners under their corresponding folders.
+`residential.trailer.singlewide` **v2** — Trailer Candidate 002.
 
-`game/scripts/reboot/` remains frozen reference only. `game/main.tscn` launches the canonical modular demo.
-
-## Live demo after System 19 — Trailer critique iteration 2
-
-The live canonical demo is now **Trailer Candidate 002**:
-
-- one controlled survivor, no NPCs/infected/loot;
-- fixed 13×13 one-screen view, still no camera;
-- deterministic `residential.trailer.singlewide` **archetype v2**;
-- **5×12 exterior shell / 3-cell usable interior width**;
+- 5×12 shell / 3-cell usable width;
+- light plaster exterior;
 - 3×4 living/kitchen, 3×2 bathroom, 3×2 bedroom;
-- light `wall.plaster` exterior shell instead of brown rural wood;
-- kitchen fixtures on one side and sofa/loveseat against the opposite wall facing inward;
-- two centered interior doors preserve a middle-column circulation spine;
-- four exterior windows and three real CLOSED doors;
-- real System 18 door passage.
+- four windows / three doors;
+- accepted by the user on 2026-08-17 and preserved by CI.
 
-Door interaction truth remains:
+### Current live critique candidate
 
-- Walk through an eligible CLOSED door -> opens at Walk commit with no extra door ticks;
-- damage-canceled Walk -> door remains CLOSED;
-- Run through eligible CLOSED door -> opens during stride, emits LOUD semantic event, no door-impact HP damage;
-- tap/click OPEN adjacent door while **facing it** -> 3-tick CANCELABLE close;
-- wrong-facing close rejects at zero ticks, so turning costs existing turn ticks;
+`residential.house.farm_small` **v1** — Farmhouse Candidate 001.
+
+- 13×13 shell;
+- exact 5×5 living room;
+- exact 3×3 kitchen, two bedrooms and bathroom;
+- open middle circulation/dining band;
+- light plaster exterior;
+- five doors / seven windows;
+- restrained domestic furniture;
+- deterministic rotation and validated circulation.
+
+The live caller is a fixed **15×15 one-screen** lot at **32 px/cell**. Camera remains deferred.
+
+## Door interaction truth
+
+- Walk through eligible CLOSED door -> opens at Walk commit.
+- damage-canceled Walk -> door stays CLOSED.
+- Run through eligible CLOSED door -> opens during stride, emits LOUD semantic passage, no door-impact HP damage.
+- tap/click eligible OPEN adjacent door while **facing it** -> 3-tick CANCELABLE close.
+- wrong-facing close costs zero and requires normal turn actions first.
 - future long-tap/right-click interaction menu remains reserved.
-
-Movement / carry truth from Systems 17–17A.1 remains unchanged.
 
 ## Immediate next path
 
-1. **User playtests/critiques Trailer Candidate 002.**
-2. Convert any further critique into reusable `residential.trailer.singlewide` rules.
-3. Once trailer density/proportions feel right, add `residential.house.small_ranch` under the existing System 19 contract.
-4. Repeat the critique loop for the house.
-5. Add camera / larger local play space when multiple properties create an actual need to see beyond one screen.
-
-The real item-interaction demo remains valid future work and can be layered into generated buildings later.
+1. User critiques Farmhouse Candidate 001.
+2. Convert useful critique into farmhouse archetype rules.
+3. Keep accepted Trailer v2 unchanged.
+4. Add further building archetypes under System 19.
+5. Add camera/larger local play space only when multiple simultaneous properties exceed the one-screen critique lab.
 
 ## Verification
 
-Original fully green Systems 18+19 candidate:
+Farmhouse Candidate 001 first green code candidate:
 
-- SHA `c035fe7b3f5d0badab6c5b598996010e92d852b2`;
-- Door Interaction run `32005363005`: SUCCESS;
-- Local Building Generation run `32005363051`: SUCCESS.
+- SHA `65a951bc1d38c055c17cbcfcd496a59cb30727c9`;
+- Local Building Generation run `32007785922`: SUCCESS.
 
-Trailer Candidate 002 first green code candidate:
-
-- SHA `30aa8d1af7ca3d694a4085d4ec2a173a783d0dcb`;
-- Local Building Generation run `32006433070`: SUCCESS.
-
-Exact documentation-promotion SHA must pass the dedicated contract plus Pages before completion is claimed.
+Exact documentation-promotion SHA must pass the dedicated System 19 contract plus Pages before completion is claimed.
 
 ## Design rule
 
-Every major system keeps a focused owner/public contract. If implementation unexpectedly requires crossing a forbidden boundary, return the design to review rather than cascading a patch.
+Every major system keeps a focused owner/public contract. System 19 shared validation is structural/generic; archetype-specific room programs belong to focused archetype owners/tests. If implementation unexpectedly requires crossing a forbidden boundary, return the design to review rather than cascading a patch.

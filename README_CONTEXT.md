@@ -18,21 +18,19 @@ Golden recovery commit: `1763958f44eb7f855fd49944c00d1ffe608c0abe`.
 
 Systems 14–19 are the live canonical demo/player path. `game/main.tscn` launches the modular canonical demo. `game/scripts/reboot/` remains frozen/deprecated reference only.
 
-Implemented + dedicated validation now includes:
+Implemented + dedicated validation includes:
 
 - WHERE / WHAT / WHEN foundation;
 - Collision / Movement / Locomotion;
 - recovered Art + Ground/Structure/Prop/Living Actor/Hand renderers;
-- Door State;
+- Door State + System 18 automatic/manual door interaction;
 - Hands / Inventory / Item Transfer;
 - Health / Needs / Skills / Item Weight / Carry / Moodlets;
 - Canonical Demo / HUD / Player Shell;
 - Run / damage-interruptible Walk;
 - 17A exertion/encumbrance/run impact;
 - 17A.1 overweight-Walk fatigue + 2x hard carry ceiling;
-- **System 18 Door Interaction / Automatic Passage**;
-- **System 19 Local Building Generation / Archetype Critique Lab**;
-- **Trailer archetype v2 / Candidate 002 critique refinement**.
+- System 19 local building generation with **accepted Trailer v2** and **Farmhouse Candidate 001**.
 
 ## 3. Foundation truth
 
@@ -40,183 +38,130 @@ Implemented + dedicated validation now includes:
 Global integer cells, 1m planning scale, N/E/S/W facing, whole-cell footprints, structure cells with H/V axis. Geometry only.
 
 ### WHAT
-One authoritative persistent current world with stable IDs, semantic types/terrain, WHERE placements, derived occupancy, typed mechanic state keyed by stable IDs.
+One authoritative persistent current world with stable IDs, semantic types/terrain, WHERE placements, derived occupancy and typed mechanic state keyed by stable IDs.
 
 ### WHEN
 One deterministic integer world tick, variable-duration actions/events, same-tick draining, COMMITTED/RESUMABLE/CANCELABLE policies, tactical decision pause plus separate hard application pause.
 
 ## 4. Movement / fatigue / carry truth
 
-Canonical movement:
+- Walk Forward/Back: one cell, damage-CANCELABLE.
+- Run Forward: two physical strides, COMMITTED.
+- Turn L/R: COMMITTED.
+- Crouch/Stand: COMMITTED.
+- Duration composes terrain × stance × fatigue × encumbrance.
+- fatigue 80+ blocks Run.
+- soft carry defaults 18 kg; 100%+ soft capacity blocks Run.
+- Walk fatigue is zero at/below soft capacity; above capacity it depends on terrain only, not degree of overage.
+- Run fatigue depends on terrain × encumbrance.
+- normal acquisition hard ceiling is 2× soft capacity, 36 kg by default.
+- known hard Run blockers cause attempted-stride exertion + 5 HP impact unless a passage resolver resolves them first.
 
-- Walk Forward/Back — one cell, damage-CANCELABLE;
-- Run Forward — two physical strides, COMMITTED;
-- Turn L/R — COMMITTED;
-- Crouch/Stand — COMMITTED.
-
-Terrain is the base movement cost. Run stride pace is 60% of that stride's Walk terrain cost before actor factors.
-
-Duration factors compose multiplicatively:
-
-`duration = ceil(base terrain/action ticks × stance × fatigue × encumbrance)`
-
-Current key thresholds:
-
-- fatigue 80+ blocks Run;
-- soft carry capacity defaults 18 kg;
-- 100%+ soft capacity blocks Run;
-- Walk fatigue is zero at/below soft capacity;
-- once overweight, Walk fatigue depends on terrain only, not degree of overage;
-- Run fatigue depends on terrain × encumbrance;
-- normal acquisition hard ceiling is derived at 2× soft capacity, 36 kg by default;
-- actual load ratio above soft capacity still increases movement duration.
-
-Known hard Run blockers cause attempted-stride exertion + 5 HP impact unless a configured passage resolver physically resolves the blocker first.
-
-## 5. System 18 — Door Interaction truth
+## 5. Door Interaction truth
 
 Design: `SYSTEM_DESIGNS/18_DOOR_INTERACTION_PASSAGE.md`
 
-Implemented rules:
-
-- Door State remains the sole persistent OPEN/CLOSED truth.
-- CLOSED doors use their normal blocking Collision profile; OPEN doors use a sparse nonblocking collision override.
-- Movement has a generic optional passage resolver and imports no door implementation.
-- Walk Forward/Back into a target blocked only by one eligible CLOSED door is conditionally accepted.
-- Walk does **not** open the door at request time; it opens at movement commit, re-queries collision, then enters if clear.
-- damage-canceled Walk leaves the door CLOSED.
-- Run gives an eligible CLOSED door one physical resolution chance at each stride; successful passage opens it, emits `run_passage` + `loud`, and continues with no door-impact HP damage.
-- unresolved blockers keep normal System 17A Run-impact behavior.
-- short click/tap only closes an OPEN door.
-- manual close costs **3 ticks**, is CANCELABLE, and requires cardinal adjacency + **facing the door**.
-- wrong-facing close rejects at zero ticks, so existing turn actions must be spent first.
+- CLOSED normal door may be conditionally traversed through Movement's generic passage seam.
+- Walk opens at actual movement commit; damage-canceled Walk leaves it CLOSED.
+- Run opens at stride, continues and emits semantic LOUD passage; no normal 5 HP door impact.
+- unresolved blockers retain normal Run-impact behavior.
+- short tap/click closes an OPEN door only when cardinally adjacent **and facing it**.
+- manual close costs 3 ticks and is CANCELABLE by damage.
 - actor in doorway prevents close.
-- damage cancels active manual close and leaves door OPEN.
-- future right-click/long-touch interaction menu is reserved, not implemented.
-- future special 180° turn/fatigue is reserved for Locomotion, not System 18.
+- future right-click/long-touch interaction menu remains reserved.
+- future special 180° turn fatigue remains deferred to Locomotion.
 
-## 6. System 19 — Local Building Generation truth
+## 6. System 19 truth
 
 Design: `SYSTEM_DESIGNS/19_LOCAL_BUILDING_GENERATION_ARCHETYPE_LAB.md`
 
-System 19 is **below** future global world planning.
+Caller supplies stable instance ID, archetype, seed, envelope, orientation and frontage. System 19 generates a pure semantic plan, validates it, materializes initial WHAT + CLOSED Door State, then relinquishes ownership to persistent gameplay truth.
 
-Caller supplies:
+Shared validator owns generic structural/connectivity correctness. Archetype-specific required room vocabulary/dimensions are locked by focused CI so the validator does not become a catalog of trailer/house/store semantics.
 
-- stable building instance namespace;
-- archetype ID;
-- global envelope;
-- orientation/frontage;
-- deterministic seed.
+### Accepted Trailer baseline
 
-System 19:
+`residential.trailer.singlewide`, **version 2**.
 
-1. generates a pure semantic plan;
-2. validates bounds/roles/structure/circulation;
-3. materializes initial WHAT + explicitly CLOSED Door State;
-4. then relinquishes ownership to persistent gameplay truth.
+User explicitly accepted/saved Candidate 002 on 2026-08-17.
 
-It never selects roads/parcels/towns, scans the world for placement, knows camera/streaming, owns loot, or stores art indices.
+- 5×12 shell;
+- 3×4 living/kitchen;
+- 3×2 bathroom;
+- 3×2 bedroom;
+- light plaster exterior;
+- four windows / three doors;
+- kitchen run on one side;
+- sofa against opposite wall facing inward;
+- preserved `TrailerCritiqueFixture.gd` and CI assertions.
 
-### Trailer Candidate 002
+Do not revise this baseline without newer explicit trailer direction.
 
-Archetype: `residential.trailer.singlewide`, **version 2**.
+### Farmhouse Candidate 001
 
-Live candidate:
+`residential.house.farm_small`, version 1.
 
-- stable ID namespace `building.demo.trailer.001`;
-- deterministic seed `19001`;
-- NORTH orientation / EAST frontage;
-- **5×12 exterior footprint**;
-- distinct **3×4 living/kitchen, 3×2 bathroom, 3×2 bedroom**;
-- one exterior side door into living/kitchen;
-- two centered interior doors forming a middle-column circulation spine;
-- four exterior windows;
-- **light `wall.plaster` exterior shell** with existing light `wall.interior` partitions;
-- stove, fridge and sink along one side of living/kitchen;
-- sofa/loveseat against the opposite wall, facing inward;
-- toilet, vanity, single bed and dresser;
-- validated one-cell circulation to every room.
+Approved exact program:
 
-Candidate 001 used a 6×12 shell / four-cell usable interior width. User critique on 2026-08-17 intentionally narrowed the archetype by one cell across while preserving length and room sequence. Because the same seed now produces different geometry, the archetype version was bumped rather than silently changing version-1 determinism.
-
-Materializer refuses conflicting occupied cells and snapshots/restores WHAT + Door State on partial write failure.
+- **13×13 shell**;
+- living room **5×5**;
+- kitchen **3×3**;
+- bedroom 1 **3×3**;
+- bathroom **3×3**;
+- bedroom 2 **3×3**;
+- light plaster exterior;
+- open middle circulation/dining band;
+- two exterior doors: front into living-room side, side door into kitchen;
+- three private-room doors;
+- seven windows;
+- restrained living/kitchen/bedroom/bath furniture;
+- deterministic rotation and one-cell circulation to every room.
 
 ## 7. Live canonical demo
 
-The current live demo is the **Trailer Candidate 002 critique lot**, not the old authored sample map.
+The current live target is **Farmhouse Candidate 001**.
 
-- fixed 13×13 one-screen tactical view;
+- fixed **15×15** one-screen critique lot;
+- **32 px/cell** presentation so camera remains deferred;
+- canonical spatial scale remains 1m/cell;
+- farmhouse envelope `Rect2i(1,1,13,13)`;
+- instance `building.demo.farmhouse.001`, seed `19002`, NORTH orientation/frontage;
+- player starts at `(4,0)` facing SOUTH toward the CLOSED front door;
 - one controlled survivor, no NPCs/infected/loot;
-- generated trailer at `Rect2i(2,0,5,12)`;
-- player starts immediately outside the CLOSED side entrance at `(7,3)`, facing WEST toward it;
-- old `CanonicalDemoFixture.gd` remains unchanged for System 14 regression;
-- current Ground -> Structure -> Prop -> Living Actor renderer stack presents the generated semantic world;
-- real HUD, Stats/Inventory/Menu, Crouch/Stand and Run remain available.
+- real HUD, Stats/Inventory/Menu, Crouch/Stand, Run and System 18 doors remain live.
 
-Controls remain:
+Desktop controls: W/Up Walk, S/Down Back, A/Left Turn L, D/Right Turn R, C stance, Shift+W/Up Run, short click eligible OPEN facing door to close.
 
-Desktop:
-- W/Up = Walk Forward
-- S/Down = Walk Back
-- A/Left = Turn Left
-- D/Right = Turn Right
-- C = Crouch/Stand
-- Shift+W / Shift+Up = Run
-- short primary click on eligible OPEN door = manual close
-
-Touch:
-- Forward / Back / Turn L / Turn R / Crouch-Stand / Run
-- short world tap on eligible OPEN door = manual close
-
-System 16 modal blocking disables movement and door pointer input.
+Touch: Forward/Back/Turn L/Turn R/Crouch-Stand/Run plus short world tap for eligible OPEN facing door close.
 
 Web Leave Game goes directly to Google.
 
 ## 8. Physical items
 
-The live critique lot still intentionally has no loose demo items. Existing canonical truths remain:
-
-- WHAT owns loose world placement;
-- 09 owns hand assignment;
-- 11 owns containment;
-- 12 owns timed transfer;
-- 13D owns weight;
-- 13E derives carried weight/capacity and supplies the real 2x acquisition policy.
-
-System 10 held-item presentation and real item-interaction composition remain future work.
+The live critique lot still has no loose demo items. Canonical ownership remains WHAT loose placement -> 09 hands -> 11 containment -> 12 timed transfer -> 13D weight -> 13E carry/capacity policy. System 10 held-item presentation and item-interaction composition remain future work.
 
 ## 9. Verification routing
 
-Systems 18/19 original fully green implementation candidate:
+Farmhouse Candidate 001 first green code candidate:
 
-- SHA `c035fe7b3f5d0badab6c5b598996010e92d852b2`;
-- Door Interaction run `32005363005`: SUCCESS;
-- Local Building Generation run `32005363051`: SUCCESS.
+- SHA `65a951bc1d38c055c17cbcfcd496a59cb30727c9`;
+- Local Building Generation run `32007785922`: SUCCESS.
 
-Trailer Candidate 002 first fully green code candidate:
+That run passed Godot parse, protected foundation/art/door regressions, preserved Trailer v2 contract assertions, exact farmhouse room-size/door/window/rotation checks, collision/art coverage, generated front-door traversal, renderer diagnostics and actual canonical startup.
 
-- SHA `30aa8d1af7ca3d694a4085d4ec2a173a783d0dcb`;
-- Local Building Generation run `32006433070`: SUCCESS.
-
-That Candidate 002 run passed Godot parse, foundation/presentation regressions, Systems 18+19 integration smokes, deterministic 5×12 generation/rotation, light plaster shell assertion, opposite-wall sofa placement assertion, generated-door traversal, renderer diagnostics and actual startup.
-
-Exact documentation-promotion SHA must pass the same dedicated contract plus Web/Pages before completion is claimed.
+Exact documentation-promotion SHA must pass the same System 19 contract plus Web/Pages before completion is claimed.
 
 ## 10. Immediate next path
 
-1. **User playtests and critiques Trailer Candidate 002.**
-2. Turn critique into reusable trailer archetype rules, not one-off fixture edits.
-3. Regenerate/retest until trailer density/layout feels right.
-4. Add `residential.house.small_ranch` under the same System 19 contract.
-5. Repeat critique loop for the house.
-6. Add camera/larger play space once multiple properties exceed a one-screen environment.
-
-The real item-interaction demo remains useful future work and can later populate these generated buildings.
+1. User playtests/critiques **Farmhouse Candidate 001**.
+2. Convert critique into reusable farmhouse archetype rules if needed.
+3. Keep accepted Trailer v2 unchanged.
+4. Add another building archetype under System 19 after farmhouse refinement.
+5. Add camera/larger local play space once multiple simultaneous properties create an actual need beyond one screen.
 
 ## 11. Later systems
 
-Container access/search/locks, corpse/decay/contamination, actor appearance/creator, richer item quantity/condition/bulk, first aid/sickness, eating/drinking/rest/sleep progression, global world generation/streaming, construction, perception/lighting/weather/spatial sound, infected AI/combat/vehicles, item interaction composition and camera/zoom remain future work unless pulled forward by newer direction.
+Container access/search/locks, corpse/decay/contamination, actor appearance/creator, richer item quantity/condition/bulk, first aid/sickness, eating/drinking/rest/sleep progression, global world generation/streaming, construction, perception/lighting/weather/spatial sound, infected AI/combat/vehicles, item interaction composition and camera/zoom remain future work unless newer direction pulls them forward.
 
 ## 12. Invariants
 
@@ -228,15 +173,13 @@ Container access/search/locks, corpse/decay/contamination, actor appearance/crea
 6. Art is not physics.
 7. Phone/Safari is first-class.
 8. Reboot is reference only.
-9. Derived carry/moodlet totals never drift into duplicate saved truth.
-10. Hard application pause uses WHEN.
-11. Run is explicit action, never persistent mode.
-12. Movement does not import Health/Needs/Carry/Door implementation code; cross-domain behavior uses narrow seams/coordinators.
-13. Soft capacity is Run/encumbrance threshold; hard normal-acquisition ceiling is 2× soft capacity.
-14. Manual door close requires physical facing; pointer selection does not waive orientation/tick cost.
-15. Local building generation consumes caller-decided global placement facts and must not become the global world planner.
-16. Once generated/materialized, WHAT/Door State own later mutations; replacing the generator must not rewrite saved reality.
-17. Intentional same-seed building-rule changes bump archetype version so generation determinism remains meaningful.
+9. Hard application pause uses WHEN.
+10. Run is explicit action, never persistent mode.
+11. Manual door close requires physical facing; pointer selection does not waive orientation/tick cost.
+12. Local building generation consumes caller-decided placement facts and must not become the global world planner.
+13. Once generated/materialized, WHAT/Door State own later mutations.
+14. Intentional same-seed archetype-rule changes bump that archetype version.
+15. Shared building validation remains structural/generic; archetype program rules stay with focused archetype contracts/tests.
 
 ## 13. Documentation source order
 
