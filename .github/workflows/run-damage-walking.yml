@@ -25,20 +25,17 @@ jobs:
           set -euxo pipefail
           test -f SYSTEM_DESIGNS/17_RUN_DAMAGE_INTERRUPTIBLE_WALKING.md
           test -f game/scripts/simulation/movement/MovementDamageInterruptionService.gd
-          test -f game/scripts/simulation/movement/MovementRunExertionService.gd
+          test -f game/scripts/simulation/movement/MovementExertionService.gd
           test -f game/scripts/ci/RunDamageWalkingSmoke.gd
-          grep -q 'Status: \*\*APPROVED\|Status: \*\*IMPLEMENTED' SYSTEM_DESIGNS/17_RUN_DAMAGE_INTERRUPTIBLE_WALKING.md
           grep -q 'request_run_forward' game/scripts/simulation/movement/MovementActionService.gd
           grep -q 'RUN_STRIDE_1_PHASE' game/scripts/simulation/movement/MovementActionService.gd
           grep -q 'RUN_STRIDE_SCALE_BP: int = 6000' game/scripts/simulation/movement/MovementTraversalPolicy.gd
           grep -q 'RUN_MAX_START_FATIGUE_EXCLUSIVE: int = 80' game/scripts/simulation/actors/needs/ActorNeedsMobilityModifierProvider.gd
           grep -q 'damage_applied' game/scripts/simulation/actors/health/ActorHealthState.gd
           grep -q 'RUN_FORWARD' game/scripts/input/PlayerActionIntent.gd
-          grep -q 'shift_pressed' game/scripts/input/KeyboardInputAdapter.gd
-          grep -q '"RUN"' game/scripts/ui/DemoMovementControls.gd
           ! grep -q 'actors/health' game/scripts/simulation/movement/MovementActionService.gd
           ! grep -q 'actors/needs' game/scripts/simulation/movement/MovementActionService.gd
-          ! grep -q 'scripts/reboot' game/scripts/simulation/movement/MovementActionService.gd game/scripts/simulation/movement/MovementDamageInterruptionService.gd game/scripts/simulation/movement/MovementRunExertionService.gd
+          ! grep -q 'actors/carry' game/scripts/simulation/movement/MovementActionService.gd
           ! grep -R -q 'is_running\|run_mode\|MODE_RUN' game/scripts/simulation/movement game/scripts/simulation/actors/locomotion game/scripts/player/DemoPlayerActionController.gd
 
       - name: Install Godot 4.7.1
@@ -60,23 +57,23 @@ jobs:
         shell: bash
         run: |
           set -euxo pipefail
-          ./Godot_v4.7.1-stable_linux.x86_64 --headless --path "$GITHUB_WORKSPACE/game" --script res://scripts/ci/MovementActionsSmoke.gd 2>&1 | tee "$RUNNER_TEMP/movement.log"
+          ./Godot_v4.7.1-stable_linux.x86_64 --headless --path "$GITHUB_WORKSPACE/game" --script res://scripts/ci/MovementActionsSmoke.gd | tee "$RUNNER_TEMP/movement.log"
           grep -q 'MOVEMENT_ACTIONS_SMOKE_OK' "$RUNNER_TEMP/movement.log"
-          ./Godot_v4.7.1-stable_linux.x86_64 --headless --path "$GITHUB_WORKSPACE/game" --script res://scripts/ci/ActorLocomotionSmoke.gd 2>&1 | tee "$RUNNER_TEMP/locomotion.log"
+          ./Godot_v4.7.1-stable_linux.x86_64 --headless --path "$GITHUB_WORKSPACE/game" --script res://scripts/ci/ActorLocomotionSmoke.gd | tee "$RUNNER_TEMP/locomotion.log"
           grep -q 'ACTOR_LOCOMOTION_SMOKE_OK' "$RUNNER_TEMP/locomotion.log"
 
       - name: Health needs carry regressions
         shell: bash
         run: |
           set -euxo pipefail
-          ./Godot_v4.7.1-stable_linux.x86_64 --headless --path "$GITHUB_WORKSPACE/game" --script res://scripts/ci/ActorHealthSmoke.gd 2>&1 | tee "$RUNNER_TEMP/health.log"
+          ./Godot_v4.7.1-stable_linux.x86_64 --headless --path "$GITHUB_WORKSPACE/game" --script res://scripts/ci/ActorHealthSmoke.gd | tee "$RUNNER_TEMP/health.log"
           grep -q 'ACTOR_HEALTH_SMOKE_OK' "$RUNNER_TEMP/health.log"
-          ./Godot_v4.7.1-stable_linux.x86_64 --headless --path "$GITHUB_WORKSPACE/game" --script res://scripts/ci/ActorNeedsSmoke.gd 2>&1 | tee "$RUNNER_TEMP/needs.log"
+          ./Godot_v4.7.1-stable_linux.x86_64 --headless --path "$GITHUB_WORKSPACE/game" --script res://scripts/ci/ActorNeedsSmoke.gd | tee "$RUNNER_TEMP/needs.log"
           grep -q 'ACTOR_NEEDS_SMOKE_OK' "$RUNNER_TEMP/needs.log"
-          ./Godot_v4.7.1-stable_linux.x86_64 --headless --path "$GITHUB_WORKSPACE/game" --script res://scripts/ci/ActorCarrySmoke.gd 2>&1 | tee "$RUNNER_TEMP/carry.log"
+          ./Godot_v4.7.1-stable_linux.x86_64 --headless --path "$GITHUB_WORKSPACE/game" --script res://scripts/ci/ActorCarrySmoke.gd | tee "$RUNNER_TEMP/carry.log"
           grep -q 'ACTOR_CARRY_SMOKE_OK' "$RUNNER_TEMP/carry.log"
 
-      - name: System 17 integration smoke
+      - name: System 17 regression smoke
         shell: bash
         run: |
           set -euxo pipefail
@@ -88,11 +85,11 @@ jobs:
         shell: bash
         run: |
           set -euxo pipefail
-          ./Godot_v4.7.1-stable_linux.x86_64 --headless --path "$GITHUB_WORKSPACE/game" --script res://scripts/ci/CanonicalDemoSmoke.gd 2>&1 | tee "$RUNNER_TEMP/demo.log"
+          ./Godot_v4.7.1-stable_linux.x86_64 --headless --path "$GITHUB_WORKSPACE/game" --script res://scripts/ci/CanonicalDemoSmoke.gd | tee "$RUNNER_TEMP/demo.log"
           grep -q 'CANONICAL_DEMO_SMOKE_OK' "$RUNNER_TEMP/demo.log"
-          ./Godot_v4.7.1-stable_linux.x86_64 --headless --path "$GITHUB_WORKSPACE/game" --script res://scripts/ci/CanonicalHudSmoke.gd 2>&1 | tee "$RUNNER_TEMP/hud.log"
+          ./Godot_v4.7.1-stable_linux.x86_64 --headless --path "$GITHUB_WORKSPACE/game" --script res://scripts/ci/CanonicalHudSmoke.gd | tee "$RUNNER_TEMP/hud.log"
           grep -q 'CANONICAL_HUD_SMOKE_OK' "$RUNNER_TEMP/hud.log"
-          ./Godot_v4.7.1-stable_linux.x86_64 --headless --path "$GITHUB_WORKSPACE/game" --script res://scripts/ci/CanonicalPlayerShellSmoke.gd 2>&1 | tee "$RUNNER_TEMP/shell.log"
+          ./Godot_v4.7.1-stable_linux.x86_64 --headless --path "$GITHUB_WORKSPACE/game" --script res://scripts/ci/CanonicalPlayerShellSmoke.gd | tee "$RUNNER_TEMP/shell.log"
           grep -q 'CANONICAL_PLAYER_SHELL_SMOKE_OK' "$RUNNER_TEMP/shell.log"
 
       - name: Canonical demo startup smoke

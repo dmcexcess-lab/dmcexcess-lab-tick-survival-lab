@@ -52,6 +52,11 @@ func evaluate_run_stride(actor_id: String, terrain_types: Array) -> MovementPoli
         return base_decision
     return _apply_capability(actor_id, RUN_FORWARD, base_decision.duration_ticks)
 
+func terrain_walk_ticks(actor_id: String, terrain_types: Array) -> int:
+    if not is_ready():
+        return 0
+    return _base_policy.terrain_walk_ticks(actor_id, terrain_types)
+
 func evaluate_turn(actor_id: String, action_type: StringName) -> MovementPolicyDecision:
     if not is_ready():
         return PolicyDecisionClass.denied(

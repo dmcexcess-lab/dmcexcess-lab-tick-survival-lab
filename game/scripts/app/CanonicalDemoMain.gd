@@ -10,7 +10,8 @@ const TickKernelClass = preload("res://scripts/foundation/time/TickKernel.gd")
 const BaseTraversalPolicyClass = preload("res://scripts/simulation/movement/MovementTraversalPolicy.gd")
 const MovementActionServiceClass = preload("res://scripts/simulation/movement/MovementActionService.gd")
 const MovementDamageInterruptionClass = preload("res://scripts/simulation/movement/MovementDamageInterruptionService.gd")
-const MovementRunExertionClass = preload("res://scripts/simulation/movement/MovementRunExertionService.gd")
+const MovementExertionClass = preload("res://scripts/simulation/movement/MovementExertionService.gd")
+const MovementRunImpactDamageClass = preload("res://scripts/simulation/movement/MovementRunImpactDamageService.gd")
 const LocomotionStateClass = preload("res://scripts/simulation/actors/locomotion/ActorLocomotionState.gd")
 const LocomotionMutationClass = preload("res://scripts/simulation/actors/locomotion/ActorLocomotionMutationService.gd")
 const MovementCapabilityClass = preload("res://scripts/simulation/actors/locomotion/ActorMovementCapabilityService.gd")
@@ -61,7 +62,8 @@ var _movement_capability: ActorMovementCapabilityService = null
 var _actor_traversal: ActorMovementTraversalPolicy = null
 var _movement: MovementActionService = null
 var _movement_damage_interrupt: MovementDamageInterruptionService = null
-var _movement_run_exertion: MovementRunExertionService = null
+var _movement_exertion: MovementExertionService = null
+var _movement_run_impact_damage: MovementRunImpactDamageService = null
 var _stance_actions: ActorStanceActionService = null
 var _hand_state: ActorHandEquipmentState = null
 var _hand_mutations: ActorHandEquipmentMutationService = null
@@ -136,8 +138,11 @@ func _boot_canonical_demo() -> bool:
         return false
 
     _movement_damage_interrupt = MovementDamageInterruptionClass.new(_health_state, _kernel)
-    _movement_run_exertion = MovementRunExertionClass.new(_movement, _needs_state)
-    if not _movement_damage_interrupt.is_ready() or not _movement_run_exertion.is_ready():
+    _movement_exertion = MovementExertionClass.new(_movement, _needs_state, _carry_query)
+    _movement_run_impact_damage = MovementRunImpactDamageClass.new(_movement, _health_state)
+    if not _movement_damage_interrupt.is_ready() \
+        or not _movement_exertion.is_ready() \
+        or not _movement_run_impact_damage.is_ready():
         return false
 
     _stance_actions = StanceActionClass.new(

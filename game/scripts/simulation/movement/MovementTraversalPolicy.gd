@@ -77,6 +77,12 @@ func evaluate_run_stride(actor_id: String, terrain_types: Array) -> MovementPoli
         return DecisionClass.denied(DecisionClass.Status.INVALID_DURATION, "invalid_duration")
     return DecisionClass.allowed(duration_ticks)
 
+func terrain_walk_ticks(actor_id: String, terrain_types: Array) -> int:
+    var decision: MovementPolicyDecision = _evaluate_walk_terrain(actor_id, terrain_types)
+    if decision == null or not decision.is_allowed():
+        return 0
+    return decision.duration_ticks
+
 func evaluate_turn(actor_id: String, action_type: StringName) -> MovementPolicyDecision:
     if actor_id.strip_edges().is_empty():
         return DecisionClass.denied(DecisionClass.Status.ACTOR_UNCLASSIFIED, "actor_unclassified")

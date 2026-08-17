@@ -2,13 +2,16 @@ extends RefCounted
 class_name ActorMobilityModifierProvider
 
 ## Narrow read-only extension contract for independently owned actor-condition systems.
-## Future health/needs/inventory/etc. providers override evaluate() without exposing internals.
+## Canonical providers return a positive duration scale in basis points where 10000 = 1.0x.
+## The deprecated duration_adjustment_bp field remains only as a compatibility read for older test helpers.
 
 enum Status {
     ALLOWED,
     BLOCKED,
     UNKNOWN,
 }
+
+const SCALE_ONE: int = 10000
 
 var _provider_id: String = ""
 
@@ -22,15 +25,17 @@ func is_valid() -> bool:
     return not _provider_id.is_empty()
 
 func evaluate(_actor_id: String, _action_type: StringName) -> Dictionary:
-    return {
-        "status": Status.ALLOWED,
-        "duration_adjustment_bp": 0,
-        "reason": "",
-    }
+    return decision(Status.ALLOWED, SCALE_ONE)
 
-static func decision(status: int, duration_adjustment_bp: int = 0, reason: String = "") -> Dictionary:
+static func decision(
+    status: int,
+    duration_scale_bp: int = SCALE_ONE,
+    reason: String = "",
+    duration_adjustment_bp: int = 0
+) -> Dictionary:
     return {
         "status": status,
+        "duration_scale_bp": duration_scale_bp,
         "duration_adjustment_bp": duration_adjustment_bp,
         "reason": reason,
     }

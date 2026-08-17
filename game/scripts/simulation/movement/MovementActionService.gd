@@ -11,11 +11,13 @@ const PhaseClass = preload("res://scripts/foundation/time/ActionPhase.gd")
 const TickRulesClass = preload("res://scripts/foundation/time/TickRules.gd")
 
 ## Canonical WHERE + WHAT + Collision + WHEN actor movement bridge.
-## Input, rendering, AI, health, stance, pathfinding, etc. remain outside.
+## Input, rendering, AI, health, needs, carry, stance, pathfinding, etc. remain outside.
 
 signal movement_committed(actor_id, action_serial, action_type, target_anchor, target_facing)
 signal movement_failed(actor_id, action_serial, action_type, reason)
 signal run_stride_committed(actor_id, action_serial, stride_index, target_anchor, target_facing)
+signal movement_exertion_resolved(actor_id, action_serial, action_type, stride_index, terrain_walk_ticks, impacted)
+signal run_impact(actor_id, action_serial, stride_index, target_anchor, target_facing, blocking_entity_ids)
 
 const STEP_FORWARD: StringName = &"movement.step_forward"
 const STEP_BACKWARD: StringName = &"movement.step_backward"
@@ -163,7 +165,7 @@ func _request_run(actor_id: String) -> MovementActionResult:
         current.facing,
         true
     )
-    if not _apply_query_failure(result, stride_1_query):
+    if not _apply_run_request_query(result, stride_1_query):
         return result
     var stride_2_query: SpatialQueryResult = _query.query_entity_footprint(
         normalized_actor,
@@ -171,26 +173,35 @@ func _request_run(actor_id: String) -> MovementActionResult:
         current.facing,
         true
     )
-    if not _apply_query_failure(result, stride_2_query):
+    if not _apply_run_request_query(result, stride_2_query):
         return result
 
-    var stride_1_policy: MovementPolicyDecision = _evaluate_run_stride_policy(
+    var stride_1_terrain_types: Array[StringName] = _terrain_types(stride_1_query.cells)
+    var stride_2_terrain_types: Array[StringName] = _terrain_types(stride_2_query.cells)
+    if stride_1_terrain_types.is_empty() or stride_2_terrain_types.is_empty():
+        result.status = ResultClass.Status.TERRAIN_UNCLASSIFIED
+        result.reason = "terrain_unclassified"
+        return result
+
+    var stride_1_policy: MovementPolicyDecision = _policy.evaluate_run_stride(
         normalized_actor,
-        stride_1_query.cells
+        stride_1_terrain_types
     )
     if not _apply_policy_result(result, stride_1_policy):
         return result
-    var stride_2_policy: MovementPolicyDecision = _evaluate_run_stride_policy(
+    var stride_2_policy: MovementPolicyDecision = _policy.evaluate_run_stride(
         normalized_actor,
-        stride_2_query.cells
+        stride_2_terrain_types
     )
     if not _apply_policy_result(result, stride_2_policy):
         return result
 
+    var stride_1_walk_ticks: int = _policy.terrain_walk_ticks(normalized_actor, stride_1_terrain_types)
+    var stride_2_walk_ticks: int = _policy.terrain_walk_ticks(normalized_actor, stride_2_terrain_types)
     var stride_1_ticks: int = stride_1_policy.duration_ticks
     var stride_2_ticks: int = stride_2_policy.duration_ticks
     var duration_ticks: int = stride_1_ticks + stride_2_ticks
-    if stride_1_ticks < 1 or stride_2_ticks < 1 or duration_ticks < 2:
+    if stride_1_walk_ticks < 1 or stride_2_walk_ticks < 1 or stride_1_ticks < 1 or stride_2_ticks < 1 or duration_ticks < 2:
         result.status = ResultClass.Status.INVALID_DURATION
         result.reason = "invalid_duration"
         return result
@@ -208,6 +219,8 @@ func _request_run(actor_id: String) -> MovementActionResult:
         "stride_2_terrain": _terrain_snapshot(stride_2_query.cells),
         "stride_1_ticks": stride_1_ticks,
         "stride_2_ticks": stride_2_ticks,
+        "stride_1_walk_ticks": stride_1_walk_ticks,
+        "stride_2_walk_ticks": stride_2_walk_ticks,
     }
     var action_serial: int = _kernel.begin_action(
         normalized_actor,
@@ -263,6 +276,17 @@ func _apply_query_failure(result: MovementActionResult, query_result: SpatialQue
         result.reason = "target_blocked"
         return false
     if query_result.status != QueryResultClass.Status.CLEAR:
+        result.status = ResultClass.Status.TARGET_UNKNOWN
+        result.reason = "target_unknown"
+        return false
+    return true
+
+func _apply_run_request_query(result: MovementActionResult, query_result: SpatialQueryResult) -> bool:
+    if query_result == null or query_result.status == QueryResultClass.Status.UNKNOWN:
+        result.status = ResultClass.Status.TARGET_UNKNOWN
+        result.reason = "target_unknown"
+        return false
+    if query_result.status != QueryResultClass.Status.CLEAR and query_result.status != QueryResultClass.Status.BLOCKED:
         result.status = ResultClass.Status.TARGET_UNKNOWN
         result.reason = "target_unknown"
         return false
@@ -354,8 +378,14 @@ func _commit_standard_action(action: TimedAction) -> void:
         return
 
     var policy_decision: MovementPolicyDecision = null
+    var walk_terrain_ticks: int = 0
     if _is_walk_step(action.action_type):
-        policy_decision = _evaluate_step_policy(action.actor_id, action.action_type, query_result.cells)
+        var terrain_types: Array[StringName] = _terrain_types(query_result.cells)
+        if terrain_types.is_empty():
+            _fail_commit(action, "terrain_unclassified")
+            return
+        policy_decision = _policy.evaluate_step(action.actor_id, action.action_type, terrain_types)
+        walk_terrain_ticks = _policy.terrain_walk_ticks(action.actor_id, terrain_types)
     else:
         policy_decision = _policy.evaluate_turn(action.actor_id, action.action_type)
     if policy_decision == null:
@@ -363,6 +393,9 @@ func _commit_standard_action(action: TimedAction) -> void:
         return
     if not policy_decision.is_allowed():
         _fail_commit(action, _policy_reason(policy_decision))
+        return
+    if _is_walk_step(action.action_type) and walk_terrain_ticks < 1:
+        _fail_commit(action, "invalid_duration")
         return
 
     if not _mutations.set_placement(
@@ -376,6 +409,15 @@ func _commit_standard_action(action: TimedAction) -> void:
         _fail_commit(action, "placement_mutation_failed")
         return
 
+    if _is_walk_step(action.action_type):
+        movement_exertion_resolved.emit(
+            action.actor_id,
+            action.serial,
+            action.action_type,
+            1,
+            walk_terrain_ticks,
+            false
+        )
     movement_committed.emit(
         action.actor_id,
         action.serial,
@@ -421,17 +463,38 @@ func _commit_run_stride(action: TimedAction, stride_index: int) -> void:
     if query_result == null or query_result.status == QueryResultClass.Status.UNKNOWN:
         _fail_commit(action, "target_unknown")
         return
-    if query_result.status == QueryResultClass.Status.BLOCKED:
-        _fail_commit(action, "target_blocked")
-        return
-    if query_result.status != QueryResultClass.Status.CLEAR:
-        _fail_commit(action, "target_unknown")
-        return
 
     var terrain_key: String = "stride_%d_terrain" % stride_index
     var stored_terrain: Variant = action.payload.get(terrain_key, [])
     if typeof(stored_terrain) != TYPE_ARRAY or _terrain_snapshot(query_result.cells) != stored_terrain:
         _fail_commit(action, "terrain_changed")
+        return
+    var walk_ticks: int = int(action.payload.get("stride_%d_walk_ticks" % stride_index, 0))
+    if walk_ticks < 1:
+        _fail_commit(action, "invalid_payload")
+        return
+
+    if query_result.status == QueryResultClass.Status.BLOCKED:
+        movement_exertion_resolved.emit(
+            action.actor_id,
+            action.serial,
+            RUN_FORWARD,
+            stride_index,
+            walk_ticks,
+            true
+        )
+        run_impact.emit(
+            action.actor_id,
+            action.serial,
+            stride_index,
+            target_anchor,
+            target_facing,
+            query_result.blocking_entity_ids.duplicate()
+        )
+        _fail_commit(action, "run_impact")
+        return
+    if query_result.status != QueryResultClass.Status.CLEAR:
+        _fail_commit(action, "target_unknown")
         return
 
     if not _mutations.set_placement(
@@ -451,6 +514,14 @@ func _commit_run_stride(action: TimedAction, stride_index: int) -> void:
         stride_index,
         target_anchor,
         target_facing
+    )
+    movement_exertion_resolved.emit(
+        action.actor_id,
+        action.serial,
+        RUN_FORWARD,
+        stride_index,
+        walk_ticks,
+        false
     )
     if stride_index == 2:
         movement_committed.emit(
@@ -488,15 +559,6 @@ func _evaluate_step_policy(
             "terrain_unclassified"
         )
     return _policy.evaluate_step(actor_id, action_type, terrain_types)
-
-func _evaluate_run_stride_policy(actor_id: String, cells: Array[Vector2i]) -> MovementPolicyDecision:
-    var terrain_types: Array[StringName] = _terrain_types(cells)
-    if terrain_types.is_empty():
-        return PolicyDecisionClass.denied(
-            PolicyDecisionClass.Status.TERRAIN_UNCLASSIFIED,
-            "terrain_unclassified"
-        )
-    return _policy.evaluate_run_stride(actor_id, terrain_types)
 
 func _terrain_types(cells: Array[Vector2i]) -> Array[StringName]:
     var terrain_types: Array[StringName] = []

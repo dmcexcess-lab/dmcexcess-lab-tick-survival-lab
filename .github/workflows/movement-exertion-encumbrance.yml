@@ -1,0 +1,96 @@
+name: Movement Exertion Encumbrance and Run Impact contract
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: movement-exertion-encumbrance-contract
+  cancel-in-progress: true
+
+jobs:
+  movement-exertion-encumbrance:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate System 17A boundaries
+        shell: bash
+        run: |
+          set -euxo pipefail
+          test -f SYSTEM_DESIGNS/17A_MOVEMENT_EXERTION_ENCUMBRANCE_RUN_IMPACT.md
+          test -f game/scripts/simulation/movement/MovementExertionService.gd
+          test -f game/scripts/simulation/movement/MovementRunImpactDamageService.gd
+          test -f game/scripts/ci/MovementExertionEncumbranceSmoke.gd
+          grep -q 'duration_scale_bp' game/scripts/simulation/actors/locomotion/ActorMobilityModifierProvider.gd
+          grep -q 'too_encumbered_to_run' game/scripts/simulation/actors/carry/ActorCarryMobilityModifierProvider.gd
+          grep -q 'movement_exertion_resolved' game/scripts/simulation/movement/MovementActionService.gd
+          grep -q 'run_impact' game/scripts/simulation/movement/MovementActionService.gd
+          grep -q 'IMPACT_DAMAGE_HP: int = 5' game/scripts/simulation/movement/MovementRunImpactDamageService.gd
+          grep -q "window.location.assign('https://www.google.com/')" game/scripts/ui/CanonicalPlayerShell.gd
+          ! grep -q 'history.back' game/scripts/ui/CanonicalPlayerShell.gd
+          ! grep -q 'actors/health' game/scripts/simulation/movement/MovementActionService.gd
+          ! grep -q 'actors/needs' game/scripts/simulation/movement/MovementActionService.gd
+          ! grep -q 'actors/carry' game/scripts/simulation/movement/MovementActionService.gd
+          ! grep -q 'scripts/reboot' game/scripts/simulation/movement/MovementExertionService.gd game/scripts/simulation/movement/MovementRunImpactDamageService.gd
+
+      - name: Install Godot 4.7.1
+        shell: bash
+        run: |
+          set -euxo pipefail
+          curl -L -o godot.zip https://github.com/godotengine/godot-builds/releases/download/4.7.1-stable/Godot_v4.7.1-stable_linux.x86_64.zip
+          unzip -q godot.zip
+          chmod +x Godot_v4.7.1-stable_linux.x86_64
+
+      - name: Import and parse project
+        shell: bash
+        run: |
+          set -euxo pipefail
+          ./Godot_v4.7.1-stable_linux.x86_64 --headless --editor --path "$GITHUB_WORKSPACE/game" --quit 2>&1 | tee "$RUNNER_TEMP/import.log"
+          if grep -Eqi 'SCRIPT ERROR|Parse Error|Failed to load script' "$RUNNER_TEMP/import.log"; then exit 1; fi
+
+      - name: Protected simulation regressions
+        shell: bash
+        run: |
+          set -euxo pipefail
+          for smoke in MovementActionsSmoke ActorLocomotionSmoke ActorHealthSmoke ActorNeedsSmoke ActorCarrySmoke RunDamageWalkingSmoke; do
+            ./Godot_v4.7.1-stable_linux.x86_64 --headless --path "$GITHUB_WORKSPACE/game" --script "res://scripts/ci/${smoke}.gd" 2>&1 | tee "$RUNNER_TEMP/${smoke}.log"
+          done
+          grep -q 'MOVEMENT_ACTIONS_SMOKE_OK' "$RUNNER_TEMP/MovementActionsSmoke.log"
+          grep -q 'ACTOR_LOCOMOTION_SMOKE_OK' "$RUNNER_TEMP/ActorLocomotionSmoke.log"
+          grep -q 'ACTOR_HEALTH_SMOKE_OK' "$RUNNER_TEMP/ActorHealthSmoke.log"
+          grep -q 'ACTOR_NEEDS_SMOKE_OK' "$RUNNER_TEMP/ActorNeedsSmoke.log"
+          grep -q 'ACTOR_CARRY_SMOKE_OK' "$RUNNER_TEMP/ActorCarrySmoke.log"
+          grep -q 'RUN_DAMAGE_WALKING_SMOKE_OK' "$RUNNER_TEMP/RunDamageWalkingSmoke.log"
+
+      - name: System 17A integration smoke
+        shell: bash
+        run: |
+          set -euxo pipefail
+          ./Godot_v4.7.1-stable_linux.x86_64 --headless --path "$GITHUB_WORKSPACE/game" --script res://scripts/ci/MovementExertionEncumbranceSmoke.gd 2>&1 | tee "$RUNNER_TEMP/system17a.log"
+          grep -q 'MOVEMENT_EXERTION_ENCUMBRANCE_SMOKE_OK' "$RUNNER_TEMP/system17a.log"
+          if grep -Eqi 'SCRIPT ERROR|Parse Error|Failed to load script' "$RUNNER_TEMP/system17a.log"; then exit 1; fi
+
+      - name: Canonical demo shell regressions
+        shell: bash
+        run: |
+          set -euxo pipefail
+          ./Godot_v4.7.1-stable_linux.x86_64 --headless --path "$GITHUB_WORKSPACE/game" --script res://scripts/ci/CanonicalDemoSmoke.gd | tee "$RUNNER_TEMP/demo.log"
+          grep -q 'CANONICAL_DEMO_SMOKE_OK' "$RUNNER_TEMP/demo.log"
+          ./Godot_v4.7.1-stable_linux.x86_64 --headless --path "$GITHUB_WORKSPACE/game" --script res://scripts/ci/CanonicalHudSmoke.gd | tee "$RUNNER_TEMP/hud.log"
+          grep -q 'CANONICAL_HUD_SMOKE_OK' "$RUNNER_TEMP/hud.log"
+          ./Godot_v4.7.1-stable_linux.x86_64 --headless --path "$GITHUB_WORKSPACE/game" --script res://scripts/ci/CanonicalPlayerShellSmoke.gd | tee "$RUNNER_TEMP/shell.log"
+          grep -q 'CANONICAL_PLAYER_SHELL_SMOKE_OK' "$RUNNER_TEMP/shell.log"
+
+      - name: Canonical demo startup smoke
+        shell: bash
+        run: |
+          set -euxo pipefail
+          ./Godot_v4.7.1-stable_linux.x86_64 --headless --path "$GITHUB_WORKSPACE/game" --quit-after 2 2>&1 | tee "$RUNNER_TEMP/startup.log"
+          grep -q 'CANONICAL_DEMO_BOOT_OK' "$RUNNER_TEMP/startup.log"
+          if grep -Eqi 'SCRIPT ERROR|Parse Error|Failed to load script|CANONICAL_DEMO_BOOT_FAILED' "$RUNNER_TEMP/startup.log"; then exit 1; fi

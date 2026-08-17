@@ -359,8 +359,7 @@ func _clear_body() -> void:
 func _leave_game() -> void:
     _leave_result = "requested"
     if OS.has_feature("web"):
-        var script := "(function(){if(window.history.length>1){window.history.back();return 'back';}window.location.assign('https://www.google.com/');return 'google';})();"
-        var result: Variant = JavaScriptBridge.eval(script, true)
+        var result: Variant = JavaScriptBridge.eval("window.location.assign('https://www.google.com/'); 'google';", true)
         _leave_result = "web:%s" % String(result)
         return
     _leave_result = "native:quit"

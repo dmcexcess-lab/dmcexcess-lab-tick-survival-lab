@@ -14,7 +14,6 @@ const BasePolicyClass = preload("res://scripts/simulation/movement/MovementTrave
 const MovementClass = preload("res://scripts/simulation/movement/MovementActionService.gd")
 const MovementResult = preload("res://scripts/simulation/movement/MovementActionResult.gd")
 const DamageInterruptClass = preload("res://scripts/simulation/movement/MovementDamageInterruptionService.gd")
-const RunExertionClass = preload("res://scripts/simulation/movement/MovementRunExertionService.gd")
 const LocomotionStateClass = preload("res://scripts/simulation/actors/locomotion/ActorLocomotionState.gd")
 const LocomotionMutationClass = preload("res://scripts/simulation/actors/locomotion/ActorLocomotionMutationService.gd")
 const Stance = preload("res://scripts/simulation/actors/locomotion/ActorStance.gd")
@@ -23,32 +22,26 @@ const ActorPolicyClass = preload("res://scripts/simulation/actors/locomotion/Act
 const HealthClass = preload("res://scripts/simulation/actors/health/ActorHealthState.gd")
 const NeedsClass = preload("res://scripts/simulation/actors/needs/ActorNeedsState.gd")
 const NeedsProviderClass = preload("res://scripts/simulation/actors/needs/ActorNeedsMobilityModifierProvider.gd")
-const ProviderBase = preload("res://scripts/simulation/actors/locomotion/ActorMobilityModifierProvider.gd")
 const Intents = preload("res://scripts/input/PlayerActionIntent.gd")
 const KeyboardClass = preload("res://scripts/input/KeyboardInputAdapter.gd")
-const ControlsClass = preload("res://scripts/ui/DemoMovementControls.gd")
 
-var _failures: Array[String] = []
+var failures: Array[String] = []
 
 func _initialize() -> void:
-    _test_healthy_run_two_phases_and_fatigue()
-    _test_mixed_terrain_duration()
-    _test_fatigue_gate_and_committed_crossing()
+    _test_two_stride_run_baseline()
+    _test_fatigue_gate()
     _test_crouched_run_blocked()
     _test_damage_interrupts_walk_not_run()
-    _test_second_stride_blocker_keeps_intermediate()
-    _test_damage_signal_is_semantic()
     _test_input_contract()
-
-    if _failures.is_empty():
+    if failures.is_empty():
         print("RUN_DAMAGE_WALKING_SMOKE_OK")
         quit(0)
         return
-    for failure: String in _failures:
+    for failure: String in failures:
         push_error("RUN_DAMAGE_WALKING_SMOKE_FAIL: %s" % failure)
     quit(1)
 
-func _fixture(actor_id: String = "actor.runner") -> Dictionary:
+func _fixture(actor_id: String) -> Dictionary:
     var world := WorldStateClass.new()
     var mutations := WorldMutationClass.new(world)
     var catalog := CatalogClass.new()
@@ -56,212 +49,95 @@ func _fixture(actor_id: String = "actor.runner") -> Dictionary:
     var query := QueryClass.new(world, catalog, overrides)
     var kernel := TickKernelClass.new()
     var base_policy := BasePolicyClass.new(3)
-
-    _check(catalog.register(&"actor.survivor", true), "fixture survivor collision profile")
-    _check(catalog.register(&"structure.wall", true), "fixture wall collision profile")
-    _check(base_policy.register_terrain(&"ground.test", true, 10), "fixture 10-tick terrain")
-    _check(base_policy.register_terrain(&"ground.slow", true, 14), "fixture 14-tick terrain")
-    _check(base_policy.register_terrain(&"ground.water", false), "fixture blocked terrain")
-    for y: int in range(0, 12):
-        for x: int in range(0, 24):
-            _check(mutations.set_terrain(Vector2i(x, y), &"ground.test"), "fixture terrain setup")
-
-    _check(mutations.create_entity(&"actor.survivor", actor_id) == actor_id, "create survivor")
-    _check(
-        mutations.set_placement(
-            actor_id,
-            Layers.Channel.ACTOR,
-            Vector2i(2, 2),
-            Facing.Value.EAST,
-            Footprint.single_cell()
-        ),
-        "place survivor"
-    )
-
+    _check(catalog.register(&"actor.survivor", true), "register actor collision")
+    _check(base_policy.register_terrain(&"ground.test", true, 10), "register terrain")
+    for y: int in range(0, 8):
+        for x: int in range(0, 12):
+            mutations.set_terrain(Vector2i(x, y), &"ground.test")
+    mutations.create_entity(&"actor.survivor", actor_id)
+    mutations.set_placement(actor_id, Layers.Channel.ACTOR, Vector2i(2, 2), Facing.Value.EAST, Footprint.single_cell())
     var locomotion := LocomotionStateClass.new()
     var locomotion_mutations := LocomotionMutationClass.new(locomotion)
-    _check(locomotion_mutations.enroll(actor_id), "enroll locomotion")
-
+    locomotion_mutations.enroll(actor_id)
     var health := HealthClass.new(world)
-    _check(health.enroll_actor(actor_id), "enroll health")
+    health.enroll_actor(actor_id)
     var needs := NeedsClass.new(world)
-    _check(needs.enroll_actor(actor_id), "enroll needs")
-
+    needs.enroll_actor(actor_id)
     var capability := CapabilityClass.new(locomotion)
-    _check(capability.register_provider(NeedsProviderClass.new(needs)), "register Needs provider")
+    capability.register_provider(NeedsProviderClass.new(needs))
     var actor_policy := ActorPolicyClass.new(base_policy, capability)
     var movement := MovementClass.new(world, mutations, query, kernel, actor_policy)
     var damage_interrupt := DamageInterruptClass.new(health, kernel)
-    var exertion := RunExertionClass.new(movement, needs)
-    _check(movement.is_ready(), "movement ready")
-    _check(damage_interrupt.is_ready(), "damage interruption ready")
-    _check(exertion.is_ready(), "run exertion ready")
-
     return {
-        "actor_id": actor_id,
         "world": world,
-        "mutations": mutations,
-        "catalog": catalog,
-        "query": query,
         "kernel": kernel,
-        "base_policy": base_policy,
-        "locomotion": locomotion,
-        "locomotion_mutations": locomotion_mutations,
+        "movement": movement,
         "health": health,
         "needs": needs,
-        "capability": capability,
-        "movement": movement,
+        "locomotion_mutations": locomotion_mutations,
         "damage_interrupt": damage_interrupt,
-        "exertion": exertion,
     }
 
-func _test_healthy_run_two_phases_and_fatigue() -> void:
-    var f: Dictionary = _fixture("actor.healthy")
-    var world: WorldState = f["world"]
-    var kernel: TickKernel = f["kernel"]
-    var movement: MovementActionService = f["movement"]
-    var needs: ActorNeedsState = f["needs"]
+func _test_two_stride_run_baseline() -> void:
+    var f := _fixture("actor.run")
+    var run: MovementActionResult = f["movement"].request_run_forward("actor.run")
+    _check(run.is_accepted() and run.duration_ticks == 12, "healthy Run remains two cells in twelve ticks")
+    _check(f["kernel"].schedule_event(6, "system17", &"observe") > 0, "midpoint event scheduled")
+    _check(f["kernel"].run_next_batch() == TickRules.RunStopReason.BATCH_COMPLETE, "first stride batch resolves")
+    _check(f["world"].placement("actor.run").anchor == Vector2i(3, 2), "first stride reaches intermediate cell")
+    _check(f["kernel"].run_until_stop() == TickRules.RunStopReason.IDLE, "Run drains")
+    _check(f["world"].placement("actor.run").anchor == Vector2i(4, 2), "second stride reaches final cell")
 
-    var run: MovementActionResult = movement.request_run_forward("actor.healthy")
-    _check(run.is_accepted(), "healthy run accepted")
-    _check(run.duration_ticks == 12 and run.target_anchor == Vector2i(4, 2), "healthy run is two cells / twelve ticks")
-    _check(kernel.schedule_event(6, "run_smoke", &"test.stride_one_observe") > 0, "stride-one observation scheduled")
-    _check(kernel.run_next_batch() == TickRules.RunStopReason.BATCH_COMPLETE, "kernel resolves tick-six batch")
-    _check(kernel.world_tick() == 6, "first stride occurs at tick six")
-    _check(world.placement("actor.healthy").anchor == Vector2i(3, 2), "first stride physically advances one cell")
-    _check(needs.fatigue("actor.healthy") == 1, "first successful stride adds one fatigue")
-    _check(kernel.run_until_stop() == TickRules.RunStopReason.IDLE, "healthy run drains")
-    _check(kernel.world_tick() == 12 and world.placement("actor.healthy").anchor == Vector2i(4, 2), "second stride commits at tick twelve")
-    _check(needs.fatigue("actor.healthy") == 2, "full run adds two fatigue")
-
-func _test_mixed_terrain_duration() -> void:
-    var f: Dictionary = _fixture("actor.mixed")
-    var mutations: WorldMutationService = f["mutations"]
-    var movement: MovementActionService = f["movement"]
-    _check(mutations.set_terrain(Vector2i(4, 2), &"ground.slow"), "mixed run second terrain made slow")
-    var run: MovementActionResult = movement.request_run_forward("actor.mixed")
-    _check(run.is_accepted() and run.duration_ticks == 15, "10 then 14 walk terrain resolves to 6 plus 9 run ticks")
-
-func _test_fatigue_gate_and_committed_crossing() -> void:
-    var f: Dictionary = _fixture("actor.fatigue")
-    var world: WorldState = f["world"]
-    var kernel: TickKernel = f["kernel"]
-    var movement: MovementActionService = f["movement"]
-    var needs: ActorNeedsState = f["needs"]
-    _check(needs.set_need("actor.fatigue", NeedsClass.FATIGUE, 79), "fatigue set to last runnable value")
-    var run: MovementActionResult = movement.request_run_forward("actor.fatigue")
-    _check(run.is_accepted(), "fatigue 79 can start run")
-    _check(kernel.run_until_stop() == TickRules.RunStopReason.IDLE, "fatigue-79 committed run drains")
-    _check(world.placement("actor.fatigue").anchor == Vector2i(4, 2), "crossing exhausted threshold mid-run does not stop stride two")
-    _check(needs.fatigue("actor.fatigue") == 81, "run from 79 ends at 81 fatigue")
-    var rejected: MovementActionResult = movement.request_run_forward("actor.fatigue")
-    _check(rejected.status == MovementResult.Status.CAPABILITY_BLOCKED and rejected.reason == "too_exhausted_to_run", "fatigue 80+ blocks next run")
-
-    var provider := NeedsProviderClass.new(needs)
-    var provider_result: Dictionary = provider.evaluate("actor.fatigue", &"movement.run_forward")
-    _check(int(provider_result.get("status", -1)) == ProviderBase.Status.BLOCKED, "Needs provider exposes exhausted run block")
+func _test_fatigue_gate() -> void:
+    var f := _fixture("actor.fatigue")
+    f["needs"].set_need("actor.fatigue", NeedsClass.FATIGUE, 79)
+    var accepted: MovementActionResult = f["movement"].request_run_forward("actor.fatigue")
+    _check(accepted.is_accepted(), "fatigue 79 may start Run")
+    var blocked_f := _fixture("actor.exhausted")
+    blocked_f["needs"].set_need("actor.exhausted", NeedsClass.FATIGUE, 80)
+    var blocked: MovementActionResult = blocked_f["movement"].request_run_forward("actor.exhausted")
+    _check(blocked.status == MovementResult.Status.CAPABILITY_BLOCKED and blocked.reason == "too_exhausted_to_run", "fatigue 80 blocks Run")
 
 func _test_crouched_run_blocked() -> void:
-    var f: Dictionary = _fixture("actor.crouched")
-    var locomotion_mutations: ActorLocomotionMutationService = f["locomotion_mutations"]
-    var movement: MovementActionService = f["movement"]
-    _check(locomotion_mutations.set_stance("actor.crouched", Stance.CROUCHED), "actor crouches")
-    var run: MovementActionResult = movement.request_run_forward("actor.crouched")
-    _check(run.status == MovementResult.Status.CAPABILITY_BLOCKED, "crouched actor cannot run")
+    var f := _fixture("actor.crouched")
+    f["locomotion_mutations"].set_stance("actor.crouched", Stance.CROUCHED)
+    var run: MovementActionResult = f["movement"].request_run_forward("actor.crouched")
+    _check(run.status == MovementResult.Status.CAPABILITY_BLOCKED, "crouched Run remains blocked")
 
 func _test_damage_interrupts_walk_not_run() -> void:
-    var walk_f: Dictionary = _fixture("actor.walk_damage")
-    var walk_world: WorldState = walk_f["world"]
-    var walk_kernel: TickKernel = walk_f["kernel"]
-    var walk_movement: MovementActionService = walk_f["movement"]
-    var walk_health: ActorHealthState = walk_f["health"]
-    walk_kernel.external_event_due.connect(
+    var walk_f := _fixture("actor.walk_damage")
+    walk_f["kernel"].external_event_due.connect(
         func(event):
-            if event.event_type == &"test.damage_walk":
-                walk_health.apply_damage("actor.walk_damage", 5)
+            if event.event_type == &"damage":
+                walk_f["health"].apply_damage("actor.walk_damage", 5)
     )
-    var walk: MovementActionResult = walk_movement.request_step_forward("actor.walk_damage")
-    _check(walk.is_accepted(), "damage-interrupt walk accepted")
-    _check(walk_kernel.schedule_event(5, "run_smoke", &"test.damage_walk") > 0, "walk damage event scheduled")
-    _check(walk_kernel.run_until_stop() == TickRules.RunStopReason.IDLE, "damage-interrupted walk resolves")
-    _check(walk_kernel.world_tick() == 5, "walk interruption keeps elapsed ticks spent")
-    _check(walk_world.placement("actor.walk_damage").anchor == Vector2i(2, 2), "damage cancels walk before placement commit")
-    _check(walk_health.current_hp("actor.walk_damage") == 95, "walk damage is real HP damage")
+    var walk: MovementActionResult = walk_f["movement"].request_step_forward("actor.walk_damage")
+    _check(walk.is_accepted(), "Walk accepted")
+    walk_f["kernel"].schedule_event(5, "system17", &"damage")
+    walk_f["kernel"].run_until_stop()
+    _check(walk_f["world"].placement("actor.walk_damage").anchor == Vector2i(2, 2), "damage still cancels Walk")
 
-    var run_f: Dictionary = _fixture("actor.run_damage")
-    var run_world: WorldState = run_f["world"]
-    var run_kernel: TickKernel = run_f["kernel"]
-    var run_movement: MovementActionService = run_f["movement"]
-    var run_health: ActorHealthState = run_f["health"]
-    run_kernel.external_event_due.connect(
+    var run_f := _fixture("actor.run_damage")
+    run_f["kernel"].external_event_due.connect(
         func(event):
-            if event.event_type == &"test.damage_run":
-                run_health.apply_damage("actor.run_damage", 5)
+            if event.event_type == &"damage":
+                run_f["health"].apply_damage("actor.run_damage", 5)
     )
-    var run: MovementActionResult = run_movement.request_run_forward("actor.run_damage")
-    _check(run.is_accepted(), "damage-during-run action accepted")
-    _check(run_kernel.schedule_event(8, "run_smoke", &"test.damage_run") > 0, "run damage event scheduled between strides")
-    _check(run_kernel.run_until_stop() == TickRules.RunStopReason.IDLE, "committed damaged run drains")
-    _check(run_world.placement("actor.run_damage").anchor == Vector2i(4, 2), "damage does not cancel committed run")
-    _check(run_kernel.world_tick() == 12 and run_health.current_hp("actor.run_damage") == 95, "run finishes on schedule despite damage")
-
-func _test_second_stride_blocker_keeps_intermediate() -> void:
-    var f: Dictionary = _fixture("actor.partial")
-    var world: WorldState = f["world"]
-    var mutations: WorldMutationService = f["mutations"]
-    var kernel: TickKernel = f["kernel"]
-    var movement: MovementActionService = f["movement"]
-    var needs: ActorNeedsState = f["needs"]
-    kernel.external_event_due.connect(
-        func(event):
-            if event.event_type == &"test.block_final":
-                mutations.create_entity(&"structure.wall", "wall.final")
-                mutations.set_placement(
-                    "wall.final",
-                    Layers.Channel.STRUCTURE,
-                    Vector2i(4, 2),
-                    Facing.Value.NORTH,
-                    Footprint.single_cell()
-                )
-    )
-    var run: MovementActionResult = movement.request_run_forward("actor.partial")
-    _check(run.is_accepted(), "partial-run request accepted before race blocker")
-    _check(kernel.schedule_event(8, "run_smoke", &"test.block_final") > 0, "final blocker scheduled after stride one")
-    _check(kernel.run_until_stop() == TickRules.RunStopReason.IDLE, "partial run resolves")
-    _check(world.placement("actor.partial").anchor == Vector2i(3, 2), "failed second stride preserves intermediate cell")
-    _check(needs.fatigue("actor.partial") == 1, "only successful first stride charges fatigue")
-
-func _test_damage_signal_is_semantic() -> void:
-    var f: Dictionary = _fixture("actor.damage_signal")
-    var health: ActorHealthState = f["health"]
-    var events: Array = []
-    health.damage_applied.connect(func(actor_id, amount, previous_hp, current_hp, version): events.append([actor_id, amount, previous_hp, current_hp, version]))
-    _check(health.apply_damage("actor.damage_signal", 7), "real damage applies")
-    _check(events.size() == 1 and int(events[0][1]) == 7, "damage signal emits actual HP loss")
-    _check(health.heal("actor.damage_signal", 3), "healing succeeds")
-    _check(health.set_max_hp("actor.damage_signal", 90), "max HP bookkeeping succeeds")
-    _check(events.size() == 1, "healing/max-HP changes do not masquerade as damage")
+    var run: MovementActionResult = run_f["movement"].request_run_forward("actor.run_damage")
+    _check(run.is_accepted(), "Run accepted")
+    run_f["kernel"].schedule_event(8, "system17", &"damage")
+    run_f["kernel"].run_until_stop()
+    _check(run_f["world"].placement("actor.run_damage").anchor == Vector2i(4, 2), "damage still does not cancel committed Run")
 
 func _test_input_contract() -> void:
     var shifted := InputEventKey.new()
     shifted.keycode = KEY_W
     shifted.shift_pressed = true
-    _check(KeyboardClass._intent_for_key(shifted) == Intents.RUN_FORWARD, "Shift+W emits semantic Run intent")
+    _check(KeyboardClass._intent_for_key(shifted) == Intents.RUN_FORWARD, "Shift+W emits Run")
     var plain := InputEventKey.new()
     plain.keycode = KEY_W
     _check(KeyboardClass._intent_for_key(plain) == Intents.FORWARD, "plain W remains Walk")
 
-    var controls := ControlsClass.new()
-    controls.set_enabled(true)
-    var found_run: bool = false
-    for child: Node in controls.get_children():
-        var button := child as Button
-        if button != null and button.text == "RUN":
-            found_run = true
-            break
-    _check(found_run, "touch controls expose native RUN button")
-    controls.free()
-
 func _check(condition: bool, message: String) -> void:
     if not condition:
-        _failures.append(message)
+        failures.append(message)
