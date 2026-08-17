@@ -1,8 +1,8 @@
 # Tick Survival Lab — 08 Player / Living Actor Renderer
 
-Status: **DRAFT — detailed renderer contract awaiting explicit approval before implementation**
+Status: **IMPLEMENTED — canonical living-ACTOR renderer and dedicated Godot CI contract present 2026-08-16**
 
-Discussion basis: after 07 Prop / Fixture / Vegetation Renderer was implemented, the user confirmed that the next actor presentation layer should include non-player actors and then explicitly approved the rule that corpses are persistent post-death world problems rather than living ACTOR render entries.
+Approval basis: after 07 Prop / Fixture / Vegetation Renderer was implemented, the user confirmed that the next actor presentation layer should include non-player actors, approved the rule that corpses are persistent post-death world problems rather than living ACTOR render entries, and then explicitly approved the full 08 contract on 2026-08-16.
 
 ## 1. Goal
 
@@ -16,144 +16,142 @@ Render every visible **living** canonical WHAT actor through one focused present
 
 08 does **not** render corpses. Death transitions physical presentation out of the living ACTOR layer; persistent corpse identity/state/rendering belongs to a later Corpse / Decay / Contamination system.
 
-## 2. Approved cross-system direction already locked
-
-The following direction is already approved independently of the remaining 08 details:
+## 2. Approved cross-system corpse direction
 
 1. Corpses are not ordinary living ACTORs.
 2. Death leaves a persistent physical corpse/world consequence rather than deleting the event.
 3. Corpse age/decay can later create accumulated local contamination/filth pressure and sickness risk when bodies are ignored for too long or accumulate in enclosed living spaces.
-4. The corpse model should follow the mini-Zomboid rule: preserve meaningful cleanup/disposal/health consequences without detailed microbiology.
+4. The corpse model follows the mini-Zomboid rule: preserve meaningful cleanup/disposal/health consequences without detailed microbiology.
 5. The corpse remains tied to the identity of the person/infected that died; exact same-ID versus linked corpse-ID representation is deferred to the dedicated corpse design because current WHAT entity semantic type is intentionally not a generic mutable metadata bag.
-6. 08 therefore stays living-actor-only.
+6. 08 is therefore living-actor-only.
+
+Cross-system rationale is recorded in `DESIGN_DECISIONS.md`.
 
 ## 3. Recovery facts
 
 ### Tick retained/golden art
 
-Current protected Tick `game/assets/tactical_atlas.svg` already contains one real four-facing First Fire survivor variant at historical atlas indices **96–99**. The golden Tick `TacticalTiles.gd` did not consume those survivor atlas cells for non-player actors; it only used the four independent `player_*.svg` textures for the player.
+Protected Tick `game/assets/tactical_atlas.svg` contains one historical four-facing First Fire survivor variant at indices 96–99. Golden Tick `TacticalTiles.gd` did not use those cells for non-player actors; it used the four independent `player_*.svg` textures for the player.
 
-Current 04 Art Catalog already exposes:
-
-`resolve_player(facing)`
-
-which maps canonical WHERE NORTH/EAST/SOUTH/WEST to the four exact retained player textures.
+04 Art Catalog exposes `resolve_player(facing)`, mapping canonical WHERE NORTH/EAST/SOUTH/WEST to those exact protected player textures.
 
 ### First Fire same-owner recovery source
 
-`FIRST_FIRE_REUSE.md` explicitly allows recovery of coherent same-owner First Fire tactical/world work without importing First Fire runtime architecture.
+`FIRST_FIRE_REUSE.md` permits recovery of coherent same-owner First Fire tactical/world work without importing First Fire runtime architecture.
 
-Current `dmcexcess-lab/first-fire` contains a richer actor section in its tactical atlas and `FFTacticalVisuals.gd` documents its exact use:
+The inspected First Fire tactical atlas and `FFTacticalVisuals.gd` establish:
 
-- survivor variants: atlas **96–127** = 8 variants × 4 facings;
-- infected/zombie variants: atlas **128–159** = 8 variants × 4 facings;
-- survivor corpse variants: **160–167**;
-- infected corpse variants: **176–183**;
-- carried weapon silhouettes begin at **192**.
+- survivor variants: source atlas 96–127 = 8 variants × 4 facings;
+- infected/zombie variants: source atlas 128–159 = 8 variants × 4 facings;
+- survivor corpse variants: 160–167;
+- infected corpse variants: 176–183;
+- carried weapon silhouettes begin at 192.
 
-First Fire facing order is NORTH, EAST, SOUTH, WEST and uses:
+Facing order is NORTH, EAST, SOUTH, WEST. Historical living actor selection was:
 
 - survivor: `96 + variant * 4 + facing_index`;
 - infected: `128 + variant * 4 + facing_index`.
 
 This is real solved same-owner art, not a placeholder.
 
-## 4. Proposed art recovery boundary
+## 4. Implemented art recovery boundary
 
-08 should **not modify** the protected Tick `tactical_atlas.svg` or the protected four player textures.
+08 does **not modify** protected Tick `tactical_atlas.svg` or the protected player textures.
 
-Instead, implementation should add a new narrow actor-only retained asset, tentatively:
+Implementation added:
 
 `game/assets/actor_atlas.svg`
 
-It should be extracted from the existing same-owner First Fire actor artwork without stylistic regeneration:
+This is a narrow actor-only extraction/repack from the same-owner First Fire artwork without stylistic regeneration:
 
-- 8 survivor variants × 4 facings;
-- 8 infected variants × 4 facings;
-- no corpse rows in 08;
-- no weapon/item rows in 08.
+- 8 survivor variants × 4 facings at canonical actor-atlas indices 0–31;
+- 8 infected variants × 4 facings at indices 32–63;
+- no corpse rows;
+- no weapon/item rows;
+- 32×32 cells, 16 columns.
 
-The new actor atlas should use the same 32×32 cell geometry. 04 Art Catalog should gain a focused actor source + resolver rather than making Actor renderer know atlas indices.
+Recovered actor asset Git blob:
 
-Corpse and carried-equipment art remain available recovery sources for their later owning systems but are deliberately not pulled into 08 merely because the source sheet contains them.
+`205036fff8ffb24f828a09cf033abcf615ce6fe0`
+
+First Fire source tactical-atlas blob recorded for provenance:
+
+`2caff9a1c2ec84fc7d56e6b2c64bce953c575029`
+
+The original ten protected Tick art files remain byte-identical and retain their existing golden-baseline contract. The actor asset has a separate immutable recovery identity rather than being falsely described as part of that golden Tick baseline.
+
+Corpse and carried-equipment art remain recovery sources for later owning systems.
 
 ## 5. Non-goals
 
 08 does **not** own or implement:
 
-- AI/decision making/pathfinding;
-- infected behavior;
+- AI/decision making/pathfinding or infected behavior;
 - combat/hit resolution;
 - health/injury/death processing;
-- corpse creation, corpse state, decay, contamination, cleanup, burial, burning or disposal;
-- inventory/equipment mechanics;
-- weapon stats or carried-item state;
-- actor names, biographies, relationships or population simulation;
-- character creator / appearance customization;
-- animation timing;
-- movement interpolation;
-- perception/vision/fog;
-- lighting/weather/sound;
-- collision;
-- movement actions;
-- WHEN scheduling;
-- camera/zoom;
-- input/UI;
+- corpse creation/state/decay/contamination/cleanup/burial/burning/disposal;
+- inventory/equipment mechanics or weapon stats;
+- names/biographies/relationships/population simulation;
+- character creation or persistent appearance customization;
+- animation timing or movement interpolation;
+- perception/vision/fog, lighting/weather/sound;
+- collision, Movement, WHEN scheduling;
+- camera/zoom, input/UI;
 - Tactical Renderer orchestration;
 - generation;
 - frozen reboot wiring.
 
-## 6. Intended owners
+## 6. Owners
 
-After approval:
-
+- `game/assets/actor_atlas.svg`
 - `game/scripts/render/ActorDrawCommand.gd`
 - `game/scripts/render/ActorLayerRenderer.gd`
 - `game/scripts/ci/ActorLayerRendererSmoke.gd`
 - `.github/workflows/actor-renderer.yml`
 
-Narrow 04 Art Catalog extension expected:
+Narrow 04 Art Catalog extension:
 
-- new actor art source registration;
-- actor-family/facing/variant descriptor resolver;
-- new recovered actor asset + immutable baseline identity check.
+- `SOURCE_ACTORS` registration for `res://assets/actor_atlas.svg`;
+- `resolve_living_actor(actor_family, facing, variant)`;
+- actor mapping counts;
+- separately pinned actor recovery asset/provenance;
+- expanded `ArtCatalogSmoke.gd` and art-catalog CI.
 
-No actor simulation state store is introduced by 08.
+No actor simulation state store was introduced.
 
 ## 7. Public renderer contract
 
-`ActorLayerRenderer` is a standalone `Node2D`.
-
-Injected read dependencies:
+`ActorLayerRenderer` is a standalone `Node2D` with injected read dependencies:
 
 - canonical `WorldState`;
 - canonical `ArtCatalog`.
 
-Presentation configuration:
+Public presentation surface:
 
 - `configure(world_state, art_catalog) -> bool`
 - `set_visible_window(origin, size_cells, cell_pixels) -> bool`
 - `set_controlled_actor_id(actor_id: String) -> bool`
+- `controlled_actor_id() -> String`
 - `plan_visible_commands() -> Array[ActorDrawCommand]`
 - `clear_texture_cache()`
-- bounded diagnostic access matching existing focused render layers.
+- bounded diagnostic access.
 
-`controlled_actor_id` is a **presentation/session role**, not a WHAT semantic type. Taking control of a different survivor must not require changing that person's persistent entity type.
+`controlled_actor_id` is a **presentation/session role**, not a WHAT semantic type. Taking control of a different survivor does not rewrite that person's persistent identity.
 
-Changing the controlled actor ID requests redraw but mutates no world/simulation state.
+Changing controlled actor requests redraw but mutates no world/simulation state.
 
 ## 8. Canonical living actor semantic families
 
-Initial recognized WHAT ACTOR semantic families:
+Initial recognized WHAT ACTOR semantic types are exactly:
 
 - `actor.survivor`
 - `actor.infected`
 
-The controlled actor is identified by stable entity ID, not by inventing `actor.player` as permanent world identity.
+The controlled actor is identified by stable entity ID, not a permanent `actor.player` type.
 
-Future actor families such as animals require explicit art/design registration rather than being guessed.
+Future actor families such as animals require explicit art/design registration. Unknown ACTOR-channel semantic types become diagnostic.
 
-A WHAT entity on ACTOR channel with an unrecognized semantic family becomes diagnostic.
+A controlled actor must currently be an `actor.survivor`; assigning control to an infected produces a visible diagnostic rather than rendering infected truth as the survivor player sprite.
 
 ## 9. Discovery and ordering
 
@@ -161,9 +159,7 @@ A WHAT entity on ACTOR channel with an unrecognized semantic family becomes diag
 
 `WorldState.entities_at(cell, SpatialLayer.Channel.ACTOR)`
 
-Stable IDs are deduplicated because arbitrary WHAT footprints can intersect more than one visible cell.
-
-Each visible/intersecting living actor creates at most one draw command.
+Stable IDs are deduplicated because arbitrary WHAT footprints can intersect multiple visible cells. Each visible/intersecting living actor creates at most one draw command.
 
 Deterministic order:
 
@@ -171,239 +167,207 @@ Deterministic order:
 2. placement anchor X;
 3. stable actor ID.
 
-If ACTOR placements overlap, 08 draws them deterministically rather than becoming collision legality. Collision/Movement owns whether an overlap should have been allowed.
+Overlapping ACTOR placements draw deterministically rather than becoming renderer-owned collision legality.
 
 ## 10. Placement / facing / footprint
 
-Every drawable actor requires:
+Every drawable actor requires an existing WHAT entity record and placement on ACTOR channel. WHAT already validates canonical facing/footprint geometry; 08 additionally verifies occupancy consistency.
 
-- existing WHAT entity record;
-- WHAT placement on ACTOR channel;
-- valid canonical N/E/S/W facing;
-- placement footprint that actually covers the occupancy entry used to discover it.
-
-`ActorDrawCommand` retains at least:
+`ActorDrawCommand` retains:
 
 - stable actor ID;
-- semantic actor family;
-- whether this ID is currently controlled;
+- semantic type/family;
+- controlled role;
 - global anchor;
 - facing;
 - copied physical footprint/world cells;
-- presentation variant index where applicable;
+- presentation variant where applicable;
 - local destination rect;
 - copied `ArtSelection` or diagnostic state.
 
-Like 07, current living actor art renders once at the actor anchor. Physical footprint remains world truth and is not turned into stretched/duplicated actor art.
+Current living actor art renders once at the actor anchor. Physical footprint remains world truth and is not stretched or duplicated into presentation geometry.
 
 ## 11. Player-controlled actor art
 
-The currently controlled actor uses current 04:
+The controlled survivor uses:
 
 `ArtCatalog.resolve_player(facing)`
 
-This preserves the exact four independent player-facing sprites already protected by the golden baseline.
-
-The renderer does not add an arrow/ring solely to identify the player. A later explicit accessibility/selection presentation can add one if desired.
+This preserves the exact four independent protected player-facing sprites. No arrow/ring was added merely to identify the player.
 
 ## 12. Non-player survivor / infected art
 
-04 Art Catalog should gain a semantic living-actor resolver with typed UNKNOWN failure, conceptually:
+04 Art Catalog now exposes:
 
 `resolve_living_actor(actor_family, facing, variant) -> ArtSelection`
 
-Allowed families initially:
+Allowed families are survivor and infected. The renderer never knows actor-atlas indices.
 
-- survivor;
-- infected.
+### Deterministic default appearance
 
-The renderer must not know atlas indices.
+Until a persistent Actor Appearance system exists, non-player variant choice is a deterministic presentation default derived from stable actor ID using explicit 32-bit FNV-1a over the UTF-8 ID bytes, modulo 8.
 
-### Proposed default visual-variant rule
+Properties:
 
-Until a future persistent Actor Appearance system exists, non-player variant choice should be a deterministic **presentation default derived from the stable actor ID**, modulo the 8 recovered variants.
-
-Requirements:
-
-- same stable actor ID always produces the same default variant across runs/platforms;
-- use an explicitly defined stable hash/byte algorithm, not dictionary order or RNG state;
-- this variant is presentation default only and has no gameplay meaning;
-- a future explicit Actor Appearance profile may override the default without changing WHAT placement or Actor renderer geometry.
-
-This avoids making every NPC identical while also avoiding fake persistent appearance state before that system is designed.
-
-This default-variant rule is part of the DRAFT and still requires user approval with the rest of 08.
+- same stable actor ID produces the same default variant across runs/platforms;
+- no RNG/global state or dictionary order participates;
+- the variant has no gameplay meaning;
+- a future Actor Appearance profile can override it without changing WHAT placement or renderer geometry.
 
 ## 13. Stance
 
-08 v1 should **not invent crouch art**.
+08 does **not invent crouch art**.
 
-The recovered living actor sprites have directional variants but no authored standing/crouched variant set. Therefore:
-
-- physical stance remains owned by 03 Actor Locomotion;
-- 08 does not require a locomotion record merely to render an actor;
-- crouched actors currently use their normal living-actor sprite;
-- no fake ring, scaling squash, or arbitrary opacity change is added to simulate crouching.
-
-A future actor-visual contract may consume stance-specific art or a deliberate stance presentation rule.
-
-This keeps infected or other ACTOR entities renderable even if they do not use 03's voluntary human stance domain.
+Physical stance remains owned by 03 Actor Locomotion. 08 does not require a locomotion record merely to render an actor; crouched actors currently use normal directional living-actor art. No fake ring, squash or opacity effect is used as substitute crouch art.
 
 ## 14. Drawing geometry
 
-Controlled player art follows the existing full-cell player texture path.
+Controlled player art uses the full visible cell rectangle.
 
-Recovered First Fire non-player actor art historically rendered at approximately **29×29 px centered inside a 32×32 cell**. 08 should preserve that proportion at arbitrary display scale:
+Recovered First Fire non-player art preserves the historical approximately 29×29-in-32 proportion:
 
 `actor_draw_size = cell_pixels * (29.0 / 32.0)`
 
-centered in the actor's anchor cell.
+centered in the anchor cell. This is presentation geometry only and does not shrink the physical footprint/collision body.
 
-This is presentation geometry only and does not shrink the physical WHAT footprint/collision body.
-
-FOUND selections use cached textures and the same proven `draw_texture_rect_region` / `draw_texture_rect` paths as existing canonical renderers.
+FOUND selections use cached textures and the same `draw_texture_rect_region` / `draw_texture_rect` paths as existing canonical renderers.
 
 ## 15. Redraw / invalidation
 
 No `_process()` polling.
 
-Redraw on:
+Redraw occurs on:
 
 - configure;
 - visible window / cell scale change;
 - controlled actor ID change;
-- texture cache clear;
+- texture-cache clear;
 - WHAT world reset;
-- visible ACTOR placement set/removal/move;
-- entity removal affecting visible actor cells.
+- relevant visible ACTOR placement set/removal/move;
+- relevant visible actor entity removal.
 
-Terrain/STRUCTURE/OBJECT/LOOSE_ITEM/EFFECT changes should not redraw when WHAT change information proves they are irrelevant.
+The renderer keeps a narrow ACTOR-placement relevance index so terrain and non-ACTOR placement changes do not redraw merely because an unrelated entity happens to have actor-like semantic text.
 
-08 has no dependency on AI ticks or movement scheduler events. It reacts when persistent WHAT placement actually changes.
+08 has no dependency on AI ticks or movement scheduler events. It reacts when WHAT placement truth changes.
 
 ## 16. Diagnostics
 
-Fail visibly for:
+Visible failure covers:
 
-- occupancy references missing actor entity;
-- missing placement;
-- wrong placement channel;
-- occupancy/placement mismatch;
-- invalid facing;
+- missing actor entity/placement;
+- wrong channel/occupancy mismatch;
 - unknown actor semantic family;
-- unknown actor art family/variant;
-- invalid/non-drawable ArtSelection;
+- unknown art family/variant/facing;
+- controlled infected/non-survivor role mismatch;
+- invalid/non-drawable selection;
 - texture load failure.
 
-Do not substitute survivor art for unknown future animals or infected art for unknown actor types.
+Unknown future animals are never silently substituted with survivor/infected art.
 
 ## 17. Performance / mobile
 
 - visible ACTOR occupancy only;
 - stable-ID deduplication;
-- at most one base actor sprite command per visible actor;
+- one base sprite command per visible actor;
 - deterministic sorting;
 - texture cache;
 - event-driven redraw;
 - no per-frame world scan;
-- no permanent render Node per persistent distant actor;
-- no input/hover/Safari-specific behavior inside renderer.
+- no permanent render Node per distant persistent actor;
+- no input/hover/Safari behavior inside renderer.
 
-## 18. Acceptance tests after approval
+## 18. Verified acceptance
 
-Dedicated Godot 4.7.1 CI should prove:
+Implementation candidate `77f2a86e964bef9128fd2b52a0799d46c146601e` introduced the production system. A CI-only correction at `c37be260e273e70a2bb2f5a91261d99a8a5cb898` fixed a mistyped assertion for the already-protected final-props hash; no production or actor-art repair was required.
+
+Dedicated **Player Living Actor Renderer contract** run `31985099706` passed on `c37be260...`:
 
 - source boundary isolation;
-- project parse/import;
-- Art Catalog, Ground, Structure and Prop regressions remain green;
-- ACTOR-only filtering;
-- controlled actor uses exact N/E/S/W player art;
-- non-player survivor uses recovered survivor art;
-- infected uses recovered infected art;
-- all 8 recovered non-player variants resolve for all four facings;
-- stable-ID default variant is deterministic;
-- different stable IDs can map to different variants without RNG/global state;
-- unknown actor family is diagnostic;
-- negative/global coordinates map locally;
-- multi-cell actor occupancy deduplicates to one command;
-- facing/footprint/world cells retained;
-- overlapping ACTOR occupants remain deterministic rather than renderer-owned collision errors;
-- controlled actor change redraws;
-- visible ACTOR move/removal redraws;
-- clearly irrelevant terrain/structure/object changes do not redraw;
-- recovered actor texture loads;
-- protected existing Tick art remains byte-identical;
-- production renderer imports no Collision, Movement, WHEN, AI, Health, Inventory, Corpse, generation, reboot, camera/input/UI, lighting/perception/weather/sound, or other render-layer internals.
+- all ten protected Tick asset hashes + recovered actor asset hash;
+- Godot 4.7.1 project parse/import;
+- Art Catalog regression;
+- Ground regression;
+- Structure regression;
+- Prop regression;
+- controlled N/E/S/W exact player art;
+- survivor/infected recovered art;
+- deterministic stable-ID appearance defaults;
+- negative/global coordinate mapping;
+- multi-cell dedup/physical geometry retention;
+- deterministic ACTOR overlap;
+- diagnostics/channel filtering;
+- controlled-role redraw and relevant WHAT invalidation.
+
+Dedicated **Recovered Art Catalog contract** run `31985099764` also passed independently on the same code head and validates all 64 living-NPC actor cells plus the existing recovered catalog.
 
 ## 19. Corpse / decay future seam
 
-08 explicitly stops at living actors.
+08 stops at living actors.
 
-Future death/corpse design should decide:
+Future corpse design should decide:
 
 - physical corpse entity/channel representation;
-- relation back to deceased persistent person/infected identity;
-- death tick / age;
-- simplified decay stages;
-- local contamination/filth contribution;
-- aggregation in enclosed/occupied spaces;
+- durable relation to deceased persistent identity;
+- death tick / age and simplified decay stages;
+- contamination/filth contribution and environmental aggregation;
 - Health interpretation of sustained exposure;
 - moving/dragging/searching/cleaning/burial/burning/disposal actions;
 - corpse collision/passability changes;
-- corpse visual variants recovered from First Fire;
+- separately recovered corpse visual variants;
 - persistence and streaming/coarse simulation.
 
-A likely mini-Zomboid model is:
+Conceptual direction remains:
 
 `corpse age/stage × corpse count × local environmental modifiers -> contamination pressure`
 
-with Health later interpreting sustained pressure. Exact formula/stages are **not** approved here and belong to the dedicated Corpse / Decay design.
+Exact formula/stages are not part of 08.
 
 ## 20. Future visual seams
 
-- persistent Actor Appearance / character creator may override default art variant;
-- equipment renderer may add recovered weapon/carried-item silhouettes without inventory logic entering 08;
-- stance-specific visuals may consume 03 stance later;
+- persistent Actor Appearance / character creator can override default NPC variant;
+- equipment presentation can add recovered weapon/carried-item silhouettes without inventory logic entering 08;
+- stance-specific visuals can later consume 03 stance;
 - damage/status VFX remain separate overlays;
-- animals add explicit actor family/art registration;
-- Tactical Renderer later composes Ground + Structure + Prop + Actor;
-- perception/lighting may later hide/modulate actors without changing their persistent world state.
+- animals add explicit family/art registration;
+- Tactical composition later combines Ground + Structure + Prop + Actor;
+- perception/lighting can later hide/modulate actors without changing persistent world truth.
 
-## 21. Expected implementation impact
+## 21. Implementation impact
 
-### Expected to change after full 08 approval
+Changed:
 
 - new actor-only recovered art asset;
-- narrow Art Catalog actor-source/resolver extension + baseline checks;
+- additive Art Catalog actor source/resolver/provenance + tests;
 - `ActorDrawCommand.gd`;
 - `ActorLayerRenderer.gd`;
-- actor renderer smoke/workflow;
-- 08 design promotion + routing/context/changelog docs.
+- actor renderer smoke/workflow.
 
-### Must remain untouched
+Untouched:
 
 - WHERE / WHAT / WHEN contracts;
 - Collision / Movement / Actor Locomotion;
 - Door State;
 - Ground / Structure / Prop production renderers;
-- protected existing art assets;
+- all ten protected existing art assets;
 - AI / Health / Inventory / Corpse mechanics;
 - generation / reboot / camera / input / UI.
 
-### Contract impact
-
-04 Art Catalog receives an additive actor-art source/resolver. No existing resolver semantics change.
-
-No simulation public contract changes are intended.
+Contract impact is additive only: 04 Art Catalog gains actor-art selection; existing resolver semantics are unchanged. No simulation public contract changed.
 
 ## 22. North-star fit
 
-Rendering the player, autonomous survivors, and infected through the same living ACTOR truth is necessary for a causally populated persistent world. Separating corpses from the living actor layer preserves death as an enduring physical consequence and leaves room for the approved cleanup/decay health pressure without turning rendering into a death or disease simulator.
+Rendering the player, autonomous survivors, and infected through the same living ACTOR truth supports a causally populated persistent world. Separating corpses from the living actor layer preserves death as an enduring physical consequence and leaves room for cleanup/decay health pressure without turning rendering into a death or disease simulator.
 
-The actor art recovery also follows the project's archaeology rule: use real solved same-owner survivor/infected art rather than fake colored markers while keeping First Fire runtime architecture out.
+The actor art recovery follows the archaeology rule: use real solved same-owner survivor/infected art rather than fake colored markers while keeping First Fire runtime architecture out.
 
-## 23. Approval state
+## 23. Approved decisions
 
-**DRAFT.**
+Approved 2026-08-16:
 
-The user has already approved the corpse-vs-living-actor boundary and the future corpse-decay consequence direction. The remaining 08 details — especially recovered actor-atlas extraction, stable-ID default non-player variants, controlled-actor presentation role, and no fake crouch presentation — require explicit approval before implementation.
+- one living-ACTOR renderer covers controlled survivor, NPC survivors and infected;
+- controlled status is a stable-ID presentation role, not permanent world type;
+- protected player textures remain the controlled-survivor art;
+- recover the real same-owner 8×4 survivor and 8×4 infected art into a separate actor atlas;
+- NPC default appearance is deterministic from stable ID using an explicit stable hash;
+- no fake crouch presentation;
+- corpses remain outside 08 and are a persistent future mechanic/domain.

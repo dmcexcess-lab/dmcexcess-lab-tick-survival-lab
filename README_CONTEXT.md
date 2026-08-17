@@ -43,7 +43,7 @@ Canonical progress:
 - **06A Door State — IMPLEMENTED + CI**
 - **06 Structure Layer Renderer — IMPLEMENTED + CI**
 - **07 Prop / Fixture / Vegetation Renderer — IMPLEMENTED + CI**
-- **08 Player / Living Actor Renderer — DRAFT; active design review**
+- **08 Player / Living Actor Renderer — IMPLEMENTED + CI**
 
 ## 3. Foundation and simulation truth
 
@@ -67,15 +67,17 @@ Collision owns hard occupancy, not door state. Movement owns forward/back/turn t
 
 06A owns persistent OPEN/CLOSED truth keyed by stable WHAT door ID. Missing state is UNKNOWN. Door State does not infer from or mutate Collision/WHEN.
 
-### Approved corpse direction
+### Death / corpse direction
 
-Corpses are persistent post-death world consequences, not living ACTOR render entries. Future Corpse / Decay / Contamination design should preserve the deceased identity relationship, corpse age/decay, and a simplified accumulated contamination/filth pressure that can create health/sickness consequences when bodies accumulate or remain too long. Exact representation, formula, disposal actions, and corpse channel are not yet designed.
+Approved cross-system direction: death leaves a persistent physical corpse/world consequence rather than an ordinary living ACTOR or disappearance. Future corpse state should preserve relation to deceased identity and support age/decay; accumulated bodies/decay may create local contamination/filth pressure that Health later interprets as sickness risk. Exact corpse representation, decay stages/formula, disposal actions and rendering are **NOT DESIGNED** yet.
 
 ## 4. Canonical presentation
 
 ### 04 Art Catalog — IMPLEMENTED
 
-Recovered six atlas families + four player sprites, exact semantic precedence, themed openings, road topology, and typed UNKNOWN behavior. Art Catalog selects descriptors only.
+Canonical design: `SYSTEM_DESIGNS/04_RECOVERED_MULTI_ATLAS_ART_CATALOG.md`.
+
+Recovered environmental multi-atlas selection plus four protected player textures remain intact. 08 additively recovered a separate same-owner living-actor atlas (`game/assets/actor_atlas.svg`) with 8 survivor variants × four facings and 8 infected variants × four facings. Original ten Tick baseline art assets remain byte-identical; the actor source is separately pinned/provenanced. Art Catalog selects descriptors only.
 
 ### 05 Ground Layer Renderer — IMPLEMENTED
 
@@ -89,48 +91,46 @@ Visible WHAT `STRUCTURE` occupancy -> Art Catalog + Door State. Supports `wall.<
 
 Canonical design: `SYSTEM_DESIGNS/07_PROP_FIXTURE_VEGETATION_RENDERER.md`.
 
-Owners:
-
-- `game/scripts/render/PropDrawCommand.gd`
-- `game/scripts/render/PropLayerRenderer.gd`
-- `game/scripts/ci/PropLayerRendererSmoke.gd`
-- `.github/workflows/prop-renderer.yml`
-
 Locked rules:
 
 - reads WHAT `OBJECT` occupancy only + 04 Art Catalog;
-- recognized families are `prop.*`, `fixture.*`, `vegetation.*`;
-- all recovered art selection delegates to `ArtCatalog.resolve_prop()`;
+- recognized families `prop.*`, `fixture.*`, `vegetation.*`;
+- all recovered art delegates to `ArtCatalog.resolve_prop()`;
 - multi-cell occupancy deduplicates to one draw command per stable entity;
-- command retains anchor, N/E/S/W facing, copied footprint, and rotated world cells;
-- current recovered one-cell prop art draws once at the physical anchor;
-- current prop art is not automatically rotated because golden `draw_prop()` defined no native-facing transform;
-- overlapping OBJECT occupants draw deterministically rather than becoming renderer-owned collision errors;
-- unknown family/art/selection/texture facts fail visibly;
-- visible-window only, lazy texture cache, event-driven redraw, no `_process()` polling;
-- no Collision/WHEN/Movement/Locomotion/Door State/generation/inventory/camera/input/reboot ownership.
+- command retains anchor/facing/footprint/world cells;
+- current recovered one-cell prop art draws once at physical anchor and is not auto-rotated;
+- overlap is deterministic, not renderer-owned collision;
+- visible-window only, lazy texture cache, event-driven redraw, no `_process()`.
 
-Initial implementation head `5c2df6439678abaf8c9a031f5b6ed7bb8fb68a86` passed dedicated run `31983182247` with Art Catalog + Ground + Structure regressions and no production repair.
+### 08 Player / Living Actor Renderer — IMPLEMENTED
 
-### 08 Player / Living Actor Renderer — ACTIVE DRAFT
+Canonical design: `SYSTEM_DESIGNS/08_PLAYER_LIVING_ACTOR_RENDERER.md`.
 
-Canonical draft: `SYSTEM_DESIGNS/08_PLAYER_LIVING_ACTOR_RENDERER.md`.
+Owners:
 
-Settled boundary:
+- `game/assets/actor_atlas.svg`
+- `game/scripts/render/ActorDrawCommand.gd`
+- `game/scripts/render/ActorLayerRenderer.gd`
+- `game/scripts/ci/ActorLayerRendererSmoke.gd`
+- `.github/workflows/actor-renderer.yml`
 
-- renders living WHAT `ACTOR` entities only;
-- includes the controlled survivor, non-player survivors/humans, and infected;
-- controlled-player role is a stable-ID presentation/session role rather than a permanent `actor.player` world type;
-- corpses are excluded and belong to the future Corpse / Decay / Contamination system.
+Locked rules:
 
-Recovery discovery:
+- reads visible WHAT `ACTOR` occupancy only + 04 Art Catalog;
+- exact living semantic types are `actor.survivor` and `actor.infected`;
+- currently controlled actor is a stable-ID presentation/session role, not a permanent WHAT player type;
+- controlled survivor uses exact protected N/E/S/W `player_*.svg` textures;
+- NPC survivors/infected use separately recovered same-owner actor atlas;
+- NPC default variant uses explicit deterministic 32-bit FNV-1a of stable actor ID modulo 8; this is presentation default only until persistent Actor Appearance exists;
+- recovered NPC art is centered at 29/32 of a visible cell, matching solved First Fire presentation;
+- no fake crouch visual; 03 stance remains simulation truth and 08 does not require locomotion state;
+- arbitrary ACTOR footprints deduplicate to one base actor draw while preserving physical footprint/world cells;
+- overlap order is deterministic, not collision legality;
+- actual ACTOR-channel placement drives redraw relevance; semantic text alone on OBJECT/other channels does not;
+- no `_process()` polling;
+- no AI/Health/Inventory/Corpse/Collision/Movement/WHEN/generation/reboot/camera/input/UI ownership.
 
-- protected Tick art already contains one real four-facing survivor variant;
-- current same-owner First Fire tactical art contains 8 survivor variants × 4 facings and 8 infected variants × 4 facings, plus separate corpse/weapon art;
-- 08 proposes extracting living actor art into a new narrow actor atlas without modifying protected Tick assets;
-- corpse art remains reserved for the future corpse renderer/mechanic.
-
-Still awaiting explicit approval with the detailed 08 draft: additive Art Catalog actor resolver, deterministic stable-ID default non-player variant selection, exact actor draw geometry, and the rule that 08 does not fake crouch art before authored stance visuals exist.
+Implementation began at `77f2a86e964bef9128fd2b52a0799d46c146601e`; a CI-only protected-hash literal correction produced code head `c37be260e273e70a2bb2f5a91261d99a8a5cb898`. Dedicated actor run `31985099706` and Art Catalog run `31985099764` passed there.
 
 ## 5. Graphics recovery status
 
@@ -139,9 +139,10 @@ Canonical graphics now include:
 1. recovered multi-atlas semantic art selection;
 2. actual Ground drawing;
 3. actual wall/door/window Structure drawing with persistent Door State;
-4. actual Prop/Fixture/Vegetation drawing from persistent OBJECT entities.
+4. actual Prop/Fixture/Vegetation drawing from persistent OBJECT entities;
+5. actual controlled survivor + NPC survivor + infected drawing from persistent living ACTOR entities.
 
-Living Actor rendering is now the active draft. Visible full-scene recovery remains incomplete until Actor plus composition/test-area and camera systems exist canonically.
+The focused visual layer owners now exist. Visible full-scene canonical recovery is still incomplete because an approved composition/test-area path and camera do not yet exist.
 
 The deployed Web page still intentionally runs the frozen reboot reference. Do not claim it demonstrates canonical 05/06/07/08 until the new presentation stack has an approved composition path.
 
@@ -180,7 +181,8 @@ Key rules:
 15. Camera/viewport owns visible-window calculation; focused renderers only consume it.
 16. Door State owns door OPEN/CLOSED truth; Collision owns blocking truth; neither infers the other.
 17. Physical WHAT footprints/facing remain world truth; presentation-specific large-object geometry/orientation must be explicit rather than inferred from physics.
-18. Living ACTOR rendering and corpse persistence/decay are separate concerns; death must not be represented by leaving a dead body as an ordinary living ACTOR.
+18. Controlled-player role is not persistent actor identity; living actor rendering reads ordinary stable WHAT actor entities.
+19. Corpses are persistent future world/mechanic consequences, not living ACTOR presentation state.
 
 ## 8. Documentation source order
 
@@ -194,12 +196,12 @@ Key rules:
 8. IMPLEMENTED/APPROVED `SYSTEM_DESIGNS/*.md`;
 9. current DRAFT designs;
 10. compatible master-design material;
-11. golden history for recovered behavior.
+11. golden/same-owner history for recovered behavior.
 
-## 9. Recommended next bounded step
+## 9. Recommended next bounded design
 
-**Review/approve `08_PLAYER_LIVING_ACTOR_RENDERER.md`.**
+**Authored Visual Test Area** is the recommended next presentation discussion.
 
-The draft covers player + non-player survivors + infected using real recovered same-owner art while keeping AI, combat, health, inventory, corpses, camera/input, and tactical composition outside the renderer.
+Why next: Ground, Structure, Prop and Living Actor focused renderers now all exist independently. A small authored canonical WHAT scene can prove them together without dragging procedural generation into presentation recovery. The test-area/composition boundary must remain explicit: no fake generator, no reboot adapter, no camera/input ownership hidden in the fixture.
 
-Keep Corpse / Decay / Contamination, Authored Visual Test Area, Tactical composition, camera/zoom, touch/keyboard/Safari input, loose-item rendering, vehicles, stateful prop variants, and Door Interaction as separate approved systems.
+Keep Tactical renderer/orchestration, camera/zoom, touch/keyboard/Safari input, tactical controls UI, loose items, vehicles, corpse/decay, Actor Appearance/equipment presentation, and Door Interaction as separate approved systems.

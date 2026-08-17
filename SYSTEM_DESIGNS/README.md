@@ -26,12 +26,12 @@ The canonical simulation stack is **WHERE / WHAT / WHEN**, followed by focused p
 | 01 | Collision / Spatial Query | **IMPLEMENTED** | `01_COLLISION_SPATIAL_QUERY.md` | Explicit collision + sparse overrides; CLEAR/BLOCKED/UNKNOWN |
 | 02 | Movement Actions | **IMPLEMENTED** | `02_MOVEMENT_ACTIONS.md` | Forward/back/turn; typed policy; commit revalidation |
 | 03 | Actor Locomotion State & Movement Capability | **IMPLEMENTED** | `03_ACTOR_LOCOMOTION_MOVEMENT_CAPABILITY.md` | Standing/crouched, timed stance, capability providers |
-| 04 | Recovered Multi-Atlas Art Catalog | **IMPLEMENTED** | `04_RECOVERED_MULTI_ATLAS_ART_CATALOG.md` | Golden semantic art descriptors/topology/asset gate |
+| 04 | Recovered Multi-Atlas Art Catalog | **IMPLEMENTED** | `04_RECOVERED_MULTI_ATLAS_ART_CATALOG.md` | Golden environmental semantics + protected player art + separately recovered living-actor source |
 | 05 | Ground Layer Renderer | **IMPLEMENTED** | `05_GROUND_LAYER_RENDERER.md` | WHAT terrain -> Art Catalog -> visible-window ground drawing |
 | 06A | Door State | **IMPLEMENTED** | `06A_DOOR_STATE.md` | Explicit stable-ID OPEN/CLOSED state, UNKNOWN on missing, versioned persistence |
 | 06 | Structure Layer Renderer | **IMPLEMENTED** | `06_STRUCTURE_LAYER_RENDERER.md` | Visible walls/doors/windows; H/V axis; Door State-driven open/closed art |
 | 07 | Prop / Fixture / Vegetation Renderer | **IMPLEMENTED** | `07_PROP_FIXTURE_VEGETATION_RENDERER.md` | Visible OBJECT entities; recovered prop art; one anchor draw per stable entity |
-| 08 | Player / Living Actor Renderer | **DRAFT** | `08_PLAYER_LIVING_ACTOR_RENDERER.md` | Living ACTOR-only; controlled survivor + NPC survivors + infected; corpses excluded |
+| 08 | Player / Living Actor Renderer | **IMPLEMENTED** | `08_PLAYER_LIVING_ACTOR_RENDERER.md` | Controlled survivor + NPC survivors + infected; living ACTOR only; real recovered actor art |
 | 00D | Global World Planning / Generation Contract | **NOT DESIGNED** | `00D_GLOBAL_WORLD_GENERATION.md` | Global geography/roads/utilities/parcels before local detail |
 | 00E | Population / Household / Outbreak / Player Story | **NOT DESIGNED** | `00E_POPULATION_OUTBREAK_PLAYER_STORY.md` | Persistent people/homes/jobs/relationships and causal outbreak |
 | 00F | Streaming / Materialization | **NOT DESIGNED** | `00F_STREAMING_MATERIALIZATION.md` | Performance/storage over one logical world |
@@ -51,10 +51,11 @@ The canonical simulation stack is **WHERE / WHAT / WHEN**, followed by focused p
 
 ### Presentation
 
-- **04 Art Catalog:** `game/scripts/art/` + `ArtCatalogSmoke.gd` + `.github/workflows/art-catalog.yml`
+- **04 Art Catalog:** `game/scripts/art/`, protected/recovered art-source manifests, `ArtCatalogSmoke.gd`, `.github/workflows/art-catalog.yml`
 - **05 Ground:** `GroundDrawCommand.gd`, `GroundLayerRenderer.gd`, `GroundLayerRendererSmoke.gd`, `.github/workflows/ground-renderer.yml`
 - **06 Structure:** `StructureDrawCommand.gd`, `StructureLayerRenderer.gd`, `StructureLayerRendererSmoke.gd`, `.github/workflows/structure-renderer.yml`
 - **07 Prop / Fixture / Vegetation:** `PropDrawCommand.gd`, `PropLayerRenderer.gd`, `PropLayerRendererSmoke.gd`, `.github/workflows/prop-renderer.yml`
+- **08 Player / Living Actor:** `game/assets/actor_atlas.svg`, `ActorDrawCommand.gd`, `ActorLayerRenderer.gd`, `ActorLayerRendererSmoke.gd`, `.github/workflows/actor-renderer.yml`
 
 The canonical modules remain intentionally separate from frozen `game/scripts/reboot/` reference code. Do not add compatibility adapters merely to make them visible in the old playable build.
 
@@ -64,7 +65,7 @@ The canonical modules remain intentionally separate from frozen `game/scripts/re
 
 **Door State** owns persistent OPEN/CLOSED truth for `door.<theme>` entities. Missing state is UNKNOWN; Door State does not mutate Collision or WHEN.
 
-**Art Catalog** owns semantic-to-art selection only. World/generator data contains no atlas indices or texture paths.
+**Art Catalog** owns semantic-to-art selection only. World/generator data contains no atlas indices or texture paths. It now exposes separately recovered living survivor/infected art in addition to the original environmental/player catalog without changing simulation identity.
 
 **Ground Renderer** draws visible WHAT terrain through Art Catalog and owns only ground presentation/topology.
 
@@ -72,9 +73,7 @@ The canonical modules remain intentionally separate from frozen `game/scripts/re
 
 **Prop Renderer** draws visible WHAT OBJECT entities whose semantic families are `prop.*`, `fixture.*`, or `vegetation.*`. Multi-cell occupancy deduplicates to one command per stable entity. Current recovered art draws once at the physical anchor and remains unrotated; facing/footprint/world cells are preserved for future explicit presentation geometry/orientation contracts. Overlap order is deterministic and does not become collision legality.
 
-**08 Player / Living Actor Renderer is DRAFT.** Settled scope is living ACTOR entities only: controlled survivor, non-player survivors/humans, and infected. The controlled actor is a stable-ID presentation/session role rather than a permanent `actor.player` semantic type. Current same-owner First Fire recovery sources contain 8 four-facing survivor variants and 8 four-facing infected variants, so non-player rendering does not require placeholder markers. Corpses remain outside 08.
-
-**Approved corpse direction:** death leaves a persistent physical corpse/world consequence tied to the deceased identity. A later Corpse / Decay / Contamination system may age corpses and aggregate local contamination/filth pressure so accumulated/long-ignored bodies can create health/sickness consequences. Exact corpse representation, formula, disposal actions and rendering are not designed yet.
+**Player / Living Actor Renderer** draws visible WHAT ACTOR entities for exact `actor.survivor` and `actor.infected` semantic types. Controlled role is a stable-ID presentation/session choice, not a permanent player entity type. The controlled survivor uses the protected four player textures; NPC survivors/infected use 8 recovered variants × four facings from a separate actor atlas, with deterministic stable-ID default variant selection. It does not consume AI, Health, Inventory, Locomotion, Collision or corpse state. Corpses are explicitly outside the living ACTOR layer.
 
 ## Why generation is not the foundation
 
@@ -86,14 +85,15 @@ Exact order is refined one approved design at a time.
 
 | System | Status | Notes |
 |---|---|---|
-| Player / Living Actor Renderer | DRAFT | **Active next presentation review**; controlled survivor + NPC survivors + infected; real recovered actor art |
-| Corpse / Decay / Contamination | NOT DESIGNED | Persistent post-death body, identity link, aging/decay, local contamination/filth pressure and later health consequences |
-| Door interaction / physical transition | NOT DESIGNED | Future WHEN action coordinating Door State + Collision at commit |
-| Authored visual test area | NOT DESIGNED | Proves canonical Ground + Structure + Prop + Actor stack without procedural generation |
+| Authored visual test area | NOT DESIGNED | **Recommended next presentation discussion**; prove canonical Ground + Structure + Prop + Actor together without procedural generation |
 | Tactical renderer/orchestration | NOT DESIGNED | Composes focused render layers only; no layer internals |
 | Tactical camera + zoom | NOT DESIGNED | Supplies visible cell window/scale; one zoom owner |
 | Touch/keyboard/Safari input | NOT DESIGNED | Emits semantic movement/stance intents; lifecycle hard-pause integration |
 | Tactical controls UI | NOT DESIGNED | Presentation/hit regions only |
+| Corpse / Decay / Contamination | NOT DESIGNED | Approved direction: persistent post-death consequence, identity link, age/decay -> local contamination pressure; exact contract still needs design |
+| Door interaction / physical transition | NOT DESIGNED | Future WHEN action coordinating Door State + Collision at commit |
+| Actor Appearance / character creator integration | NOT DESIGNED | Persistent visual identity can replace 08's deterministic presentation default |
+| Actor equipment presentation | NOT DESIGNED | Recovered carried-item/weapon silhouettes; must not own inventory mechanics |
 | Loose-item renderer | NOT DESIGNED | Separate LOOSE_ITEM presentation; does not belong in Prop |
 | Road network/topology | NOT DESIGNED | Global coherent road truth; future road-class metadata seam |
 | Property/parcel planner | NOT DESIGNED | Parcels/frontage/access/site mix |
@@ -105,7 +105,7 @@ Exact order is refined one approved design at a time.
 | Prefab authoring tools | NOT DESIGNED | Canonical semantic data/art renderer with separate DEV tooling |
 | Construction/destruction | DEFERRED | Persistent WHAT mutation; bases anywhere legal |
 | Base/community summary | NOT DESIGNED | Thin summary over physical world facts |
-| Health/body/first aid | NOT DESIGNED | Mini-Zomboid injury/treatment; future mobility provider and corpse-exposure consumer |
+| Health/body/first aid | NOT DESIGNED | Mini-Zomboid injury/treatment; future mobility provider |
 | Needs/fatigue/temperature | NOT DESIGNED | Coarse consequential states; future mobility provider |
 | Vision/perception | DEFERRED | Major mood/gameplay system; mine golden work |
 | Lighting | DEFERRED | Major mood/gameplay system; mine golden work |
@@ -113,7 +113,7 @@ Exact order is refined one approved design at a time.
 | Silent spatial sound | DEFERRED | Spatial events; no default audible playback |
 | Infected AI | DEFERRED | Emits shared actions via actor/perception/world contracts |
 | Loot/inventory/search | DEFERRED | Stable-ID physical state; timed actions; future encumbrance provider |
-| Combat | DEFERRED | Timed actions + health consequences + future death/corpse transition |
+| Combat | DEFERRED | Timed actions + health consequences |
 | Vehicles | DEFERRED | Persistent multi-cell entities; separate vehicle rendering/behavior |
 | Old raid/extraction/session architecture | **SUPERSEDED** | No required raid/extraction/staging loop |
 
