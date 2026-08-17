@@ -41,9 +41,9 @@ Canonical progress:
 - **09 Actor Hand Equipment State — IMPLEMENTED + CI**
 - **10 Actor Hand Equipment Presentation — IMPLEMENTED + CI**
 - **11 Inventory / Containment — IMPLEMENTED + CI**
-- **12 Item Transfer / Pickup / Drop / Equip Actions — DRAFT; direction approved, detailed contract awaiting explicit approval**
+- **12 Item Transfer / Pickup / Drop / Equip Actions — IMPLEMENTED + CI**
 
-11 initial complete code head `1218c62cd04b3821991400918ffa43b29d621181` passed dedicated run `31988099341` with no production repair.
+12 initial implementation head `7ea53e0d300fb0d7aad2802b11d4da930b802a49` preserved all neighboring regressions but its new smoke exposed a real reentrant destination-change edge case. Hardened head `c3139466c26cbb8367b4509f107a48916a323916` revalidated destination truth immediately before the second cross-domain mutation and passed dedicated run `31990020356`.
 
 ## 3. Foundation / mechanic truth
 
@@ -62,14 +62,14 @@ Collision owns hard occupancy. Movement owns forward/back/turn request -> time -
 ### Door State
 06A owns persistent OPEN/CLOSED truth keyed by stable WHAT door ID. Missing state is UNKNOWN. Door State does not infer from or mutate Collision/WHEN.
 
-### 09 Actor Hand Equipment State
+### 09 Actor Hand Equipment
 
 Canonical design: `SYSTEM_DESIGNS/09_ACTOR_HAND_EQUIPMENT_STATE.md`.
 
 - explicit `actor.survivor` enrollment;
 - primary = anatomical right hand; secondary = anatomical left;
 - stable WHAT `item.*` assignments;
-- one physical item cannot occupy multiple hands/actors inside 09;
+- one physical item cannot occupy multiple 09 hand assignments;
 - missing record differs from enrolled empty hands;
 - versioned/copy-safe/deterministic snapshot state;
 - no Inventory/Render/Combat/Lighting/WHEN/UI ownership.
@@ -80,53 +80,61 @@ Canonical design: `SYSTEM_DESIGNS/11_INVENTORY_CONTAINMENT.md`.
 
 - explicit container enrollment; no art/name/channel inference;
 - stable direct relation `item_id -> direct_container_id`;
-- only valid unplaced WHAT `item.*` children accepted by normal `set_container`;
+- normal containment accepts only valid unplaced WHAT `item.*` children;
 - one direct parent maximum;
 - nested item-containers supported;
 - self/ancestry cycles rejected;
-- reverse direct-contents index derived from canonical parent truth;
-- sorted/copy-safe reads;
-- global revision + direct-container versions;
-- A -> B transfer changes one relation and increments both affected parent versions;
-- moving a container item between parents does not alter its own direct-contents version;
+- direct-container versions + global revision;
 - non-empty containers cannot be unenrolled;
-- stale item/container state can be explicitly cleaned after WHAT deletion;
-- deterministic atomic snapshot/restore;
 - no capacity/weight/bulk/stack/quantity values;
 - no import of 09, WHEN, render, UI, combat, locomotion, collision, generation, or reboot.
 
-## 4. Physical item-disposition boundary
+### 12 Item Transfer Actions
 
-Current low-level owners intentionally remain separate:
+Canonical design: `SYSTEM_DESIGNS/12_ITEM_TRANSFER_ACTIONS.md`.
 
-- WHAT placement owns tactically placed/loose physical location;
-- 09 owns explicit hand assignments;
-- 11 owns direct containment.
+The low-level item truths remain separate:
 
-These systems do not import each other merely to enforce final gameplay transitions.
+- WHAT placement owns loose physical world location;
+- 09 owns anatomical hand assignment;
+- 11 owns direct containment;
+- **12 owns timed transitions between those truths.**
 
-Active DRAFT: `SYSTEM_DESIGNS/12_ITEM_TRANSFER_ACTIONS.md`.
+12 adds a read-only `ItemDispositionQuery` that derives `LOOSE_WORLD`, `HAND`, `CONTAINED`, `UNCLAIMED`, `INVALID_PLACEMENT`, `CONFLICT`, or `UNKNOWN`. It is never serialized as a fourth item-location truth.
 
-12 proposes:
+V1 supports:
 
-- a **read-only** cross-domain `ItemDispositionQuery` that derives loose-world / hand / contained / unclaimed / conflict status without becoming persistent truth;
-- a timed coordinator using WHAT + 09 + 11 + WHEN public contracts;
-- request -> validate -> spend time -> commit revalidation -> coordinated mutation;
-- `CANCELABLE` transfer actions with no partial physical effect before final commit;
-- no item/hand/container reservation; deterministic first valid commit wins races;
-- personal-survivor v1 access only: floor items at the actor/one-cell-forward fringe, actor-root inventory, nested personal containers, and held item-containers;
-- arbitrary cabinets/trunks/corpses/vehicle cargo deferred until real access/search/open/lock rules exist;
-- normal drop at the actor's feet as one single-cell `LOOSE_ITEM` placement;
-- explicit timing policy registration rather than invented pickup/drop/equip costs;
-- exceptional compensation if a second low-level mutation unexpectedly fails after source removal.
+- floor -> personal container;
+- floor -> hand;
+- personal container -> floor;
+- hand -> floor;
+- personal container -> hand;
+- hand -> personal container;
+- personal container -> personal container.
 
-The user's latest “approved” establishes 12 as the next system direction, but does not bypass review of these new detailed mechanics. Do not implement until the detailed DRAFT is explicitly approved.
+Rules:
 
-## 5. Death / corpse direction
+- pickup reach = actor footprint + one-cell-forward fringe;
+- normal drop = one single-cell `LOOSE_ITEM` at actor anchor;
+- actor-root, nested personal containers, held item-containers, and containers nested under held item-containers are accessible;
+- arbitrary cabinets/trunks/corpses/vehicles are inaccessible until real access/search/open/lock rules exist;
+- occupied target hand does not auto-swap;
+- timing is explicit policy data; no pickup/drop/equip defaults were invented;
+- actions are `CANCELABLE` until final `item_transfer.commit`;
+- no item/hand/container reservation exists;
+- pending expectations live only in WHEN payload;
+- commit revalidates actor placement/facing, exact source, hand/container versions, personal access, destination state, and policy;
+- cross-domain writes are synchronous, but low-level WHAT/09/11 signals remain independent;
+- destination truth is rechecked **again after source removal** before the second mutation to defend against reentrant callbacks;
+- unexpected second-write failure compensates through public APIs; compensation failure is an explicit critical consistency diagnostic.
+
+WHAT, WHEN, 09, and 11 production/public APIs remained unchanged during 12 implementation.
+
+## 4. Death / corpse direction
 
 Approved cross-system direction: death leaves a persistent physical corpse/world consequence rather than an ordinary living ACTOR or disappearance. Future corpse state preserves relation to deceased identity and supports age/decay; accumulated bodies may create local contamination/filth pressure that Health later interprets as sickness risk. Exact corpse representation, decay formula, disposal actions, and rendering are **NOT DESIGNED**.
 
-## 6. Canonical presentation
+## 5. Canonical presentation
 
 ### 04 Art Catalog
 Recovered environmental multi-atlas selection plus protected player textures, separate recovered living-actor atlas, and separate recovered held-item atlas. Art Catalog selects presentation descriptors/metadata only.
@@ -154,27 +162,27 @@ Visible WHAT ACTOR entities for `actor.survivor` and `actor.infected`. Controlle
 
 Canonical design: `SYSTEM_DESIGNS/10_ACTOR_HAND_EQUIPMENT_PRESENTATION.md`.
 
-- one focused renderer instantiated as `BACK` or `FRONT`;
-- future composition: `10 BACK -> 08 actor body -> 10 FRONT`;
-- primary remains anatomical right, secondary anatomical left;
+Future composition is `10 BACK -> 08 actor body -> 10 FRONT`.
+
+- primary = anatomical right;
+- secondary = anatomical left;
 - held art rotates N/E/S/W;
-- NORTH/SOUTH both FRONT;
-- EAST secondary/left BACK, primary/right FRONT;
-- WEST primary/right BACK, secondary/left FRONT;
-- no Inventory/Combat/Lighting/WHEN/UI/Input/Camera/Reboot ownership.
+- NORTH/SOUTH: both FRONT;
+- EAST: secondary/left BACK, primary/right FRONT;
+- WEST: primary/right BACK, secondary/left FRONT.
 
-## 7. Canonical demo/UI target requested by the user
+## 6. Canonical demo/UI target requested by the user
 
-The next visible canonical demo must not be keyboard-only. Safari/iPhone is first-class.
+The eventual canonical demo must not be keyboard-only. Safari/iPhone is first-class.
 
-Eventual target:
+Target:
 
 - touch Forward, Back, Turn Left, Turn Right and implemented stance/navigation actions;
 - desktop keyboard equivalents;
 - recovered-style `Looking at: ...` HUD;
 - concise **real** actor stats;
 - `STATS` button for detailed inspection;
-- `INVENTORY` button for real containment/held-item inspection;
+- `INVENTORY` button using real 09/11/12 item truth;
 - `MENU` button invoking hard application pause;
 - Stats/Inventory inspection also pauses safely;
 - Menu includes Resume and Leave Game;
@@ -182,21 +190,21 @@ Eventual target:
 
 Web note: a webpage cannot reliably open the user's configured browser homepage. Future Leave Game should prefer useful browser-history return, with a safe fallback such as Google.
 
-## 8. Dependency order from the latest request
+## 7. Dependency order toward the requested honest demo
 
 Completed:
 
 1. **09 Actor Hand Equipment State — IMPLEMENTED.**
 2. **10 Actor Hand Equipment Presentation — IMPLEMENTED.**
 3. **11 Inventory / Containment — IMPLEMENTED.**
+4. **12 Item Transfer Actions — IMPLEMENTED.**
 
-Active design gate:
+Recommended next bounded design:
 
-4. **12 Item Transfer / Pickup / Drop / Equip Actions — DRAFT.** Review/approve the detailed personal-access, reach/drop, timing, interruption, no-reservation and compensation rules before code.
+5. **Actor stat domains required for inspector — NOT DESIGNED / NEXT**, unless the user explicitly prioritizes visual composition first. Reuse real existing locomotion/equipment/inventory facts; design Health/Needs only as far as real displayed stats require them.
 
-Then remaining prerequisites toward the requested honest demo:
+Then:
 
-5. **Actor stat domains required for inspector — NOT DESIGNED.** Reuse implemented state where it exists; design Health/Needs only as needed rather than fabricate numbers.
 6. **Authored Visual Test Area — NOT DESIGNED.** Real canonical WHAT fixture.
 7. **Tactical Renderer / Orchestration — NOT DESIGNED.** Compose Ground/Structure/Prop/10-BACK/08/10-FRONT.
 8. **Tactical Camera + Zoom — NOT DESIGNED.**
@@ -205,6 +213,36 @@ Then remaining prerequisites toward the requested honest demo:
 11. **HUD / Facing Inspection / Stats & Inventory Inspector / Pause Menu — NOT DESIGNED.**
 
 Later slices may combine only when their explicit contracts prove they are genuinely one coherent owner.
+
+## 8. Other later modular systems
+
+- **Container Access / Search / Open / Lock — NOT DESIGNED.** Extends 12 to world storage.
+- **Corpse / Decay / Contamination — NOT DESIGNED.** Approved direction only.
+- **Door interaction / physical transition — NOT DESIGNED.** WHEN + Door State + Collision coordination.
+- **Actor Appearance / character creator integration — NOT DESIGNED.**
+- **Loose-item renderer — NOT DESIGNED.**
+- **Item definitions / quantity / condition — NOT DESIGNED.**
+- **Capacity / weight / bulk / encumbrance — NOT DESIGNED.**
+- **Road network/topology — NOT DESIGNED.**
+- **Property/parcel planner — NOT DESIGNED.**
+- **Building/prefab placement — NOT DESIGNED.**
+- **Procedural room/layout — NOT DESIGNED.**
+- **Furniture/fixture/clutter dressing — NOT DESIGNED.**
+- **Vegetation/utilities/civic dressing — NOT DESIGNED.**
+- **World/generator validation — NOT DESIGNED.**
+- **Prefab authoring tools — NOT DESIGNED.**
+- **Construction/destruction — DEFERRED.**
+- **Base/community summary — NOT DESIGNED.**
+- **Health/body/first aid — NOT DESIGNED.**
+- **Needs/fatigue/temperature — NOT DESIGNED.**
+- **Vision/perception — DEFERRED.**
+- **Lighting — DEFERRED.**
+- **Weather — DEFERRED.**
+- **Silent spatial sound — DEFERRED.**
+- **Infected AI — DEFERRED.**
+- **Combat — DEFERRED.**
+- **Vehicles — DEFERRED.**
+- **Old raid/extraction/session architecture — SUPERSEDED.**
 
 ## 9. Open-world / generation direction
 
@@ -237,9 +275,10 @@ Canonical process:
 13. Controlled-player role is not persistent actor identity.
 14. Corpses are persistent future world/mechanic consequences, not living ACTOR presentation state.
 15. Hand equipment truth remains separate from held-item presentation and Inventory/Containment.
-16. Inventory containment must not become universal item disposition or item-stat ownership.
-17. Cross-domain physical transitions get a dedicated coordinator instead of mutual imports among low-level state owners.
-18. A derived item-disposition query may summarize WHAT/09/11 but must never become a fourth serialized item-location truth.
+16. Inventory containment is not universal item disposition or item-stat ownership.
+17. Cross-domain physical transitions use 12 rather than mutual imports among low-level state owners.
+18. `ItemDispositionQuery` may summarize WHAT/09/11 but is never a fourth serialized truth.
+19. A synchronous cross-domain coordinator must account for reentrant low-level signals: revalidate destination truth immediately before its second mutation and compensate explicitly if the second write fails.
 
 ## 11. Documentation source order
 
@@ -257,4 +296,4 @@ Canonical process:
 
 ## 12. Recommended next action
 
-Review and explicitly approve or revise `SYSTEM_DESIGNS/12_ITEM_TRANSFER_ACTIONS.md`. Once approved, implement only the timed personal item-transfer coordinator + disposition query + timing policy + tests, leaving WHAT/WHEN/09/11 production unchanged.
+Design **Actor stat domains required for the requested real Stats/HUD inspector**, unless the user explicitly chooses to prioritize the authored visual test/composition path first. Do not fabricate HP/stamina/carry values merely to populate the demo UI.
