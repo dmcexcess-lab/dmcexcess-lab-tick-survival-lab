@@ -31,7 +31,7 @@ Implemented + dedicated validation includes:
 - Run / damage-interruptible Walk;
 - 17A exertion/encumbrance/run impact;
 - 17A.1 overweight-Walk fatigue + 2x hard carry ceiling;
-- System 19 local building generation with **accepted Trailer v2** and current **Farmhouse Candidate 002 / archetype v2**.
+- System 19 local building generation with accepted **Trailer v2**, accepted **Small Farmhouse v2**, and current **Large Farmhouse Candidate 001**.
 
 ## 3. Foundation truth
 
@@ -90,6 +90,12 @@ Caller supplies stable instance ID, archetype, seed, envelope, orientation and f
 
 Shared validator owns generic structural/connectivity correctness. Archetype-specific room vocabulary/dimensions stay in focused CI so the validator does not become a catalog of trailer/house/store semantics.
 
+Current registry:
+
+- `residential.trailer.singlewide`
+- `residential.house.farm_small`
+- `residential.house.farm_large`
+
 ### Accepted Trailer baseline
 
 `residential.trailer.singlewide`, **version 2**.
@@ -103,43 +109,69 @@ User explicitly accepted/saved Candidate 002 on 2026-08-17.
 - light plaster exterior;
 - four windows / three doors;
 - kitchen run on one side;
-- sofa against opposite wall facing inward;
-- preserved `TrailerCritiqueFixture.gd` and CI assertions.
+- sofa against opposite wall facing inward.
 
-Do not revise this baseline without newer explicit trailer direction.
+Do not revise without newer explicit trailer direction.
 
-### Farmhouse Candidate 002 — current
+### Accepted Small Farmhouse baseline
 
 `residential.house.farm_small`, **version 2**.
 
-User playtest critique on 2026-08-17 superseded Candidate 001 because its unpartitioned front/middle area read as too large. Current approved program:
+User explicitly accepted this on 2026-08-17 with: **“Nice save that as small farm house.”**
 
-- **13×9 shell**;
-- one open-plan **11×3 living/kitchen** room (33 cells; user described it as 3×11);
-- kitchen occupies the rightmost 3×3 end of the same room with linoleum flooring;
-- bedroom 1 **3×3**;
-- bathroom **3×3**;
-- bedroom 2 **3×3**;
-- one partition row immediately behind the main room; no oversized middle circulation/dining band;
-- light plaster exterior;
-- two exterior doors: front into living side, east side into kitchen end;
-- three private-room doors;
+- 13×9 shell;
+- one open-plan **11×3 living/kitchen** room;
+- kitchen occupies the rightmost 3×3 end;
+- bedroom 1 3×3;
+- bathroom 3×3;
+- bedroom 2 3×3;
+- one partition row immediately behind the main room;
+- two exterior + three interior doors;
 - seven windows;
-- restrained wall-aware living/kitchen/bedroom/bath furniture;
-- deterministic rotation and one-cell circulation to every room.
+- deterministic wall-aware furniture.
 
-Candidate 001 / archetype v1 (13×13, 5×5 living, separate 3×3 kitchen, large open middle band) is historical/superseded only.
+This is now a protected saved baseline. `FarmhouseBuildingGenerator.gd` remains the small-farmhouse owner. `SmallFarmhouseCritiqueFixture.gd` preserves the accepted live critique configuration independently of the new large-house demo.
+
+### Large Farmhouse Candidate 001 — current
+
+`residential.house.farm_large`, **version 1**.
+
+Requested 2026-08-17 as a large farmhouse with **3 bedrooms, 2 bathrooms, separate living room and kitchen**, with a bonus for a non-square shape.
+
+Current candidate deliberately uses a real **L-shaped occupied footprint**, not merely a rectangular shell labeled irregular:
+
+- 25×20 NORTH bounding footprint;
+- 19×20 main body plus a 6×8 front-right kitchen wing;
+- southeast notch remains outdoor ground;
+- central hall entered from the primary front door;
+- separate 6×5 living room behind a real wall + interior door;
+- separate 5×5 kitchen in the wing behind a real wall + interior door;
+- bedroom 1: 6×4;
+- bedroom 2: 6×4;
+- bedroom 3: 6×3;
+- bathroom 1: 3×3;
+- bathroom 2: 3×3;
+- two exterior doors, seven interior doors, twelve windows;
+- all seven declared rooms reachable from the front hall with doors conceptually open;
+- furniture uses existing recovered semantics and System 07A facing.
+
+First green code candidate:
+
+- SHA `a533f4f27de6f37b92b5e8472bb4b81220b2e06e`;
+- Local Building Generation run `32011785845`: SUCCESS.
+
+That run passed System 19 source boundaries, Godot 4.7.1 import/parse, foundation/presentation regressions, Systems 18/19 integration smokes, preserved small-farmhouse regression, large-farmhouse deterministic/rotation/notch checks, and canonical demo startup.
 
 ## 8. Live canonical demo
 
-The current live target is **Farmhouse Candidate 002**, presented with System 07A facing-aware furniture rotation.
+The current live target is **Large Farmhouse Candidate 001**.
 
-- fixed **15×15** one-screen critique lot;
-- **32 px/cell** presentation so camera remains deferred;
+- fixed **27×22** critique lot;
+- **19 px/cell** presentation so the whole candidate remains visible without adding a camera system just for this critique;
 - canonical spatial scale remains 1m/cell;
-- farmhouse envelope `Rect2i(1,1,13,9)`;
-- stable demo instance namespace `building.demo.farmhouse.001`, seed `19002`, NORTH orientation/frontage;
-- player starts at `(4,0)` facing SOUTH toward the CLOSED front door;
+- large farmhouse envelope `Rect2i(1,1,25,20)`;
+- instance `building.demo.farmhouse.large.001`, seed `19003`, NORTH orientation/frontage;
+- player starts at `(10,0)` facing SOUTH toward the CLOSED primary front door;
 - one controlled survivor, no NPCs/infected/loot;
 - real HUD, Stats/Inventory/Menu, Crouch/Stand, Run and System 18 doors remain live.
 
@@ -149,6 +181,8 @@ Touch: Forward/Back/Turn L/Turn R/Crouch-Stand/Run plus short world tap for elig
 
 Web Leave Game goes directly to Google.
 
+The accepted small farmhouse remains available as a preserved fixture/regression, but is no longer the live boot target while the large candidate is under critique.
+
 ## 9. Physical items
 
 The live critique lot still has no loose demo items. Canonical ownership remains WHAT loose placement -> 09 hands -> 11 containment -> 12 timed transfer -> 13D weight -> 13E carry/capacity policy. System 10 held-item presentation and item-interaction composition remain future work.
@@ -157,25 +191,30 @@ System 07A rotates world OBJECT presentation only; it does not change held-item 
 
 ## 10. Verification routing
 
-Historical first-green Farmhouse Candidate 001:
+Historical first-green Small Farmhouse Candidate 001:
 
 - SHA `65a951bc1d38c055c17cbcfcd496a59cb30727c9`;
 - Local Building Generation run `32007785922`: SUCCESS.
 
-System 07A first green code candidate:
+Accepted compact Small Farmhouse v2 code:
 
-- SHA `6a41dd24a2fa0a594c14ef83ea2ba1015b333124`;
-- Prop Fixture Vegetation Renderer run `32008973352`: SUCCESS.
+- SHA `cd9ac22106e3ab3b51eca2cbb5f9f9b0c64ddd10`;
+- exact-head Local Building Generation and Web/Pages succeeded before the user accepted it as the small baseline.
 
-Farmhouse Candidate 002 must pass exact-final-head Local Building Generation, relevant renderer/door regressions, canonical startup and Web/Pages before completion is claimed.
+Large Farmhouse Candidate 001 first green code:
+
+- SHA `a533f4f27de6f37b92b5e8472bb4b81220b2e06e`;
+- Local Building Generation run `32011785845`: SUCCESS.
+
+Exact documentation-promotion head must re-pass relevant System 19/canonical/Web gates before completion is claimed.
 
 ## 11. Immediate next path
 
-1. User playtests/critiques **Farmhouse Candidate 002** with compact 11×3 living/kitchen and correctly oriented furniture.
-2. Convert any further critique into reusable farmhouse archetype rules.
-3. Keep accepted Trailer v2 unchanged.
-4. Add another building archetype under System 19 after farmhouse refinement.
-5. Add camera/larger local play space once multiple simultaneous properties create an actual need beyond one screen.
+1. User playtests/critiques **Large Farmhouse Candidate 001**.
+2. Keep accepted Small Farmhouse v2 and Trailer v2 unchanged unless explicitly reopened.
+3. Convert large-house critique into reusable `farm_large` rules/version bumps.
+4. Add another building archetype after the large farmhouse is accepted.
+5. Add camera/larger local play space only when the world presentation—not merely a critique fixture—actually requires it.
 
 ## 12. Later systems
 
@@ -200,6 +239,7 @@ Container access/search/locks, corpse/decay/contamination, actor appearance/crea
 15. Shared building validation remains structural/generic; archetype program rules stay with focused archetype contracts/tests.
 16. Directional prop facing is WHAT truth; native sprite facing/rotation policy is presentation truth only.
 17. Accepted archetype baselines are preserved unless a newer explicit critique supersedes them.
+18. `farm_small` and `farm_large` are separate archetypes; large-house critique must not mutate the accepted small-house baseline.
 
 ## 14. Documentation source order
 
