@@ -1,12 +1,14 @@
 # 17 Run / Damage-Interruptible Walking
 
-Status: **DRAFT — discussion only; do not implement until explicitly approved**
+Status: **APPROVED — implementation authorized 2026-08-16**
 
 Drafted from the user direction on 2026-08-16 and revised after clarification:
 
 > “Lets add a run mechanic. More movement less tics, its a committed action vs walk which can be interrupted by dmg. Run has a move of two squares.”
 >
 > “Fewer tics per square, but more tics over all move. higher fatigue drain, fatigue min requires to run”
+
+Approval basis: user explicitly instructed **“17 is go for approval”** after reviewing the revised contract.
 
 ## 1. Goal
 
@@ -23,9 +25,9 @@ No persistent run-mode flag or separate stamina bar is introduced.
 
 ## 2. Existing contracts intentionally revised
 
-Current System 02 makes every movement action COMMITTED. If System 17 is approved, that statement is superseded for ordinary walk steps only.
+Current System 02 makes every movement action COMMITTED. System 17 supersedes that statement for ordinary walk steps only.
 
-Approved implementation would revise the interruption split to:
+Approved interruption split:
 
 - `movement.step_forward` — **CANCELABLE** by damage interruption;
 - `movement.step_backward` — **CANCELABLE** by damage interruption;
@@ -185,7 +187,7 @@ The scheduled stride times are fixed when the committed Run begins. Later fatigu
 
 So the user concept “minimum fatigue required to run” is represented canonically as a **maximum fatigue pressure allowed to start**.
 
-V1 proposed cutoff:
+V1 cutoff:
 
 - fatigue **0..79** -> Run may start if all other capability checks pass;
 - fatigue **80..100** -> Run is CAPABILITY_BLOCKED with reason `too_exhausted_to_run`.
@@ -198,9 +200,9 @@ Crouched stance remains separately blocking regardless of fatigue.
 
 ## 10. Acute Run fatigue cost
 
-Running should have a real endurance consequence now rather than waiting for a future stamina placeholder.
+Running has a real endurance consequence without adding a separate stamina placeholder.
 
-V1 proposed tuning:
+V1 tuning:
 
 - successful run stride: **+1 fatigue**;
 - full two-cell Run: **+2 fatigue total**;
@@ -264,7 +266,7 @@ It stores no persistent state.
 
 ### Health semantic damage signal
 
-13A currently exposes `apply_damage()` but only generic HP-change observation. System 17 proposes one additive Health signal:
+13A currently exposes `apply_damage()` but only generic HP-change observation. System 17 adds one additive Health signal:
 
 `damage_applied(actor_id, amount, previous_hp, current_hp, version)`
 
@@ -336,13 +338,12 @@ System 16 modal input blocking remains unchanged.
 
 It does not calculate distance, timing, fatigue, collision, damage interruption, or stance legality.
 
-## 17. Expected implementation surface after approval
+## 17. Expected implementation surface
 
-Production changes expected:
+Production changes:
 
 - `game/scripts/simulation/movement/MovementActionService.gd`
 - `game/scripts/simulation/movement/MovementTraversalPolicy.gd`
-- likely small typed result/policy helpers if required by two-stride diagnostics
 - new `game/scripts/simulation/movement/MovementDamageInterruptionService.gd`
 - new `game/scripts/simulation/movement/MovementRunExertionService.gd`
 - additive `damage_applied` signal in `game/scripts/simulation/actors/health/ActorHealthState.gd`
@@ -378,7 +379,7 @@ System 17 must not redesign:
 
 ## 19. Acceptance tests
 
-Dedicated System 17 verification should prove:
+Dedicated System 17 verification must prove:
 
 1. existing Movement/Locomotion/Health/Needs/System14–16 regressions remain green;
 2. plain forward walk remains one-cell movement at 10 healthy demo ticks;
@@ -429,7 +430,7 @@ This preserves **Ultima-style turn-based mini Zomboid** by making sprinting a si
 
 The design adds consequence rather than a second stamina simulation.
 
-## 22. Draft decisions requiring explicit approval
+## 22. Approved decisions — 2026-08-16
 
 1. Run is one explicit `movement.run_forward` action, never persistent run mode.
 2. Run moves two straight cells through two physical stride phases.

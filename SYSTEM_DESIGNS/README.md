@@ -40,7 +40,7 @@ This directory is the durable detailed memory for individual systems. Major syst
 | 14 | Canonical Playable Demo Integration | **IMPLEMENTED** | `14_CANONICAL_PLAYABLE_DEMO.md` |
 | 15 | Canonical HUD / Facing Inspection | **IMPLEMENTED** | `15_CANONICAL_HUD_FACING_INSPECTION.md` |
 | 16 | Canonical Player Shell / Inspectors / Stance Integration | **IMPLEMENTED** | `16_CANONICAL_PLAYER_SHELL.md` |
-| 17 | Run / Damage-Interruptible Walking | **DRAFT** | `17_RUN_DAMAGE_INTERRUPTIBLE_WALKING.md` |
+| 17 | Run / Damage-Interruptible Walking | **APPROVED** | `17_RUN_DAMAGE_INTERRUPTIBLE_WALKING.md` |
 | 00D | Global World Planning / Generation | **NOT DESIGNED** | `00D_GLOBAL_WORLD_GENERATION.md` |
 | 00E | Population / Household / Outbreak / Player Story | **NOT DESIGNED** | `00E_POPULATION_OUTBREAK_PLAYER_STORY.md` |
 | 00F | Streaming / Materialization | **NOT DESIGNED** | `00F_STREAMING_MATERIALIZATION.md` |
@@ -95,27 +95,27 @@ The deployed canonical demo now has:
 - Menu provides Resume and Leave Game;
 - System 15 is the sole tick/action status surface; the old duplicate help/tick labels remain removed.
 
-Dedicated System 16 verification: `.github/workflows/canonical-player-shell.yml` and `game/scripts/ci/CanonicalPlayerShellSmoke.gd`. Hardened code head `dce48115f35ef6487bcbe8811fe945d2e5012cff` passed run `31996425080` after one lifecycle-only touch-control hardening; protected simulation/demo/HUD regressions were green before and after that repair.
+Dedicated System 16 verification: `.github/workflows/canonical-player-shell.yml` and `game/scripts/ci/CanonicalPlayerShellSmoke.gd`.
 
 ## Active design — System 17
 
-`17_RUN_DAMAGE_INTERRUPTIBLE_WALKING.md` is **DRAFT** and awaits explicit user approval.
+`17_RUN_DAMAGE_INTERRUPTIBLE_WALKING.md` is **APPROVED** for implementation.
 
-Proposed bounded revision:
+Approved bounded revision:
 
-1. add explicit `movement.run_forward` rather than persistent run mode;
+1. explicit `movement.run_forward`, never persistent run mode;
 2. run two straight cells in two physical stride phases;
-3. recover the golden 6-tick healthy baseline, with existing mobility modifiers still applied;
-4. change forward/back walking from COMMITTED to damage-interruptible CANCELABLE actions;
-5. keep run and turns COMMITTED;
-6. add a narrow Health damage observation signal plus a movement interruption coordinator so Movement itself never imports Health;
-7. add Shift+W/Shift+Up and the currently empty bottom-right phone control slot for Run.
-
-Do not implement System 17 until approval.
+3. 6 ticks per square / 12 total on current 10-tick walk terrain, with each stride derived at 60% of its walk terrain cost;
+4. fatigue 80+ blocks Run start and each successful stride adds +1 fatigue;
+5. forward/back walking changes from COMMITTED to damage-interruptible CANCELABLE actions;
+6. Run and turns remain COMMITTED;
+7. additive Health `damage_applied` plus a stateless movement interruption coordinator keeps Health out of Movement;
+8. stateless run-exertion coordination keeps Needs out of Movement;
+9. Shift+W/Shift+Up and a bottom-right native touch RUN button submit semantic Run intent.
 
 ## Immediate path after System 17
 
-Once System 17 is approved/implemented, return to the planned real-item demo slice:
+Once System 17 is implemented, return to the planned real-item demo slice:
 
 1. add real stable WHAT `item.*` entities and explicit 13D weights;
 2. implement loose-item presentation;
