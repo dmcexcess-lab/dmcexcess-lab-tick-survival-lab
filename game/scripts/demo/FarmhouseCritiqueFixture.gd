@@ -18,7 +18,7 @@ const PLAYER_START: Vector2i = Vector2i(4, 0)
 const BASE_WALK_TICKS: int = 10
 const BUILDING_ID: String = "building.demo.farmhouse.001"
 const EXTERIOR_DOOR_ID: String = "building.demo.farmhouse.001.door.exterior.primary"
-const FARMHOUSE_ENVELOPE: Rect2i = Rect2i(1, 1, 13, 13)
+const FARMHOUSE_ENVELOPE: Rect2i = Rect2i(1, 1, 13, 9)
 const FARMHOUSE_SEED: int = 19002
 
 const GRASS: StringName = &"ground.grass_lush"

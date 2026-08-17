@@ -73,55 +73,58 @@ func _test_trailer_preserved(generator: LocalBuildingGenerator, validator: Gener
 
 func _test_farmhouse_generation(generator: LocalBuildingGenerator, validator: GeneratedBuildingValidator) -> void:
     var supported: Array[StringName] = generator.supported_archetypes()
-    _check(supported.has(TrailerClass.ARCHETYPE_ID) and supported.has(FarmhouseClass.ARCHETYPE_ID), "registry exposes preserved trailer and new farmhouse")
+    _check(supported.has(TrailerClass.ARCHETYPE_ID) and supported.has(FarmhouseClass.ARCHETYPE_ID), "registry exposes preserved trailer and farmhouse")
 
     var request := RequestClass.new(
         "building.test.farmhouse",
         FarmhouseClass.ARCHETYPE_ID,
         19002,
-        Rect2i(60, 70, 13, 13),
+        Rect2i(60, 70, 13, 9),
         Facing.Value.NORTH,
         Facing.Value.NORTH
     )
     var plan_a: GeneratedBuildingPlan = generator.generate(request)
     var plan_b: GeneratedBuildingPlan = generator.generate(request)
     _check(plan_a.is_generated() and plan_a.signature() == plan_b.signature(), "farmhouse same request+seed is deterministic")
-    _check(plan_a.archetype_version == 1, "farmhouse begins at archetype version 1")
-    _check(bool(validator.validate(plan_a).get("ok", false)), "north farmhouse plan validates")
-    _check(plan_a.footprint_rect == Rect2i(60, 70, 13, 13), "farmhouse uses approved 13x13 shell")
-    _check(_room_cell_count(plan_a, "living_room") == 25, "farmhouse living room is exact 5x5")
-    _check(_room_cell_count(plan_a, "kitchen") == 9, "farmhouse kitchen is exact 3x3")
-    _check(_room_cell_count(plan_a, "bedroom_1") == 9, "farmhouse bedroom 1 is exact 3x3")
-    _check(_room_cell_count(plan_a, "bathroom") == 9, "farmhouse bathroom is exact 3x3")
-    _check(_room_cell_count(plan_a, "bedroom_2") == 9, "farmhouse bedroom 2 is exact 3x3")
-    _check(_structure_kind_count(plan_a, "door") == 5, "farmhouse has two exterior plus three private-room doors")
-    _check(_structure_kind_count(plan_a, "window") == 7, "farmhouse has approved first-pass seven-window set")
+    _check(plan_a.archetype_version == 2, "farmhouse critique revision bumps archetype version to 2")
+    _check(bool(validator.validate(plan_a).get("ok", false)), "north farmhouse v2 plan validates")
+    _check(plan_a.footprint_rect == Rect2i(60, 70, 13, 9), "farmhouse v2 uses compact 13x9 shell")
+    _check(_room_cell_count(plan_a, "living_kitchen") == 33, "farmhouse living/kitchen is exact 11x3")
+    _check(_room_cell_count(plan_a, "living_room") == 0 and _room_cell_count(plan_a, "kitchen") == 0, "farmhouse v2 uses one open-plan living/kitchen room purpose")
+    _check(_room_cell_count(plan_a, "bedroom_1") == 9, "farmhouse bedroom 1 remains exact 3x3")
+    _check(_room_cell_count(plan_a, "bathroom") == 9, "farmhouse bathroom remains exact 3x3")
+    _check(_room_cell_count(plan_a, "bedroom_2") == 9, "farmhouse bedroom 2 remains exact 3x3")
+    _check(_structure_kind_count(plan_a, "door") == 5, "farmhouse keeps two exterior plus three private-room doors")
+    _check(_structure_kind_count(plan_a, "window") == 7, "farmhouse keeps seven-window set")
     _check(_all_exterior_walls_are(plan_a, &"wall.plaster"), "farmhouse uses light plaster exterior walls")
-    _check(_role_cell(plan_a, "door.exterior.primary") == Vector2i(63, 70), "farmhouse front door opens into living-room side")
-    _check(_role_cell(plan_a, "door.exterior.kitchen") == Vector2i(72, 72), "farmhouse side kitchen door lands directly on kitchen")
+    _check(_role_cell(plan_a, "door.exterior.primary") == Vector2i(63, 70), "farmhouse front door opens into living side of open-plan room")
+    _check(_role_cell(plan_a, "door.exterior.kitchen") == Vector2i(72, 72), "farmhouse side kitchen door lands directly on kitchen end")
+    _check(_role_cell(plan_a, "door.interior.bedroom_1") == Vector2i(62, 74), "private-room wall follows compact main room immediately")
+    _check(_role_cell(plan_a, "door.interior.bathroom") == Vector2i(66, 74), "bathroom door follows compact main room immediately")
+    _check(_role_cell(plan_a, "door.interior.bedroom_2") == Vector2i(70, 74), "bedroom 2 door follows compact main room immediately")
 
     var east_request := RequestClass.new(
         "building.test.farmhouse.east",
         FarmhouseClass.ARCHETYPE_ID,
         19002,
-        Rect2i(90, 100, 13, 13),
+        Rect2i(90, 100, 9, 13),
         Facing.Value.EAST,
         Facing.Value.EAST
     )
     var east_plan: GeneratedBuildingPlan = generator.generate(east_request)
-    _check(east_plan.is_generated() and east_plan.footprint_rect.size == Vector2i(13, 13), "square farmhouse rotates inside same 13x13 extent")
-    _check(bool(validator.validate(east_plan).get("ok", false)), "rotated farmhouse validates")
-    _check(_role_cell(east_plan, "door.exterior.primary") == Vector2i(102, 103), "farmhouse doorway geometry rotates deterministically")
+    _check(east_plan.is_generated() and east_plan.footprint_rect.size == Vector2i(9, 13), "rectangular farmhouse rotates to 9x13 extent")
+    _check(bool(validator.validate(east_plan).get("ok", false)), "rotated farmhouse v2 validates")
+    _check(_role_cell(east_plan, "door.exterior.primary") == Vector2i(98, 103), "farmhouse doorway geometry rotates deterministically")
 
     var too_small := RequestClass.new(
         "building.test.farmhouse.small",
         FarmhouseClass.ARCHETYPE_ID,
         1,
-        Rect2i(0, 0, 12, 13),
+        Rect2i(0, 0, 13, 8),
         Facing.Value.NORTH,
         Facing.Value.NORTH
     )
-    _check(not generator.generate(too_small).is_generated(), "too-small farmhouse envelope fails explicitly")
+    _check(not generator.generate(too_small).is_generated(), "too-short farmhouse envelope fails explicitly")
 
 func _test_farmhouse_fixture() -> void:
     var world := WorldStateClass.new()

@@ -31,7 +31,7 @@ Implemented + dedicated validation includes:
 - Run / damage-interruptible Walk;
 - 17A exertion/encumbrance/run impact;
 - 17A.1 overweight-Walk fatigue + 2x hard carry ceiling;
-- System 19 local building generation with **accepted Trailer v2** and **Farmhouse Candidate 001**.
+- System 19 local building generation with **accepted Trailer v2** and current **Farmhouse Candidate 002 / archetype v2**.
 
 ## 3. Foundation truth
 
@@ -48,23 +48,11 @@ One deterministic integer world tick, variable-duration actions/events, same-tic
 
 Design: `SYSTEM_DESIGNS/07A_PROP_ART_ORIENTATION.md`
 
-WHAT placement facing remains authoritative. Generation/world state continue to store semantic N/E/S/W orientation with no art-specific values.
+WHAT placement facing remains authoritative. Generation/world state store semantic N/E/S/W orientation with no art-specific values.
 
-Presentation now additionally knows the native facing of recovered directional prop art:
+Presentation knows native facing for recovered directional prop art and rotates suitable furniture/fixtures around the center of the existing one-cell destination. Sinks, shelves, sofas, beds, counters, appliances and similar props therefore visually face their semantic direction. Vegetation/outdoor nondirectional art remains unrotated.
 
-- recovered indoor/furniture/retail/industrial one-cell art is authored native SOUTH/down;
-- Prop Renderer computes 0/1/2/3 quarter turns from native facing to WHAT facing;
-- rotation occurs around the center of the existing one-cell draw destination;
-- sinks, shelves, sofas, beds, counters, appliances and similar furniture now visually face their semantic direction;
-- vegetation/outdoor nondirectional art remains unrotated;
-- no generator geometry, collision, interaction, item or persistent-state rule changed.
-
-Current native-SOUTH coverage:
-
-- final props atlas cells 64–127;
-- building props 0–19;
-- directional clutter 0–6 and 18;
-- tactical indoor fixtures 37–47.
+System 19 only emits semantic type + WHAT facing; it does not know sprite transforms.
 
 ## 5. Movement / fatigue / carry truth
 
@@ -100,7 +88,7 @@ Design: `SYSTEM_DESIGNS/19_LOCAL_BUILDING_GENERATION_ARCHETYPE_LAB.md`
 
 Caller supplies stable instance ID, archetype, seed, envelope, orientation and frontage. System 19 generates a pure semantic plan, validates it, materializes initial WHAT + CLOSED Door State, then relinquishes ownership to persistent gameplay truth.
 
-Shared validator owns generic structural/connectivity correctness. Archetype-specific required room vocabulary/dimensions are locked by focused CI so the validator does not become a catalog of trailer/house/store semantics.
+Shared validator owns generic structural/connectivity correctness. Archetype-specific room vocabulary/dimensions stay in focused CI so the validator does not become a catalog of trailer/house/store semantics.
 
 ### Accepted Trailer baseline
 
@@ -120,35 +108,37 @@ User explicitly accepted/saved Candidate 002 on 2026-08-17.
 
 Do not revise this baseline without newer explicit trailer direction.
 
-### Farmhouse Candidate 001
+### Farmhouse Candidate 002 — current
 
-`residential.house.farm_small`, version 1.
+`residential.house.farm_small`, **version 2**.
 
-Approved exact program:
+User playtest critique on 2026-08-17 superseded Candidate 001 because its unpartitioned front/middle area read as too large. Current approved program:
 
-- **13×13 shell**;
-- living room **5×5**;
-- kitchen **3×3**;
+- **13×9 shell**;
+- one open-plan **11×3 living/kitchen** room (33 cells; user described it as 3×11);
+- kitchen occupies the rightmost 3×3 end of the same room with linoleum flooring;
 - bedroom 1 **3×3**;
 - bathroom **3×3**;
 - bedroom 2 **3×3**;
+- one partition row immediately behind the main room; no oversized middle circulation/dining band;
 - light plaster exterior;
-- open middle circulation/dining band;
-- two exterior doors: front into living-room side, side door into kitchen;
+- two exterior doors: front into living side, east side into kitchen end;
 - three private-room doors;
 - seven windows;
-- restrained living/kitchen/bedroom/bath furniture;
+- restrained wall-aware living/kitchen/bedroom/bath furniture;
 - deterministic rotation and one-cell circulation to every room.
+
+Candidate 001 / archetype v1 (13×13, 5×5 living, separate 3×3 kitchen, large open middle band) is historical/superseded only.
 
 ## 8. Live canonical demo
 
-The current live target is **Farmhouse Candidate 001**, now presented with System 07A facing-aware furniture rotation.
+The current live target is **Farmhouse Candidate 002**, presented with System 07A facing-aware furniture rotation.
 
 - fixed **15×15** one-screen critique lot;
 - **32 px/cell** presentation so camera remains deferred;
 - canonical spatial scale remains 1m/cell;
-- farmhouse envelope `Rect2i(1,1,13,13)`;
-- instance `building.demo.farmhouse.001`, seed `19002`, NORTH orientation/frontage;
+- farmhouse envelope `Rect2i(1,1,13,9)`;
+- stable demo instance namespace `building.demo.farmhouse.001`, seed `19002`, NORTH orientation/frontage;
 - player starts at `(4,0)` facing SOUTH toward the CLOSED front door;
 - one controlled survivor, no NPCs/infected/loot;
 - real HUD, Stats/Inventory/Menu, Crouch/Stand, Run and System 18 doors remain live.
@@ -167,7 +157,7 @@ System 07A rotates world OBJECT presentation only; it does not change held-item 
 
 ## 10. Verification routing
 
-Farmhouse Candidate 001 first green code candidate:
+Historical first-green Farmhouse Candidate 001:
 
 - SHA `65a951bc1d38c055c17cbcfcd496a59cb30727c9`;
 - Local Building Generation run `32007785922`: SUCCESS.
@@ -177,14 +167,12 @@ System 07A first green code candidate:
 - SHA `6a41dd24a2fa0a594c14ef83ea2ba1015b333124`;
 - Prop Fixture Vegetation Renderer run `32008973352`: SUCCESS.
 
-That 07A run passed source boundaries, Godot parse, Art/Ground/Structure regressions, dedicated orientation assertions, and the existing Prop renderer regression.
-
-Exact documentation-promotion SHA must pass Prop/07A, System 19 and Web/Pages before completion is claimed.
+Farmhouse Candidate 002 must pass exact-final-head Local Building Generation, relevant renderer/door regressions, canonical startup and Web/Pages before completion is claimed.
 
 ## 11. Immediate next path
 
-1. User playtests/critiques **Farmhouse Candidate 001** with correctly oriented furniture.
-2. Convert critique into reusable farmhouse archetype rules if needed.
+1. User playtests/critiques **Farmhouse Candidate 002** with compact 11×3 living/kitchen and correctly oriented furniture.
+2. Convert any further critique into reusable farmhouse archetype rules.
 3. Keep accepted Trailer v2 unchanged.
 4. Add another building archetype under System 19 after farmhouse refinement.
 5. Add camera/larger local play space once multiple simultaneous properties create an actual need beyond one screen.
@@ -211,6 +199,7 @@ Container access/search/locks, corpse/decay/contamination, actor appearance/crea
 14. Intentional same-seed archetype-rule changes bump that archetype version.
 15. Shared building validation remains structural/generic; archetype program rules stay with focused archetype contracts/tests.
 16. Directional prop facing is WHAT truth; native sprite facing/rotation policy is presentation truth only.
+17. Accepted archetype baselines are preserved unless a newer explicit critique supersedes them.
 
 ## 14. Documentation source order
 
