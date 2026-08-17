@@ -1,0 +1,85 @@
+name: Door State contract
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: door-state-contract
+  cancel-in-progress: true
+
+jobs:
+  door-state:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate door state source boundary
+        shell: bash
+        run: |
+          set -euxo pipefail
+          test -f SYSTEM_DESIGNS/06A_DOOR_STATE.md
+          test -f game/scripts/simulation/doors/DoorStateValue.gd
+          test -f game/scripts/simulation/doors/DoorStateRecord.gd
+          test -f game/scripts/simulation/doors/DoorStateStore.gd
+          test -f game/scripts/simulation/doors/DoorStateMutationService.gd
+          test -f game/scripts/ci/DoorStateSmoke.gd
+          grep -q 'class_name DoorStateValue' game/scripts/simulation/doors/DoorStateValue.gd
+          grep -q 'class_name DoorStateStore' game/scripts/simulation/doors/DoorStateStore.gd
+          grep -q 'class_name DoorStateMutationService' game/scripts/simulation/doors/DoorStateMutationService.gd
+          grep -q 'func enroll(door_id: String, initial_state: StringName)' game/scripts/simulation/doors/DoorStateMutationService.gd
+          ! grep -q 'initial_state: StringName =' game/scripts/simulation/doors/DoorStateMutationService.gd
+          ! grep -R -q 'scripts/simulation/collision' game/scripts/simulation/doors
+          ! grep -R -q 'scripts/foundation/time' game/scripts/simulation/doors
+          ! grep -R -q 'scripts/render' game/scripts/simulation/doors
+          ! grep -R -q 'scripts/art' game/scripts/simulation/doors
+          ! grep -R -q 'scripts/generation' game/scripts/simulation/doors
+          ! grep -R -q 'scripts/reboot' game/scripts/simulation/doors
+          ! grep -R -q 'scripts/input' game/scripts/simulation/doors
+          ! grep -R -q 'scripts/ui' game/scripts/simulation/doors
+          ! grep -R -q 'scripts/ai' game/scripts/simulation/doors
+          ! grep -R -q 'scripts/perception' game/scripts/simulation/doors
+
+      - name: Install Godot 4.7.1
+        shell: bash
+        run: |
+          set -euxo pipefail
+          curl -L -o godot.zip https://github.com/godotengine/godot-builds/releases/download/4.7.1-stable/Godot_v4.7.1-stable_linux.x86_64.zip
+          unzip -q godot.zip
+          chmod +x Godot_v4.7.1-stable_linux.x86_64
+
+      - name: Import and parse project
+        shell: bash
+        run: |
+          set -euxo pipefail
+          ./Godot_v4.7.1-stable_linux.x86_64 --headless --editor --path "$GITHUB_WORKSPACE/game" --quit 2>&1 | tee "$RUNNER_TEMP/import.log"
+          if grep -Eqi 'SCRIPT ERROR|Parse Error|Failed to load script' "$RUNNER_TEMP/import.log"; then exit 1; fi
+
+      - name: Persistent WHAT regression smoke
+        shell: bash
+        run: |
+          set -euxo pipefail
+          ./Godot_v4.7.1-stable_linux.x86_64 --headless --path "$GITHUB_WORKSPACE/game" --script res://scripts/ci/WorldStateSmoke.gd 2>&1 | tee "$RUNNER_TEMP/world-state-smoke.log"
+          grep -q 'WORLD_STATE_SMOKE_OK' "$RUNNER_TEMP/world-state-smoke.log"
+          if grep -Eqi 'SCRIPT ERROR|Parse Error|Failed to load script' "$RUNNER_TEMP/world-state-smoke.log"; then exit 1; fi
+
+      - name: Collision regression smoke
+        shell: bash
+        run: |
+          set -euxo pipefail
+          ./Godot_v4.7.1-stable_linux.x86_64 --headless --path "$GITHUB_WORKSPACE/game" --script res://scripts/ci/CollisionSpatialQuerySmoke.gd 2>&1 | tee "$RUNNER_TEMP/collision-smoke.log"
+          grep -q 'COLLISION_SPATIAL_QUERY_SMOKE_OK' "$RUNNER_TEMP/collision-smoke.log"
+          if grep -Eqi 'SCRIPT ERROR|Parse Error|Failed to load script' "$RUNNER_TEMP/collision-smoke.log"; then exit 1; fi
+
+      - name: Door state contract smoke
+        shell: bash
+        run: |
+          set -euxo pipefail
+          ./Godot_v4.7.1-stable_linux.x86_64 --headless --path "$GITHUB_WORKSPACE/game" --script res://scripts/ci/DoorStateSmoke.gd 2>&1 | tee "$RUNNER_TEMP/door-state-smoke.log"
+          grep -q 'DOOR_STATE_SMOKE_OK' "$RUNNER_TEMP/door-state-smoke.log"
+          if grep -Eqi 'SCRIPT ERROR|Parse Error|Failed to load script' "$RUNNER_TEMP/door-state-smoke.log"; then exit 1; fi
