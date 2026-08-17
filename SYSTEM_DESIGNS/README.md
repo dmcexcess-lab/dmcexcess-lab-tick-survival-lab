@@ -39,7 +39,7 @@ This directory is the durable detailed memory for individual systems. Major syst
 | 13F | Actor Moodlets / Status Derivation | **IMPLEMENTED** | `13F_ACTOR_MOODLETS.md` |
 | 14 | Canonical Playable Demo Integration | **IMPLEMENTED** | `14_CANONICAL_PLAYABLE_DEMO.md` |
 | 15 | Canonical HUD / Facing Inspection | **IMPLEMENTED** | `15_CANONICAL_HUD_FACING_INSPECTION.md` |
-| 16 | Canonical Player Shell / Inspectors / Stance Integration | **DRAFT** | `16_CANONICAL_PLAYER_SHELL.md` |
+| 16 | Canonical Player Shell / Inspectors / Stance Integration | **IMPLEMENTED** | `16_CANONICAL_PLAYER_SHELL.md` |
 | 00D | Global World Planning / Generation | **NOT DESIGNED** | `00D_GLOBAL_WORLD_GENERATION.md` |
 | 00E | Population / Household / Outbreak / Player Story | **NOT DESIGNED** | `00E_POPULATION_OUTBREAK_PLAYER_STORY.md` |
 | 00F | Streaming / Materialization | **NOT DESIGNED** | `00F_STREAMING_MATERIALIZATION.md` |
@@ -68,58 +68,46 @@ This directory is the durable detailed memory for individual systems. Major syst
 ### Presentation / application
 - 04: `game/scripts/art/`
 - 05/06/07/08/10: focused files under `game/scripts/render/`
-- 14: `game/scripts/app/CanonicalDemoMain.gd`, `game/scripts/demo/CanonicalDemoFixture.gd`, `game/scripts/render/TacticalRendererStack.gd`, `game/scripts/input/`, `game/scripts/player/DemoPlayerActionController.gd`, and `game/scripts/ui/DemoMovementControls.gd`
-- 15: `game/scripts/ui/FacingInspectionQuery.gd`, `ActorStatusSummaryQuery.gd`, and `CanonicalStatusHud.gd`; live wiring remains composition-only in `CanonicalDemoMain.gd`
+- 14: canonical app/demo/render-stack/input/player-control integration
+- 15: `FacingInspectionQuery.gd`, `ActorStatusSummaryQuery.gd`, `CanonicalStatusHud.gd`
+- 16: `ActorStatsInspectorQuery.gd`, `ActorInventoryInspectorQuery.gd`, `CanonicalPlayerShell.gd`, additive stance/input integration in existing semantic adapters/controller
 
-System 16 is **DRAFT only**. Proposed owners are `ActorStatsInspectorQuery.gd`, `ActorInventoryInspectorQuery.gd`, `CanonicalPlayerShell.gd`, plus bounded additions to the existing input/player-action integration. No System 16 production code may be implemented until explicit approval.
+Canonical modules remain separate from frozen `game/scripts/reboot/` reference code. `game/main.tscn` launches the canonical demo.
 
-The canonical modules remain separate from frozen `game/scripts/reboot/` reference code. As of System 14, `game/main.tscn` launches the canonical demo instead of Reboot.
+## Current live demo shell
 
-## Current System 13 contract summary
+The deployed canonical demo now has:
 
-**13A Health** owns real HP and broad persistent injuries. **13B Needs** owns fatigue/hunger/thirst/sleep pressure. **13C Skills** owns six catalog-driven base skills plus XP/levels. **13D Item Physical Properties** owns explicit semantic item weight in grams. **13E Carry** persists capacity but derives current weight from real Hands + Containment + Weight. **13F Moodlets** derives readable statuses and stores no ordinary duplicated moodlet state.
-
-03 remains the mobility-composition owner. Needs and Carry plug into its existing narrow modifier-provider seam; Movement does not import either domain.
-
-Dedicated verification: `.github/workflows/actor-stats.yml`, success token set from six child smokes. Initial complete candidate `78ed167678257749b093acd54e53e9f065cd8ce5` passed run `31992365565` with no production repair.
-
-## Current canonical playable demo
-
-System 14 is the first live canonical composition and supersedes Reboot as the deployed entry point.
-
-- one authored 13x13 canonical WHAT sample map;
+- one authored 13x13 WHAT map;
 - exactly one controlled survivor, no NPCs/infected;
-- existing Ground -> Structure -> Prop -> Living Actor renderer composition;
-- real Collision + Movement + Locomotion + WHEN for walking/turning;
-- W/arrow keyboard input and native touch/Safari buttons emitting the same semantic intents;
-- fixed one-screen tactical view; camera/zoom intentionally deferred until a larger world requires it.
+- existing Ground -> Structure -> Prop -> Living Actor renderer stack;
+- real Collision + Movement + Locomotion + WHEN;
+- keyboard and native touch navigation;
+- real System 15 HUD with tick/facing/Looking at/HP/Needs/Carry/Moodlets;
+- C / touch Crouch-Stand using real 4-tick System 03 stance actions;
+- real crouched 14-tick walking against the 10-tick demo terrain;
+- `STATS`, `INVENTORY`, `MENU` shell;
+- Stats reads real status, injuries, stance, and all six Skills;
+- Inventory reads real Hands + nested Containment + item weight truth + Carry and is currently honestly Empty;
+- Stats/Inventory/Menu use WHEN hard pause and restore the exact prior pause state;
+- modal lifetime blocks gameplay touch/keyboard input;
+- Menu provides Resume and Leave Game;
+- System 15 is the sole tick/action status surface; the old duplicate help/tick labels remain removed.
 
-System 15 adds the first real survival-status presentation to that same live build:
+Dedicated System 16 verification: `.github/workflows/canonical-player-shell.yml` and `game/scripts/ci/CanonicalPlayerShellSmoke.gd`. Hardened code head `dce48115f35ef6487bcbe8811fe945d2e5012cff` passed run `31996425080` after one lifecycle-only touch-control hardening; protected simulation/demo/HUD regressions were green before and after that repair.
 
-- authoritative tick and current facing;
-- read-only one-cell-ahead `Looking at:` physical inspection;
-- real HP, fatigue, hunger, thirst, sleep pressure;
-- real derived carry current/capacity;
-- real derived moodlets;
-- no perception claim, no fake values, no frame polling.
+## Immediate path after System 16
 
-The duplicate pre-System-15 help line and second controls-owned tick/action label are vestigial and are being removed so the HUD is the sole action/tick status surface.
+Do not rebuild the completed player shell or existing renderers.
 
-Dedicated System 15 verification: `.github/workflows/canonical-hud.yml` and `game/scripts/ci/CanonicalHudSmoke.gd`. Hardened code head `fb19c7b86569c388dcb251b2b61210e745f3909a` passed run `31994628336`; the only earlier failure was an over-broad CI text match, not production behavior.
+The next useful bounded integration is **real demo items / loose-item presentation / interaction UI**:
 
-## Immediate path after HUD
+1. add a few real stable WHAT `item.*` entities and explicit 13D weights to the authored demo;
+2. implement the still-missing loose-item renderer as a focused presentation owner;
+3. compose existing System 10 BACK -> actor body -> FRONT hand layers now that equipped items can exist visibly;
+4. expose real System 12 pickup/drop/equip/unequip through semantic interaction UI without moving possession truth into UI.
 
-System 16 is now the active **DRAFT** design. It proposes one integration slice that reuses already-real systems for:
-
-1. timed Crouch/Stand through existing System 03;
-2. read-only `STATS` over real status/injury/skill/stance state;
-3. read-only `INVENTORY` over real Hands/Containment/Carry state;
-4. `MENU` plus modal hard-pause ownership and Resume/Leave Game;
-5. gameplay input blocking while modal UI is open.
-
-The next gate is explicit user approval or revision of `16_CANONICAL_PLAYER_SHELL.md`. Do not implement it while DRAFT.
-
-After System 16, likely bounded additions are demo items/loose-item presentation + System 10 held-item composition and real System 12 interaction UI, then door interaction.
+Door interaction remains a separate later bounded system.
 
 ## Other later modular systems
 - Container Access / Search / Open / Lock — NOT DESIGNED
@@ -128,16 +116,12 @@ After System 16, likely bounded additions are demo items/loose-item presentation
 - Actor Appearance / character creator integration — NOT DESIGNED
 - Loose-item renderer — NOT DESIGNED
 - Quantity / stack / durability / richer item definitions — NOT DESIGNED
-- Capacity/transfer blocking or bulk policy — NOT DESIGNED; current 13E only derives consequences
 - Health progression / first aid / sickness — NOT DESIGNED beyond 13A state
 - Needs progression / eating / drinking / sleeping actions — NOT DESIGNED beyond 13B state
-- Road/property/building/room/dressing generation systems — NOT DESIGNED
+- Global world generation / roads / parcels / buildings / rooms / dressing — NOT DESIGNED
 - Construction/destruction — DEFERRED
 - Vision/perception, lighting, weather, silent spatial sound — DEFERRED
 - Infected AI, combat, vehicles — DEFERRED
-
-## Requested future demo UI target
-The canonical demo now has phone/keyboard navigation plus real HUD/`Looking at:`/status. System 16 DRAFT defines the remaining first-shell target: Crouch/Stand, `STATS`, `INVENTORY`, `MENU`, safe hard pause during modal inspection/menu, Resume + Leave Game, and no fabricated values.
 
 ## Design rule
 Every major system keeps a focused owner/public contract. If implementation unexpectedly requires crossing a forbidden boundary, return the design to review rather than cascading a patch.
