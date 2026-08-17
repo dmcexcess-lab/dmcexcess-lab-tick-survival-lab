@@ -1,14 +1,14 @@
 # Tick Survival Lab — 06A Door State
 
-Status: **DRAFT — prerequisite concept approved 2026-08-16; detailed contract awaiting user approval**
+Status: **IMPLEMENTED — canonical Door State domain and dedicated Godot CI contract present 2026-08-16**
 
-Discussion basis: while designing `06_STRUCTURE_LAYER_RENDERER.md`, canonical source was found to have no authoritative door open/closed state. The user approved Door State as the prerequisite before Structure implementation. This document defines the smallest durable Door State system needed to satisfy that prerequisite without implementing door interaction, timing, collision synchronization, sound, perception, or rendering.
+Approval basis: while designing `06_STRUCTURE_LAYER_RENDERER.md`, canonical source was found to have no authoritative door open/closed state. The user first approved Door State as the prerequisite, then explicitly authorized implementation of both Door State and Structure with **“Program both”** on 2026-08-16.
 
 ## 1. Goal
 
 Own the authoritative persistent **OPEN / CLOSED** state of door entities by stable WHAT entity ID.
 
-The system must provide a small, deterministic, snapshot-safe read/write contract that future Structure rendering, door interaction, collision synchronization, perception, sound, AI, and save orchestration can consume without any of those systems becoming the owner of door state.
+The system provides a small, deterministic, snapshot-safe read/write contract that Structure rendering and future door interaction, collision synchronization, perception, sound, AI, and save orchestration can consume without any of those systems becoming the owner of door state.
 
 Missing/unclassified door state is explicit **UNKNOWN**. A door is never silently assumed closed.
 
@@ -44,9 +44,9 @@ Door State therefore owns only the physical open/closed fact.
 
 Those are later systems consuming this state contract.
 
-## 4. Intended owners
+## 4. Owners
 
-Canonical source after approval:
+Canonical source:
 
 - `game/scripts/simulation/doors/DoorStateValue.gd` — semantic OPEN/CLOSED/UNKNOWN vocabulary and validation.
 - `game/scripts/simulation/doors/DoorStateRecord.gd` — immutable-style stable-ID door state record with per-door version.
@@ -85,7 +85,7 @@ Reads return copies so external consumers cannot mutate canonical state through 
 
 ## 7. Store read contract
 
-`DoorStateStore` exposes read-only helpers including:
+`DoorStateStore` exposes:
 
 - `revision() -> int`
 - `has_door(door_id) -> bool`
@@ -140,7 +140,7 @@ Initial API:
 Rules:
 
 - enrollment validates the WHAT entity and canonical door semantic family;
-- `set_state` requires an existing door record and OPEN/CLOSED target;
+- `set_state` requires an existing door record, valid current WHAT door identity, and OPEN/CLOSED target;
 - same-state `set_state` succeeds as a no-op without revision/version/signal changes;
 - state mutation never changes WHAT placement or Collision;
 - removal is explicit and may clean up a state record even if the WHAT entity has already been removed by an owning lifecycle coordinator.
@@ -157,7 +157,7 @@ Successful enrollment, removal, or actual OPEN/CLOSED change increments the stor
 
 An actual state change replaces the record with `version + 1`.
 
-Enrollment chooses a version greater than prior store mutation history (for example based on the store revision), so removing and later re-enrolling the same stable door ID cannot accidentally recreate an old version.
+Enrollment chooses a version greater than prior store mutation history, so removing and later re-enrolling the same stable door ID cannot accidentally recreate an old version.
 
 This supports a future timed Door Action contract that can store:
 
@@ -181,7 +181,7 @@ Simulation-level signals:
 
 Signals expose semantic state only. They contain no rendering behavior or collision side effects.
 
-Structure Renderer 06 will consume `door_state_changed` / `door_state_reset` read-only for event-driven redraw.
+Structure Renderer 06 consumes enrollment/removal/change/reset read-only for event-driven redraw.
 
 Future gameplay coordinators may observe changes, but authoritative cross-system mutations such as Collision synchronization should be performed deliberately by the future owning Door Interaction/Physical Transition service rather than hidden inside a signal listener whose ordering could become gameplay-significant.
 
@@ -202,7 +202,7 @@ Future gameplay coordinators may observe changes, but authoritative cross-system
 - rejects invalid IDs;
 - rejects duplicate IDs;
 - rejects UNKNOWN or any unrecognized stored state;
-- rejects non-positive record versions;
+- rejects non-positive record versions and impossible record-version/revision combinations;
 - validates the complete candidate before replacing current state;
 - restores atomically;
 - emits one `door_state_reset` after success.
@@ -237,7 +237,7 @@ Future expected physical rule:
 
 But that coordination must occur in a separately approved door physical-transition/action owner so Door State and Collision are committed coherently at one semantic action phase.
 
-The renderer will read Door State; Movement will read Collision. Neither infers the other's truth.
+The renderer reads Door State; Movement reads Collision. Neither infers the other's truth.
 
 ## 15. Future Door Interaction seam
 
@@ -266,7 +266,7 @@ No WHERE placement dependency is required by the core state store.
 
 ## 17. Forbidden dependencies
 
-06A production code must not import or inspect:
+06A production code does not import or inspect:
 
 - renderers or Art Catalog;
 - Collision / `CollisionOverrideState`;
@@ -283,7 +283,7 @@ No WHERE placement dependency is required by the core state store.
 
 ## 18. Failure / edge cases
 
-Must handle explicitly:
+Handled explicitly:
 
 - invalid stable ID;
 - missing WHAT entity on enrollment;
@@ -312,30 +312,28 @@ Must handle explicitly:
 
 This remains suitable for a large persistent world where many doors may exist but only a small visible subset is rendered tactically.
 
-## 20. Dedicated verification after approval
+## 20. Verified acceptance
 
-Godot 4.7.1 CI should prove:
+The first complete implementation head `2c69a98633b7a8bccfa64001921e0a6a19b36583` passed the dedicated **Door State contract** under Godot 4.7.1 with no production repair required.
 
-- source-boundary guards;
+Verification covers:
+
+- source-boundary isolation;
 - project import/parse;
-- explicit OPEN and CLOSED enrollment;
-- no default initial state path;
-- missing record returns UNKNOWN;
-- duplicate enrollment rejected;
-- missing/non-door WHAT entity enrollment rejected;
-- state read returns mutation-safe record copies;
-- same-state set is a no-op;
-- OPEN <-> CLOSED change increments version/revision and emits exact semantic change signal;
-- unplaced door retains state;
-- explicit removal works even for lifecycle cleanup;
-- removal/re-enrollment cannot reuse stale version;
+- WHAT and Collision regression smokes;
+- explicit OPEN and CLOSED enrollment with no default state path;
+- missing record -> UNKNOWN;
+- duplicate/missing/non-door enrollment rejection;
+- mutation-safe record copies;
+- same-state no-op semantics;
+- OPEN/CLOSED version + revision changes and exact semantic signals;
+- persistent unplaced door state;
+- explicit orphan cleanup;
+- remove/re-enroll stale-version protection;
 - deterministic sorted IDs and snapshot order;
-- deterministic snapshot round trip;
-- malformed/duplicate/UNKNOWN snapshot data rejected atomically;
-- successful restore emits one reset;
-- production source does not import Collision, WHEN, renderer/art, generation, reboot, input, or AI.
-
-Existing WHAT and Collision regression smokes should remain green because 06A changes neither contract.
+- deterministic atomic snapshot round-trip;
+- malformed/duplicate/UNKNOWN/bad-version snapshot rejection;
+- successful restore reset signaling.
 
 ## 21. Recovery source
 
@@ -379,12 +377,16 @@ A persistent survival world needs doors to remain physically what happened to th
 
 This preserves consequence and persistence without recreating a detailed door simulator, and it keeps rendering, collision, action timing, AI, generation, and perception independently replaceable.
 
-## 24. Approval state
+## 24. Approved decisions
 
-Approved in concept on 2026-08-16:
+Approved and authorized by the user on 2026-08-16:
 
-- Door State is a required canonical prerequisite for Structure rendering;
-- open/closed state must not be inferred from Collision or art;
-- persistent state belongs in a typed stable-ID domain outside WHAT.
-
-Still awaiting explicit approval of this **detailed 06A contract** before runtime implementation.
+- Door State is the canonical prerequisite for Structure rendering;
+- stable door ID -> explicit OPEN/CLOSED persistent state;
+- missing state is UNKNOWN, never implicit CLOSED;
+- explicit enrollment has no default initial state;
+- per-door versions provide a stale-action seam;
+- state is independent from Collision/WHEN/rendering;
+- low-level mutations validate current WHAT door identity where applicable;
+- orphan cleanup is explicit;
+- implementing Door State and Structure together was explicitly authorized with **“Program both”**.
