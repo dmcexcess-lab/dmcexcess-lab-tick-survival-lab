@@ -124,6 +124,9 @@ func _fixture(actor_id: String, load_grams: int = 0, capacity_grams: int = 10000
         "carry_state": carry_state,
         "carry_query": carry_query,
         "locomotion_mutations": locomotion_mutations,
+        "damage_interrupt": damage_interrupt,
+        "exertion": exertion,
+        "impact_damage": impact_damage,
     }
 
 func _test_baselines_and_multiplication() -> void:
