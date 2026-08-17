@@ -14,10 +14,11 @@ var _buttons: Array[Button] = []
 var _stance_button: Button = null
 var _locomotion: ActorLocomotionState = null
 var _actor_id: String = ""
+var _buttons_built: bool = false
 
 func _ready() -> void:
     layer = 20
-    _build_buttons()
+    _ensure_buttons()
     _refresh_stance_label()
 
 func configure_stance(locomotion_state: ActorLocomotionState, actor_id: String) -> bool:
@@ -29,11 +30,13 @@ func configure_stance(locomotion_state: ActorLocomotionState, actor_id: String) 
     _actor_id = actor_id.strip_edges()
     if not _locomotion.stance_changed.is_connected(_on_stance_changed):
         _locomotion.stance_changed.connect(_on_stance_changed)
+    _ensure_buttons()
     _refresh_stance_label()
     return true
 
 func set_enabled(enabled: bool) -> void:
     _enabled = enabled
+    _ensure_buttons()
     for button: Button in _buttons:
         button.disabled = not enabled
 
@@ -41,7 +44,14 @@ func is_enabled() -> bool:
     return _enabled
 
 func stance_button_text() -> String:
+    _ensure_buttons()
     return "" if _stance_button == null else _stance_button.text
+
+func _ensure_buttons() -> void:
+    if _buttons_built:
+        return
+    _buttons_built = true
+    _build_buttons()
 
 func _build_buttons() -> void:
     _add_button("FORWARD", Vector2(255, 638), Vector2(130, 52), Intents.FORWARD)
@@ -62,6 +72,7 @@ func _add_button(
     button.size = size_value
     button.focus_mode = Control.FOCUS_NONE
     button.add_theme_font_size_override("font_size", 18)
+    button.disabled = not _enabled
     button.pressed.connect(_on_button_pressed.bind(intent))
     add_child(button)
     _buttons.append(button)
