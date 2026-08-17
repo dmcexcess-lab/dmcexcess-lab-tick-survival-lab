@@ -6,8 +6,8 @@ const StructureGeometry = preload("res://scripts/foundation/spatial/SpatialStruc
 const PlanClass = preload("res://scripts/generation/buildings/GeneratedBuildingPlan.gd")
 
 const ARCHETYPE_ID: StringName = &"residential.trailer.singlewide"
-const ARCHETYPE_VERSION: int = 1
-const BASE_WIDTH: int = 6
+const ARCHETYPE_VERSION: int = 2
+const BASE_WIDTH: int = 5
 const BASE_HEIGHT: int = 12
 
 func generate(request: BuildingGenerationRequest) -> GeneratedBuildingPlan:
@@ -44,17 +44,17 @@ func _add_ground_and_rooms(plan: GeneratedBuildingPlan, request: BuildingGenerat
     var bed_cells: Array[Vector2i] = []
     var bedroom_floor: StringName = &"ground.carpet_blue" if absi(request.seed) % 2 == 0 else &"ground.carpet_beige"
     for y in range(1, 5):
-        for x in range(1, 5):
+        for x in range(1, 4):
             var cell: Vector2i = _global_cell(Vector2i(x, y), request)
             living_cells.append(cell)
             plan.ground_entries.append({"cell": cell, "semantic": &"ground.linoleum_green"})
     for y in range(6, 8):
-        for x in range(1, 5):
+        for x in range(1, 4):
             var cell: Vector2i = _global_cell(Vector2i(x, y), request)
             bath_cells.append(cell)
             plan.ground_entries.append({"cell": cell, "semantic": &"ground.tile_white"})
     for y in range(9, 11):
-        for x in range(1, 5):
+        for x in range(1, 4):
             var cell: Vector2i = _global_cell(Vector2i(x, y), request)
             bed_cells.append(cell)
             plan.ground_entries.append({"cell": cell, "semantic": bedroom_floor})
@@ -63,12 +63,12 @@ func _add_ground_and_rooms(plan: GeneratedBuildingPlan, request: BuildingGenerat
     plan.rooms.append({"purpose": "bedroom", "cells": bed_cells})
 
 func _add_exterior_structure(plan: GeneratedBuildingPlan, request: BuildingGenerationRequest) -> void:
-    var entry := Vector2i(5, 3)
+    var entry := Vector2i(4, 3)
     var windows: Dictionary = {
         Vector2i(0, 2): "living_west",
-        Vector2i(5, 1): "living_east",
+        Vector2i(4, 1): "living_east",
         Vector2i(0, 9): "bedroom_west",
-        Vector2i(5, 10): "bedroom_east",
+        Vector2i(4, 10): "bedroom_east",
     }
     var wall_index: int = 1
     var window_index: int = 1
@@ -84,15 +84,15 @@ func _add_exterior_structure(plan: GeneratedBuildingPlan, request: BuildingGener
                 _structure(plan, request, "window.%03d.%s" % [window_index, String(windows[local])], local, &"window.rural_wood", axis, "window", Facing.Value.NORTH)
                 window_index += 1
             else:
-                _structure(plan, request, "wall.exterior.%03d" % wall_index, local, &"wall.rural_wood", axis, "wall", Facing.Value.NORTH)
+                _structure(plan, request, "wall.exterior.%03d" % wall_index, local, &"wall.plaster", axis, "wall", Facing.Value.NORTH)
                 wall_index += 1
 
 func _add_partitions(plan: GeneratedBuildingPlan, request: BuildingGenerationRequest) -> void:
     var wall_index: int = 1
     for partition_y in [5, 8]:
-        for x in range(1, 5):
+        for x in range(1, 4):
             var local := Vector2i(x, partition_y)
-            if x == 3:
+            if x == 2:
                 var purpose: String = "bathroom" if partition_y == 5 else "bedroom"
                 _structure(plan, request, "door.interior.%s" % purpose, local, &"door.house", StructureGeometry.Axis.HORIZONTAL, "door", Facing.Value.SOUTH)
             else:
@@ -105,7 +105,7 @@ func _add_props(plan: GeneratedBuildingPlan, request: BuildingGenerationRequest)
         ["prop.kitchen.stove", Vector2i(1, 1), &"prop.stove_range", Facing.Value.EAST],
         ["prop.kitchen.fridge", Vector2i(1, 2), &"prop.refrigerator_white", Facing.Value.EAST],
         ["prop.kitchen.sink", Vector2i(1, 3), &"prop.kitchen_sink", Facing.Value.EAST],
-        ["prop.living.sofa", Vector2i(2, 1), sofa_semantic, Facing.Value.SOUTH],
+        ["prop.living.sofa", Vector2i(3, 1), sofa_semantic, Facing.Value.WEST],
         ["prop.bath.toilet", Vector2i(1, 6), &"prop.toilet_modern", Facing.Value.EAST],
         ["prop.bath.vanity", Vector2i(1, 7), &"prop.bathroom_vanity", Facing.Value.EAST],
         ["prop.bedroom.bed", Vector2i(1, 9), &"prop.bed_single", Facing.Value.EAST],
