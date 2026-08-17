@@ -1,8 +1,8 @@
 # 15 Canonical HUD / Facing Inspection
 
-Status: **APPROVED**
+Status: **IMPLEMENTED**
 
-Approved by the user on 2026-08-16 after the live System 14 walking demo was playtested successfully. The approved next slice is the recovered-style `Looking at:` HUD plus concise real System 13 status.
+Approved by the user on 2026-08-16 after the live System 14 walking demo was playtested successfully. The approved slice is the recovered-style `Looking at:` HUD plus concise real System 13 status.
 
 ## 1. Goal
 
@@ -71,7 +71,7 @@ HUD never mutates simulation state.
 
 ## 4. Demo state wiring
 
-The live demo now enrolls its existing survivor into the already-implemented canonical state required to make status queries honest:
+The live demo enrolls its existing survivor into the already-implemented canonical state required to make status queries honest:
 
 - 13A Health;
 - 13B Needs;
@@ -183,7 +183,7 @@ Forbidden:
 
 ## 10. Acceptance tests
 
-Dedicated System 15 CI must prove:
+Dedicated System 15 CI proves:
 
 1. Godot project parses;
 2. System 14 walking-demo integration regression remains green;
@@ -202,13 +202,23 @@ Dedicated System 15 CI must prove:
 
 Golden `MapPreview.gd` at commit `1763958f44eb7f855fd49944c00d1ffe608c0abe`, blob `8ef5d900e5f56bb557bba496d10acc47438b38de`, is recovery evidence for the useful one-cell-ahead `Looking at:` concept and compact tactical HUD. Its monolithic input/render/simulation architecture is not restored.
 
-## 12. Future seams
+## 12. Verification / implementation record
+
+Production implementation first landed at `87c8426247b90b83badc300a3c664f1da10f37f5`.
+
+The first dedicated run failed only in a CI boundary guard because the check matched the word `perception` inside a comment explaining that the query is **not** perception-aware. The guard was narrowed to actual perception `preload/load` dependencies; production code was unchanged.
+
+Hardened verification head `fb19c7b86569c388dcb251b2b61210e745f3909a` passed dedicated **Canonical HUD Facing Inspection contract** run `31994628336`, including Godot parse, Health, Needs, Carry, Moodlets, System 14 walking-demo regression, the full new HUD smoke, and actual main-scene startup.
+
+No production repair was required after the complete implementation candidate.
+
+## 13. Future seams
 
 - Stats inspector may reuse `ActorStatusSummaryQuery` and add the separately implemented Skills readout.
 - Inventory presentation may use 09/11/12 directly and call HUD refresh after transfers.
 - A future perception service may wrap/filter `FacingInspectionQuery` results before HUD presentation.
 - Future calendar/time UI may add a separate tick-to-calendar presenter; WHEN itself remains calendar-agnostic.
 
-## 13. North-star fit
+## 14. North-star fit
 
 This makes the tiny canonical demo feel like an actual survival-game shell while preserving the project rule that presentation only reports typed simulation truth. It adds consequence readability without adding fake simulation complexity.

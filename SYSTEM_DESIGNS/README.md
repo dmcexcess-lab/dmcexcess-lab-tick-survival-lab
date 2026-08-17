@@ -38,6 +38,7 @@ This directory is the durable detailed memory for individual systems. Major syst
 | 13E | Actor Carry / Encumbrance | **IMPLEMENTED** | `13E_ACTOR_CARRY_ENCUMBRANCE.md` |
 | 13F | Actor Moodlets / Status Derivation | **IMPLEMENTED** | `13F_ACTOR_MOODLETS.md` |
 | 14 | Canonical Playable Demo Integration | **IMPLEMENTED** | `14_CANONICAL_PLAYABLE_DEMO.md` |
+| 15 | Canonical HUD / Facing Inspection | **IMPLEMENTED** | `15_CANONICAL_HUD_FACING_INSPECTION.md` |
 | 00D | Global World Planning / Generation | **NOT DESIGNED** | `00D_GLOBAL_WORLD_GENERATION.md` |
 | 00E | Population / Household / Outbreak / Player Story | **NOT DESIGNED** | `00E_POPULATION_OUTBREAK_PLAYER_STORY.md` |
 | 00F | Streaming / Materialization | **NOT DESIGNED** | `00F_STREAMING_MATERIALIZATION.md` |
@@ -67,6 +68,7 @@ This directory is the durable detailed memory for individual systems. Major syst
 - 04: `game/scripts/art/`
 - 05/06/07/08/10: focused files under `game/scripts/render/`
 - 14: `game/scripts/app/CanonicalDemoMain.gd`, `game/scripts/demo/CanonicalDemoFixture.gd`, `game/scripts/render/TacticalRendererStack.gd`, `game/scripts/input/`, `game/scripts/player/DemoPlayerActionController.gd`, and `game/scripts/ui/DemoMovementControls.gd`
+- 15: `game/scripts/ui/FacingInspectionQuery.gd`, `ActorStatusSummaryQuery.gd`, and `CanonicalStatusHud.gd`; live wiring remains composition-only in `CanonicalDemoMain.gd`
 
 The canonical modules remain separate from frozen `game/scripts/reboot/` reference code. As of System 14, `game/main.tscn` launches the canonical demo instead of Reboot.
 
@@ -89,16 +91,26 @@ System 14 is the first live canonical composition and supersedes Reboot as the d
 - W/arrow keyboard input and native touch/Safari buttons emitting the same semantic intents;
 - fixed one-screen tactical view; camera/zoom intentionally deferred until a larger world requires it.
 
-Dedicated verification: `.github/workflows/canonical-demo.yml` and `game/scripts/ci/CanonicalDemoSmoke.gd`. Initial complete integration head `41ccfedd658082f5d249b5107363658705ea4b03` passed run `31993465800` with no production repair after the complete candidate reached CI.
+System 15 adds the first real survival-status presentation to that same live build:
 
-## Immediate path after the walking demo
+- authoritative tick and current facing;
+- read-only one-cell-ahead `Looking at:` physical inspection;
+- real HP, fatigue, hunger, thirst, sleep pressure;
+- real derived carry current/capacity;
+- real derived moodlets;
+- no perception claim, no fake values, no frame polling.
 
-The next work should extend the live canonical demo rather than rebuild already-proven renderers. Likely bounded additions, only when requested:
+Dedicated System 15 verification: `.github/workflows/canonical-hud.yml` and `game/scripts/ci/CanonicalHudSmoke.gd`. Hardened code head `fb19c7b86569c388dcb251b2b61210e745f3909a` passed run `31994628336`; the only earlier failure was an over-broad CI text match, not production behavior.
 
-1. `Looking at:` / Stats / Inventory / Menu UI reading already-real systems.
-2. Held-item layers/items and Item Transfer interaction in the demo.
-3. Camera/zoom only when world content expands beyond one screen.
-4. Larger authored/generated world content behind the same canonical simulation/render contracts.
+## Immediate path after HUD
+
+The next work should extend the live canonical demo rather than rebuild already-proven renderers or actor-state domains. Likely bounded additions, only when requested:
+
+1. crouch/stand control plus `STATS`, `INVENTORY`, and `MENU`/hard-pause UI using already-real systems;
+2. demo items/loose-item presentation plus System 10 BACK/body/FRONT held-item composition and real 09/11/12 transfers;
+3. door interaction;
+4. camera/zoom only when world content expands beyond one screen;
+5. larger authored/generated world content behind the same canonical simulation/render contracts.
 
 ## Other later modular systems
 - Container Access / Search / Open / Lock — NOT DESIGNED
@@ -116,7 +128,7 @@ The next work should extend the live canonical demo rather than rebuild already-
 - Infected AI, combat, vehicles — DEFERRED
 
 ## Requested future demo UI target
-The canonical walking demo now exists. Later UI may add Safari/iPhone navigation refinements, desktop equivalents, recovered-style `Looking at:`, concise real actor stats, `STATS`, `INVENTORY`, and `MENU` buttons, safe pause during inspection/menu, Resume + Leave Game, and no fabricated values.
+The canonical demo now has phone/keyboard navigation plus real HUD/`Looking at:`/status. Remaining target UI includes `STATS`, `INVENTORY`, and `MENU` buttons, safe hard pause during inspection/menu, Resume + Leave Game, and no fabricated values.
 
 ## Design rule
 Every major system keeps a focused owner/public contract. If implementation unexpectedly requires crossing a forbidden boundary, return the design to review rather than cascading a patch.

@@ -17,7 +17,7 @@ Live Web build: `https://dmcexcess-lab.github.io/dmcexcess-lab-tick-survival-lab
 
 ## 2. Current architectural phase
 
-**System 14 is now the live canonical entry point.** `game/main.tscn` launches the canonical playable demo; `game/scripts/reboot/` remains frozen/deprecated recovery/reference code and must not be extended or used as a compatibility adapter.
+**Systems 14–15 are now the live canonical entry/presentation path.** `game/main.tscn` launches the canonical playable demo with the real status HUD; `game/scripts/reboot/` remains frozen/deprecated recovery/reference code and must not be extended or used as a compatibility adapter.
 
 Golden recovery commit: `1763958f44eb7f855fd49944c00d1ffe608c0abe`.
 
@@ -44,13 +44,15 @@ Implemented + CI:
 - 13D Item Physical Properties
 - 13E Carry / Encumbrance
 - 13F Moodlets / Status Derivation
-- **14 Canonical Playable Demo Integration**
+- 14 Canonical Playable Demo Integration
+- **15 Canonical HUD / Facing Inspection**
 
 System 13 umbrella: `SYSTEM_DESIGNS/13_ACTOR_STATS_STATUS_ARCHITECTURE.md`.
 System 14 design: `SYSTEM_DESIGNS/14_CANONICAL_PLAYABLE_DEMO.md`.
-System 14 implementation log: `SYSTEM_DESIGNS/14_IMPLEMENTATION_CHANGELOG.md`.
+System 15 design: `SYSTEM_DESIGNS/15_CANONICAL_HUD_FACING_INSPECTION.md`.
 Dedicated demo workflow: `.github/workflows/canonical-demo.yml`.
-Initial complete demo candidate `41ccfedd658082f5d249b5107363658705ea4b03` passed Canonical Playable Demo run `31993465800` with no production repair after the complete candidate reached CI.
+Dedicated HUD workflow: `.github/workflows/canonical-hud.yml`.
+System 15 hardened code head `fb19c7b86569c388dcb251b2b61210e745f3909a` passed Canonical HUD Facing Inspection run `31994628336`; the only earlier failure was a CI boundary regex matching an explanatory comment, not production code.
 
 ## 3. Foundation / mechanic truth
 
@@ -130,9 +132,9 @@ System 14 currently composes the visible walking-demo stack as:
 
 The demo actor has no held items, so System 10 BACK/FRONT layers are intentionally not instantiated yet. They remain ready to insert around the actor body when demo item equipment is added.
 
-## 7. Live canonical walking demo
+System 15 adds a separate CanvasLayer HUD and read-only query owners. It does not change renderer ownership or simulation truth.
 
-System 14 deliberately collapsed the previously listed multi-step demo roadmap into one real integration slice.
+## 7. Live canonical demo
 
 Current live demo:
 - real authored 13x13 WHAT map, fully terrain-populated;
@@ -145,20 +147,22 @@ Current live demo:
 - W/Up forward, S/Down backward, A/Left turn left, D/Right turn right;
 - native Godot touch buttons emit the same semantic intents for Safari/iPhone;
 - fixed one-screen view at 38 px/cell; no camera because the whole test area fits;
-- small action/tick feedback only; no fake Stats/Inventory values.
+- real HUD shows tick, facing, action result, one-cell-ahead `Looking at:`, HP, fatigue, hunger, thirst, sleep pressure, carry, and derived moodlets.
 
-Dedicated integration smoke proves 169 ground commands, 11 structure commands, 6 prop commands, exactly 1 actor command, zero planned presentation diagnostics, real forward commit, real turn commit, and blocked authored walls.
+The live demo survivor is now honestly enrolled in canonical Health, Needs, Hands, actor-root Inventory, Carry, and Moodlet state. At boot this means **100/100 HP, all need pressures 0, carry 0.0/18.0 kg, Well Rested**. These are domain defaults/derived facts, not UI placeholders.
 
-## 8. Immediate path after the walking demo
+`Looking at:` is currently a direct physical WHAT inspection of the cell in front. It is deliberately **not perception-aware**. Future LOS/vision/darkness logic may filter that information before presentation.
 
-Do **not** rebuild the already-proven renderers or invent extra demo prerequisite systems.
+## 8. Immediate path after HUD
+
+Do **not** rebuild the already-proven renderers, actor-state domains, or HUD queries.
 
 When requested, extend the live canonical demo directly with bounded additions such as:
-1. recovered-style `Looking at:` plus real System-13 summary/status display;
-2. `STATS`, `INVENTORY`, and `MENU`/hard-pause UI;
-3. demo items/held-item BACK/body/FRONT composition and real 09/11/12 transfers;
+1. crouch/stand control plus `STATS`, `INVENTORY`, and `MENU`/hard-pause UI;
+2. demo items/loose-item presentation, System 10 BACK/body/FRONT composition, and real 09/11/12 pickup/drop/equip;
+3. door open/close interaction;
 4. camera/zoom only once a larger world actually exceeds the one-screen authored view;
-5. larger authored or generated content behind the same simulation/render contracts.
+5. larger authored/generated content behind the same canonical contracts.
 
 ## 9. Other later systems
 - Container Access / Search / Open / Lock — NOT DESIGNED
@@ -190,6 +194,7 @@ When requested, extend the live canonical demo directly with bounded additions s
 12. Carry totals and moodlets are derived; do not persist duplicate truth.
 13. Needs/Carry affect locomotion only through 03's provider contract.
 14. Reboot remains recoverable reference code, but live composition belongs to canonical owners.
+15. HUD/inspection presentation reads typed truth and does not become perception or simulation ownership.
 
 ## 11. Documentation source order
 1. newest explicit user instruction;
@@ -205,4 +210,4 @@ When requested, extend the live canonical demo directly with bounded additions s
 11. golden/same-owner history.
 
 ## 12. Recommended next action
-Playtest the live **System 14 canonical walking demo**. Future work should extend that live composition directly rather than returning to the old staged renderer/demo roadmap.
+Playtest the live **System 15 HUD build** on phone/Safari. The next useful integration slice is likely crouch/stand plus the real `STATS`, `INVENTORY`, and `MENU` shell, unless playtesting exposes a more immediate HUD/control defect.
