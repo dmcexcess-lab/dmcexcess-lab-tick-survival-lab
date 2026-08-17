@@ -53,7 +53,7 @@ jobs:
           test "$(git hash-object game/assets/world_art_atlas.svg)" = "995e52973e14db0ef60f3562c1cfa5ae342d62d2"
           test "$(git hash-object game/assets/building_props_atlas.svg)" = "856be2fc90d009d1b4bcc565990b9428323bb4d6"
           test "$(git hash-object game/assets/final_environment_surfaces_atlas.svg)" = "a42607858bae04f25fb1c6621a6d9262e81550b1"
-          test "$(git hash-object game/assets/final_environment_props_atlas.svg)" = "7714d8c95833e20ecfa20cfa1374f23eaa5509f1"
+          test "$(git hash-object game/assets/final_environment_props_atlas.svg)" = "7714d8c95833e20ebca20cfa1374f23eaa5509f1"
           test "$(git hash-object game/assets/player_north.svg)" = "dfeb5be1c9cc0b66aec842d969b60b485d3a4f99"
           test "$(git hash-object game/assets/player_east.svg)" = "76c3e7e1a3b07712c65b385f1d80e131b45d90b3"
           test "$(git hash-object game/assets/player_south.svg)" = "a2e358fd8fe15d497bf9559ae89835af0331d10f"
