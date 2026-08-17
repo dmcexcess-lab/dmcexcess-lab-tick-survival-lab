@@ -7,7 +7,17 @@ const Intents = preload("res://scripts/input/PlayerActionIntent.gd")
 
 signal action_intent(intent: StringName)
 
+var _enabled: bool = true
+
+func set_enabled(enabled: bool) -> void:
+    _enabled = enabled
+
+func is_enabled() -> bool:
+    return _enabled
+
 func _unhandled_input(event: InputEvent) -> void:
+    if not _enabled:
+        return
     var key_event := event as InputEventKey
     if key_event == null or not key_event.pressed or key_event.echo:
         return
@@ -27,6 +37,8 @@ static func _intent_for_key(event: InputEventKey) -> StringName:
         return Intents.TURN_LEFT
     if _matches(event, KEY_D) or _matches(event, KEY_RIGHT):
         return Intents.TURN_RIGHT
+    if _matches(event, KEY_C):
+        return Intents.STANCE_TOGGLE
     return &""
 
 static func _matches(event: InputEventKey, code: Key) -> bool:
