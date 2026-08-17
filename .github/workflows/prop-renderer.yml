@@ -24,27 +24,31 @@ jobs:
         run: |
           set -euxo pipefail
           test -f SYSTEM_DESIGNS/07_PROP_FIXTURE_VEGETATION_RENDERER.md
+          test -f game/scripts/art/PropArtOrientationCatalog.gd
           test -f game/scripts/render/PropDrawCommand.gd
           test -f game/scripts/render/PropLayerRenderer.gd
           test -f game/scripts/ci/PropLayerRendererSmoke.gd
+          test -f game/scripts/ci/PropArtOrientationSmoke.gd
+          grep -q 'class_name PropArtOrientationCatalog' game/scripts/art/PropArtOrientationCatalog.gd
           grep -q 'class_name PropDrawCommand' game/scripts/render/PropDrawCommand.gd
           grep -q 'class_name PropLayerRenderer' game/scripts/render/PropLayerRenderer.gd
           grep -q 'plan_visible_commands' game/scripts/render/PropLayerRenderer.gd
           grep -q 'draw_texture_rect_region' game/scripts/render/PropLayerRenderer.gd
+          grep -q 'draw_set_transform' game/scripts/render/PropLayerRenderer.gd
+          grep -q 'PropArtOrientationCatalog' game/scripts/render/PropLayerRenderer.gd
           grep -q 'Channel.OBJECT' game/scripts/render/PropLayerRenderer.gd
-          ! grep -R -q 'scripts/reboot' game/scripts/render/Prop*.gd
-          ! grep -R -q 'scripts/generation' game/scripts/render/Prop*.gd
-          ! grep -R -q 'scripts/simulation' game/scripts/render/Prop*.gd
-          ! grep -R -q 'scripts/foundation/time' game/scripts/render/Prop*.gd
-          ! grep -R -q 'scripts/camera' game/scripts/render/Prop*.gd
-          ! grep -R -q 'scripts/input' game/scripts/render/Prop*.gd
-          ! grep -R -q 'scripts/ui' game/scripts/render/Prop*.gd
-          ! grep -R -q 'scripts/perception' game/scripts/render/Prop*.gd
-          ! grep -R -q 'scripts/inventory' game/scripts/render/Prop*.gd
+          ! grep -R -q 'scripts/reboot' game/scripts/render/Prop*.gd game/scripts/art/PropArtOrientationCatalog.gd
+          ! grep -R -q 'scripts/generation' game/scripts/render/Prop*.gd game/scripts/art/PropArtOrientationCatalog.gd
+          ! grep -R -q 'scripts/simulation' game/scripts/render/Prop*.gd game/scripts/art/PropArtOrientationCatalog.gd
+          ! grep -R -q 'scripts/foundation/time' game/scripts/render/Prop*.gd game/scripts/art/PropArtOrientationCatalog.gd
+          ! grep -R -q 'scripts/camera' game/scripts/render/Prop*.gd game/scripts/art/PropArtOrientationCatalog.gd
+          ! grep -R -q 'scripts/input' game/scripts/render/Prop*.gd game/scripts/art/PropArtOrientationCatalog.gd
+          ! grep -R -q 'scripts/ui' game/scripts/render/Prop*.gd game/scripts/art/PropArtOrientationCatalog.gd
+          ! grep -R -q 'scripts/perception' game/scripts/render/Prop*.gd game/scripts/art/PropArtOrientationCatalog.gd
+          ! grep -R -q 'scripts/inventory' game/scripts/render/Prop*.gd game/scripts/art/PropArtOrientationCatalog.gd
           ! grep -R -q 'GroundLayerRenderer' game/scripts/render/Prop*.gd
           ! grep -R -q 'StructureLayerRenderer' game/scripts/render/Prop*.gd
           ! grep -R -q '_process' game/scripts/render/PropLayerRenderer.gd
-          ! grep -E -q 'draw_set_transform|draw_set_transform_matrix|rotate\(' game/scripts/render/PropLayerRenderer.gd
           ! grep -E -q 'tactical_atlas|clutter_atlas|world_art_atlas|building_props_atlas|final_environment' game/scripts/render/Prop*.gd
 
       - name: Install Godot 4.7.1
@@ -69,6 +73,14 @@ jobs:
           ./Godot_v4.7.1-stable_linux.x86_64 --headless --path "$GITHUB_WORKSPACE/game" --script res://scripts/ci/ArtCatalogSmoke.gd 2>&1 | tee "$RUNNER_TEMP/art-catalog-smoke.log"
           grep -q 'ART_CATALOG_SMOKE_OK' "$RUNNER_TEMP/art-catalog-smoke.log"
           if grep -Eqi 'SCRIPT ERROR|Parse Error|Failed to load script' "$RUNNER_TEMP/art-catalog-smoke.log"; then exit 1; fi
+
+      - name: Prop art orientation contract smoke
+        shell: bash
+        run: |
+          set -euxo pipefail
+          ./Godot_v4.7.1-stable_linux.x86_64 --headless --path "$GITHUB_WORKSPACE/game" --script res://scripts/ci/PropArtOrientationSmoke.gd 2>&1 | tee "$RUNNER_TEMP/prop-orientation-smoke.log"
+          grep -q 'PROP_ART_ORIENTATION_SMOKE_OK' "$RUNNER_TEMP/prop-orientation-smoke.log"
+          if grep -Eqi 'SCRIPT ERROR|Parse Error|Failed to load script' "$RUNNER_TEMP/prop-orientation-smoke.log"; then exit 1; fi
 
       - name: Ground renderer regression smoke
         shell: bash

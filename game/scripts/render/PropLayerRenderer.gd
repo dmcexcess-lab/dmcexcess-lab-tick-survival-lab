@@ -2,6 +2,7 @@ extends Node2D
 class_name PropLayerRenderer
 
 const SelectionClass = preload("res://scripts/art/ArtSelection.gd")
+const PropOrientation = preload("res://scripts/art/PropArtOrientationCatalog.gd")
 const CommandClass = preload("res://scripts/render/PropDrawCommand.gd")
 const ChangeClass = preload("res://scripts/foundation/world/WorldChange.gd")
 const Layers = preload("res://scripts/foundation/spatial/SpatialLayer.gd")
@@ -125,18 +126,8 @@ func _draw() -> void:
             _remember_diagnostic("texture_load_failed")
             _draw_diagnostic(command.destination)
             continue
-        if selection.is_atlas_region():
-            draw_texture_rect_region(
-                texture,
-                command.destination,
-                selection.region(),
-                Color.WHITE,
-                false,
-                true
-            )
-        elif selection.source != null and not selection.source.atlas:
-            draw_texture_rect(texture, command.destination, false, Color.WHITE, false)
-        else:
+        var quarter_turns: int = PropOrientation.quarter_turns(selection, command.facing)
+        if not _draw_selection(texture, selection, command.destination, quarter_turns):
             _remember_diagnostic("selection_not_drawable")
             _draw_diagnostic(command.destination)
 
@@ -283,6 +274,40 @@ func _texture_for_selection(selection: ArtSelection) -> Texture2D:
     if texture != null:
         _texture_cache[path] = texture
     return texture
+
+func _draw_selection(
+    texture: Texture2D,
+    selection: ArtSelection,
+    destination: Rect2,
+    quarter_turns: int
+) -> bool:
+    if texture == null or selection == null or not selection.is_found():
+        return false
+    var turns: int = ((quarter_turns % 4) + 4) % 4
+    var target: Rect2 = destination
+    if turns != 0:
+        var center: Vector2 = destination.position + destination.size * 0.5
+        draw_set_transform(center, float(turns) * PI * 0.5, Vector2.ONE)
+        target = Rect2(-destination.size * 0.5, destination.size)
+
+    var drawn: bool = false
+    if selection.is_atlas_region():
+        draw_texture_rect_region(
+            texture,
+            target,
+            selection.region(),
+            Color.WHITE,
+            false,
+            true
+        )
+        drawn = true
+    elif selection.source != null and not selection.source.atlas:
+        draw_texture_rect(texture, target, false, Color.WHITE, false)
+        drawn = true
+
+    if turns != 0:
+        draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+    return drawn
 
 func _draw_diagnostic(rect: Rect2) -> void:
     draw_rect(rect, DIAGNOSTIC_FILL, true)
