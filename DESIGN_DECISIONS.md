@@ -253,3 +253,34 @@ This is **not** a detailed microbiology simulation and should not become a flat 
 **Affected systems:** death/combat, persistent world state, corpse state, WHEN, health/sickness, collision, inventory/search, rendering, base safety, streaming/coarse simulation, cleaning/disposal interactions.
 
 **Current renderer consequence:** `SYSTEM_DESIGNS/08_PLAYER_LIVING_ACTOR_RENDERER.md` is living-ACTOR-only; corpse rendering belongs to the future Corpse / Decay / Contamination system.
+
+---
+
+## 2026-08-16 — Actor stats/status are modular peer domains; UI composes them
+
+**Decision:** The requested survivor status set — **moodlets, HP, fatigue, hunger, thirst, sleep, carry weight, and skills/levels** — is not stored in one universal actor dictionary.
+
+The approved architecture separates these responsibilities:
+
+- Health / Injury owns HP and health/injury truth;
+- Needs / Rest owns fatigue, hunger, thirst, and sleep pressure;
+- Skills owns persistent skill levels/progression;
+- Item Physical Properties owns real item weight;
+- Carry / Encumbrance derives carried weight/capacity/consequence from actual physical possession plus item weight;
+- Moodlets primarily derive readable semantic statuses from the owning domains.
+
+**UI rule:** the future Stats/HUD layer is a reader/composer only. It should consume narrow module contracts/provider adapters so new actor-state domains can be added later without rewriting a monolithic character record or making UI own gameplay truth.
+
+**Derived-truth rules:**
+
+- moodlets should not duplicate HP/needs/carry values as another persistent state bag unless a future effect genuinely owns duration/source/history;
+- carried weight should not be persisted as a second total that can drift from real physical items;
+- fatigue and sleep remain distinct because they represent short-horizon exertion versus longer-horizon sleep pressure/debt.
+
+**Why:** This preserves the user's desired simple character sheet while keeping the simulation replaceable and extensible. It also fixes the historical tendency for golden Tick `PlayerActor.gd` and First Fire survivor dictionaries to accumulate unrelated state in one owner.
+
+**Affected systems:** health, needs, skills, item definitions/properties, inventory/hands/transfer, carry/encumbrance, movement capability, moodlets, character generation/backgrounds, Stats/HUD UI, save orchestration.
+
+**Detailed umbrella:** `SYSTEM_DESIGNS/13_ACTOR_STATS_STATUS_ARCHITECTURE.md`.
+
+**Implementation rule:** the umbrella approval does not authorize all children at once; each independently implementable child still requires its own bounded design/approval.
