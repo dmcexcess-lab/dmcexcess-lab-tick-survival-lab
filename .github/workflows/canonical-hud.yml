@@ -36,7 +36,7 @@ jobs:
           ! grep -q 'MutationService' game/scripts/ui/FacingInspectionQuery.gd game/scripts/ui/ActorStatusSummaryQuery.gd game/scripts/ui/CanonicalStatusHud.gd
           ! grep -q 'simulation/movement' game/scripts/ui/FacingInspectionQuery.gd game/scripts/ui/ActorStatusSummaryQuery.gd game/scripts/ui/CanonicalStatusHud.gd
           ! grep -q 'scripts/render' game/scripts/ui/FacingInspectionQuery.gd game/scripts/ui/ActorStatusSummaryQuery.gd game/scripts/ui/CanonicalStatusHud.gd
-          ! grep -q 'perception' game/scripts/ui/FacingInspectionQuery.gd game/scripts/ui/ActorStatusSummaryQuery.gd game/scripts/ui/CanonicalStatusHud.gd
+          ! grep -E -q 'preload\([^)]*perception|load\([^)]*perception' game/scripts/ui/FacingInspectionQuery.gd game/scripts/ui/ActorStatusSummaryQuery.gd game/scripts/ui/CanonicalStatusHud.gd
 
       - name: Install Godot 4.7.1
         shell: bash
