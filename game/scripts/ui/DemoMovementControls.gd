@@ -2,30 +2,52 @@ extends CanvasLayer
 class_name DemoMovementControls
 
 const Intents = preload("res://scripts/input/PlayerActionIntent.gd")
+const Stance = preload("res://scripts/simulation/actors/locomotion/ActorStance.gd")
 
-## Touch-first demo movement controls.
+## Touch-first demo movement/stance controls.
 ## Emits semantic intent only; owns no simulation dependency or status presentation.
 
 signal action_intent(intent: StringName)
 
+var _enabled: bool = true
+var _buttons: Array[Button] = []
+var _stance_button: Button = null
+var _locomotion: ActorLocomotionState = null
+var _actor_id: String = ""
+
 func _ready() -> void:
     layer = 20
-    _build_title()
     _build_buttons()
+    _refresh_stance_label()
 
-func _build_title() -> void:
-    var title := Label.new()
-    title.text = "TICK SURVIVAL LAB — CANONICAL DEMO"
-    title.position = Vector2(73, 18)
-    title.size = Vector2(494, 30)
-    title.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-    title.add_theme_font_size_override("font_size", 18)
-    add_child(title)
+func configure_stance(locomotion_state: ActorLocomotionState, actor_id: String) -> bool:
+    if locomotion_state == null or actor_id.strip_edges().is_empty():
+        return false
+    if not locomotion_state.has_actor(actor_id.strip_edges()):
+        return false
+    _locomotion = locomotion_state
+    _actor_id = actor_id.strip_edges()
+    if not _locomotion.stance_changed.is_connected(_on_stance_changed):
+        _locomotion.stance_changed.connect(_on_stance_changed)
+    _refresh_stance_label()
+    return true
+
+func set_enabled(enabled: bool) -> void:
+    _enabled = enabled
+    for button: Button in _buttons:
+        button.disabled = not enabled
+
+func is_enabled() -> bool:
+    return _enabled
+
+func stance_button_text() -> String:
+    return "" if _stance_button == null else _stance_button.text
 
 func _build_buttons() -> void:
     _add_button("FORWARD", Vector2(255, 638), Vector2(130, 52), Intents.FORWARD)
     _add_button("TURN L", Vector2(82, 704), Vector2(132, 56), Intents.TURN_LEFT)
     _add_button("TURN R", Vector2(426, 704), Vector2(132, 56), Intents.TURN_RIGHT)
+    _stance_button = _add_button("CROUCH", Vector2(82, 772), Vector2(132, 52), Intents.STANCE_TOGGLE)
     _add_button("BACK", Vector2(255, 772), Vector2(130, 52), Intents.BACKWARD)
 
 func _add_button(
@@ -33,7 +55,7 @@ func _add_button(
     position_value: Vector2,
     size_value: Vector2,
     intent: StringName
-) -> void:
+) -> Button:
     var button := Button.new()
     button.text = text_value
     button.position = position_value
@@ -42,6 +64,24 @@ func _add_button(
     button.add_theme_font_size_override("font_size", 18)
     button.pressed.connect(_on_button_pressed.bind(intent))
     add_child(button)
+    _buttons.append(button)
+    return button
 
 func _on_button_pressed(intent: StringName) -> void:
+    if not _enabled:
+        return
     action_intent.emit(intent)
+
+func _on_stance_changed(actor_id: String, _previous_stance: StringName, _new_stance: StringName, _version: int) -> void:
+    if actor_id != _actor_id:
+        return
+    _refresh_stance_label()
+
+func _refresh_stance_label() -> void:
+    if _stance_button == null:
+        return
+    if _locomotion == null or _actor_id.is_empty():
+        _stance_button.text = "CROUCH"
+        return
+    var current: StringName = _locomotion.stance(_actor_id)
+    _stance_button.text = "STAND" if current == Stance.CROUCHED else "CROUCH"
