@@ -9,6 +9,8 @@ const SpatialQueryClass = preload("res://scripts/simulation/collision/SpatialQue
 const TickKernelClass = preload("res://scripts/foundation/time/TickKernel.gd")
 const BaseTraversalPolicyClass = preload("res://scripts/simulation/movement/MovementTraversalPolicy.gd")
 const MovementActionServiceClass = preload("res://scripts/simulation/movement/MovementActionService.gd")
+const MovementDamageInterruptionClass = preload("res://scripts/simulation/movement/MovementDamageInterruptionService.gd")
+const MovementRunExertionClass = preload("res://scripts/simulation/movement/MovementRunExertionService.gd")
 const LocomotionStateClass = preload("res://scripts/simulation/actors/locomotion/ActorLocomotionState.gd")
 const LocomotionMutationClass = preload("res://scripts/simulation/actors/locomotion/ActorLocomotionMutationService.gd")
 const MovementCapabilityClass = preload("res://scripts/simulation/actors/locomotion/ActorMovementCapabilityService.gd")
@@ -20,11 +22,13 @@ const InventoryStateClass = preload("res://scripts/simulation/inventory/Inventor
 const InventoryMutationClass = preload("res://scripts/simulation/inventory/InventoryContainmentMutationService.gd")
 const HealthStateClass = preload("res://scripts/simulation/actors/health/ActorHealthState.gd")
 const NeedsStateClass = preload("res://scripts/simulation/actors/needs/ActorNeedsState.gd")
+const NeedsMobilityProviderClass = preload("res://scripts/simulation/actors/needs/ActorNeedsMobilityModifierProvider.gd")
 const SkillStateClass = preload("res://scripts/simulation/actors/skills/ActorSkillState.gd")
 const PhysicalCatalogClass = preload("res://scripts/simulation/items/properties/ItemPhysicalPropertyCatalog.gd")
 const WeightQueryClass = preload("res://scripts/simulation/items/properties/ItemWeightQuery.gd")
 const CarryStateClass = preload("res://scripts/simulation/actors/carry/ActorCarryState.gd")
 const CarryQueryClass = preload("res://scripts/simulation/actors/carry/ActorCarryQuery.gd")
+const CarryMobilityProviderClass = preload("res://scripts/simulation/actors/carry/ActorCarryMobilityModifierProvider.gd")
 const MoodletServiceClass = preload("res://scripts/simulation/actors/moodlets/ActorMoodletService.gd")
 const StatusSummaryClass = preload("res://scripts/ui/ActorStatusSummaryQuery.gd")
 const InspectionQueryClass = preload("res://scripts/ui/FacingInspectionQuery.gd")
@@ -56,6 +60,8 @@ var _locomotion_mutations: ActorLocomotionMutationService = null
 var _movement_capability: ActorMovementCapabilityService = null
 var _actor_traversal: ActorMovementTraversalPolicy = null
 var _movement: MovementActionService = null
+var _movement_damage_interrupt: MovementDamageInterruptionService = null
+var _movement_run_exertion: MovementRunExertionService = null
 var _stance_actions: ActorStanceActionService = null
 var _hand_state: ActorHandEquipmentState = null
 var _hand_mutations: ActorHandEquipmentMutationService = null
@@ -108,6 +114,10 @@ func _boot_canonical_demo() -> bool:
         return false
 
     _movement_capability = MovementCapabilityClass.new(_locomotion_state)
+    if not _movement_capability.register_provider(NeedsMobilityProviderClass.new(_needs_state)):
+        return false
+    if not _movement_capability.register_provider(CarryMobilityProviderClass.new(_carry_query)):
+        return false
     _actor_traversal = ActorTraversalPolicyClass.new(_base_traversal, _movement_capability)
     _spatial_query = SpatialQueryClass.new(
         _world,
@@ -123,6 +133,11 @@ func _boot_canonical_demo() -> bool:
         _actor_traversal
     )
     if not _movement.is_ready():
+        return false
+
+    _movement_damage_interrupt = MovementDamageInterruptionClass.new(_health_state, _kernel)
+    _movement_run_exertion = MovementRunExertionClass.new(_movement, _needs_state)
+    if not _movement_damage_interrupt.is_ready() or not _movement_run_exertion.is_ready():
         return false
 
     _stance_actions = StanceActionClass.new(

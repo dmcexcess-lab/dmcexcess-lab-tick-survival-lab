@@ -8,6 +8,8 @@ const DecisionClass = preload("res://scripts/simulation/movement/MovementPolicyD
 ## policy adapters/providers, not in MovementActionService or WHEN.
 
 const GOLDEN_TURN_TICKS: int = 3
+const RUN_STRIDE_SCALE_BP: int = 6000
+const SCALE_ONE: int = 10000
 
 var _turn_ticks: int = GOLDEN_TURN_TICKS
 var _terrain_rules: Dictionary = {}
@@ -56,10 +58,37 @@ func registered_terrain_types() -> Array[String]:
     return result
 
 func evaluate_step(actor_id: String, action_type: StringName, terrain_types: Array) -> MovementPolicyDecision:
+    var base: MovementPolicyDecision = _evaluate_walk_terrain(actor_id, terrain_types)
+    if base == null or not base.is_allowed():
+        return base
+    if String(action_type).strip_edges().is_empty():
+        return DecisionClass.denied(DecisionClass.Status.CAPABILITY_UNKNOWN, "movement_action_unclassified")
+    return base
+
+func evaluate_run_stride(actor_id: String, terrain_types: Array) -> MovementPolicyDecision:
+    var walk: MovementPolicyDecision = _evaluate_walk_terrain(actor_id, terrain_types)
+    if walk == null or not walk.is_allowed():
+        return walk
+    var product: int = walk.duration_ticks * RUN_STRIDE_SCALE_BP
+    var duration_ticks: int = product / SCALE_ONE
+    if product % SCALE_ONE != 0:
+        duration_ticks += 1
+    if duration_ticks < 1:
+        return DecisionClass.denied(DecisionClass.Status.INVALID_DURATION, "invalid_duration")
+    return DecisionClass.allowed(duration_ticks)
+
+func evaluate_turn(actor_id: String, action_type: StringName) -> MovementPolicyDecision:
     if actor_id.strip_edges().is_empty():
         return DecisionClass.denied(DecisionClass.Status.ACTOR_UNCLASSIFIED, "actor_unclassified")
     if String(action_type).strip_edges().is_empty():
         return DecisionClass.denied(DecisionClass.Status.CAPABILITY_UNKNOWN, "movement_action_unclassified")
+    if _turn_ticks < 1:
+        return DecisionClass.denied(DecisionClass.Status.INVALID_DURATION, "invalid_duration")
+    return DecisionClass.allowed(_turn_ticks)
+
+func _evaluate_walk_terrain(actor_id: String, terrain_types: Array) -> MovementPolicyDecision:
+    if actor_id.strip_edges().is_empty():
+        return DecisionClass.denied(DecisionClass.Status.ACTOR_UNCLASSIFIED, "actor_unclassified")
     if terrain_types.is_empty():
         return DecisionClass.denied(DecisionClass.Status.TERRAIN_UNCLASSIFIED, "terrain_unclassified")
 
@@ -76,12 +105,3 @@ func evaluate_step(actor_id: String, action_type: StringName, terrain_types: Arr
     if duration_ticks < 1:
         return DecisionClass.denied(DecisionClass.Status.INVALID_DURATION, "invalid_duration")
     return DecisionClass.allowed(duration_ticks)
-
-func evaluate_turn(actor_id: String, action_type: StringName) -> MovementPolicyDecision:
-    if actor_id.strip_edges().is_empty():
-        return DecisionClass.denied(DecisionClass.Status.ACTOR_UNCLASSIFIED, "actor_unclassified")
-    if String(action_type).strip_edges().is_empty():
-        return DecisionClass.denied(DecisionClass.Status.CAPABILITY_UNKNOWN, "movement_action_unclassified")
-    if _turn_ticks < 1:
-        return DecisionClass.denied(DecisionClass.Status.INVALID_DURATION, "invalid_duration")
-    return DecisionClass.allowed(_turn_ticks)

@@ -59,6 +59,7 @@ func _build_buttons() -> void:
     _add_button("TURN R", Vector2(426, 704), Vector2(132, 56), Intents.TURN_RIGHT)
     _stance_button = _add_button("CROUCH", Vector2(82, 772), Vector2(132, 52), Intents.STANCE_TOGGLE)
     _add_button("BACK", Vector2(255, 772), Vector2(130, 52), Intents.BACKWARD)
+    _add_button("RUN", Vector2(426, 772), Vector2(132, 52), Intents.RUN_FORWARD)
 
 func _add_button(
     text_value: String,

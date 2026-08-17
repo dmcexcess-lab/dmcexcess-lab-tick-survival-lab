@@ -30,7 +30,7 @@ func _unhandled_input(event: InputEvent) -> void:
 
 static func _intent_for_key(event: InputEventKey) -> StringName:
     if _matches(event, KEY_W) or _matches(event, KEY_UP):
-        return Intents.FORWARD
+        return Intents.RUN_FORWARD if event.shift_pressed else Intents.FORWARD
     if _matches(event, KEY_S) or _matches(event, KEY_DOWN):
         return Intents.BACKWARD
     if _matches(event, KEY_A) or _matches(event, KEY_LEFT):

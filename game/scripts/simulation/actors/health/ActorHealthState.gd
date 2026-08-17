@@ -10,6 +10,7 @@ const InjuryClass = preload("res://scripts/simulation/actors/health/ActorInjuryR
 signal actor_enrolled(actor_id, version)
 signal actor_removed(actor_id, version)
 signal hp_changed(actor_id, previous_hp, current_hp, max_hp, version)
+signal damage_applied(actor_id, amount, previous_hp, current_hp, version)
 signal max_hp_changed(actor_id, previous_max_hp, current_max_hp, current_hp, version)
 signal injury_added(actor_id, injury_id, version)
 signal injury_changed(actor_id, injury_id, version)
@@ -139,7 +140,20 @@ func set_hp(actor_id: String, value: int) -> bool:
 func apply_damage(actor_id: String, amount: int) -> bool:
     if amount <= 0 or not _records.has(actor_id):
         return false
-    return set_hp(actor_id, maxi(0, current_hp(actor_id) - amount))
+    var previous_hp: int = current_hp(actor_id)
+    var target_hp: int = maxi(0, previous_hp - amount)
+    if target_hp == previous_hp:
+        return true
+    if not set_hp(actor_id, target_hp):
+        return false
+    damage_applied.emit(
+        actor_id,
+        previous_hp - target_hp,
+        previous_hp,
+        target_hp,
+        version(actor_id)
+    )
+    return true
 
 func heal(actor_id: String, amount: int) -> bool:
     if amount <= 0 or not _records.has(actor_id):

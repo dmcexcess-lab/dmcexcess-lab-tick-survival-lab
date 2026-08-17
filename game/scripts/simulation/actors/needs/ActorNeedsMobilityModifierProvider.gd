@@ -1,7 +1,8 @@
 extends "res://scripts/simulation/actors/locomotion/ActorMobilityModifierProvider.gd"
 class_name ActorNeedsMobilityModifierProvider
 
-## Read-only 13B -> 03 seam. Recovers golden Tick fatigue timing pressure.
+## Read-only 13B -> 03 seam. Recovers golden Tick fatigue timing pressure and
+## supplies the explicit System 17 run-start fatigue eligibility rule.
 
 const STEP_FORWARD: StringName = &"movement.step_forward"
 const STEP_BACKWARD: StringName = &"movement.step_backward"
@@ -10,6 +11,7 @@ const TURN_RIGHT: StringName = &"movement.turn_right"
 const RUN_FORWARD: StringName = &"movement.run_forward"
 const CROUCH_ACTION: StringName = &"actor.stance.crouch"
 const STAND_ACTION: StringName = &"actor.stance.stand"
+const RUN_MAX_START_FATIGUE_EXCLUSIVE: int = 80
 
 var _needs: ActorNeedsState = null
 
@@ -25,6 +27,8 @@ func evaluate(actor_id: String, action_type: StringName) -> Dictionary:
     var fatigue_value: int = _needs.fatigue(actor_id)
     if fatigue_value < 0:
         return decision(Status.UNKNOWN, 0, "fatigue_unclassified")
+    if action_type == RUN_FORWARD and fatigue_value >= RUN_MAX_START_FATIGUE_EXCLUSIVE:
+        return decision(Status.BLOCKED, 0, "too_exhausted_to_run")
     return decision(Status.ALLOWED, fatigue_value * 65, "")
 
 static func _is_locomotion_action(action_type: StringName) -> bool:

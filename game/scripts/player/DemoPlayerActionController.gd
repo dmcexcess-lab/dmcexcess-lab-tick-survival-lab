@@ -68,6 +68,8 @@ func _submit_movement(intent: StringName) -> void:
             result = _movement.request_step_forward(_actor_id)
         Intents.BACKWARD:
             result = _movement.request_step_backward(_actor_id)
+        Intents.RUN_FORWARD:
+            result = _movement.request_run_forward(_actor_id)
         Intents.TURN_LEFT:
             result = _movement.request_turn_left(_actor_id)
         Intents.TURN_RIGHT:

@@ -6,6 +6,7 @@ class_name PlayerActionIntent
 
 const FORWARD: StringName = &"player.move_forward"
 const BACKWARD: StringName = &"player.move_backward"
+const RUN_FORWARD: StringName = &"player.run_forward"
 const TURN_LEFT: StringName = &"player.turn_left"
 const TURN_RIGHT: StringName = &"player.turn_right"
 const STANCE_TOGGLE: StringName = &"player.stance_toggle"
@@ -13,6 +14,7 @@ const STANCE_TOGGLE: StringName = &"player.stance_toggle"
 static func is_valid(value: StringName) -> bool:
     return value == FORWARD \
         or value == BACKWARD \
+        or value == RUN_FORWARD \
         or value == TURN_LEFT \
         or value == TURN_RIGHT \
         or value == STANCE_TOGGLE
@@ -20,6 +22,7 @@ static func is_valid(value: StringName) -> bool:
 static func is_movement(value: StringName) -> bool:
     return value == FORWARD \
         or value == BACKWARD \
+        or value == RUN_FORWARD \
         or value == TURN_LEFT \
         or value == TURN_RIGHT
 
@@ -29,6 +32,8 @@ static func label(value: StringName) -> String:
             return "Forward"
         BACKWARD:
             return "Back"
+        RUN_FORWARD:
+            return "Run"
         TURN_LEFT:
             return "Turn Left"
         TURN_RIGHT:

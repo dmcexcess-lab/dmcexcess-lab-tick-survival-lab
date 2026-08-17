@@ -7,6 +7,8 @@ const CapabilityDecisionClass = preload("res://scripts/simulation/actors/locomot
 ## MovementTraversalPolicy adapter that adds actor capability after base terrain/timing policy.
 ## It does not own terrain, collision, actor condition domains, or WHEN.
 
+const RUN_FORWARD: StringName = &"movement.run_forward"
+
 var _base_policy: MovementTraversalPolicy = null
 var _capability: ActorMovementCapabilityService = null
 
@@ -35,6 +37,20 @@ func evaluate_step(actor_id: String, action_type: StringName, terrain_types: Arr
     if base_decision == null or not base_decision.is_allowed():
         return base_decision
     return _apply_capability(actor_id, action_type, base_decision.duration_ticks)
+
+func evaluate_run_stride(actor_id: String, terrain_types: Array) -> MovementPolicyDecision:
+    if not is_ready():
+        return PolicyDecisionClass.denied(
+            PolicyDecisionClass.Status.CAPABILITY_UNKNOWN,
+            "actor_movement_policy_not_ready"
+        )
+    var base_decision: MovementPolicyDecision = _base_policy.evaluate_run_stride(
+        actor_id,
+        terrain_types
+    )
+    if base_decision == null or not base_decision.is_allowed():
+        return base_decision
+    return _apply_capability(actor_id, RUN_FORWARD, base_decision.duration_ticks)
 
 func evaluate_turn(actor_id: String, action_type: StringName) -> MovementPolicyDecision:
     if not is_ready():

@@ -232,25 +232,49 @@ func _test_multi_cell_rotation() -> void:
     _check(turn.status == MovementResult.Status.TARGET_BLOCKED, "multi-cell rotation checks rotated footprint")
 
 func _test_hard_pause_and_committed_interrupt() -> void:
-    var fixture: Dictionary = _fixture()
-    var world: WorldState = fixture["world"]
-    var kernel: TickKernel = fixture["kernel"]
-    var movement: MovementActionService = fixture["movement"]
-    _place_actor(fixture, "actor_pause", Vector2i(14, 2), Facing.Value.EAST)
+    var cancel_fixture: Dictionary = _fixture()
+    var cancel_world: WorldState = cancel_fixture["world"]
+    var cancel_kernel: TickKernel = cancel_fixture["kernel"]
+    var cancel_movement: MovementActionService = cancel_fixture["movement"]
+    _place_actor(cancel_fixture, "actor_cancel", Vector2i(14, 2), Facing.Value.EAST)
 
-    var move: MovementActionResult = movement.request_step_forward("actor_pause")
-    _check(move.is_accepted(), "hard-pause move accepted")
+    var cancel_walk: MovementActionResult = cancel_movement.request_step_forward("actor_cancel")
+    _check(cancel_walk.is_accepted(), "cancelable walk accepted")
     _check(
-        kernel.interrupt_action(move.action_serial, "ordinary_interrupt") == TickRules.ActionStatus.RUNNING,
-        "ordinary interruption does not cancel COMMITTED movement"
+        cancel_kernel.interrupt_action(cancel_walk.action_serial, "ordinary_interrupt") == TickRules.ActionStatus.CANCELED,
+        "walk uses CANCELABLE interruption policy"
     )
-    kernel.set_hard_paused(true)
-    _check(kernel.run_until_stop() == TickRules.RunStopReason.HARD_PAUSED, "hard pause stops movement kernel immediately")
-    _check(kernel.world_tick() == 0, "hard pause advances zero ticks")
-    _check(world.placement("actor_pause").anchor == Vector2i(14, 2), "hard pause preserves pre-commit placement")
-    kernel.set_hard_paused(false)
-    _check(kernel.run_until_stop() == TickRules.RunStopReason.IDLE, "movement resumes after hard pause")
-    _check(world.placement("actor_pause").anchor == Vector2i(15, 2), "resumed committed move completes normally")
+    _check(cancel_world.placement("actor_cancel").anchor == Vector2i(14, 2), "canceled walk never commits placement")
+
+    var pause_fixture: Dictionary = _fixture()
+    var pause_world: WorldState = pause_fixture["world"]
+    var pause_kernel: TickKernel = pause_fixture["kernel"]
+    var pause_movement: MovementActionService = pause_fixture["movement"]
+    _place_actor(pause_fixture, "actor_pause", Vector2i(14, 2), Facing.Value.EAST)
+
+    var paused_walk: MovementActionResult = pause_movement.request_step_forward("actor_pause")
+    _check(paused_walk.is_accepted(), "hard-pause walk accepted")
+    pause_kernel.set_hard_paused(true)
+    _check(pause_kernel.run_until_stop() == TickRules.RunStopReason.HARD_PAUSED, "hard pause stops movement kernel immediately")
+    _check(pause_kernel.world_tick() == 0, "hard pause advances zero ticks")
+    _check(pause_world.placement("actor_pause").anchor == Vector2i(14, 2), "hard pause preserves pre-commit placement")
+    pause_kernel.set_hard_paused(false)
+    _check(pause_kernel.run_until_stop() == TickRules.RunStopReason.IDLE, "walk resumes after hard pause")
+    _check(pause_world.placement("actor_pause").anchor == Vector2i(15, 2), "resumed walk completes normally")
+
+    var turn_fixture: Dictionary = _fixture()
+    var turn_world: WorldState = turn_fixture["world"]
+    var turn_kernel: TickKernel = turn_fixture["kernel"]
+    var turn_movement: MovementActionService = turn_fixture["movement"]
+    _place_actor(turn_fixture, "actor_turn_commit", Vector2i(14, 2), Facing.Value.EAST)
+    var turn: MovementActionResult = turn_movement.request_turn_left("actor_turn_commit")
+    _check(turn.is_accepted(), "committed turn accepted")
+    _check(
+        turn_kernel.interrupt_action(turn.action_serial, "ordinary_interrupt") == TickRules.ActionStatus.RUNNING,
+        "turn remains COMMITTED"
+    )
+    _check(turn_kernel.run_until_stop() == TickRules.RunStopReason.IDLE, "committed turn drains")
+    _check(turn_world.placement("actor_turn_commit").facing == Facing.Value.NORTH, "committed turn completes")
 
 func _check(condition: bool, message: String) -> void:
     if not condition:
