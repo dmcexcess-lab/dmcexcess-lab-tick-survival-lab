@@ -60,6 +60,15 @@ func layer_command_counts() -> Dictionary:
         "actor": _actors.plan_visible_commands().size(),
     }
 
+func planned_diagnostic_counts() -> Dictionary:
+    _ensure_layers()
+    return {
+        "ground": _count_diagnostics(_ground.plan_visible_commands()),
+        "structure": _count_diagnostics(_structures.plan_visible_commands()),
+        "prop": _count_diagnostics(_props.plan_visible_commands()),
+        "actor": _count_diagnostics(_actors.plan_visible_commands()),
+    }
+
 func diagnostic_summary() -> Dictionary:
     _ensure_layers()
     return {
@@ -91,3 +100,10 @@ func _ensure_layers() -> void:
     _actors.name = "Actors"
     _actors.z_index = 30
     add_child(_actors)
+
+static func _count_diagnostics(commands: Array) -> int:
+    var count: int = 0
+    for command: Variant in commands:
+        if command != null and command.has_method("is_diagnostic") and bool(command.call("is_diagnostic")):
+            count += 1
+    return count
