@@ -1,0 +1,112 @@
+name: Item Transfer Actions contract
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: item-transfer-actions-contract
+  cancel-in-progress: true
+
+jobs:
+  item-transfer-actions:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate item transfer source boundary
+        shell: bash
+        run: |
+          set -euxo pipefail
+          test -f SYSTEM_DESIGNS/12_ITEM_TRANSFER_ACTIONS.md
+          test -f game/scripts/simulation/items/transfer/ItemTransferActionType.gd
+          test -f game/scripts/simulation/items/transfer/ItemDispositionResult.gd
+          test -f game/scripts/simulation/items/transfer/ItemDispositionQuery.gd
+          test -f game/scripts/simulation/items/transfer/ItemTransferTimingDecision.gd
+          test -f game/scripts/simulation/items/transfer/ItemTransferTimingPolicy.gd
+          test -f game/scripts/simulation/items/transfer/ItemTransferActionResult.gd
+          test -f game/scripts/simulation/items/transfer/ItemTransferActionService.gd
+          test -f game/scripts/ci/ItemTransferActionsSmoke.gd
+          grep -q 'class_name ItemDispositionQuery' game/scripts/simulation/items/transfer/ItemDispositionQuery.gd
+          grep -q 'class_name ItemTransferActionService' game/scripts/simulation/items/transfer/ItemTransferActionService.gd
+          grep -q 'item_transfer.commit' game/scripts/simulation/items/transfer/ItemTransferActionService.gd
+          grep -q 'InterruptionPolicy.CANCELABLE' game/scripts/simulation/items/transfer/ItemTransferActionService.gd
+          grep -q 'request_pickup_to_container' game/scripts/simulation/items/transfer/ItemTransferActionService.gd
+          grep -q 'request_pickup_to_hand' game/scripts/simulation/items/transfer/ItemTransferActionService.gd
+          grep -q 'request_drop_from_container' game/scripts/simulation/items/transfer/ItemTransferActionService.gd
+          grep -q 'request_drop_from_hand' game/scripts/simulation/items/transfer/ItemTransferActionService.gd
+          grep -q 'request_equip_from_container' game/scripts/simulation/items/transfer/ItemTransferActionService.gd
+          grep -q 'request_unequip_to_container' game/scripts/simulation/items/transfer/ItemTransferActionService.gd
+          grep -q 'request_transfer_container' game/scripts/simulation/items/transfer/ItemTransferActionService.gd
+          ! grep -R -q 'scripts/render' game/scripts/simulation/items/transfer
+          ! grep -R -q 'scripts/art' game/scripts/simulation/items/transfer
+          ! grep -R -q 'scripts/input' game/scripts/simulation/items/transfer
+          ! grep -R -q 'scripts/ui' game/scripts/simulation/items/transfer
+          ! grep -R -q 'scripts/reboot' game/scripts/simulation/items/transfer
+          ! grep -R -q 'scripts/generation' game/scripts/simulation/items/transfer
+          ! grep -R -q 'scripts/ai' game/scripts/simulation/items/transfer
+          ! grep -R -q 'scripts/health' game/scripts/simulation/items/transfer
+          ! grep -R -q 'scripts/combat' game/scripts/simulation/items/transfer
+          ! grep -R -q 'scripts/simulation/movement' game/scripts/simulation/items/transfer
+          ! grep -R -q 'scripts/simulation/collision' game/scripts/simulation/items/transfer
+          ! grep -R -q 'scripts/simulation/actors/locomotion' game/scripts/simulation/items/transfer
+
+      - name: Install Godot 4.7.1
+        shell: bash
+        run: |
+          set -euxo pipefail
+          curl -L -o godot.zip https://github.com/godotengine/godot-builds/releases/download/4.7.1-stable/Godot_v4.7.1-stable_linux.x86_64.zip
+          unzip -q godot.zip
+          chmod +x Godot_v4.7.1-stable_linux.x86_64
+
+      - name: Import and parse project
+        shell: bash
+        run: |
+          set -euxo pipefail
+          ./Godot_v4.7.1-stable_linux.x86_64 --headless --editor --path "$GITHUB_WORKSPACE/game" --quit 2>&1 | tee "$RUNNER_TEMP/import.log"
+          if grep -Eqi 'SCRIPT ERROR|Parse Error|Failed to load script' "$RUNNER_TEMP/import.log"; then exit 1; fi
+
+      - name: Persistent WHAT regression smoke
+        shell: bash
+        run: |
+          set -euxo pipefail
+          ./Godot_v4.7.1-stable_linux.x86_64 --headless --path "$GITHUB_WORKSPACE/game" --script res://scripts/ci/WorldStateSmoke.gd 2>&1 | tee "$RUNNER_TEMP/world-state-smoke.log"
+          grep -q 'WORLD_STATE_SMOKE_OK' "$RUNNER_TEMP/world-state-smoke.log"
+          if grep -Eqi 'SCRIPT ERROR|Parse Error|Failed to load script' "$RUNNER_TEMP/world-state-smoke.log"; then exit 1; fi
+
+      - name: Tick kernel regression smoke
+        shell: bash
+        run: |
+          set -euxo pipefail
+          ./Godot_v4.7.1-stable_linux.x86_64 --headless --path "$GITHUB_WORKSPACE/game" --script res://scripts/ci/TickKernelSmoke.gd 2>&1 | tee "$RUNNER_TEMP/tick-kernel-smoke.log"
+          grep -q 'TICK_KERNEL_SMOKE_OK' "$RUNNER_TEMP/tick-kernel-smoke.log"
+          if grep -Eqi 'SCRIPT ERROR|Parse Error|Failed to load script' "$RUNNER_TEMP/tick-kernel-smoke.log"; then exit 1; fi
+
+      - name: Actor hand equipment regression smoke
+        shell: bash
+        run: |
+          set -euxo pipefail
+          ./Godot_v4.7.1-stable_linux.x86_64 --headless --path "$GITHUB_WORKSPACE/game" --script res://scripts/ci/ActorHandEquipmentSmoke.gd 2>&1 | tee "$RUNNER_TEMP/actor-hand-equipment-smoke.log"
+          grep -q 'ACTOR_HAND_EQUIPMENT_SMOKE_OK' "$RUNNER_TEMP/actor-hand-equipment-smoke.log"
+          if grep -Eqi 'SCRIPT ERROR|Parse Error|Failed to load script' "$RUNNER_TEMP/actor-hand-equipment-smoke.log"; then exit 1; fi
+
+      - name: Inventory containment regression smoke
+        shell: bash
+        run: |
+          set -euxo pipefail
+          ./Godot_v4.7.1-stable_linux.x86_64 --headless --path "$GITHUB_WORKSPACE/game" --script res://scripts/ci/InventoryContainmentSmoke.gd 2>&1 | tee "$RUNNER_TEMP/inventory-containment-smoke.log"
+          grep -q 'INVENTORY_CONTAINMENT_SMOKE_OK' "$RUNNER_TEMP/inventory-containment-smoke.log"
+          if grep -Eqi 'SCRIPT ERROR|Parse Error|Failed to load script' "$RUNNER_TEMP/inventory-containment-smoke.log"; then exit 1; fi
+
+      - name: Item transfer actions contract smoke
+        shell: bash
+        run: |
+          set -euxo pipefail
+          ./Godot_v4.7.1-stable_linux.x86_64 --headless --path "$GITHUB_WORKSPACE/game" --script res://scripts/ci/ItemTransferActionsSmoke.gd 2>&1 | tee "$RUNNER_TEMP/item-transfer-actions-smoke.log"
+          grep -q 'ITEM_TRANSFER_ACTIONS_SMOKE_OK' "$RUNNER_TEMP/item-transfer-actions-smoke.log"
+          if grep -Eqi 'SCRIPT ERROR|Parse Error|Failed to load script' "$RUNNER_TEMP/item-transfer-actions-smoke.log"; then exit 1; fi
