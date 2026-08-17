@@ -16,6 +16,7 @@ const SOURCE_BUILDING: StringName = &"building_props"
 const SOURCE_FINAL_SURFACES: StringName = &"final_surfaces"
 const SOURCE_FINAL_PROPS: StringName = &"final_props"
 const SOURCE_ACTORS: StringName = &"actors"
+const SOURCE_HELD_ITEMS: StringName = &"held_items"
 const SOURCE_PLAYER_NORTH: StringName = &"player_north"
 const SOURCE_PLAYER_EAST: StringName = &"player_east"
 const SOURCE_PLAYER_SOUTH: StringName = &"player_south"
@@ -24,6 +25,8 @@ const SOURCE_PLAYER_WEST: StringName = &"player_west"
 const ATLAS_CELL_PIXELS: int = 32
 const ATLAS_COLUMNS: int = 16
 const LIVING_ACTOR_VARIANTS: int = 8
+const HELD_ITEM_WEAPON_SCALE: float = 14.0 / 32.0
+const HELD_ITEM_UTILITY_SCALE: float = 12.0 / 32.0
 
 const GROUND := {
     "asphalt": 0, "road": 1, "sidewalk": 2, "concrete": 3, "tile": 4,
@@ -190,6 +193,37 @@ const LIVING_ACTOR_BASE := {
     "infected": 32,
 }
 
+const HELD_ITEM_INDEX := {
+    "utility_knife": 0,
+    "kitchen_knife": 0,
+    "wooden_club": 1,
+    "baseball_bat": 1,
+    "hammer": 2,
+    "improvised_spear": 3,
+    "crowbar": 4,
+    "hatchet": 5,
+    "pistol": 6,
+    "shotgun": 7,
+    "flashlight": 8,
+    "headlamp": 9,
+    "lantern": 10,
+    "glow_stick": 11,
+    "road_flare": 12,
+}
+
+const HELD_ITEM_WEAPON_KIND := {
+    "utility_knife": true,
+    "kitchen_knife": true,
+    "wooden_club": true,
+    "baseball_bat": true,
+    "hammer": true,
+    "improvised_spear": true,
+    "crowbar": true,
+    "hatchet": true,
+    "pistol": true,
+    "shotgun": true,
+}
+
 var _sources: Dictionary = {}
 
 func _init() -> void:
@@ -200,6 +234,7 @@ func _init() -> void:
     _register_source(SOURCE_FINAL_SURFACES, "res://assets/final_environment_surfaces_atlas.svg", true)
     _register_source(SOURCE_FINAL_PROPS, "res://assets/final_environment_props_atlas.svg", true)
     _register_source(SOURCE_ACTORS, "res://assets/actor_atlas.svg", true)
+    _register_source(SOURCE_HELD_ITEMS, "res://assets/held_item_atlas.svg", true)
     _register_source(SOURCE_PLAYER_NORTH, "res://assets/player_north.svg", false)
     _register_source(SOURCE_PLAYER_EAST, "res://assets/player_east.svg", false)
     _register_source(SOURCE_PLAYER_SOUTH, "res://assets/player_south.svg", false)
@@ -234,6 +269,7 @@ func mapping_counts() -> Dictionary:
         "prop_final_alias": FINAL_PROP_ALIAS.size(),
         "actor_survivor": LIVING_ACTOR_VARIANTS * 4,
         "actor_infected": LIVING_ACTOR_VARIANTS * 4,
+        "held_item": HELD_ITEM_INDEX.size(),
     }
 
 func resolve_ground(semantic_id: StringName) -> ArtSelection:
@@ -327,6 +363,24 @@ func resolve_living_actor(actor_family: StringName, facing: int, variant: int) -
         return _unknown(requested, "facing_unclassified")
     var atlas_index: int = int(LIVING_ACTOR_BASE[token]) + variant * 4 + facing_index
     return _found(requested, SOURCE_ACTORS, atlas_index)
+
+func resolve_held_item(semantic_id: StringName) -> ArtSelection:
+    var token: String = _leaf_token(semantic_id)
+    if not HELD_ITEM_INDEX.has(token):
+        return _unknown(semantic_id, "held_item_unclassified")
+    return _found(semantic_id, SOURCE_HELD_ITEMS, int(HELD_ITEM_INDEX[token]))
+
+func held_item_draw_scale(semantic_id: StringName) -> float:
+    var token: String = _leaf_token(semantic_id)
+    if not HELD_ITEM_INDEX.has(token):
+        return 0.0
+    return HELD_ITEM_WEAPON_SCALE if HELD_ITEM_WEAPON_KIND.has(token) else HELD_ITEM_UTILITY_SCALE
+
+func held_item_native_facing(semantic_id: StringName) -> int:
+    var token: String = _leaf_token(semantic_id)
+    if not HELD_ITEM_INDEX.has(token):
+        return -1
+    return Facing.Value.EAST
 
 func resolve_road(
     mask: int,

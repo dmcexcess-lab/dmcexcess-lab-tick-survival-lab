@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="32" viewBox="0 0 512 32" shape-rendering="crispEdges">
+<g transform="translate(0 0)"><path d="M8 21L24 9" stroke="#c9d0cf" stroke-width="3"/><path d="M7 23l6-6" stroke="#6b4935" stroke-width="3"/></g>
+<g transform="translate(32 0)"><path d="M7 24L25 8" stroke="#8d6441" stroke-width="5"/><circle cx="26" cy="7" r="3" fill="#5b4330"/></g>
+<g transform="translate(64 0)"><path d="M10 25L21 12" stroke="#71503a" stroke-width="3"/><rect x="18" y="8" width="10" height="6" fill="#aeb5b4"/></g>
+<g transform="translate(96 0)"><path d="M5 26L25 6" stroke="#7d5b3a" stroke-width="3"/><path d="M25 6l4-4-2 8z" fill="#c5ccca"/></g>
+<g transform="translate(128 0)"><path d="M7 25L24 8l4 4" fill="none" stroke="#8d3d34" stroke-width="3"/></g>
+<g transform="translate(160 0)"><path d="M8 24L21 11" stroke="#795336" stroke-width="3"/><path d="M19 8h10l-7 8z" fill="#b5bcba"/></g>
+<g transform="translate(192 0)"><rect x="8" y="13" width="18" height="6" fill="#5d676a"/><rect x="11" y="18" width="6" height="7" fill="#23282a"/></g>
+<g transform="translate(224 0)"><path d="M5 18L28 11" stroke="#596265" stroke-width="4"/><rect x="7" y="16" width="10" height="5" fill="#765036"/></g>
+<g transform="translate(256 0)"><rect x="7" y="12" width="17" height="8" fill="#303638" stroke="#8e9a9a"/><path d="M24 10l6 3v6l-6 3z" fill="#b9c5bd"/><rect x="8" y="14" width="6" height="4" fill="#d6c34a"/></g>
+<g transform="translate(288 0)"><path d="M3 14h26" stroke="#33383a" stroke-width="3"/><rect x="12" y="9" width="9" height="10" fill="#454a4b" stroke="#9ea9a7"/><circle cx="16" cy="13" r="2" fill="#efe5a7"/></g>
+<g transform="translate(320 0)"><rect x="10" y="7" width="12" height="20" fill="#755230" stroke="#2a2521" stroke-width="2"/><circle cx="16" cy="17" r="7" fill="#f0b657" opacity=".8"/><path d="M12 6h8l3 5" stroke="#3c3e3d" stroke-width="2" fill="none"/></g>
+<g transform="translate(352 0)"><rect x="13" y="4" width="6" height="24" fill="#70e353" stroke="#d7ff9d"/><rect x="12" y="4" width="8" height="5" fill="#293129"/><rect x="12" y="24" width="8" height="5" fill="#293129"/></g>
+<g transform="translate(384 0)"><rect x="12" y="4" width="7" height="24" fill="#e74f3e" stroke="#ffad75"/><path d="M12 4h7l-3-4z" fill="#f8e6be"/></g>
+</svg>

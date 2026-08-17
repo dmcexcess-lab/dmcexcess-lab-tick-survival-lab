@@ -25,6 +25,7 @@ jobs:
           set -euxo pipefail
           test -f SYSTEM_DESIGNS/04_RECOVERED_MULTI_ATLAS_ART_CATALOG.md
           test -f game/assets/actor_atlas.svg
+          test -f game/assets/held_item_atlas.svg
           test -f game/scripts/art/ArtSource.gd
           test -f game/scripts/art/ArtSelection.gd
           test -f game/scripts/art/ArtBaselineManifest.gd
@@ -36,6 +37,8 @@ jobs:
           grep -q 'class_name RoadArtTopology' game/scripts/art/RoadArtTopology.gd
           grep -q 'resolve_living_actor' game/scripts/art/ArtCatalog.gd
           grep -q 'SOURCE_ACTORS' game/scripts/art/ArtCatalog.gd
+          grep -q 'resolve_held_item' game/scripts/art/ArtCatalog.gd
+          grep -q 'SOURCE_HELD_ITEMS' game/scripts/art/ArtCatalog.gd
           ! grep -R -q 'scripts/reboot' game/scripts/art
           ! grep -R -q 'scripts/generation' game/scripts/art
           ! grep -R -q 'scripts/simulation/collision' game/scripts/art
@@ -64,6 +67,12 @@ jobs:
         run: |
           set -euxo pipefail
           test "$(git hash-object game/assets/actor_atlas.svg)" = "205036fff8ffb24f828a09cf033abcf615ce6fe0"
+
+      - name: Verify recovered held-item art byte-for-byte
+        shell: bash
+        run: |
+          set -euxo pipefail
+          test "$(git hash-object game/assets/held_item_atlas.svg)" = "6c29e8a925b6f107de8440e1dd8dc002ffd768cd"
 
       - name: Install Godot 4.7.1
         shell: bash

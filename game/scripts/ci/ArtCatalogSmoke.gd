@@ -18,6 +18,7 @@ func _initialize() -> void:
     _test_road_recovery(catalog)
     _test_player_recovery(catalog)
     _test_living_actor_recovery(catalog)
+    _test_held_item_recovery(catalog)
     _test_unknowns(catalog)
 
     if _failures.is_empty():
@@ -30,7 +31,7 @@ func _initialize() -> void:
     quit(1)
 
 func _test_sources_and_manifest(catalog: ArtCatalog) -> void:
-    _check(catalog.source_ids().size() == 11, "catalog exposes seven atlases plus four player sprites")
+    _check(catalog.source_ids().size() == 12, "catalog exposes eight atlases plus four player sprites")
     var expected: Dictionary = Manifest.expected_asset_blob_shas()
     _check(expected.size() == 10, "baseline manifest still protects ten golden Tick assets")
     for repository_path: Variant in expected.keys():
@@ -45,6 +46,13 @@ func _test_sources_and_manifest(catalog: ArtCatalog) -> void:
         _check(ResourceLoader.exists(res_path), "recovered actor asset exists: %s" % res_path)
         var loaded: Resource = ResourceLoader.load(res_path)
         _check(loaded is Texture2D, "recovered actor asset loads as Texture2D: %s" % res_path)
+    var recovered_held: Dictionary = Manifest.expected_recovered_held_item_blob_shas()
+    _check(recovered_held.size() == 1, "manifest protects one separately recovered held-item asset")
+    for repository_path: Variant in recovered_held.keys():
+        var res_path: String = Manifest.res_path(String(repository_path))
+        _check(ResourceLoader.exists(res_path), "recovered held-item asset exists: %s" % res_path)
+        var loaded: Resource = ResourceLoader.load(res_path)
+        _check(loaded is Texture2D, "recovered held-item asset loads as Texture2D: %s" % res_path)
 
 func _test_region_math(catalog: ArtCatalog) -> void:
     var source: ArtSource = catalog.source(CatalogClass.SOURCE_WORLD)
@@ -57,6 +65,10 @@ func _test_region_math(catalog: ArtCatalog) -> void:
     _check(actor_source != null and actor_source.atlas, "actor source is atlas-backed")
     if actor_source != null:
         _check(actor_source.region(63) == Rect2(480, 96, 32, 32), "actor atlas final living cell region")
+    var held_source: ArtSource = catalog.source(CatalogClass.SOURCE_HELD_ITEMS)
+    _check(held_source != null and held_source.atlas, "held-item source is atlas-backed")
+    if held_source != null:
+        _check(held_source.region(12) == Rect2(384, 0, 32, 32), "held-item atlas final recovered cell region")
 
 func _test_ground_recovery(catalog: ArtCatalog) -> void:
     _expect(catalog.resolve_ground(&"ground.grass"), CatalogClass.SOURCE_FINAL_SURFACES, 0, "generic grass uses final alias")
@@ -158,6 +170,34 @@ func _test_living_actor_recovery(catalog: ArtCatalog) -> void:
     _check(int(counts.get("actor_survivor", 0)) == 32, "32 survivor living actor mappings recovered")
     _check(int(counts.get("actor_infected", 0)) == 32, "32 infected living actor mappings recovered")
 
+func _test_held_item_recovery(catalog: ArtCatalog) -> void:
+    var expected := {
+        "item.utility_knife": 0,
+        "item.kitchen_knife": 0,
+        "item.wooden_club": 1,
+        "item.baseball_bat": 1,
+        "item.hammer": 2,
+        "item.improvised_spear": 3,
+        "item.crowbar": 4,
+        "item.hatchet": 5,
+        "item.pistol": 6,
+        "item.shotgun": 7,
+        "item.flashlight": 8,
+        "item.headlamp": 9,
+        "item.lantern": 10,
+        "item.glow_stick": 11,
+        "item.road_flare": 12,
+    }
+    for semantic: Variant in expected.keys():
+        var semantic_id := StringName(String(semantic))
+        _expect(catalog.resolve_held_item(semantic_id), CatalogClass.SOURCE_HELD_ITEMS, int(expected[semantic]), "held item %s" % semantic)
+        _check(catalog.held_item_native_facing(semantic_id) == Facing.Value.EAST, "%s is EAST-native" % semantic)
+    _check(is_equal_approx(catalog.held_item_draw_scale(&"item.utility_knife"), 14.0 / 32.0), "weapon silhouettes retain 14/32 scale")
+    _check(is_equal_approx(catalog.held_item_draw_scale(&"item.shotgun"), 14.0 / 32.0), "shotgun retains weapon scale")
+    _check(is_equal_approx(catalog.held_item_draw_scale(&"item.flashlight"), 12.0 / 32.0), "utility icons retain 12/32 scale")
+    _check(is_equal_approx(catalog.held_item_draw_scale(&"item.road_flare"), 12.0 / 32.0), "road flare retains utility scale")
+    _check(int(catalog.mapping_counts().get("held_item", 0)) == 15, "15 semantic held-item mappings recover 13 art cells")
+
 func _test_unknowns(catalog: ArtCatalog) -> void:
     _check(catalog.resolve_ground(&"ground.does_not_exist").status == SelectionClass.Status.UNKNOWN, "unknown ground fails visibly")
     _check(catalog.resolve_wall(&"wall.does_not_exist").status == SelectionClass.Status.UNKNOWN, "unknown wall fails visibly")
@@ -168,6 +208,9 @@ func _test_unknowns(catalog: ArtCatalog) -> void:
     _check(catalog.resolve_living_actor(&"actor.animal", Facing.Value.NORTH, 0).status == SelectionClass.Status.UNKNOWN, "unknown living actor family fails visibly")
     _check(catalog.resolve_living_actor(&"actor.survivor", Facing.Value.NORTH, 8).status == SelectionClass.Status.UNKNOWN, "invalid living actor variant fails visibly")
     _check(catalog.resolve_living_actor(&"actor.survivor", 99, 0).status == SelectionClass.Status.UNKNOWN, "invalid living actor facing fails visibly")
+    _check(catalog.resolve_held_item(&"item.does_not_exist").status == SelectionClass.Status.UNKNOWN, "unknown held item fails visibly")
+    _check(catalog.held_item_draw_scale(&"item.does_not_exist") == 0.0, "unknown held item has no scale")
+    _check(catalog.held_item_native_facing(&"item.does_not_exist") == -1, "unknown held item has no native facing")
     _check(catalog.resolve_road(99).status == SelectionClass.Status.UNKNOWN, "invalid road mask fails visibly")
 
 func _expect(selection: ArtSelection, source_id: StringName, index: int, message: String) -> void:
