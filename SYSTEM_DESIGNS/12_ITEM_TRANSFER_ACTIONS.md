@@ -1,212 +1,147 @@
 # Tick Survival Lab — 12 Item Transfer / Pickup / Drop / Equip Actions
 
-Status: **DRAFT — direction approved; detailed contract requires explicit approval before implementation**
+Status: **IMPLEMENTED — canonical timed item-transition coordinator with dedicated Godot CI, 2026-08-16**
 
-Direction basis: after 11 Inventory / Containment was implemented, the user approved proceeding to the recommended **Item Transfer / Pickup / Drop / Equip Actions** system on 2026-08-16. That approval establishes this as the next system to design. Per `DESIGN_WORKFLOW.md`, the detailed cross-domain contract below remains DRAFT until explicitly approved.
+Approval basis: after 11 Inventory / Containment was implemented, the user approved the detailed 12 contract on 2026-08-16 with **“12 is approved.”**
+
+Initial complete implementation head: `7ea53e0d300fb0d7aad2802b11d4da930b802a49`.
+Verification then exposed one real reentrant-destination edge case; hardened code head `c3139466c26cbb8367b4509f107a48916a323916` passed the full dedicated contract in run `31990020356`.
 
 ## 1. Goal
 
-Own the timed **physical transition** of one stable item between the three existing low-level item-disposition truths:
+12 owns the timed **physical transition** of one stable item among the three already-existing low-level truths:
 
-- WHAT tactical placement — a loose physical item in the world;
+- WHAT tactical placement — a loose item in the world;
 - 09 Actor Hand Equipment — an item in a survivor's anatomical hand;
 - 11 Inventory / Containment — an item directly contained by a container.
 
 12 does **not** create a fourth persistent item-location store.
 
-Its job is:
+Canonical sequence:
 
-> validate a requested transition, spend simulation time through WHEN, revalidate all relevant source/destination facts at commit, and coordinate the existing public mutation services so the final physical disposition is coherent.
+> request -> validate now -> spend simulation time through WHEN -> revalidate at `item_transfer.commit` -> coordinate existing public mutation services.
 
-This is the gameplay/action owner that 09 and 11 deliberately deferred.
+## 2. Owners
 
-## 2. Core architectural rule
+Production under `game/scripts/simulation/items/transfer/`:
 
-> **Disposition remains owned by WHAT + 09 + 11. 12 owns transitions between those truths, not another copy of them.**
-
-12 may derive a read-only cross-domain disposition view, but that view is never serialized as authoritative persistent state.
-
-Low-level owners remain independently testable and do not import each other.
-
-## 3. Owners
-
-Planned production under:
-
-`game/scripts/simulation/items/transfer/`
-
-Focused modules:
-
-- `ItemTransferActionType.gd` — semantic transition/action constants;
-- `ItemDispositionResult.gd` — typed read-only derived disposition result;
-- `ItemDispositionQuery.gd` — read-only WHAT + 09 + 11 physical-disposition query;
-- `ItemTransferTimingDecision.gd` — typed timing-policy result;
-- `ItemTransferTimingPolicy.gd` — explicit positive tick-cost registration/evaluation;
-- `ItemTransferActionResult.gd` — typed request result/status;
-- `ItemTransferActionService.gd` — request validation, WHEN submission, commit revalidation, coordinated mutations and exceptional compensation.
+- `ItemTransferActionType.gd`
+- `ItemDispositionResult.gd`
+- `ItemDispositionQuery.gd`
+- `ItemTransferTimingDecision.gd`
+- `ItemTransferTimingPolicy.gd`
+- `ItemTransferActionResult.gd`
+- `ItemTransferActionService.gd`
 
 Testing:
 
 - `game/scripts/ci/ItemTransferActionsSmoke.gd`
 - `.github/workflows/item-transfer-actions.yml`
 
-No Main/reboot/UI/render wiring in this slice.
+No Main/reboot/UI/render wiring exists in this slice.
 
-## 4. Dependencies
+## 3. Dependency boundary
 
-12 may consume only public contracts from:
+Allowed production dependencies are public contracts from:
 
-- WHERE: facing, `SpatialLayer`, `SpatialFootprint` and placement geometry values;
-- WHAT: `WorldState` read APIs and `WorldMutationService` writes;
-- 09: `ActorHandEquipmentState`, `ActorHandEquipmentMutationService`, `ActorHandSlot`;
-- 11: `InventoryContainmentState`, `InventoryContainmentMutationService`;
+- WHERE: facing, `SpatialLayer`, `SpatialFootprint`, placement geometry;
+- WHAT: `WorldState` reads + `WorldMutationService` writes;
+- 09: hand state/mutation/slot contracts;
+- 11: containment state/mutation contracts;
 - WHEN: `TickKernel`, `ActionPhase`, `TickRules`;
-- its own timing policy.
+- 12 timing policy.
 
-The cross-domain dependency is intentional: **12 is the coordinator** whose existence allows WHAT, 09, 11 and WHEN to stay narrow.
+Production 12 does **not** import or own:
 
-## 5. Forbidden dependencies / ownership
-
-12 does not import or own:
-
-- Art Catalog or renderers;
-- 10 held-item presentation;
+- Art Catalog/renderers/10 held-item presentation;
 - UI/input/camera/Safari pointer handling;
 - Collision / Movement / Actor Locomotion;
 - Health / Needs / encumbrance;
 - Combat / ammo / durability;
 - AI;
-- generator/streaming;
+- generation/streaming;
 - corpse mechanics;
 - door/container open/lock/search state;
-- item definitions, capacity, weight, bulk or quantity;
+- item definitions/capacity/weight/bulk/quantity;
 - crafting;
 - loose-item rendering;
 - frozen `game/scripts/reboot/`.
 
-No existing low-level production API is revised merely to make 12 convenient.
+WHAT, WHEN, all 09 production, and all 11 production remained unchanged during 12 implementation.
 
-## 6. Stable item identity
+## 4. Stable item identity
 
-Every transferred item is a stable WHAT entity with a non-empty semantic type beginning `item.`.
+Transferred objects are persistent WHAT entities whose semantic type is a non-empty `item.*`.
 
-12 never transfers:
+12 never transfers copied display names, UI stack records, art indices, or Node identities.
 
-- copied item names;
-- UI stack records;
-- art indices;
-- temporary Node identities.
+If the entity is missing or its semantic identity no longer matches before commit, the timed action fails after elapsed time without beginning the intended transition.
 
-If the WHAT entity disappears or ceases to be a valid `item.*` before commit, the action fails after elapsed time and performs no intended destination mutation.
+## 5. Read-only `ItemDispositionQuery`
 
-## 7. Read-only cross-domain disposition query
+12 adds one public **derived** cross-domain read seam. It is never serialized as authoritative state.
 
-`ItemDispositionQuery` derives the current physical disposition of a stable item from public WHAT + 09 + 11 reads.
+Statuses:
 
-Canonical statuses:
+- `LOOSE_WORLD` — WHAT placement on `LOOSE_ITEM`, not held or contained;
+- `HAND` — unplaced, assigned by 09, not contained;
+- `CONTAINED` — unplaced, directly parented by 11, not hand-assigned;
+- `UNCLAIMED` — valid unplaced item with neither hand nor container truth;
+- `INVALID_PLACEMENT` — item is placed on a non-`LOOSE_ITEM` channel;
+- `CONFLICT` — multiple low-level disposition truths coexist;
+- `UNKNOWN` — missing/malformed/non-item entity.
 
-- `LOOSE_WORLD` — item has WHAT placement on `SpatialLayer.Channel.LOOSE_ITEM` and is neither hand-assigned nor contained;
-- `HAND` — item is unplaced, assigned by 09 to exactly one survivor hand, and not contained;
-- `CONTAINED` — item is unplaced, has exactly one 11 direct parent, and is not hand-assigned;
-- `UNCLAIMED` — valid persistent item exists, is tactically unplaced, is neither contained nor hand-assigned;
-- `INVALID_PLACEMENT` — item is tactically placed on a channel other than `LOOSE_ITEM`;
-- `CONFLICT` — contradictory low-level physical truths coexist, such as placed + contained, placed + hand, or hand + contained;
-- `UNKNOWN` — item is missing, malformed or not a valid `item.*` entity.
+Results may carry copied loose placement, actor/slot, direct container ID, semantic type, and diagnostic reason.
 
-The result may carry:
+`CONFLICT`, `INVALID_PLACEMENT`, and `UNKNOWN` fail closed for normal transfer requests. Ordinary player actions never guess which low-level domain is correct and never silently repair contradictory state.
 
-- stable item ID;
-- item semantic type;
-- copied WHAT placement for `LOOSE_WORLD`;
-- actor ID + hand slot for `HAND`;
-- direct container ID for `CONTAINED`;
-- diagnostic reason.
+## 6. V1 personal-container access
 
-The query mutates nothing and stores no persistent state.
+12 deliberately supports **personal survivor handling**, not arbitrary world-container looting.
 
-### Why this query exists
+A container is personally accessible to `actor_id` when it is enrolled in 11 and is:
 
-Several future systems need to answer “where is this physical item?” without creating a new universal item-location store.
+1. the survivor actor ID itself — carried-inventory root;
+2. an item-container whose 11 ancestry reaches that actor root;
+3. an uncontained item-container assigned by 09 to either hand of that actor;
+4. nested beneath such a held item-container.
 
-12 uses the query for action validation. Later Inventory UI, debug validation and save consistency checks may also consume it.
+Accepted examples include a backpack in inventory, a pouch inside it, a held backpack, and a pouch inside a held backpack.
 
-## 8. Fail-closed conflict rule
+V1 rejects arbitrary cabinets, trunks, another survivor's possessions, corpse inventory, and vehicle cargo. Those remain future access/search/open/lock/proximity-policy work rather than treating container enrollment as universal player access.
 
-If `ItemDispositionQuery` returns `CONFLICT`, `INVALID_PLACEMENT` or `UNKNOWN`, normal transfer actions fail without spending time.
+Access is derived by bounded ancestry walking through public 11/09 reads. No persistent recursive-access cache exists.
 
-12 never guesses which low-level owner is “more correct” and never silently repairs contradictory state during an ordinary player action.
+## 7. Loose-item reach
 
-Explicit lifecycle/save repair remains a separate concern.
+Floor pickup requires `LOOSE_WORLD` and intersection with either:
 
-## 9. V1 personal-access boundary
+- any cell in the actor's current footprint; or
+- the one-cell-forward fringe of that footprint in current facing.
 
-V1 deliberately supports **personal survivor item handling**, not arbitrary looting of every world container.
+There is no diagonal/radius pickup in v1.
 
-A container is personally accessible to survivor `actor_id` when it is explicitly enrolled in 11 and one of these is true:
+Actor placement and facing are revalidated at commit, so moving or turning during the action makes the accepted request stale.
 
-1. the container ID **is the survivor actor ID** — the actor's carried-inventory root;
-2. the container is an `item.*` container whose 11 ancestry ultimately reaches that actor inventory root;
-3. the container is an `item.*` container assigned by 09 to either hand of that same actor;
-4. the container is nested inside a held item-container whose top uncontained ancestor is assigned to that actor's hand.
+## 8. Drop geometry
 
-Examples accepted:
+Normal drop means **at the survivor's feet**.
 
-- survivor root inventory;
-- backpack in survivor inventory;
-- pouch inside that backpack;
-- backpack currently held in the survivor's left hand;
-- pouch inside that held backpack.
+At commit, WHAT receives:
 
-Examples rejected in v1:
-
-- cabinet across the room;
-- vehicle trunk;
-- another survivor's backpack;
-- corpse inventory;
-- arbitrary enrolled world fixture.
-
-Those require real interaction/access truth such as proximity, opening, locks, searching, ownership/permission or corpse-looting rules. 12 does not pretend enrollment alone means “the player can reach inside it.”
-
-A later **Container Access / Search** policy can extend 12 without changing WHAT, 09 or 11.
-
-## 10. Loose-item interaction reach
-
-For a normal floor pickup, the source must be `LOOSE_WORLD` and physically reachable from the survivor's current ACTOR placement.
-
-V1 reach is deliberately small and deterministic:
-
-- any cell occupied by the actor's current footprint — “at the survivor's feet”; or
-- the one-cell-forward fringe of that footprint in the actor's current facing — “directly in front.”
-
-A loose item's WHAT footprint must intersect one of those reachable cells.
-
-This gives the future `Looking at:` / interaction UI a natural front-cell interaction while still allowing an item under the actor to be picked up.
-
-No diagonal/radius/telekinetic pickup exists in v1.
-
-## 11. Drop location
-
-Normal drop means **put the item at the survivor's feet**.
-
-At commit, the item is placed in WHAT as:
-
-- channel: `LOOSE_ITEM`;
-- anchor: the survivor's current placement anchor;
-- facing: the survivor's current facing;
-- footprint: `SpatialFootprint.single_cell()`;
+- channel `LOOSE_ITEM`;
+- actor current anchor;
+- actor current facing;
+- `SpatialFootprint.single_cell()`;
 - no structure axis.
 
-This deliberately allows loose-item/actor channel overlap and does not require Collision.
+Loose-item/actor channel overlap is legal WHAT state and no Collision dependency is introduced.
 
-V1 therefore distinguishes:
+Targeted place/throw and large multi-cell object placement remain separate future mechanics.
 
-- **drop** — at your feet;
-- future **place/throw** — targeted spatial actions with their own range/collision/surface rules.
+## 9. Action vocabulary
 
-Large physical objects that require multi-cell world geometry should be OBJECT-class world entities/interactions rather than silently inheriting hand-item drop geometry.
-
-## 12. Action vocabulary
-
-Internal semantic action types describe source -> destination truth:
+Semantic action types:
 
 - `item.world_to_container`
 - `item.world_to_hand`
@@ -216,148 +151,29 @@ Internal semantic action types describe source -> destination truth:
 - `item.hand_to_container`
 - `item.container_to_container`
 
-Public request methods use gameplay language rather than asking callers to construct generic endpoint dictionaries.
+Public gameplay-language requests:
 
-### 12.1 Pickup into inventory/container
+- `request_pickup_to_container(actor_id, item_id, destination_container_id)`
+- `request_pickup_to_hand(actor_id, item_id, slot)`
+- `request_drop_from_container(actor_id, item_id)`
+- `request_drop_from_hand(actor_id, slot)`
+- `request_equip_from_container(actor_id, item_id, slot)`
+- `request_unequip_to_container(actor_id, slot, destination_container_id)`
+- `request_transfer_container(actor_id, item_id, destination_container_id)`
 
-`request_pickup_to_container(actor_id, item_id, destination_container_id)`
+Occupied-hand equip fails clearly. V1 does not silently swap or teleport the displaced item elsewhere.
 
-Requires:
+## 10. Timing policy
 
-- actor is a valid placed `actor.survivor`;
-- actor is not busy in WHEN;
-- source disposition is `LOOSE_WORLD`;
-- loose item is within v1 interaction reach;
-- destination is personally accessible to actor;
-- destination is still enrolled in 11;
-- timing policy allows the action.
+No legitimate historical pickup/drop/equip timing values were found during archaeology, so 12 invents **no gameplay defaults**.
 
-Commit:
+`ItemTransferTimingPolicy` explicitly registers positive integer durations by semantic action type:
 
-`WHAT loose placement -> unplaced -> 11 destination container`
+- `register_duration(action_type, ticks)`
+- `has_duration(action_type)`
+- `evaluate(actor_id, action_type)`
 
-### 12.2 Pickup directly into hand
-
-`request_pickup_to_hand(actor_id, item_id, slot)`
-
-Requires:
-
-- same loose-item reach rules;
-- actor has 09 enrollment;
-- target anatomical hand slot is valid and empty;
-- timing policy allows.
-
-Commit:
-
-`WHAT loose placement -> unplaced -> 09 hand`
-
-### 12.3 Drop contained item
-
-`request_drop_from_container(actor_id, item_id)`
-
-Requires:
-
-- item disposition is `CONTAINED`;
-- current containment path is personally accessible to actor;
-- timing policy allows.
-
-Commit:
-
-`11 containment -> unclaimed/unplaced -> WHAT LOOSE_ITEM at actor feet`
-
-### 12.4 Drop held item
-
-`request_drop_from_hand(actor_id, slot)`
-
-Requires:
-
-- valid 09 actor/slot;
-- hand contains a stable valid item;
-- item disposition confirms that exact actor/slot;
-- timing policy allows.
-
-Commit:
-
-`09 hand -> unclaimed/unplaced -> WHAT LOOSE_ITEM at actor feet`
-
-### 12.5 Equip from personal containment
-
-`request_equip_from_container(actor_id, item_id, slot)`
-
-Requires:
-
-- item disposition `CONTAINED`;
-- its containment path is personally accessible to actor;
-- target 09 slot is empty;
-- timing policy allows.
-
-Commit:
-
-`11 containment -> unclaimed/unplaced -> 09 hand`
-
-### 12.6 Unequip into personal container
-
-`request_unequip_to_container(actor_id, slot, destination_container_id)`
-
-Requires:
-
-- exact item is in requested actor/slot;
-- destination is personally accessible;
-- timing policy allows.
-
-Commit:
-
-`09 hand -> unclaimed/unplaced -> 11 container`
-
-### 12.7 Transfer between personal containers
-
-`request_transfer_container(actor_id, item_id, destination_container_id)`
-
-Requires:
-
-- item is currently contained;
-- source containment path is personally accessible;
-- destination is personally accessible;
-- source and destination are not already the same direct parent;
-- 11's cycle rules will permit the destination;
-- timing policy allows.
-
-Commit uses 11's existing atomic A -> B direct-parent mutation.
-
-## 13. Deliberate v1 omissions
-
-V1 does not provide:
-
-- automatic swap when equipping into an occupied hand;
-- hand-to-hand swapping as one action;
-- direct arbitrary world-container looting;
-- dropping into a chosen adjacent cell;
-- throwing;
-- placing on tables/shelves;
-- two-handed item reservation;
-- capacity/weight rejection;
-- item-specific equip restrictions;
-- quantity splitting/merging.
-
-An occupied target hand fails clearly. The player may unequip/drop first and then equip, with each physical action consuming its own configured time.
-
-This is intentionally less magical than silently teleporting the displaced item elsewhere.
-
-## 14. Timing policy — no invented action costs
-
-The inspected golden Tick action stack contains established costs for movement/turn/door/stance and a reload timing example, but no canonical recovered pickup/drop/equip/containment costs suitable to claim as historical truth.
-
-12 therefore does **not** invent hidden default numbers.
-
-`ItemTransferTimingPolicy` explicitly registers positive integer durations by semantic action type.
-
-Planned contract:
-
-- `register_duration(action_type, ticks) -> bool`
-- `has_duration(action_type) -> bool`
-- `evaluate(actor_id, action_type) -> ItemTransferTimingDecision`
-
-`ItemTransferTimingDecision` statuses:
+Timing-decision statuses:
 
 - `ALLOWED`
 - `ACTION_UNCLASSIFIED`
@@ -366,160 +182,113 @@ Planned contract:
 - `CAPABILITY_BLOCKED`
 - `INVALID_DURATION`
 
-Initial simple policy needs only explicit action-type duration registration. Future Health, injury, skills, encumbrance or item-property policies may wrap/replace it through the same typed seam.
+Unregistered timing fails before ticks are spent. CI uses explicit test durations only; future gameplay composition must deliberately choose tuning values.
 
-If an action duration is unregistered, the request fails **before time is spent** as `TIMING_UNCLASSIFIED`.
+A later richer capability policy may wrap/replace this seam without teaching WHEN what inventory means.
 
-Tests use explicit test durations. Later gameplay composition/tuning must deliberately configure canonical values rather than receiving accidental test constants.
+## 11. WHEN semantics
 
-## 15. WHEN execution model
+Every accepted v1 transfer uses:
 
-Accepted actions follow the same proven pattern as Movement:
+- one final `item_transfer.commit` phase at total duration;
+- `TickRules.InterruptionPolicy.CANCELABLE`;
+- primitive/snapshot-safe expected facts in the WHEN action payload;
+- no second pending-action dictionary in 12.
 
-**request -> validate now -> spend time -> revalidate at final commit -> coordinated physical mutation**
+Cancellation before commit leaves physical source/destination truth unchanged while already-elapsed ticks remain spent.
 
-Each accepted item-transfer action has one final phase:
+Hard application pause advances zero ticks and preserves the pending transfer unchanged.
 
-`item_transfer.commit`
+A newly slower-but-still-allowed timing policy does not stretch an already-scheduled action; the new duration applies to the next request. A newly blocked/unknown policy can invalidate commit.
 
-at total duration.
+## 12. No reservations
 
-No physical source/destination mutation occurs before that phase.
+12 reserves no loose item, hand, or container at request time.
 
-## 16. Interruption policy
+Two survivors may both begin pickup of the same loose item. WHEN's deterministic ordering lets the first still-valid commit win; the later action fails stale after its already-spent time.
 
-V1 item-transfer actions use WHEN `CANCELABLE` interruption semantics.
+This mirrors Movement's no-reservation rule and avoids hidden lock state becoming another item-location truth.
 
-Rationale:
+## 13. Expected-state payload and commit revalidation
 
-- pickup/drop/equip/transfer have no committed partial physical phase before the final commit;
-- if a later combat/health system interrupts the action before commit, the item simply remains in its original source disposition;
-- resuming “half a pickup” after moving away adds complexity without useful consequence;
-- unlike Movement's chosen committed step, an interrupted inventory manipulation should not magically complete despite the interruption.
-
-Hard application pause remains separate and advances zero ticks. Resuming from hard pause continues the same action unchanged.
-
-## 17. No item/destination reservation
-
-12 does **not** reserve loose items, hands or containers when an action begins.
-
-Examples:
-
-- two survivors may both begin trying to pick up the same loose item;
-- an actor may begin equipping into a hand that another system changes before commit;
-- a destination container may change before commit.
-
-At commit, the entire transition is revalidated.
-
-Deterministic WHEN ordering means the first still-valid commit wins. A later stale action fails after its already-spent duration.
-
-This matches the established Movement no-reservation rule and prevents hidden lock state from becoming a second source of truth.
-
-## 18. Expected-state payload
-
-All pending expected facts live in WHEN's serializable action payload. 12 owns no second pending-action store.
-
-Depending on action type, payload carries primitive/snapshot-safe expected facts such as:
+Depending on transition type, WHEN payload retains safe expected facts including:
 
 - actor placement snapshot;
-- item ID;
-- expected item semantic type;
+- item ID + semantic type;
 - expected source disposition kind;
-- expected loose-item placement snapshot;
-- expected actor hand-equipment version;
-- expected source actor/slot;
-- expected source direct-container ID;
-- expected source container version;
-- expected destination container ID/version;
-- expected destination hand slot and hand-equipment version.
+- exact loose-item placement snapshot;
+- actor hand version and slot;
+- source direct-container ID/version;
+- destination container ID/version;
+- destination hand slot/version.
 
-No live Resource/Node reference is stored in the payload.
+Before source mutation, 12 revalidates:
 
-## 19. Commit-time revalidation
-
-Before mutating any source truth at `item_transfer.commit`, 12 revalidates:
-
-1. actor still exists as `actor.survivor`;
-2. actor's current ACTOR placement still matches the accepted expected placement;
-3. item still exists with expected valid `item.*` semantic identity;
-4. current cross-domain disposition is non-conflicting and exactly matches the expected source;
-5. loose pickup item is still in interaction reach when applicable;
-6. 09 hand version/slot facts still match when applicable;
-7. source and destination 11 container relations/versions still match when applicable;
+1. actor still exists as placed `actor.survivor`;
+2. actor placement/facing still equals accepted snapshot;
+3. item identity still matches;
+4. current disposition exactly equals expected source and is non-conflicting;
+5. loose pickup remains reachable;
+6. hand version/slot facts still match;
+7. source/destination container relations and versions still match;
 8. personal-access ancestry is still valid;
-9. target hand is still empty where required;
-10. timing/capability policy still permits the action.
+9. destination hand is still empty;
+10. timing/capability policy still permits commit.
 
-If any check fails, the action is failed through WHEN after elapsed time and intended physical mutation does not begin.
+Any failure here spends the committed elapsed duration but begins no physical mutation.
 
-As with Movement, a newly slower but still allowed timing policy does **not** stretch an already scheduled action; the new cost applies to the next request. A newly blocked/unknown capability can invalidate commit.
+## 14. Coordinated commit order
 
-## 20. Coordinated commit order
-
-After full revalidation, source removal occurs before destination assignment.
-
-Deterministic normal sequences:
+Normal deterministic sequences:
 
 - world -> container: `unplace_entity` then `set_container`;
 - world -> hand: `unplace_entity` then `set_item`;
-- container -> world: `clear_container` then `set_placement(LOOSE_ITEM at feet)`;
-- hand -> world: `clear_slot` then `set_placement(LOOSE_ITEM at feet)`;
+- container -> world: `clear_container` then loose `set_placement`;
+- hand -> world: `clear_slot` then loose `set_placement`;
 - container -> hand: `clear_container` then `set_item`;
 - hand -> container: `clear_slot` then `set_container`;
-- container -> container: one existing 11 `set_container` A -> B mutation.
+- container -> container: one existing 11 atomic A -> B `set_container`.
 
-The source and destination low-level services remain unchanged.
+The low-level services remain independently owned and unchanged.
 
-## 21. Semantic atomicity and signal boundary
+## 15. Synchronous semantic atomicity and reentrant hardening
 
-Godot simulation mutations execute synchronously inside the final WHEN phase handler.
+The two mutations happen synchronously inside the final WHEN phase, so no other WHEN event/tick interleaves between them.
 
-Therefore **no other WHEN event or world tick may interleave between source removal and destination assignment**.
+Existing WHAT/09/11 signals still fire normally. 12 does not retrofit three domains with a global transaction bus. Consumers that need the final coherent result should observe `item_transfer_committed` or query after the current call stack.
 
-However, because WHAT, 09 and 11 retain their existing independent signals, 12 does **not** claim that low-level notification callbacks receive one magically batched cross-domain signal. A low-level observer may receive source-removal notification before destination-add notification during the same synchronous call stack.
+### Verified reentrant destination rule
 
-Consumers that require the final coherent disposition should react to 12's final `item_transfer_committed` signal or query after the current call stack rather than treating the first low-level notification as a completed gameplay transfer.
+The first CI run revealed a real edge case: 09's low-level `set_item()` is intentionally permissive enough to replace a slot, so a synchronous source-removal signal could reentrantly occupy the destination hand after the initial prevalidation. Without a second check, 12 could overwrite that newly changed destination.
 
-This avoids invasive transaction/signal revisions to three already-implemented state owners.
+12 was hardened to **recheck the destination immediately after source removal and immediately before the second mutation**:
 
-## 22. Exceptional compensation
+- hand destination must still be enrolled, valid, and empty;
+- container destination must still exist/enroll, retain expected version, and remain personally accessible;
+- world/drop destination requires the actor placement/facing still equal the captured placement.
 
-Full commit prevalidation is designed so the second mutation of a two-step transition should normally succeed.
+This is coordinator-owned transaction safety. It required no changes to WHAT, 09, or 11.
 
-Nevertheless, reentrant signal handlers or an unexpected low-level invariant failure could make the destination mutation fail after the source was already removed.
+## 16. Exceptional compensation
 
-12 must never knowingly leave the item silently unclaimed and report ordinary failure.
+If the second mutation fails after source removal, 12 immediately attempts compensation through the same public APIs using captured source truth:
 
-If the destination mutation unexpectedly fails after source removal, 12 immediately attempts **compensation** through the same public mutation APIs using the captured source truth:
+- restore original WHAT placement; or
+- restore original 11 parent; or
+- restore original 09 actor/slot.
 
-- restore original WHAT placement;
-- or restore original 11 direct parent;
-- or restore original 09 actor/slot.
+Outcomes:
 
-Then:
+- compensation succeeds -> action fails as `destination_mutation_failed_compensated` and emits bounded diagnostic;
+- compensation also fails -> action fails as `critical_consistency_failure` with a bounded critical diagnostic.
 
-- if compensation succeeds: action fails with `destination_mutation_failed_compensated`;
-- if compensation also fails: action fails with `critical_consistency_failure` and emits a bounded critical diagnostic identifying the item/action.
+Compensation may legitimately advance low-level revisions/versions because real writes occurred. Full-world snapshot rollback is not used for ordinary item actions.
 
-Compensation may advance low-level revisions/versions because it represents real attempted writes. It is an exceptional consistency safeguard, not the normal action path.
+## 17. Request results and signals
 
-12 does not use full-world snapshot rollback for ordinary actions.
+`ItemTransferActionResult` carries status, reason, action type/serial, actor/item ID, duration, source/destination kind, and destination container/slot where relevant.
 
-## 23. Request result contract
-
-`ItemTransferActionResult` is typed and includes at least:
-
-- status;
-- reason;
-- action type;
-- action serial;
-- actor ID;
-- item ID;
-- duration ticks;
-- source kind;
-- destination kind/container/slot where applicable.
-
-Representative statuses:
+Statuses include:
 
 - `ACCEPTED`
 - `NOT_READY`
@@ -537,234 +306,154 @@ Representative statuses:
 - `HAND_OCCUPIED`
 - `CONTAINER_UNKNOWN`
 - `CONTAINER_INACCESSIBLE`
+- `CONTAINER_REJECTED`
 - `TIMING_UNCLASSIFIED`
 - `CAPABILITY_UNKNOWN`
 - `CAPABILITY_BLOCKED`
 - `INVALID_DURATION`
 - `TIMING_REJECTED`
 
-Rejected requests consume zero ticks.
+Rejected requests spend zero ticks.
 
-## 24. Signals / diagnostics
+Semantic signals:
 
-Planned semantic signals:
+- `item_transfer_committed(...)`
+- `item_transfer_failed(...)`
+- `item_transfer_canceled(...)`
 
-- `item_transfer_committed(actor_id, action_serial, action_type, item_id, source_kind, destination_kind)`
-- `item_transfer_failed(actor_id, action_serial, action_type, item_id, reason)`
-- `item_transfer_canceled(actor_id, action_serial, action_type, item_id, reason)`
+12 also exposes bounded recent diagnostics for exceptional consistency failures; they are not gameplay persistence.
 
-A bounded recent diagnostic list may retain invariant/compensation failures for CI/dev inspection. It is not persistent gameplay truth.
-
-Ordinary low-level WHAT/09/11 signals continue to fire from their owners.
-
-## 25. Cancellation behavior
-
-If a CANCELABLE 12 action is interrupted/canceled before `item_transfer.commit`:
-
-- no physical mutation has occurred;
-- source disposition remains unchanged;
-- destination remains unchanged;
-- elapsed ticks already spent remain spent according to WHEN;
-- 12 emits the semantic canceled/failure notification when it observes its action finish as canceled.
-
-Hard pause is not cancellation.
-
-## 26. Personal containment ancestry helper
-
-12 derives personal access by walking 11's public `container_of` relation only.
-
-Rules:
-
-- cycles should already be impossible in valid 11 state;
-- a bounded ancestry guard still prevents pathological corrupted data from looping forever;
-- reaching actor ID means actor-root possession;
-- reaching an uncontained item-container assigned by 09 to the same actor means held-container possession;
-- reaching any other root means inaccessible in v1.
-
-No recursive contents cache becomes persistent 12 truth.
-
-## 27. Performance / mobile requirements
-
-12 has no UI but must remain suitable for Safari/mobile gameplay:
+## 18. Performance / mobile
 
 - no `_process()` polling;
 - no full-world item scan;
-- item disposition uses stable-ID direct lookups;
-- containment access walks ancestry depth only;
-- pickup reach examines actor/item footprints only;
-- pending action state lives in WHEN payload;
+- stable-ID direct lookup for disposition;
+- containment access proportional to ancestry depth;
+- pickup reach proportional to local footprints;
+- pending state stored in WHEN action payload;
 - no Node per item/action;
-- deterministic bounded diagnostics;
-- rejected requests return immediately without advancing ticks.
+- bounded diagnostics;
+- immediate zero-tick request rejection.
 
-Future touch UI submits semantic request methods; it never implements transfer rules itself.
+Safari/touch UI can later submit these semantic requests without implementing item rules itself.
 
-## 28. Save / restore boundary
+## 19. Save / restore boundary
 
-12 owns no durable transfer-state store beyond pending actions already serialized by WHEN.
+12 owns no durable transfer-state store beyond pending WHEN actions.
 
-Because action payloads are primitive serializable data, a future coordinated save restore can restore:
+Future save orchestration may restore WHAT + 09 + 11 + WHEN and reconnect a fresh 12 service. The restored pending action is still fully revalidated at commit.
 
-- WHAT;
-- 09;
-- 11;
-- WHEN active action payload;
+## 20. Explicit non-goals
 
-and reconnect a fresh 12 service to the restored kernel/state.
+12 v1 does not own or implement:
 
-12 must revalidate at commit after restore just as it would during uninterrupted play.
+- arbitrary world-container access/search;
+- automatic hand swaps or hand-to-hand swap action;
+- targeted adjacent placement/throwing;
+- table/shelf placement;
+- two-handed reservation;
+- capacity/weight/encumbrance;
+- item-specific equip legality;
+- quantity split/merge;
+- corpse/vehicle inventory access;
+- combat reload/ammunition mechanics;
+- rendering, animation, loose-item presentation, UI, or input.
 
-Cross-domain save ordering/orchestration remains a future owner.
+## 21. Verification
 
-## 29. Recovery / archaeology
+Dedicated workflow: **Item Transfer Actions contract**.
 
-Useful recovered principles:
+Initial code head `7ea53e0d300fb0d7aad2802b11d4da930b802a49` passed:
 
-- golden Tick/02 Movement established **validate -> spend time -> commit revalidation -> mutate**;
-- 00C WHEN provides serializable action payloads, final phases, cancellation and hard pause;
-- 09 and 11 were explicitly designed to defer equip/transfer coordination to this system;
-- golden Tick `PlayerActor.gd` supplied known movement/door/stance timing values but no canonical item-transfer cost contract;
-- inspected golden `MapPreview.gd` demonstrates interaction/front-facing UI patterns but no physical inventory-transfer implementation worth restoring.
+- source-boundary checks;
+- Godot 4.7.1 import/parse;
+- WHAT regression;
+- WHEN regression;
+- 09 hand-equipment regression;
+- 11 containment regression.
 
-Therefore 12 reuses the solved timing/action architecture but does **not** claim old dictionary inventory behavior or invented transfer costs as recovered gameplay.
+Its new 12 smoke correctly failed the exceptional-compensation scenario, exposing the reentrant destination-overwrite issue described above.
 
-## 30. Tests / acceptance criteria
+Hardened head `c3139466c26cbb8367b4509f107a48916a323916` then passed dedicated run `31990020356`, including the complete 12 smoke.
 
-Dedicated headless smoke should prove at minimum:
+The smoke proves:
 
-1. disposition query identifies loose world, contained, hand, unclaimed and conflict states correctly;
-2. placed `item.*` on a non-LOOSE_ITEM channel fails closed;
-3. valid actor-root and nested personal-container ancestry;
-4. held backpack and nested held-container ancestry are personally accessible;
-5. arbitrary world cabinet/container is inaccessible in v1;
-6. pickup from actor footprint is accepted;
-7. pickup from one-cell-forward fringe is accepted;
-8. out-of-reach loose item is rejected before ticks;
-9. world -> container commits only at exact final tick;
-10. world -> hand commits only at exact final tick;
-11. container -> world drops as single-cell LOOSE_ITEM at actor anchor;
-12. hand -> world drops correctly;
-13. container -> hand equip works only into empty target hand;
-14. hand -> container unequip works;
-15. container -> container A -> B uses 11 atomically;
-16. occupied target hand rejects without implicit swap;
-17. timing-unclassified action rejects without ticks;
-18. explicit timing policy duration is used exactly;
-19. CANCELABLE interruption before commit leaves source/destination unchanged;
-20. hard pause advances zero ticks and preserves pending transfer;
-21. actor placement/facing changed before commit causes stale failure;
-22. source loose placement changed before commit causes stale failure;
-23. hand version/slot changed before commit causes stale failure;
-24. source/destination container relation/version changed before commit causes stale failure;
-25. personal-access ancestry lost before commit causes failure;
-26. two actors may begin for one loose item with no reservation; deterministic first valid commit wins and later stale action fails after time;
-27. destination mutation failure after source removal is compensated back to source through public APIs;
-28. failed compensation emits explicit critical consistency diagnostic;
-29. no persistent pending-action dictionary exists outside WHEN payload;
-30. WHAT, 09, 11 and WHEN regression smokes remain green;
-31. source guards prove no render/UI/input/reboot/AI/Combat/Health/Movement/Collision imports.
+- all disposition statuses including conflict/invalid/unclaimed;
+- actor-root, nested, held-container and nested-held access;
+- arbitrary world container rejection;
+- feet/front reach and far rejection;
+- all seven transition directions;
+- exact explicit timing;
+- occupied-hand no-swap behavior;
+- cycle rejection;
+- CANCELABLE interruption;
+- hard-pause zero-time preservation;
+- actor placement/facing stale failure;
+- loose-source stale placement failure;
+- hand-version stale failure;
+- source/destination container version stale failure;
+- personal-access ancestry loss;
+- deterministic two-actor no-reservation race;
+- successful compensation after a reentrant destination change;
+- critical diagnostic when compensation itself is made impossible.
 
-## 31. Future seams
+No low-level WHAT/WHEN/09/11 contract repair was required.
 
-Known extensions that should not rewrite the core coordinator:
+## 22. Recovery / archaeology
 
-- world-container access/search/open/lock policy;
+Recovered principles, not old architecture:
+
+- golden Tick/02 Movement: validate -> spend time -> commit revalidation -> mutate;
+- 00C WHEN: serializable action payloads, final phases, cancellation, hard pause;
+- 09 and 11: explicit future transfer-coordinator seam;
+- golden Tick player/action code: no trustworthy canonical item-transfer duration values were present.
+
+Old copied-name/dictionary inventory behavior is not restored.
+
+## 23. Future seams
+
+Known extensions can attach without changing the core three-truth coordinator model:
+
+- Container Access / Search / Open / Lock policy;
 - corpse looting;
-- vehicle cargo access;
-- capacity/weight/bulk/encumbrance policy;
-- item-specific equip restrictions;
-- two-handed equipment reservation;
-- hand-to-hand and explicit swap actions;
-- targeted place/throw actions;
-- item quantity split/merge;
-- combat reload/ammo transitions;
+- vehicle cargo;
+- capacity/weight/bulk/encumbrance;
+- item equip restrictions/two-handed gear;
+- explicit swap actions;
+- targeted place/throw;
+- quantity split/merge;
+- combat reload/ammo;
 - crafting consumption/output;
 - AI transfer decisions;
 - Inventory Inspector UI;
 - loose-item renderer;
-- sound generation for noisy item handling;
-- animation/presentation of transfer progress.
+- sound/animation for item handling.
 
-The invariant remains: these systems request/observe physical transitions; they do not create competing persistent item-location truth.
+## 24. North-star fit
 
-## 32. Expected implementation impact after approval
+Physical item handling now consumes real simulation time while preserving one stable physical item through floor, hands, and persistent storage. Races, interruption, stale state, and failed actions have consequences without adding a universal item-state god object or arbitrary inventory math.
 
-Expected new production:
+This is the smallest model that makes carrying and manipulating supplies physically meaningful for **Ultima-style turn-based mini Zomboid**.
 
-- `game/scripts/simulation/items/transfer/ItemTransferActionType.gd`
-- `game/scripts/simulation/items/transfer/ItemDispositionResult.gd`
-- `game/scripts/simulation/items/transfer/ItemDispositionQuery.gd`
-- `game/scripts/simulation/items/transfer/ItemTransferTimingDecision.gd`
-- `game/scripts/simulation/items/transfer/ItemTransferTimingPolicy.gd`
-- `game/scripts/simulation/items/transfer/ItemTransferActionResult.gd`
-- `game/scripts/simulation/items/transfer/ItemTransferActionService.gd`
+## 25. Approved / implemented decisions
 
-Expected testing:
+Approved 2026-08-16 and implemented:
 
-- `game/scripts/ci/ItemTransferActionsSmoke.gd`
-- `.github/workflows/item-transfer-actions.yml`
-
-Expected durable-memory updates after implementation:
-
-- this design -> IMPLEMENTED;
-- `SYSTEM_DESIGNS/README.md`;
-- `README_CONTEXT.md`;
-- `CHANGELOG.md`;
-- `DESIGN_DECISIONS.md` only if implementation reveals a genuinely new cross-system rule.
-
-Must remain untouched unless the approved design proves impossible:
-
-- WHAT production;
-- WHEN production;
-- all 09 production;
-- all 11 production;
-- Collision / Movement / Locomotion;
-- Art / renderers / assets;
-- generation/reboot/input/UI/camera.
-
-## 33. Contract impact
-
-Proposed 12 is **additive**.
-
-It consumes the already-public contracts of WHAT, 09, 11 and WHEN and requires no low-level API revision.
-
-The important new public seam is `ItemDispositionQuery`, a read-only derived cross-domain view. It is explicitly not persistent state.
-
-## 34. North-star fit
-
-Physical item handling is where persistent survival state becomes tactical consequence.
-
-Picking up a flashlight, stowing food, dropping a weapon, or moving a tool from a backpack into a hand should consume real simulation time while infected and other systems may act. The same stable physical item should persist through every transition.
-
-This design keeps the model small:
-
-- three existing low-level truths;
-- one derived disposition query;
-- one timed coordinator;
-- one-cell at-feet drops;
-- short personal-access rules;
-- no invented capacity or item stats.
-
-But it preserves the important consequences: time exposure, stale-world races, physical identity, interruption, persistent storage, and no magical duplicate item.
-
-## 35. Decisions proposed for detailed approval
-
-Proposed 2026-08-16 decisions:
-
-1. 12 owns **timed physical transitions**, not persistent item disposition.
-2. A read-only cross-domain `ItemDispositionQuery` derives loose/hand/contained/unclaimed/conflict state without being serialized.
-3. Contradictory disposition fails closed; ordinary player actions never guess or auto-repair it.
-4. V1 supports personal survivor handling only: floor, actor-root inventory, nested personal containers and held item-containers.
-5. Arbitrary world-container/corpse/vehicle access is deferred until real access/search/open/lock rules exist.
-6. Loose pickup reach is actor footprint plus the one-cell-forward fringe.
-7. Normal drop places one single-cell `LOOSE_ITEM` at the survivor's feet/anchor.
-8. Public v1 actions are pickup-to-container, pickup-to-hand, drop-from-container, drop-from-hand, equip-from-container, unequip-to-container, and personal container-to-container transfer.
-9. Occupied-hand equip does not silently swap/displace another item.
-10. Transfer timing is explicit policy data; no unrecovered pickup/drop/equip numbers are invented.
-11. Item transfer actions use `CANCELABLE` interruption with no partial physical effect before final commit.
-12. No source/destination reservation; commit-time revalidation decides races after time is spent.
-13. Pending expected facts live only in WHEN's serializable payload; 12 has no second pending-action store.
-14. Commit revalidates actor placement, source disposition, hand/container versions, personal access and capability.
-15. Cross-domain commit is synchronous/simulation-atomic but does not revise low-level signals into one batched transaction.
-16. Unexpected second-mutation failure triggers immediate public-API compensation back to the captured source; compensation failure is a critical consistency diagnostic.
-17. WHAT, 09, 11 and WHEN public APIs remain unchanged.
+1. 12 owns timed physical transitions, not persistent disposition.
+2. `ItemDispositionQuery` is derived/read-only and never serialized as truth.
+3. contradictory disposition fails closed.
+4. v1 supports personal survivor floor/root/nested/held-container handling only.
+5. world/corpse/vehicle container access waits for real access rules.
+6. pickup reach is actor footprint + one-cell-forward fringe.
+7. drop is one-cell `LOOSE_ITEM` at actor feet.
+8. the seven explicit transition requests are canonical v1 action paths.
+9. occupied hand does not auto-swap.
+10. transfer duration is explicit policy data with no invented defaults.
+11. transfers are CANCELABLE until final commit.
+12. no source/destination reservation exists.
+13. pending expected facts live only in WHEN payload.
+14. commit revalidates actor/source/hands/containers/access/policy.
+15. cross-domain commit is synchronous but low-level signals remain independent.
+16. unexpected second-write failure compensates back through public APIs; failed compensation is critical.
+17. destination is revalidated again after source removal to defend against reentrant low-level callbacks.
+18. WHAT, WHEN, 09, and 11 public/production contracts remain unchanged.
