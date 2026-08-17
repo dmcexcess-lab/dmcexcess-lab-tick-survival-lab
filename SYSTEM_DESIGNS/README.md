@@ -37,6 +37,7 @@ This directory is the durable detailed memory for individual systems. Major syst
 | 13D | Item Physical Properties | **IMPLEMENTED** | `13D_ITEM_PHYSICAL_PROPERTIES.md` |
 | 13E | Actor Carry / Encumbrance | **IMPLEMENTED** | `13E_ACTOR_CARRY_ENCUMBRANCE.md` |
 | 13F | Actor Moodlets / Status Derivation | **IMPLEMENTED** | `13F_ACTOR_MOODLETS.md` |
+| 14 | Canonical Playable Demo Integration | **IMPLEMENTED** | `14_CANONICAL_PLAYABLE_DEMO.md` |
 | 00D | Global World Planning / Generation | **NOT DESIGNED** | `00D_GLOBAL_WORLD_GENERATION.md` |
 | 00E | Population / Household / Outbreak / Player Story | **NOT DESIGNED** | `00E_POPULATION_OUTBREAK_PLAYER_STORY.md` |
 | 00F | Streaming / Materialization | **NOT DESIGNED** | `00F_STREAMING_MATERIALIZATION.md` |
@@ -62,11 +63,12 @@ This directory is the durable detailed memory for individual systems. Major syst
 - 13E: `game/scripts/simulation/actors/carry/`
 - 13F: `game/scripts/simulation/actors/moodlets/`
 
-### Presentation
+### Presentation / application
 - 04: `game/scripts/art/`
 - 05/06/07/08/10: focused files under `game/scripts/render/`
+- 14: `game/scripts/app/CanonicalDemoMain.gd`, `game/scripts/demo/CanonicalDemoFixture.gd`, `game/scripts/render/TacticalRendererStack.gd`, `game/scripts/input/`, `game/scripts/player/DemoPlayerActionController.gd`, and `game/scripts/ui/DemoMovementControls.gd`
 
-The canonical modules remain intentionally separate from frozen `game/scripts/reboot/` reference code.
+The canonical modules remain separate from frozen `game/scripts/reboot/` reference code. As of System 14, `game/main.tscn` launches the canonical demo instead of Reboot.
 
 ## Current System 13 contract summary
 
@@ -76,18 +78,27 @@ The canonical modules remain intentionally separate from frozen `game/scripts/re
 
 Dedicated verification: `.github/workflows/actor-stats.yml`, success token set from six child smokes. Initial complete candidate `78ed167678257749b093acd54e53e9f065cd8ce5` passed run `31992365565` with no production repair.
 
-## Immediate path to the requested canonical demo
+## Current canonical playable demo
 
-The honest actor-data prerequisites are now complete through System 13. Next bounded path:
+System 14 is the first live canonical composition and supersedes Reboot as the deployed entry point.
 
-1. **Authored Visual Test Area — NOT DESIGNED.** Real canonical WHAT fixture with actor/items/stat enrollment.
-2. **Tactical Renderer / Orchestration — NOT DESIGNED.** Compose Ground/Structure/Prop/10-BACK/08/10-FRONT.
-3. **Tactical Camera + Zoom — NOT DESIGNED.**
-4. **Touch / Keyboard / Safari Input — NOT DESIGNED.**
-5. **Tactical Controls UI — NOT DESIGNED.**
-6. **HUD / Facing Inspection + Stats & Inventory Inspector + Pause Menu — NOT DESIGNED.** These may now display real System 13 + 09/11/12 data rather than fabricated values.
+- one authored 13x13 canonical WHAT sample map;
+- exactly one controlled survivor, no NPCs/infected;
+- existing Ground -> Structure -> Prop -> Living Actor renderer composition;
+- real Collision + Movement + Locomotion + WHEN for walking/turning;
+- W/arrow keyboard input and native touch/Safari buttons emitting the same semantic intents;
+- fixed one-screen tactical view; camera/zoom intentionally deferred until a larger world requires it.
 
-The user explicitly wants to reach the playable canonical demo quickly, so future design should favor the smallest real composition path and avoid reopening completed foundation mechanics.
+Dedicated verification: `.github/workflows/canonical-demo.yml` and `game/scripts/ci/CanonicalDemoSmoke.gd`. Initial complete integration head `41ccfedd658082f5d249b5107363658705ea4b03` passed run `31993465800` with no production repair after the complete candidate reached CI.
+
+## Immediate path after the walking demo
+
+The next work should extend the live canonical demo rather than rebuild already-proven renderers. Likely bounded additions, only when requested:
+
+1. `Looking at:` / Stats / Inventory / Menu UI reading already-real systems.
+2. Held-item layers/items and Item Transfer interaction in the demo.
+3. Camera/zoom only when world content expands beyond one screen.
+4. Larger authored/generated world content behind the same canonical simulation/render contracts.
 
 ## Other later modular systems
 - Container Access / Search / Open / Lock — NOT DESIGNED
@@ -105,7 +116,7 @@ The user explicitly wants to reach the playable canonical demo quickly, so futur
 - Infected AI, combat, vehicles — DEFERRED
 
 ## Requested future demo UI target
-The eventual canonical demo must include Safari/iPhone touch navigation, desktop keyboard equivalents, recovered-style `Looking at:`, concise real actor stats, `STATS`, `INVENTORY`, and `MENU` buttons, safe pause during inspection/menu, Resume + Leave Game, and no fabricated values.
+The canonical walking demo now exists. Later UI may add Safari/iPhone navigation refinements, desktop equivalents, recovered-style `Looking at:`, concise real actor stats, `STATS`, `INVENTORY`, and `MENU` buttons, safe pause during inspection/menu, Resume + Leave Game, and no fabricated values.
 
 ## Design rule
 Every major system keeps a focused owner/public contract. If implementation unexpectedly requires crossing a forbidden boundary, return the design to review rather than cascading a patch.
