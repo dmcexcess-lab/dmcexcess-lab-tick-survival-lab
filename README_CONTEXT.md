@@ -31,7 +31,8 @@ Implemented + dedicated validation now includes:
 - 17A exertion/encumbrance/run impact;
 - 17A.1 overweight-Walk fatigue + 2x hard carry ceiling;
 - **System 18 Door Interaction / Automatic Passage**;
-- **System 19 Local Building Generation / Archetype Critique Lab**.
+- **System 19 Local Building Generation / Archetype Critique Lab**;
+- **Trailer archetype v2 / Candidate 002 critique refinement**.
 
 ## 3. Foundation truth
 
@@ -117,33 +118,38 @@ System 19:
 
 It never selects roads/parcels/towns, scans the world for placement, knows camera/streaming, owns loot, or stores art indices.
 
-### Trailer Candidate 001
+### Trailer Candidate 002
 
-Archetype: `residential.trailer.singlewide`, version 1.
+Archetype: `residential.trailer.singlewide`, **version 2**.
 
 Live candidate:
 
 - stable ID namespace `building.demo.trailer.001`;
 - deterministic seed `19001`;
 - NORTH orientation / EAST frontage;
-- 6×12 exterior footprint;
-- distinct 4×4 living/kitchen, 4×2 bathroom, 4×2 bedroom;
+- **5×12 exterior footprint**;
+- distinct **3×4 living/kitchen, 3×2 bathroom, 3×2 bedroom**;
 - one exterior side door into living/kitchen;
-- two interior doors;
+- two centered interior doors forming a middle-column circulation spine;
 - four exterior windows;
-- stove, fridge, sink, sofa/loveseat, toilet, vanity, single bed, dresser;
-- validated one-cell circulation spine to every room.
+- **light `wall.plaster` exterior shell** with existing light `wall.interior` partitions;
+- stove, fridge and sink along one side of living/kitchen;
+- sofa/loveseat against the opposite wall, facing inward;
+- toilet, vanity, single bed and dresser;
+- validated one-cell circulation to every room.
+
+Candidate 001 used a 6×12 shell / four-cell usable interior width. User critique on 2026-08-17 intentionally narrowed the archetype by one cell across while preserving length and room sequence. Because the same seed now produces different geometry, the archetype version was bumped rather than silently changing version-1 determinism.
 
 Materializer refuses conflicting occupied cells and snapshots/restores WHAT + Door State on partial write failure.
 
 ## 7. Live canonical demo
 
-The current live demo is the **Trailer Candidate 001 critique lot**, not the old authored sample map.
+The current live demo is the **Trailer Candidate 002 critique lot**, not the old authored sample map.
 
 - fixed 13×13 one-screen tactical view;
 - one controlled survivor, no NPCs/infected/loot;
-- generated trailer at the supplied showcase envelope;
-- player starts immediately outside the CLOSED side entrance at `(8,3)`, facing WEST toward it;
+- generated trailer at `Rect2i(2,0,5,12)`;
+- player starts immediately outside the CLOSED side entrance at `(7,3)`, facing WEST toward it;
 - old `CanonicalDemoFixture.gd` remains unchanged for System 14 regression;
 - current Ground -> Structure -> Prop -> Living Actor renderer stack presents the generated semantic world;
 - real HUD, Stats/Inventory/Menu, Crouch/Stand and Run remain available.
@@ -182,19 +188,24 @@ System 10 held-item presentation and real item-interaction composition remain fu
 
 ## 9. Verification routing
 
-Systems 18/19 first fully green implementation candidate:
+Systems 18/19 original fully green implementation candidate:
 
 - SHA `c035fe7b3f5d0badab6c5b598996010e92d852b2`;
 - Door Interaction run `32005363005`: SUCCESS;
 - Local Building Generation run `32005363051`: SUCCESS.
 
-That candidate passed Godot parse, protected regressions, door passage/manual close tests, deterministic trailer generation/rotation/materialization, generated semantic art/collision coverage, generated-door traversal, renderer diagnostics and actual startup.
+Trailer Candidate 002 first fully green code candidate:
 
-Exact documentation-promotion SHA must pass the same dedicated contracts plus Web/Pages before completion is claimed.
+- SHA `30aa8d1af7ca3d694a4085d4ec2a173a783d0dcb`;
+- Local Building Generation run `32006433070`: SUCCESS.
+
+That Candidate 002 run passed Godot parse, foundation/presentation regressions, Systems 18+19 integration smokes, deterministic 5×12 generation/rotation, light plaster shell assertion, opposite-wall sofa placement assertion, generated-door traversal, renderer diagnostics and actual startup.
+
+Exact documentation-promotion SHA must pass the same dedicated contract plus Web/Pages before completion is claimed.
 
 ## 10. Immediate next path
 
-1. **User playtests and critiques Trailer Candidate 001.**
+1. **User playtests and critiques Trailer Candidate 002.**
 2. Turn critique into reusable trailer archetype rules, not one-off fixture edits.
 3. Regenerate/retest until trailer density/layout feels right.
 4. Add `residential.house.small_ranch` under the same System 19 contract.
@@ -225,6 +236,7 @@ Container access/search/locks, corpse/decay/contamination, actor appearance/crea
 14. Manual door close requires physical facing; pointer selection does not waive orientation/tick cost.
 15. Local building generation consumes caller-decided global placement facts and must not become the global world planner.
 16. Once generated/materialized, WHAT/Door State own later mutations; replacing the generator must not rewrite saved reality.
+17. Intentional same-seed building-rule changes bump archetype version so generation determinism remains meaningful.
 
 ## 13. Documentation source order
 
