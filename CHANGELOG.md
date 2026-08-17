@@ -1,5 +1,19 @@
 # Changelog
 
+## 08 Player / Living Actor Renderer — 2026-08-16
+
+- Implemented **08 Player / Living Actor Renderer** after the user explicitly approved the detailed living-actor contract.
+- Added `ActorDrawCommand.gd` and standalone `ActorLayerRenderer.gd` reading visible WHAT `ACTOR` occupancy plus 04 Art Catalog only. Controlled survivor, NPC survivors, and living infected now share one focused presentation owner without importing AI, combat, Health, Inventory, Collision, Movement, WHEN, camera/input/UI, generation, corpse mechanics, or reboot.
+- Kept controlled-player status as a stable-ID presentation/session role rather than a permanent WHAT semantic type. The controlled survivor continues to use the exact protected four directional `player_*.svg` textures.
+- Recovered real same-owner First Fire living-actor artwork into a new separate `actor_atlas.svg`: 8 survivor variants × four facings and 8 infected variants × four facings. The original ten Tick art assets remain byte-identical; the actor asset is separately pinned/provenanced rather than being mislabeled as part of the golden Tick baseline.
+- Extended `ArtCatalog` additively with `SOURCE_ACTORS` and typed `resolve_living_actor(family, facing, variant)`; existing ground/wall/door/window/prop/player/road resolver semantics remain unchanged.
+- NPC living actors use an explicit stable 32-bit FNV-1a hash of persistent actor ID modulo 8 as a temporary presentation default, giving deterministic variation without inventing an Actor Appearance persistence system or consuming RNG state.
+- Preserved recovered First Fire NPC scale at 29/32 of a cell, centered at the physical WHAT anchor. Arbitrary ACTOR footprints deduplicate to one visual while retaining physical footprint/world cells and deterministic overlap ordering.
+- Deliberately added no fake crouch art. 03 Actor Locomotion remains stance truth; 08 can render actors without a locomotion record and leaves stance-specific visuals for an explicit later presentation contract.
+- Locked the approved corpse boundary: corpses are not living ACTOR render entries. Future persistent corpse/decay/contamination mechanics remain a separate NOT DESIGNED system, with the approved direction that accumulated aging bodies can create local contamination/filth pressure and later sickness consequences.
+- Added `ActorLayerRendererSmoke.gd` plus dedicated Godot 4.7.1 `Player Living Actor Renderer contract`. On code head `c37be260e273e70a2bb2f5a91261d99a8a5cb898`, actor run `31985099706` and Art Catalog run `31985099764` passed after one CI-only correction to a mistyped pre-existing protected-asset hash literal; no production or actor-art repair was required.
+- Promoted 08 and the additive 04 actor-art contract to IMPLEMENTED. Next bounded presentation discussion: **Authored Visual Test Area** to prove Ground + Structure + Prop + Living Actor together without procedural generation or a reboot adapter.
+
 ## 07 Prop / Fixture / Vegetation Renderer — 2026-08-16
 
 - Implemented **07 Prop / Fixture / Vegetation Renderer** after the user explicitly approved the refreshed focused design.
