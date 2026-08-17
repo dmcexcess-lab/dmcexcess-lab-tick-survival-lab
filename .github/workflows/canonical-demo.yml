@@ -1,0 +1,133 @@
+name: Canonical Playable Demo contract
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: canonical-playable-demo-contract
+  cancel-in-progress: true
+
+jobs:
+  canonical-demo:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate canonical demo boundaries
+        shell: bash
+        run: |
+          set -euxo pipefail
+          test -f SYSTEM_DESIGNS/14_CANONICAL_PLAYABLE_DEMO.md
+          test -f game/scripts/app/CanonicalDemoMain.gd
+          test -f game/scripts/demo/CanonicalDemoFixture.gd
+          test -f game/scripts/render/TacticalRendererStack.gd
+          test -f game/scripts/input/PlayerActionIntent.gd
+          test -f game/scripts/input/KeyboardInputAdapter.gd
+          test -f game/scripts/player/DemoPlayerActionController.gd
+          test -f game/scripts/ui/DemoMovementControls.gd
+          test -f game/scripts/ci/CanonicalDemoSmoke.gd
+          grep -q 'CanonicalDemoMain.gd' game/main.tscn
+          ! grep -q 'scripts/reboot/RebootMain.gd' game/main.tscn
+          ! grep -R -q 'scripts/reboot' game/scripts/app game/scripts/demo game/scripts/input game/scripts/player game/scripts/ui game/scripts/render/TacticalRendererStack.gd
+          ! grep -R -q 'simulation/movement' game/scripts/input game/scripts/ui
+          ! grep -R -q 'foundation/world' game/scripts/input game/scripts/ui
+          ! grep -R -q 'scripts/render' game/scripts/input game/scripts/player game/scripts/ui
+          ! grep -q '_draw' game/scripts/app/CanonicalDemoMain.gd
+          ! grep -q '_unhandled_input' game/scripts/app/CanonicalDemoMain.gd
+          ! grep -q '_unhandled_input' game/scripts/player/DemoPlayerActionController.gd
+          grep -q 'GroundLayerRenderer.gd' game/scripts/render/TacticalRendererStack.gd
+          grep -q 'StructureLayerRenderer.gd' game/scripts/render/TacticalRendererStack.gd
+          grep -q 'PropLayerRenderer.gd' game/scripts/render/TacticalRendererStack.gd
+          grep -q 'ActorLayerRenderer.gd' game/scripts/render/TacticalRendererStack.gd
+
+      - name: Install Godot 4.7.1
+        shell: bash
+        run: |
+          set -euxo pipefail
+          curl -L -o godot.zip https://github.com/godotengine/godot-builds/releases/download/4.7.1-stable/Godot_v4.7.1-stable_linux.x86_64.zip
+          unzip -q godot.zip
+          chmod +x Godot_v4.7.1-stable_linux.x86_64
+
+      - name: Import and parse project
+        shell: bash
+        run: |
+          set -euxo pipefail
+          ./Godot_v4.7.1-stable_linux.x86_64 --headless --editor --path "$GITHUB_WORKSPACE/game" --quit 2>&1 | tee "$RUNNER_TEMP/import.log"
+          if grep -Eqi 'SCRIPT ERROR|Parse Error|Failed to load script' "$RUNNER_TEMP/import.log"; then exit 1; fi
+
+      - name: Persistent WHAT regression smoke
+        shell: bash
+        run: |
+          set -euxo pipefail
+          ./Godot_v4.7.1-stable_linux.x86_64 --headless --path "$GITHUB_WORKSPACE/game" --script res://scripts/ci/WorldStateSmoke.gd 2>&1 | tee "$RUNNER_TEMP/world.log"
+          grep -q 'WORLD_STATE_SMOKE_OK' "$RUNNER_TEMP/world.log"
+
+      - name: WHEN regression smoke
+        shell: bash
+        run: |
+          set -euxo pipefail
+          ./Godot_v4.7.1-stable_linux.x86_64 --headless --path "$GITHUB_WORKSPACE/game" --script res://scripts/ci/TickKernelSmoke.gd 2>&1 | tee "$RUNNER_TEMP/time.log"
+          grep -q 'TICK_KERNEL_SMOKE_OK' "$RUNNER_TEMP/time.log"
+
+      - name: Collision regression smoke
+        shell: bash
+        run: |
+          set -euxo pipefail
+          ./Godot_v4.7.1-stable_linux.x86_64 --headless --path "$GITHUB_WORKSPACE/game" --script res://scripts/ci/CollisionSpatialQuerySmoke.gd 2>&1 | tee "$RUNNER_TEMP/collision.log"
+          grep -q 'COLLISION_SPATIAL_QUERY_SMOKE_OK' "$RUNNER_TEMP/collision.log"
+
+      - name: Movement regression smoke
+        shell: bash
+        run: |
+          set -euxo pipefail
+          ./Godot_v4.7.1-stable_linux.x86_64 --headless --path "$GITHUB_WORKSPACE/game" --script res://scripts/ci/MovementActionsSmoke.gd 2>&1 | tee "$RUNNER_TEMP/movement.log"
+          grep -q 'MOVEMENT_ACTIONS_SMOKE_OK' "$RUNNER_TEMP/movement.log"
+
+      - name: Actor locomotion regression smoke
+        shell: bash
+        run: |
+          set -euxo pipefail
+          ./Godot_v4.7.1-stable_linux.x86_64 --headless --path "$GITHUB_WORKSPACE/game" --script res://scripts/ci/ActorLocomotionSmoke.gd 2>&1 | tee "$RUNNER_TEMP/locomotion.log"
+          grep -q 'ACTOR_LOCOMOTION_SMOKE_OK' "$RUNNER_TEMP/locomotion.log"
+
+      - name: Art Catalog regression smoke
+        shell: bash
+        run: |
+          set -euxo pipefail
+          ./Godot_v4.7.1-stable_linux.x86_64 --headless --path "$GITHUB_WORKSPACE/game" --script res://scripts/ci/ArtCatalogSmoke.gd 2>&1 | tee "$RUNNER_TEMP/art.log"
+          grep -q 'ART_CATALOG_SMOKE_OK' "$RUNNER_TEMP/art.log"
+
+      - name: Existing renderer regression smokes
+        shell: bash
+        run: |
+          set -euxo pipefail
+          ./Godot_v4.7.1-stable_linux.x86_64 --headless --path "$GITHUB_WORKSPACE/game" --script res://scripts/ci/GroundLayerRendererSmoke.gd 2>&1 | tee "$RUNNER_TEMP/ground.log"
+          grep -q 'GROUND_LAYER_RENDERER_SMOKE_OK' "$RUNNER_TEMP/ground.log"
+          ./Godot_v4.7.1-stable_linux.x86_64 --headless --path "$GITHUB_WORKSPACE/game" --script res://scripts/ci/StructureLayerRendererSmoke.gd 2>&1 | tee "$RUNNER_TEMP/structure.log"
+          grep -q 'STRUCTURE_LAYER_RENDERER_SMOKE_OK' "$RUNNER_TEMP/structure.log"
+          ./Godot_v4.7.1-stable_linux.x86_64 --headless --path "$GITHUB_WORKSPACE/game" --script res://scripts/ci/PropLayerRendererSmoke.gd 2>&1 | tee "$RUNNER_TEMP/prop.log"
+          grep -q 'PROP_LAYER_RENDERER_SMOKE_OK' "$RUNNER_TEMP/prop.log"
+          ./Godot_v4.7.1-stable_linux.x86_64 --headless --path "$GITHUB_WORKSPACE/game" --script res://scripts/ci/ActorLayerRendererSmoke.gd 2>&1 | tee "$RUNNER_TEMP/actor.log"
+          grep -q 'ACTOR_LAYER_RENDERER_SMOKE_OK' "$RUNNER_TEMP/actor.log"
+
+      - name: Canonical demo integration smoke
+        shell: bash
+        run: |
+          set -euxo pipefail
+          ./Godot_v4.7.1-stable_linux.x86_64 --headless --path "$GITHUB_WORKSPACE/game" --script res://scripts/ci/CanonicalDemoSmoke.gd 2>&1 | tee "$RUNNER_TEMP/demo.log"
+          grep -q 'CANONICAL_DEMO_SMOKE_OK' "$RUNNER_TEMP/demo.log"
+          if grep -Eqi 'SCRIPT ERROR|Parse Error|Failed to load script' "$RUNNER_TEMP/demo.log"; then exit 1; fi
+
+      - name: Canonical demo startup smoke
+        shell: bash
+        run: |
+          set -euxo pipefail
+          ./Godot_v4.7.1-stable_linux.x86_64 --headless --path "$GITHUB_WORKSPACE/game" --quit-after 2 2>&1 | tee "$RUNNER_TEMP/startup.log"
+          grep -q 'CANONICAL_DEMO_BOOT_OK' "$RUNNER_TEMP/startup.log"
+          if grep -Eqi 'SCRIPT ERROR|Parse Error|Failed to load script|CANONICAL_DEMO_BOOT_FAILED' "$RUNNER_TEMP/startup.log"; then exit 1; fi
