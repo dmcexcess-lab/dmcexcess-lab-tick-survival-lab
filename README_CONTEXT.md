@@ -40,6 +40,7 @@ Canonical progress:
 - **08 Player / Living Actor Renderer — IMPLEMENTED + CI**
 - **09 Actor Hand Equipment State — IMPLEMENTED + CI**
 - **10 Actor Hand Equipment Presentation — IMPLEMENTED + CI**
+- **11 Inventory / Containment — DRAFT; awaiting explicit user approval before implementation**
 
 ## 3. Foundation / mechanic truth
 
@@ -69,6 +70,26 @@ Canonical design: `SYSTEM_DESIGNS/09_ACTOR_HAND_EQUIPMENT_STATE.md`.
 - missing record differs from enrolled empty hands;
 - versioned/copy-safe/deterministic snapshot state;
 - no Inventory/Render/Combat/Lighting/WHEN/UI ownership.
+
+### 11 Inventory / Containment — DRAFT
+
+Active design: `SYSTEM_DESIGNS/11_INVENTORY_CONTAINMENT.md`.
+
+Proposed contract, not yet approved/implemented:
+
+- 11 owns only direct persistent containment: `item_id -> direct_container_id`;
+- only stable WHAT `item.*` entities are containable children;
+- container capability is explicit enrollment, never inferred from art or semantic name;
+- survivor actors, placed/unplaced world entities, and item-containers may be enrolled;
+- one direct parent maximum per contained item;
+- nested item-containers supported; self/ancestry cycles rejected;
+- normal newly contained items must be tactically unplaced in WHAT;
+- global revision + direct-container versions support stale transfer revalidation;
+- no invented capacity/weight/bulk/stack/quantity values;
+- 11 deliberately does not import 09;
+- a later Item Transfer / Pickup / Drop / Equip coordinator will coordinate WHAT + 09 + 11 + WHEN at semantic commit.
+
+Do not implement 11 until the user explicitly approves the detailed draft.
 
 ## 4. Death / corpse direction
 
@@ -147,16 +168,23 @@ Completed:
 1. **09 Actor Hand Equipment State — IMPLEMENTED.**
 2. **10 Actor Hand Equipment Presentation — IMPLEMENTED.**
 
-Next bounded prerequisites toward the requested honest demo:
+Active design gate:
 
-3. **Inventory / Containment — NOT DESIGNED / DEFERRED.** Real persistent holdings and equip coordination before an Inventory screen claims contents.
-4. **Actor stat domains required for the inspector — NOT DESIGNED.** Reuse implemented state where it exists; design Health/Needs/etc. only as needed rather than fabricate numbers.
-5. **Authored Visual Test Area — NOT DESIGNED.** Real canonical WHAT fixture.
-6. **Tactical renderer/orchestration — NOT DESIGNED.** Compose Ground/Structure/Prop/10-BACK/08/10-FRONT.
-7. **Tactical camera + zoom — NOT DESIGNED.**
-8. **Touch/keyboard/Safari input — NOT DESIGNED.**
-9. **Tactical Controls UI — NOT DESIGNED.**
-10. **HUD / Facing Inspection / Stats & Inventory Inspector / Pause Menu — NOT DESIGNED.**
+3. **11 Inventory / Containment — DRAFT.** Await explicit approval before code. This provides real persistent direct holdings without inventing capacity/stat rules.
+
+Likely immediate follow-up after 11 implementation:
+
+4. **Item Transfer / Pickup / Drop / Equip Actions — NOT DESIGNED.** Higher-level physical transition coordinator over WHAT + 09 + 11 + WHEN so gameplay cannot end with an item simultaneously loose/contained/hand-equipped.
+
+Then remaining bounded prerequisites toward the requested honest demo:
+
+5. **Actor stat domains required for the inspector — NOT DESIGNED.** Reuse implemented state where it exists; design Health/Needs/etc. only as needed rather than fabricate numbers.
+6. **Authored Visual Test Area — NOT DESIGNED.** Real canonical WHAT fixture.
+7. **Tactical renderer/orchestration — NOT DESIGNED.** Compose Ground/Structure/Prop/10-BACK/08/10-FRONT.
+8. **Tactical camera + zoom — NOT DESIGNED.**
+9. **Touch/keyboard/Safari input — NOT DESIGNED.**
+10. **Tactical Controls UI — NOT DESIGNED.**
+11. **HUD / Facing Inspection / Stats & Inventory Inspector / Pause Menu — NOT DESIGNED.**
 
 Later slices may combine only when their explicit contracts prove they are genuinely one coherent owner. Do not hide them inside a monolithic demo scene.
 
@@ -191,6 +219,7 @@ Canonical process:
 13. Controlled-player role is not persistent actor identity.
 14. Corpses are persistent future world/mechanic consequences, not living ACTOR presentation state.
 15. Hand equipment truth remains separate from held-item presentation and Inventory/Containment.
+16. Inventory containment must not silently become the universal item-disposition or item-stat system.
 
 ## 10. Documentation source order
 
@@ -208,4 +237,4 @@ Canonical process:
 
 ## 11. Recommended next action
 
-Design the next honest prerequisite for the requested Safari-first canonical demo rather than extending frozen reboot. Current routing recommends **Inventory / Containment** first because the requested Inventory inspector must display real persistent contents, not a demo-only loadout dictionary.
+Review and explicitly approve or revise `SYSTEM_DESIGNS/11_INVENTORY_CONTAINMENT.md`. Once approved, implement only the 11 persistent containment state + tests, leaving 09, rendering, WHAT/WHEN production, capacity/encumbrance, transfer actions and UI untouched.
