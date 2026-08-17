@@ -1,6 +1,6 @@
 # Tick Survival Lab — 05 Ground Layer Renderer
 
-Status: **APPROVED — implementation authorized by the user on 2026-08-16**
+Status: **IMPLEMENTED — canonical ground renderer and dedicated Godot CI contract present 2026-08-16**
 
 Approval basis: after 04 recovered the canonical Art Catalog, the user requested the Ground Layer Renderer. The focused design was described in chat and the user replied **“Approved”**.
 
@@ -8,230 +8,129 @@ Approval basis: after 04 recovered the canonical Art Catalog, the user requested
 
 Render canonical WHAT terrain for a supplied visible global-cell window using the recovered 04 Art Catalog, while remaining independent from generation, camera/zoom ownership, structures, props, actors, simulation mechanics, and the frozen reboot runtime.
 
-This is the first canonical visual layer that turns persistent semantic terrain into actual CanvasItem drawing.
+05 is the first canonical visual layer that turns persistent semantic terrain into actual CanvasItem drawing.
 
-## 2. Non-goals
-
-05 does not own or implement:
-
-- structures, walls, doors or windows;
-- props, fixtures, vegetation or loose items;
-- actors/player sprites;
-- camera position, zoom selection or visible-window calculation;
-- procedural generation or authored-world creation;
-- road-network planning/classification;
-- collision, traversal or other physics;
-- vision/perception, lighting, weather or sound;
-- input/UI;
-- tactical renderer orchestration;
-- wiring into deprecated `game/scripts/reboot/`.
-
-## 3. Owners
+## 2. Owners
 
 - `game/scripts/render/GroundDrawCommand.gd`
 - `game/scripts/render/GroundLayerRenderer.gd`
 - `game/scripts/ci/GroundLayerRendererSmoke.gd`
 - `.github/workflows/ground-renderer.yml`
 
+## 3. Non-goals / forbidden ownership
+
+05 does not own structures/openings, props/vegetation, actors, camera/zoom, generation, road-network planning/classification, collision/traversal, WHEN, input/UI, lighting/perception/weather/sound, tactical orchestration, or reboot compatibility.
+
+Production Ground renderer source contains no preserved texture paths or atlas indices. Those remain owned by 04 Art Catalog.
+
 ## 4. Public contract
 
-`GroundLayerRenderer` is a standalone `Node2D` presentation owner.
+`GroundLayerRenderer` is a standalone `Node2D`.
 
-It receives dependencies explicitly:
+Dependencies are injected explicitly:
 
-- canonical `WorldState` as read-only terrain truth;
-- canonical `ArtCatalog` for semantic-to-art selection.
+- read-only canonical `WorldState` terrain truth;
+- canonical `ArtCatalog` semantic-to-art selection.
 
-It receives view state explicitly from a future camera/viewport owner:
+View state is supplied explicitly:
 
 - global top-left visible cell;
-- visible width/height in whole cells;
+- visible whole-cell width/height;
 - positive display cell size in pixels.
 
-It exposes deterministic planning for the current visible window as an ordered array of `GroundDrawCommand` values. Commands contain:
+`plan_visible_commands()` returns deterministic row-major `GroundDrawCommand` values. Each command contains the global cell, destination rectangle local to the visible origin, semantic terrain ID, and copied `ArtSelection`.
 
-- global cell;
-- destination rectangle local to the supplied visible-window origin;
-- semantic terrain ID;
-- resolved `ArtSelection` or explicit diagnostic UNKNOWN selection.
-
-The renderer owns texture loading/caching and CanvasItem drawing from those commands.
+Invalid non-positive view dimensions/cell scale are rejected without replacing the last valid view.
 
 ## 5. Data ownership
 
 The renderer owns only ephemeral presentation state:
 
-- current visible-cell window;
-- current display cell size;
-- texture cache;
-- bounded diagnostic bookkeeping.
+- visible window and display cell size;
+- lazy texture cache;
+- bounded diagnostic reason set.
 
-It mutates no WHAT, WHERE, WHEN, collision, movement, actor, generation or art-catalog state.
+It mutates no simulation/world/art state.
 
-## 6. Allowed dependencies
+## 6. Coordinate rule
 
-Allowed:
-
-- `WorldState` read methods `has_terrain(cell)` / `terrain_at(cell)`;
-- `WorldState.changed` / `world_reset` notifications;
-- typed `WorldChange` terrain change vocabulary;
-- `ArtCatalog` and `ArtSelection`;
-- Godot CanvasItem/Node2D drawing and `ResourceLoader`.
-
-## 7. Forbidden dependencies
-
-Production `game/scripts/render/Ground*` source must not import or inspect:
-
-- `game/scripts/reboot/`;
-- generation modules or generator dictionaries/specs;
-- collision or movement;
-- actor locomotion/capability;
-- WHEN/tick kernel;
-- camera/zoom internals;
-- input/UI;
-- structure/prop/actor renderers;
-- lighting/perception/weather/sound.
-
-It must not contain atlas indices or preserved texture paths. Those belong to 04 Art Catalog selections.
-
-## 8. Visible window and coordinates
-
-WHAT coordinates remain authoritative global integer cells.
-
-The renderer draws only the explicitly supplied visible window. A global cell `(x, y)` maps to local destination position:
+WHAT coordinates remain global integer cells. Destination rectangles are local:
 
 `(cell - visible_origin) * cell_pixels`.
 
-This keeps CanvasItem coordinates local even when global world coordinates become very large or negative.
+This permits large/negative global coordinates without requiring giant CanvasItem coordinates.
 
-Commands are generated deterministically in row-major order: top-to-bottom, left-to-right.
+## 7. Ground selection
 
-A view with non-positive dimensions or non-positive cell size is invalid and must be rejected rather than silently drawing nonsense.
+Ordinary terrain delegates to `ArtCatalog.resolve_ground()` and therefore inherits 04 precedence.
 
-## 9. Ground art selection
+Contextual generic terrain:
 
-Ordinary semantic terrain delegates directly to `ArtCatalog.resolve_ground(semantic_id)` and therefore preserves 04 precedence.
+- `road` -> `resolve_road(cardinal_mask, local)`;
+- `dirt_road` -> `resolve_dirt_road(cardinal_mask)`;
+- `sidewalk` -> `resolve_sidewalk(adjacent_road_mask)`.
 
-Three generic semantic terrain families receive contextual topology selection:
+Explicit recovered variants such as `road_ne`, `road_h`, `road_cross`, `dirt_road_h`, etc. remain literal Art Catalog requests and are not recomputed.
 
-- `ground.road` / leaf token `road` -> `ArtCatalog.resolve_road(mask, &"local")`;
-- `ground.dirt_road` / leaf token `dirt_road` -> `ArtCatalog.resolve_dirt_road(mask)`;
-- `ground.sidewalk` / leaf token `sidewalk` -> `ArtCatalog.resolve_sidewalk(touching_road_mask)`.
+## 8. Road topology rule
 
-Explicit authored topology/surface variants such as `ground.road_ne`, `ground.road_h`, `ground.kitchen_tile`, etc. remain literal Art Catalog requests and are not overwritten by contextual selection.
+Generic paved and dirt road cells share one cardinal connectivity family, recovering the useful golden road-cell behavior without restoring generator dictionaries.
 
-## 10. Local road topology recovery
+Road-like neighbors are limited to generic road/dirt-road semantics and explicit recovered road/dirt-road topology variants. Asphalt/concrete/paint-marking surfaces are not guessed to be roads.
 
-For generic road/dirt-road/sidewalk terrain, the renderer derives cardinal N/E/S/W connectivity only from neighboring canonical semantic terrain.
+Missing/unmaterialized neighbor terrain contributes no connection. A later terrain materialization/change triggers the normal halo invalidation path.
 
-Paved and dirt roads participate in one connected road-neighbor family, matching the useful golden behavior where a separate road-cell set carried both paved and dirt road cells.
+05 does not invent arterial/local/trail truth. Generic paved roads use local/default Art Catalog topology until a future canonical Road Network system owns richer road metadata.
 
-Road-like neighbors for this bounded slice are the generic road/dirt-road semantics and the explicitly recovered road/dirt-road topology variants. The renderer does not treat arbitrary asphalt/concrete/road-marking surfaces as roads merely because they visually resemble a road.
+## 9. Drawing behavior
 
-Missing/unmaterialized neighbor terrain simply contributes no connection. If that neighbor materializes later, the normal terrain change notification invalidates the visible topology through the one-cell halo rule below.
+For a FOUND atlas selection, `GroundLayerRenderer` lazily loads/caches the supplied source texture and draws with:
 
-### Road class
+- `draw_texture_rect_region`;
+- destination from the command;
+- `ArtSelection.region()` source rectangle;
+- white modulation;
+- transpose=false;
+- clip_uv=true.
 
-05 does **not** invent arterial/local/trail classification. Canonical WHAT currently has no road-class domain. Generic paved roads therefore use Art Catalog's normal/local topology behavior.
+These flags recover the golden `TacticalTiles.gd` ground draw behavior.
 
-A future Road Network/Topology system may provide richer semantic road metadata through a separately approved seam. Generator-specific dictionaries must never become the renderer's source of truth.
+A valid future full-texture ground selection is supported through `draw_texture_rect` without changing WHAT.
 
-## 11. Drawing behavior
+## 10. Diagnostics
 
-For a FOUND atlas selection:
+Missing WHAT terrain, UNKNOWN art, malformed/non-drawable selection, and texture-load failure render an obvious diagnostic cell rather than silently substituting plausible terrain.
 
-- load/cache the texture from the ArtSelection source descriptor;
-- draw with `draw_texture_rect_region` into the command destination rectangle;
-- use the `ArtSelection.region()` source rectangle;
-- preserve the golden draw flags: no transpose, clipping enabled.
+Diagnostic reasons are bounded to 64 unique strings and are presentation-only.
 
-If a future valid ground selection is a full texture rather than an atlas region, the renderer may draw it with `draw_texture_rect` using the same destination rectangle without moving source knowledge into WHAT.
+## 11. Redraw/invalidation
 
-The preserved art assets remain untouched.
+There is no `_process()` redraw loop.
 
-## 12. Unknown/missing diagnostics
+Redraw is requested on:
 
-Missing WHAT terrain and Art Catalog UNKNOWN results are visible presentation failures, not silent substitutions.
+- dependency configuration;
+- visible-window/cell-scale change;
+- explicit texture-cache clear;
+- WHAT `world_reset`;
+- WHAT `TERRAIN_SET` / `TERRAIN_REMOVED` inside the visible window;
+- those terrain changes in the one-cell **cardinal** topology halo immediately beyond the visible edges.
 
-The renderer draws an obvious diagnostic tile for that destination and records a bounded diagnostic reason. It does not silently replace missing/unknown ground with grass, asphalt, concrete or another plausible surface.
+Diagonal-only offscreen changes and non-terrain WHAT changes do not redraw this layer.
 
-Diagnostic presentation changes no simulation truth.
+## 12. Performance/mobile
 
-## 13. Invalidation / redraw rules
-
-The renderer has no `_process()` redraw loop.
-
-A redraw is requested when:
-
-- dependencies are configured/reconfigured;
-- the visible window or display cell size changes;
-- WHAT emits `world_reset`;
-- WHAT emits `TERRAIN_SET` or `TERRAIN_REMOVED` for a cell inside the visible window or its one-cell cardinal/topology halo.
-
-Non-terrain WHAT changes do not redraw the Ground layer.
-
-The one-cell halo is required because changing a just-offscreen road cell can change the topology sprite of an onscreen boundary road/sidewalk cell.
-
-## 14. Texture cache
-
-Textures are loaded lazily from `ArtSelection.source.texture_path` and cached by path for reuse.
-
-The cache is presentation-only and may be cleared explicitly or on dependency reset. It owns no source paths beyond those supplied by the Art Catalog.
-
-A failed texture load produces a diagnostic draw rather than a silent omission.
-
-## 15. Performance / mobile
-
-- iterate only supplied visible cells;
+- visible cells only;
 - no full-world scan;
-- no per-frame polling/redraw;
-- row-major deterministic command generation;
-- cached texture resources;
-- terrain events redraw only when they affect visible/topology-relevant cells;
-- no hover, input, or Safari-specific behavior belongs in this renderer.
+- no per-frame polling;
+- deterministic row-major planning;
+- cached textures;
+- bounded event-driven invalidation;
+- no input/hover/Safari behavior in the renderer.
 
-This is compatible with phone/Safari because future camera/input systems can change the visible window without changing renderer mechanics.
+Future camera/streaming systems may change the supplied window without changing Ground semantics.
 
-## 16. Failure cases / edge cases
-
-Must handle:
-
-- negative global coordinates;
-- missing terrain inside the visible window;
-- unknown semantic ground IDs;
-- invalid view dimensions/cell size;
-- road endpoints, straights, corners, T intersections and crossroads;
-- mixed paved/dirt road adjacency;
-- dirt-road horizontal/vertical/mixed selection;
-- sidewalk with zero, one, or multiple adjacent road cells;
-- terrain changes just outside the visible window;
-- world reset;
-- texture load failure.
-
-## 17. Verification / acceptance
-
-Dedicated Godot 4.7.1 CI must prove:
-
-- production source boundary guards;
-- project import/parse;
-- deterministic visible-window command count/order;
-- destination rectangles relative to visible origin;
-- negative global coordinates;
-- ordinary Art Catalog precedence through real semantic IDs;
-- road straight/corner/T/cross/end behavior;
-- paved/dirt road shared connectivity;
-- dirt-road orientation;
-- sidewalk curb selection;
-- explicit topology variants remain literal;
-- missing and unknown terrain become diagnostics;
-- texture paths used by found commands exist/load;
-- non-terrain WHAT changes do not request redraw;
-- visible/halo terrain changes do request redraw;
-- distant terrain changes do not request redraw;
-- world reset/view change requests redraw;
-- 04 Art Catalog regression smoke remains green.
-
-## 18. Recovery source
+## 13. Recovery source
 
 Golden recovery commit:
 
@@ -241,44 +140,65 @@ Golden `TacticalTiles.gd` blob:
 
 `3d8a0a70ac983408bb48f58fc659dfb07e216ed3`
 
-Recovered draw facts used by 05:
+Recovered facts:
 
-- 32px source atlas regions were stretched to destination cell rectangles;
-- `draw_texture_rect_region` used transpose=false and clip_uv=true;
-- road connectivity was cardinal;
-- paved/dirt ground shared the road-cell network;
-- sidewalk used a curb variant only when exactly one adjacent road existed.
+- atlas regions stretched into destination cells;
+- transpose=false / clip_uv=true;
+- cardinal road connectivity;
+- paved/dirt ground shared the road network;
+- sidewalk curb used only when exactly one adjacent road existed.
 
-The golden generator `spec`, road dictionaries and monolithic draw helper are not restored.
+The golden generator `spec`, road dictionaries, and monolithic draw helper were not restored.
 
-## 19. Future seams
+## 14. Verified acceptance
 
-Future consumers/extensions:
+The first complete implementation head `0b1460a89140d0a9d84478c9300dacb84d991a11` passed the dedicated **Ground Layer Renderer contract** under Godot 4.7.1 with no production repair required.
 
-- Tactical camera/viewport owner supplies the visible global-cell window and display scale;
-- future Road Network may provide explicit road class/topology metadata through an approved presentation seam;
-- a Tactical Renderer may orchestrate Ground + Structure + Prop + Actor layers without absorbing their internals;
-- lighting/perception/weather may overlay or modulate presentation later without moving simulation truth into Ground;
-- streaming/materialization can change available WHAT terrain without changing renderer coordinate semantics.
+The dedicated contract proves:
 
-## 20. North-star fit
+- source-boundary isolation;
+- project import/parse;
+- 04 Art Catalog regression remains green;
+- visible-only deterministic command count/order;
+- negative global coordinates and local destination rectangles;
+- recovered ground precedence;
+- road endpoints, straights, corners, T intersections and crossroads;
+- paved/dirt shared connectivity;
+- horizontal/vertical/mixed dirt-road selection;
+- sidewalk curb/plain selection;
+- explicit topology variants remain literal;
+- missing/unknown terrain is diagnostic;
+- resolved textures exist/load;
+- non-terrain/distant/diagonal changes do not redraw;
+- visible/cardinal-halo terrain, world reset, and view changes do redraw.
 
-This is the smallest real visible layer that turns the persistent open-world WHAT truth into the recovered readable Ultima-style art. It preserves mood/readability while keeping rendering replaceable and refusing to make generator state, art indices or physics into presentation truth.
+## 15. Future seams
 
-## 21. Approved decisions
+- Tactical camera/viewport supplies visible origin/size/scale.
+- Future Road Network may provide approved road-class metadata without exposing generator dictionaries.
+- Future Tactical Renderer may orchestrate Ground + Structure + Prop + Actor layers without absorbing their internals.
+- Lighting/perception/weather remain overlays/modulators, not Ground truth.
+- Streaming/materialization may change WHAT availability without changing coordinate semantics.
+
+## 16. North-star fit
+
+This is the smallest real visible layer turning persistent open-world WHAT truth into the recovered readable Ultima-style art. It keeps rendering replaceable and refuses to make generator state, art indices, or physics into presentation truth.
+
+## 17. Approved decisions
 
 Approved 2026-08-16:
 
-- Ground Renderer is a standalone Node2D presentation system;
-- reads canonical WHAT terrain and 04 Art Catalog only;
-- draws only a supplied visible global-cell window;
-- destination coordinates are local to the visible origin;
-- no `_process()` full-scene redraw loop;
-- terrain event invalidation includes a one-cell topology halo;
-- generic road/dirt-road/sidewalk topology is derived from neighboring semantic terrain;
-- paved and dirt roads share connectivity;
-- explicit authored topology variants stay literal;
-- generic road class is local/default until a real Road system owns classification;
-- missing/unknown art is visibly diagnostic, never silently substituted;
-- texture loading is lazy/cached from ArtSelection descriptors;
-- do not touch preserved art or wire into deprecated reboot code.
+- standalone Node2D ground presentation owner;
+- canonical WHAT terrain + 04 Art Catalog only;
+- supplied visible global-cell window;
+- local destination coordinates;
+- no per-frame redraw loop;
+- cardinal one-cell topology halo invalidation;
+- generic road/dirt-road/sidewalk topology from semantic neighbors;
+- paved/dirt roads share connectivity;
+- explicit variants remain literal;
+- default/local road class until a real Road system owns classification;
+- visible diagnostics instead of silent terrain substitution;
+- lazy/cached texture loading from ArtSelection descriptors;
+- preserved art untouched;
+- no deprecated reboot wiring.
