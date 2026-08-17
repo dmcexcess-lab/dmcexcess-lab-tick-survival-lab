@@ -233,3 +233,23 @@ LOOSE_ITEM and EFFECT placements do not require collision profiles by default. T
 **Affected systems:** movement, doors, AI/pathfinding, generator/content validation, construction, vehicles, death/corpses, persistence/save orchestration.
 
 **Implementation:** `SYSTEM_DESIGNS/01_COLLISION_SPATIAL_QUERY.md` and `game/scripts/simulation/collision/`.
+
+---
+
+## 2026-08-16 — Death leaves persistent corpse consequences; corpses are not living actors
+
+**Decision:** A dead person/infected should leave a persistent physical corpse/world consequence rather than remain an ordinary living `ACTOR` entry or disappear from the world.
+
+The living Actor renderer therefore covers only living actors. Corpse representation, state, rendering and mechanics are a separate future domain.
+
+Corpse state should preserve a durable relationship to the deceased identity and support age/decay over world time. The exact same-ID versus linked corpse-ID representation is intentionally deferred to the dedicated corpse design because current WHAT entity identity/type contracts should not be casually rewritten merely to support death.
+
+**Gameplay consequence:** ignored bodies can become an environmental health problem. The intended simplified model is accumulated local contamination/filth pressure driven by corpse age/decay, number of bodies and later environmental modifiers such as enclosure/ventilation. Health may later interpret sustained exposure as sickness risk or related penalties.
+
+This is **not** a detailed microbiology simulation and should not become a flat “corpse nearby = random disease roll.” The design target is meaningful cleanup/disposal decisions: moving bodies, cleaning, burial/burning/disposal and avoiding sleeping/living beside accumulating decay.
+
+**Why:** Persistent corpses make death physically consequential, create emergent base-cleanup problems, and fit the mini-Zomboid rule by preserving the survival decision without unnecessary biological complexity.
+
+**Affected systems:** death/combat, persistent world state, corpse state, WHEN, health/sickness, collision, inventory/search, rendering, base safety, streaming/coarse simulation, cleaning/disposal interactions.
+
+**Current renderer consequence:** `SYSTEM_DESIGNS/08_PLAYER_LIVING_ACTOR_RENDERER.md` is living-ACTOR-only; corpse rendering belongs to the future Corpse / Decay / Contamination system.
