@@ -13,11 +13,11 @@ const TrailerClass = preload("res://scripts/generation/buildings/archetypes/Trai
 const MAP_ORIGIN: Vector2i = Vector2i.ZERO
 const MAP_SIZE: Vector2i = Vector2i(13, 13)
 const PLAYER_ID: String = "actor.player.demo"
-const PLAYER_START: Vector2i = Vector2i(8, 3)
+const PLAYER_START: Vector2i = Vector2i(7, 3)
 const BASE_WALK_TICKS: int = 10
 const BUILDING_ID: String = "building.demo.trailer.001"
 const EXTERIOR_DOOR_ID: String = "building.demo.trailer.001.door.exterior.primary"
-const TRAILER_ENVELOPE: Rect2i = Rect2i(2, 0, 6, 12)
+const TRAILER_ENVELOPE: Rect2i = Rect2i(2, 0, 5, 12)
 const TRAILER_SEED: int = 19001
 
 const GRASS: StringName = &"ground.grass_lush"
@@ -73,7 +73,7 @@ static func build(
 static func _configure_rules(collision_catalog: CollisionCatalog, traversal_policy: MovementTraversalPolicy) -> bool:
     var blocking_semantics: Array[StringName] = [
         SURVIVOR,
-        &"wall.rural_wood", &"wall.interior",
+        &"wall.plaster", &"wall.interior",
         &"door.rural_wood", &"door.house",
         &"window.rural_wood",
         &"prop.stove_range", &"prop.refrigerator_white", &"prop.kitchen_sink",
