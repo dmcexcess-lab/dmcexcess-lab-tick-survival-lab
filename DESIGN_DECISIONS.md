@@ -284,3 +284,30 @@ The approved architecture separates these responsibilities:
 **Detailed umbrella:** `SYSTEM_DESIGNS/13_ACTOR_STATS_STATUS_ARCHITECTURE.md`.
 
 **Implementation rule:** the umbrella approval does not authorize all children at once; each independently implementable child still requires its own bounded design/approval.
+
+---
+
+## 2026-08-16 — Walk is damage-interruptible; Run is a committed two-cell action
+
+**Decision:** Movement now distinguishes cautious Walk from committed Run rather than treating all movement as the same interruption class.
+
+- Walk Forward/Back moves one cell and uses WHEN `CANCELABLE`.
+- Run Forward is an explicit action, never a persistent run mode; it moves two straight cells through two physical stride phases and uses WHEN `COMMITTED`.
+- Turns remain COMMITTED.
+- Real HP damage requests interruption through a stateless Health -> WHEN coordinator. WHEN policy cancels Walk but ignores ordinary damage interruption for Run/Turn.
+- Run validates both crossed cells at request and each physical stride revalidates current placement/collision/terrain with no reservation.
+- A successful first Run stride is not rolled back if the second later fails.
+
+**Run timing:** each stride is `ceil(60% * normal walk terrain cost)` before actor capability modifiers. Current 10-tick demo terrain therefore runs at 6 ticks/square, 12 ticks for the full two-cell action.
+
+**Run endurance:** fatigue is still the existing 0..100 Needs pressure scale. Fatigue 80+ blocks Run start, each successful Run stride adds +1 fatigue, and start capability is latched for the committed action so crossing 80 after stride one does not cancel stride two.
+
+**Architecture:** MovementActionService does not import Health or Needs. `MovementDamageInterruptionService` and `MovementRunExertionService` coordinate through narrow public signals/APIs. No stamina state or persistent Run mode is introduced.
+
+**Why:** This creates a meaningful tactical choice with minimal simulation clutter: Walk is slower but abortable under damage; Run crosses ground faster per square but commits the survivor to momentum and real fatigue cost.
+
+**Supersedes:** older System 02 statements that all movement actions are COMMITTED and older System 03 statements that Run is only a deferred capability seam.
+
+**Affected systems:** Movement, Actor Locomotion/Capability, Health observation, Needs/Fatigue, player input/controller, HUD-visible timing/status indirectly.
+
+**Detailed design:** `SYSTEM_DESIGNS/17_RUN_DAMAGE_INTERRUPTIBLE_WALKING.md`.

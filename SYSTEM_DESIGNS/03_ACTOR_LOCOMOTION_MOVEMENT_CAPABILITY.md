@@ -1,165 +1,79 @@
 # Tick Survival Lab — 03 Actor Locomotion State & Movement Capability
 
-Status: **IMPLEMENTED — canonical modular source and dedicated Godot CI contract present 2026-08-16**
+Status: **IMPLEMENTED — canonical modular source; Run seam activated by implemented System 17 on 2026-08-16**
 
-Approval basis: after reviewing the DRAFT design, the user explicitly instructed **“Approved!”** on 2026-08-16.
+Approval basis: original 03 was explicitly approved on 2026-08-16. System 17 later activated the already-reserved `movement.run_forward` capability seam without adding persistent Run state.
 
 ## 1. Goal
 
-Provide the canonical shared locomotion-state and movement-capability layer for persistent actors without creating a generic `ActorState` god object.
+Own persistent actor stance and compose read-only mobility capability without creating a generic ActorState object.
 
-The system answers only locomotion questions:
+03 answers:
 
-- is an actor standing or crouched?;
+- is the actor standing or crouched?;
 - may the actor perform a movement/stance action?;
-- how does stance modify a base action duration?;
-- how can future health, fatigue, encumbrance, equipment or skill systems affect mobility without Movement, WHAT, Collision or WHEN learning their internals?
+- how does stance change base timing?;
+- how do independent condition domains contribute capability/timing through narrow providers?
 
 Canonical relationship:
 
-**persistent stance + read-only mobility contributors -> actor capability -> Movement policy / stance action -> WHEN**
+**persistent stance + read-only mobility contributors -> actor capability -> Movement/stance actions -> WHEN**
 
-## 2. Non-goals / ownership boundary
+## 2. Ownership boundary
 
-This system does **not** own actor identity, appearance, occupation, relationships, health/wounds, fatigue/stamina, hunger/thirst/temperature, inventory/carry weight, equipment, skills, input/UI, rendering/animation, perception, sound, AI/pathfinding, collision, terrain classification, WHAT placement, WHEN internals, doors, forced displacement, generation or population simulation.
+03 does not own identity, placement, collision, Health, fatigue state, inventory/carry truth, equipment, skills, input/UI, rendering, AI, perception, sound, or WHEN internals.
 
-Those domains may later contribute mobility effects through the provider contract without being imported by locomotion.
+Those domains contribute only through public provider contracts. System 17 does not change that boundary.
 
 ## 3. Implemented owners
 
-Canonical production source lives under `game/scripts/simulation/actors/locomotion/`:
+Under `game/scripts/simulation/actors/locomotion/`:
 
-- `ActorStance.gd` — stable semantic stance vocabulary.
-- `ActorLocomotionRecord.gd` — immutable-style actor locomotion value record.
-- `ActorLocomotionState.gd` — authoritative locomotion store, safe reads, revision, deterministic snapshot/restore.
-- `ActorLocomotionMutationService.gd` — validated normal write path.
-- `ActorMovementCapabilityDecision.gd` — typed actor-capability decision.
-- `ActorMobilityModifierProvider.gd` — narrow extension contract for future condition domains.
-- `ActorMovementCapabilityService.gd` — deterministic stance/provider aggregation.
-- `ActorMovementTraversalPolicy.gd` — Movement-policy adapter that layers actor capability over base terrain/timing policy.
-- `ActorStanceActionResult.gd` — typed crouch/stand request result.
-- `ActorStanceActionService.gd` — timed voluntary stance action owner.
+- `ActorStance.gd`
+- `ActorLocomotionRecord.gd`
+- `ActorLocomotionState.gd`
+- `ActorLocomotionMutationService.gd`
+- `ActorMovementCapabilityDecision.gd`
+- `ActorMobilityModifierProvider.gd`
+- `ActorMovementCapabilityService.gd`
+- `ActorMovementTraversalPolicy.gd`
+- `ActorStanceActionResult.gd`
+- `ActorStanceActionService.gd`
 
-Verification/support:
+Verification includes `ActorLocomotionSmoke.gd` plus System 17 integration coverage.
 
-- `game/scripts/ci/ActorLocomotionTestProvider.gd`
-- `game/scripts/ci/ActorLocomotionSmoke.gd`
-- `.github/workflows/actor-locomotion.yml`
+## 4. Persistent state
 
-## 4. Persistent locomotion state
-
-The only persistent locomotion state in 03 is semantic stance:
+The only persistent locomotion state remains:
 
 - `standing`
 - `crouched`
 
-Each record is keyed by the stable WHAT entity ID and contains:
+There is **no persistent Run mode**. Running is a semantic Movement action requested when needed.
 
-- actor ID;
-- semantic stance;
-- monotonic per-actor locomotion version.
+Actors require explicit locomotion enrollment. Missing state fails closed as `ACTOR_UNCLASSIFIED`. Snapshot/restore remains deterministic and stores stance/version only; pending actions remain WHEN-owned.
 
-Stance is not stored in `WorldEntityRecord`, does not alter WHAT placement, and does not require the actor to remain tactically placed. An unplaced/distant actor may retain locomotion state.
-
-### Explicit enrollment / fail closed
-
-ACTOR-channel placement does not implicitly create locomotion capability.
-
-- actors must be explicitly enrolled;
-- first explicit enrollment defaults to standing unless another valid stance is supplied;
-- duplicate enrollment is rejected;
-- missing locomotion state is `ACTOR_UNCLASSIFIED`, not an assumed standing actor;
-- cleanup is explicit rather than tied to Godot Node lifetime;
-- remove/re-enroll receives a newer version basis so stale pending stance work cannot accidentally match a recreated record.
-
-## 5. No persistent run state / no run action yet
-
-`run` is **not** persistent locomotion state. A stationary actor is never physically “running” because an input preference happens to be enabled.
-
-03 deliberately does **not** add `request_run` or a runnable Movement action. Until real fatigue/stamina/sound consequences exist, faster running would be an incomplete always-better placeholder.
-
-The capability service reserves semantic `movement.run_forward` only as a future extension seam. Crouched stance already reports that future action as blocked, without implementing the action itself.
-
-## 6. Stance behavior and timing
+## 5. Stance timing
 
 Standing:
 
-- step duration scale: `10000` = 1.0x base Movement duration;
-- turn duration scale: `10000` = 1.0x.
+- ordinary step scale 1.0x;
+- turn scale 1.0x;
+- Run permitted subject to registered providers.
 
 Crouched:
 
-- same WHAT anchor/footprint as standing;
-- forward/backward step scale: `14000` = 1.4x;
-- turn scale: `10000` = 1.0x in the initial tuning;
-- future run capability is blocked.
+- forward/back walk scale 1.4x;
+- turn scale 1.0x;
+- `movement.run_forward` is explicitly CAPABILITY_BLOCKED.
 
-Voluntary crouch/stand changes are real actions with base cost **4 ticks** before external capability modifiers.
+Crouch/stand are real committed actions with 4-tick base cost before provider modifiers.
 
-All timing scaling uses deterministic integer basis points. Positive scaled durations use integer ceil division so they cannot truncate to zero.
+All scales use deterministic integer basis points with ceiling division.
 
-These values are balance tuning, not WHEN constants.
+## 6. Capability contract
 
-## 7. Actor locomotion state contract
-
-`ActorLocomotionState` owns only locomotion records plus store revision.
-
-Public reads return copies/semantic values. Normal writes pass through `ActorLocomotionMutationService`:
-
-- `enroll(actor_id, initial_stance)`
-- `remove(actor_id)`
-- `set_stance(actor_id, target_stance)`
-
-Successful stance mutation increments both the actor locomotion version and store revision and emits a stance-change fact. Successful enroll/remove also advance the store revision.
-
-The store intentionally does not own WHAT lifecycle. If a WHAT entity is removed, locomotion cleanup remains an explicit domain/orchestration action rather than hidden cross-domain mutation.
-
-## 8. Snapshot / restore
-
-Locomotion snapshot state contains:
-
-- explicit schema version;
-- deterministic actor-ID-sorted records;
-- semantic stance values;
-- per-actor versions;
-- store revision.
-
-Restore validates into replacement state first and is atomic on malformed input. No Godot Node references, WHAT placement, health, inventory, fatigue or pending action objects are serialized here.
-
-Pending stance actions remain WHEN-owned serializable action records/payloads, avoiding a second action truth.
-
-## 9. Stance action contract
-
-`ActorStanceActionService` exposes:
-
-- `request_crouch(actor_id)`
-- `request_stand(actor_id)`
-
-Request-time requirements:
-
-- service dependencies ready;
-- actor exists in WHAT;
-- actor has an ACTOR-channel placement;
-- actor has explicit locomotion state;
-- actor is not already busy in WHEN;
-- requested stance differs from current stance;
-- capability service allows the transition and resolves a positive duration.
-
-Requesting the already-current stance returns explicit `NO_CHANGE` and consumes no ticks.
-
-Accepted stance actions:
-
-- use WHEN `COMMITTED` interruption policy;
-- contain one final `actor.stance.commit` phase;
-- store expected locomotion version, source stance and target stance in safe payload data;
-- mutate locomotion state only at commit;
-- are frozen normally by hard application pause with zero hidden tick advancement.
-
-At commit the service rechecks WHAT actor/placement, expected locomotion version/source stance, action/target consistency and current capability. If any required fact changed, the action fails without overwriting newer state.
-
-## 10. Capability service contract
-
-`ActorMovementCapabilityService.evaluate(actor_id, action_type, base_duration_ticks)` returns typed:
+`ActorMovementCapabilityService.evaluate(actor_id, action_type, base_duration_ticks)` returns:
 
 - `ALLOWED`
 - `ACTOR_UNCLASSIFIED`
@@ -167,127 +81,99 @@ At commit the service rechecks WHAT actor/placement, expected locomotion version
 - `CAPABILITY_BLOCKED`
 - `INVALID_DURATION`
 
-The decision includes resolved duration, reason and stance used for evaluation.
+Recognized action vocabulary includes:
 
-Unknown actor locomotion state fails closed. Unknown action semantics fail closed rather than silently receiving ordinary walk capability.
+- `movement.step_forward`
+- `movement.step_backward`
+- `movement.run_forward`
+- `movement.turn_left`
+- `movement.turn_right`
+- crouch / stand stance actions.
 
-## 11. Mobility modifier provider seam
+Unknown actions fail closed.
 
-Future systems extend mobility through `ActorMobilityModifierProvider`, not by exposing their internal dictionaries to locomotion.
+## 7. Provider seam
 
-Each provider supplies:
+Each `ActorMobilityModifierProvider` supplies a stable provider ID and read-only `(actor_id, action_type)` evaluation with:
 
-- stable unique provider ID;
-- read-only `(actor_id, action_type)` evaluation;
-- `ALLOWED`, `BLOCKED` or `UNKNOWN`;
+- ALLOWED / BLOCKED / UNKNOWN;
 - signed duration adjustment in basis points;
-- stable reason where relevant.
+- semantic reason.
 
-Aggregation rules:
+Provider IDs are unique and evaluated in deterministic sorted order. Explicit BLOCKED outranks UNKNOWN; UNKNOWN fails closed; allowed timing adjustments combine additively.
 
-- duplicate provider IDs are rejected;
-- provider IDs are maintained/evaluated in sorted deterministic order;
-- any explicit `BLOCKED` result blocks the action;
-- `UNKNOWN` fails closed if no explicit block supersedes it;
-- allowed adjustments combine additively in basis points;
-- a non-positive combined scale is `INVALID_DURATION`;
-- providers do not mutate other domains during evaluation.
+Current canonical demo registers:
 
-Intended future provider owners include Health, Needs/Fatigue, Inventory/Encumbrance, Equipment and Skills/Traits.
+- Needs/Fatigue provider;
+- Carry/Encumbrance provider.
 
-## 12. Movement integration / 02 contract revision
+The demo therefore now uses the already-implemented real fatigue/carry timing seams rather than leaving those providers unwired.
 
-03 implements the approved narrow revision to Movement's replaceable policy seam.
+## 8. Run capability semantics
 
-New `game/scripts/simulation/movement/MovementPolicyDecision.gd` distinguishes:
+System 17 activates `movement.run_forward` as a real action.
 
-- `ALLOWED`
-- `TERRAIN_UNCLASSIFIED`
-- `TERRAIN_BLOCKED`
-- `ACTOR_UNCLASSIFIED`
-- `CAPABILITY_UNKNOWN`
-- `CAPABILITY_BLOCKED`
-- `INVALID_DURATION`
+At Run request time:
 
-`MovementTraversalPolicy` now exposes typed:
+- actor must be standing;
+- Needs provider must permit Run start;
+- Carry and other registered providers contribute their timing/capability decisions;
+- current provider timing scales each Run stride base duration through the actor-aware traversal policy.
 
-- `evaluate_step(actor_id, action_type, terrain_types)`
-- `evaluate_turn(actor_id, action_type)`
+Needs specifically blocks Run start at fatigue 80+ (`too_exhausted_to_run`).
 
-The simple base policy still owns only terrain/base timing. `ActorMovementTraversalPolicy` delegates to the base policy, then applies `ActorMovementCapabilityService`.
+Once a Run is accepted, the two-stride action latches start-time actor capability. System 17 intentionally does **not** re-evaluate actor condition between strides, because Run is a committed action. Therefore self-generated fatigue crossing 80 after stride one does not cancel stride two. New condition affects the next action.
 
-`MovementActionResult` gained matching actor/capability failure statuses so an injured/unknown actor condition is never mislabeled as terrain failure.
+This differs from ordinary Walk/Turn commit behavior, where Movement continues to perform its normal commit-time capability revalidation.
 
-The public Movement action vocabulary and semantics remain unchanged: forward, backward, turn left and turn right only.
+## 9. ActorMovementTraversalPolicy
 
-## 13. Commit-time capability revalidation
+The adapter keeps base terrain timing separate from actor condition:
 
-Movement already revalidates collision, terrain and expected origin at `movement.commit`. Actor-aware policy evaluation now runs again there as well.
+- ordinary `evaluate_step` -> base walk terrain timing -> actor capability;
+- `evaluate_run_stride` -> base 60%-of-walk Run-stride timing -> actor capability using `movement.run_forward`;
+- `evaluate_turn` -> base turn timing -> actor capability.
 
-- if the actor becomes **incapable** before commit, the committed action spends its elapsed duration and fails without WHAT movement;
-- if the actor remains capable but a new condition would make movement **slower**, the already-scheduled action is not stretched/rescheduled;
-- the changed duration applies to the next action.
+The adapter does not inspect Needs/Carry internals.
 
-This preserves deterministic WHEN ownership of the committed duration while still allowing severe physical capability changes to invalidate the final physical result.
+## 10. Stance action contract
 
-## 14. Signals / observation
+`request_crouch` / `request_stand` remain real WHEN COMMITTED actions. Same-stance request is explicit no-op. State mutates only at final stance commit and revalidates expected version/source stance/capability. Hard pause freezes action with zero hidden ticks.
 
-Locomotion exposes mechanic facts such as record enrolled/removed and stance changed. Stance actions expose committed/failed results.
+## 11. Historical recovery
 
-Renderer, UI, perception, sound and AI may observe these facts later without locomotion owning presentation or decision logic.
-
-## 15. Performance / mobile
-
-Normal locomotion lookup is O(1); capability evaluation is O(P) over a deliberately small provider set. There is no per-frame polling, full-world scan or Node-per-record requirement.
-
-No Safari/touch handling lives here. Future input adapters emit semantic crouch/stand/movement requests. WHEN/application lifecycle remains owner of hard-pause behavior.
-
-## 16. Historical recovery
-
-Golden source inspected:
-
-- `PlayerActor.gd` blob `2f839f1a50041c8bd00e144c1a9389d0a33d1401` from recovery commit `1763958f44eb7f855fd49944c00d1ffe608c0abe`.
-
-Recovered useful behavior:
+Golden `PlayerActor.gd` supplied useful tuning/direction:
 
 - walk ~10 ticks;
-- crouched walk ~14 ticks;
-- turn ~3 ticks;
-- stance change ~4 ticks;
-- crouch prevents running;
-- actor conditions may modify action cost.
+- run pace ~6 ticks/square;
+- crouched walk ~14;
+- turn ~3;
+- stance ~4;
+- crouch prevents Run;
+- actor condition can alter action timing.
 
-Rejected golden architecture:
+Rejected golden architecture remains rejected: no player-only god object and no persistent RUN flag.
 
-- one player-only object owning movement, stance, health, carry weight, fatigue and identity;
-- persistent RUN mode as physical simulation state;
-- float ratios as the cross-system capability contract.
+## 12. Verified acceptance criteria
 
-## 17. Verified acceptance criteria
+03 + System 17 tests now prove:
 
-Dedicated Godot 4.7.1 CI proves:
+- explicit enrollment/version/snapshot rules;
+- standing 1.0x and crouched 1.4x walk timing;
+- committed 4-tick stance change;
+- crouched Run blocked;
+- standing Run recognized through capability;
+- deterministic provider ordering and timing combination;
+- fatigue/carry providers can modify Run start timing without Movement imports;
+- fatigue 80+ provider block propagates as capability blocked;
+- Run start capability can be latched while subsequent condition changes affect the next action;
+- no persistent Run state exists;
+- Movement/Locomotion remain independent of Needs/Carry implementation internals.
 
-- explicit enrollment and duplicate rejection;
-- safe locomotion reads, revision/version progression and explicit cleanup;
-- deterministic snapshot round-trip and atomic malformed restore rejection;
-- standing 1.0x / crouched 1.4x step timing and normal crouched turning;
-- crouched future-run capability blocked without implementing a run action;
-- missing locomotion state fails closed;
-- deterministic provider ordering, additive modifiers, UNKNOWN handling, BLOCKED priority and invalid non-positive scale rejection;
-- crouch/stand mutate only at the final 4-tick stance commit;
-- no-change stance requests consume zero ticks;
-- stance does not alter WHAT anchor/footprint;
-- hard pause freezes stance work with zero hidden time;
-- stale locomotion versions prevent overwrite;
-- locomotion may persist while WHAT placement is absent;
-- WHAT actor removal causes pending stance commit failure without hidden cross-domain cleanup;
-- actor-aware Movement distinguishes actor capability failures from terrain failures;
-- crouched Movement uses 14 ticks against the 10-tick test terrain while turns remain 3 ticks;
-- capability becoming BLOCKED mid-move prevents commit after the already-spent duration;
-- a newly slower-but-still-allowed condition does not stretch the current move and affects the next request;
-- the existing Movement regression smoke remains green;
-- no reboot/input/render/generation/health/needs/inventory implementation was imported into the locomotion owner.
+## 13. Supersession note
 
-## 18. North-star fit
+System 17 supersedes older wording in this design that Run was only a deferred future seam. The seam is now active; the detailed physical Run contract belongs to `17_RUN_DAMAGE_INTERRUPTIBLE_WALKING.md` and Movement System 02.
 
-03 creates the smallest causal locomotion model that preserves meaningful movement/stance consequence for **Ultima-style turn-based mini Zomboid**. It gives later injuries, fatigue and encumbrance a real way to change action capability/cost while keeping those simulations independent, keeping WHEN mechanic-agnostic, and avoiding a generic ActorState god object.
+## 14. North-star fit
+
+03 still supplies the smallest modular locomotion model for **Ultima-style turn-based mini Zomboid**: persistent stance plus composable real capability, with Run now using the seam that was deliberately reserved for it rather than forcing a locomotion-state redesign.

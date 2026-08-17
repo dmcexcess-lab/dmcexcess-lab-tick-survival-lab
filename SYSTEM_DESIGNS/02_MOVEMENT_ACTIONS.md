@@ -1,174 +1,166 @@
 # Tick Survival Lab — 02 Movement Actions
 
-Status: **IMPLEMENTED — canonical modular source and dedicated Godot CI contract present 2026-08-16**
+Status: **IMPLEMENTED — canonical modular source; revised by implemented System 17 on 2026-08-16**
 
-Approval basis: after the Movement Actions design was described in chat, the user instructed: **“Approved code it.”**
-
-03 Actor Locomotion later made an explicitly approved **typed policy-contract extension** without changing Movement's physical action semantics.
+Approval basis: original Movement was approved with “Approved code it.” System 03 later extended the typed actor-capability seam. System 17, explicitly approved with “17 is go for approval,” revises walking interruption and activates explicit two-cell running.
 
 ## 1. Goal
 
-Provide the canonical actor movement bridge across WHERE + WHAT + Collision / Spatial Query + WHEN.
+Own the canonical physical actor-movement bridge across WHERE + WHAT + Collision + WHEN. Movement validates semantic requests, submits deterministic timed actions, revalidates physical truth at movement phases, and mutates WHAT placement only through `WorldMutationService`.
 
-Movement turns a semantic request into a deterministic timed action, revalidates legality at commit, and mutates WHAT placement only through `WorldMutationService`.
+Movement does not own input, rendering, AI/pathfinding, Health, Needs, Carry, stance truth, equipment, doors, perception, sound, weather, generation, or WHEN internals.
 
 ## 2. Action vocabulary
 
-- `movement.step_forward` — one cell along current facing.
-- `movement.step_backward` — one cell opposite facing without changing facing.
+- `movement.step_forward` — one cell along facing.
+- `movement.step_backward` — one cell opposite facing, preserving facing.
+- `movement.run_forward` — two straight forward cells under one committed action, implemented by System 17.
 - `movement.turn_left` — rotate 90 degrees in place.
 - `movement.turn_right` — rotate 90 degrees in place.
 
-No diagonal movement, strafing or run action is implemented by 02/03.
+No diagonal movement, strafing, or running backward exists in v1. Run is an explicit action, never persistent movement mode.
 
-## 3. Non-goals
-
-Movement does not own input/held-button state, touch/Safari UI, rendering/animation, AI/pathfinding, stance state, health, fatigue, encumbrance, equipment, doors/interactions, forced displacement, vision, lighting, sound, weather, generation/streaming, collision profiles, WHAT internals or WHEN internals.
-
-Actor-specific stance/condition capability is supplied through the replaceable policy seam established by 03, not stored in MovementActionService.
-
-## 4. Owners
+## 3. Owners
 
 Canonical source under `game/scripts/simulation/movement/`:
 
-- `MovementPolicyDecision.gd` — typed traversal/capability policy result.
-- `MovementActionResult.gd` — typed request result/status.
-- `MovementTraversalPolicy.gd` — simple terrain/base timing policy.
-- `MovementActionService.gd` — request validation, WHEN submission, commit revalidation and WHAT placement mutation.
+- `MovementPolicyDecision.gd`
+- `MovementActionResult.gd`
+- `MovementTraversalPolicy.gd`
+- `MovementActionService.gd`
+- `MovementDamageInterruptionService.gd` — System 17 stateless Health -> WHEN coordination.
+- `MovementRunExertionService.gd` — System 17 stateless Movement -> Needs coordination.
+
+Primary verification:
+
 - `game/scripts/ci/MovementActionsSmoke.gd`
+- `game/scripts/ci/RunDamageWalkingSmoke.gd`
 - `.github/workflows/movement.yml`
+- `.github/workflows/run-damage-walking.yml`
 
-03 supplies optional actor-aware adapter `game/scripts/simulation/actors/locomotion/ActorMovementTraversalPolicy.gd` through the same policy contract.
+03 supplies `ActorMovementTraversalPolicy.gd`, layering actor capability over terrain timing.
 
-## 5. Allowed dependencies
+## 4. Allowed dependencies / hard boundaries
 
-MovementActionService may consume public contracts from:
+`MovementActionService` may consume public contracts from WHERE, WHAT, Collision, WHEN, and the replaceable movement policy. It must not import Health, Needs, Carry, Inventory, Combat, renderer/art, input/UI, generation, Reboot, or other mechanic internals.
 
-- WHERE: facing, footprint and spatial layer vocabulary;
-- WHAT: safe entity/placement reads plus `WorldMutationService` writes;
-- Collision / Spatial Query: hypothetical footprint queries and terrain reads;
-- WHEN: `TickKernel`, phases and timing enums;
-- replaceable Movement policy.
+System 17 preserves that boundary through two stateless coordinators rather than importing Health/Needs into Movement.
 
-It must not import reboot runtime, renderer/art/camera, input/UI, generator/streaming, AI/pathfinding, health/needs/inventory/combat, door systems, weather/lighting/perception/sound.
+## 5. Request contract
 
-## 6. Request contract
-
-Public semantic methods remain:
+Public methods:
 
 - `request_step_forward(actor_id)`
 - `request_step_backward(actor_id)`
+- `request_run_forward(actor_id)`
 - `request_turn_left(actor_id)`
 - `request_turn_right(actor_id)`
 
-A request is rejected without spending simulation time when dependencies/actor/placement are invalid, actor is busy, Collision returns BLOCKED/UNKNOWN, policy rejects traversal/capability, duration is invalid, or WHEN rejects submission.
+Requests reject without spending time when dependencies, actor/placement, collision, terrain, capability, duration, or WHEN submission are invalid. Target cells are never reserved.
 
-Accepted results contain action serial, resolved duration and target placement facts.
+Typed failures continue to distinguish target BLOCKED/UNKNOWN, terrain unclassified/blocked, actor unclassified, capability unknown/blocked, invalid duration, and timing rejection.
 
-`MovementActionResult` distinguishes physical and policy-domain failures, including:
+## 6. Terrain / timing policy
 
-- target blocked / target unknown;
-- terrain unclassified / terrain blocked;
-- actor unclassified;
-- capability unknown / capability blocked;
-- invalid duration / timing rejected.
+`MovementTraversalPolicy` owns semantic terrain traversal and base timing. Missing terrain rules fail closed.
 
-## 7. Typed policy contract
+Ordinary walk step duration uses the maximum registered walk cost over the target footprint. Turn duration remains independently configured; canonical demo baseline is 3 ticks.
 
-The policy seam uses `MovementPolicyDecision` with statuses:
+System 17 adds `evaluate_run_stride(actor_id, terrain_types)`. Each run stride base duration is deterministic `ceil(walk_cost * 0.60)` before 03 actor modifiers. Therefore current 10-tick demo terrain resolves to 6 ticks per run square.
 
-- `ALLOWED`
-- `TERRAIN_UNCLASSIFIED`
-- `TERRAIN_BLOCKED`
-- `ACTOR_UNCLASSIFIED`
-- `CAPABILITY_UNKNOWN`
-- `CAPABILITY_BLOCKED`
-- `INVALID_DURATION`
+`ActorMovementTraversalPolicy` then applies actor capability/provider modifiers. Movement never learns what fatigue, carry, stance, or injuries mean.
 
-Canonical policy methods:
+## 7. Walking execution / interruption
 
-- `evaluate_step(actor_id, action_type, terrain_types) -> MovementPolicyDecision`
-- `evaluate_turn(actor_id, action_type) -> MovementPolicyDecision`
+Forward/backward Walk sequence:
 
-The simple `MovementTraversalPolicy` owns semantic terrain rules and base timing only. Existing terrain must be registered; missing rules fail closed. Multi-cell step duration uses the maximum target-footprint terrain cost. Turn duration is configured independently.
+**request -> validate -> spend time -> revalidate at `movement.commit` -> mutate WHAT**
 
-03's `ActorMovementTraversalPolicy` composes the simple base policy with actor locomotion/capability. MovementActionService remains ignorant of stance, injuries, fatigue, inventory or provider internals.
+Walk actions use WHEN `CANCELABLE` interruption policy after System 17. Real HP damage is observed by `MovementDamageInterruptionService`, which asks WHEN to interrupt the actor's active movement action. A canceled walk:
 
-## 8. Execution model
+- keeps ticks already elapsed;
+- removes the remaining movement phase;
+- leaves WHAT placement at the pre-walk cell;
+- emits movement failure so callers resolve the action honestly.
 
-Canonical sequence:
+Healing or max-HP bookkeeping is not damage interruption.
 
-**request -> validate now -> spend simulation time -> revalidate at `movement.commit` -> mutate WHAT**
+Hard application pause remains separate and advances zero simulation ticks.
 
-Every accepted movement action has one final `movement.commit` phase at its total duration and uses WHEN's `COMMITTED` interruption policy. Ordinary interruption does not refund/cancel the chosen move. Hard application pause remains separate and advances zero simulation ticks.
+## 8. Turn execution
 
-Pending placement facts are stored in WHEN's serializable action payload rather than in a second Movement pending-action store.
+Turns remain one final `movement.commit` phase and remain WHEN `COMMITTED`. Ordinary damage interruption does not cancel a turn. Collision checks the complete rotated footprint, so multi-cell actors cannot rotate through blockers/UNKNOWN space.
 
-## 9. No destination reservation
+## 9. Run execution
 
-Movement does **not** reserve target cells.
+`movement.run_forward` is one WHEN `COMMITTED` action containing two physical phases:
 
-A target may be clear when an action starts and become occupied before commit. Commit repeats collision/terrain/policy legality. If the destination is no longer legal, the actor remains at origin and elapsed ticks are not refunded.
+- `movement.run_stride_1`
+- `movement.run_stride_2`
 
-Concurrent actors may therefore both begin toward one cell; deterministic WHEN ordering and commit-time revalidation permit only a still-legal commit.
+The request validates both crossed cells before time is spent and stores request-time physical path facts in the serializable WHEN payload.
 
-## 10. Origin consistency
+For each stride:
 
-The accepted action payload stores the expected starting `WorldPlacement` as safe serializable data.
+- expected origin/intermediate placement must match;
+- target footprint must remain Collision CLEAR;
+- request-time terrain semantic truth must still match;
+- if valid, WHAT advances exactly one cell;
+- successful stride emits `run_stride_committed`.
 
-At commit, current placement must still be equivalent. If another mechanic moved, rotated or unplaced the actor meanwhile, the stale movement fails rather than overwriting newer WHAT truth.
+A full healthy demo Run is 6 + 6 = 12 ticks. Mixed terrain sums the two independently resolved stride durations, e.g. walk costs 10 then 14 -> Run 6 + 9 = 15 ticks.
 
-## 11. Turning / multi-cell footprint
+Run does not re-evaluate actor capability between strides. Capability is intentionally latched at Run start because Run is committed. Newly changed fatigue/carry affects the next action. Physical impossibility still stops the affected stride.
 
-Turning preserves anchor and changes facing only, but Collision receives the complete rotated footprint. A multi-cell actor therefore cannot rotate through a blocker/UNKNOWN cell.
+If stride 1 succeeds and stride 2 later fails, the actor remains at the intermediate cell; there is no rollback.
 
-Backward movement changes anchor opposite current facing and preserves facing.
+## 10. No reservation / race semantics
 
-## 12. Commit-time policy/capability revalidation
+Walk and Run reserve no cells. Request-time clarity does not guarantee commit-time clarity. Deterministic WHEN ordering plus per-phase collision/path revalidation resolves races. Movement never overwrites a newer external placement because expected origin/intermediate placement must still match.
 
-Movement reevaluates its policy at commit for both steps and turns.
+## 11. Damage and exertion coordination
 
-With 03 actor capability:
+`MovementDamageInterruptionService` listens only to public Health `damage_applied` and public WHEN active-action/interrupt APIs. It stores no persistent state. WHEN's policy decides the result: Walk cancels; Run/Turn continue.
 
-- if capability becomes blocked/unknown before commit, the move fails after the committed duration;
-- if capability remains allowed but now implies a slower duration, the already-scheduled action is **not stretched or rescheduled**;
-- the new duration applies to the next request.
+`MovementRunExertionService` listens only to successful `run_stride_committed` facts and calls the public Needs mutation API to add +1 fatigue per successful stride. Failed physical strides add no fatigue. MovementActionService itself has no Needs dependency.
 
-This keeps WHEN authoritative over an action's committed schedule while allowing a severe newly changed condition to invalidate the final physical effect.
+## 12. Signals
 
-## 13. Terrain/base timing
+Movement emits:
 
-Collision answers hard occupancy; Movement policy answers traversal/timing.
+- `movement_committed`
+- `movement_failed`
+- `run_stride_committed` for each successful physical sprint stride.
 
-The simple policy explicitly registers semantic terrain as traversable/non-traversable with positive step ticks for traversable terrain. Missing rules fail closed. Turning has a separate positive base duration.
+Presentation/input/AI may observe/request through public contracts without owning physical truth.
 
-The historical golden prototype's ~10-tick walk and ~3-tick turn remain tuning guidance, not WHEN constants.
+## 13. Verified acceptance criteria
 
-## 14. Signals
+Movement + System 17 CI cover:
 
-Movement emits semantic commit/failure facts. Future input/render/AI systems may observe them without Movement owning presentation or decisions.
+- ordinary 10-tick forward/backward walk;
+- backward facing preservation;
+- committed 3-tick turns;
+- walk CANCELABLE interruption plus hard-pause zero-time safety;
+- real Health damage canceling Walk before commit;
+- Run remaining COMMITTED under damage;
+- two-cell Run request path validation;
+- healthy Run physical stride at tick 6 and final stride at tick 12;
+- mixed-terrain 60%-per-stride timing;
+- no reservation and commit-time blocker handling;
+- successful first stride retained when second fails;
+- stale origin/intermediate placement never overwrites newer WHAT;
+- semantic terrain fail-closed behavior;
+- typed capability failures;
+- crouched and exhausted Run rejection through 03/provider seams;
+- no persistent run-mode state;
+- no Health/Needs import in MovementActionService;
+- frozen Reboot remains untouched.
 
-## 15. Verified acceptance criteria
+## 14. Supersession note
 
-Movement CI and 03 regression coverage prove:
+System 17 supersedes older statements in this design that all Movement actions were COMMITTED and that Run did not exist. The canonical detailed Run contract is `17_RUN_DAMAGE_INTERRUPTIBLE_WALKING.md`.
 
-- forward commit only at final tick;
-- backward preserves facing;
-- left/right turn in place;
-- semantic terrain duration and fail-closed terrain handling;
-- static blockers reject before time is spent;
-- mid-action blocker causes full-duration failure;
-- same-cell races use no reservation and deterministic commit revalidation;
-- stale origin never overwrites newer placement;
-- multi-cell rotation checks rotated footprint;
-- COMMITTED behavior and hard-pause zero-time behavior;
-- typed policy results preserve terrain errors and distinguish actor/capability failures;
-- actor-aware crouched movement can change duration without Movement importing stance state;
-- capability becoming blocked at commit prevents placement;
-- newly slower-but-allowed capability affects the next action, not the current schedule;
-- no run action was smuggled into Movement;
-- frozen reboot runtime remains untouched.
+## 15. North-star fit
 
-## 16. North-star fit
-
-Movement provides readable cell-by-cell, variable-duration physical action for **Ultima-style turn-based mini Zomboid** while keeping occupancy, actor condition, timing and presentation in their proper owners.
+Movement remains readable deterministic grid movement for **Ultima-style turn-based mini Zomboid**: Walk is cautious and interruptible; Run crosses ground faster per square but commits two physical strides and costs endurance, while timing, actor condition, damage, and presentation remain independently owned.

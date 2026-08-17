@@ -1,11 +1,11 @@
 # Tick Survival Lab — 13B Actor Needs / Rest
 
-Status: **IMPLEMENTED + CI**
+Status: **IMPLEMENTED + CI — Run eligibility/exertion seam activated by System 17**
 
 Parent: `13_ACTOR_STATS_STATUS_ARCHITECTURE.md`.
 
 ## Goal
-Own persistent survivor fatigue, hunger, thirst, and sleep-pressure truth as simple consequential values suitable for future actions, capability policies, moodlets, and UI.
+Own persistent survivor fatigue, hunger, thirst, and sleep-pressure truth as simple consequential values suitable for actions, capability policies, moodlets, and UI.
 
 ## Owner
 - `game/scripts/simulation/actors/needs/ActorNeedsState.gd`
@@ -13,32 +13,69 @@ Own persistent survivor fatigue, hunger, thirst, and sleep-pressure truth as sim
 - smoke: `game/scripts/ci/ActorNeedsSmoke.gd`
 
 ## Contract
-All four values are independent integer **0..100 pressure scales**: fatigue, hunger, thirst, and sleep pressure. Zero means no current pressure; 100 means severe pressure. Enrollment defaults all four to zero; future population/player-story setup may explicitly choose other starting values.
+All four values remain independent integer **0..100 pressure scales**: fatigue, hunger, thirst, sleep pressure. Zero means no current pressure; 100 means severe pressure. Enrollment defaults all four to zero.
 
-Fatigue is short-horizon exertion/tiredness. Sleep pressure is longer-horizon time-awake debt. They are intentionally separate.
+Fatigue is short-horizon exertion/tiredness. Sleep pressure is longer-horizon time-awake debt. They remain intentionally separate.
 
 ## Time rule
-13B has no `_process()` and no guessed tick/calendar conversion. Future eating, drinking, rest, sleep, exertion, and needs-progression coordinators explicitly mutate these values using WHEN/calendar policy.
+13B has no `_process()` and no guessed tick/calendar conversion. Eating, drinking, rest, sleep, exertion, and broader needs progression explicitly mutate these values through owning actions/coordinators.
+
+System 17 adds only one acute physical exertion consequence: each **successful Run stride** adds +1 fatigue through the existing public `change_need()` API. A failed stride that produces no movement adds no fatigue. Ordinary Walk/Turn/Stance gain no new acute fatigue surcharge in System 17.
 
 ## Locomotion seam
-`ActorNeedsMobilityModifierProvider` plugs into 03's existing read-only provider contract. It recovers golden Tick fatigue timing pressure exactly: `duration_adjustment_bp = fatigue * 65`, so fatigue 100 adds 6500 basis points (+65%) to recognized locomotion action duration. Missing Needs state returns UNKNOWN/fail-closed. Hunger, thirst, and sleep pressure receive no invented movement penalty in v1.
+`ActorNeedsMobilityModifierProvider` plugs into 03's read-only provider contract.
+
+Existing timing rule remains:
+
+`duration_adjustment_bp = fatigue * 65`
+
+So fatigue 100 adds +65% to recognized locomotion action duration. Missing Needs state returns UNKNOWN/fail-closed.
+
+System 17 adds Run-start eligibility:
+
+- fatigue 0..79 -> Run may start if other capability checks pass;
+- fatigue 80..100 -> provider returns BLOCKED with `too_exhausted_to_run`.
+
+This aligns with 13F's existing **Exhausted** moodlet threshold at 80.
+
+The threshold is a **start requirement**, not a mid-sprint cancellation rule. A committed Run begun at fatigue 79 may cross 80 after stride one and still complete stride two. The changed fatigue applies to future action capability/timing.
+
+Hunger, thirst, and sleep pressure still have no invented locomotion penalty in v1.
+
+## Run exertion ownership
+System 17's stateless `MovementRunExertionService` observes successful public Movement run-stride facts and calls:
+
+`ActorNeedsState.change_need(actor_id, FATIGUE, +1)`
+
+Needs does not import Movement, and MovementActionService does not import Needs. Persistent Needs state/API shape is unchanged.
 
 ## Persistence
-Deterministic schema-v1 snapshot/restore, sorted actor IDs, atomic malformed-state rejection, global revision and per-actor version.
+Deterministic schema-v1 snapshot/restore remains unchanged: sorted actor IDs, atomic malformed-state rejection, global revision and per-actor version.
 
 ## Boundaries
-Allowed: read-only WHAT validation and 03's narrow mobility-provider seam.
-Forbidden: Movement internals, Health, Skills, Inventory, Carry, Moodlets, WHEN internals, UI/render/art, reboot.
+Allowed: read-only WHAT validation and 03's narrow mobility-provider seam; ordinary public Needs mutation by external owning coordinators.
+Forbidden: Movement internals, Health, Skills, Inventory, Carry internals, Moodlets, WHEN internals, UI/render/art, Reboot.
 
 ## Verification
-`ActorNeedsSmoke.gd` covers defaults, independent fatigue/sleep values, set/change/clamp, non-survivor rejection, no-op versioning, deterministic snapshot restore, malformed rejection, unrelated-action neutrality, and exact recovered +65%-at-100-fatigue provider scaling.
+Needs/System17 CI covers:
 
-Initial complete System 13 candidate `78ed167678257749b093acd54e53e9f065cd8ce5` passed **Actor Stats Domains contract** run `31992365565` with no production repair.
+- default/independent 0..100 pressure state;
+- set/change/clamp/no-op/versioning;
+- deterministic persistence;
+- exact +65%-at-100 fatigue timing rule;
+- Run permitted at fatigue 79 and blocked at 80+;
+- successful Run stride +1 fatigue;
+- full Run +2 fatigue;
+- failed stride no fatigue charge;
+- fatigue crossing 80 after committed stride one does not cancel stride two.
 
 ## Approved decisions — 2026-08-16
-1. Fatigue/hunger/thirst/sleep-pressure use independent 0..100 integer pressure scales.
+1. Fatigue/hunger/thirst/sleep-pressure use independent 0..100 pressure scales.
 2. Zero means no current pressure; 100 means severe pressure.
 3. Enrollment defaults to zero without constraining future generated starts.
 4. No hidden frame-time/tick progression exists in the state owner.
-5. Fatigue reuses golden Tick's +0..65% locomotion-duration modifier through 03.
+5. Fatigue uses +0..65% locomotion-duration modifier through 03.
 6. No hunger/thirst/sleep movement penalties are invented in v1.
+7. Run start requires fatigue below 80.
+8. Each successful Run stride adds +1 fatigue through a stateless external coordinator.
+9. Run-start eligibility is latched for the committed sprint; crossing 80 mid-Run affects the next action, not the current second stride.
