@@ -1,40 +1,32 @@
 # Tick Survival Lab — 06 Structure Layer Renderer
 
-Status: **DRAFT — design complete enough for review; implementation blocked by missing canonical Door State read contract**
+Status: **IMPLEMENTED — canonical Structure renderer and dedicated Godot CI contract present 2026-08-16**
 
-Discussion basis: after 05 Ground Layer Renderer was implemented, the user instructed **“Go for structural layer”**. Per the mandatory project workflow, this prompt designs the next major system but does not implement runtime code before approval.
+Approval basis: after 05 Ground Layer Renderer, the user requested the structural layer. Design identified canonical Door State as a prerequisite. The user approved that prerequisite and then explicitly authorized implementation of both systems with **“Program both”** on 2026-08-16.
 
 ## 1. Goal
 
-Render visible canonical WHAT structures — walls, doors, and windows — through the recovered 04 Art Catalog while preserving the canonical structure-cell / explicit-axis geometry and keeping presentation independent from generation, collision, interaction, camera, input, and the frozen reboot runtime.
+Render visible canonical WHAT structures — walls, doors, and windows — through the recovered 04 Art Catalog while preserving canonical structure-cell / explicit-axis geometry and keeping presentation independent from generation, collision, interaction, camera, input, and the frozen reboot runtime.
 
-The renderer must be capable of presenting current dynamic door state correctly. It may never infer door openness from collision/passability or silently assume every door is closed.
+Dynamic door art reads authoritative 06A Door State. Door openness is never inferred from collision/passability and an unknown door is never silently drawn closed.
 
-## 2. Critical prerequisite discovered during design
+## 2. Satisfied prerequisite
 
-Current canonical source has no Door State owner.
+06A Door State is implemented under `game/scripts/simulation/doors/`.
 
-WHAT intentionally stores only stable entity identity, semantic type, and placement; mechanic-specific durable state such as doors belongs in a typed stable-ID domain outside `WorldEntityRecord`.
+The renderer consumes only its read/signaling contract:
 
-Collision intentionally treats an open door as a possible sparse non-blocking override, but its contract explicitly says collision does **not** own door state.
+- stable door entity ID -> OPEN / CLOSED / UNKNOWN;
+- event signals for enrollment/removal/change/reset;
+- no renderer access to Door State mutation internals.
 
-Golden `LocalWorldState.gd` stored each door's open/closed boolean directly and golden `TacticalTiles.gd` selected different open/closed door art from that fact.
-
-Therefore 06 must **not** be implemented until a canonical Door State read contract exists. The smallest required upstream contract is:
-
-- stable door entity ID -> explicit known OPEN or CLOSED state;
-- missing/unclassified state remains UNKNOWN rather than defaulting;
-- read-only lookup for renderer consumers;
-- change/reset notification keyed by stable entity ID so visible doors redraw event-driven;
-- persistent/snapshot-capable ownership designed independently from rendering and collision.
-
-The owning Door State system, its writes, timing, interaction actions, and collision synchronization require their own bounded design/approval. 06 only states the read dependency it requires.
+Door interaction, timing, and Collision synchronization remain separate future systems.
 
 ## 3. Non-goals
 
 06 does not own or implement:
 
-- door-state persistence or mutation;
+- Door State persistence or mutation;
 - door interaction/open/close actions;
 - WHEN timing for door actions;
 - collision/passability updates;
@@ -48,44 +40,42 @@ The owning Door State system, its writes, timing, interaction actions, and colli
 - input/UI;
 - lighting, perception, weather, or sound;
 - tactical layer orchestration;
-- wiring into deprecated `game/scripts/reboot/`.
+- deprecated reboot wiring.
 
-## 4. Intended owners
-
-After prerequisite approval/implementation:
+## 4. Owners
 
 - `game/scripts/render/StructureDrawCommand.gd`
 - `game/scripts/render/StructureLayerRenderer.gd`
 - `game/scripts/ci/StructureLayerRendererSmoke.gd`
 - `.github/workflows/structure-renderer.yml`
 
-The Door State owner is deliberately **not** placed under `render/` and is not part of 06.
+Door State is separately owned by 06A under `game/scripts/simulation/doors/`.
 
 ## 5. Public renderer contract
 
-`StructureLayerRenderer` is a standalone `Node2D` presentation owner.
+`StructureLayerRenderer` is a standalone `Node2D`.
 
 Dependencies are injected explicitly:
 
 - canonical `WorldState` for read-only entity/placement/STRUCTURE occupancy truth;
-- canonical `ArtCatalog` for wall/door/window art selections;
-- canonical Door State **read** service for explicit door OPEN/CLOSED/UNKNOWN state.
+- canonical `ArtCatalog` for wall/door/window selections;
+- canonical `DoorStateStore` read/signaling contract.
 
-View state matches 05 Ground's presentation seam:
+View state matches Ground's seam:
 
 - global top-left visible cell;
-- visible width/height in whole cells;
+- visible whole-cell width/height;
 - positive display cell size in pixels.
 
-`plan_visible_commands()` returns deterministic row-major `StructureDrawCommand` records containing at minimum:
+`plan_visible_commands()` returns deterministic row-major `StructureDrawCommand` records for visible occupied structure cells. Each command contains:
 
 - global cell;
 - destination rectangle local to visible origin;
 - stable structure entity ID;
 - semantic structure type;
-- structure kind (wall / door / window / unknown);
+- structure kind (`wall` / `door` / `window` / `unknown`);
 - canonical HORIZONTAL/VERTICAL structure axis;
-- resolved copied `ArtSelection` or explicit diagnostic state.
+- copied `ArtSelection` or explicit diagnostic UNKNOWN selection.
 
 ## 6. Data ownership
 
@@ -105,75 +95,57 @@ For each visible global cell, the renderer queries:
 
 It never scans all world entities.
 
-Entity IDs are handled deterministically. WHAT occupancy already returns deterministic stable IDs; renderer command order for structures at the same cell is stable by entity ID.
+Entity IDs are sorted deterministically. A normal valid structure cell has exactly one wall/door/window structure entity. Multiple STRUCTURE occupants in one cell produce one diagnostic command rather than arbitrary overdraw.
 
-A normal valid structure cell has exactly one wall/door/window structure entity. Multiple structure entities occupying the same cell are treated as ambiguous invalid presentation/world content and render a diagnostic instead of relying on arbitrary overdraw order.
-
-Multi-cell structure entities are supported: each occupied visible cell produces a cell draw using the entity's semantic structure art. Doors/windows are expected to be single-cell content, but the renderer does not silently rewrite malformed footprints.
+Multi-cell structure entities are supported: each occupied visible cell produces a cell draw using the entity's semantic structure art. Doors/windows are expected to be single-cell content, but malformed footprints are not silently rewritten.
 
 ## 8. Canonical semantic categories
 
-The renderer consumes semantic structure types, not atlas names.
-
-Initial canonical categories for this layer are:
+Initial categories are exactly:
 
 - `wall.<theme>`
 - `door.<theme>`
 - `window.<theme>`
 
-Examples already consistent with canonical work include `door.house`; Art Catalog accepts the theme leaf token for the recovered wall/opening vocabulary.
+The renderer does not infer category from atlas availability. A STRUCTURE placement outside those semantic families is diagnostic.
 
-The renderer must not infer a wall/door/window merely because an art mapping exists. A STRUCTURE placement whose semantic type does not belong to one of the recognized categories is diagnostic/UNKNOWN.
-
-This categorization is presentation/content vocabulary only; it does not assign collision, opacity, interaction, or other mechanics.
+This vocabulary is presentation/content classification only; it does not assign collision, opacity, interaction, or other mechanics.
 
 ## 9. Structure-axis rule
 
-Every drawable wall/door/window placement must have a valid canonical `SpatialStructureGeometry.Axis.HORIZONTAL` or `.VERTICAL`.
+Every drawable wall/door/window placement requires a valid `SpatialStructureGeometry.Axis.HORIZONTAL` or `.VERTICAL`.
 
-A STRUCTURE placement with `NO_STRUCTURE_AXIS` or an invalid axis is diagnostic. The renderer does not invent an axis from neighboring cells or sprite appearance.
+Missing/invalid axis is diagnostic. The renderer does not invent an axis from neighboring cells or sprite appearance.
 
-The axis remains part of each draw command for future art-pack/orientation extension and geometry validation.
+Golden `TacticalTiles.gd` did not rotate current recovered wall/door/window art by axis. 06 preserves that behavior: axis remains authoritative geometry and is retained in commands, but existing recovered opening/wall sprites are not rotated solely because axis differs.
 
-### Golden visual behavior
-
-Golden `TacticalTiles.gd` drew the same recovered wall/door/window cell sprite regardless of H/V axis; it did not rotate opening/wall art based on axis.
-
-06 therefore preserves that recovered presentation initially: **axis is authoritative geometry but does not rotate current golden wall/door/window sprites.**
-
-If a future art pack contains authored H/V variants or needs 90-degree rotation, Art Catalog/renderer presentation may add that without changing WHAT geometry.
+Future art packs may add H/V variants or rotation without changing WHAT geometry.
 
 ## 10. Art resolution
 
 ### Wall
 
-`wall.<theme>` delegates to:
-
-`ArtCatalog.resolve_wall(semantic_type)`
-
-This preserves recovered final -> world -> tactical wall precedence.
+`wall.<theme>` delegates to `ArtCatalog.resolve_wall(semantic_type)`, preserving recovered final -> world -> tactical wall precedence.
 
 ### Door
 
-`door.<theme>` requires known canonical Door State.
+`door.<theme>` reads canonical Door State:
 
 - OPEN -> `ArtCatalog.resolve_door(theme, true)`
 - CLOSED -> `ArtCatalog.resolve_door(theme, false)`
-- UNKNOWN/missing -> visible diagnostic; no default to closed
+- UNKNOWN/missing -> diagnostic `door_state_unknown`
 
 The renderer never asks Collision whether the door blocks movement.
 
 ### Window
 
-`window.<theme>` delegates to:
+`window.<theme>` delegates to `ArtCatalog.resolve_window(theme)`.
 
-`ArtCatalog.resolve_window(theme)`
-
-06 represents the currently recovered intact/static window vocabulary only. Future broken/open/barricaded window mechanics require their own persistent state/art contract rather than being guessed here.
+06 represents the currently recovered intact/static window vocabulary only. Broken/open/barricaded windows require their own future persistent state/art contract.
 
 ## 11. Drawing behavior
 
-FOUND atlas selections use the same recovered cell drawing semantics already proven by 05:
+FOUND atlas selections use the same recovered cell drawing semantics proven by 05:
 
 - lazy-load/cache texture from `ArtSelection.source.texture_path`;
 - destination rectangle local to visible origin;
@@ -183,25 +155,25 @@ FOUND atlas selections use the same recovered cell drawing semantics already pro
 - transpose=false;
 - clip_uv=true.
 
-Valid future full-texture structure selections may use `draw_texture_rect`.
+Valid future full-texture structure selections are supported through `draw_texture_rect`.
 
 No texture path or atlas index is stored in WHAT or hardcoded into Structure renderer source.
 
 ## 12. Coordinates / visible window
 
-WHAT structure positions remain authoritative global integer cells.
+WHAT positions remain authoritative global integer cells.
 
 Destination rectangle is local to the supplied visible origin:
 
 `(cell - visible_origin) * cell_pixels`
 
-This mirrors 05 and supports large/negative persistent-world coordinates without giant CanvasItem positions.
+This supports large/negative persistent-world coordinates without giant CanvasItem coordinates.
 
-Invalid non-positive visible dimensions or cell scale are rejected rather than silently replacing the last valid view.
+Invalid non-positive visible dimensions or scale are rejected rather than replacing the last valid view.
 
 ## 13. Redraw / invalidation
 
-There is no `_process()` redraw loop.
+There is no per-frame redraw polling.
 
 Redraw is requested on:
 
@@ -209,69 +181,70 @@ Redraw is requested on:
 - view/window/cell-scale change;
 - texture-cache clear;
 - WHAT `world_reset`;
-- WHAT placement/entity changes that can affect a visible wall/door/window cell;
-- Door State change for a currently visible door;
+- visible structure placement/removal/entity removal changes;
+- Door State enrollment/removal/change for a currently visible door;
 - Door State reset.
 
-No structure-neighbor halo is required for recovered 06 art because current wall/opening sprite choice has no neighbor-connectivity topology.
+No neighbor halo is required because current wall/opening art has no connectivity topology.
 
-Terrain-only changes do not redraw Structure.
-
-For placement events, the renderer uses change `before_cells` / `after_cells` plus the entity's stable semantic category where still available. Entity removal touching visible cells may redraw conservatively because the removed record no longer exists to classify.
+Terrain changes do not redraw Structure. Initial non-STRUCTURE object placement does not redraw Structure. Some removal/move events are conservatively redrawn when WHAT's mechanic-agnostic change record no longer contains enough prior-channel detail; correctness wins over hiding stale pixels.
 
 ## 14. Diagnostics / fail-visible rules
 
-Visible diagnostic drawing is required for:
+Visible diagnostic drawing covers:
 
 - multiple STRUCTURE occupants at one cell;
 - missing entity record referenced by occupancy;
 - malformed/non-STRUCTURE placement;
-- structure placement not actually covering the queried cell;
+- occupancy/placement mismatch;
 - missing/invalid structure axis;
 - unknown structure semantic category;
 - unknown wall/door/window theme art;
-- missing/UNKNOWN Door State for a door;
+- missing/UNKNOWN Door State;
 - malformed/non-drawable `ArtSelection`;
 - texture load failure.
 
-The renderer does not silently turn bad structure content into a generic wall, closed door, or default window.
+The renderer never silently substitutes a generic wall, closed door, or default-looking structure for invalid content.
 
 ## 15. Performance / mobile
 
-- query visible cells only;
+- visible cells only;
 - no full-world structure scan;
 - no per-frame polling;
 - deterministic row-major cell traversal;
-- stable ID ordering within a cell;
+- stable ID ordering;
 - cached textures;
 - event-driven redraw;
-- no input, hover, or Safari-specific interaction in this layer.
+- no input, hover, or Safari-specific interaction.
 
-Future camera/streaming systems can change the supplied visible window without changing structure semantics.
+Future camera/streaming systems can change the supplied visible window without changing Structure semantics.
 
-## 16. Required acceptance tests after prerequisite exists
+## 16. Verified acceptance
 
-Dedicated Godot 4.7.1 CI should prove:
+The first complete implementation head `2c69a98633b7a8bccfa64001921e0a6a19b36583` passed the dedicated **Structure Layer Renderer contract** under Godot 4.7.1 with no production repair required.
 
-- production source boundary guards;
+The dedicated contract proves:
+
+- source-boundary isolation;
 - project import/parse;
-- 04 Art Catalog regression remains green;
-- 05 Ground renderer regression remains green;
+- Art Catalog regression remains green;
+- Ground renderer regression remains green;
+- Door State regression remains green;
 - deterministic visible-only command order/count;
 - local destination rectangles including negative global coordinates;
-- wall themes use recovered Art Catalog precedence;
-- open and closed doors resolve different recovered art from explicit Door State;
-- missing Door State is diagnostic and never defaults closed;
-- windows resolve recovered themed/default art;
-- H/V structure axis is preserved in commands;
-- current golden art is not rotated merely because axis differs;
-- invalid/missing axis is diagnostic;
-- multiple structure occupants are diagnostic;
-- unknown semantic category/theme is diagnostic;
-- non-structure/terrain/distant changes avoid unnecessary redraw where contract permits;
-- visible structure placement/removal and visible Door State changes request redraw;
-- resolved textures exist/load;
-- no forbidden imports/dependencies.
+- recovered wall precedence;
+- distinct explicit CLOSED/OPEN door art from Door State;
+- missing Door State is diagnostic rather than default CLOSED;
+- recovered themed window art;
+- H/V structure axis retained in commands;
+- current golden wall art does not swap solely by axis;
+- missing axis diagnostic behavior;
+- overlapping STRUCTURE occupants diagnostic behavior;
+- unknown category/theme diagnostics;
+- terrain and initial non-structure changes avoid unnecessary redraw;
+- visible structure and Door State changes redraw;
+- distant Door State changes do not redraw;
+- resolved textures exist and load.
 
 ## 17. Recovery sources
 
@@ -292,21 +265,21 @@ Golden door-state source:
 
 - `LocalWorldState.gd` blob `f8fd11ebbf0ff2b3958fd46000404cbb12142fc5`
 - useful semantic fact: each door had explicit open/closed state;
-- rejected architecture: coordinate-keyed local world dictionaries mixing walls/obstacles/glass/doors/collision.
+- rejected architecture: coordinate-keyed local dictionaries mixing walls/obstacles/glass/doors/collision.
 
 ## 18. Dependencies / forbidden boundaries
 
-Allowed after prerequisite exists:
+Allowed:
 
 - WHAT public entity/placement/STRUCTURE occupancy reads + mechanic-agnostic change notifications;
-- WHERE `SpatialLayer` and `SpatialStructureGeometry` public vocabulary;
+- WHERE `SpatialLayer` and `SpatialStructureGeometry` vocabulary;
 - 04 Art Catalog / ArtSelection;
-- canonical Door State read contract only;
+- 06A Door State read/signaling contract;
 - Godot Node2D/CanvasItem/ResourceLoader.
 
 Forbidden:
 
-- Door State writes/actions internals;
+- Door State writes/action internals;
 - Collision and collision overrides as visual truth;
 - WHEN;
 - Movement / Actor Locomotion;
@@ -318,21 +291,29 @@ Forbidden:
 
 ## 19. Future seams
 
-- Door interaction system mutates canonical Door State and collision at an approved action commit without renderer involvement.
+- Door Interaction later mutates Door State + Collision at an approved WHEN commit without renderer involvement.
 - Window State may later add broken/open/barricaded presentation through an analogous typed read seam.
-- Construction/destruction changes WHAT placements; Structure renderer reacts through ordinary world changes.
+- Construction/destruction changes WHAT placements; Structure reacts through world changes.
 - Tactical Renderer may orchestrate Ground + Structure + Prop + Actor layers without absorbing them.
-- Lighting/perception can modulate/overlay later without becoming structure truth.
+- Lighting/perception may modulate/overlay later without becoming structure truth.
 - Alternative art packs may add H/V variants while keeping canonical structure axis unchanged.
 
 ## 20. North-star fit
 
-Walls, doors, and windows make houses/stores/farms physically readable and are essential to the Ultima-style world presentation. Requiring real dynamic door state preserves the mini-Zomboid consequence rule: the picture reflects the persistent physical world rather than a plausible-looking placeholder.
+Walls, doors, and windows make houses/stores/farms physically readable and are essential to the Ultima-style world presentation. Requiring real dynamic door state preserves the mini-Zomboid consequence rule: the picture reflects persistent physical truth rather than a plausible placeholder.
 
-## 21. Draft recommendation
+## 21. Approved decisions
 
-**Do not implement 06 yet.**
+Approved and authorized by the user on 2026-08-16:
 
-The next bounded design should be the minimal canonical **Door State** domain required by Structure, future interaction actions, collision synchronization, vision/opacity, save/load, AI, and construction.
-
-After Door State is approved and implemented, return to this 06 design, resolve any exact read-contract names, obtain explicit user approval for 06, then implement/verify the renderer.
+- standalone structure-only `Node2D`;
+- visible WHAT STRUCTURE occupancy + Art Catalog + read-only Door State only;
+- `wall.<theme>` / `door.<theme>` / `window.<theme>` semantic categories;
+- explicit H/V axis required and retained;
+- recovered art is not rotated solely by current axis;
+- OPEN/CLOSED art comes only from canonical Door State;
+- UNKNOWN door state is diagnostic;
+- fail-visible invalid structure content;
+- visible-window local coordinates and cached/event-driven drawing;
+- no collision/WHEN/generator/reboot/camera/input ownership;
+- implementing Door State and Structure in the same prompt was explicitly authorized with **“Program both”**.
