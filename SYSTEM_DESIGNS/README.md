@@ -35,6 +35,7 @@ Major systems move through **NOT DESIGNED -> DRAFT -> APPROVED -> IMPLEMENTED** 
 | 16 | Canonical Player Shell / Inspectors / Stance | **IMPLEMENTED** | `16_CANONICAL_PLAYER_SHELL.md` |
 | 17 | Run / Damage-Interruptible Walking | **IMPLEMENTED** | `17_RUN_DAMAGE_INTERRUPTIBLE_WALKING.md` |
 | 17A | Movement Exertion / Encumbrance / Run Impact Revision | **IMPLEMENTED** | `17A_MOVEMENT_EXERTION_ENCUMBRANCE_RUN_IMPACT.md` |
+| 17A.1 | Overweight Walk Fatigue / Absolute Carry Ceiling Correction | **IMPLEMENTED** | `17A1_OVERWEIGHT_WALK_FATIGUE_HARD_CARRY_LIMIT.md` |
 | 00D | Global World Planning / Generation | **NOT DESIGNED** | `00D_GLOBAL_WORLD_GENERATION.md` |
 | 00E | Population / Household / Outbreak / Player Story | **NOT DESIGNED** | `00E_POPULATION_OUTBREAK_PLAYER_STORY.md` |
 | 00F | Streaming / Materialization | **NOT DESIGNED** | `00F_STREAMING_MATERIALIZATION.md` |
@@ -57,6 +58,7 @@ Foundation and simulation remain separated by domain:
 - Hands: `game/scripts/simulation/actors/equipment/`
 - Inventory: `game/scripts/simulation/inventory/`
 - Item transfer: `game/scripts/simulation/items/transfer/`
+- neutral item acquisition-capacity seam: `game/scripts/simulation/items/ItemAcquisitionCapacityPolicy.gd`
 - Item physical properties: `game/scripts/simulation/items/properties/`
 - Moodlets: `game/scripts/simulation/actors/moodlets/`
 
@@ -68,7 +70,7 @@ Presentation/application remains separate:
 
 `game/scripts/reboot/` remains frozen reference only. `game/main.tscn` launches the canonical demo.
 
-## Live demo after System 17A
+## Live demo after System 17A.1
 
 The canonical demo has one controlled survivor, no NPCs/infected, the authored 13x13 sample map, existing renderer stack, real HUD, Stats/Inventory/Menu, Crouch/Stand and Run.
 
@@ -78,21 +80,34 @@ Movement truth:
 - Run: two committed forward strides at 60% of each stride's Walk terrain pace before actor factors;
 - terrain × stance × fatigue × encumbrance multiply movement duration;
 - fatigue 80+ blocks Run;
-- 100%+ carry capacity blocks Run;
+- 100%+ soft carry capacity blocks Run;
 - over-capacity Walk remains legal/slower;
-- successful Walk fatigue depends on terrain only;
+- Walk adds **no** movement fatigue at or below soft capacity;
+- overweight Walk fatigue depends on terrain only, not how far overweight the survivor is;
 - Run fatigue depends on terrain + encumbrance;
 - known hard Run blockers cause physical impact, attempted-stride fatigue, 5 HP damage, and stop the sprint;
 - UNKNOWN space still fails closed.
 
-System 16 Web Leave Game now navigates directly to Google rather than attempting browser history.
+Carry truth:
 
-Dedicated System 17A verification:
+- default soft capacity remains 18 kg;
+- absolute hard possession ceiling is derived at 2x soft capacity, therefore 36 kg by default;
+- normal loose-world pickup may reach but not exceed the hard ceiling;
+- incoming container contents count toward projected pickup weight;
+- System 12 consumes a neutral capacity policy rather than importing Carry internals.
+
+The live authored demo still has no physical item entities, so the hard pickup ceiling is currently canonical/tested simulation behavior awaiting the real item-interaction demo composition.
+
+System 16 Web Leave Game navigates directly to Google rather than attempting browser history.
+
+Dedicated verification:
 
 - `.github/workflows/movement-exertion-encumbrance.yml`
+- `.github/workflows/item-transfer-actions.yml`
 - `game/scripts/ci/MovementExertionEncumbranceSmoke.gd`
+- `game/scripts/ci/ActorCarryAcquisitionSmoke.gd`
 
-Hardened implementation candidate `eeb5eb421337df3067f45b41fb4837fdb9b8875b` passed dedicated run `32000627706` after a test-fixture-only retention correction; production required no repair.
+Correction candidate `67a130b36fe35189651e942a386248352027a8d5` passed System 17A run `32002310686` and Item Transfer Actions run `32002310787` before documentation promotion.
 
 ## Immediate next path
 
@@ -101,7 +116,7 @@ Do not rebuild movement/player shell/renderers. Return to the real item-interact
 1. add a few real stable WHAT `item.*` entities with 13D weights;
 2. add the missing loose-item presentation;
 3. compose existing System 10 BACK -> actor body -> FRONT held-item layers in the live stack;
-4. expose real System 12 pickup/drop/equip/unequip through semantic keyboard/touch interaction;
+4. compose System 12 with the real 13E `ActorCarryAcquisitionPolicy` and expose pickup/drop/equip/unequip through semantic keyboard/touch interaction;
 5. let existing HUD/Inventory read the committed truth.
 
 Door interaction remains a separate later system.
