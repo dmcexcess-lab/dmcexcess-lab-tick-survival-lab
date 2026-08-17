@@ -6,7 +6,7 @@ const StructureGeometry = preload("res://scripts/foundation/spatial/SpatialStruc
 const PlanClass = preload("res://scripts/generation/buildings/GeneratedBuildingPlan.gd")
 
 const ARCHETYPE_ID: StringName = &"residential.house.farm_large"
-const ARCHETYPE_VERSION: int = 3
+const ARCHETYPE_VERSION: int = 4
 const BASE_WIDTH: int = 21
 const BASE_HEIGHT: int = 9
 
@@ -159,25 +159,30 @@ func _add_interior_partitions(plan: GeneratedBuildingPlan, request: BuildingGene
 
 func _add_props(plan: GeneratedBuildingPlan, request: BuildingGenerationRequest) -> void:
     var entries: Array = [
-        ["prop.living.sofa", Vector2i(1, 3), &"prop.sofa", Facing.Value.EAST],
-        ["prop.living.armchair", Vector2i(9, 3), &"prop.armchair", Facing.Value.WEST],
-        ["prop.living.coffee_table", Vector2i(4, 2), &"prop.coffee_table", Facing.Value.NORTH],
-        ["prop.kitchen.stove", Vector2i(12, 1), &"prop.stove_range", Facing.Value.SOUTH],
-        ["prop.kitchen.fridge", Vector2i(13, 1), &"prop.refrigerator_white", Facing.Value.SOUTH],
-        ["prop.kitchen.sink", Vector2i(14, 1), &"prop.kitchen_sink", Facing.Value.SOUTH],
-        ["prop.kitchen.table", Vector2i(18, 2), &"prop.breakfast_table", Facing.Value.NORTH],
-        ["prop.bedroom_1.bed", Vector2i(1, 6), &"prop.bed_double", Facing.Value.EAST],
-        ["prop.bedroom_1.dresser", Vector2i(3, 6), &"prop.dresser_wide", Facing.Value.WEST],
-        ["prop.bathroom_1.toilet", Vector2i(5, 6), &"prop.toilet_modern", Facing.Value.EAST],
-        ["prop.bathroom_1.vanity", Vector2i(7, 6), &"prop.bathroom_vanity", Facing.Value.WEST],
-        ["prop.bathroom_1.tub", Vector2i(5, 7), &"prop.bathtub_clawfoot", Facing.Value.EAST],
-        ["prop.bedroom_2.bed", Vector2i(9, 6), &"prop.bed_double", Facing.Value.EAST],
-        ["prop.bedroom_2.dresser", Vector2i(11, 6), &"prop.dresser_wide", Facing.Value.WEST],
-        ["prop.bathroom_2.toilet", Vector2i(13, 6), &"prop.toilet_modern", Facing.Value.EAST],
-        ["prop.bathroom_2.vanity", Vector2i(15, 6), &"prop.bathroom_vanity", Facing.Value.WEST],
-        ["prop.bathroom_2.tub", Vector2i(13, 7), &"prop.bathtub_clawfoot", Facing.Value.EAST],
-        ["prop.bedroom_3.bed", Vector2i(17, 6), &"prop.bed_double", Facing.Value.EAST],
-        ["prop.bedroom_3.dresser", Vector2i(19, 6), &"prop.dresser_wide", Facing.Value.WEST],
+        ["prop.living.bookshelf", Vector2i(1, 1), &"prop.bookshelf_tall", Facing.Value.SOUTH, true],
+        ["prop.living.end_table", Vector2i(2, 1), &"prop.end_table", Facing.Value.SOUTH, true],
+        ["prop.living.coffee_table", Vector2i(2, 2), &"prop.coffee_table", Facing.Value.SOUTH, true],
+        ["prop.living.sofa", Vector2i(1, 3), &"prop.sofa", Facing.Value.EAST, true],
+        ["prop.living.armchair", Vector2i(3, 3), &"prop.armchair", Facing.Value.WEST, true],
+        ["prop.living.entry_rug", Vector2i(5, 1), &"prop.rug", Facing.Value.SOUTH, false],
+        ["prop.kitchen.stove", Vector2i(12, 1), &"prop.stove_range", Facing.Value.SOUTH, true],
+        ["prop.kitchen.fridge", Vector2i(13, 1), &"prop.refrigerator_white", Facing.Value.SOUTH, true],
+        ["prop.kitchen.counter", Vector2i(14, 1), &"prop.counter_straight", Facing.Value.SOUTH, true],
+        ["prop.kitchen.sink", Vector2i(15, 1), &"prop.kitchen_sink", Facing.Value.SOUTH, true],
+        ["prop.kitchen.chair", Vector2i(17, 2), &"prop.dining_chair", Facing.Value.EAST, true],
+        ["prop.kitchen.table", Vector2i(18, 2), &"prop.breakfast_table", Facing.Value.WEST, true],
+        ["prop.bedroom_1.bed", Vector2i(1, 6), &"prop.bed_double", Facing.Value.EAST, true],
+        ["prop.bedroom_1.dresser", Vector2i(3, 6), &"prop.dresser_wide", Facing.Value.WEST, true],
+        ["prop.bathroom_1.toilet", Vector2i(5, 6), &"prop.toilet_modern", Facing.Value.EAST, true],
+        ["prop.bathroom_1.vanity", Vector2i(7, 6), &"prop.bathroom_vanity", Facing.Value.WEST, true],
+        ["prop.bathroom_1.tub", Vector2i(5, 7), &"prop.bathtub_clawfoot", Facing.Value.EAST, true],
+        ["prop.bedroom_2.bed", Vector2i(9, 6), &"prop.bed_double", Facing.Value.EAST, true],
+        ["prop.bedroom_2.dresser", Vector2i(11, 6), &"prop.dresser_wide", Facing.Value.WEST, true],
+        ["prop.bathroom_2.toilet", Vector2i(13, 6), &"prop.toilet_modern", Facing.Value.EAST, true],
+        ["prop.bathroom_2.vanity", Vector2i(15, 6), &"prop.bathroom_vanity", Facing.Value.WEST, true],
+        ["prop.bathroom_2.tub", Vector2i(13, 7), &"prop.bathtub_clawfoot", Facing.Value.EAST, true],
+        ["prop.bedroom_3.bed", Vector2i(17, 6), &"prop.bed_double", Facing.Value.EAST, true],
+        ["prop.bedroom_3.dresser", Vector2i(19, 6), &"prop.dresser_wide", Facing.Value.WEST, true],
     ]
     for entry: Array in entries:
         plan.props.append({
@@ -185,7 +190,7 @@ func _add_props(plan: GeneratedBuildingPlan, request: BuildingGenerationRequest)
             "cell": _global_cell(entry[1], request),
             "semantic": entry[2],
             "facing": _rotate_facing(int(entry[3]), request.orientation),
-            "blocking": true,
+            "blocking": bool(entry[4]),
         })
 
 func _structure(

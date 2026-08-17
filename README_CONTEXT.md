@@ -31,7 +31,7 @@ Implemented + dedicated validation includes:
 - Run / damage-interruptible Walk;
 - 17A exertion/encumbrance/run impact;
 - 17A.1 overweight-Walk fatigue + 2x hard carry ceiling;
-- System 19 local building generation with accepted **Trailer v2**, accepted **Small Farmhouse v2**, and current **Large Farmhouse Candidate 003 / archetype v3**.
+- System 19 local building generation with accepted **Trailer v2**, accepted **Small Farmhouse v2**, and current **Large Farmhouse Candidate 004 / archetype v4**.
 
 ## 3. Foundation truth
 
@@ -113,35 +113,38 @@ User explicitly accepted this on 2026-08-17 with: **“Nice save that as small f
 
 `FarmhouseBuildingGenerator.gd` remains the small-farmhouse owner. `SmallFarmhouseCritiqueFixture.gd` preserves its accepted critique configuration.
 
-### Large Farmhouse Candidate 003 — current
+### Large Farmhouse Candidate 004 — current
 
-`residential.house.farm_large`, version 3.
+`residential.house.farm_large`, version 4.
 
-Candidate 001 was rejected as too large/hallway-heavy. Candidate 002 established the compact 21×9 / no-hall baseline and was liked better. Candidate 003 keeps that shell and room program while refining the living/kitchen flow and kitchen dressing:
+Candidate 004 keeps Candidate 003's structure **exactly unchanged** and revises only generated prop dressing:
 
-- **21×9 shell**;
-- separate **10×3 living room** and **8×3 kitchen**;
-- three 3×3 bedrooms and two 3×3 bathrooms in the immediate rear private band;
+- 21×9 shell;
+- separate 10×3 living room and 8×3 kitchen;
+- three 3×3 bedrooms and two 3×3 bathrooms;
 - zero dedicated hall/corridor room cells;
-- the living/kitchen divider's former door is now a solid wall cell;
-- the lower divider cell is completely open, creating a **doorless lower passage** between living and kitchen;
-- the kitchen's full bottom row is `ground.laminate_light`, creating a wood runner aligned with that lower passage;
-- all eight runner cells remain free of generated props/clutter;
-- stove, refrigerator and sink share the kitchen's north wall;
-- a real `prop.breakfast_table` sits in the open linoleum area near the east exterior wall without blocking the runner or exterior-door approach;
-- all five private rooms still open directly into living/kitchen;
-- two exterior doors + five private-room doors = **7 total doors**;
-- eleven windows;
-- restrained wall-aware furniture using existing semantics.
+- same upper living/kitchen divider wall + lower open passage;
+- same full-width clutter-free wood runner along kitchen y=3;
+- same 7 doors and 11 windows.
 
-The earlier `door.interior.living_kitchen` no longer exists in Candidate 003. Generated runtime doors still begin CLOSED and remain owned by Door State/System 18.
+Common-room furnishing now follows a compact-cluster rule rather than stretching a few objects across the room:
+
+- living seating cluster: sofa + coffee table + armchair stay within two cells of one another;
+- tall bookshelf + end table sit beside that same cluster rather than across the room;
+- a nonblocking throw rug sits directly inside the primary front door;
+- kitchen appliance cluster is contiguous along the north wall: stove + refrigerator + straight counter + sink;
+- breakfast table stays near the east wall with an adjacent dining chair;
+- kitchen exterior-door approach and the entire wood runner remain clear;
+- canonical NORTH table-facing choices are SOUTH or WEST only: end table SOUTH, coffee table SOUTH, breakfast table WEST.
+
+The cluster rule is a dressing rule, not a new global clutter subsystem. Candidate 004 is still authored by `LargeFarmhouseBuildingGenerator.gd`; future archetypes may adopt similar room-specific placement logic after critique.
 
 ## 8. Live canonical demo
 
-The current live target is **Large Farmhouse Candidate 003**.
+The current live target is **Large Farmhouse Candidate 004**.
 
-- fixed **23×11** critique lot;
-- **23 px/cell** presentation;
+- fixed 23×11 critique lot;
+- 23 px/cell presentation;
 - canonical spatial scale remains 1m/cell;
 - large farmhouse envelope `Rect2i(1,1,21,9)`;
 - instance `building.demo.farmhouse.large.001`, seed `19003`, NORTH orientation/frontage;
@@ -167,11 +170,13 @@ Large Farmhouse Candidate 001 first-green code: `a533f4f27de6f37b92b5e8472bb4b81
 
 Large Farmhouse Candidate 002 first-green exact head: `e7fe7f1fb7645ec5d1d1e97d8ac07f757a2ea9ce`; historical after the kitchen-flow critique.
 
-Candidate 003 must pass exact-final-head Local Building Generation and Web/Pages before completion is claimed.
+Large Farmhouse Candidate 003 first-green exact head: `78b22929928f3faa6af5330c05daca5b8d1c48c0`; historical after the clustered-clutter critique.
+
+Candidate 004 must pass exact-final-head Local Building Generation and Web/Pages before completion is claimed.
 
 ## 11. Immediate next path
 
-1. User playtests/critiques **Large Farmhouse Candidate 003**.
+1. User playtests/critiques Large Farmhouse Candidate 004.
 2. Keep accepted Small Farmhouse v2 and Trailer v2 unchanged unless explicitly reopened.
 3. Convert further large-house critique into versioned `farm_large` rules.
 4. Add another building archetype after the large farmhouse is accepted.
@@ -198,6 +203,7 @@ Container access/search/locks, corpse/decay/contamination, actor appearance/crea
 14. Accepted archetype baselines are preserved unless a newer explicit critique supersedes them.
 15. `farm_small` and `farm_large` are separate archetypes; large-house critique must not mutate the accepted small-house baseline.
 16. Large farmhouse compactness should come from efficient room adjacency/common-room circulation, not dedicated hall inflation.
+17. Large farmhouse common-room dressing should prefer believable local furniture clusters and purposeful wall/door anchors over distributing a few props across the full room span.
 
 ## 14. Documentation source order
 

@@ -1,5 +1,18 @@
 # Changelog
 
+## System 19 Large Farmhouse Candidate 004 — 2026-08-17
+
+- Preserved the entire Candidate 003 structure unchanged: same 21×9 shell, room sizes, wall/opening geometry, 7 doors, 11 windows, open lower living/kitchen passage and clutter-free wood kitchen runner.
+- Bumped `residential.house.farm_large` to archetype version 4 because same-seed generated prop placement/orientation intentionally changed.
+- Reworked common-room furnishing from sparse room-spanning placement into compact local clusters. The large open areas are allowed to remain open instead of stretching a few objects across the room.
+- Living-room seating now forms one tight cluster: sofa, coffee table and armchair stay within two cells of one another, with a nearby tall bookshelf and end table against the same side of the room.
+- Added a nonblocking `prop.rug` directly inside the primary front door as entry dressing without changing movement/collision behavior.
+- Kitchen appliance dressing is now contiguous: stove + refrigerator + `prop.counter_straight` + sink share the north wall, with the counter physically filling the gap between refrigerator and sink.
+- Added `prop.dining_chair` directly beside the existing breakfast table near the east wall. The table remains off the wood runner and the exterior-door approach stays clear.
+- Corrected table-facing choices in the canonical NORTH layout: end table and coffee table face SOUTH; breakfast table faces WEST. Tables are no longer authored facing NORTH in this archetype.
+- Added collision coverage for bookshelf, end table, counter and dining chair as blocking props; the entry rug is explicitly registered passable/nonblocking.
+- Expanded System 19 CI to lock the unchanged structure, 24-prop clustered dressing, cluster distances, table orientations, counter placement, chair/table adjacency, clear wood runner, art/collision coverage, rotation, materialization and canonical startup.
+
 ## System 19 Large Farmhouse Candidate 003 — 2026-08-17
 
 - Preserved accepted Trailer v2 and accepted Small Farmhouse v2 unchanged.

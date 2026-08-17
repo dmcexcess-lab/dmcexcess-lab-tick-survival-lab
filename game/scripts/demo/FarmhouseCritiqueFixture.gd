@@ -76,14 +76,17 @@ static func _configure_rules(collision_catalog: CollisionCatalog, traversal_poli
         SURVIVOR,
         &"wall.plaster", &"wall.interior",
         &"door.house", &"window.house",
-        &"prop.sofa", &"prop.armchair", &"prop.coffee_table",
-        &"prop.stove_range", &"prop.refrigerator_white", &"prop.kitchen_sink", &"prop.breakfast_table",
+        &"prop.sofa", &"prop.armchair", &"prop.coffee_table", &"prop.bookshelf_tall", &"prop.end_table",
+        &"prop.stove_range", &"prop.refrigerator_white", &"prop.counter_straight", &"prop.kitchen_sink",
+        &"prop.breakfast_table", &"prop.dining_chair",
         &"prop.bed_double", &"prop.dresser_wide",
         &"prop.toilet_modern", &"prop.bathroom_vanity", &"prop.bathtub_clawfoot",
     ]
     for semantic: StringName in blocking_semantics:
         if not collision_catalog.register(semantic, true):
             return false
+    if not collision_catalog.register(&"prop.rug", false):
+        return false
     for terrain: StringName in [
         GRASS, ROAD, &"ground.laminate_light", &"ground.linoleum_yellow",
         &"ground.tile_white", &"ground.carpet_beige", &"ground.carpet_blue"

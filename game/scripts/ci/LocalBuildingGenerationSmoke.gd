@@ -87,33 +87,60 @@ func _test_large_farmhouse_generation(generator: LocalBuildingGenerator, validat
     var plan_a: GeneratedBuildingPlan = generator.generate(request)
     var plan_b: GeneratedBuildingPlan = generator.generate(request)
     _check(plan_a.is_generated() and plan_a.signature() == plan_b.signature(), "large farmhouse is deterministic")
-    _check(plan_a.archetype_version == 3, "large farmhouse kitchen-flow critique bumps to version 3")
+    _check(plan_a.archetype_version == 4, "large farmhouse clustered-clutter critique bumps to version 4")
     _check(bool(validator.validate(plan_a).get("ok", false)), "large farmhouse north plan validates")
-    _check(plan_a.footprint_rect == Rect2i(60, 70, 21, 9), "large farmhouse remains compact 21x9")
+    _check(plan_a.footprint_rect == Rect2i(60, 70, 21, 9), "large farmhouse structure remains compact 21x9")
     _check(_room_cell_count(plan_a, "living_room") == 30, "large farmhouse living room remains separate 10x3")
     _check(_room_cell_count(plan_a, "kitchen") == 24, "large farmhouse kitchen remains separate 8x3")
     for purpose: String in ["bedroom_1", "bathroom_1", "bedroom_2", "bathroom_2", "bedroom_3"]:
         _check(_room_cell_count(plan_a, purpose) == 9, "%s remains compact 3x3" % purpose)
     _check(_room_cell_count(plan_a, "hall") == 0 and _room_cell_count(plan_a, "corridor") == 0, "large farmhouse still has no dedicated hallway room")
-    _check(_structure_kind_count(plan_a, "door") == 7, "large farmhouse now has two exterior plus five private-room doors")
+    _check(_structure_kind_count(plan_a, "door") == 7, "large farmhouse keeps two exterior plus five private-room doors")
     _check(_structure_kind_count(plan_a, "window") == 11, "large farmhouse keeps eleven windows")
     _check(_all_exterior_walls_are(plan_a, &"wall.plaster"), "large farmhouse uses plaster exterior walls")
-    _check(_role_cell(plan_a, "door.exterior.primary") == Vector2i(65, 70), "large farmhouse front door opens directly into living room")
-    _check(_role_cell(plan_a, "door.interior.living_kitchen") == Vector2i(-1, -1), "living/kitchen divider no longer owns a door")
-    _check(_structure_kind_at(plan_a, Vector2i(71, 72)) == "wall", "former living/kitchen door cell is solid wall")
-    _check(not _has_structure_at(plan_a, Vector2i(71, 73)), "lower living/kitchen divider cell is completely open")
-    _check(_role_cell(plan_a, "door.interior.bedroom_1") == Vector2i(62, 74), "bedroom 1 opens directly from living room")
-    _check(_role_cell(plan_a, "door.interior.bathroom_1") == Vector2i(66, 74), "bathroom 1 opens directly from living room")
-    _check(_role_cell(plan_a, "door.interior.bedroom_2") == Vector2i(70, 74), "bedroom 2 opens directly from living room")
-    _check(_role_cell(plan_a, "door.interior.bathroom_2") == Vector2i(74, 74), "bathroom 2 opens directly from kitchen")
-    _check(_role_cell(plan_a, "door.interior.bedroom_3") == Vector2i(78, 74), "bedroom 3 opens directly from kitchen")
+    _check(_role_cell(plan_a, "door.exterior.primary") == Vector2i(65, 70), "large farmhouse front door remains unchanged")
+    _check(_role_cell(plan_a, "door.interior.living_kitchen") == Vector2i(-1, -1), "living/kitchen divider still owns no door")
+    _check(_structure_kind_at(plan_a, Vector2i(71, 72)) == "wall", "former living/kitchen door cell remains solid wall")
+    _check(not _has_structure_at(plan_a, Vector2i(71, 73)), "lower living/kitchen divider remains open")
+    _check(_role_cell(plan_a, "door.interior.bedroom_1") == Vector2i(62, 74), "bedroom 1 structure remains unchanged")
+    _check(_role_cell(plan_a, "door.interior.bathroom_1") == Vector2i(66, 74), "bathroom 1 structure remains unchanged")
+    _check(_role_cell(plan_a, "door.interior.bedroom_2") == Vector2i(70, 74), "bedroom 2 structure remains unchanged")
+    _check(_role_cell(plan_a, "door.interior.bathroom_2") == Vector2i(74, 74), "bathroom 2 structure remains unchanged")
+    _check(_role_cell(plan_a, "door.interior.bedroom_3") == Vector2i(78, 74), "bedroom 3 structure remains unchanged")
     for x in range(72, 80):
         var runner_cell := Vector2i(x, 73)
-        _check(_ground_semantic_at(plan_a, runner_cell) == &"ground.laminate_light", "kitchen bottom row becomes wood runner at %s" % str(runner_cell))
+        _check(_ground_semantic_at(plan_a, runner_cell) == &"ground.laminate_light", "kitchen wood runner remains at %s" % str(runner_cell))
         _check(not _has_prop_at(plan_a, runner_cell), "kitchen wood runner stays clutter-free at %s" % str(runner_cell))
-    _check(_prop_role_cell(plan_a, "prop.kitchen.sink") == Vector2i(74, 71), "kitchen sink moves onto same north wall as fridge")
-    _check(_prop_role_cell(plan_a, "prop.kitchen.table") == Vector2i(78, 72), "breakfast table sits near east wall without blocking runner")
-    _check(_prop_semantic_for_role(plan_a, "prop.kitchen.table") == &"prop.breakfast_table", "kitchen table uses real breakfast-table art semantic")
+
+    _check(plan_a.props.size() == 24, "large farmhouse uses more small clustered props instead of stretched sparse dressing")
+    _check(_prop_role_cell(plan_a, "prop.living.bookshelf") == Vector2i(61, 71), "living cluster gains wall bookshelf")
+    _check(_prop_role_cell(plan_a, "prop.living.end_table") == Vector2i(62, 71), "living cluster gains nearby end table")
+    _check(_prop_role_cell(plan_a, "prop.living.coffee_table") == Vector2i(62, 72), "coffee table sits inside seating cluster")
+    _check(_prop_role_cell(plan_a, "prop.living.sofa") == Vector2i(61, 73), "sofa remains in compact living cluster")
+    _check(_prop_role_cell(plan_a, "prop.living.armchair") == Vector2i(63, 73), "armchair moves into compact living cluster")
+    _check(_prop_role_cell(plan_a, "prop.living.entry_rug") == Vector2i(65, 71), "front door gains throw rug")
+    _check(not _prop_blocking_for_role(plan_a, "prop.living.entry_rug"), "entry rug is decorative and nonblocking")
+    _check(_manhattan(_prop_role_cell(plan_a, "prop.living.sofa"), _prop_role_cell(plan_a, "prop.living.coffee_table")) <= 2, "sofa stays within two tiles of coffee table")
+    _check(_manhattan(_prop_role_cell(plan_a, "prop.living.armchair"), _prop_role_cell(plan_a, "prop.living.coffee_table")) <= 2, "armchair stays within two tiles of coffee table")
+    _check(_manhattan(_prop_role_cell(plan_a, "prop.living.bookshelf"), _prop_role_cell(plan_a, "prop.living.end_table")) <= 2, "living wall clutter stays clustered")
+
+    _check(_prop_role_cell(plan_a, "prop.kitchen.fridge") == Vector2i(73, 71), "kitchen fridge remains on north appliance wall")
+    _check(_prop_role_cell(plan_a, "prop.kitchen.counter") == Vector2i(74, 71), "counter fills appliance run between fridge and sink")
+    _check(_prop_role_cell(plan_a, "prop.kitchen.sink") == Vector2i(75, 71), "sink remains on north appliance wall")
+    _check(_manhattan(_prop_role_cell(plan_a, "prop.kitchen.fridge"), _prop_role_cell(plan_a, "prop.kitchen.counter")) == 1, "fridge and counter are adjacent")
+    _check(_manhattan(_prop_role_cell(plan_a, "prop.kitchen.counter"), _prop_role_cell(plan_a, "prop.kitchen.sink")) == 1, "counter and sink are adjacent")
+    _check(_prop_role_cell(plan_a, "prop.kitchen.chair") == Vector2i(77, 72), "breakfast table gains adjacent chair")
+    _check(_prop_role_cell(plan_a, "prop.kitchen.table") == Vector2i(78, 72), "breakfast table remains near east wall")
+    _check(_manhattan(_prop_role_cell(plan_a, "prop.kitchen.chair"), _prop_role_cell(plan_a, "prop.kitchen.table")) == 1, "breakfast table and chair form a tight cluster")
+
+    _check(_prop_semantic_for_role(plan_a, "prop.living.bookshelf") == &"prop.bookshelf_tall", "living bookshelf uses supported semantic")
+    _check(_prop_semantic_for_role(plan_a, "prop.kitchen.counter") == &"prop.counter_straight", "kitchen filler uses supported counter semantic")
+    _check(_prop_semantic_for_role(plan_a, "prop.kitchen.chair") == &"prop.dining_chair", "breakfast chair uses supported semantic")
+    _check(_prop_semantic_for_role(plan_a, "prop.living.entry_rug") == &"prop.rug", "entry rug uses supported clutter semantic")
+    _check(_prop_facing_for_role(plan_a, "prop.living.end_table") == Facing.Value.SOUTH, "end table faces south")
+    _check(_prop_facing_for_role(plan_a, "prop.living.coffee_table") == Facing.Value.SOUTH, "coffee table faces south")
+    _check(_prop_facing_for_role(plan_a, "prop.kitchen.table") == Facing.Value.WEST, "breakfast table faces west")
+
     var east_request := RequestClass.new("building.test.farmhouse.large.east", LargeFarmhouseClass.ARCHETYPE_ID, 19003, Rect2i(100, 110, 9, 21), Facing.Value.EAST, Facing.Value.EAST)
     var east_plan: GeneratedBuildingPlan = generator.generate(east_request)
     _check(east_plan.is_generated() and east_plan.footprint_rect.size == Vector2i(9, 21), "compact large farmhouse rotates to 9x21")
@@ -249,6 +276,21 @@ func _prop_semantic_for_role(plan: GeneratedBuildingPlan, role: String) -> Strin
             var semantic: StringName = prop.get("semantic", &"")
             return semantic
     return &""
+
+func _prop_facing_for_role(plan: GeneratedBuildingPlan, role: String) -> int:
+    for prop: Dictionary in plan.props:
+        if String(prop.get("role", "")) == role:
+            return int(prop.get("facing", -1))
+    return -1
+
+func _prop_blocking_for_role(plan: GeneratedBuildingPlan, role: String) -> bool:
+    for prop: Dictionary in plan.props:
+        if String(prop.get("role", "")) == role:
+            return bool(prop.get("blocking", true))
+    return true
+
+func _manhattan(a: Vector2i, b: Vector2i) -> int:
+    return absi(a.x - b.x) + absi(a.y - b.y)
 
 func _check(condition: bool, message: String) -> void:
     if not condition:
