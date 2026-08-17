@@ -75,7 +75,11 @@ func is_ready() -> bool:
 func recent_diagnostics() -> Array[Dictionary]:
     return _diagnostics.duplicate(true)
 
-func request_pickup_to_container(actor_id: String, item_id: String, destination_container_id: String) -> ItemTransferActionResult:
+func request_pickup_to_container(
+    actor_id: String,
+    item_id: String,
+    destination_container_id: String
+) -> ItemTransferActionResult:
     var result: ItemTransferActionResult = _new_result(ActionTypes.WORLD_TO_CONTAINER, actor_id, item_id)
     var actor_placement: WorldPlacement = _validate_actor(result)
     if actor_placement == null:
@@ -87,10 +91,11 @@ func request_pickup_to_container(actor_id: String, item_id: String, destination_
         return _reject(result, ResultClass.Status.OUT_OF_REACH, "out_of_reach")
     if not _validate_destination_container(result, result.actor_id, destination_container_id):
         return result
-    return _begin_transfer(result, actor_placement, source, {
+    var extra: Dictionary = {
         "destination_container_id": destination_container_id,
         "destination_container_version": _containment.container_version(destination_container_id),
-    })
+    }
+    return _begin_transfer(result, actor_placement, source, extra)
 
 func request_pickup_to_hand(actor_id: String, item_id: String, slot: int) -> ItemTransferActionResult:
     var result: ItemTransferActionResult = _new_result(ActionTypes.WORLD_TO_HAND, actor_id, item_id)
@@ -105,10 +110,11 @@ func request_pickup_to_hand(actor_id: String, item_id: String, slot: int) -> Ite
         return _reject(result, ResultClass.Status.OUT_OF_REACH, "out_of_reach")
     if not _validate_target_hand(result, result.actor_id, slot):
         return result
-    return _begin_transfer(result, actor_placement, source, {
+    var extra: Dictionary = {
         "destination_slot": slot,
         "expected_hand_version": _hands.version(result.actor_id),
-    })
+    }
+    return _begin_transfer(result, actor_placement, source, extra)
 
 func request_drop_from_container(actor_id: String, item_id: String) -> ItemTransferActionResult:
     var result: ItemTransferActionResult = _new_result(ActionTypes.CONTAINER_TO_WORLD, actor_id, item_id)
@@ -120,10 +126,11 @@ func request_drop_from_container(actor_id: String, item_id: String) -> ItemTrans
         return result
     if not _validate_source_container_access(result, result.actor_id, source.container_id):
         return result
-    return _begin_transfer(result, actor_placement, source, {
+    var extra: Dictionary = {
         "source_container_id": source.container_id,
         "source_container_version": _containment.container_version(source.container_id),
-    })
+    }
+    return _begin_transfer(result, actor_placement, source, extra)
 
 func request_drop_from_hand(actor_id: String, slot: int) -> ItemTransferActionResult:
     var result: ItemTransferActionResult = _new_result(ActionTypes.HAND_TO_WORLD, actor_id, "")
@@ -143,11 +150,12 @@ func request_drop_from_hand(actor_id: String, slot: int) -> ItemTransferActionRe
         return result
     if source.actor_id != result.actor_id or source.slot != slot:
         return _reject(result, ResultClass.Status.SOURCE_MISMATCH, "hand_source_mismatch")
-    return _begin_transfer(result, actor_placement, source, {
+    var extra: Dictionary = {
         "source_actor_id": result.actor_id,
         "source_slot": slot,
         "expected_hand_version": _hands.version(result.actor_id),
-    })
+    }
+    return _begin_transfer(result, actor_placement, source, extra)
 
 func request_equip_from_container(actor_id: String, item_id: String, slot: int) -> ItemTransferActionResult:
     var result: ItemTransferActionResult = _new_result(ActionTypes.CONTAINER_TO_HAND, actor_id, item_id)
@@ -162,14 +170,19 @@ func request_equip_from_container(actor_id: String, item_id: String, slot: int) 
         return result
     if not _validate_target_hand(result, result.actor_id, slot):
         return result
-    return _begin_transfer(result, actor_placement, source, {
+    var extra: Dictionary = {
         "source_container_id": source.container_id,
         "source_container_version": _containment.container_version(source.container_id),
         "destination_slot": slot,
         "expected_hand_version": _hands.version(result.actor_id),
-    })
+    }
+    return _begin_transfer(result, actor_placement, source, extra)
 
-func request_unequip_to_container(actor_id: String, slot: int, destination_container_id: String) -> ItemTransferActionResult:
+func request_unequip_to_container(
+    actor_id: String,
+    slot: int,
+    destination_container_id: String
+) -> ItemTransferActionResult:
     var result: ItemTransferActionResult = _new_result(ActionTypes.HAND_TO_CONTAINER, actor_id, "")
     result.destination_slot = slot
     var actor_placement: WorldPlacement = _validate_actor(result)
@@ -190,15 +203,20 @@ func request_unequip_to_container(actor_id: String, slot: int, destination_conta
         return _reject(result, ResultClass.Status.SOURCE_MISMATCH, "hand_source_mismatch")
     if not _validate_destination_container(result, result.actor_id, destination_container_id):
         return result
-    return _begin_transfer(result, actor_placement, source, {
+    var extra: Dictionary = {
         "source_actor_id": result.actor_id,
         "source_slot": slot,
         "expected_hand_version": _hands.version(result.actor_id),
         "destination_container_id": destination_container_id,
         "destination_container_version": _containment.container_version(destination_container_id),
-    })
+    }
+    return _begin_transfer(result, actor_placement, source, extra)
 
-func request_transfer_container(actor_id: String, item_id: String, destination_container_id: String) -> ItemTransferActionResult:
+func request_transfer_container(
+    actor_id: String,
+    item_id: String,
+    destination_container_id: String
+) -> ItemTransferActionResult:
     var result: ItemTransferActionResult = _new_result(ActionTypes.CONTAINER_TO_CONTAINER, actor_id, item_id)
     var actor_placement: WorldPlacement = _validate_actor(result)
     if actor_placement == null:
@@ -214,12 +232,13 @@ func request_transfer_container(actor_id: String, item_id: String, destination_c
         return result
     if _would_create_cycle(result.item_id, destination_container_id):
         return _reject(result, ResultClass.Status.CONTAINER_REJECTED, "containment_cycle")
-    return _begin_transfer(result, actor_placement, source, {
+    var extra: Dictionary = {
         "source_container_id": source.container_id,
         "source_container_version": _containment.container_version(source.container_id),
         "destination_container_id": destination_container_id,
         "destination_container_version": _containment.container_version(destination_container_id),
-    })
+    }
+    return _begin_transfer(result, actor_placement, source, extra)
 
 func _new_result(action_type: StringName, actor_id: String, item_id: String) -> ItemTransferActionResult:
     var result := ResultClass.new()
@@ -253,7 +272,11 @@ func _validate_actor(result: ItemTransferActionResult) -> WorldPlacement:
         return null
     return placement
 
-func _require_source(result: ItemTransferActionResult, source: ItemDispositionResult, expected_status: int) -> bool:
+func _require_source(
+    result: ItemTransferActionResult,
+    source: ItemDispositionResult,
+    expected_status: int
+) -> bool:
     if source == null:
         _reject(result, ResultClass.Status.ITEM_MISSING, "item_missing")
         return false
@@ -286,7 +309,11 @@ func _validate_target_hand(result: ItemTransferActionResult, actor_id: String, s
         return false
     return true
 
-func _validate_destination_container(result: ItemTransferActionResult, actor_id: String, container_id: String) -> bool:
+func _validate_destination_container(
+    result: ItemTransferActionResult,
+    actor_id: String,
+    container_id: String
+) -> bool:
     result.destination_container_id = container_id
     if not _containment.has_container(container_id) or not _world.has_entity(container_id):
         _reject(result, ResultClass.Status.CONTAINER_UNKNOWN, "container_unknown")
@@ -296,7 +323,11 @@ func _validate_destination_container(result: ItemTransferActionResult, actor_id:
         return false
     return true
 
-func _validate_source_container_access(result: ItemTransferActionResult, actor_id: String, container_id: String) -> bool:
+func _validate_source_container_access(
+    result: ItemTransferActionResult,
+    actor_id: String,
+    container_id: String
+) -> bool:
     if not _containment.has_container(container_id) or not _world.has_entity(container_id):
         _reject(result, ResultClass.Status.CONTAINER_UNKNOWN, "container_unknown")
         return false
@@ -305,10 +336,16 @@ func _validate_source_container_access(result: ItemTransferActionResult, actor_i
         return false
     return true
 
-func _begin_transfer(result: ItemTransferActionResult, actor_placement: WorldPlacement, source: ItemDispositionResult, extra_payload: Dictionary) -> ItemTransferActionResult:
+func _begin_transfer(
+    result: ItemTransferActionResult,
+    actor_placement: WorldPlacement,
+    source: ItemDispositionResult,
+    extra_payload: Dictionary
+) -> ItemTransferActionResult:
     var timing: ItemTransferTimingDecision = _policy.evaluate(result.actor_id, result.action_type)
     if timing == null or not timing.is_allowed():
         return _reject_for_timing(result, timing)
+
     var payload: Dictionary = {
         "actor_placement": actor_placement.to_snapshot(),
         "item_id": result.item_id,
@@ -326,6 +363,7 @@ func _begin_transfer(result: ItemTransferActionResult, actor_placement: WorldPla
         payload["source_container_id"] = source.container_id
     for key: Variant in extra_payload.keys():
         payload[key] = extra_payload[key]
+
     var phases: Array[ActionPhase] = [PhaseClass.new(COMMIT_PHASE, timing.duration_ticks)]
     var action_serial: int = _kernel.begin_action(
         result.actor_id,
@@ -337,13 +375,17 @@ func _begin_transfer(result: ItemTransferActionResult, actor_placement: WorldPla
     )
     if action_serial <= 0:
         return _reject(result, ResultClass.Status.TIMING_REJECTED, "timing_rejected")
+
     result.status = ResultClass.Status.ACCEPTED
     result.reason = ""
     result.action_serial = action_serial
     result.duration_ticks = timing.duration_ticks
     return result
 
-func _reject_for_timing(result: ItemTransferActionResult, timing: ItemTransferTimingDecision) -> ItemTransferActionResult:
+func _reject_for_timing(
+    result: ItemTransferActionResult,
+    timing: ItemTransferTimingDecision
+) -> ItemTransferActionResult:
     if timing == null:
         return _reject(result, ResultClass.Status.TIMING_UNCLASSIFIED, "timing_unclassified")
     match timing.status:
@@ -375,14 +417,27 @@ func _on_action_finished(action: TimedAction) -> void:
         return
     var item_id: String = String(action.payload.get("item_id", ""))
     if action.status == TickRulesClass.ActionStatus.CANCELED:
-        item_transfer_canceled.emit(action.actor_id, action.serial, action.action_type, item_id, action.reason)
+        item_transfer_canceled.emit(
+            action.actor_id,
+            action.serial,
+            action.action_type,
+            item_id,
+            action.reason
+        )
     elif action.status == TickRulesClass.ActionStatus.FAILED:
-        item_transfer_failed.emit(action.actor_id, action.serial, action.action_type, item_id, action.reason)
+        item_transfer_failed.emit(
+            action.actor_id,
+            action.serial,
+            action.action_type,
+            item_id,
+            action.reason
+        )
 
 func _commit_action(action: TimedAction) -> void:
     if not is_ready():
         _fail_action(action, "item_transfer_not_ready")
         return
+
     var payload: Dictionary = action.payload
     var expected_actor_value: Variant = payload.get("actor_placement", {})
     if typeof(expected_actor_value) != TYPE_DICTIONARY:
@@ -392,6 +447,7 @@ func _commit_action(action: TimedAction) -> void:
     if expected_actor == null or expected_actor.entity_id != action.actor_id or expected_actor.channel != Layers.Channel.ACTOR:
         _fail_action(action, "invalid_payload")
         return
+
     if not _world.has_entity(action.actor_id):
         _fail_action(action, "actor_missing")
         return
@@ -418,6 +474,7 @@ func _commit_action(action: TimedAction) -> void:
     if not _commit_source_matches(payload, current_source):
         _fail_action(action, "source_changed")
         return
+
     if current_source.status == DispositionClass.Status.LOOSE_WORLD:
         if current_source.placement == null or not _loose_item_reachable(current_actor, current_source.placement):
             _fail_action(action, "out_of_reach")
@@ -430,9 +487,11 @@ func _commit_action(action: TimedAction) -> void:
         if _hands.version(action.actor_id) != int(payload.get("expected_hand_version", -1)):
             _fail_action(action, "hand_version_changed")
             return
+
     if current_source.status == DispositionClass.Status.HAND:
         var source_slot: int = int(payload.get("source_slot", -1))
-        if not Slots.is_valid(source_slot) or _hands.item_in_slot(action.actor_id, source_slot) != item_id:
+        if not Slots.is_valid(source_slot) \
+            or _hands.item_in_slot(action.actor_id, source_slot) != item_id:
             _fail_action(action, "hand_source_changed")
             return
 
@@ -482,6 +541,7 @@ func _commit_action(action: TimedAction) -> void:
     if timing == null or not timing.is_allowed():
         _fail_action(action, _timing_reason(timing))
         return
+
     _perform_commit(action, current_actor)
 
 func _commit_source_matches(payload: Dictionary, current: ItemDispositionResult) -> bool:
@@ -508,15 +568,21 @@ func _commit_source_matches(payload: Dictionary, current: ItemDispositionResult)
 func _perform_commit(action: TimedAction, actor_placement: WorldPlacement) -> void:
     var payload: Dictionary = action.payload
     var item_id: String = String(payload.get("item_id", ""))
+
     if action.action_type == ActionTypes.CONTAINER_TO_CONTAINER:
-        if not _containment_mutations.set_container(item_id, String(payload.get("destination_container_id", ""))):
+        if not _containment_mutations.set_container(
+            item_id,
+            String(payload.get("destination_container_id", ""))
+        ):
             _fail_action(action, "destination_mutation_failed")
             return
         _emit_commit(action)
         return
+
     if not _remove_source(action.action_type, payload, item_id):
         _fail_action(action, "source_mutation_failed")
         return
+
     if not _add_destination(action.action_type, payload, item_id, actor_placement, action.actor_id):
         var compensated: bool = _restore_source(payload, item_id)
         if compensated:
@@ -526,6 +592,7 @@ func _perform_commit(action: TimedAction, actor_placement: WorldPlacement) -> vo
             _append_diagnostic(action, item_id, "critical_consistency_failure", true)
             _fail_action(action, "critical_consistency_failure")
         return
+
     _emit_commit(action)
 
 func _remove_source(action_type: StringName, payload: Dictionary, item_id: String) -> bool:
@@ -535,13 +602,28 @@ func _remove_source(action_type: StringName, payload: Dictionary, item_id: Strin
         &"container":
             return _containment_mutations.clear_container(item_id)
         &"hand":
-            return _hand_mutations.clear_slot(String(payload.get("source_actor_id", "")), int(payload.get("source_slot", -1)))
+            return _hand_mutations.clear_slot(
+                String(payload.get("source_actor_id", "")),
+                int(payload.get("source_slot", -1))
+            )
         _:
             return false
 
-func _add_destination(action_type: StringName, payload: Dictionary, item_id: String, actor_placement: WorldPlacement, actor_id: String) -> bool:
+func _add_destination(
+    action_type: StringName,
+    payload: Dictionary,
+    item_id: String,
+    actor_placement: WorldPlacement,
+    actor_id: String
+) -> bool:
+    # Source-removal signals may run reentrant callbacks. Recheck the destination
+    # immediately before the second mutation so low-level permissive APIs cannot
+    # overwrite a newly occupied/stale destination.
     match ActionTypes.destination_kind(action_type):
         &"world":
+            var current_actor: WorldPlacement = _world.placement(actor_id)
+            if current_actor == null or not current_actor.equivalent(actor_placement):
+                return false
             return _world_mutations.set_placement(
                 item_id,
                 Layers.Channel.LOOSE_ITEM,
@@ -551,9 +633,22 @@ func _add_destination(action_type: StringName, payload: Dictionary, item_id: Str
                 PlacementClass.NO_STRUCTURE_AXIS
             )
         &"container":
-            return _containment_mutations.set_container(item_id, String(payload.get("destination_container_id", "")))
+            var container_id: String = String(payload.get("destination_container_id", ""))
+            if not _containment.has_container(container_id) or not _world.has_entity(container_id):
+                return false
+            if payload.has("destination_container_version") \
+                and _containment.container_version(container_id) != int(payload.get("destination_container_version", -1)):
+                return false
+            if not _is_personal_container_accessible(actor_id, container_id):
+                return false
+            return _containment_mutations.set_container(item_id, container_id)
         &"hand":
-            return _hand_mutations.set_item(actor_id, int(payload.get("destination_slot", -1)), item_id)
+            var slot: int = int(payload.get("destination_slot", -1))
+            if not _hands.has_actor(actor_id) or not Slots.is_valid(slot):
+                return false
+            if not _hands.item_in_slot(actor_id, slot).is_empty():
+                return false
+            return _hand_mutations.set_item(actor_id, slot, item_id)
         _:
             return false
 
@@ -576,7 +671,10 @@ func _restore_source(payload: Dictionary, item_id: String) -> bool:
                 placement.structure_axis
             )
         "container":
-            return _containment_mutations.set_container(item_id, String(payload.get("source_container_id", "")))
+            return _containment_mutations.set_container(
+                item_id,
+                String(payload.get("source_container_id", ""))
+            )
         "hand":
             return _hand_mutations.set_item(
                 String(payload.get("source_actor_id", "")),
@@ -607,6 +705,7 @@ func _is_personal_container_accessible(actor_id: String, container_id: String) -
         return false
     if container_id == actor_id:
         return true
+
     var current: String = container_id
     var visited: Dictionary = {}
     for _i: int in range(ANCESTRY_LIMIT):
@@ -617,6 +716,7 @@ func _is_personal_container_accessible(actor_id: String, container_id: String) -
             return _world.has_entity(actor_id)
         if not _world.has_entity(current):
             return false
+
         var assignment: Dictionary = _hands.assignment_for_item(current)
         var parent: String = _containment.container_of(current)
         if not assignment.is_empty() and parent.is_empty():
