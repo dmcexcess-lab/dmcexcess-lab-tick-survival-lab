@@ -114,7 +114,7 @@ func _initialize() -> void:
     get_root().add_child(pointer)
     _check(pointer.configure(Vector2(73, 72), Vector2i.ZERO, Vector2i(13, 13), 38.0), "pointer mapper configures")
     var mapped: Variant = pointer.world_cell_for_screen(Vector2(73 + 2 * 38 + 4, 72 + 1 * 38 + 4))
-    _check(mapped != null and mapped as Vector2i == Vector2i(2, 1), "screen pointer maps exact world cell")
+    _check(typeof(mapped) == TYPE_VECTOR2I and mapped == Vector2i(2, 1), "screen pointer maps exact world cell")
     pointer.queue_free()
 
     if failures.is_empty():
