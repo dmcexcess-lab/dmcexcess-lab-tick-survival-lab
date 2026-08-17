@@ -36,8 +36,8 @@ Major systems move through **NOT DESIGNED -> DRAFT -> APPROVED -> IMPLEMENTED** 
 | 17 | Run / Damage-Interruptible Walking | **IMPLEMENTED** | `17_RUN_DAMAGE_INTERRUPTIBLE_WALKING.md` |
 | 17A | Movement Exertion / Encumbrance / Run Impact Revision | **IMPLEMENTED** | `17A_MOVEMENT_EXERTION_ENCUMBRANCE_RUN_IMPACT.md` |
 | 17A.1 | Overweight Walk Fatigue / Absolute Carry Ceiling Correction | **IMPLEMENTED** | `17A1_OVERWEIGHT_WALK_FATIGUE_HARD_CARRY_LIMIT.md` |
-| 18 | Door Interaction / Automatic Passage | **DRAFT** | `18_DOOR_INTERACTION_PASSAGE.md` |
-| 19 | Local Building Generation / Archetype Critique Lab | **DRAFT** | `19_LOCAL_BUILDING_GENERATION_ARCHETYPE_LAB.md` |
+| 18 | Door Interaction / Automatic Passage | **IMPLEMENTED** | `18_DOOR_INTERACTION_PASSAGE.md` |
+| 19 | Local Building Generation / Archetype Critique Lab | **IMPLEMENTED** | `19_LOCAL_BUILDING_GENERATION_ARCHETYPE_LAB.md` |
 | 00D | Global World Planning / Generation | **NOT DESIGNED** | `00D_GLOBAL_WORLD_GENERATION.md` |
 | 00E | Population / Household / Outbreak / Player Story | **NOT DESIGNED** | `00E_POPULATION_OUTBREAK_PLAYER_STORY.md` |
 | 00F | Streaming / Materialization | **NOT DESIGNED** | `00F_STREAMING_MATERIALIZATION.md` |
@@ -51,94 +51,62 @@ Foundation and simulation remain separated by domain:
 - WHAT: `game/scripts/foundation/world/`
 - WHEN: `game/scripts/foundation/time/`
 - Collision: `game/scripts/simulation/collision/`
-- Movement / 17 / 17A physical actions and stateless coordinators: `game/scripts/simulation/movement/`
+- Movement / Run / passage seams: `game/scripts/simulation/movement/`
+- Door State + Door Interaction: `game/scripts/simulation/doors/`
 - Locomotion/capability: `game/scripts/simulation/actors/locomotion/`
-- Health: `game/scripts/simulation/actors/health/`
-- Needs: `game/scripts/simulation/actors/needs/`
-- Skills: `game/scripts/simulation/actors/skills/`
-- Carry: `game/scripts/simulation/actors/carry/`
+- Health / Needs / Skills / Carry / Moodlets: focused actor-domain folders under `game/scripts/simulation/actors/`
 - Hands: `game/scripts/simulation/actors/equipment/`
 - Inventory: `game/scripts/simulation/inventory/`
 - Item transfer: `game/scripts/simulation/items/transfer/`
-- neutral item acquisition-capacity seam: `game/scripts/simulation/items/ItemAcquisitionCapacityPolicy.gd`
 - Item physical properties: `game/scripts/simulation/items/properties/`
-- Moodlets: `game/scripts/simulation/actors/moodlets/`
-- Door State: `game/scripts/simulation/doors/`
-
-Presentation/application remains separate:
-
+- Local building generation: `game/scripts/generation/buildings/`
 - Art: `game/scripts/art/`
-- existing canonical renderers: `game/scripts/render/`
-- canonical demo/bootstrap/input/player-control under focused app/demo/input/player/UI owners.
+- canonical renderers: `game/scripts/render/`
+- demo/bootstrap/input/player/UI: focused owners under their corresponding folders.
 
-`game/scripts/reboot/` remains frozen reference only. `game/main.tscn` launches the canonical demo.
+`game/scripts/reboot/` remains frozen reference only. `game/main.tscn` launches the canonical modular demo.
 
-## Live demo after System 17A.1
+## Live demo after System 19
 
-The canonical demo has one controlled survivor, no NPCs/infected, the authored 13x13 sample map, existing renderer stack, real HUD, Stats/Inventory/Menu, Crouch/Stand and Run.
+The live canonical demo is now the **Trailer Candidate 001 critique lot**:
 
-Movement truth:
+- one controlled survivor, no NPCs/infected/loot;
+- fixed 13×13 one-screen view, still no camera;
+- one deterministic generated 6×12 single-wide trailer;
+- real walls/windows/furniture and three real CLOSED doors;
+- distinct living/kitchen, bathroom and bedroom;
+- real System 18 door passage.
 
-- Walk: one cell, terrain base cost, damage-CANCELABLE;
-- Run: two committed forward strides at 60% of each stride's Walk terrain pace before actor factors;
-- terrain × stance × fatigue × encumbrance multiply movement duration;
-- fatigue 80+ blocks Run;
-- 100%+ soft carry capacity blocks Run;
-- over-capacity Walk remains legal/slower;
-- Walk adds **no** movement fatigue at or below soft capacity;
-- overweight Walk fatigue depends on terrain only, not how far overweight the survivor is;
-- Run fatigue depends on terrain + encumbrance;
-- known hard Run blockers cause physical impact, attempted-stride fatigue, 5 HP damage, and stop the sprint;
-- UNKNOWN space still fails closed.
+Door interaction truth:
 
-Carry truth:
+- Walk through an eligible CLOSED door -> opens at Walk commit with no extra door ticks;
+- damage-canceled Walk -> door remains CLOSED;
+- Run through eligible CLOSED door -> opens during stride, emits LOUD semantic event, no door-impact HP damage;
+- tap/click OPEN adjacent door while **facing it** -> 3-tick CANCELABLE close;
+- wrong-facing close rejects at zero ticks, so turning costs existing turn ticks;
+- future long-tap/right-click interaction menu remains reserved.
 
-- default soft capacity remains 18 kg;
-- absolute hard possession ceiling is derived at 2x soft capacity, therefore 36 kg by default;
-- normal loose-world pickup may reach but not exceed the hard ceiling;
-- incoming container contents count toward projected pickup weight;
-- System 12 consumes a neutral capacity policy rather than importing Carry internals.
+Movement / carry truth from Systems 17–17A.1 remains unchanged.
 
-The live authored demo still has no physical item entities, so the hard pickup ceiling is currently canonical/tested simulation behavior awaiting later item-interaction composition.
+## Immediate next path
 
-System 16 Web Leave Game navigates directly to Google rather than attempting browser history.
+1. **User playtests/critiques Trailer Candidate 001.**
+2. Convert critique into reusable `residential.trailer.singlewide` archetype rules rather than hand-editing the showcase instance.
+3. Once trailer density/proportions feel right, add `residential.house.small_ranch` under the existing System 19 contract.
+4. Repeat the critique loop for the house.
+5. Add camera / larger local play space when multiple properties create an actual need to see beyond one screen.
 
-## Active design drafts — 2026-08-16
+The real item-interaction demo remains valid future work and can be layered into generated buildings later.
 
-### System 18 — Door Interaction / Automatic Passage
+## Verification
 
-Proposed player behavior:
+First fully green Systems 18+19 candidate:
 
-- Walk through a normal CLOSED door -> it opens automatically at Walk commit and movement continues;
-- Run through a normal CLOSED door -> it opens during the committed stride, movement continues, and a LOUD semantic door event is emitted;
-- short click/tap on a nearby OPEN door -> timed manual close;
-- future long-tap/right-click interaction menu is reserved but deferred.
+- SHA `c035fe7b3f5d0badab6c5b598996010e92d852b2`;
+- Door Interaction run `32005363005`: SUCCESS;
+- Local Building Generation run `32005363051`: SUCCESS.
 
-Architecture uses existing 06A Door State plus Collision overrides and a narrow generic Movement passage-resolver seam so Movement never imports door rules.
-
-### System 19 — Local Building Generation / Archetype Critique Lab
-
-Proposed first archetype:
-
-`residential.trailer.singlewide`
-
-System 19 is intentionally below future global world planning. A caller supplies a legal envelope/orientation/frontage/seed; System 19 produces a validated semantic building plan and materializes initial physical WHAT + explicitly CLOSED Door State.
-
-Development loop:
-
-> spawn deterministic trailer -> user critiques -> refine trailer rules -> then add small house/ranch archetype under the same contract.
-
-The first trailer target has distinct living/kitchen, bathroom, bedroom, physical doors/windows, functional furniture, and validated one-cell circulation.
-
-## Recommended approval / implementation order
-
-1. **System 18 Door Interaction** first — small prerequisite that makes generated buildings naturally enterable.
-2. **System 19 Local Building Generation** second — implement generator contract + Trailer Candidate 001 in a one-screen critique lot.
-3. User critiques generated trailer and generator rules are refined.
-4. Add small ordinary house/ranch archetype under the same generator contract.
-5. Add camera / larger local play space only once multiple structures create a real need to see beyond one screen.
-
-The item-interaction demo remains valid future work, but current explicit direction prioritizes doors + building generation before expanding camera/map scale.
+Exact documentation-promotion SHA must pass the same dedicated contracts plus Pages before completion is claimed.
 
 ## Design rule
 
