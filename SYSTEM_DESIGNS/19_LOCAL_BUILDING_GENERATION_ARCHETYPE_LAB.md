@@ -1,543 +1,331 @@
 # Tick Survival Lab — System 19 Local Building Generation / Archetype Critique Lab
 
-Status: **DRAFT — design only; no implementation authorized yet**
+Status: **IMPLEMENTED — local semantic building generator, validator/materializer, Trailer Candidate 001 and dedicated CI contract present 2026-08-17**
 
 Date: 2026-08-16
 
-Depends on:
-
-- implemented WHERE / WHAT foundations;
-- implemented Art Catalog and Ground / Structure / Prop renderers;
-- implemented Door State for generated doors;
-- System 18 Door Interaction once approved/implemented for actually entering generated buildings;
-- future Global World Planning remains a separate higher-level system.
+Depends on implemented WHERE / WHAT, Art Catalog + tactical layer renderers, Door State, and System 18 Door Interaction. Future Global World Planning remains a separate higher-level owner.
 
 ## 1. Goal
 
-Create a real reusable **local building generator** that can turn an already-chosen property/building slot into a believable physical building, beginning with one single-wide trailer.
+Create a reusable **local building generator** that turns an already-chosen building slot into a believable physical building. The first implemented archetype is one single-wide trailer developed through a user critique loop:
 
-The development loop is intentionally taste-guided:
+> generate trailer -> play/inspect it -> user critiques it -> refine archetype rules -> then add the next house archetype
 
-> generate one trailer -> user plays/looks at it -> user critiques it -> refine archetype rules -> then add the next house archetype
-
-This is not a disposable screenshot generator and not a full world generator. It is the lower-level building materialization engine that a future parcel/property/world planner can call after that higher-level system has decided *where* a building belongs.
+System 19 is not a disposable screenshot generator and not the global world generator. It is the lower-level materialization system a future parcel/property planner can call after deciding *where* a building belongs.
 
 ## 2. Architectural boundary
 
 System 19 answers:
 
-> “Given this global-space envelope, orientation, archetype, instance ID, and seed, what physical building exists here?”
+> Given a global-space envelope, orientation, frontage, archetype, stable instance namespace and seed, what physical building exists here?
 
-It does **not** answer:
+It does **not** decide towns, roads, parcels, addresses, utilities, household occupants, loot, outbreak history, streaming regions, camera behavior or which property gets which building type.
 
-- where towns are;
-- where roads run;
-- where parcels are;
-- which parcel gets a trailer versus a ranch house;
-- addresses;
-- utility networks;
-- household occupants;
-- loot;
-- outbreak damage/history;
-- streaming boundaries.
+Global planning must decide those higher-level facts first. System 19 never scans the world looking for a convenient place to build.
 
-Those remain future Global World Planning / Population / Streaming responsibilities.
+## 3. Implemented owners
 
-This distinction preserves the North Star rule:
+### `game/scripts/generation/buildings/BuildingGenerationRequest.gd`
 
-> global planning decides large-scale coherence first; local materialization fills detail inside already-decided facts.
+Pure request facts:
 
-## 3. Non-goals
+- stable `instance_id` namespace;
+- `archetype_id`;
+- seed;
+- global `Rect2i` envelope;
+- canonical N/E/S/W orientation;
+- caller-selected frontage side.
 
-V1 does **not** implement:
+No texture paths, atlas indices, Nodes, camera state, player state or loot data.
 
-- full neighborhood generation;
-- roads/parcels/property access planning;
-- camera or map streaming;
-- multi-floor buildings;
-- basements;
-- roofs/roof visibility systems;
-- procedural loot or containers;
-- zombies/NPCs;
-- power/water functionality;
-- locked doors;
-- construction/destruction;
-- room-based loot tables;
-- persistent household/building-record systems not already designed;
-- arbitrary architectural grammar;
-- automatic furniture physics inference from art.
-
-V1 is one real local-building generation contract plus the first trailer archetype and a critique/showcase integration.
-
-## 4. Existing recovery lessons
-
-Golden generator v6 already contained useful ideas but should not be restored architecturally.
-
-Recovered useful facts:
-
-- functional rooms are better than generic front/back rectangles;
-- furniture should imply room purpose;
-- special archetypes should own their own layout rules;
-- generation must be validated deterministically;
-- generation-only code should not own loot/combat/runtime state.
-
-The old trailer implementation was too coarse:
-
-- `trailer_living_kitchen`;
-- `trailer_bed_bath`.
-
-System 19's first candidate deliberately improves that target to:
-
-- living/kitchen zone;
-- **distinct bathroom**;
-- **distinct bedroom**;
-- real exterior entrance;
-- interior doorway(s);
-- windows;
-- traversable one-cell circulation.
-
-The old pass is a recovery source for fixture vocabulary, not the new architecture.
-
-## 5. Intended production modules
-
-### Pure request / plan data
-
-`game/scripts/generation/buildings/BuildingGenerationRequest.gd`
-
-Contains only caller-supplied generation facts such as:
-
-- `instance_id: String` — stable caller-owned building instance namespace;
-- `archetype_id: StringName`;
-- `seed: int`;
-- `envelope: Rect2i` in global WHERE coordinates;
-- `orientation: int` using canonical N/E/S/W rotation language;
-- `frontage_side: int` or equivalent caller-decided entrance-facing constraint.
-
-It contains no texture paths, atlas indices, Nodes, camera state, player state, or loot data.
-
-`game/scripts/generation/buildings/GeneratedBuildingPlan.gd`
+### `game/scripts/generation/buildings/GeneratedBuildingPlan.gd`
 
 Pure semantic result containing:
 
-- selected footprint cells / envelope usage;
-- interior ground semantic assignments;
-- structure entries: walls, doors, windows with global cells + structure axis;
-- prop entries with semantic IDs, anchors, facing, footprints where applicable;
-- generation-only room-purpose regions/tags for validation/debug critique;
-- deterministic role labels used to construct stable child entity IDs;
-- generator/archetype version + seed provenance.
+- used footprint;
+- interior ground assignments;
+- walls / doors / windows with global cells, axis and facing;
+- prop placements;
+- generation-only room-purpose regions;
+- deterministic child role labels;
+- archetype version + seed provenance;
+- deterministic snapshot/signature.
 
-Room-purpose tags in V1 are **plan metadata**, not a new authoritative persistent Room State domain. Physical WHAT facts are the gameplay truth once materialized. If future gameplay needs persistent room identity/type, that gets its own approved domain rather than smuggling room state into WHAT metadata.
+Room purposes remain generator/validation metadata in V1, not a new persistent Room State domain.
 
-### Generator coordinator
+### `game/scripts/generation/buildings/LocalBuildingGenerator.gd`
 
-`game/scripts/generation/buildings/LocalBuildingGenerator.gd`
+Registry/coordinator only. It routes an archetype ID to its focused generator and contains no trailer room logic.
 
-- registry/coordinator only;
-- maps `archetype_id` to a focused archetype generator;
-- validates request basics;
-- calls one generator;
-- returns plan or explicit failure;
-- contains no trailer-specific room logic.
+### `game/scripts/generation/buildings/archetypes/TrailerBuildingGenerator.gd`
 
-### First archetype
+Owns only `residential.trailer.singlewide`.
 
-`game/scripts/generation/buildings/archetypes/TrailerBuildingGenerator.gd`
+### `game/scripts/generation/buildings/GeneratedBuildingValidator.gd`
 
-Owns only the `residential.trailer.singlewide` family.
+Pure plan validation covering:
 
-Later house archetypes are added as separate modules under the same contract instead of making one procedural-building god script.
+- footprint containment;
+- unique deterministic roles;
+- legal structure axes;
+- no duplicate structure/prop contradictions;
+- required room purposes;
+- exactly one primary exterior door;
+- blocking furniture not occupying structure/opening cells;
+- one-cell circulation from exterior entrance to every room with doors conceptually passable.
 
-### Validation
+Art and Collision coverage remain independent integration tests instead of generator dependencies.
 
-`game/scripts/generation/buildings/GeneratedBuildingValidator.gd`
+### `game/scripts/generation/buildings/GeneratedBuildingMaterializer.gd`
 
-Pure geometry/semantic plan validation:
+Consumes only a validated plan and public initial-state contracts.
 
-- no overlap contradictions;
-- legal WHERE structure geometry;
-- door/window replaces wall cell rather than overlaps it;
-- connectivity;
-- circulation clearance;
-- room-purpose requirements;
-- footprint/envelope containment;
-- deterministic ID-role uniqueness;
-- no generator-specific art or Collision ownership.
+It:
 
-Art and Collision semantic coverage are checked separately by integration tests so generation does not become dependent on renderer/physics implementation.
+- writes interior terrain to WHAT;
+- creates/places semantic wall, door, window and prop entities with deterministic stable IDs;
+- explicitly enrolls generated doors CLOSED in 06A;
+- refuses conflicting existing entity occupancy rather than deleting persistent facts;
+- snapshots WHAT + Door State and restores them if a later materialization write fails.
 
-### Initial-world materialization
+After materialization, the generator does not own the building. WHAT / Door State and later runtime mechanics own current reality.
 
-`game/scripts/generation/buildings/GeneratedBuildingMaterializer.gd`
+## 4. Replaceability / future global-planner seam
 
-Consumes a **validated** plan and uses existing public state APIs to create initial physical facts:
+Future world generation can remain:
 
-- set interior ground terrain semantics in WHAT;
-- create/position `wall.*`, `door.*`, `window.*`, `prop.*` entities with deterministic stable IDs;
-- explicitly enroll every generated door in 06A with an explicit initial state;
-- V1 generated residential doors begin **CLOSED**.
+1. plan geography/roads globally;
+2. plan parcels/properties;
+3. choose property use/building archetype;
+4. choose legal envelope/orientation/frontage;
+5. call System 19;
+6. validate/materialize the returned building;
+7. afterward persistent gameplay truth owns mutations.
 
-It does not register Collision Catalog rules, render art, or own runtime door interaction.
+Changing the local generator later must not rewrite existing saved buildings.
 
-The caller/composition layer must provide compatible semantic collision profiles and rendering coverage.
+## 5. Determinism and identity
 
-## 6. Replaceability / global-planner seam
+The same archetype version + request + seed produces the same semantic plan/signature.
 
-Future global generation should be able to do:
+Randomness is local/seeded; no wall-clock/global random source is used.
 
-1. plan road network globally;
-2. plan parcel/property globally;
-3. decide property use/building archetype;
-4. choose a legal building envelope/orientation/frontage;
-5. call **System 19** with that request;
-6. materialize the returned plan into initial WHAT;
-7. afterward, persistent world state owns all gameplay mutations.
-
-System 19 therefore must never scan the world looking for a “nice random place” to build a house. Placement decisions arrive from the caller.
-
-For the current critique lab, a small demo fixture plays the role of the caller by supplying one fixed legal showcase envelope. That is an explicit test/DEV integration, not the long-term property planner.
-
-## 7. Determinism
-
-Same:
-
-- archetype version;
-- request data;
-- seed
-
-must produce the same semantic plan and deterministic child role IDs.
-
-Randomness is local and seeded. No wall-clock/random-global state.
-
-Changing the archetype algorithm/version may change new generation, but it must not rewrite already-materialized saved buildings. Once materialized, WHAT/Door State own current reality.
-
-## 8. Stable entity IDs
-
-The caller supplies a stable `instance_id` namespace.
-
-Materialized child IDs are deterministically derived from that namespace + semantic role, for example conceptually:
+Child entity IDs derive deterministically from caller instance namespace + semantic role, e.g.:
 
 - `<instance>.wall.exterior.001`
-- `<instance>.door.exterior.001`
-- `<instance>.door.bedroom.001`
-- `<instance>.window.living.001`
-- `<instance>.prop.kitchen.stove.001`
+- `<instance>.door.exterior.primary`
+- `<instance>.door.interior.bathroom`
+- `<instance>.prop.kitchen.stove`
 
-Exact valid formatting follows current `WorldEntityId` rules.
+Identity never depends on insertion order or Godot Node identity.
 
-Generator output must not depend on insertion order to define identity.
+## 6. Trailer Candidate 001 — implemented geometry
 
-## 9. First archetype: single-wide trailer
-
-Canonical archetype ID proposal:
+Canonical archetype:
 
 `residential.trailer.singlewide`
 
-### Shape target
+Archetype version: **1**.
 
-- long narrow single-story shell;
-- rotates deterministically with request orientation;
-- coarse 1 m tactical cells mean proportions are gameplay-readable approximations rather than architectural CAD dimensions;
-- initial target envelope should support roughly **5–6 cells exterior width** and **10–12 cells exterior length**, depending on orientation and requested envelope.
+Canonical north-oriented exterior footprint: **6 × 12 cells**. East/West orientation rotates to 12 × 6. Other orientations rotate deterministically using WHERE facing/axis rules.
 
-The generator chooses only among sizes that fit the supplied envelope.
+The current critique-lot request uses:
 
-### Functional program
+- stable instance `building.demo.trailer.001`;
+- envelope `Rect2i(2, 0, 6, 12)`;
+- orientation NORTH;
+- frontage EAST;
+- deterministic seed `19001`.
 
-A valid V1 trailer must contain recognizable physical zones for:
+### Functional rooms
 
-1. **Living / kitchen**
-2. **Bathroom**
-3. **Bedroom**
+The trailer has three distinct required spaces rather than the golden generator's old combined `bed_bath` zone:
 
-The bathroom and bedroom may be compact but must be distinct rather than one `bed_bath` blob.
+1. **Living / kitchen** — 4×4 interior zone;
+2. **Bathroom** — 4×2 interior zone;
+3. **Bedroom** — 4×2 interior zone.
 
-### Exterior entrance
+Interior partition rows physically separate those spaces, with a real interior door in each partition.
 
-- exactly one primary exterior door in the first candidate;
-- placed on a long side consistent with supplied frontage constraint;
-- opens directly into the living/kitchen zone rather than through a nonsensical bedroom/bath entrance;
-- exterior access cell remains free of blocking props.
+### Exterior opening
 
-Future archetype variants may add rear doors, porches, utility doors, double-wides, etc.; V1 does not.
-
-### Interior doors
-
-At least the bedroom/bath privacy layout must use physical interior opening(s) where the wall topology requires them.
-
-All generated doors are real `door.*` structure entities, not gaps disguised as doors.
+- exactly one primary exterior side door;
+- canonical local cell `(5,3)` on the long East side;
+- enters directly into living/kitchen;
+- generated as `door.rural_wood` and explicitly begins CLOSED.
 
 ### Windows
 
-Trailer candidate should include a small believable set of windows:
+Candidate 001 includes four exterior windows:
 
-- living/kitchen gets exterior light/window coverage;
-- bedroom gets at least one window when geometry permits;
-- bathroom window is optional/small and may be omitted in V1.
+- two serving living/kitchen;
+- two serving bedroom;
+- bathroom intentionally has no window in V1.
 
-Windows remain static structure blockers until a future window-state/breaking system exists.
+### Floors
 
-### Interior floor semantics
+- living/kitchen: `ground.linoleum_green`;
+- bathroom: `ground.tile_white`;
+- bedroom: deterministic beige/blue carpet variant from seed.
 
-Use existing semantic art vocabulary where appropriate, for example:
+### Structure vocabulary
 
-- living/kitchen: `ground.linoleum_green` / other supported domestic surface;
-- bedroom: `ground.carpet_beige` or similar;
-- bathroom: `ground.tile_white` / `ground.tile_mosaic`.
+- exterior: `wall.rural_wood`;
+- interior partitions: `wall.interior`;
+- exterior door: `door.rural_wood`;
+- interior doors: `door.house`;
+- windows: `window.rural_wood`.
 
-Generator chooses semantic IDs only; Art Catalog owns presentation.
+Generator stores semantics only. Art Catalog owns appearance.
 
-### Wall / opening semantics
+### Fixtures / furniture
 
-Initial proposal:
-
-- exterior wall: `wall.rural_wood` or another supported residential exterior token;
-- interior partition: `wall.interior`;
-- exterior door: `door.rural_wood` / `door.house` compatible family;
-- interior doors may use `door.house`/residential family;
-- windows: `window.rural_wood` / `window.house`.
-
-Exact content token can be tuned before implementation, but all selected semantics must already be renderable and receive explicit collision classification in demo composition.
-
-### Fixture / prop target
-
-The first candidate should physically communicate use with a restrained fixture set, not clutter spam.
-
-Living/kitchen candidate vocabulary:
+Current restrained set:
 
 - stove range;
 - refrigerator;
-- kitchen sink/counter;
-- sofa or loveseat;
-- optional small table/chair if circulation permits.
-
-Bedroom:
-
-- single or double bed depending on size;
-- small dresser/nightstand if circulation permits.
-
-Bathroom:
-
+- kitchen sink;
+- sofa/loveseat deterministic variant;
 - toilet;
-- vanity/pedestal sink;
-- shower/tub only if footprint supports it without destroying navigation.
+- bathroom vanity;
+- single bed;
+- dresser.
 
-Props use existing semantic Art Catalog vocabulary such as `prop.stove_range`, `prop.refrigerator_white`, `prop.kitchen_sink`, `prop.sofa`, `prop.bed_single`, `prop.toilet_modern`, etc. Generator never uses atlas numbers.
+A clear circulation spine is intentionally preserved instead of filling every available cell.
 
-## 10. Circulation / tactical quality rules
+## 7. Tactical quality rules
 
-A generated home must be playable, not merely recognizable in a static image.
+A valid home must be playable, not merely recognizable in a static screenshot.
 
-V1 rules:
+System 19 validates:
 
-- at least one 1-cell-wide traversable route from exterior door to every functional room;
-- no required route through a blocking furniture cell;
-- no blocking prop directly on a door/opening cell;
-- no “sealed bathroom/bedroom” due to partition mistakes;
-- no accidental wall/door/window overlap;
-- no structure overlap with the player spawn/access path in the critique fixture;
-- doors should create meaningful but not absurd chokepoints;
-- furniture may narrow a room but must not make ordinary movement impossible.
+- one-cell route from exterior door to all three room zones;
+- no required route through blocking furniture;
+- no blocking prop on a door/opening;
+- no sealed bath/bedroom;
+- no wall/door/window overlap;
+- deterministic legal orientation/axis rotation;
+- no corrective deletion of pre-existing occupied cells.
 
-Connectivity validation should conceptually test the floor plan with doors treated as open/passable. Runtime Door State remains separate.
+Connectivity validation treats doors as conceptually open/passable. Runtime state remains 06A + System 18.
 
-## 11. Materialization rules
+## 8. Critique-lot integration
 
-Materialization is initial-world creation, not runtime regeneration.
+`game/scripts/demo/TrailerCritiqueFixture.gd` is the current live composition fixture.
 
-Before writing:
+It remains a fixed **13×13 one-screen** environment so camera/streaming are still deferred. The lot contains:
 
-- plan must pass `GeneratedBuildingValidator`;
-- target envelope may contain caller-provided base terrain, which interior floor assignments may replace;
-- existing non-terrain entity occupancy inside intended building cells causes materialization to fail rather than deleting unrelated persistent facts;
-- materializer never “cleans up” existing buildings to make its result fit.
+- simple grass/road context;
+- one generated Trailer Candidate 001;
+- player spawn immediately outside the side entrance at `(8,3)`, facing WEST toward the CLOSED exterior door;
+- no NPCs/infected/loot.
 
-After successful materialization:
+The old authored `CanonicalDemoFixture.gd` remains unchanged and continues to serve its existing regression contract.
 
-- generator does not own those entities anymore;
-- runtime Door Interaction changes Door State normally;
-- future destruction/loot/construction mutate canonical persistent domains;
-- regenerating the seed must not overwrite a changed existing building.
+System 18 makes the generated trailer physically enterable:
 
-## 12. Critique/showcase integration before camera
+- Walk opens the exterior/interior door only at movement commit;
+- Run forces it open loudly;
+- manual tap close requires adjacency and facing.
 
-System 19 should be testable **without building the camera system first**.
+Camera is intentionally not required until multiple properties exceed one screen.
 
-Initial live/demo integration proposal:
+## 9. User-guided archetype iteration
 
-- keep the current fixed one-screen tactical view;
-- use a 13×13 or similarly one-screen **single-building critique lot**;
-- road/yard/access is simple authored context around the generated structure;
-- one generated trailer occupies the showcase envelope;
-- player starts outside its exterior entrance;
-- System 18 doors make it enterable;
-- no NPCs/zombies/loot are required for the first layout critique.
+Trailer Candidate 001 is a **candidate**, not a declaration that trailer design is finished.
 
-This may intentionally revise the current authored sample-map content while preserving the old fixture/regression where useful. The implementation design must keep movement/foundation regression coverage even if the live test lot changes.
+Development loop:
 
-The purpose is to answer visually and tactically:
+1. play Candidate 001;
+2. critique proportions, rooms, entrance, windows, furniture and tactical circulation;
+3. turn critique into reusable trailer-generation rules;
+4. regenerate and retest;
+5. once the trailer archetype feels right, version/freeze those rules for new generation;
+6. add `residential.house.small_ranch` under the same contract;
+7. repeat.
 
-- does it look like a trailer?
-- do the room sizes feel right?
-- is the entrance believable?
-- is circulation annoying or interesting?
-- does furniture placement make sense?
-- are there too many/few windows?
-- does it feel too empty or too cluttered?
+Do not patch one showcase instance by hand when critique should become an archetype rule.
 
-No camera is necessary until we want multiple buildings / a map larger than one screen.
+## 10. Next archetype
 
-## 13. User-guided archetype iteration
+The intended next building family remains a small ordinary ranch/house, targeting:
 
-The first generated trailer is intentionally a **candidate**, not a claim that trailer design is finished.
-
-Recommended content-development loop:
-
-1. implement System 19 architecture + trailer generator;
-2. spawn deterministic `Trailer Candidate 001`;
-3. user critiques physical layout/playability;
-4. change trailer archetype rules based on critique;
-5. regenerate/retest candidate(s);
-6. once trailer rules feel good, freeze a trailer archetype version;
-7. add next archetype, likely `residential.house.small_ranch`;
-8. repeat critique cycle.
-
-If an archetype addition fits the existing System 19 public contract, it is a focused content/rule extension rather than a new global-generation architecture rewrite.
-
-If critique reveals the request/plan/materialization contract itself is wrong, revise System 19 explicitly instead of stacking corrective passes.
-
-## 14. Next house after trailer
-
-The intended second archetype is a small ordinary house/ranch, not a mansion.
-
-It should eventually target distinct:
-
-- living room;
+- distinct living room;
 - kitchen;
 - bathroom;
 - primary bedroom;
-- optional second bedroom when footprint supports it;
-- sensible exterior entrance/frontage;
-- windows and domestic fixtures.
+- optional second bedroom where footprint supports it;
+- sensible exterior frontage/windows/domestic fixtures.
 
-But **house generation is not implemented in V1** until the trailer loop has taught us what spatial density/readability works at the current 1 m tactical scale.
+House generation is not part of System 19 V1 yet.
 
-## 15. Validation / acceptance criteria
+## 11. Verified acceptance
 
-Pure generator tests must prove:
+`game/scripts/ci/LocalBuildingGenerationSmoke.gd` + `.github/workflows/local-building-generation.yml` prove:
 
-1. same request+seed -> byte-equivalent semantic plan/snapshot;
-2. different supported orientation rotates geometry correctly inside envelope;
-3. output never exceeds envelope;
-4. all structure entries use legal structure axes;
-5. no duplicate occupancy contradictions among walls/doors/windows;
-6. exactly one primary exterior trailer door;
-7. living/kitchen, bathroom, bedroom purpose regions all exist;
-8. exterior entrance leads to living/kitchen;
-9. every room is reachable with doors treated open;
-10. no blocking prop occupies required circulation/door cells;
-11. every role/entity ID is deterministic and unique;
-12. malformed/too-small request fails explicitly rather than producing a broken building.
+1. same request+seed produces identical semantic plan signature;
+2. rotated orientation changes footprint correctly and still validates;
+3. too-small request fails explicitly;
+4. Candidate 001 materializes into canonical WHAT;
+5. all three generated doors are explicitly enrolled CLOSED;
+6. all generated blocking semantics have Collision coverage;
+7. generated ground/wall/door/window/prop semantics resolve through current Art Catalog;
+8. System 18 can Walk through the generated exterior door and opens it at commit;
+9. fixed one-screen renderer stack configures the generated lot without diagnostics;
+10. foundation/art/door regressions and actual canonical demo startup remain green.
 
-Materialization smoke must prove:
+Implementation candidate `c035fe7b3f5d0badab6c5b598996010e92d852b2` passed dedicated Local Building Generation run `32005363051` before documentation promotion.
 
-13. validated plan becomes canonical WHAT terrain/entities/placements;
-14. every generated door is explicitly enrolled CLOSED in 06A;
-15. generator/materializer does not mutate existing unrelated occupied cells;
-16. resulting semantic IDs are independently covered by current Art Catalog / renderers;
-17. resulting blocking structure/prop semantics are independently classified in Collision so no UNKNOWN holes exist;
-18. System 18 can auto-open the generated exterior/interior doors through public contracts;
-19. current foundation/movement/render/player-shell regressions remain green.
+## 12. Performance / mobile
 
-## 16. Performance
-
-V1 building generation is bounded by one local building envelope and should be inexpensive.
-
-Requirements:
-
+- generation is bounded to one caller-supplied envelope;
 - no full-world scan;
-- no per-frame generator work;
-- deterministic bounded layout attempts;
-- avoid unbounded random retry loops;
-- validation proportional to plan/envelope size;
-- generation occurs only when initial local detail is being created, not continuously during gameplay.
+- no per-frame generation;
+- no unbounded random retries;
+- validation scales with local plan size;
+- no generator behavior depends on desktop UI/hover;
+- the live critique result remains playable with existing phone controls + System 18 touch interaction.
 
-Future streaming may call this for newly materialized virgin properties, but System 19 must not depend on streaming internals.
+## 13. Forbidden dependencies
 
-## 17. Safari/mobile
+Generation production code does not import renderer/art internals, texture paths/atlas indices, camera/zoom, player input, HUD geometry, Health/Needs/Skills, loot/inventory actions, AI, Reboot, world-scale road/parcel planner internals, or future streaming implementation.
 
-The generator itself has no Safari/input behavior.
+The materializer uses only approved public initial-state mutation contracts: WHAT + Door State.
 
-The critique result must remain playable on phone through existing tactical controls and System 18 tap interaction.
+## 14. Future seams
 
-No generator rule may depend on desktop-only hover or debug UI.
+The same request/plan/validator/materializer contract can later host:
 
-## 18. Forbidden dependencies
-
-Generation production code must not import:
-
-- renderers;
-- texture paths/atlas indices;
-- camera/zoom;
-- player input;
-- HUD/UI geometry;
-- Health/Needs/Skills;
-- loot/inventory actions;
-- AI;
-- Reboot runtime;
-- world-scale road/parcel planner internals;
-- future streaming implementation.
-
-Materializer may use only the public initial-state mutation contracts explicitly approved: WHAT and Door State for V1 physical building creation.
-
-## 19. Future seams
-
-System 19 should later accept/add archetypes for:
-
-- small ranch house;
-- larger house;
-- duplex;
-- apartment units/buildings;
-- gas station;
-- convenience store;
-- standalone retail;
-- office;
-- warehouse/industrial;
-- farm/rural house;
-- cabin;
+- small/large houses;
+- duplexes;
+- apartments;
+- gas stations/convenience stores;
+- retail/office/warehouse;
+- farms/cabins;
 - sheds/garages/outbuildings.
 
-Future higher-level systems may supply:
+Future higher layers may supply parcel identity, address, utility connection points, household/business identity, socioeconomic/style/age parameters, pre-collapse furnishing variation and outbreak damage state without letting System 19 own global geography.
 
-- parcel/property envelope;
-- address/property identity;
-- utility connection points;
-- household/business identity;
-- socioeconomic/building-age/style parameters;
-- pre-collapse furnishing variation;
-- damage/outbreak scenario state.
+## 15. North-star fit
 
-Those extend the request/catalog ecosystem; they do not let local building generation choose global geography.
+Believable enterable houses are core to “Ultima-style turn-based mini Zomboid.” System 19 preserves the meaningful depth—room purpose, navigation, doors/windows/furniture and persistent physical state—without becoming architectural CAD or a world-planning monolith.
 
-## 20. North-star fit
+The critique loop is especially important at the coarse 1 m grid scale: learn good density/proportion from actual play before multiplying bad assumptions across a large generated world.
 
-Believable enterable houses are one of the core experiences of “Ultima-style turn-based mini Zomboid.”
+## 16. Approved decisions
 
-The system preserves depth where it matters—recognizable room purpose, spatial navigation, doors/windows/furniture, persistent physical consequences—without becoming architectural simulation software.
+Approved by the user on 2026-08-16/17:
 
-The critique loop is especially valuable at the coarse 1 m tactical scale: we can learn the right density and proportions from actual play before multiplying bad assumptions across an infinite world.
-
-## 21. Decisions currently proposed for approval
-
-1. System 19 is a local building materializer, not the global world planner.
+1. System 19 is local building generation/materialization, not global world planning.
 2. Caller supplies envelope/orientation/frontage/instance ID/seed; generator never hunts the world for placement.
-3. Pure semantic plan is generated and validated before any WHAT mutation.
-4. Initial materialization writes physical WHAT facts and explicitly enrolls generated doors CLOSED in 06A.
-5. Room-purpose data is generation/validation metadata in V1, not a hidden new persistent Room State domain.
+3. Pure semantic plan is generated and validated before WHAT mutation.
+4. Initial materialization writes physical WHAT facts and explicitly enrolls doors CLOSED in 06A.
+5. Room-purpose data remains generation/validation metadata in V1.
 6. First archetype is `residential.trailer.singlewide`.
-7. Trailer target is roughly 5–6 cells wide × 10–12 long before rotation, subject to envelope fit.
-8. First trailer must have distinct living/kitchen, bathroom, and bedroom rather than the old combined bed/bath zone.
-9. First trailer has one main exterior side entrance, interior doors as needed, windows, and restrained functional furniture.
-10. Connectivity/circulation is validated as gameplay geometry, not judged only by appearance.
-11. First live critique uses a single-building one-screen lot; camera stays deferred.
-12. After trailer critique/refinement, next archetype is a small ordinary house/ranch under the same generator contract.
+7. Candidate 001 uses a concrete 6×12 single-wide footprint before rotation.
+8. Trailer has distinct living/kitchen, bathroom and bedroom rather than the old combined bed/bath zone.
+9. First trailer has one main exterior side entrance, two interior doors, windows and restrained functional furniture.
+10. Connectivity/circulation is validated as gameplay geometry.
+11. First live critique uses one generated building on the fixed one-screen lot; camera remains deferred.
+12. User critiques become generator/archetype rules; next archetype after trailer refinement is a small ordinary ranch house.
