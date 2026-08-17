@@ -20,46 +20,29 @@ Golden recovery commit: `1763958f44eb7f855fd49944c00d1ffe608c0abe`.
 
 Systems 14–17 are the live canonical demo/player path. `game/main.tscn` launches the canonical demo. `game/scripts/reboot/` is frozen/deprecated reference only.
 
-Implemented + CI:
+Implemented + CI through System 17:
 
-- 00A WHERE / Spatial Model
-- 00B WHAT / Persistent World State
-- 00C WHEN / Tick Action Pause
-- 01 Collision
-- 02 Movement Actions
-- 03 Actor Locomotion / Movement Capability
-- 04 Recovered Art Catalog
-- 05 Ground Renderer
-- 06A Door State
-- 06 Structure Renderer
-- 07 Prop Renderer
-- 08 Living Actor Renderer
-- 09 Hand Equipment State
-- 10 Hand Equipment Presentation
-- 11 Inventory / Containment
-- 12 Item Transfer Actions
-- 13A Health / Injury
-- 13B Needs / Rest
-- 13C Skills
-- 13D Item Physical Properties
-- 13E Carry / Encumbrance
-- 13F Moodlets
-- 14 Canonical Playable Demo
-- 15 HUD / Facing Inspection
-- 16 Player Shell / Inspectors / Stance
+- WHERE / WHAT / WHEN foundation
+- Collision / Movement / Locomotion
+- recovered art + Ground / Structure / Prop / Living Actor renderers
+- Hands / Held-item presentation / Inventory / Item Transfer
+- Health / Needs / Skills / Item Weight / Carry / Moodlets
+- Canonical Demo / HUD / Player Shell
 - **17 Run / Damage-Interruptible Walking**
 
-Active/current designs:
+Active revision design:
 
-- `SYSTEM_DESIGNS/14_CANONICAL_PLAYABLE_DEMO.md`
-- `SYSTEM_DESIGNS/15_CANONICAL_HUD_FACING_INSPECTION.md`
-- `SYSTEM_DESIGNS/16_CANONICAL_PLAYER_SHELL.md`
+- **17A Movement Exertion / Encumbrance / Run Impact — DRAFT; awaiting explicit approval.**
+- `SYSTEM_DESIGNS/17A_MOVEMENT_EXERTION_ENCUMBRANCE_RUN_IMPACT.md`
+
+Current implemented parent design:
+
 - `SYSTEM_DESIGNS/17_RUN_DAMAGE_INTERRUPTIBLE_WALKING.md`
 
 ## 3. Foundation truth
 
 ### WHERE
-Global integer Vector2i cells, 1m planning scale, N/E/S/W facing, whole-cell footprints, structure cells with H/V axis. Geometry only.
+Global integer `Vector2i` cells, 1m planning scale, N/E/S/W facing, whole-cell footprints, structure cells with H/V axis. Geometry only.
 
 ### WHAT
 One authoritative persistent current world with stable IDs, semantic types/terrain, WHERE placements, derived occupancy, typed mechanic state keyed by stable IDs.
@@ -67,65 +50,73 @@ One authoritative persistent current world with stable IDs, semantic types/terra
 ### WHEN
 One deterministic integer world tick, variable-duration actions/events, same-tick draining, COMMITTED/RESUMABLE/CANCELABLE policies, tactical decision pause plus separate hard application pause.
 
-## 4. Movement / locomotion truth after System 17
+## 4. Current implemented Movement / Run truth
 
-Collision owns hard occupancy. Movement owns physical movement actions. 03 owns stance and actor movement capability.
+Collision owns hard occupancy. Movement owns physical actions. 03 owns stance/capability.
 
-Canonical actions:
+Implemented now:
 
-- Walk Forward — one cell, healthy demo baseline 10 ticks, CANCELABLE.
-- Walk Back — one cell preserving facing, healthy demo baseline 10 ticks, CANCELABLE.
-- Run Forward — two cells, COMMITTED, two physical stride phases.
-- Turn L/R — 3-tick healthy baseline, COMMITTED.
-- Crouch/Stand — 4-tick healthy baseline, COMMITTED.
+- Walk Forward/Back — one cell, healthy normal-terrain baseline 10 ticks, CANCELABLE by real damage.
+- Run Forward — two forward cells, healthy normal-terrain 6 ticks/stride / 12 total, COMMITTED.
+- Turn L/R — healthy 3 ticks, COMMITTED.
+- Crouch/Stand — healthy 4 ticks, COMMITTED.
+- Crouched Walk = 1.4x; crouched Run blocked.
+- fatigue 80+ blocks Run.
+- successful Run stride currently adds exactly +1 fatigue.
+- known hard blockers currently reject Run at request time if already present.
 
-Crouched walking remains 1.4x normal walk duration (14 ticks on demo terrain). Crouched Run is blocked.
+Current Run terrain pace:
 
-### Run timing
-Each Run stride base cost is `ceil(walk_terrain_cost * 0.60)` before actor modifiers.
+`run_stride_base_ticks = ceil(walk_terrain_ticks * 0.60)`
 
-Current healthy/empty 10-tick demo terrain:
+Needs and Carry mobility providers are live in the canonical demo.
 
-- stride 1 at +6 ticks;
-- stride 2 at +12 total ticks.
+## 5. Active System 17A DRAFT
 
-Mixed terrain sums independent stride costs. Run validates both cells at request, reserves neither, and revalidates expected physical placement/collision/terrain at each stride. If second stride fails after first succeeds, actor stays on the intermediate cell.
+Newest user direction requires a bounded revision before returning to item interaction.
 
-Run capability is latched at action start because Run is committed. Later condition changes affect the next action, not the current second stride.
+Proposed/settled direction represented by the DRAFT:
 
-## 5. Fatigue / carry movement truth
+- terrain and encumbrance multiply movement time;
+- 03 mobility duration scales become truly multiplicative rather than additive percentage adjustments;
+- existing fatigue timing pressure remains, also as a multiplier;
+- existing carry timing scale remains +75% at exactly capacity;
+- Run is blocked at **100%+ carry capacity** with `too_encumbered_to_run`;
+- over-capacity Walk remains legal but increasingly slow;
+- Walking now builds real fatigue based on terrain only — carry weight does not increase Walk fatigue;
+- Run fatigue is multiplied by terrain difficulty and encumbrance;
+- terrain effort v1 derives from `walk_terrain_ticks / 10`;
+- proposed Walk fatigue = `max(1, ceil(terrain_effort_factor))` per successful cell;
+- proposed Run fatigue = `max(1, round(terrain_effort_factor * encumbrance_factor))` per resolved/impact stride;
+- known hard Collision BLOCKED during Run becomes a physical impact instead of a harmless zero-cost Run rejection;
+- impact stops the sprint at the last legal cell and charges the attempted stride effort;
+- proposed hard Run impact damage = **5 HP** through a stateless Movement -> Health coordinator;
+- UNKNOWN/unmaterialized/untraversable space still fails closed and is not impact damage;
+- Web Leave Game changes from history/back fallback logic to direct `window.location.assign('https://www.google.com/')`.
 
-13B fatigue remains 0 fresh -> 100 severe pressure. Existing timing rule remains +65 basis points per fatigue point, reaching +65% at fatigue 100.
+**Do not implement 17A until explicit user approval.**
 
-System 17 adds:
+## 6. Current fatigue / carry truth
 
-- fatigue 0..79 may start Run if other capability passes;
-- fatigue 80+ blocks Run with `too_exhausted_to_run`;
-- each successful Run stride adds +1 fatigue through `MovementRunExertionService` -> public Needs mutation;
-- failed stride adds no fatigue;
-- Run begun at 79 may complete to 81 because start capability is latched.
+13B fatigue is 0 fresh -> 100 severe pressure. Current timing rule reaches +65% duration at fatigue 100.
 
-13E Carry remains real derived possession weight/capacity. The canonical demo now registers both Needs and Carry mobility providers with 03, so real fatigue/carry timing modifiers are live.
+13E Carry derives real possession weight against persistent capacity (default 18 kg). Current implemented carry timing reaches +75% at exactly capacity and continues scaling above capacity.
 
-No separate stamina state exists.
+17A does not change Needs' 0..100 record shape or Carry's derived weight/capacity truth.
 
-## 6. Damage interruption truth
+## 7. Damage interruption truth
 
-13A Health now emits semantic `damage_applied` only for actual HP loss via `apply_damage()`.
+13A Health emits semantic `damage_applied` only for actual HP loss.
 
-`MovementDamageInterruptionService` observes that public fact and asks WHEN to interrupt the actor's active Movement action.
+`MovementDamageInterruptionService` asks WHEN to interrupt active Movement work:
 
-WHEN policy decides:
+- Walk CANCELABLE -> stops;
+- Run COMMITTED -> ordinary damage does not cancel;
+- Turn COMMITTED -> ordinary damage does not cancel.
 
-- Walk CANCELABLE -> stops immediately, elapsed ticks stay spent, no placement commit;
-- Run COMMITTED -> damage does not cancel;
-- Turn COMMITTED -> damage does not cancel.
+17A proposes a separate Run-impact damage coordinator; Movement still must not import Health.
 
-Healing and max-HP bookkeeping are not damage interruption.
-
-MovementActionService does not import Health. Health does not import Movement.
-
-## 7. Physical item truth
+## 8. Physical item truth
 
 - WHAT placement owns loose world location;
 - 09 owns anatomical Right/Primary + Left/Secondary hands;
@@ -134,107 +125,69 @@ MovementActionService does not import Health. Health does not import Movement.
 - 13D owns explicit item weight;
 - 13E derives carried weight/capacity.
 
-System 16 Inventory remains read-only. The live demo still has no real demo items yet, and System 10 held-item BACK/FRONT layers are not yet composed into live rendering because nothing is equipped.
+System 16 Inventory remains read-only. Live demo still has no real demo items yet, and System 10 held-item BACK/FRONT layers are not yet composed into live rendering because nothing is equipped.
 
-## 8. Live canonical demo
+## 9. Live canonical demo
 
-Current demo:
+Current deployed demo has one authored 13x13 WHAT map and one controlled `actor.survivor`, no NPCs/infected.
 
-- authored 13x13 WHAT map;
-- one controlled `actor.survivor`; no NPCs/infected;
-- grass/cross-road/house shell/trees/bench/mailbox/streetlight;
-- Ground -> Structure -> Prop -> Living Actor render composition;
-- fixed one-screen view, no camera yet;
-- System 15 real HUD: tick, action, facing, one-cell-ahead `Looking at:`, HP, fatigue, hunger, thirst, sleep pressure, carry, moodlets;
-- System 16 Stats/Inventory/Menu with real WHEN hard pause;
-- real Crouch/Stand;
-- real Run.
-
-Desktop controls:
+Desktop:
 
 - W/Up = Walk Forward
 - S/Down = Walk Back
 - A/Left = Turn Left
 - D/Right = Turn Right
 - C = Crouch/Stand
-- **Shift+W / Shift+Up = Run Forward**
+- Shift+W / Shift+Up = Run Forward
 
-Touch controls:
+Touch:
 
-- Forward
-- Turn L
-- Turn R
-- Crouch/Stand
-- Back
-- **Run** in lower-right slot beneath Turn R
+- Forward / Back / Turn L / Turn R / Crouch-Stand / Run
 
-System 16 modal blocking disables all gameplay input including Run.
+System 15 HUD shows real tick/action/facing/Looking-at/HP/Needs/Carry/Moodlets. System 16 Stats/Inventory/Menu use WHEN hard pause and block gameplay input while open.
 
-## 9. System 17 verification
+Current Leave Game Web implementation tries browser history first and falls back to Google. User reports that path does not work for them; 17A implementation should replace it with direct Google navigation.
 
-Initial code candidate `33580c2e9016c15591005536707b2729e580876e` passed dedicated **Run and Damage-Interruptible Walking contract** run `31998617639` without production repair.
+## 10. System 17 verification baseline
 
-That run covered:
+Initial System 17 candidate `33580c2e9016c15591005536707b2729e580876e` passed dedicated run `31998617639` without production repair.
 
-- project parse;
-- revised Movement and Locomotion regressions;
-- Health/Needs/Carry regressions;
-- dedicated two-stride Run/damage/fatigue integration smoke;
-- Systems 14–16 regressions;
-- actual canonical demo startup.
+Promoted exact-final SHA `2e54ef3edc0616727258974e0b4c9d046322afdc` passed dedicated System 17 run `31998976669` and Pages/deploy run `31998976603`.
 
-Exact-final promoted SHA must still pass the same dedicated contract plus Web/Pages deployment before completion is claimed.
+17A implementation, once approved, must re-prove Systems 02/03/13A/13B/13E/14/15/16/17 plus dedicated 17A behavior and exact-head Web deployment.
 
-## 10. Death / corpse direction
+## 11. Immediate path
 
-Death should leave a persistent physical corpse consequence rather than an ordinary living ACTOR/disappearance. Exact corpse representation/decay/disposal remains NOT DESIGNED.
+First gate: user approves/revises **17A Movement Exertion / Encumbrance / Run Impact**.
 
-## 11. Immediate path after System 17
+After 17A implementation, return to the planned real item interaction demo:
 
-Return to the real item-interaction demo:
+1. add real stable WHAT `item.*` entities with explicit 13D weights;
+2. implement loose-item renderer;
+3. compose existing System 10 BACK -> actor body -> FRONT hand layers;
+4. expose System 12 pickup/drop/equip/unequip through semantic keyboard/touch UI;
+5. refresh HUD/Inventory from committed transfer truth.
 
-1. add a few real stable WHAT `item.*` entities with explicit 13D weights to the authored map;
-2. implement missing loose-item renderer;
-3. insert existing System 10 `BACK -> actor body -> FRONT` held-item layers into live composition;
-4. expose real System 12 pickup/drop/equip/unequip through semantic keyboard/touch interaction;
-5. refresh existing HUD/Inventory from committed transfer truth.
+## 12. Later systems
 
-Door interaction remains a separate later bounded system.
-
-## 12. Other later systems
-
-- Container Access / Search / Open / Lock — NOT DESIGNED
-- Corpse / Decay / Contamination — NOT DESIGNED, direction approved
-- Door interaction / physical transition — NOT DESIGNED
-- Actor Appearance / character creator integration — NOT DESIGNED
-- Loose-item renderer — NOT DESIGNED
-- richer item quantity/condition/bulk — NOT DESIGNED
-- first aid / health progression / sickness — NOT DESIGNED beyond 13A
-- eating/drinking/rest/sleep progression — NOT DESIGNED beyond 13B
-- global world generation / roads / parcels / buildings / rooms / dressing — NOT DESIGNED
-- construction/destruction — DEFERRED
-- vision/perception, lighting, weather, silent spatial sound — DEFERRED
-- infected AI, combat, vehicles — DEFERRED
-- old raid/extraction physical architecture — SUPERSEDED
+Container Access/Search/Locks; Corpse/Decay/Contamination; Door interaction; Actor Appearance; richer item quantity/condition/bulk; first aid/sickness; eating/drinking/rest/sleep progression; global world generation; construction; vision/lighting/weather/spatial sound; infected AI/combat/vehicles.
 
 ## 13. Development invariants
 
 1. Main/root is composition only.
-2. One independently replaceable system = focused owner/public contract.
-3. No placeholder/fake completion.
-4. Generator creates initial WHAT; it does not own reality.
-5. Rendering presents truth; it does not become truth.
-6. Input emits semantic intent; it does not implement mechanics.
-7. Art is not physics.
-8. Phone/Safari is first-class.
-9. Reboot is reference only.
-10. Persistent mechanic state uses typed stable-ID domains.
-11. Carry totals and moodlets are derived.
-12. HUD/inspectors are readers/composers.
-13. Hard application pause uses WHEN, not SceneTree pause.
-14. Run is explicit action, never persistent locomotion mode.
-15. Run-start capability is distinct from committed mid-Run continuation.
-16. Damage interruption is coordinated through public Health/WHEN contracts, not Health imports in Movement.
+2. Focused owners/public contracts; no god scripts.
+3. No fake/placeholder completion.
+4. Generator creates initial WHAT; rendering only presents truth.
+5. Input emits semantic intent.
+6. Art is not physics.
+7. Phone/Safari is first-class.
+8. Reboot is reference only.
+9. Persistent mechanic state uses typed stable-ID domains.
+10. Carry totals and moodlets are derived.
+11. HUD/inspectors are readers/composers.
+12. Hard application pause uses WHEN.
+13. Run is explicit action, never persistent mode.
+14. Movement must not import Health/Needs/Carry implementation internals.
 
 ## 14. Documentation source order
 
