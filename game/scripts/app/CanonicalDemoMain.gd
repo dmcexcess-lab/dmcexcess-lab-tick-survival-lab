@@ -13,6 +13,19 @@ const LocomotionStateClass = preload("res://scripts/simulation/actors/locomotion
 const LocomotionMutationClass = preload("res://scripts/simulation/actors/locomotion/ActorLocomotionMutationService.gd")
 const MovementCapabilityClass = preload("res://scripts/simulation/actors/locomotion/ActorMovementCapabilityService.gd")
 const ActorTraversalPolicyClass = preload("res://scripts/simulation/actors/locomotion/ActorMovementTraversalPolicy.gd")
+const HandStateClass = preload("res://scripts/simulation/actors/equipment/ActorHandEquipmentState.gd")
+const HandMutationClass = preload("res://scripts/simulation/actors/equipment/ActorHandEquipmentMutationService.gd")
+const InventoryStateClass = preload("res://scripts/simulation/inventory/InventoryContainmentState.gd")
+const InventoryMutationClass = preload("res://scripts/simulation/inventory/InventoryContainmentMutationService.gd")
+const HealthStateClass = preload("res://scripts/simulation/actors/health/ActorHealthState.gd")
+const NeedsStateClass = preload("res://scripts/simulation/actors/needs/ActorNeedsState.gd")
+const PhysicalCatalogClass = preload("res://scripts/simulation/items/properties/ItemPhysicalPropertyCatalog.gd")
+const WeightQueryClass = preload("res://scripts/simulation/items/properties/ItemWeightQuery.gd")
+const CarryStateClass = preload("res://scripts/simulation/actors/carry/ActorCarryState.gd")
+const CarryQueryClass = preload("res://scripts/simulation/actors/carry/ActorCarryQuery.gd")
+const MoodletServiceClass = preload("res://scripts/simulation/actors/moodlets/ActorMoodletService.gd")
+const StatusSummaryClass = preload("res://scripts/ui/ActorStatusSummaryQuery.gd")
+const InspectionQueryClass = preload("res://scripts/ui/FacingInspectionQuery.gd")
 const ArtCatalogClass = preload("res://scripts/art/ArtCatalog.gd")
 const DoorStateClass = preload("res://scripts/simulation/doors/DoorStateStore.gd")
 const FixtureClass = preload("res://scripts/demo/CanonicalDemoFixture.gd")
@@ -24,6 +37,7 @@ const ControllerClass = preload("res://scripts/player/DemoPlayerActionController
 @onready var _world_view: TacticalRendererStack = $WorldView
 @onready var _keyboard: KeyboardInputAdapter = $KeyboardInput
 @onready var _controls: DemoMovementControls = $Controls
+@onready var _hud: CanonicalStatusHud = $Hud
 
 var _world: WorldState = null
 var _world_mutations: WorldMutationService = null
@@ -37,6 +51,19 @@ var _locomotion_mutations: ActorLocomotionMutationService = null
 var _movement_capability: ActorMovementCapabilityService = null
 var _actor_traversal: ActorMovementTraversalPolicy = null
 var _movement: MovementActionService = null
+var _hand_state: ActorHandEquipmentState = null
+var _hand_mutations: ActorHandEquipmentMutationService = null
+var _inventory_state: InventoryContainmentState = null
+var _inventory_mutations: InventoryContainmentMutationService = null
+var _health_state: ActorHealthState = null
+var _needs_state: ActorNeedsState = null
+var _physical_catalog: ItemPhysicalPropertyCatalog = null
+var _weight_query: ItemWeightQuery = null
+var _carry_state: ActorCarryState = null
+var _carry_query: ActorCarryQuery = null
+var _moodlet_service: ActorMoodletService = null
+var _status_summary: ActorStatusSummaryQuery = null
+var _inspection_query: FacingInspectionQuery = null
 var _art_catalog: ArtCatalog = null
 var _door_state: DoorStateStore = null
 var _controller: DemoPlayerActionController = null
@@ -66,6 +93,9 @@ func _boot_canonical_demo() -> bool:
     _locomotion_state = LocomotionStateClass.new()
     _locomotion_mutations = LocomotionMutationClass.new(_locomotion_state)
     if not _locomotion_mutations.enroll(FixtureClass.PLAYER_ID):
+        return false
+
+    if not _boot_actor_status():
         return false
 
     _movement_capability = MovementCapabilityClass.new(_locomotion_state)
@@ -102,6 +132,21 @@ func _boot_canonical_demo() -> bool:
     ):
         return false
 
+    _status_summary = StatusSummaryClass.new(
+        _health_state,
+        _needs_state,
+        _carry_query,
+        _moodlet_service
+    )
+    _inspection_query = InspectionQueryClass.new(_world)
+    if not _hud.configure(
+        _kernel,
+        _status_summary,
+        _inspection_query,
+        FixtureClass.PLAYER_ID
+    ):
+        return false
+
     _controller = ControllerClass.new(
         _movement,
         _kernel,
@@ -113,4 +158,44 @@ func _boot_canonical_demo() -> bool:
     _keyboard.action_intent.connect(Callable(_controller, "submit_intent"))
     _controls.action_intent.connect(Callable(_controller, "submit_intent"))
     _controller.action_resolved.connect(Callable(_controls, "present_action_result"))
+    _controller.action_resolved.connect(Callable(_hud, "present_action_result"))
+    return true
+
+func _boot_actor_status() -> bool:
+    _hand_state = HandStateClass.new()
+    _hand_mutations = HandMutationClass.new(_hand_state, _world)
+    if not _hand_mutations.enroll_actor(FixtureClass.PLAYER_ID):
+        return false
+
+    _inventory_state = InventoryStateClass.new()
+    _inventory_mutations = InventoryMutationClass.new(_inventory_state, _world)
+    if not _inventory_mutations.enroll_container(FixtureClass.PLAYER_ID):
+        return false
+
+    _health_state = HealthStateClass.new(_world)
+    if not _health_state.enroll_actor(FixtureClass.PLAYER_ID):
+        return false
+
+    _needs_state = NeedsStateClass.new(_world)
+    if not _needs_state.enroll_actor(FixtureClass.PLAYER_ID):
+        return false
+
+    _physical_catalog = PhysicalCatalogClass.new()
+    _weight_query = WeightQueryClass.new(_world, _physical_catalog)
+    _carry_state = CarryStateClass.new(_world)
+    if not _carry_state.enroll_actor(FixtureClass.PLAYER_ID):
+        return false
+
+    _carry_query = CarryQueryClass.new(
+        _world,
+        _hand_state,
+        _inventory_state,
+        _weight_query,
+        _carry_state
+    )
+    _moodlet_service = MoodletServiceClass.new(
+        _health_state,
+        _needs_state,
+        _carry_query
+    )
     return true
