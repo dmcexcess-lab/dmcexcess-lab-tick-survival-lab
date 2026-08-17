@@ -52,7 +52,7 @@ Implemented + CI:
 
 Active design:
 
-- **17 Run / Damage-Interruptible Walking — DRAFT; awaiting explicit approval.**
+- **17 Run / Damage-Interruptible Walking — DRAFT; revised after user clarification; awaiting explicit approval.**
 
 Current designs:
 
@@ -124,7 +124,14 @@ Existing `apply_damage(actor_id, amount)` mutates real HP but currently exposes 
 
 ### 13B Needs
 
-Independent integer 0..100 fatigue, hunger, thirst, sleep pressure. No implicit frame-time progression. Fatigue contributes to locomotion only through 03’s provider seam.
+Independent integer 0..100 fatigue, hunger, thirst, sleep pressure. Zero fatigue is fresh; 100 is severe fatigue. Existing fatigue already slows locomotion through 03’s provider seam, and the current 13F moodlet system labels fatigue 80+ as **Exhausted**.
+
+System 17 DRAFT now proposes two narrow Run-specific consequences without changing the Needs record/API:
+
+- Run may start only while fatigue is below 80;
+- each successful Run stride adds +1 fatigue through the existing public Needs mutation API.
+
+General walking fatigue/time-awake progression and fatigue recovery/rest remain outside System 17.
 
 ### 13C Skills
 
@@ -174,27 +181,36 @@ The old controls help line and second controls-owned tick/action label remain go
 
 `SYSTEM_DESIGNS/17_RUN_DAMAGE_INTERRUPTIBLE_WALKING.md` is the active design and must not be implemented until explicit user approval.
 
-Proposed locked direction from the current user instruction:
+Settled user direction being represented by the draft:
 
-- Run becomes explicit `movement.run_forward`, not persistent run mode;
+- Run is explicit `movement.run_forward`, not persistent run mode;
 - one Run action covers two straight cells;
+- Run uses fewer ticks per square than Walk but more total ticks than one Walk action;
 - Run is COMMITTED;
 - walking becomes damage-interruptible;
+- Run has higher acute fatigue cost than Walk;
+- actor must have sufficient fatigue reserve to begin Run;
 - crouched running remains blocked.
 
-Proposed detailed tuning/architecture awaiting approval:
+Current detailed draft tuning/architecture awaiting approval:
 
-- recover golden healthy Run baseline = 6 total ticks against current 10-tick walk terrain;
-- represent the two-cell run as two physical stride phases at half-duration/final-duration (3 and 6 ticks at baseline) rather than final-tick teleportation;
-- derive base run timing as 60% of slowest relevant walk terrain cost, then apply existing 03 Needs/Carry modifiers;
-- forward/back walk use WHEN CANCELABLE; turns remain COMMITTED;
-- add semantic Health `damage_applied` observation plus `MovementDamageInterruptionService` so MovementActionService never imports Health;
-- on damage, coordinator asks WHEN to interrupt active Movement action; CANCELABLE walk stops, COMMITTED run/turn ignores interruption;
-- request and each run stride revalidate collision/terrain with no reservation;
+- healthy walk remains 1 cell / 10 ticks on demo terrain;
+- healthy Run is **2 cells / 12 ticks total**, physically committing stride 1 at tick 6 and stride 2 at tick 12;
+- each Run stride derives as 60% of the terrain’s normal walk cost, so Run is 6 ticks/square on current 10-tick terrain;
+- mixed-terrain Run total is the sum of the two independently resolved stride costs;
+- existing Needs/Carry duration modifiers are captured when Run starts and do not stretch an already-committed sprint;
+- fatigue **80+ blocks Run start**, aligned to the existing Exhausted moodlet threshold;
+- each successful Run stride adds **+1 fatigue** (+2 for a complete two-cell Run);
+- crossing fatigue 80 during stride 1 does not cancel stride 2 because Run capability is latched at commitment;
+- forward/back Walk use WHEN CANCELABLE; turns remain COMMITTED;
+- semantic Health `damage_applied` + separate `MovementDamageInterruptionService` keeps Health out of Movement;
+- separate `MovementRunExertionService` mutates real Needs through its existing public API after successful Run strides;
+- damage cancels Walk but does not cancel committed Run/turn;
+- request validates both Run cells; each stride revalidates physical placement/collision/terrain with no reservation;
 - Shift+W/Shift+Up = Run on desktop;
-- native RUN touch button uses the currently empty bottom-right control slot beneath Turn R.
+- native RUN touch button uses the empty bottom-right control slot beneath Turn R.
 
-No stamina, sound, fatigue accumulation or AI run behavior is added in this slice.
+No separate stamina bar/state, sound system, AI Run policy, fatigue recovery, or general Needs progression is added in this slice.
 
 ## 8. Death / corpse direction
 
@@ -244,10 +260,11 @@ Door interaction remains separate.
 10. Persistent mechanic state uses typed stable-ID domains rather than a universal metadata bag.
 11. Controlled-player role is not persistent actor identity.
 12. Carry totals and moodlets are derived.
-13. Needs/Carry affect locomotion only through 03’s provider contract.
+13. Needs/Carry affect locomotion only through narrow public capability/action seams.
 14. HUD/inspectors are readers/composers; they do not mutate mechanic truth.
 15. Hard application pause uses WHEN, not SceneTree pause.
 16. Running, if approved, is an explicit action rather than persistent locomotion mode.
+17. Run-start fatigue eligibility is distinct from mid-run committed continuation.
 
 ## 12. Documentation source order
 
@@ -265,4 +282,4 @@ Door interaction remains separate.
 
 ## 13. Recommended next action
 
-Review and explicitly approve/revise **System 17 Run / Damage-Interruptible Walking**. On approval, implement only that bounded movement/interruption slice and exact-final-SHA verify it through Godot/CI/Web deployment.
+Review and explicitly approve/revise **System 17 Run / Damage-Interruptible Walking**. On approval, implement only that bounded movement/interruption/exertion slice and exact-final-SHA verify it through Godot/CI/Web deployment.
