@@ -398,6 +398,7 @@ This section grows when repeated lessons are discovered.
 - A new canonical subsystem does **not** need to affect the currently deployed deprecated runtime to count as real progress. Its contract + owning code + dedicated tests can be complete independently.
 - Do not add compatibility glue whose only purpose is to make a new module visibly run through old architecture. Wait until the canonical neighboring contracts exist, then integrate once through the real seam.
 - When a system status changes (for example APPROVED -> IMPLEMENTED), update CI/document guards that assert that status; otherwise the process check itself becomes stale.
+- **Cross-domain synchronous transactions must account for reentrant low-level signals.** If a coordinator removes source truth in one independently signaled domain and then writes destination truth in another, a source-removal callback can synchronously change the destination before the second write. Prevalidate before commit **and revalidate the destination immediately before the second mutation**; if the second write fails, compensate through public APIs or emit an explicit critical consistency failure. Do not solve this by making the low-level domains import each other or by silently overwriting newly changed destination state.
 
 ### Web/Safari
 
