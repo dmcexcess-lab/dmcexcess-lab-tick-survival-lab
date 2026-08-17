@@ -1,5 +1,5 @@
 extends RefCounted
-class_name FarmhouseCritiqueFixture
+class_name SmallFarmhouseCritiqueFixture
 
 const Facing = preload("res://scripts/foundation/spatial/SpatialFacing.gd")
 const Footprint = preload("res://scripts/foundation/spatial/SpatialFootprint.gd")
@@ -8,18 +8,18 @@ const RequestClass = preload("res://scripts/generation/buildings/BuildingGenerat
 const GeneratorClass = preload("res://scripts/generation/buildings/LocalBuildingGenerator.gd")
 const ValidatorClass = preload("res://scripts/generation/buildings/GeneratedBuildingValidator.gd")
 const MaterializerClass = preload("res://scripts/generation/buildings/GeneratedBuildingMaterializer.gd")
-const LargeFarmhouseClass = preload("res://scripts/generation/buildings/archetypes/LargeFarmhouseBuildingGenerator.gd")
+const FarmhouseClass = preload("res://scripts/generation/buildings/archetypes/FarmhouseBuildingGenerator.gd")
 
 const MAP_ORIGIN: Vector2i = Vector2i.ZERO
-const MAP_SIZE: Vector2i = Vector2i(27, 22)
-const CELL_PIXELS: float = 19.0
+const MAP_SIZE: Vector2i = Vector2i(15, 15)
+const CELL_PIXELS: float = 32.0
 const PLAYER_ID: String = "actor.player.demo"
-const PLAYER_START: Vector2i = Vector2i(10, 0)
+const PLAYER_START: Vector2i = Vector2i(4, 0)
 const BASE_WALK_TICKS: int = 10
-const BUILDING_ID: String = "building.demo.farmhouse.large.001"
-const EXTERIOR_DOOR_ID: String = "building.demo.farmhouse.large.001.door.exterior.primary"
-const FARMHOUSE_ENVELOPE: Rect2i = Rect2i(1, 1, 25, 20)
-const FARMHOUSE_SEED: int = 19003
+const BUILDING_ID: String = "building.demo.farmhouse.001"
+const EXTERIOR_DOOR_ID: String = "building.demo.farmhouse.001.door.exterior.primary"
+const FARMHOUSE_ENVELOPE: Rect2i = Rect2i(1, 1, 13, 9)
+const FARMHOUSE_SEED: int = 19002
 
 const GRASS: StringName = &"ground.grass_lush"
 const ROAD: StringName = &"ground.road"
@@ -42,7 +42,7 @@ static func build(
 
     var request := RequestClass.new(
         BUILDING_ID,
-        LargeFarmhouseClass.ARCHETYPE_ID,
+        FarmhouseClass.ARCHETYPE_ID,
         FARMHOUSE_SEED,
         FARMHOUSE_ENVELOPE,
         Facing.Value.NORTH,
@@ -53,7 +53,7 @@ static func build(
     var plan: GeneratedBuildingPlan = generator.generate(request)
     var validation: Dictionary = validator.validate(plan)
     if not bool(validation.get("ok", false)):
-        push_error("LargeFarmhouseCritiqueFixture validation failed: %s" % str(validation.get("failures", [])))
+        push_error("SmallFarmhouseCritiqueFixture validation failed: %s" % str(validation.get("failures", [])))
         return false
     var materializer := MaterializerClass.new(world, mutations, door_state, door_mutations, validator)
     if not materializer.materialize(plan):
