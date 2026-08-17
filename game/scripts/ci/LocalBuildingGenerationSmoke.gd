@@ -31,33 +31,46 @@ func _initialize() -> void:
         "building.test.trailer",
         TrailerClass.ARCHETYPE_ID,
         19001,
-        Rect2i(20, 30, 6, 12),
+        Rect2i(20, 30, 5, 12),
         Facing.Value.NORTH,
         Facing.Value.EAST
     )
     var plan_a: GeneratedBuildingPlan = generator.generate(request)
     var plan_b: GeneratedBuildingPlan = generator.generate(request)
     _check(plan_a.is_generated() and plan_a.signature() == plan_b.signature(), "same request+seed produces identical semantic plan")
+    _check(plan_a.archetype_version == 2, "narrow trailer is archetype version 2")
     _check(bool(validator.validate(plan_a).get("ok", false)), "north trailer plan validates")
-    _check(plan_a.footprint_rect == Rect2i(20, 30, 6, 12), "north trailer uses expected 6x12 footprint")
+    _check(plan_a.footprint_rect == Rect2i(20, 30, 5, 12), "north trailer uses expected 5x12 footprint")
+    var saw_light_shell: bool = false
+    var saw_wood_shell: bool = false
+    for structure: Dictionary in plan_a.structures:
+        if String(structure.get("role", "")).begins_with("wall.exterior"):
+            saw_light_shell = saw_light_shell or structure.get("semantic", &"") == &"wall.plaster"
+            saw_wood_shell = saw_wood_shell or structure.get("semantic", &"") == &"wall.rural_wood"
+    _check(saw_light_shell and not saw_wood_shell, "trailer exterior uses light plaster walls instead of rural wood")
+    var saw_sofa_opposite_kitchen: bool = false
+    for prop: Dictionary in plan_a.props:
+        if String(prop.get("role", "")) == "prop.living.sofa":
+            saw_sofa_opposite_kitchen = prop.get("cell", Vector2i(-1, -1)) == Vector2i(23, 31) and int(prop.get("facing", -1)) == Facing.Value.WEST
+    _check(saw_sofa_opposite_kitchen, "sofa sits against wall opposite kitchen run and faces inward")
 
     var east_request := RequestClass.new(
         "building.test.trailer.east",
         TrailerClass.ARCHETYPE_ID,
         19001,
-        Rect2i(40, 50, 12, 6),
+        Rect2i(40, 50, 12, 5),
         Facing.Value.EAST,
         Facing.Value.SOUTH
     )
     var east_plan: GeneratedBuildingPlan = generator.generate(east_request)
-    _check(east_plan.is_generated() and east_plan.footprint_rect.size == Vector2i(12, 6), "east orientation rotates footprint")
+    _check(east_plan.is_generated() and east_plan.footprint_rect.size == Vector2i(12, 5), "east orientation rotates footprint")
     _check(bool(validator.validate(east_plan).get("ok", false)), "rotated trailer validates")
 
     var too_small := RequestClass.new(
         "building.test.small",
         TrailerClass.ARCHETYPE_ID,
         1,
-        Rect2i(0, 0, 5, 10),
+        Rect2i(0, 0, 4, 11),
         Facing.Value.NORTH,
         Facing.Value.EAST
     )
@@ -107,7 +120,7 @@ func _initialize() -> void:
     _check(enter != null and enter.is_accepted(), "generated exterior door accepts automatic Walk passage")
     kernel.run_until_stop()
     _check(doors.state(FixtureClass.EXTERIOR_DOOR_ID) == DoorValue.OPEN, "generated exterior door opens through System 18")
-    _check(world.placement(FixtureClass.PLAYER_ID).anchor == Vector2i(7, 3), "player enters generated exterior doorway")
+    _check(world.placement(FixtureClass.PLAYER_ID).anchor == Vector2i(6, 3), "player enters generated exterior doorway")
 
     var stack := RendererStackClass.new()
     get_root().add_child(stack)
