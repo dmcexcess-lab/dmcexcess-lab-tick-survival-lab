@@ -42,6 +42,8 @@ Canonical progress:
 - **10 Actor Hand Equipment Presentation — IMPLEMENTED + CI**
 - **11 Inventory / Containment — IMPLEMENTED + CI**
 - **12 Item Transfer / Pickup / Drop / Equip Actions — IMPLEMENTED + CI**
+- **13 Actor Stats / Status Architecture — APPROVED umbrella**
+- **13C Actor Skills — DRAFT; awaiting detailed approval**
 
 12 initial implementation head `7ea53e0d300fb0d7aad2802b11d4da930b802a49` preserved all neighboring regressions but its new smoke exposed a real reentrant destination-change edge case. Hardened head `c3139466c26cbb8367b4509f107a48916a323916` revalidated destination truth immediately before the second cross-domain mutation and passed dedicated run `31990020356`.
 
@@ -130,6 +132,59 @@ Rules:
 
 WHAT, WHEN, 09, and 11 production/public APIs remained unchanged during 12 implementation.
 
+### 13 Actor Stats / Status Architecture
+
+Canonical umbrella: `SYSTEM_DESIGNS/13_ACTOR_STATS_STATUS_ARCHITECTURE.md`.
+
+The user explicitly wants the character display to contain:
+
+- moodlets;
+- HP;
+- fatigue;
+- hunger;
+- thirst;
+- sleep;
+- carry weight;
+- skills and their levels.
+
+The user explicitly approved keeping these modular so more domains can be added later.
+
+Locked umbrella ownership:
+
+- **13A Health / Injury** owns HP + future injury-capable health truth;
+- **13B Needs / Rest** owns fatigue, hunger, thirst, sleep pressure;
+- **13C Skills** owns persistent skill levels/XP;
+- **13D Item Physical Properties** owns real item weight and later genuinely shared physical item facts;
+- **13E Carry / Encumbrance** derives carried weight/capacity/consequence from physical possession + item weights and later modifiers;
+- **13F Moodlets** derives readable status from real source domains rather than duplicating their state.
+
+There is no universal `ActorStats` dictionary. The future Stats/HUD layer is a reader/composer and must be extensible by provider/adapters rather than owning mechanics.
+
+Important semantic distinction approved at umbrella level:
+
+- **fatigue** = short-horizon exertion/physical tiredness;
+- **sleep** = longer-horizon sleep pressure/debt.
+
+Carry weight is not a persisted duplicate total. It is derived from actual physical possession through existing item truth plus 13D weight.
+
+### 13C Actor Skills — active DRAFT
+
+Canonical draft: `SYSTEM_DESIGNS/13C_ACTOR_SKILLS.md`.
+
+Same-owner First Fire recovery proves a strong candidate vocabulary/progression:
+
+- Combat;
+- Scavenging;
+- Survival;
+- Medical;
+- Technical;
+- Social;
+- persistent XP;
+- levels/ranks up to 10;
+- next-level XP threshold `20 + current_level * 15`.
+
+Those details are **not implemented and not yet approved as the child contract**. The user approved the modular umbrella only. Explicit approval of 13C is required before code.
+
 ## 4. Death / corpse direction
 
 Approved cross-system direction: death leaves a persistent physical corpse/world consequence rather than an ordinary living ACTOR or disappearance. Future corpse state preserves relation to deceased identity and supports age/decay; accumulated bodies may create local contamination/filth pressure that Health later interprets as sickness risk. Exact corpse representation, decay formula, disposal actions, and rendering are **NOT DESIGNED**.
@@ -188,6 +243,8 @@ Target:
 - Menu includes Resume and Leave Game;
 - no fabricated HP, stamina, carry weight, names, or inventory contents.
 
+Stats target is explicitly moodlets, HP, fatigue, hunger, thirst, sleep, carry weight, and skills/levels. UI must compose those from real modular domains rather than a giant actor record.
+
 Web note: a webpage cannot reliably open the user's configured browser homepage. Future Leave Game should prefer useful browser-history return, with a safe fallback such as Google.
 
 ## 7. Dependency order toward the requested honest demo
@@ -198,19 +255,28 @@ Completed:
 2. **10 Actor Hand Equipment Presentation — IMPLEMENTED.**
 3. **11 Inventory / Containment — IMPLEMENTED.**
 4. **12 Item Transfer Actions — IMPLEMENTED.**
+5. **13 Actor Stats / Status Architecture — APPROVED umbrella.**
 
-Recommended next bounded design:
+Active detailed design gate:
 
-5. **Actor stat domains required for inspector — NOT DESIGNED / NEXT**, unless the user explicitly prioritizes visual composition first. Reuse real existing locomotion/equipment/inventory facts; design Health/Needs only as far as real displayed stats require them.
+6. **13C Actor Skills — DRAFT.** Recommended first child because same-owner recovery is strongest and it is independent of Health/Needs/Carry. Review/approve the six-skill 0–10 XP contract before code.
+
+Then recommended stat children:
+
+7. **13B Needs / Rest — NOT DESIGNED.** Fatigue/hunger/thirst/sleep.
+8. **13A Health / Injury — NOT DESIGNED.** HP + injury-capable state.
+9. **13D Item Physical Properties — NOT DESIGNED.** Real item weight.
+10. **13E Carry / Encumbrance — NOT DESIGNED.** Derived weight/capacity/consequence.
+11. **13F Moodlets — NOT DESIGNED.** Derived readable conditions.
 
 Then:
 
-6. **Authored Visual Test Area — NOT DESIGNED.** Real canonical WHAT fixture.
-7. **Tactical Renderer / Orchestration — NOT DESIGNED.** Compose Ground/Structure/Prop/10-BACK/08/10-FRONT.
-8. **Tactical Camera + Zoom — NOT DESIGNED.**
-9. **Touch / Keyboard / Safari Input — NOT DESIGNED.**
-10. **Tactical Controls UI — NOT DESIGNED.**
-11. **HUD / Facing Inspection / Stats & Inventory Inspector / Pause Menu — NOT DESIGNED.**
+12. **Authored Visual Test Area — NOT DESIGNED.** Real canonical WHAT fixture.
+13. **Tactical Renderer / Orchestration — NOT DESIGNED.** Compose Ground/Structure/Prop/10-BACK/08/10-FRONT.
+14. **Tactical Camera + Zoom — NOT DESIGNED.**
+15. **Touch / Keyboard / Safari Input — NOT DESIGNED.**
+16. **Tactical Controls UI — NOT DESIGNED.**
+17. **HUD / Facing Inspection / Stats & Inventory Inspector / Pause Menu — NOT DESIGNED.**
 
 Later slices may combine only when their explicit contracts prove they are genuinely one coherent owner.
 
@@ -221,8 +287,7 @@ Later slices may combine only when their explicit contracts prove they are genui
 - **Door interaction / physical transition — NOT DESIGNED.** WHEN + Door State + Collision coordination.
 - **Actor Appearance / character creator integration — NOT DESIGNED.**
 - **Loose-item renderer — NOT DESIGNED.**
-- **Item definitions / quantity / condition — NOT DESIGNED.**
-- **Capacity / weight / bulk / encumbrance — NOT DESIGNED.**
+- **Item definitions / quantity / condition beyond 13D weight — NOT DESIGNED.**
 - **Road network/topology — NOT DESIGNED.**
 - **Property/parcel planner — NOT DESIGNED.**
 - **Building/prefab placement — NOT DESIGNED.**
@@ -233,8 +298,6 @@ Later slices may combine only when their explicit contracts prove they are genui
 - **Prefab authoring tools — NOT DESIGNED.**
 - **Construction/destruction — DEFERRED.**
 - **Base/community summary — NOT DESIGNED.**
-- **Health/body/first aid — NOT DESIGNED.**
-- **Needs/fatigue/temperature — NOT DESIGNED.**
 - **Vision/perception — DEFERRED.**
 - **Lighting — DEFERRED.**
 - **Weather — DEFERRED.**
@@ -279,6 +342,10 @@ Canonical process:
 17. Cross-domain physical transitions use 12 rather than mutual imports among low-level state owners.
 18. `ItemDispositionQuery` may summarize WHAT/09/11 but is never a fourth serialized truth.
 19. A synchronous cross-domain coordinator must account for reentrant low-level signals: revalidate destination truth immediately before its second mutation and compensate explicitly if the second write fails.
+20. Actor condition/stat truth is composed from typed peer domains; do not introduce a universal ActorStats/character metadata dictionary.
+21. Moodlets primarily derive presentation/status from owning domains rather than duplicating canonical numeric state.
+22. Carry weight derives from real physical possession plus item weight; it is not a second inventory total.
+23. Stats/HUD presentation reads/composes module contracts and does not own or directly mutate actor mechanics.
 
 ## 11. Documentation source order
 
@@ -296,4 +363,4 @@ Canonical process:
 
 ## 12. Recommended next action
 
-Design **Actor stat domains required for the requested real Stats/HUD inspector**, unless the user explicitly chooses to prioritize the authored visual test/composition path first. Do not fabricate HP/stamina/carry values merely to populate the demo UI.
+Review and explicitly approve or revise `SYSTEM_DESIGNS/13C_ACTOR_SKILLS.md`. Once approved, implement only Actor Skills as the first bounded child of the approved 13 umbrella. Do not implement Needs/Health/Weight/Carry/Moodlets in the same slice.
