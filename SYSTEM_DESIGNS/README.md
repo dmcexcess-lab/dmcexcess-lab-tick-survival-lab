@@ -40,6 +40,7 @@ This directory is the durable detailed memory for individual systems. Major syst
 | 14 | Canonical Playable Demo Integration | **IMPLEMENTED** | `14_CANONICAL_PLAYABLE_DEMO.md` |
 | 15 | Canonical HUD / Facing Inspection | **IMPLEMENTED** | `15_CANONICAL_HUD_FACING_INSPECTION.md` |
 | 16 | Canonical Player Shell / Inspectors / Stance Integration | **IMPLEMENTED** | `16_CANONICAL_PLAYER_SHELL.md` |
+| 17 | Run / Damage-Interruptible Walking | **DRAFT** | `17_RUN_DAMAGE_INTERRUPTIBLE_WALKING.md` |
 | 00D | Global World Planning / Generation | **NOT DESIGNED** | `00D_GLOBAL_WORLD_GENERATION.md` |
 | 00E | Population / Household / Outbreak / Player Story | **NOT DESIGNED** | `00E_POPULATION_OUTBREAK_PLAYER_STORY.md` |
 | 00F | Streaming / Materialization | **NOT DESIGNED** | `00F_STREAMING_MATERIALIZATION.md` |
@@ -96,16 +97,30 @@ The deployed canonical demo now has:
 
 Dedicated System 16 verification: `.github/workflows/canonical-player-shell.yml` and `game/scripts/ci/CanonicalPlayerShellSmoke.gd`. Hardened code head `dce48115f35ef6487bcbe8811fe945d2e5012cff` passed run `31996425080` after one lifecycle-only touch-control hardening; protected simulation/demo/HUD regressions were green before and after that repair.
 
-## Immediate path after System 16
+## Active design — System 17
 
-Do not rebuild the completed player shell or existing renderers.
+`17_RUN_DAMAGE_INTERRUPTIBLE_WALKING.md` is **DRAFT** and awaits explicit user approval.
 
-The next useful bounded integration is **real demo items / loose-item presentation / interaction UI**:
+Proposed bounded revision:
 
-1. add a few real stable WHAT `item.*` entities and explicit 13D weights to the authored demo;
-2. implement the still-missing loose-item renderer as a focused presentation owner;
-3. compose existing System 10 BACK -> actor body -> FRONT hand layers now that equipped items can exist visibly;
-4. expose real System 12 pickup/drop/equip/unequip through semantic interaction UI without moving possession truth into UI.
+1. add explicit `movement.run_forward` rather than persistent run mode;
+2. run two straight cells in two physical stride phases;
+3. recover the golden 6-tick healthy baseline, with existing mobility modifiers still applied;
+4. change forward/back walking from COMMITTED to damage-interruptible CANCELABLE actions;
+5. keep run and turns COMMITTED;
+6. add a narrow Health damage observation signal plus a movement interruption coordinator so Movement itself never imports Health;
+7. add Shift+W/Shift+Up and the currently empty bottom-right phone control slot for Run.
+
+Do not implement System 17 until approval.
+
+## Immediate path after System 17
+
+Once System 17 is approved/implemented, return to the planned real-item demo slice:
+
+1. add real stable WHAT `item.*` entities and explicit 13D weights;
+2. implement loose-item presentation;
+3. compose existing System 10 BACK -> actor body -> FRONT hand layers;
+4. expose System 12 pickup/drop/equip/unequip through semantic UI.
 
 Door interaction remains a separate later bounded system.
 
