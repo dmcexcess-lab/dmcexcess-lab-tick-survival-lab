@@ -16,27 +16,22 @@ Golden recovery commit: `1763958f44eb7f855fd49944c00d1ffe608c0abe`.
 
 ## 2. Current phase
 
-Systems 14–17A.1 are the live canonical demo/player path. `game/main.tscn` launches the canonical demo. `game/scripts/reboot/` is frozen/deprecated reference only.
+Systems 14–19 are the live canonical demo/player path. `game/main.tscn` launches the modular canonical demo. `game/scripts/reboot/` remains frozen/deprecated reference only.
 
-Implemented + CI through:
+Implemented + dedicated validation now includes:
 
-- WHERE / WHAT / WHEN foundation
-- Collision / Movement / Locomotion
-- recovered Art + Ground/Structure/Prop/Living Actor/Hand renderers
-- Door state
-- Hands / Inventory / Item Transfer
-- Health / Needs / Skills / Item Weight / Carry / Moodlets
-- Canonical Demo / HUD / Player Shell
-- Run / damage-interruptible Walk
-- System 17A Movement Exertion / Encumbrance / Run Impact Revision
-- **17A.1 Overweight Walk Fatigue / Absolute Carry Ceiling correction**
-
-Active DRAFT designs:
-
-- **System 18 — Door Interaction / Automatic Passage**
-- **System 19 — Local Building Generation / Archetype Critique Lab**
-
-No System 18/19 gameplay code is implemented yet.
+- WHERE / WHAT / WHEN foundation;
+- Collision / Movement / Locomotion;
+- recovered Art + Ground/Structure/Prop/Living Actor/Hand renderers;
+- Door State;
+- Hands / Inventory / Item Transfer;
+- Health / Needs / Skills / Item Weight / Carry / Moodlets;
+- Canonical Demo / HUD / Player Shell;
+- Run / damage-interruptible Walk;
+- 17A exertion/encumbrance/run impact;
+- 17A.1 overweight-Walk fatigue + 2x hard carry ceiling;
+- **System 18 Door Interaction / Automatic Passage**;
+- **System 19 Local Building Generation / Archetype Critique Lab**.
 
 ## 3. Foundation truth
 
@@ -49,266 +44,189 @@ One authoritative persistent current world with stable IDs, semantic types/terra
 ### WHEN
 One deterministic integer world tick, variable-duration actions/events, same-tick draining, COMMITTED/RESUMABLE/CANCELABLE policies, tactical decision pause plus separate hard application pause.
 
-## 4. Movement truth after 17A.1
+## 4. Movement / fatigue / carry truth
 
-Canonical actions:
+Canonical movement:
 
-- Walk Forward — one cell, CANCELABLE by real damage.
-- Walk Back — one cell preserving facing, CANCELABLE.
-- Run Forward — two forward physical strides, COMMITTED.
-- Turn L/R — COMMITTED.
+- Walk Forward/Back — one cell, damage-CANCELABLE;
+- Run Forward — two physical strides, COMMITTED;
+- Turn L/R — COMMITTED;
 - Crouch/Stand — COMMITTED.
 
-Terrain remains the base action cost. Run stride base pace is 60% of that stride's Walk terrain cost.
+Terrain is the base movement cost. Run stride pace is 60% of that stride's Walk terrain cost before actor factors.
 
-Actor duration factors compose multiplicatively:
+Duration factors compose multiplicatively:
 
 `duration = ceil(base terrain/action ticks × stance × fatigue × encumbrance)`
 
-Current factors:
+Current key thresholds:
 
-- standing = 1.0x;
-- crouched Walk = 1.4x;
-- fatigue = `1 + fatigue*0.0065`;
-- carry = `1 + load_ratio*0.75`.
+- fatigue 80+ blocks Run;
+- soft carry capacity defaults 18 kg;
+- 100%+ soft capacity blocks Run;
+- Walk fatigue is zero at/below soft capacity;
+- once overweight, Walk fatigue depends on terrain only, not degree of overage;
+- Run fatigue depends on terrain × encumbrance;
+- normal acquisition hard ceiling is derived at 2× soft capacity, 36 kg by default;
+- actual load ratio above soft capacity still increases movement duration.
 
-Fresh/empty normal demo values remain Walk 10, Run 6+6=12, Turn 3, Stance 4.
+Known hard Run blockers cause attempted-stride exertion + 5 HP impact unless a configured passage resolver physically resolves the blocker first.
 
-The actual load ratio continues affecting movement duration above soft capacity. A survivor at 190% capacity is therefore slower than one at 110% capacity.
+## 5. System 18 — Door Interaction truth
 
-## 5. Exertion / carry
+Design: `SYSTEM_DESIGNS/18_DOOR_INTERACTION_PASSAGE.md`
 
-Fatigue remains 0 fresh -> 100 severe pressure.
+Implemented rules:
 
-Run start is blocked by:
+- Door State remains the sole persistent OPEN/CLOSED truth.
+- CLOSED doors use their normal blocking Collision profile; OPEN doors use a sparse nonblocking collision override.
+- Movement has a generic optional passage resolver and imports no door implementation.
+- Walk Forward/Back into a target blocked only by one eligible CLOSED door is conditionally accepted.
+- Walk does **not** open the door at request time; it opens at movement commit, re-queries collision, then enters if clear.
+- damage-canceled Walk leaves the door CLOSED.
+- Run gives an eligible CLOSED door one physical resolution chance at each stride; successful passage opens it, emits `run_passage` + `loud`, and continues with no door-impact HP damage.
+- unresolved blockers keep normal System 17A Run-impact behavior.
+- short click/tap only closes an OPEN door.
+- manual close costs **3 ticks**, is CANCELABLE, and requires cardinal adjacency + **facing the door**.
+- wrong-facing close rejects at zero ticks, so existing turn actions must be spent first.
+- actor in doorway prevents close.
+- damage cancels active manual close and leaves door OPEN.
+- future right-click/long-touch interaction menu is reserved, not implemented.
+- future special 180° turn/fatigue is reserved for Locomotion, not System 18.
 
-- crouched stance;
-- fatigue 80+ (`too_exhausted_to_run`);
-- carry load 100%+ **soft capacity** (`too_encumbered_to_run`).
+## 6. System 19 — Local Building Generation truth
 
-Soft capacity defaults to **18,000 g / 18 kg**.
+Design: `SYSTEM_DESIGNS/19_LOCAL_BUILDING_GENERATION_ARCHETYPE_LAB.md`
 
-Absolute possession ceiling is a separate derived fact:
+System 19 is **below** future global world planning.
 
-`hard_limit_grams = soft_capacity_grams * 2`
+Caller supplies:
 
-Default hard ceiling is therefore **36 kg**. It is derived and not persisted as a second capacity field.
+- stable building instance namespace;
+- archetype ID;
+- global envelope;
+- orientation/frontage;
+- deterministic seed.
 
-Movement exertion is coordinated by `MovementExertionService` through public Needs/Carry contracts:
+System 19:
 
-- successful Walk at or below soft capacity = **+0 movement fatigue**;
-- successful Walk strictly above soft capacity = `max(1, ceil(walk_terrain_ticks/10))`;
-- once overweight, the degree of overage does **not** change Walk fatigue — terrain alone sets the charge;
-- Run fatigue per successful/impact stride = `max(1, round((walk_terrain_ticks/10) × encumbrance_factor))`;
-- Run encumbrance factor uses `1 + load_ratio*0.75`;
-- damage-canceled Walk with no committed cell adds no movement fatigue.
+1. generates a pure semantic plan;
+2. validates bounds/roles/structure/circulation;
+3. materializes initial WHAT + explicitly CLOSED Door State;
+4. then relinquishes ownership to persistent gameplay truth.
 
-Example on identical 14-tick terrain with 10 kg soft capacity:
+It never selects roads/parcels/towns, scans the world for placement, knows camera/streaming, owns loot, or stores art indices.
 
-- 5 kg -> +0 Walk fatigue;
-- 10 kg -> +0;
-- 11 kg -> +2;
-- 19 kg -> +2.
+### Trailer Candidate 001
 
-The 11 kg and 19 kg cases still take different movement time because carry timing remains load-ratio-sensitive.
+Archetype: `residential.trailer.singlewide`, version 1.
 
-## 6. Absolute item-acquisition ceiling
+Live candidate:
 
-System 12 now has a neutral `ItemAcquisitionCapacityPolicy` seam. It does not import 13E implementation code.
+- stable ID namespace `building.demo.trailer.001`;
+- deterministic seed `19001`;
+- NORTH orientation / EAST frontage;
+- 6×12 exterior footprint;
+- distinct 4×4 living/kitchen, 4×2 bathroom, 4×2 bedroom;
+- one exterior side door into living/kitchen;
+- two interior doors;
+- four exterior windows;
+- stove, fridge, sink, sofa/loveseat, toilet, vanity, single bed, dresser;
+- validated one-cell circulation spine to every room.
 
-13E supplies `ActorCarryAcquisitionPolicy`:
+Materializer refuses conflicting occupied cells and snapshots/restores WHAT + Door State on partial write failure.
 
-- derive current personal carried weight;
-- recursively derive incoming item + nested-container contents;
-- projected weight `<= 2x soft capacity` -> allowed;
-- projected weight `> 2x soft capacity` -> blocked with `absolute_carry_limit_exceeded`;
-- unknown weight/carry truth -> fail closed.
+## 7. Live canonical demo
 
-Only loose-world acquisition increases personal mass and uses this admission check:
+The current live demo is the **Trailer Candidate 001 critique lot**, not the old authored sample map.
 
-- world -> personal container;
-- world -> hand.
+- fixed 13×13 one-screen tactical view;
+- one controlled survivor, no NPCs/infected/loot;
+- generated trailer at the supplied showcase envelope;
+- player starts immediately outside the CLOSED side entrance at `(8,3)`, facing WEST toward it;
+- old `CanonicalDemoFixture.gd` remains unchanged for System 14 regression;
+- current Ground -> Structure -> Prop -> Living Actor renderer stack presents the generated semantic world;
+- real HUD, Stats/Inventory/Menu, Crouch/Stand and Run remain available.
 
-Equip/unequip/repack/drop remain legal at the ceiling because they do not increase personal carried mass.
-
-Timed acquisition revalidates capacity at request, final commit, and again after source removal before destination mutation. The third check protects against synchronous/reentrant state changes. If newer Carry truth makes the pickup illegal after the floor item was removed, System 12 restores the loose source rather than exceeding the ceiling.
-
-09 Hands and 11 Containment remain low-level independent stores and may represent exceptional/debug/imported over-hard state. The hard limit is normal gameplay admission policy, not a persistence rewrite.
-
-## 7. Run impact truth
-
-Known hard Collision BLOCKED cells are Run impact candidates instead of harmless request rejection.
-
-At stride resolution:
-
-- CLEAR -> move normally;
-- BLOCKED -> remain at last legal cell, charge attempted Run-stride fatigue, emit impact, apply 5 HP damage, stop Run;
-- UNKNOWN -> fail closed, no fake impact.
-
-`MovementRunImpactDamageService` is the stateless Movement -> Health coordinator. MovementActionService has no Health/Needs/Carry implementation dependency.
-
-Normal Health `damage_applied` still cancels Walk through `MovementDamageInterruptionService`; COMMITTED Run ignores ordinary interruption. Impact then explicitly fails the physical Run after resolving the collision consequence, so no rollback occurs.
-
-System 18 DRAFT proposes a narrow Movement passage-resolver seam so eligible CLOSED doors can be opened at the actual Walk commit / Run stride before the ordinary blocked/impact result is finalized. Movement itself would remain door-agnostic.
-
-## 8. Physical items
-
-- WHAT placement owns loose world location;
-- 09 owns anatomical hand assignments;
-- 11 owns direct/nested containment;
-- 12 owns timed world/hand/personal-container transitions;
-- 13D owns real item weight;
-- 13E derives carried weight, soft capacity, hard ceiling, and concrete acquisition-capacity policy.
-
-The live demo still intentionally has no demo items. System 16 Inventory therefore honestly shows Empty, and existing System 10 held-item layers are not yet composed into the live stack. The 2x hard pickup ceiling is canonical simulation behavior already covered by dedicated CI and must be used when item interaction is composed into the demo.
-
-## 9. Live canonical demo / controls
-
-Current demo:
-
-- authored 13x13 WHAT map;
-- one controlled survivor, no NPCs/infected;
-- existing Ground -> Structure -> Prop -> Living Actor render stack;
-- fixed one-screen view;
-- real HUD and Stats/Inventory/Menu;
-- real Crouch/Stand and Run.
+Controls remain:
 
 Desktop:
-
 - W/Up = Walk Forward
 - S/Down = Walk Back
 - A/Left = Turn Left
 - D/Right = Turn Right
 - C = Crouch/Stand
 - Shift+W / Shift+Up = Run
+- short primary click on eligible OPEN door = manual close
 
 Touch:
+- Forward / Back / Turn L / Turn R / Crouch-Stand / Run
+- short world tap on eligible OPEN door = manual close
 
-- Forward / Back / Turn L / Turn R / Crouch-Stand / Run.
+System 16 modal blocking disables movement and door pointer input.
 
-System 16 modal blocking disables gameplay input.
+Web Leave Game goes directly to Google.
 
-Web Leave Game directly assigns `https://www.google.com/`; browser history is not used.
+## 8. Physical items
 
-## 10. Verification state
+The live critique lot still intentionally has no loose demo items. Existing canonical truths remain:
 
-Current main before Systems 18/19 design drafting:
+- WHAT owns loose world placement;
+- 09 owns hand assignment;
+- 11 owns containment;
+- 12 owns timed transfer;
+- 13D owns weight;
+- 13E derives carried weight/capacity and supplies the real 2x acquisition policy.
 
-`019926ba4e53df0e47c2df5e9447371ffe252d1b`
+System 10 held-item presentation and real item-interaction composition remain future work.
 
-That promoted System 17A.1 head passed:
+## 9. Verification routing
 
-- System 17A movement/exertion contract run `32002568350`;
-- Item Transfer Actions / hard carry ceiling run `32002568406`;
-- Actor Stats Domains run `32002568361`;
-- System 17 movement regression run `32002568429`;
-- Web build + Pages deployment run `32002568376`.
+Systems 18/19 first fully green implementation candidate:
 
-Systems 18 and 19 are design-only drafts after this point; they require explicit approval before implementation.
+- SHA `c035fe7b3f5d0badab6c5b598996010e92d852b2`;
+- Door Interaction run `32005363005`: SUCCESS;
+- Local Building Generation run `32005363051`: SUCCESS.
 
-## 11. Active DRAFT — System 18 Door Interaction / Automatic Passage
+That candidate passed Godot parse, protected regressions, door passage/manual close tests, deterministic trailer generation/rotation/materialization, generated semantic art/collision coverage, generated-door traversal, renderer diagnostics and actual startup.
 
-Design source:
+Exact documentation-promotion SHA must pass the same dedicated contracts plus Web/Pages before completion is claimed.
 
-`SYSTEM_DESIGNS/18_DOOR_INTERACTION_PASSAGE.md`
+## 10. Immediate next path
 
-Current proposal:
+1. **User playtests and critiques Trailer Candidate 001.**
+2. Turn critique into reusable trailer archetype rules, not one-off fixture edits.
+3. Regenerate/retest until trailer density/layout feels right.
+4. Add `residential.house.small_ranch` under the same System 19 contract.
+5. Repeat critique loop for the house.
+6. Add camera/larger play space once multiple properties exceed a one-screen environment.
 
-- normal CLOSED door is blocking persistent physical truth;
-- Walk Forward/Back into an eligible CLOSED door accepts conditional passage, opens it only at actual movement commit, then moves through if clear;
-- damage-canceled Walk before commit leaves door closed;
-- Run into eligible CLOSED door opens it at the stride, continues, causes no normal 5 HP hard-obstacle impact, and emits a semantic **LOUD** door event;
-- future non-openable locked/jammed/barricaded door can decline passage and retain current Run-impact consequence;
-- short click/tap on nearby OPEN door requests manual close;
-- proposed manual close = 3 ticks, CANCELABLE;
-- doorway actor prevents closing;
-- long tap/right-click is reserved for future interaction menu, not V1;
-- Door State + Collision synchronization belongs to a focused Door physical-transition coordinator;
-- Movement only sees a generic optional passage-resolver interface and never imports Door State.
+The real item-interaction demo remains useful future work and can later populate these generated buildings.
 
-## 12. Active DRAFT — System 19 Local Building Generation / Archetype Critique Lab
+## 11. Later systems
 
-Design source:
+Container access/search/locks, corpse/decay/contamination, actor appearance/creator, richer item quantity/condition/bulk, first aid/sickness, eating/drinking/rest/sleep progression, global world generation/streaming, construction, perception/lighting/weather/spatial sound, infected AI/combat/vehicles, item interaction composition and camera/zoom remain future work unless pulled forward by newer direction.
 
-`SYSTEM_DESIGNS/19_LOCAL_BUILDING_GENERATION_ARCHETYPE_LAB.md`
-
-System 19 is **not** the future global world planner.
-
-A caller supplies:
-
-- stable building instance namespace;
-- archetype ID;
-- global-space envelope;
-- orientation/frontage constraint;
-- deterministic seed.
-
-System 19 returns a pure validated semantic building plan, then a separate materializer creates initial WHAT terrain/entities/placements and explicitly enrolls generated doors CLOSED in 06A.
-
-First archetype proposal:
-
-`residential.trailer.singlewide`
-
-First candidate target:
-
-- roughly 5–6 exterior cells wide × 10–12 long before rotation, subject to envelope fit;
-- living/kitchen;
-- distinct bathroom;
-- distinct bedroom;
-- one main side exterior entrance into living/kitchen;
-- interior doors where needed;
-- small believable window set;
-- restrained functional furniture;
-- guaranteed one-cell circulation to every room.
-
-The old golden trailer's two-zone `living_kitchen` + `bed_bath` rule is a recovery source but deliberately considered too coarse for the new candidate.
-
-Critique loop:
-
-> implement generator + Trailer Candidate 001 -> user critiques -> refine rules -> freeze good trailer version -> add small ordinary house/ranch archetype -> repeat
-
-A one-screen single-building critique lot is proposed so camera remains deferred until multiple buildings create a real need for larger visible space.
-
-## 13. Immediate next path
-
-Recommended sequence under mandatory design approval:
-
-1. review/adjust **System 18 Door Interaction** DRAFT;
-2. approve System 18, then implement/verify it as the small prerequisite;
-3. review/adjust **System 19 Local Building Generation** DRAFT;
-4. approve System 19, then implement generator contract + Trailer Candidate 001;
-5. playtest/critique the trailer and tune its archetype rules;
-6. add small ordinary house/ranch archetype under the same generator contract;
-7. add camera / larger map when multiple structures make the one-screen critique lot insufficient.
-
-The earlier real-item interaction demo remains valid future work, but the newest explicit direction prioritizes doors + building generation first.
-
-## 14. Later systems
-
-Container access/search/locks, corpse/decay/contamination, actor appearance/creator, richer item quantity/condition/bulk, first aid/sickness, eating/drinking/rest/sleep progression, global world generation/streaming, construction, perception/lighting/weather/spatial sound, infected AI/combat/vehicles and camera/zoom remain future work unless pulled forward by a newer explicit direction.
-
-## 15. Invariants
+## 12. Invariants
 
 1. Main/root is composition only.
 2. Focused owners/public contracts; no god state.
 3. No placeholder/fake completion.
-4. Generator produces initial WHAT; it does not own reality.
+4. Generator produces initial WHAT; it does not own runtime reality.
 5. Rendering presents truth; input submits semantic intent.
 6. Art is not physics.
 7. Phone/Safari is first-class.
 8. Reboot is reference only.
-9. Carry totals, hard ceiling, and moodlets are derived where specified; no drifting duplicate totals.
-10. HUD/inspectors are readers/composers.
-11. Hard application pause uses WHEN.
-12. Run is explicit action, never persistent mode.
-13. Movement does not import Health/Needs/Carry implementations; cross-domain consequences use narrow providers/coordinators.
-14. Independent physical movement factors compose multiplicatively when they represent true scales; rounding occurs deterministically after composition.
-15. Soft capacity is the encumbrance/Run threshold; the absolute normal-acquisition ceiling is 2x soft capacity.
-16. Walk fatigue is zero through soft capacity; once overweight it is terrain-driven and does not scale with the amount of overage.
-17. Timed two-step acquisition rechecks capacity after source removal before destination mutation so reentrant newer truth cannot be overwritten.
-18. Door Interaction, if approved, must coordinate existing Door State + Collision rather than invent another door truth.
-19. Local building generation must consume caller-decided placement/envelope facts and must not become the global world planner.
+9. Derived carry/moodlet totals never drift into duplicate saved truth.
+10. Hard application pause uses WHEN.
+11. Run is explicit action, never persistent mode.
+12. Movement does not import Health/Needs/Carry/Door implementation code; cross-domain behavior uses narrow seams/coordinators.
+13. Soft capacity is Run/encumbrance threshold; hard normal-acquisition ceiling is 2× soft capacity.
+14. Manual door close requires physical facing; pointer selection does not waive orientation/tick cost.
+15. Local building generation consumes caller-decided global placement facts and must not become the global world planner.
+16. Once generated/materialized, WHAT/Door State own later mutations; replacing the generator must not rewrite saved reality.
 
-## 16. Documentation source order
+## 13. Documentation source order
 
 1. newest explicit user instruction;
 2. `PROJECT_NORTH_STAR.md`;
