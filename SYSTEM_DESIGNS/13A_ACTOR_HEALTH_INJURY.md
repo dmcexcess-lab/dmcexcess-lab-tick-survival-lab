@@ -1,74 +1,44 @@
 # Tick Survival Lab — 13A Actor Health / Injury
 
-Status: **APPROVED — user explicitly approved all System 13 children for implementation on 2026-08-16**
+Status: **IMPLEMENTED + CI**
 
 Parent: `13_ACTOR_STATS_STATUS_ARCHITECTURE.md`.
 
 ## Goal
 Own persistent survivor physical-health truth: readable HP now, plus a small injury model that future combat/first-aid/death systems can use without rebuilding the actor record.
 
-## Non-goals
-13A does not resolve attacks, create corpses, schedule healing, consume medicine, own Needs, or render UI.
-
 ## Owner
-`game/scripts/simulation/actors/health/`:
-- `ActorInjuryRecord.gd`
-- `ActorHealthState.gd`
+- `game/scripts/simulation/actors/health/ActorInjuryRecord.gd`
+- `game/scripts/simulation/actors/health/ActorHealthState.gd`
+- smoke: `game/scripts/ci/ActorHealthSmoke.gd`
 
-## Public contract
-`ActorHealthState` is constructed with read-only WHAT for enrollment validation. Public reads include enrollment/version/revision, current/max HP, HP percent, copied injuries, and snapshot. Public mutations include enroll/remove, set HP bounds, damage/heal HP, add/update/remove injury, and load snapshot.
+## Contract
+Per stable `actor.survivor` ID, 13A owns integer `current_hp`, integer `max_hp`, an actor version, and copied persistent injury records. Recovered v1 enrollment starts at **100 / 100 HP**.
 
-## Data ownership
-Per stable `actor.survivor` ID:
-- `current_hp: int`
-- `max_hp: int`
-- injury records
-- actor version
+Injuries carry a stable local injury ID, semantic injury type, broad body region, severity, stabilized flag, and treated flag. V1 regions are head, torso, left/right arm, and left/right leg. V1 severities are MINOR, SERIOUS, CRITICAL. Multiple injuries may coexist, including on one region.
 
-V1 recovered starting/max HP is **100**. HP is integer, clamped `0..max_hp`.
+HP and injury facts are deliberately independent: the mechanic causing an outcome decides whether to apply HP damage, an injury, or both. `current_hp == 0` is Health truth only; 13A does not remove living ACTOR placement, create a corpse, or own death-transition timing.
 
-## Injury model
-Each injury has:
-- stable local injury ID;
-- semantic injury type (`StringName`, open vocabulary owned by future content/mechanics);
-- body region;
-- severity;
-- stabilized flag;
-- treated flag.
-
-V1 body regions: `head`, `torso`, `left_arm`, `right_arm`, `left_leg`, `right_leg`.
-
-V1 severities: `MINOR`, `SERIOUS`, `CRITICAL`.
-
-Multiple injuries may coexist, including on the same region. Injury records do not automatically deduct HP; the calling mechanic applies whatever HP/injury combination its outcome owns.
-
-## Death boundary
-`current_hp == 0` is health truth only. 13A emits health changes but does **not** remove the living ACTOR, generate a corpse, or decide death-transition timing. The future Death/Corpse coordinator consumes this state.
-
-## Time
-No `_process()` and no implicit healing. WHEN/action systems explicitly call mutations when treatment/healing outcomes occur.
+## Mutation / time
+Normal writes are explicit `ActorHealthState` methods: enroll/remove, set/max HP, damage/heal, add/update/remove injury. Same-value writes are successful no-ops. There is no `_process()` healing or hidden clock.
 
 ## Persistence
-Schema-versioned deterministic snapshot, sorted actor IDs and injury IDs, atomic malformed-state rejection, monotonic domain revision and per-actor version.
+Deterministic schema-v1 snapshot/restore, sorted actor/injury identity, atomic malformed-state rejection, global revision and per-actor version.
 
-## Dependencies
-Allowed: WHAT read validation and 13A-owned records.
+## Dependencies / boundaries
+Allowed: read-only WHAT validation plus 13A injury records.
 Forbidden: Combat, Corpse, Needs, Carry, Moodlets, Inventory, WHEN internals, UI/render/art, reboot.
 
-## Failure cases
-Reject missing/non-survivor enrollment, invalid HP bounds, invalid region/severity/type, duplicate injury IDs, negative heal/damage amounts, and malformed snapshots. Same-value writes are successful no-ops and do not advance revision/version.
+## Verification
+`ActorHealthSmoke.gd` covers survivor enrollment, non-survivor rejection, 100 HP recovery, damage/heal/clamp, max-HP changes, multiple injuries, treatment/stabilization, mutation-safe injury reads, deterministic snapshot round trip, and atomic malformed rejection.
 
-## Tests
-Dedicated smoke covers enrollment, recovered 100 HP, damage/heal/clamping, max-HP changes, all regions/severities, multiple injuries, treatment flags, copy safety, no-op versioning, snapshot determinism/atomic rejection, and non-survivor rejection.
+Initial complete System 13 candidate `78ed167678257749b093acd54e53e9f065cd8ce5` passed **Actor Stats Domains contract** run `31992365565` with no production repair.
 
 ## Future seams
-Combat can apply HP/injuries; first aid can stabilize/treat; Health capability providers can later translate injuries into action penalties; Death/Corpse can observe zero-HP outcomes without 13A owning corpse state.
-
-## North-star fit
-This preserves meaningful injury location/severity/treatment consequences without detailed physiology.
+Combat can apply HP/injuries; first aid can stabilize/treat; future capability providers can translate health facts into action consequences; Death/Corpse consumes zero-HP outcomes without Health owning corpse state.
 
 ## Approved decisions — 2026-08-16
-1. HP is canonical current/max integer health with recovered v1 max/start 100.
+1. HP is canonical integer current/max health with recovered v1 max/start 100.
 2. Injury truth is type + body region + severity + stabilization/treatment.
 3. Six broad body regions are sufficient for v1.
 4. Severities are MINOR/SERIOUS/CRITICAL.

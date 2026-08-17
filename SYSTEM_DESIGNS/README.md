@@ -1,171 +1,111 @@
 # Tick Survival Lab — System Design Index / Approval Ledger
 
-This directory is the durable detailed memory for individual systems.
-
-Major systems move through **NOT DESIGNED -> DRAFT -> APPROVED -> IMPLEMENTED** under `DESIGN_WORKFLOW.md`. Read `PROJECT_NORTH_STAR.md` and `DESIGN_DECISIONS.md` first.
+This directory is the durable detailed memory for individual systems. Major systems move through **NOT DESIGNED -> DRAFT -> APPROVED -> IMPLEMENTED** under `DESIGN_WORKFLOW.md`. Read `PROJECT_NORTH_STAR.md` and `DESIGN_DECISIONS.md` first.
 
 ## Status meanings
-
 - **NOT DESIGNED** — known future system, no detailed contract yet.
 - **DRAFT** — discussion only; do not implement.
 - **APPROVED** — user approved; implementation may begin.
-- **IMPLEMENTED** — approved design is present in canonical modular source and tested.
+- **IMPLEMENTED** — approved design exists in canonical modular source and is tested.
 - **SUPERSEDED** — historical design replaced by newer direction.
-- **RECOVERY SOURCE** — historical behavior worth mining, not current architecture.
 
 ## Current canonical architecture
 
-| Order | System | Status | Design source | Notes |
-|---|---|---|---|---|
-| 00 | WHERE / WHAT / WHEN Simulation Foundation | **IMPLEMENTED via child contracts** | `00_FOUNDATION_WHERE_WHAT_WHEN.md` | Umbrella realized by 00A/00B/00C |
-| 00A | Spatial Model — WHERE | **IMPLEMENTED** | `00A_SPATIAL_MODEL.md` | Global grid/facing/whole-cell footprints/structure axis |
-| 00B | Persistent World / Entity State — WHAT | **IMPLEMENTED** | `00B_PERSISTENT_WORLD_STATE.md` | Stable IDs, semantic world facts, placement, mutation, snapshot |
-| 00C | Tick / Action / Pause Kernel — WHEN | **IMPLEMENTED** | `00C_TICK_ACTION_PAUSE.md` | Integer ticks, deterministic actions/events, tactical + hard pause |
-| 01 | Collision / Spatial Query | **IMPLEMENTED** | `01_COLLISION_SPATIAL_QUERY.md` | Explicit collision + sparse overrides |
-| 02 | Movement Actions | **IMPLEMENTED** | `02_MOVEMENT_ACTIONS.md` | Forward/back/turn; commit revalidation |
-| 03 | Actor Locomotion State & Movement Capability | **IMPLEMENTED** | `03_ACTOR_LOCOMOTION_MOVEMENT_CAPABILITY.md` | Standing/crouched, timed stance, capability providers |
-| 04 | Recovered Multi-Atlas Art Catalog | **IMPLEMENTED** | `04_RECOVERED_MULTI_ATLAS_ART_CATALOG.md` | Environment/player/living-actor + held-item art selection |
-| 05 | Ground Layer Renderer | **IMPLEMENTED** | `05_GROUND_LAYER_RENDERER.md` | WHAT terrain -> Art Catalog |
-| 06A | Door State | **IMPLEMENTED** | `06A_DOOR_STATE.md` | Stable-ID OPEN/CLOSED state |
-| 06 | Structure Layer Renderer | **IMPLEMENTED** | `06_STRUCTURE_LAYER_RENDERER.md` | Walls/doors/windows + Door State |
-| 07 | Prop / Fixture / Vegetation Renderer | **IMPLEMENTED** | `07_PROP_FIXTURE_VEGETATION_RENDERER.md` | Visible OBJECT entities |
-| 08 | Player / Living Actor Renderer | **IMPLEMENTED** | `08_PLAYER_LIVING_ACTOR_RENDERER.md` | Controlled survivor + NPC survivors + infected |
-| 09 | Actor Hand Equipment State | **IMPLEMENTED** | `09_ACTOR_HAND_EQUIPMENT_STATE.md` | Stable primary/right + secondary/left item assignments |
-| 10 | Actor Hand Equipment Presentation | **IMPLEMENTED** | `10_ACTOR_HAND_EQUIPMENT_PRESENTATION.md` | Recovered held art, facing rotation, BACK/body/FRONT seam |
-| 11 | Inventory / Containment | **IMPLEMENTED** | `11_INVENTORY_CONTAINMENT.md` | Stable direct containment, explicit containers, nested acyclic graph |
-| 12 | Item Transfer / Pickup / Drop / Equip Actions | **IMPLEMENTED** | `12_ITEM_TRANSFER_ACTIONS.md` | Timed floor/hand/personal-containment transitions + derived disposition query |
-| 13 | Actor Stats / Status Architecture | **APPROVED umbrella** | `13_ACTOR_STATS_STATUS_ARCHITECTURE.md` | Modular Health/Needs/Skills/Item Properties/Carry/Moodlets; no universal ActorStats bag |
-| 13A | Actor Health / Injury | **NOT DESIGNED** | parent 13 | HP + injury-capable health truth |
-| 13B | Actor Needs / Rest | **NOT DESIGNED** | parent 13 | Fatigue, hunger, thirst, sleep pressure |
-| 13C | Actor Skills | **DRAFT** | `13C_ACTOR_SKILLS.md` | Recovery-backed six-skill level/XP contract awaiting explicit approval |
-| 13D | Item Physical Properties | **NOT DESIGNED** | parent 13 | Real item weight first; shared physical item facts only |
-| 13E | Carry / Encumbrance | **NOT DESIGNED** | parent 13 | Derived carried weight/capacity/consequence; no duplicate inventory total |
-| 13F | Moodlets / Status Derivation | **NOT DESIGNED** | parent 13 | Derived readable statuses from real source domains |
-| 00D | Global World Planning / Generation Contract | **NOT DESIGNED** | `00D_GLOBAL_WORLD_GENERATION.md` | Global geography/roads/utilities/parcels before local detail |
-| 00E | Population / Household / Outbreak / Player Story | **NOT DESIGNED** | `00E_POPULATION_OUTBREAK_PLAYER_STORY.md` | Persistent people/homes/jobs/relationships and causal outbreak |
-| 00F | Streaming / Materialization | **NOT DESIGNED** | `00F_STREAMING_MATERIALIZATION.md` | Performance/storage over one logical world |
-| old-01 | Semantic tactical map / `RaidMapSpec` | **SUPERSEDED** | `01_RAID_MAP_DATA.md` | Historical mine; assumed disconnected raid maps |
+| Order | System | Status | Design source |
+|---|---|---|---|
+| 00 | WHERE / WHAT / WHEN Simulation Foundation | **IMPLEMENTED via children** | `00_FOUNDATION_WHERE_WHAT_WHEN.md` |
+| 00A | Spatial Model — WHERE | **IMPLEMENTED** | `00A_SPATIAL_MODEL.md` |
+| 00B | Persistent World / Entity State — WHAT | **IMPLEMENTED** | `00B_PERSISTENT_WORLD_STATE.md` |
+| 00C | Tick / Action / Pause Kernel — WHEN | **IMPLEMENTED** | `00C_TICK_ACTION_PAUSE.md` |
+| 01 | Collision / Spatial Query | **IMPLEMENTED** | `01_COLLISION_SPATIAL_QUERY.md` |
+| 02 | Movement Actions | **IMPLEMENTED** | `02_MOVEMENT_ACTIONS.md` |
+| 03 | Actor Locomotion / Movement Capability | **IMPLEMENTED** | `03_ACTOR_LOCOMOTION_MOVEMENT_CAPABILITY.md` |
+| 04 | Recovered Multi-Atlas Art Catalog | **IMPLEMENTED** | `04_RECOVERED_MULTI_ATLAS_ART_CATALOG.md` |
+| 05 | Ground Layer Renderer | **IMPLEMENTED** | `05_GROUND_LAYER_RENDERER.md` |
+| 06A | Door State | **IMPLEMENTED** | `06A_DOOR_STATE.md` |
+| 06 | Structure Layer Renderer | **IMPLEMENTED** | `06_STRUCTURE_LAYER_RENDERER.md` |
+| 07 | Prop / Fixture / Vegetation Renderer | **IMPLEMENTED** | `07_PROP_FIXTURE_VEGETATION_RENDERER.md` |
+| 08 | Player / Living Actor Renderer | **IMPLEMENTED** | `08_PLAYER_LIVING_ACTOR_RENDERER.md` |
+| 09 | Actor Hand Equipment State | **IMPLEMENTED** | `09_ACTOR_HAND_EQUIPMENT_STATE.md` |
+| 10 | Actor Hand Equipment Presentation | **IMPLEMENTED** | `10_ACTOR_HAND_EQUIPMENT_PRESENTATION.md` |
+| 11 | Inventory / Containment | **IMPLEMENTED** | `11_INVENTORY_CONTAINMENT.md` |
+| 12 | Item Transfer / Pickup / Drop / Equip Actions | **IMPLEMENTED** | `12_ITEM_TRANSFER_ACTIONS.md` |
+| 13 | Actor Stats / Status Architecture | **IMPLEMENTED via children** | `13_ACTOR_STATS_STATUS_ARCHITECTURE.md` |
+| 13A | Actor Health / Injury | **IMPLEMENTED** | `13A_ACTOR_HEALTH_INJURY.md` |
+| 13B | Actor Needs / Rest | **IMPLEMENTED** | `13B_ACTOR_NEEDS_REST.md` |
+| 13C | Actor Skills | **IMPLEMENTED** | `13C_ACTOR_SKILLS.md` |
+| 13D | Item Physical Properties | **IMPLEMENTED** | `13D_ITEM_PHYSICAL_PROPERTIES.md` |
+| 13E | Actor Carry / Encumbrance | **IMPLEMENTED** | `13E_ACTOR_CARRY_ENCUMBRANCE.md` |
+| 13F | Actor Moodlets / Status Derivation | **IMPLEMENTED** | `13F_ACTOR_MOODLETS.md` |
+| 00D | Global World Planning / Generation | **NOT DESIGNED** | `00D_GLOBAL_WORLD_GENERATION.md` |
+| 00E | Population / Household / Outbreak / Player Story | **NOT DESIGNED** | `00E_POPULATION_OUTBREAK_PLAYER_STORY.md` |
+| 00F | Streaming / Materialization | **NOT DESIGNED** | `00F_STREAMING_MATERIALIZATION.md` |
+| old-01 | Raid-map / extraction physical-world model | **SUPERSEDED** | `01_RAID_MAP_DATA.md` |
 
 ## Implemented source owners
 
-### Foundation / simulation / mechanic state
-
-- **00A WHERE:** `game/scripts/foundation/spatial/` + `SpatialModelSmoke.gd`
-- **00B WHAT:** `game/scripts/foundation/world/` + `WorldStateSmoke.gd`
-- **00C WHEN:** `game/scripts/foundation/time/` + `TickKernelSmoke.gd`
-- **01 Collision:** `game/scripts/simulation/collision/` + `CollisionSpatialQuerySmoke.gd`
-- **02 Movement:** `game/scripts/simulation/movement/` + `MovementActionsSmoke.gd`
-- **03 Actor Locomotion:** `game/scripts/simulation/actors/locomotion/` + `ActorLocomotionSmoke.gd`
-- **06A Door State:** `game/scripts/simulation/doors/` + `DoorStateSmoke.gd`
-- **09 Actor Hand Equipment:** `game/scripts/simulation/actors/equipment/` + `ActorHandEquipmentSmoke.gd`
-- **11 Inventory / Containment:** `game/scripts/simulation/inventory/` + `InventoryContainmentSmoke.gd` + `.github/workflows/inventory-containment.yml`
-- **12 Item Transfer Actions:** `game/scripts/simulation/items/transfer/` + `ItemTransferActionsSmoke.gd` + `.github/workflows/item-transfer-actions.yml`
+### Foundation / simulation
+- 00A: `game/scripts/foundation/spatial/`
+- 00B: `game/scripts/foundation/world/`
+- 00C: `game/scripts/foundation/time/`
+- 01: `game/scripts/simulation/collision/`
+- 02: `game/scripts/simulation/movement/`
+- 03: `game/scripts/simulation/actors/locomotion/`
+- 06A: `game/scripts/simulation/doors/`
+- 09: `game/scripts/simulation/actors/equipment/`
+- 11: `game/scripts/simulation/inventory/`
+- 12: `game/scripts/simulation/items/transfer/`
+- 13A: `game/scripts/simulation/actors/health/`
+- 13B: `game/scripts/simulation/actors/needs/`
+- 13C: `game/scripts/simulation/actors/skills/`
+- 13D: `game/scripts/simulation/items/properties/`
+- 13E: `game/scripts/simulation/actors/carry/`
+- 13F: `game/scripts/simulation/actors/moodlets/`
 
 ### Presentation
-
-- **04 Art Catalog:** `game/scripts/art/`, protected/recovered art manifests, `ArtCatalogSmoke.gd`
-- **05 Ground:** `GroundDrawCommand.gd`, `GroundLayerRenderer.gd`, `GroundLayerRendererSmoke.gd`
-- **06 Structure:** `StructureDrawCommand.gd`, `StructureLayerRenderer.gd`, `StructureLayerRendererSmoke.gd`
-- **07 Prop / Fixture / Vegetation:** `PropDrawCommand.gd`, `PropLayerRenderer.gd`, `PropLayerRendererSmoke.gd`
-- **08 Player / Living Actor:** `actor_atlas.svg`, `ActorDrawCommand.gd`, `ActorLayerRenderer.gd`, `ActorLayerRendererSmoke.gd`
-- **10 Actor Hand Equipment Presentation:** `held_item_atlas.svg`, `ActorHandDrawCommand.gd`, `ActorHandEquipmentLayerRenderer.gd`, `ActorHandEquipmentPresentationSmoke.gd`
+- 04: `game/scripts/art/`
+- 05/06/07/08/10: focused files under `game/scripts/render/`
 
 The canonical modules remain intentionally separate from frozen `game/scripts/reboot/` reference code.
 
-## Current contract summary
+## Current System 13 contract summary
 
-**WHERE** owns geometry. **WHAT** owns persistent semantic terrain/entities/placement. **WHEN** owns time/order. **Collision** answers hard occupancy. **Movement** owns discrete movement actions. **Actor Locomotion** owns standing/crouched state and movement capability composition.
+**13A Health** owns real HP and broad persistent injuries. **13B Needs** owns fatigue/hunger/thirst/sleep pressure. **13C Skills** owns six catalog-driven base skills plus XP/levels. **13D Item Physical Properties** owns explicit semantic item weight in grams. **13E Carry** persists capacity but derives current weight from real Hands + Containment + Weight. **13F Moodlets** derives readable statuses and stores no ordinary duplicated moodlet state.
 
-**Door State** owns persistent OPEN/CLOSED truth for doors.
+03 remains the mobility-composition owner. Needs and Carry plug into its existing narrow modifier-provider seam; Movement does not import either domain.
 
-**09 Actor Hand Equipment State** owns explicit survivor primary/right and secondary/left stable `item.*` assignments. One physical item cannot occupy multiple 09 hand assignments. 09 owns no containment, rendering, combat, lighting, timing, AI, input, or UI.
+Dedicated verification: `.github/workflows/actor-stats.yml`, success token set from six child smokes. Initial complete candidate `78ed167678257749b093acd54e53e9f065cd8ce5` passed run `31992365565` with no production repair.
 
-**11 Inventory / Containment** owns only direct persistent containment: `item_id -> direct_container_id`. Container capability is explicit typed enrollment. One item has at most one direct parent; nested item-containers are supported; self/ancestry cycles are rejected; direct-content versions plus global revision support stale transfer revalidation. Normal new containment requires an existing unplaced WHAT `item.*`. 11 does not import 09 and does not own pickup/drop/equip timing, capacity/encumbrance, stacking/quantity, item stats, rendering, or UI.
+## Immediate path to the requested canonical demo
 
-**12 Item Transfer Actions** is the timed coordinator over WHAT + 09 + 11 + WHEN. It adds read-only `ItemDispositionQuery`, explicit action timing policy, floor/hand/personal-container pickup/drop/equip/unequip/transfer requests, exact commit revalidation, no reservations, CANCELABLE pre-commit behavior, and public-API compensation for exceptional second-write failure. V1 rejects arbitrary world cabinets/trunks/corpses/vehicles until a real access/search/open/lock policy exists. A verified reentrant-destination guard rechecks the destination immediately after source removal so permissive low-level APIs cannot overwrite newly changed truth.
+The honest actor-data prerequisites are now complete through System 13. Next bounded path:
 
-**13 Actor Stats / Status Architecture** is an approved umbrella, not a monolithic implementation. The requested player-visible set is HP, fatigue, hunger, thirst, sleep, carry weight, skills/levels and moodlets. Health, Needs, Skills, Item Physical Properties, Carry/Encumbrance and Moodlets remain peer child domains keyed/read through stable contracts. Moodlets are primarily derived; carried weight is derived from physical possession plus item weight; future Stats/HUD is a reader/composer rather than a simulation owner.
+1. **Authored Visual Test Area — NOT DESIGNED.** Real canonical WHAT fixture with actor/items/stat enrollment.
+2. **Tactical Renderer / Orchestration — NOT DESIGNED.** Compose Ground/Structure/Prop/10-BACK/08/10-FRONT.
+3. **Tactical Camera + Zoom — NOT DESIGNED.**
+4. **Touch / Keyboard / Safari Input — NOT DESIGNED.**
+5. **Tactical Controls UI — NOT DESIGNED.**
+6. **HUD / Facing Inspection + Stats & Inventory Inspector + Pause Menu — NOT DESIGNED.** These may now display real System 13 + 09/11/12 data rather than fabricated values.
 
-**13C Actor Skills is DRAFT only.** It proposes recovery-backed Combat/Scavenging/Survival/Medical/Technical/Social semantic skills, levels 0–10, persistent XP and First Fire's `20 + current_level * 15` threshold. Those detailed mechanics still require explicit user approval before code.
-
-**04 Art Catalog** owns semantic-to-art selection only. **05 Ground**, **06 Structure**, **07 Prop**, and **08 Living Actor** independently present focused WHAT layers.
-
-**10 Actor Hand Equipment Presentation** reads WHAT + 09 + 04 and renders held items through explicit BACK and FRONT passes around the actor body.
-
-## Immediate dependency path toward the requested canonical demo
-
-Completed prerequisites:
-
-1. **09 Actor Hand Equipment State — IMPLEMENTED.**
-2. **10 Actor Hand Equipment Presentation — IMPLEMENTED.**
-3. **11 Inventory / Containment — IMPLEMENTED.**
-4. **12 Item Transfer / Pickup / Drop / Equip Actions — IMPLEMENTED.**
-5. **13 Actor Stats / Status Architecture — APPROVED umbrella.**
-
-Active child design gate:
-
-6. **13C Actor Skills — DRAFT, awaiting detailed approval.** It is recommended first because its exact same-owner recovery is strongest and it has no dependency on Health/Needs/Carry.
-
-Remaining stat children:
-
-| System | Status | Notes |
-|---|---|---|
-| 13B Needs / Rest | NOT DESIGNED | Fatigue, hunger, thirst, sleep |
-| 13A Health / Injury | NOT DESIGNED | HP plus injury-capable state |
-| 13D Item Physical Properties | NOT DESIGNED | Item weight |
-| 13E Carry / Encumbrance | NOT DESIGNED | Derived weight/capacity/consequence |
-| 13F Moodlets / Status Derivation | NOT DESIGNED | Derived statuses after source domains exist |
-
-Then remaining honest-demo prerequisites:
-
-| System | Status | Notes |
-|---|---|---|
-| Authored Visual Test Area | NOT DESIGNED | Real canonical WHAT fixture |
-| Tactical Renderer / Orchestration | NOT DESIGNED | Ground/Structure/Prop/10-BACK/08/10-FRONT composition |
-| Tactical Camera + Zoom | NOT DESIGNED | Supplies visible window/scale |
-| Touch / Keyboard / Safari Input | NOT DESIGNED | Semantic intents + lifecycle hard pause |
-| Tactical Controls UI | NOT DESIGNED | Real touch Button/Control nodes |
-| HUD / Facing Inspection | NOT DESIGNED | Canonical `Looking at:` query |
-| Stats / Inventory Inspector UI | NOT DESIGNED | Real data only; safe pause; composes stat providers |
-| Pause / Menu UI | NOT DESIGNED | Resume + Leave Game |
+The user explicitly wants to reach the playable canonical demo quickly, so future design should favor the smallest real composition path and avoid reopening completed foundation mechanics.
 
 ## Other later modular systems
-
-| System | Status | Notes |
-|---|---|---|
-| Container Access / Search / Open / Lock | NOT DESIGNED | Extends 12 beyond personal containers to real world storage access |
-| Corpse / Decay / Contamination | NOT DESIGNED | Approved persistent corpse/contamination direction only |
-| Door interaction / physical transition | NOT DESIGNED | WHEN + Door State + Collision coordination |
-| Actor Appearance / character creator integration | NOT DESIGNED | Persistent visual identity |
-| Loose-item renderer | NOT DESIGNED | Separate LOOSE_ITEM presentation |
-| Item definitions / quantity / condition beyond 13D weight | NOT DESIGNED | Physical item properties and divisible-resource semantics |
-| Road network/topology | NOT DESIGNED | Global coherent road truth |
-| Property/parcel planner | NOT DESIGNED | Parcels/frontage/access/site mix |
-| Building/prefab placement | NOT DESIGNED | Semantic placement respecting global facts |
-| Procedural room/layout | NOT DESIGNED | Room graph/circulation/doors |
-| Furniture/fixture/clutter dressing | NOT DESIGNED | Purpose-aware local detail |
-| Vegetation/utilities/civic dressing | NOT DESIGNED | Local detail respecting global networks |
-| World/generator validation | NOT DESIGNED | Independent coherence/quality gates |
-| Prefab authoring tools | NOT DESIGNED | Separate DEV tooling |
-| Construction/destruction | DEFERRED | Persistent WHAT mutation; bases anywhere legal |
-| Base/community summary | NOT DESIGNED | Thin summary over physical world facts |
-| Vision/perception | DEFERRED | Major mood/gameplay system |
-| Lighting | DEFERRED | Major mood/gameplay system |
-| Weather | DEFERRED | WHEN state + VFX |
-| Silent spatial sound | DEFERRED | Spatial information events |
-| Infected AI | DEFERRED | Canonical actor actions |
-| Combat | DEFERRED | Timed actions + health consequences |
-| Vehicles | DEFERRED | Persistent multi-cell entities |
-| Old raid/extraction/session architecture | **SUPERSEDED** | No required raid/extraction/staging loop |
+- Container Access / Search / Open / Lock — NOT DESIGNED
+- Corpse / Decay / Contamination — NOT DESIGNED, direction approved
+- Door interaction / physical transition — NOT DESIGNED
+- Actor Appearance / character creator integration — NOT DESIGNED
+- Loose-item renderer — NOT DESIGNED
+- Quantity / stack / durability / richer item definitions — NOT DESIGNED
+- Capacity/transfer blocking or bulk policy — NOT DESIGNED; current 13E only derives consequences
+- Health progression / first aid / sickness — NOT DESIGNED beyond 13A state
+- Needs progression / eating / drinking / sleeping actions — NOT DESIGNED beyond 13B state
+- Road/property/building/room/dressing generation systems — NOT DESIGNED
+- Construction/destruction — DEFERRED
+- Vision/perception, lighting, weather, silent spatial sound — DEFERRED
+- Infected AI, combat, vehicles — DEFERRED
 
 ## Requested future demo UI target
-
-The eventual canonical demo must include Safari/iPhone touch navigation, desktop keyboard equivalents, recovered-style `Looking at:`, concise real actor stats, `STATS`, `INVENTORY`, and `MENU` buttons, safe pause during inspection/menu, Resume + Leave Game, and no fabricated values before their owning systems exist.
-
-The requested Stats target is now explicitly: **moodlets, HP, fatigue, hunger, thirst, sleep, carry weight, and skills with levels**. The inspector must compose these from real modular domains and remain open to later provider modules without a god actor dictionary.
+The eventual canonical demo must include Safari/iPhone touch navigation, desktop keyboard equivalents, recovered-style `Looking at:`, concise real actor stats, `STATS`, `INVENTORY`, and `MENU` buttons, safe pause during inspection/menu, Resume + Leave Game, and no fabricated values.
 
 ## Design rule
-
-Every major system design must define status, goal, non-goals, owners, public contract, data ownership, dependencies, forbidden dependencies, behavior, edge cases, performance/mobile requirements, tests, recovery sources, future seams, North-star fit, and approved decisions.
-
-If an approved implementation unexpectedly requires crossing a forbidden boundary, stop and return the design to DRAFT instead of cascading changes.
+Every major system keeps a focused owner/public contract. If implementation unexpectedly requires crossing a forbidden boundary, return the design to review rather than cascading a patch.

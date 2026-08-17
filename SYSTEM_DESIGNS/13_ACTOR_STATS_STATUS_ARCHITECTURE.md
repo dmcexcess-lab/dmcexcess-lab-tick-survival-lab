@@ -1,45 +1,33 @@
 # Tick Survival Lab — 13 Actor Stats / Status Architecture
 
-Status: **APPROVED UMBRELLA — all six child systems explicitly approved for implementation on 2026-08-16**
-
-Approval basis: the user specified the desired visible set — moodlets, HP, fatigue, hunger, thirst, sleep, carry weight, and skills with levels — approved the modular peer-domain architecture, then explicitly approved **all of System 13** for implementation so work can proceed toward the canonical demo.
+Status: **IMPLEMENTED via 13A–13F child contracts + dedicated CI**
 
 ## Goal
-Provide a simple readable survivor status surface while keeping Health, Needs, Skills, item weight, Carry, and Moodlets independently replaceable and extensible.
+Provide a simple readable survivor status surface while keeping Health, Needs, Skills, Item Physical Properties, Carry, and Moodlets independently replaceable and extensible.
 
 ## Core rule
 > **Actor condition is composed from typed peer domains keyed by stable WHAT actor ID. There is no universal ActorStats dictionary.**
 
 The future Stats/HUD layer is a reader/composer. It never owns simulation truth.
 
-## Child systems
+## Implemented children
+- **13A Health / Injury — IMPLEMENTED:** integer HP, broad typed injuries, treatment/stabilization, 100 HP recovered baseline; no corpse ownership.
+- **13B Needs / Rest — IMPLEMENTED:** fatigue/hunger/thirst/sleep pressure 0..100; no hidden clock; recovered fatigue timing provider through 03.
+- **13C Skills — IMPLEMENTED:** Combat/Scavenging/Survival/Medical/Technical/Social, level 0..10, persistent XP, recovered `20 + level * 15` progression.
+- **13D Item Physical Properties — IMPLEMENTED:** explicit semantic item weight in integer grams; missing classification UNKNOWN.
+- **13E Carry / Encumbrance — IMPLEMENTED:** persistent base capacity only; recovered 18 kg default; derived carried weight over real 09/11/13D truth; recovered encumbrance timing provider through 03.
+- **13F Moodlets — IMPLEMENTED:** derived readable Health/Needs/Carry statuses; ordinary moodlets are not persisted.
 
-### 13A Actor Health / Injury — APPROVED
-Design: `13A_ACTOR_HEALTH_INJURY.md`.
-Owns current/max HP plus injury type/body-region/severity/stabilization/treatment. V1 recovered HP baseline is 100. HP zero does not itself implement death/corpse transition.
+Detailed contracts:
+- `13A_ACTOR_HEALTH_INJURY.md`
+- `13B_ACTOR_NEEDS_REST.md`
+- `13C_ACTOR_SKILLS.md`
+- `13D_ITEM_PHYSICAL_PROPERTIES.md`
+- `13E_ACTOR_CARRY_ENCUMBRANCE.md`
+- `13F_ACTOR_MOODLETS.md`
 
-### 13B Actor Needs / Rest — APPROVED
-Design: `13B_ACTOR_NEEDS_REST.md`.
-Owns 0..100 fatigue, hunger, thirst, and sleep-pressure values. Fatigue is short-horizon exertion; sleep pressure is longer-horizon debt. No hidden frame-time progression. A read-only provider uses golden Tick's fatigue action-duration pressure through 03.
-
-### 13C Actor Skills — APPROVED
-Design: `13C_ACTOR_SKILLS.md`.
-Owns semantic skills, level, and XP. V1 uses recovered Combat, Scavenging, Survival, Medical, Technical, Social; levels 0..10; XP threshold `20 + level * 15`.
-
-### 13D Item Physical Properties — APPROVED
-Design: `13D_ITEM_PHYSICAL_PROPERTIES.md`.
-Owns semantic item physical definition facts beginning with positive integer weight in grams. Missing weight classification is UNKNOWN rather than zero.
-
-### 13E Actor Carry / Encumbrance — APPROVED
-Design: `13E_ACTOR_CARRY_ENCUMBRANCE.md`.
-Owns persistent base capacity only and derives current carried weight from real 09 Hands + 11 Containment + 13D weight. Recovered v1 base capacity is 18,000 g. Current weight is never persisted. A read-only provider uses golden Tick's encumbrance timing pressure through 03.
-
-### 13F Actor Moodlets — APPROVED
-Design: `13F_ACTOR_MOODLETS.md`.
-Derives readable statuses from real Health/Needs/Carry state. Ordinary threshold moodlets are not persisted.
-
-## Stable identity
-Persistent actor-state children key records by stable WHAT actor ID, never Node identity, UI index, controlled-player role, or renderer variant.
+## Stable identity / persistence
+Persistent actor-state children key records by stable WHAT survivor ID. They use deterministic schema-versioned snapshots, mutation-safe reads, explicit mutations, global revisions and per-actor versions where appropriate. 13D is explicit content/configuration; 13F is derived presentation state and therefore not redundantly serialized.
 
 ## Numeric representation
 - Health: integer current/max HP.
@@ -49,44 +37,46 @@ Persistent actor-state children key records by stable WHAT actor ID, never Node 
 - Carry ratio: integer basis points, 10,000 = 100%.
 - Moodlets: semantic ID/severity/priority, not duplicated numeric state.
 
-## Mutation / time rule
-Persistent values change only through their owning domains. WHEN owns order/time but not meanings. No System 13 owner advances itself from `_process()`.
+## Time / composition
+No System 13 owner advances itself from `_process()`. WHEN owns time/order, while future mechanic coordinators explicitly apply outcomes to their domain.
 
-Future coordinators explicitly mutate state after real outcomes: damage -> Health, eating/drinking/rest -> Needs, completed activities -> Skills, item disposition -> automatically changes derived Carry.
+03 Actor Locomotion's existing provider seam is the only locomotion dependency: Needs and Carry supply read-only modifiers without Movement importing either domain.
 
-## Composition seams
-03 Actor Locomotion already provides a narrow modifier-provider contract. 13B Needs and 13E Carry may implement read-only providers through that seam without Movement importing their internals.
-
-The later Stats Inspector may compose public reads/provider adapters, but does not become a simulation owner.
-
-## Persistence pattern
-Persistent children use stable IDs, deterministic snapshot/restore, mutation-safe reads, revision/version tracking where useful, and bounded semantic signals. 13D content catalog and 13F derived moodlets are not per-save duplicated state.
+Current combined recovered timing semantics are additive through 03's existing basis-point composition. At fatigue 100 and exactly 100% carry capacity, the separate providers contribute +6500 bp and +7500 bp respectively before 03 resolves the action duration.
 
 ## Forbidden architecture
-Do not create:
-- one ActorStats.gd storing all domains;
-- Health importing Needs internals;
-- Needs importing Inventory internals;
-- Carry mutating Hands/Inventory;
-- Item Properties owning location;
-- Moodlets mutating source domains;
-- UI/render/reboot-owned stats;
-- duplicate persisted carry totals.
+Do not create a universal ActorStats object/dictionary; do not make Health/Needs/Skills mutually import each other; do not persist derived carried weight; do not let Moodlets mutate their source domains; do not put actor stats in Main/UI/render/reboot.
+
+## Verification
+Dedicated workflow: `.github/workflows/actor-stats.yml` — **Actor Stats Domains contract**.
+
+Initial complete implementation candidate `78ed167678257749b093acd54e53e9f065cd8ce5` passed run `31992365565` with:
+- source-boundary checks;
+- Godot 4.7.1 import/parse;
+- WHAT regression;
+- Actor Locomotion regression;
+- 09 Hand Equipment regression;
+- 11 Inventory / Containment regression;
+- 13A Health smoke;
+- 13B Needs smoke;
+- 13C Skills smoke;
+- 13D Item Physical Properties smoke;
+- 13E Carry smoke;
+- 13F Moodlets smoke.
+
+No production repair was required after the first complete candidate.
 
 ## Recovery basis
-Golden Tick `PlayerActor.gd` proves 100 health, 18 kg carry capacity, encumbrance/fatigue timing pressure. Same-owner First Fire proves 0..100 fatigue and six persistent skills with XP/level progression. System 13 recovers useful semantics while rejecting both historical god-object/dictionary ownership shapes.
+Golden Tick `PlayerActor.gd` provided 100 health, 18 kg carry capacity, fatigue ratio, encumbrance ratio, and the +65%/+75% timing-pressure coefficients. Same-owner First Fire provided the six broad skills, persistent XP, level cap 10, and threshold formula. System 13 recovers those useful semantics while rejecting the historical player god-object/survivor dictionary shapes.
 
-## Tests
-Each child has deterministic contract smoke coverage. A coordinated System 13 workflow may run the six child smokes plus protected regressions. Exact-final-SHA validation remains required before implementation is called complete.
-
-## North-star fit
-The player gets the meaningful status pressure of mini Zomboid without detailed physiology or a monolithic character record. New domains can be added later without rewriting existing owners.
+## Future seams
+The requested honest Stats/HUD inspector can now display real HP, needs, skills, carry totals/capacity, and moodlets by composing public reads. Future Combat/First Aid, Needs progression, item content catalogs, backgrounds, death/corpses, and transfer capacity policy remain separate systems.
 
 ## Approved decisions — 2026-08-16
 1. Visible target: moodlets, HP, fatigue, hunger, thirst, sleep, carry weight, skills/levels.
 2. 13A–13F are separate peer responsibilities.
-3. All six child contracts are explicitly approved for implementation in one coordinated System 13 slice by newest user instruction.
+3. Newest user instruction explicitly authorized implementing all six children together while preserving internal modularity.
 4. Moodlets are primarily derived.
 5. Current carry weight is derived from real possession + real weight.
 6. Future UI is a reader/composer.
-7. Child implementations must remain independently replaceable even though this prompt authorizes implementing them together.
+7. Child implementations remain independently replaceable even though they were delivered in one coordinated slice.

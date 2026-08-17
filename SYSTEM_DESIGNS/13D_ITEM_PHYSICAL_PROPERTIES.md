@@ -1,57 +1,37 @@
 # Tick Survival Lab — 13D Item Physical Properties
 
-Status: **APPROVED — user explicitly approved all System 13 children for implementation on 2026-08-16**
+Status: **IMPLEMENTED + CI**
 
 Parent: `13_ACTOR_STATS_STATUS_ARCHITECTURE.md`.
 
 ## Goal
-Own reusable physical item-definition facts needed by more than one mechanic, beginning with real item weight, without teaching Inventory/Hands/Carry where items are or duplicating item location truth.
-
-## Non-goals
-13D does not own containment, hand assignment, pickup/drop/equip actions, carried totals, item rendering, quantity/stacks, condition/durability, or a universal item metadata bag.
+Own reusable physical item-definition facts needed by multiple mechanics, beginning with real item weight, without owning item location or carried totals.
 
 ## Owner
-`game/scripts/simulation/items/properties/`:
-- `ItemPhysicalProfile.gd`
-- `ItemPhysicalPropertyCatalog.gd`
-- `ItemWeightQuery.gd`
+- `game/scripts/simulation/items/properties/ItemPhysicalProfile.gd`
+- `game/scripts/simulation/items/properties/ItemPhysicalPropertyCatalog.gd`
+- `game/scripts/simulation/items/properties/ItemWeightQuery.gd`
+- smoke: `game/scripts/ci/ItemPhysicalPropertiesSmoke.gd`
 
-## Public contract
-`ItemPhysicalPropertyCatalog` explicitly registers a profile by semantic `item.*` type and provides mutation-safe profile reads. `ItemWeightQuery` combines read-only WHAT item identity/type with the catalog and returns typed KNOWN/UNKNOWN/INVALID results for a stable item ID.
+## Contract
+V1 physical profiles are explicit semantic `item.*` type definitions containing positive integer **weight in grams**. Integer grams avoid floating drift and have a clean display conversion (`1000 g = 1 kg`).
 
-## Weight representation
-Canonical v1 weight is a positive integer number of **grams**. Integer grams avoid floating drift and convert cleanly for later display (`1000 g = 1 kg`).
+The catalog deliberately ships with no guessed universal weights. Content/demo composition explicitly registers the semantic item types it actually creates. Profile reads are copy-safe and deterministic.
 
-A profile contains:
-- semantic item type (`StringName` beginning `item.`);
-- `weight_grams: int > 0`.
+`ItemWeightQuery` maps a stable WHAT item ID through its semantic type to a profile and returns typed KNOWN / UNKNOWN / INVALID status. Missing profile is UNKNOWN/fail-closed, never implicit zero. Non-item WHAT identity is INVALID.
 
-The catalog intentionally ships with **no guessed universal weights**. Content/demo composition must explicitly register actual item types it creates. Same-owner recovered weights may be registered by later content where exact values exist.
+V1 weight is semantic-type data, not redundant per-instance state. A future true per-instance physical modifier requires its own typed design rather than a generic metadata bag.
 
-## Type defaults
-V1 weight is a semantic-type definition, not redundant state copied onto every item entity. All instances of the same semantic type use the profile unless a future explicitly designed per-instance physical override system is needed.
+## Persistence / boundaries
+The catalog is content/configuration, not per-save actor state, so it has no actor snapshot. WHAT/09/11/12 remain the owners of item identity/location/disposition.
 
-## Missing-data rule
-Missing profile is UNKNOWN/fail-closed for weight consumers. Carry must not silently assume zero weight for an unclassified possessed item.
+Allowed dependency: read-only WHAT in `ItemWeightQuery`.
+Forbidden: 09 Hands, 11 Inventory, 12 Transfer, Carry mutation, Health, Needs, Skills, UI/render/art, reboot.
 
-## Persistence
-The catalog is content/configuration, not per-save actor state; it has no save snapshot. World items remain stable WHAT entities. Future save orchestration persists item identity/location through their owning systems.
+## Verification
+`ItemPhysicalPropertiesSmoke.gd` proves the catalog starts empty, positive integer gram registration, deterministic type ordering, duplicate/invalid rejection, copy safety, WHAT resolution, missing-profile UNKNOWN, non-item INVALID, and missing-item UNKNOWN.
 
-## Dependencies
-Allowed: read-only WHAT in `ItemWeightQuery`.
-Forbidden: 09 Hands, 11 Inventory, 12 Transfer, Carry, Health, Needs, Skills, UI/render/art, reboot.
-
-## Failure cases
-Reject invalid semantic IDs, zero/negative weights, duplicate registrations unless explicitly unregistered/replaced through the catalog API, missing/non-item WHAT entities, and missing profile queries.
-
-## Tests
-Dedicated smoke covers registration, deterministic semantic ordering, positive integer grams, copy-safe profiles, duplicate rejection, WHAT item resolution, missing profile UNKNOWN, non-item INVALID, and no location-system imports.
-
-## Future seams
-Bulk or other genuinely shared immutable physical facts may be added as explicit profile fields later. Per-instance modifiers require their own approved typed state rather than converting this catalog into a generic dictionary.
-
-## North-star fit
-Real weight creates physical survival consequences while keeping item location and item definition cleanly separated.
+Initial complete System 13 candidate `78ed167678257749b093acd54e53e9f065cd8ce5` passed **Actor Stats Domains contract** run `31992365565` with no production repair.
 
 ## Approved decisions — 2026-08-16
 1. Weight is canonical integer grams.

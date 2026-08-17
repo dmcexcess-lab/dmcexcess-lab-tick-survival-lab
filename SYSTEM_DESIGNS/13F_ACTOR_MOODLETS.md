@@ -1,71 +1,52 @@
 # Tick Survival Lab — 13F Actor Moodlets / Status Derivation
 
-Status: **APPROVED — user explicitly approved all System 13 children for implementation on 2026-08-16**
+Status: **IMPLEMENTED + CI**
 
 Parent: `13_ACTOR_STATS_STATUS_ARCHITECTURE.md`.
 
 ## Goal
 Derive concise readable survivor-status moodlets from real Health, Needs, and Carry truth without duplicating those values as another persistent state bag.
 
-## Non-goals
-13F does not mutate Health/Needs/Carry, persist ordinary derived moodlets, own panic/morale/drug/illness state, or render UI.
-
 ## Owner
-`game/scripts/simulation/actors/moodlets/`:
-- `ActorMoodlet.gd`
-- `ActorMoodletService.gd`
+- `game/scripts/simulation/actors/moodlets/ActorMoodlet.gd`
+- `game/scripts/simulation/actors/moodlets/ActorMoodletService.gd`
+- smoke: `game/scripts/ci/ActorMoodletsSmoke.gd`
 
-## Public contract
-`ActorMoodletService.moodlets_for(actor_id)` returns a deterministic copied `Array[ActorMoodlet]`. Each moodlet contains semantic ID, display label, severity, and priority. Missing source-domain truth produces a diagnostic/unknown result rather than fabricated moodlets.
+## Contract
+Ordinary v1 moodlets are derived only. A moodlet contains semantic ID, display label, semantic severity, and deterministic priority. Severities are POSITIVE, NOTICE, WARNING, CRITICAL.
 
-## Severity
-V1 severities are semantic presentation facts:
-- `POSITIVE`
-- `NOTICE`
-- `WARNING`
-- `CRITICAL`
-
-They are not another numeric need scale.
-
-## V1 derived rules
 Only the strongest moodlet in each source category is emitted.
 
-Needs:
-- fatigue >= 80: `exhausted` CRITICAL; >= 50: `tired` WARNING;
-- hunger >= 85: `starving` CRITICAL; >= 55: `hungry` WARNING;
-- thirst >= 80: `dehydrated` CRITICAL; >= 50: `thirsty` WARNING;
-- sleep pressure >= 80: `sleep_deprived` CRITICAL; >= 50: `sleepy` WARNING;
-- if fatigue <= 10 and sleep pressure <= 10: `well_rested` POSITIVE.
+### Needs thresholds
+- fatigue >= 80: Exhausted CRITICAL; >= 50: Tired WARNING;
+- hunger >= 85: Starving CRITICAL; >= 55: Hungry WARNING;
+- thirst >= 80: Dehydrated CRITICAL; >= 50: Thirsty WARNING;
+- sleep pressure >= 80: Sleep Deprived CRITICAL; >= 50: Sleepy WARNING;
+- fatigue <= 10 and sleep pressure <= 10: Well Rested POSITIVE.
 
-Health:
-- HP percent <= 25 and above zero: `badly_injured` CRITICAL;
-- HP below max: `injured` WARNING;
-- HP == 0: `no_vitality` CRITICAL. This does not itself mean corpse/death transition occurred.
+### Health thresholds
+- HP == 0: No Vitality CRITICAL;
+- HP > 0 and <= 25%: Badly Injured CRITICAL;
+- HP below max: Injured WARNING.
 
-Carry:
-- load ratio > 100%: `overburdened` CRITICAL;
-- load ratio >= 75%: `heavy_load` NOTICE.
+`No Vitality` is readable health state only and does not implement the future death/corpse transition.
 
-Moodlets sort by priority, then semantic ID, so output is deterministic.
+### Carry thresholds
+- load ratio > 100%: Overburdened CRITICAL;
+- load ratio >= 75%: Heavy Load NOTICE.
 
-## Derived-only rule
-Ordinary threshold moodlets have no snapshot and no mutation API. If a later effect genuinely owns duration/source/history (panic episode, medication, illness, morale buff), that effect receives its own domain and 13F may present it through an adapter later.
+Moodlets sort by descending priority, then semantic ID. Missing Health/Needs/Carry source truth fails explicitly rather than producing plausible guesses.
 
-## Dependencies
-Allowed: read-only 13A, 13B, 13E contracts.
-Forbidden: direct WHAT mutation, WHEN internals, Inventory/Hands mutation, Movement, Combat, UI/render/art, reboot.
+## Persistence / boundaries
+13F has no ordinary snapshot or mutation API. If a future effect has real duration/source/history—panic episode, illness, medication, morale effect—that fact belongs to its own typed domain and may later be presented through a provider.
 
-## Failure cases
-If the actor is missing from any required source domain or Carry is UNKNOWN/INVALID, moodlet derivation returns failure/diagnostic rather than plausible status guesses.
+Allowed: read-only 13A, 13B, 13E.
+Forbidden: source-domain mutation, WHAT mutation, WHEN internals, Hands/Inventory mutation, Movement, Combat, UI/render/art, reboot.
 
-## Tests
-Dedicated smoke covers every threshold boundary, category strongest-only behavior, well-rested positive state, HP/carry moodlets, deterministic ordering, source-state changes immediately reflected without moodlet mutation, and missing-source diagnostics.
+## Verification
+`ActorMoodletsSmoke.gd` covers fresh Well Rested state, all warning/critical thresholds, strongest-only behavior, HP thresholds including zero, Heavy Load/Overburdened, deterministic ordering, derived-read freshness/copy behavior, and explicit missing-source failure.
 
-## Future seams
-A later moodlet-provider interface may merge additional typed effect domains while retaining deterministic ordering and no duplicated state.
-
-## North-star fit
-The player gets readable Zomboid-like condition feedback while the underlying mechanics stay simple, causal, and separately owned.
+Initial complete System 13 candidate `78ed167678257749b093acd54e53e9f065cd8ce5` passed **Actor Stats Domains contract** run `31992365565` with no production repair.
 
 ## Approved decisions — 2026-08-16
 1. Ordinary moodlets are derived, not persisted.

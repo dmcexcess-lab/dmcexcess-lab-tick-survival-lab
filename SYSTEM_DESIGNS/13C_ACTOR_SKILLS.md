@@ -1,22 +1,18 @@
 # Tick Survival Lab — 13C Actor Skills
 
-Status: **APPROVED — user explicitly approved all System 13 children for implementation on 2026-08-16**
+Status: **IMPLEMENTED + CI**
 
 Parent: `13_ACTOR_STATS_STATUS_ARCHITECTURE.md`.
 
 ## Goal
 Own persistent survivor skill identity, level/rank, and XP progression as a standalone typed domain keyed by stable WHAT actor ID.
 
-## Non-goals
-13C does not own occupations/background generation, temporary effective-skill modifiers, combat resolution, action timing, item bonuses, UI, or a universal actor dictionary.
-
 ## Owner
-`game/scripts/simulation/actors/skills/`:
-- `ActorSkillCatalog.gd`
-- `ActorSkillState.gd`
+- `game/scripts/simulation/actors/skills/ActorSkillCatalog.gd`
+- `game/scripts/simulation/actors/skills/ActorSkillState.gd`
+- smoke: `game/scripts/ci/ActorSkillsSmoke.gd`
 
-## Initial catalog
-Recovery-backed canonical v1 skills, in deterministic display order:
+## Canonical v1 catalog
 1. `combat` — Combat
 2. `scavenging` — Scavenging
 3. `survival` — Survival
@@ -24,49 +20,33 @@ Recovery-backed canonical v1 skills, in deterministic display order:
 5. `technical` — Technical
 6. `social` — Social
 
-The catalog is semantic and enumerable so a later seventh skill does not require fixed actor fields or hardcoded UI rows.
+The catalog is semantic and enumerable rather than six hardcoded actor fields.
 
 ## Progression
-Exact same-owner First Fire progression is reused:
+Recovered same-owner First Fire progression is canonical v1:
 - levels 0..10;
 - persistent XP per skill;
-- next-level threshold `20 + current_level * 15`;
-- a large XP award may cross multiple levels deterministically;
-- after crossing a threshold, only remainder XP carries forward;
-- level 10 is capped and stores 0 XP.
+- threshold `20 + current_level * 15`;
+- one award may cross multiple levels deterministically;
+- threshold subtraction leaves remainder XP;
+- level 10 stores zero XP.
 
-Interpretive bands (presentation only): 0 untrained; 1–3 basic; 4–6 experienced; 7–9 expert; 10 mastery.
+13C owns base persistent skill only. Fatigue, injury, tools, equipment, traits, panic/mood, and environmental modifiers remain outside the skill state.
 
-## Enrollment / state
-Normal enrollment accepts existing `actor.survivor` WHAT entities. Missing record differs from enrolled all-zero skills.
-
-Per actor:
-- level per catalog skill;
-- XP per catalog skill;
-- per-actor version.
-
-Public reads expose level, XP, next threshold, catalog IDs/display names, version/revision, copied actor data, and deterministic snapshot. Public mutations enroll/remove, set level+XP for setup, award positive XP, and load snapshot.
-
-Background/player-story generation may set starting levels through public mutation but is not owned here.
-
-## Effective-skill seam
-13C owns base persistent skill only. Fatigue, injury, tools, equipment, traits, mood/panic, and environment remain mechanic-specific modifiers outside 13C.
+## Enrollment / mutation
+Normal enrollment accepts existing `actor.survivor` WHAT entities and starts all six at level 0 / XP 0. Public setup may set normalized level+XP for generated backgrounds. Positive XP awards use the catalog progression policy. Unknown skills and invalid levels/XP are rejected. Same-value setup and XP awards at cap are no-ops.
 
 ## Persistence
-Schema-versioned deterministic actor/skill ordering, atomic malformed-snapshot rejection, unknown-skill rejection, monotonic revision/per-actor version, no RNG.
+Deterministic schema-v1 snapshot/restore with actor and catalog order, atomic malformed/unknown-skill rejection, global revision and per-actor version.
 
-## Dependencies
-Allowed: read-only WHAT validation and 13C catalog.
+## Boundaries
+Allowed: read-only WHAT validation + 13C catalog.
 Forbidden: WHEN, Health, Needs, Inventory/Hands/Carry, Combat/AI, character-creator UI, renderer/art, reboot.
 
-## Failure cases
-Reject missing/non-survivor enrollment, unknown skill, invalid level/XP, non-positive XP award, malformed snapshot. Same-value setup is a no-op. Awarding XP at level 10 is a successful capped no-op.
+## Verification
+`ActorSkillsSmoke.gd` covers all six IDs/order, zero enrollment, exact 20/35/50 progression, multi-level awards, level-10 cap, setup validation, unknown-skill rejection, no-op version behavior, copy-safe reads, deterministic snapshot restore, and atomic malformed rejection.
 
-## Tests
-Dedicated smoke covers all six IDs/order, enrollment, zero state, level/XP reads, exact threshold progression, multi-level gain, level-10 cap, setup validation, version/no-op behavior, copy safety, deterministic atomic snapshot restore, unknown-skill rejection, and WHAT regression compatibility.
-
-## North-star fit
-Six broad skills create meaningful survivor differentiation without a sprawling RPG tree and fit background-derived generated people.
+Initial complete System 13 candidate `78ed167678257749b093acd54e53e9f065cd8ce5` passed **Actor Stats Domains contract** run `31992365565` with no production repair.
 
 ## Approved decisions — 2026-08-16
 1. Initial skills are Combat, Scavenging, Survival, Medical, Technical, Social.
