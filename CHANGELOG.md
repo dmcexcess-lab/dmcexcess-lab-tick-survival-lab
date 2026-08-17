@@ -1,5 +1,18 @@
 # Changelog
 
+## 13 Actor Stats / Status Architecture — 2026-08-16
+
+- Approved the modular actor-stats/status umbrella for the requested character display: moodlets, HP, fatigue, hunger, thirst, sleep, carry weight, and skills/levels.
+- Added `SYSTEM_DESIGNS/13_ACTOR_STATS_STATUS_ARCHITECTURE.md` as an **APPROVED umbrella**; its approval establishes ownership/boundaries but does not authorize implementing all child mechanics in one slice.
+- Split actor condition into peer domains: 13A Health / Injury, 13B Needs / Rest, 13C Skills, 13D Item Physical Properties, 13E Carry / Encumbrance, and 13F Moodlets / Status Derivation.
+- Locked the architectural distinction that fatigue is short-horizon exertion/tiredness while sleep is longer-horizon sleep pressure/debt.
+- Carry weight must be derived from real physical possession plus item weight rather than maintained as a second drifting inventory total. Moodlets primarily derive readable status from owning domains rather than duplicating their canonical state.
+- Locked the future Stats/HUD layer as a reader/composer using narrow module contracts/provider adapters so additional stat domains can be added later without a universal `ActorStats` dictionary.
+- Recovered historical semantics from golden Tick `PlayerActor.gd` — health, carry weight/capacity, encumbrance, and fatigue — while explicitly rejecting its single-player god-object ownership shape.
+- Recovered same-owner First Fire evidence for six persistent skills (Combat, Scavenging, Survival, Medical, Technical, Social), persistent XP, rank display, level cap 10, and next-rank threshold `20 + rank * 15`.
+- Added `SYSTEM_DESIGNS/13C_ACTOR_SKILLS.md` as a **DRAFT** first child proposing those six semantic skills, levels 0–10, persistent XP, deterministic progression, and dynamic catalog-driven UI enumeration.
+- No runtime/gameplay code changed. The next gate is explicit approval or revision of **13C Actor Skills** before implementation; Needs, Health, Item Weight, Carry, and Moodlets remain separate later child designs.
+
 ## 12 Item Transfer / Pickup / Drop / Equip Actions — 2026-08-16
 
 - Implemented **12 Item Transfer Actions** after explicit approval of the detailed cross-domain contract.
