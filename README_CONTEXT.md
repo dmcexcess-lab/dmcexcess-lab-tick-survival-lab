@@ -22,13 +22,7 @@ The project is in staged modular replacement of the deprecated playable runtime.
 
 `game/scripts/reboot/` is **frozen/deprecated reference code**. Do not extend it or add temporary adapters just to make canonical systems appear in the old playable build.
 
-Golden recovery commit:
-
-`1763958f44eb7f855fd49944c00d1ffe608c0abe`
-
-Golden mature `TacticalTiles.gd` blob:
-
-`3d8a0a70ac983408bb48f58fc659dfb07e216ed3`
+Golden recovery commit: `1763958f44eb7f855fd49944c00d1ffe608c0abe`.
 
 Canonical progress:
 
@@ -44,138 +38,112 @@ Canonical progress:
 - **06 Structure Layer Renderer — IMPLEMENTED + CI**
 - **07 Prop / Fixture / Vegetation Renderer — IMPLEMENTED + CI**
 - **08 Player / Living Actor Renderer — IMPLEMENTED + CI**
-- **09 Actor Hand Equipment State — DRAFT**
+- **09 Actor Hand Equipment State — IMPLEMENTED + CI**
 
-## 3. Foundation and simulation truth
+## 3. Foundation / mechanic truth
 
 ### WHERE
-
 Global integer `Vector2i` cells, 1m planning scale, N/E/S/W facing, arbitrary whole-cell footprints, structure cells with explicit H/V axis. Geometry only.
 
 ### WHAT
-
-One authoritative current persistent world with semantic terrain/entities, stable IDs, WHERE placements, derived occupancy, typed mechanic-agnostic change notifications, and deterministic snapshot/restore. Rendering reads WHAT; it does not own it. Mechanic state such as door openness remains in typed stable-ID domains outside `WorldEntityRecord`.
+One authoritative current persistent world with semantic terrain/entities, stable IDs, WHERE placements, derived occupancy, typed mechanic-agnostic change notifications, and deterministic snapshot/restore. Persistent mechanic state attaches in typed domains keyed by the same stable IDs.
 
 ### WHEN
-
 One deterministic non-negative integer world tick; variable-duration actions/events; same-tick batch drain; committed/resumable/cancelable interruption; tactical decision pause plus separate hard application pause.
 
 ### Collision / Movement / Locomotion
-
-Collision owns hard occupancy, not door state. Movement owns forward/back/turn target/commit semantics with no destination reservation and typed policy decisions. Actor Locomotion owns standing/crouched state, timed stance changes, and future mobility-provider composition. Running remains deferred until it has real consequences.
+Collision owns hard occupancy. Movement owns forward/back/turn request -> time -> commit semantics. Actor Locomotion owns standing/crouched state and movement-capability composition. Running remains deferred until it has real costs.
 
 ### Door State
-
 06A owns persistent OPEN/CLOSED truth keyed by stable WHAT door ID. Missing state is UNKNOWN. Door State does not infer from or mutate Collision/WHEN.
 
-### Death / corpse direction
+### Actor Hand Equipment State
+Canonical design: `SYSTEM_DESIGNS/09_ACTOR_HAND_EQUIPMENT_STATE.md`.
 
-Approved cross-system direction: death leaves a persistent physical corpse/world consequence rather than an ordinary living ACTOR or disappearance. Future corpse state should preserve relation to deceased identity and support age/decay; accumulated bodies/decay may create local contamination/filth pressure that Health later interprets as sickness risk. Exact corpse representation, decay stages/formula, disposal actions and rendering are **NOT DESIGNED** yet.
+Locked implemented rules:
 
-## 4. Canonical presentation
+- explicit `actor.survivor` enrollment;
+- `PRIMARY_RIGHT` = anatomical right hand;
+- `SECONDARY_LEFT` = anatomical left hand;
+- assignments reference stable WHAT `item.*` entities, not item-name strings;
+- held items must be tactically unplaced when newly assigned;
+- one physical item cannot occupy two hands or two actors simultaneously;
+- missing hand-state record is distinct from enrolled empty hands;
+- copy-safe reads, reverse assignment lookup, global revision, per-actor versions;
+- deterministic schema-versioned atomic snapshot/restore;
+- explicit lifecycle cleanup after WHAT removal;
+- no Art/Render/Inventory/Combat/Health/WHEN/AI/Input/UI/Reboot ownership.
 
-### 04 Art Catalog — IMPLEMENTED
+Implementation code head `c108083744f474c80b06f8dc02673b60f1dca7cd` passed dedicated Actor Hand Equipment run `31986162867` with no production repair.
 
-Recovered environmental multi-atlas selection plus four protected player textures remain intact. 08 additively recovered a separate same-owner living-actor atlas (`game/assets/actor_atlas.svg`) with 8 survivor variants × four facings and 8 infected variants × four facings. Original ten Tick baseline art assets remain byte-identical; the actor source is separately pinned/provenanced. Art Catalog selects descriptors only.
+## 4. Death / corpse direction
 
-### 05 Ground Layer Renderer — IMPLEMENTED
+Approved cross-system direction: death leaves a persistent physical corpse/world consequence rather than an ordinary living ACTOR or disappearance. Future corpse state preserves relation to deceased identity and supports age/decay; accumulated bodies may create local contamination/filth pressure that Health later interprets as sickness risk. Exact corpse representation, decay formula, disposal actions, and rendering are **NOT DESIGNED**.
 
-Standalone ground-only `Node2D`; visible WHAT terrain -> Art Catalog; local visible-window coordinates; event-driven redraw; recovered road/dirt-road/sidewalk topology; explicit diagnostics; no camera/generation/physics/input ownership.
+## 5. Canonical presentation
 
-### 06 Structure Layer Renderer — IMPLEMENTED
+### 04 Art Catalog
+Recovered environmental multi-atlas selection plus protected player textures and a separately recovered living-actor atlas. Art Catalog selects descriptors only.
 
-Visible WHAT `STRUCTURE` occupancy -> Art Catalog + Door State. Supports `wall.<theme>`, `door.<theme>`, `window.<theme>`, preserves H/V axis, uses distinct OPEN/CLOSED door art, and fails visibly for unknown state/content.
+### 05 Ground
+Visible WHAT terrain -> Art Catalog; event-driven visible-window rendering.
 
-### 07 Prop / Fixture / Vegetation Renderer — IMPLEMENTED
+### 06 Structure
+Visible WHAT STRUCTURE occupancy -> Art Catalog + Door State; walls/doors/windows only.
 
-Reads WHAT `OBJECT` occupancy only + 04 Art Catalog. Recognizes `prop.*`, `fixture.*`, and `vegetation.*`; multi-cell occupancy deduplicates to one draw command per stable entity; current recovered one-cell art draws once at the anchor; overlap order is deterministic; no `_process()` polling.
+### 07 Prop / Fixture / Vegetation
+Visible WHAT OBJECT occupancy for `prop.*`, `fixture.*`, `vegetation.*`; one visual per stable entity.
 
-### 08 Player / Living Actor Renderer — IMPLEMENTED
+### 08 Player / Living Actor
+Visible WHAT ACTOR entities for `actor.survivor` and `actor.infected`. Controlled status is stable-ID presentation/session state; NPC survivor/infected art is real recovered same-owner artwork. Corpses are outside 08.
 
-Canonical design: `SYSTEM_DESIGNS/08_PLAYER_LIVING_ACTOR_RENDERER.md`.
+## 6. Active next design — Actor Hand Equipment Presentation
 
-Locked rules:
+This is now the recommended next bounded design.
 
-- reads visible WHAT `ACTOR` occupancy only + 04 Art Catalog;
-- exact living semantic types are `actor.survivor` and `actor.infected`;
-- controlled actor is a stable-ID presentation/session role, not a permanent WHAT player type;
-- controlled survivor uses exact protected N/E/S/W `player_*.svg` textures;
-- NPC survivors/infected use the separately recovered actor atlas;
-- NPC default appearance uses deterministic 32-bit FNV-1a of stable actor ID modulo 8;
-- no fake crouch visual;
-- arbitrary ACTOR footprints deduplicate to one base actor draw;
-- actual ACTOR-channel placement drives redraw relevance;
-- no AI/Health/Inventory/Corpse/Collision/Movement/WHEN/generation/reboot/camera/input/UI ownership.
+It should read:
 
-## 5. Active design — 09 Actor Hand Equipment State
+- visible living ACTOR placement/facing from WHAT / 08-compatible geometry;
+- 09 primary/right + secondary/left stable item IDs;
+- item semantic types from WHAT;
+- recovered held-item art through an additive Art Catalog contract.
 
-Canonical DRAFT:
-
-`SYSTEM_DESIGNS/09_ACTOR_HAND_EQUIPMENT_STATE.md`
-
-The user requested visible primary/right-hand and secondary/left-hand items for the controlled survivor and survivor NPCs. The state prerequisite is intentionally separated from the renderer so held-item graphics never become inventory truth.
-
-Current DRAFT direction:
-
-- primary = anatomical right hand;
-- secondary = anatomical left hand;
-- persistent assignments reference stable WHAT `item.*` entities, not item-name strings;
-- equipped items are normally tactically unplaced while held;
-- one physical item cannot occupy multiple hands/actors simultaneously;
-- missing hand-state record is not silently equivalent to empty hands;
-- 09 owns no art, rendering, inventory containment, combat, lighting, WHEN, input or UI;
-- future equip actions coordinate Inventory/Containment + 09 + WHEN rather than putting action rules in the store.
-
-**Do not implement until the user explicitly approves the detailed 09 contract.**
-
-## 6. Held-item presentation direction requested for the next design
-
-After 09, design a separate **Actor Hand Equipment Presentation** owner.
-
-Requested behavior:
+Requested presentation behavior:
 
 - both held objects float beside the actor;
-- recover same-owner First Fire weapon silhouettes and secondary utility icons before inventing new art;
+- recover same-owner First Fire weapon silhouettes and utility icons before inventing new art;
 - hand art rotates with N/E/S/W facing;
 - north/south show both hands clearly;
-- east/west use back-hand -> actor body -> front-hand draw ordering so the far-side object is naturally occluded by the body;
-- primary/right and secondary/left never swap semantic meaning when the actor turns;
-- presentation rotation/occlusion changes no physics or item state.
-
-Requested E/W anatomical ordering from the approved grid orientation:
-
-- EAST: primary/right is south/near/front; secondary/left is north/far/back;
-- WEST: primary/right is north/far/back; secondary/left is south/near/front.
+- east/west use **back hand -> actor body -> front hand** ordering so the far object is naturally occluded;
+- primary/right and secondary/left never swap semantic meaning when facing changes;
+- EAST: secondary/left is far/back; primary/right is near/front;
+- WEST: primary/right is far/back; secondary/left is near/front;
+- presentation changes no physics or item state.
 
 ## 7. Canonical demo/UI target requested by the user
 
-The next visible canonical demo should **not be keyboard-only**. Safari/iPhone is first-class and requires real UI controls.
+The next visible canonical demo must not be keyboard-only. Safari/iPhone is first-class.
 
-Requested target:
+Requested eventual target:
 
-- touch buttons for Forward, Back, Turn Left, Turn Right and implemented stance/navigation actions;
+- real touch buttons for Forward, Back, Turn Left, Turn Right and implemented stance/navigation actions;
 - keyboard equivalents retained on desktop;
 - concise HUD with recovered-style `Looking at: ...` display;
-- concise real actor stats;
+- concise **real** actor stats;
 - `STATS` button for detailed actor inspection;
 - `INVENTORY` button for real inventory/held-item inspection;
-- `MENU` button that invokes hard application pause;
-- Stats/Inventory inspection also pauses safely while open;
-- menu includes Resume and Leave Game.
+- `MENU` button invoking hard application pause;
+- Stats/Inventory inspection also pauses safely;
+- Menu includes Resume and Leave Game;
+- no fabricated HP, stamina, carry weight, names, or inventory contents merely to fill UI.
 
-Do not invent HP, stamina, carry weight, names, gear contents or other values merely to fill the HUD. UI consumes only canonical state that actually exists. Health/Needs/Inventory can expand the inspector later.
+Web note: a webpage cannot reliably open the user's configured browser homepage. Future Leave Game should prefer useful browser-history return, with a safe fallback such as Google.
 
-The old golden `MapPreview.gd` is a recovery source for the exact `Looking at:` concept and the prior pause menu; First Fire `FFInspector.gd` is a recovery source for touch-friendly scrollable survivor/inventory inspection patterns. Neither old runtime architecture should be restored.
+## 8. Dependency order from the latest request
 
-Web note: a webpage cannot reliably open the user's configured browser homepage. Future Leave Game behavior should prefer browser-history return when useful, with a safe fallback such as Google.
-
-## 8. Dependency order created by the latest request
-
-The latest request spans multiple major owners, so it must be built in bounded slices:
-
-1. **09 Actor Hand Equipment State** — DRAFT, first prerequisite.
-2. Actor Hand Equipment Presentation — NOT DESIGNED.
-3. Inventory / Containment and any actor-stat domains required for honest inspector data — NOT DESIGNED/DEFERRED.
+1. **09 Actor Hand Equipment State — IMPLEMENTED.**
+2. **Actor Hand Equipment Presentation — NEXT DESIGN.**
+3. Inventory / Containment and any actor-stat domains required for honest inspector data — NOT DESIGNED / DEFERRED.
 4. Authored Visual Test Area — NOT DESIGNED.
 5. Tactical renderer/orchestration — NOT DESIGNED.
 6. Tactical camera + zoom — NOT DESIGNED.
@@ -183,9 +151,9 @@ The latest request spans multiple major owners, so it must be built in bounded s
 8. Tactical Controls UI — NOT DESIGNED.
 9. HUD / Facing Inspection / Stats & Inventory Inspector / Pause Menu — NOT DESIGNED.
 
-This order may be tightened later where contracts prove two pieces are genuinely one coherent slice, but none should be hidden inside a monolithic demo scene.
+Later slices may combine only if their approved contracts prove they are truly one coherent owner. Do not hide them inside a monolithic demo scene.
 
-## 9. Open-world/generation direction
+## 9. Open-world / generation direction
 
 Generation is not the engine and streaming partitions never define logical reality.
 
@@ -213,13 +181,11 @@ Key rules:
 8. Art is not physics.
 9. Phone/Safari is first-class.
 10. Do not wire canonical modules into deprecated reboot through temporary adapters.
-11. Persistent mechanic state uses typed stable-ID domain stores rather than a universal metadata bag.
+11. Persistent mechanic state uses typed stable-ID domains rather than a universal metadata bag.
 12. Gameplay durations/order use WHEN while mechanic meanings remain external.
-13. World/generator data never stores atlas indices or texture paths.
-14. Camera/viewport owns visible-window calculation; focused renderers only consume it.
-15. Controlled-player role is not persistent actor identity.
-16. Corpses are persistent future world/mechanic consequences, not living ACTOR presentation state.
-17. Hand equipment truth must remain separate from held-item presentation and future inventory containment.
+13. Controlled-player role is not persistent actor identity.
+14. Corpses are persistent future world/mechanic consequences, not living ACTOR presentation state.
+15. Hand equipment truth is separate from held-item presentation and Inventory/Containment.
 
 ## 11. Documentation source order
 
@@ -237,4 +203,4 @@ Key rules:
 
 ## 12. Recommended next action
 
-Review **09 Actor Hand Equipment State**. If approved, implement and verify only that state prerequisite. Then design the held-item presentation layer with the requested rotation and E/W body-occlusion behavior.
+Design **Actor Hand Equipment Presentation** with recovered weapon/utility art, N/E/S/W rotation, and the requested east/west body occlusion. Do not code it until that detailed design is approved.
