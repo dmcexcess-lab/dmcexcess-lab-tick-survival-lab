@@ -39,6 +39,7 @@ Canonical progress:
 - **07 Prop / Fixture / Vegetation Renderer — IMPLEMENTED + CI**
 - **08 Player / Living Actor Renderer — IMPLEMENTED + CI**
 - **09 Actor Hand Equipment State — IMPLEMENTED + CI**
+- **10 Actor Hand Equipment Presentation — APPROVED / implementation in progress**
 
 ## 3. Foundation / mechanic truth
 
@@ -74,8 +75,6 @@ Locked implemented rules:
 - explicit lifecycle cleanup after WHAT removal;
 - no Art/Render/Inventory/Combat/Health/WHEN/AI/Input/UI/Reboot ownership.
 
-Implementation code head `c108083744f474c80b06f8dc02673b60f1dca7cd` passed dedicated Actor Hand Equipment run `31986162867` with no production repair.
-
 ## 4. Death / corpse direction
 
 Approved cross-system direction: death leaves a persistent physical corpse/world consequence rather than an ordinary living ACTOR or disappearance. Future corpse state preserves relation to deceased identity and supports age/decay; accumulated bodies may create local contamination/filth pressure that Health later interprets as sickness risk. Exact corpse representation, decay formula, disposal actions, and rendering are **NOT DESIGNED**.
@@ -97,28 +96,25 @@ Visible WHAT OBJECT occupancy for `prop.*`, `fixture.*`, `vegetation.*`; one vis
 ### 08 Player / Living Actor
 Visible WHAT ACTOR entities for `actor.survivor` and `actor.infected`. Controlled status is stable-ID presentation/session state; NPC survivor/infected art is real recovered same-owner artwork. Corpses are outside 08.
 
-## 6. Active next design — Actor Hand Equipment Presentation
+## 6. Active approved system — 10 Actor Hand Equipment Presentation
 
-This is now the recommended next bounded design.
+Canonical design:
 
-It should read:
+`SYSTEM_DESIGNS/10_ACTOR_HAND_EQUIPMENT_PRESENTATION.md`
 
-- visible living ACTOR placement/facing from WHAT / 08-compatible geometry;
-- 09 primary/right + secondary/left stable item IDs;
-- item semantic types from WHAT;
-- recovered held-item art through an additive Art Catalog contract.
+Approved direction:
 
-Requested presentation behavior:
-
-- both held objects float beside the actor;
-- recover same-owner First Fire weapon silhouettes and utility icons before inventing new art;
-- hand art rotates with N/E/S/W facing;
-- north/south show both hands clearly;
-- east/west use **back hand -> actor body -> front hand** ordering so the far object is naturally occluded;
-- primary/right and secondary/left never swap semantic meaning when facing changes;
-- EAST: secondary/left is far/back; primary/right is near/front;
-- WEST: primary/right is far/back; secondary/left is near/front;
-- presentation changes no physics or item state.
+- recover exact same-owner First Fire weapon silhouettes and utility icons into a separate held-item atlas;
+- read visible survivor placement/facing from WHAT and stable hand assignments from 09;
+- resolve item semantics through additive 04 Art Catalog mapping;
+- preserve primary = anatomical right and secondary = anatomical left;
+- rotate held art from EAST-native source orientation into N/E/S/W actor facing;
+- preserve historical proportional hand offsets;
+- EAST: secondary/left BACK, primary/right FRONT;
+- WEST: primary/right BACK, secondary/left FRONT;
+- NORTH/SOUTH: both FRONT and clearly visible;
+- use two instances of one focused renderer owner so future canonical composition can order `BACK hands -> 08 actor body -> FRONT hands`;
+- no Inventory/Combat/Lighting/WHEN/UI/Input/Camera/Reboot ownership.
 
 ## 7. Canonical demo/UI target requested by the user
 
@@ -142,7 +138,7 @@ Web note: a webpage cannot reliably open the user's configured browser homepage.
 ## 8. Dependency order from the latest request
 
 1. **09 Actor Hand Equipment State — IMPLEMENTED.**
-2. **Actor Hand Equipment Presentation — NEXT DESIGN.**
+2. **10 Actor Hand Equipment Presentation — APPROVED / IMPLEMENTING.**
 3. Inventory / Containment and any actor-stat domains required for honest inspector data — NOT DESIGNED / DEFERRED.
 4. Authored Visual Test Area — NOT DESIGNED.
 5. Tactical renderer/orchestration — NOT DESIGNED.
@@ -203,4 +199,4 @@ Key rules:
 
 ## 12. Recommended next action
 
-Design **Actor Hand Equipment Presentation** with recovered weapon/utility art, N/E/S/W rotation, and the requested east/west body occlusion. Do not code it until that detailed design is approved.
+Implement and verify **10 Actor Hand Equipment Presentation** exactly as approved. After 10 closes, return to the canonical visible-demo dependency chain rather than extending the frozen reboot.
