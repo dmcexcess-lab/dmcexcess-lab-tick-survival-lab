@@ -1,5 +1,21 @@
 # Changelog
 
+## System 19 Compact Laundry House Candidate 001 — 2026-08-17
+
+- Added the new peer archetype `residential.house.compact_laundry` at version 1, based on the user-approved generated house reference rather than modifying any existing farmhouse.
+- Built a compact **17×13 bounding plan** with an intentionally irregular occupied footprint: two bedrooms, one bathroom, separate kitchen/dining room, central living room, small south/front entry bump and a dedicated 3×3 laundry/utility room.
+- Kept circulation compact with **no dedicated hall/corridor room**. The living room acts as the circulation hub, and kitchen/living use a two-cell doorless opening.
+- Added one south-facing exterior entry plus four interior room doors, for **5 total doors**, and **10 windows** distributed by room purpose.
+- Used room-specific flooring: beige/blue bedroom carpet, white kitchen tile, mosaic bathroom tile and dark laminate through living/entry/laundry.
+- Added **33 clustered props** without filling circulation space. Kitchen uses a contiguous refrigerator + counter + sink + counter + stove + pantry run plus adjacent breakfast table/chair.
+- Added a real laundry-room cluster using recovered supported semantics: `prop.washer_front`, `prop.dryer_front`, `prop.utility_sink` and `prop.hamper`.
+- Added living-room bookshelf/TV-side and sofa/coffee-table/armchair clusters, furnished bedrooms, bathroom fixtures, and a small entry table/rug cluster.
+- Kept decorative rugs explicitly nonblocking and carried forward the learned table-orientation rule: table-like props in the canonical NORTH plan face only SOUTH or WEST.
+- Added `CompactLaundryHouseCritiqueFixture.gd`: 19×15 lot, 26 px/cell, seed 19004, NORTH orientation with SOUTH frontage, player starting south of the closed front door.
+- Registered the new archetype in `LocalBuildingGenerator.gd` and switched the canonical demo fixture preload to the new critique house while keeping `CanonicalDemoMain.gd` composition-only.
+- Expanded System 19 CI to protect all three existing archetypes and test the new room program, irregular geometry, laundry equipment, clustering, facing, rotation, frontage rejection, collision/art coverage, System 18 front-door traversal and renderer diagnostics.
+- Preserved Trailer v2, Small Farmhouse v2 and Large Farmhouse Candidate 004/v4 unchanged.
+
 ## System 19 Large Farmhouse Candidate 004 — 2026-08-17
 
 - Preserved the entire Candidate 003 structure unchanged: same 21×9 shell, room sizes, wall/opening geometry, 7 doors, 11 windows, open lower living/kitchen passage and clutter-free wood kitchen runner.

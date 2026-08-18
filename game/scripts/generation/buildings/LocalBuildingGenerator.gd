@@ -4,6 +4,7 @@ class_name LocalBuildingGenerator
 const TrailerClass = preload("res://scripts/generation/buildings/archetypes/TrailerBuildingGenerator.gd")
 const FarmhouseClass = preload("res://scripts/generation/buildings/archetypes/FarmhouseBuildingGenerator.gd")
 const LargeFarmhouseClass = preload("res://scripts/generation/buildings/archetypes/LargeFarmhouseBuildingGenerator.gd")
+const CompactLaundryHouseClass = preload("res://scripts/generation/buildings/archetypes/CompactLaundryHouseBuildingGenerator.gd")
 const PlanClass = preload("res://scripts/generation/buildings/GeneratedBuildingPlan.gd")
 
 var _generators: Dictionary = {}
@@ -12,9 +13,11 @@ func _init() -> void:
     var trailer := TrailerClass.new()
     var farmhouse := FarmhouseClass.new()
     var large_farmhouse := LargeFarmhouseClass.new()
+    var compact_laundry_house := CompactLaundryHouseClass.new()
     _generators[TrailerClass.ARCHETYPE_ID] = trailer
     _generators[FarmhouseClass.ARCHETYPE_ID] = farmhouse
     _generators[LargeFarmhouseClass.ARCHETYPE_ID] = large_farmhouse
+    _generators[CompactLaundryHouseClass.ARCHETYPE_ID] = compact_laundry_house
 
 func generate(request: BuildingGenerationRequest) -> GeneratedBuildingPlan:
     if request == null or not request.is_valid():

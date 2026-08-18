@@ -31,7 +31,7 @@ Implemented + dedicated validation includes:
 - Run / damage-interruptible Walk;
 - 17A exertion/encumbrance/run impact;
 - 17A.1 overweight-Walk fatigue + 2x hard carry ceiling;
-- System 19 local building generation with accepted **Trailer v2**, accepted **Small Farmhouse v2**, and current **Large Farmhouse Candidate 004 / archetype v4**.
+- System 19 local building generation with accepted **Trailer v2**, accepted **Small Farmhouse v2**, preserved **Large Farmhouse Candidate 004 / v4**, and current **Compact Laundry House Candidate 001 / v1**.
 
 ## 3. Foundation truth
 
@@ -93,6 +93,7 @@ Current registry:
 - `residential.trailer.singlewide`
 - `residential.house.farm_small`
 - `residential.house.farm_large`
+- `residential.house.compact_laundry`
 
 ### Accepted Trailer baseline
 
@@ -113,42 +114,62 @@ User explicitly accepted this on 2026-08-17 with: **“Nice save that as small f
 
 `FarmhouseBuildingGenerator.gd` remains the small-farmhouse owner. `SmallFarmhouseCritiqueFixture.gd` preserves its accepted critique configuration.
 
-### Large Farmhouse Candidate 004 — current
+### Large Farmhouse Candidate 004 — preserved
 
 `residential.house.farm_large`, version 4.
 
-Candidate 004 keeps Candidate 003's structure **exactly unchanged** and revises only generated prop dressing:
+The current preserved large-house candidate remains unchanged:
 
 - 21×9 shell;
 - separate 10×3 living room and 8×3 kitchen;
 - three 3×3 bedrooms and two 3×3 bathrooms;
 - zero dedicated hall/corridor room cells;
-- same upper living/kitchen divider wall + lower open passage;
-- same full-width clutter-free wood runner along kitchen y=3;
-- same 7 doors and 11 windows.
+- upper living/kitchen divider wall + lower open passage;
+- clutter-free wood runner along kitchen y=3;
+- 7 doors and 11 windows;
+- compact clustered living-room furnishing;
+- contiguous stove + refrigerator + counter + sink kitchen run;
+- breakfast table + chair cluster near the east wall;
+- canonical NORTH table-facing choices SOUTH/WEST only.
 
-Common-room furnishing now follows a compact-cluster rule rather than stretching a few objects across the room:
+`LargeFarmhouseBuildingGenerator.gd` remains untouched by the new-house work.
 
-- living seating cluster: sofa + coffee table + armchair stay within two cells of one another;
-- tall bookshelf + end table sit beside that same cluster rather than across the room;
-- a nonblocking throw rug sits directly inside the primary front door;
-- kitchen appliance cluster is contiguous along the north wall: stove + refrigerator + straight counter + sink;
-- breakfast table stays near the east wall with an adjacent dining chair;
-- kitchen exterior-door approach and the entire wood runner remain clear;
-- canonical NORTH table-facing choices are SOUTH or WEST only: end table SOUTH, coffee table SOUTH, breakfast table WEST.
+### Compact Laundry House Candidate 001 — current
 
-The cluster rule is a dressing rule, not a new global clutter subsystem. Candidate 004 is still authored by `LargeFarmhouseBuildingGenerator.gd`; future archetypes may adopt similar room-specific placement logic after critique.
+Archetype: `residential.house.compact_laundry`, version 1.
+
+This is a new peer residential archetype based on the user-approved generated reference image and the critique lessons learned from the farmhouse work.
+
+Canonical NORTH plan:
+
+- 17×13 bounding envelope with an intentionally irregular occupied footprint and a small south-facing entry bump;
+- two bedrooms;
+- one bathroom;
+- separate kitchen/dining room;
+- central irregular living room that owns circulation instead of a dedicated hallway;
+- separate 3×3 laundry/utility room;
+- small 3-cell entry area;
+- one exterior door + four interior doors;
+- ten windows;
+- two-cell doorless opening between kitchen and living;
+- room-specific flooring: carpet bedrooms, white kitchen tile, mosaic bath tile, dark laminate living/entry/laundry;
+- 33 props arranged in local room-purpose clusters rather than stretched across open space.
+
+Laundry is a real physical room using recovered game-art semantics: washer, dryer, utility sink and hamper. Kitchen uses a contiguous north-wall refrigerator/counter/sink/counter/stove/pantry run plus a small breakfast table and chair. Living uses bookshelf/TV-side and sofa/coffee-table/armchair clusters with a passable rug. Entry has a passable rug directly inside the front door.
+
+Table-like dressing follows the learned canonical rule: SOUTH or WEST facing only in the canonical NORTH plan. The new archetype is authored entirely inside System 19 and does not change art, rendering, collision contracts, movement, doors, HUD or persistent-world semantics.
 
 ## 8. Live canonical demo
 
-The current live target is **Large Farmhouse Candidate 004**.
+The current live target is **Compact Laundry House Candidate 001**.
 
-- fixed 23×11 critique lot;
-- 23 px/cell presentation;
+- fixed 19×15 critique lot;
+- 26 px/cell presentation;
 - canonical spatial scale remains 1m/cell;
-- large farmhouse envelope `Rect2i(1,1,21,9)`;
-- instance `building.demo.farmhouse.large.001`, seed `19003`, NORTH orientation/frontage;
-- player starts at `(6,0)` facing SOUTH toward the CLOSED front door;
+- house envelope `Rect2i(1,1,17,13)`;
+- instance `building.demo.house.compact_laundry.001`, seed `19004`;
+- canonical request orientation NORTH with SOUTH frontage to preserve the image-inspired bottom/front entry;
+- player starts at `(8,14)` facing NORTH toward the CLOSED front door;
 - one controlled survivor, no NPCs/infected/loot;
 - real HUD, Stats/Inventory/Menu, Crouch/Stand, Run and System 18 doors remain live.
 
@@ -172,14 +193,16 @@ Large Farmhouse Candidate 002 first-green exact head: `e7fe7f1fb7645ec5d1d1e97d8
 
 Large Farmhouse Candidate 003 first-green exact head: `78b22929928f3faa6af5330c05daca5b8d1c48c0`; historical after the clustered-clutter critique.
 
-Candidate 004 must pass exact-final-head Local Building Generation and Web/Pages before completion is claimed.
+Large Farmhouse Candidate 004 exact-green head before this new archetype: `94821719bcf7ec21c6a655f4c69d3d0fcae8db25`.
+
+Compact Laundry House Candidate 001 must pass exact-final-head Local Building Generation and Web/Pages before completion is claimed.
 
 ## 11. Immediate next path
 
-1. User playtests/critiques Large Farmhouse Candidate 004.
-2. Keep accepted Small Farmhouse v2 and Trailer v2 unchanged unless explicitly reopened.
-3. Convert further large-house critique into versioned `farm_large` rules.
-4. Add another building archetype after the large farmhouse is accepted.
+1. User playtests/critiques Compact Laundry House Candidate 001.
+2. Preserve Trailer v2, Small Farmhouse v2 and Large Farmhouse v4 unchanged while iterating the new archetype unless explicitly reopened.
+3. Convert critique into versioned `compact_laundry` rules.
+4. Continue adding residential/commercial archetypes through the same pure-plan -> validation -> materialization loop.
 
 ## 12. Later systems
 
@@ -200,10 +223,10 @@ Container access/search/locks, corpse/decay/contamination, actor appearance/crea
 11. Intentional same-seed archetype-rule changes bump that archetype version.
 12. Shared building validation remains structural/generic; archetype program rules stay with focused archetype contracts/tests.
 13. Directional prop facing is WHAT truth; native sprite facing/rotation policy is presentation truth only.
-14. Accepted archetype baselines are preserved unless a newer explicit critique supersedes them.
-15. `farm_small` and `farm_large` are separate archetypes; large-house critique must not mutate the accepted small-house baseline.
-16. Large farmhouse compactness should come from efficient room adjacency/common-room circulation, not dedicated hall inflation.
-17. Large farmhouse common-room dressing should prefer believable local furniture clusters and purposeful wall/door anchors over distributing a few props across the full room span.
+14. Accepted/preserved archetype baselines are not mutated by critique of a peer archetype.
+15. Residential layouts should use compact room adjacency and purposeful common-room circulation instead of inflating dedicated halls.
+16. Common-room dressing should prefer believable local furniture clusters and purposeful wall/door anchors over distributing a few props across the full room span.
+17. A bounding envelope may contain an irregular occupied footprint; System 19 need not force every archetype into a rectangular shell.
 
 ## 14. Documentation source order
 

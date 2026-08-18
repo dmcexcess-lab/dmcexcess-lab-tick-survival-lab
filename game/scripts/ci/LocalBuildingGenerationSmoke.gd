@@ -6,8 +6,10 @@ const ValidatorClass = preload("res://scripts/generation/buildings/GeneratedBuil
 const TrailerClass = preload("res://scripts/generation/buildings/archetypes/TrailerBuildingGenerator.gd")
 const SmallFarmhouseClass = preload("res://scripts/generation/buildings/archetypes/FarmhouseBuildingGenerator.gd")
 const LargeFarmhouseClass = preload("res://scripts/generation/buildings/archetypes/LargeFarmhouseBuildingGenerator.gd")
+const CompactLaundryHouseClass = preload("res://scripts/generation/buildings/archetypes/CompactLaundryHouseBuildingGenerator.gd")
 const SmallFixtureClass = preload("res://scripts/demo/SmallFarmhouseCritiqueFixture.gd")
 const LargeFixtureClass = preload("res://scripts/demo/FarmhouseCritiqueFixture.gd")
+const CompactLaundryFixtureClass = preload("res://scripts/demo/CompactLaundryHouseCritiqueFixture.gd")
 const WorldStateClass = preload("res://scripts/foundation/world/WorldState.gd")
 const WorldMutationClass = preload("res://scripts/foundation/world/WorldMutationService.gd")
 const CollisionCatalogClass = preload("res://scripts/simulation/collision/CollisionCatalog.gd")
@@ -33,8 +35,10 @@ func _initialize() -> void:
     _test_trailer_preserved(generator, validator)
     _test_small_farmhouse_preserved(generator, validator)
     _test_large_farmhouse_generation(generator, validator)
+    _test_compact_laundry_house_generation(generator, validator)
     _test_small_farmhouse_fixture()
     _test_large_farmhouse_fixture()
+    _test_compact_laundry_house_fixture()
     if failures.is_empty():
         print("LOCAL_BUILDING_GENERATION_SMOKE_OK")
         quit(0)
@@ -144,6 +148,88 @@ func _test_large_farmhouse_generation(generator: LocalBuildingGenerator, validat
     var too_small := RequestClass.new("building.test.farmhouse.large.small", LargeFarmhouseClass.ARCHETYPE_ID, 1, Rect2i(0, 0, 20, 9), Facing.Value.NORTH, Facing.Value.NORTH)
     _check(not generator.generate(too_small).is_generated(), "too-small compact large farmhouse envelope fails explicitly")
 
+func _test_compact_laundry_house_generation(generator: LocalBuildingGenerator, validator: GeneratedBuildingValidator) -> void:
+    var supported: Array[StringName] = generator.supported_archetypes()
+    _check(supported.has(CompactLaundryHouseClass.ARCHETYPE_ID), "registry exposes compact laundry house")
+    _check(supported.size() == 4, "registry contains the four approved/current residential archetypes")
+
+    var request := RequestClass.new(
+        "building.test.house.compact_laundry",
+        CompactLaundryHouseClass.ARCHETYPE_ID,
+        19004,
+        Rect2i(60, 70, 17, 13),
+        Facing.Value.NORTH,
+        Facing.Value.SOUTH
+    )
+    var plan_a: GeneratedBuildingPlan = generator.generate(request)
+    var plan_b: GeneratedBuildingPlan = generator.generate(request)
+    _check(plan_a.is_generated() and plan_a.signature() == plan_b.signature(), "compact laundry house is deterministic")
+    _check(plan_a.archetype_version == 1, "compact laundry house begins at archetype version 1")
+    _check(bool(validator.validate(plan_a).get("ok", false)), "compact laundry house north plan validates")
+    _check(plan_a.footprint_rect == Rect2i(60, 70, 17, 13), "compact laundry house uses 17x13 bounding envelope")
+    _check(_room_cell_count(plan_a, "bedroom_1") == 16, "compact laundry house bedroom 1 is 4x4")
+    _check(_room_cell_count(plan_a, "kitchen") == 24, "compact laundry house kitchen is 6x4")
+    _check(_room_cell_count(plan_a, "laundry") == 9, "compact laundry house has a real 3x3 laundry room")
+    _check(_room_cell_count(plan_a, "bathroom") == 9, "compact laundry house bathroom is 3x3")
+    _check(_room_cell_count(plan_a, "living_room") == 37, "compact laundry house living room is irregular and central")
+    _check(_room_cell_count(plan_a, "entry") == 3, "compact laundry house has a small dedicated entry")
+    _check(_room_cell_count(plan_a, "bedroom_2") == 12, "compact laundry house bedroom 2 is 4x3")
+    _check(_room_cell_count(plan_a, "hall") == 0 and _room_cell_count(plan_a, "corridor") == 0, "compact laundry house uses no dedicated hallway")
+    _check(_structure_kind_count(plan_a, "door") == 5, "compact laundry house has one exterior plus four interior doors")
+    _check(_structure_kind_count(plan_a, "window") == 10, "compact laundry house has ten windows")
+    _check(_all_exterior_walls_are(plan_a, &"wall.plaster"), "compact laundry house uses plaster exterior walls")
+    _check(_role_cell(plan_a, "door.exterior.primary") == Vector2i(67, 82), "compact laundry house front door is on the south entry bump")
+    _check(_role_cell(plan_a, "door.interior.bedroom_1") == Vector2i(64, 75), "bedroom 1 opens directly into the living hub")
+    _check(_role_cell(plan_a, "door.interior.laundry") == Vector2i(72, 72), "laundry opens directly from the kitchen")
+    _check(_role_cell(plan_a, "door.interior.bathroom") == Vector2i(72, 76), "bathroom opens directly from the living hub")
+    _check(_role_cell(plan_a, "door.interior.bedroom_2") == Vector2i(71, 79), "bedroom 2 opens directly from the living hub")
+    _check(not _has_structure_at(plan_a, Vector2i(67, 75)) and not _has_structure_at(plan_a, Vector2i(68, 75)), "kitchen and living use a two-cell doorless opening")
+    _check(_ground_semantic_at(plan_a, Vector2i(67, 75)) == &"ground.laminate_dark" and _ground_semantic_at(plan_a, Vector2i(68, 75)) == &"ground.laminate_dark", "kitchen/living opening uses wood threshold flooring")
+
+    _check(plan_a.props.size() == 33, "compact laundry house uses dense clustered dressing without filling circulation")
+    _check(_prop_role_cell(plan_a, "prop.laundry.washer") == Vector2i(73, 71), "laundry contains a real washer")
+    _check(_prop_role_cell(plan_a, "prop.laundry.dryer") == Vector2i(74, 71), "laundry contains a real dryer")
+    _check(_prop_role_cell(plan_a, "prop.laundry.utility_sink") == Vector2i(73, 73), "laundry includes a utility sink")
+    _check(_prop_role_cell(plan_a, "prop.laundry.hamper") == Vector2i(75, 73), "laundry includes a hamper")
+    _check(_prop_semantic_for_role(plan_a, "prop.laundry.washer") == &"prop.washer_front", "laundry washer uses recovered final-prop art")
+    _check(_prop_semantic_for_role(plan_a, "prop.laundry.dryer") == &"prop.dryer_front", "laundry dryer uses recovered final-prop art")
+    _check(_prop_role_cell(plan_a, "prop.kitchen.fridge") == Vector2i(66, 71), "kitchen starts with refrigerator on the north wall")
+    _check(_prop_role_cell(plan_a, "prop.kitchen.sink") == Vector2i(68, 71), "kitchen sink sits in the contiguous north-wall run")
+    _check(_prop_role_cell(plan_a, "prop.kitchen.stove") == Vector2i(70, 71), "kitchen stove sits in the contiguous north-wall run")
+    _check(_prop_role_cell(plan_a, "prop.kitchen.table") == Vector2i(68, 73), "kitchen keeps a small table near the center")
+    _check(_manhattan(_prop_role_cell(plan_a, "prop.kitchen.table"), _prop_role_cell(plan_a, "prop.kitchen.chair")) == 1, "kitchen chair remains adjacent to table")
+    _check(_prop_role_cell(plan_a, "prop.entry.rug") == Vector2i(67, 81), "entry has a rug directly inside the front door")
+    _check(not _prop_blocking_for_role(plan_a, "prop.entry.rug"), "entry rug is passable")
+    _check(_manhattan(_prop_role_cell(plan_a, "prop.living.sofa"), _prop_role_cell(plan_a, "prop.living.coffee_table")) == 2, "living sofa and coffee table stay in one local cluster")
+    _check(_manhattan(_prop_role_cell(plan_a, "prop.living.sofa"), _prop_role_cell(plan_a, "prop.living.end_table")) == 1, "living end table stays beside the sofa")
+    for role: String in [
+        "prop.bedroom_1.nightstand",
+        "prop.kitchen.table",
+        "prop.living.coffee_table",
+        "prop.living.end_table",
+        "prop.bedroom_2.nightstand",
+        "prop.entry.table"
+    ]:
+        var facing: int = _prop_facing_for_role(plan_a, role)
+        _check(facing == Facing.Value.SOUTH or facing == Facing.Value.WEST, "%s uses south/west table facing" % role)
+
+    var east_request := RequestClass.new(
+        "building.test.house.compact_laundry.east",
+        CompactLaundryHouseClass.ARCHETYPE_ID,
+        19004,
+        Rect2i(100, 110, 13, 17),
+        Facing.Value.EAST,
+        Facing.Value.WEST
+    )
+    var east_plan: GeneratedBuildingPlan = generator.generate(east_request)
+    _check(east_plan.is_generated() and east_plan.footprint_rect.size == Vector2i(13, 17), "compact laundry house rotates to 13x17")
+    _check(bool(validator.validate(east_plan).get("ok", false)), "rotated compact laundry house validates")
+
+    var too_small := RequestClass.new("building.test.house.compact_laundry.small", CompactLaundryHouseClass.ARCHETYPE_ID, 1, Rect2i(0, 0, 16, 13), Facing.Value.NORTH, Facing.Value.SOUTH)
+    _check(not generator.generate(too_small).is_generated(), "too-small compact laundry house envelope fails explicitly")
+    var wrong_frontage := RequestClass.new("building.test.house.compact_laundry.frontage", CompactLaundryHouseClass.ARCHETYPE_ID, 1, Rect2i(0, 0, 17, 13), Facing.Value.NORTH, Facing.Value.NORTH)
+    _check(not generator.generate(wrong_frontage).is_generated(), "compact laundry house rejects frontage inconsistent with its south-front canonical plan")
+
 func _test_small_farmhouse_fixture() -> void:
     var world := WorldStateClass.new()
     var mutations := WorldMutationClass.new(world)
@@ -165,6 +251,33 @@ func _test_large_farmhouse_fixture() -> void:
     var door_mutations := DoorMutationClass.new(doors, world)
     _check(LargeFixtureClass.build(world, mutations, collision_catalog, traversal, doors, door_mutations), "large farmhouse critique fixture materializes")
     _verify_fixture(world, mutations, collision_catalog, collision_overrides, traversal, doors, door_mutations, LargeFixtureClass.PLAYER_ID, LargeFixtureClass.EXTERIOR_DOOR_ID, LargeFixtureClass.MAP_ORIGIN, LargeFixtureClass.MAP_SIZE, LargeFixtureClass.CELL_PIXELS, 7, Vector2i(6, 1), "large farmhouse")
+
+func _test_compact_laundry_house_fixture() -> void:
+    var world := WorldStateClass.new()
+    var mutations := WorldMutationClass.new(world)
+    var collision_catalog := CollisionCatalogClass.new()
+    var collision_overrides := CollisionOverridesClass.new()
+    var traversal := BaseTraversalClass.new()
+    var doors := DoorStateClass.new()
+    var door_mutations := DoorMutationClass.new(doors, world)
+    _check(CompactLaundryFixtureClass.build(world, mutations, collision_catalog, traversal, doors, door_mutations), "compact laundry house critique fixture materializes")
+    _verify_fixture(
+        world,
+        mutations,
+        collision_catalog,
+        collision_overrides,
+        traversal,
+        doors,
+        door_mutations,
+        CompactLaundryFixtureClass.PLAYER_ID,
+        CompactLaundryFixtureClass.EXTERIOR_DOOR_ID,
+        CompactLaundryFixtureClass.MAP_ORIGIN,
+        CompactLaundryFixtureClass.MAP_SIZE,
+        CompactLaundryFixtureClass.CELL_PIXELS,
+        5,
+        Vector2i(8, 13),
+        "compact laundry house"
+    )
 
 func _verify_fixture(world: WorldState, mutations: WorldMutationService, collision_catalog: CollisionCatalog, collision_overrides: CollisionOverrideState, traversal: MovementTraversalPolicy, doors: DoorStateStore, door_mutations: DoorStateMutationService, player_id: String, exterior_door_id: String, map_origin: Vector2i, map_size: Vector2i, cell_pixels: float, expected_door_count: int, expected_entry_cell: Vector2i, label: String) -> void:
     _check(world.has_entity(exterior_door_id), "%s stable exterior door exists" % label)
