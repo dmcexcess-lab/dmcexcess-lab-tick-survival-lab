@@ -1,5 +1,20 @@
 # Changelog
 
+## System 19 Building Grammar Hardening — Trial 001 Rural Diner — 2026-08-20
+
+- Promoted `commercial.gas_station.small` v1 to the protected fifth reference example after the user accepted it with “perfect.” Trailer v2, Small Farmhouse v2, Large Farmhouse v4, Compact Laundry House v1 and Small Gas Station v1 remain unchanged during grammar hardening.
+- Extracted the recurring critique lessons into explicit shared rules rather than copying exact room dimensions or prop counts: compact purposeful space, meaningful circulation, functional primary entry, real/reachable required rooms, clear doorway/service approaches, local functional clustering, contiguous work runs, deliberate open space, bounded blocking-prop density, frontage/orientation correctness and deterministic seeded variation.
+- Added `BuildingArchetypePlacementDescriptor.gd` and `LocalBuildingGenerator.placement_descriptor()` / `placement_descriptors()` as the narrow read-only System 20 seam. Placement facts are derived by probing each archetype's own public generation behavior, so System 20 does not maintain a duplicate size/frontage table.
+- Added reusable grammar owners: `BuildingGrammarProfile.gd`, `BuildingGrammarGenerator.gd`, `BuildingRoomDressingPlanner.gd` and `BuildingGrammarQualityValidator.gd`. Generic physical validation remains separate from profile-specific building-quality rules.
+- Added the first grammar-driven proof archetype, `commercial.diner.rural_small` v1, through a thin profile/wrapper rather than a hand-authored cell-by-cell diner generator.
+- Rural Diner Trial 001 uses a compact **17×11** SOUTH-frontage shell with a **15×5 dining/public hub**, **7×3 kitchen**, **3×3 storage**, **3×3 bathroom**, no dedicated hall/corridor, **5 doors**, **11 windows** and **26 purposeful props**.
+- Diner dressing hardens four booth/table clusters, a compact customer-counter group, a contiguous seven-cell kitchen work line, wall-hugging storage clutter with a protected middle service lane, and a compact bathroom fixture group while leaving the central customer aisle open.
+- Added deterministic topology variation: seed 19006 orders kitchen → storage → bathroom; seed 19007 orders bathroom → kitchen → storage. The rear service exit follows the storage room instead of remaining hard-coded.
+- Added `RuralDinerCritiqueFixture.gd` and switched the canonical demo composition to the diner for playtest. Existing HUD, movement, System 18 door passage, collision and render systems are reused unchanged.
+- Added `BuildingGrammarSmoke.gd` to verify placement descriptors for all six callable archetypes, exact Trial 001 structure/dressing, alternate-seed topology, undersized/frontage failures, **32 consecutive seeds × all four cardinal rotations**, materialization, CLOSED initial doors, collision/art coverage, System 18 automatic entry and zero renderer diagnostics.
+- Updated the existing System 19 regression smoke only for the registry count; all saved-example geometry/content assertions remain intact.
+- Trial 001 is now the first of the two agreed hardening proofs. It is ready for user playtest/acceptance; System 19 is not finalized until a second unrelated grammar-generated building is also accepted.
+
 ## System 19 Small Gas Station Candidate 001 — 2026-08-20
 
 - Promoted Compact Laundry House Candidate 001 / `residential.house.compact_laundry` v1 to an accepted protected baseline after the user said: “ok that looks perfect.”
