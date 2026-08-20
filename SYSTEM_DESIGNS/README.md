@@ -38,60 +38,60 @@ Major systems move through **NOT DESIGNED -> DRAFT -> APPROVED -> IMPLEMENTED** 
 | 17A | Movement Exertion / Encumbrance / Run Impact Revision | **IMPLEMENTED** | `17A_MOVEMENT_EXERTION_ENCUMBRANCE_RUN_IMPACT.md` |
 | 17A.1 | Overweight Walk Fatigue / Absolute Carry Ceiling Correction | **IMPLEMENTED** | `17A1_OVERWEIGHT_WALK_FATIGUE_HARD_CARRY_LIMIT.md` |
 | 18 | Door Interaction / Automatic Passage | **IMPLEMENTED** | `18_DOOR_INTERACTION_PASSAGE.md` |
-| 19 | Local Building Generation / Archetype Critique Lab | **IMPLEMENTED** | `19_LOCAL_BUILDING_GENERATION_ARCHETYPE_LAB.md` |
-| 20 | Local Area / Parcel Generation | **DRAFT** | `20_LOCAL_AREA_PARCEL_GENERATION.md` |
-| 00D | Global World Planning / Generation | **NOT DESIGNED** | future design; listed path is not yet present |
+| 19 | Local Building Generation / Building Grammar | **IMPLEMENTED — HARDENING TRIAL 001** | `19_LOCAL_BUILDING_GENERATION_ARCHETYPE_LAB.md` |
+| 20 | Local Area / Parcel Generation | **DRAFT — NEXT** | `20_LOCAL_AREA_PARCEL_GENERATION.md` |
+| 00D | Global World Planning / Generation | **NOT DESIGNED** | future design |
 | 00E | Population / Household / Outbreak / Player Story | **NOT DESIGNED** | future design |
 | 00F | Streaming / Materialization | **NOT DESIGNED** | future design |
 | old-01 | Raid-map / extraction physical-world model | **SUPERSEDED** | `01_RAID_MAP_DATA.md` |
 
-## Current generation stack
+## System 19 saved reference library
 
-### System 19 — implemented building/property archetypes
+Protected/preserved examples used to extract the grammar:
 
-Current registry:
+- `residential.trailer.singlewide` v2 — accepted;
+- `residential.house.farm_small` v2 — accepted;
+- `residential.house.farm_large` v4 — preserved compact/no-hall reference;
+- `residential.house.compact_laundry` v1 — accepted;
+- `commercial.gas_station.small` v1 — accepted after the user said “perfect.”
 
-- `residential.trailer.singlewide` v2 — accepted protected baseline;
-- `residential.house.farm_small` v2 — accepted protected baseline;
-- `residential.house.farm_large` v4 — preserved Candidate 004;
-- `residential.house.compact_laundry` v1 — accepted protected baseline;
-- `commercial.gas_station.small` v1 — current live critique candidate.
+Current hardening trial:
 
-System 19 receives an already-chosen stable instance ID, archetype, seed, envelope, orientation and frontage. It does not choose roads/parcels/towns.
+- `commercial.diner.rural_small` v1 — generated through shared profile/layout/dressing/quality owners, not a hand-authored diner floor plan.
 
-### System 20 — current design discussion
+Current reusable System 19 additions:
 
-`20_LOCAL_AREA_PARCEL_GENERATION.md` is **DRAFT**.
+- read-only placement descriptor seam for System 20;
+- `BuildingGrammarProfile`;
+- generic `front_hub_back_strip` topology strategy;
+- shared functional dressing planner;
+- profile-aware grammar quality validator;
+- deterministic profile-declared topology variants;
+- multi-seed / four-rotation grammar smoke.
 
-Draft direction:
+The user's finish condition is **two successful arbitrary grammar-generated buildings**. If the diner and one more unrelated Trial 002 are accepted, System 19 is finalized and primary work moves to System 20.
 
-- globally coordinated local-area planning, not streaming-chunk generation;
-- higher-level world planning supplies major cross-boundary road constraints;
-- System 20 may create minor roads, parcels, legal access, land-use/property zones and exact System 19 building requests;
-- settlement/area morphology profile is separate from environment/ecology profile;
-- first profile target is `rural.crossroads` with a `temperate.rural` environment candidate;
-- Candidate 001 proposes a 256×256 planning area with substantial wilderness/agricultural land, sparse houses/farmsteads, a tiny denser crossroads center, gas station and exactly one signalized intersection;
-- missing barns/small stores are not faked; parcels may remain vacant until real System 19 archetypes exist;
-- no implementation is allowed until the draft is explicitly approved.
+## System 20 next direction
 
-## Prop art orientation truth
+`20_LOCAL_AREA_PARCEL_GENERATION.md` remains the next major system. Current rural-first direction was received positively by the user, but implementation is intentionally deferred until System 19 hardening completes.
 
-System 07A consumes the N/E/S/W facing preserved in WHAT placement. Recovered directional props are rotated by presentation rules only; generator/world facing remains semantic truth and art remains separate from physics.
+Key design direction:
 
-## Door interaction truth
-
-- Walk through eligible CLOSED door -> opens at Walk commit.
-- damage-canceled Walk -> door stays CLOSED.
-- Run through eligible CLOSED door -> opens during stride, emits LOUD semantic passage, no normal door-impact HP damage.
-- tap/click eligible OPEN adjacent door while facing it -> 3-tick CANCELABLE close.
+- global-coordinate planning domain, not streaming chunk generation;
+- higher-level world planning supplies cross-boundary major-road constraints;
+- System 20 owns minor roads, parcels, accesses, land use, building requests and outdoor/property dressing;
+- System 19 owns building/property internals;
+- settlement morphology profile is separate from environment/ecology profile;
+- first target is `rural.crossroads + temperate.rural` with a tiny one-stoplight center and substantial open agricultural/wilderness land.
 
 ## Immediate next path
 
-1. Review/revise `20_LOCAL_AREA_PARCEL_GENERATION.md`.
-2. Keep System 20 status DRAFT until explicit approval.
-3. Preserve all accepted/preserved System 19 archetypes while area planning is designed.
-4. After approval, implement the first bounded System 20 planning slice before adding unrelated camera/streaming/population work.
+1. Playtest Rural Diner hardening Trial 001.
+2. If accepted, preserve it and generate one more arbitrary building through the grammar.
+3. Trial 002 should exercise another arrangement/dressing family so the grammar is not diner-specific.
+4. If Trial 002 is accepted, finalize System 19.
+5. Begin the bounded System 20 implementation after its status is formally promoted from DRAFT.
 
 ## Design rule
 
-Every major system keeps a focused owner/public contract. Global planning owns cross-region coherence; System 20 refines caller-constrained local areas; System 19 owns building/property internals; WHAT owns runtime persistence after materialization. If implementation requires a forbidden boundary, return the design to review instead of cascading a patch.
+Every major system keeps a focused owner/public contract. Global planning owns cross-region coherence; System 20 refines caller-constrained local areas; System 19 owns local building/property generation; WHAT owns runtime persistence after materialization. Art remains presentation truth, not physics. If implementation requires a forbidden boundary, return the design to review instead of cascading a patch.
