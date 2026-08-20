@@ -57,7 +57,7 @@ Protected/preserved examples used to extract the grammar:
 
 Current hardening trial:
 
-- `commercial.diner.rural_small` v1 — generated through shared profile/layout/dressing/quality owners, not a hand-authored diner floor plan.
+- `commercial.diner.rural_small` v2 — first shared-grammar proof. The first deployed version was called “very good”; v2 adds two more booth/table pairs and a DEV seed-cycle control for rapid critique before final signoff.
 
 Current reusable System 19 additions:
 
@@ -67,7 +67,9 @@ Current reusable System 19 additions:
 - shared functional dressing planner;
 - profile-aware grammar quality validator;
 - deterministic profile-declared topology variants;
-- multi-seed / four-rotation grammar smoke.
+- four legal diner service-room orders exercised by sequential seeds;
+- multi-seed / four-rotation grammar smoke;
+- explicit DEV-only `NEW BUILDING` critique control that advances the seed and reloads through the normal generation pipeline.
 
 The user's finish condition is **two successful arbitrary grammar-generated buildings**. If the diner and one more unrelated Trial 002 are accepted, System 19 is finalized and primary work moves to System 20.
 
@@ -86,7 +88,7 @@ Key design direction:
 
 ## Immediate next path
 
-1. Playtest Rural Diner hardening Trial 001.
+1. Playtest Rural Diner hardening Trial 001 v2 and use `NEW BUILDING` to inspect sequential seeded variants.
 2. If accepted, preserve it and generate one more arbitrary building through the grammar.
 3. Trial 002 should exercise another arrangement/dressing family so the grammar is not diner-specific.
 4. If Trial 002 is accepted, finalize System 19.
