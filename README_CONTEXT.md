@@ -18,9 +18,9 @@ Golden recovery commit: `1763958f44eb7f855fd49944c00d1ffe608c0abe`.
 
 Systems 14–19 are the live canonical demo/player path. `game/main.tscn` launches the modular canonical demo. `game/scripts/reboot/` remains frozen/deprecated reference only.
 
-System 19 has entered its **building-grammar hardening phase**. Five saved user-approved/preserved examples are being used as regression/training references, and two arbitrary grammar-generated buildings are the agreed finish test before System 19 is finalized.
+System 19 is in its **building-grammar hardening phase**. Five saved user-approved/preserved examples are the regression/training references, and two arbitrary grammar-generated buildings are the agreed finish test before System 19 is finalized.
 
-**Current hardening Trial 001:** `commercial.diner.rural_small` — rural roadside diner generated through shared profile/layout/dressing/quality owners rather than a cell-by-cell diner generator.
+**Current hardening Trial 001:** `commercial.diner.rural_small` v2. The first deployed diner was called “very good”; v2 responds to the remaining critique by adding more dining tables and a DEV `NEW BUILDING` seed-cycle control for rapid visual testing.
 
 System 20 Local Area / Parcel Generation is designed next, but implementation remains deferred until the System 19 two-building hardening proof is complete.
 
@@ -50,7 +50,8 @@ Implemented + dedicated validation includes:
 - Run / damage-interruptible Walk;
 - 17A exertion/encumbrance/run impact;
 - 17A.1 overweight-Walk fatigue + 2x hard carry ceiling;
-- System 19 Local Building Generation + current reusable grammar hardening owners.
+- System 19 Local Building Generation + reusable grammar hardening owners;
+- explicit System 19 DEV seed-cycle critique controls.
 
 Art remains presentation truth; generation stores semantic type/facing only. Art is not physics.
 
@@ -132,9 +133,9 @@ Current hard rules are intentionally qualitative/structural rather than copied e
 - `commercial.gas_station.small`
 - `commercial.diner.rural_small`
 
-## 8. Hardening Trial 001 — Rural Diner
+## 8. Hardening Trial 001 — Rural Diner v2
 
-`commercial.diner.rural_small`, v1.
+`commercial.diner.rural_small`, v2.
 
 Canonical NORTH envelope: **17×11**, SOUTH frontage.
 
@@ -147,28 +148,31 @@ Program:
 - no dedicated hall/corridor;
 - 5 doors;
 - 11 windows;
-- 26 purposeful props.
+- 30 purposeful props.
 
-Dressing uses four booth/table pairs, a small customer-counter cluster, one contiguous seven-cell kitchen line, wall-hugging storage dressing with clear middle lane, and a compact bathroom cluster. Central entry/customer aisle stays clear.
+Dressing now uses six booth/table pairs, a small customer-counter cluster, one contiguous seven-cell kitchen line, wall-hugging storage dressing with clear middle lane, and a compact bathroom cluster. The central entry/customer aisle remains clear.
 
-Seed 19006 orders kitchen -> storage -> bathroom. Seed 19007 legally reorders bathroom -> kitchen -> storage and moves the storage service exit with the storage room. This is deliberate topology variation, not decorative noise.
+Four legal seeded back-of-house arrangements are available. Seeds 19006 and 19007 preserve the already-reviewed v1 topology; 19008 and 19009 expose the additional legal room orders. The storage service exit follows the storage room.
 
-`BuildingGrammarSmoke.gd` exercises 32 consecutive diner seeds across all four rotations in addition to exact Candidate 001 checks.
+`BuildingGrammarSmoke.gd` exercises 32 consecutive diner seeds across all four rotations in addition to exact v2 checks and the DEV seed-session contract.
 
 ## 9. Live canonical demo
 
-Current live target: **Rural Diner hardening Trial 001**.
+Current live target: **Rural Diner hardening Trial 001 v2**.
 
 - 19×13 critique lot;
 - 28 px/cell;
 - envelope `Rect2i(1,1,17,11)`;
 - instance `building.demo.diner.rural_small.001`;
-- seed `19006`;
+- default seed `19006`;
 - NORTH orientation / SOUTH frontage;
 - player `(9,12)` facing NORTH toward primary door `(9,11)`;
 - road on bottom row;
 - one controlled survivor, no extra runtime world content injected by System 19;
-- real HUD/player shell/movement/System 18 doors remain live.
+- real HUD/player shell/movement/System 18 doors remain live;
+- a DEV `NEW BUILDING` button sits in the otherwise-empty center slot between TURN L and TURN R.
+
+Pressing `NEW BUILDING` advances the seed and reloads the demo through the normal System 19 generation/validation/materialization path. Web carries the DEV seed in the `building_seed` query parameter; native uses a runtime ProjectSettings override. This is critique tooling only, not a normal gameplay/world-generation mechanic.
 
 ## 10. System 20 next design
 
@@ -189,7 +193,7 @@ A System 20 area is a planning domain, **not a streaming chunk**.
 
 ## 11. Immediate next path
 
-1. User playtests Rural Diner Trial 001.
+1. User playtests Rural Diner Trial 001 v2 and can cycle seeds with `NEW BUILDING`.
 2. If accepted, preserve it and generate **one more arbitrary building through the shared grammar**.
 3. Trial 002 should exercise another arrangement/dressing family rather than simply cloning the diner.
 4. If Trial 002 is also accepted, finalize System 19 and freeze its placement/profile/quality seams.
@@ -212,6 +216,7 @@ A System 20 area is a planning domain, **not a streaming chunk**.
 13. Intentional same-seed profile/archetype-rule changes require version bumps.
 14. Settlement morphology and environment/ecology remain separate profile dimensions.
 15. Open space is legitimate output indoors and outdoors; do not fill it merely to increase object density.
+16. DEV critique controls may request a fresh seed/reload but do not own production world generation or mutate an already-materialized world in place.
 
 ## 13. Documentation source order
 
