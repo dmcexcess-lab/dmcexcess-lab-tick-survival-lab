@@ -10,7 +10,7 @@ The user-approved finish condition is now explicit:
 
 > Build two arbitrary buildings successfully from the extracted grammar. If both look right in playtest, finalize System 19 and move on to System 20.
 
-Trial 001 is `commercial.diner.rural_small`.
+Trial 001 is `commercial.diner.rural_small`. After the first deployed playtest the user said the diner was **“very good”** and requested a few more tables plus a one-button way to render another grammar seed. Diner v2 implements that focused critique while Trial 001 remains active until the revised version is visually signed off.
 
 ## 1. Goal
 
@@ -278,7 +278,7 @@ Current checks include:
 
 Archetype: `commercial.diner.rural_small`
 
-Version: **1**
+Version: **2**
 
 Canonical envelope: **17×11**, SOUTH frontage.
 
@@ -301,14 +301,16 @@ No hall/corridor room exists.
 
 ### Seeded topology variation
 
-The profile currently declares two legal service-room orderings:
+Diner v2 exposes four legal service-room orderings while deliberately preventing the seven-cell kitchen from occupying the far-east slot where its customer-counter dressing would collide with east-wall booths:
 
+- kitchen -> bathroom -> storage;
+- storage -> kitchen -> bathroom;
 - kitchen -> storage -> bathroom;
 - bathroom -> kitchen -> storage.
 
-Seed 19006 uses the first ordering. Seed 19007 uses the second. The storage rear service exit follows the storage room rather than remaining at a hard-coded coordinate.
+The ordering array preserves the already-reviewed seed behavior: seed 19006 still produces kitchen -> storage -> bathroom, and seed 19007 still produces bathroom -> kitchen -> storage. Seeds 19008 and 19009 expose the other two legal arrangements. The storage rear service exit follows the storage room rather than remaining at a hard-coded coordinate.
 
-This is the first proof that seed variation can change topology while the same quality rules continue to hold.
+This gives the DEV seed-cycle button four visibly meaningful back-of-house arrangements before the sequence repeats structurally.
 
 ### Seed 19006 openings
 
@@ -326,15 +328,15 @@ Windows: **11** total — six storefront windows, two dining side windows, two k
 
 ### Dressing
 
-The diner emits **26 blocking props**, leaving most of the building open:
+The diner emits **30 blocking props**, leaving most of the building open:
 
-- four booth/table pairs;
+- six booth/table pairs, adding one middle pair to each side wall after the user's request for more tables;
 - two counter segments + two nearby counter chairs;
 - seven contiguous kitchen work-line pieces: refrigerator, counter, sink, counter, stove, counter, pantry;
 - storage: two racks, pallet and tool cabinet with the middle service lane clear;
 - bathroom: toilet, sink and towel rack.
 
-The central customer aisle from the front door through the dining room is reserved clear.
+The central customer aisle from the front door through the dining room is reserved clear. The v2 seating increase stays wall-clustered rather than filling that lane.
 
 ### Live critique fixture
 
@@ -343,13 +345,26 @@ The central customer aisle from the front door through the dining room is reserv
 - 19×13 lot;
 - 28 px/cell;
 - envelope `Rect2i(1,1,17,11)`;
-- seed `19006`;
+- default seed `19006`;
 - NORTH orientation / SOUTH frontage;
 - player `(9,12)` facing NORTH toward closed primary door `(9,11)` global;
 - road on the south/bottom row;
 - no NPCs or runtime content injected by System 19.
 
 Canonical demo currently points at this fixture for playtest.
+
+### DEV critique seed cycle
+
+`BuildingGrammarDevControls.gd` + `BuildingGrammarDevSeedSession.gd` are explicitly **DEV-only critique tooling**, not survival gameplay or persistent-world mechanics.
+
+- a phone-friendly `NEW BUILDING` button occupies the otherwise-empty center slot between TURN L and TURN R;
+- one press advances to the next integer seed;
+- Web stores the requested seed in the `building_seed` query parameter and reloads the page;
+- native builds store the temporary override in runtime `ProjectSettings` and reload the current scene;
+- the fresh scene then runs the ordinary request -> generation -> validation -> materialization pipeline from scratch;
+- the tool never rewrites an already-materialized WHAT world in place and does not add generator behavior to `CanonicalDemoMain.gd`.
+
+This is intentionally a critique convenience. Future normal gameplay/world generation continues to receive seeds from the actual world/parcel owners rather than from this button.
 
 ## 9. Registry
 
@@ -362,36 +377,37 @@ Current callable archetypes:
 - `commercial.gas_station.small`
 - `commercial.diner.rural_small`
 
-The first five are saved references. The diner is hardening Trial 001 until the user accepts/rejects it.
+The first five are saved references. The diner is hardening Trial 001 until the revised v2 is accepted/rejected.
 
 ## 10. Verification contract
 
 The original `LocalBuildingGenerationSmoke.gd` continues protecting the saved reference behavior.
 
-New `BuildingGrammarSmoke.gd` must prove:
+`BuildingGrammarSmoke.gd` must prove:
 
 1. all six callable archetypes expose valid placement facts;
 2. the five saved generators retain their expected canonical size/frontage/version without editing their source;
-3. diner v1 is deterministic for one seed;
+3. diner v2 is deterministic for one seed;
 4. diner room program is 75 dining / 21 kitchen / 9 storage / 9 bathroom cells;
 5. no diner hall/corridor exists;
-6. diner has 5 doors, 11 windows and 26 props;
+6. diner has 5 doors, 11 windows and 30 props;
 7. primary/service/interior door cells match seed-19006 program;
 8. kitchen work line is contiguous;
 9. central customer aisle remains clear;
 10. storage service lane remains clear;
-11. booth/table clusters remain adjacent;
+11. all six booth/table clusters remain adjacent;
 12. recovered table-facing rule remains satisfied;
-13. seed 19007 produces a different valid topology/signature;
+13. seeds 19007, 19008 and 19009 exercise the other three legal service arrangements with storage exit relocation;
 14. 32 consecutive seeds × all four cardinal orientations generate and pass the shared structural validator;
 15. undersized envelopes and incompatible frontage fail explicitly;
-16. critique fixture materializes into WHAT + CLOSED Door State;
-17. collision and art coverage are complete;
-18. System 18 automatic front-door Walk works;
-19. renderer has zero planned diagnostics;
-20. canonical demo boots on the diner fixture.
+16. DEV seed override defaults, overrides and clears deterministically in native/headless validation;
+17. critique fixture materializes into WHAT + CLOSED Door State;
+18. collision and art coverage are complete;
+19. System 18 automatic front-door Walk works;
+20. renderer has zero planned diagnostics;
+21. canonical demo boots with the DEV control present.
 
-Exact-final-head Web/Pages validation remains required before Trial 001 is presented as successfully deployed.
+Exact-final-head Web/Pages validation remains required before Trial 001 v2 is presented as successfully deployed.
 
 ## 11. Performance / mobile
 
@@ -401,7 +417,8 @@ Exact-final-head Web/Pages validation remains required before Trial 001 is prese
 - quality validation is proportional to local rooms/props;
 - descriptor probing is cached and only uses public generation contracts;
 - critique fixture remains one bounded mobile-friendly visible window;
-- no hover dependency or desktop-only input is introduced.
+- the DEV `NEW BUILDING` button is a single touch action with no hover dependency;
+- seed cycling rebuilds through a scene/page reload rather than attempting risky in-place service graph mutation.
 
 ## 12. Forbidden dependencies
 
@@ -420,9 +437,11 @@ Art remains presentation truth; generated semantic type/facing remains world tru
 
 Saved peer archetype generators do not import or mutate one another.
 
+DEV critique controls may depend on the active critique fixture and browser/native reload mechanisms, but production generation code never depends on the DEV UI.
+
 ## 13. Trial process / finish condition
 
-1. **Trial 001:** Rural Roadside Diner generated through the shared grammar. User playtests and critiques it.
+1. **Trial 001:** Rural Roadside Diner generated through the shared grammar. User playtests and critiques it; v2 is the current revision after the “very good” first review plus requested seating/control tweaks.
 2. If accepted, save it as another reference and make **Trial 002: another arbitrary building chosen without copying a previous exact layout**.
 3. Trial 002 should preferably exercise either another profile arrangement or another reusable dressing family so it proves the grammar is not secretly diner-specific.
 4. If Trial 002 is also accepted, promote the hardened grammar contract to the final System 19 implementation state.
@@ -445,3 +464,5 @@ Saved peer archetype generators do not import or mutate one another.
 13. Hardening should prove itself by generating arbitrary new buildings, not by manually authoring more exact examples.
 14. The first arbitrary proof building is a rural roadside diner.
 15. Two successful arbitrary grammar-generated buildings are the agreed finish condition before System 19 is finalized and primary work moves to System 20.
+16. Trial 001 v2 adds two more booth/table pairs after the user said the diner was very good but could use more tables; the same-seed dressing change therefore bumps the archetype version.
+17. A `NEW BUILDING` seed-cycle control is allowed only as explicit DEV critique tooling; it rebuilds through the normal generation pipeline and is not a normal gameplay/world-generation owner.
