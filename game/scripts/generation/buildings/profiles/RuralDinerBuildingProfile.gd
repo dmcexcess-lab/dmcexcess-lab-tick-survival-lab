@@ -5,7 +5,7 @@ const Facing = preload("res://scripts/foundation/spatial/SpatialFacing.gd")
 const ProfileClass = preload("res://scripts/generation/buildings/grammar/BuildingGrammarProfile.gd")
 
 const ARCHETYPE_ID: StringName = &"commercial.diner.rural_small"
-const ARCHETYPE_VERSION: int = 1
+const ARCHETYPE_VERSION: int = 2
 const CANONICAL_SIZE: Vector2i = Vector2i(17, 11)
 const CANONICAL_FRONTAGE: int = Facing.Value.SOUTH
 
@@ -50,7 +50,12 @@ static func build() -> BuildingGrammarProfile:
             "service_exit": false,
         },
     }
+    # Four legal orders keep the 7-wide kitchen away from the far-right booth wall,
+    # where the customer-counter cluster would otherwise collide with seating.
+    # Ordering is chosen so accepted critique seeds 19006 and 19007 keep their v1 topology.
     profile.service_order_variants = [
+        ["kitchen", "bathroom", "storage"],
+        ["storage", "kitchen", "bathroom"],
         ["kitchen", "storage", "bathroom"],
         ["bathroom", "kitchen", "storage"],
     ]
