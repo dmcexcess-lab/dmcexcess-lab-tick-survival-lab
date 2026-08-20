@@ -138,7 +138,9 @@ func _materialize_ground_and_rooms(
 ) -> void:
     var room_rects: Dictionary = layout.get("room_rects", {})
     var public_purpose: String = String(profile.public_room.get("purpose", ""))
-    var ordered_purposes: Array[String] = layout.get("service_order", []).duplicate()
+    var ordered_purposes: Array[String] = []
+    for purpose_value: Variant in layout.get("service_order", []):
+        ordered_purposes.append(String(purpose_value))
     ordered_purposes.append(public_purpose)
     for purpose: String in ordered_purposes:
         var room: Rect2i = room_rects[purpose]
