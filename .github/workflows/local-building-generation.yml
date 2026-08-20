@@ -29,11 +29,20 @@ jobs:
           test -f game/scripts/generation/buildings/LocalBuildingGenerator.gd
           test -f game/scripts/generation/buildings/GeneratedBuildingValidator.gd
           test -f game/scripts/generation/buildings/GeneratedBuildingMaterializer.gd
+          test -f game/scripts/generation/buildings/BuildingArchetypePlacementDescriptor.gd
+          test -f game/scripts/generation/buildings/grammar/BuildingGrammarProfile.gd
+          test -f game/scripts/generation/buildings/grammar/BuildingGrammarGenerator.gd
+          test -f game/scripts/generation/buildings/grammar/BuildingRoomDressingPlanner.gd
+          test -f game/scripts/generation/buildings/grammar/BuildingGrammarQualityValidator.gd
+          test -f game/scripts/generation/buildings/profiles/RuralDinerBuildingProfile.gd
           test -f game/scripts/generation/buildings/archetypes/TrailerBuildingGenerator.gd
           test -f game/scripts/generation/buildings/archetypes/FarmhouseBuildingGenerator.gd
+          test -f game/scripts/generation/buildings/archetypes/RuralDinerBuildingGenerator.gd
           test -f game/scripts/demo/TrailerCritiqueFixture.gd
           test -f game/scripts/demo/FarmhouseCritiqueFixture.gd
+          test -f game/scripts/demo/RuralDinerCritiqueFixture.gd
           test -f game/scripts/ci/LocalBuildingGenerationSmoke.gd
+          test -f game/scripts/ci/BuildingGrammarSmoke.gd
           ! grep -R -q 'assets/\|atlas_index\|Texture2D\|Camera2D' game/scripts/generation/buildings
           ! grep -R -q 'inventory\|loot\|infected' game/scripts/generation/buildings
 
@@ -73,7 +82,9 @@ jobs:
           grep -q 'DOOR_INTERACTION_SMOKE_OK' "$RUNNER_TEMP/door18.log"
           ./Godot_v4.7.1-stable_linux.x86_64 --headless --path "$GITHUB_WORKSPACE/game" --quit-after 10 --script res://scripts/ci/LocalBuildingGenerationSmoke.gd 2>&1 | tee "$RUNNER_TEMP/building19.log"
           grep -q 'LOCAL_BUILDING_GENERATION_SMOKE_OK' "$RUNNER_TEMP/building19.log"
-          if grep -Eqi 'SCRIPT ERROR|Parse Error|Failed to load script' "$RUNNER_TEMP/door18.log" "$RUNNER_TEMP/building19.log"; then exit 1; fi
+          ./Godot_v4.7.1-stable_linux.x86_64 --headless --path "$GITHUB_WORKSPACE/game" --quit-after 20 --script res://scripts/ci/BuildingGrammarSmoke.gd 2>&1 | tee "$RUNNER_TEMP/buildinggrammar.log"
+          grep -q 'BUILDING_GRAMMAR_SMOKE_OK' "$RUNNER_TEMP/buildinggrammar.log"
+          if grep -Eqi 'SCRIPT ERROR|Parse Error|Failed to load script' "$RUNNER_TEMP/door18.log" "$RUNNER_TEMP/building19.log" "$RUNNER_TEMP/buildinggrammar.log"; then exit 1; fi
 
       - name: Canonical demo startup smoke
         shell: bash
