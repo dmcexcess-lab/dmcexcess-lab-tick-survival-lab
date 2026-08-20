@@ -9,6 +9,7 @@ const GeneratorClass = preload("res://scripts/generation/buildings/LocalBuilding
 const ValidatorClass = preload("res://scripts/generation/buildings/GeneratedBuildingValidator.gd")
 const MaterializerClass = preload("res://scripts/generation/buildings/GeneratedBuildingMaterializer.gd")
 const DinerClass = preload("res://scripts/generation/buildings/archetypes/RuralDinerBuildingGenerator.gd")
+const DevSeedSessionClass = preload("res://scripts/demo/BuildingGrammarDevSeedSession.gd")
 
 const MAP_ORIGIN: Vector2i = Vector2i.ZERO
 const MAP_SIZE: Vector2i = Vector2i(19, 13)
@@ -24,6 +25,9 @@ const DINER_SEED: int = 19006
 const GRASS: StringName = &"ground.grass_lush"
 const ROAD: StringName = &"ground.road"
 const SURVIVOR: StringName = &"actor.survivor"
+
+static func active_seed() -> int:
+    return DevSeedSessionClass.current_seed(DINER_SEED)
 
 static func build(
     world: WorldState,
@@ -43,7 +47,7 @@ static func build(
     var request := RequestClass.new(
         BUILDING_ID,
         DinerClass.ARCHETYPE_ID,
-        DINER_SEED,
+        active_seed(),
         DINER_ENVELOPE,
         Facing.Value.NORTH,
         Facing.Value.SOUTH
