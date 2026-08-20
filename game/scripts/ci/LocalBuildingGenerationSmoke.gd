@@ -155,7 +155,7 @@ func _test_large_farmhouse_generation(generator: LocalBuildingGenerator, validat
 func _test_compact_laundry_house_generation(generator: LocalBuildingGenerator, validator: GeneratedBuildingValidator) -> void:
     var supported: Array[StringName] = generator.supported_archetypes()
     _check(supported.has(CompactLaundryHouseClass.ARCHETYPE_ID), "registry exposes accepted compact laundry house")
-    _check(supported.size() == 5, "registry contains the four preserved residential archetypes plus gas station")
+    _check(supported.size() == 6, "registry contains the five saved examples plus diner grammar trial")
 
     var request := RequestClass.new(
         "building.test.house.compact_laundry",
@@ -237,7 +237,7 @@ func _test_compact_laundry_house_generation(generator: LocalBuildingGenerator, v
 func _test_gas_station_generation(generator: LocalBuildingGenerator, validator: GeneratedBuildingValidator) -> void:
     var supported: Array[StringName] = generator.supported_archetypes()
     _check(supported.has(GasStationClass.ARCHETYPE_ID), "registry exposes small gas station")
-    _check(supported.size() == 5, "registry exposes exactly five current archetypes")
+    _check(supported.size() == 6, "registry exposes five saved archetypes plus diner grammar trial")
 
     var request := RequestClass.new(
         "building.test.gas_station.small",
