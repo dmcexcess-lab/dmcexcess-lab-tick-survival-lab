@@ -39,80 +39,59 @@ Major systems move through **NOT DESIGNED -> DRAFT -> APPROVED -> IMPLEMENTED** 
 | 17A.1 | Overweight Walk Fatigue / Absolute Carry Ceiling Correction | **IMPLEMENTED** | `17A1_OVERWEIGHT_WALK_FATIGUE_HARD_CARRY_LIMIT.md` |
 | 18 | Door Interaction / Automatic Passage | **IMPLEMENTED** | `18_DOOR_INTERACTION_PASSAGE.md` |
 | 19 | Local Building Generation / Archetype Critique Lab | **IMPLEMENTED** | `19_LOCAL_BUILDING_GENERATION_ARCHETYPE_LAB.md` |
-| 00D | Global World Planning / Generation | **NOT DESIGNED** | `00D_GLOBAL_WORLD_GENERATION.md` |
-| 00E | Population / Household / Outbreak / Player Story | **NOT DESIGNED** | `00E_POPULATION_OUTBREAK_PLAYER_STORY.md` |
-| 00F | Streaming / Materialization | **NOT DESIGNED** | `00F_STREAMING_MATERIALIZATION.md` |
+| 20 | Local Area / Parcel Generation | **DRAFT** | `20_LOCAL_AREA_PARCEL_GENERATION.md` |
+| 00D | Global World Planning / Generation | **NOT DESIGNED** | future design; listed path is not yet present |
+| 00E | Population / Household / Outbreak / Player Story | **NOT DESIGNED** | future design |
+| 00F | Streaming / Materialization | **NOT DESIGNED** | future design |
 | old-01 | Raid-map / extraction physical-world model | **SUPERSEDED** | `01_RAID_MAP_DATA.md` |
+
+## Current generation stack
+
+### System 19 — implemented building/property archetypes
+
+Current registry:
+
+- `residential.trailer.singlewide` v2 — accepted protected baseline;
+- `residential.house.farm_small` v2 — accepted protected baseline;
+- `residential.house.farm_large` v4 — preserved Candidate 004;
+- `residential.house.compact_laundry` v1 — accepted protected baseline;
+- `commercial.gas_station.small` v1 — current live critique candidate.
+
+System 19 receives an already-chosen stable instance ID, archetype, seed, envelope, orientation and frontage. It does not choose roads/parcels/towns.
+
+### System 20 — current design discussion
+
+`20_LOCAL_AREA_PARCEL_GENERATION.md` is **DRAFT**.
+
+Draft direction:
+
+- globally coordinated local-area planning, not streaming-chunk generation;
+- higher-level world planning supplies major cross-boundary road constraints;
+- System 20 may create minor roads, parcels, legal access, land-use/property zones and exact System 19 building requests;
+- settlement/area morphology profile is separate from environment/ecology profile;
+- first profile target is `rural.crossroads` with a `temperate.rural` environment candidate;
+- Candidate 001 proposes a 256×256 planning area with substantial wilderness/agricultural land, sparse houses/farmsteads, a tiny denser crossroads center, gas station and exactly one signalized intersection;
+- missing barns/small stores are not faked; parcels may remain vacant until real System 19 archetypes exist;
+- no implementation is allowed until the draft is explicitly approved.
 
 ## Prop art orientation truth
 
-System 07A now consumes the N/E/S/W facing already preserved in WHAT object placement.
-
-- recovered indoor/furniture/retail/industrial prop art has presentation-only native-facing metadata;
-- current recovered directional groups are authored native SOUTH/down;
-- Prop Renderer rotates those sprites in 90-degree increments around the cell center to match WHAT facing;
-- sinks, shelves, beds, sofas, counters, appliances and similar furniture therefore face their semantic placement direction;
-- nondirectional art such as vegetation remains unrotated;
-- generator/world/collision truth is unchanged.
-
-## System 19 current archetype library
-
-### Accepted saved baseline
-
-`residential.trailer.singlewide` **v2** — Trailer Candidate 002.
-
-- 5×12 shell / 3-cell usable width;
-- light plaster exterior;
-- 3×4 living/kitchen, 3×2 bathroom, 3×2 bedroom;
-- four windows / three doors;
-- accepted by the user on 2026-08-17 and preserved by CI.
-
-### Current live critique candidate
-
-`residential.house.farm_small` **v1** — Farmhouse Candidate 001.
-
-- 13×13 shell;
-- exact 5×5 living room;
-- exact 3×3 kitchen, two bedrooms and bathroom;
-- open middle circulation/dining band;
-- light plaster exterior;
-- five doors / seven windows;
-- restrained domestic furniture;
-- deterministic rotation and validated circulation.
-
-The live caller is a fixed **15×15 one-screen** lot at **32 px/cell**. Camera remains deferred.
+System 07A consumes the N/E/S/W facing preserved in WHAT placement. Recovered directional props are rotated by presentation rules only; generator/world facing remains semantic truth and art remains separate from physics.
 
 ## Door interaction truth
 
 - Walk through eligible CLOSED door -> opens at Walk commit.
 - damage-canceled Walk -> door stays CLOSED.
-- Run through eligible CLOSED door -> opens during stride, emits LOUD semantic passage, no door-impact HP damage.
-- tap/click eligible OPEN adjacent door while **facing it** -> 3-tick CANCELABLE close.
-- wrong-facing close costs zero and requires normal turn actions first.
-- future long-tap/right-click interaction menu remains reserved.
+- Run through eligible CLOSED door -> opens during stride, emits LOUD semantic passage, no normal door-impact HP damage.
+- tap/click eligible OPEN adjacent door while facing it -> 3-tick CANCELABLE close.
 
 ## Immediate next path
 
-1. User critiques Farmhouse Candidate 001, now with facing-aware furniture presentation.
-2. Convert useful critique into farmhouse archetype rules.
-3. Keep accepted Trailer v2 unchanged.
-4. Add further building archetypes under System 19.
-5. Add camera/larger local play space only when multiple simultaneous properties exceed the one-screen critique lab.
-
-## Verification
-
-Farmhouse Candidate 001 first green code candidate:
-
-- SHA `65a951bc1d38c055c17cbcfcd496a59cb30727c9`;
-- Local Building Generation run `32007785922`: SUCCESS.
-
-System 07A first green code candidate:
-
-- SHA `6a41dd24a2fa0a594c14ef83ea2ba1015b333124`;
-- Prop Fixture Vegetation Renderer run `32008973352`: SUCCESS.
-
-Exact documentation-promotion SHA must pass the dedicated Prop/07A contract, System 19 contract and Pages before completion is claimed.
+1. Review/revise `20_LOCAL_AREA_PARCEL_GENERATION.md`.
+2. Keep System 20 status DRAFT until explicit approval.
+3. Preserve all accepted/preserved System 19 archetypes while area planning is designed.
+4. After approval, implement the first bounded System 20 planning slice before adding unrelated camera/streaming/population work.
 
 ## Design rule
 
-Every major system keeps a focused owner/public contract. System 19 shared validation is structural/generic; archetype-specific room programs belong to focused archetype owners/tests. Art-native orientation metadata is presentation truth only; generator/world facing remains semantic world truth. If implementation unexpectedly requires crossing a forbidden boundary, return the design to review rather than cascading a patch.
+Every major system keeps a focused owner/public contract. Global planning owns cross-region coherence; System 20 refines caller-constrained local areas; System 19 owns building/property internals; WHAT owns runtime persistence after materialization. If implementation requires a forbidden boundary, return the design to review instead of cascading a patch.

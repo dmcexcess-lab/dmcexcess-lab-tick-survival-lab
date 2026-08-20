@@ -31,7 +31,9 @@ Implemented + dedicated validation includes:
 - Run / damage-interruptible Walk;
 - 17A exertion/encumbrance/run impact;
 - 17A.1 overweight-Walk fatigue + 2x hard carry ceiling;
-- System 19 local building generation with accepted **Trailer v2**, accepted **Small Farmhouse v2**, preserved **Large Farmhouse Candidate 004 / v4**, accepted **Compact Laundry House v1**, and current **Small Gas Station Candidate 001 / v1**.
+- System 19 local building generation with accepted Trailer v2, accepted Small Farmhouse v2, preserved Large Farmhouse v4, accepted Compact Laundry House v1 and Small Gas Station v1.
+
+**Current design work:** `SYSTEM_DESIGNS/20_LOCAL_AREA_PARCEL_GENERATION.md` is DRAFT. No System 20 production code is approved yet.
 
 ## 3. Foundation truth
 
@@ -48,11 +50,7 @@ One deterministic integer world tick, variable-duration actions/events, same-tic
 
 Design: `SYSTEM_DESIGNS/07A_PROP_ART_ORIENTATION.md`
 
-WHAT placement facing remains authoritative. Generation/world state store semantic N/E/S/W orientation with no art-specific values.
-
-Presentation knows native facing for recovered directional prop art and rotates suitable furniture/fixtures around the center of the existing one-cell destination. Sinks, shelves, sofas, beds, counters, appliances and similar props therefore visually face their semantic direction. Vegetation/outdoor nondirectional art remains unrotated.
-
-System 19 only emits semantic type + WHAT facing; it does not know sprite transforms.
+WHAT placement facing remains authoritative. Presentation owns native sprite-facing metadata/rotation. Generation stores semantic N/E/S/W only. Art is not physics.
 
 ## 5. Movement / fatigue / carry truth
 
@@ -63,8 +61,6 @@ System 19 only emits semantic type + WHAT facing; it does not know sprite transf
 - Duration composes terrain × stance × fatigue × encumbrance.
 - fatigue 80+ blocks Run.
 - soft carry defaults 18 kg; 100%+ soft capacity blocks Run.
-- Walk fatigue is zero at/below soft capacity; above capacity it depends on terrain only, not degree of overage.
-- Run fatigue depends on terrain × encumbrance.
 - normal acquisition hard ceiling is 2× soft capacity, 36 kg by default.
 - known hard Run blockers cause attempted-stride exertion + 5 HP impact unless a passage resolver resolves them first.
 
@@ -75,7 +71,6 @@ Design: `SYSTEM_DESIGNS/18_DOOR_INTERACTION_PASSAGE.md`
 - CLOSED normal door may be conditionally traversed through Movement's generic passage seam.
 - Walk opens at actual movement commit; damage-canceled Walk leaves it CLOSED.
 - Run opens at stride, continues and emits semantic LOUD passage; no normal 5 HP door impact.
-- unresolved blockers retain normal Run-impact behavior.
 - short tap/click closes an OPEN door only when cardinally adjacent and facing it.
 - manual close costs 3 ticks and is CANCELABLE by damage.
 - actor in doorway prevents close.
@@ -86,162 +81,116 @@ Design: `SYSTEM_DESIGNS/19_LOCAL_BUILDING_GENERATION_ARCHETYPE_LAB.md`
 
 Caller supplies stable instance ID, archetype, seed, envelope, orientation and frontage. System 19 generates a pure semantic plan, validates it, materializes initial WHAT + CLOSED Door State, then relinquishes ownership to persistent gameplay truth.
 
-Shared validator owns generic structural/connectivity correctness. Archetype-specific room vocabulary/dimensions stay in focused CI so the validator does not become a catalog of trailer/house/store semantics.
-
 Current registry:
 
-- `residential.trailer.singlewide`
-- `residential.house.farm_small`
-- `residential.house.farm_large`
-- `residential.house.compact_laundry`
-- `commercial.gas_station.small`
+- `residential.trailer.singlewide` v2 — accepted protected baseline;
+- `residential.house.farm_small` v2 — accepted protected baseline;
+- `residential.house.farm_large` v4 — preserved Candidate 004;
+- `residential.house.compact_laundry` v1 — accepted protected baseline;
+- `commercial.gas_station.small` v1 — current commercial candidate/live demo target.
 
-### Accepted Trailer baseline
+System 19 does not choose towns, roads, parcels, addresses, utilities or which property receives which archetype.
 
-`residential.trailer.singlewide`, version 2. Preserve unless explicitly reopened.
+### Small Gas Station v1
 
-### Accepted Small Farmhouse baseline
+Canonical NORTH property envelope: 19×15, SOUTH frontage.
 
-`residential.house.farm_small`, version 2.
+- broad storefront and connected sales floor;
+- real 5×3 storage, 4×3 office and 3×3 bathroom;
+- 5 doors / 10 windows;
+- four gas pumps in two islands;
+- immediate forecourt included in the System 19 property envelope;
+- 33 purposeful props;
+- road/parcel/world planning remains outside System 19.
 
-User explicitly accepted this on 2026-08-17 with: **“Nice save that as small farm house.”**
+## 8. System 20 DRAFT truth
 
-- 13×9 shell;
-- one open-plan 11×3 living/kitchen;
-- two 3×3 bedrooms;
-- one 3×3 bathroom;
-- no oversized circulation band;
-- protected saved baseline.
+Design: `SYSTEM_DESIGNS/20_LOCAL_AREA_PARCEL_GENERATION.md`
 
-### Large Farmhouse Candidate 004 — preserved
+Status: **DRAFT — not approved for implementation**.
 
-`residential.house.farm_large`, version 4.
+Draft hierarchy:
 
-- 21×9 shell;
-- separate 10×3 living room and 8×3 kitchen;
-- three 3×3 bedrooms and two 3×3 bathrooms;
-- zero dedicated hall/corridor room cells;
-- upper living/kitchen divider wall + lower open passage;
-- clutter-free wood runner along kitchen y=3;
-- 7 doors and 11 windows;
-- compact clustered common-room furnishing.
+- future Global World Planning supplies major cross-boundary geography/road constraints;
+- System 20 refines a bounded **global-coordinate planning area** into minor roads, parcels, access/driveways, land use, building placement requests and property/environment dressing;
+- System 19 generates each selected building/property interior/detail;
+- WHAT owns runtime reality after initial materialization.
 
-### Accepted Compact Laundry House baseline
+A System 20 area is **not a streaming chunk**.
 
-`residential.house.compact_laundry`, version 1.
+Draft profile split:
 
-User accepted Candidate 001 on 2026-08-20 with: **“ok that looks perfect.”**
+- **area/settlement profile** controls human morphology/density (`rural.crossroads`, future suburban/urban/etc.);
+- **environment profile** controls ecological/surface dressing (`temperate.rural`, future desert/forest/grassland/etc.).
 
-Protected baseline:
+First draft candidate:
 
-- 17×13 bounding envelope with irregular occupied footprint;
-- two bedrooms, one bathroom;
-- separate kitchen/dining;
-- central living room with no dedicated hallway;
-- dedicated 3×3 laundry/utility room;
-- small south-facing entry bump;
-- 5 doors, 10 windows;
-- 33 compactly clustered props;
-- real washer/dryer/utility-sink/hamper semantics;
-- canonical table-like dressing uses SOUTH/WEST facings.
+- 256×256 planning area;
+- `rural.crossroads + temperate.rural`;
+- two inherited crossing roads;
+- exactly one signalized central intersection;
+- gas station near the center;
+- 8–12 occupied residential/farmstead parcels for the critique seed;
+- substantial agricultural/vacant/wilderness land with >=60% non-road area unbuilt by buildings;
+- density falls sharply outward from the crossroads;
+- accepted System 19 residential archetypes reused rather than replaced;
+- extra commercial parcels may remain vacant until real small-store archetypes exist;
+- no fake barns/stores/people/cars/loot/outbreak scenes;
+- no camera/render/streaming ownership.
 
-`CompactLaundryHouseBuildingGenerator.gd` and `CompactLaundryHouseCritiqueFixture.gd` remain protected while the commercial critique loop is active.
+Before implementation, System 19 is expected to need a narrow read-only placement-descriptor seam so System 20 can query archetype envelope/frontage requirements without duplicating generator internals.
 
-### Small Gas Station Candidate 001 — current
+## 9. Live canonical demo
 
-Archetype: `commercial.gas_station.small`, version 1.
-
-Canonical NORTH property envelope: **19×15**, SOUTH frontage.
-
-The station is intentionally a small independent roadside convenience store rather than a travel center:
-
-- compact rectangular store building occupies the north/rear portion of the property;
-- broad storefront faces a concrete apron and pump forecourt;
-- two two-pump islands create four fuel-pump positions while keeping the central customer path clear;
-- sales floor: 76 connected cells with two compact retail shelf/endcap clusters, checkout/counter cluster, cooler/freezer/vending fixtures;
-- storage room: 5×3 with warehouse racks/pallets/tool cabinet and its own rear service exit;
-- office: 4×3 with desk/chair/file cabinet/copier;
-- bathroom: 3×3 with toilet/sink/towel rack;
-- no dedicated hall/corridor room;
-- one primary storefront entrance, one rear service door and three back-room doors = 5 doors;
-- 10 storefront/side/back windows;
-- 33 purposeful props total including four real `prop.gas_pump` objects, `prop.gas_sign`, exterior ice box/vending/trash, retail shelves, walk-in coolers and back-room fixtures;
-- exterior uses storefront + white-brick commercial semantics; art assets/catalogs are unchanged.
-
-The request envelope is still a caller-supplied local property/building slot. For this archetype it includes the immediate pump forecourt because those pumps are part of the station's local physical property. System 19 still does not choose roads, parcels, towns or utility networks.
-
-## 8. Live canonical demo
-
-The current live target is **Small Gas Station Candidate 001**.
+The current live target remains **Small Gas Station v1** while System 20 is only a design draft.
 
 - fixed 21×17 critique lot;
 - 24 px/cell presentation;
-- canonical spatial scale remains 1m/cell;
 - station/property envelope `Rect2i(1,1,19,15)`;
 - instance `building.demo.gas_station.small.001`, seed `19005`;
 - NORTH orientation / SOUTH frontage;
-- player starts at `(10,11)` facing NORTH, one cell south of primary door `(10,10)`;
-- two pump islands sit farther south on the forecourt while the center approach remains clear;
-- road occupies the bottom map row;
 - one controlled survivor, no NPCs/infected/loot;
 - real HUD, Stats/Inventory/Menu, Crouch/Stand, Run and System 18 doors remain live.
 
-Desktop controls: W/Up Walk, S/Down Back, A/Left Turn L, D/Right Turn R, C stance, Shift+W/Up Run, short click eligible OPEN facing door to close.
-
-Touch: Forward/Back/Turn L/Turn R/Crouch-Stand/Run plus short world tap for eligible OPEN facing door close.
-
-Web Leave Game goes directly to Google.
-
-## 9. Physical items
-
-The live critique lot still has no loose demo items. Canonical ownership remains WHAT loose placement -> 09 hands -> 11 containment -> 12 timed transfer -> 13D weight -> 13E carry/capacity policy.
-
 ## 10. Verification routing
 
-Accepted compact Small Farmhouse v2 code: `cd9ac22106e3ab3b51eca2cbb5f9f9b0c64ddd10`.
-
-Large Farmhouse Candidate 001 first-green code: `a533f4f27de6f37b92b5e8472bb4b81220b2e06e`; historical only after the compactness rejection.
-
-Large Farmhouse Candidate 002 first-green exact head: `e7fe7f1fb7645ec5d1d1e97d8ac07f757a2ea9ce`; historical after the kitchen-flow critique.
-
-Large Farmhouse Candidate 003 first-green exact head: `78b22929928f3faa6af5330c05daca5b8d1c48c0`; historical after the clustered-clutter critique.
+Accepted Small Farmhouse v2 code: `cd9ac22106e3ab3b51eca2cbb5f9f9b0c64ddd10`.
 
 Large Farmhouse Candidate 004 exact-green head before later archetypes: `94821719bcf7ec21c6a655f4c69d3d0fcae8db25`.
 
 Accepted Compact Laundry House v1 implementation head: `c072a2f34e9c4e9e98e2bd5809fb62087d7362f0`.
 
-Small Gas Station Candidate 001 must pass exact-final-head Local Building Generation and Web/Pages before completion is claimed.
+Small Gas Station v1 implementation head before System 20 design docs: `fec7f5df3213551b76df20fc9a2e6104f55ec70a`.
 
 ## 11. Immediate next path
 
-1. User playtests/critiques Small Gas Station Candidate 001.
-2. Preserve Trailer v2, Small Farmhouse v2, Large Farmhouse v4 and accepted Compact Laundry House v1 unless explicitly reopened.
-3. Convert gas-station critique into versioned `commercial.gas_station.small` rules.
-4. Continue adding residential/commercial archetypes through the same pure-plan -> validation -> materialization loop.
+1. Review/revise System 20 DRAFT.
+2. Keep System 20 DRAFT until explicit user approval.
+3. Preserve all accepted/preserved System 19 archetypes during System 20 work.
+4. After approval, implement the first bounded System 20 planning slice and its headless deterministic validation.
+5. Do not fold camera, streaming, utilities, population/outbreak or fake missing building archetypes into System 20 implementation.
 
 ## 12. Later systems
 
-Container access/search/locks, corpse/decay/contamination, actor appearance/creator, richer item quantity/condition/bulk, first aid/sickness, eating/drinking/rest/sleep progression, global world generation/streaming, construction, perception/lighting/weather/spatial sound, infected AI/combat/vehicles, item interaction composition and camera/zoom remain future work unless newer direction pulls them forward.
+Container access/search/locks, corpse/decay/contamination, actor appearance/creator, richer item quantity/condition/bulk, first aid/sickness, eating/drinking/rest/sleep progression, full Global World Planning, streaming/materialization orchestration, construction, perception/lighting/weather/spatial sound, infected AI/combat/vehicles, utilities, population/households/outbreak/player story, item interaction composition and camera/zoom remain future work unless newer direction pulls them forward.
 
 ## 13. Invariants
 
 1. Main/root is composition only.
 2. Focused owners/public contracts; no god state.
 3. No placeholder/fake completion.
-4. Generator produces initial WHAT; it does not own runtime reality.
+4. Generation produces initial WHAT; it does not own runtime reality.
 5. Rendering presents truth; input submits semantic intent.
 6. Art is not physics.
 7. Phone/Safari is first-class.
 8. Reboot is reference only.
-9. Local building generation consumes caller-decided placement facts and must not become the global world planner.
-10. Once generated/materialized, WHAT/Door State own later mutations.
-11. Intentional same-seed archetype-rule changes bump that archetype version.
-12. Shared building validation remains structural/generic; archetype program rules stay with focused archetype contracts/tests.
-13. Directional prop facing is WHAT truth; native sprite facing/rotation policy is presentation truth only.
-14. Accepted/preserved archetype baselines are not mutated by critique of a peer archetype.
-15. Common-room/commercial dressing should prefer believable local clusters and clear circulation over distributing a few props across a whole room.
-16. A bounding envelope may contain an irregular building or immediate archetype-owned property dressing such as a forecourt; it must not expand into road/parcel/world planning.
-17. Commercial back-of-house rooms remain real reachable room regions, not labels painted onto one open sales floor.
+9. Cross-region infrastructure is globally coordinated; local planning cannot invent incompatible boundary exits.
+10. System 20 planning areas are global-coordinate planning domains, not streaming chunks.
+11. System 20 chooses parcels/building requests; System 19 owns building/property internals.
+12. Accepted/preserved System 19 archetypes are not mutated merely to fit a System 20 parcel.
+13. Intentional same-seed profile/archetype-rule changes require version bumps.
+14. Settlement morphology and environment/ecology are separate profile dimensions.
+15. Open rural land is legitimate output and should not be filled merely to increase object density.
 
 ## 14. Documentation source order
 
