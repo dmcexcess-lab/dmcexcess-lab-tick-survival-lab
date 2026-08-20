@@ -55,14 +55,19 @@ func _dress_restaurant_dining(
     var right_booth_x: int = room.position.x + room.size.x - 1
     var right_table_x: int = right_booth_x - 1
     var row_a: int = room.position.y + 1
+    var row_mid: int = room.position.y + room.size.y / 2
     var row_b: int = room.position.y + room.size.y - 2
 
     _add_prop(props, occupied, reserved, "prop.dining.booth.west_a", Vector2i(left_booth_x, row_a), &"prop.restaurant_booth", Facing.Value.EAST, true, failures)
     _add_prop(props, occupied, reserved, "prop.dining.table.west_a", Vector2i(left_table_x, row_a), &"prop.restaurant_table", Facing.Value.WEST, true, failures)
+    _add_prop(props, occupied, reserved, "prop.dining.booth.west_mid", Vector2i(left_booth_x, row_mid), &"prop.restaurant_booth", Facing.Value.EAST, true, failures)
+    _add_prop(props, occupied, reserved, "prop.dining.table.west_mid", Vector2i(left_table_x, row_mid), &"prop.restaurant_table", Facing.Value.WEST, true, failures)
     _add_prop(props, occupied, reserved, "prop.dining.booth.west_b", Vector2i(left_booth_x, row_b), &"prop.restaurant_booth", Facing.Value.EAST, true, failures)
     _add_prop(props, occupied, reserved, "prop.dining.table.west_b", Vector2i(left_table_x, row_b), &"prop.restaurant_table", Facing.Value.WEST, true, failures)
     _add_prop(props, occupied, reserved, "prop.dining.booth.east_a", Vector2i(right_booth_x, row_a), &"prop.restaurant_booth", Facing.Value.WEST, true, failures)
     _add_prop(props, occupied, reserved, "prop.dining.table.east_a", Vector2i(right_table_x, row_a), &"prop.restaurant_table", Facing.Value.WEST, true, failures)
+    _add_prop(props, occupied, reserved, "prop.dining.booth.east_mid", Vector2i(right_booth_x, row_mid), &"prop.restaurant_booth", Facing.Value.WEST, true, failures)
+    _add_prop(props, occupied, reserved, "prop.dining.table.east_mid", Vector2i(right_table_x, row_mid), &"prop.restaurant_table", Facing.Value.WEST, true, failures)
     _add_prop(props, occupied, reserved, "prop.dining.booth.east_b", Vector2i(right_booth_x, row_b), &"prop.restaurant_booth", Facing.Value.WEST, true, failures)
     _add_prop(props, occupied, reserved, "prop.dining.table.east_b", Vector2i(right_table_x, row_b), &"prop.restaurant_table", Facing.Value.WEST, true, failures)
 
