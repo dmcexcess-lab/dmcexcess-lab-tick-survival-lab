@@ -31,7 +31,7 @@ Implemented + dedicated validation includes:
 - Run / damage-interruptible Walk;
 - 17A exertion/encumbrance/run impact;
 - 17A.1 overweight-Walk fatigue + 2x hard carry ceiling;
-- System 19 local building generation with accepted **Trailer v2**, accepted **Small Farmhouse v2**, preserved **Large Farmhouse Candidate 004 / v4**, and current **Compact Laundry House Candidate 001 / v1**.
+- System 19 local building generation with accepted **Trailer v2**, accepted **Small Farmhouse v2**, preserved **Large Farmhouse Candidate 004 / v4**, accepted **Compact Laundry House v1**, and current **Small Gas Station Candidate 001 / v1**.
 
 ## 3. Foundation truth
 
@@ -94,6 +94,7 @@ Current registry:
 - `residential.house.farm_small`
 - `residential.house.farm_large`
 - `residential.house.compact_laundry`
+- `commercial.gas_station.small`
 
 ### Accepted Trailer baseline
 
@@ -112,13 +113,9 @@ User explicitly accepted this on 2026-08-17 with: **“Nice save that as small f
 - no oversized circulation band;
 - protected saved baseline.
 
-`FarmhouseBuildingGenerator.gd` remains the small-farmhouse owner. `SmallFarmhouseCritiqueFixture.gd` preserves its accepted critique configuration.
-
 ### Large Farmhouse Candidate 004 — preserved
 
 `residential.house.farm_large`, version 4.
-
-The current preserved large-house candidate remains unchanged:
 
 - 21×9 shell;
 - separate 10×3 living room and 8×3 kitchen;
@@ -127,49 +124,65 @@ The current preserved large-house candidate remains unchanged:
 - upper living/kitchen divider wall + lower open passage;
 - clutter-free wood runner along kitchen y=3;
 - 7 doors and 11 windows;
-- compact clustered living-room furnishing;
-- contiguous stove + refrigerator + counter + sink kitchen run;
-- breakfast table + chair cluster near the east wall;
-- canonical NORTH table-facing choices SOUTH/WEST only.
+- compact clustered common-room furnishing.
 
-`LargeFarmhouseBuildingGenerator.gd` remains untouched by the new-house work.
+### Accepted Compact Laundry House baseline
 
-### Compact Laundry House Candidate 001 — current
+`residential.house.compact_laundry`, version 1.
 
-Archetype: `residential.house.compact_laundry`, version 1.
+User accepted Candidate 001 on 2026-08-20 with: **“ok that looks perfect.”**
 
-This is a new peer residential archetype based on the user-approved generated reference image and the critique lessons learned from the farmhouse work.
+Protected baseline:
 
-Canonical NORTH plan:
+- 17×13 bounding envelope with irregular occupied footprint;
+- two bedrooms, one bathroom;
+- separate kitchen/dining;
+- central living room with no dedicated hallway;
+- dedicated 3×3 laundry/utility room;
+- small south-facing entry bump;
+- 5 doors, 10 windows;
+- 33 compactly clustered props;
+- real washer/dryer/utility-sink/hamper semantics;
+- canonical table-like dressing uses SOUTH/WEST facings.
 
-- 17×13 bounding envelope with an intentionally irregular occupied footprint and a small south-facing entry bump;
-- two bedrooms;
-- one bathroom;
-- separate kitchen/dining room;
-- central irregular living room that owns circulation instead of a dedicated hallway;
-- separate 3×3 laundry/utility room;
-- small 3-cell entry area;
-- one exterior door + four interior doors;
-- ten windows;
-- two-cell doorless opening between kitchen and living;
-- room-specific flooring: carpet bedrooms, white kitchen tile, mosaic bath tile, dark laminate living/entry/laundry;
-- 33 props arranged in local room-purpose clusters rather than stretched across open space.
+`CompactLaundryHouseBuildingGenerator.gd` and `CompactLaundryHouseCritiqueFixture.gd` remain protected while the commercial critique loop is active.
 
-Laundry is a real physical room using recovered game-art semantics: washer, dryer, utility sink and hamper. Kitchen uses a contiguous north-wall refrigerator/counter/sink/counter/stove/pantry run plus a small breakfast table and chair. Living uses bookshelf/TV-side and sofa/coffee-table/armchair clusters with a passable rug. Entry has a passable rug directly inside the front door.
+### Small Gas Station Candidate 001 — current
 
-Table-like dressing follows the learned canonical rule: SOUTH or WEST facing only in the canonical NORTH plan. The new archetype is authored entirely inside System 19 and does not change art, rendering, collision contracts, movement, doors, HUD or persistent-world semantics.
+Archetype: `commercial.gas_station.small`, version 1.
+
+Canonical NORTH property envelope: **19×15**, SOUTH frontage.
+
+The station is intentionally a small independent roadside convenience store rather than a travel center:
+
+- compact rectangular store building occupies the north/rear portion of the property;
+- broad storefront faces a concrete apron and pump forecourt;
+- two two-pump islands create four fuel-pump positions while keeping the central customer path clear;
+- sales floor: 76 connected cells with two compact retail shelf/endcap clusters, checkout/counter cluster, cooler/freezer/vending fixtures;
+- storage room: 5×3 with warehouse racks/pallets/tool cabinet and its own rear service exit;
+- office: 4×3 with desk/chair/file cabinet/copier;
+- bathroom: 3×3 with toilet/sink/towel rack;
+- no dedicated hall/corridor room;
+- one primary storefront entrance, one rear service door and three back-room doors = 5 doors;
+- 10 storefront/side/back windows;
+- 33 purposeful props total including four real `prop.gas_pump` objects, `prop.gas_sign`, exterior ice box/vending/trash, retail shelves, walk-in coolers and back-room fixtures;
+- exterior uses storefront + white-brick commercial semantics; art assets/catalogs are unchanged.
+
+The request envelope is still a caller-supplied local property/building slot. For this archetype it includes the immediate pump forecourt because those pumps are part of the station's local physical property. System 19 still does not choose roads, parcels, towns or utility networks.
 
 ## 8. Live canonical demo
 
-The current live target is **Compact Laundry House Candidate 001**.
+The current live target is **Small Gas Station Candidate 001**.
 
-- fixed 19×15 critique lot;
-- 26 px/cell presentation;
+- fixed 21×17 critique lot;
+- 24 px/cell presentation;
 - canonical spatial scale remains 1m/cell;
-- house envelope `Rect2i(1,1,17,13)`;
-- instance `building.demo.house.compact_laundry.001`, seed `19004`;
-- canonical request orientation NORTH with SOUTH frontage to preserve the image-inspired bottom/front entry;
-- player starts at `(8,14)` facing NORTH toward the CLOSED front door;
+- station/property envelope `Rect2i(1,1,19,15)`;
+- instance `building.demo.gas_station.small.001`, seed `19005`;
+- NORTH orientation / SOUTH frontage;
+- player starts at `(10,11)` facing NORTH, one cell south of primary door `(10,10)`;
+- two pump islands sit farther south on the forecourt while the center approach remains clear;
+- road occupies the bottom map row;
 - one controlled survivor, no NPCs/infected/loot;
 - real HUD, Stats/Inventory/Menu, Crouch/Stand, Run and System 18 doors remain live.
 
@@ -193,15 +206,17 @@ Large Farmhouse Candidate 002 first-green exact head: `e7fe7f1fb7645ec5d1d1e97d8
 
 Large Farmhouse Candidate 003 first-green exact head: `78b22929928f3faa6af5330c05daca5b8d1c48c0`; historical after the clustered-clutter critique.
 
-Large Farmhouse Candidate 004 exact-green head before this new archetype: `94821719bcf7ec21c6a655f4c69d3d0fcae8db25`.
+Large Farmhouse Candidate 004 exact-green head before later archetypes: `94821719bcf7ec21c6a655f4c69d3d0fcae8db25`.
 
-Compact Laundry House Candidate 001 must pass exact-final-head Local Building Generation and Web/Pages before completion is claimed.
+Accepted Compact Laundry House v1 implementation head: `c072a2f34e9c4e9e98e2bd5809fb62087d7362f0`.
+
+Small Gas Station Candidate 001 must pass exact-final-head Local Building Generation and Web/Pages before completion is claimed.
 
 ## 11. Immediate next path
 
-1. User playtests/critiques Compact Laundry House Candidate 001.
-2. Preserve Trailer v2, Small Farmhouse v2 and Large Farmhouse v4 unchanged while iterating the new archetype unless explicitly reopened.
-3. Convert critique into versioned `compact_laundry` rules.
+1. User playtests/critiques Small Gas Station Candidate 001.
+2. Preserve Trailer v2, Small Farmhouse v2, Large Farmhouse v4 and accepted Compact Laundry House v1 unless explicitly reopened.
+3. Convert gas-station critique into versioned `commercial.gas_station.small` rules.
 4. Continue adding residential/commercial archetypes through the same pure-plan -> validation -> materialization loop.
 
 ## 12. Later systems
@@ -224,9 +239,9 @@ Container access/search/locks, corpse/decay/contamination, actor appearance/crea
 12. Shared building validation remains structural/generic; archetype program rules stay with focused archetype contracts/tests.
 13. Directional prop facing is WHAT truth; native sprite facing/rotation policy is presentation truth only.
 14. Accepted/preserved archetype baselines are not mutated by critique of a peer archetype.
-15. Residential layouts should use compact room adjacency and purposeful common-room circulation instead of inflating dedicated halls.
-16. Common-room dressing should prefer believable local furniture clusters and purposeful wall/door anchors over distributing a few props across the full room span.
-17. A bounding envelope may contain an irregular occupied footprint; System 19 need not force every archetype into a rectangular shell.
+15. Common-room/commercial dressing should prefer believable local clusters and clear circulation over distributing a few props across a whole room.
+16. A bounding envelope may contain an irregular building or immediate archetype-owned property dressing such as a forecourt; it must not expand into road/parcel/world planning.
+17. Commercial back-of-house rooms remain real reachable room regions, not labels painted onto one open sales floor.
 
 ## 14. Documentation source order
 

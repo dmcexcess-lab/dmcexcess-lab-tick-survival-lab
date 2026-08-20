@@ -7,9 +7,11 @@ const TrailerClass = preload("res://scripts/generation/buildings/archetypes/Trai
 const SmallFarmhouseClass = preload("res://scripts/generation/buildings/archetypes/FarmhouseBuildingGenerator.gd")
 const LargeFarmhouseClass = preload("res://scripts/generation/buildings/archetypes/LargeFarmhouseBuildingGenerator.gd")
 const CompactLaundryHouseClass = preload("res://scripts/generation/buildings/archetypes/CompactLaundryHouseBuildingGenerator.gd")
+const GasStationClass = preload("res://scripts/generation/buildings/archetypes/GasStationBuildingGenerator.gd")
 const SmallFixtureClass = preload("res://scripts/demo/SmallFarmhouseCritiqueFixture.gd")
 const LargeFixtureClass = preload("res://scripts/demo/FarmhouseCritiqueFixture.gd")
 const CompactLaundryFixtureClass = preload("res://scripts/demo/CompactLaundryHouseCritiqueFixture.gd")
+const GasStationFixtureClass = preload("res://scripts/demo/GasStationCritiqueFixture.gd")
 const WorldStateClass = preload("res://scripts/foundation/world/WorldState.gd")
 const WorldMutationClass = preload("res://scripts/foundation/world/WorldMutationService.gd")
 const CollisionCatalogClass = preload("res://scripts/simulation/collision/CollisionCatalog.gd")
@@ -36,9 +38,11 @@ func _initialize() -> void:
     _test_small_farmhouse_preserved(generator, validator)
     _test_large_farmhouse_generation(generator, validator)
     _test_compact_laundry_house_generation(generator, validator)
+    _test_gas_station_generation(generator, validator)
     _test_small_farmhouse_fixture()
     _test_large_farmhouse_fixture()
     _test_compact_laundry_house_fixture()
+    _test_gas_station_fixture()
     if failures.is_empty():
         print("LOCAL_BUILDING_GENERATION_SMOKE_OK")
         quit(0)
@@ -150,8 +154,8 @@ func _test_large_farmhouse_generation(generator: LocalBuildingGenerator, validat
 
 func _test_compact_laundry_house_generation(generator: LocalBuildingGenerator, validator: GeneratedBuildingValidator) -> void:
     var supported: Array[StringName] = generator.supported_archetypes()
-    _check(supported.has(CompactLaundryHouseClass.ARCHETYPE_ID), "registry exposes compact laundry house")
-    _check(supported.size() == 4, "registry contains the four approved/current residential archetypes")
+    _check(supported.has(CompactLaundryHouseClass.ARCHETYPE_ID), "registry exposes accepted compact laundry house")
+    _check(supported.size() == 5, "registry contains the four preserved residential archetypes plus gas station")
 
     var request := RequestClass.new(
         "building.test.house.compact_laundry",
@@ -163,9 +167,9 @@ func _test_compact_laundry_house_generation(generator: LocalBuildingGenerator, v
     )
     var plan_a: GeneratedBuildingPlan = generator.generate(request)
     var plan_b: GeneratedBuildingPlan = generator.generate(request)
-    _check(plan_a.is_generated() and plan_a.signature() == plan_b.signature(), "compact laundry house is deterministic")
-    _check(plan_a.archetype_version == 1, "compact laundry house begins at archetype version 1")
-    _check(bool(validator.validate(plan_a).get("ok", false)), "compact laundry house north plan validates")
+    _check(plan_a.is_generated() and plan_a.signature() == plan_b.signature(), "accepted compact laundry house remains deterministic")
+    _check(plan_a.archetype_version == 1, "accepted compact laundry house remains version 1")
+    _check(bool(validator.validate(plan_a).get("ok", false)), "accepted compact laundry house north plan validates")
     _check(plan_a.footprint_rect == Rect2i(60, 70, 17, 13), "compact laundry house uses 17x13 bounding envelope")
     _check(_room_cell_count(plan_a, "bedroom_1") == 16, "compact laundry house bedroom 1 is 4x4")
     _check(_room_cell_count(plan_a, "kitchen") == 24, "compact laundry house kitchen is 6x4")
@@ -186,7 +190,7 @@ func _test_compact_laundry_house_generation(generator: LocalBuildingGenerator, v
     _check(not _has_structure_at(plan_a, Vector2i(67, 75)) and not _has_structure_at(plan_a, Vector2i(68, 75)), "kitchen and living use a two-cell doorless opening")
     _check(_ground_semantic_at(plan_a, Vector2i(67, 75)) == &"ground.laminate_dark" and _ground_semantic_at(plan_a, Vector2i(68, 75)) == &"ground.laminate_dark", "kitchen/living opening uses wood threshold flooring")
 
-    _check(plan_a.props.size() == 33, "compact laundry house uses dense clustered dressing without filling circulation")
+    _check(plan_a.props.size() == 33, "compact laundry house keeps its 33 clustered props")
     _check(_prop_role_cell(plan_a, "prop.laundry.washer") == Vector2i(73, 71), "laundry contains a real washer")
     _check(_prop_role_cell(plan_a, "prop.laundry.dryer") == Vector2i(74, 71), "laundry contains a real dryer")
     _check(_prop_role_cell(plan_a, "prop.laundry.utility_sink") == Vector2i(73, 73), "laundry includes a utility sink")
@@ -230,6 +234,70 @@ func _test_compact_laundry_house_generation(generator: LocalBuildingGenerator, v
     var wrong_frontage := RequestClass.new("building.test.house.compact_laundry.frontage", CompactLaundryHouseClass.ARCHETYPE_ID, 1, Rect2i(0, 0, 17, 13), Facing.Value.NORTH, Facing.Value.NORTH)
     _check(not generator.generate(wrong_frontage).is_generated(), "compact laundry house rejects frontage inconsistent with its south-front canonical plan")
 
+func _test_gas_station_generation(generator: LocalBuildingGenerator, validator: GeneratedBuildingValidator) -> void:
+    var supported: Array[StringName] = generator.supported_archetypes()
+    _check(supported.has(GasStationClass.ARCHETYPE_ID), "registry exposes small gas station")
+    _check(supported.size() == 5, "registry exposes exactly five current archetypes")
+
+    var request := RequestClass.new(
+        "building.test.gas_station.small",
+        GasStationClass.ARCHETYPE_ID,
+        19005,
+        Rect2i(60, 70, 19, 15),
+        Facing.Value.NORTH,
+        Facing.Value.SOUTH
+    )
+    var plan_a: GeneratedBuildingPlan = generator.generate(request)
+    var plan_b: GeneratedBuildingPlan = generator.generate(request)
+    _check(plan_a.is_generated() and plan_a.signature() == plan_b.signature(), "gas station is deterministic")
+    _check(plan_a.archetype_version == 1, "gas station begins at archetype version 1")
+    _check(bool(validator.validate(plan_a).get("ok", false)), "gas station north plan validates")
+    _check(plan_a.footprint_rect == Rect2i(60, 70, 19, 15), "gas station uses 19x15 property envelope")
+    _check(_room_cell_count(plan_a, "storage") == 15, "gas station has a 5x3 storage room")
+    _check(_room_cell_count(plan_a, "office") == 12, "gas station has a 4x3 office")
+    _check(_room_cell_count(plan_a, "bathroom") == 9, "gas station has a 3x3 bathroom")
+    _check(_room_cell_count(plan_a, "sales_floor") == 76, "gas station has a broad connected sales floor")
+    _check(_room_cell_count(plan_a, "hall") == 0 and _room_cell_count(plan_a, "corridor") == 0, "gas station has no wasted dedicated hallway")
+    _check(_structure_kind_count(plan_a, "door") == 5, "gas station has primary/service exterior doors plus three back-room doors")
+    _check(_structure_kind_count(plan_a, "window") == 10, "gas station has ten storefront/side/back windows")
+    _check(_role_cell(plan_a, "door.exterior.primary") == Vector2i(69, 79), "gas station primary entrance faces the forecourt")
+    _check(_role_cell(plan_a, "door.exterior.service") == Vector2i(63, 70), "storage room owns a rear service exit")
+    _check(_role_cell(plan_a, "door.interior.storage") == Vector2i(63, 74), "storage opens directly to sales floor")
+    _check(_role_cell(plan_a, "door.interior.office") == Vector2i(69, 74), "office opens directly to sales floor")
+    _check(_role_cell(plan_a, "door.interior.bathroom") == Vector2i(73, 74), "bathroom opens directly to sales floor")
+    _check(_ground_semantic_at(plan_a, Vector2i(69, 80)) == &"ground.concrete_clean", "storefront gets a concrete apron")
+    _check(_ground_semantic_at(plan_a, Vector2i(69, 81)) == &"ground.parking_faded", "forecourt uses faded parking/asphalt surface")
+
+    _check(plan_a.props.size() == 33, "gas station uses 33 purposeful clustered props")
+    _check(_prop_semantic_for_role(plan_a, "prop.storage.rack_left") == &"prop.warehouse_rack", "storage uses warehouse rack art")
+    _check(_prop_semantic_for_role(plan_a, "prop.office.desk") == &"prop.office_desk", "office uses real office desk art")
+    _check(_prop_semantic_for_role(plan_a, "prop.bathroom.toilet") == &"prop.toilet_modern", "bathroom uses real toilet art")
+    _check(_prop_semantic_for_role(plan_a, "prop.sales.checkout") == &"prop.checkout", "sales floor has a real checkout")
+    _check(_prop_semantic_for_role(plan_a, "prop.sales.aisle_1_shelf_1") == &"prop.retail_shelf", "sales floor uses recovered retail shelves")
+    _check(_prop_role_cell(plan_a, "prop.forecourt.pump_left_1") == Vector2i(65, 82), "left pump island begins at expected forecourt cell")
+    _check(_prop_role_cell(plan_a, "prop.forecourt.pump_right_1") == Vector2i(72, 82), "right pump island begins at expected forecourt cell")
+    _check(_prop_semantic_for_role(plan_a, "prop.forecourt.pump_left_1") == &"prop.gas_pump", "forecourt uses real gas-pump semantic")
+    _check(_prop_semantic_for_role(plan_a, "prop.forecourt.sign") == &"prop.gas_sign", "forecourt gets a gas-station sign")
+    for y in range(80, 83):
+        _check(not _has_prop_at(plan_a, Vector2i(69, y)), "primary customer approach remains clear at y=%d" % y)
+
+    var east_request := RequestClass.new(
+        "building.test.gas_station.small.east",
+        GasStationClass.ARCHETYPE_ID,
+        19005,
+        Rect2i(100, 110, 15, 19),
+        Facing.Value.EAST,
+        Facing.Value.WEST
+    )
+    var east_plan: GeneratedBuildingPlan = generator.generate(east_request)
+    _check(east_plan.is_generated() and east_plan.footprint_rect.size == Vector2i(15, 19), "gas station rotates to 15x19")
+    _check(bool(validator.validate(east_plan).get("ok", false)), "rotated gas station validates")
+
+    var too_small := RequestClass.new("building.test.gas_station.small.small", GasStationClass.ARCHETYPE_ID, 1, Rect2i(0, 0, 18, 15), Facing.Value.NORTH, Facing.Value.SOUTH)
+    _check(not generator.generate(too_small).is_generated(), "too-small gas station envelope fails explicitly")
+    var wrong_frontage := RequestClass.new("building.test.gas_station.small.frontage", GasStationClass.ARCHETYPE_ID, 1, Rect2i(0, 0, 19, 15), Facing.Value.NORTH, Facing.Value.NORTH)
+    _check(not generator.generate(wrong_frontage).is_generated(), "gas station rejects frontage inconsistent with its south-facing forecourt")
+
 func _test_small_farmhouse_fixture() -> void:
     var world := WorldStateClass.new()
     var mutations := WorldMutationClass.new(world)
@@ -260,7 +328,7 @@ func _test_compact_laundry_house_fixture() -> void:
     var traversal := BaseTraversalClass.new()
     var doors := DoorStateClass.new()
     var door_mutations := DoorMutationClass.new(doors, world)
-    _check(CompactLaundryFixtureClass.build(world, mutations, collision_catalog, traversal, doors, door_mutations), "compact laundry house critique fixture materializes")
+    _check(CompactLaundryFixtureClass.build(world, mutations, collision_catalog, traversal, doors, door_mutations), "accepted compact laundry house fixture materializes")
     _verify_fixture(
         world,
         mutations,
@@ -277,6 +345,33 @@ func _test_compact_laundry_house_fixture() -> void:
         5,
         Vector2i(8, 13),
         "compact laundry house"
+    )
+
+func _test_gas_station_fixture() -> void:
+    var world := WorldStateClass.new()
+    var mutations := WorldMutationClass.new(world)
+    var collision_catalog := CollisionCatalogClass.new()
+    var collision_overrides := CollisionOverridesClass.new()
+    var traversal := BaseTraversalClass.new()
+    var doors := DoorStateClass.new()
+    var door_mutations := DoorMutationClass.new(doors, world)
+    _check(GasStationFixtureClass.build(world, mutations, collision_catalog, traversal, doors, door_mutations), "gas station critique fixture materializes")
+    _verify_fixture(
+        world,
+        mutations,
+        collision_catalog,
+        collision_overrides,
+        traversal,
+        doors,
+        door_mutations,
+        GasStationFixtureClass.PLAYER_ID,
+        GasStationFixtureClass.EXTERIOR_DOOR_ID,
+        GasStationFixtureClass.MAP_ORIGIN,
+        GasStationFixtureClass.MAP_SIZE,
+        GasStationFixtureClass.CELL_PIXELS,
+        5,
+        Vector2i(10, 10),
+        "gas station"
     )
 
 func _verify_fixture(world: WorldState, mutations: WorldMutationService, collision_catalog: CollisionCatalog, collision_overrides: CollisionOverrideState, traversal: MovementTraversalPolicy, doors: DoorStateStore, door_mutations: DoorStateMutationService, player_id: String, exterior_door_id: String, map_origin: Vector2i, map_size: Vector2i, cell_pixels: float, expected_door_count: int, expected_entry_cell: Vector2i, label: String) -> void:

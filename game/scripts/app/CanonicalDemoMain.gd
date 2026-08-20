@@ -42,7 +42,7 @@ const DoorTransitionClass = preload("res://scripts/simulation/doors/DoorPhysical
 const DoorPassageClass = preload("res://scripts/simulation/doors/DoorMovementPassageResolver.gd")
 const DoorActionClass = preload("res://scripts/simulation/doors/DoorInteractionActionService.gd")
 const DoorDamageInterruptionClass = preload("res://scripts/simulation/doors/DoorDamageInterruptionService.gd")
-const FixtureClass = preload("res://scripts/demo/CompactLaundryHouseCritiqueFixture.gd")
+const FixtureClass = preload("res://scripts/demo/GasStationCritiqueFixture.gd")
 const ControllerClass = preload("res://scripts/player/DemoPlayerActionController.gd")
 const DoorControllerClass = preload("res://scripts/player/DoorPlayerInteractionController.gd")
 

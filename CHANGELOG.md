@@ -1,5 +1,20 @@
 # Changelog
 
+## System 19 Small Gas Station Candidate 001 — 2026-08-20
+
+- Promoted Compact Laundry House Candidate 001 / `residential.house.compact_laundry` v1 to an accepted protected baseline after the user said: “ok that looks perfect.”
+- Added the new peer commercial archetype `commercial.gas_station.small` at version 1 without modifying Trailer v2, Small Farmhouse v2, Large Farmhouse v4 or Compact Laundry House v1.
+- Built a compact **19×15 property envelope** containing a small roadside convenience-store building plus its immediate pump forecourt rather than an oversized highway travel center.
+- Implemented the requested back-of-house program as real reachable rooms: **5×3 storage**, **4×3 office**, and **3×3 bathroom**, all opening directly onto a connected 76-cell sales floor with no dedicated hallway.
+- Added five doors: primary storefront entrance, rear storage/service exit, and dedicated storage/office/bathroom interior doors. Ten storefront/side/back windows establish the commercial shell.
+- Used commercial room/property surfaces: shop floor, warehouse floor, office carpet, mosaic bathroom tile, concrete storefront apron and faded parking/forecourt pavement.
+- Added **33 purposeful props** using existing recovered art: checkout/counter, two compact retail shelf/endcap clusters, walk-in coolers, freezer, vending, office furniture, bathroom fixtures, warehouse racks/pallets/tool cabinet and exterior convenience-store dressing.
+- Added four real `prop.gas_pump` objects as two pump islands, plus `prop.gas_sign`, exterior ice box, vending machine and trash bin while keeping the central customer path from road/forecourt to storefront clear.
+- Added `GasStationCritiqueFixture.gd`: 21×17 lot, 24 px/cell, seed 19005, NORTH orientation / SOUTH frontage, player starting one cell south of the closed storefront door.
+- Registered the fifth archetype in `LocalBuildingGenerator.gd` and switched the canonical demo fixture preload to the gas station while keeping `CanonicalDemoMain.gd` composition-only.
+- Expanded System 19 CI to protect all four previous archetypes and lock gas-station room sizes, doors/windows, commercial semantics, pump islands, clear circulation, rotation/frontage rejection, collision/art coverage, System 18 entry traversal and renderer diagnostics.
+- No Art Catalog/assets, renderer, movement, door-system, HUD or persistent-world contracts were changed.
+
 ## System 19 Compact Laundry House Candidate 001 — 2026-08-17
 
 - Added the new peer archetype `residential.house.compact_laundry` at version 1, based on the user-approved generated house reference rather than modifying any existing farmhouse.
