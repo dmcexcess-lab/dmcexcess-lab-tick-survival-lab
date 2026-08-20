@@ -10,6 +10,7 @@ const CompactLaundryHouseClass = preload("res://scripts/generation/buildings/arc
 const GasStationClass = preload("res://scripts/generation/buildings/archetypes/GasStationBuildingGenerator.gd")
 const DinerClass = preload("res://scripts/generation/buildings/archetypes/RuralDinerBuildingGenerator.gd")
 const DinerFixtureClass = preload("res://scripts/demo/RuralDinerCritiqueFixture.gd")
+const DevSeedSessionClass = preload("res://scripts/demo/BuildingGrammarDevSeedSession.gd")
 const WorldStateClass = preload("res://scripts/foundation/world/WorldState.gd")
 const WorldMutationClass = preload("res://scripts/foundation/world/WorldMutationService.gd")
 const CollisionCatalogClass = preload("res://scripts/simulation/collision/CollisionCatalog.gd")
@@ -35,6 +36,7 @@ func _initialize() -> void:
     _test_placement_descriptors(generator)
     _test_diner_candidate(generator, validator)
     _test_diner_seed_and_rotation_torture(generator, validator)
+    _test_dev_seed_session()
     _test_diner_fixture()
     if failures.is_empty():
         print("BUILDING_GRAMMAR_SMOKE_OK")
@@ -51,7 +53,7 @@ func _test_placement_descriptors(generator: LocalBuildingGenerator) -> void:
         [LargeFarmhouseClass.ARCHETYPE_ID, Vector2i(21, 9), Facing.Value.NORTH, 4],
         [CompactLaundryHouseClass.ARCHETYPE_ID, Vector2i(17, 13), Facing.Value.SOUTH, 1],
         [GasStationClass.ARCHETYPE_ID, Vector2i(19, 15), Facing.Value.SOUTH, 1],
-        [DinerClass.ARCHETYPE_ID, Vector2i(17, 11), Facing.Value.SOUTH, 1],
+        [DinerClass.ARCHETYPE_ID, Vector2i(17, 11), Facing.Value.SOUTH, 2],
     ]
     _check(generator.supported_archetypes().size() == 6, "registry exposes five saved examples plus diner grammar trial")
     _check(generator.placement_descriptors().size() == 6, "every registered archetype exposes a placement descriptor")
@@ -81,7 +83,7 @@ func _test_diner_candidate(generator: LocalBuildingGenerator, validator: Generat
     var plan_a: GeneratedBuildingPlan = generator.generate(request)
     var plan_b: GeneratedBuildingPlan = generator.generate(request)
     _check(plan_a.is_generated() and plan_a.signature() == plan_b.signature(), "diner grammar is deterministic for same seed")
-    _check(plan_a.archetype_version == 1, "diner grammar trial begins at version 1")
+    _check(plan_a.archetype_version == 2, "diner grammar v2 reports the table-density rule change")
     _check(bool(validator.validate(plan_a).get("ok", false)), "diner grammar output passes shared structural validator")
     _check(plan_a.footprint_rect == Rect2i(60, 70, 17, 11), "diner uses compact 17x11 shell")
     _check(_room_cell_count(plan_a, "dining_room") == 75, "diner public room is broad 15x5 dining hub")
@@ -96,7 +98,7 @@ func _test_diner_candidate(generator: LocalBuildingGenerator, validator: Generat
     _check(_role_cell(plan_a, "door.interior.kitchen") == Vector2i(64, 74), "kitchen opens directly to dining hub")
     _check(_role_cell(plan_a, "door.interior.storage") == Vector2i(70, 74), "storage opens directly to dining hub")
     _check(_role_cell(plan_a, "door.interior.bathroom") == Vector2i(74, 74), "bathroom opens directly to dining hub")
-    _check(plan_a.props.size() == 26, "diner grammar uses purposeful clustered dressing rather than filling space")
+    _check(plan_a.props.size() == 30, "diner v2 adds two more table/booth clusters without filling the aisle")
 
     var kitchen_roles: Array[String] = [
         "prop.kitchen.fridge",
@@ -120,7 +122,7 @@ func _test_diner_candidate(generator: LocalBuildingGenerator, validator: Generat
     for y in range(71, 74):
         _check(not _has_blocking_prop_at(plan_a, Vector2i(70, y)), "storage service lane remains open at y=%d" % y)
 
-    for suffix: String in ["west_a", "west_b", "east_a", "east_b"]:
+    for suffix: String in ["west_a", "west_mid", "west_b", "east_a", "east_mid", "east_b"]:
         var table: Vector2i = _prop_role_cell(plan_a, "prop.dining.table.%s" % suffix)
         var booth: Vector2i = _prop_role_cell(plan_a, "prop.dining.booth.%s" % suffix)
         _check(_manhattan(table, booth) == 1, "diner table/booth cluster %s stays adjacent" % suffix)
@@ -140,6 +142,32 @@ func _test_diner_candidate(generator: LocalBuildingGenerator, validator: Generat
     _check(alternate_plan.signature() != plan_a.signature(), "adjacent diner seeds produce meaningfully different room ordering")
     _check(_role_cell(alternate_plan, "door.interior.kitchen") == Vector2i(68, 74), "alternate seed moves kitchen through profile ordering rather than hand-authored duplicate")
     _check(_role_cell(alternate_plan, "door.exterior.service") == Vector2i(74, 70), "alternate seed moves storage service exit with storage room")
+
+    var third := RequestClass.new(
+        "building.test.diner.rural_small.third",
+        DinerClass.ARCHETYPE_ID,
+        19008,
+        Rect2i(60, 70, 17, 11),
+        Facing.Value.NORTH,
+        Facing.Value.SOUTH
+    )
+    var third_plan: GeneratedBuildingPlan = generator.generate(third)
+    _check(third_plan.is_generated() and bool(validator.validate(third_plan).get("ok", false)), "third diner topology generates and validates")
+    _check(_role_cell(third_plan, "door.interior.kitchen") == Vector2i(64, 74), "seed 19008 keeps kitchen west while swapping the compact service rooms")
+    _check(_role_cell(third_plan, "door.exterior.service") == Vector2i(74, 70), "seed 19008 moves storage service exit east")
+
+    var fourth := RequestClass.new(
+        "building.test.diner.rural_small.fourth",
+        DinerClass.ARCHETYPE_ID,
+        19009,
+        Rect2i(60, 70, 17, 11),
+        Facing.Value.NORTH,
+        Facing.Value.SOUTH
+    )
+    var fourth_plan: GeneratedBuildingPlan = generator.generate(fourth)
+    _check(fourth_plan.is_generated() and bool(validator.validate(fourth_plan).get("ok", false)), "fourth diner topology generates and validates")
+    _check(_role_cell(fourth_plan, "door.interior.kitchen") == Vector2i(68, 74), "seed 19009 keeps the kitchen centered")
+    _check(_role_cell(fourth_plan, "door.exterior.service") == Vector2i(62, 70), "seed 19009 moves storage service exit west")
 
 func _test_diner_seed_and_rotation_torture(generator: LocalBuildingGenerator, validator: GeneratedBuildingValidator) -> void:
     var descriptor: BuildingArchetypePlacementDescriptor = generator.placement_descriptor(DinerClass.ARCHETYPE_ID)
@@ -168,6 +196,14 @@ func _test_diner_seed_and_rotation_torture(generator: LocalBuildingGenerator, va
     _check(not generator.generate(too_small).is_generated(), "diner grammar rejects undersized envelope")
     var wrong_frontage := RequestClass.new("building.test.diner.wrong_frontage", DinerClass.ARCHETYPE_ID, 1, Rect2i(0, 0, 17, 11), Facing.Value.NORTH, Facing.Value.NORTH)
     _check(not generator.generate(wrong_frontage).is_generated(), "diner grammar rejects incompatible frontage")
+
+func _test_dev_seed_session() -> void:
+    DevSeedSessionClass.clear_native_override()
+    _check(DevSeedSessionClass.current_seed(DinerFixtureClass.DINER_SEED) == DinerFixtureClass.DINER_SEED, "dev seed session defaults to fixture seed")
+    DevSeedSessionClass.set_native_seed(19009)
+    _check(DevSeedSessionClass.current_seed(DinerFixtureClass.DINER_SEED) == 19009, "dev seed session exposes explicit native override")
+    DevSeedSessionClass.clear_native_override()
+    _check(DinerFixtureClass.active_seed() == DinerFixtureClass.DINER_SEED, "clearing dev seed restores canonical fixture seed")
 
 func _test_diner_fixture() -> void:
     var world := WorldStateClass.new()
