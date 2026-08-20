@@ -14,7 +14,8 @@ func validate(profile: BuildingGrammarProfile, layout: Dictionary, props: Array[
     var public_purpose: String = String(profile.public_room.get("purpose", ""))
     if public_purpose.is_empty() or not room_rects.has(public_purpose):
         failures.append("required_public_room_missing")
-    for purpose: String in profile.service_rooms.keys():
+    for purpose_value: Variant in profile.service_rooms.keys():
+        var purpose: String = String(purpose_value)
         if not room_rects.has(purpose):
             failures.append("required_service_room_missing_%s" % purpose)
     if profile.forbid_dedicated_hall and (room_rects.has("hall") or room_rects.has("corridor")):
@@ -32,7 +33,8 @@ func validate(profile: BuildingGrammarProfile, layout: Dictionary, props: Array[
         if prop_cells.has(cell) and bool(prop_cells[cell]):
             failures.append("reserved_clearance_blocked")
 
-    for purpose: String in room_rects.keys():
+    for purpose_value: Variant in room_rects.keys():
+        var purpose: String = String(purpose_value)
         var room: Rect2i = room_rects[purpose]
         if room.size.x <= 0 or room.size.y <= 0:
             failures.append("invalid_room_rect_%s" % purpose)
@@ -48,7 +50,7 @@ func validate(profile: BuildingGrammarProfile, layout: Dictionary, props: Array[
     _validate_kitchen_run(layout, props, failures)
     _validate_restaurant_clusters(profile, props, failures)
     _validate_storage_lane(layout, props, failures)
-    _validate_bathroom(props, failures)
+    _validate_bathroom(layout, props, failures)
     _validate_table_facings(props, failures)
     return {"ok": failures.is_empty(), "failures": failures}
 
@@ -113,7 +115,10 @@ func _validate_storage_lane(layout: Dictionary, props: Array[Dictionary], failur
             failures.append("storage_service_lane_blocked")
             return
 
-func _validate_bathroom(props: Array[Dictionary], failures: Array[String]) -> void:
+func _validate_bathroom(layout: Dictionary, props: Array[Dictionary], failures: Array[String]) -> void:
+    var room_rects: Dictionary = layout.get("room_rects", {})
+    if not room_rects.has("bathroom"):
+        return
     var saw_toilet: bool = false
     var saw_sink: bool = false
     for prop: Dictionary in props:
