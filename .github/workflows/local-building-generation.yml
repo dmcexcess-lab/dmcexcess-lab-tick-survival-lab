@@ -41,6 +41,8 @@ jobs:
           test -f game/scripts/demo/TrailerCritiqueFixture.gd
           test -f game/scripts/demo/FarmhouseCritiqueFixture.gd
           test -f game/scripts/demo/RuralDinerCritiqueFixture.gd
+          test -f game/scripts/demo/BuildingGrammarDevSeedSession.gd
+          test -f game/scripts/ui/BuildingGrammarDevControls.gd
           test -f game/scripts/ci/LocalBuildingGenerationSmoke.gd
           test -f game/scripts/ci/BuildingGrammarSmoke.gd
           ! grep -R -q 'assets/\|atlas_index\|Texture2D\|Camera2D' game/scripts/generation/buildings
