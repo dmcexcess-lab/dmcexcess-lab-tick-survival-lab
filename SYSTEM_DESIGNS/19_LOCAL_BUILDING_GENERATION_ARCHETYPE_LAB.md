@@ -1,461 +1,447 @@
-# Tick Survival Lab — System 19 Local Building Generation / Archetype Critique Lab
+# Tick Survival Lab — System 19 Local Building Generation / Building Grammar
 
-Status: **IMPLEMENTED — shared local-building contract with accepted Trailer v2, accepted Small Farmhouse v2, preserved Large Farmhouse Candidate 004, accepted Compact Laundry House v1, and current Small Gas Station Candidate 001**
+Status: **IMPLEMENTED — HARDENING TRIAL 001 ACTIVE**
 
-Date: 2026-08-16; archetype critique work current through 2026-08-20.
+Date: 2026-08-20
 
-Depends on implemented WHERE / WHAT, Art Catalog + tactical layer renderers, Door State, and System 18 Door Interaction. Future Global World Planning remains a separate higher-level owner.
+System 19 is the local physical-building owner between higher-level parcel planning and persistent WHAT. The original archetype critique lab produced five saved reference buildings. The current hardening phase converts the recurring lessons from those references into reusable building rules, then proves the rules on buildings that were not hand-authored cell-by-cell.
+
+The user-approved finish condition is now explicit:
+
+> Build two arbitrary buildings successfully from the extracted grammar. If both look right in playtest, finalize System 19 and move on to System 20.
+
+Trial 001 is `commercial.diner.rural_small`.
 
 ## 1. Goal
 
-Create a reusable local building generator that turns an already-chosen building/property slot into a believable physical place.
+Given a caller-selected building/property slot, stable instance namespace, archetype/profile, seed, global envelope, orientation and frontage, produce a believable deterministic physical building plan that can be validated and materialized into the persistent world.
 
-Development loop:
+System 19 should make adding a barn, diner, store, church, warehouse or another house primarily **profile/content work**, not another rewrite of generation architecture.
 
-> generate an archetype candidate -> play/inspect it -> user critiques it -> convert critique into archetype rules -> preserve accepted versions -> add the next archetype
+## 2. Architectural position
 
-System 19 is not a screenshot generator and not the global world planner.
+Generation hierarchy:
 
-## 2. Architectural boundary
+1. future Global World Planning decides geography, settlements and cross-area infrastructure;
+2. System 20 Local Area / Parcel Generation decides local roads, parcels, accesses, land use and which building slot/archetype belongs on a property;
+3. **System 19** turns that already-chosen slot into physical local building/property detail;
+4. WHAT + typed mechanic state own all later reality.
 
-System 19 answers:
+System 19 does not choose towns, roads, parcels, addresses, households, businesses as social/economic actors, population, runtime occupancy, weather, outbreak history, camera, streaming partitions or world-scale utilities.
 
-> Given a global-space envelope, orientation, frontage, archetype, stable instance namespace and seed, what physical building/property detail exists here?
+A commercial archetype may own immediate inseparable property detail inside its supplied envelope, such as the accepted gas station's pump forecourt. That never gives System 19 ownership of the road or parcel network.
 
-It does not decide towns, roads, parcels, addresses, utilities, household/business assignment, loot, outbreak history, streaming regions, camera behavior or which property receives which building type.
+## 3. Stable public pipeline
 
-A request envelope is a bounding area. Archetypes may occupy a rectangle or an irregular subset within it. A local commercial archetype may also use part of that caller-supplied envelope for immediate property fixtures that are inseparable from the business, such as a gas-station pump forecourt. This does not transfer road/parcel/world-planning ownership into System 19.
+Canonical flow:
 
-## 3. Implemented owners
+`BuildingGenerationRequest -> LocalBuildingGenerator -> GeneratedBuildingPlan -> GeneratedBuildingValidator -> GeneratedBuildingMaterializer -> WHAT + CLOSED Door State`
 
 ### `BuildingGenerationRequest.gd`
-Pure request facts: instance namespace, archetype ID, seed, global envelope, N/E/S/W orientation and caller-selected frontage.
+
+Caller facts only:
+
+- stable instance ID;
+- archetype ID;
+- seed;
+- global bounding envelope;
+- N/E/S/W orientation;
+- caller-selected frontage.
 
 ### `GeneratedBuildingPlan.gd`
-Pure semantic result: bounding footprint, ground, structures, props, generation-only room-purpose regions, deterministic roles, version and seed provenance.
 
-### `LocalBuildingGenerator.gd`
-Registry/coordinator only. It routes:
+Pure semantic initial-state plan:
+
+- bounding footprint;
+- ground entries;
+- structures/openings;
+- props/fixtures;
+- generation-only room-purpose regions;
+- deterministic child roles/IDs;
+- archetype version/seed/orientation/frontage provenance.
+
+It contains no atlas indices, texture paths, renderer calls, UI state, runtime people or mutable gameplay ownership.
+
+### `GeneratedBuildingValidator.gd`
+
+Shared structural validator owns only generic correctness:
+
+- valid generated plan/provenance;
+- unique cells/roles where required;
+- footprint containment;
+- valid structure axes;
+- one primary exterior door;
+- no illegal structure/prop contradiction;
+- no blocking prop on a doorway;
+- valid room records;
+- reachability from the primary entrance with doors conceptually passable.
+
+It must **not** become a catalog of diner/house/store-specific room programs.
+
+### `GeneratedBuildingMaterializer.gd`
+
+Writes only validated initial world facts through public WHAT + Door State contracts. Generated doors begin CLOSED. If materialization fails part-way, it restores the prior state. After success, generation relinquishes ownership.
+
+## 4. Read-only placement seam for System 20
+
+### `BuildingArchetypePlacementDescriptor.gd`
+
+System 20 must not copy sizes/frontage rules out of individual System 19 files.
+
+`LocalBuildingGenerator.placement_descriptor(archetype_id)` therefore exposes a narrow read-only description derived through the archetype's own public generation behavior:
+
+- archetype ID/version;
+- canonical required size;
+- canonical frontage;
+- supported cardinal orientations;
+- rotated required size;
+- rotated frontage.
+
+Legacy accepted generators remain untouched. The registry probes their own public contract to derive the descriptor and caches the result, so there is one source of truth rather than a second hand-maintained size table.
+
+This descriptor exposes placement facts only. It does not expose rooms, furniture or generator internals.
+
+## 5. Saved reference library
+
+These examples are the golden regression/training set used to extract rules. Peer critique must not silently mutate them.
+
+### Trailer v2 — accepted
+
+`residential.trailer.singlewide`
+
+- 5×12;
+- compact living/kitchen + bath + bedroom;
+- contiguous small kitchen work group;
+- very little circulation waste.
+
+### Small Farmhouse v2 — accepted
+
+`residential.house.farm_small`
+
+- 13×9;
+- two bedrooms + bath;
+- 11×3 open living/kitchen;
+- private rooms directly behind one partition row;
+- no inflated hallway band.
+
+### Large Farmhouse v4 — preserved reference
+
+`residential.house.farm_large`
+
+- 21×9;
+- separate living and kitchen;
+- three bedrooms + two bathrooms;
+- no dedicated hallway/corridor;
+- doorless lower living/kitchen passage;
+- clear kitchen runner;
+- furniture clustered by function rather than stretched across open rooms.
+
+### Compact Laundry House v1 — accepted
+
+`residential.house.compact_laundry`
+
+User acceptance: **“ok that looks perfect.”**
+
+- 17×13 irregular occupied footprint;
+- two bedrooms + one bath;
+- separate kitchen;
+- central living circulation;
+- real 3×3 laundry/utility room;
+- small entry bump;
+- kitchen work run and local furniture clusters;
+- open space intentionally left open.
+
+### Small Gas Station v1 — accepted
+
+`commercial.gas_station.small`
+
+User acceptance: **“perfect.”**
+
+- 19×15 property envelope;
+- compact roadside convenience store, not a travel center;
+- real sales floor, office, bathroom and storage room;
+- rear storage/service exit;
+- checkout/retail/cooler clusters;
+- two pump islands / four pumps;
+- clear customer route from forecourt to storefront.
+
+The gas station is now a protected fifth reference rather than the active critique target.
+
+## 6. Extracted hard-rule hierarchy
+
+The examples do **not** imply universal exact dimensions or prop counts. A 3×3 bathroom, ten windows or thirty-three props can be correct for one archetype without becoming a law for every building.
+
+Rules are separated into three levels.
+
+### 6.1 Universal building-quality rules
+
+These are the reusable lessons System 19 is hardening:
+
+1. **Compact purposeful space.** Extra envelope area does not automatically inflate rooms.
+2. **Circulation must have a reason.** Prefer useful room adjacency and shared public/common circulation over dedicated hallways when the program does not need a hall.
+3. **Primary entry must make functional sense.** The player should enter a public/common/customer space, not teleport conceptually into a private/service room.
+4. **Every required room is physically real and reachable.** A label on one undivided floor is not a room.
+5. **Door approaches remain usable.** Reserve the doorway and immediate approach cells from blocking dressing.
+6. **Service routes remain usable.** Storage/service exits and work lanes are protected from decorative filling.
+7. **Functional objects cluster.** Related objects normally stay within roughly one or two cells rather than being distributed across a room to fill space.
+8. **Work runs are contiguous where appropriate.** Kitchen appliances/counters and similar sequences should read as one usable work area.
+9. **Open space is allowed.** Do not add props simply because a tile is empty.
+10. **Room dressing has a density ceiling.** The current grammar rejects rooms where blocking dressing exceeds 45% of room cells; profiles may be stricter later.
+11. **Frontage is physical truth.** Entrances/storefronts/service sides rotate with semantic building orientation.
+12. **Same version + request + seed is deterministic.** Intentional same-seed rule changes bump the archetype/profile version.
+13. **Different seeds should matter when a profile declares variants.** Variation changes legal spatial choices, not random decoration noise that breaks functional rules.
+
+### 6.2 Profile-specific rules
+
+A profile owns facts that are not universal:
+
+- required/optional room purposes;
+- room widths/depths or ranges;
+- adjacency/order variants;
+- whether a service room needs an exterior exit;
+- window expectations;
+- public-space type;
+- wall/opening semantic themes;
+- dressing families;
+- canonical envelope/frontage;
+- whether a dedicated hall is allowed/required;
+- immediate archetype-owned exterior property detail.
+
+The shared quality layer asks whether the declared program is satisfied. It must not decide that every building needs a bathroom, office, kitchen, bedroom or storage room.
+
+### 6.3 Presentation-only art-facing rules
+
+Recovered art currently makes table-like sprites in canonical NORTH layouts read correctly when authored SOUTH/WEST rather than NORTH. New grammar dressing therefore enforces SOUTH/WEST semantic facings for recovered table-like groups it owns.
+
+This is **not architecture/physics truth**. System 07A remains the presentation owner for native sprite orientation. If art is replaced later, presentation metadata/rules may change without rewriting building topology.
+
+## 7. Reusable hardening owners
+
+### `grammar/BuildingGrammarProfile.gd`
+
+Data contract for grammar-driven archetypes. Trial 001 supports the first layout strategy, `front_hub_back_strip`:
+
+- one broad public/common front hub;
+- compact service rooms across the rear;
+- direct service-room doors into the hub;
+- optional rear service exit;
+- no dedicated hallway unless a future profile/strategy explicitly needs one.
+
+Profiles may provide deterministic legal service-room order variants.
+
+### `grammar/BuildingGrammarGenerator.gd`
+
+Owns reusable topology for the selected strategy:
+
+- envelope/frontage checks;
+- room rectangle construction;
+- separator/partition placement;
+- primary and service opening placement;
+- frontage/side/rear window grammar;
+- reserved circulation cells;
+- N/E/S/W transformation;
+- final semantic plan assembly.
+
+It does not know renderer art internals or gameplay state.
+
+### `grammar/BuildingRoomDressingPlanner.gd`
+
+Owns reusable functional dressing patterns rather than building identities.
+
+Trial 001 hardens:
+
+- restaurant booth/table clusters;
+- small customer counter cluster;
+- contiguous seven-cell kitchen work line;
+- storage wall dressing with clear middle service lane;
+- compact bathroom fixture cluster.
+
+The planner refuses blocking props on reserved circulation cells.
+
+### `grammar/BuildingGrammarQualityValidator.gd`
+
+Second validation layer for generation quality/profile fulfillment. It is separate from `GeneratedBuildingValidator` so generic physical validity does not become coupled to content style.
+
+Current checks include:
+
+- declared rooms exist;
+- forbidden hall/corridor purposes do not appear;
+- reserved circulation remains clear;
+- room blocking-prop density stays <=45%;
+- kitchen work run remains contiguous when a kitchen exists;
+- restaurant tables stay adjacent to booths for the restaurant dressing family;
+- storage middle service lane remains clear when storage exists;
+- bathroom contains its required basic fixtures when bathroom exists;
+- grammar-owned table-like props obey the current recovered-art facing rule.
+
+## 8. Hardening Trial 001 — Rural Roadside Diner
+
+Archetype: `commercial.diner.rural_small`
+
+Version: **1**
+
+Canonical envelope: **17×11**, SOUTH frontage.
+
+The archetype wrapper is intentionally thin. It delegates to `RuralDinerBuildingProfile.gd` + the shared grammar rather than owning a hand-written floor plan.
+
+### Program
+
+Public hub:
+
+- `dining_room`: 15×5 = 75 cells, restaurant floor.
+
+Rear service strip:
+
+- `kitchen`: 7×3 = 21 cells;
+- `storage`: 3×3 = 9 cells;
+- `bathroom`: 3×3 = 9 cells;
+- two one-cell separator walls between the service rooms.
+
+No hall/corridor room exists.
+
+### Seeded topology variation
+
+The profile currently declares two legal service-room orderings:
+
+- kitchen -> storage -> bathroom;
+- bathroom -> kitchen -> storage.
+
+Seed 19006 uses the first ordering. Seed 19007 uses the second. The storage rear service exit follows the storage room rather than remaining at a hard-coded coordinate.
+
+This is the first proof that seed variation can change topology while the same quality rules continue to hold.
+
+### Seed 19006 openings
+
+Local canonical cells:
+
+- primary SOUTH storefront door `(8,10)`;
+- rear storage service door `(10,0)`;
+- kitchen door `(4,4)`;
+- storage door `(10,4)`;
+- bathroom door `(14,4)`.
+
+Total: **5 doors**.
+
+Windows: **11** total — six storefront windows, two dining side windows, two kitchen rear windows and one bathroom rear window.
+
+### Dressing
+
+The diner emits **26 blocking props**, leaving most of the building open:
+
+- four booth/table pairs;
+- two counter segments + two nearby counter chairs;
+- seven contiguous kitchen work-line pieces: refrigerator, counter, sink, counter, stove, counter, pantry;
+- storage: two racks, pallet and tool cabinet with the middle service lane clear;
+- bathroom: toilet, sink and towel rack.
+
+The central customer aisle from the front door through the dining room is reserved clear.
+
+### Live critique fixture
+
+`RuralDinerCritiqueFixture.gd`:
+
+- 19×13 lot;
+- 28 px/cell;
+- envelope `Rect2i(1,1,17,11)`;
+- seed `19006`;
+- NORTH orientation / SOUTH frontage;
+- player `(9,12)` facing NORTH toward closed primary door `(9,11)` global;
+- road on the south/bottom row;
+- no NPCs or runtime content injected by System 19.
+
+Canonical demo currently points at this fixture for playtest.
+
+## 9. Registry
+
+Current callable archetypes:
 
 - `residential.trailer.singlewide`
 - `residential.house.farm_small`
 - `residential.house.farm_large`
 - `residential.house.compact_laundry`
 - `commercial.gas_station.small`
-
-It contains no room-layout logic.
-
-### `archetypes/TrailerBuildingGenerator.gd`
-Owns the accepted single-wide trailer rules.
-
-### `archetypes/FarmhouseBuildingGenerator.gd`
-Owns only the accepted small farmhouse rules.
-
-### `archetypes/LargeFarmhouseBuildingGenerator.gd`
-Owns only `residential.house.farm_large`, including its compact three-bedroom/two-bath program and current clustered dressing.
-
-### `archetypes/CompactLaundryHouseBuildingGenerator.gd`
-Owns only the accepted `residential.house.compact_laundry` program.
-
-### `archetypes/GasStationBuildingGenerator.gd`
-Owns only `commercial.gas_station.small`: compact convenience-store shell, sales floor, office, bathroom, storage room, storefront, immediate pump forecourt and room-specific commercial dressing.
-
-### `GeneratedBuildingValidator.gd`
-Shared structural validator verifies footprint containment, unique roles, legal axes, no structure/prop contradictions, valid room records, exactly one primary exterior door, no blocking furniture on doors, and reachability from the primary entrance with doors conceptually passable.
-
-The shared validator does not hard-code archetype-specific room names, dimensions or clutter style. Dedicated CI locks each archetype program.
-
-### `GeneratedBuildingMaterializer.gd`
-Consumes a validated plan and public initial-state contracts only. It writes initial WHAT terrain/entities/placements, enrolls generated doors CLOSED, refuses unrelated occupied cells, and restores WHAT + Door State if a later write fails.
-
-After materialization, generator ownership ends.
-
-## 4. Determinism / identity
-
-Same archetype version + request + seed must produce the same semantic plan/signature.
-
-Child IDs derive from caller instance namespace + deterministic role.
-
-Intentional same-seed archetype output changes bump that archetype version.
-
-Different residential/commercial layouts remain peer archetypes rather than mode flags inside one giant generator.
-
-## 5. Accepted Trailer baseline — v2
-
-Preserve the accepted 5×12 trailer baseline unless explicitly reopened.
-
-## 6. Accepted Small Farmhouse baseline — v2
-
-Archetype: `residential.house.farm_small`
-
-User accepted it on 2026-08-17 with:
-
-> “Nice save that as small farm house.”
-
-Canonical program:
-
-- 13×9 shell;
-- one 11×3 open living/kitchen;
-- bedroom 1 3×3;
-- bathroom 3×3;
-- bedroom 2 3×3;
-- private rooms directly behind one partition row;
-- no oversized middle circulation band;
-- two exterior + three private-room doors;
-- seven windows;
-- restrained wall-aware furniture.
-
-This is a protected accepted baseline.
-
-## 7. Large Farmhouse Candidate 004 — preserved
-
-Archetype: `residential.house.farm_large`
-
-Version: **4**.
-
-### 7.1 Historical critique path
-
-Candidate 001 used a 25×20 L-shaped footprint with large rooms and a central hall and was rejected as too large/hallway-heavy.
-
-Candidate 002 established the density direction: 21×9 shell, 10×3 living room, 8×3 kitchen, three 3×3 bedrooms, two 3×3 bathrooms and no hall/corridor room.
-
-Candidate 003 kept that structure while replacing the living/kitchen door with upper divider wall + lower open passage, converting the kitchen bottom row to a clutter-free wood runner, moving the sink to the north wall and adding a breakfast table near the east wall.
-
-Candidate 004 kept all Candidate 003 structure/floor geometry and changed only common-room prop placement/orientation/density.
-
-### 7.2 Preserved structure and dressing
-
-- 21×9 shell;
-- separate 10×3 living room and 8×3 kitchen;
-- three 3×3 bedrooms and two 3×3 bathrooms;
-- 7 total doors and 11 windows;
-- no dedicated hallway/corridor room;
-- upper living/kitchen divider remains wall, lower divider remains open;
-- kitchen y=3 wood runner remains prop-free;
-- living furniture uses compact local clustering;
-- kitchen appliance run remains stove + refrigerator + counter + sink;
-- breakfast table + chair remain near east wall;
-- canonical NORTH table-like props use SOUTH/WEST facings.
-
-## 8. Accepted Compact Laundry House baseline — v1
-
-Archetype: `residential.house.compact_laundry`
-
-Version: **1**.
-
-The user accepted Candidate 001 on 2026-08-20 with:
-
-> “ok that looks perfect.”
-
-The implementation translates the approved image concept into the game's 1m tactical-grid language rather than attempting pixel-for-pixel architectural tracing.
-
-### 8.1 Canonical NORTH bounding plan
-
-Bounding envelope: **17×13**.
-
-The occupied house is deliberately irregular inside that bounding rectangle:
-
-- top-left bedroom wing;
-- top-center kitchen;
-- top-right laundry projection;
-- mid-right bathroom;
-- central/lower living room;
-- bottom-right bedroom;
-- small south/front entry bump.
-
-There is **no dedicated hall/corridor room**. Living is the circulation hub, and kitchen/living share a two-cell doorless opening.
-
-Room-purpose ground regions:
-
-- `bedroom_1`: local `Rect2i(1,1,4,4)` = 16 cells, beige carpet;
-- `kitchen`: `Rect2i(6,1,6,4)` = 24 cells, white tile;
-- `laundry`: `Rect2i(13,1,3,3)` = 9 cells, dark laminate;
-- `bathroom`: `Rect2i(13,5,3,3)` = 9 cells, mosaic tile;
-- `living_room`: `Rect2i(4,6,8,2)` + `Rect2i(4,8,7,3)` = 37 cells, dark laminate;
-- `entry`: `Rect2i(6,11,3,1)` = 3 cells, dark laminate;
-- `bedroom_2`: `Rect2i(12,9,4,3)` = 12 cells, blue carpet.
-
-Door/passage threshold ground is explicitly authored so connectivity remains physical and readable.
-
-### 8.2 Openings and frontage
-
-Canonical front is SOUTH.
-
-Doors:
-
-- primary exterior door: local `(7,12)`;
-- bedroom 1: `(4,5)`;
-- laundry: `(12,2)`;
-- bathroom: `(12,6)`;
-- bedroom 2: `(11,9)`.
-
-Kitchen/living intentionally use **no door**. Local `(7,5)` and `(8,5)` are a two-cell open threshold with dark-laminate floor.
-
-Candidate 001 has **5 total doors**: one exterior + four interior.
-
-### 8.3 Windows
-
-Ten windows establish the visual shape and room identity: bedroom 1 north/west, two kitchen north windows, laundry north, living west/south, bathroom east and bedroom 2 east/south.
-
-Exterior wall semantic remains `wall.plaster`; interior partitions remain `wall.interior`.
-
-### 8.4 Kitchen/dining dressing
-
-North wall contiguous run:
-
-- refrigerator `(6,1)`;
-- straight counter `(7,1)`;
-- sink `(8,1)`;
-- straight counter `(9,1)`;
-- stove `(10,1)`;
-- pantry `(11,1)`.
-
-Dining cluster:
-
-- breakfast table `(8,3)`;
-- dining chair `(9,3)`.
-
-### 8.5 Laundry/utility dressing
-
-The dedicated 3×3 laundry room uses recovered art semantics:
-
-- `prop.washer_front` at `(13,1)`;
-- `prop.dryer_front` at `(14,1)`;
-- `prop.utility_sink` at `(13,3)`;
-- `prop.hamper` at `(15,3)`.
-
-### 8.6 Living / private-room dressing
-
-Living uses local bookshelf/TV and sofa/coffee/armchair/end-table clusters plus a passable rug. Both bedrooms and the bathroom use compact fixture/furniture groups. The entry has a small table and passable rug directly inside the front door.
-
-### 8.7 Table-facing rule
-
-Canonical NORTH table-like objects use SOUTH or WEST only. House rotation rotates semantic facings; System 07A remains presentation owner.
-
-### 8.8 Prop density / collision
-
-The accepted house emits **33 props**. Rugs are nonblocking. Furniture/appliances use fixture-local Collision Catalog registrations; art does not decide physics.
-
-## 9. Small Gas Station Candidate 001 — current
-
-Archetype: `commercial.gas_station.small`
-
-Version: **1**.
-
-User requirement: a gas station including a **bathroom, office and storage area**. Candidate 001 interprets this as a compact independent roadside convenience store, not an oversized highway travel center.
-
-### 9.1 Canonical NORTH property plan
-
-Bounding property envelope: **19×15** with SOUTH frontage.
-
-The store building occupies local x=0..18, y=0..9. The immediate forecourt occupies y=10..14 and is part of this archetype's local property dressing.
-
-Declared rooms:
-
-- `storage`: `Rect2i(1,1,5,3)` = 15 cells, warehouse floor;
-- `office`: `Rect2i(7,1,4,3)` = 12 cells, office carpet;
-- `bathroom`: `Rect2i(12,1,3,3)` = 9 cells, mosaic tile;
-- `sales_floor`: front `Rect2i(1,5,17,4)` plus east cooler wing `Rect2i(16,1,2,4)` = 76 connected shop-floor cells.
-
-There is no dedicated hall/corridor. All three back rooms open directly onto the connected customer/sales area.
-
-### 9.2 Storefront / doors / windows
-
-Primary storefront door: local `(9,9)`, SOUTH-facing toward the forecourt.
-
-Rear storage service exit: `(3,0)`.
-
-Back-room doors on partition row y=4:
-
-- storage `(3,4)`;
-- office `(9,4)`;
-- bathroom `(13,4)`.
-
-Total doors: **5** — two exterior and three interior.
-
-Windows: **10** total.
-
-- six broad front/storefront windows;
-- one office back window;
-- one bathroom/back window;
-- west/east side windows on the sales floor.
-
-Front exterior uses `wall.storefront`/`window.storefront`/`door.storefront`; side/rear shell uses `wall.white_brick` with store/office opening semantics. Interior partitions remain `wall.interior`.
-
-### 9.3 Sales-floor dressing
-
-Candidate 001 keeps the store readable rather than filling every tile:
-
-- checkout + adjacent counter near the front-right side;
-- two compact retail shelf/endcap aisle clusters;
-- three walk-in cooler fixtures in the east/rear sales wing;
-- chest freezer and vending machine on the east sales side;
-- wide circulation around the entrance and between the aisles/back-room doors.
-
-### 9.4 Storage room
-
-Storage is a real reachable room with a straight path between its sales-floor door and rear service exit.
-
-Dressing:
-
-- two warehouse racks;
-- two pallet stacks;
-- one tool cabinet.
-
-The center/service path remains clear.
-
-### 9.5 Office
-
-Office is a real 4×3 room with:
-
-- office desk;
-- office chair;
-- tall file cabinet;
-- copier.
-
-### 9.6 Bathroom
-
-Bathroom is a real 3×3 room with:
-
-- modern toilet;
-- pedestal sink;
-- towel rack.
-
-The entry cell/center path remains usable.
-
-### 9.7 Pump forecourt
-
-The forecourt uses a concrete strip immediately outside the storefront and faded parking/asphalt farther south.
-
-Two pump islands are represented as four real `prop.gas_pump` objects:
-
-- left pair `(5,12)` / `(6,12)`;
-- right pair `(12,12)` / `(13,12)`.
-
-The central x=9 customer path from road/forecourt to the primary door stays clear.
-
-Additional exterior dressing:
-
-- gas-station sign `(1,13)`;
-- public trash bin `(15,10)`;
-- ice box `(16,10)`;
-- vending machine `(17,10)`.
-
-Candidate 001 emits **33 props** total across store, back rooms and forecourt.
-
-### 9.8 Rotation / frontage
-
-Canonical NORTH requires SOUTH frontage. EAST rotation yields a 15×19 envelope with WEST frontage. Undersized envelopes and incompatible frontage fail explicitly.
-
-## 10. Critique fixtures / live demo
-
-### Preserved fixtures
-
-- `SmallFarmhouseCritiqueFixture.gd` preserves accepted Small Farmhouse v2.
-- `FarmhouseCritiqueFixture.gd` preserves Large Farmhouse Candidate 004.
-- `CompactLaundryHouseCritiqueFixture.gd` preserves accepted Compact Laundry House v1.
-
-### Current live fixture
-
-`GasStationCritiqueFixture.gd` is the current live System 19 critique caller.
-
-Configuration:
-
-- 21×17 critique lot;
-- 24 px/cell presentation;
-- envelope `Rect2i(1,1,19,15)`;
-- instance `building.demo.gas_station.small.001`;
-- seed `19005`;
-- NORTH orientation / SOUTH frontage;
-- player `(10,11)` facing NORTH toward primary door `(10,10)` in global fixture cells;
-- pump islands are farther south on the property, leaving the center approach clear;
-- road along the south/bottom map row, grass elsewhere;
-- no NPCs/infected/loot;
-- real Collision, System 18 door passage, renderer, HUD and player shell remain unchanged.
-
-Canonical WHERE remains 1m/cell. No camera subsystem is introduced for this critique.
-
-## 11. Tactical quality / verification contract
-
-`LocalBuildingGenerationSmoke.gd` + `.github/workflows/local-building-generation.yml` must prove:
-
-1. accepted Trailer v2 remains unchanged;
-2. accepted Small Farmhouse v2 remains unchanged and rotationally valid;
-3. preserved Large Farmhouse v4 remains unchanged and rotationally valid;
-4. accepted Compact Laundry House v1 remains unchanged and rotationally valid;
-5. registry exposes exactly five archetypes including `commercial.gas_station.small`;
-6. Gas Station v1 is deterministic;
-7. canonical gas-station property footprint is 19×15;
-8. gas-station room counts remain storage 15, office 12, bathroom 9, sales floor 76;
-9. no gas-station hall/corridor room exists;
-10. gas station has exactly 5 doors and 10 windows;
-11. primary front door, rear storage service door and three back-room doors remain at approved cells;
-12. forecourt concrete/apron and faded parking surfaces remain authored;
-13. gas station emits exactly 33 props;
-14. storage uses real warehouse racks/pallets/tool cabinet and retains a clear service path;
-15. office uses real office furniture;
-16. bathroom uses real bathroom fixtures;
-17. sales floor uses real checkout, retail shelf/endcap, cooler/freezer/vending semantics;
-18. two pump islands use four real gas-pump semantics;
-19. central customer approach remains prop-free;
-20. all gas-station prop/structure/ground semantics resolve through existing Art Catalog;
-21. all required object semantics have Collision coverage;
-22. every declared room remains reachable from the primary entrance;
-23. EAST rotation yields valid 15×19 geometry with WEST frontage;
-24. undersized envelopes and incompatible frontage fail explicitly;
-25. preserved residential fixtures still materialize;
-26. gas-station fixture materializes into WHAT + CLOSED Door State;
-27. System 18 automatically Walks through the gas-station front door;
-28. critique rendering has zero planned diagnostics;
-29. canonical demo startup remains green;
-30. exact-final-head Web export + Pages deployment remain green.
-
-## 12. Performance / mobile
-
-- generation is bounded to one caller-supplied envelope;
-- no full-world scan or unbounded retry loop;
-- no per-frame generation;
-- validation scales with local plan size;
-- no generator behavior depends on hover;
-- the 21×17 / 24px critique window remains within the same bounded mobile-friendly demo model used by prior fixtures.
-
-## 13. Forbidden dependencies
-
-Generation production code must not import renderer/art internals, texture paths/atlas indices, camera/zoom, player input, HUD geometry, Health/Needs/Skills, loot/inventory actions, AI, Reboot, world-scale parcel/road planner internals or future streaming implementation.
-
-System 07A prop-art orientation is presentation-only. System 19 supplies semantic facing but does not know native sprite transforms.
-
-All five archetype generators are peer owners and must not import or mutate one another.
-
-Gas Station generation may author pump/forecourt facts inside its supplied local property envelope, but must not invent the road network, parcel boundaries, fuel utility network, business assignment, loot or operating state.
-
-## 14. Future seams / next loop
-
-- playtest/critique Small Gas Station Candidate 001;
-- convert critique into versioned `commercial.gas_station.small` rules without touching accepted residential archetypes;
-- preserve Trailer v2, Small Farmhouse v2, Large Farmhouse v4 and accepted Compact Laundry House v1 unless explicitly reopened;
-- continue adding residential/commercial archetypes through pure-plan -> validation -> materialization;
-- if clustered-dressing rules prove common across several accepted archetypes, design a dedicated shared dressing owner later rather than prematurely globalizing authored rules;
-- allow future global planning to choose these archetypes based on parcel/business/household facts;
-- allow future container/loot systems to make shelves, coolers and storage searchable without System 19 owning inventory contents.
-
-## 15. Approved decisions
-
-Approved by the user through 2026-08-20:
-
-1. System 19 is local building generation/materialization, not global planning.
-2. Caller supplies envelope/orientation/frontage/instance ID/seed.
-3. Generate pure semantic plan -> validate -> materialize initial WHAT + Door State.
-4. Room-purpose data is generation/validation metadata, not persistent Room State.
-5. Trailer v2 is an accepted protected baseline.
-6. `residential.house.farm_small` v2 is the accepted Small Farmhouse baseline.
-7. Large farmhouse remains a separate `residential.house.farm_large` archetype.
-8. Large farmhouse compactness/no-hall/clustering lessons remain preserved in v4.
-9. New examples are peer archetypes rather than overwriting saved examples.
-10. Compact Laundry House v1 is accepted after the user said it “looks perfect.”
-11. The accepted compact house remains protected while commercial archetypes are explored.
-12. The next requested archetype is a gas station.
-13. The gas station must include a real bathroom, office and storage area.
-14. Candidate 001 is a compact roadside convenience-store station with a SOUTH-facing storefront and immediate pump forecourt, not an oversized travel center.
-15. Storage gets a rear service exit; office/bath/storage remain real reachable rooms instead of labels on one open floor.
-16. The station uses existing recovered commercial/gas-station art semantics; no new art or renderer contract is introduced for Candidate 001.
+- `commercial.diner.rural_small`
+
+The first five are saved references. The diner is hardening Trial 001 until the user accepts/rejects it.
+
+## 10. Verification contract
+
+The original `LocalBuildingGenerationSmoke.gd` continues protecting the saved reference behavior.
+
+New `BuildingGrammarSmoke.gd` must prove:
+
+1. all six callable archetypes expose valid placement facts;
+2. the five saved generators retain their expected canonical size/frontage/version without editing their source;
+3. diner v1 is deterministic for one seed;
+4. diner room program is 75 dining / 21 kitchen / 9 storage / 9 bathroom cells;
+5. no diner hall/corridor exists;
+6. diner has 5 doors, 11 windows and 26 props;
+7. primary/service/interior door cells match seed-19006 program;
+8. kitchen work line is contiguous;
+9. central customer aisle remains clear;
+10. storage service lane remains clear;
+11. booth/table clusters remain adjacent;
+12. recovered table-facing rule remains satisfied;
+13. seed 19007 produces a different valid topology/signature;
+14. 32 consecutive seeds × all four cardinal orientations generate and pass the shared structural validator;
+15. undersized envelopes and incompatible frontage fail explicitly;
+16. critique fixture materializes into WHAT + CLOSED Door State;
+17. collision and art coverage are complete;
+18. System 18 automatic front-door Walk works;
+19. renderer has zero planned diagnostics;
+20. canonical demo boots on the diner fixture.
+
+Exact-final-head Web/Pages validation remains required before Trial 001 is presented as successfully deployed.
+
+## 11. Performance / mobile
+
+- generation is bounded to one caller-supplied local envelope;
+- no world scan, unbounded retry or per-frame generation;
+- grammar/layout work is proportional to one small building;
+- quality validation is proportional to local rooms/props;
+- descriptor probing is cached and only uses public generation contracts;
+- critique fixture remains one bounded mobile-friendly visible window;
+- no hover dependency or desktop-only input is introduced.
+
+## 12. Forbidden dependencies
+
+Production code under `generation/buildings/` must not depend on:
+
+- renderer nodes, textures, atlas coordinates or camera;
+- player input/HUD;
+- health/needs/skills;
+- item/container gameplay actions;
+- AI/population/outbreak behavior;
+- future streaming implementation;
+- world-scale road/parcel planner internals;
+- runtime people/vehicles/occupancy.
+
+Art remains presentation truth; generated semantic type/facing remains world truth.
+
+Saved peer archetype generators do not import or mutate one another.
+
+## 13. Trial process / finish condition
+
+1. **Trial 001:** Rural Roadside Diner generated through the shared grammar. User playtests and critiques it.
+2. If accepted, save it as another reference and make **Trial 002: another arbitrary building chosen without copying a previous exact layout**.
+3. Trial 002 should preferably exercise either another profile arrangement or another reusable dressing family so it proves the grammar is not secretly diner-specific.
+4. If Trial 002 is also accepted, promote the hardened grammar contract to the final System 19 implementation state.
+5. Freeze the placement/profile/quality seams, leave future archetypes as profile/content additions, and move primary development to System 20 Local Area / Parcel Generation.
+
+## 14. Approved decisions through 2026-08-20
+
+1. System 19 owns local building/property generation, not global planning.
+2. Caller supplies stable instance ID, archetype, seed, envelope, orientation and frontage.
+3. Pure plan -> shared structural validation -> materialize initial WHAT + Door State -> relinquish ownership.
+4. Room-purpose regions are generation/validation metadata, not persistent Room State.
+5. Saved examples must not be mutated while extracting common rules.
+6. Trailer v2 and Small Farmhouse v2 are accepted baselines.
+7. Large Farmhouse v4 is a preserved compact/no-hall/clustering reference.
+8. Compact Laundry House v1 is accepted after the user said it looked perfect.
+9. Small Gas Station v1 is accepted after the user said “perfect.”
+10. Exact dimensions/prop counts from one example are not universal laws.
+11. Common hard rules are compact purposeful space, logical adjacency, minimal wasted circulation, clear door/service paths, functional clustering, contiguous work runs where appropriate and permission for open space to remain empty.
+12. System 20 receives placement facts through a narrow System 19 descriptor rather than copying archetype internals.
+13. Hardening should prove itself by generating arbitrary new buildings, not by manually authoring more exact examples.
+14. The first arbitrary proof building is a rural roadside diner.
+15. Two successful arbitrary grammar-generated buildings are the agreed finish condition before System 19 is finalized and primary work moves to System 20.
