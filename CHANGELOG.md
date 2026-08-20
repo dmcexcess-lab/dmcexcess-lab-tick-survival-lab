@@ -1,5 +1,19 @@
 # Changelog
 
+## System 19 Rural Diner v2 + DEV New Building Cycle — 2026-08-20
+
+- Responded to the first deployed diner review: the user called it **“very good”** and asked for a few more tables plus a button that renders another building from the rule set.
+- Bumped `commercial.diner.rural_small` from v1 to **v2** because same-seed generated dressing intentionally changed.
+- Increased the dining room from four to **six booth/table pairs** by adding one middle cluster on each side wall. Total diner props rise from 26 to **30** while the center customer aisle, service-room approaches and storage lane remain clear.
+- Expanded the profile from two to **four legal back-of-house room orders**. Seeds 19006 and 19007 preserve the already-reviewed layouts; 19008 and 19009 expose the two additional valid arrangements. The far-east kitchen permutation remains excluded because its customer-counter cluster would collide with east-wall seating.
+- Added explicit DEV-only `BuildingGrammarDevSeedSession.gd` and `BuildingGrammarDevControls.gd` owners. A phone-friendly **NEW BUILDING** button now fills the unused center slot between TURN L and TURN R.
+- Pressing NEW BUILDING advances the integer seed and reloads the critique scene so the normal System 19 request → grammar → validation → materialization path runs cleanly from scratch. It never rewrites an already-materialized WHAT world in place.
+- Web builds carry the critique seed through a `building_seed` URL query parameter; native builds use a runtime `ProjectSettings` override across scene reloads. This is DEV critique tooling only and does not become a production world-generation mechanic.
+- `CanonicalDemoMain.gd` remains unchanged and composition-only; the DEV control is wired as its own CanvasLayer in `game/main.tscn`.
+- Expanded `BuildingGrammarSmoke.gd` to lock diner v2, 30 props, all six table/booth clusters, four legal sequential seed layouts, DEV seed override/default behavior, 32-seed × four-rotation grammar torture coverage, fixture materialization, System 18 entry and renderer diagnostics.
+- Added the DEV owners to the System 19 CI boundary checks and updated System 19 design/context/approval routing notes.
+- Trailer v2, Small Farmhouse v2, Large Farmhouse v4, Compact Laundry House v1 and Small Gas Station v1 remain untouched.
+
 ## System 19 Building Grammar Hardening — Trial 001 Rural Diner — 2026-08-20
 
 - Promoted `commercial.gas_station.small` v1 to the protected fifth reference example after the user accepted it with “perfect.” Trailer v2, Small Farmhouse v2, Large Farmhouse v4, Compact Laundry House v1 and Small Gas Station v1 remain unchanged during grammar hardening.
