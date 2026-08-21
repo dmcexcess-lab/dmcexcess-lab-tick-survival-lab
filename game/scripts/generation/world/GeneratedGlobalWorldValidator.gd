@@ -1,6 +1,13 @@
 extends RefCounted
 class_name GeneratedGlobalWorldValidator
 
+const GeographyQueryClass = preload("res://scripts/generation/world/GlobalGeographyQuery.gd")
+
+var _geography: GlobalGeographyQuery
+
+func _init() -> void:
+    _geography = GeographyQueryClass.new()
+
 func validate(request: GlobalWorldGenerationRequest, plan: GeneratedGlobalWorldPlan) -> Dictionary:
     var failures: Array[String] = []
     if request == null or not request.is_valid() or plan == null or not plan.is_generated():
@@ -9,6 +16,8 @@ func validate(request: GlobalWorldGenerationRequest, plan: GeneratedGlobalWorldP
         failures.append("global_world_provenance_mismatch")
 
     var ids: Dictionary = {}
+    _validate_geography(plan, ids, failures)
+
     var settlement_centers: Dictionary = {}
     var settlement_ids: Dictionary = {}
 
@@ -35,6 +44,8 @@ func validate(request: GlobalWorldGenerationRequest, plan: GeneratedGlobalWorldP
         settlement_centers[center] = settlement_id
         if int(settlement.get("influence_radius", 0)) <= 0:
             failures.append("global_settlement_influence_invalid")
+        if not _geography.settlement_allowed(center, plan.geography_cells):
+            failures.append("global_settlement_on_forbidden_landform")
 
     for first_index in range(plan.settlements.size()):
         var first_center: Vector2i = plan.settlements[first_index].get("center", Vector2i.ZERO)
@@ -57,6 +68,8 @@ func validate(request: GlobalWorldGenerationRequest, plan: GeneratedGlobalWorldP
             failures.append("global_road_width_invalid")
         if not plan.bounds.has_point(start) or not plan.bounds.has_point(finish):
             failures.append("global_road_endpoint_out_of_bounds")
+        if _segment_intersects_ridge(road, plan.geography_cells):
+            failures.append("global_road_crosses_ridge")
         if _is_boundary_cell(plan.bounds, start):
             gateway_count += 1
         if _is_boundary_cell(plan.bounds, finish):
@@ -110,6 +123,59 @@ func validate(request: GlobalWorldGenerationRequest, plan: GeneratedGlobalWorldP
             failures.append("global_settlement_area_site_missing")
 
     return {"ok": failures.is_empty(), "failures": failures}
+
+func _validate_geography(plan: GeneratedGlobalWorldPlan, ids: Dictionary, failures: Array[String]) -> void:
+    if plan.geography_cells.is_empty():
+        failures.append("global_geography_missing")
+        return
+    var grids: Dictionary = {}
+    var total_area: int = 0
+    var valid_landforms: Array[StringName] = _geography.valid_landforms()
+    for first_index in range(plan.geography_cells.size()):
+        var geography: Dictionary = plan.geography_cells[first_index]
+        _claim_id(ids, String(geography.get("id", "")), failures)
+        var grid: Vector2i = geography.get("grid", Vector2i(-999999, -999999))
+        if grids.has(grid):
+            failures.append("global_geography_grid_duplicate")
+        grids[grid] = true
+        var rect: Rect2i = geography.get("rect", Rect2i())
+        if not _rect_inside(plan.bounds, rect):
+            failures.append("global_geography_out_of_bounds")
+        total_area += maxi(0, rect.size.x) * maxi(0, rect.size.y)
+        var elevation: int = int(geography.get("elevation", -1))
+        if elevation < 0 or elevation > 100:
+            failures.append("global_geography_elevation_invalid")
+        var landform: StringName = StringName(geography.get("landform", &""))
+        if not valid_landforms.has(landform):
+            failures.append("global_geography_landform_invalid")
+        for second_index in range(first_index + 1, plan.geography_cells.size()):
+            var other_rect: Rect2i = plan.geography_cells[second_index].get("rect", Rect2i())
+            if _rects_intersect(rect, other_rect):
+                failures.append("global_geography_overlap")
+                break
+    if total_area != plan.bounds.size.x * plan.bounds.size.y:
+        failures.append("global_geography_does_not_tile_bounds")
+
+func _segment_intersects_ridge(road: Dictionary, geography_cells: Array[Dictionary]) -> bool:
+    var start: Vector2i = road.get("start", Vector2i.ZERO)
+    var finish: Vector2i = road.get("end", Vector2i.ZERO)
+    for geography: Dictionary in geography_cells:
+        if StringName(geography.get("landform", &"")) != &"ridge":
+            continue
+        var rect: Rect2i = geography.get("rect", Rect2i())
+        var max_x: int = rect.position.x + rect.size.x - 1
+        var max_y: int = rect.position.y + rect.size.y - 1
+        if start.y == finish.y:
+            if start.y < rect.position.y or start.y > max_y:
+                continue
+            if _ranges_overlap(mini(start.x, finish.x), maxi(start.x, finish.x), rect.position.x, max_x):
+                return true
+        elif start.x == finish.x:
+            if start.x < rect.position.x or start.x > max_x:
+                continue
+            if _ranges_overlap(mini(start.y, finish.y), maxi(start.y, finish.y), rect.position.y, max_y):
+                return true
+    return false
 
 func _road_network_connected(roads: Array[Dictionary]) -> bool:
     if roads.is_empty():
@@ -211,3 +277,11 @@ func _rect_inside(outer: Rect2i, inner: Rect2i) -> bool:
         return false
     var inner_max := Vector2i(inner.position.x + inner.size.x - 1, inner.position.y + inner.size.y - 1)
     return outer.has_point(inner.position) and outer.has_point(inner_max)
+
+func _rects_intersect(a: Rect2i, b: Rect2i) -> bool:
+    if a.size.x <= 0 or a.size.y <= 0 or b.size.x <= 0 or b.size.y <= 0:
+        return false
+    return a.position.x < b.position.x + b.size.x \
+        and a.position.x + a.size.x > b.position.x \
+        and a.position.y < b.position.y + b.size.y \
+        and a.position.y + a.size.y > b.position.y
