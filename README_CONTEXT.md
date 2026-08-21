@@ -18,15 +18,15 @@ Golden recovery commit: `1763958f44eb7f855fd49944c00d1ffe608c0abe`.
 
 System 00D plus Systems 14–22 form the current canonical world-planning/playable path. `game/scripts/reboot/` remains frozen/deprecated reference only.
 
-**System 00D Global World Planning Slices 001–003 are implemented.** The global plan now establishes geography, settlement/site intent, globally coherent major roads, one deterministic regional river, and explicit bridge-crossing intents before System 20 local planning is invoked.
+**System 00D Global World Planning Slices 001–004 are implemented.** The global plan establishes geography, settlement/site intent, globally coherent major roads, one deterministic regional river, explicit bridge-crossing intents, and one connected regional electrical-feeder network before System 20 local planning is invoked.
 
 **System 19 is finalized.** New building profiles are ordinary content work unless the frozen grammar contract proves insufficient.
 
-**System 20 Rural Crossroads Candidate 006 is the accepted local-area integration anchor.** Current profiles are `rural.crossroads` v5 + `temperate.rural` v3. Roads, local-road frontage, farms, close setbacks, straight door-aligned approaches, ecological noise and generic road-flush building-owned parking frontage remain protected.
+**System 20 Rural Crossroads Candidate 006 is the accepted local-area integration anchor.** Current profiles remain `rural.crossroads` v5 + `temperate.rural` v3. Roads, local-road frontage, farms, close setbacks, straight door-aligned approaches, ecological noise and generic road-flush building-owned parking frontage remain protected.
 
 **System 21 Tactical Camera / View Control is implemented.** Player-follow is default; five discrete zoom levels, detached inspection, recenter, focus and scripted/cutscene seams are presentation-only.
 
-**System 22 Large-Area DEV Critique Runtime is implemented.** The live game still materializes/renders Candidate 006. System 00D remains pure upstream planning; no fake world viewer or streaming layer has been introduced.
+**System 22 Large-Area DEV Critique Runtime is implemented.** The live game still materializes/renders Candidate 006. System 00D remains pure upstream planning; no fake world viewer, tactical river, tactical power grid or streaming layer has been introduced.
 
 ## 3. Foundation truth
 
@@ -55,7 +55,7 @@ Dedicated canonical validation includes:
 - System 20 local area/parcel planning + initial materialization;
 - System 21 tactical camera/view control;
 - System 22 bounded large-area critique runtime;
-- **System 00D geography + hydrology + settlements + major roads + bridge intent + System 20 projection seam**.
+- **System 00D geography + hydrology + settlements + major roads + bridge intent + regional electrical infrastructure + System 20 read-only projection seams**.
 
 Art remains presentation truth; generation stores semantic IDs/facing only. Art is not physics.
 
@@ -65,13 +65,15 @@ Umbrella design: `SYSTEM_DESIGNS/00D_GLOBAL_WORLD_PLANNING.md`
 
 Hydrology slice: `SYSTEM_DESIGNS/00D3_GLOBAL_HYDROLOGY_BRIDGE_INTENT.md`
 
+Electrical infrastructure slice: `SYSTEM_DESIGNS/00D4_GLOBAL_ELECTRICAL_INFRASTRUCTURE.md`
+
 Current pure order:
 
-`GlobalWorldGenerationRequest -> geography -> hydrology -> settlements/sites -> hydrology-aware major roads -> bridge intents -> planning regions -> GeneratedGlobalWorldValidator -> GeneratedGlobalWorldPlan`
+`GlobalWorldGenerationRequest -> geography -> hydrology -> settlements/sites -> hydrology-aware major roads -> bridge intents -> regional electrical infrastructure -> planning regions -> validation -> GeneratedGlobalWorldPlan`
 
 Current global fixture:
 
-- profile `temperate.rural.region` **v3**;
+- profile `temperate.rural.region` **v4**;
 - bounds `Rect2i(232,1232,1792,1792)`;
 - seed `20001`;
 - 196 coarse 128-cell geography records;
@@ -80,10 +82,15 @@ Current global fixture:
 - one connected primary/secondary major-road network with real boundary gateways;
 - protected central road half-span 640 cells so geography-aware bends stay outside the center and immediate adjacent local windows;
 - one deterministic boundary-to-boundary primary regional river routed outside the protected central corridor;
-- settlement sites must clear the river corridor;
+- settlement sites clear the river corridor;
 - roads retain geography costs and pay a high river-crossing cost;
 - roads may not run collinearly along river centerline;
 - every real perpendicular road/river crossing has exactly one explicit bridge intent;
+- one deterministic regional electrical ingress at a real road gateway;
+- one small-town substation;
+- five settlement service nodes;
+- one connected feeder network derived from existing major-road geometry;
+- every feeder segment stores its source road/route and remains ridge-free;
 - broad rural-open background plus settlement influence regions;
 - five local-area site records;
 - no WHAT materialization, streaming, population, outbreak, renderer, camera or UI ownership.
@@ -100,13 +107,17 @@ Central global site:
 - inherited road IDs `road.region.primary.001` + `road.region.secondary.001`;
 - `rural.crossroads` + `temperate.rural`.
 
-`project_site()` still produces the same existing System 20 request shape and Candidate 006 output. Slice 003 does not inject unsupported tactical water into `AreaGenerationRequest`.
+`project_site()` still produces the same existing System 20 request shape and Candidate 006 output. Slices 003–004 do not inject unsupported tactical water, bridges, utility poles or wires into `AreaGenerationRequest`.
 
-New read-only seam:
+Read-only seams:
 
 `System20AreaRequestProjector.hydrology_constraints_for_bounds(plan, bounds)`
 
-returns clipped river centerline facts plus bridge intents for a planning window. Candidate 006 plus its four immediately adjacent protected windows intentionally return no hydrology facts; an outer window containing the canonical crossing exposes both river and bridge intent.
+returns clipped river centerline facts plus bridge intents.
+
+`System20AreaRequestProjector.power_constraints_for_bounds(plan, bounds)`
+
+returns clipped regional feeder segments plus power nodes. Candidate 006 can expose its regional service/feed facts through this query while local materialization/rendering remains unchanged.
 
 Exact-head context: `verify/system00d-global-world`.
 
@@ -143,7 +154,7 @@ Current Candidate 006:
 - 3 commercial opportunities: gas station + diner + one honest vacancy;
 - residential/commercial facades stay close; farms modestly farther back;
 - every occupied approach is frontage-normal and terminates at the actual System 19 primary door;
-- building-owned road-facing `ground.parking*` frontage is extended to the road with the same surface semantic; no parking is invented for buildings without such frontage;
+- building-owned road-facing `ground.parking*` frontage extends to the road with the same surface semantic; no parking invented where absent;
 - >=60% non-road area unbuilt;
 - deterministic 2D tree/shrub/rock dressing.
 
@@ -157,14 +168,14 @@ System 21 owns player-follow, five zoom presets, detached pan/inspect, recenter,
 
 System 22 owns only the DEV moving render-window composition for the accepted 256×256 local area. It does not own global planning or streaming.
 
-The live Web build remains Candidate 006; global rivers/bridges are currently headless semantic facts by design.
+The live Web build remains Candidate 006. Global rivers/bridge intents and regional electrical infrastructure are currently headless semantic facts by design.
 
 ## 9. Immediate next path
 
 1. Keep Candidate 006 frozen as the accepted central local integration anchor.
-2. Keep System 00D Slices 001–003 protected as the global geography/settlement/road/hydrology baseline.
-3. Before streaming, continue the North-Star top-down world hierarchy with the next bounded world-planning need: **utilities/infrastructure and/or the local settlement profiles required to materialize non-crossroads global sites**. Design that slice explicitly before coding.
-4. Add System 20 profiles such as `smalltown.center` / `rural.scattered` when global sites are ready for real local refinement; unsupported hints must continue to fail honestly meanwhile.
+2. Keep System 00D Slices 001–004 protected as the global geography/settlement/road/hydrology/electrical baseline.
+3. Before streaming, continue the North-Star top-down hierarchy with one separately designed bounded need: **water/waste infrastructure** or the **real System 20 settlement profiles** required to materialize `smalltown.center` / `rural.scattered` sites.
+4. Do not turn Slice 004 power facts into tactical poles/wires/runtime electricity until the downstream local infrastructure/materialization and electrical-state owners are explicitly designed.
 5. Design System 00F streaming/materialization only after logical global places/infrastructure are stable enough that partitions are purely implementation/storage details.
 6. Design System 00E population/households/jobs/outbreak/player story after stable world places provide real homes/workplaces/properties for people to inhabit.
 
@@ -177,7 +188,7 @@ The live Web build remains Candidate 006; global rivers/bridges are currently he
 5. Rendering presents truth; input submits semantic intent.
 6. Art is not physics.
 7. Phone/Safari is first-class.
-8. System 00D owns cross-region geography, hydrology, settlement and major-road/infrastructure coherence.
+8. System 00D owns cross-region geography, hydrology, settlement, major-road and regional infrastructure coherence.
 9. Global planning regions/geography cells are logical planning facts, never streaming chunks.
 10. Pure System 00D code does not import System 20; the separate projector is the downstream adapter.
 11. System 20 preserves inherited regional facts and may add only profile-authorized local roads/content.
@@ -187,6 +198,7 @@ The live Web build remains Candidate 006; global rivers/bridges are currently he
 15. System 22 is DEV presentation/integration, not a world-planning owner.
 16. Streaming consumes global logical truth; streaming boundaries never invent roads, rivers or infrastructure.
 17. Bridge intent is global planning truth, not tactical bridge implementation.
+18. Regional power nodes/feeders are global planning truth, not tactical poles/wires or energized runtime state.
 
 ## 11. Documentation source order
 
