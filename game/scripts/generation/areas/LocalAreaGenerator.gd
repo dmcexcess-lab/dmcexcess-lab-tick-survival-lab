@@ -8,6 +8,7 @@ const RoadPlannerClass = preload("res://scripts/generation/areas/LocalRoadPlanne
 const ParcelPlannerClass = preload("res://scripts/generation/areas/ParcelPlanner.gd")
 const AccessPlannerClass = preload("res://scripts/generation/areas/ParcelAccessPlanner.gd")
 const BuildingPlannerClass = preload("res://scripts/generation/areas/BuildingPlacementPlanner.gd")
+const PavedFrontagePlannerClass = preload("res://scripts/generation/areas/CommercialPavedFrontagePlanner.gd")
 const OutdoorPlannerClass = preload("res://scripts/generation/areas/OutdoorPropertyDressingPlanner.gd")
 const ValidatorClass = preload("res://scripts/generation/areas/GeneratedAreaValidator.gd")
 
@@ -17,6 +18,7 @@ var _road_planner: LocalRoadPlanner
 var _parcel_planner: ParcelPlanner
 var _access_planner: ParcelAccessPlanner
 var _building_planner: BuildingPlacementPlanner
+var _paved_frontage_planner: CommercialPavedFrontagePlanner
 var _outdoor_planner: OutdoorPropertyDressingPlanner
 var _validator: GeneratedAreaValidator
 
@@ -27,6 +29,7 @@ func _init() -> void:
     _parcel_planner = ParcelPlannerClass.new()
     _access_planner = AccessPlannerClass.new()
     _building_planner = BuildingPlannerClass.new()
+    _paved_frontage_planner = PavedFrontagePlannerClass.new()
     _outdoor_planner = OutdoorPlannerClass.new()
     _validator = ValidatorClass.new()
 
@@ -94,11 +97,22 @@ func generate(request: AreaGenerationRequest) -> GeneratedAreaPlan:
         plan.failure_reason = String(driveway_result.get("failure_reason", "driveway_planning_failed"))
         return plan
 
+    var paved_result: Dictionary = _paved_frontage_planner.plan(request, parcels)
+    if not bool(paved_result.get("ok", false)):
+        plan.failure_reason = String(paved_result.get("failure_reason", "paved_frontage_planning_failed"))
+        return plan
+
+    var ground_regions: Array[Dictionary] = []
+    for paved_value: Variant in paved_result.get("ground_regions", []):
+        if typeof(paved_value) != TYPE_DICTIONARY:
+            plan.failure_reason = "paved_frontage_ground_result_invalid"
+            return plan
+        ground_regions.append(paved_value)
+
     var outdoor_result: Dictionary = _outdoor_planner.plan(request, environment_profile, roads, intersections, parcels)
     if not bool(outdoor_result.get("ok", false)):
         plan.failure_reason = String(outdoor_result.get("failure_reason", "outdoor_dressing_failed"))
         return plan
-    var ground_regions: Array[Dictionary] = []
     for ground_value: Variant in outdoor_result.get("ground_regions", []):
         if typeof(ground_value) != TYPE_DICTIONARY:
             plan.failure_reason = "outdoor_ground_result_invalid"
