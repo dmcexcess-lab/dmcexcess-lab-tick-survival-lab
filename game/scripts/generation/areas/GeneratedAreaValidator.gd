@@ -78,16 +78,18 @@ func validate(request: AreaGenerationRequest, plan: GeneratedAreaPlan) -> Dictio
         if not building_id.is_empty() and not building_ids.has(building_id):
             failures.append("parcel_building_request_missing")
 
-    var driveway_cells: Dictionary = {}
+    var access_cells: Dictionary = {}
     for parcel: Dictionary in plan.parcels:
         for value: Variant in parcel.get("driveway_cells", []):
-            driveway_cells[value] = true
+            access_cells[value] = true
+        for value: Variant in parcel.get("parking_cells", []):
+            access_cells[value] = true
     for prop: Dictionary in plan.outdoor_props:
         _claim_id(ids, String(prop.get("id", "")), failures)
         var cell: Vector2i = prop.get("cell", Vector2i(-1, -1))
         if not request.bounds.has_point(cell):
             failures.append("outdoor_prop_out_of_bounds")
-        if road_cells.has(cell) or driveway_cells.has(cell):
+        if road_cells.has(cell) or access_cells.has(cell):
             failures.append("outdoor_prop_blocks_access")
         for parcel: Dictionary in plan.parcels:
             var envelope: Rect2i = parcel.get("building_envelope", Rect2i())
@@ -137,6 +139,10 @@ func _validate_parcel_access(request: AreaGenerationRequest, parcel: Dictionary,
     for value: Variant in driveway:
         if not request.bounds.has_point(value):
             failures.append("driveway_out_of_bounds")
+            return
+    for value: Variant in parcel.get("parking_cells", []):
+        if typeof(value) != TYPE_VECTOR2I or not request.bounds.has_point(value):
+            failures.append("parking_apron_out_of_bounds")
             return
 
 func _claim_id(ids: Dictionary, value: String, failures: Array[String]) -> void:
