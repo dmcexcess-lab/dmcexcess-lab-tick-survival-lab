@@ -5,6 +5,7 @@ on:
     workflows:
       - Local Building Generation and Archetype Lab contract
       - Local Area and Parcel Generation contract
+      - Tactical Camera and View Control contract
       - Build and deploy Tick Survival Lab
     types: [completed]
 
@@ -34,6 +35,9 @@ jobs:
               ;;
             "Local Area and Parcel Generation contract")
               context="verify/system20-local-area"
+              ;;
+            "Tactical Camera and View Control contract")
+              context="verify/system21-camera-view"
               ;;
             "Build and deploy Tick Survival Lab")
               context="verify/pages-deploy"
