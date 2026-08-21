@@ -38,61 +38,61 @@ Major systems move through **NOT DESIGNED -> DRAFT -> APPROVED -> IMPLEMENTED** 
 | 17A | Movement Exertion / Encumbrance / Run Impact Revision | **IMPLEMENTED** | `17A_MOVEMENT_EXERTION_ENCUMBRANCE_RUN_IMPACT.md` |
 | 17A.1 | Overweight Walk Fatigue / Absolute Carry Ceiling Correction | **IMPLEMENTED** | `17A1_OVERWEIGHT_WALK_FATIGUE_HARD_CARRY_LIMIT.md` |
 | 18 | Door Interaction / Automatic Passage | **IMPLEMENTED** | `18_DOOR_INTERACTION_PASSAGE.md` |
-| 19 | Local Building Generation / Building Grammar | **IMPLEMENTED — HARDENING TRIAL 001** | `19_LOCAL_BUILDING_GENERATION_ARCHETYPE_LAB.md` |
-| 20 | Local Area / Parcel Generation | **DRAFT — NEXT** | `20_LOCAL_AREA_PARCEL_GENERATION.md` |
+| 19 | Local Building Generation / Building Grammar | **IMPLEMENTED — FINALIZED** | `19_LOCAL_BUILDING_GENERATION_ARCHETYPE_LAB.md` |
+| 20 | Local Area / Parcel Generation | **IMPLEMENTED — CANDIDATE 001 PURE PLAN** | `20_LOCAL_AREA_PARCEL_GENERATION.md` |
 | 00D | Global World Planning / Generation | **NOT DESIGNED** | future design |
 | 00E | Population / Household / Outbreak / Player Story | **NOT DESIGNED** | future design |
 | 00F | Streaming / Materialization | **NOT DESIGNED** | future design |
 | old-01 | Raid-map / extraction physical-world model | **SUPERSEDED** | `01_RAID_MAP_DATA.md` |
 
-## System 19 saved reference library
+## System 19 finalized building grammar
 
-Protected/preserved examples used to extract the grammar:
+Protected/preserved examples used to extract and validate the grammar:
 
 - `residential.trailer.singlewide` v2 — accepted;
 - `residential.house.farm_small` v2 — accepted;
 - `residential.house.farm_large` v4 — preserved compact/no-hall reference;
 - `residential.house.compact_laundry` v1 — accepted;
-- `commercial.gas_station.small` v1 — accepted after the user said “perfect.”
+- `commercial.gas_station.small` v1 — accepted;
+- `commercial.diner.rural_small` v2 — accepted as the first shared-grammar proof after the table-density revision.
 
-Current hardening trial:
+Final reusable System 19 seams:
 
-- `commercial.diner.rural_small` v2 — first shared-grammar proof. The first deployed version was called “very good”; v2 adds two more booth/table pairs and a DEV seed-cycle control for rapid critique before final signoff.
+- read-only placement descriptor for higher-level planners;
+- `BuildingGrammarProfile` content contract;
+- reusable topology/dressing/quality owners;
+- deterministic profile-declared variation;
+- multi-seed/four-rotation regression tests;
+- DEV-only `NEW BUILDING` critique control.
 
-Current reusable System 19 additions:
+The user's 2026-08-20 direction explicitly finalized System 19 and replaced the earlier two-arbitrary-building gate. New building profiles are now content work that may be added without reopening System 19 architecture when needed by later area/world tests.
 
-- read-only placement descriptor seam for System 20;
-- `BuildingGrammarProfile`;
-- generic `front_hub_back_strip` topology strategy;
-- shared functional dressing planner;
-- profile-aware grammar quality validator;
-- deterministic profile-declared topology variants;
-- four legal diner service-room orders exercised by sequential seeds;
-- multi-seed / four-rotation grammar smoke;
-- explicit DEV-only `NEW BUILDING` critique control that advances the seed and reloads through the normal generation pipeline.
+## System 20 Candidate 001
 
-The user's finish condition is **two successful arbitrary grammar-generated buildings**. If the diner and one more unrelated Trial 002 are accepted, System 19 is finalized and primary work moves to System 20.
+The approved first implementation is `rural.crossroads + temperate.rural`, using **only the existing System 19 library** so area-generation quality can be judged independently from new building content.
 
-## System 20 next direction
+Current pure-plan implementation owns:
 
-`20_LOCAL_AREA_PARCEL_GENERATION.md` remains the next major system. Current rural-first direction was received positively by the user, but implementation is intentionally deferred until System 19 hardening completes.
+- caller-constrained inherited road installation;
+- one signalized rural crossroads;
+- road-facing parcel subdivision;
+- density-ordered commercial/residential/farmstead/open land use;
+- legal parcel access and driveways;
+- System 19 descriptor-based archetype selection and placement;
+- field/mailbox/fence/tree/traffic-signal semantic dressing;
+- deterministic named sub-seeds;
+- generic full-plan validation.
 
-Key design direction:
+Candidate 001 uses the gas station and diner as the two real commercial buildings, leaves another commercial opportunity vacant, and exercises the existing trailer/small farmhouse/large farmhouse/compact-laundry residential library. No new building profiles, fake barns, fake stores, actors, vehicles, loot or outbreak scenes are introduced.
 
-- global-coordinate planning domain, not streaming chunk generation;
-- higher-level world planning supplies cross-boundary major-road constraints;
-- System 20 owns minor roads, parcels, accesses, land use, building requests and outdoor/property dressing;
-- System 19 owns building/property internals;
-- settlement morphology profile is separate from environment/ecology profile;
-- first target is `rural.crossroads + temperate.rural` with a tiny one-stoplight center and substantial open agricultural/wilderness land.
+System 20 planning is headless/pure-data in this slice. A large-area critique viewer/camera is a separate presentation task and must not be smuggled into the planner.
 
 ## Immediate next path
 
-1. Playtest Rural Diner hardening Trial 001 v2 and use `NEW BUILDING` to inspect sequential seeded variants.
-2. If accepted, preserve it and generate one more arbitrary building through the grammar.
-3. Trial 002 should exercise another arrangement/dressing family so the grammar is not diner-specific.
-4. If Trial 002 is accepted, finalize System 19.
-5. Begin the bounded System 20 implementation after its status is formally promoted from DRAFT.
+1. Validate System 20 Candidate 001 pure planning across deterministic seeds.
+2. Add a separately owned large-area critique presentation/viewer so the 256×256 result can be visually inspected without corrupting System 20.
+3. After that visual area test, add new System 19 building profiles as needed by area content rather than reopening the building-grammar architecture.
+4. Continue expanding System 20 profiles/environments only through the frozen planner contracts.
 
 ## Design rule
 
