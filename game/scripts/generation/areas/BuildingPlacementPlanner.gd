@@ -89,34 +89,6 @@ func _place_one(
 
     var instance_id: String = "%s.building.primary" % String(parcel.get("id", "parcel"))
     var building_seed: int = Seed.derive(area_request.seed, "building:%s" % String(parcel.get("id", "")))
-    var first_pass: Dictionary = _generate_validated(instance_id, archetype_id, building_seed, envelope, orientation, frontage)
-    if not bool(first_pass.get("ok", false)):
-        return first_pass
-    var first_entry: Vector2i = first_pass.get("entry_cell", Vector2i(-1, -1))
-
-    var aligned_envelope: Rect2i = _align_envelope_to_entry(envelope, frontage, parcel_access, first_entry)
-    if not _rect_inside(buildable, aligned_envelope):
-        return {"ok": false, "failure_reason": "building_entry_alignment_does_not_fit"}
-
-    var final_pass: Dictionary = first_pass
-    if aligned_envelope != envelope:
-        final_pass = _generate_validated(instance_id, archetype_id, building_seed, aligned_envelope, orientation, frontage)
-        if not bool(final_pass.get("ok", false)):
-            return final_pass
-
-    var final_entry: Vector2i = final_pass.get("entry_cell", Vector2i(-1, -1))
-    if not _entry_matches_access_axis(final_entry, parcel_access, frontage):
-        return {"ok": false, "failure_reason": "building_entry_alignment_failed"}
-    return final_pass
-
-func _generate_validated(
-    instance_id: String,
-    archetype_id: StringName,
-    building_seed: int,
-    envelope: Rect2i,
-    orientation: int,
-    frontage: int
-) -> Dictionary:
     var building_request: BuildingGenerationRequest = RequestClass.new(instance_id, archetype_id, building_seed, envelope, orientation, frontage)
     var plan: GeneratedBuildingPlan = _building_generator.generate(building_request)
     if not plan.is_generated():
@@ -127,7 +99,29 @@ func _generate_validated(
     var entry_cell: Vector2i = _primary_entry_cell(plan)
     if entry_cell.x < 0:
         return {"ok": false, "failure_reason": "system19_primary_entry_missing"}
+    if not _align_parcel_access_to_entry(parcel, entry_cell, frontage):
+        return {"ok": false, "failure_reason": "building_entry_alignment_failed"}
     return {"ok": true, "failure_reason": "", "request": building_request, "entry_cell": entry_cell}
+
+func _align_parcel_access_to_entry(parcel: Dictionary, entry: Vector2i, frontage: int) -> bool:
+    var parcel_access: Vector2i = parcel.get("parcel_access_cell", Vector2i(-1, -1))
+    var road_access: Vector2i = parcel.get("access_cell", Vector2i(-1, -1))
+    if parcel_access.x < 0 or road_access.x < 0 or entry.x < 0 or not Facing.is_valid(frontage):
+        return false
+    if frontage == Facing.Value.NORTH or frontage == Facing.Value.SOUTH:
+        var shift_x: int = entry.x - parcel_access.x
+        parcel_access.x = entry.x
+        road_access.x += shift_x
+    else:
+        var shift_y: int = entry.y - parcel_access.y
+        parcel_access.y = entry.y
+        road_access.y += shift_y
+    var parcel_rect: Rect2i = parcel.get("rect", Rect2i())
+    if not parcel_rect.has_point(parcel_access):
+        return false
+    parcel["parcel_access_cell"] = parcel_access
+    parcel["access_cell"] = road_access
+    return true
 
 func _orientation_for_frontage(descriptor: BuildingArchetypePlacementDescriptor, frontage: int) -> int:
     for orientation: int in descriptor.supported_orientations():
@@ -171,28 +165,6 @@ func _envelope_for_access(
             x = buildable.position.x + buildable.size.x - size.x - setback
             y = _clamp_origin(access.y - half_height, buildable.position.y, buildable.position.y + buildable.size.y - size.y)
     return Rect2i(Vector2i(x, y), size)
-
-func _align_envelope_to_entry(
-    envelope: Rect2i,
-    frontage: int,
-    access: Vector2i,
-    entry: Vector2i
-) -> Rect2i:
-    if access.x < 0 or entry.x < 0 or not Facing.is_valid(frontage):
-        return Rect2i()
-    var shift: Vector2i = Vector2i.ZERO
-    if frontage == Facing.Value.NORTH or frontage == Facing.Value.SOUTH:
-        shift.x = access.x - entry.x
-    else:
-        shift.y = access.y - entry.y
-    return Rect2i(envelope.position + shift, envelope.size)
-
-func _entry_matches_access_axis(entry: Vector2i, access: Vector2i, frontage: int) -> bool:
-    if entry.x < 0 or access.x < 0 or not Facing.is_valid(frontage):
-        return false
-    if frontage == Facing.Value.NORTH or frontage == Facing.Value.SOUTH:
-        return entry.x == access.x
-    return entry.y == access.y
 
 func _clamp_origin(value: int, minimum: int, maximum: int) -> int:
     if maximum < minimum:
