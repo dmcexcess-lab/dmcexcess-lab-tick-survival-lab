@@ -40,6 +40,7 @@ Major systems move through **NOT DESIGNED -> DRAFT -> APPROVED -> IMPLEMENTED** 
 | 18 | Door Interaction / Automatic Passage | **IMPLEMENTED** | `18_DOOR_INTERACTION_PASSAGE.md` |
 | 19 | Local Building Generation / Building Grammar | **IMPLEMENTED — FINALIZED** | `19_LOCAL_BUILDING_GENERATION_ARCHETYPE_LAB.md` |
 | 20 | Local Area / Parcel Generation | **IMPLEMENTED — CANDIDATE 001 PURE PLAN** | `20_LOCAL_AREA_PARCEL_GENERATION.md` |
+| 21 | Tactical Camera / View Control | **IMPLEMENTED** | `21_TACTICAL_CAMERA_VIEW_CONTROL.md` |
 | 00D | Global World Planning / Generation | **NOT DESIGNED** | future design |
 | 00E | Population / Household / Outbreak / Player Story | **NOT DESIGNED** | future design |
 | 00F | Streaming / Materialization | **NOT DESIGNED** | future design |
@@ -54,7 +55,7 @@ Protected/preserved examples used to extract and validate the grammar:
 - `residential.house.farm_large` v4 — preserved compact/no-hall reference;
 - `residential.house.compact_laundry` v1 — accepted;
 - `commercial.gas_station.small` v1 — accepted;
-- `commercial.diner.rural_small` v2 — accepted as the first shared-grammar proof after the table-density revision.
+- `commercial.diner.rural_small` v2 — accepted after the table-density revision.
 
 Final reusable System 19 seams:
 
@@ -65,11 +66,11 @@ Final reusable System 19 seams:
 - multi-seed/four-rotation regression tests;
 - DEV-only `NEW BUILDING` critique control.
 
-The user's 2026-08-20 direction explicitly finalized System 19 and replaced the earlier two-arbitrary-building gate. New building profiles are now content work that may be added without reopening System 19 architecture when needed by later area/world tests.
+New building profiles are now ordinary content work and do not reopen System 19 architecture unless its frozen public contract proves insufficient.
 
 ## System 20 Candidate 001
 
-The approved first implementation is `rural.crossroads + temperate.rural`, using **only the existing System 19 library** so area-generation quality can be judged independently from new building content.
+The first implementation is `rural.crossroads + temperate.rural`, using only the existing System 19 library so area-generation quality can be judged independently from new building content.
 
 Current pure-plan implementation owns:
 
@@ -85,15 +86,24 @@ Current pure-plan implementation owns:
 
 Candidate 001 uses the gas station and diner as the two real commercial buildings, leaves another commercial opportunity vacant, and exercises the existing trailer/small farmhouse/large farmhouse/compact-laundry residential library. No new building profiles, fake barns, fake stores, actors, vehicles, loot or outbreak scenes are introduced.
 
-System 20 planning is headless/pure-data in this slice. A large-area critique viewer/camera is a separate presentation task and must not be smuggled into the planner.
+## System 21 camera truth
+
+Normal gameplay camera now defaults to player-follow and has five discrete zoom presets: Very Close, Close, Normal, Far and Area.
+
+The public camera seam also supports detached inspection, recenter, cell focus, actor focus, scripted presentation transitions and one-level restore for future cutscenes/reveals. Camera state never moves actors or advances simulation.
+
+Touch uses explicit `ZOOM - / CENTER / ZOOM +` buttons plus two-finger pan/pinch; desktop uses wheel, middle-drag and Home recenter. Right-click remains reserved for future interaction UI.
+
+`DoorPointerInputAdapter` maps through the active canvas/camera transform and cancels touch selection on drag/multitouch so camera gestures do not become door actions.
 
 ## Immediate next path
 
-1. Validate System 20 Candidate 001 pure planning across deterministic seeds.
-2. Add a separately owned large-area critique presentation/viewer so the 256×256 result can be visually inspected without corrupting System 20.
-3. After that visual area test, add new System 19 building profiles as needed by area content rather than reopening the building-grammar architecture.
-4. Continue expanding System 20 profiles/environments only through the frozen planner contracts.
+1. Use System 21 as the camera foundation for a separately owned **System 20 rural-area DEV critique viewer**.
+2. Let that viewer update the renderer-visible window while System 21 owns focus/zoom/pan only.
+3. Visually critique Candidate 001 roads, parcel spacing, density gradient, driveways, farms and commercial center.
+4. After the area test, add new System 19 building profiles freely as content needs emerge.
+5. Only after plan + visual inspection are sound, design System 20 initial WHAT materialization/transaction behavior.
 
 ## Design rule
 
-Every major system keeps a focused owner/public contract. Global planning owns cross-region coherence; System 20 refines caller-constrained local areas; System 19 owns local building/property generation; WHAT owns runtime persistence after materialization. Art remains presentation truth, not physics. If implementation requires a forbidden boundary, return the design to review instead of cascading a patch.
+Every major system keeps a focused owner/public contract. Global planning owns cross-region coherence; System 20 refines caller-constrained local areas; System 19 owns local building/property generation; System 21 owns camera presentation; WHAT owns runtime persistence after materialization. Art remains presentation truth, not physics. If implementation requires a forbidden boundary, return the design to review instead of cascading a patch.
