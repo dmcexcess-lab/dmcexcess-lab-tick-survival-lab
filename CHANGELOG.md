@@ -1,5 +1,22 @@
 # Changelog
 
+## System 20 Rural Crossroads Candidate 004 — 2026-08-20
+
+- Responded to the live morphology critique that development still hugged the inherited center road and that buildings were offset too far behind purposeless open space.
+- Bumped `rural.crossroads` from v2 to **v3**. `temperate.rural` remains **v3**, preserving Candidate 003's mixed-coordinate 2D vegetation-noise correction unchanged.
+- Replaced the single non-frontage farm-access branch with **two internal 3-cell bent gravel `local_rural` roads** extending into opposite portions of the countryside. Both remain local-only, create no area-boundary exit, and join the inherited primary road through ordinary uncontrolled junctions.
+- Local rural roads are now real **parcel-frontage authorities**. `ParcelPlanner` can create parcels along usable straight spans of local polylines while keeping safety margins around bends/ends and rejecting overlap with every road corridor.
+- Added an explicit local-frontage capacity requirement: if the profile cannot produce enough legal local-road parcels, generation fails rather than silently falling back to lining all occupied properties along inherited roads.
+- Preserved the 3-commercial / 6-residential / 4-farmstead / 12-building content target using only the finalized System 19 library.
+- Commercial opportunities remain on inherited primary-road frontage near the tiny center. At least **6 of the 10 residential/farmstead properties** now use local-road frontage, including at least 3 residential properties and 3 farmsteads.
+- Tightened the actual visible building setback. Regression now measures **road edge -> building facade**, not total driveway length to an off-center primary door. Residential and small-commercial average facade setbacks are <=5 cells; farmsteads remain farther back but <=8 cells.
+- Candidate 004 generates **zero parking cells**. Empty grass is not treated as implicit parking; any future parking lot must be explicit physical property geometry/surface.
+- Changed driveway routing so access enters the parcel **perpendicular to the frontage road first**, then turns near the building toward the actual generated System 19 primary entry. This removes unnatural shoulder-parallel driveway runs and preserves mailbox frontage.
+- Kept the inherited wide-road presentation fix unchanged: plain carriageway surfaces, one center-path yellow line per inherited road, and unpainted gravel local roads.
+- Preserved Candidate 003's tree/shrub/rock noise distribution and anti-diagonal regressions.
+- Expanded `LocalAreaGenerationSmoke.gd` across twelve consecutive seeds to lock two local roads, local frontage authority, the 6-of-10 local-road majority, close facade setbacks, zero fake parking, mailbox/field/access integrity, existing prefab coverage and environmental-noise distribution.
+- No System 19 building source, renderer/art source, camera source, movement source or door source changed.
+
 ## System 20 Rural Crossroads Candidate 003 — 2026-08-20
 
 - Fixed the reported natural-prop **diagonal-line artifact** while preserving Candidate 002 roads, parcels, buildings, camera and renderer behavior.
