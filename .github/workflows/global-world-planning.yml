@@ -28,6 +28,8 @@ jobs:
           test -f game/scripts/generation/world/GlobalWorldGenerationRequest.gd
           test -f game/scripts/generation/world/GeneratedGlobalWorldPlan.gd
           test -f game/scripts/generation/world/GlobalWorldProfileCatalog.gd
+          test -f game/scripts/generation/world/GlobalGeographyPlanner.gd
+          test -f game/scripts/generation/world/GlobalGeographyQuery.gd
           test -f game/scripts/generation/world/GlobalSettlementPlanner.gd
           test -f game/scripts/generation/world/GlobalMajorRoadPlanner.gd
           test -f game/scripts/generation/world/GlobalPlanningRegionPlanner.gd
@@ -53,7 +55,7 @@ jobs:
           ./Godot_v4.7.1-stable_linux.x86_64 --headless --editor --path "$GITHUB_WORKSPACE/game" --quit 2>&1 | tee "$RUNNER_TEMP/import.log"
           if grep -Eqi 'SCRIPT ERROR|Parse Error|Failed to load script' "$RUNNER_TEMP/import.log"; then exit 1; fi
 
-      - name: System 00D regional skeleton and System 20 projection smoke
+      - name: System 00D geography and System 20 projection smoke
         shell: bash
         run: |
           set -euxo pipefail
