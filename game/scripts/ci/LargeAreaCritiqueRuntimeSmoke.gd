@@ -127,23 +127,18 @@ func _touch_center_control_once() -> bool:
     get_root().add_child(controls)
     var counter: Array[int] = [0]
     controls.recenter_requested.connect(func() -> void: counter[0] += 1)
-    var center_button: Button = null
-    for child: Node in controls.get_children():
-        if child is Button and String((child as Button).text).begins_with("CENTER"):
-            center_button = child as Button
-            break
-    if center_button == null:
-        return false
+
     var touch := InputEventScreenTouch.new()
     touch.index = 0
-    touch.position = center_button.position + center_button.size * 0.5
     touch.pressed = false
-    center_button.gui_input.emit(touch)
+    if not controls.dispatch_control_event(touch, CameraControlsClass.ACTION_RECENTER, 1000):
+        return false
+
     var synthetic_mouse := InputEventMouseButton.new()
     synthetic_mouse.button_index = MOUSE_BUTTON_LEFT
-    synthetic_mouse.position = touch.position
     synthetic_mouse.pressed = false
-    center_button.gui_input.emit(synthetic_mouse)
+    if not controls.dispatch_control_event(synthetic_mouse, CameraControlsClass.ACTION_RECENTER, 1000):
+        return false
     return counter[0] == 1
 
 func _diner_entry(plan: GeneratedAreaPlan) -> Vector2i:
