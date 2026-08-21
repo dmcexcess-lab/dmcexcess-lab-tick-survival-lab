@@ -18,19 +18,19 @@ Golden recovery commit: `1763958f44eb7f855fd49944c00d1ffe608c0abe`.
 
 Systems 14–22 form the current canonical playable/planning path. `game/scripts/reboot/` remains frozen/deprecated reference only.
 
-**System 19 is finalized.** New building profiles are normal content work by default.
+**System 19 is finalized.** New building profiles are ordinary content work unless the frozen grammar contract proves insufficient.
 
-**System 20 Rural Crossroads Candidate 004 is the active area baseline.** Current profiles are `rural.crossroads` v3 + `temperate.rural` v3 over the same 256×256 global critique area and existing System 19 building library.
+**System 20 Rural Crossroads Candidate 005 is the active area baseline.** Current profiles are `rural.crossroads` v4 + `temperate.rural` v3 over the same 256×256 global critique area and existing System 19 building library.
 
-Candidate 004 addresses the live morphology critique that development still hugged the inherited center road and buildings sat behind too much purposeless open space. Two internal bent 3-cell gravel `local_rural` roads are now real parcel-frontage authorities. At least six of the ten residential/farmstead properties are targeted onto those local roads (at least three houses + three farmsteads), while commercial remains clustered near the inherited primary-road center. Residential/commercial facades are kept close to road frontage; farms retain only a modest extra setback. No fake parking is generated to justify empty grass.
+Candidate 005 preserves the accepted Candidate 004 roads, farms, parcel distribution, setbacks, building envelopes, vegetation and zero-fake-parking rule. It fixes the remaining property-access critique: each occupied parcel now aligns its road/sidewalk/driveway approach axis directly to the **actual generated System 19 primary exterior door**, so the path no longer reaches the facade and turns sideways at the last moment.
 
-Candidate 003's ecological correction remains intact: tree/shrub/rock dressing uses mixed-coordinate 2D value noise plus independent per-cell coordinate sampling, so countryside dressing scatters in broad irregular pockets without diagonal bias.
+The alignment uses only public System 19 plan facts. Saved prefab internals are untouched.
 
 **System 21 Tactical Camera / View Control is implemented.** Player-follow is default; five discrete zoom levels, detached inspection, recenter, focus and scripted/cutscene seams are presentation-only.
 
 **System 22 Large-Area DEV Critique Runtime is implemented.** The canonical live game materializes and renders the generated Rural Crossroads area.
 
-The immediate active work remains **user visual/playable critique of System 20 rural morphology and environmental dressing**.
+The immediate active work remains **user visual/playable critique of System 20 rural morphology/property access/environmental dressing**.
 
 ## 3. Foundation truth
 
@@ -88,32 +88,29 @@ Design: `SYSTEM_DESIGNS/20_LOCAL_AREA_PARCEL_GENERATION.md`
 
 Pure plan:
 
-`AreaGenerationRequest -> inherited roads + profile-authorized local roads -> intersections -> parcels -> land use -> access -> System 19 placement requests -> driveways -> outdoor dressing -> GeneratedAreaValidator -> GeneratedAreaPlan`
+`AreaGenerationRequest -> inherited roads + profile-authorized local roads -> intersections -> parcels -> land use -> access -> System 19 placement requests -> primary-entry alignment -> straight approaches -> outdoor dressing -> GeneratedAreaValidator -> GeneratedAreaPlan`
 
-Current Candidate 004:
+Current Candidate 005:
 
 - bounds `Rect2i(1000,2000,256,256)`;
 - seed `20001`;
-- `rural.crossroads` v3 + `temperate.rural` v3;
+- `rural.crossroads` v4 + `temperate.rural` v3;
 - inherited 5-cell primary E/W road preserved exactly;
 - inherited 3-cell secondary N/S road preserved exactly;
 - central signalized crossing `(1128,2128)`;
-- two internal 3-cell gravel `local_rural` roads, each with multiple bends and an uncontrolled junction;
-- local roads have no boundary exits and **do generate parcel frontage**;
-- paved inherited corridors use `ground.road_plain` plus one center-path yellow line (`road_yellow_line_h` / `road_yellow_line_v`);
+- two internal 3-cell gravel `local_rural` roads with bends and uncontrolled junctions;
+- local roads have no boundary exits and do generate parcel frontage;
+- inherited paved corridors use `ground.road_plain` plus one center-path yellow line;
 - 3 commercial opportunities: gas station + diner + one vacancy;
 - 6 residential parcels;
 - 4 farmsteads;
-- at least 6/10 residential+farmstead properties are on local roads, including >=3 houses and >=3 farmsteads;
-- commercial remains on inherited primary-road frontage near the center;
-- visible setback is evaluated as road edge -> building facade rather than total driveway length;
-- residential/commercial average facade setback <=5 cells; farmstead average <=8 cells and farther than residential;
-- zero generated parking cells in Candidate 004; parking must be explicit future property geometry if introduced;
-- driveways enter perpendicular to the frontage first, then turn near the building toward the actual generated primary door;
+- at least 6/10 residential+farmstead properties on local roads, including >=3 houses and >=3 farmsteads;
+- residential/commercial average facade setback <=5 cells;
+- farmstead average setback > residential and <=8 cells;
+- zero generated parking cells;
+- every occupied approach starts at the road-access anchor, remains perpendicular to frontage, and ends at the real generated primary exterior door with no lateral hook;
 - >=60% non-road area remains unbuilt;
 - deterministic tree/shrub/rock dressing uses low-frequency smooth 2D density noise plus independent per-cell coordinate hashing;
-- natural family noise creates tree-heavy, brush-heavy and rocky pockets without directional bias;
-- natural dressing avoids roads, driveways, buildings, active fields and the immediate signalized town center;
 - no fake barns/stores, actors, vehicles, loot or outbreak scenes.
 
 Pure-plan workflow/context: `verify/system20-local-area`.
@@ -174,16 +171,16 @@ Exact-head context: `verify/system22-area-critique`.
 
 ## 9. Current live demo
 
-The live Web build is the generated **Rural Crossroads Candidate 004** after deployment of the current exact head.
+The live Web build is the generated **Rural Crossroads Candidate 005** after deployment of the current exact head.
 
-This is intentionally still a DEV critique world: no zombies, population, loot, vehicles or outbreak layer is invented merely to make the area look busy.
+This remains a DEV critique world: no zombies, population, loot, vehicles or outbreak layer is invented merely to make the area look busy.
 
-Use the build to judge local-road shape/frontage, whether development now occupies the interior naturally, residential/farm spacing, facade setbacks, fields, driveways, commercial-center composition, and environmental noise distribution.
+Use the build to judge local-road shape/frontage, interior development, residential/farm spacing, facade setbacks, fields, straight door approaches, commercial-center composition, and environmental noise distribution.
 
 ## 10. Immediate next path
 
-1. User playtests/visually critiques Candidate 004 local-road development and tighter setbacks.
-2. Fix remaining System 20 rural morphology/environment rules while preserving accepted System 19 building baselines.
+1. User playtests/visually critiques Candidate 005 property-door alignment.
+2. Fix any remaining System 20 rural morphology/environment rules while preserving accepted System 19 baselines.
 3. Once rural morphology is accepted, add new System 19 profiles freely as content or test another area/environment combination.
 4. Design global world planning / long-term streaming-save architecture only when the next world-scale requirement demands it.
 
@@ -201,12 +198,13 @@ Use the build to judge local-road shape/frontage, whether development now occupi
 10. Local roads may own parcel frontage when their area profile explicitly permits it.
 11. System 20 areas are planning domains, not streaming chunks.
 12. System 19 owns building internals; accepted baselines remain protected.
-13. Settlement morphology and ecological environment stay separate.
-14. Open space is legitimate output but may receive environment-appropriate natural dressing.
-15. Natural environmental sampling must be genuinely two-dimensional; X/Y seed correlation must not create visible directional artifacts.
-16. Large building setbacks require an explicit land-use purpose; empty grass is not implicit parking.
-17. System 21 camera never mutates simulation.
-18. System 22 is DEV presentation/integration, not a new world-planning owner.
+13. System 20 may read public generated primary-entry facts to align parcel access without reaching into prefab internals.
+14. Settlement morphology and ecological environment stay separate.
+15. Open space is legitimate output but may receive environment-appropriate natural dressing.
+16. Natural environmental sampling must be genuinely two-dimensional.
+17. Large building setbacks require an explicit land-use purpose; empty grass is not implicit parking.
+18. System 21 camera never mutates simulation.
+19. System 22 is DEV presentation/integration, not a new world-planning owner.
 
 ## 12. Documentation source order
 
