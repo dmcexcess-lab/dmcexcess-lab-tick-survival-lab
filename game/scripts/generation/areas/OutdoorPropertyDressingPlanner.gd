@@ -178,18 +178,48 @@ func _blocked_cells(roads: Array[Dictionary], parcels: Array[Dictionary]) -> Dic
 
 func _field_rect(parcel: Dictionary) -> Rect2i:
     var rect: Rect2i = parcel.get("rect", Rect2i())
+    var envelope: Rect2i = parcel.get("building_envelope", Rect2i())
     var frontage: int = int(parcel.get("frontage_side", Facing.Value.SOUTH))
-    var frontage_depth: int = rect.size.y if frontage == Facing.Value.NORTH or frontage == Facing.Value.SOUTH else rect.size.x
-    var depth: int = mini(8, maxi(4, int(frontage_depth / 3)))
+    var inner_left: int = rect.position.x + 2
+    var inner_top: int = rect.position.y + 2
+    var inner_right: int = rect.position.x + rect.size.x - 2
+    var inner_bottom: int = rect.position.y + rect.size.y - 2
+    var desired_depth: int = 8
+    var gap: int = 1
+
     match frontage:
         Facing.Value.NORTH:
-            return Rect2i(Vector2i(rect.position.x + 2, rect.position.y + rect.size.y - depth - 2), Vector2i(rect.size.x - 4, depth))
+            var start_y: int = inner_top
+            if envelope.size.x > 0 and envelope.size.y > 0:
+                start_y = maxi(start_y, envelope.position.y + envelope.size.y + gap)
+            var depth_north: int = mini(desired_depth, inner_bottom - start_y)
+            if depth_north < 4 or inner_right - inner_left < 4:
+                return Rect2i()
+            return Rect2i(Vector2i(inner_left, start_y), Vector2i(inner_right - inner_left, depth_north))
         Facing.Value.SOUTH:
-            return Rect2i(rect.position + Vector2i(2, 2), Vector2i(rect.size.x - 4, depth))
+            var end_y: int = inner_bottom
+            if envelope.size.x > 0 and envelope.size.y > 0:
+                end_y = mini(end_y, envelope.position.y - gap)
+            var depth_south: int = mini(desired_depth, end_y - inner_top)
+            if depth_south < 4 or inner_right - inner_left < 4:
+                return Rect2i()
+            return Rect2i(Vector2i(inner_left, end_y - depth_south), Vector2i(inner_right - inner_left, depth_south))
         Facing.Value.WEST:
-            return Rect2i(Vector2i(rect.position.x + rect.size.x - depth - 2, rect.position.y + 2), Vector2i(depth, rect.size.y - 4))
+            var start_x: int = inner_left
+            if envelope.size.x > 0 and envelope.size.y > 0:
+                start_x = maxi(start_x, envelope.position.x + envelope.size.x + gap)
+            var depth_west: int = mini(desired_depth, inner_right - start_x)
+            if depth_west < 4 or inner_bottom - inner_top < 4:
+                return Rect2i()
+            return Rect2i(Vector2i(start_x, inner_top), Vector2i(depth_west, inner_bottom - inner_top))
         Facing.Value.EAST:
-            return Rect2i(rect.position + Vector2i(2, 2), Vector2i(depth, rect.size.y - 4))
+            var end_x: int = inner_right
+            if envelope.size.x > 0 and envelope.size.y > 0:
+                end_x = mini(end_x, envelope.position.x - gap)
+            var depth_east: int = mini(desired_depth, end_x - inner_left)
+            if depth_east < 4 or inner_bottom - inner_top < 4:
+                return Rect2i()
+            return Rect2i(Vector2i(end_x - depth_east, inner_top), Vector2i(depth_east, inner_bottom - inner_top))
     return Rect2i()
 
 func _mailbox_cell(parcel: Dictionary) -> Vector2i:
