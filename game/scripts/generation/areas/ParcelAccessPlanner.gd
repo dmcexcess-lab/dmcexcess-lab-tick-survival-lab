@@ -54,18 +54,23 @@ func _parcel_edge_access(rect: Rect2i, frontage: int) -> Vector2i:
     return Vector2i(-1, -1)
 
 func _road_edge_access(road: Dictionary, parcel_access: Vector2i, frontage: int) -> Vector2i:
-    var centerline: Vector2i = road.get("start", Vector2i.ZERO)
+    var path: Array = road.get("path_cells", [])
+    if path.is_empty() or not Facing.is_valid(frontage):
+        return Vector2i(-1, -1)
+    var nearest: Vector2i = Vector2i(-1, -1)
+    var nearest_distance: int = 2147483647
+    for value: Variant in path:
+        if typeof(value) != TYPE_VECTOR2I:
+            continue
+        var cell: Vector2i = value
+        var distance: int = absi(cell.x - parcel_access.x) + absi(cell.y - parcel_access.y)
+        if distance < nearest_distance:
+            nearest_distance = distance
+            nearest = cell
+    if nearest.x < 0:
+        return Vector2i(-1, -1)
     var half_width: int = int(road.get("width", 1)) / 2
-    match frontage:
-        Facing.Value.NORTH:
-            return Vector2i(parcel_access.x, centerline.y + half_width)
-        Facing.Value.SOUTH:
-            return Vector2i(parcel_access.x, centerline.y - half_width)
-        Facing.Value.EAST:
-            return Vector2i(centerline.x - half_width, parcel_access.y)
-        Facing.Value.WEST:
-            return Vector2i(centerline.x + half_width, parcel_access.y)
-    return Vector2i(-1, -1)
+    return nearest - Facing.vector(frontage) * half_width
 
 func _orthogonal_path(start: Vector2i, finish: Vector2i) -> Array[Vector2i]:
     var result: Array[Vector2i] = []
