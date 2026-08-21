@@ -16,13 +16,13 @@ Golden recovery commit: `1763958f44eb7f855fd49944c00d1ffe608c0abe`.
 
 ## 2. Current phase
 
-Systems 14–19 are the live canonical demo/player path. `game/main.tscn` launches the modular canonical demo. `game/scripts/reboot/` remains frozen/deprecated reference only.
+Systems 14–19 are the live canonical demo/player path. `game/main.tscn` still launches the modular diner critique demo. `game/scripts/reboot/` remains frozen/deprecated reference only.
 
-System 19 is in its **building-grammar hardening phase**. Five saved user-approved/preserved examples are the regression/training references, and two arbitrary grammar-generated buildings are the agreed finish test before System 19 is finalized.
+**System 19 is finalized.** The user explicitly accepted the building grammar and directed development to move on. New building profiles are now normal content work by default and should not reopen System 19 architecture unless a frozen contract proves insufficient.
 
-**Current hardening Trial 001:** `commercial.diner.rural_small` v2. The first deployed diner was called “very good”; v2 responds to the remaining critique by adding more dining tables and a DEV `NEW BUILDING` seed-cycle control for rapid visual testing.
+**System 20 Candidate 001 is the active implementation:** pure deterministic `rural.crossroads + temperate.rural` local-area planning over 256×256 global cells, using only the existing System 19 building library.
 
-System 20 Local Area / Parcel Generation is designed next, but implementation remains deferred until the System 19 two-building hardening proof is complete.
+Large-area visualization/camera and WHAT materialization are intentionally not part of this pure-plan slice.
 
 ## 3. Foundation truth
 
@@ -48,177 +48,151 @@ Implemented + dedicated validation includes:
 - Health / Needs / Skills / Item Weight / Carry / Moodlets;
 - Canonical Demo / HUD / Player Shell;
 - Run / damage-interruptible Walk;
-- 17A exertion/encumbrance/run impact;
-- 17A.1 overweight-Walk fatigue + 2x hard carry ceiling;
-- System 19 Local Building Generation + reusable grammar hardening owners;
-- explicit System 19 DEV seed-cycle critique controls.
+- movement exertion/encumbrance/run impact;
+- System 19 Local Building Generation / finalized building grammar;
+- System 19 DEV seed-cycle critique controls;
+- System 20 Candidate 001 pure local-area/parcel planning.
 
 Art remains presentation truth; generation stores semantic type/facing only. Art is not physics.
 
-## 5. Movement / fatigue / carry truth
-
-- Walk Forward/Back: one cell, damage-CANCELABLE.
-- Run Forward: two physical strides, COMMITTED.
-- Turn L/R: COMMITTED.
-- Crouch/Stand: COMMITTED.
-- Duration composes terrain × stance × fatigue × encumbrance.
-- fatigue 80+ blocks Run.
-- soft carry defaults 18 kg; 100%+ soft capacity blocks Run.
-- normal acquisition hard ceiling is 2× soft capacity, 36 kg by default.
-- known hard Run blockers cause attempted-stride exertion + 5 HP impact unless a passage resolver resolves them first.
-
-## 6. Door Interaction truth
-
-Design: `SYSTEM_DESIGNS/18_DOOR_INTERACTION_PASSAGE.md`
-
-- CLOSED normal door may be conditionally traversed through Movement's generic passage seam.
-- Walk opens at actual movement commit; damage-canceled Walk leaves it CLOSED.
-- Run opens at stride, continues and emits semantic LOUD passage; no normal 5 HP door impact.
-- short tap/click closes an OPEN door only when cardinally adjacent and facing it.
-- manual close costs 3 ticks and is CANCELABLE by damage.
-- actor in doorway prevents close.
-
-## 7. System 19 current truth
+## 5. System 19 final truth
 
 Design: `SYSTEM_DESIGNS/19_LOCAL_BUILDING_GENERATION_ARCHETYPE_LAB.md`
 
 Stable pipeline:
 
-`request -> pure semantic plan -> shared structural validation -> materialize initial WHAT + CLOSED Door State -> relinquish ownership`
+`request -> pure semantic building plan -> shared structural validation -> materialize initial WHAT + CLOSED Door State -> relinquish ownership`
 
-### Saved reference set
+Frozen placement seam for higher-level planners:
 
-- `residential.trailer.singlewide` v2 — accepted;
-- `residential.house.farm_small` v2 — accepted;
-- `residential.house.farm_large` v4 — preserved compact/no-hall reference;
-- `residential.house.compact_laundry` v1 — accepted after user said it looked perfect;
-- `commercial.gas_station.small` v1 — accepted after user said “perfect.”
+`LocalBuildingGenerator.placement_descriptor(archetype_id)`
 
-These five sources remain untouched during hardening.
+Protected/finalized library:
 
-### Extracted shared rules
+- `residential.trailer.singlewide` v2;
+- `residential.house.farm_small` v2;
+- `residential.house.farm_large` v4;
+- `residential.house.compact_laundry` v1;
+- `commercial.gas_station.small` v1;
+- `commercial.diner.rural_small` v2.
 
-Current hard rules are intentionally qualitative/structural rather than copied exact dimensions:
+Final hard rules emphasize compact purposeful space, logical adjacency, minimal wasted circulation, clear door/service paths, local functional clustering, contiguous work runs where appropriate, intentional open space, deterministic seeded variation and profile-specific requirements outside generic structural validation.
 
-- compact purposeful space;
-- logical adjacency before hallway inflation;
-- public/common entry makes functional sense;
-- every required room is real/reachable;
-- clear doorway approaches;
-- clear service/work routes;
-- functional props cluster locally;
-- contiguous work runs where appropriate;
-- empty space may remain empty;
-- grammar blocking-prop density ceiling currently 45%;
-- deterministic generation/versioning;
-- profile-specific room requirements stay outside the generic structural validator.
+The earlier second-arbitrary-building finalization gate is superseded by the user's explicit 2026-08-20 instruction to finalize System 19.
 
-### Reusable hardening owners
-
-- `BuildingArchetypePlacementDescriptor.gd` — read-only size/frontage/orientation seam for System 20;
-- `grammar/BuildingGrammarProfile.gd` — profile program data;
-- `grammar/BuildingGrammarGenerator.gd` — reusable topology/layout strategy;
-- `grammar/BuildingRoomDressingPlanner.gd` — functional clusters/work runs;
-- `grammar/BuildingGrammarQualityValidator.gd` — profile-aware quality constraints;
-- thin archetype wrappers/profile files provide content rather than duplicating layout algorithms.
-
-`LocalBuildingGenerator.placement_descriptor()` derives placement facts through each archetype's own public generation behavior, so System 20 does not maintain a second size/frontage table.
-
-### Current callable registry
-
-- `residential.trailer.singlewide`
-- `residential.house.farm_small`
-- `residential.house.farm_large`
-- `residential.house.compact_laundry`
-- `commercial.gas_station.small`
-- `commercial.diner.rural_small`
-
-## 8. Hardening Trial 001 — Rural Diner v2
-
-`commercial.diner.rural_small`, v2.
-
-Canonical NORTH envelope: **17×11**, SOUTH frontage.
-
-Program:
-
-- 15×5 dining/public hub;
-- 7×3 kitchen;
-- 3×3 storage with rear service exit;
-- 3×3 bathroom;
-- no dedicated hall/corridor;
-- 5 doors;
-- 11 windows;
-- 30 purposeful props.
-
-Dressing now uses six booth/table pairs, a small customer-counter cluster, one contiguous seven-cell kitchen line, wall-hugging storage dressing with clear middle lane, and a compact bathroom cluster. The central entry/customer aisle remains clear.
-
-Four legal seeded back-of-house arrangements are available. Seeds 19006 and 19007 preserve the already-reviewed v1 topology; 19008 and 19009 expose the additional legal room orders. The storage service exit follows the storage room.
-
-`BuildingGrammarSmoke.gd` exercises 32 consecutive diner seeds across all four rotations in addition to exact v2 checks and the DEV seed-session contract.
-
-## 9. Live canonical demo
-
-Current live target: **Rural Diner hardening Trial 001 v2**.
-
-- 19×13 critique lot;
-- 28 px/cell;
-- envelope `Rect2i(1,1,17,11)`;
-- instance `building.demo.diner.rural_small.001`;
-- default seed `19006`;
-- NORTH orientation / SOUTH frontage;
-- player `(9,12)` facing NORTH toward primary door `(9,11)`;
-- road on bottom row;
-- one controlled survivor, no extra runtime world content injected by System 19;
-- real HUD/player shell/movement/System 18 doors remain live;
-- a DEV `NEW BUILDING` button sits in the otherwise-empty center slot between TURN L and TURN R.
-
-Pressing `NEW BUILDING` advances the seed and reloads the demo through the normal System 19 generation/validation/materialization path. Web carries the DEV seed in the `building_seed` query parameter; native uses a runtime ProjectSettings override. This is critique tooling only, not a normal gameplay/world-generation mechanic.
-
-## 10. System 20 next design
+## 6. System 20 active truth
 
 Design: `SYSTEM_DESIGNS/20_LOCAL_AREA_PARCEL_GENERATION.md`
 
-The user accepted the current rural-first direction in conversation; implementation is intentionally deferred until System 19 hardening finishes.
+Current pipeline:
 
-Core hierarchy:
+`AreaGenerationRequest -> inherited roads/intersection -> road-facing parcels -> land use -> access -> System 19 placement -> driveways -> outdoor/environment dressing -> GeneratedAreaValidator -> pure GeneratedAreaPlan`
 
-- future Global World Planning supplies cross-area geography/major-road constraints;
-- System 20 plans local roads, parcels, accesses, land use, building requests and outdoor/environment dressing in global coordinates;
-- System 19 generates each selected building/property;
-- WHAT owns later reality.
+Current owners under `game/scripts/generation/areas/`:
 
-First target remains `rural.crossroads + temperate.rural`: roughly 256×256 planning area, one signalized crossroads, gas station near center, 8–12 houses/farmsteads, substantial agriculture/vacant/wilderness area and >=60% non-road area unbuilt.
+- `AreaSeed.gd`;
+- `AreaGenerationRequest.gd`;
+- `GeneratedAreaPlan.gd`;
+- `AreaProfileCatalog.gd`;
+- `EnvironmentProfileCatalog.gd`;
+- `LocalRoadPlanner.gd`;
+- `ParcelPlanner.gd`;
+- `ParcelAccessPlanner.gd`;
+- `BuildingPlacementPlanner.gd`;
+- `OutdoorPropertyDressingPlanner.gd`;
+- `GeneratedAreaValidator.gd`;
+- `LocalAreaGenerator.gd`.
 
-A System 20 area is a planning domain, **not a streaming chunk**.
+System 20 depends on System 19 only through its read-only placement descriptor and normal public generation/validation contracts. It does not inspect building internals.
 
-## 11. Immediate next path
+## 7. Candidate 001 — Rural Crossroads
 
-1. User playtests Rural Diner Trial 001 v2 and can cycle seeds with `NEW BUILDING`.
-2. If accepted, preserve it and generate **one more arbitrary building through the shared grammar**.
-3. Trial 002 should exercise another arrangement/dressing family rather than simply cloning the diner.
-4. If Trial 002 is also accepted, finalize System 19 and freeze its placement/profile/quality seams.
-5. Move primary development to System 20 Local Area / Parcel Generation.
+Fixture: `RuralCrossroadsPlanFixture.gd`
 
-## 12. Invariants
+- global bounds `Rect2i(1000,2000,256,256)`;
+- seed `20001`;
+- `rural.crossroads` v1;
+- `temperate.rural` v1;
+- inherited 5-cell primary east/west road;
+- inherited 3-cell secondary north/south road;
+- central crossing at `(1128,2128)`;
+- exactly one signalized intersection;
+- zero locally generated road spurs.
+
+Land-use target:
+
+- 3 `commercial_small` opportunities nearest center;
+- 6 residential parcels;
+- 4 farther farmstead parcels;
+- remaining generated frontage parcels agricultural/vacant/wilderness;
+- >=60% non-road land unbuilt by buildings.
+
+Existing library only:
+
+- gas station once;
+- diner once;
+- third commercial opportunity intentionally vacant;
+- ten residential/farmstead buildings drawn from the existing trailer/small farmhouse/large farmhouse/compact-laundry library.
+
+Outdoor semantics include base grass, roads, gravel driveways, fields, one traffic signal, mailboxes, sparse residential trees and sparse farm fencing. No fake barns/stores, people, vehicles, loot or outbreak scenes.
+
+## 8. System 20 verification
+
+`LocalAreaGenerationSmoke.gd` verifies:
+
+- deterministic same-seed replay and different-seed variation;
+- inherited road/boundary integrity;
+- one signalized crossroads;
+- parcel non-overlap and road exclusion;
+- 3 commercial / 6 residential / 4 farmstead targets;
+- gas station + diner + one honest vacant commercial parcel;
+- all four saved residential archetypes exercised;
+- density falling outward;
+- longer farmstead driveways;
+- >=60% unbuilt non-road area;
+- traffic signal/mailboxes/fields;
+- every selected building accepted by System 19;
+- recovered-art semantic coverage;
+- twelve consecutive area seeds without reroll loops.
+
+Dedicated workflow: `.github/workflows/local-area-generation.yml`.
+
+Exact-head status context: `verify/system20-local-area`.
+
+## 9. Current live demo
+
+The live Web demo remains the **Rural Diner v2** critique fixture with `NEW BUILDING` seed cycling.
+
+This is intentional. System 20 Candidate 001 is a 256×256 pure plan and does not own a camera/viewer. Do not distort the planner merely to fit the current one-screen demo.
+
+## 10. Immediate next path
+
+1. Get System 20 Candidate 001 pure planner green on exact `main` SHA.
+2. Implement a separately owned large-area DEV critique viewer/camera to inspect the full rural plan visually.
+3. Use that visual test to critique road/parcel/density/driveway behavior.
+4. After the area test, add new System 19 building profiles freely as content needs emerge.
+5. Only after the plan/viewer are sound, design System 20 initial WHAT materialization/transaction behavior.
+
+## 11. Invariants
 
 1. Main/root is composition only.
 2. Focused owners/public contracts; no god state.
-3. No placeholder/fake completion.
-4. Generation produces initial WHAT; it does not own runtime reality.
+3. No placeholders/fake completion.
+4. Generation produces initial truth; persistent WHAT owns later changes after materialization.
 5. Rendering presents truth; input submits semantic intent.
 6. Art is not physics.
 7. Phone/Safari is first-class.
 8. Reboot is reference only.
-9. Cross-region infrastructure is globally coordinated; local planning cannot invent incompatible boundary exits.
-10. System 20 planning areas are global-coordinate planning domains, not streaming chunks.
-11. System 20 chooses parcels/building requests; System 19 owns building/property internals.
-12. Saved System 19 references are not mutated merely to satisfy a new trial or parcel.
-13. Intentional same-seed profile/archetype-rule changes require version bumps.
-14. Settlement morphology and environment/ecology remain separate profile dimensions.
-15. Open space is legitimate output indoors and outdoors; do not fill it merely to increase object density.
-16. DEV critique controls may request a fresh seed/reload but do not own production world generation or mutate an already-materialized world in place.
+9. Cross-region infrastructure is globally coordinated.
+10. System 20 areas are planning domains, not streaming chunks.
+11. System 20 chooses parcels/building requests; System 19 owns building internals.
+12. New building profiles are content additions by default; accepted baselines stay protected.
+13. Same-seed intentional rule changes require version bumps.
+14. Settlement morphology and environment ecology remain separate.
+15. Open space is legitimate output indoors and outdoors.
+16. Large-area presentation is separate from System 20 planning.
 
-## 13. Documentation source order
+## 12. Documentation source order
 
 1. newest explicit user instruction;
 2. `PROJECT_NORTH_STAR.md`;
