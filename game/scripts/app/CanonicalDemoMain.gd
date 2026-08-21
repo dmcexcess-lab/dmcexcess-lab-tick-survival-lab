@@ -49,9 +49,13 @@ const DoorControllerClass = preload("res://scripts/player/DoorPlayerInteractionC
 ## Canonical demo bootstrap/composition only.
 
 @onready var _world_view: TacticalRendererStack = $WorldView
+@onready var _camera_controller: TacticalCameraController = $CameraRig
+@onready var _camera: Camera2D = $CameraRig/Camera2D
 @onready var _keyboard: KeyboardInputAdapter = $KeyboardInput
 @onready var _door_pointer: DoorPointerInputAdapter = $DoorPointerInput
+@onready var _camera_input: CameraInputAdapter = $CameraInput
 @onready var _controls: DemoMovementControls = $Controls
+@onready var _camera_controls: CameraControls = $CameraControls
 @onready var _hud: CanonicalStatusHud = $Hud
 @onready var _shell: CanonicalPlayerShell = $PlayerShell
 
@@ -178,6 +182,25 @@ func _boot_canonical_demo() -> bool:
     if not _door_pointer.configure(_world_view.position, FixtureClass.MAP_ORIGIN, FixtureClass.MAP_SIZE, FixtureClass.CELL_PIXELS):
         return false
 
+    _camera_controller.presentation_changed.connect(Callable(_camera_controls, "present_camera_state"))
+    _camera_input.zoom_in_requested.connect(Callable(_camera_controller, "zoom_in"))
+    _camera_input.zoom_out_requested.connect(Callable(_camera_controller, "zoom_out"))
+    _camera_input.pan_requested.connect(Callable(_camera_controller, "pan_screen_pixels"))
+    _camera_input.recenter_requested.connect(Callable(_camera_controller, "recenter_player"))
+    _camera_controls.zoom_in_requested.connect(Callable(_camera_controller, "zoom_in"))
+    _camera_controls.zoom_out_requested.connect(Callable(_camera_controller, "zoom_out"))
+    _camera_controls.recenter_requested.connect(Callable(_camera_controller, "recenter_player"))
+    if not _camera_controller.configure(
+        _world,
+        _camera,
+        _world_view,
+        FixtureClass.PLAYER_ID,
+        FixtureClass.MAP_ORIGIN,
+        FixtureClass.CELL_PIXELS
+    ):
+        return false
+    _camera_controls.present_camera_state(_camera_controller.presentation_snapshot())
+
     _status_summary = StatusSummaryClass.new(_health_state, _needs_state, _carry_query, _moodlet_service)
     _inspection_query = InspectionQueryClass.new(_world)
     if not _hud.configure(_kernel, _status_summary, _inspection_query, FixtureClass.PLAYER_ID):
@@ -234,3 +257,5 @@ func _on_interaction_blocked_changed(blocked: bool) -> void:
     _keyboard.set_enabled(not blocked)
     _controls.set_enabled(not blocked)
     _door_pointer.set_enabled(not blocked)
+    _camera_input.set_enabled(not blocked)
+    _camera_controls.set_enabled(not blocked)
