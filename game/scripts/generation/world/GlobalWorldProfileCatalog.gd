@@ -11,11 +11,25 @@ func profile(profile_id: StringName) -> Dictionary:
         return {}
     return {
         "id": TEMPERATE_RURAL_REGION,
-        "version": 1,
+        "version": 2,
         "minimum_world_size": Vector2i(1536, 1536),
         "local_site_size": Vector2i(256, 256),
         "primary_width": 5,
         "secondary_width": 3,
+
+        "geography_cell_size": 128,
+        "geography_noise_scale_cells": 4,
+        "geography_peak_boost": 46,
+        "lowland_elevation_max": 35,
+        "rolling_elevation_max": 58,
+        "upland_elevation_max": 75,
+        "protected_cross_half_span": 384,
+        "protected_cross_half_thickness": 192,
+        "settlement_geography_search_radius_cells": 4,
+        "road_cost_lowland": 10,
+        "road_cost_rolling": 14,
+        "road_cost_upland": 32,
+
         "smalltown_distance_min": 520,
         "smalltown_distance_max": 620,
         "north_hamlet_distance_min": 500,
