@@ -11,7 +11,7 @@ func profile(profile_id: StringName) -> Dictionary:
         return {}
     return {
         "id": TEMPERATE_RURAL,
-        "version": 2,
+        "version": 3,
         "base_ground": &"ground.grass_lush",
         "road_ground": &"ground.road_plain",
         "road_surface_ground": &"ground.road_plain",
@@ -23,10 +23,10 @@ func profile(profile_id: StringName) -> Dictionary:
         "tree_semantics": [&"prop.deciduous_large", &"prop.deciduous_small"],
         "shrub_semantics": [&"prop.dense_bush", &"prop.thorn_bush"],
         "rock_semantics": [&"prop.rock_small", &"prop.rock_cluster", &"prop.mossy_rock"],
-        "natural_cluster_count": 38,
-        "natural_cluster_radius": 7,
-        "natural_cluster_min_props": 6,
-        "natural_cluster_max_props": 12,
+        "natural_noise_density": 0.0105,
+        "natural_noise_patch_scale": 22,
+        "natural_noise_sparse_multiplier": 0.20,
+        "natural_noise_dense_multiplier": 2.25,
         "natural_road_clearance": 1,
         "natural_center_clear_radius": 24,
         "fence_semantic": &"prop.wood_fence",
