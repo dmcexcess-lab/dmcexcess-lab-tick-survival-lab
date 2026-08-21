@@ -1,5 +1,23 @@
 # Changelog
 
+## System 00D Global World Planning — Regional Skeleton Slice 001 — 2026-08-20
+
+- Added the user-approved **System 00D Global World Planning** regional-skeleton slice before streaming/population work.
+- Added pure global-planning owners under `game/scripts/generation/world/`: stable global sub-seeds, request/plan/profile contracts, settlement planning, major-road planning, broad planning regions, independent validation and a coordinator-only `GlobalWorldPlanner`.
+- Added `temperate.rural.region` v1 and `GlobalWorldPlanFixture.gd` with global bounds `Rect2i(232,1232,1792,1792)` and seed `20001`.
+- Slice 001 creates five stable settlement anchors: one central rural crossroads, one smalltown and three rural hamlets.
+- Added one connected regional road network containing a boundary-to-boundary primary corridor, a boundary-to-boundary secondary corridor and two secondary settlement branches with real regional boundary gateways.
+- Added one broad rural-open planning region plus five settlement influence regions. These are semantic planning regions, **not streaming/storage chunks**.
+- Added five local-area site records. Future profile hints such as `smalltown.center` and `rural.scattered` remain honest planning intent and are not silently substituted with the existing rural-crossroads profile.
+- Added separate `System20AreaRequestProjector.gd`; pure 00D source does not import System 20. The adapter clips global cardinal road segments into the existing `AreaGenerationRequest` contract and preserves global road IDs/classes/widths.
+- Preserved the accepted Candidate 005 local area as a hard integration anchor. The central global site projects to the exact existing `area.rural.crossroads.001` bounds, seed, primary/secondary road IDs and local profile/environment selection.
+- Proved the projected System 20 request is semantically identical to `RuralCrossroadsPlanFixture.request(20001)` and that System 20 produces the **exact same Candidate 005 semantic plan signature** from the global facts.
+- Added adjacent-window road continuity checks: arbitrary west/east/north/south projection windows preserve contiguous cells and the same stable global primary/secondary road IDs across shared boundaries.
+- Added honest failure for unsupported future local profiles rather than fabricating small-town or scattered-rural content.
+- Added `.github/workflows/global-world-planning.yml` and exact-head status `verify/system00d-global-world`; the workflow also reruns System 20 and canonical startup regressions.
+- Updated the exact-head status publisher for System 00D.
+- The live Web demo intentionally remains Candidate 005; no fake strategic/world viewer or streaming layer was added merely to make the new pure world plan visible.
+
 ## System 20 Rural Crossroads Candidate 005 — 2026-08-20
 
 - Fixed the live property-access critique where some generated approaches reached a building facade and then turned sideways to an off-center front door.
