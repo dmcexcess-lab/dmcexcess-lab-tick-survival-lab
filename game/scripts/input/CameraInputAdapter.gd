@@ -145,5 +145,7 @@ func _first_two_touch_positions() -> Array[Vector2]:
     ids.sort()
     var result: Array[Vector2] = []
     for index in range(mini(2, ids.size())):
-        result.append(_touches[ids[index]] as Vector2)
+        var value: Variant = _touches[ids[index]]
+        if typeof(value) == TYPE_VECTOR2:
+            result.append(value)
     return result
