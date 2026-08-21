@@ -1,0 +1,83 @@
+name: Local Area and Parcel Generation contract
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: local-area-generation-contract
+  cancel-in-progress: true
+
+jobs:
+  local-area-generation:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate System 20 boundaries
+        shell: bash
+        run: |
+          set -euxo pipefail
+          test -f SYSTEM_DESIGNS/20_LOCAL_AREA_PARCEL_GENERATION.md
+          test -f game/scripts/generation/areas/AreaSeed.gd
+          test -f game/scripts/generation/areas/AreaGenerationRequest.gd
+          test -f game/scripts/generation/areas/GeneratedAreaPlan.gd
+          test -f game/scripts/generation/areas/AreaProfileCatalog.gd
+          test -f game/scripts/generation/areas/EnvironmentProfileCatalog.gd
+          test -f game/scripts/generation/areas/LocalRoadPlanner.gd
+          test -f game/scripts/generation/areas/ParcelPlanner.gd
+          test -f game/scripts/generation/areas/ParcelAccessPlanner.gd
+          test -f game/scripts/generation/areas/BuildingPlacementPlanner.gd
+          test -f game/scripts/generation/areas/OutdoorPropertyDressingPlanner.gd
+          test -f game/scripts/generation/areas/GeneratedAreaValidator.gd
+          test -f game/scripts/generation/areas/LocalAreaGenerator.gd
+          test -f game/scripts/demo/RuralCrossroadsPlanFixture.gd
+          test -f game/scripts/ci/LocalAreaGenerationSmoke.gd
+          ! grep -R -q 'Texture2D\|atlas_index\|Camera2D\|scripts/render\|scripts/ui\|scripts/player' game/scripts/generation/areas
+          ! grep -R -q 'loot\|infected\|outbreak\|weather' game/scripts/generation/areas
+
+      - name: Install Godot 4.7.1
+        shell: bash
+        run: |
+          set -euxo pipefail
+          curl -L -o godot.zip https://github.com/godotengine/godot-builds/releases/download/4.7.1-stable/Godot_v4.7.1-stable_linux.x86_64.zip
+          unzip -q godot.zip
+          chmod +x Godot_v4.7.1-stable_linux.x86_64
+
+      - name: Import and parse project
+        shell: bash
+        run: |
+          set -euxo pipefail
+          ./Godot_v4.7.1-stable_linux.x86_64 --headless --editor --path "$GITHUB_WORKSPACE/game" --quit 2>&1 | tee "$RUNNER_TEMP/import.log"
+          if grep -Eqi 'SCRIPT ERROR|Parse Error|Failed to load script' "$RUNNER_TEMP/import.log"; then exit 1; fi
+
+      - name: System 19 dependency regressions
+        shell: bash
+        run: |
+          set -euxo pipefail
+          ./Godot_v4.7.1-stable_linux.x86_64 --headless --path "$GITHUB_WORKSPACE/game" --quit-after 10 --script res://scripts/ci/LocalBuildingGenerationSmoke.gd 2>&1 | tee "$RUNNER_TEMP/building19.log"
+          grep -q 'LOCAL_BUILDING_GENERATION_SMOKE_OK' "$RUNNER_TEMP/building19.log"
+          ./Godot_v4.7.1-stable_linux.x86_64 --headless --path "$GITHUB_WORKSPACE/game" --quit-after 20 --script res://scripts/ci/BuildingGrammarSmoke.gd 2>&1 | tee "$RUNNER_TEMP/buildinggrammar.log"
+          grep -q 'BUILDING_GRAMMAR_SMOKE_OK' "$RUNNER_TEMP/buildinggrammar.log"
+          if grep -Eqi 'SCRIPT ERROR|Parse Error|Failed to load script' "$RUNNER_TEMP/building19.log" "$RUNNER_TEMP/buildinggrammar.log"; then exit 1; fi
+
+      - name: System 20 pure-plan smoke
+        shell: bash
+        run: |
+          set -euxo pipefail
+          ./Godot_v4.7.1-stable_linux.x86_64 --headless --path "$GITHUB_WORKSPACE/game" --quit-after 30 --script res://scripts/ci/LocalAreaGenerationSmoke.gd 2>&1 | tee "$RUNNER_TEMP/area20.log"
+          grep -q 'LOCAL_AREA_GENERATION_SMOKE_OK' "$RUNNER_TEMP/area20.log"
+          if grep -Eqi 'SCRIPT ERROR|Parse Error|Failed to load script' "$RUNNER_TEMP/area20.log"; then exit 1; fi
+
+      - name: Canonical demo startup regression
+        shell: bash
+        run: |
+          set -euxo pipefail
+          ./Godot_v4.7.1-stable_linux.x86_64 --headless --path "$GITHUB_WORKSPACE/game" --quit-after 2 2>&1 | tee "$RUNNER_TEMP/startup.log"
+          grep -q 'CANONICAL_DEMO_BOOT_OK' "$RUNNER_TEMP/startup.log"
+          if grep -Eqi 'SCRIPT ERROR|Parse Error|Failed to load script|CANONICAL_DEMO_BOOT_FAILED' "$RUNNER_TEMP/startup.log"; then exit 1; fi
