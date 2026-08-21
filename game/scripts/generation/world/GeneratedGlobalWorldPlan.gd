@@ -6,6 +6,7 @@ var seed: int = 0
 var bounds: Rect2i = Rect2i()
 var profile_id: StringName = &""
 var profile_version: int = 0
+var geography_cells: Array[Dictionary] = []
 var regions: Array[Dictionary] = []
 var settlements: Array[Dictionary] = []
 var road_segments: Array[Dictionary] = []
@@ -17,6 +18,7 @@ func is_generated() -> bool:
         and not world_id.is_empty() \
         and bounds.size.x > 0 and bounds.size.y > 0 \
         and profile_version > 0 \
+        and not geography_cells.is_empty() \
         and not settlements.is_empty() \
         and not road_segments.is_empty()
 
@@ -28,6 +30,16 @@ func signature() -> String:
     parts.append("seed=%d" % seed)
     parts.append("bounds=%d,%d,%d,%d" % [bounds.position.x, bounds.position.y, bounds.size.x, bounds.size.y])
     parts.append("profile=%s@%d" % [String(profile_id), profile_version])
+    for geography: Dictionary in geography_cells:
+        var grid: Vector2i = geography.get("grid", Vector2i.ZERO)
+        var rect: Rect2i = geography.get("rect", Rect2i())
+        parts.append("geography=%s|g%d,%d|%d,%d,%d,%d|e%d|%s" % [
+            String(geography.get("id", "")),
+            grid.x, grid.y,
+            rect.position.x, rect.position.y, rect.size.x, rect.size.y,
+            int(geography.get("elevation", 0)),
+            String(geography.get("landform", &"")),
+        ])
     for region: Dictionary in regions:
         var rect: Rect2i = region.get("rect", Rect2i())
         parts.append("region=%s|%s|%d,%d,%d,%d|p%d|%s|%s" % [
