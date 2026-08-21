@@ -88,6 +88,39 @@ func road_constraints_for_bounds(plan: GeneratedGlobalWorldPlan, bounds: Rect2i)
         })
     return {"ok": true, "failure_reason": "", "roads": roads}
 
+## Read-only future seam. Slice 003 does not inject water/bridge facts into the
+## current AreaGenerationRequest because System 20 tactical hydrology is not yet
+## designed. Callers may inspect which global river/bridge facts intersect a
+## local planning window without changing Candidate 006.
+func hydrology_constraints_for_bounds(plan: GeneratedGlobalWorldPlan, bounds: Rect2i) -> Dictionary:
+    var rivers: Array[Dictionary] = []
+    var bridges: Array[Dictionary] = []
+    if plan == null or not plan.is_generated() or not _rect_inside(plan.bounds, bounds):
+        return {"ok": false, "failure_reason": "invalid_global_hydrology_projection_bounds", "rivers": rivers, "bridges": bridges}
+
+    for segment: Dictionary in plan.river_segments:
+        if _segment_overlap_is_single_point(segment, bounds):
+            continue
+        var clipped: Dictionary = _clip_segment(segment, bounds)
+        if clipped.is_empty():
+            continue
+        rivers.append({
+            "segment_id": String(segment.get("segment_id", "")),
+            "river_id": String(segment.get("river_id", "")),
+            "start": clipped.get("start", Vector2i.ZERO),
+            "end": clipped.get("end", Vector2i.ZERO),
+            "width": int(segment.get("width", 0)),
+            "ordinal": int(segment.get("ordinal", 0)),
+        })
+
+    for bridge: Dictionary in plan.bridge_intents:
+        var cell: Vector2i = bridge.get("cell", Vector2i(-999999, -999999))
+        if not bounds.has_point(cell):
+            continue
+        bridges.append(bridge.duplicate(true))
+
+    return {"ok": true, "failure_reason": "", "rivers": rivers, "bridges": bridges}
+
 func _segment_overlap_is_single_point(segment: Dictionary, bounds: Rect2i) -> bool:
     var start: Vector2i = segment.get("start", Vector2i.ZERO)
     var finish: Vector2i = segment.get("end", Vector2i.ZERO)
