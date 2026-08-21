@@ -1,0 +1,78 @@
+name: Global World Planning contract
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: global-world-planning-contract
+  cancel-in-progress: true
+
+jobs:
+  global-world-planning:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate System 00D boundaries
+        shell: bash
+        run: |
+          set -euxo pipefail
+          test -f SYSTEM_DESIGNS/00D_GLOBAL_WORLD_PLANNING.md
+          test -f game/scripts/generation/world/GlobalWorldSeed.gd
+          test -f game/scripts/generation/world/GlobalWorldGenerationRequest.gd
+          test -f game/scripts/generation/world/GeneratedGlobalWorldPlan.gd
+          test -f game/scripts/generation/world/GlobalWorldProfileCatalog.gd
+          test -f game/scripts/generation/world/GlobalSettlementPlanner.gd
+          test -f game/scripts/generation/world/GlobalMajorRoadPlanner.gd
+          test -f game/scripts/generation/world/GlobalPlanningRegionPlanner.gd
+          test -f game/scripts/generation/world/GeneratedGlobalWorldValidator.gd
+          test -f game/scripts/generation/world/GlobalWorldPlanner.gd
+          test -f game/scripts/generation/integration/System20AreaRequestProjector.gd
+          test -f game/scripts/demo/GlobalWorldPlanFixture.gd
+          test -f game/scripts/ci/GlobalWorldPlanningSmoke.gd
+          ! grep -R -q 'scripts/generation/areas\|scripts/generation/buildings\|scripts/render\|scripts/art\|scripts/camera\|scripts/input\|scripts/ui\|scripts/player\|scripts/reboot\|WorldMutationService\|AreaMaterializationCoordinator' game/scripts/generation/world
+
+      - name: Install Godot 4.7.1
+        shell: bash
+        run: |
+          set -euxo pipefail
+          curl -L -o godot.zip https://github.com/godotengine/godot-builds/releases/download/4.7.1-stable/Godot_v4.7.1-stable_linux.x86_64.zip
+          unzip -q godot.zip
+          chmod +x Godot_v4.7.1-stable_linux.x86_64
+
+      - name: Import and parse project
+        shell: bash
+        run: |
+          set -euxo pipefail
+          ./Godot_v4.7.1-stable_linux.x86_64 --headless --editor --path "$GITHUB_WORKSPACE/game" --quit 2>&1 | tee "$RUNNER_TEMP/import.log"
+          if grep -Eqi 'SCRIPT ERROR|Parse Error|Failed to load script' "$RUNNER_TEMP/import.log"; then exit 1; fi
+
+      - name: System 00D regional skeleton and System 20 projection smoke
+        shell: bash
+        run: |
+          set -euxo pipefail
+          ./Godot_v4.7.1-stable_linux.x86_64 --headless --path "$GITHUB_WORKSPACE/game" --quit-after 30 --script res://scripts/ci/GlobalWorldPlanningSmoke.gd 2>&1 | tee "$RUNNER_TEMP/world00d.log"
+          grep -q 'GLOBAL_WORLD_PLANNING_SMOKE_OK' "$RUNNER_TEMP/world00d.log"
+          if grep -Eqi 'SCRIPT ERROR|Parse Error|Failed to load script' "$RUNNER_TEMP/world00d.log"; then exit 1; fi
+
+      - name: Preserve System 20 dependency contract
+        shell: bash
+        run: |
+          set -euxo pipefail
+          ./Godot_v4.7.1-stable_linux.x86_64 --headless --path "$GITHUB_WORKSPACE/game" --quit-after 30 --script res://scripts/ci/LocalAreaGenerationSmoke.gd 2>&1 | tee "$RUNNER_TEMP/area20.log"
+          grep -q 'LOCAL_AREA_GENERATION_SMOKE_OK' "$RUNNER_TEMP/area20.log"
+          if grep -Eqi 'SCRIPT ERROR|Parse Error|Failed to load script' "$RUNNER_TEMP/area20.log"; then exit 1; fi
+
+      - name: Canonical demo startup regression
+        shell: bash
+        run: |
+          set -euxo pipefail
+          ./Godot_v4.7.1-stable_linux.x86_64 --headless --path "$GITHUB_WORKSPACE/game" --quit-after 2 2>&1 | tee "$RUNNER_TEMP/startup.log"
+          grep -q 'CANONICAL_DEMO_BOOT_OK' "$RUNNER_TEMP/startup.log"
+          if grep -Eqi 'SCRIPT ERROR|Parse Error|Failed to load script|CANONICAL_DEMO_BOOT_FAILED' "$RUNNER_TEMP/startup.log"; then exit 1; fi
