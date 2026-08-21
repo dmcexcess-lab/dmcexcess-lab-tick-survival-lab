@@ -39,7 +39,7 @@ Major systems move through **NOT DESIGNED -> DRAFT -> APPROVED -> IMPLEMENTED** 
 | 17A.1 | Overweight Walk Fatigue / Absolute Carry Ceiling Correction | **IMPLEMENTED** | `17A1_OVERWEIGHT_WALK_FATIGUE_HARD_CARRY_LIMIT.md` |
 | 18 | Door Interaction / Automatic Passage | **IMPLEMENTED** | `18_DOOR_INTERACTION_PASSAGE.md` |
 | 19 | Local Building Generation / Building Grammar | **IMPLEMENTED — FINALIZED** | `19_LOCAL_BUILDING_GENERATION_ARCHETYPE_LAB.md` |
-| 20 | Local Area / Parcel Generation | **IMPLEMENTED — RURAL CROSSROADS CANDIDATE 003** | `20_LOCAL_AREA_PARCEL_GENERATION.md` |
+| 20 | Local Area / Parcel Generation | **IMPLEMENTED — RURAL CROSSROADS CANDIDATE 004** | `20_LOCAL_AREA_PARCEL_GENERATION.md` |
 | 21 | Tactical Camera / View Control | **IMPLEMENTED** | `21_TACTICAL_CAMERA_VIEW_CONTROL.md` |
 | 22 | Large-Area DEV Critique Runtime | **IMPLEMENTED** | `22_LARGE_AREA_CRITIQUE_RUNTIME.md` |
 | 00D | Global World Planning / Generation | **NOT DESIGNED** | future design |
@@ -68,24 +68,28 @@ Final reusable System 19 seams:
 
 New building profiles are ordinary content work and do not reopen System 19 architecture unless its frozen public contract proves insufficient.
 
-## System 20 Rural Crossroads Candidate 003
-
-Candidate 003 preserves the accepted Candidate 002 human morphology and fixes only the next live ecological critique.
+## System 20 Rural Crossroads Candidate 004
 
 Current morphology/environment truth:
 
-- `rural.crossroads` v2 + `temperate.rural` v3;
+- `rural.crossroads` v3 + `temperate.rural` v3;
 - inherited regional roads remain exact and keep the single signalized crossroads;
-- one local internal 3-cell gravel farm-access road adds multiple bends and one uncontrolled junction without inventing a boundary exit;
-- that local branch still does not claim parcel frontage, so the accepted 3-commercial / 6-residential / 4-farmstead allocation remains isolated from the road-shape test;
-- paved 3–5-cell corridors use `ground.road_plain`, while only the center path uses horizontal/vertical yellow-line ground semantics;
-- natural countryside no longer uses separately derived random cluster-center X/Y coordinates;
-- `AreaSeed.hash_2d()` mixes X and Y into one coordinate sample, a smooth low-frequency value-noise layer creates broad dense/sparse ecological patches, and independent per-cell noise sprinkles trees/shrubs/rocks within those patches;
-- a second broad noise layer biases local pockets toward trees, brush or rocks without creating a preferred diagonal/axis;
-- natural dressing stays clear of roads, driveways, active fields, building envelopes and the immediate town-center crossing;
+- **two** internal 3-cell bent gravel `local_rural` roads add interior access and two uncontrolled junctions without boundary exits;
+- both local roads are now real **parcel-frontage authorities**;
+- local polyline segments generate legal parcels with bend/end safety margins and full-road overlap rejection;
+- the generator requires enough local-road parcel candidates to satisfy the local occupancy target rather than silently falling back to highway-only development;
+- 3 commercial opportunities remain on inherited primary-road frontage near center;
+- 6 residential + 4 farmstead occupied candidates remain the baseline;
+- at least **6 of those 10 homes/farmsteads** use local-road frontage: >=3 residential + >=3 farmstead;
+- paved inherited corridors retain `ground.road_plain` with a single center-path yellow line; both local roads use unpainted gravel;
+- ordinary residential and small commercial facades stay close to road frontage; farms sit only modestly farther back;
+- road-edge -> facade is the canonical setback measure, not total driveway length to an off-center door;
+- Candidate 004 generates **no parking cells**. A larger future commercial setback requires an explicit physical parking lot/property use, not empty grass;
+- driveways enter perpendicular to the road first and only then turn toward the actual generated primary door;
+- Candidate 003's mixed-coordinate 2D vegetation noise remains unchanged, preserving broad tree/shrub/rock scatter without diagonal bias;
 - the gas station, diner, intentionally vacant third commercial lot and ten existing residential/farmstead buildings remain the only building content.
 
-System 20 still owns no camera/render/art behavior. System 05 remains unchanged; explicit ground/prop semantics are materialized as physical world facts.
+System 20 still owns no camera/render/art behavior. System 05 remains unchanged; generated ground/prop semantics are materialized as physical world facts.
 
 ## System 21 camera truth
 
@@ -103,11 +107,11 @@ The live Web demo materializes the current System 20 Rural Crossroads candidate 
 
 ## Immediate next path
 
-1. Playtest/visually critique Candidate 003 vegetation distribution and the preserved Candidate 002 road fixes.
+1. Playtest/visually critique Candidate 004 local-road development, facade setbacks and preserved environmental noise.
 2. Fix remaining System 20 rural morphology/environment rules while preserving System 19 baselines.
 3. Once rural morphology is accepted, add new System 19 profiles freely as content or test another settlement/environment combination.
 4. Design Global World Planning / long-term streaming-save architecture only when the next world-scale requirement demands it.
 
 ## Design rule
 
-Every major system keeps a focused owner/public contract. Global planning owns cross-region coherence; System 20 refines caller-constrained local areas and may add only profile-authorized local roads; System 19 owns building internals; System 21 owns camera presentation; System 22 owns DEV large-area presentation composition; WHAT owns runtime persistence after materialization. Art remains presentation truth, not physics. If implementation requires a forbidden boundary, return the design to review instead of cascading a patch.
+Every major system keeps a focused owner/public contract. Global planning owns cross-region coherence; System 20 refines caller-constrained local areas and may add profile-authorized local roads with local parcel frontage; System 19 owns building internals; System 21 owns camera presentation; System 22 owns DEV large-area presentation composition; WHAT owns runtime persistence after materialization. Art remains presentation truth, not physics. If implementation requires a forbidden boundary, return the design to review instead of cascading a patch.
