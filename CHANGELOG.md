@@ -1,5 +1,17 @@
 # Changelog
 
+## System 20 Rural Crossroads Candidate 002 — 2026-08-20
+
+- Fixed the live **yellow-box road** problem without changing System 05 or any art asset. Wide paved corridors now materialize as `ground.road_plain`, with a single center-path `ground.road_yellow_line_h` / `ground.road_yellow_line_v` layer instead of asking every cell across a 3–5-cell-wide road to infer generic road topology.
+- Centerline paint is withheld through the immediate intersection footprint so the crossroads reads as a crossing rather than overlapping painted boxes.
+- Bumped `rural.crossroads` and `temperate.rural` from v1 to **v2** because same-seed morphology/environment output intentionally changed.
+- Added one deterministic internal **3-cell gravel farm-access road** with multiple cardinal bends and one uncontrolled junction. The two caller-owned regional roads and their authorized boundary exits remain exact, and the central crossroads remains the only signalized intersection.
+- Kept the local farm-access branch from claiming parcel frontage in this candidate, isolating the road-shape test from the already accepted **3 commercial / 6 residential / 4 farmstead / 12-building** layout target.
+- Added deterministic clustered natural dressing across wilderness, vacant and otherwise unclaimed rural space using existing recovered art: deciduous trees, dense/thorn shrubs, small/cluster/mossy rocks.
+- Natural clusters use bounded seeded placement and avoid roads, driveway halos, building envelopes, active fields and the immediate signalized town center rather than uniformly spraying props across the map.
+- Preserved the entire finalized System 19 prefab library, System 21 camera behavior and System 22 moving-window viewer unchanged.
+- Expanded `LocalAreaGenerationSmoke.gd` to lock profile/environment v2, the bent local road, boundary safety, physical lane-marking semantics, substantial clustered vegetation, tree/shrub/rock diversity, field clearance, the existing building-density baseline, and twelve consecutive seeds without reroll loops.
+
 ## System 20 Materialization + System 22 Live Rural Crossroads — 2026-08-20
 
 - Replaced the isolated Rural Diner live critique fixture with the real **System 20 Rural Crossroads Candidate 001** as the canonical playable Web world.
