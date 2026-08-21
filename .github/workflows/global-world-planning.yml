@@ -25,6 +25,7 @@ jobs:
           set -euxo pipefail
           test -f SYSTEM_DESIGNS/00D_GLOBAL_WORLD_PLANNING.md
           test -f SYSTEM_DESIGNS/00D3_GLOBAL_HYDROLOGY_BRIDGE_INTENT.md
+          test -f SYSTEM_DESIGNS/00D4_GLOBAL_ELECTRICAL_INFRASTRUCTURE.md
           test -f game/scripts/generation/world/GlobalWorldSeed.gd
           test -f game/scripts/generation/world/GlobalWorldGenerationRequest.gd
           test -f game/scripts/generation/world/GeneratedGlobalWorldPlan.gd
@@ -36,6 +37,9 @@ jobs:
           test -f game/scripts/generation/world/GlobalSettlementPlanner.gd
           test -f game/scripts/generation/world/GlobalMajorRoadPlanner.gd
           test -f game/scripts/generation/world/GlobalBridgeIntentPlanner.gd
+          test -f game/scripts/generation/world/GlobalPowerInfrastructurePlanner.gd
+          test -f game/scripts/generation/world/GlobalPowerInfrastructureQuery.gd
+          test -f game/scripts/generation/world/GlobalPowerInfrastructureValidator.gd
           test -f game/scripts/generation/world/GlobalPlanningRegionPlanner.gd
           test -f game/scripts/generation/world/GeneratedGlobalWorldValidator.gd
           test -f game/scripts/generation/world/GlobalWorldPlanner.gd
@@ -59,7 +63,7 @@ jobs:
           ./Godot_v4.7.1-stable_linux.x86_64 --headless --editor --path "$GITHUB_WORKSPACE/game" --quit 2>&1 | tee "$RUNNER_TEMP/import.log"
           if grep -Eqi 'SCRIPT ERROR|Parse Error|Failed to load script' "$RUNNER_TEMP/import.log"; then exit 1; fi
 
-      - name: System 00D geography hydrology and System 20 projection smoke
+      - name: System 00D geography hydrology roads power and System 20 projection smoke
         shell: bash
         run: |
           set -euxo pipefail
