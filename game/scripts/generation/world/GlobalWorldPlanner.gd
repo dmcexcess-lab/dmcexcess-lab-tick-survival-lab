@@ -4,23 +4,29 @@ class_name GlobalWorldPlanner
 const PlanClass = preload("res://scripts/generation/world/GeneratedGlobalWorldPlan.gd")
 const ProfilesClass = preload("res://scripts/generation/world/GlobalWorldProfileCatalog.gd")
 const GeographyPlannerClass = preload("res://scripts/generation/world/GlobalGeographyPlanner.gd")
+const HydrologyPlannerClass = preload("res://scripts/generation/world/GlobalHydrologyPlanner.gd")
 const SettlementPlannerClass = preload("res://scripts/generation/world/GlobalSettlementPlanner.gd")
 const RoadPlannerClass = preload("res://scripts/generation/world/GlobalMajorRoadPlanner.gd")
+const BridgePlannerClass = preload("res://scripts/generation/world/GlobalBridgeIntentPlanner.gd")
 const RegionPlannerClass = preload("res://scripts/generation/world/GlobalPlanningRegionPlanner.gd")
 const ValidatorClass = preload("res://scripts/generation/world/GeneratedGlobalWorldValidator.gd")
 
 var _profiles: GlobalWorldProfileCatalog
 var _geography_planner: GlobalGeographyPlanner
+var _hydrology_planner: GlobalHydrologyPlanner
 var _settlement_planner: GlobalSettlementPlanner
 var _road_planner: GlobalMajorRoadPlanner
+var _bridge_planner: GlobalBridgeIntentPlanner
 var _region_planner: GlobalPlanningRegionPlanner
 var _validator: GeneratedGlobalWorldValidator
 
 func _init() -> void:
     _profiles = ProfilesClass.new()
     _geography_planner = GeographyPlannerClass.new()
+    _hydrology_planner = HydrologyPlannerClass.new()
     _settlement_planner = SettlementPlannerClass.new()
     _road_planner = RoadPlannerClass.new()
+    _bridge_planner = BridgePlannerClass.new()
     _region_planner = RegionPlannerClass.new()
     _validator = ValidatorClass.new()
 
@@ -46,7 +52,18 @@ func generate(request: GlobalWorldGenerationRequest) -> GeneratedGlobalWorldPlan
             return plan
         geography_cells.append(geography_value)
 
-    var settlement_result: Dictionary = _settlement_planner.plan(request, profile, geography_cells)
+    var hydrology_result: Dictionary = _hydrology_planner.plan(request, profile, geography_cells)
+    if not bool(hydrology_result.get("ok", false)):
+        plan.failure_reason = String(hydrology_result.get("failure_reason", "global_hydrology_planning_failed"))
+        return plan
+    var river_segments: Array[Dictionary] = []
+    for river_value: Variant in hydrology_result.get("river_segments", []):
+        if typeof(river_value) != TYPE_DICTIONARY:
+            plan.failure_reason = "global_hydrology_result_invalid"
+            return plan
+        river_segments.append(river_value)
+
+    var settlement_result: Dictionary = _settlement_planner.plan(request, profile, geography_cells, river_segments)
     if not bool(settlement_result.get("ok", false)):
         plan.failure_reason = String(settlement_result.get("failure_reason", "global_settlement_planning_failed"))
         return plan
@@ -63,7 +80,7 @@ func generate(request: GlobalWorldGenerationRequest) -> GeneratedGlobalWorldPlan
             return plan
         area_sites.append(site_value)
 
-    var road_result: Dictionary = _road_planner.plan(request, profile, settlements, geography_cells)
+    var road_result: Dictionary = _road_planner.plan(request, profile, settlements, geography_cells, river_segments)
     if not bool(road_result.get("ok", false)):
         plan.failure_reason = String(road_result.get("failure_reason", "global_major_road_planning_failed"))
         return plan
@@ -73,6 +90,17 @@ func generate(request: GlobalWorldGenerationRequest) -> GeneratedGlobalWorldPlan
             plan.failure_reason = "global_major_road_result_invalid"
             return plan
         road_segments.append(road_value)
+
+    var bridge_result: Dictionary = _bridge_planner.plan(road_segments, river_segments)
+    if not bool(bridge_result.get("ok", false)):
+        plan.failure_reason = String(bridge_result.get("failure_reason", "global_bridge_intent_planning_failed"))
+        return plan
+    var bridge_intents: Array[Dictionary] = []
+    for bridge_value: Variant in bridge_result.get("bridge_intents", []):
+        if typeof(bridge_value) != TYPE_DICTIONARY:
+            plan.failure_reason = "global_bridge_intent_result_invalid"
+            return plan
+        bridge_intents.append(bridge_value)
 
     var region_result: Dictionary = _region_planner.plan(request, settlements)
     if not bool(region_result.get("ok", false)):
@@ -91,9 +119,11 @@ func generate(request: GlobalWorldGenerationRequest) -> GeneratedGlobalWorldPlan
     plan.profile_id = request.profile_id
     plan.profile_version = int(profile.get("version", 0))
     plan.geography_cells = geography_cells
+    plan.river_segments = river_segments
     plan.regions = regions
     plan.settlements = settlements
     plan.road_segments = road_segments
+    plan.bridge_intents = bridge_intents
     plan.area_sites = area_sites
 
     var validation: Dictionary = _validator.validate(request, plan)
