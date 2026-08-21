@@ -56,6 +56,12 @@ func road_constraints_for_bounds(plan: GeneratedGlobalWorldPlan, bounds: Rect2i)
     if plan == null or not plan.is_generated() or not _rect_inside(plan.bounds, bounds):
         return {"ok": false, "failure_reason": "invalid_global_road_projection_bounds", "roads": roads}
     for segment: Dictionary in plan.road_segments:
+        ## A named global route may continue outward from the exact boundary cell
+        ## already owned by another segment. If that continuation touches this
+        ## local planning window at only that one point, it contributes no road
+        ## length inside the window and must not become a duplicate inherited road.
+        if _segment_overlap_is_single_point(segment, bounds):
+            continue
         var clipped: Dictionary = _clip_segment(segment, bounds)
         if clipped.is_empty():
             continue
@@ -81,6 +87,27 @@ func road_constraints_for_bounds(plan: GeneratedGlobalWorldPlan, bounds: Rect2i)
             "allowed_boundary_cells": allowed,
         })
     return {"ok": true, "failure_reason": "", "roads": roads}
+
+func _segment_overlap_is_single_point(segment: Dictionary, bounds: Rect2i) -> bool:
+    var start: Vector2i = segment.get("start", Vector2i.ZERO)
+    var finish: Vector2i = segment.get("end", Vector2i.ZERO)
+    var min_x: int = bounds.position.x
+    var max_x: int = bounds.position.x + bounds.size.x - 1
+    var min_y: int = bounds.position.y
+    var max_y: int = bounds.position.y + bounds.size.y - 1
+    if start.y == finish.y:
+        if start.y < min_y or start.y > max_y:
+            return false
+        var overlap_min_x: int = maxi(mini(start.x, finish.x), min_x)
+        var overlap_max_x: int = mini(maxi(start.x, finish.x), max_x)
+        return overlap_min_x == overlap_max_x
+    if start.x == finish.x:
+        if start.x < min_x or start.x > max_x:
+            return false
+        var overlap_min_y: int = maxi(mini(start.y, finish.y), min_y)
+        var overlap_max_y: int = mini(maxi(start.y, finish.y), max_y)
+        return overlap_min_y == overlap_max_y
+    return false
 
 func _clip_segment(segment: Dictionary, bounds: Rect2i) -> Dictionary:
     var start: Vector2i = segment.get("start", Vector2i.ZERO)
