@@ -1,5 +1,23 @@
 # Changelog
 
+## System 00D Global World Planning — Hydrology / Bridge Intent Slice 003 — 2026-08-21
+
+- Implemented the approved **System 00D Hydrology / Rivers + Bridge Intent Slice 003** and bumped `temperate.rural.region` to **v3**.
+- Added focused pure owners `GlobalHydrologyPlanner.gd`, `GlobalHydrologyQuery.gd` and `GlobalBridgeIntentPlanner.gd` under `game/scripts/generation/world/`; pure 00D still imports no System 19/20, WHAT mutation, renderer, camera, player or streaming owner.
+- Extended `GeneratedGlobalWorldPlan` and deterministic signatures with ordered global `river_segments` plus explicit `bridge_intents`.
+- The canonical regional fixture now creates one deterministic **boundary-to-boundary primary river** on the coarse 128-cell geography lattice. Seeded routing chooses a legal west/east side outside the protected central corridor, prefers lower geography and strongly penalizes uphill movement without pretending to simulate fluid dynamics.
+- Kept the accepted Candidate 006 center and its immediately adjacent 256×256 windows hydrology-free. The protected central integration corridor remains a hard no-river region.
+- Non-central settlement/site placement now requires both legal lowland/rolling geography and a profile-defined river-clearance margin. If bounded snapping cannot satisfy both, global generation fails rather than placing a site across water.
+- Major-road routing keeps Slice 002 geography costs, adds a high river-crossing cost, and refuses to follow consecutive river-centerline coarse cells. This favors avoiding water while still permitting topologically necessary crossings.
+- Added explicit bridge-intent planning **after** road and river geometry exists. Every real perpendicular route/river/cell crossing produces exactly one intent containing road/route IDs, river/segment IDs, crossing cell, bridge axis and widths.
+- Independent `GeneratedGlobalWorldValidator` recomputes the crossings itself and rejects collinear road/river overlap, missing bridge intent, duplicate intent, orphan intent, bad references, incorrect crossing cell/axis/width, disconnected river order or illegal river endpoints.
+- Added read-only `System20AreaRequestProjector.hydrology_constraints_for_bounds()`. It exposes clipped river centerlines and bridge intents to future local hydrology work without changing the current `AreaGenerationRequest` or silently materializing water.
+- Proved the central global `project_site()` request remains semantically identical to the accepted System 20 Candidate 006 request and still produces the exact accepted local semantic output.
+- Added regression that protected center/adjacent windows expose no hydrology while an outer 256×256 window around a canonical bridge exposes both the global river and its bridge intent.
+- Same-seed global replay now includes hydrology/bridge identity; alternate seeds vary legal river geometry while retaining geography, settlement, ridge-avoidance, crossing and bridge-intent validity.
+- No tactical water surface, swimming, drowning, bridge art/collision/destruction, flooding, utilities, streaming, population or outbreak behavior was faked into this slice.
+- Exact-head verification remains `verify/system00d-global-world` and continues to rerun System 20 plus canonical startup regressions.
+
 ## System 00D Global World Planning — Geography / Landform Slice 002 — 2026-08-21
 
 - Implemented the approved **System 00D Geography / Landform Slice 002** and bumped `temperate.rural.region` to **v2**.
