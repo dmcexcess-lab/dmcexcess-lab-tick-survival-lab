@@ -8,8 +8,10 @@ const HydrologyPlannerClass = preload("res://scripts/generation/world/GlobalHydr
 const SettlementPlannerClass = preload("res://scripts/generation/world/GlobalSettlementPlanner.gd")
 const RoadPlannerClass = preload("res://scripts/generation/world/GlobalMajorRoadPlanner.gd")
 const BridgePlannerClass = preload("res://scripts/generation/world/GlobalBridgeIntentPlanner.gd")
+const PowerPlannerClass = preload("res://scripts/generation/world/GlobalPowerInfrastructurePlanner.gd")
 const RegionPlannerClass = preload("res://scripts/generation/world/GlobalPlanningRegionPlanner.gd")
 const ValidatorClass = preload("res://scripts/generation/world/GeneratedGlobalWorldValidator.gd")
+const PowerValidatorClass = preload("res://scripts/generation/world/GlobalPowerInfrastructureValidator.gd")
 
 var _profiles: GlobalWorldProfileCatalog
 var _geography_planner: GlobalGeographyPlanner
@@ -17,8 +19,10 @@ var _hydrology_planner: GlobalHydrologyPlanner
 var _settlement_planner: GlobalSettlementPlanner
 var _road_planner: GlobalMajorRoadPlanner
 var _bridge_planner: GlobalBridgeIntentPlanner
+var _power_planner: GlobalPowerInfrastructurePlanner
 var _region_planner: GlobalPlanningRegionPlanner
 var _validator: GeneratedGlobalWorldValidator
+var _power_validator: GlobalPowerInfrastructureValidator
 
 func _init() -> void:
     _profiles = ProfilesClass.new()
@@ -27,8 +31,10 @@ func _init() -> void:
     _settlement_planner = SettlementPlannerClass.new()
     _road_planner = RoadPlannerClass.new()
     _bridge_planner = BridgePlannerClass.new()
+    _power_planner = PowerPlannerClass.new()
     _region_planner = RegionPlannerClass.new()
     _validator = ValidatorClass.new()
+    _power_validator = PowerValidatorClass.new()
 
 func generate(request: GlobalWorldGenerationRequest) -> GeneratedGlobalWorldPlan:
     var plan: GeneratedGlobalWorldPlan = PlanClass.new()
@@ -102,6 +108,23 @@ func generate(request: GlobalWorldGenerationRequest) -> GeneratedGlobalWorldPlan
             return plan
         bridge_intents.append(bridge_value)
 
+    var power_result: Dictionary = _power_planner.plan(request, profile, settlements, road_segments)
+    if not bool(power_result.get("ok", false)):
+        plan.failure_reason = String(power_result.get("failure_reason", "global_power_infrastructure_planning_failed"))
+        return plan
+    var power_nodes: Array[Dictionary] = []
+    for power_node_value: Variant in power_result.get("power_nodes", []):
+        if typeof(power_node_value) != TYPE_DICTIONARY:
+            plan.failure_reason = "global_power_node_result_invalid"
+            return plan
+        power_nodes.append(power_node_value)
+    var power_segments: Array[Dictionary] = []
+    for power_segment_value: Variant in power_result.get("power_segments", []):
+        if typeof(power_segment_value) != TYPE_DICTIONARY:
+            plan.failure_reason = "global_power_segment_result_invalid"
+            return plan
+        power_segments.append(power_segment_value)
+
     var region_result: Dictionary = _region_planner.plan(request, settlements)
     if not bool(region_result.get("ok", false)):
         plan.failure_reason = String(region_result.get("failure_reason", "global_region_planning_failed"))
@@ -124,6 +147,8 @@ func generate(request: GlobalWorldGenerationRequest) -> GeneratedGlobalWorldPlan
     plan.settlements = settlements
     plan.road_segments = road_segments
     plan.bridge_intents = bridge_intents
+    plan.power_nodes = power_nodes
+    plan.power_segments = power_segments
     plan.area_sites = area_sites
 
     var validation: Dictionary = _validator.validate(request, plan)
@@ -132,6 +157,14 @@ func generate(request: GlobalWorldGenerationRequest) -> GeneratedGlobalWorldPlan
         for failure_value: Variant in validation.get("failures", []):
             failure_parts.append(String(failure_value))
         plan.failure_reason = "global_world_validation_failed:%s" % ",".join(failure_parts)
+        return plan
+
+    var power_validation: Dictionary = _power_validator.validate(request, plan)
+    if not bool(power_validation.get("ok", false)):
+        var power_failure_parts := PackedStringArray()
+        for failure_value: Variant in power_validation.get("failures", []):
+            power_failure_parts.append(String(failure_value))
+        plan.failure_reason = "global_power_validation_failed:%s" % ",".join(power_failure_parts)
     return plan
 
 func profile_ids() -> Array[StringName]:
