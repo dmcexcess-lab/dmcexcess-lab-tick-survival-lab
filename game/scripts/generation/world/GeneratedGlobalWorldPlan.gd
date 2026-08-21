@@ -7,9 +7,11 @@ var bounds: Rect2i = Rect2i()
 var profile_id: StringName = &""
 var profile_version: int = 0
 var geography_cells: Array[Dictionary] = []
+var river_segments: Array[Dictionary] = []
 var regions: Array[Dictionary] = []
 var settlements: Array[Dictionary] = []
 var road_segments: Array[Dictionary] = []
+var bridge_intents: Array[Dictionary] = []
 var area_sites: Array[Dictionary] = []
 var failure_reason: String = ""
 
@@ -40,6 +42,16 @@ func signature() -> String:
             int(geography.get("elevation", 0)),
             String(geography.get("landform", &"")),
         ])
+    for river: Dictionary in river_segments:
+        var river_start: Vector2i = river.get("start", Vector2i.ZERO)
+        var river_end: Vector2i = river.get("end", Vector2i.ZERO)
+        parts.append("river=%s|%s|%d,%d>%d,%d|w%d|o%d" % [
+            String(river.get("segment_id", "")),
+            String(river.get("river_id", "")),
+            river_start.x, river_start.y, river_end.x, river_end.y,
+            int(river.get("width", 0)),
+            int(river.get("ordinal", 0)),
+        ])
     for region: Dictionary in regions:
         var rect: Rect2i = region.get("rect", Rect2i())
         parts.append("region=%s|%s|%d,%d,%d,%d|p%d|%s|%s" % [
@@ -68,6 +80,19 @@ func signature() -> String:
             start.x, start.y, finish.x, finish.y,
             int(road.get("width", 0)),
             String(road.get("route_id", "")),
+        ])
+    for bridge: Dictionary in bridge_intents:
+        var cell: Vector2i = bridge.get("cell", Vector2i.ZERO)
+        parts.append("bridge=%s|%s|%s|%s|%s|%d,%d|%s|rw%d|ww%d" % [
+            String(bridge.get("id", "")),
+            String(bridge.get("road_id", "")),
+            String(bridge.get("route_id", "")),
+            String(bridge.get("river_id", "")),
+            String(bridge.get("river_segment_id", "")),
+            cell.x, cell.y,
+            String(bridge.get("bridge_axis", &"")),
+            int(bridge.get("road_width", 0)),
+            int(bridge.get("river_width", 0)),
         ])
     for site: Dictionary in area_sites:
         var site_bounds: Rect2i = site.get("bounds", Rect2i())
