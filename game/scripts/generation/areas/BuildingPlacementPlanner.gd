@@ -63,6 +63,8 @@ func place(request: AreaGenerationRequest, profile: Dictionary, parcels: Array[D
         parcel["building_seed"] = built_request.seed
         parcel["building_instance_id"] = built_request.instance_id
         parcel["building_entry_cell"] = placement.get("entry_cell", Vector2i(-1, -1))
+        var paved_frontage: Array = placement.get("paved_frontage", [])
+        parcel["road_flush_paved_frontage"] = paved_frontage.duplicate(true)
 
     return {"ok": true, "failure_reason": "", "building_requests": building_requests}
 
@@ -101,7 +103,13 @@ func _place_one(
         return {"ok": false, "failure_reason": "system19_primary_entry_missing"}
     if not _align_parcel_access_to_entry(parcel, entry_cell, frontage):
         return {"ok": false, "failure_reason": "building_entry_alignment_failed"}
-    return {"ok": true, "failure_reason": "", "request": building_request, "entry_cell": entry_cell}
+    return {
+        "ok": true,
+        "failure_reason": "",
+        "request": building_request,
+        "entry_cell": entry_cell,
+        "paved_frontage": _road_facing_parking_edge(plan, frontage),
+    }
 
 func _align_parcel_access_to_entry(parcel: Dictionary, entry: Vector2i, frontage: int) -> bool:
     var parcel_access: Vector2i = parcel.get("parcel_access_cell", Vector2i(-1, -1))
@@ -122,6 +130,42 @@ func _align_parcel_access_to_entry(parcel: Dictionary, entry: Vector2i, frontage
     parcel["parcel_access_cell"] = parcel_access
     parcel["access_cell"] = road_access
     return true
+
+func _road_facing_parking_edge(plan: GeneratedBuildingPlan, frontage: int) -> Array[Dictionary]:
+    var result: Array[Dictionary] = []
+    if plan == null or not plan.is_generated() or not Facing.is_valid(frontage):
+        return result
+    var footprint: Rect2i = plan.footprint_rect
+    if footprint.size.x <= 0 or footprint.size.y <= 0:
+        return result
+    for ground: Dictionary in plan.ground_entries:
+        var semantic: StringName = StringName(ground.get("semantic", &""))
+        if not String(semantic).begins_with("ground.parking"):
+            continue
+        var cell: Vector2i = ground.get("cell", Vector2i(-999999, -999999))
+        if not _cell_on_frontage_edge(cell, footprint, frontage):
+            continue
+        result.append({"cell": cell, "semantic": semantic})
+    result.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
+        var a_cell: Vector2i = a.get("cell", Vector2i.ZERO)
+        var b_cell: Vector2i = b.get("cell", Vector2i.ZERO)
+        return a_cell.y < b_cell.y or (a_cell.y == b_cell.y and a_cell.x < b_cell.x)
+    )
+    return result
+
+func _cell_on_frontage_edge(cell: Vector2i, footprint: Rect2i, frontage: int) -> bool:
+    var max_x: int = footprint.position.x + footprint.size.x - 1
+    var max_y: int = footprint.position.y + footprint.size.y - 1
+    match frontage:
+        Facing.Value.NORTH:
+            return cell.y == footprint.position.y
+        Facing.Value.EAST:
+            return cell.x == max_x
+        Facing.Value.SOUTH:
+            return cell.y == max_y
+        Facing.Value.WEST:
+            return cell.x == footprint.position.x
+    return false
 
 func _orientation_for_frontage(descriptor: BuildingArchetypePlacementDescriptor, frontage: int) -> int:
     for orientation: int in descriptor.supported_orientations():
