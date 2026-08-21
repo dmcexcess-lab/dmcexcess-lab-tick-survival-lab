@@ -1,6 +1,6 @@
 # Tick Survival Lab — System 00D Slice 003 Global Hydrology / Bridge Intent
 
-Status: **APPROVED**
+Status: **IMPLEMENTED**
 
 Date: 2026-08-21
 
@@ -41,11 +41,11 @@ Pure System 00D owners under `game/scripts/generation/world/`:
 - existing `GlobalMajorRoadPlanner.gd` — consumes river crossing cost while routing;
 - existing `GeneratedGlobalWorldPlan.gd`, `GlobalWorldPlanner.gd`, `GeneratedGlobalWorldValidator.gd`, `GlobalWorldProfileCatalog.gd` — extended only for the new plan facts.
 
-The existing `System20AreaRequestProjector.gd` remains the only 00D-adjacent integration owner. Slice 003 may expose clipped hydrology/bridge facts through a read-only projector query, but the existing System 20 `AreaGenerationRequest` contract is unchanged.
+The existing `System20AreaRequestProjector.gd` remains the only 00D-adjacent integration owner. It exposes clipped hydrology/bridge facts through a read-only projector query, while the existing System 20 `AreaGenerationRequest` contract remains unchanged.
 
 ## 4. Public plan contract additions
 
-`GeneratedGlobalWorldPlan` gains:
+`GeneratedGlobalWorldPlan` contains:
 
 - `river_segments: Array[Dictionary]`;
 - `bridge_intents: Array[Dictionary]`.
@@ -79,16 +79,15 @@ The intent does not store art, collision, condition, owner, traffic rules or run
 
 ## 5. Temperate rural profile v3
 
-`temperate.rural.region` bumps from v2 to v3 because same-seed global output intentionally gains hydrology and hydrology-aware road/settlement behavior.
+`temperate.rural.region` is v3 because same-seed global output now includes hydrology and hydrology-aware road/settlement behavior.
 
-Slice 003 profile parameters include:
+Current Slice 003 profile parameters include:
 
-- one primary river;
-- odd primary river width;
+- one primary river with odd width;
 - hydrology exclusion around the protected central integration cross;
-- road river-crossing cost high enough that roads avoid unnecessary crossings;
+- high but finite road river-crossing cost;
 - settlement/site river-clearance distance;
-- deterministic hydrology meander/noise cost.
+- deterministic hydrology meander/noise cost and uphill penalty.
 
 ## 6. Hydrology generation rules
 
@@ -117,7 +116,7 @@ Slice 003 profile parameters include:
 3. This makes roads avoid unnecessary river crossings but still permits a crossing when network topology requires one.
 4. A road may not run collinearly along a river centerline through a shared segment.
 5. A road/river crossing must be perpendicular and resolve to a single crossing cell at the global centerline level.
-6. The canonical boundary-to-boundary primary road and boundary-to-boundary river are arranged so at least one crossing is topologically unavoidable outside the protected central area.
+6. The canonical boundary-to-boundary primary road and boundary-to-boundary river make at least one crossing topologically unavoidable outside the protected central area.
 7. Road routing itself does not create bridge entities; it only creates road geometry.
 
 ## 9. Bridge intent rules
@@ -125,35 +124,35 @@ Slice 003 profile parameters include:
 1. `GlobalBridgeIntentPlanner` runs after roads and rivers exist.
 2. Every perpendicular road/river centerline intersection produces exactly one bridge intent.
 3. Collinear road/river overlap is invalid and cannot be converted into bridge intents.
-4. Duplicate intents for one exact road/river/cell crossing are invalid.
+4. Duplicate intents for one route/river/cell crossing are invalid.
 5. Every actual road/river crossing must have a corresponding bridge intent.
 6. Every bridge intent must correspond to a real road/river crossing.
-7. The canonical fixture must contain at least one bridge intent.
+7. The canonical fixture contains at least one bridge intent.
 
 ## 10. System 20 projection seam
 
 The existing local-area request remains unchanged in Slice 003 so Candidate 006 does not acquire fake tactical water support.
 
-`System20AreaRequestProjector` may expose a read-only:
+`System20AreaRequestProjector` exposes:
 
 `hydrology_constraints_for_bounds(plan, bounds)`
 
-result containing clipped river centerline segments and bridge intents inside that planning window.
+which returns clipped river centerline segments and bridge intents inside a requested global planning window.
 
 This is an integration seam for a future explicitly designed System 20 hydrology/materialization profile. `project_site()` does not silently inject unsupported water into `AreaGenerationRequest`.
 
-For the accepted central Candidate 006 bounds and its immediately adjacent protected windows, the hydrology query must return no river or bridge facts.
+For the accepted central Candidate 006 bounds and its immediately adjacent protected windows, the hydrology query returns no river or bridge facts.
 
 ## 11. Validation
 
-`GeneratedGlobalWorldValidator` must independently verify:
+`GeneratedGlobalWorldValidator` independently verifies:
 
 - river stable IDs and segment IDs;
 - cardinal non-zero river segments with odd positive widths;
 - river endpoints inside global bounds;
 - the primary river has real boundary endpoints and one connected ordered route;
 - no river segment enters the protected central hydrology-exclusion zone;
-- non-central settlement sites clear the river corridor;
+- settlement sites clear the river corridor;
 - no road and river overlap collinearly;
 - every road/river crossing is perpendicular and has exactly one bridge intent;
 - every bridge intent references existing road and river segment IDs and the exact real crossing cell;
@@ -163,14 +162,14 @@ For the accepted central Candidate 006 bounds and its immediately adjacent prote
 
 ## 12. Acceptance tests
 
-Dedicated `verify/system00d-global-world` coverage must prove:
+Dedicated `verify/system00d-global-world` proves:
 
 1. `temperate.rural.region` records v3;
 2. same-seed replay includes identical rivers and bridge intents;
 3. different seed changes legal hydrology outside the protected anchor;
 4. at least one boundary-to-boundary primary river exists;
 5. river geometry is connected, cardinal and outside the protected center;
-6. non-central settlement sites do not intersect the river-clearance corridor;
+6. settlement sites do not intersect the river-clearance corridor;
 7. canonical major roads still avoid ridge geography;
 8. at least one road/river crossing is unavoidable and produces a bridge intent;
 9. every crossing has exactly one intent and every intent maps to a crossing;
@@ -218,3 +217,11 @@ Approved by the user on 2026-08-21:
 2. Keep this inside System 00D rather than starting streaming.
 3. Preserve Candidate 006 and the protected central integration zone.
 4. Do not fake tactical water/bridge behavior before a downstream owner is designed.
+
+## 18. Implementation result
+
+Slice 003 is implemented under `game/scripts/generation/world/` with focused hydrology/query/bridge-intent owners and is verified through the existing exact-head `verify/system00d-global-world` contract.
+
+The canonical seed now produces a deterministic boundary-to-boundary river outside the protected central local-area corridor. Non-central settlement sites clear that river, road routing pays a crossing penalty while retaining ridge avoidance, and every real perpendicular road/river crossing is represented by exactly one independently validated bridge intent.
+
+`System20AreaRequestProjector.hydrology_constraints_for_bounds()` exposes those global facts without changing `AreaGenerationRequest`. The accepted Candidate 006 center and its immediately adjacent windows remain hydrology-free and its System 20 semantic output is unchanged.
