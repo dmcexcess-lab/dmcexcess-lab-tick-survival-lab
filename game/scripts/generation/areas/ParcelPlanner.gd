@@ -15,8 +15,11 @@ func plan(
         return {"ok": false, "failure_reason": "invalid_parcel_planner_input", "parcels": parcels}
 
     var center: Vector2i = intersections[0].get("cell", request.bounds.get_center())
+    var road_cells: Dictionary = _road_cell_set(roads)
     for road: Dictionary in roads:
-        _append_road_frontage_parcels(request, profile, road, center, parcels)
+        if not bool(road.get("parcel_frontage_enabled", true)):
+            continue
+        _append_road_frontage_parcels(request, profile, road, center, road_cells, parcels)
 
     if parcels.size() < int(profile.get("commercial_count", 0)) + int(profile.get("residential_count", 0)) + int(profile.get("farmstead_count", 0)):
         return {"ok": false, "failure_reason": "insufficient_rural_parcel_candidates", "parcels": parcels}
@@ -29,6 +32,7 @@ func _append_road_frontage_parcels(
     profile: Dictionary,
     road: Dictionary,
     center: Vector2i,
+    road_cells: Dictionary,
     parcels: Array[Dictionary]
 ) -> void:
     var road_class: StringName = road.get("road_class", &"")
@@ -58,9 +62,11 @@ func _append_road_frontage_parcels(
                         y = int(road.get("start", Vector2i.ZERO).y) + half_width + gap_from_road + 1
                         frontage = Facing.Value.NORTH
                     var placed := Rect2i(Vector2i(rect.position.x, y), Vector2i(rect.size.x, depth))
-                    _try_append_parcel(request, road, side, frontage, placed, center, parcels)
+                    _try_append_parcel(request, road, side, frontage, placed, center, road_cells, parcels)
         return
 
+    if StringName(road.get("axis", &"")) != &"vertical":
+        return
     spans.append(Vector2i(request.bounds.position.y + edge_margin, center.y - radius - 1))
     spans.append(Vector2i(center.y + radius + 1, request.bounds.position.y + request.bounds.size.y - edge_margin - 1))
     for side: StringName in [&"west", &"east"]:
@@ -77,7 +83,7 @@ func _append_road_frontage_parcels(
                     x = int(road.get("start", Vector2i.ZERO).x) + half_width + gap_from_road + 1
                     frontage = Facing.Value.WEST
                 var placed := Rect2i(Vector2i(x, rect.position.y), Vector2i(depth, rect.size.y))
-                _try_append_parcel(request, road, side, frontage, placed, center, parcels)
+                _try_append_parcel(request, road, side, frontage, placed, center, road_cells, parcels)
 
 func _segment_rects(
     request: AreaGenerationRequest,
@@ -118,6 +124,7 @@ func _try_append_parcel(
     frontage: int,
     rect: Rect2i,
     center: Vector2i,
+    road_cells: Dictionary,
     parcels: Array[Dictionary]
 ) -> void:
     if not _rect_inside(request.bounds, rect):
@@ -125,6 +132,8 @@ func _try_append_parcel(
     for forbidden: Rect2i in request.forbidden_regions:
         if _rects_intersect(rect, forbidden):
             return
+    if _rect_contains_any_cell(rect, road_cells):
+        return
     for existing: Dictionary in parcels:
         if _rects_intersect(rect, existing.get("rect", Rect2i())):
             return
@@ -207,6 +216,20 @@ func _classify_land_use(seed: int, profile: Dictionary, center: Vector2i, parcel
                 parcel["land_use"] = &"vacant"
             _:
                 parcel["land_use"] = &"wilderness"
+
+func _road_cell_set(roads: Array[Dictionary]) -> Dictionary:
+    var result: Dictionary = {}
+    for road: Dictionary in roads:
+        for value: Variant in road.get("corridor_cells", []):
+            if typeof(value) == TYPE_VECTOR2I:
+                result[value] = true
+    return result
+
+func _rect_contains_any_cell(rect: Rect2i, cells: Dictionary) -> bool:
+    for value: Variant in cells.keys():
+        if rect.has_point(value as Vector2i):
+            return true
+    return false
 
 func _rect_inside(outer: Rect2i, inner: Rect2i) -> bool:
     if inner.size.x <= 0 or inner.size.y <= 0:

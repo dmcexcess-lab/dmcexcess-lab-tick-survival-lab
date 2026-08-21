@@ -39,76 +39,73 @@ Major systems move through **NOT DESIGNED -> DRAFT -> APPROVED -> IMPLEMENTED** 
 | 17A.1 | Overweight Walk Fatigue / Absolute Carry Ceiling Correction | **IMPLEMENTED** | `17A1_OVERWEIGHT_WALK_FATIGUE_HARD_CARRY_LIMIT.md` |
 | 18 | Door Interaction / Automatic Passage | **IMPLEMENTED** | `18_DOOR_INTERACTION_PASSAGE.md` |
 | 19 | Local Building Generation / Building Grammar | **IMPLEMENTED — FINALIZED** | `19_LOCAL_BUILDING_GENERATION_ARCHETYPE_LAB.md` |
-| 20 | Local Area / Parcel Generation + Initial Materialization | **IMPLEMENTED — CANDIDATE 001** | `20_LOCAL_AREA_PARCEL_GENERATION.md` |
+| 20 | Local Area / Parcel Generation | **IMPLEMENTED — RURAL CROSSROADS CANDIDATE 002** | `20_LOCAL_AREA_PARCEL_GENERATION.md` |
 | 21 | Tactical Camera / View Control | **IMPLEMENTED** | `21_TACTICAL_CAMERA_VIEW_CONTROL.md` |
 | 22 | Large-Area DEV Critique Runtime | **IMPLEMENTED** | `22_LARGE_AREA_CRITIQUE_RUNTIME.md` |
 | 00D | Global World Planning / Generation | **NOT DESIGNED** | future design |
 | 00E | Population / Household / Outbreak / Player Story | **NOT DESIGNED** | future design |
-| 00F | Streaming / Save Materialization Strategy | **NOT DESIGNED** | future design |
+| 00F | Streaming / Materialization | **NOT DESIGNED** | future design |
 | old-01 | Raid-map / extraction physical-world model | **SUPERSEDED** | `01_RAID_MAP_DATA.md` |
 
 ## System 19 finalized building grammar
 
-Protected current library:
+Protected/preserved examples used to extract and validate the grammar:
 
-- `residential.trailer.singlewide` v2;
-- `residential.house.farm_small` v2;
-- `residential.house.farm_large` v4;
-- `residential.house.compact_laundry` v1;
-- `commercial.gas_station.small` v1;
-- `commercial.diner.rural_small` v2.
+- `residential.trailer.singlewide` v2 — accepted;
+- `residential.house.farm_small` v2 — accepted;
+- `residential.house.farm_large` v4 — preserved compact/no-hall reference;
+- `residential.house.compact_laundry` v1 — accepted;
+- `commercial.gas_station.small` v1 — accepted;
+- `commercial.diner.rural_small` v2 — accepted after the table-density revision.
 
-New building profiles are ordinary content work by default. System 20 consumes only System 19 public placement/generation/materialization contracts.
+Final reusable System 19 seams:
 
-## System 20 Candidate 001
+- read-only placement descriptor for higher-level planners;
+- `BuildingGrammarProfile` content contract;
+- reusable topology/dressing/quality owners;
+- deterministic profile-declared variation;
+- multi-seed/four-rotation regression tests.
 
-`rural.crossroads + temperate.rural` remains the first test profile over a 256×256 global planning domain:
+New building profiles are ordinary content work and do not reopen System 19 architecture unless its frozen public contract proves insufficient.
 
-- two inherited crossing roads;
-- exactly one traffic-light crossroads;
-- 3 commercial opportunities (gas station + diner + one honest vacancy);
-- 6 residential parcels;
-- 4 farmsteads;
-- open agricultural/vacant/wilderness frontage;
-- >=60% non-road land unbuilt;
-- only existing System 19 building content.
+## System 20 Rural Crossroads Candidate 002
 
-The pure planner remains independently tested. `AreaMaterializationCoordinator.gd` now performs the separate transactional **initial** write into WHAT + Door State and relinquishes generation ownership afterward.
+Candidate 001 established the first 256×256 `rural.crossroads + temperate.rural` plan with the existing prefab library only. Candidate 002 keeps the accepted building/parcel baseline but hardens the three live-critique failures identified by the user.
+
+Current morphology/environment truth:
+
+- `rural.crossroads` v2 + `temperate.rural` v2;
+- inherited regional roads remain exact and keep the single signalized crossroads;
+- one local internal 3-cell gravel farm-access road adds multiple bends and one uncontrolled junction without inventing a boundary exit;
+- that local branch currently does not claim parcel frontage, so the accepted 3-commercial / 6-residential / 4-farmstead allocation remains isolated from the road-shape test;
+- paved 3–5-cell corridors use `ground.road_plain`, while only the center path uses horizontal/vertical yellow-line ground semantics; the renderer is no longer asked to infer topology from every cell across a wide road;
+- open rural land receives deterministic clustered deciduous trees, dense/thorn shrubs and rocks;
+- natural dressing stays clear of roads, driveways, active fields, building envelopes and the immediate town-center crossing;
+- the gas station, diner, intentionally vacant third commercial lot and ten existing residential/farmstead buildings remain the only building content.
+
+System 20 still owns no camera/render/art behavior. System 05 remains unchanged; explicit road-surface/paint semantics are materialized as physical ground facts.
 
 ## System 21 camera truth
 
-Camera presentation remains independent from simulation:
+Normal gameplay camera defaults to player-follow and has five discrete zoom presets: Very Close, Close, Normal, Far and Area.
 
-- player-follow default;
-- five discrete zoom presets: Very Close / Close / Normal / Far / Area;
-- detached inspection;
-- CENTER/recenter;
-- cell/actor focus;
-- scripted presentation + restore seam for future cutscenes.
+The public camera seam also supports detached inspection, recenter, cell focus, actor focus, scripted presentation transitions and one-level restore for future cutscenes/reveals. Camera state never moves actors or advances simulation.
 
-Safari explicit camera controls use direct touch-release activation with synthetic-mouse suppression. CENTER reports `FOLLOW`/`INSPECT` state and reliably returns to player follow.
+Touch uses explicit `ZOOM - / CENTER / ZOOM +` buttons plus two-finger pan/pinch; desktop uses wheel, middle-drag and Home recenter. Right-click remains reserved for future interaction UI.
 
-## System 22 live critique truth
+`DoorPointerInputAdapter` maps through the active canvas/camera transform and cancels touch selection on drag/multitouch so camera gestures do not become door actions.
 
-The canonical live demo now materializes and displays the **real System 20 rural crossroads**, rather than the old isolated diner fixture.
+## System 22 critique runtime truth
 
-- player starts outside the generated diner primary entrance;
-- all 12 existing-library buildings exist in one WHAT world;
-- existing movement/collision/System 18 doors remain active;
-- logical area remains 256×256;
-- renderer draws an 80×96 moving presentation window at 24 px/cell;
-- render-window shifts preserve global world-cell placement;
-- System 21 owns follow/pan/zoom/recenter.
-
-No new buildings, fake stores/barns, actors, loot, vehicles or outbreak content were added for this test.
+The live Web demo materializes the current System 20 Rural Crossroads candidate into real WHAT, places the player outside the generated diner and renders an 80×96-cell moving presentation window over the 256×256 logical area. System 21 owns camera behavior; System 22 only shifts presentation windows and composes the DEV critique runtime.
 
 ## Immediate next path
 
-1. **User visually/playably critiques Candidate 001**: road scale, parcel spacing, density gradient, farms, driveways, commercial center and overall rural feel.
-2. Correct System 20 profile/planning rules exposed by that critique without changing accepted System 19 buildings merely to hide area defects.
-3. Once the rural profile is accepted, add new System 19 building profiles freely as content and/or test another settlement/environment profile.
-4. Design long-term streaming/save materialization only when the continuous world needs regions beyond this bounded critique runtime.
+1. Playtest/visually critique Candidate 002 road readability, road-network variation and clustered vegetation.
+2. Fix remaining System 20 rural morphology rules while preserving System 19 baselines.
+3. Once rural morphology is accepted, add new System 19 profiles freely as content or test another settlement/environment combination.
+4. Design Global World Planning / long-term streaming-save architecture only when the next world-scale requirement demands it.
 
 ## Design rule
 
-Global planning owns cross-region coherence; System 20 refines caller-constrained local areas and may transactionally create their initial WHAT; System 19 owns buildings; System 21 owns camera presentation; System 22 only composes the DEV large-area critique. WHAT owns runtime truth after materialization. Art remains presentation truth, not physics.
+Every major system keeps a focused owner/public contract. Global planning owns cross-region coherence; System 20 refines caller-constrained local areas and may add only profile-authorized local roads; System 19 owns building internals; System 21 owns camera presentation; System 22 owns DEV large-area presentation composition; WHAT owns runtime persistence after materialization. Art remains presentation truth, not physics. If implementation requires a forbidden boundary, return the design to review instead of cascading a patch.

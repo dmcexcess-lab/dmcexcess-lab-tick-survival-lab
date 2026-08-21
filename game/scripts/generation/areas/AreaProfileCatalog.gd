@@ -11,7 +11,7 @@ func profile(profile_id: StringName) -> Dictionary:
         return {}
     return {
         "id": RURAL_CROSSROADS,
-        "version": 1,
+        "version": 2,
         "center_exclusion_radius": 30,
         "edge_margin": 8,
         "parcel_gap": 3,
@@ -22,7 +22,13 @@ func profile(profile_id: StringName) -> Dictionary:
         "commercial_count": 3,
         "residential_count": 6,
         "farmstead_count": 4,
-        "local_road_spurs": 0,
+        "local_road_spurs": 1,
+        "local_spur_width": 3,
+        "local_spur_branch_offset": 64,
+        "local_spur_first_leg": 20,
+        "local_spur_lateral_leg": 20,
+        "local_spur_second_leg": 30,
+        "local_spur_tail_leg": 14,
         "residential_setback": 3,
         "farmstead_setback": 8,
         "commercial_setback": 1,

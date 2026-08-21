@@ -23,13 +23,7 @@ func plan(
         "priority": 0,
     })
 
-    for road: Dictionary in roads:
-        ground_regions.append({
-            "id": "%s.ground.road.%s" % [request.area_id, String(road.get("road_id", ""))],
-            "semantic": environment.get("road_ground", &"ground.road"),
-            "cells": (road.get("corridor_cells", []) as Array).duplicate(),
-            "priority": 100,
-        })
+    _add_road_ground_regions(request, environment, roads, intersections, ground_regions)
 
     for parcel: Dictionary in parcels:
         var driveway: Array = parcel.get("driveway_cells", [])
@@ -56,7 +50,101 @@ func plan(
     var blocked: Dictionary = _blocked_cells(roads, parcels)
     _add_signal_prop(request, environment, intersections, props, blocked)
     _add_parcel_props(request, environment, parcels, props, blocked)
+    _add_natural_clusters(request, environment, roads, intersections, parcels, props, blocked)
     return {"ok": true, "failure_reason": "", "ground_regions": ground_regions, "props": props}
+
+func _add_road_ground_regions(
+    request: AreaGenerationRequest,
+    environment: Dictionary,
+    roads: Array[Dictionary],
+    intersections: Array[Dictionary],
+    ground_regions: Array[Dictionary]
+) -> void:
+    for road: Dictionary in roads:
+        var road_id: String = String(road.get("road_id", "road"))
+        var surface_family: StringName = StringName(road.get("surface_family", &"paved_centerline"))
+        var surface_semantic: StringName = StringName(environment.get("road_surface_ground", environment.get("road_ground", &"ground.road_plain")))
+        if surface_family == &"rural_gravel":
+            surface_semantic = StringName(environment.get("local_road_ground", &"ground.gravel_dark"))
+        ground_regions.append({
+            "id": "%s.ground.road.%s.surface" % [request.area_id, road_id],
+            "semantic": surface_semantic,
+            "cells": (road.get("corridor_cells", []) as Array).duplicate(),
+            "priority": 100,
+        })
+
+        if not bool(road.get("paint_centerline", false)):
+            continue
+        var line_groups: Dictionary = _centerline_cells_by_axis(road, intersections)
+        var horizontal: Array = line_groups.get(&"horizontal", [])
+        if not horizontal.is_empty():
+            ground_regions.append({
+                "id": "%s.ground.road.%s.centerline_h" % [request.area_id, road_id],
+                "semantic": environment.get("road_centerline_horizontal", &"ground.road_yellow_line_h"),
+                "cells": horizontal.duplicate(),
+                "priority": 110,
+            })
+        var vertical: Array = line_groups.get(&"vertical", [])
+        if not vertical.is_empty():
+            ground_regions.append({
+                "id": "%s.ground.road.%s.centerline_v" % [request.area_id, road_id],
+                "semantic": environment.get("road_centerline_vertical", &"ground.road_yellow_line_v"),
+                "cells": vertical.duplicate(),
+                "priority": 110,
+            })
+
+func _centerline_cells_by_axis(road: Dictionary, intersections: Array[Dictionary]) -> Dictionary:
+    var horizontal: Array[Vector2i] = []
+    var vertical: Array[Vector2i] = []
+    var path: Array = road.get("path_cells", [])
+    var road_id: String = String(road.get("road_id", ""))
+    var intersection_clearance: int = int(road.get("width", 1)) / 2 + 1
+    var explicit_axis: StringName = StringName(road.get("axis", &""))
+    for index in range(path.size()):
+        var cell: Vector2i = path[index]
+        if _near_road_intersection(cell, road_id, intersections, intersection_clearance):
+            continue
+        var axis: StringName = explicit_axis
+        if axis != &"horizontal" and axis != &"vertical":
+            axis = _path_axis(path, index)
+        if axis == &"horizontal":
+            horizontal.append(cell)
+        elif axis == &"vertical":
+            vertical.append(cell)
+    return {&"horizontal": horizontal, &"vertical": vertical}
+
+func _path_axis(path: Array, index: int) -> StringName:
+    var cell: Vector2i = path[index]
+    var before: Vector2i = cell
+    var after: Vector2i = cell
+    if index > 0:
+        before = path[index - 1]
+    if index + 1 < path.size():
+        after = path[index + 1]
+    if before.y == cell.y and after.y == cell.y:
+        return &"horizontal"
+    if before.x == cell.x and after.x == cell.x:
+        return &"vertical"
+    if after != cell:
+        return &"horizontal" if after.y == cell.y else &"vertical"
+    if before != cell:
+        return &"horizontal" if before.y == cell.y else &"vertical"
+    return &""
+
+func _near_road_intersection(
+    cell: Vector2i,
+    road_id: String,
+    intersections: Array[Dictionary],
+    clearance: int
+) -> bool:
+    for intersection: Dictionary in intersections:
+        var ids: Array = intersection.get("road_ids", [])
+        if not ids.has(road_id):
+            continue
+        var center: Vector2i = intersection.get("cell", Vector2i(-999999, -999999))
+        if absi(cell.x - center.x) + absi(cell.y - center.y) <= clearance:
+            return true
+    return false
 
 func _add_signal_prop(
     request: AreaGenerationRequest,
@@ -148,6 +236,169 @@ func _add_farm_boundary(
         )
         ordinal += 1
 
+func _add_natural_clusters(
+    request: AreaGenerationRequest,
+    environment: Dictionary,
+    roads: Array[Dictionary],
+    intersections: Array[Dictionary],
+    parcels: Array[Dictionary],
+    props: Array[Dictionary],
+    blocked: Dictionary
+) -> void:
+    var trees: Array = environment.get("tree_semantics", [])
+    var shrubs: Array = environment.get("shrub_semantics", [])
+    var rocks: Array = environment.get("rock_semantics", [])
+    if trees.is_empty() or shrubs.is_empty() or rocks.is_empty():
+        return
+
+    var cluster_count: int = int(environment.get("natural_cluster_count", 0))
+    var radius: int = maxi(1, int(environment.get("natural_cluster_radius", 6)))
+    var minimum_props: int = maxi(1, int(environment.get("natural_cluster_min_props", 5)))
+    var maximum_props: int = maxi(minimum_props, int(environment.get("natural_cluster_max_props", 10)))
+    var natural_blocked: Dictionary = blocked.duplicate()
+    _reserve_natural_road_halo(roads, parcels, int(environment.get("natural_road_clearance", 1)), natural_blocked, request.bounds)
+
+    for cluster_index in range(cluster_count):
+        var center: Vector2i = _natural_cluster_center(
+            request,
+            environment,
+            intersections,
+            parcels,
+            natural_blocked,
+            cluster_index,
+            radius
+        )
+        if center.x < -100000:
+            continue
+        var cluster_size: int = minimum_props + Seed.choose_index(
+            request.seed,
+            "natural_cluster:size:%d" % cluster_index,
+            maximum_props - minimum_props + 1
+        )
+        var family: int = Seed.choose_index(request.seed, "natural_cluster:family:%d" % cluster_index, 3)
+        for prop_index in range(cluster_size):
+            var placed: bool = false
+            for attempt in range(8):
+                var domain: String = "natural_cluster:%d:%d:%d" % [cluster_index, prop_index, attempt]
+                var dx: int = Seed.choose_index(request.seed, "%s:x" % domain, radius * 2 + 1) - radius
+                var dy: int = Seed.choose_index(request.seed, "%s:y" % domain, radius * 2 + 1) - radius
+                if dx * dx + dy * dy > radius * radius:
+                    continue
+                var cell := center + Vector2i(dx, dy)
+                if not _natural_cell_allowed(request, environment, intersections, parcels, natural_blocked, cell):
+                    continue
+                var semantic: StringName = _natural_semantic(request.seed, domain, family, trees, shrubs, rocks)
+                if semantic == &"":
+                    continue
+                _append_prop(
+                    props,
+                    natural_blocked,
+                    "%s.prop.natural.%03d.%02d" % [request.area_id, cluster_index, prop_index],
+                    semantic,
+                    cell,
+                    Facing.Value.SOUTH
+                )
+                placed = true
+                break
+            if not placed:
+                continue
+
+func _natural_cluster_center(
+    request: AreaGenerationRequest,
+    environment: Dictionary,
+    intersections: Array[Dictionary],
+    parcels: Array[Dictionary],
+    blocked: Dictionary,
+    cluster_index: int,
+    radius: int
+) -> Vector2i:
+    var margin: int = radius + 2
+    var width: int = request.bounds.size.x - margin * 2
+    var height: int = request.bounds.size.y - margin * 2
+    if width <= 0 or height <= 0:
+        return Vector2i(-999999, -999999)
+    for attempt in range(12):
+        var domain: String = "natural_cluster:center:%d:%d" % [cluster_index, attempt]
+        var x: int = request.bounds.position.x + margin + Seed.choose_index(request.seed, "%s:x" % domain, width)
+        var y: int = request.bounds.position.y + margin + Seed.choose_index(request.seed, "%s:y" % domain, height)
+        var cell := Vector2i(x, y)
+        if _natural_cell_allowed(request, environment, intersections, parcels, blocked, cell):
+            return cell
+    return Vector2i(-999999, -999999)
+
+func _natural_cell_allowed(
+    request: AreaGenerationRequest,
+    environment: Dictionary,
+    intersections: Array[Dictionary],
+    parcels: Array[Dictionary],
+    blocked: Dictionary,
+    cell: Vector2i
+) -> bool:
+    if not request.bounds.has_point(cell) or blocked.has(cell):
+        return false
+    var center_clear_radius: int = int(environment.get("natural_center_clear_radius", 0))
+    if center_clear_radius > 0:
+        for intersection: Dictionary in intersections:
+            if StringName(intersection.get("control", &"")) != &"signalized":
+                continue
+            var center: Vector2i = intersection.get("cell", Vector2i.ZERO)
+            if absi(cell.x - center.x) + absi(cell.y - center.y) < center_clear_radius:
+                return false
+    for parcel: Dictionary in parcels:
+        var rect: Rect2i = parcel.get("rect", Rect2i())
+        if not rect.has_point(cell):
+            continue
+        var land_use: StringName = StringName(parcel.get("land_use", &""))
+        return land_use == &"wilderness" or land_use == &"vacant"
+    return true
+
+func _natural_semantic(
+    seed: int,
+    domain: String,
+    family: int,
+    trees: Array,
+    shrubs: Array,
+    rocks: Array
+) -> StringName:
+    var roll: int = Seed.choose_index(seed, "%s:kind" % domain, 10)
+    var source: Array = trees
+    match family:
+        0:
+            source = trees if roll < 6 else (shrubs if roll < 9 else rocks)
+        1:
+            source = shrubs if roll < 6 else (trees if roll < 8 else rocks)
+        _:
+            source = rocks if roll < 5 else (shrubs if roll < 8 else trees)
+    if source.is_empty():
+        return &""
+    var index: int = Seed.choose_index(seed, "%s:variant" % domain, source.size())
+    return StringName(source[index])
+
+func _reserve_natural_road_halo(
+    roads: Array[Dictionary],
+    parcels: Array[Dictionary],
+    clearance: int,
+    blocked: Dictionary,
+    bounds: Rect2i
+) -> void:
+    var radius: int = maxi(0, clearance)
+    for road: Dictionary in roads:
+        for value: Variant in road.get("corridor_cells", []):
+            var road_cell: Vector2i = value
+            for dy in range(-radius, radius + 1):
+                for dx in range(-radius, radius + 1):
+                    var cell := road_cell + Vector2i(dx, dy)
+                    if bounds.has_point(cell):
+                        blocked[cell] = true
+    for parcel: Dictionary in parcels:
+        for value: Variant in parcel.get("driveway_cells", []):
+            var driveway_cell: Vector2i = value
+            for dy in range(-radius, radius + 1):
+                for dx in range(-radius, radius + 1):
+                    var cell := driveway_cell + Vector2i(dx, dy)
+                    if bounds.has_point(cell):
+                        blocked[cell] = true
+
 func _append_prop(
     props: Array[Dictionary],
     blocked: Dictionary,
@@ -171,10 +422,16 @@ func _blocked_cells(roads: Array[Dictionary], parcels: Array[Dictionary]) -> Dic
             blocked[value] = true
         var envelope: Rect2i = parcel.get("building_envelope", Rect2i())
         if envelope.size.x > 0 and envelope.size.y > 0:
-            for y in range(envelope.position.y, envelope.position.y + envelope.size.y):
-                for x in range(envelope.position.x, envelope.position.x + envelope.size.x):
-                    blocked[Vector2i(x, y)] = true
+            _block_rect(blocked, envelope)
+        var field_rect: Rect2i = parcel.get("field_rect", Rect2i())
+        if field_rect.size.x > 0 and field_rect.size.y > 0:
+            _block_rect(blocked, field_rect)
     return blocked
+
+func _block_rect(blocked: Dictionary, rect: Rect2i) -> void:
+    for y in range(rect.position.y, rect.position.y + rect.size.y):
+        for x in range(rect.position.x, rect.position.x + rect.size.x):
+            blocked[Vector2i(x, y)] = true
 
 func _field_rect(parcel: Dictionary) -> Rect2i:
     var rect: Rect2i = parcel.get("rect", Rect2i())
