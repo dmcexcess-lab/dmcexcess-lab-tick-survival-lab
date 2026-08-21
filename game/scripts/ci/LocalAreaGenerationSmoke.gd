@@ -30,27 +30,27 @@ func _test_candidate(
     request: AreaGenerationRequest,
     plan: GeneratedAreaPlan
 ) -> void:
-    _check(request.is_valid(), "Rural Crossroads Candidate 002 request is valid")
-    _check(plan.is_generated(), "Rural Crossroads Candidate 002 generates")
+    _check(request.is_valid(), "Rural Crossroads Candidate 003 request is valid")
+    _check(plan.is_generated(), "Rural Crossroads Candidate 003 generates")
     if not plan.is_generated():
         return
-    _check(bool(validator.validate(request, plan).get("ok", false)), "Candidate 002 passes generic area validation")
-    _check(plan.bounds == FixtureClass.BOUNDS and plan.bounds.size == Vector2i(256, 256), "Candidate 002 keeps the approved 256x256 global planning area")
-    _check(plan.area_profile_version == 2, "rural.crossroads v2 records intentional morphology change")
-    _check(plan.environment_profile_version == 2, "temperate.rural v2 records intentional ecological/surface change")
+    _check(bool(validator.validate(request, plan).get("ok", false)), "Candidate 003 passes generic area validation")
+    _check(plan.bounds == FixtureClass.BOUNDS and plan.bounds.size == Vector2i(256, 256), "Candidate 003 keeps the approved 256x256 global planning area")
+    _check(plan.area_profile_version == 2, "rural.crossroads v2 preserves Candidate 002 morphology")
+    _check(plan.environment_profile_version == 3, "temperate.rural v3 records the coordinate-noise ecological correction")
 
-    _check(plan.roads.size() == 3, "Candidate 002 has two inherited roads plus one local rural branch")
+    _check(plan.roads.size() == 3, "Candidate 003 preserves two inherited roads plus one local rural branch")
     _check(_count_inherited_roads(plan) == 2, "the two regional roads remain inherited exactly")
-    _check(_count_road_class(plan, &"farm_access") == 1, "one locally generated farm-access road adds rural road variation")
+    _check(_count_road_class(plan, &"farm_access") == 1, "one locally generated farm-access road preserves rural road variation")
     var local_road: Dictionary = _first_road_class(plan, &"farm_access")
     _check(not local_road.is_empty() and not bool(local_road.get("inherited", true)), "farm-access road is locally owned rather than a fake inherited constraint")
-    _check(_road_has_bends(local_road), "farm-access road contains multiple cardinal bends instead of another straight line")
+    _check(_road_has_bends(local_road), "farm-access road preserves multiple cardinal bends")
     _check(_road_stays_off_boundary(local_road, plan.bounds), "local road creates no unauthorized area-boundary exit")
     _check(not bool(local_road.get("parcel_frontage_enabled", true)), "current farm-access branch does not silently become a new parcel-frontage authority")
 
-    _check(_count_intersections(plan, &"signalized") == 1, "Candidate 002 preserves exactly one signalized crossroads")
-    _check(_count_intersections(plan, &"uncontrolled") == 1, "local rural branch creates one ordinary uncontrolled junction")
-    _check(plan.intersections.size() == 2, "Candidate 002 has the crossroads plus the local branch junction")
+    _check(_count_intersections(plan, &"signalized") == 1, "Candidate 003 preserves exactly one signalized crossroads")
+    _check(_count_intersections(plan, &"uncontrolled") == 1, "local rural branch preserves one ordinary uncontrolled junction")
+    _check(plan.intersections.size() == 2, "Candidate 003 has the crossroads plus the local branch junction")
     if not plan.intersections.is_empty():
         _check(plan.intersections[0].get("cell", Vector2i(-1, -1)) == FixtureClass.CENTER, "signalized crossroads remains at inherited-road crossing")
 
@@ -76,28 +76,31 @@ func _test_candidate(
         &"residential.house.farm_large",
         &"residential.house.compact_laundry",
     ]:
-        _check(residential_archetypes.has(required), "Candidate 002 exercises saved residential archetype %s" % String(required))
+        _check(residential_archetypes.has(required), "Candidate 003 exercises saved residential archetype %s" % String(required))
 
     _check(_average_distance(plan, &"commercial_small") < _average_distance(plan, &"residential"), "commercial density is closest to crossroads")
     _check(_average_distance(plan, &"residential") < _average_distance(plan, &"farmstead"), "farmsteads sit materially farther from crossroads")
     _check(_average_driveway(plan, &"farmstead") > _average_driveway(plan, &"residential"), "farmstead driveways are longer than residential driveways")
     _check(_unbuilt_nonroad_ratio(plan) >= 0.60, "at least 60 percent of non-road area remains unbuilt")
 
-    _check(_count_ground_semantic(plan, &"ground.road") == 0, "wide roads no longer feed generic topology tiles that create yellow boxes")
-    _check(_count_ground_semantic(plan, &"ground.road_plain") == 2, "both inherited paved corridors use plain road surface")
-    _check(_count_ground_semantic(plan, &"ground.road_yellow_line_h") == 1, "east-west road has one explicit horizontal centerline layer")
-    _check(_count_ground_semantic(plan, &"ground.road_yellow_line_v") == 1, "north-south road has one explicit vertical centerline layer")
-    _check(_count_ground_semantic(plan, &"ground.gravel_dark") == 1, "local rural branch uses an unpainted gravel surface")
+    _check(_count_ground_semantic(plan, &"ground.road") == 0, "wide roads stay off generic topology tiles that created yellow boxes")
+    _check(_count_ground_semantic(plan, &"ground.road_plain") == 2, "both inherited paved corridors preserve plain road surface")
+    _check(_count_ground_semantic(plan, &"ground.road_yellow_line_h") == 1, "east-west road preserves one explicit horizontal centerline layer")
+    _check(_count_ground_semantic(plan, &"ground.road_yellow_line_v") == 1, "north-south road preserves one explicit vertical centerline layer")
+    _check(_count_ground_semantic(plan, &"ground.gravel_dark") == 1, "local rural branch preserves an unpainted gravel surface")
 
     _check(_count_prop_semantic(plan, &"prop.traffic_light") == 1, "one physical traffic light dresses the crossroads")
     _check(_count_prop_semantic(plan, &"prop.curb_mailbox") == 10, "occupied rural homes/farms receive one mailbox each")
     _check(_count_ground_semantic(plan, &"ground.field_green") >= 4, "farmstead/agricultural parcels expose real field zones")
-    _check(_natural_prop_count(plan) >= 120, "open rural land receives substantial clustered natural dressing")
+    _check(_natural_prop_count(plan) >= 150, "open rural land receives substantial noise-scattered natural dressing")
     _check(_count_prop_semantic(plan, &"prop.deciduous_large") + _count_prop_semantic(plan, &"prop.deciduous_small") > 0, "natural dressing includes trees")
     _check(_count_prop_semantic(plan, &"prop.dense_bush") + _count_prop_semantic(plan, &"prop.thorn_bush") > 0, "natural dressing includes shrubs")
     _check(_count_prop_semantic(plan, &"prop.rock_small") + _count_prop_semantic(plan, &"prop.rock_cluster") + _count_prop_semantic(plan, &"prop.mossy_rock") > 0, "natural dressing includes rocks")
-    _check(_natural_props_avoid_fields(plan), "natural clusters stay out of active field rectangles")
-    _check(_natural_neighbor_ratio(plan) >= 0.50, "natural props form readable clusters rather than uniform scatter")
+    _check(_natural_props_avoid_fields(plan), "natural noise stays out of active field rectangles")
+    var neighbor_ratio: float = _natural_neighbor_ratio(plan)
+    _check(neighbor_ratio >= 0.20 and neighbor_ratio <= 0.90, "natural noise has local texture without collapsing into one dense chain")
+    _check(_natural_coarse_bin_coverage(plan) >= 10, "natural noise reaches broad portions of the open map")
+    _check(_natural_xy_correlation_abs(plan) <= 0.45, "natural noise has no strong diagonal X/Y correlation")
 
     var building_generator := BuildingGeneratorClass.new()
     var building_validator := BuildingValidatorClass.new()
@@ -122,12 +125,14 @@ func _test_seed_replay(generator: LocalAreaGenerator) -> void:
     _check(alternate.is_generated() and alternate.signature() != original_a.signature(), "different area seed changes legal parcel/building/environment planning")
     for seed in range(20001, 20013):
         var plan: GeneratedAreaPlan = generator.generate(FixtureClass.request(seed))
-        _check(plan.is_generated(), "rural crossroads v2 seed %d generates without reroll loops" % seed)
+        _check(plan.is_generated(), "rural crossroads v2 / temperate rural v3 seed %d generates without reroll loops" % seed)
         if plan.is_generated():
             _check(_count_intersections(plan, &"signalized") == 1, "seed %d preserves one signalized crossroads" % seed)
             _check(_count_road_class(plan, &"farm_access") == 1, "seed %d preserves one varied local branch" % seed)
             _check(plan.building_requests.size() == 12, "seed %d preserves approved occupied-building target" % seed)
-            _check(_natural_prop_count(plan) >= 80, "seed %d preserves meaningful natural dressing" % seed)
+            _check(_natural_prop_count(plan) >= 100, "seed %d preserves meaningful natural dressing" % seed)
+            _check(_natural_coarse_bin_coverage(plan) >= 8, "seed %d spreads natural dressing across the area" % seed)
+            _check(_natural_xy_correlation_abs(plan) <= 0.60, "seed %d avoids diagonal natural-prop collapse" % seed)
 
 func _count_inherited_roads(plan: GeneratedAreaPlan) -> int:
     var count: int = 0
@@ -248,12 +253,15 @@ func _count_ground_semantic(plan: GeneratedAreaPlan, semantic: StringName) -> in
             count += 1
     return count
 
-func _natural_prop_count(plan: GeneratedAreaPlan) -> int:
-    var count: int = 0
+func _natural_cells(plan: GeneratedAreaPlan) -> Array[Vector2i]:
+    var cells: Array[Vector2i] = []
     for prop: Dictionary in plan.outdoor_props:
         if String(prop.get("id", "")).contains(".prop.natural."):
-            count += 1
-    return count
+            cells.append(prop.get("cell", Vector2i.ZERO))
+    return cells
+
+func _natural_prop_count(plan: GeneratedAreaPlan) -> int:
+    return _natural_cells(plan).size()
 
 func _natural_props_avoid_fields(plan: GeneratedAreaPlan) -> bool:
     var fields: Array[Rect2i] = []
@@ -261,20 +269,14 @@ func _natural_props_avoid_fields(plan: GeneratedAreaPlan) -> bool:
         var field_rect: Rect2i = parcel.get("field_rect", Rect2i())
         if field_rect.size.x > 0 and field_rect.size.y > 0:
             fields.append(field_rect)
-    for prop: Dictionary in plan.outdoor_props:
-        if not String(prop.get("id", "")).contains(".prop.natural."):
-            continue
-        var cell: Vector2i = prop.get("cell", Vector2i.ZERO)
+    for cell: Vector2i in _natural_cells(plan):
         for field_rect: Rect2i in fields:
             if field_rect.has_point(cell):
                 return false
     return true
 
 func _natural_neighbor_ratio(plan: GeneratedAreaPlan) -> float:
-    var cells: Array[Vector2i] = []
-    for prop: Dictionary in plan.outdoor_props:
-        if String(prop.get("id", "")).contains(".prop.natural."):
-            cells.append(prop.get("cell", Vector2i.ZERO))
+    var cells: Array[Vector2i] = _natural_cells(plan)
     if cells.is_empty():
         return 0.0
     var near_count: int = 0
@@ -290,6 +292,40 @@ func _natural_neighbor_ratio(plan: GeneratedAreaPlan) -> float:
         if has_neighbor:
             near_count += 1
     return float(near_count) / float(cells.size())
+
+func _natural_coarse_bin_coverage(plan: GeneratedAreaPlan) -> int:
+    var occupied: Dictionary = {}
+    for cell: Vector2i in _natural_cells(plan):
+        var local: Vector2i = cell - plan.bounds.position
+        var bin_x: int = clampi(int(float(local.x) * 4.0 / float(plan.bounds.size.x)), 0, 3)
+        var bin_y: int = clampi(int(float(local.y) * 4.0 / float(plan.bounds.size.y)), 0, 3)
+        occupied[Vector2i(bin_x, bin_y)] = true
+    return occupied.size()
+
+func _natural_xy_correlation_abs(plan: GeneratedAreaPlan) -> float:
+    var cells: Array[Vector2i] = _natural_cells(plan)
+    if cells.size() < 3:
+        return 1.0
+    var mean_x: float = 0.0
+    var mean_y: float = 0.0
+    for cell: Vector2i in cells:
+        mean_x += float(cell.x)
+        mean_y += float(cell.y)
+    mean_x /= float(cells.size())
+    mean_y /= float(cells.size())
+
+    var covariance: float = 0.0
+    var variance_x: float = 0.0
+    var variance_y: float = 0.0
+    for cell: Vector2i in cells:
+        var dx: float = float(cell.x) - mean_x
+        var dy: float = float(cell.y) - mean_y
+        covariance += dx * dy
+        variance_x += dx * dx
+        variance_y += dy * dy
+    if variance_x <= 0.0 or variance_y <= 0.0:
+        return 1.0
+    return absf(covariance / sqrt(variance_x * variance_y))
 
 func _check(condition: bool, message: String) -> void:
     if not condition:
