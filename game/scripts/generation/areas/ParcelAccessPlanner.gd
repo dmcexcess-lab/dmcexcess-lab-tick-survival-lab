@@ -25,7 +25,7 @@ func assign_access(parcels: Array[Dictionary], roads: Array[Dictionary]) -> Dict
 
 func finalize_driveways(parcels: Array[Dictionary]) -> Dictionary:
     for parcel: Dictionary in parcels:
-        var land_use: StringName = parcel.get("land_use", &"")
+        var land_use: StringName = StringName(parcel.get("land_use", &""))
         if land_use != &"residential" and land_use != &"farmstead" and land_use != &"commercial_small":
             parcel["driveway_cells"] = []
             continue
@@ -34,9 +34,10 @@ func finalize_driveways(parcels: Array[Dictionary]) -> Dictionary:
             parcel["driveway_cells"] = []
             continue
         var start: Vector2i = parcel.get("access_cell", Vector2i(-1, -1))
-        if start.x < 0:
+        var frontage: int = int(parcel.get("frontage_side", -1))
+        if start.x < 0 or not Facing.is_valid(frontage):
             return {"ok": false, "failure_reason": "occupied_parcel_access_missing"}
-        parcel["driveway_cells"] = _orthogonal_path(start, entry)
+        parcel["driveway_cells"] = _frontage_path(start, entry, frontage)
     return {"ok": true, "failure_reason": ""}
 
 func _parcel_edge_access(rect: Rect2i, frontage: int) -> Vector2i:
@@ -86,10 +87,18 @@ func _road_edge_access(road: Dictionary, parcel_access: Vector2i, frontage: int)
     var half_width: int = int(road.get("width", 1)) / 2
     return nearest - Facing.vector(frontage) * half_width
 
-func _orthogonal_path(start: Vector2i, finish: Vector2i) -> Array[Vector2i]:
+func _frontage_path(start: Vector2i, finish: Vector2i, frontage: int) -> Array[Vector2i]:
     var result: Array[Vector2i] = []
     var current: Vector2i = start
     result.append(current)
+    if frontage == Facing.Value.NORTH or frontage == Facing.Value.SOUTH:
+        while current.y != finish.y:
+            current.y += 1 if finish.y > current.y else -1
+            result.append(current)
+        while current.x != finish.x:
+            current.x += 1 if finish.x > current.x else -1
+            result.append(current)
+        return result
     while current.x != finish.x:
         current.x += 1 if finish.x > current.x else -1
         result.append(current)
