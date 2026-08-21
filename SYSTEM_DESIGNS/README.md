@@ -10,7 +10,7 @@ Major systems move through **NOT DESIGNED -> DRAFT -> APPROVED -> IMPLEMENTED** 
 | 00A | Spatial Model — WHERE | **IMPLEMENTED** | `00A_SPATIAL_MODEL.md` |
 | 00B | Persistent World / Entity State — WHAT | **IMPLEMENTED** | `00B_PERSISTENT_WORLD_STATE.md` |
 | 00C | Tick / Action / Pause Kernel — WHEN | **IMPLEMENTED** | `00C_TICK_ACTION_PAUSE.md` |
-| 00D | Global World Planning / Generation | **IMPLEMENTED — SLICES 001–003** | `00D_GLOBAL_WORLD_PLANNING.md`, `00D3_GLOBAL_HYDROLOGY_BRIDGE_INTENT.md` |
+| 00D | Global World Planning / Generation | **IMPLEMENTED — SLICES 001–004** | `00D_GLOBAL_WORLD_PLANNING.md`, `00D3_GLOBAL_HYDROLOGY_BRIDGE_INTENT.md`, `00D4_GLOBAL_ELECTRICAL_INFRASTRUCTURE.md` |
 | 01 | Collision / Spatial Query | **IMPLEMENTED** | `01_COLLISION_SPATIAL_QUERY.md` |
 | 02 | Movement Actions | **IMPLEMENTED** | `02_MOVEMENT_ACTIONS.md` |
 | 03 | Actor Locomotion / Movement Capability | **IMPLEMENTED** | `03_ACTOR_LOCOMOTION_MOVEMENT_CAPABILITY.md` |
@@ -47,13 +47,13 @@ Major systems move through **NOT DESIGNED -> DRAFT -> APPROVED -> IMPLEMENTED** 
 | 00F | Streaming / Materialization | **NOT DESIGNED** | future design |
 | old-01 | Raid-map / extraction physical-world model | **SUPERSEDED** | `01_RAID_MAP_DATA.md` |
 
-## System 00D current implementation — Slices 001–003
+## System 00D current implementation — Slices 001–004
 
-Current profile: `temperate.rural.region` **v3**.
+Current profile: `temperate.rural.region` **v4**.
 
-The pure global planner now establishes, in order:
+The pure global planner establishes, in order:
 
-`geography -> hydrology -> settlements/sites -> major roads -> bridge intents -> broad planning regions`.
+`geography -> hydrology -> settlements/sites -> major roads -> bridge intents -> regional electrical infrastructure -> broad planning regions`.
 
 Current global fixture:
 
@@ -62,17 +62,20 @@ Current global fixture:
 - one central rural crossroads, one smalltown and three rural hamlets;
 - geography/hydrology-constrained settlement sites;
 - globally connected primary/secondary road network with real boundary gateways;
-- protected central straight cross with 640-cell half-span so the accepted center/adjacent windows remain clean local-road inputs;
+- protected central straight cross with 640-cell half-span;
 - one deterministic boundary-to-boundary primary regional river outside that protected corridor;
 - major roads pay a high river-crossing cost and cannot run collinearly along a river centerline;
-- every actual perpendicular route/river/cell crossing has exactly one explicit independently validated bridge intent;
-- `System20AreaRequestProjector.hydrology_constraints_for_bounds()` exposes river + bridge facts read-only without changing `AreaGenerationRequest`;
-- central Candidate 006 and its immediately adjacent protected windows remain hydrology-free;
+- every actual perpendicular route/river/cell crossing has exactly one explicit bridge intent;
+- one deterministic regional electrical ingress on a real road boundary gateway;
+- one small-town substation and one service node per settlement;
+- one connected road-following regional feeder network with source-road provenance and independent validation;
+- `System20AreaRequestProjector.hydrology_constraints_for_bounds()` exposes river + bridge facts read-only;
+- `System20AreaRequestProjector.power_constraints_for_bounds()` exposes feeder + power-node facts read-only;
 - central `project_site()` still produces the accepted System 20 road request and exact Candidate 006 semantic output;
 - unsupported future local profiles still fail honestly;
 - exact-head context `verify/system00d-global-world`.
 
-System 00D remains pure planning. It owns no tactical water, bridge art/collision, WHAT mutation, renderer, camera, population, outbreak or streaming behavior.
+System 00D remains pure planning. It owns no tactical water, bridge art/collision, utility poles/wires, energized electrical state, WHAT mutation, renderer, camera, population, outbreak or streaming behavior.
 
 ## System 19 finalized building grammar
 
@@ -108,11 +111,11 @@ Exact-head context: `verify/system20-local-area`.
 
 System 21 owns camera follow/pan/zoom/focus/recenter only and never mutates simulation.
 
-System 22 owns the bounded moving-window DEV presentation for the accepted 256×256 Candidate 006 local area. The live Web demo remains Candidate 006; System 00D rivers/bridge intents remain headless global planning facts until a downstream hydrology/materialization system is explicitly designed.
+System 22 owns the bounded moving-window DEV presentation for the accepted 256×256 Candidate 006 local area. The live Web demo remains Candidate 006; System 00D rivers/bridge intents/power infrastructure remain headless global planning facts until downstream materialization systems are explicitly designed.
 
 ## Immediate next path
 
-Keep Slices 001–003 and Candidate 006 protected. The next major step must be separately designed. North-Star candidates are global utilities/infrastructure or real System 20 profiles needed to refine the planned `smalltown.center` / `rural.scattered` sites. Streaming remains later, after logical world geography/places/infrastructure are stable enough that partitions are purely technical.
+Keep Slices 001–004 and Candidate 006 protected. The next major step must be separately designed. North-Star candidates are **water/waste infrastructure** or the real System 20 profiles needed to refine planned `smalltown.center` / `rural.scattered` sites. Streaming remains later, after logical world geography/places/infrastructure are stable enough that partitions are purely technical.
 
 ## Design rule
 
