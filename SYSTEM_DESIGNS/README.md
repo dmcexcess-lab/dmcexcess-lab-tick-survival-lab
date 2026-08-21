@@ -39,7 +39,7 @@ Major systems move through **NOT DESIGNED -> DRAFT -> APPROVED -> IMPLEMENTED** 
 | 17A.1 | Overweight Walk Fatigue / Absolute Carry Ceiling Correction | **IMPLEMENTED** | `17A1_OVERWEIGHT_WALK_FATIGUE_HARD_CARRY_LIMIT.md` |
 | 18 | Door Interaction / Automatic Passage | **IMPLEMENTED** | `18_DOOR_INTERACTION_PASSAGE.md` |
 | 19 | Local Building Generation / Building Grammar | **IMPLEMENTED — FINALIZED** | `19_LOCAL_BUILDING_GENERATION_ARCHETYPE_LAB.md` |
-| 20 | Local Area / Parcel Generation | **IMPLEMENTED — RURAL CROSSROADS CANDIDATE 002** | `20_LOCAL_AREA_PARCEL_GENERATION.md` |
+| 20 | Local Area / Parcel Generation | **IMPLEMENTED — RURAL CROSSROADS CANDIDATE 003** | `20_LOCAL_AREA_PARCEL_GENERATION.md` |
 | 21 | Tactical Camera / View Control | **IMPLEMENTED** | `21_TACTICAL_CAMERA_VIEW_CONTROL.md` |
 | 22 | Large-Area DEV Critique Runtime | **IMPLEMENTED** | `22_LARGE_AREA_CRITIQUE_RUNTIME.md` |
 | 00D | Global World Planning / Generation | **NOT DESIGNED** | future design |
@@ -68,22 +68,24 @@ Final reusable System 19 seams:
 
 New building profiles are ordinary content work and do not reopen System 19 architecture unless its frozen public contract proves insufficient.
 
-## System 20 Rural Crossroads Candidate 002
+## System 20 Rural Crossroads Candidate 003
 
-Candidate 001 established the first 256×256 `rural.crossroads + temperate.rural` plan with the existing prefab library only. Candidate 002 keeps the accepted building/parcel baseline but hardens the three live-critique failures identified by the user.
+Candidate 003 preserves the accepted Candidate 002 human morphology and fixes only the next live ecological critique.
 
 Current morphology/environment truth:
 
-- `rural.crossroads` v2 + `temperate.rural` v2;
+- `rural.crossroads` v2 + `temperate.rural` v3;
 - inherited regional roads remain exact and keep the single signalized crossroads;
 - one local internal 3-cell gravel farm-access road adds multiple bends and one uncontrolled junction without inventing a boundary exit;
-- that local branch currently does not claim parcel frontage, so the accepted 3-commercial / 6-residential / 4-farmstead allocation remains isolated from the road-shape test;
-- paved 3–5-cell corridors use `ground.road_plain`, while only the center path uses horizontal/vertical yellow-line ground semantics; the renderer is no longer asked to infer topology from every cell across a wide road;
-- open rural land receives deterministic clustered deciduous trees, dense/thorn shrubs and rocks;
+- that local branch still does not claim parcel frontage, so the accepted 3-commercial / 6-residential / 4-farmstead allocation remains isolated from the road-shape test;
+- paved 3–5-cell corridors use `ground.road_plain`, while only the center path uses horizontal/vertical yellow-line ground semantics;
+- natural countryside no longer uses separately derived random cluster-center X/Y coordinates;
+- `AreaSeed.hash_2d()` mixes X and Y into one coordinate sample, a smooth low-frequency value-noise layer creates broad dense/sparse ecological patches, and independent per-cell noise sprinkles trees/shrubs/rocks within those patches;
+- a second broad noise layer biases local pockets toward trees, brush or rocks without creating a preferred diagonal/axis;
 - natural dressing stays clear of roads, driveways, active fields, building envelopes and the immediate town-center crossing;
 - the gas station, diner, intentionally vacant third commercial lot and ten existing residential/farmstead buildings remain the only building content.
 
-System 20 still owns no camera/render/art behavior. System 05 remains unchanged; explicit road-surface/paint semantics are materialized as physical ground facts.
+System 20 still owns no camera/render/art behavior. System 05 remains unchanged; explicit ground/prop semantics are materialized as physical world facts.
 
 ## System 21 camera truth
 
@@ -101,8 +103,8 @@ The live Web demo materializes the current System 20 Rural Crossroads candidate 
 
 ## Immediate next path
 
-1. Playtest/visually critique Candidate 002 road readability, road-network variation and clustered vegetation.
-2. Fix remaining System 20 rural morphology rules while preserving System 19 baselines.
+1. Playtest/visually critique Candidate 003 vegetation distribution and the preserved Candidate 002 road fixes.
+2. Fix remaining System 20 rural morphology/environment rules while preserving System 19 baselines.
 3. Once rural morphology is accepted, add new System 19 profiles freely as content or test another settlement/environment combination.
 4. Design Global World Planning / long-term streaming-save architecture only when the next world-scale requirement demands it.
 
