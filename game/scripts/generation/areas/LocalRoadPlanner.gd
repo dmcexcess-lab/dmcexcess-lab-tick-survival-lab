@@ -85,19 +85,20 @@ func _build_local_rural_spur(
         request.bounds.position.x + request.bounds.size.x / 2,
         request.bounds.position.y + request.bounds.size.y / 2
     )
-    var branch_side: int = -1 if Seed.choose_index(request.seed, "local_spur:horizontal_side:%d" % ordinal, 2) == 0 else 1
-    var vertical_side: int = -1 if Seed.choose_index(request.seed, "local_spur:vertical_side:%d" % ordinal, 2) == 0 else 1
+    var layout_flip: int = -1 if Seed.choose_index(request.seed, "local_roads:layout_flip", 2) == 0 else 1
+    var branch_side: int = (-1 if ordinal % 2 == 0 else 1) * layout_flip
+    var vertical_side: int = -1 if ordinal % 2 == 0 else 1
     var branch_offset: int = int(profile.get("local_spur_branch_offset", 64))
-    branch_offset += Seed.choose_index(request.seed, "local_spur:branch_jitter:%d" % ordinal, 9) - 4
+    branch_offset += Seed.choose_index(request.seed, "local_spur:branch_jitter:%d" % ordinal, 7) - 3
 
-    var first_leg: int = int(profile.get("local_spur_first_leg", 20))
+    var first_leg: int = int(profile.get("local_spur_first_leg", 36))
     first_leg += Seed.choose_index(request.seed, "local_spur:first_leg:%d" % ordinal, 7) - 3
-    var lateral_leg: int = int(profile.get("local_spur_lateral_leg", 20))
-    lateral_leg += Seed.choose_index(request.seed, "local_spur:lateral_leg:%d" % ordinal, 7) - 3
-    var second_leg: int = int(profile.get("local_spur_second_leg", 30))
+    var lateral_leg: int = int(profile.get("local_spur_lateral_leg", 44))
+    lateral_leg += Seed.choose_index(request.seed, "local_spur:lateral_leg:%d" % ordinal, 9) - 4
+    var second_leg: int = int(profile.get("local_spur_second_leg", 46))
     second_leg += Seed.choose_index(request.seed, "local_spur:second_leg:%d" % ordinal, 9) - 4
-    var tail_leg: int = int(profile.get("local_spur_tail_leg", 14))
-    tail_leg += Seed.choose_index(request.seed, "local_spur:tail_leg:%d" % ordinal, 5) - 2
+    var tail_leg: int = int(profile.get("local_spur_tail_leg", 28))
+    tail_leg += Seed.choose_index(request.seed, "local_spur:tail_leg:%d" % ordinal, 7) - 3
 
     var primary_start: Vector2i = primary.get("start", Vector2i.ZERO)
     var primary_end: Vector2i = primary.get("end", Vector2i.ZERO)
@@ -137,8 +138,8 @@ func _build_local_rural_spur(
         return {}
 
     return {
-        "road_id": "%s.road.local.farm_access.%02d" % [request.area_id, ordinal],
-        "road_class": &"farm_access",
+        "road_id": "%s.road.local.rural.%02d" % [request.area_id, ordinal],
+        "road_class": &"local_rural",
         "start": start,
         "end": finish,
         "width": width,
@@ -150,7 +151,7 @@ func _build_local_rural_spur(
         "allowed_boundary_cells": [],
         "surface_family": &"rural_gravel",
         "paint_centerline": false,
-        "parcel_frontage_enabled": false,
+        "parcel_frontage_enabled": true,
     }
 
 func _straight_corridor(path_cells: Array[Vector2i], axis: StringName, width: int) -> Array[Vector2i]:
