@@ -114,7 +114,8 @@ func _materialize_ground(plan: GeneratedAreaPlan) -> bool:
             for value: Variant in region.get("cells", []):
                 if typeof(value) != TYPE_VECTOR2I:
                     return false
-                if not _mutations.set_terrain(value as Vector2i, semantic):
+                var cell: Vector2i = value
+                if not _mutations.set_terrain(cell, semantic):
                     return false
     return true
 
