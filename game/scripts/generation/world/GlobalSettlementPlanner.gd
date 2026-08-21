@@ -2,11 +2,21 @@ extends RefCounted
 class_name GlobalSettlementPlanner
 
 const Seed = preload("res://scripts/generation/world/GlobalWorldSeed.gd")
+const GeographyQueryClass = preload("res://scripts/generation/world/GlobalGeographyQuery.gd")
 
-func plan(request: GlobalWorldGenerationRequest, profile: Dictionary) -> Dictionary:
+var _geography: GlobalGeographyQuery
+
+func _init() -> void:
+    _geography = GeographyQueryClass.new()
+
+func plan(
+    request: GlobalWorldGenerationRequest,
+    profile: Dictionary,
+    geography_cells: Array[Dictionary]
+) -> Dictionary:
     var settlements: Array[Dictionary] = []
     var area_sites: Array[Dictionary] = []
-    if request == null or not request.is_valid() or profile.is_empty():
+    if request == null or not request.is_valid() or profile.is_empty() or geography_cells.is_empty():
         return {"ok": false, "failure_reason": "invalid_settlement_planner_input", "settlements": settlements, "area_sites": area_sites}
 
     var minimum_size: Vector2i = profile.get("minimum_world_size", Vector2i.ZERO)
@@ -56,7 +66,7 @@ func plan(request: GlobalWorldGenerationRequest, profile: Dictionary) -> Diction
         int(profile.get("northeast_y_distance_max", 580))
     )
 
-    var centers: Array[Vector2i] = [
+    var desired_centers: Array[Vector2i] = [
         center,
         center + Vector2i(smalltown_distance, 0),
         center + Vector2i(0, -north_distance),
@@ -99,16 +109,34 @@ func plan(request: GlobalWorldGenerationRequest, profile: Dictionary) -> Diction
         &"rural.scattered",
     ]
 
-    for index in range(centers.size()):
-        var settlement_center: Vector2i = centers[index]
+    var occupied_centers: Array[Vector2i] = []
+    for index in range(desired_centers.size()):
+        var settlement_center: Vector2i = desired_centers[index]
+        if index > 0:
+            settlement_center = _snap_to_legal_geography(
+                desired_centers[index],
+                site_size,
+                request.bounds,
+                geography_cells,
+                profile,
+                occupied_centers
+            )
+            if settlement_center.x < -900000:
+                return {"ok": false, "failure_reason": "settlement_geography_unresolved", "settlements": settlements, "area_sites": area_sites}
+        elif not _geography.settlement_allowed(settlement_center, geography_cells):
+            return {"ok": false, "failure_reason": "central_settlement_geography_invalid", "settlements": settlements, "area_sites": area_sites}
+
         var site_rect: Rect2i = _centered_rect(settlement_center, site_size)
         if not _rect_inside(request.bounds, site_rect):
             return {"ok": false, "failure_reason": "settlement_site_out_of_bounds", "settlements": settlements, "area_sites": area_sites}
+
+        occupied_centers.append(settlement_center)
         var site_seed: int = request.seed if index == 0 else Seed.derive(request.seed, "area_site:%s" % site_ids[index])
         settlements.append({
             "id": settlement_ids[index],
             "kind": kinds[index],
             "center": settlement_center,
+            "desired_center": desired_centers[index],
             "influence_radius": influence_radii[index],
             "area_site_id": site_ids[index],
         })
@@ -122,6 +150,54 @@ func plan(request: GlobalWorldGenerationRequest, profile: Dictionary) -> Diction
         })
 
     return {"ok": true, "failure_reason": "", "settlements": settlements, "area_sites": area_sites}
+
+func _snap_to_legal_geography(
+    desired: Vector2i,
+    site_size: Vector2i,
+    world_bounds: Rect2i,
+    geography_cells: Array[Dictionary],
+    profile: Dictionary,
+    occupied_centers: Array[Vector2i]
+) -> Vector2i:
+    var desired_grid: Vector2i = _geography.grid_for_point(desired, geography_cells)
+    if desired_grid.x < -900000:
+        return Vector2i(-999999, -999999)
+    var search_radius: int = maxi(0, int(profile.get("settlement_geography_search_radius_cells", 4)))
+    var best_center := Vector2i(-999999, -999999)
+    var best_distance: int = 2147483647
+    var best_grid := Vector2i(2147483647, 2147483647)
+
+    for cell: Dictionary in geography_cells:
+        var grid: Vector2i = cell.get("grid", Vector2i(-999999, -999999))
+        var grid_distance: int = absi(grid.x - desired_grid.x) + absi(grid.y - desired_grid.y)
+        if grid_distance > search_radius:
+            continue
+        var landform: StringName = StringName(cell.get("landform", &""))
+        if landform != &"lowland" and landform != &"rolling":
+            continue
+        var candidate: Vector2i = _geography.cell_center(cell)
+        var site_rect: Rect2i = _centered_rect(candidate, site_size)
+        if not _rect_inside(world_bounds, site_rect):
+            continue
+        if _too_close_to_existing(candidate, occupied_centers):
+            continue
+        var distance: int = absi(candidate.x - desired.x) + absi(candidate.y - desired.y)
+        if distance < best_distance or (distance == best_distance and _grid_before(grid, best_grid)):
+            best_distance = distance
+            best_grid = grid
+            best_center = candidate
+    return best_center
+
+func _too_close_to_existing(candidate: Vector2i, existing: Array[Vector2i]) -> bool:
+    for center: Vector2i in existing:
+        var dx: int = candidate.x - center.x
+        var dy: int = candidate.y - center.y
+        if dx * dx + dy * dy < 160 * 160:
+            return true
+    return false
+
+func _grid_before(a: Vector2i, b: Vector2i) -> bool:
+    return a.y < b.y or (a.y == b.y and a.x < b.x)
 
 func _centered_rect(center: Vector2i, size: Vector2i) -> Rect2i:
     return Rect2i(center - Vector2i(size.x / 2, size.y / 2), size)
