@@ -1,5 +1,36 @@
 # Changelog
 
+## System 00D Global World Planning — Geography / Landform Slice 002 — 2026-08-21
+
+- Implemented the approved **System 00D Geography / Landform Slice 002** and bumped `temperate.rural.region` to **v2**.
+- Added a deterministic 128-cell coarse geography lattice to the canonical 1792×1792 regional fixture: **14×14 = 196 geography records** covering the complete global planning bounds.
+- Added planning elevation `0..100` and semantic `lowland`, `rolling`, `upland`, and `ridge` classes using deterministic mixed-coordinate value noise, bounded detail noise and seeded peak boosts.
+- Added `GlobalGeographyPlanner.gd` and read-only `GlobalGeographyQuery.gd`; pure System 00D remains independent of System 20, WHAT, renderer, camera, player and streaming owners.
+- Geography now exists **before settlements and major roads**. The central rural-crossroads anchor remains fixed, while non-central smalltown/hamlet anchors use bounded deterministic snapping to legal lowland/rolling geography.
+- Reworked outer major-road planning into deterministic four-neighbor geography routing: lowland is cheapest, rolling mildly penalized, upland strongly penalized, and ridge cells are forbidden. Generated named routes remain composed from cardinal global segments.
+- Added independent validation that geography fully tiles the world, settlements use legal landform, the major-road network remains connected, boundary gateways exist, and no major-road centerline crosses ridge geography.
+- Preserved `road.region.primary.001` and `road.region.secondary.001` as the stable protected central inherited-road IDs used by the Rural Crossroads System 20 fixture.
+- During integration, found that the original 384-cell protected half-span allowed the first coarse geography bend to begin inside an immediately adjacent 256×256 local window. Fixed the **global planner**, not the downstream adapter, by extending the protected straight-road half-span to **640 cells**. Geography-aware bends now begin beyond the center, all four adjacent critique windows, and one additional local-area width of safety.
+- Kept `System20AreaRequestProjector` strict: zero-length tangent contacts are ignored because no road actually enters the area, while substantial unsupported internal inherited-road geometry still fails honestly.
+- Proved the central global site still projects to the current Rural Crossroads inherited-road request; current System 20 Candidate 006 generates successfully from it, and west/east/north/south adjacent windows retain continuous shared primary/secondary road segments.
+- Preserved honest failure for future unsupported `smalltown.center` / `rural.scattered` local profiles rather than fabricating local content.
+- Slice 002 adds **no hydrology, bridges/tunnels, streaming, population, utilities, tactical elevation or world-map renderer**. Rivers/hydrology remain the next natural design extension rather than a placeholder hidden inside this slice.
+- Exact-head verification remains `verify/system00d-global-world`.
+
+## System 20 Rural Crossroads Candidate 006 — Road-Flush Commercial Paved Frontage — 2026-08-21
+
+- Responded to the live critique that the existing gas-station parking/forecourt was separated from the road by an unpaved strip, and generalized the user's rule: **a store with a real parking lot/forecourt frontage should have that pavement meet the road directly**.
+- Bumped `rural.crossroads` from v4 to **v5** because same-seed local property-ground output intentionally changed. `temperate.rural` remains v3.
+- Preserved Candidate 005 roads, parcel allocation, farms, close facade setbacks, primary-door alignment, straight frontage-normal approaches, fields and mixed-coordinate ecological noise.
+- Kept every finalized System 19 prefab source unchanged. There is **no gas-station archetype hardcode** in the new rule.
+- `BuildingPlacementPlanner` now reads public generated System 19 ground entries and recognizes `ground.parking*` only when those cells lie on the generated building/property footprint's actual road-facing edge.
+- Added standalone `CommercialPavedFrontagePlanner.gd`, which extends each qualifying parking edge straight to the road and uses the **same building-owned parking semantic** for the new apron cells.
+- The current gas station therefore extends its existing `ground.parking_faded` forecourt directly to the frontage road.
+- Diner, houses and other buildings without a qualifying road-facing parking semantic receive **no invented parking apron**. Candidate 004's earlier rule remains true: empty setback grass is not implicit parking.
+- Added real `parking_cells` only for generated paved frontage, reserved those cells from natural obstruction, and included the matching parking ground regions in normal System 20 materialization.
+- Expanded `LocalAreaGenerationSmoke.gd` across the critique seed plus twelve consecutive seeds to verify real parking exists where declared, every declared paved frontage reaches road edge continuously, no building without parking frontage gets an apron, and every apron is covered by its building-owned ground semantic.
+- No System 19 room/wall/door/archetype source, art asset/catalog, renderer, camera, player movement or door mechanic changed.
+
 ## System 00D Global World Planning — Regional Skeleton Slice 001 — 2026-08-20
 
 - Added the user-approved **System 00D Global World Planning** regional-skeleton slice before streaming/population work.
