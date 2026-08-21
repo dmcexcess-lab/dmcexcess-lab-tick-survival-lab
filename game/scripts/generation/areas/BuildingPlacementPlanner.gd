@@ -29,7 +29,7 @@ func place(request: AreaGenerationRequest, profile: Dictionary, parcels: Array[D
     var farmstead_offset: int = Seed.choose_index(request.seed, "building_selection:farmstead", farmstead_pool.size())
 
     for parcel: Dictionary in parcels:
-        var land_use: StringName = parcel.get("land_use", &"")
+        var land_use: StringName = StringName(parcel.get("land_use", &""))
         var archetype_id: StringName = &""
         match land_use:
             &"commercial_small":
@@ -52,7 +52,9 @@ func place(request: AreaGenerationRequest, profile: Dictionary, parcels: Array[D
         var placement: Dictionary = _place_one(request, profile, parcel, archetype_id)
         if not bool(placement.get("ok", false)):
             return {"ok": false, "failure_reason": String(placement.get("failure_reason", "building_placement_failed")), "building_requests": building_requests}
-        var built_request: BuildingGenerationRequest = placement.get("request")
+        var built_request: BuildingGenerationRequest = placement.get("request") as BuildingGenerationRequest
+        if built_request == null:
+            return {"ok": false, "failure_reason": "building_request_result_invalid", "building_requests": building_requests}
         building_requests.append(built_request)
         parcel["building_archetype_id"] = archetype_id
         parcel["building_envelope"] = built_request.envelope
@@ -80,13 +82,14 @@ func _place_one(
     var size: Vector2i = descriptor.required_size(orientation)
     var buildable: Rect2i = parcel.get("buildable_rect", Rect2i())
     var setback: int = _setback_for_land_use(profile, StringName(parcel.get("land_use", &"")))
-    var envelope: Rect2i = _envelope_for_access(buildable, size, frontage, parcel.get("parcel_access_cell", Vector2i(-1, -1)), setback)
+    var parcel_access: Vector2i = parcel.get("parcel_access_cell", Vector2i(-1, -1))
+    var envelope: Rect2i = _envelope_for_access(buildable, size, frontage, parcel_access, setback)
     if not _rect_inside(buildable, envelope):
         return {"ok": false, "failure_reason": "building_does_not_fit_parcel"}
 
     var instance_id: String = "%s.building.primary" % String(parcel.get("id", "parcel"))
     var building_seed: int = Seed.derive(area_request.seed, "building:%s" % String(parcel.get("id", "")))
-    var building_request := RequestClass.new(instance_id, archetype_id, building_seed, envelope, orientation, frontage)
+    var building_request: BuildingGenerationRequest = RequestClass.new(instance_id, archetype_id, building_seed, envelope, orientation, frontage)
     var plan: GeneratedBuildingPlan = _building_generator.generate(building_request)
     if not plan.is_generated():
         return {"ok": false, "failure_reason": "system19_generation_failed"}
@@ -122,21 +125,23 @@ func _envelope_for_access(
 ) -> Rect2i:
     if size.x <= 0 or size.y <= 0 or access.x < 0:
         return Rect2i()
-    var x: int = access.x - size.x / 2
-    var y: int = access.y - size.y / 2
+    var half_width: int = size.x / 2
+    var half_height: int = size.y / 2
+    var x: int = access.x - half_width
+    var y: int = access.y - half_height
     match frontage:
         Facing.Value.NORTH:
             y = buildable.position.y + setback
-            x = _clamp_origin(access.x - size.x / 2, buildable.position.x, buildable.position.x + buildable.size.x - size.x)
+            x = _clamp_origin(access.x - half_width, buildable.position.x, buildable.position.x + buildable.size.x - size.x)
         Facing.Value.SOUTH:
             y = buildable.position.y + buildable.size.y - size.y - setback
-            x = _clamp_origin(access.x - size.x / 2, buildable.position.x, buildable.position.x + buildable.size.x - size.x)
+            x = _clamp_origin(access.x - half_width, buildable.position.x, buildable.position.x + buildable.size.x - size.x)
         Facing.Value.WEST:
             x = buildable.position.x + setback
-            y = _clamp_origin(access.y - size.y / 2, buildable.position.y, buildable.position.y + buildable.size.y - size.y)
+            y = _clamp_origin(access.y - half_height, buildable.position.y, buildable.position.y + buildable.size.y - size.y)
         Facing.Value.EAST:
             x = buildable.position.x + buildable.size.x - size.x - setback
-            y = _clamp_origin(access.y - size.y / 2, buildable.position.y, buildable.position.y + buildable.size.y - size.y)
+            y = _clamp_origin(access.y - half_height, buildable.position.y, buildable.position.y + buildable.size.y - size.y)
     return Rect2i(Vector2i(x, y), size)
 
 func _clamp_origin(value: int, minimum: int, maximum: int) -> int:
