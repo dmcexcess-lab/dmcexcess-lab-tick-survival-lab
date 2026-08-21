@@ -1,8 +1,8 @@
 # Tick Survival Lab — System 00D Global World Planning
 
-Status: **IMPLEMENTED — REGIONAL SKELETON SLICE 001**
+Status: **SLICE 001 IMPLEMENTED — SLICE 002 APPROVED**
 
-Date: 2026-08-20
+Date: 2026-08-21
 
 ## 1. Goal
 
@@ -10,7 +10,8 @@ System 00D creates the deterministic **large-scale semantic plan** that must exi
 
 Its job is to answer global questions such as:
 
-- where are broad rural/settlement planning regions;
+- where are broad geography/landform facts;
+- where are rural/settlement planning regions;
 - where are settlements and rural crossroads;
 - which major roads connect them and cross the wider world;
 - which local planning sites should later be refined by System 20;
@@ -24,11 +25,11 @@ Canonical hierarchy:
 
 Streaming/storage remains a later consumer of this logical world plan, never its owner.
 
-## 2. Approved first implementation slice
+## 2. Slice 001 — regional skeleton
 
-Slice 001 implements one deterministic **temperate rural regional skeleton** large enough to prove the upstream/downstream contract without pretending to finish all world generation.
+Slice 001 implemented one deterministic **temperate rural regional skeleton** large enough to prove the upstream/downstream contract without pretending to finish all world generation.
 
-The slice contains:
+It contains:
 
 - one global planning request and pure generated plan;
 - broad rural + settlement influence regions;
@@ -39,9 +40,9 @@ The slice contains:
 - local-area site records with future System 20 profile hints;
 - a separate System 20 projection adapter;
 - deterministic validation and CI;
-- a hard integration proof that the accepted Rural Crossroads Candidate 005 can be produced from global facts without changing its local semantic signature.
+- a hard integration proof that the accepted Rural Crossroads local area can be produced from global facts without changing its local semantic signature.
 
-The current accepted rural crossroads is intentionally used as the Slice 001 integration anchor. The global fixture is centered so that the central 256x256 local site is exactly:
+The accepted rural crossroads is intentionally used as the integration anchor. The global fixture is centered so that the central 256x256 local site is exactly:
 
 `Rect2i(1000, 2000, 256, 256)`
 
@@ -59,15 +60,49 @@ and the projected request preserves:
 
 This is an integration anchor, not a permanent requirement that every future world contain this exact location.
 
-## 3. Non-goals
+## 3. Slice 002 — geography / landform constraints
 
-System 00D Slice 001 does **not** own or implement:
+Slice 002 is the user-approved next bounded System 00D extension.
+
+The purpose is to stop placing settlements and routing major roads across abstract empty space. The regional skeleton must now react to coarse physical landform facts while preserving the proven central System 20 integration anchor.
+
+### 3.1 Slice 002 adds
+
+- deterministic coarse **global geography cells** covering the full System 00D bounds;
+- an integer coarse elevation value and semantic landform class for each geography cell;
+- landform classes `lowland`, `rolling`, `upland`, and `ridge`;
+- one broad protected central lowland/rolling basin around the accepted rural-crossroads anchor so the existing local test remains stable;
+- settlement placement that starts from the Slice 001 desired anchors but snaps non-central settlements to nearby legal lowland/rolling geography;
+- major-road routing over the coarse geography lattice;
+- deterministic cardinal route segments that prefer lowland/rolling terrain, penalize upland, and refuse ridge cells;
+- a protected straight central road cross wide enough to preserve the accepted central System 20 request and the existing adjacent-window continuity proof;
+- independent validation that settlements occupy legal landform and that major-road centerlines do not cross ridge geography;
+- seed replay/variation tests proving geography, settlements and route topology are deterministic and terrain-constrained.
+
+### 3.2 Slice 002 deliberately does not add
+
+- rivers, lakes or hydrology;
+- detailed heightmaps or per-tactical-cell elevation;
+- slopes/physics or movement penalties;
+- bridges/tunnels;
+- utilities;
+- population;
+- streaming;
+- tactical rendering of the global geography;
+- local System 20 terrain overrides based on elevation.
+
+Hydrology is the next natural geography extension after this slice, but it is not faked here.
+
+## 4. Non-goals
+
+System 00D does **not** own or implement:
 
 - local/minor roads;
 - parcels, driveways, sidewalks or parking;
 - building envelopes/interiors/furniture;
 - local vegetation/clutter;
-- detailed elevation, rivers or hydrology;
+- detailed tactical elevation;
+- rivers/hydrology in Slice 002;
 - utilities/infrastructure beyond the major-road seam;
 - addresses;
 - households, businesses as social actors, population or jobs;
@@ -82,16 +117,18 @@ System 00D Slice 001 does **not** own or implement:
 
 Those remain future systems or downstream owners.
 
-## 4. Ownership / modules
+## 5. Ownership / modules
 
 Pure System 00D owners live under `game/scripts/generation/world/`:
 
-- `GlobalWorldSeed.gd` — stable named global sub-seeds;
+- `GlobalWorldSeed.gd` — stable named global sub-seeds and coordinate hashing;
 - `GlobalWorldGenerationRequest.gd` — caller world constraints;
 - `GeneratedGlobalWorldPlan.gd` — immutable-by-convention pure semantic result + signature;
 - `GlobalWorldProfileCatalog.gd` — global planning profiles/versions;
-- `GlobalSettlementPlanner.gd` — settlement anchors and local-area site intent;
-- `GlobalMajorRoadPlanner.gd` — major-road segment network;
+- `GlobalGeographyPlanner.gd` — coarse deterministic elevation/landform cells;
+- `GlobalGeographyQuery.gd` — read-only geography lookup and route/settlement suitability queries;
+- `GlobalSettlementPlanner.gd` — settlement anchors and local-area site intent constrained by geography;
+- `GlobalMajorRoadPlanner.gd` — geography-aware major-road route network;
 - `GlobalPlanningRegionPlanner.gd` — broad rural/settlement influence regions;
 - `GeneratedGlobalWorldValidator.gd` — generic full-plan correctness;
 - `GlobalWorldPlanner.gd` — coordinator only.
@@ -102,7 +139,7 @@ The narrow downstream adapter lives separately under `game/scripts/generation/in
 
 The adapter is not the owner of either system.
 
-## 5. Public contract
+## 6. Public contract
 
 ### `GlobalWorldGenerationRequest`
 
@@ -120,6 +157,7 @@ The request does not contain streaming/chunk size.
 Public semantic collections:
 
 - provenance: world ID, seed, bounds, profile ID/version;
+- `geography_cells: Array[Dictionary]`;
 - `regions: Array[Dictionary]`;
 - `settlements: Array[Dictionary]`;
 - `road_segments: Array[Dictionary]`;
@@ -129,9 +167,21 @@ Public semantic collections:
 
 All coordinates are canonical global `Vector2i`/`Rect2i` facts.
 
+### Geography-cell record
+
+Slice 002 records:
+
+- stable `id`;
+- coarse grid coordinate;
+- `rect` covering part of the global request bounds;
+- integer `elevation` in `0..100` as a planning value, not tactical physics;
+- semantic `landform` (`lowland`, `rolling`, `upland`, `ridge`).
+
+Geography cells tile the global bounds without overlap. Their size is profile-controlled and is a **planning resolution**, not a streaming partition size.
+
 ### Settlement record
 
-Slice 001 records:
+Records:
 
 - stable `id`;
 - semantic `kind` (`rural_crossroads`, `smalltown`, `rural_hamlet`);
@@ -139,23 +189,25 @@ Slice 001 records:
 - coarse influence radius;
 - associated local-area site ID where applicable.
 
+The central rural-crossroads center remains fixed for the integration anchor. Non-central desired anchors may move to a nearby legal geography cell through bounded deterministic search.
+
 A settlement is not yet a population, government or business simulation.
 
 ### Global road-segment record
 
-Slice 001 records:
+Records:
 
 - stable `road_id`;
 - semantic `road_class` (`primary` or `secondary`);
 - cardinal global `start` / `end`;
 - odd physical width;
-- optional route-family ID.
+- route-family ID.
 
-A road segment is a global topology edge. Named routes may later group many segments without changing the local clipping contract.
+A named route may contain several road segments. Slice 002 is allowed to bend routes around landform by composing multiple cardinal segments while preserving the existing local clipping contract.
 
 ### Planning-region record
 
-Slice 001 uses broad semantic influence regions:
+Uses broad semantic influence regions:
 
 - stable `id`;
 - `kind` (`rural_open`, `rural_crossroads`, `smalltown`, `rural_settlement`);
@@ -178,9 +230,9 @@ A site records a location that a later local planner may refine:
 
 A profile hint may name a future not-yet-implemented local profile. That is planning intent, not fake local content. The System 20 adapter must reject unsupported hints rather than fabricate a substitute.
 
-## 6. System 20 projection seam
+## 7. System 20 projection seam
 
-`System20AreaRequestProjector` is the only Slice 001 code allowed to import System 20 request/profile types.
+`System20AreaRequestProjector` remains the only System 00D-adjacent code allowed to import System 20 request/profile types.
 
 For a supported site it:
 
@@ -189,54 +241,97 @@ For a supported site it:
 3. preserves the global road segment's stable ID, class and width;
 4. marks only real clipped boundary endpoints as allowed boundary cells;
 5. constructs the existing `AreaGenerationRequest`;
-6. returns failure instead of inventing a local profile or silently dropping an unsupported global geometry case.
+6. returns failure instead of inventing a local profile or silently dropping unsupported global geometry.
 
 Pure files under `generation/world/` do not import System 20.
 
-Slice 001 deliberately keeps the central integration road segments straight through the accepted crossroads site so the current System 20 inherited-road contract can represent them exactly.
+Slice 002 preserves a straight protected central cross spanning the accepted center plus its immediately adjacent test windows. The central local site therefore continues to receive exactly one `road.region.primary.001` and one `road.region.secondary.001` constraint with the same IDs, widths and geometry as the accepted local baseline.
 
-## 7. Slice 001 regional profile
+Outside that protected cross, the named primary/secondary routes may contain additional deterministic segments to follow geography.
 
-Initial global profile:
+## 8. Temperate rural regional profile
 
-`temperate.rural.region` v1
+Profile:
 
-The profile produces a connected regional skeleton around the request center:
+`temperate.rural.region` v2
+
+The profile produces:
 
 - one central `rural_crossroads` settlement fixed to the request center;
-- one `smalltown` anchor along the primary regional corridor;
-- multiple `rural_hamlet` anchors on secondary corridors;
-- one boundary-to-boundary primary corridor;
-- one boundary-to-boundary secondary corridor;
-- additional secondary branches connecting off-axis hamlets;
+- one `smalltown` desired anchor generally east of center;
+- multiple `rural_hamlet` desired anchors;
+- a coarse geography lattice across the whole region;
+- a protected central basin/cross around the local integration anchor;
+- settlement snapping to nearby lowland/rolling geography;
+- one connected primary route and secondary route family;
+- geography-aware secondary branches connecting off-axis hamlets;
 - broad `rural_open` background plus settlement influence regions.
 
-Non-central settlement distances/branch positions vary deterministically by seed while respecting bounded spacing and world edges.
+Non-central settlement desired positions and geography vary deterministically by seed. There are no unbounded reroll loops.
 
-There are no unbounded reroll loops.
+## 9. Geography generation rules
 
-## 8. Determinism / identity
+1. Geography is generated before settlements and roads.
+2. Coarse cells are aligned to the global request bounds, not to streaming partitions.
+3. Elevation comes from deterministic mixed-coordinate 2D value noise plus a smaller secondary noise component.
+4. Elevation is clamped into `0..100`.
+5. Landform bands are profile thresholds over elevation.
+6. Cells intersecting the protected central integration basin/cross are capped to lowland/rolling terrain so the accepted crossroads road geometry remains legal.
+7. Same request + profile version yields identical geography.
+8. Different seeds alter geography outside the protected integration anchor.
+
+## 10. Settlement geography rules
+
+1. The central rural crossroads remains exactly at the global request center.
+2. Its site bounds remain exactly the accepted System 20 integration bounds.
+3. Other settlement roles first compute the same semantic desired direction/distance as Slice 001.
+4. Each non-central settlement performs a bounded search over nearby geography cells.
+5. Settlement-legal cells are `lowland` or `rolling` only.
+6. Selection minimizes distance from the desired anchor, with deterministic ID/grid-coordinate tie-breaking.
+7. The resulting 256x256 local site must still fit inside global bounds.
+8. No reroll loops are permitted.
+
+## 11. Major-road geography rules
+
+1. Roads remain semantic cardinal global segments.
+2. Named routes may contain multiple segments.
+3. Routing uses the coarse geography lattice only; it does not materialize tactical cells.
+4. `lowland` is cheapest, `rolling` mildly penalized, `upland` strongly penalized, and `ridge` is forbidden for Slice 002 roads.
+5. Route search is deterministic four-neighbor A* / equivalent bounded graph search over the coarse geography lattice.
+6. Route path cells are converted into cardinal tactical-coordinate segments and collinear sections are merged.
+7. The central protected primary and secondary segments are emitted first with their existing stable IDs.
+8. Geography-aware outer route segments connect those protected segments to boundary gateways and settlement anchors.
+9. Every settlement center lies on at least one major-road segment.
+10. All road segments belong to one connected network.
+11. Real boundary gateways remain present.
+12. No bridge/tunnel exception exists in Slice 002; ridge crossings are validation failures.
+
+## 12. Determinism / identity
 
 Same request + profile version must produce the same plan signature.
 
-Different seeds must change at least some non-central settlement/branch geometry while keeping all validation rules true.
+Different seeds must change at least some geography plus non-central settlement/route geometry while keeping all validation rules true.
 
 Named global sub-seeds isolate unrelated planning domains.
 
-Stable IDs derive from semantic role/ordinal, never array address, Node identity or renderer state.
+Stable IDs derive from semantic role/route/ordinal, never array address, Node identity or renderer state.
 
 Intentional same-seed output changes require a global-profile version bump.
 
-## 9. Validation
+## 13. Validation
 
 `GeneratedGlobalWorldValidator` must independently verify:
 
 - provenance;
-- all stable IDs are non-empty and unique within their namespace/plan;
+- all stable IDs are non-empty and unique within the plan;
+- geography cells tile the global bounds without overlap/gaps;
+- geography elevations are `0..100` and landform values are valid;
 - regions/sites are inside global bounds;
 - settlements are inside bounds and not collapsed onto one another;
+- non-central settlements occupy lowland/rolling geography;
 - all major-road segments are non-zero cardinal lines with odd width;
 - road endpoints are inside bounds;
+- major-road centerlines do not intersect `ridge` geography;
 - the road-segment network is connected;
 - every settlement center lies on a global major-road segment;
 - every non-boundary road endpoint is justified by a settlement or intersection with another road segment;
@@ -246,24 +341,26 @@ Intentional same-seed output changes require a global-profile version bump.
 
 The validator owns correctness, not generation strategy.
 
-## 10. Slice 001 acceptance tests
+## 14. Slice 002 acceptance tests
 
 Dedicated CI must prove:
 
-1. same-seed deterministic replay;
-2. different-seed legal variation;
-3. central rural crossroads site exactly matches the accepted Candidate 005 bounds/ID/seed/profile hints;
-4. global central primary/secondary road segments clip to the exact current Candidate 005 inherited-road constraints;
-5. projected central `AreaGenerationRequest` is semantically identical to `RuralCrossroadsPlanFixture.request(20001)`;
-6. existing System 20 generates the projected request successfully;
-7. its resulting semantic signature equals the current Candidate 005 signature from the existing fixture request;
-8. adjacent arbitrary projection windows observe matching shared boundary crossings from the same global road segments;
-9. all settlements connect through one global major-road network;
-10. boundary gateways are preserved;
-11. unsupported future local-profile sites fail projection honestly;
-12. pure 00D source imports no System 19/20, WHAT mutation, renderer, camera, UI, player, streaming or reboot owner.
+1. same-seed deterministic replay including geography;
+2. different-seed legal geography variation outside the protected central anchor;
+3. geography cells fully tile the global bounds;
+4. the world contains multiple landform classes rather than one flat label;
+5. all non-central settlements occupy lowland/rolling cells;
+6. at least one outer major route bends for the canonical seed rather than every road remaining one straight axis;
+7. no major-road centerline crosses a ridge cell;
+8. the major-road network remains connected and exposes boundary gateways;
+9. the central rural-crossroads site exactly preserves the accepted local bounds/ID/seed/profile hints;
+10. projected central `AreaGenerationRequest` remains semantically identical to `RuralCrossroadsPlanFixture.request(20001)`;
+11. System 20 still generates the projected request successfully and matches the current accepted local fixture signature;
+12. adjacent central projection windows still observe continuous shared `road.region.primary.001` / `road.region.secondary.001` segments;
+13. unsupported future local-profile sites still fail projection honestly;
+14. pure 00D source imports no System 19/20, WHAT mutation, renderer, camera, UI, player, streaming or reboot owner.
 
-## 11. Data ownership
+## 15. Data ownership
 
 System 00D owns only the generated **initial global plan**.
 
@@ -271,21 +368,21 @@ It does not mutate WHAT and does not own later runtime changes.
 
 Future save/world-creation orchestration may persist the generated global plan as immutable world provenance or reconstruct it deterministically, but gameplay never asks System 00D to overwrite a location already owned by persistent world state.
 
-## 12. Performance
+## 16. Performance
 
-Slice 001 operates on a small number of semantic records, not every tactical cell in the world.
+Slice 002 remains coarse planning.
 
-Roads are line segments, settlements are points, regions/sites are rectangles. No per-frame work exists.
+For the canonical regional fixture, geography is a small lattice (hundreds of cells, not millions of tactical cells). Route search runs only at world creation and uses bounded deterministic graph work. No per-frame work exists.
 
-Future much larger worlds must preserve this coarse-plan property; global planning must not require materializing every tactical cell merely to know where towns and highways are.
+Future much larger worlds must preserve this coarse-plan property; global planning must not require materializing every tactical cell merely to know where towns, ridges and highways are.
 
-## 13. Safari/mobile
+## 17. Safari/mobile
 
-No direct input/UI exists in Slice 001.
+No direct input/UI exists in Slice 002.
 
-The system must remain presentation-free so mobile performance is affected only when a later viewer or materializer consumes its output.
+The system remains presentation-free so mobile performance is affected only when a later viewer or materializer consumes its output.
 
-## 14. Forbidden dependencies
+## 18. Forbidden dependencies
 
 Pure `generation/world/` code must not import:
 
@@ -300,14 +397,14 @@ Pure `generation/world/` code must not import:
 
 Only the separate System 20 projection adapter may import the public System 20 request/profile contract.
 
-## 15. Future extension seams
+## 19. Future extension seams
 
-Without rewriting the Slice 001 plan contract, later 00D work may add focused owners/records for:
+Without rewriting the Slice 002 plan contract, later 00D work may add focused owners/records for:
 
-- geography/elevation/biomes;
-- rivers/hydrology;
+- rivers/hydrology and bridge crossing intent;
+- richer biome/climate facts;
 - richer settlement hierarchy/districts;
-- road-route grouping and more varied cardinal topology;
+- road-route grouping refinements;
 - utilities/infrastructure;
 - zoning/addresses;
 - world-scale land-use constraints.
@@ -322,35 +419,36 @@ Downstream future systems may consume the global plan for:
 
 Those consumers must not move ownership of global coherence out of 00D.
 
-## 16. North-star fit
+## 20. North-star fit
 
-The North Star requires one logically continuous persistent world whose major roads/infrastructure are globally coherent before local detail or streaming boundaries are considered.
+The North Star requires top-down generation to establish geography before settlements/roads/local detail and requires roads/infrastructure to be globally coherent before streaming boundaries are considered.
 
-System 00D provides exactly that upstream semantic truth while remaining small enough to replace independently. It does not build a strategic-map game layer, does not reintroduce raid maps, and does not confuse planning regions with streaming chunks.
+Slice 002 advances exactly that hierarchy: coarse physical landform becomes upstream truth, settlements react to it, and major roads route through it. The slice stays deliberately simpler than a terrain simulator because its purpose is to preserve believable world-scale constraints and future consequences, not to simulate geology.
 
-## 17. Approved decisions
+## 21. Approved decisions
 
-Approved by the user on 2026-08-20:
+Approved by the user on 2026-08-21:
 
-1. System 20 Candidate 005 is accepted enough to stop polishing the isolated rural test and move upstream.
-2. Global World Planning is the next major system before streaming.
-3. The first implementation slice is a deterministic regional skeleton: settlements/rural regions + coherent major roads + System 20 projection seam.
-4. No streaming, population, utilities, outbreak or new local building content is bundled into Slice 001.
-5. The accepted Candidate 005 rural crossroads is used as a hard integration anchor so global planning extends the world around proven local work rather than invalidating it.
+1. System 00D remains the active major system before streaming.
+2. Slice 002 adds coarse deterministic elevation/landform constraints before richer global topology.
+3. Settlement placement and major-road routing must react to those landforms.
+4. Rivers/hydrology are deferred rather than faked inside Slice 002.
+5. The accepted central rural crossroads remains the protected local integration anchor while the larger world becomes geography-aware.
+6. In parallel as a small System 20 refinement, a commercial prefab whose real road-facing edge is parking/paved frontage must have that paved frontage meet the road directly; this does not authorize a System 19 prefab rewrite.
 
-## 18. Implementation result
+## 22. Slice 001 implementation result
 
 Slice 001 is implemented and independently verified.
 
-Current canonical fixture:
+Current canonical fixture before Slice 002:
 
 - world bounds `Rect2i(232,1232,1792,1792)`;
 - world seed `20001`;
 - five settlement anchors: one rural crossroads, one smalltown, three rural hamlets;
-- one connected primary/secondary regional-road network with four global road segments and real boundary gateways;
+- one connected primary/secondary regional-road network;
 - one broad rural-open background plus five settlement influence regions;
 - five local-area site records.
 
-The central site projects through `System20AreaRequestProjector` into an `AreaGenerationRequest` semantically identical to the existing Candidate 005 fixture request. System 20 then produces the exact same Candidate 005 semantic plan signature. Adjacent projection windows preserve continuous shared primary/secondary road crossings.
+The central site projects through `System20AreaRequestProjector` into an `AreaGenerationRequest` semantically identical to the existing accepted rural-crossroads fixture request. Adjacent central projection windows preserve continuous shared primary/secondary road crossings.
 
 Dedicated exact-head context: `verify/system00d-global-world`.
