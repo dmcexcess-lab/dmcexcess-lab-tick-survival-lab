@@ -4,6 +4,7 @@ const GlobalFixtureClass = preload("res://scripts/demo/GlobalWorldPlanFixture.gd
 const GlobalPlannerClass = preload("res://scripts/generation/world/GlobalWorldPlanner.gd")
 const GlobalValidatorClass = preload("res://scripts/generation/world/GeneratedGlobalWorldValidator.gd")
 const GeographyQueryClass = preload("res://scripts/generation/world/GlobalGeographyQuery.gd")
+const HydrologyQueryClass = preload("res://scripts/generation/world/GlobalHydrologyQuery.gd")
 const ProjectorClass = preload("res://scripts/generation/integration/System20AreaRequestProjector.gd")
 const LocalFixtureClass = preload("res://scripts/demo/RuralCrossroadsPlanFixture.gd")
 const LocalGeneratorClass = preload("res://scripts/generation/areas/LocalAreaGenerator.gd")
@@ -20,6 +21,7 @@ func _initialize() -> void:
     _test_global_candidate(planner, validator, request, plan)
     _test_system20_projection(projector, plan)
     _test_adjacent_road_projection(projector, plan)
+    _test_hydrology_projection(projector, plan)
 
     if failures.is_empty():
         print("GLOBAL_WORLD_PLANNING_SMOKE_OK")
@@ -35,27 +37,34 @@ func _test_global_candidate(
     request: GlobalWorldGenerationRequest,
     plan: GeneratedGlobalWorldPlan
 ) -> void:
-    _check(request.is_valid(), "Slice 002 request is valid")
-    _check(plan.is_generated(), "Slice 002 geography-aware global world plan generates")
+    _check(request.is_valid(), "Slice 003 request is valid")
+    _check(plan.is_generated(), "Slice 003 hydrology-aware global world plan generates")
     if not plan.is_generated():
         return
 
-    _check(bool(validator.validate(request, plan).get("ok", false)), "Slice 002 passes independent global validation")
-    _check(plan.profile_version == 2, "temperate.rural.region v2 is recorded")
+    _check(bool(validator.validate(request, plan).get("ok", false)), "Slice 003 passes independent global validation")
+    _check(plan.profile_version == 3, "temperate.rural.region v3 is recorded")
     _check(plan.bounds == GlobalFixtureClass.BOUNDS, "global fixture keeps approved bounds")
     _check(plan.geography_cells.size() == 196, "128-cell geography lattice tiles the 1792x1792 fixture with 14x14 cells")
     _check(_geography_area(plan) == plan.bounds.size.x * plan.bounds.size.y, "coarse geography covers every global planning cell exactly by area")
     _check(_landform_class_count(plan) >= 3, "regional geography contains multiple meaningful landform classes")
     _check(_count_landform(plan, &"ridge") > 0, "regional geography includes real ridge constraints")
     _check(_all_settlements_use_legal_landform(plan), "all settlement anchors occupy lowland or rolling geography")
-    _check(_no_major_road_crosses_ridge(plan), "major roads route around ridge geography")
-    _check(_at_least_one_route_bends(plan), "canonical outer road topology bends through geography rather than remaining only straight axes")
+    _check(_no_major_road_crosses_ridge(plan), "major roads still route around ridge geography")
+    _check(_at_least_one_route_bends(plan), "canonical outer road topology still bends through geography")
+
+    _check(not plan.river_segments.is_empty(), "regional plan contains a real primary river")
+    _check(_river_route_is_boundary_to_boundary(plan), "primary river is one connected boundary-to-boundary route")
+    _check(_all_sites_clear_river(plan, 16), "all settlement sites clear the river corridor")
+    _check(_no_road_river_collinear_overlap(plan), "major roads never run collinearly along river centerline")
+    _check(not plan.bridge_intents.is_empty(), "topologically unavoidable road/river crossing produces bridge intent")
+    _check(_bridge_intents_match_crossings(plan), "every road/river crossing has exactly one real bridge intent")
 
     _check(plan.settlements.size() == 5, "regional skeleton still contains five settlement anchors")
     _check(_count_settlement_kind(plan, &"rural_crossroads") == 1, "regional skeleton contains one central rural crossroads")
     _check(_count_settlement_kind(plan, &"smalltown") == 1, "regional skeleton contains one small-town anchor")
     _check(_count_settlement_kind(plan, &"rural_hamlet") == 3, "regional skeleton contains three rural hamlets")
-    _check(plan.road_segments.size() > 4, "geography-aware routes may compose multiple cardinal segments")
+    _check(plan.road_segments.size() > 4, "geography/hydrology-aware routes may compose multiple cardinal segments")
     _check(_count_road_class(plan, &"primary") >= 3, "primary route spans the protected center and outer geography")
     _check(_count_road_class(plan, &"secondary") >= 5, "secondary network connects gateways and rural settlements")
     _check(plan.regions.size() == 6, "broad rural background plus five settlement influence regions remain recorded")
@@ -80,15 +89,18 @@ func _test_global_candidate(
         _check(_segment_covers_rect_axis(central_secondary, LocalFixtureClass.BOUNDS, &"vertical"), "protected secondary spans the complete accepted local window")
 
     var replay: GeneratedGlobalWorldPlan = planner.generate(GlobalFixtureClass.request(GlobalFixtureClass.SEED))
-    _check(replay.is_generated() and replay.signature() == plan.signature(), "same global request and seed replay geography/settlements/routes identically")
+    _check(replay.is_generated() and replay.signature() == plan.signature(), "same global request and seed replay geography/hydrology/roads identically")
     var alternate: GeneratedGlobalWorldPlan = planner.generate(GlobalFixtureClass.request(GlobalFixtureClass.SEED + 1))
     _check(alternate.is_generated(), "alternate global seed still generates legally")
     if alternate.is_generated():
         _check(_geography_signature(alternate) != _geography_signature(plan), "different global seed changes geography outside the protected anchor")
+        _check(_river_signature(alternate) != _river_signature(plan), "different global seed changes legal hydrology")
         var alternate_central: Dictionary = _site_by_id(alternate, GlobalFixtureClass.CENTRAL_SITE_ID)
         _check(alternate_central.get("bounds", Rect2i()) == LocalFixtureClass.BOUNDS, "seed variation does not move protected central integration bounds")
         _check(_all_settlements_use_legal_landform(alternate), "alternate seed still places settlements on legal geography")
+        _check(_all_sites_clear_river(alternate, 16), "alternate seed settlements still clear rivers")
         _check(_no_major_road_crosses_ridge(alternate), "alternate seed roads still avoid ridges")
+        _check(_bridge_intents_match_crossings(alternate), "alternate seed bridge intents still exactly cover crossings")
 
 func _test_system20_projection(projector: System20AreaRequestProjector, plan: GeneratedGlobalWorldPlan) -> void:
     if not plan.is_generated():
@@ -99,15 +111,15 @@ func _test_system20_projection(projector: System20AreaRequestProjector, plan: Ge
     if projected_request == null:
         return
     var baseline_request: AreaGenerationRequest = LocalFixtureClass.request(LocalFixtureClass.SEED)
-    _check(_area_request_signature(projected_request) == _area_request_signature(baseline_request), "geography-aware global projection remains semantically identical to the accepted local request")
+    _check(_area_request_signature(projected_request) == _area_request_signature(baseline_request), "hydrology-aware global projection leaves Candidate 006 request unchanged")
 
     var local_generator: LocalAreaGenerator = LocalGeneratorClass.new()
     var projected_plan: GeneratedAreaPlan = local_generator.generate(projected_request)
     var baseline_plan: GeneratedAreaPlan = local_generator.generate(baseline_request)
-    _check(projected_plan.is_generated(), "System 20 generates from geography-aware global inherited-road facts")
+    _check(projected_plan.is_generated(), "System 20 generates from hydrology-aware global inherited-road facts")
     _check(baseline_plan.is_generated(), "current rural-crossroads baseline still generates")
     if projected_plan.is_generated() and baseline_plan.is_generated():
-        _check(projected_plan.signature() == baseline_plan.signature(), "global geography preserves exact current local semantic output")
+        _check(projected_plan.signature() == baseline_plan.signature(), "global hydrology preserves exact current local semantic output")
         _check(projected_plan.area_profile_version == 5, "projected local area uses current rural.crossroads v5")
 
     var unsupported_result: Dictionary = projector.project_site(plan, "area.smalltown.center.001")
@@ -159,6 +171,94 @@ func _test_adjacent_road_projection(projector: System20AreaRequestProjector, pla
         var center_end: Vector2i = center_secondary.get("end", Vector2i.ZERO)
         var south_start: Vector2i = south_secondary.get("start", Vector2i.ZERO)
         _check(center_end + Vector2i(0, 1) == south_start, "center and south windows preserve adjacent cells on one continuous secondary road")
+
+func _test_hydrology_projection(projector: System20AreaRequestProjector, plan: GeneratedGlobalWorldPlan) -> void:
+    if not plan.is_generated():
+        return
+    var center_bounds: Rect2i = LocalFixtureClass.BOUNDS
+    var protected_windows: Array[Rect2i] = [
+        center_bounds,
+        Rect2i(center_bounds.position.x - center_bounds.size.x, center_bounds.position.y, center_bounds.size),
+        Rect2i(center_bounds.position.x + center_bounds.size.x, center_bounds.position.y, center_bounds.size),
+        Rect2i(center_bounds.position.x, center_bounds.position.y - center_bounds.size.y, center_bounds.size),
+        Rect2i(center_bounds.position.x, center_bounds.position.y + center_bounds.size.y, center_bounds.size),
+    ]
+    for bounds: Rect2i in protected_windows:
+        var result: Dictionary = projector.hydrology_constraints_for_bounds(plan, bounds)
+        _check(bool(result.get("ok", false)), "protected hydrology projection succeeds")
+        _check((result.get("rivers", []) as Array).is_empty(), "protected Candidate 006/adjacent window contains no river")
+        _check((result.get("bridges", []) as Array).is_empty(), "protected Candidate 006/adjacent window contains no bridge intent")
+
+    if plan.bridge_intents.is_empty():
+        return
+    var crossing: Vector2i = plan.bridge_intents[0].get("cell", Vector2i.ZERO)
+    var outer_window: Rect2i = _window_around_cell(plan.bounds, crossing, Vector2i(256, 256))
+    var outer_result: Dictionary = projector.hydrology_constraints_for_bounds(plan, outer_window)
+    _check(bool(outer_result.get("ok", false)), "outer bridge hydrology projection succeeds")
+    _check(not (outer_result.get("rivers", []) as Array).is_empty(), "outer bridge window exposes clipped global river facts")
+    _check(not (outer_result.get("bridges", []) as Array).is_empty(), "outer bridge window exposes explicit bridge intent")
+
+func _river_route_is_boundary_to_boundary(plan: GeneratedGlobalWorldPlan) -> bool:
+    if plan.river_segments.is_empty():
+        return false
+    var previous_end := Vector2i(-999999, -999999)
+    for index in range(plan.river_segments.size()):
+        var segment: Dictionary = plan.river_segments[index]
+        if int(segment.get("ordinal", 0)) != index + 1:
+            return false
+        var start: Vector2i = segment.get("start", Vector2i.ZERO)
+        var finish: Vector2i = segment.get("end", Vector2i.ZERO)
+        if start == finish or (start.x != finish.x and start.y != finish.y):
+            return false
+        if index > 0 and start != previous_end:
+            return false
+        previous_end = finish
+    return _is_boundary_cell(plan.bounds, plan.river_segments[0].get("start", Vector2i.ZERO)) \
+        and _is_boundary_cell(plan.bounds, plan.river_segments[plan.river_segments.size() - 1].get("end", Vector2i.ZERO))
+
+func _all_sites_clear_river(plan: GeneratedGlobalWorldPlan, clearance: int) -> bool:
+    var query: GlobalHydrologyQuery = HydrologyQueryClass.new()
+    for site: Dictionary in plan.area_sites:
+        if not query.rect_clear_of_rivers(site.get("bounds", Rect2i()), plan.river_segments, clearance):
+            return false
+    return true
+
+func _no_road_river_collinear_overlap(plan: GeneratedGlobalWorldPlan) -> bool:
+    var query: GlobalHydrologyQuery = HydrologyQueryClass.new()
+    for road: Dictionary in plan.road_segments:
+        for river: Dictionary in plan.river_segments:
+            if query.collinear_overlap_length(road, river) > 0:
+                return false
+    return true
+
+func _bridge_intents_match_crossings(plan: GeneratedGlobalWorldPlan) -> bool:
+    var query: GlobalHydrologyQuery = HydrologyQueryClass.new()
+    var crossings: Dictionary = {}
+    for road: Dictionary in plan.road_segments:
+        for river: Dictionary in plan.river_segments:
+            if query.collinear_overlap_length(road, river) > 0:
+                return false
+            var cell: Vector2i = query.perpendicular_crossing(road, river)
+            if cell.x < -900000:
+                continue
+            crossings[_bridge_key(String(road.get("route_id", "")), String(river.get("river_id", "")), cell)] = true
+    if crossings.is_empty():
+        return false
+    var bridge_counts: Dictionary = {}
+    for bridge: Dictionary in plan.bridge_intents:
+        var key: String = _bridge_key(
+            String(bridge.get("route_id", "")),
+            String(bridge.get("river_id", "")),
+            bridge.get("cell", Vector2i.ZERO)
+        )
+        bridge_counts[key] = int(bridge_counts.get(key, 0)) + 1
+    for key_value: Variant in crossings.keys():
+        if int(bridge_counts.get(key_value, 0)) != 1:
+            return false
+    for key_value: Variant in bridge_counts.keys():
+        if not crossings.has(key_value) or int(bridge_counts[key_value]) != 1:
+            return false
+    return true
 
 func _geography_area(plan: GeneratedGlobalWorldPlan) -> int:
     var total: int = 0
@@ -251,6 +351,14 @@ func _geography_signature(plan: GeneratedGlobalWorldPlan) -> String:
         ])
     return "|".join(parts)
 
+func _river_signature(plan: GeneratedGlobalWorldPlan) -> String:
+    var parts := PackedStringArray()
+    for river: Dictionary in plan.river_segments:
+        var start: Vector2i = river.get("start", Vector2i.ZERO)
+        var finish: Vector2i = river.get("end", Vector2i.ZERO)
+        parts.append("%s:%d,%d>%d,%d" % [String(river.get("segment_id", "")), start.x, start.y, finish.x, finish.y])
+    return "|".join(parts)
+
 func _count_settlement_kind(plan: GeneratedGlobalWorldPlan, kind: StringName) -> int:
     var count: int = 0
     for settlement: Dictionary in plan.settlements:
@@ -282,8 +390,25 @@ func _road_by_id(road_values: Variant, road_id: String) -> Dictionary:
             return road
     return {}
 
+func _bridge_key(route_id: String, river_id: String, cell: Vector2i) -> String:
+    return "%s|%s|%d,%d" % [route_id, river_id, cell.x, cell.y]
+
+func _window_around_cell(world_bounds: Rect2i, cell: Vector2i, size: Vector2i) -> Rect2i:
+    var x: int = cell.x - size.x / 2
+    var y: int = cell.y - size.y / 2
+    x = clampi(x, world_bounds.position.x, world_bounds.position.x + world_bounds.size.x - size.x)
+    y = clampi(y, world_bounds.position.y, world_bounds.position.y + world_bounds.size.y - size.y)
+    return Rect2i(Vector2i(x, y), size)
+
 func _ranges_overlap(a_min: int, a_max: int, b_min: int, b_max: int) -> bool:
     return a_min <= b_max and b_min <= a_max
+
+func _is_boundary_cell(rect: Rect2i, cell: Vector2i) -> bool:
+    if not rect.has_point(cell):
+        return false
+    var max_x: int = rect.position.x + rect.size.x - 1
+    var max_y: int = rect.position.y + rect.size.y - 1
+    return cell.x == rect.position.x or cell.x == max_x or cell.y == rect.position.y or cell.y == max_y
 
 func _area_request_signature(request: AreaGenerationRequest) -> String:
     var parts := PackedStringArray()
