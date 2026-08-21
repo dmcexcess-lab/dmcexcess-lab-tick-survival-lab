@@ -33,6 +33,7 @@ jobs:
           test -f game/scripts/generation/areas/ParcelPlanner.gd
           test -f game/scripts/generation/areas/ParcelAccessPlanner.gd
           test -f game/scripts/generation/areas/BuildingPlacementPlanner.gd
+          test -f game/scripts/generation/areas/CommercialPavedFrontagePlanner.gd
           test -f game/scripts/generation/areas/OutdoorPropertyDressingPlanner.gd
           test -f game/scripts/generation/areas/GeneratedAreaValidator.gd
           test -f game/scripts/generation/areas/LocalAreaGenerator.gd
