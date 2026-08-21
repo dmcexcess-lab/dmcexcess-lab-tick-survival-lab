@@ -1,6 +1,6 @@
 # Tick Survival Lab — System 00D Global World Planning
 
-Status: **SLICE 001 + SLICE 002 + SLICE 003 IMPLEMENTED**
+Status: **SLICES 001–004 IMPLEMENTED**
 
 Date: 2026-08-21
 
@@ -10,11 +10,11 @@ System 00D owns deterministic **large-scale semantic world truth** before local 
 
 Canonical hierarchy:
 
-`world seed -> geography -> hydrology -> settlements/regions -> major roads + infrastructure intent -> System 20 local area -> System 19 buildings -> initial WHAT -> persistent runtime mutation`
+`world seed -> geography -> hydrology -> settlements/regions -> major roads + bridge intent -> regional infrastructure -> System 20 local area -> System 19 buildings -> initial WHAT -> persistent runtime mutation`
 
 System 00D is pure planning. It never materializes WHAT and never owns rendering, camera, local building layout or streaming partitions.
 
-## 2. Current implemented slices
+## 2. Implemented slices
 
 ### Slice 001 — Regional Skeleton
 
@@ -38,7 +38,7 @@ Added:
 - settlement placement limited to lowland/rolling geography;
 - geography-aware cardinal major-road routing;
 - lowland preference, rolling penalty, upland strong penalty, ridge prohibition;
-- protected central lowland/rolling cross with `protected_cross_half_span = 640`, keeping geography-aware bends outside the accepted center and its immediately adjacent 256×256 planning windows.
+- protected central lowland/rolling cross with `protected_cross_half_span = 640`, keeping geography-aware bends outside the accepted center and immediately adjacent 256×256 planning windows.
 
 ### Slice 003 — Global Hydrology / Bridge Intent
 
@@ -52,12 +52,27 @@ Added:
 - prohibition on roads running collinearly along river centerlines;
 - explicit global bridge-intent records for every real perpendicular road/river crossing;
 - independent validation that crossings and bridge intents correspond exactly;
-- read-only `System20AreaRequestProjector.hydrology_constraints_for_bounds()` seam for future local hydrology work;
+- read-only `System20AreaRequestProjector.hydrology_constraints_for_bounds()` seam;
 - preserved Candidate 006 and its four immediately adjacent protected windows as hydrology-free integration anchors.
+
+### Slice 004 — Regional Electrical Infrastructure
+
+Detailed design: `00D4_GLOBAL_ELECTRICAL_INFRASTRUCTURE.md`.
+
+Added:
+
+- one deterministic regional electrical-grid ingress at a real road boundary gateway;
+- one small-town-associated substation/distribution hub;
+- one settlement service node for each of the five current settlements;
+- one connected regional feeder network derived from the already valid major-road graph;
+- feeder segments that carry stable source-road/source-route provenance rather than inventing independent off-road utility geometry;
+- independent `GlobalPowerInfrastructureValidator` proof of one ingress, one substation, complete settlement service, road containment, ridge avoidance, boundary discipline and connectivity;
+- read-only `System20AreaRequestProjector.power_constraints_for_bounds()` seam;
+- Candidate 006 local request/materialization/render output unchanged: global power facts are queryable but tactical poles/wires/electricity are not faked.
 
 ## 3. Current canonical fixture
 
-Profile: `temperate.rural.region` **v3**.
+Profile: `temperate.rural.region` **v4**.
 
 Global fixture:
 
@@ -68,6 +83,10 @@ Global fixture:
 - connected primary/secondary regional road network;
 - one deterministic primary regional river outside the protected center;
 - at least one topologically required road/river crossing represented by explicit bridge intent;
+- one regional power ingress;
+- one small-town substation;
+- five settlement service nodes;
+- one connected road-following regional feeder network;
 - broad rural-open region plus settlement influence regions;
 - five local-area site records.
 
@@ -80,7 +99,7 @@ The protected central site remains:
 - environment profile `temperate.rural`;
 - inherited road IDs `road.region.primary.001` and `road.region.secondary.001`.
 
-Its projected System 20 request remains semantically identical to the current `RuralCrossroadsPlanFixture.request(20001)` request, and System 20 still produces the accepted Candidate 006 semantic output from those facts.
+Its projected System 20 request remains semantically identical to `RuralCrossroadsPlanFixture.request(20001)`, and System 20 still produces the accepted Candidate 006 semantic output from those facts.
 
 ## 4. Owners
 
@@ -91,13 +110,15 @@ Pure owners under `game/scripts/generation/world/`:
 - `GeneratedGlobalWorldPlan.gd` — pure semantic result/signature;
 - `GlobalWorldProfileCatalog.gd` — planning profiles/versions;
 - `GlobalGeographyPlanner.gd` / `GlobalGeographyQuery.gd` — coarse landform truth;
-- `GlobalHydrologyPlanner.gd` / `GlobalHydrologyQuery.gd` — river planning and read queries;
+- `GlobalHydrologyPlanner.gd` / `GlobalHydrologyQuery.gd` — river planning/read queries;
 - `GlobalSettlementPlanner.gd` — geography/hydrology-constrained settlement/site intent;
 - `GlobalMajorRoadPlanner.gd` — geography/hydrology-aware regional roads;
 - `GlobalBridgeIntentPlanner.gd` — explicit bridge crossing intent;
+- `GlobalPowerInfrastructurePlanner.gd` / `GlobalPowerInfrastructureQuery.gd` — regional electrical topology/read queries;
+- `GlobalPowerInfrastructureValidator.gd` — focused independent electrical-topology validation;
 - `GlobalPlanningRegionPlanner.gd` — broad planning regions;
-- `GeneratedGlobalWorldValidator.gd` — independent full-plan correctness;
-- `GlobalWorldPlanner.gd` — orchestration only.
+- `GeneratedGlobalWorldValidator.gd` — independent Slices 001–003 full-plan correctness;
+- `GlobalWorldPlanner.gd` — orchestration plus composition of base/power validation only.
 
 Separate downstream adapter:
 
@@ -116,6 +137,8 @@ Pure System 00D source does not import System 19, System 20, WHAT mutation, rend
 - `settlements`;
 - `road_segments`;
 - `bridge_intents`;
+- `power_nodes`;
+- `power_segments`;
 - `area_sites`;
 - deterministic `signature()`;
 - failure reason.
@@ -147,8 +170,6 @@ Settlements own stable semantic place identity and center; area-site records pro
 - odd width;
 - stable route-family ID.
 
-A route may contain several segments to react to geography/hydrology.
-
 ### Bridge intent record
 
 - stable ID;
@@ -158,82 +179,102 @@ A route may contain several segments to react to geography/hydrology.
 - bridge axis;
 - road/river widths.
 
-A bridge intent is **planning infrastructure intent**, not art, collision, a runtime entity or a completed tactical bridge.
+A bridge intent is planning infrastructure intent, not art/collision/runtime bridge state.
 
-## 6. Generation order and rules
+### Power node record
 
-1. Validate the global request/profile.
+- stable ID;
+- regional network ID;
+- semantic kind (`regional_ingress`, `substation`, `settlement_service`);
+- global cell;
+- optional settlement association.
+
+### Power segment record
+
+- stable ID/network ID;
+- `regional_feeder` class;
+- cardinal start/end;
+- deterministic ordinal;
+- source major-road ID and route ID.
+
+A power segment is regional corridor truth, not a tactical pole/wire or energized runtime entity.
+
+## 6. Generation order
+
+1. Validate global request/profile.
 2. Generate coarse geography.
 3. Generate global hydrology from geography.
 4. Place/snap settlements and area sites against geography + river clearance.
 5. Generate major roads against geography + river crossing cost.
 6. Derive explicit bridge intents from actual road/river intersections.
-7. Generate broad planning regions.
-8. Independently validate the whole plan.
-9. Return pure semantic global truth.
+7. Derive regional electrical nodes/feeders from the connected major-road graph.
+8. Generate broad planning regions.
+9. Independently validate the base global plan and focused electrical network.
+10. Return pure semantic global truth.
 
 No unbounded reroll loops are permitted. Unsupported topology fails honestly.
 
-## 7. Geography rules
+## 7. Geography / hydrology / roads
 
 - Geography cells are planning resolution, not streaming partitions.
-- Elevation is deterministic 2D seeded planning data, not tactical slope physics.
+- Elevation is deterministic planning data, not tactical slope physics.
 - Settlements require lowland/rolling terrain.
 - Major roads may use lowland/rolling/upland with increasing cost; ridge is forbidden.
-- The protected central cross remains capped to legal low/rolling terrain to preserve the accepted integration anchor.
+- The protected central cross remains legal low/rolling terrain.
+- The primary river is a real boundary-to-boundary route outside the protected Candidate 006 corridor.
+- Road river crossings are expensive but legal when topology requires them.
+- Roads may not run collinearly along river centerlines.
+- Every real perpendicular crossing has exactly one bridge intent.
 
-## 8. Hydrology rules
+## 8. Regional electrical rules
 
-- The current slice creates one globally coherent north/south boundary-to-boundary primary river.
-- The seed chooses a legal west/east side outside the protected central corridor.
-- Routing uses coarse geography and prefers lower elevation while strongly penalizing uphill movement.
-- The model is deliberately a drainage heuristic rather than geological/fluid simulation.
-- River geometry is cardinal, ordered and globally stable for a seed/profile version.
-- River centerline may not enter the protected central Candidate 006 corridor.
-- Settlement site rectangles must clear the river corridor by profile-defined margin.
+- Exactly one deterministic major-road boundary gateway is chosen as the regional electrical ingress.
+- The small-town settlement center hosts the current regional substation planning node.
+- Every settlement center has exactly one service node.
+- The feeder planner uses the existing major-road geometry as its graph; it does not reroute independently through terrain.
+- Primary-road corridors are mildly preferred over secondary corridors when alternative road-graph paths exist.
+- The union of shortest required road-graph paths from ingress to the substation/services becomes the regional feeder network.
+- Every feeder segment must remain contained in the named source road segment.
+- Ridge avoidance is therefore inherited from roads and independently rechecked.
+- Only the chosen ingress may create a feeder endpoint at the regional boundary.
+- Same seed/profile replays identical power facts; alternate seeds may vary ingress/network topology legally.
 
-## 9. Major-road / bridge rules
+## 9. System 20 projection seams
 
-- Existing landform costs remain active.
-- River cells add a high but finite road cost so unnecessary crossings are avoided but required connectivity remains possible.
-- Roads may not share a positive-length collinear centerline segment with a river.
-- Every valid road/river intersection is perpendicular at one global crossing cell.
-- Every actual route/river/cell crossing has exactly one bridge intent.
-- Every bridge intent must map back to an actual crossing.
-- Missing, duplicate or orphan bridge intent is a validation failure.
+`System20AreaRequestProjector.project_site()` remains unchanged at the local request contract: it clips supported global major roads into `AreaGenerationRequest`.
 
-## 10. System 20 projection seam
+Read-only future seams:
 
-`System20AreaRequestProjector.project_site()` remains unchanged at the local request contract: it clips supported global major roads into `AreaGenerationRequest`. Slice 003 does **not** inject tactical rivers/bridges into a System 20 request before a local hydrology/materialization design exists.
+- `hydrology_constraints_for_bounds(plan, bounds)` -> clipped river + bridge intent facts;
+- `power_constraints_for_bounds(plan, bounds)` -> clipped feeder segments + power nodes.
 
-The separate read-only query:
+Neither seam silently injects unsupported water, bridges, poles or wires into `AreaGenerationRequest`.
 
-`hydrology_constraints_for_bounds(plan, bounds)`
-
-returns clipped river facts plus bridge intents for a global planning window. This creates a future seam without fake local implementation.
-
-## 11. Validation / exact-head acceptance
+## 10. Validation / exact-head acceptance
 
 `verify/system00d-global-world` protects:
 
-- deterministic geography, hydrology, roads and bridge intents;
+- deterministic geography, hydrology, roads, bridge intents and power infrastructure;
 - legal alternate-seed variation;
-- full geography tiling and meaningful landform classes;
+- complete geography tiling and meaningful landforms;
 - settlement geography + hydrology clearance;
-- ridge-free road centerlines;
-- connected major-road network and real world-boundary gateways;
-- boundary-to-boundary connected river route;
-- no road/river collinear overlap;
-- at least one real crossing/bridge intent in the canonical regional fixture;
-- exact one-to-one crossing/bridge-intent correspondence;
-- protected central Candidate 006 road projection unchanged;
-- accepted System 20 Candidate 006 output unchanged;
-- clean adjacent central road continuity;
+- ridge-free roads;
+- connected major-road network and boundary gateways;
+- boundary-to-boundary river route;
+- exact crossing/bridge-intent correspondence;
+- exactly one power ingress and one small-town substation;
+- exactly five settlement service nodes;
+- road-contained, ridge-free, connected power feeder network;
+- no unintended power boundary egress;
+- protected Candidate 006 road request/output unchanged;
+- clean adjacent central road projection;
 - hydrology-free center/adjacent protected windows;
 - outer bridge window exposing river + bridge facts;
-- pure-owner dependency boundaries.
+- Candidate 006 read-only power projection exposing global feeder/service facts;
+- pure-owner dependency boundaries;
+- System 20 and canonical startup regressions.
 
-## 12. Non-goals / future ownership
+## 11. Non-goals / future ownership
 
 System 00D still does not own:
 
@@ -242,16 +283,17 @@ System 00D still does not own:
 - tactical water terrain/physics;
 - bridge art/collision/destruction;
 - lakes/wetlands/floodplains;
-- detailed terrain slopes;
-- utilities;
+- tactical utility poles/wires/transformers;
+- runtime energized state, outages, generators or building wiring;
+- water/sewer utility networks;
 - addresses/population/jobs/households;
 - outbreak simulation;
 - WHAT materialization;
 - save/streaming partition strategy;
 - renderer/camera/UI/input/player gameplay.
 
-Future global extensions may add tributaries/lakes, richer settlement hierarchy, utilities/infrastructure, zoning/addresses and broader land-use constraints. Streaming remains downstream of logical world truth.
+Future global extensions may add water/waste infrastructure, richer settlement hierarchy, zoning/addresses and other world-spanning facts. Streaming remains downstream of logical world truth.
 
-## 13. North-star fit
+## 12. North-star fit
 
-The North Star requires geography, rivers, settlements, roads and other world-spanning structures to be coherent in global coordinates **before** streaming/local partitions are considered. Slices 001–003 now establish that hierarchy while deliberately stopping before tactical water, population or streaming behavior that belongs to later systems.
+The North Star requires geography, rivers, settlements, roads, utilities and other world-spanning structures to be coherent in global coordinates **before** streaming/local partitions are considered. Slices 001–004 now establish geography, hydrology, settlement/road topology and the first real regional utility network while deliberately stopping before tactical materialization, population or runtime electrical simulation.
