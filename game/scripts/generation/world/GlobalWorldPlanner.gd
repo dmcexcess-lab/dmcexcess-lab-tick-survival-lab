@@ -1,0 +1,92 @@
+extends RefCounted
+class_name GlobalWorldPlanner
+
+const PlanClass = preload("res://scripts/generation/world/GeneratedGlobalWorldPlan.gd")
+const ProfilesClass = preload("res://scripts/generation/world/GlobalWorldProfileCatalog.gd")
+const SettlementPlannerClass = preload("res://scripts/generation/world/GlobalSettlementPlanner.gd")
+const RoadPlannerClass = preload("res://scripts/generation/world/GlobalMajorRoadPlanner.gd")
+const RegionPlannerClass = preload("res://scripts/generation/world/GlobalPlanningRegionPlanner.gd")
+const ValidatorClass = preload("res://scripts/generation/world/GeneratedGlobalWorldValidator.gd")
+
+var _profiles: GlobalWorldProfileCatalog
+var _settlement_planner: GlobalSettlementPlanner
+var _road_planner: GlobalMajorRoadPlanner
+var _region_planner: GlobalPlanningRegionPlanner
+var _validator: GeneratedGlobalWorldValidator
+
+func _init() -> void:
+    _profiles = ProfilesClass.new()
+    _settlement_planner = SettlementPlannerClass.new()
+    _road_planner = RoadPlannerClass.new()
+    _region_planner = RegionPlannerClass.new()
+    _validator = ValidatorClass.new()
+
+func generate(request: GlobalWorldGenerationRequest) -> GeneratedGlobalWorldPlan:
+    var plan: GeneratedGlobalWorldPlan = PlanClass.new()
+    if request == null or not request.is_valid():
+        plan.failure_reason = "invalid_global_world_request"
+        return plan
+    if not _profiles.has_profile(request.profile_id):
+        plan.failure_reason = "global_world_profile_unknown"
+        return plan
+
+    var profile: Dictionary = _profiles.profile(request.profile_id)
+    var settlement_result: Dictionary = _settlement_planner.plan(request, profile)
+    if not bool(settlement_result.get("ok", false)):
+        plan.failure_reason = String(settlement_result.get("failure_reason", "global_settlement_planning_failed"))
+        return plan
+    var settlements: Array[Dictionary] = []
+    for settlement_value: Variant in settlement_result.get("settlements", []):
+        if typeof(settlement_value) != TYPE_DICTIONARY:
+            plan.failure_reason = "global_settlement_result_invalid"
+            return plan
+        settlements.append(settlement_value)
+    var area_sites: Array[Dictionary] = []
+    for site_value: Variant in settlement_result.get("area_sites", []):
+        if typeof(site_value) != TYPE_DICTIONARY:
+            plan.failure_reason = "global_area_site_result_invalid"
+            return plan
+        area_sites.append(site_value)
+
+    var road_result: Dictionary = _road_planner.plan(request, profile, settlements)
+    if not bool(road_result.get("ok", false)):
+        plan.failure_reason = String(road_result.get("failure_reason", "global_major_road_planning_failed"))
+        return plan
+    var road_segments: Array[Dictionary] = []
+    for road_value: Variant in road_result.get("road_segments", []):
+        if typeof(road_value) != TYPE_DICTIONARY:
+            plan.failure_reason = "global_major_road_result_invalid"
+            return plan
+        road_segments.append(road_value)
+
+    var region_result: Dictionary = _region_planner.plan(request, settlements)
+    if not bool(region_result.get("ok", false)):
+        plan.failure_reason = String(region_result.get("failure_reason", "global_region_planning_failed"))
+        return plan
+    var regions: Array[Dictionary] = []
+    for region_value: Variant in region_result.get("regions", []):
+        if typeof(region_value) != TYPE_DICTIONARY:
+            plan.failure_reason = "global_region_result_invalid"
+            return plan
+        regions.append(region_value)
+
+    plan.world_id = request.world_id
+    plan.seed = request.seed
+    plan.bounds = request.bounds
+    plan.profile_id = request.profile_id
+    plan.profile_version = int(profile.get("version", 0))
+    plan.regions = regions
+    plan.settlements = settlements
+    plan.road_segments = road_segments
+    plan.area_sites = area_sites
+
+    var validation: Dictionary = _validator.validate(request, plan)
+    if not bool(validation.get("ok", false)):
+        var failure_parts := PackedStringArray()
+        for failure_value: Variant in validation.get("failures", []):
+            failure_parts.append(String(failure_value))
+        plan.failure_reason = "global_world_validation_failed:%s" % ",".join(failure_parts)
+    return plan
+
+func profile_ids() -> Array[StringName]:
+    return [GlobalWorldProfileCatalog.TEMPERATE_RURAL_REGION]
