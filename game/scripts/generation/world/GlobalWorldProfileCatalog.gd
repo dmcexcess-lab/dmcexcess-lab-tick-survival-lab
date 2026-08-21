@@ -11,7 +11,7 @@ func profile(profile_id: StringName) -> Dictionary:
         return {}
     return {
         "id": TEMPERATE_RURAL_REGION,
-        "version": 3,
+        "version": 4,
         "minimum_world_size": Vector2i(1536, 1536),
         "local_site_size": Vector2i(256, 256),
         "primary_width": 5,
@@ -36,6 +36,9 @@ func profile(profile_id: StringName) -> Dictionary:
         "river_meander_cost": 7,
         "road_cost_river_crossing": 120,
         "settlement_river_clearance": 16,
+
+        "power_cost_primary": 10,
+        "power_cost_secondary": 12,
 
         "smalltown_distance_min": 520,
         "smalltown_distance_max": 620,
