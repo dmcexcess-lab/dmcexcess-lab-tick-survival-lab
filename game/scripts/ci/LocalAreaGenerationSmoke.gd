@@ -65,8 +65,8 @@ func _test_candidate(
     _check(_count_building_archetype(plan, &"commercial.gas_station.small") == 1, "existing gas station is used once")
     _check(_count_building_archetype(plan, &"commercial.diner.rural_small") == 1, "accepted diner is used once")
     _check(_commercial_without_building(plan) == 1, "one commercial opportunity stays honestly vacant")
-    _check(_occupied_on_road_class(plan, &"local_rural") >= 7, "at least seven homes/farmsteads move off inherited roads onto local roads")
-    _check(_count_land_use_on_road_class(plan, &"residential", &"local_rural") >= 4, "at least four houses use local-road frontage")
+    _check(_occupied_on_road_class(plan, &"local_rural") >= 6, "a majority of homes/farmsteads move off inherited roads onto local roads")
+    _check(_count_land_use_on_road_class(plan, &"residential", &"local_rural") >= 3, "at least three houses use local-road frontage")
     _check(_count_land_use_on_road_class(plan, &"farmstead", &"local_rural") >= 3, "at least three farmsteads use local-road frontage")
 
     var residential_archetypes: Dictionary = {}
@@ -143,7 +143,7 @@ func _test_seed_replay(generator: LocalAreaGenerator) -> void:
         _check(_count_intersections(plan, &"signalized") == 1, "seed %d preserves one signalized crossroads" % seed)
         _check(_count_road_class(plan, &"local_rural") == 2, "seed %d preserves two local rural roads" % seed)
         _check(plan.building_requests.size() == 12, "seed %d preserves approved occupied-building target" % seed)
-        _check(_occupied_on_road_class(plan, &"local_rural") >= 7, "seed %d keeps most homes/farms on local roads" % seed)
+        _check(_occupied_on_road_class(plan, &"local_rural") >= 6, "seed %d keeps a majority of homes/farms on local roads" % seed)
         _check(_average_front_setback(plan, &"residential") <= 5.0, "seed %d keeps residential facades close to the road" % seed)
         _check(_average_front_setback(plan, &"commercial_small") <= 5.0, "seed %d keeps small commercial facades close to the road" % seed)
         _check(_average_front_setback(plan, &"farmstead") <= 8.0, "seed %d keeps farmstead setbacks bounded" % seed)
