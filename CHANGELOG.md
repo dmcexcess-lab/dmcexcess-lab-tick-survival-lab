@@ -1,5 +1,20 @@
 # Changelog
 
+## System 21 Tactical Camera / View Control — 2026-08-20
+
+- Added the user-approved standalone **System 21 Tactical Camera / View Control** instead of putting camera behavior into System 20, the renderer or player movement.
+- Normal gameplay now defaults to `FOLLOW_PLAYER`, centering the active `Camera2D` on the controlled survivor while reading the survivor's real WHAT placement rather than moving the actor to satisfy presentation.
+- Added five discrete zoom presets: **Very Close 1.75×, Close 1.35×, Normal 1.00×, Far 0.75× and Area 0.50×**. Normal is the default and all zoom changes stay inside the camera presentation owner.
+- Added reusable camera modes for `FOLLOW_PLAYER`, manual `DETACHED` inspection, `FOCUS_CELL`, `FOCUS_ACTOR` and temporary `SCRIPTED` presentation transitions. Focus/scripted calls may remember and restore one prior camera state for future cutscenes/reveals.
+- Added `TacticalCameraState.gd`, `ZoomController.gd` and `TacticalCameraController.gd`. The controller reacts only to relevant public WHAT placement changes and advances no simulation ticks.
+- Added `CameraInputAdapter.gd`: desktop mouse-wheel zoom, middle-button drag inspection, Home recenter and bracket-key zoom convenience. Right-click remains unclaimed because System 18 reserves it for a future interaction menu.
+- Added mobile two-finger centroid pan and pinch-to-discrete-zoom behavior plus explicit phone-friendly `ZOOM - / CENTER / ZOOM +` buttons in `CameraControls.gd`.
+- Made `DoorPointerInputAdapter.gd` camera-aware by inverting the active viewport canvas transform before mapping screen coordinates to world cells. Touch door selection now resolves on a short release and cancels on drag/multitouch so the first finger of a camera pinch cannot accidentally become a door action.
+- Wired the camera through composition-only `CanonicalDemoMain.gd` and `game/main.tscn`; existing movement, doors, renderer/art, System 19 building generation and System 20 area generation rules remain separate.
+- Added `CameraViewControlSmoke.gd` covering the five exact zoom levels, follow/detached/recenter, cell/actor focus, restore, scripted zero-tick presentation and one-vs-two-finger input behavior.
+- Added `.github/workflows/camera-view-control.yml` and exact-head status publishing as `verify/system21-camera-view`, with Door Interaction, System 20 and canonical-startup regressions in the same camera gate.
+- System 21 intentionally does **not** render the 256×256 rural crossroads yet. The next bounded slice is a separately owned System 20 DEV area viewer that uses this camera foundation.
+
 ## System 19 Finalization + System 20 Rural Crossroads Candidate 001 — 2026-08-20
 
 - Finalized **System 19 Local Building Generation / Building Grammar** after the user explicitly approved moving on. The earlier provisional “two arbitrary proof buildings” gate is superseded by this direct finalization instruction.
@@ -85,7 +100,7 @@
 - Living-room seating now forms one tight cluster: sofa, coffee table and armchair stay within two cells of one another, with a nearby tall bookshelf and end table against the same side of the room.
 - Added a nonblocking `prop.rug` directly inside the primary front door as entry dressing without changing movement/collision behavior.
 - Kitchen appliance dressing is now contiguous: stove + refrigerator + `prop.counter_straight` + sink share the north wall, with the counter physically filling the gap between refrigerator and sink.
-- Added `prop.dining_chair` directly beside the existing breakfast table near the east wall. The table remains off the wood runner and the exterior-door approach stays clear.
+- Added `prop.dining_chair` directly beside the existing breakfast table near the east wall. The table remains off the runner and the exterior-door approach stays clear.
 - Corrected table-facing choices in the canonical NORTH layout: end table and coffee table face SOUTH; breakfast table faces WEST. Tables are no longer authored facing NORTH in this archetype.
 - Added collision coverage for bookshelf, end table, counter and dining chair as blocking props; the entry rug is explicitly registered passable/nonblocking.
 - Expanded System 19 CI to lock the unchanged structure, 24-prop clustered dressing, cluster distances, table orientations, counter placement, chair/table adjacency, clear wood runner, art/collision coverage, rotation, materialization and canonical startup.
