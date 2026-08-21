@@ -16,61 +16,58 @@ Golden recovery commit: `1763958f44eb7f855fd49944c00d1ffe608c0abe`.
 
 ## 2. Current phase
 
-Systems 14–21 are the current canonical demo/player/planning path. `game/main.tscn` still launches the modular Rural Diner critique world while the System 20 rural crossroads remains a pure 256×256 plan. `game/scripts/reboot/` remains frozen/deprecated reference only.
+Systems 14–22 form the current canonical playable/planning path. `game/scripts/reboot/` remains frozen/deprecated reference only.
 
-**System 19 is finalized.** New building profiles are normal content work by default and should not reopen the building-grammar architecture unless its frozen public contract proves insufficient.
+**System 19 is finalized.** New building profiles are normal content work by default.
 
-**System 20 Candidate 001 is implemented as a pure deterministic planner:** `rural.crossroads + temperate.rural`, 256×256 global cells, existing System 19 building library only.
+**System 20 Candidate 001 is implemented through both pure planning and a separate one-time transactional initial-materialization owner.** The current profile is `rural.crossroads + temperate.rural`, 256×256 global cells, existing System 19 building library only.
 
-**System 21 Tactical Camera / View Control is implemented:** player-follow by default, five discrete zoom levels, detached inspection/pan, recenter, cell/actor focus and future-cutscene scripted transition/restore seams. It is presentation only and does not move actors or advance simulation.
+**System 21 Tactical Camera / View Control is implemented.** Player-follow is default; five discrete zoom levels, detached inspection, recenter, focus and scripted/cutscene seams are presentation-only.
 
-The immediate active development target is now a separately owned **System 20 large-area DEV critique viewer** that uses System 21 for camera behavior while keeping System 20 generation pure.
+**System 22 Large-Area DEV Critique Runtime is implemented.** The canonical live game now materializes and renders the generated rural crossroads rather than the old isolated diner fixture.
+
+The immediate active work is **user visual/playable critique of System 20 Candidate 001**.
 
 ## 3. Foundation truth
 
 ### WHERE
-Global integer cells, 1m planning scale, N/E/S/W facing, whole-cell footprints, structure cells with H/V axis. Geometry only.
+Global integer cells, ~1m planning scale, N/E/S/W facing, whole-cell footprints, structure cells with H/V axis. Geometry only.
 
 ### WHAT
-One authoritative persistent current world with stable IDs, semantic types/terrain, WHERE placements, derived occupancy and typed mechanic state keyed by stable IDs.
+One authoritative persistent current world with stable IDs, semantic terrain/entities, WHERE placements and typed mechanic state.
 
 ### WHEN
-One deterministic integer world tick, variable-duration actions/events, same-tick draining, COMMITTED/RESUMABLE/CANCELABLE policies, tactical decision pause plus separate hard application pause.
+One deterministic integer world tick, variable-duration actions/events, tactical decision pause plus separate hard application pause.
 
-## 4. Implemented canonical gameplay/presentation
+## 4. Implemented canonical stack
 
-Implemented + dedicated validation includes:
+Dedicated canonical validation now includes:
 
-- WHERE / WHAT / WHEN foundation;
-- Collision / Movement / Locomotion;
-- recovered Art + Ground/Structure/Prop/Living Actor/Hand renderers;
-- System 07A facing-aware Prop Art Orientation;
-- Door State + System 18 automatic/manual door interaction;
-- Hands / Inventory / Item Transfer;
-- Health / Needs / Skills / Item Weight / Carry / Moodlets;
-- Canonical Demo / HUD / Player Shell;
-- Run / damage-interruptible Walk;
-- movement exertion/encumbrance/run impact;
-- System 19 Local Building Generation / finalized building grammar;
-- System 19 DEV seed-cycle critique controls;
-- System 20 Candidate 001 pure local-area/parcel planning;
-- System 21 Tactical Camera / View Control.
+- WHERE / WHAT / WHEN;
+- collision / movement / locomotion;
+- recovered Art + ground/structure/prop/living-actor/hand renderers;
+- prop orientation;
+- Door State + System 18 passage/manual close;
+- hands / inventory / item transfer;
+- health / needs / skills / physical weight / carry / moodlets;
+- canonical HUD / player shell;
+- run / interruptible walk / exertion / encumbrance / run impact;
+- System 19 finalized building grammar;
+- System 20 local area/parcel planning + initial materialization;
+- System 21 tactical camera/view control;
+- System 22 bounded large-area critique runtime.
 
-Art remains presentation truth; generation stores semantic type/facing only. Art is not physics.
+Art remains presentation truth; generation stores semantic IDs/facing only. Art is not physics.
 
 ## 5. System 19 final truth
 
 Design: `SYSTEM_DESIGNS/19_LOCAL_BUILDING_GENERATION_ARCHETYPE_LAB.md`
 
-Stable pipeline:
+Stable building pipeline:
 
-`request -> pure semantic building plan -> shared structural validation -> materialize initial WHAT + CLOSED Door State -> relinquish ownership`
+`request -> pure semantic building plan -> structural/profile validation -> initial WHAT + CLOSED Door State -> generation relinquishes ownership`
 
-Frozen placement seam for higher-level planners:
-
-`LocalBuildingGenerator.placement_descriptor(archetype_id)`
-
-Protected/finalized library:
+Protected library:
 
 - `residential.trailer.singlewide` v2;
 - `residential.house.farm_small` v2;
@@ -79,107 +76,54 @@ Protected/finalized library:
 - `commercial.gas_station.small` v1;
 - `commercial.diner.rural_small` v2.
 
-Final hard rules emphasize compact purposeful space, logical adjacency, minimal wasted circulation, clear door/service paths, local functional clustering, contiguous work runs where appropriate, intentional open space, deterministic seeded variation and profile-specific requirements outside generic structural validation.
+System 20 uses System 19 only through public placement/generation/validation/materialization contracts.
 
-## 6. System 20 active truth
+## 6. System 20 current truth
 
 Design: `SYSTEM_DESIGNS/20_LOCAL_AREA_PARCEL_GENERATION.md`
 
-Current pipeline:
+Pure plan:
 
-`AreaGenerationRequest -> inherited roads/intersection -> road-facing parcels -> land use -> access -> System 19 placement -> driveways -> outdoor/environment dressing -> GeneratedAreaValidator -> pure GeneratedAreaPlan`
+`AreaGenerationRequest -> inherited roads/intersection -> parcels -> land use -> access -> System 19 placement requests -> driveways -> outdoor dressing -> GeneratedAreaValidator -> GeneratedAreaPlan`
 
-Current owners under `game/scripts/generation/areas/`:
+Current Candidate 001:
 
-- `AreaSeed.gd`;
-- `AreaGenerationRequest.gd`;
-- `GeneratedAreaPlan.gd`;
-- `AreaProfileCatalog.gd`;
-- `EnvironmentProfileCatalog.gd`;
-- `LocalRoadPlanner.gd`;
-- `ParcelPlanner.gd`;
-- `ParcelAccessPlanner.gd`;
-- `BuildingPlacementPlanner.gd`;
-- `OutdoorPropertyDressingPlanner.gd`;
-- `GeneratedAreaValidator.gd`;
-- `LocalAreaGenerator.gd`.
-
-System 20 depends on System 19 only through its read-only placement descriptor and normal public generation/validation contracts. It does not inspect building internals and it does not own camera/viewer behavior.
-
-## 7. Candidate 001 — Rural Crossroads
-
-Fixture: `RuralCrossroadsPlanFixture.gd`
-
-- global bounds `Rect2i(1000,2000,256,256)`;
+- bounds `Rect2i(1000,2000,256,256)`;
 - seed `20001`;
-- `rural.crossroads` v1;
-- `temperate.rural` v1;
-- inherited 5-cell primary east/west road;
-- inherited 3-cell secondary north/south road;
-- central crossing at `(1128,2128)`;
-- exactly one signalized intersection;
-- zero locally generated road spurs.
-
-Land-use target:
-
-- 3 `commercial_small` opportunities nearest center;
+- `rural.crossroads` v1 + `temperate.rural` v1;
+- one inherited 5-cell primary E/W road;
+- one inherited 3-cell secondary N/S road;
+- central crossing `(1128,2128)`;
+- exactly one signalized crossroads;
+- zero local road spurs;
+- 3 commercial opportunities: gas station + diner + one vacancy;
 - 6 residential parcels;
-- 4 farther farmstead parcels;
-- remaining generated frontage parcels agricultural/vacant/wilderness;
-- >=60% non-road land unbuilt by buildings.
+- 4 farmsteads;
+- remaining frontage agricultural/vacant/wilderness;
+- >=60% non-road area unbuilt;
+- no fake barns/stores, actors, vehicles, loot or outbreak scenes.
 
-Existing library only:
+Pure-plan workflow/context: `verify/system20-local-area`.
 
-- gas station once;
-- diner once;
-- third commercial opportunity intentionally vacant;
-- ten residential/farmstead buildings drawn from trailer/small farmhouse/large farmhouse/compact-laundry.
+### Initial materialization
 
-Outdoor semantics include base grass, roads, gravel driveways, fields, one traffic signal, mailboxes, sparse residential trees and sparse farm fencing. No fake barns/stores, people, vehicles, loot or outbreak scenes.
+`AreaMaterializationCoordinator.gd` separately consumes the validated plan, validates/regenerates all System 19 subplans, snapshots WHAT + Door State, writes terrain/outdoor props/buildings, initializes building doors CLOSED, rolls back on failure, and relinquishes generation ownership after success.
 
-## 8. System 20 verification
+This is initial world creation only. Long-term save/streaming partition architecture remains future work.
 
-`LocalAreaGenerationSmoke.gd` verifies:
-
-- deterministic same-seed replay and different-seed variation;
-- inherited road/boundary integrity;
-- one signalized crossroads;
-- parcel non-overlap and road exclusion;
-- 3 commercial / 6 residential / 4 farmstead targets;
-- gas station + diner + one honest vacant commercial parcel;
-- all four saved residential archetypes exercised;
-- density falling outward;
-- longer farmstead driveways;
-- >=60% unbuilt non-road area;
-- traffic signal/mailboxes/fields;
-- every selected building accepted by System 19;
-- recovered-art semantic coverage;
-- twelve consecutive area seeds without reroll loops.
-
-Dedicated workflow: `.github/workflows/local-area-generation.yml`.
-Exact-head status context: `verify/system20-local-area`.
-
-## 9. System 21 camera truth
+## 7. System 21 camera truth
 
 Design: `SYSTEM_DESIGNS/21_TACTICAL_CAMERA_VIEW_CONTROL.md`
 
-Owners:
+Modes:
 
-- `camera/TacticalCameraState.gd`;
-- `camera/ZoomController.gd`;
-- `camera/TacticalCameraController.gd`;
-- `input/CameraInputAdapter.gd`;
-- `ui/CameraControls.gd`.
-
-Camera modes:
-
-- `FOLLOW_PLAYER` — default;
-- `DETACHED` — manual inspect/pan;
+- `FOLLOW_PLAYER` default;
+- `DETACHED` inspect/pan;
 - `FOCUS_CELL`;
 - `FOCUS_ACTOR`;
-- `SCRIPTED` — wall-clock presentation transition, then settles into focus.
+- `SCRIPTED` presentation transition.
 
-Five zoom presets:
+Zoom presets:
 
 1. Very Close — 1.75×;
 2. Close — 1.35×;
@@ -187,57 +131,67 @@ Five zoom presets:
 4. Far — 0.75×;
 5. Area — 0.50×.
 
-Desktop: wheel zoom, middle-drag pan, Home recenter, bracket-key zoom convenience. Right-click remains reserved for future interaction UI.
+Desktop: wheel zoom, middle-drag pan, Home recenter. Right-click stays reserved for future interaction UI.
 
-Mobile: two-finger centroid pan + pinch-to-discrete-zoom, plus explicit `ZOOM - / CENTER / ZOOM +` buttons. One-finger gameplay touch is not consumed by the camera gesture adapter.
+Mobile: two-finger pan/pinch plus explicit `ZOOM - / CENTER / ZOOM +` controls.
 
-`DoorPointerInputAdapter` is camera-aware: it inverts the active canvas transform before mapping screen position to world cells. Touch selection resolves on short release and cancels on drag/multitouch so a pinch cannot accidentally become a door action.
+Safari correction: explicit camera buttons activate directly on touch release and suppress the immediate synthetic mouse release. CENTER displays `FOLLOW`/`INSPECT` state and reliably returns to player follow.
 
-Dedicated workflow: `.github/workflows/camera-view-control.yml`.
-Exact-head status context: `verify/system21-camera-view`.
+Exact-head context: `verify/system21-camera-view`.
 
-## 10. Current live demo
+## 8. System 22 live critique truth
 
-The live Web demo remains the **Rural Diner v2** critique fixture with `NEW BUILDING` seed cycling, but it now runs through System 21:
+Design: `SYSTEM_DESIGNS/22_LARGE_AREA_CRITIQUE_RUNTIME.md`
 
-- camera starts centered on the survivor;
-- Normal zoom is the default;
-- `ZOOM - / CENTER / ZOOM +` controls are available;
-- desktop/touch camera gestures are available;
-- player movement moves the camera only while in follow mode;
-- inspect/focus camera behavior changes presentation only.
+Owners:
 
-The 256×256 System 20 area itself is still not the live world. Its dedicated critique viewer/materialization is the next bounded slice.
+- `RuralCrossroadsCritiqueFixture.gd` — generates/materializes Candidate 001, derives critique physics registrations from public plan facts, places player outside generated diner;
+- `LargeAreaRenderWindowController.gd` — presentation-only moving renderer window.
 
-## 11. Immediate next path
+Live behavior:
 
-1. Build a separately owned System 20 **large-area DEV critique viewer**.
-2. Have that viewer expose/render the generated 256×256 area while System 21 owns camera follow/pan/zoom/recenter.
-3. Visually critique road/parcel/density/driveway/farm/commercial-center behavior.
-4. Add new System 19 building profiles freely after the prefab-only area test establishes System 20 quality.
-5. Only after planner + visual inspection are sound, design System 20 initial WHAT materialization/transaction behavior.
+- logical world is the real 256×256 System 20 area;
+- all 12 existing-library buildings exist together in WHAT;
+- player starts one cell outside the generated diner primary door and normal movement/System 18 doors work immediately;
+- renderer draws an 80×96-cell window at 24 px/cell rather than scanning 65,536 cells every frame;
+- renderer window shifts near its edge while preserving stable global world-cell positions;
+- System 21 camera follows/pans/zooms independently of simulation.
 
-## 12. Invariants
+Exact-head context: `verify/system22-area-critique`.
+
+## 9. Current live demo
+
+The live Web build is now the **generated Rural Crossroads Candidate 001**, not the standalone diner.
+
+This is intentionally still a DEV critique world: no zombies, population, loot, vehicles or outbreak layer has been invented merely to make the area look busy.
+
+Use the build to judge roads, scale, parcel spacing, farms, driveways, building orientation, density gradient, commercial-center composition and outdoor dressing.
+
+## 10. Immediate next path
+
+1. User playtests/visually critiques Candidate 001.
+2. Fix area/profile rules that look wrong while preserving accepted building baselines.
+3. Once rural morphology is accepted, add new System 19 profiles freely as content or test another area/environment combination.
+4. Design global world planning / long-term streaming-save architecture only when the next world-scale requirement demands it.
+
+## 11. Invariants
 
 1. Main/root is composition only.
 2. Focused owners/public contracts; no god state.
 3. No placeholders/fake completion.
-4. Generation produces initial truth; persistent WHAT owns later changes after materialization.
+4. Generation creates initial truth; WHAT owns subsequent reality.
 5. Rendering presents truth; input submits semantic intent.
 6. Art is not physics.
 7. Phone/Safari is first-class.
-8. Reboot is reference only.
-9. Cross-region infrastructure is globally coordinated.
-10. System 20 areas are planning domains, not streaming chunks.
-11. System 20 chooses parcels/building requests; System 19 owns building internals.
-12. New building profiles are content additions by default; accepted baselines stay protected.
-13. Same-seed intentional rule changes require version bumps.
-14. Settlement morphology and environment ecology remain separate.
-15. Open space is legitimate output indoors and outdoors.
-16. System 21 owns camera presentation only; camera never mutates world/simulation truth.
-17. Large-area critique/viewer composition remains separate from System 20 planning and System 21 camera control.
+8. Cross-region infrastructure is globally coordinated.
+9. System 20 areas are planning domains, not streaming chunks.
+10. System 19 owns building internals; accepted baselines remain protected.
+11. Settlement morphology and ecological environment stay separate.
+12. Open space is legitimate output.
+13. System 21 camera never mutates simulation.
+14. System 22 is DEV presentation/integration, not a new world-planning owner.
 
-## 13. Documentation source order
+## 12. Documentation source order
 
 1. newest explicit user instruction;
 2. `PROJECT_NORTH_STAR.md`;
