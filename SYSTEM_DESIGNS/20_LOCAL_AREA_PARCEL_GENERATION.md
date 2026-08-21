@@ -1,10 +1,10 @@
 # Tick Survival Lab — System 20 Local Area / Parcel Generation
 
-Status: **IMPLEMENTED — RURAL CROSSROADS CANDIDATE 002 + INITIAL MATERIALIZATION**
+Status: **IMPLEMENTED — RURAL CROSSROADS CANDIDATE 003 + INITIAL MATERIALIZATION**
 
 Date: 2026-08-20
 
-The user approved the rural-first design and explicitly directed development to move on from finalized System 19 using only the existing building library for the first area test. Candidate 001 established deterministic roads/parcels/building placement and later real WHAT materialization. During live critique, the user then identified three concrete quality failures: multi-cell paved roads rendered as repeated yellow boxes, the local road network was too geometrically straight, and the large open rural spaces lacked enough trees/shrubs/rocks. Candidate 002 hardens those same approved System 20 responsibilities without reopening System 19, System 21, or renderer ownership.
+The user approved the rural-first design and explicitly directed development to move on from finalized System 19 using only the existing building library for the first area test. Candidate 001 established deterministic roads/parcels/building placement and later real WHAT materialization. Candidate 002 fixed the live yellow-box road presentation input, added one bent local farm-access road, and added trees/shrubs/rocks. During the next live critique the user identified that the natural props themselves were spatially correlated into a diagonal line. Candidate 003 corrects only that ecological-placement rule while preserving the accepted Candidate 002 road, parcel and building morphology.
 
 ## 1. Goal
 
@@ -67,11 +67,11 @@ Controls initial ecological/surface semantics:
 - base ground;
 - paved/local-road surface families and physical centerline semantics;
 - tree/shrub/rock families;
-- natural cluster tendencies;
+- spatial ecological density/noise tendencies;
 - field surfaces;
 - fence/mailbox/civic/environment semantic props.
 
-Current implemented profile: `temperate.rural` **v2**.
+Current implemented profile: `temperate.rural` **v3**.
 
 Settlement morphology and ecology remain independently replaceable/combinable.
 
@@ -79,7 +79,7 @@ Settlement morphology and ecology remain independently replaceable/combinable.
 
 All planning owners live under `game/scripts/generation/areas/` and remain pure-data / bounded generation work:
 
-- `AreaSeed.gd` — stable named sub-seeds;
+- `AreaSeed.gd` — stable named sub-seeds plus deterministic mixed 2D coordinate hashing for spatial-noise consumers;
 - `AreaGenerationRequest.gd` — caller constraints;
 - `GeneratedAreaPlan.gd` — pure semantic result;
 - `AreaProfileCatalog.gd` — settlement morphology/versioning;
@@ -88,7 +88,7 @@ All planning owners live under `game/scripts/generation/areas/` and remain pure-
 - `ParcelPlanner.gd` — road-facing parcels/land use and road-overlap rejection;
 - `ParcelAccessPlanner.gd` — parcel access and driveways;
 - `BuildingPlacementPlanner.gd` — System 19 descriptor-based selection/placement;
-- `OutdoorPropertyDressingPlanner.gd` — road surfaces/markings, fields/mailboxes/fences, natural clusters, traffic signal;
+- `OutdoorPropertyDressingPlanner.gd` — road surfaces/markings, fields/mailboxes/fences, natural noise dressing, traffic signal;
 - `GeneratedAreaValidator.gd` — generic full-plan correctness;
 - `LocalAreaGenerator.gd` — coordinator only.
 
@@ -119,11 +119,13 @@ There is no unbounded reroll loop.
 
 Same request + System/profile/environment versions + System 19 archetype versions produces the same semantic signature.
 
-Named sub-seeds isolate domains so vegetation variation does not reshuffle building assignments merely because a shared RNG consumed another value.
+Named sub-seeds isolate unrelated domains so vegetation changes do not reshuffle roads or building assignments merely because a shared RNG consumed another value.
 
-Stable IDs derive from caller area ID plus deterministic roles/geometry. Intentional same-seed output-rule changes require the owning profile/system version to change.
+For spatial ecology, `AreaSeed.hash_2d(seed, x, y, salt)` mixes both coordinates into one deterministic value. X and Y are never generated from sibling linear seed streams. `unit_2d()` exposes the same mixed value as a stable 0–1 sample.
 
-Candidate 002 therefore bumps both `rural.crossroads` and `temperate.rural` from v1 to v2.
+Stable IDs derive from caller area ID plus deterministic generation order/roles. Intentional same-seed output-rule changes require the owning profile/system version to change.
+
+Candidate 002 bumped `rural.crossroads` and `temperate.rural` from v1 to v2. Candidate 003 keeps `rural.crossroads` v2 because human morphology is unchanged and bumps only `temperate.rural` **v2 -> v3** because ecological placement intentionally changes.
 
 ## 8. System 19 boundary
 
@@ -137,7 +139,7 @@ System 20 may use only System 19 public contracts:
 
 It may not inspect individual building generator/profile internals or duplicate their canonical geometry truth.
 
-## 9. Candidate 002 — `rural.crossroads@2 + temperate.rural@2`
+## 9. Candidate 003 — `rural.crossroads@2 + temperate.rural@3`
 
 `RuralCrossroadsPlanFixture.gd` still supplies:
 
@@ -149,35 +151,28 @@ It may not inspect individual building generator/profile internals or duplicate 
 
 Those inherited roads remain exact caller constraints and retain their authorized boundary exits.
 
-### Road morphology
+### Road morphology — unchanged from Candidate 002
 
-Candidate 002 adds exactly one deterministic **local farm-access branch**:
+Candidate 003 preserves exactly one deterministic local **farm-access branch**:
 
 - 3 cells wide;
 - internal only; no area-boundary exit;
 - branches from the inherited primary road at an ordinary uncontrolled junction;
 - contains multiple cardinal bends rather than another straight line;
 - uses gravel/unpainted rural-road surface semantics;
-- currently does **not** claim parcel-frontage authority, so it can add believable rural road shape without silently redesigning parcel allocation.
+- currently does **not** claim parcel-frontage authority.
 
 The memorable inherited-road crossroads remains the only signalized intersection.
 
-### Paved-road surface/marking rule
+### Paved-road surface/marking rule — unchanged from Candidate 002
 
-The earlier generic-road approach was correct for one-cell topology roads but wrong for a 3–5-cell-wide carriageway: every interior cell saw neighbors in all directions, so the Ground Renderer legitimately selected intersection-like road art repeatedly and the road looked like yellow boxes.
+The full paved corridor is `ground.road_plain`; only the center path receives `ground.road_yellow_line_h` or `ground.road_yellow_line_v`. Centerline paint is withheld through the immediate intersection footprint. The local farm-access branch uses `ground.gravel_dark` with no yellow centerline.
 
-Candidate 002 fixes the semantic input rather than changing System 05:
+These are semantic physical surfaces/paint facts, not atlas indices or renderer instructions. System 05 remains unchanged.
 
-- the full paved corridor is `ground.road_plain`;
-- only the center path receives `ground.road_yellow_line_h` or `ground.road_yellow_line_v`;
-- centerline paint is withheld through the immediate intersection footprint so crossings read as crossings rather than overlapping painted boxes;
-- the local farm-access branch uses `ground.gravel_dark` with no yellow centerline.
+### Parcel/building target — unchanged from Candidate 002
 
-These are semantic physical surfaces/paint facts, not atlas indices or renderer instructions. System 05 continues to render explicit ground semantics literally through the Art Catalog.
-
-### Parcel/building target
-
-Candidate 002 deliberately preserves the accepted Candidate 001 density/content target:
+Candidate 003 preserves:
 
 - 3 `commercial_small` opportunities nearest center;
 - 6 residential parcels;
@@ -190,34 +185,44 @@ Candidate 002 deliberately preserves the accepted Candidate 001 density/content 
 - one intentionally vacant commercial opportunity;
 - ten residential/farmstead placements using only Trailer / Small Farmhouse / Large Farmhouse / Compact Laundry House profiles.
 
-The new farm-access road is not allowed to erase these counts. Parcel candidates overlapping it are rejected before classification; remaining inherited-road frontage supplies the same 12 buildings.
+The farm-access road is still not allowed to erase these counts.
 
-### Natural rural dressing
+### Natural rural dressing — Candidate 003 correction
 
-`temperate.rural` v2 adds deterministic clustered natural dressing rather than uniform scatter:
+The Candidate 002 cluster algorithm selected a finite list of cluster centers by deriving X and Y separately from closely related string-domain seed streams. The output was deterministic but the two coordinate streams were visibly correlated, producing a diagonal chain across the map.
 
-- deciduous large/small trees;
-- dense/thorn shrubs;
-- small/cluster/mossy rocks;
-- multiple seeded cluster families (groves, brush-heavy clusters, rocky scrub);
-- bounded cluster count/radius/size;
-- a clear radius around the signalized town center;
-- clearance around roads and driveways;
-- no placement inside building envelopes or active field rectangles;
-- occupied residential/commercial/farmstead parcel interiors remain deliberately controlled;
-- wilderness/vacant parcels and otherwise unclaimed open rural land are valid natural-cluster space.
+Candidate 003 removes random cluster centers entirely.
 
-Open land remains open at the planning level, but it no longer means visually empty grass.
+Natural placement now uses **two-scale deterministic 2D noise**:
 
-## 10. Candidate 002 pure-plan verification
+1. every eligible cell is evaluated with a low-frequency smooth value-noise field;
+2. that field modulates local natural-prop density, creating broad dense and sparse patches;
+3. an independent mixed per-cell coordinate sample decides whether an individual cell receives a prop;
+4. a second lower-frequency noise field biases local ecology toward tree-heavy, shrub-heavy or rocky pockets;
+5. a final independent coordinate hash selects the exact semantic variant.
+
+The value-noise field interpolates four independently mixed coarse-grid coordinate samples, so density changes smoothly through space without a preferred diagonal, row or column.
+
+Eligible natural space remains constrained exactly as before:
+
+- clear radius around the signalized town center;
+- clearance around all road corridors and driveways;
+- no building-envelope overlap;
+- no active-field overlap;
+- occupied residential/commercial/farmstead parcel interiors remain controlled;
+- wilderness/vacant parcels and otherwise unclaimed open rural land are valid natural space.
+
+Trees, shrubs and rocks therefore appear as irregular noise-like countryside with local groves/brush/rocky pockets and genuine empty gaps, rather than as a line of authored-looking clusters.
+
+## 10. Candidate 003 pure-plan verification
 
 `LocalAreaGenerationSmoke.gd` protects:
 
 - same-seed determinism and different-seed variation;
 - exact inherited-road/boundary integrity;
-- two inherited roads + one local farm-access branch;
+- two inherited roads + one bent local farm-access branch;
 - one signalized crossroads + one uncontrolled branch junction;
-- local branch has real bends and no boundary exit;
+- local branch has no boundary exit or parcel-frontage authority;
 - parcel non-overlap / all-road exclusion;
 - 3 commercial / 6 residential / 4 farmstead targets;
 - gas station + diner + honest vacant commercial parcel;
@@ -226,12 +231,15 @@ Open land remains open at the planning level, but it no longer means visually em
 - longer farmstead driveways;
 - >=60% unbuilt non-road area;
 - plain paved corridor + single horizontal/vertical yellow centerline layers + gravel local branch;
-- no generic multi-cell `ground.road` region in Candidate 002;
+- no generic multi-cell `ground.road` region;
 - one traffic signal / ten mailboxes / real field zones;
-- substantial tree/shrub/rock dressing, clustered rather than uniform, and excluded from active fields;
+- substantial tree/shrub/rock dressing and active-field exclusion;
+- natural-prop local-neighbor ratio bounded away from both total isolation and one dense chain;
+- broad 4x4 coarse-map coverage;
+- low absolute X/Y correlation, explicitly preventing the reported diagonal-collapse failure;
 - every building request accepted by System 19;
 - recovered-art semantic coverage;
-- twelve consecutive seeds without retry loops while preserving building, road and natural-dressing targets.
+- twelve consecutive seeds without retry loops while preserving building, road and natural-noise distribution targets.
 
 Dedicated workflow: `.github/workflows/local-area-generation.yml`.
 Exact-head context: `verify/system20-local-area`.
@@ -259,17 +267,19 @@ Long-term save-file format and streaming-region transactions remain future owner
 
 ## 12. Presentation boundary
 
-System 20 still owns **no camera or viewer behavior**.
+System 20 owns **no camera or viewer behavior**.
 
 The live critique presentation belongs to `SYSTEM_DESIGNS/22_LARGE_AREA_CRITIQUE_RUNTIME.md`, which consumes materialized WHAT and System 21 camera services through public contracts.
 
-Candidate 002 intentionally changes only semantic area output. No art assets, camera zoom values, renderer topology contract, player movement or door behavior are changed.
+Candidate 003 changes only semantic environment output and its deterministic seed helper. No art assets, camera zoom values, renderer contract, player movement, door behavior, road morphology, parcel allocation or System 19 building content changes.
 
 ## 13. Performance / mobile
 
 Planning and materialization are bounded startup/generation work, never per-frame systems.
 
-Natural dressing uses a fixed number of deterministic cluster/placement attempts rather than a full per-frame/world scan or unbounded reroll loop. Rendering still draws only the bounded System 22 window.
+Candidate 003 scans the bounded local-area cells once during environment generation. For the current 256×256 critique area that is 65,536 deterministic eligibility/noise evaluations at startup, with no retries and no frame polling. Rendering still draws only the bounded System 22 window.
+
+If future planning domains become dramatically larger, natural dressing may be spatially partitioned internally without changing the 2D-noise contract or logical world coordinates.
 
 ## 14. Failure behavior
 
@@ -277,13 +287,15 @@ Whole-plan failures include invalid requests/profiles, contradictory road facts,
 
 Local roads may not create unauthorized boundary exits. Materialization failures restore the pre-transaction WHAT + Door State snapshots.
 
-Valid outcomes include intentionally vacant parcels, farms without barns, omitted individual optional vegetation placements and substantial open land. No fake content is generated to satisfy a visual count.
+Valid outcomes include intentionally vacant parcels, farms without barns, naturally sparse ecological pockets and substantial open land. No fake content is generated to satisfy a visual count.
 
 ## 15. Future extension seams
 
 Future systems may add typed constraints/facts for utilities, rivers/topography, addresses, households/businesses, zoning/land value, secondary farm/commercial buildings, parking/vehicles, sidewalks/civic dressing, world-plan persistence and streaming orchestration.
 
 Future Global World Planning may also supply richer inherited road geometry. System 20 continues to preserve inherited facts rather than locally bending a caller-owned regional road merely for aesthetics.
+
+Environment profiles may later select different noise scales/densities/semantic families for forest, desert, scrub, marsh or other ecological profiles without changing parcel/building logic.
 
 ## 16. Approved decisions / critique history
 
@@ -298,4 +310,5 @@ Future Global World Planning may also supply richer inherited road geometry. Sys
 9. The area test uses only the existing System 19 building library.
 10. Pure planning stays independent from materialization and presentation.
 11. On 2026-08-20 the user approved putting the generated plan into the live critique world; initial materialization writes real WHAT rather than a fake preview.
-12. On 2026-08-20 live critique identified the yellow-box road markings, over-straight road network and under-dressed wilderness. Candidate 002 therefore adds semantic carriageway/centerline separation, one bent local farm-access branch, and clustered trees/shrubs/rocks while preserving the accepted building/parcel baseline.
+12. On 2026-08-20 live critique identified the yellow-box road markings, over-straight road network and under-dressed wilderness. Candidate 002 added semantic carriageway/centerline separation, one bent local farm-access branch, and trees/shrubs/rocks while preserving the accepted building/parcel baseline.
+13. On 2026-08-20 the next live critique identified that Candidate 002 natural props formed a visible diagonal line. Candidate 003 therefore replaces separate-X/Y cluster-center sampling with mixed-coordinate two-scale 2D noise while leaving Candidate 002 morphology unchanged.
