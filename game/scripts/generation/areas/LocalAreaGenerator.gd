@@ -48,14 +48,29 @@ func generate(request: AreaGenerationRequest) -> GeneratedAreaPlan:
     if not bool(road_result.get("ok", false)):
         plan.failure_reason = String(road_result.get("failure_reason", "road_planning_failed"))
         return plan
-    var roads: Array[Dictionary] = road_result.get("roads", [])
-    var intersections: Array[Dictionary] = road_result.get("intersections", [])
+    var roads: Array[Dictionary] = []
+    for road_value: Variant in road_result.get("roads", []):
+        if typeof(road_value) != TYPE_DICTIONARY:
+            plan.failure_reason = "road_planning_result_invalid"
+            return plan
+        roads.append(road_value)
+    var intersections: Array[Dictionary] = []
+    for intersection_value: Variant in road_result.get("intersections", []):
+        if typeof(intersection_value) != TYPE_DICTIONARY:
+            plan.failure_reason = "intersection_planning_result_invalid"
+            return plan
+        intersections.append(intersection_value)
 
     var parcel_result: Dictionary = _parcel_planner.plan(request, area_profile, roads, intersections)
     if not bool(parcel_result.get("ok", false)):
         plan.failure_reason = String(parcel_result.get("failure_reason", "parcel_planning_failed"))
         return plan
-    var parcels: Array[Dictionary] = parcel_result.get("parcels", [])
+    var parcels: Array[Dictionary] = []
+    for parcel_value: Variant in parcel_result.get("parcels", []):
+        if typeof(parcel_value) != TYPE_DICTIONARY:
+            plan.failure_reason = "parcel_planning_result_invalid"
+            return plan
+        parcels.append(parcel_value)
 
     var access_result: Dictionary = _access_planner.assign_access(parcels, roads)
     if not bool(access_result.get("ok", false)):
@@ -66,7 +81,13 @@ func generate(request: AreaGenerationRequest) -> GeneratedAreaPlan:
     if not bool(building_result.get("ok", false)):
         plan.failure_reason = String(building_result.get("failure_reason", "building_placement_failed"))
         return plan
-    var building_requests: Array[BuildingGenerationRequest] = building_result.get("building_requests", [])
+    var building_requests: Array[BuildingGenerationRequest] = []
+    for building_value: Variant in building_result.get("building_requests", []):
+        var building_request: BuildingGenerationRequest = building_value as BuildingGenerationRequest
+        if building_request == null:
+            plan.failure_reason = "building_placement_result_invalid"
+            return plan
+        building_requests.append(building_request)
 
     var driveway_result: Dictionary = _access_planner.finalize_driveways(parcels)
     if not bool(driveway_result.get("ok", false)):
@@ -77,6 +98,18 @@ func generate(request: AreaGenerationRequest) -> GeneratedAreaPlan:
     if not bool(outdoor_result.get("ok", false)):
         plan.failure_reason = String(outdoor_result.get("failure_reason", "outdoor_dressing_failed"))
         return plan
+    var ground_regions: Array[Dictionary] = []
+    for ground_value: Variant in outdoor_result.get("ground_regions", []):
+        if typeof(ground_value) != TYPE_DICTIONARY:
+            plan.failure_reason = "outdoor_ground_result_invalid"
+            return plan
+        ground_regions.append(ground_value)
+    var outdoor_props: Array[Dictionary] = []
+    for prop_value: Variant in outdoor_result.get("props", []):
+        if typeof(prop_value) != TYPE_DICTIONARY:
+            plan.failure_reason = "outdoor_prop_result_invalid"
+            return plan
+        outdoor_props.append(prop_value)
 
     plan.area_id = request.area_id
     plan.seed = request.seed
@@ -89,12 +122,15 @@ func generate(request: AreaGenerationRequest) -> GeneratedAreaPlan:
     plan.intersections = intersections
     plan.parcels = parcels
     plan.building_requests = building_requests
-    plan.ground_regions = outdoor_result.get("ground_regions", [])
-    plan.outdoor_props = outdoor_result.get("props", [])
+    plan.ground_regions = ground_regions
+    plan.outdoor_props = outdoor_props
 
     var validation: Dictionary = _validator.validate(request, plan)
     if not bool(validation.get("ok", false)):
-        plan.failure_reason = "area_validation_failed:%s" % ",".join(validation.get("failures", []))
+        var failure_parts := PackedStringArray()
+        for failure_value: Variant in validation.get("failures", []):
+            failure_parts.append(String(failure_value))
+        plan.failure_reason = "area_validation_failed:%s" % ",".join(failure_parts)
     return plan
 
 func area_profile_ids() -> Array[StringName]:
