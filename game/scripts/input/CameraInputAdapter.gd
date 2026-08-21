@@ -11,14 +11,14 @@ const PINCH_ZOOM_OUT_THRESHOLD: float = 0.85
 const MIN_PINCH_DISTANCE: float = 12.0
 
 var _enabled: bool = true
-var _mouse_drag_button: int = 0
+var _mouse_dragging: bool = false
 var _touches: Dictionary = {}
 var _pinch_accumulator: float = 1.0
 
 func set_enabled(value: bool) -> void:
     _enabled = value
     if not value:
-        _mouse_drag_button = 0
+        _mouse_dragging = false
         _touches.clear()
         _pinch_accumulator = 1.0
 
@@ -58,16 +58,13 @@ func _handle_mouse_button(event: InputEventMouseButton) -> void:
         zoom_out_requested.emit()
         get_viewport().set_input_as_handled()
         return
-    if event.button_index != MOUSE_BUTTON_MIDDLE and event.button_index != MOUSE_BUTTON_RIGHT:
+    if event.button_index != MOUSE_BUTTON_MIDDLE:
         return
-    if event.pressed:
-        _mouse_drag_button = event.button_index
-    elif _mouse_drag_button == event.button_index:
-        _mouse_drag_button = 0
+    _mouse_dragging = event.pressed
     get_viewport().set_input_as_handled()
 
 func _handle_mouse_motion(event: InputEventMouseMotion) -> void:
-    if _mouse_drag_button == 0:
+    if not _mouse_dragging:
         return
     if not event.relative.is_zero_approx():
         pan_requested.emit(event.relative)
