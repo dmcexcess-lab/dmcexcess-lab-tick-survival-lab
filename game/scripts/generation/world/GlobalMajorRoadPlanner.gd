@@ -2,20 +2,24 @@ extends RefCounted
 class_name GlobalMajorRoadPlanner
 
 const GeographyQueryClass = preload("res://scripts/generation/world/GlobalGeographyQuery.gd")
+const HydrologyQueryClass = preload("res://scripts/generation/world/GlobalHydrologyQuery.gd")
 
 var _geography: GlobalGeographyQuery
+var _hydrology: GlobalHydrologyQuery
 
 func _init() -> void:
     _geography = GeographyQueryClass.new()
+    _hydrology = HydrologyQueryClass.new()
 
 func plan(
     request: GlobalWorldGenerationRequest,
     profile: Dictionary,
     settlements: Array[Dictionary],
-    geography_cells: Array[Dictionary]
+    geography_cells: Array[Dictionary],
+    river_segments: Array[Dictionary]
 ) -> Dictionary:
     var road_segments: Array[Dictionary] = []
-    if request == null or not request.is_valid() or profile.is_empty() or settlements.is_empty() or geography_cells.is_empty():
+    if request == null or not request.is_valid() or profile.is_empty() or settlements.is_empty() or geography_cells.is_empty() or river_segments.is_empty():
         return {"ok": false, "failure_reason": "invalid_major_road_planner_input", "road_segments": road_segments}
 
     var crossroads: Dictionary = _settlement_by_id(settlements, "settlement.rural.crossroads.001")
@@ -29,7 +33,7 @@ func plan(
     var center: Vector2i = crossroads.get("center", Vector2i.ZERO)
     var primary_width: int = int(profile.get("primary_width", 5))
     var secondary_width: int = int(profile.get("secondary_width", 3))
-    var half_span: int = int(profile.get("protected_cross_half_span", 384))
+    var half_span: int = int(profile.get("protected_cross_half_span", 640))
 
     var primary_start := Vector2i(center.x - half_span, center.y)
     var primary_end := Vector2i(center.x + half_span - 1, center.y)
@@ -63,27 +67,27 @@ func plan(
     if west_gateway.x < -900000 or east_gateway.x < -900000 or north_gateway.x < -900000 or south_gateway.x < -900000:
         return {"ok": false, "failure_reason": "global_road_gateway_unresolved", "road_segments": []}
 
-    if not _append_routed_path(road_segments, "road.region.primary.west", &"primary", "route.region.primary.001", west_gateway, primary_start, primary_width, geography_cells, profile):
+    if not _append_routed_path(road_segments, "road.region.primary.west", &"primary", "route.region.primary.001", west_gateway, primary_start, primary_width, geography_cells, river_segments, profile):
         return {"ok": false, "failure_reason": "global_primary_west_route_failed", "road_segments": []}
     var smalltown_center: Vector2i = smalltown.get("center", Vector2i.ZERO)
-    if not _append_routed_path(road_segments, "road.region.primary.east.inner", &"primary", "route.region.primary.001", primary_end, smalltown_center, primary_width, geography_cells, profile):
+    if not _append_routed_path(road_segments, "road.region.primary.east.inner", &"primary", "route.region.primary.001", primary_end, smalltown_center, primary_width, geography_cells, river_segments, profile):
         return {"ok": false, "failure_reason": "global_primary_smalltown_route_failed", "road_segments": []}
-    if not _append_routed_path(road_segments, "road.region.primary.east.outer", &"primary", "route.region.primary.001", smalltown_center, east_gateway, primary_width, geography_cells, profile):
+    if not _append_routed_path(road_segments, "road.region.primary.east.outer", &"primary", "route.region.primary.001", smalltown_center, east_gateway, primary_width, geography_cells, river_segments, profile):
         return {"ok": false, "failure_reason": "global_primary_east_route_failed", "road_segments": []}
 
     var north_center: Vector2i = north_hamlet.get("center", Vector2i.ZERO)
-    if not _append_routed_path(road_segments, "road.region.secondary.north.inner", &"secondary", "route.region.secondary.001", secondary_start, north_center, secondary_width, geography_cells, profile):
+    if not _append_routed_path(road_segments, "road.region.secondary.north.inner", &"secondary", "route.region.secondary.001", secondary_start, north_center, secondary_width, geography_cells, river_segments, profile):
         return {"ok": false, "failure_reason": "global_secondary_north_settlement_route_failed", "road_segments": []}
-    if not _append_routed_path(road_segments, "road.region.secondary.north.outer", &"secondary", "route.region.secondary.001", north_center, north_gateway, secondary_width, geography_cells, profile):
+    if not _append_routed_path(road_segments, "road.region.secondary.north.outer", &"secondary", "route.region.secondary.001", north_center, north_gateway, secondary_width, geography_cells, river_segments, profile):
         return {"ok": false, "failure_reason": "global_secondary_north_gateway_route_failed", "road_segments": []}
-    if not _append_routed_path(road_segments, "road.region.secondary.south", &"secondary", "route.region.secondary.001", secondary_end, south_gateway, secondary_width, geography_cells, profile):
+    if not _append_routed_path(road_segments, "road.region.secondary.south", &"secondary", "route.region.secondary.001", secondary_end, south_gateway, secondary_width, geography_cells, river_segments, profile):
         return {"ok": false, "failure_reason": "global_secondary_south_route_failed", "road_segments": []}
 
     var southwest_center: Vector2i = southwest.get("center", Vector2i.ZERO)
-    if not _append_routed_path(road_segments, "road.region.secondary.southwest", &"secondary", "route.region.secondary.002", primary_start, southwest_center, secondary_width, geography_cells, profile):
+    if not _append_routed_path(road_segments, "road.region.secondary.southwest", &"secondary", "route.region.secondary.002", primary_start, southwest_center, secondary_width, geography_cells, river_segments, profile):
         return {"ok": false, "failure_reason": "global_southwest_branch_route_failed", "road_segments": []}
     var northeast_center: Vector2i = northeast.get("center", Vector2i.ZERO)
-    if not _append_routed_path(road_segments, "road.region.secondary.northeast", &"secondary", "route.region.secondary.003", secondary_start, northeast_center, secondary_width, geography_cells, profile):
+    if not _append_routed_path(road_segments, "road.region.secondary.northeast", &"secondary", "route.region.secondary.003", secondary_start, northeast_center, secondary_width, geography_cells, river_segments, profile):
         return {"ok": false, "failure_reason": "global_northeast_branch_route_failed", "road_segments": []}
 
     for road: Dictionary in road_segments:
@@ -101,11 +105,12 @@ func _append_routed_path(
     finish: Vector2i,
     width: int,
     geography_cells: Array[Dictionary],
+    river_segments: Array[Dictionary],
     profile: Dictionary
 ) -> bool:
     if start == finish:
         return true
-    var points: Array[Vector2i] = _route_points(start, finish, geography_cells, profile)
+    var points: Array[Vector2i] = _route_points(start, finish, geography_cells, river_segments, profile)
     if points.size() < 2:
         return false
     var ordinal: int = 1
@@ -132,6 +137,7 @@ func _route_points(
     start: Vector2i,
     finish: Vector2i,
     geography_cells: Array[Dictionary],
+    river_segments: Array[Dictionary],
     profile: Dictionary
 ) -> Array[Vector2i]:
     var start_grid: Vector2i = _geography.grid_for_point(start, geography_cells)
@@ -141,7 +147,7 @@ func _route_points(
     if not _geography.road_allowed_grid(start_grid, geography_cells) or not _geography.road_allowed_grid(finish_grid, geography_cells):
         return []
 
-    var grid_path: Array[Vector2i] = _a_star_grid(start_grid, finish_grid, geography_cells, profile)
+    var grid_path: Array[Vector2i] = _a_star_grid(start_grid, finish_grid, geography_cells, river_segments, profile)
     if grid_path.is_empty():
         return []
 
@@ -165,6 +171,7 @@ func _a_star_grid(
     start: Vector2i,
     finish: Vector2i,
     geography_cells: Array[Dictionary],
+    river_segments: Array[Dictionary],
     profile: Dictionary
 ) -> Array[Vector2i]:
     var open_set: Dictionary = {start: true}
@@ -185,14 +192,20 @@ func _a_star_grid(
         open_set.erase(current)
         closed[current] = true
         var current_score: int = int(g_score.get(current, 2147483647))
+        var current_on_river: bool = _hydrology.grid_on_river(current, geography_cells, river_segments)
 
         for direction: Vector2i in directions:
             var neighbor: Vector2i = current + direction
             if closed.has(neighbor) or not _geography.road_allowed_grid(neighbor, geography_cells):
                 continue
+            var neighbor_on_river: bool = _hydrology.grid_on_river(neighbor, geography_cells, river_segments)
+            if current_on_river and neighbor_on_river:
+                continue
             var step_cost: int = _geography.road_cost_grid(neighbor, geography_cells, profile)
             if step_cost >= 2147483647:
                 continue
+            if neighbor_on_river:
+                step_cost += int(profile.get("road_cost_river_crossing", 120))
             var tentative: int = current_score + step_cost
             var known: int = int(g_score.get(neighbor, 2147483647))
             if tentative >= known:
