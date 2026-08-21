@@ -1,5 +1,18 @@
 # Changelog
 
+## System 20 Rural Crossroads Candidate 005 — 2026-08-20
+
+- Fixed the live property-access critique where some generated approaches reached a building facade and then turned sideways to an off-center front door.
+- Bumped `rural.crossroads` from v3 to **v4** because same-seed property-access output intentionally changed. `temperate.rural` remains v3.
+- Preserved Candidate 004 roads, local-road frontage, parcel allocation, farm layout, building envelopes, facade setbacks, fields, vegetation and zero-fake-parking behavior.
+- Kept every finalized System 19 prefab source unchanged. System 20 still learns the primary entrance only by generating the building through the public contract and reading its `door.exterior.primary` cell from `GeneratedBuildingPlan`.
+- After normal legal building placement, System 20 now slides the parcel-side and road-side property-access anchors **along the frontage axis** until they align with the actual generated primary door.
+- Final approaches therefore run straight and perpendicular from the road edge to the real primary door instead of making a last-second lateral hook along the facade.
+- If a shifted parcel-side access anchor would leave its legal parcel, generation fails rather than restoring a crooked presentation workaround.
+- Expanded `LocalAreaGenerationSmoke.gd` so every occupied residential, farmstead and small-commercial approach must begin at its road-access anchor, end at the actual primary door, and remain on one frontage-normal axis.
+- The alignment regression runs across the critique seed plus twelve consecutive System 20 seeds while preserving Candidate 004 building counts, local-road majority, setback, road, farm and environmental-noise requirements.
+- No renderer/art, camera, movement, door-mechanics or System 19 building source changed.
+
 ## System 20 Rural Crossroads Candidate 004 — 2026-08-20
 
 - Responded to the live morphology critique that development still hugged the inherited center road and that buildings were offset too far behind purposeless open space.
