@@ -25,6 +25,10 @@ func plan(
         return {"ok": false, "failure_reason": "insufficient_rural_parcel_candidates", "parcels": parcels}
 
     _classify_land_use(request.seed, profile, center, parcels)
+    if _count_land_use(parcels, &"commercial_small") != int(profile.get("commercial_count", 0)) \
+        or _count_land_use(parcels, &"residential") != int(profile.get("residential_count", 0)) \
+        or _count_land_use(parcels, &"farmstead") != int(profile.get("farmstead_count", 0)):
+        return {"ok": false, "failure_reason": "rural_land_use_targets_unmet", "parcels": parcels}
     return {"ok": true, "failure_reason": "", "parcels": parcels}
 
 func _append_road_frontage_parcels(
@@ -35,76 +39,177 @@ func _append_road_frontage_parcels(
     road_cells: Dictionary,
     parcels: Array[Dictionary]
 ) -> void:
-    var road_class: StringName = road.get("road_class", &"")
-    var depth: int = int(profile.get("primary_parcel_depth", 28)) if road_class == &"primary" else int(profile.get("secondary_parcel_depth", 32))
+    var axis: StringName = StringName(road.get("axis", &""))
+    if axis == &"horizontal" or axis == &"vertical":
+        _append_inherited_straight_frontage(request, profile, road, center, road_cells, parcels)
+        return
+    if axis == &"polyline":
+        _append_polyline_frontage(request, profile, road, center, road_cells, parcels)
+
+func _append_inherited_straight_frontage(
+    request: AreaGenerationRequest,
+    profile: Dictionary,
+    road: Dictionary,
+    center: Vector2i,
+    road_cells: Dictionary,
+    parcels: Array[Dictionary]
+) -> void:
+    var road_class: StringName = StringName(road.get("road_class", &""))
+    var depth: int = int(profile.get("primary_parcel_depth", 24)) if road_class == &"primary" else int(profile.get("secondary_parcel_depth", 24))
     var radius: int = int(profile.get("center_exclusion_radius", 30))
     var edge_margin: int = int(profile.get("edge_margin", 8))
     var road_id: String = String(road.get("road_id", ""))
     var width: int = int(road.get("width", 1))
     var half_width: int = width / 2
-    var gap_from_road: int = 2
+    var gap_from_road: int = int(profile.get("parcel_road_gap", 1))
+    var minimum: int = int(profile.get("frontage_min", 28))
+    var maximum: int = int(profile.get("frontage_max", 36))
+    var parcel_gap: int = int(profile.get("parcel_gap", 3))
+    var axis: StringName = StringName(road.get("axis", &""))
     var spans: Array[Vector2i] = []
 
-    if StringName(road.get("axis", &"")) == &"horizontal":
+    if axis == &"horizontal":
         spans.append(Vector2i(request.bounds.position.x + edge_margin, center.x - radius - 1))
         spans.append(Vector2i(center.x + radius + 1, request.bounds.position.x + request.bounds.size.x - edge_margin - 1))
+        var centerline_y: int = int(road.get("start", Vector2i.ZERO).y)
         for side: StringName in [&"north", &"south"]:
             for span: Vector2i in spans:
-                var segment_rects: Array[Rect2i] = _segment_rects(request, profile, road_id, side, span.x, span.y, true, depth)
-                for rect: Rect2i in segment_rects:
-                    var y: int
-                    var frontage: int
-                    if side == &"north":
-                        var bottom: int = int(road.get("start", Vector2i.ZERO).y) - half_width - gap_from_road - 1
-                        y = bottom - depth + 1
-                        frontage = Facing.Value.SOUTH
-                    else:
-                        y = int(road.get("start", Vector2i.ZERO).y) + half_width + gap_from_road + 1
-                        frontage = Facing.Value.NORTH
-                    var placed := Rect2i(Vector2i(rect.position.x, y), Vector2i(rect.size.x, depth))
-                    _try_append_parcel(request, road, side, frontage, placed, center, road_cells, parcels)
+                _append_axis_segment_parcels(
+                    request, profile, road, center, road_cells, parcels,
+                    &"horizontal", centerline_y, span.x, span.y, side,
+                    depth, half_width, gap_from_road, minimum, maximum, parcel_gap
+                )
         return
 
-    if StringName(road.get("axis", &"")) != &"vertical":
-        return
     spans.append(Vector2i(request.bounds.position.y + edge_margin, center.y - radius - 1))
     spans.append(Vector2i(center.y + radius + 1, request.bounds.position.y + request.bounds.size.y - edge_margin - 1))
+    var centerline_x: int = int(road.get("start", Vector2i.ZERO).x)
     for side: StringName in [&"west", &"east"]:
         for span: Vector2i in spans:
-            var segment_rects: Array[Rect2i] = _segment_rects(request, profile, road_id, side, span.x, span.y, false, depth)
-            for rect: Rect2i in segment_rects:
-                var x: int
-                var frontage: int
-                if side == &"west":
-                    var right: int = int(road.get("start", Vector2i.ZERO).x) - half_width - gap_from_road - 1
-                    x = right - depth + 1
-                    frontage = Facing.Value.EAST
-                else:
-                    x = int(road.get("start", Vector2i.ZERO).x) + half_width + gap_from_road + 1
-                    frontage = Facing.Value.WEST
-                var placed := Rect2i(Vector2i(x, rect.position.y), Vector2i(depth, rect.size.y))
-                _try_append_parcel(request, road, side, frontage, placed, center, road_cells, parcels)
+            _append_axis_segment_parcels(
+                request, profile, road, center, road_cells, parcels,
+                &"vertical", centerline_x, span.x, span.y, side,
+                depth, half_width, gap_from_road, minimum, maximum, parcel_gap
+            )
 
-func _segment_rects(
+func _append_polyline_frontage(
     request: AreaGenerationRequest,
     profile: Dictionary,
+    road: Dictionary,
+    center: Vector2i,
+    road_cells: Dictionary,
+    parcels: Array[Dictionary]
+) -> void:
+    var waypoints: Array = road.get("waypoints", [])
+    if waypoints.size() < 2:
+        return
+    var depth: int = int(profile.get("local_parcel_depth", 20))
+    var half_width: int = int(road.get("width", 3)) / 2
+    var gap_from_road: int = int(profile.get("parcel_road_gap", 1))
+    var minimum: int = int(profile.get("local_frontage_min", 20))
+    var maximum: int = int(profile.get("local_frontage_max", 26))
+    var parcel_gap: int = int(profile.get("parcel_gap", 3))
+    var end_margin: int = int(profile.get("local_frontage_end_margin", 5))
+
+    for segment_index in range(waypoints.size() - 1):
+        var start: Vector2i = waypoints[segment_index]
+        var finish: Vector2i = waypoints[segment_index + 1]
+        if start.x == finish.x:
+            var span_start: int = mini(start.y, finish.y) + end_margin
+            var span_end: int = maxi(start.y, finish.y) - end_margin
+            if span_end - span_start + 1 < minimum:
+                continue
+            for side: StringName in [&"west", &"east"]:
+                _append_axis_segment_parcels(
+                    request, profile, road, center, road_cells, parcels,
+                    &"vertical", start.x, span_start, span_end, side,
+                    depth, half_width, gap_from_road, minimum, maximum, parcel_gap
+                )
+        elif start.y == finish.y:
+            var span_start: int = mini(start.x, finish.x) + end_margin
+            var span_end: int = maxi(start.x, finish.x) - end_margin
+            if span_end - span_start + 1 < minimum:
+                continue
+            for side: StringName in [&"north", &"south"]:
+                _append_axis_segment_parcels(
+                    request, profile, road, center, road_cells, parcels,
+                    &"horizontal", start.y, span_start, span_end, side,
+                    depth, half_width, gap_from_road, minimum, maximum, parcel_gap
+                )
+
+func _append_axis_segment_parcels(
+    request: AreaGenerationRequest,
+    profile: Dictionary,
+    road: Dictionary,
+    center: Vector2i,
+    road_cells: Dictionary,
+    parcels: Array[Dictionary],
+    axis: StringName,
+    centerline: int,
+    span_start: int,
+    span_end: int,
+    side: StringName,
+    depth: int,
+    half_width: int,
+    gap_from_road: int,
+    minimum: int,
+    maximum: int,
+    parcel_gap: int
+) -> void:
+    var segment_rects: Array[Rect2i] = _segment_rects(
+        request.seed,
+        String(road.get("road_id", "")),
+        side,
+        span_start,
+        span_end,
+        axis == &"horizontal",
+        depth,
+        minimum,
+        maximum,
+        parcel_gap
+    )
+    for rect: Rect2i in segment_rects:
+        var placed: Rect2i = Rect2i()
+        var frontage: int = -1
+        if axis == &"horizontal":
+            if side == &"north":
+                var bottom: int = centerline - half_width - gap_from_road - 1
+                placed = Rect2i(Vector2i(rect.position.x, bottom - depth + 1), Vector2i(rect.size.x, depth))
+                frontage = Facing.Value.SOUTH
+            else:
+                var top: int = centerline + half_width + gap_from_road + 1
+                placed = Rect2i(Vector2i(rect.position.x, top), Vector2i(rect.size.x, depth))
+                frontage = Facing.Value.NORTH
+        else:
+            if side == &"west":
+                var right: int = centerline - half_width - gap_from_road - 1
+                placed = Rect2i(Vector2i(right - depth + 1, rect.position.y), Vector2i(depth, rect.size.y))
+                frontage = Facing.Value.EAST
+            else:
+                var left: int = centerline + half_width + gap_from_road + 1
+                placed = Rect2i(Vector2i(left, rect.position.y), Vector2i(depth, rect.size.y))
+                frontage = Facing.Value.WEST
+        _try_append_parcel(request, profile, road, side, frontage, placed, center, road_cells, parcels)
+
+func _segment_rects(
+    seed: int,
     road_id: String,
     side: StringName,
     span_start: int,
     span_end: int,
     horizontal: bool,
-    depth: int
+    depth: int,
+    minimum: int,
+    maximum: int,
+    gap: int
 ) -> Array[Rect2i]:
     var result: Array[Rect2i] = []
-    var minimum: int = int(profile.get("frontage_min", 28))
-    var maximum: int = int(profile.get("frontage_max", 36))
-    var gap: int = int(profile.get("parcel_gap", 3))
     var cursor: int = span_start
     var ordinal: int = 0
     while cursor + minimum - 1 <= span_end:
         var remaining: int = span_end - cursor + 1
         var domain: String = "parcel_width:%s:%s:%d:%d" % [road_id, String(side), cursor, ordinal]
-        var width: int = minimum + Seed.choose_index(request.seed, domain, maximum - minimum + 1)
+        var width: int = minimum + Seed.choose_index(seed, domain, maximum - minimum + 1)
         if width > remaining:
             if remaining < minimum:
                 break
@@ -119,6 +224,7 @@ func _segment_rects(
 
 func _try_append_parcel(
     request: AreaGenerationRequest,
+    profile: Dictionary,
     road: Dictionary,
     side: StringName,
     frontage: int,
@@ -137,7 +243,7 @@ func _try_append_parcel(
     for existing: Dictionary in parcels:
         if _rects_intersect(rect, existing.get("rect", Rect2i())):
             return
-    var shrink: int = 2
+    var shrink: int = int(profile.get("parcel_buildable_margin", 1))
     var buildable := Rect2i(
         rect.position + Vector2i(shrink, shrink),
         rect.size - Vector2i(shrink * 2, shrink * 2)
@@ -157,6 +263,7 @@ func _try_append_parcel(
         "access_cell": Vector2i(-1, -1),
         "parcel_access_cell": Vector2i(-1, -1),
         "driveway_cells": [],
+        "parking_cells": [],
         "building_archetype_id": &"",
         "building_envelope": Rect2i(),
         "building_entry_cell": Vector2i(-1, -1),
@@ -182,7 +289,8 @@ func _classify_land_use(seed: int, profile: Dictionary, center: Vector2i, parcel
         commercial_used += 1
 
     var residential_target: int = int(profile.get("residential_count", 6))
-    var residential_used: int = 0
+    var local_residential_target: int = mini(residential_target, int(profile.get("local_residential_target", 0)))
+    var residential_used: int = _assign_local_land_use(parcels, &"residential", local_residential_target, false)
     for parcel: Dictionary in parcels:
         if residential_used >= residential_target:
             break
@@ -192,7 +300,8 @@ func _classify_land_use(seed: int, profile: Dictionary, center: Vector2i, parcel
         residential_used += 1
 
     var farmstead_target: int = int(profile.get("farmstead_count", 4))
-    var farmstead_used: int = 0
+    var local_farmstead_target: int = mini(farmstead_target, int(profile.get("local_farmstead_target", 0)))
+    var farmstead_used: int = _assign_local_land_use(parcels, &"farmstead", local_farmstead_target, true)
     for index in range(parcels.size() - 1, -1, -1):
         if farmstead_used >= farmstead_target:
             break
@@ -201,9 +310,6 @@ func _classify_land_use(seed: int, profile: Dictionary, center: Vector2i, parcel
             continue
         parcel["land_use"] = &"farmstead"
         farmstead_used += 1
-
-    if commercial_used != commercial_target or residential_used != residential_target or farmstead_used != farmstead_target:
-        return
 
     for parcel: Dictionary in parcels:
         if StringName(parcel.get("land_use", &"")) != &"unclassified":
@@ -216,6 +322,38 @@ func _classify_land_use(seed: int, profile: Dictionary, center: Vector2i, parcel
                 parcel["land_use"] = &"vacant"
             _:
                 parcel["land_use"] = &"wilderness"
+
+func _assign_local_land_use(parcels: Array[Dictionary], land_use: StringName, target: int, farthest_first: bool) -> int:
+    if target <= 0:
+        return 0
+    var candidates: Array[Dictionary] = []
+    for parcel: Dictionary in parcels:
+        if StringName(parcel.get("land_use", &"")) != &"unclassified":
+            continue
+        if StringName(parcel.get("frontage_road_class", &"")) != &"local_rural":
+            continue
+        candidates.append(parcel)
+    candidates.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
+        var da: int = int(a.get("distance_to_center", 0))
+        var db: int = int(b.get("distance_to_center", 0))
+        if da != db:
+            return da > db if farthest_first else da < db
+        return String(a.get("id", "")) < String(b.get("id", ""))
+    )
+    var used: int = 0
+    for parcel: Dictionary in candidates:
+        if used >= target:
+            break
+        parcel["land_use"] = land_use
+        used += 1
+    return used
+
+func _count_land_use(parcels: Array[Dictionary], land_use: StringName) -> int:
+    var count: int = 0
+    for parcel: Dictionary in parcels:
+        if StringName(parcel.get("land_use", &"")) == land_use:
+            count += 1
+    return count
 
 func _road_cell_set(roads: Array[Dictionary]) -> Dictionary:
     var result: Dictionary = {}
