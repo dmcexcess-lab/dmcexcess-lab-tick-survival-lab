@@ -23,7 +23,7 @@ func profile(profile_id: StringName) -> Dictionary:
         "lowland_elevation_max": 35,
         "rolling_elevation_max": 58,
         "upland_elevation_max": 75,
-        "protected_cross_half_span": 384,
+        "protected_cross_half_span": 640,
         "protected_cross_half_thickness": 192,
         "settlement_geography_search_radius_cells": 4,
         "road_cost_lowland": 10,
