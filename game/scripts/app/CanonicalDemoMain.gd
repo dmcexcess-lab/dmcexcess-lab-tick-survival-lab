@@ -42,7 +42,7 @@ const DoorTransitionClass = preload("res://scripts/simulation/doors/DoorPhysical
 const DoorPassageClass = preload("res://scripts/simulation/doors/DoorMovementPassageResolver.gd")
 const DoorActionClass = preload("res://scripts/simulation/doors/DoorInteractionActionService.gd")
 const DoorDamageInterruptionClass = preload("res://scripts/simulation/doors/DoorDamageInterruptionService.gd")
-const FixtureClass = preload("res://scripts/demo/RuralDinerCritiqueFixture.gd")
+const FixtureClass = preload("res://scripts/demo/RuralCrossroadsCritiqueFixture.gd")
 const ControllerClass = preload("res://scripts/player/DemoPlayerActionController.gd")
 const DoorControllerClass = preload("res://scripts/player/DoorPlayerInteractionController.gd")
 
@@ -51,6 +51,7 @@ const DoorControllerClass = preload("res://scripts/player/DoorPlayerInteractionC
 @onready var _world_view: TacticalRendererStack = $WorldView
 @onready var _camera_controller: TacticalCameraController = $CameraRig
 @onready var _camera: Camera2D = $CameraRig/Camera2D
+@onready var _large_area_view: LargeAreaRenderWindowController = $LargeAreaView
 @onready var _keyboard: KeyboardInputAdapter = $KeyboardInput
 @onready var _door_pointer: DoorPointerInputAdapter = $DoorPointerInput
 @onready var _camera_input: CameraInputAdapter = $CameraInput
@@ -177,9 +178,18 @@ func _boot_canonical_demo() -> bool:
     _art_catalog = ArtCatalogClass.new()
     if not _world_view.configure(_world, _art_catalog, _door_state, FixtureClass.PLAYER_ID):
         return false
-    if not _world_view.set_visible_window(FixtureClass.MAP_ORIGIN, FixtureClass.MAP_SIZE, FixtureClass.CELL_PIXELS):
-        return false
-    if not _door_pointer.configure(_world_view.position, FixtureClass.MAP_ORIGIN, FixtureClass.MAP_SIZE, FixtureClass.CELL_PIXELS):
+
+    var initial_render_origin: Vector2i = FixtureClass.initial_render_origin(_world)
+    if not _large_area_view.configure(
+        _world_view,
+        _world_view,
+        _door_pointer,
+        FixtureClass.AREA_BOUNDS,
+        FixtureClass.RENDER_WINDOW_SIZE,
+        FixtureClass.CELL_PIXELS,
+        initial_render_origin,
+        Vector2.ZERO
+    ):
         return false
 
     _camera_controller.presentation_changed.connect(Callable(_camera_controls, "present_camera_state"))
@@ -195,9 +205,11 @@ func _boot_canonical_demo() -> bool:
         _camera,
         _world_view,
         FixtureClass.PLAYER_ID,
-        FixtureClass.MAP_ORIGIN,
+        initial_render_origin,
         FixtureClass.CELL_PIXELS
     ):
+        return false
+    if not _large_area_view.attach_camera(_camera_controller):
         return false
     _camera_controls.present_camera_state(_camera_controller.presentation_snapshot())
 
