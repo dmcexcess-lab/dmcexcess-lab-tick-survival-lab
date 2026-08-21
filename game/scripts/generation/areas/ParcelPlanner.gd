@@ -21,8 +21,12 @@ func plan(
             continue
         _append_road_frontage_parcels(request, profile, road, center, road_cells, parcels)
 
-    if parcels.size() < int(profile.get("commercial_count", 0)) + int(profile.get("residential_count", 0)) + int(profile.get("farmstead_count", 0)):
+    var required_total: int = int(profile.get("commercial_count", 0)) + int(profile.get("residential_count", 0)) + int(profile.get("farmstead_count", 0))
+    if parcels.size() < required_total:
         return {"ok": false, "failure_reason": "insufficient_rural_parcel_candidates", "parcels": parcels}
+    var required_local: int = int(profile.get("local_residential_target", 0)) + int(profile.get("local_farmstead_target", 0))
+    if _count_road_class_candidates(parcels, &"local_rural") < required_local:
+        return {"ok": false, "failure_reason": "insufficient_local_road_parcel_candidates", "parcels": parcels}
 
     _classify_land_use(request.seed, profile, center, parcels)
     if _count_land_use(parcels, &"commercial_small") != int(profile.get("commercial_count", 0)) \
@@ -56,7 +60,7 @@ func _append_inherited_straight_frontage(
 ) -> void:
     var road_class: StringName = StringName(road.get("road_class", &""))
     var depth: int = int(profile.get("primary_parcel_depth", 24)) if road_class == &"primary" else int(profile.get("secondary_parcel_depth", 24))
-    var radius: int = int(profile.get("center_exclusion_radius", 30))
+    var radius: int = int(profile.get("center_exclusion_radius", 20))
     var edge_margin: int = int(profile.get("edge_margin", 8))
     var road_id: String = String(road.get("road_id", ""))
     var width: int = int(road.get("width", 1))
@@ -106,10 +110,10 @@ func _append_polyline_frontage(
     var depth: int = int(profile.get("local_parcel_depth", 20))
     var half_width: int = int(road.get("width", 3)) / 2
     var gap_from_road: int = int(profile.get("parcel_road_gap", 1))
-    var minimum: int = int(profile.get("local_frontage_min", 20))
-    var maximum: int = int(profile.get("local_frontage_max", 26))
+    var minimum: int = int(profile.get("local_frontage_min", 23))
+    var maximum: int = int(profile.get("local_frontage_max", 28))
     var parcel_gap: int = int(profile.get("parcel_gap", 3))
-    var end_margin: int = int(profile.get("local_frontage_end_margin", 5))
+    var end_margin: int = int(profile.get("local_frontage_end_margin", 3))
 
     for segment_index in range(waypoints.size() - 1):
         var start: Vector2i = waypoints[segment_index]
@@ -352,6 +356,13 @@ func _count_land_use(parcels: Array[Dictionary], land_use: StringName) -> int:
     var count: int = 0
     for parcel: Dictionary in parcels:
         if StringName(parcel.get("land_use", &"")) == land_use:
+            count += 1
+    return count
+
+func _count_road_class_candidates(parcels: Array[Dictionary], road_class: StringName) -> int:
+    var count: int = 0
+    for parcel: Dictionary in parcels:
+        if StringName(parcel.get("frontage_road_class", &"")) == road_class:
             count += 1
     return count
 
