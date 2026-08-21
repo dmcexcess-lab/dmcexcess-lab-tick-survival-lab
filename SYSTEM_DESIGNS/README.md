@@ -10,7 +10,7 @@ Major systems move through **NOT DESIGNED -> DRAFT -> APPROVED -> IMPLEMENTED** 
 | 00A | Spatial Model — WHERE | **IMPLEMENTED** | `00A_SPATIAL_MODEL.md` |
 | 00B | Persistent World / Entity State — WHAT | **IMPLEMENTED** | `00B_PERSISTENT_WORLD_STATE.md` |
 | 00C | Tick / Action / Pause Kernel — WHEN | **IMPLEMENTED** | `00C_TICK_ACTION_PAUSE.md` |
-| 00D | Global World Planning / Generation | **IMPLEMENTED — GEOGRAPHY / LANDFORM SLICE 002** | `00D_GLOBAL_WORLD_PLANNING.md` |
+| 00D | Global World Planning / Generation | **IMPLEMENTED — SLICES 001–003** | `00D_GLOBAL_WORLD_PLANNING.md`, `00D3_GLOBAL_HYDROLOGY_BRIDGE_INTENT.md` |
 | 01 | Collision / Spatial Query | **IMPLEMENTED** | `01_COLLISION_SPATIAL_QUERY.md` |
 | 02 | Movement Actions | **IMPLEMENTED** | `02_MOVEMENT_ACTIONS.md` |
 | 03 | Actor Locomotion / Movement Capability | **IMPLEMENTED** | `03_ACTOR_LOCOMOTION_MOVEMENT_CAPABILITY.md` |
@@ -47,99 +47,73 @@ Major systems move through **NOT DESIGNED -> DRAFT -> APPROVED -> IMPLEMENTED** 
 | 00F | Streaming / Materialization | **NOT DESIGNED** | future design |
 | old-01 | Raid-map / extraction physical-world model | **SUPERSEDED** | `01_RAID_MAP_DATA.md` |
 
-## System 00D Global World Planning — Geography / Landform Slice 002
+## System 00D current implementation — Slices 001–003
 
-Current global-planning truth:
+Current profile: `temperate.rural.region` **v3**.
 
-- pure `temperate.rural.region` **v2** regional plan under `game/scripts/generation/world/`;
-- global fixture bounds `Rect2i(232,1232,1792,1792)` with seed `20001`;
-- 196 coarse 128-cell geography records covering the whole fixture;
-- deterministic planning elevation plus `lowland`, `rolling`, `upland`, `ridge` landforms;
-- one protected central low/rolling integration cross/basin;
-- five settlement anchors: one central rural crossroads, one smalltown, three rural hamlets;
-- non-central settlements snap through bounded deterministic search to legal low/rolling geography;
-- one connected geography-aware major-road network: lowland cheapest, rolling mildly penalized, upland strongly penalized, ridge forbidden;
-- geography-aware outer route bends with real regional boundary gateways;
-- no major-road centerline crossing ridge geography;
-- broad rural-open background plus settlement influence regions;
-- five local-area site records carrying downstream profile hints without fabricating unsupported local content;
-- pure 00D source has no System 20/building/render/camera/player/streaming dependency;
-- separate `System20AreaRequestProjector` clips global road facts into the existing System 20 request contract and remains fail-honest for unsupported substantial internal geometry;
-- the protected central cross uses half-span **640**, so the center and immediately adjacent 256x256 windows see clean continuous inherited primary/secondary roads before geography-aware bends begin farther out;
-- the central global site projects to the exact current Rural Crossroads inherited-road request and System 20 produces Candidate 006 from it;
+The pure global planner now establishes, in order:
+
+`geography -> hydrology -> settlements/sites -> major roads -> bridge intents -> broad planning regions`.
+
+Current global fixture:
+
+- bounds `Rect2i(232,1232,1792,1792)`, seed `20001`;
+- 196 coarse 128-cell geography records with lowland/rolling/upland/ridge classes;
+- one central rural crossroads, one smalltown and three rural hamlets;
+- geography/hydrology-constrained settlement sites;
+- globally connected primary/secondary road network with real boundary gateways;
+- protected central straight cross with 640-cell half-span so the accepted center/adjacent windows remain clean local-road inputs;
+- one deterministic boundary-to-boundary primary regional river outside that protected corridor;
+- major roads pay a high river-crossing cost and cannot run collinearly along a river centerline;
+- every actual perpendicular route/river/cell crossing has exactly one explicit independently validated bridge intent;
+- `System20AreaRequestProjector.hydrology_constraints_for_bounds()` exposes river + bridge facts read-only without changing `AreaGenerationRequest`;
+- central Candidate 006 and its immediately adjacent protected windows remain hydrology-free;
+- central `project_site()` still produces the accepted System 20 road request and exact Candidate 006 semantic output;
+- unsupported future local profiles still fail honestly;
 - exact-head context `verify/system00d-global-world`.
 
-This proves physical landform can be upstream truth for settlements/major roads without turning geography cells into streaming chunks or invalidating the accepted local world.
+System 00D remains pure planning. It owns no tactical water, bridge art/collision, WHAT mutation, renderer, camera, population, outbreak or streaming behavior.
 
 ## System 19 finalized building grammar
 
-Protected/preserved examples used to extract and validate the grammar:
+Protected library:
 
-- `residential.trailer.singlewide` v2 — accepted;
-- `residential.house.farm_small` v2 — accepted;
-- `residential.house.farm_large` v4 — preserved compact/no-hall reference;
-- `residential.house.compact_laundry` v1 — accepted;
-- `commercial.gas_station.small` v1 — accepted;
-- `commercial.diner.rural_small` v2 — accepted after the table-density revision.
+- `residential.trailer.singlewide` v2;
+- `residential.house.farm_small` v2;
+- `residential.house.farm_large` v4;
+- `residential.house.compact_laundry` v1;
+- `commercial.gas_station.small` v1;
+- `commercial.diner.rural_small` v2.
 
-Final reusable System 19 seams:
-
-- read-only placement descriptor for higher-level planners;
-- public generated semantic plan facts including entries/ground semantics;
-- `BuildingGrammarProfile` content contract;
-- reusable topology/dressing/quality owners;
-- deterministic profile-declared variation;
-- multi-seed/four-rotation regression tests.
-
-New building profiles are ordinary content work and do not reopen System 19 architecture unless its frozen public contract proves insufficient.
+New building profiles are ordinary content work unless the frozen System 19 public grammar contract proves insufficient.
 
 ## System 20 Rural Crossroads Candidate 006
 
-Candidate 006 is the current downstream local-area integration anchor for System 00D Slice 002.
+Current local integration truth:
 
-Current morphology/environment truth:
+- `rural.crossroads` v5 + `temperate.rural` v3;
+- exact inherited regional road constraints from System 00D;
+- two bent local gravel roads with real local frontage;
+- majority of houses/farms off the inherited highway;
+- compact meaningful setbacks;
+- straight primary-door-aligned property approaches;
+- deterministic two-dimensional vegetation;
+- one real gas-station parking/forecourt frontage extended flush to the road because the System 19 plan exposes `ground.parking*` at its road-facing edge;
+- no parking invented for buildings without a real parking edge;
+- initial materialization remains transactional and relinquishes ownership to WHAT afterward.
 
-- `rural.crossroads` **v5** + `temperate.rural` v3;
-- inherited regional roads remain exact and keep the single signalized crossroads;
-- two internal 3-cell bent gravel `local_rural` roads provide interior frontage through ordinary uncontrolled junctions and no boundary exits;
-- at least 6 of the 10 homes/farmsteads use local-road frontage, including >=3 residential + >=3 farmstead;
-- 3 commercial opportunities remain near center: gas station + diner + one honest vacancy;
-- ordinary residential/small-commercial facades remain close to frontage; farms remain modestly farther back;
-- mixed-coordinate 2D tree/shrub/rock noise remains unchanged;
-- every occupied property approach is aligned directly to its actual generated System 19 primary exterior door;
-- final approaches run straight and frontage-normal with no last-second lateral hook;
-- `CommercialPavedFrontagePlanner` now extends only **real generated road-facing `ground.parking*` frontage** to the road using the same semantic surface;
-- the current gas-station `ground.parking_faded` forecourt reaches the road directly;
-- diner/houses do not receive invented parking aprons;
-- empty setback grass remains explicitly **not parking**;
-- no System 19 room/wall/door/archetype source changes.
+Exact-head context: `verify/system20-local-area`.
 
-System 20 still owns no global world selection, camera/render/art behavior, population or streaming.
+## System 21 / 22 presentation truth
 
-## System 21 camera truth
+System 21 owns camera follow/pan/zoom/focus/recenter only and never mutates simulation.
 
-Normal gameplay camera defaults to player-follow and has five discrete zoom presets: Very Close, Close, Normal, Far and Area.
-
-The public camera seam also supports detached inspection, recenter, cell focus, actor focus, scripted presentation transitions and one-level restore for future cutscenes/reveals. Camera state never moves actors or advances simulation.
-
-Touch uses explicit `ZOOM - / CENTER / ZOOM +` buttons plus two-finger pan/pinch; desktop uses wheel, middle-drag and Home recenter. Right-click remains reserved for future interaction UI.
-
-`DoorPointerInputAdapter` maps through the active canvas/camera transform and cancels touch selection on drag/multitouch so camera gestures do not become door actions.
-
-## System 22 critique runtime truth
-
-The live Web demo materializes the current System 20 Rural Crossroads Candidate 006 into real WHAT, places the player outside the generated diner and renders an 80×96-cell moving presentation window over the 256×256 logical area. System 21 owns camera behavior; System 22 only shifts presentation windows and composes the DEV critique runtime.
-
-System 00D Slice 002 is verified as upstream pure planning and does not create a fake strategic/world viewer.
+System 22 owns the bounded moving-window DEV presentation for the accepted 256×256 Candidate 006 local area. The live Web demo remains Candidate 006; System 00D rivers/bridge intents remain headless global planning facts until a downstream hydrology/materialization system is explicitly designed.
 
 ## Immediate next path
 
-1. Keep Candidate 006 as the current local integration anchor unless a bounded live critique requires a correction.
-2. The next natural System 00D design slice is **hydrology/rivers + explicit bridge-crossing intent**; do not implement it without design approval and do not fake rivers into Slice 002.
-3. Add additional System 20 settlement/environment profiles such as `smalltown.center` / `rural.scattered` when we are ready to materialize those real 00D sites.
-4. Design System 00F streaming/materialization only after the logical global world plan is rich enough that partition boundaries are implementation details rather than world-generation inputs.
-5. Design System 00E population/households/outbreak/player story after world places/roads/properties provide stable places for people to belong to.
+Keep Slices 001–003 and Candidate 006 protected. The next major step must be separately designed. North-Star candidates are global utilities/infrastructure or real System 20 profiles needed to refine the planned `smalltown.center` / `rural.scattered` sites. Streaming remains later, after logical world geography/places/infrastructure are stable enough that partitions are purely technical.
 
 ## Design rule
 
-Every major system keeps a focused owner/public contract. System 00D owns global geography/settlement/major-road coherence; System 20 refines caller-constrained local areas, may add profile-authorized local roads with local parcel frontage, and may connect only a real building-owned paved frontage to its road; System 19 owns building internals; System 21 owns camera presentation; System 22 owns DEV large-area presentation composition; WHAT owns runtime persistence after materialization. Streaming consumes logical world truth and never defines it. Art remains presentation truth, not physics. If implementation requires a forbidden boundary, return the design to review instead of cascading a patch.
+Every major system keeps a focused owner/public contract. System 00D owns global geography/hydrology/settlement/major-road/infrastructure coherence; System 20 owns local refinement; System 19 owns building internals; System 21 owns camera presentation; System 22 owns DEV large-area presentation; WHAT owns persistent runtime truth after materialization. Streaming consumes logical world truth and never defines it. Art remains presentation truth, not physics.
