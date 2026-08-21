@@ -1,6 +1,6 @@
 # Tick Survival Lab — System 00D Slice 004 Regional Electrical Infrastructure
 
-Status: **APPROVED**
+Status: **IMPLEMENTED**
 
 Date: 2026-08-21
 
@@ -231,3 +231,11 @@ Those systems consume the stable network rather than redefining regional topolog
 ## 15. North-star fit
 
 The North Star explicitly requires utilities/infrastructure to be globally coherent before local materialization and streaming partitions. Slice 004 adds the smallest causal electrical-planning model that preserves that coherence: one region-wide road-following network with real settlement service relationships, while deferring tactical poles, runtime electricity and failure simulation to their proper owners.
+
+## 16. Implementation result
+
+Implemented on 2026-08-21. `temperate.rural.region` is now v4. The canonical regional plan records one deterministic road-gateway ingress, one small-town substation, five settlement service nodes, and a connected feeder network whose atomic segments remain on named major-road geometry.
+
+The focused power validator independently checks node roles, settlement associations, road containment, ridge avoidance, boundary discipline, unique IDs and ingress reachability. The System 20 projector exposes clipped power facts read-only without changing the Candidate 006 request or local semantic output.
+
+Exact-head `verify/system00d-global-world`, protected Systems 19–22 checks, and Pages deploy all passed on the first integrated Slice 004 code head before final documentation promotion.
