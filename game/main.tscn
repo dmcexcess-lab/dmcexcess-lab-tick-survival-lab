@@ -1,4 +1,4 @@
-[gd_scene load_steps=9 format=3]
+[gd_scene load_steps=12 format=3]
 
 [ext_resource path="res://scripts/app/CanonicalDemoMain.gd" type="Script" id="1"]
 [ext_resource path="res://scripts/render/TacticalRendererStack.gd" type="Script" id="2"]
@@ -8,6 +8,9 @@
 [ext_resource path="res://scripts/ui/CanonicalPlayerShell.gd" type="Script" id="6"]
 [ext_resource path="res://scripts/input/DoorPointerInputAdapter.gd" type="Script" id="7"]
 [ext_resource path="res://scripts/ui/BuildingGrammarDevControls.gd" type="Script" id="8"]
+[ext_resource path="res://scripts/camera/TacticalCameraController.gd" type="Script" id="9"]
+[ext_resource path="res://scripts/input/CameraInputAdapter.gd" type="Script" id="10"]
+[ext_resource path="res://scripts/ui/CameraControls.gd" type="Script" id="11"]
 
 [node name="CanonicalDemo" type="Node"]
 script = ExtResource("1")
@@ -16,17 +19,28 @@ script = ExtResource("1")
 position = Vector2(73, 72)
 script = ExtResource("2")
 
+[node name="CameraRig" type="Node" parent="."]
+script = ExtResource("9")
+
+[node name="Camera2D" type="Camera2D" parent="CameraRig"]
+
 [node name="KeyboardInput" type="Node" parent="."]
 script = ExtResource("3")
 
 [node name="DoorPointerInput" type="Node" parent="."]
 script = ExtResource("7")
 
+[node name="CameraInput" type="Node" parent="."]
+script = ExtResource("10")
+
 [node name="Controls" type="CanvasLayer" parent="."]
 script = ExtResource("4")
 
 [node name="BuildingGrammarDev" type="CanvasLayer" parent="."]
 script = ExtResource("8")
+
+[node name="CameraControls" type="CanvasLayer" parent="."]
+script = ExtResource("11")
 
 [node name="Hud" type="CanvasLayer" parent="."]
 script = ExtResource("5")
