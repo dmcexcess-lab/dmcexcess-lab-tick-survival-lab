@@ -40,10 +40,11 @@ func plan(
                 "cells": driveway.duplicate(),
                 "priority": 90,
             })
-        var land_use: StringName = parcel.get("land_use", &"")
+        var land_use: StringName = StringName(parcel.get("land_use", &""))
         if land_use == &"farmstead" or land_use == &"agricultural":
             var field_rect: Rect2i = _field_rect(parcel)
-            if field_rect.size.x > 0 and field_rect.size.y > 0 and not _rects_intersect(field_rect, parcel.get("building_envelope", Rect2i())):
+            var building_envelope: Rect2i = parcel.get("building_envelope", Rect2i())
+            if field_rect.size.x > 0 and field_rect.size.y > 0 and not _rects_intersect(field_rect, building_envelope):
                 parcel["field_rect"] = field_rect
                 ground_regions.append({
                     "id": "%s.ground.field" % String(parcel.get("id", "parcel")),
@@ -81,7 +82,7 @@ func _add_signal_prop(
                 props,
                 blocked,
                 "%s.prop.traffic_signal" % String(intersection.get("id", "intersection")),
-                environment.get("traffic_signal_semantic", &"prop.traffic_light"),
+                StringName(environment.get("traffic_signal_semantic", &"prop.traffic_light")),
                 cell,
                 Facing.Value.SOUTH
             )
@@ -96,7 +97,7 @@ func _add_parcel_props(
 ) -> void:
     var tree_semantics: Array = environment.get("tree_semantics", [])
     for parcel: Dictionary in parcels:
-        var land_use: StringName = parcel.get("land_use", &"")
+        var land_use: StringName = StringName(parcel.get("land_use", &""))
         if land_use == &"residential" or land_use == &"farmstead":
             var mailbox: Vector2i = _mailbox_cell(parcel)
             if request.bounds.has_point(mailbox) and not blocked.has(mailbox):
@@ -104,7 +105,7 @@ func _add_parcel_props(
                     props,
                     blocked,
                     "%s.prop.mailbox" % String(parcel.get("id", "parcel")),
-                    environment.get("mailbox_semantic", &"prop.curb_mailbox"),
+                    StringName(environment.get("mailbox_semantic", &"prop.curb_mailbox")),
                     mailbox,
                     int(parcel.get("frontage_side", Facing.Value.SOUTH))
                 )
@@ -141,7 +142,7 @@ func _add_farm_boundary(
             props,
             blocked,
             "%s.prop.fence.%02d" % [String(parcel.get("id", "parcel")), ordinal],
-            environment.get("fence_semantic", &"prop.wood_fence"),
+            StringName(environment.get("fence_semantic", &"prop.wood_fence")),
             cell,
             Facing.Value.SOUTH
         )
@@ -178,7 +179,8 @@ func _blocked_cells(roads: Array[Dictionary], parcels: Array[Dictionary]) -> Dic
 func _field_rect(parcel: Dictionary) -> Rect2i:
     var rect: Rect2i = parcel.get("rect", Rect2i())
     var frontage: int = int(parcel.get("frontage_side", Facing.Value.SOUTH))
-    var depth: int = mini(8, maxi(4, (rect.size.y if frontage == Facing.Value.NORTH or frontage == Facing.Value.SOUTH else rect.size.x) / 3))
+    var frontage_depth: int = rect.size.y if frontage == Facing.Value.NORTH or frontage == Facing.Value.SOUTH else rect.size.x
+    var depth: int = mini(8, maxi(4, int(frontage_depth / 3)))
     match frontage:
         Facing.Value.NORTH:
             return Rect2i(Vector2i(rect.position.x + 2, rect.position.y + rect.size.y - depth - 2), Vector2i(rect.size.x - 4, depth))
