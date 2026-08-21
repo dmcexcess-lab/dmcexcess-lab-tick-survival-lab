@@ -5,6 +5,9 @@ signal zoom_in_requested
 signal zoom_out_requested
 signal recenter_requested
 
+const ACTION_ZOOM_OUT: StringName = &"zoom_out"
+const ACTION_RECENTER: StringName = &"recenter"
+const ACTION_ZOOM_IN: StringName = &"zoom_in"
 const ROW_Y: float = 500.0
 const BUTTON_SIZE := Vector2(132, 52)
 const SYNTHETIC_MOUSE_SUPPRESS_MS: int = 500
@@ -40,14 +43,35 @@ func present_camera_state(snapshot: Dictionary) -> void:
 func presentation_snapshot() -> Dictionary:
     return _last_snapshot.duplicate(true)
 
+func dispatch_control_event(event: InputEvent, action: StringName, now_ms: int = -1) -> bool:
+    if not _enabled or event == null or not _is_valid_action(action):
+        return false
+    var resolved_now: int = Time.get_ticks_msec() if now_ms < 0 else now_ms
+    if event is InputEventScreenTouch:
+        var touch := event as InputEventScreenTouch
+        if touch.pressed:
+            return false
+        _suppress_mouse_until_ms = resolved_now + SYNTHETIC_MOUSE_SUPPRESS_MS
+        _emit_action(action)
+        return true
+    if event is InputEventMouseButton:
+        var mouse := event as InputEventMouseButton
+        if mouse.button_index != MOUSE_BUTTON_LEFT or mouse.pressed:
+            return false
+        if resolved_now <= _suppress_mouse_until_ms:
+            return true
+        _emit_action(action)
+        return true
+    return false
+
 func _build_controls() -> void:
     if _center_button != null:
         return
-    _zoom_out_button = _add_button("ZOOM -", Vector2(82, ROW_Y), Callable(self, "_on_zoom_out"))
-    _center_button = _add_button("CENTER\nFOLLOW", Vector2(255, ROW_Y), Callable(self, "_on_recenter"))
-    _zoom_in_button = _add_button("ZOOM +", Vector2(426, ROW_Y), Callable(self, "_on_zoom_in"))
+    _zoom_out_button = _add_button("ZOOM -", Vector2(82, ROW_Y), ACTION_ZOOM_OUT)
+    _center_button = _add_button("CENTER\nFOLLOW", Vector2(255, ROW_Y), ACTION_RECENTER)
+    _zoom_in_button = _add_button("ZOOM +", Vector2(426, ROW_Y), ACTION_ZOOM_IN)
 
-func _add_button(text_value: String, position_value: Vector2, callback: Callable) -> Button:
+func _add_button(text_value: String, position_value: Vector2, action: StringName) -> Button:
     var button := Button.new()
     button.text = text_value
     button.position = position_value
@@ -55,40 +79,22 @@ func _add_button(text_value: String, position_value: Vector2, callback: Callable
     button.focus_mode = Control.FOCUS_NONE
     button.add_theme_font_size_override("font_size", 13)
     button.disabled = not _enabled
-    button.gui_input.connect(_on_button_gui_input.bind(callback))
+    button.gui_input.connect(_on_button_gui_input.bind(action))
     add_child(button)
     return button
 
-func _on_button_gui_input(event: InputEvent, callback: Callable) -> void:
-    if not _enabled:
-        return
-    var now_ms: int = Time.get_ticks_msec()
-    if event is InputEventScreenTouch:
-        var touch := event as InputEventScreenTouch
-        if touch.pressed:
-            return
-        _suppress_mouse_until_ms = now_ms + SYNTHETIC_MOUSE_SUPPRESS_MS
-        callback.call()
-        get_viewport().set_input_as_handled()
-        return
-    if event is InputEventMouseButton:
-        var mouse := event as InputEventMouseButton
-        if mouse.button_index != MOUSE_BUTTON_LEFT or mouse.pressed:
-            return
-        if now_ms <= _suppress_mouse_until_ms:
-            get_viewport().set_input_as_handled()
-            return
-        callback.call()
+func _on_button_gui_input(event: InputEvent, action: StringName) -> void:
+    if dispatch_control_event(event, action):
         get_viewport().set_input_as_handled()
 
-func _on_zoom_out() -> void:
-    if _enabled:
-        zoom_out_requested.emit()
+func _emit_action(action: StringName) -> void:
+    match action:
+        ACTION_ZOOM_OUT:
+            zoom_out_requested.emit()
+        ACTION_RECENTER:
+            recenter_requested.emit()
+        ACTION_ZOOM_IN:
+            zoom_in_requested.emit()
 
-func _on_recenter() -> void:
-    if _enabled:
-        recenter_requested.emit()
-
-func _on_zoom_in() -> void:
-    if _enabled:
-        zoom_in_requested.emit()
+func _is_valid_action(action: StringName) -> bool:
+    return action == ACTION_ZOOM_OUT or action == ACTION_RECENTER or action == ACTION_ZOOM_IN
