@@ -1,5 +1,22 @@
 # Changelog
 
+## System 00D Global World Planning — Regional Electrical Infrastructure Slice 004 — 2026-08-21
+
+- Implemented the approved **System 00D Regional Electrical Infrastructure Slice 004** and bumped `temperate.rural.region` from **v3 to v4**.
+- Added focused pure owners `GlobalPowerInfrastructurePlanner.gd`, `GlobalPowerInfrastructureQuery.gd` and `GlobalPowerInfrastructureValidator.gd` under `game/scripts/generation/world/`.
+- Extended `GeneratedGlobalWorldPlan` and its deterministic signature with `power_nodes` and `power_segments` while keeping System 00D free of System 19/20 ownership, WHAT mutation, renderer/art, camera/player and streaming dependencies.
+- The canonical regional fixture now has exactly one deterministic electrical-grid ingress at a real major-road boundary gateway, one small-town-associated substation, and one settlement-service node for each of the five current settlements.
+- Built the regional feeder network from the already connected major-road graph instead of inventing a second cross-country routing truth. Existing road endpoints, intersections, settlement centers and gateways become graph vertices; required ingress-to-service paths are unioned into one connected network.
+- Feeder segments retain stable source-road and source-route provenance. Primary road corridors are mildly preferred over secondary corridors when legal alternatives exist, but every feeder segment remains fully contained by actual major-road geometry.
+- Ridge avoidance remains inherited from global roads and is independently rechecked by the power validator. Only the selected regional ingress may terminate at the world boundary.
+- Added independent validation for one ingress, one small-town substation, complete five-settlement service coverage, valid node locations, unique IDs, road containment, ridge avoidance, boundary discipline, feeder connectivity and ingress reachability.
+- Added read-only `System20AreaRequestProjector.power_constraints_for_bounds()`, returning clipped feeder segments and power nodes without changing `AreaGenerationRequest` or silently materializing tactical infrastructure.
+- Proved the accepted Candidate 006 `project_site()` request and generated System 20 semantic output remain unchanged. Candidate 006 can expose its global crossroads service/feed facts through the new query, but the playable map still has no new tactical utility poles or wires.
+- Same-seed replay now includes stable power identity; alternate seeds retain legal power topology while allowing deterministic variation through regional ingress and existing global geography/road variation.
+- Preserved Slice 003 hydrology/bridge projection regressions, adjacent-road continuity, unsupported future local-profile failure, System 20 local generation and canonical startup behavior.
+- No energized/de-energized runtime state, outages, transformers, house service drops, tactical utility poles, tactical wire rendering, local building wiring, generators/batteries, electrical hazards, water/sewer, streaming, population or outbreak behavior was faked into this slice.
+- Exact-head verification remains `verify/system00d-global-world`; protected Systems 19–22 and Pages deployment remain required on the final head.
+
 ## System 00D Global World Planning — Hydrology / Bridge Intent Slice 003 — 2026-08-21
 
 - Implemented the approved **System 00D Hydrology / Rivers + Bridge Intent Slice 003** and bumped `temperate.rural.region` to **v3**.
@@ -92,7 +109,7 @@
 - Tightened the actual visible building setback. Regression now measures **road edge -> building facade**, not total driveway length to an off-center primary door. Residential and small-commercial average facade setbacks are <=5 cells; farmsteads remain farther back but <=8 cells.
 - Candidate 004 generates **zero parking cells**. Empty grass is not treated as implicit parking; any future parking lot must be explicit physical property geometry/surface.
 - Changed driveway routing so access enters the parcel **perpendicular to the frontage road first**, then turns near the building toward the actual generated System 19 primary entry. This removes unnatural shoulder-parallel driveway runs and preserves mailbox frontage.
-- Kept the inherited wide-road presentation fix unchanged: plain carriageway surfaces, one center-path yellow line per inherited road, and unpainted gravel local roads.
+- Kept the inherited wide-road presentation fix unchanged: plain paved carriageways, one center-path yellow line per inherited road, and unpainted gravel local roads.
 - Preserved Candidate 003's tree/shrub/rock noise distribution and anti-diagonal regressions.
 - Expanded `LocalAreaGenerationSmoke.gd` across twelve consecutive seeds to lock two local roads, local frontage authority, the 6-of-10 local-road majority, close facade setbacks, zero fake parking, mailbox/field/access integrity, existing prefab coverage and environmental-noise distribution.
 - No System 19 building source, renderer/art source, camera source, movement source or door source changed.
