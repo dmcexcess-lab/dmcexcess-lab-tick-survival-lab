@@ -1,5 +1,21 @@
 # Changelog
 
+## System 20 Materialization + System 22 Live Rural Crossroads — 2026-08-20
+
+- Replaced the isolated Rural Diner live critique fixture with the real **System 20 Rural Crossroads Candidate 001** as the canonical playable Web world.
+- Added `AreaMaterializationCoordinator.gd` as the separately owned System 20 initial-write seam. It validates the full area, regenerates/validates all public System 19 subplans, snapshots WHAT + Door State, writes terrain/outdoor props/buildings, initializes doors CLOSED, and rolls back the entire initial transaction on failure.
+- Kept System 20 pure planning independently testable; the materializer consumes an already-valid `GeneratedAreaPlan` and does not move planning rules into WHAT/runtime code.
+- Added `RuralCrossroadsCritiqueFixture.gd`, which generates/materializes the 256×256 `rural.crossroads + temperate.rural` seed and derives critique collision/traversal registrations from generated public semantics rather than maintaining another authored building list.
+- The player now starts one cell outside the **generated diner's actual primary exterior door**, facing it. Existing movement and System 18 automatic door passage immediately operate in the same area world.
+- All **12 existing-library buildings** are materialized together in one WHAT world. No new building profile, fake store/barn, survivor population, vehicle, loot or outbreak content was added to make the test look busier.
+- Added `LargeAreaRenderWindowController.gd`: the logical area remains 256×256, but the renderer plans/draws an **80×96** moving window at 24 px/cell for mobile performance. Window shifts preserve each global world cell's global pixel position and never alter simulation truth.
+- System 21 remains the camera owner. Player-follow, five zoom presets, detached pan, focus/scripted seams and recenter are unchanged; the large-area viewer only updates the renderer's bounded window and presentation transform.
+- Fixed the reported **Safari CENTER button** failure. `CameraControls.gd` now activates explicit camera controls directly on touch release, suppresses Safari's immediate synthetic mouse release for 500 ms, and shows camera mode (`FOLLOW`, `INSPECT`, etc.) on CENTER.
+- Added deterministic `CameraControls.dispatch_control_event()` so the live button path and CI exercise the same touch/mouse de-duplication contract instead of spoofing Godot GUI signals.
+- Removed the old `NEW BUILDING` diner critique button from the canonical live scene; the System 19 DEV seed-cycle owners remain available as System 19 tooling but no longer occupy the live area UI.
+- Added `LargeAreaCritiqueRuntimeSmoke.gd` and `.github/workflows/large-area-critique-runtime.yml`, protecting full area materialization, all building doors CLOSED initially, generated-diner entry, System 18 traversal, bounded render-window shifts, world-pixel invariance, detached camera behavior, CENTER follow restoration and Safari touch de-duplication.
+- Added exact-head status `verify/system22-area-critique`. Existing System 19, System 20 pure-plan, System 21 camera and Pages gates remain required on the final head.
+
 ## System 21 Tactical Camera / View Control — 2026-08-20
 
 - Added the user-approved standalone **System 21 Tactical Camera / View Control** instead of putting camera behavior into System 20, the renderer or player movement.
@@ -9,136 +25,50 @@
 - Added `TacticalCameraState.gd`, `ZoomController.gd` and `TacticalCameraController.gd`. The controller reacts only to relevant public WHAT placement changes and advances no simulation ticks.
 - Added `CameraInputAdapter.gd`: desktop mouse-wheel zoom, middle-button drag inspection, Home recenter and bracket-key zoom convenience. Right-click remains unclaimed because System 18 reserves it for a future interaction menu.
 - Added mobile two-finger centroid pan and pinch-to-discrete-zoom behavior plus explicit phone-friendly `ZOOM - / CENTER / ZOOM +` buttons in `CameraControls.gd`.
-- Made `DoorPointerInputAdapter.gd` camera-aware by inverting the active viewport canvas transform before mapping screen coordinates to world cells. Touch door selection now resolves on a short release and cancels on drag/multitouch so the first finger of a camera pinch cannot accidentally become a door action.
+- Made `DoorPointerInputAdapter.gd` camera-aware by inverting the active viewport canvas transform before mapping screen coordinates to world cells. Touch door selection resolves on a short release and cancels on drag/multitouch so a camera pinch cannot accidentally become a door action.
 - Wired the camera through composition-only `CanonicalDemoMain.gd` and `game/main.tscn`; existing movement, doors, renderer/art, System 19 building generation and System 20 area generation rules remain separate.
-- Added `CameraViewControlSmoke.gd` covering the five exact zoom levels, follow/detached/recenter, cell/actor focus, restore, scripted zero-tick presentation and one-vs-two-finger input behavior.
-- Added `.github/workflows/camera-view-control.yml` and exact-head status publishing as `verify/system21-camera-view`, with Door Interaction, System 20 and canonical-startup regressions in the same camera gate.
-- System 21 intentionally does **not** render the 256×256 rural crossroads yet. The next bounded slice is a separately owned System 20 DEV area viewer that uses this camera foundation.
+- Added `CameraViewControlSmoke.gd` and `.github/workflows/camera-view-control.yml` with exact-head status `verify/system21-camera-view`.
 
 ## System 19 Finalization + System 20 Rural Crossroads Candidate 001 — 2026-08-20
 
-- Finalized **System 19 Local Building Generation / Building Grammar** after the user explicitly approved moving on. The earlier provisional “two arbitrary proof buildings” gate is superseded by this direct finalization instruction.
-- Froze System 19’s higher-level placement seam: `LocalBuildingGenerator.placement_descriptor()` remains the only size/frontage/orientation contract System 20 needs; new building profiles are now ordinary content work unless that contract itself proves insufficient.
+- Finalized **System 19 Local Building Generation / Building Grammar** after the user explicitly approved moving on. New building profiles became ordinary content work unless the frozen grammar contract proves insufficient.
 - Kept all six current System 19 archetypes unchanged: Trailer v2, Small Farmhouse v2, Large Farmhouse v4, Compact Laundry House v1, Small Gas Station v1 and Rural Diner v2.
-- Promoted the approved System 20 rural-first design into the first implementation slice: **pure deterministic local-area/parcel planning**, deliberately separate from camera/viewer and persistent WHAT materialization.
-- Added `game/scripts/generation/areas/` with focused owners for stable named sub-seeds, request/result records, settlement/environment profile catalogs, inherited road planning, parcel subdivision, parcel access/driveways, System 19 building placement, outdoor/property dressing, generic validation and coordination.
-- Added `rural.crossroads` v1 and `temperate.rural` v1 as separate settlement/environment profiles so future suburban/urban and desert/forest combinations do not require separate generator architectures.
-- Added `RuralCrossroadsPlanFixture.gd`: a **256×256 global-coordinate** critique area at `Rect2i(1000,2000,256,256)` with one inherited 5-cell primary road and one inherited 3-cell secondary road crossing at `(1128,2128)`.
-- Candidate 001 generates exactly one signalized crossroads and zero local road spurs, then creates road-facing parcels with a density gradient: 3 commercial opportunities near center, 6 residential parcels, 4 farther farmsteads and remaining frontage parcels as agricultural/vacant/wilderness.
-- Used only existing building content for the area test: one Small Gas Station, one Rural Diner, one intentionally vacant commercial opportunity, plus ten residential/farmstead placements drawn from the existing Trailer, Small Farmhouse, Large Farmhouse and Compact Laundry House library.
-- System 20 selects buildings only through System 19 placement descriptors, rotates them to the parcel’s true road frontage, generates/validates the real System 19 subplan, and connects the driveway to the actual generated primary exterior door.
-- Added semantic outdoor planning with base grass, inherited road surfaces, gravel driveways, farm/agricultural fields, one traffic signal, one mailbox per occupied rural home/farm, sparse residential trees and sparse farm-boundary fencing. No fake barns, stores, people, vehicles, loot or outbreak scenes were introduced.
-- Added `LocalAreaGenerationSmoke.gd` covering same-seed determinism, different-seed variation, inherited-road boundary integrity, one signalized intersection, parcel counts/density ordering, longer farm driveways, >=60% non-road land remaining unbuilt, existing-archetype-only selection, System 19 subplan validation, recovered-art semantic coverage and twelve consecutive area seeds without retry loops.
-- Added `.github/workflows/local-area-generation.yml` plus exact-head status publishing as `verify/system20-local-area`.
-- The live Web demo remains the diner critique fixture intentionally. A 256×256 area needs a separately owned large-area DEV viewer/camera; System 20 does not absorb presentation logic just to make the planner visible.
+- Added the first pure deterministic System 20 local-area/parcel planner, deliberately separate from camera/viewer and persistent WHAT materialization.
+- Added `rural.crossroads` v1 and `temperate.rural` v1 as separate settlement/environment profiles.
+- Candidate 001 is a **256×256 global-coordinate** area at `Rect2i(1000,2000,256,256)` with one inherited 5-cell primary road and one inherited 3-cell secondary road crossing at `(1128,2128)`.
+- Candidate 001 generates exactly one signalized crossroads and zero local road spurs, then creates 3 commercial opportunities, 6 residential parcels, 4 farther farmsteads and remaining agricultural/vacant/wilderness frontage.
+- Used only existing building content: one Small Gas Station, one Rural Diner, one intentionally vacant commercial opportunity, plus ten residential/farmstead placements drawn from Trailer, Small Farmhouse, Large Farmhouse and Compact Laundry House.
+- System 20 selects buildings only through System 19 placement descriptors, rotates them to true road frontage, validates their System 19 plan, and connects driveways to the actual generated primary exterior door.
+- Added semantic grass, roads, gravel driveways, fields, one traffic signal, mailboxes, sparse trees and sparse farm fencing without inventing fake runtime content.
+- Added `LocalAreaGenerationSmoke.gd` and `.github/workflows/local-area-generation.yml` with exact-head status `verify/system20-local-area`.
 
 ## System 19 Rural Diner v2 + DEV New Building Cycle — 2026-08-20
 
-- Responded to the first deployed diner review: the user called it **“very good”** and asked for a few more tables plus a button that renders another building from the rule set.
+- The user called the first diner **“very good”** and requested more tables.
 - Bumped `commercial.diner.rural_small` from v1 to **v2** because same-seed generated dressing intentionally changed.
-- Increased the dining room from four to **six booth/table pairs** by adding one middle cluster on each side wall. Total diner props rise from 26 to **30** while the center customer aisle, service-room approaches and storage lane remain clear.
-- Expanded the profile from two to **four legal back-of-house room orders**. Seeds 19006 and 19007 preserve the already-reviewed layouts; 19008 and 19009 expose the two additional valid arrangements. The far-east kitchen permutation remains excluded because its customer-counter cluster would collide with east-wall seating.
-- Added explicit DEV-only `BuildingGrammarDevSeedSession.gd` and `BuildingGrammarDevControls.gd` owners. A phone-friendly **NEW BUILDING** button now fills the unused center slot between TURN L and TURN R.
-- Pressing NEW BUILDING advances the integer seed and reloads the critique scene so the normal System 19 request → grammar → validation → materialization path runs cleanly from scratch. It never rewrites an already-materialized WHAT world in place.
-- Web builds carry the critique seed through a `building_seed` URL query parameter; native builds use a runtime `ProjectSettings` override across scene reloads. This is DEV critique tooling only and does not become a production world-generation mechanic.
-- `CanonicalDemoMain.gd` remains unchanged and composition-only; the DEV control is wired as its own CanvasLayer in `game/main.tscn`.
-- Expanded `BuildingGrammarSmoke.gd` to lock diner v2, 30 props, all six table/booth clusters, four legal sequential seed layouts, DEV seed override/default behavior, 32-seed × four-rotation grammar torture coverage, fixture materialization, System 18 entry and renderer diagnostics.
-- Added the DEV owners to the System 19 CI boundary checks and updated System 19 design/context/approval routing notes.
-- Trailer v2, Small Farmhouse v2, Large Farmhouse v4, Compact Laundry House v1 and Small Gas Station v1 remain untouched.
+- Increased the dining room from four to **six booth/table pairs** while keeping the central aisle and service approaches clear. Total props rose from 26 to **30**.
+- Expanded the profile to **four legal back-of-house room orders** across seeds.
+- Added explicit DEV-only `BuildingGrammarDevSeedSession.gd` and `BuildingGrammarDevControls.gd` owners; the earlier diner critique scene could cycle to a fresh generated seed without mutating an already-materialized world in place.
+- Expanded `BuildingGrammarSmoke.gd` to lock diner v2, all six table/booth clusters, legal seed variation, 32 seeds × four rotations, fixture materialization, System 18 entry and renderer diagnostics.
+- Trailer v2, Small Farmhouse v2, Large Farmhouse v4, Compact Laundry House v1 and Small Gas Station v1 remained untouched.
 
 ## System 19 Building Grammar Hardening — Trial 001 Rural Diner — 2026-08-20
 
-- Promoted `commercial.gas_station.small` v1 to the protected fifth reference example after the user accepted it with “perfect.” Trailer v2, Small Farmhouse v2, Large Farmhouse v4, Compact Laundry House v1 and Small Gas Station v1 remain unchanged during grammar hardening.
-- Extracted the recurring critique lessons into explicit shared rules rather than copying exact room dimensions or prop counts: compact purposeful space, meaningful circulation, functional primary entry, real/reachable required rooms, clear doorway/service approaches, local functional clustering, contiguous work runs, deliberate open space, bounded blocking-prop density, frontage/orientation correctness and deterministic seeded variation.
-- Added `BuildingArchetypePlacementDescriptor.gd` and `LocalBuildingGenerator.placement_descriptor()` / `placement_descriptors()` as the narrow read-only System 20 seam. Placement facts are derived by probing each archetype's own public generation behavior, so System 20 does not maintain a duplicate size/frontage table.
-- Added reusable grammar owners: `BuildingGrammarProfile.gd`, `BuildingGrammarGenerator.gd`, `BuildingRoomDressingPlanner.gd` and `BuildingGrammarQualityValidator.gd`. Generic physical validation remains separate from profile-specific building-quality rules.
-- Added the first grammar-driven proof archetype, `commercial.diner.rural_small` v1, through a thin profile/wrapper rather than a hand-authored cell-by-cell diner generator.
-- Rural Diner Trial 001 uses a compact **17×11** SOUTH-frontage shell with a **15×5 dining/public hub**, **7×3 kitchen**, **3×3 storage**, **3×3 bathroom**, no dedicated hall/corridor, **5 doors**, **11 windows** and **26 purposeful props**.
-- Diner dressing hardens four booth/table clusters, a compact customer-counter group, a contiguous seven-cell kitchen work line, wall-hugging storage clutter with a protected middle service lane, and a compact bathroom fixture group while leaving the central customer aisle open.
-- Added deterministic topology variation: seed 19006 orders kitchen → storage → bathroom; seed 19007 orders bathroom → kitchen → storage. The rear service exit follows the storage room instead of remaining hard-coded.
-- Added `RuralDinerCritiqueFixture.gd` and switched the canonical demo composition to the diner for playtest. Existing HUD, movement, System 18 door passage, collision and render systems are reused unchanged.
-- Added `BuildingGrammarSmoke.gd` to verify placement descriptors for all six callable archetypes, exact Trial 001 structure/dressing, alternate-seed topology, undersized/frontage failures, **32 consecutive seeds × all four cardinal rotations**, materialization, CLOSED initial doors, collision/art coverage, System 18 automatic entry and zero renderer diagnostics.
-- Updated the existing System 19 regression smoke only for the registry count; all saved-example geometry/content assertions remain intact.
-- Trial 001 is now the first of the two agreed hardening proofs. It is ready for user playtest/acceptance; System 19 is not finalized until a second unrelated grammar-generated building is also accepted.
+- Promoted `commercial.gas_station.small` v1 to the protected fifth reference example after user acceptance.
+- Extracted reusable shared rules instead of copying exact room dimensions/prop counts: compact purposeful space, meaningful circulation, functional primary entry, reachable required rooms, clear approaches, local functional clustering, contiguous work runs, deliberate open space, bounded blocking density, frontage/orientation correctness and deterministic seeded variation.
+- Added `BuildingArchetypePlacementDescriptor.gd` and `LocalBuildingGenerator.placement_descriptor()` as the narrow System 20 placement seam.
+- Added reusable grammar owners: `BuildingGrammarProfile.gd`, `BuildingGrammarGenerator.gd`, `BuildingRoomDressingPlanner.gd` and `BuildingGrammarQualityValidator.gd`.
+- Added the first shared-grammar proof archetype, `commercial.diner.rural_small`, with compact public dining hub plus kitchen/storage/bathroom, no hallway waste, clustered furniture and deterministic back-room variation.
+- Added `BuildingGrammarSmoke.gd` to cover placement descriptors, profile quality, multi-seed/four-rotation generation, materialization, collision/art, System 18 entry and renderer diagnostics.
 
 ## System 19 Small Gas Station Candidate 001 — 2026-08-20
 
-- Promoted Compact Laundry House Candidate 001 / `residential.house.compact_laundry` v1 to an accepted protected baseline after the user said: “ok that looks perfect.”
-- Added the new peer commercial archetype `commercial.gas_station.small` at version 1 without modifying Trailer v2, Small Farmhouse v2, Large Farmhouse v4 or Compact Laundry House v1.
-- Built a compact **19×15 property envelope** containing a small roadside convenience-store building plus its immediate pump forecourt rather than an oversized highway travel center.
-- Implemented the requested back-of-house program as real reachable rooms: **5×3 storage**, **4×3 office**, and **3×3 bathroom**, all opening directly onto a connected 76-cell sales floor with no dedicated hallway.
-- Added five doors: primary storefront entrance, rear storage/service exit, and dedicated storage/office/bathroom interior doors. Ten storefront/side/back windows establish the commercial shell.
-- Used commercial room/property surfaces: shop floor, warehouse floor, office carpet, mosaic bathroom tile, concrete storefront apron and faded parking/forecourt pavement.
-- Added **33 purposeful props** using existing recovered art: checkout/counter, two compact retail shelf/endcap clusters, walk-in coolers, freezer, vending, office furniture, bathroom fixtures, warehouse racks/pallets/tool cabinet and exterior convenience-store dressing.
-- Added four real `prop.gas_pump` objects as two pump islands, plus `prop.gas_sign`, exterior ice box, vending machine and trash bin while keeping the central customer path from road/forecourt to storefront clear.
-- Added `GasStationCritiqueFixture.gd`: 21×17 lot, 24 px/cell, seed 19005, NORTH orientation / SOUTH frontage, player starting one cell south of the closed storefront door.
-- Registered the fifth archetype in `LocalBuildingGenerator.gd` and switched the canonical demo fixture preload to the gas station while keeping `CanonicalDemoMain.gd` composition-only.
-- Expanded System 19 CI to protect all four previous archetypes and lock gas-station room sizes, doors/windows, commercial semantics, pump islands, clear circulation, rotation/frontage rejection, collision/art coverage, System 18 entry traversal and renderer diagnostics.
-- No Art Catalog/assets, renderer, movement, door-system, HUD or persistent-world contracts were changed.
-
-## System 19 Compact Laundry House Candidate 001 — 2026-08-17
-
-- Added the new peer archetype `residential.house.compact_laundry` at version 1, based on the user-approved generated house reference rather than modifying any existing farmhouse.
-- Built a compact **17×13 bounding plan** with an intentionally irregular occupied footprint: two bedrooms, one bathroom, separate kitchen/dining room, central living room, small south/front entry bump and a dedicated 3×3 laundry/utility room.
-- Kept circulation compact with **no dedicated hall/corridor room**. The living room acts as the circulation hub, and kitchen/living use a two-cell doorless opening.
-- Added one south-facing exterior entry plus four interior room doors, for **5 total doors**, and **10 windows** distributed by room purpose.
-- Used room-specific flooring: beige/blue bedroom carpet, white kitchen tile, mosaic bathroom tile and dark laminate through living/entry/laundry.
-- Added **33 clustered props** without filling circulation space. Kitchen uses a contiguous refrigerator + counter + sink + counter + stove + pantry run plus adjacent breakfast table/chair.
-- Added a real laundry-room cluster using recovered supported semantics: `prop.washer_front`, `prop.dryer_front`, `prop.utility_sink` and `prop.hamper`.
-- Added living-room bookshelf/TV-side and sofa/coffee-table/armchair clusters, furnished bedrooms, bathroom fixtures, and a small entry table/rug cluster.
-- Kept decorative rugs explicitly nonblocking and carried forward the learned table-orientation rule: table-like props in the canonical NORTH plan face only SOUTH or WEST.
-- Added `CompactLaundryHouseCritiqueFixture.gd`: 19×15 lot, 26 px/cell, seed 19004, NORTH orientation with SOUTH frontage, player starting south of the closed front door.
-- Registered the new archetype in `LocalBuildingGenerator.gd` and switched the canonical demo fixture preload to the new critique house while keeping `CanonicalDemoMain.gd` composition-only.
-- Expanded System 19 CI to protect all three existing archetypes and test the new room program, irregular geometry, laundry equipment, clustering, facing, rotation, frontage rejection, collision/art coverage, System 18 front-door traversal and renderer diagnostics.
-- Preserved Trailer v2, Small Farmhouse v2 and Large Farmhouse Candidate 004/v4 unchanged.
-
-## System 19 Large Farmhouse Candidate 004 — 2026-08-17
-
-- Preserved the entire Candidate 003 structure unchanged: same 21×9 shell, room sizes, wall/opening geometry, 7 doors, 11 windows, open lower living/kitchen passage and clutter-free wood kitchen runner.
-- Bumped `residential.house.farm_large` to archetype version 4 because same-seed generated prop placement/orientation intentionally changed.
-- Reworked common-room furnishing from sparse room-spanning placement into compact local clusters. The large open areas are allowed to remain open instead of stretching a few objects across the room.
-- Living-room seating now forms one tight cluster: sofa, coffee table and armchair stay within two cells of one another, with a nearby tall bookshelf and end table against the same side of the room.
-- Added a nonblocking `prop.rug` directly inside the primary front door as entry dressing without changing movement/collision behavior.
-- Kitchen appliance dressing is now contiguous: stove + refrigerator + `prop.counter_straight` + sink share the north wall, with the counter physically filling the gap between refrigerator and sink.
-- Added `prop.dining_chair` directly beside the existing breakfast table near the east wall. The table remains off the runner and the exterior-door approach stays clear.
-- Corrected table-facing choices in the canonical NORTH layout: end table and coffee table face SOUTH; breakfast table faces WEST. Tables are no longer authored facing NORTH in this archetype.
-- Added collision coverage for bookshelf, end table, counter and dining chair as blocking props; the entry rug is explicitly registered passable/nonblocking.
-- Expanded System 19 CI to lock the unchanged structure, 24-prop clustered dressing, cluster distances, table orientations, counter placement, chair/table adjacency, clear wood runner, art/collision coverage, rotation, materialization and canonical startup.
-
-## System 19 Large Farmhouse Candidate 003 — 2026-08-17
-
-- Preserved accepted Trailer v2 and accepted Small Farmhouse v2 unchanged.
-- Bumped `residential.house.farm_large` to archetype version 3 after the next large-house playtest critique.
-- Kept Candidate 002's compact **21×9** shell, 10×3 living room, 8×3 kitchen, three 3×3 bedrooms, two 3×3 bathrooms and zero dedicated hallway rooms.
-- Removed `door.interior.living_kitchen`: its former middle divider cell is now solid `wall.interior`, while the lower divider cell is completely open for a doorless passage between living and kitchen.
-- Changed the full bottom row of kitchen tiles to `ground.laminate_light`, creating an eight-cell wood-floor runner from the living/kitchen passage toward the east side.
-- Locked the new wood runner as generated-clutter-free: no prop may occupy any of those eight cells.
-- Moved the kitchen sink from the lower/east side onto the north wall beside the stove and refrigerator.
-- Added a real `prop.breakfast_table` in the open linoleum area near the east exterior wall, positioned off the runner and clear of the exterior-door approach.
-- Door count drops from eight to **seven**: two exterior doors plus five private-room doors. Eleven windows remain unchanged.
-- Updated the large-house critique fixture collision catalog for the existing breakfast-table semantic; no renderer, art, movement, door-system or public System 19 contract changed.
-- Expanded focused System 19 CI to lock the removed living/kitchen door, replacement wall, open lower passage, wood-runner terrain/clearance, sink/table positions, collision/art coverage, rotation, materialization and canonical startup.
-
-## System 19 Large Farmhouse Candidate 002 — 2026-08-17
-
-- Rejected Large Farmhouse Candidate 001 after playtest feedback: **too big and too hallway-heavy**.
-- Preserved accepted Trailer v2 and accepted Small Farmhouse v2 unchanged.
-- Bumped `residential.house.farm_large` to archetype version 2.
-- Rebuilt the large farmhouse from 25×20 down to **21×9**, matching the accepted small farmhouse's depth instead of scaling every room up.
-- Removed the dedicated central hall entirely. The primary exterior door enters the living room directly, and all five private rooms open directly from living/kitchen through one partition row.
-- Kept the required separate common rooms: living is **10×3**, kitchen is **8×3**.
-- Kept all private rooms compact: three **3×3 bedrooms** and two **3×3 bathrooms**.
-- Candidate 002 had two exterior doors, six interior doors and eleven windows.
-- The previous L-shaped Candidate 001 remains historical only; compactness now takes precedence over irregular-shape complexity for the large-house critique loop.
-
-## System 19 Large Farmhouse Candidate 001 — 2026-08-17
-
-- Promoted the accepted compact farmhouse to the protected **Small Farmhouse** baseline after the user explicitly said: “Nice save that as small farm house.”
-- Preserved `residential.house.farm_small` at archetype version 2 with its exact 13×9 geometry, 11×3 open living/kitchen, two bedrooms, one bathroom, five doors and seven windows.
-- Added the peer archetype `residential.house.farm_large` with standalone owner `LargeFarmhouseBuildingGenerator.gd`.
-- Candidate 001 used a 25×20 L-shaped occupied building with 3 bedrooms, 2 bathrooms, separate living/kitchen and a central hall.
-- Candidate 001 first-green code was `a533f4f27de6f37b92b5e8472bb4b81220b2e06e`; Local Building Generation run `32011785845` passed. It is now superseded by Candidate 002.
+- Added `commercial.gas_station.small` v1 as a compact **19×15** roadside property using the existing art/physics contracts.
+- Implemented real reachable **storage, office and bathroom**, connected sales floor, rear service exit, storefront entry, pump forecourt and clear customer approach.
+- Added purposeful convenience-store, office, bathroom, warehouse and pump-island props with recovered semantic art.
+- Registered it as a System 19 archetype and added rotation/frontage/materialization/System 18/render regression coverage.
+- No Art Catalog/assets, renderer, movement, door-system, HUD or persistent-world contracts changed.
 
 ## Earlier project changelog
 
-The full prior changelog is preserved verbatim in `CHANGELOG_ARCHIVE_THROUGH_2026-08-17.md`. Git history also retains every earlier version of this file.
+The detailed earlier System 19 house iterations and all preceding project history remain preserved in `CHANGELOG_ARCHIVE_THROUGH_2026-08-17.md` and Git history.
