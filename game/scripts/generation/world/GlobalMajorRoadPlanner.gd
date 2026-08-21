@@ -39,8 +39,6 @@ func plan(
         or not request.bounds.has_point(secondary_start) or not request.bounds.has_point(secondary_end):
         return {"ok": false, "failure_reason": "protected_global_road_cross_out_of_bounds", "road_segments": road_segments}
 
-    ## These two IDs/segments are intentionally preserved so the accepted
-    ## System 20 central site remains byte-for-byte equivalent at the request seam.
     road_segments.append(_segment(
         "road.region.primary.001",
         &"primary",
@@ -173,7 +171,12 @@ func _a_star_grid(
     var came_from: Dictionary = {}
     var g_score: Dictionary = {start: 0}
     var closed: Dictionary = {}
-    var directions: Array[Vector2i] = [Vector2i.NORTH, Vector2i.EAST, Vector2i.SOUTH, Vector2i.WEST]
+    var directions: Array[Vector2i] = [
+        Vector2i(0, -1),
+        Vector2i(1, 0),
+        Vector2i(0, 1),
+        Vector2i(-1, 0),
+    ]
 
     while not open_set.is_empty():
         var current: Vector2i = _lowest_f_score(open_set, g_score, finish)
@@ -215,7 +218,8 @@ func _reconstruct_grid_path(came_from: Dictionary, finish: Vector2i) -> Array[Ve
     var reversed: Array[Vector2i] = [finish]
     var current: Vector2i = finish
     while came_from.has(current):
-        current = came_from[current]
+        var prior: Vector2i = came_from[current]
+        current = prior
         reversed.append(current)
     reversed.reverse()
     return reversed
