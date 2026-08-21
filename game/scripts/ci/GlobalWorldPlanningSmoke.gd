@@ -178,10 +178,10 @@ func _test_hydrology_projection(projector: System20AreaRequestProjector, plan: G
     var center_bounds: Rect2i = LocalFixtureClass.BOUNDS
     var protected_windows: Array[Rect2i] = [
         center_bounds,
-        Rect2i(center_bounds.position.x - center_bounds.size.x, center_bounds.position.y, center_bounds.size),
-        Rect2i(center_bounds.position.x + center_bounds.size.x, center_bounds.position.y, center_bounds.size),
-        Rect2i(center_bounds.position.x, center_bounds.position.y - center_bounds.size.y, center_bounds.size),
-        Rect2i(center_bounds.position.x, center_bounds.position.y + center_bounds.size.y, center_bounds.size),
+        Rect2i(Vector2i(center_bounds.position.x - center_bounds.size.x, center_bounds.position.y), center_bounds.size),
+        Rect2i(Vector2i(center_bounds.position.x + center_bounds.size.x, center_bounds.position.y), center_bounds.size),
+        Rect2i(Vector2i(center_bounds.position.x, center_bounds.position.y - center_bounds.size.y), center_bounds.size),
+        Rect2i(Vector2i(center_bounds.position.x, center_bounds.position.y + center_bounds.size.y), center_bounds.size),
     ]
     for bounds: Rect2i in protected_windows:
         var result: Dictionary = projector.hydrology_constraints_for_bounds(plan, bounds)
