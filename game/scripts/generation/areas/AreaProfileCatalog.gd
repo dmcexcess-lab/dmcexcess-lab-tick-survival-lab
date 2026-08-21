@@ -11,7 +11,7 @@ func profile(profile_id: StringName) -> Dictionary:
         return {}
     return {
         "id": RURAL_CROSSROADS,
-        "version": 3,
+        "version": 4,
         "center_exclusion_radius": 20,
         "edge_margin": 8,
         "parcel_gap": 3,
