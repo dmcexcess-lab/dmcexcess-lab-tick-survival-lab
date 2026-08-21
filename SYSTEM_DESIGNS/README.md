@@ -39,71 +39,76 @@ Major systems move through **NOT DESIGNED -> DRAFT -> APPROVED -> IMPLEMENTED** 
 | 17A.1 | Overweight Walk Fatigue / Absolute Carry Ceiling Correction | **IMPLEMENTED** | `17A1_OVERWEIGHT_WALK_FATIGUE_HARD_CARRY_LIMIT.md` |
 | 18 | Door Interaction / Automatic Passage | **IMPLEMENTED** | `18_DOOR_INTERACTION_PASSAGE.md` |
 | 19 | Local Building Generation / Building Grammar | **IMPLEMENTED — FINALIZED** | `19_LOCAL_BUILDING_GENERATION_ARCHETYPE_LAB.md` |
-| 20 | Local Area / Parcel Generation | **IMPLEMENTED — CANDIDATE 001 PURE PLAN** | `20_LOCAL_AREA_PARCEL_GENERATION.md` |
+| 20 | Local Area / Parcel Generation + Initial Materialization | **IMPLEMENTED — CANDIDATE 001** | `20_LOCAL_AREA_PARCEL_GENERATION.md` |
 | 21 | Tactical Camera / View Control | **IMPLEMENTED** | `21_TACTICAL_CAMERA_VIEW_CONTROL.md` |
+| 22 | Large-Area DEV Critique Runtime | **IMPLEMENTED** | `22_LARGE_AREA_CRITIQUE_RUNTIME.md` |
 | 00D | Global World Planning / Generation | **NOT DESIGNED** | future design |
 | 00E | Population / Household / Outbreak / Player Story | **NOT DESIGNED** | future design |
-| 00F | Streaming / Materialization | **NOT DESIGNED** | future design |
+| 00F | Streaming / Save Materialization Strategy | **NOT DESIGNED** | future design |
 | old-01 | Raid-map / extraction physical-world model | **SUPERSEDED** | `01_RAID_MAP_DATA.md` |
 
 ## System 19 finalized building grammar
 
-Protected/preserved examples used to extract and validate the grammar:
+Protected current library:
 
-- `residential.trailer.singlewide` v2 — accepted;
-- `residential.house.farm_small` v2 — accepted;
-- `residential.house.farm_large` v4 — preserved compact/no-hall reference;
-- `residential.house.compact_laundry` v1 — accepted;
-- `commercial.gas_station.small` v1 — accepted;
-- `commercial.diner.rural_small` v2 — accepted after the table-density revision.
+- `residential.trailer.singlewide` v2;
+- `residential.house.farm_small` v2;
+- `residential.house.farm_large` v4;
+- `residential.house.compact_laundry` v1;
+- `commercial.gas_station.small` v1;
+- `commercial.diner.rural_small` v2.
 
-Final reusable System 19 seams:
-
-- read-only placement descriptor for higher-level planners;
-- `BuildingGrammarProfile` content contract;
-- reusable topology/dressing/quality owners;
-- deterministic profile-declared variation;
-- multi-seed/four-rotation regression tests;
-- DEV-only `NEW BUILDING` critique control.
-
-New building profiles are now ordinary content work and do not reopen System 19 architecture unless its frozen public contract proves insufficient.
+New building profiles are ordinary content work by default. System 20 consumes only System 19 public placement/generation/materialization contracts.
 
 ## System 20 Candidate 001
 
-The first implementation is `rural.crossroads + temperate.rural`, using only the existing System 19 library so area-generation quality can be judged independently from new building content.
+`rural.crossroads + temperate.rural` remains the first test profile over a 256×256 global planning domain:
 
-Current pure-plan implementation owns:
+- two inherited crossing roads;
+- exactly one traffic-light crossroads;
+- 3 commercial opportunities (gas station + diner + one honest vacancy);
+- 6 residential parcels;
+- 4 farmsteads;
+- open agricultural/vacant/wilderness frontage;
+- >=60% non-road land unbuilt;
+- only existing System 19 building content.
 
-- caller-constrained inherited road installation;
-- one signalized rural crossroads;
-- road-facing parcel subdivision;
-- density-ordered commercial/residential/farmstead/open land use;
-- legal parcel access and driveways;
-- System 19 descriptor-based archetype selection and placement;
-- field/mailbox/fence/tree/traffic-signal semantic dressing;
-- deterministic named sub-seeds;
-- generic full-plan validation.
-
-Candidate 001 uses the gas station and diner as the two real commercial buildings, leaves another commercial opportunity vacant, and exercises the existing trailer/small farmhouse/large farmhouse/compact-laundry residential library. No new building profiles, fake barns, fake stores, actors, vehicles, loot or outbreak scenes are introduced.
+The pure planner remains independently tested. `AreaMaterializationCoordinator.gd` now performs the separate transactional **initial** write into WHAT + Door State and relinquishes generation ownership afterward.
 
 ## System 21 camera truth
 
-Normal gameplay camera now defaults to player-follow and has five discrete zoom presets: Very Close, Close, Normal, Far and Area.
+Camera presentation remains independent from simulation:
 
-The public camera seam also supports detached inspection, recenter, cell focus, actor focus, scripted presentation transitions and one-level restore for future cutscenes/reveals. Camera state never moves actors or advances simulation.
+- player-follow default;
+- five discrete zoom presets: Very Close / Close / Normal / Far / Area;
+- detached inspection;
+- CENTER/recenter;
+- cell/actor focus;
+- scripted presentation + restore seam for future cutscenes.
 
-Touch uses explicit `ZOOM - / CENTER / ZOOM +` buttons plus two-finger pan/pinch; desktop uses wheel, middle-drag and Home recenter. Right-click remains reserved for future interaction UI.
+Safari explicit camera controls use direct touch-release activation with synthetic-mouse suppression. CENTER reports `FOLLOW`/`INSPECT` state and reliably returns to player follow.
 
-`DoorPointerInputAdapter` maps through the active canvas/camera transform and cancels touch selection on drag/multitouch so camera gestures do not become door actions.
+## System 22 live critique truth
+
+The canonical live demo now materializes and displays the **real System 20 rural crossroads**, rather than the old isolated diner fixture.
+
+- player starts outside the generated diner primary entrance;
+- all 12 existing-library buildings exist in one WHAT world;
+- existing movement/collision/System 18 doors remain active;
+- logical area remains 256×256;
+- renderer draws an 80×96 moving presentation window at 24 px/cell;
+- render-window shifts preserve global world-cell placement;
+- System 21 owns follow/pan/zoom/recenter.
+
+No new buildings, fake stores/barns, actors, loot, vehicles or outbreak content were added for this test.
 
 ## Immediate next path
 
-1. Use System 21 as the camera foundation for a separately owned **System 20 rural-area DEV critique viewer**.
-2. Let that viewer update the renderer-visible window while System 21 owns focus/zoom/pan only.
-3. Visually critique Candidate 001 roads, parcel spacing, density gradient, driveways, farms and commercial center.
-4. After the area test, add new System 19 building profiles freely as content needs emerge.
-5. Only after plan + visual inspection are sound, design System 20 initial WHAT materialization/transaction behavior.
+1. **User visually/playably critiques Candidate 001**: road scale, parcel spacing, density gradient, farms, driveways, commercial center and overall rural feel.
+2. Correct System 20 profile/planning rules exposed by that critique without changing accepted System 19 buildings merely to hide area defects.
+3. Once the rural profile is accepted, add new System 19 building profiles freely as content and/or test another settlement/environment profile.
+4. Design long-term streaming/save materialization only when the continuous world needs regions beyond this bounded critique runtime.
 
 ## Design rule
 
-Every major system keeps a focused owner/public contract. Global planning owns cross-region coherence; System 20 refines caller-constrained local areas; System 19 owns local building/property generation; System 21 owns camera presentation; WHAT owns runtime persistence after materialization. Art remains presentation truth, not physics. If implementation requires a forbidden boundary, return the design to review instead of cascading a patch.
+Global planning owns cross-region coherence; System 20 refines caller-constrained local areas and may transactionally create their initial WHAT; System 19 owns buildings; System 21 owns camera presentation; System 22 only composes the DEV large-area critique. WHAT owns runtime truth after materialization. Art remains presentation truth, not physics.
