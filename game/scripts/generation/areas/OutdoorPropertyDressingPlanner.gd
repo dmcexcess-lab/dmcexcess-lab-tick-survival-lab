@@ -50,7 +50,7 @@ func plan(
     var blocked: Dictionary = _blocked_cells(roads, parcels)
     _add_signal_prop(request, environment, intersections, props, blocked)
     _add_parcel_props(request, environment, parcels, props, blocked)
-    _add_natural_clusters(request, environment, roads, intersections, parcels, props, blocked)
+    _add_natural_noise(request, environment, roads, intersections, parcels, props, blocked)
     return {"ok": true, "failure_reason": "", "ground_regions": ground_regions, "props": props}
 
 func _add_road_ground_regions(
@@ -236,7 +236,7 @@ func _add_farm_boundary(
         )
         ordinal += 1
 
-func _add_natural_clusters(
+func _add_natural_noise(
     request: AreaGenerationRequest,
     environment: Dictionary,
     roads: Array[Dictionary],
@@ -251,80 +251,63 @@ func _add_natural_clusters(
     if trees.is_empty() or shrubs.is_empty() or rocks.is_empty():
         return
 
-    var cluster_count: int = int(environment.get("natural_cluster_count", 0))
-    var radius: int = maxi(1, int(environment.get("natural_cluster_radius", 6)))
-    var minimum_props: int = maxi(1, int(environment.get("natural_cluster_min_props", 5)))
-    var maximum_props: int = maxi(minimum_props, int(environment.get("natural_cluster_max_props", 10)))
+    var base_density: float = clampf(float(environment.get("natural_noise_density", 0.0105)), 0.0, 1.0)
+    var patch_scale: int = maxi(4, int(environment.get("natural_noise_patch_scale", 22)))
+    var sparse_multiplier: float = maxf(0.0, float(environment.get("natural_noise_sparse_multiplier", 0.20)))
+    var dense_multiplier: float = maxf(sparse_multiplier, float(environment.get("natural_noise_dense_multiplier", 2.25)))
     var natural_blocked: Dictionary = blocked.duplicate()
     _reserve_natural_road_halo(roads, parcels, int(environment.get("natural_road_clearance", 1)), natural_blocked, request.bounds)
 
-    for cluster_index in range(cluster_count):
-        var center: Vector2i = _natural_cluster_center(
-            request,
-            environment,
-            intersections,
-            parcels,
-            natural_blocked,
-            cluster_index,
-            radius
-        )
-        if center.x < -100000:
-            continue
-        var cluster_size: int = minimum_props + Seed.choose_index(
-            request.seed,
-            "natural_cluster:size:%d" % cluster_index,
-            maximum_props - minimum_props + 1
-        )
-        var family: int = Seed.choose_index(request.seed, "natural_cluster:family:%d" % cluster_index, 3)
-        for prop_index in range(cluster_size):
-            var placed: bool = false
-            for attempt in range(8):
-                var domain: String = "natural_cluster:%d:%d:%d" % [cluster_index, prop_index, attempt]
-                var dx: int = Seed.choose_index(request.seed, "%s:x" % domain, radius * 2 + 1) - radius
-                var dy: int = Seed.choose_index(request.seed, "%s:y" % domain, radius * 2 + 1) - radius
-                if dx * dx + dy * dy > radius * radius:
-                    continue
-                var cell := center + Vector2i(dx, dy)
-                if not _natural_cell_allowed(request, environment, intersections, parcels, natural_blocked, cell):
-                    continue
-                var semantic: StringName = _natural_semantic(request.seed, domain, family, trees, shrubs, rocks)
-                if semantic == &"":
-                    continue
-                _append_prop(
-                    props,
-                    natural_blocked,
-                    "%s.prop.natural.%03d.%02d" % [request.area_id, cluster_index, prop_index],
-                    semantic,
-                    cell,
-                    Facing.Value.SOUTH
-                )
-                placed = true
-                break
-            if not placed:
+    var ordinal: int = 0
+    for y in range(request.bounds.position.y, request.bounds.position.y + request.bounds.size.y):
+        for x in range(request.bounds.position.x, request.bounds.position.x + request.bounds.size.x):
+            var cell := Vector2i(x, y)
+            if not _natural_cell_allowed(request, environment, intersections, parcels, natural_blocked, cell):
                 continue
 
-func _natural_cluster_center(
-    request: AreaGenerationRequest,
-    environment: Dictionary,
-    intersections: Array[Dictionary],
-    parcels: Array[Dictionary],
-    blocked: Dictionary,
-    cluster_index: int,
-    radius: int
-) -> Vector2i:
-    var margin: int = radius + 2
-    var width: int = request.bounds.size.x - margin * 2
-    var height: int = request.bounds.size.y - margin * 2
-    if width <= 0 or height <= 0:
-        return Vector2i(-999999, -999999)
-    for attempt in range(12):
-        var domain: String = "natural_cluster:center:%d:%d" % [cluster_index, attempt]
-        var x: int = request.bounds.position.x + margin + Seed.choose_index(request.seed, "%s:x" % domain, width)
-        var y: int = request.bounds.position.y + margin + Seed.choose_index(request.seed, "%s:y" % domain, height)
-        var cell := Vector2i(x, y)
-        if _natural_cell_allowed(request, environment, intersections, parcels, blocked, cell):
-            return cell
-    return Vector2i(-999999, -999999)
+            var local_cell: Vector2i = cell - request.bounds.position
+            var patch_noise: float = _value_noise_2d(request.seed, local_cell, patch_scale, 401)
+            var local_density: float = base_density * lerpf(sparse_multiplier, dense_multiplier, patch_noise)
+            var cell_noise: float = Seed.unit_2d(request.seed, cell.x, cell.y, 503)
+            if cell_noise >= local_density:
+                continue
+
+            var family_noise: float = _value_noise_2d(request.seed, local_cell, patch_scale * 2, 607)
+            var family: int = 0
+            if family_noise >= 0.78:
+                family = 2
+            elif family_noise >= 0.43:
+                family = 1
+            var semantic: StringName = _natural_semantic_at(request.seed, cell, family, trees, shrubs, rocks)
+            if semantic == &"":
+                continue
+
+            _append_prop(
+                props,
+                natural_blocked,
+                "%s.prop.natural.%04d" % [request.area_id, ordinal],
+                semantic,
+                cell,
+                Facing.Value.SOUTH
+            )
+            ordinal += 1
+
+func _value_noise_2d(seed: int, local_cell: Vector2i, scale: int, salt: int) -> float:
+    var safe_scale: int = maxi(1, scale)
+    var grid_x: int = floori(float(local_cell.x) / float(safe_scale))
+    var grid_y: int = floori(float(local_cell.y) / float(safe_scale))
+    var frac_x: float = float(local_cell.x - grid_x * safe_scale) / float(safe_scale)
+    var frac_y: float = float(local_cell.y - grid_y * safe_scale) / float(safe_scale)
+    var smooth_x: float = frac_x * frac_x * (3.0 - 2.0 * frac_x)
+    var smooth_y: float = frac_y * frac_y * (3.0 - 2.0 * frac_y)
+
+    var n00: float = Seed.unit_2d(seed, grid_x, grid_y, salt)
+    var n10: float = Seed.unit_2d(seed, grid_x + 1, grid_y, salt)
+    var n01: float = Seed.unit_2d(seed, grid_x, grid_y + 1, salt)
+    var n11: float = Seed.unit_2d(seed, grid_x + 1, grid_y + 1, salt)
+    var top: float = lerpf(n00, n10, smooth_x)
+    var bottom: float = lerpf(n01, n11, smooth_x)
+    return lerpf(top, bottom, smooth_y)
 
 func _natural_cell_allowed(
     request: AreaGenerationRequest,
@@ -352,26 +335,26 @@ func _natural_cell_allowed(
         return land_use == &"wilderness" or land_use == &"vacant"
     return true
 
-func _natural_semantic(
+func _natural_semantic_at(
     seed: int,
-    domain: String,
+    cell: Vector2i,
     family: int,
     trees: Array,
     shrubs: Array,
     rocks: Array
 ) -> StringName:
-    var roll: int = Seed.choose_index(seed, "%s:kind" % domain, 10)
+    var roll: int = Seed.hash_2d(seed, cell.x, cell.y, 709) % 10
     var source: Array = trees
     match family:
         0:
-            source = trees if roll < 6 else (shrubs if roll < 9 else rocks)
+            source = trees if roll < 7 else (shrubs if roll < 9 else rocks)
         1:
-            source = shrubs if roll < 6 else (trees if roll < 8 else rocks)
+            source = shrubs if roll < 7 else (trees if roll < 9 else rocks)
         _:
-            source = rocks if roll < 5 else (shrubs if roll < 8 else trees)
+            source = rocks if roll < 6 else (shrubs if roll < 8 else trees)
     if source.is_empty():
         return &""
-    var index: int = Seed.choose_index(seed, "%s:variant" % domain, source.size())
+    var index: int = Seed.hash_2d(seed, cell.x, cell.y, 811) % source.size()
     return StringName(source[index])
 
 func _reserve_natural_road_halo(
