@@ -12,6 +12,8 @@ var regions: Array[Dictionary] = []
 var settlements: Array[Dictionary] = []
 var road_segments: Array[Dictionary] = []
 var bridge_intents: Array[Dictionary] = []
+var power_nodes: Array[Dictionary] = []
+var power_segments: Array[Dictionary] = []
 var area_sites: Array[Dictionary] = []
 var failure_reason: String = ""
 
@@ -22,7 +24,9 @@ func is_generated() -> bool:
         and profile_version > 0 \
         and not geography_cells.is_empty() \
         and not settlements.is_empty() \
-        and not road_segments.is_empty()
+        and not road_segments.is_empty() \
+        and not power_nodes.is_empty() \
+        and not power_segments.is_empty()
 
 func signature() -> String:
     if not is_generated():
@@ -93,6 +97,27 @@ func signature() -> String:
             String(bridge.get("bridge_axis", &"")),
             int(bridge.get("road_width", 0)),
             int(bridge.get("river_width", 0)),
+        ])
+    for power_node: Dictionary in power_nodes:
+        var power_cell: Vector2i = power_node.get("cell", Vector2i.ZERO)
+        parts.append("power_node=%s|%s|%s|%d,%d|%s" % [
+            String(power_node.get("id", "")),
+            String(power_node.get("network_id", "")),
+            String(power_node.get("kind", &"")),
+            power_cell.x, power_cell.y,
+            String(power_node.get("settlement_id", "")),
+        ])
+    for power_segment: Dictionary in power_segments:
+        var power_start: Vector2i = power_segment.get("start", Vector2i.ZERO)
+        var power_end: Vector2i = power_segment.get("end", Vector2i.ZERO)
+        parts.append("power_segment=%s|%s|%s|%d,%d>%d,%d|o%d|%s|%s" % [
+            String(power_segment.get("id", "")),
+            String(power_segment.get("network_id", "")),
+            String(power_segment.get("power_class", &"")),
+            power_start.x, power_start.y, power_end.x, power_end.y,
+            int(power_segment.get("ordinal", 0)),
+            String(power_segment.get("source_road_id", "")),
+            String(power_segment.get("source_route_id", "")),
         ])
     for site: Dictionary in area_sites:
         var site_bounds: Rect2i = site.get("bounds", Rect2i())
