@@ -3,6 +3,7 @@ name: Publish exact-head workflow statuses
 on:
   workflow_run:
     workflows:
+      - Global World Planning contract
       - Local Building Generation and Archetype Lab contract
       - Local Area and Parcel Generation contract
       - Tactical Camera and View Control contract
@@ -31,6 +32,9 @@ jobs:
           set -euo pipefail
 
           case "$RUN_NAME" in
+            "Global World Planning contract")
+              context="verify/system00d-global-world"
+              ;;
             "Local Building Generation and Archetype Lab contract")
               context="verify/system19-local-building"
               ;;
