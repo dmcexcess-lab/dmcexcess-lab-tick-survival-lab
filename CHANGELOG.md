@@ -1,5 +1,22 @@
 # Changelog
 
+## System 19 Finalization + System 20 Rural Crossroads Candidate 001 — 2026-08-20
+
+- Finalized **System 19 Local Building Generation / Building Grammar** after the user explicitly approved moving on. The earlier provisional “two arbitrary proof buildings” gate is superseded by this direct finalization instruction.
+- Froze System 19’s higher-level placement seam: `LocalBuildingGenerator.placement_descriptor()` remains the only size/frontage/orientation contract System 20 needs; new building profiles are now ordinary content work unless that contract itself proves insufficient.
+- Kept all six current System 19 archetypes unchanged: Trailer v2, Small Farmhouse v2, Large Farmhouse v4, Compact Laundry House v1, Small Gas Station v1 and Rural Diner v2.
+- Promoted the approved System 20 rural-first design into the first implementation slice: **pure deterministic local-area/parcel planning**, deliberately separate from camera/viewer and persistent WHAT materialization.
+- Added `game/scripts/generation/areas/` with focused owners for stable named sub-seeds, request/result records, settlement/environment profile catalogs, inherited road planning, parcel subdivision, parcel access/driveways, System 19 building placement, outdoor/property dressing, generic validation and coordination.
+- Added `rural.crossroads` v1 and `temperate.rural` v1 as separate settlement/environment profiles so future suburban/urban and desert/forest combinations do not require separate generator architectures.
+- Added `RuralCrossroadsPlanFixture.gd`: a **256×256 global-coordinate** critique area at `Rect2i(1000,2000,256,256)` with one inherited 5-cell primary road and one inherited 3-cell secondary road crossing at `(1128,2128)`.
+- Candidate 001 generates exactly one signalized crossroads and zero local road spurs, then creates road-facing parcels with a density gradient: 3 commercial opportunities near center, 6 residential parcels, 4 farther farmsteads and remaining frontage parcels as agricultural/vacant/wilderness.
+- Used only existing building content for the area test: one Small Gas Station, one Rural Diner, one intentionally vacant commercial opportunity, plus ten residential/farmstead placements drawn from the existing Trailer, Small Farmhouse, Large Farmhouse and Compact Laundry House library.
+- System 20 selects buildings only through System 19 placement descriptors, rotates them to the parcel’s true road frontage, generates/validates the real System 19 subplan, and connects the driveway to the actual generated primary exterior door.
+- Added semantic outdoor planning with base grass, inherited road surfaces, gravel driveways, farm/agricultural fields, one traffic signal, one mailbox per occupied rural home/farm, sparse residential trees and sparse farm-boundary fencing. No fake barns, stores, people, vehicles, loot or outbreak scenes were introduced.
+- Added `LocalAreaGenerationSmoke.gd` covering same-seed determinism, different-seed variation, inherited-road boundary integrity, one signalized intersection, parcel counts/density ordering, longer farm driveways, >=60% non-road land remaining unbuilt, existing-archetype-only selection, System 19 subplan validation, recovered-art semantic coverage and twelve consecutive area seeds without retry loops.
+- Added `.github/workflows/local-area-generation.yml` plus exact-head status publishing as `verify/system20-local-area`.
+- The live Web demo remains the diner critique fixture intentionally. A 256×256 area needs a separately owned large-area DEV viewer/camera; System 20 does not absorb presentation logic just to make the planner visible.
+
 ## System 19 Rural Diner v2 + DEV New Building Cycle — 2026-08-20
 
 - Responded to the first deployed diner review: the user called it **“very good”** and asked for a few more tables plus a button that renders another building from the rule set.
@@ -105,7 +122,7 @@
 - Preserved `residential.house.farm_small` at archetype version 2 with its exact 13×9 geometry, 11×3 open living/kitchen, two bedrooms, one bathroom, five doors and seven windows.
 - Added the peer archetype `residential.house.farm_large` with standalone owner `LargeFarmhouseBuildingGenerator.gd`.
 - Candidate 001 used a 25×20 L-shaped occupied building with 3 bedrooms, 2 bathrooms, separate living/kitchen and a central hall.
-- Candidate 001 first-green code was `a533f4f27de6f37b92b5e8472bb4b81220b2e06e`; Local Building Generation run `32011785845` passed. It is now superseded by Candidate 002 after playtest critique.
+- Candidate 001 first-green code was `a533f4f27de6f37b92b5e8472bb4b81220b2e06e`; Local Building Generation run `32011785845` passed. It is now superseded by Candidate 002.
 
 ## Earlier project changelog
 
