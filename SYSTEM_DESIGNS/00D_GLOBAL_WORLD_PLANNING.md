@@ -1,6 +1,6 @@
 # Tick Survival Lab — System 00D Global World Planning
 
-Status: **APPROVED — REGIONAL SKELETON SLICE 001**
+Status: **IMPLEMENTED — REGIONAL SKELETON SLICE 001**
 
 Date: 2026-08-20
 
@@ -337,3 +337,20 @@ Approved by the user on 2026-08-20:
 3. The first implementation slice is a deterministic regional skeleton: settlements/rural regions + coherent major roads + System 20 projection seam.
 4. No streaming, population, utilities, outbreak or new local building content is bundled into Slice 001.
 5. The accepted Candidate 005 rural crossroads is used as a hard integration anchor so global planning extends the world around proven local work rather than invalidating it.
+
+## 18. Implementation result
+
+Slice 001 is implemented and independently verified.
+
+Current canonical fixture:
+
+- world bounds `Rect2i(232,1232,1792,1792)`;
+- world seed `20001`;
+- five settlement anchors: one rural crossroads, one smalltown, three rural hamlets;
+- one connected primary/secondary regional-road network with four global road segments and real boundary gateways;
+- one broad rural-open background plus five settlement influence regions;
+- five local-area site records.
+
+The central site projects through `System20AreaRequestProjector` into an `AreaGenerationRequest` semantically identical to the existing Candidate 005 fixture request. System 20 then produces the exact same Candidate 005 semantic plan signature. Adjacent projection windows preserve continuous shared primary/secondary road crossings.
+
+Dedicated exact-head context: `verify/system00d-global-world`.
