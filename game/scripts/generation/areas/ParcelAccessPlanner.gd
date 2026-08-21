@@ -59,14 +59,28 @@ func _road_edge_access(road: Dictionary, parcel_access: Vector2i, frontage: int)
         return Vector2i(-1, -1)
     var nearest: Vector2i = Vector2i(-1, -1)
     var nearest_distance: int = 2147483647
+    var frontage_is_vertical: bool = frontage == Facing.Value.NORTH or frontage == Facing.Value.SOUTH
     for value: Variant in path:
         if typeof(value) != TYPE_VECTOR2I:
             continue
         var cell: Vector2i = value
+        if frontage_is_vertical and cell.x != parcel_access.x:
+            continue
+        if not frontage_is_vertical and cell.y != parcel_access.y:
+            continue
         var distance: int = absi(cell.x - parcel_access.x) + absi(cell.y - parcel_access.y)
         if distance < nearest_distance:
             nearest_distance = distance
             nearest = cell
+    if nearest.x < 0:
+        for value: Variant in path:
+            if typeof(value) != TYPE_VECTOR2I:
+                continue
+            var cell: Vector2i = value
+            var distance: int = absi(cell.x - parcel_access.x) + absi(cell.y - parcel_access.y)
+            if distance < nearest_distance:
+                nearest_distance = distance
+                nearest = cell
     if nearest.x < 0:
         return Vector2i(-1, -1)
     var half_width: int = int(road.get("width", 1)) / 2
