@@ -2,7 +2,7 @@ name: Global World Planning contract
 
 on:
   push:
-    branches: [main, work/system00d-slice004-power]
+    branches: [main]
   workflow_dispatch:
 
 permissions:
