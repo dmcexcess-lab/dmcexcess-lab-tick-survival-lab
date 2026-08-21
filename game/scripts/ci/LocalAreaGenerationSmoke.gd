@@ -31,16 +31,16 @@ func _test_candidate(
     request: AreaGenerationRequest,
     plan: GeneratedAreaPlan
 ) -> void:
-    _check(request.is_valid(), "Rural Crossroads Candidate 004 request is valid")
-    _check(plan.is_generated(), "Rural Crossroads Candidate 004 generates")
+    _check(request.is_valid(), "Rural Crossroads Candidate 005 request is valid")
+    _check(plan.is_generated(), "Rural Crossroads Candidate 005 generates")
     if not plan.is_generated():
         return
-    _check(bool(validator.validate(request, plan).get("ok", false)), "Candidate 004 passes generic area validation")
-    _check(plan.bounds == FixtureClass.BOUNDS and plan.bounds.size == Vector2i(256, 256), "Candidate 004 keeps the approved 256x256 global planning area")
-    _check(plan.area_profile_version == 3, "rural.crossroads v3 records local-road frontage and setback morphology")
+    _check(bool(validator.validate(request, plan).get("ok", false)), "Candidate 005 passes generic area validation")
+    _check(plan.bounds == FixtureClass.BOUNDS and plan.bounds.size == Vector2i(256, 256), "Candidate 005 keeps the approved 256x256 global planning area")
+    _check(plan.area_profile_version == 4, "rural.crossroads v4 records primary-door approach alignment")
     _check(plan.environment_profile_version == 3, "temperate.rural v3 preserves accepted coordinate-noise ecology")
 
-    _check(plan.roads.size() == 4, "Candidate 004 has two inherited roads plus two local rural roads")
+    _check(plan.roads.size() == 4, "Candidate 005 has two inherited roads plus two local rural roads")
     _check(_count_inherited_roads(plan) == 2, "the two regional roads remain inherited exactly")
     _check(_count_road_class(plan, &"local_rural") == 2, "two locally generated rural roads use interior open space")
     for road: Dictionary in plan.roads:
@@ -52,9 +52,9 @@ func _test_candidate(
         _check(_road_stays_off_boundary(road, plan.bounds), "local road creates no unauthorized area-boundary exit")
         _check(bool(road.get("parcel_frontage_enabled", false)), "local road is real parcel frontage")
 
-    _check(_count_intersections(plan, &"signalized") == 1, "Candidate 004 preserves exactly one signalized crossroads")
+    _check(_count_intersections(plan, &"signalized") == 1, "Candidate 005 preserves exactly one signalized crossroads")
     _check(_count_intersections(plan, &"uncontrolled") == 2, "two local-road junctions are ordinary uncontrolled intersections")
-    _check(plan.intersections.size() == 3, "Candidate 004 has one crossroads plus two local-road junctions")
+    _check(plan.intersections.size() == 3, "Candidate 005 has one crossroads plus two local-road junctions")
     if not plan.intersections.is_empty():
         _check(plan.intersections[0].get("cell", Vector2i(-1, -1)) == FixtureClass.CENTER, "signalized crossroads remains at inherited-road crossing")
 
@@ -68,6 +68,7 @@ func _test_candidate(
     _check(_occupied_on_road_class(plan, &"local_rural") >= 6, "a majority of homes/farmsteads move off inherited roads onto local roads")
     _check(_count_land_use_on_road_class(plan, &"residential", &"local_rural") >= 3, "at least three houses use local-road frontage")
     _check(_count_land_use_on_road_class(plan, &"farmstead", &"local_rural") >= 3, "at least three farmsteads use local-road frontage")
+    _check(_all_occupied_approaches_align_to_primary_doors(plan), "every occupied approach runs straight from frontage to the actual primary door")
 
     var residential_archetypes: Dictionary = {}
     for parcel: Dictionary in plan.parcels:
@@ -83,7 +84,7 @@ func _test_candidate(
         &"residential.house.farm_large",
         &"residential.house.compact_laundry",
     ]:
-        _check(residential_archetypes.has(required), "Candidate 004 exercises saved residential archetype %s" % String(required))
+        _check(residential_archetypes.has(required), "Candidate 005 exercises saved residential archetype %s" % String(required))
 
     _check(_average_distance(plan, &"commercial_small") < _average_distance(plan, &"farmstead"), "commercial center remains materially closer than farmsteads")
     var residential_setback: float = _average_front_setback(plan, &"residential")
@@ -92,7 +93,7 @@ func _test_candidate(
     _check(residential_setback >= 0.0 and residential_setback <= 5.0, "ordinary houses sit close to their frontage road")
     _check(commercial_setback >= 0.0 and commercial_setback <= 5.0, "small commercial buildings sit close to the road when no parking lot exists")
     _check(farm_setback > residential_setback and farm_setback <= 8.0, "farmsteads keep a modest but not excessive rural setback")
-    _check(_parking_cell_count(plan) == 0, "Candidate 004 does not invent fake parking to justify empty setbacks")
+    _check(_parking_cell_count(plan) == 0, "Candidate 005 does not invent fake parking to justify empty setbacks")
     _check(_unbuilt_nonroad_ratio(plan) >= 0.60, "at least 60 percent of non-road area remains unbuilt")
 
     _check(_count_ground_semantic(plan, &"ground.road") == 0, "wide roads stay off generic topology tiles that created yellow boxes")
@@ -137,13 +138,14 @@ func _test_seed_replay(generator: LocalAreaGenerator) -> void:
     _check(alternate.is_generated() and alternate.signature() != original_a.signature(), "different area seed changes legal parcel/building/environment planning")
     for seed in range(20001, 20013):
         var plan: GeneratedAreaPlan = generator.generate(FixtureClass.request(seed))
-        _check(plan.is_generated(), "rural crossroads v3 / temperate rural v3 seed %d generates without reroll loops" % seed)
+        _check(plan.is_generated(), "rural crossroads v4 / temperate rural v3 seed %d generates without reroll loops" % seed)
         if not plan.is_generated():
             continue
         _check(_count_intersections(plan, &"signalized") == 1, "seed %d preserves one signalized crossroads" % seed)
         _check(_count_road_class(plan, &"local_rural") == 2, "seed %d preserves two local rural roads" % seed)
         _check(plan.building_requests.size() == 12, "seed %d preserves approved occupied-building target" % seed)
         _check(_occupied_on_road_class(plan, &"local_rural") >= 6, "seed %d keeps a majority of homes/farms on local roads" % seed)
+        _check(_all_occupied_approaches_align_to_primary_doors(plan), "seed %d keeps every occupied approach aligned to its primary door" % seed)
         _check(_average_front_setback(plan, &"residential") <= 5.0, "seed %d keeps residential facades close to the road" % seed)
         _check(_average_front_setback(plan, &"commercial_small") <= 5.0, "seed %d keeps small commercial facades close to the road" % seed)
         _check(_average_front_setback(plan, &"farmstead") <= 8.0, "seed %d keeps farmstead setbacks bounded" % seed)
@@ -151,6 +153,37 @@ func _test_seed_replay(generator: LocalAreaGenerator) -> void:
         _check(_natural_prop_count(plan) >= 60, "seed %d preserves meaningful natural dressing" % seed)
         _check(_natural_coarse_bin_coverage(plan) >= 7, "seed %d spreads natural dressing across the area" % seed)
         _check(_natural_xy_correlation_abs(plan) <= 0.70, "seed %d avoids diagonal natural-prop collapse" % seed)
+
+func _all_occupied_approaches_align_to_primary_doors(plan: GeneratedAreaPlan) -> bool:
+    for parcel: Dictionary in plan.parcels:
+        var land_use: StringName = StringName(parcel.get("land_use", &""))
+        if land_use != &"residential" and land_use != &"farmstead" and land_use != &"commercial_small":
+            continue
+        if String(parcel.get("building_instance_id", "")).is_empty():
+            continue
+        var access: Vector2i = parcel.get("access_cell", Vector2i(-1, -1))
+        var entry: Vector2i = parcel.get("building_entry_cell", Vector2i(-1, -1))
+        var frontage: int = int(parcel.get("frontage_side", -1))
+        var driveway: Array = parcel.get("driveway_cells", [])
+        if access.x < 0 or entry.x < 0 or driveway.is_empty() or not Facing.is_valid(frontage):
+            return false
+        if driveway[0] != access or driveway[driveway.size() - 1] != entry:
+            return false
+        if frontage == Facing.Value.NORTH or frontage == Facing.Value.SOUTH:
+            if access.x != entry.x:
+                return false
+            for value: Variant in driveway:
+                var cell: Vector2i = value
+                if cell.x != access.x:
+                    return false
+        else:
+            if access.y != entry.y:
+                return false
+            for value: Variant in driveway:
+                var cell: Vector2i = value
+                if cell.y != access.y:
+                    return false
+    return true
 
 func _count_inherited_roads(plan: GeneratedAreaPlan) -> int:
     var count: int = 0
