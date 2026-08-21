@@ -121,6 +121,39 @@ func hydrology_constraints_for_bounds(plan: GeneratedGlobalWorldPlan, bounds: Re
 
     return {"ok": true, "failure_reason": "", "rivers": rivers, "bridges": bridges}
 
+## Read-only Slice 004 seam. Regional power remains pure global planning truth;
+## `project_site()` intentionally does not inject poles/wires into the current
+## AreaGenerationRequest before local utility materialization is designed.
+func power_constraints_for_bounds(plan: GeneratedGlobalWorldPlan, bounds: Rect2i) -> Dictionary:
+    var segments: Array[Dictionary] = []
+    var nodes: Array[Dictionary] = []
+    if plan == null or not plan.is_generated() or not _rect_inside(plan.bounds, bounds):
+        return {"ok": false, "failure_reason": "invalid_global_power_projection_bounds", "segments": segments, "nodes": nodes}
+
+    for segment: Dictionary in plan.power_segments:
+        if _segment_overlap_is_single_point(segment, bounds):
+            continue
+        var clipped: Dictionary = _clip_segment(segment, bounds)
+        if clipped.is_empty():
+            continue
+        segments.append({
+            "id": String(segment.get("id", "")),
+            "network_id": String(segment.get("network_id", "")),
+            "power_class": StringName(segment.get("power_class", &"")),
+            "start": clipped.get("start", Vector2i.ZERO),
+            "end": clipped.get("end", Vector2i.ZERO),
+            "ordinal": int(segment.get("ordinal", 0)),
+            "source_road_id": String(segment.get("source_road_id", "")),
+            "source_route_id": String(segment.get("source_route_id", "")),
+        })
+
+    for node: Dictionary in plan.power_nodes:
+        var cell: Vector2i = node.get("cell", Vector2i(-999999, -999999))
+        if bounds.has_point(cell):
+            nodes.append(node.duplicate(true))
+
+    return {"ok": true, "failure_reason": "", "segments": segments, "nodes": nodes}
+
 func _segment_overlap_is_single_point(segment: Dictionary, bounds: Rect2i) -> bool:
     var start: Vector2i = segment.get("start", Vector2i.ZERO)
     var finish: Vector2i = segment.get("end", Vector2i.ZERO)
