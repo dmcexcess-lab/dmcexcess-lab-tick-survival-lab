@@ -1,5 +1,18 @@
 # Changelog
 
+## System 20 Rural Crossroads Candidate 003 — 2026-08-20
+
+- Fixed the reported natural-prop **diagonal-line artifact** while preserving Candidate 002 roads, parcels, buildings, camera and renderer behavior.
+- Root cause: Candidate 002 selected cluster-center X and Y independently from closely related string-domain seed streams; those deterministic streams were visibly correlated.
+- Added `AreaSeed.hash_2d()` / `unit_2d()` so spatial consumers can mix **both coordinates into one deterministic sample** with no preferred axis or diagonal.
+- Bumped `temperate.rural` from v2 to **v3** because same-seed ecological output intentionally changed. `rural.crossroads` remains v2 because road/parcel/building morphology is unchanged.
+- Replaced finite random cluster centers with a bounded **two-scale 2D value-noise scatter** over eligible countryside cells.
+- Low-frequency smooth value noise now modulates local vegetation density, while an independent per-cell coordinate sample decides individual placement. A second broad noise field biases pockets toward trees, brush or rocks.
+- Trees/shrubs/rocks still avoid roads, driveway halos, buildings, active fields, occupied parcel interiors and the immediate signalized town center.
+- Preserved the Candidate 002 road fix exactly: plain paved carriageways, one center-path yellow line per inherited road, and one bent internal gravel farm-access branch.
+- Expanded `LocalAreaGenerationSmoke.gd` with explicit anti-diagonal regressions: broad 4x4 map coverage, bounded local-neighbor ratio and low absolute X/Y spatial correlation across the critique seed and twelve consecutive area seeds.
+- System 19, System 21 and System 22 source contracts remain unchanged.
+
 ## System 20 Rural Crossroads Candidate 002 — 2026-08-20
 
 - Fixed the live **yellow-box road** problem without changing System 05 or any art asset. Wide paved corridors now materialize as `ground.road_plain`, with a single center-path `ground.road_yellow_line_h` / `ground.road_yellow_line_v` layer instead of asking every cell across a 3–5-cell-wide road to infer generic road topology.
