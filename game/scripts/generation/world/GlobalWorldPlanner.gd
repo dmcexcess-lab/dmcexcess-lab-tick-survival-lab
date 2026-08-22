@@ -9,9 +9,11 @@ const SettlementPlannerClass = preload("res://scripts/generation/world/GlobalSet
 const RoadPlannerClass = preload("res://scripts/generation/world/GlobalMajorRoadPlanner.gd")
 const BridgePlannerClass = preload("res://scripts/generation/world/GlobalBridgeIntentPlanner.gd")
 const PowerPlannerClass = preload("res://scripts/generation/world/GlobalPowerInfrastructurePlanner.gd")
+const WaterPlannerClass = preload("res://scripts/generation/world/GlobalWaterInfrastructurePlanner.gd")
 const RegionPlannerClass = preload("res://scripts/generation/world/GlobalPlanningRegionPlanner.gd")
 const ValidatorClass = preload("res://scripts/generation/world/GeneratedGlobalWorldValidator.gd")
 const PowerValidatorClass = preload("res://scripts/generation/world/GlobalPowerInfrastructureValidator.gd")
+const WaterValidatorClass = preload("res://scripts/generation/world/GlobalWaterInfrastructureValidator.gd")
 
 var _profiles: GlobalWorldProfileCatalog
 var _geography_planner: GlobalGeographyPlanner
@@ -20,9 +22,11 @@ var _settlement_planner: GlobalSettlementPlanner
 var _road_planner: GlobalMajorRoadPlanner
 var _bridge_planner: GlobalBridgeIntentPlanner
 var _power_planner: GlobalPowerInfrastructurePlanner
+var _water_planner: GlobalWaterInfrastructurePlanner
 var _region_planner: GlobalPlanningRegionPlanner
 var _validator: GeneratedGlobalWorldValidator
 var _power_validator: GlobalPowerInfrastructureValidator
+var _water_validator: GlobalWaterInfrastructureValidator
 
 func _init() -> void:
     _profiles = ProfilesClass.new()
@@ -32,9 +36,11 @@ func _init() -> void:
     _road_planner = RoadPlannerClass.new()
     _bridge_planner = BridgePlannerClass.new()
     _power_planner = PowerPlannerClass.new()
+    _water_planner = WaterPlannerClass.new()
     _region_planner = RegionPlannerClass.new()
     _validator = ValidatorClass.new()
     _power_validator = PowerValidatorClass.new()
+    _water_validator = WaterValidatorClass.new()
 
 func generate(request: GlobalWorldGenerationRequest) -> GeneratedGlobalWorldPlan:
     var plan: GeneratedGlobalWorldPlan = PlanClass.new()
@@ -125,6 +131,29 @@ func generate(request: GlobalWorldGenerationRequest) -> GeneratedGlobalWorldPlan
             return plan
         power_segments.append(power_segment_value)
 
+    var water_result: Dictionary = _water_planner.plan(request, profile, settlements, area_sites, road_segments)
+    if not bool(water_result.get("ok", false)):
+        plan.failure_reason = String(water_result.get("failure_reason", "global_water_infrastructure_planning_failed"))
+        return plan
+    var water_services: Array[Dictionary] = []
+    for water_service_value: Variant in water_result.get("water_services", []):
+        if typeof(water_service_value) != TYPE_DICTIONARY:
+            plan.failure_reason = "global_water_service_result_invalid"
+            return plan
+        water_services.append(water_service_value)
+    var water_nodes: Array[Dictionary] = []
+    for water_node_value: Variant in water_result.get("water_nodes", []):
+        if typeof(water_node_value) != TYPE_DICTIONARY:
+            plan.failure_reason = "global_water_node_result_invalid"
+            return plan
+        water_nodes.append(water_node_value)
+    var water_segments: Array[Dictionary] = []
+    for water_segment_value: Variant in water_result.get("water_segments", []):
+        if typeof(water_segment_value) != TYPE_DICTIONARY:
+            plan.failure_reason = "global_water_segment_result_invalid"
+            return plan
+        water_segments.append(water_segment_value)
+
     var region_result: Dictionary = _region_planner.plan(request, settlements)
     if not bool(region_result.get("ok", false)):
         plan.failure_reason = String(region_result.get("failure_reason", "global_region_planning_failed"))
@@ -149,6 +178,9 @@ func generate(request: GlobalWorldGenerationRequest) -> GeneratedGlobalWorldPlan
     plan.bridge_intents = bridge_intents
     plan.power_nodes = power_nodes
     plan.power_segments = power_segments
+    plan.water_services = water_services
+    plan.water_nodes = water_nodes
+    plan.water_segments = water_segments
     plan.area_sites = area_sites
 
     var validation: Dictionary = _validator.validate(request, plan)
@@ -165,6 +197,14 @@ func generate(request: GlobalWorldGenerationRequest) -> GeneratedGlobalWorldPlan
         for failure_value: Variant in power_validation.get("failures", []):
             power_failure_parts.append(String(failure_value))
         plan.failure_reason = "global_power_validation_failed:%s" % ",".join(power_failure_parts)
+        return plan
+
+    var water_validation: Dictionary = _water_validator.validate(request, plan)
+    if not bool(water_validation.get("ok", false)):
+        var water_failure_parts := PackedStringArray()
+        for failure_value: Variant in water_validation.get("failures", []):
+            water_failure_parts.append(String(failure_value))
+        plan.failure_reason = "global_water_validation_failed:%s" % ",".join(water_failure_parts)
     return plan
 
 func profile_ids() -> Array[StringName]:
