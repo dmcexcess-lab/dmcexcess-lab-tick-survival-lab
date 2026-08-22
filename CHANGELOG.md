@@ -1,5 +1,21 @@
 # Changelog
 
+## System 00D Global World Planning — Potable Water Infrastructure Slice 005 — 2026-08-22
+
+- Implemented the approved **System 00D Potable Water Infrastructure Slice 005** and bumped `temperate.rural.region` from **v4 to v5**.
+- Added a mixed rural potable-water service model instead of copying the electrical grid: `settlement.smalltown.001` has municipal groundwater service, while the rural crossroads and three rural hamlets have decentralized groundwater-source intent for later local/private or shared wells.
+- Added focused pure owners `GlobalWaterInfrastructurePlanner.gd`, `GlobalWaterInfrastructureQuery.gd` and `GlobalWaterInfrastructureValidator.gd` under `game/scripts/generation/world/`.
+- Extended `GeneratedGlobalWorldPlan`, `is_generated()` completeness and deterministic signatures with `water_services`, `water_nodes` and `water_segments`.
+- The small-town municipal network records exactly three **planning connection anchors** — `groundwater_source`, `treatment_storage`, `settlement_service` — rather than pretending those cells are final wellhead/tower/waterworks footprints.
+- Added profile-bounded source/treatment offsets of 48/24 cells. The municipal source corridor is chosen deterministically from legal major-road geometry incident to the small-town center, stays inside the existing small-town planning site, and prefers a primary-road corridor where available.
+- Added exactly two contiguous `municipal_trunk` segments from source -> treatment/storage -> service. Each retains stable source-road/source-route provenance and remains fully contained in real major-road geometry.
+- Added independent validation for one service per settlement, exact municipal/decentralized classification, groundwater source type, three municipal node roles, two trunk edges, small-town site containment, road containment, ridge/boundary discipline, ID uniqueness and source-to-service reachability.
+- Added read-only `System20AreaRequestProjector.water_constraints_for_bounds()`. Candidate 006 exposes only its `decentralized_source` groundwater service intent; it receives no fake well, municipal nodes or pipe trunk. The future small-town planning window already exposes its municipal service, three anchors and two trunk segments.
+- Preserved the existing `project_site()` contract exactly. Candidate 006 still produces the same inherited-road request and exact accepted System 20 semantic output; unsupported `smalltown.center` / `rural.scattered` local profiles still fail honestly.
+- Preserved all geography, hydrology, bridge-intent and regional-power regressions. Same-seed replay now includes water identity, and the alternate global seed passes base, power and water validation.
+- No tactical wells, pumps, towers, tanks, pipes, building plumbing, pressure/flow, water quantity/quality, drinking/container mechanics, power-to-pump coupling, rain collection, wastewater/sewer/septic, WHAT/WHEN state, streaming, population or outbreak behavior was faked into this slice.
+- The first integrated code head `415cca449acb598c517434bfc7b48ba07fb62340` passed `verify/system00d-global-world` (run `32600102767`) and protected Systems 19–22 before final documentation promotion. Final exact-head verification still requires System 00D, Systems 19–22 and Pages all green together.
+
 ## System 00D Global World Planning — Regional Electrical Infrastructure Slice 004 — 2026-08-21
 
 - Implemented the approved **System 00D Regional Electrical Infrastructure Slice 004** and bumped `temperate.rural.region` from **v3 to v4**.
