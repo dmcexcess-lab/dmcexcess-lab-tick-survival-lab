@@ -1,6 +1,6 @@
 # Tick Survival Lab — System 00D Slice 005 Potable Water Infrastructure
 
-Status: **APPROVED**
+Status: **IMPLEMENTED**
 
 Date: 2026-08-22
 
@@ -263,3 +263,13 @@ Those systems consume the stable service/source topology rather than redefining 
 ## 16. North-star fit
 
 The North Star requires world-spanning infrastructure to be coherent before local materialization and streaming. Slice 005 establishes the smallest believable rural potable-water model that preserves future survival consequences without pretending to simulate plumbing now: municipal groundwater service where a town supports it, decentralized groundwater intent where rural properties should remain independent.
+
+## 17. Implementation result
+
+Implemented on 2026-08-22 with `temperate.rural.region` **v5**. The canonical regional plan now records five settlement water-service intents: municipal groundwater for the small town and decentralized groundwater-source intent for the rural crossroads plus three hamlets.
+
+The small-town municipal backbone records exactly three road-corridor connection anchors (`groundwater_source`, `treatment_storage`, `settlement_service`) and two contiguous `municipal_trunk` segments with source-road/source-route provenance. `GlobalWaterInfrastructureValidator` independently checks service classification, anchor/site/road legality, ridge and boundary discipline, ID uniqueness, exact two-edge topology and source-to-service reachability.
+
+`System20AreaRequestProjector.water_constraints_for_bounds()` exposes these facts read-only. Candidate 006 remains semantically identical and exposes only its decentralized groundwater intent; it receives no fake well, municipal nodes or trunk. The unsupported small-town local profile remains honestly unsupported while its future planning window can already query municipal water truth.
+
+The first integrated Slice 005 code head `415cca449acb598c517434bfc7b48ba07fb62340` passed `verify/system00d-global-world` (run `32600102767`) plus protected Systems 19–22 before final documentation promotion.
