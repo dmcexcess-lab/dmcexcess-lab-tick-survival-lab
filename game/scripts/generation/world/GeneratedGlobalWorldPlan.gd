@@ -14,6 +14,9 @@ var road_segments: Array[Dictionary] = []
 var bridge_intents: Array[Dictionary] = []
 var power_nodes: Array[Dictionary] = []
 var power_segments: Array[Dictionary] = []
+var water_services: Array[Dictionary] = []
+var water_nodes: Array[Dictionary] = []
+var water_segments: Array[Dictionary] = []
 var area_sites: Array[Dictionary] = []
 var failure_reason: String = ""
 
@@ -26,7 +29,10 @@ func is_generated() -> bool:
         and not settlements.is_empty() \
         and not road_segments.is_empty() \
         and not power_nodes.is_empty() \
-        and not power_segments.is_empty()
+        and not power_segments.is_empty() \
+        and not water_services.is_empty() \
+        and not water_nodes.is_empty() \
+        and not water_segments.is_empty()
 
 func signature() -> String:
     if not is_generated():
@@ -118,6 +124,35 @@ func signature() -> String:
             int(power_segment.get("ordinal", 0)),
             String(power_segment.get("source_road_id", "")),
             String(power_segment.get("source_route_id", "")),
+        ])
+    for water_service: Dictionary in water_services:
+        parts.append("water_service=%s|%s|%s|%s|%s" % [
+            String(water_service.get("id", "")),
+            String(water_service.get("settlement_id", "")),
+            String(water_service.get("service_mode", &"")),
+            String(water_service.get("source_type", &"")),
+            String(water_service.get("network_id", "")),
+        ])
+    for water_node: Dictionary in water_nodes:
+        var water_cell: Vector2i = water_node.get("cell", Vector2i.ZERO)
+        parts.append("water_node=%s|%s|%s|%d,%d|%s" % [
+            String(water_node.get("id", "")),
+            String(water_node.get("network_id", "")),
+            String(water_node.get("kind", &"")),
+            water_cell.x, water_cell.y,
+            String(water_node.get("settlement_id", "")),
+        ])
+    for water_segment: Dictionary in water_segments:
+        var water_start: Vector2i = water_segment.get("start", Vector2i.ZERO)
+        var water_end: Vector2i = water_segment.get("end", Vector2i.ZERO)
+        parts.append("water_segment=%s|%s|%s|%d,%d>%d,%d|o%d|%s|%s" % [
+            String(water_segment.get("id", "")),
+            String(water_segment.get("network_id", "")),
+            String(water_segment.get("water_class", &"")),
+            water_start.x, water_start.y, water_end.x, water_end.y,
+            int(water_segment.get("ordinal", 0)),
+            String(water_segment.get("source_road_id", "")),
+            String(water_segment.get("source_route_id", "")),
         ])
     for site: Dictionary in area_sites:
         var site_bounds: Rect2i = site.get("bounds", Rect2i())
