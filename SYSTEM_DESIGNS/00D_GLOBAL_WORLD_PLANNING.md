@@ -1,8 +1,8 @@
 # Tick Survival Lab — System 00D Global World Planning
 
-Status: **SLICES 001–004 IMPLEMENTED**
+Status: **SLICES 001–005 IMPLEMENTED**
 
-Date: 2026-08-21
+Date: 2026-08-22
 
 ## 1. Goal
 
@@ -18,117 +18,77 @@ System 00D is pure planning. It never materializes WHAT and never owns rendering
 
 ### Slice 001 — Regional Skeleton
 
-Established:
-
-- global request/plan/profile contracts;
-- broad rural + settlement planning regions;
-- one central rural crossroads, one smalltown and three rural hamlets;
-- globally coherent primary/secondary road families with real boundary gateways;
-- local-area site records carrying downstream profile hints;
-- separate `System20AreaRequestProjector` integration owner;
-- exact proof that the accepted central rural-crossroads area can be derived from global facts without changing the local inherited-road contract.
+Established global request/plan/profile contracts, broad planning regions, five settlement anchors, coherent primary/secondary roads with real gateways, local-area site records, and the separate System 20 projection adapter.
 
 ### Slice 002 — Geography / Landform Constraints
 
-Added:
-
-- 128-cell coarse geography lattice;
-- deterministic planning elevation `0..100`;
-- `lowland`, `rolling`, `upland`, `ridge` landforms;
-- settlement placement limited to lowland/rolling geography;
-- geography-aware cardinal major-road routing;
-- lowland preference, rolling penalty, upland strong penalty, ridge prohibition;
-- protected central lowland/rolling cross with `protected_cross_half_span = 640`, keeping geography-aware bends outside the accepted center and immediately adjacent 256×256 planning windows.
+Added the deterministic 128-cell geography lattice, planning elevation and lowland/rolling/upland/ridge classes, legal settlement geography, geography-aware road routing, and the protected central straight-cross corridor.
 
 ### Slice 003 — Global Hydrology / Bridge Intent
 
 Detailed design: `00D3_GLOBAL_HYDROLOGY_BRIDGE_INTENT.md`.
 
-Added:
-
-- deterministic boundary-to-boundary regional river planning over the coarse geography lattice;
-- hydrology clearance for settlement sites;
-- hydrology-aware major-road crossing cost;
-- prohibition on roads running collinearly along river centerlines;
-- explicit global bridge-intent records for every real perpendicular road/river crossing;
-- independent validation that crossings and bridge intents correspond exactly;
-- read-only `System20AreaRequestProjector.hydrology_constraints_for_bounds()` seam;
-- preserved Candidate 006 and its four immediately adjacent protected windows as hydrology-free integration anchors.
+Added a deterministic boundary-to-boundary primary river, settlement river clearance, hydrology-aware road costs, explicit bridge intents for real road/river crossings, independent crossing validation, and `hydrology_constraints_for_bounds()` while keeping Candidate 006 and its immediate adjacent windows hydrology-free.
 
 ### Slice 004 — Regional Electrical Infrastructure
 
 Detailed design: `00D4_GLOBAL_ELECTRICAL_INFRASTRUCTURE.md`.
 
+Added one regional grid ingress, one small-town substation, one electrical service node per settlement, one connected road-following feeder network with source-road provenance, independent electrical validation, and `power_constraints_for_bounds()` without changing Candidate 006.
+
+### Slice 005 — Potable Water Infrastructure
+
+Detailed design: `00D5_GLOBAL_POTABLE_WATER_INFRASTRUCTURE.md`.
+
 Added:
 
-- one deterministic regional electrical-grid ingress at a real road boundary gateway;
-- one small-town-associated substation/distribution hub;
-- one settlement service node for each of the five current settlements;
-- one connected regional feeder network derived from the already valid major-road graph;
-- feeder segments that carry stable source-road/source-route provenance rather than inventing independent off-road utility geometry;
-- independent `GlobalPowerInfrastructureValidator` proof of one ingress, one substation, complete settlement service, road containment, ridge avoidance, boundary discipline and connectivity;
-- read-only `System20AreaRequestProjector.power_constraints_for_bounds()` seam;
-- Candidate 006 local request/materialization/render output unchanged: global power facts are queryable but tactical poles/wires/electricity are not faked.
+- one potable-water service record for every current settlement;
+- municipal groundwater service for `settlement.smalltown.001`;
+- decentralized groundwater-source intent for the rural crossroads and all three rural hamlets;
+- one small-town municipal network with `groundwater_source`, `treatment_storage`, and `settlement_service` planning anchors;
+- two contiguous `municipal_trunk` segments contained by real major-road geometry inside the small-town planning site;
+- independent water validation for service classification, anchor/site/road legality, ridge/boundary discipline, exact topology and source-to-service reachability;
+- read-only `System20AreaRequestProjector.water_constraints_for_bounds()`;
+- no change to Candidate 006 local generation or presentation.
 
 ## 3. Current canonical fixture
 
-Profile: `temperate.rural.region` **v4**.
+Profile: `temperate.rural.region` **v5**.
 
 Global fixture:
 
-- bounds `Rect2i(232,1232,1792,1792)`;
-- seed `20001`;
-- 14×14 = 196 coarse geography cells;
-- five settlement anchors;
+- bounds `Rect2i(232,1232,1792,1792)`, seed `20001`;
+- 196 coarse geography cells and five settlement anchors;
 - connected primary/secondary regional road network;
-- one deterministic primary regional river outside the protected center;
-- at least one topologically required road/river crossing represented by explicit bridge intent;
-- one regional power ingress;
-- one small-town substation;
-- five settlement service nodes;
-- one connected road-following regional feeder network;
+- one deterministic primary river plus explicit bridge intent at every real crossing;
+- one regional power ingress, one small-town electrical substation, five electrical service nodes and one connected road-following feeder network;
+- five potable-water service records;
+- one small-town municipal groundwater service and four decentralized rural groundwater-source intents;
+- three small-town municipal water connection anchors and two road-contained municipal trunk segments;
 - broad rural-open region plus settlement influence regions;
 - five local-area site records.
 
-The protected central site remains:
+The protected central site remains `area.rural.crossroads.001` at `Rect2i(1000,2000,256,256)`, seed `20001`, using `rural.crossroads` + `temperate.rural` and inherited roads `road.region.primary.001` / `road.region.secondary.001`.
 
-- ID `area.rural.crossroads.001`;
-- bounds `Rect2i(1000,2000,256,256)`;
-- seed `20001`;
-- area profile `rural.crossroads`;
-- environment profile `temperate.rural`;
-- inherited road IDs `road.region.primary.001` and `road.region.secondary.001`.
-
-Its projected System 20 request remains semantically identical to `RuralCrossroadsPlanFixture.request(20001)`, and System 20 still produces the accepted Candidate 006 semantic output from those facts.
+Its projected System 20 request remains semantically identical to `RuralCrossroadsPlanFixture.request(20001)`, and System 20 still produces the accepted Candidate 006 semantic output.
 
 ## 4. Owners
 
-Pure owners under `game/scripts/generation/world/`:
+Pure owners under `game/scripts/generation/world/` include the request/plan/profile contracts; geography, hydrology, settlement, major-road, bridge-intent, power, potable-water and planning-region owners; independent base/power/water validators; and `GlobalWorldPlanner.gd` as orchestration only.
 
-- `GlobalWorldSeed.gd` — stable named sub-seeds and coordinate hashing;
-- `GlobalWorldGenerationRequest.gd` — world constraints;
-- `GeneratedGlobalWorldPlan.gd` — pure semantic result/signature;
-- `GlobalWorldProfileCatalog.gd` — planning profiles/versions;
-- `GlobalGeographyPlanner.gd` / `GlobalGeographyQuery.gd` — coarse landform truth;
-- `GlobalHydrologyPlanner.gd` / `GlobalHydrologyQuery.gd` — river planning/read queries;
-- `GlobalSettlementPlanner.gd` — geography/hydrology-constrained settlement/site intent;
-- `GlobalMajorRoadPlanner.gd` — geography/hydrology-aware regional roads;
-- `GlobalBridgeIntentPlanner.gd` — explicit bridge crossing intent;
-- `GlobalPowerInfrastructurePlanner.gd` / `GlobalPowerInfrastructureQuery.gd` — regional electrical topology/read queries;
-- `GlobalPowerInfrastructureValidator.gd` — focused independent electrical-topology validation;
-- `GlobalPlanningRegionPlanner.gd` — broad planning regions;
-- `GeneratedGlobalWorldValidator.gd` — independent Slices 001–003 full-plan correctness;
-- `GlobalWorldPlanner.gd` — orchestration plus composition of base/power validation only.
+Potable-water-specific owners:
 
-Separate downstream adapter:
+- `GlobalWaterInfrastructurePlanner.gd`;
+- `GlobalWaterInfrastructureQuery.gd`;
+- `GlobalWaterInfrastructureValidator.gd`.
 
-- `game/scripts/generation/integration/System20AreaRequestProjector.gd`.
+Separate downstream adapter: `game/scripts/generation/integration/System20AreaRequestProjector.gd`.
 
-Pure System 00D source does not import System 19, System 20, WHAT mutation, renderer/art, camera/input/UI/player, reboot code or future streaming ownership.
+Pure System 00D source does not import System 19, System 20, WHAT mutation, WHEN, renderer/art, camera/input/UI/player, reboot code or future streaming ownership.
 
 ## 5. Public plan contract
 
-`GeneratedGlobalWorldPlan` exposes semantic global-coordinate collections:
+`GeneratedGlobalWorldPlan` exposes:
 
 - provenance: world ID, seed, bounds, profile ID/version;
 - `geography_cells`;
@@ -139,161 +99,86 @@ Pure System 00D source does not import System 19, System 20, WHAT mutation, rend
 - `bridge_intents`;
 - `power_nodes`;
 - `power_segments`;
+- `water_services`;
+- `water_nodes`;
+- `water_segments`;
 - `area_sites`;
-- deterministic `signature()`;
-- failure reason.
+- deterministic `signature()` and failure reason.
 
-### Geography record
+Bridge intents are planning facts, not tactical bridge state. Power records are regional corridor/service truth, not poles/wires or energized state.
 
-- stable ID;
-- coarse grid coordinate;
-- global `Rect2i`;
-- planning elevation;
-- semantic landform.
+A water service record stores stable ID, settlement ID, `municipal` or `decentralized_source`, source type (`groundwater` here), and municipal network ID when applicable. Decentralized service does not pre-place a physical well.
 
-### River segment record
-
-- stable segment ID and river ID;
-- cardinal start/end;
-- odd physical width;
-- downstream ordinal.
-
-### Settlement/site records
-
-Settlements own stable semantic place identity and center; area-site records provide bounded downstream local-planning intent and profile hints. They are not population records or streaming chunks.
-
-### Road segment record
-
-- stable road ID;
-- primary/secondary class;
-- cardinal start/end;
-- odd width;
-- stable route-family ID.
-
-### Bridge intent record
-
-- stable ID;
-- road/route IDs;
-- river/river-segment IDs;
-- exact crossing cell;
-- bridge axis;
-- road/river widths.
-
-A bridge intent is planning infrastructure intent, not art/collision/runtime bridge state.
-
-### Power node record
-
-- stable ID;
-- regional network ID;
-- semantic kind (`regional_ingress`, `substation`, `settlement_service`);
-- global cell;
-- optional settlement association.
-
-### Power segment record
-
-- stable ID/network ID;
-- `regional_feeder` class;
-- cardinal start/end;
-- deterministic ordinal;
-- source major-road ID and route ID.
-
-A power segment is regional corridor truth, not a tactical pole/wire or energized runtime entity.
+Municipal water nodes store stable network/kind/cell/settlement facts for `groundwater_source`, `treatment_storage`, and `settlement_service`. They are connection anchors, not exact facility footprints. Municipal water segments store `municipal_trunk` cardinal geometry plus source-road/source-route provenance.
 
 ## 6. Generation order
 
 1. Validate global request/profile.
 2. Generate coarse geography.
-3. Generate global hydrology from geography.
+3. Generate global hydrology.
 4. Place/snap settlements and area sites against geography + river clearance.
 5. Generate major roads against geography + river crossing cost.
-6. Derive explicit bridge intents from actual road/river intersections.
+6. Derive bridge intents from actual road/river crossings.
 7. Derive regional electrical nodes/feeders from the connected major-road graph.
-8. Generate broad planning regions.
-9. Independently validate the base global plan and focused electrical network.
-10. Return pure semantic global truth.
+8. Derive potable-water settlement service and the bounded small-town municipal backbone.
+9. Generate broad planning regions.
+10. Independently validate base global truth plus focused electrical and water infrastructure.
+11. Return pure semantic global truth.
 
 No unbounded reroll loops are permitted. Unsupported topology fails honestly.
 
-## 7. Geography / hydrology / roads
+## 7. Geography / hydrology / road rules
 
-- Geography cells are planning resolution, not streaming partitions.
-- Elevation is deterministic planning data, not tactical slope physics.
-- Settlements require lowland/rolling terrain.
-- Major roads may use lowland/rolling/upland with increasing cost; ridge is forbidden.
-- The protected central cross remains legal low/rolling terrain.
-- The primary river is a real boundary-to-boundary route outside the protected Candidate 006 corridor.
-- Road river crossings are expensive but legal when topology requires them.
-- Roads may not run collinearly along river centerlines.
-- Every real perpendicular crossing has exactly one bridge intent.
+Geography cells are planning resolution, not streaming partitions. Settlements require legal lowland/rolling terrain. Major roads may use lowland/rolling/upland with increasing cost; ridge is forbidden. The primary river is a boundary-to-boundary route outside the protected Candidate 006 corridor. Roads cannot follow the river centerline; every real perpendicular crossing has exactly one bridge intent.
 
 ## 8. Regional electrical rules
 
-- Exactly one deterministic major-road boundary gateway is chosen as the regional electrical ingress.
-- The small-town settlement center hosts the current regional substation planning node.
-- Every settlement center has exactly one service node.
-- The feeder planner uses the existing major-road geometry as its graph; it does not reroute independently through terrain.
-- Primary-road corridors are mildly preferred over secondary corridors when alternative road-graph paths exist.
-- The union of shortest required road-graph paths from ingress to the substation/services becomes the regional feeder network.
-- Every feeder segment must remain contained in the named source road segment.
-- Ridge avoidance is therefore inherited from roads and independently rechecked.
-- Only the chosen ingress may create a feeder endpoint at the regional boundary.
-- Same seed/profile replays identical power facts; alternate seeds may vary ingress/network topology legally.
+Exactly one deterministic road gateway is the electrical ingress. The small town hosts the current substation. Every settlement has an electrical service node. The feeder uses existing major-road geometry, mildly prefers primary roads, remains road-contained/ridge-free, and only the selected ingress may terminate at the world boundary.
 
-## 9. System 20 projection seams
+## 9. Potable-water rules
 
-`System20AreaRequestProjector.project_site()` remains unchanged at the local request contract: it clips supported global major roads into `AreaGenerationRequest`.
+- Exactly one water-service record exists for each current settlement.
+- The small town is the only municipal service in v5; crossroads + three hamlets are decentralized groundwater-source service areas.
+- The regional river is not silently treated as drinking-water intake; current source type is semantic `groundwater`.
+- Municipal `settlement_service` is at the small-town center.
+- `treatment_storage` and `groundwater_source` anchors are placed at bounded deterministic offsets on one legal incident major-road corridor inside the small-town area site.
+- Two contiguous trunk segments connect source -> treatment/storage -> service and retain source-road/source-route provenance.
+- Municipal nodes/segments remain inside the small-town site, off the regional boundary, road-contained and ridge-free.
+- Physical facilities, local distribution, private wells and runtime water behavior are downstream responsibilities.
 
-Read-only future seams:
+## 10. System 20 projection seams
 
-- `hydrology_constraints_for_bounds(plan, bounds)` -> clipped river + bridge intent facts;
-- `power_constraints_for_bounds(plan, bounds)` -> clipped feeder segments + power nodes.
+`project_site()` remains unchanged and supplies only supported inherited major roads to `AreaGenerationRequest`.
 
-Neither seam silently injects unsupported water, bridges, poles or wires into `AreaGenerationRequest`.
+Read-only seams:
 
-## 10. Validation / exact-head acceptance
+- `hydrology_constraints_for_bounds()` -> clipped river + bridge facts;
+- `power_constraints_for_bounds()` -> clipped feeder + power-node facts;
+- `water_constraints_for_bounds()` -> settlement water-service intent + clipped municipal nodes/trunks.
 
-`verify/system00d-global-world` protects:
+None silently injects bridges, poles, wires, wells or pipes into local generation. Candidate 006 keeps its exact accepted local output while exposing decentralized groundwater intent. The unsupported small-town site can expose municipal planning facts without fabricating a local profile.
 
-- deterministic geography, hydrology, roads, bridge intents and power infrastructure;
-- legal alternate-seed variation;
-- complete geography tiling and meaningful landforms;
-- settlement geography + hydrology clearance;
-- ridge-free roads;
-- connected major-road network and boundary gateways;
-- boundary-to-boundary river route;
-- exact crossing/bridge-intent correspondence;
-- exactly one power ingress and one small-town substation;
-- exactly five settlement service nodes;
-- road-contained, ridge-free, connected power feeder network;
-- no unintended power boundary egress;
-- protected Candidate 006 road request/output unchanged;
-- clean adjacent central road projection;
-- hydrology-free center/adjacent protected windows;
-- outer bridge window exposing river + bridge facts;
-- Candidate 006 read-only power projection exposing global feeder/service facts;
-- pure-owner dependency boundaries;
-- System 20 and canonical startup regressions.
+## 11. Validation / exact-head acceptance
 
-## 11. Non-goals / future ownership
+`verify/system00d-global-world` protects deterministic geography/hydrology/roads/bridges/power/water, alternate-seed legality, road and river constraints, electrical topology, five water services, exact mixed municipal/decentralized classification, three municipal anchors, two road-contained trunk segments, source-to-service reachability, unchanged Candidate 006 output, all read-only projection seams, honest unsupported-profile failure, dependency boundaries, System 20 regression and canonical startup.
+
+## 12. Non-goals / future ownership
 
 System 00D still does not own:
 
-- local/minor roads, parcels, driveways, sidewalks or parking;
-- building layouts/interiors;
-- tactical water terrain/physics;
-- bridge art/collision/destruction;
-- lakes/wetlands/floodplains;
-- tactical utility poles/wires/transformers;
-- runtime energized state, outages, generators or building wiring;
-- water/sewer utility networks;
-- addresses/population/jobs/households;
-- outbreak simulation;
-- WHAT materialization;
-- save/streaming partition strategy;
+- local roads/parcels/driveways/parking or building internals;
+- tactical bridge implementation;
+- poles/wires/transformers or energized electrical state;
+- literal potable-water wells, pumps, tanks, towers, waterworks or pipes;
+- local municipal distribution, private-well placement or building plumbing;
+- runtime pressure, flow, water quantity/quality/consumption or pump-power behavior;
+- wastewater, sewer, septic or storm-drain infrastructure;
+- population/jobs/households/outbreak;
+- WHAT materialization or streaming/save partition strategy;
 - renderer/camera/UI/input/player gameplay.
 
-Future global extensions may add water/waste infrastructure, richer settlement hierarchy, zoning/addresses and other world-spanning facts. Streaming remains downstream of logical world truth.
+Future global extensions may add wastewater/septic intent, richer settlement hierarchy, zoning/addresses and other world-spanning facts.
 
-## 12. North-star fit
+## 13. North-star fit
 
-The North Star requires geography, rivers, settlements, roads, utilities and other world-spanning structures to be coherent in global coordinates **before** streaming/local partitions are considered. Slices 001–004 now establish geography, hydrology, settlement/road topology and the first real regional utility network while deliberately stopping before tactical materialization, population or runtime electrical simulation.
+The North Star requires geography, rivers, settlements, roads and utilities to be coherent globally before local partitions. Slices 001–005 now establish geography, hydrology, settlement/road topology, regional electrical service and a believable mixed rural potable-water model while stopping before tactical utility materialization, population or runtime utility simulation.
