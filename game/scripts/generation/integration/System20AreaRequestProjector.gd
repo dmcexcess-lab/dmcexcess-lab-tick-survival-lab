@@ -56,10 +56,6 @@ func road_constraints_for_bounds(plan: GeneratedGlobalWorldPlan, bounds: Rect2i)
     if plan == null or not plan.is_generated() or not _rect_inside(plan.bounds, bounds):
         return {"ok": false, "failure_reason": "invalid_global_road_projection_bounds", "roads": roads}
     for segment: Dictionary in plan.road_segments:
-        ## A named global route may continue outward from the exact boundary cell
-        ## already owned by another segment. If that continuation touches this
-        ## local planning window at only that one point, it contributes no road
-        ## length inside the window and must not become a duplicate inherited road.
         if _segment_overlap_is_single_point(segment, bounds):
             continue
         var clipped: Dictionary = _clip_segment(segment, bounds)
@@ -88,10 +84,9 @@ func road_constraints_for_bounds(plan: GeneratedGlobalWorldPlan, bounds: Rect2i)
         })
     return {"ok": true, "failure_reason": "", "roads": roads}
 
-## Read-only future seam. Slice 003 does not inject water/bridge facts into the
-## current AreaGenerationRequest because System 20 tactical hydrology is not yet
-## designed. Callers may inspect which global river/bridge facts intersect a
-## local planning window without changing Candidate 006.
+## Read-only future seam. Slice 003 does not inject tactical river/bridge facts into
+## the current AreaGenerationRequest because System 20 tactical hydrology is not
+## designed. Callers may inspect global river/bridge facts without changing Candidate 006.
 func hydrology_constraints_for_bounds(plan: GeneratedGlobalWorldPlan, bounds: Rect2i) -> Dictionary:
     var rivers: Array[Dictionary] = []
     var bridges: Array[Dictionary] = []
@@ -115,9 +110,8 @@ func hydrology_constraints_for_bounds(plan: GeneratedGlobalWorldPlan, bounds: Re
 
     for bridge: Dictionary in plan.bridge_intents:
         var cell: Vector2i = bridge.get("cell", Vector2i(-999999, -999999))
-        if not bounds.has_point(cell):
-            continue
-        bridges.append(bridge.duplicate(true))
+        if bounds.has_point(cell):
+            bridges.append(bridge.duplicate(true))
 
     return {"ok": true, "failure_reason": "", "rivers": rivers, "bridges": bridges}
 
@@ -153,6 +147,49 @@ func power_constraints_for_bounds(plan: GeneratedGlobalWorldPlan, bounds: Rect2i
             nodes.append(node.duplicate(true))
 
     return {"ok": true, "failure_reason": "", "segments": segments, "nodes": nodes}
+
+## Read-only Slice 005 seam. Potable-water service classification and municipal
+## connection anchors remain global planning truth. Current System 20 requests do
+## not receive wells, pipes, pumps or fixture-water state.
+func water_constraints_for_bounds(plan: GeneratedGlobalWorldPlan, bounds: Rect2i) -> Dictionary:
+    var services: Array[Dictionary] = []
+    var nodes: Array[Dictionary] = []
+    var segments: Array[Dictionary] = []
+    if plan == null or not plan.is_generated() or not _rect_inside(plan.bounds, bounds):
+        return {"ok": false, "failure_reason": "invalid_global_water_projection_bounds", "services": services, "nodes": nodes, "segments": segments}
+
+    for service: Dictionary in plan.water_services:
+        var settlement_id: String = String(service.get("settlement_id", ""))
+        var settlement: Dictionary = _settlement_by_id(plan.settlements, settlement_id)
+        if settlement.is_empty():
+            continue
+        var center: Vector2i = settlement.get("center", Vector2i(-999999, -999999))
+        if bounds.has_point(center):
+            services.append(service.duplicate(true))
+
+    for node: Dictionary in plan.water_nodes:
+        var cell: Vector2i = node.get("cell", Vector2i(-999999, -999999))
+        if bounds.has_point(cell):
+            nodes.append(node.duplicate(true))
+
+    for segment: Dictionary in plan.water_segments:
+        if _segment_overlap_is_single_point(segment, bounds):
+            continue
+        var clipped: Dictionary = _clip_segment(segment, bounds)
+        if clipped.is_empty():
+            continue
+        segments.append({
+            "id": String(segment.get("id", "")),
+            "network_id": String(segment.get("network_id", "")),
+            "water_class": StringName(segment.get("water_class", &"")),
+            "start": clipped.get("start", Vector2i.ZERO),
+            "end": clipped.get("end", Vector2i.ZERO),
+            "ordinal": int(segment.get("ordinal", 0)),
+            "source_road_id": String(segment.get("source_road_id", "")),
+            "source_route_id": String(segment.get("source_route_id", "")),
+        })
+
+    return {"ok": true, "failure_reason": "", "services": services, "nodes": nodes, "segments": segments}
 
 func _segment_overlap_is_single_point(segment: Dictionary, bounds: Rect2i) -> bool:
     var start: Vector2i = segment.get("start", Vector2i.ZERO)
@@ -208,6 +245,12 @@ func _site_by_id(sites: Array[Dictionary], site_id: String) -> Dictionary:
     for site: Dictionary in sites:
         if String(site.get("id", "")) == site_id:
             return site
+    return {}
+
+func _settlement_by_id(settlements: Array[Dictionary], settlement_id: String) -> Dictionary:
+    for settlement: Dictionary in settlements:
+        if String(settlement.get("id", "")) == settlement_id:
+            return settlement
     return {}
 
 func _is_boundary_cell(rect: Rect2i, cell: Vector2i) -> bool:
