@@ -70,15 +70,27 @@ func _road_constraint_valid(road: Dictionary) -> bool:
         return false
     if not bounds.has_point(start) or not bounds.has_point(finish):
         return false
+
     var allowed: Array = road.get("allowed_boundary_cells", [])
-    if allowed.is_empty():
-        return false
     for value: Variant in allowed:
         if typeof(value) != TYPE_VECTOR2I:
             return false
         var cell: Vector2i = value
         if not _is_boundary_cell(bounds, cell):
             return false
+
+    var start_on_boundary: bool = _is_boundary_cell(bounds, start)
+    var finish_on_boundary: bool = _is_boundary_cell(bounds, finish)
+    if start_on_boundary and not allowed.has(start):
+        return false
+    if finish_on_boundary and not allowed.has(finish):
+        return false
+    if not start_on_boundary and allowed.has(start):
+        return false
+    if not finish_on_boundary and allowed.has(finish):
+        return false
+    if allowed.is_empty() and (start_on_boundary or finish_on_boundary):
+        return false
     return true
 
 func _planning_constraint_valid(constraint: Dictionary) -> bool:
