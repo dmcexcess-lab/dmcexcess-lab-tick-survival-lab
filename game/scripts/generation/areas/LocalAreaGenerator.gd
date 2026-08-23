@@ -13,6 +13,7 @@ const BuildingPlannerClass = preload("res://scripts/generation/areas/BuildingPla
 const PavedFrontagePlannerClass = preload("res://scripts/generation/areas/CommercialPavedFrontagePlanner.gd")
 const OutdoorPlannerClass = preload("res://scripts/generation/areas/OutdoorPropertyDressingPlanner.gd")
 const RuralOpenLandscapePlannerClass = preload("res://scripts/generation/areas/RuralOpenLandscapePlanner.gd")
+const RiverBridgePlannerClass = preload("res://scripts/generation/areas/LocalRiverBridgePlanner.gd")
 const ValidatorClass = preload("res://scripts/generation/areas/GeneratedAreaValidator.gd")
 
 var _area_profiles: AreaProfileCatalog
@@ -26,6 +27,7 @@ var _building_planner: BuildingPlacementPlanner
 var _paved_frontage_planner: CommercialPavedFrontagePlanner
 var _outdoor_planner: OutdoorPropertyDressingPlanner
 var _rural_open_landscape_planner: RuralOpenLandscapePlanner
+var _river_bridge_planner: LocalRiverBridgePlanner
 var _validator: GeneratedAreaValidator
 
 func _init() -> void:
@@ -40,6 +42,7 @@ func _init() -> void:
     _paved_frontage_planner = PavedFrontagePlannerClass.new()
     _outdoor_planner = OutdoorPlannerClass.new()
     _rural_open_landscape_planner = RuralOpenLandscapePlannerClass.new()
+    _river_bridge_planner = RiverBridgePlannerClass.new()
     _validator = ValidatorClass.new()
 
 func generate(request: AreaGenerationRequest) -> GeneratedAreaPlan:
@@ -59,6 +62,8 @@ func generate(request: AreaGenerationRequest) -> GeneratedAreaPlan:
     if bool(area_profile.get("inherited_roads_required", true)) and request.inherited_roads.is_empty():
         plan.failure_reason = "area_profile_requires_inherited_road"
         return plan
+    if request.area_profile_id == AreaProfileCatalog.RURAL_WATERCOURSE:
+        return _generate_rural_watercourse(request, area_profile, environment_profile)
     if request.area_profile_id == AreaProfileCatalog.RURAL_OPEN:
         return _generate_rural_open(request, area_profile, environment_profile)
 
@@ -176,6 +181,7 @@ func generate(request: AreaGenerationRequest) -> GeneratedAreaPlan:
     plan.blocks = blocks
     plan.parcels = parcels
     plan.building_requests = building_requests
+    plan.hydrology_features = []
     plan.ground_regions = ground_regions
     plan.outdoor_props = outdoor_props
 
@@ -261,8 +267,80 @@ func _generate_rural_open(
     plan.blocks = []
     plan.parcels = []
     plan.building_requests = []
+    plan.hydrology_features = []
     plan.ground_regions = ground_regions
     plan.outdoor_props = outdoor_props
+
+    _validate_final_plan(request, plan)
+    return plan
+
+func _generate_rural_watercourse(
+    request: AreaGenerationRequest,
+    area_profile: Dictionary,
+    environment_profile: Dictionary
+) -> GeneratedAreaPlan:
+    var plan := PlanClass.new()
+    var road_result: Dictionary = _road_planner.plan(request, area_profile, [])
+    if not bool(road_result.get("ok", false)):
+        plan.failure_reason = String(road_result.get("failure_reason", "watercourse_road_planning_failed"))
+        return plan
+
+    var roads: Array[Dictionary] = []
+    for road_value: Variant in road_result.get("roads", []):
+        if typeof(road_value) != TYPE_DICTIONARY:
+            plan.failure_reason = "watercourse_road_result_invalid"
+            return plan
+        var road: Dictionary = road_value
+        if not bool(road.get("inherited", false)):
+            plan.failure_reason = "watercourse_local_road_forbidden"
+            return plan
+        roads.append(road)
+
+    var intersections: Array[Dictionary] = []
+    for intersection_value: Variant in road_result.get("intersections", []):
+        if typeof(intersection_value) != TYPE_DICTIONARY:
+            plan.failure_reason = "watercourse_intersection_result_invalid"
+            return plan
+        var intersection: Dictionary = intersection_value
+        if StringName(intersection.get("control", &"")) != &"uncontrolled":
+            plan.failure_reason = "watercourse_controlled_intersection_forbidden"
+            return plan
+        intersections.append(intersection)
+
+    var hydrology_result: Dictionary = _river_bridge_planner.plan(request, area_profile, environment_profile)
+    if not bool(hydrology_result.get("ok", false)):
+        plan.failure_reason = String(hydrology_result.get("failure_reason", "watercourse_hydrology_planning_failed"))
+        return plan
+
+    var ground_regions: Array[Dictionary] = []
+    for value: Variant in hydrology_result.get("ground_regions", []):
+        if typeof(value) != TYPE_DICTIONARY:
+            plan.failure_reason = "watercourse_ground_result_invalid"
+            return plan
+        ground_regions.append(value)
+    var hydrology_features: Array[Dictionary] = []
+    for value: Variant in hydrology_result.get("hydrology_features", []):
+        if typeof(value) != TYPE_DICTIONARY:
+            plan.failure_reason = "watercourse_feature_result_invalid"
+            return plan
+        hydrology_features.append(value)
+
+    plan.area_id = request.area_id
+    plan.seed = request.seed
+    plan.bounds = request.bounds
+    plan.area_profile_id = request.area_profile_id
+    plan.area_profile_version = int(area_profile.get("version", 0))
+    plan.environment_profile_id = request.environment_profile_id
+    plan.environment_profile_version = int(environment_profile.get("version", 0))
+    plan.reservations = []
+    plan.roads = roads
+    plan.intersections = intersections
+    plan.blocks = []
+    plan.parcels = []
+    plan.building_requests = []
+    plan.hydrology_features = hydrology_features
+    plan.ground_regions = ground_regions
+    plan.outdoor_props = []
 
     _validate_final_plan(request, plan)
     return plan
@@ -293,7 +371,13 @@ func _parcel_road_order(profile: Dictionary, roads: Array[Dictionary]) -> Array[
     return ordered
 
 func area_profile_ids() -> Array[StringName]:
-    return [AreaProfileCatalog.RURAL_CROSSROADS, AreaProfileCatalog.SMALLTOWN_CENTER, AreaProfileCatalog.RURAL_SCATTERED, AreaProfileCatalog.RURAL_OPEN]
+    return [
+        AreaProfileCatalog.RURAL_CROSSROADS,
+        AreaProfileCatalog.SMALLTOWN_CENTER,
+        AreaProfileCatalog.RURAL_SCATTERED,
+        AreaProfileCatalog.RURAL_OPEN,
+        AreaProfileCatalog.RURAL_WATERCOURSE,
+    ]
 
 func environment_profile_ids() -> Array[StringName]:
     return [EnvironmentProfileCatalog.TEMPERATE_RURAL]

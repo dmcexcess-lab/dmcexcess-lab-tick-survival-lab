@@ -857,3 +857,20 @@ func _rect_inside(outer: Rect2i, inner: Rect2i) -> bool:
         return false
     var inner_max := Vector2i(inner.position.x + inner.size.x - 1, inner.position.y + inner.size.y - 1)
     return outer.has_point(inner.position) and outer.has_point(inner_max)
+
+func project_watercourse_bounds(
+    plan: GeneratedGlobalWorldPlan,
+    area_id: String,
+    bounds: Rect2i
+) -> Dictionary:
+    var helper_script: Variant = load("res://scripts/generation/integration/System20WatercourseRequestProjection.gd")
+    if helper_script == null:
+        return {"ok": false, "failure_reason": "watercourse_projection_helper_missing", "request": null}
+    var helper: Variant = helper_script.new()
+    return helper.project(
+        plan,
+        area_id,
+        bounds,
+        Callable(self, "_rural_open_context_contains_bounds"),
+        Callable(self, "road_constraints_for_bounds")
+    )

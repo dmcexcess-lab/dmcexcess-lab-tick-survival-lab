@@ -49,6 +49,25 @@ func segment_corridor_rect(segment: Dictionary, clearance: int = 0) -> Rect2i:
         )
     return Rect2i()
 
+func bridge_deck_rect(bridge_intent: Dictionary) -> Rect2i:
+    var cell: Vector2i = bridge_intent.get("cell", Vector2i.ZERO)
+    var axis: StringName = StringName(bridge_intent.get("bridge_axis", &""))
+    var road_width: int = int(bridge_intent.get("road_width", 0))
+    var river_width: int = int(bridge_intent.get("river_width", 0))
+    if road_width <= 0 or river_width <= 0 or road_width % 2 == 0 or river_width % 2 == 0:
+        return Rect2i()
+    if axis == &"horizontal":
+        return Rect2i(
+            cell - Vector2i(river_width / 2, road_width / 2),
+            Vector2i(river_width, road_width)
+        )
+    if axis == &"vertical":
+        return Rect2i(
+            cell - Vector2i(road_width / 2, river_width / 2),
+            Vector2i(road_width, river_width)
+        )
+    return Rect2i()
+
 func point_on_segment(point: Vector2i, segment: Dictionary) -> bool:
     var start: Vector2i = segment.get("start", Vector2i.ZERO)
     var finish: Vector2i = segment.get("end", Vector2i.ZERO)
