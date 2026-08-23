@@ -18,7 +18,7 @@ Golden recovery commit: `1763958f44eb7f855fd49944c00d1ffe608c0abe`.
 
 System 00D plus Systems 14–22 form the current canonical world-planning/playable path. `game/scripts/reboot/` remains frozen/deprecated reference only.
 
-**System 00D Global World Planning Slices 001–005 are implemented.** The global plan establishes geography, settlement/site intent, globally coherent major roads, one deterministic regional river, explicit bridge-crossing intents, a connected regional electrical network, and potable-water service topology before System 20 local planning.
+**System 00D Global World Planning Slices 001–006 are implemented.** The global plan now establishes geography, settlement/site intent, globally coherent major roads, one deterministic regional river, explicit bridge intents, regional electrical service, potable-water service, and wastewater/septic service topology before System 20 local planning.
 
 **System 19 is finalized.** New building profiles are ordinary content work unless the frozen grammar contract proves insufficient.
 
@@ -41,7 +41,7 @@ One deterministic integer world tick, variable-duration actions/events, tactical
 
 ## 4. Implemented canonical stack
 
-Dedicated canonical validation includes WHERE / WHAT / WHEN; collision/movement/locomotion; recovered Art and layer renderers; Door State/System 18; hands/inventory/item transfer; actor stats/status domains; canonical HUD/player shell; run/exertion/encumbrance; finalized System 19 building grammar; System 20 local area/materialization; System 21 camera; System 22 critique runtime; and **System 00D geography + hydrology + settlements + major roads + bridge intent + regional electrical infrastructure + potable-water infrastructure + read-only System 20 projection seams**.
+Dedicated canonical validation includes WHERE / WHAT / WHEN; collision/movement/locomotion; recovered Art and layer renderers; Door State/System 18; hands/inventory/item transfer; actor stats/status domains; canonical HUD/player shell; run/exertion/encumbrance; finalized System 19 building grammar; System 20 local area/materialization; System 21 camera; System 22 critique runtime; and **System 00D geography + hydrology + settlements + major roads + bridge intent + regional electrical + potable-water + wastewater/septic infrastructure + read-only System 20 projection seams**.
 
 Art remains presentation truth; generation stores semantic IDs/facing only. Art is not physics.
 
@@ -55,13 +55,15 @@ Electrical: `SYSTEM_DESIGNS/00D4_GLOBAL_ELECTRICAL_INFRASTRUCTURE.md`
 
 Potable water: `SYSTEM_DESIGNS/00D5_GLOBAL_POTABLE_WATER_INFRASTRUCTURE.md`
 
+Wastewater/septic: `SYSTEM_DESIGNS/00D6_GLOBAL_WASTEWATER_SEPTIC_INFRASTRUCTURE.md`
+
 Current pure order:
 
-`GlobalWorldGenerationRequest -> geography -> hydrology -> settlements/sites -> hydrology-aware major roads -> bridge intents -> regional electrical infrastructure -> potable water infrastructure -> planning regions -> validation -> GeneratedGlobalWorldPlan`
+`GlobalWorldGenerationRequest -> geography -> hydrology -> settlements/sites -> hydrology-aware major roads -> bridge intents -> regional electrical infrastructure -> potable water infrastructure -> wastewater/septic infrastructure -> planning regions -> validation -> GeneratedGlobalWorldPlan`
 
 Current global fixture:
 
-- profile `temperate.rural.region` **v5**;
+- profile `temperate.rural.region` **v6**;
 - bounds `Rect2i(232,1232,1792,1792)`, seed `20001`;
 - 196 coarse 128-cell geography records with lowland/rolling/upland/ridge;
 - five settlements: one rural crossroads, one smalltown, three rural hamlets;
@@ -69,9 +71,12 @@ Current global fixture:
 - one deterministic boundary-to-boundary primary river outside the protected central corridor;
 - settlement river clearance, high road crossing cost, no road/river collinear overlap, and one explicit bridge intent per real perpendicular crossing;
 - one deterministic regional electrical ingress, one small-town substation, five electrical settlement-service nodes, and one connected road-following feeder network;
-- **five potable-water service records:** small-town municipal groundwater plus decentralized groundwater-source intent for crossroads + three hamlets;
-- **three small-town municipal water planning anchors:** `groundwater_source`, `treatment_storage`, `settlement_service`;
-- **two contiguous road-contained municipal trunk segments** inside the small-town planning site;
+- five potable-water services: small-town municipal groundwater plus decentralized groundwater-source intent for crossroads + three hamlets;
+- three small-town municipal water planning anchors and two road-contained municipal trunk segments;
+- five wastewater services: small-town municipal treatment plus decentralized septic intent for crossroads + three hamlets;
+- every rural septic service carries `potable_source_clearance_required`;
+- two small-town wastewater anchors (`settlement_collection`, `treatment_disposal`) and one road-contained municipal collection trunk;
+- wastewater corridor selection excludes the potable-water source direction and positive-length potable-water trunk overlap;
 - broad rural-open background plus settlement influence regions and five local-area site records;
 - no WHAT materialization, streaming, population, outbreak, renderer, camera or UI ownership.
 
@@ -81,15 +86,16 @@ Pure source lives under `game/scripts/generation/world/` and imports no System 1
 
 Central site remains `area.rural.crossroads.001`, bounds `Rect2i(1000,2000,256,256)`, seed `20001`, using inherited roads `road.region.primary.001` + `road.region.secondary.001`, `rural.crossroads` + `temperate.rural`.
 
-`project_site()` still produces the exact accepted System 20 request shape and Candidate 006 semantic output. Slices 003–005 do not inject unsupported tactical bridge, power or water content into `AreaGenerationRequest`.
+`project_site()` still produces the exact accepted System 20 request shape and Candidate 006 semantic output. Slices 003–006 do not inject unsupported tactical bridge/power/water/wastewater content into `AreaGenerationRequest`.
 
 Read-only seams:
 
 - `hydrology_constraints_for_bounds(plan, bounds)` -> clipped river + bridge facts;
 - `power_constraints_for_bounds(plan, bounds)` -> clipped feeder + power-node facts;
-- `water_constraints_for_bounds(plan, bounds)` -> settlement water-service intent + municipal water nodes/trunks where present.
+- `water_constraints_for_bounds(plan, bounds)` -> settlement water-service intent + municipal water nodes/trunks where present;
+- `wastewater_constraints_for_bounds(plan, bounds)` -> settlement wastewater-service intent + municipal wastewater nodes/trunk where present.
 
-Candidate 006 exposes decentralized groundwater-source intent only: no municipal water nodes/trunks and no visible well. The future small-town site already exposes its municipal groundwater anchors/trunk even though `smalltown.center` remains an unsupported local profile.
+Candidate 006 exposes decentralized groundwater-source intent and decentralized-septic intent only: no municipal water/wastewater nodes or trunks and no visible well/septic infrastructure. The future small-town site already exposes both municipal water and wastewater planning anchors/trunks even though `smalltown.center` remains unsupported.
 
 Exact-head context: `verify/system00d-global-world`.
 
@@ -113,16 +119,17 @@ Exact-head context: `verify/system20-local-area`.
 
 System 21 owns camera behavior only and never mutates simulation. System 22 owns the bounded DEV moving render-window composition only.
 
-The live Web build remains Candidate 006. Global river/bridge, electrical and potable-water facts are currently headless semantic planning truth by design.
+The live Web build remains Candidate 006. Global river/bridge, electrical, potable-water and wastewater/septic facts are currently headless semantic planning truth by design.
 
 ## 9. Immediate next path
 
 1. Keep Candidate 006 frozen as the central local integration anchor.
-2. Keep System 00D Slices 001–005 protected as the global geography/settlement/road/hydrology/electrical/potable-water baseline.
-3. The next bounded world-planning choice is **wastewater/septic infrastructure** or the real System 20 `smalltown.center` / `rural.scattered` profiles.
-4. Do not turn power facts into tactical poles/wires/electricity or water facts into wells/pipes/plumbing/pressure until downstream owners are explicitly designed.
-5. Design System 00F streaming only after logical places/infrastructure are stable enough that partitions are technical only.
-6. Design System 00E population/outbreak/player story after stable world places provide real homes/workplaces/properties.
+2. Keep System 00D Slices 001–006 protected as the current global geography/settlement/road/hydrology/utility baseline.
+3. **Move next into the real System 20 `smalltown.center` profile.** The regional utility skeleton is now stable enough that small-town parcels, civic/service opportunities and local streets can consume it rather than redefine it.
+4. Follow `smalltown.center` with the `rural.scattered` / hamlet profile needed by the remaining global sites.
+5. Do not turn power facts into tactical electricity, potable-water facts into physical plumbing, or wastewater facts into physical sewer/septic mechanics until downstream owners are explicitly designed.
+6. Design System 00F streaming only after logical places/local profiles are stable enough that partitions are technical only.
+7. Design System 00E population/outbreak/player story after stable world places provide real homes/workplaces/properties.
 
 ## 10. Invariants
 
@@ -140,6 +147,7 @@ The live Web build remains Candidate 006. Global river/bridge, electrical and po
 12. Bridge intent is global planning truth, not tactical bridge implementation.
 13. Regional power nodes/feeders are planning truth, not tactical poles/wires or energized state.
 14. Potable-water services/anchors/trunks are planning truth, not literal wells/towers/pipes, plumbing, pressure or runtime water state.
+15. Wastewater services/anchors/trunk are planning truth, not literal septic/sewer/treatment geometry or runtime sanitation state.
 
 ## 11. Documentation source order
 
