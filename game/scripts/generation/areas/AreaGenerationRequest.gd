@@ -11,6 +11,7 @@ var environment_profile_id: StringName = &""
 var inherited_roads: Array[Dictionary] = []
 var forbidden_regions: Array[Rect2i] = []
 var inherited_planning_constraints: Array[Dictionary] = []
+var inherited_geography: Array[Dictionary] = []
 
 func _init(
     p_area_id: String = "",
@@ -20,7 +21,8 @@ func _init(
     p_environment_profile_id: StringName = &"",
     p_inherited_roads: Array[Dictionary] = [],
     p_forbidden_regions: Array[Rect2i] = [],
-    p_inherited_planning_constraints: Array[Dictionary] = []
+    p_inherited_planning_constraints: Array[Dictionary] = [],
+    p_inherited_geography: Array[Dictionary] = []
 ) -> void:
     area_id = p_area_id.strip_edges()
     seed = p_seed
@@ -30,6 +32,7 @@ func _init(
     inherited_roads = p_inherited_roads.duplicate(true)
     forbidden_regions = p_forbidden_regions.duplicate()
     inherited_planning_constraints = p_inherited_planning_constraints.duplicate(true)
+    inherited_geography = p_inherited_geography.duplicate(true)
 
 func is_valid() -> bool:
     if not EntityId.is_valid(area_id):
@@ -37,8 +40,6 @@ func is_valid() -> bool:
     if bounds.size.x <= 0 or bounds.size.y <= 0:
         return false
     if String(area_profile_id).strip_edges().is_empty() or String(environment_profile_id).strip_edges().is_empty():
-        return false
-    if inherited_roads.is_empty():
         return false
     for road: Dictionary in inherited_roads:
         if not _road_constraint_valid(road):
@@ -54,6 +55,14 @@ func is_valid() -> bool:
         if constraint_ids.has(constraint_id):
             return false
         constraint_ids[constraint_id] = true
+    var geography_ids: Dictionary = {}
+    for geography: Dictionary in inherited_geography:
+        if not _geography_record_valid(geography):
+            return false
+        var geography_id: String = String(geography.get("id", ""))
+        if geography_ids.has(geography_id):
+            return false
+        geography_ids[geography_id] = true
     return true
 
 func _road_constraint_valid(road: Dictionary) -> bool:
@@ -111,6 +120,22 @@ func _planning_constraint_valid(constraint: Dictionary) -> bool:
         return bounds.has_point(start) and bounds.has_point(finish)
     var cell: Vector2i = constraint.get("cell", Vector2i(-999999, -999999))
     return bounds.has_point(cell)
+
+func _geography_record_valid(geography: Dictionary) -> bool:
+    var geography_id: String = String(geography.get("id", "")).strip_edges()
+    var rect: Rect2i = geography.get("rect", Rect2i())
+    var grid_value: Variant = geography.get("grid", null)
+    var elevation: int = int(geography.get("elevation", -1))
+    var landform: StringName = StringName(geography.get("landform", &""))
+    if not EntityId.is_valid(geography_id):
+        return false
+    if rect.size.x <= 0 or rect.size.y <= 0 or not _rect_inside(bounds, rect):
+        return false
+    if typeof(grid_value) != TYPE_VECTOR2I:
+        return false
+    if elevation < 0 or elevation > 100:
+        return false
+    return landform == &"lowland" or landform == &"rolling" or landform == &"upland" or landform == &"ridge"
 
 static func _is_boundary_cell(rect: Rect2i, cell: Vector2i) -> bool:
     if not rect.has_point(cell):
