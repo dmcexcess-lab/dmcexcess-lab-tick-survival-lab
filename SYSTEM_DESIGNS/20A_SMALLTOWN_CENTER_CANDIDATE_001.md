@@ -1,6 +1,6 @@
 # Tick Survival Lab — System 20A Small-Town Center Candidate 001
 
-Status: **APPROVED**
+Status: **IMPLEMENTED**
 
 Date: 2026-08-22
 
@@ -101,7 +101,7 @@ Narrow changes:
 - `GeneratedAreaValidator.gd` verifies reservation/block legality and ordinary property exclusion;
 - `LocalAreaGenerator.gd` orchestrates reservations -> roads -> blocks -> parcels -> existing building/access/dressing pipeline;
 - `System20AreaRequestProjector.gd` normalizes System 00D small-town hydrology/power/water/wastewater facts into the new request seam;
-- `LocalAreaGenerationSmoke.gd` and `GlobalWorldPlanningSmoke.gd` gain Candidate 001 regressions.
+- `LocalAreaGenerationSmoke.gd`, `SmallTownCenterGenerationSmoke.gd` and `GlobalWorldPlanningV6Smoke.gd` protect Candidate 001 plus Candidate 006 regressions.
 
 ## 6. Protected untouched neighbors
 
@@ -201,7 +201,7 @@ Blocks:
 - are global-coordinate morphology records only;
 - remain inside the area;
 - contain no road corridor cells;
-- do not overlap blocking facility/hydrology reservations;
+- are carved around blocking facility/hydrology reservations rather than deleting otherwise useful surrounding town land;
 - are not streaming/persistence boundaries;
 - provide a future seam for zoning/addresses/land-value work.
 
@@ -221,6 +221,8 @@ Ordinary parcels/buildings/driveways/parking may not overlap any reservation wit
 
 Existing System 19 primary-door alignment and real road-flush parking rules remain unchanged.
 
+Inherited-road frontage is clipped to the actual inherited segment extent. A regional road that legitimately terminates inside the local 256×256 site therefore cannot accidentally authorize parcels beyond its physical centerline geometry.
+
 ## 12. Environment / presentation semantics
 
 Candidate 001 reuses `temperate.rural` v3 environment semantics.
@@ -233,17 +235,17 @@ Random natural dressing must not place obstructive props inside reserved facilit
 
 ## 13. Validation / acceptance
 
-Exact-head `verify/system20-local-area` and `verify/system00d-global-world` must prove:
+Exact-head `verify/system20-local-area` and `verify/system00d-global-world` prove:
 
 1. `smalltown.center` v1 is a supported System 20 profile;
 2. `area.smalltown.center.001` projects successfully from the current System 00D v6 global plan;
-3. all inherited regional road exits/IDs remain exact;
+3. all inherited regional road IDs and real boundary contacts are preserved; regional segments may legally terminate inside the local site;
 4. the generated plan has a connected interior `local_town` street network with no boundary exits;
 5. semantic town blocks are present and legal;
 6. four small-commercial opportunities exist near the main-road center;
 7. exactly gas station + diner use the current commercial library and at least two commercial opportunities remain honestly vacant;
 8. ten residential opportunities exist, with a majority on `local_town` frontage;
-9. all occupied approaches still terminate directly at real System 19 primary doors;
+9. all occupied approaches terminate directly at real System 19 primary doors;
 10. any real building-owned parking frontage still reaches its road using the existing Candidate 006 rule;
 11. infrastructure reservations are deterministic, inside bounds, source-traceable and non-overlapping where blocking;
 12. ordinary parcels/buildings do not occupy blocking infrastructure reservations;
@@ -273,3 +275,18 @@ Future systems consume the stable reservation/block/parcel facts instead of movi
 ## 15. North-star fit
 
 The North Star requires large-scale roads/utilities to exist before local parcels and detailed materialization. Candidate 001 is the first local settlement profile to prove that hierarchy end to end: a recognizable town grows around inherited global truth instead of locally inventing a conflicting world.
+
+## 16. Implementation result
+
+Implemented on 2026-08-22/23 against System 00D `temperate.rural.region` v6.
+
+The integrated implementation added the approved request/plan seams, `smalltown.center` v1, reusable infrastructure reservations, semantic town blocks, a connected paved `local_town` network, town-specific parcel classification, reservation-aware outdoor dressing, and global-to-local infrastructure normalization.
+
+Integration exposed and corrected two assumptions that were valid for Candidate 006 but not for a real settlement site:
+
+- an inherited regional road may legally terminate inside a local planning window; only actual boundary contacts require an allowed boundary exit;
+- inherited-road parcel frontage must be limited to the real segment extent rather than the full local-area axis.
+
+Candidate 006 remains exact: its projected request signature, generated semantic signature, profile versions, reservations and blocks are unchanged.
+
+The first fully green implementation head is `3a5924f48acb3165c29c65c778802f6a209d98eb`. Exact-head verification succeeded for System 00D, Systems 19–22 and Pages deployment, including the dedicated `SmallTownCenterGenerationSmoke.gd` contract and `GlobalWorldPlanningV6Smoke.gd` integration regression.
