@@ -9,7 +9,8 @@ func plan(
     environment: Dictionary,
     roads: Array[Dictionary],
     intersections: Array[Dictionary],
-    parcels: Array[Dictionary]
+    parcels: Array[Dictionary],
+    reservations: Array[Dictionary] = []
 ) -> Dictionary:
     var ground_regions: Array[Dictionary] = []
     var props: Array[Dictionary] = []
@@ -48,6 +49,7 @@ func plan(
                 })
 
     var blocked: Dictionary = _blocked_cells(roads, parcels)
+    _block_reservations(blocked, reservations)
     _add_signal_prop(request, environment, intersections, props, blocked)
     _add_parcel_props(request, environment, parcels, props, blocked)
     _add_natural_noise(request, environment, roads, intersections, parcels, props, blocked)
@@ -410,6 +412,13 @@ func _blocked_cells(roads: Array[Dictionary], parcels: Array[Dictionary]) -> Dic
         if field_rect.size.x > 0 and field_rect.size.y > 0:
             _block_rect(blocked, field_rect)
     return blocked
+
+func _block_reservations(blocked: Dictionary, reservations: Array[Dictionary]) -> void:
+    for reservation: Dictionary in reservations:
+        var rect: Rect2i = reservation.get("rect", Rect2i())
+        if rect.size.x <= 0 or rect.size.y <= 0:
+            continue
+        _block_rect(blocked, rect)
 
 func _block_rect(blocked: Dictionary, rect: Rect2i) -> void:
     for y in range(rect.position.y, rect.position.y + rect.size.y):
