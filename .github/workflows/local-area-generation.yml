@@ -26,6 +26,7 @@ jobs:
           test -f SYSTEM_DESIGNS/20_LOCAL_AREA_PARCEL_GENERATION.md
           test -f SYSTEM_DESIGNS/20A_SMALLTOWN_CENTER_CANDIDATE_001.md
           test -f SYSTEM_DESIGNS/20B_RURAL_SCATTERED_CANDIDATE_001.md
+          test -f SYSTEM_DESIGNS/20C_RURAL_OPEN_COUNTRYSIDE_CANDIDATE_001.md
           test -f game/scripts/generation/areas/AreaSeed.gd
           test -f game/scripts/generation/areas/AreaGenerationRequest.gd
           test -f game/scripts/generation/areas/GeneratedAreaPlan.gd
@@ -39,12 +40,14 @@ jobs:
           test -f game/scripts/generation/areas/BuildingPlacementPlanner.gd
           test -f game/scripts/generation/areas/CommercialPavedFrontagePlanner.gd
           test -f game/scripts/generation/areas/OutdoorPropertyDressingPlanner.gd
+          test -f game/scripts/generation/areas/RuralOpenLandscapePlanner.gd
           test -f game/scripts/generation/areas/GeneratedAreaValidator.gd
           test -f game/scripts/generation/areas/LocalAreaGenerator.gd
           test -f game/scripts/demo/RuralCrossroadsPlanFixture.gd
           test -f game/scripts/ci/LocalAreaGenerationSmoke.gd
           test -f game/scripts/ci/SmallTownCenterGenerationSmoke.gd
           test -f game/scripts/ci/RuralScatteredGenerationSmoke.gd
+          test -f game/scripts/ci/RuralOpenCountrysideGenerationSmoke.gd
           ! grep -R -q 'Texture2D\|atlas_index\|Camera2D\|scripts/render\|scripts/ui\|scripts/player' game/scripts/generation/areas
           ! grep -R -q 'loot\|infected\|outbreak\|weather' game/scripts/generation/areas
 
@@ -96,6 +99,14 @@ jobs:
           ./Godot_v4.7.1-stable_linux.x86_64 --headless --path "$GITHUB_WORKSPACE/game" --quit-after 60 --script res://scripts/ci/RuralScatteredGenerationSmoke.gd 2>&1 | tee "$RUNNER_TEMP/area20-scattered.log"
           grep -q 'RURAL_SCATTERED_GENERATION_SMOKE_OK' "$RUNNER_TEMP/area20-scattered.log"
           if grep -Eqi 'SCRIPT ERROR|Parse Error|Failed to load script' "$RUNNER_TEMP/area20-scattered.log"; then exit 1; fi
+
+      - name: System 20 Rural-Open Countryside Candidate 001 contract
+        shell: bash
+        run: |
+          set -euxo pipefail
+          ./Godot_v4.7.1-stable_linux.x86_64 --headless --path "$GITHUB_WORKSPACE/game" --quit-after 90 --script res://scripts/ci/RuralOpenCountrysideGenerationSmoke.gd 2>&1 | tee "$RUNNER_TEMP/area20-rural-open.log"
+          grep -q 'RURAL_OPEN_COUNTRYSIDE_GENERATION_SMOKE_OK' "$RUNNER_TEMP/area20-rural-open.log"
+          if grep -Eqi 'SCRIPT ERROR|Parse Error|Failed to load script' "$RUNNER_TEMP/area20-rural-open.log"; then exit 1; fi
 
       - name: Canonical demo startup regression
         shell: bash
