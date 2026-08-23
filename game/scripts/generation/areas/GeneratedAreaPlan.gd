@@ -8,8 +8,10 @@ var area_profile_id: StringName = &""
 var area_profile_version: int = 0
 var environment_profile_id: StringName = &""
 var environment_profile_version: int = 0
+var reservations: Array[Dictionary] = []
 var roads: Array[Dictionary] = []
 var intersections: Array[Dictionary] = []
+var blocks: Array[Dictionary] = []
 var parcels: Array[Dictionary] = []
 var building_requests: Array[BuildingGenerationRequest] = []
 var ground_regions: Array[Dictionary] = []
@@ -32,10 +34,14 @@ func signature() -> String:
     parts.append("bounds=%d,%d,%d,%d" % [bounds.position.x, bounds.position.y, bounds.size.x, bounds.size.y])
     parts.append("profile=%s@%d" % [String(area_profile_id), area_profile_version])
     parts.append("environment=%s@%d" % [String(environment_profile_id), environment_profile_version])
+    for reservation: Dictionary in reservations:
+        parts.append(_reservation_signature(reservation))
     for road: Dictionary in roads:
         parts.append(_road_signature(road))
     for intersection: Dictionary in intersections:
         parts.append(_intersection_signature(intersection))
+    for block: Dictionary in blocks:
+        parts.append(_block_signature(block))
     for parcel: Dictionary in parcels:
         parts.append(_parcel_signature(parcel))
     for request: BuildingGenerationRequest in building_requests:
@@ -63,6 +69,19 @@ func signature() -> String:
         ])
     return "\n".join(parts)
 
+func _reservation_signature(reservation: Dictionary) -> String:
+    var rect: Rect2i = reservation.get("rect", Rect2i())
+    return "reservation=%s|%s|%s|%s|%s|%d,%d,%d,%d|p%d|r%d" % [
+        String(reservation.get("id", "")),
+        String(reservation.get("source_id", "")),
+        String(reservation.get("domain", &"")),
+        String(reservation.get("kind", &"")),
+        String(reservation.get("reservation_role", &"")),
+        rect.position.x, rect.position.y, rect.size.x, rect.size.y,
+        1 if bool(reservation.get("blocks_parcels", false)) else 0,
+        1 if bool(reservation.get("blocks_local_roads", false)) else 0,
+    ]
+
 func _road_signature(road: Dictionary) -> String:
     var start: Vector2i = road.get("start", Vector2i.ZERO)
     var finish: Vector2i = road.get("end", Vector2i.ZERO)
@@ -86,6 +105,14 @@ func _intersection_signature(intersection: Dictionary) -> String:
         cell.x, cell.y,
         String(intersection.get("control", &"")),
         ",".join(names),
+    ]
+
+func _block_signature(block: Dictionary) -> String:
+    var rect: Rect2i = block.get("rect", Rect2i())
+    return "block=%s|%s|%d,%d,%d,%d" % [
+        String(block.get("id", "")),
+        String(block.get("kind", &"")),
+        rect.position.x, rect.position.y, rect.size.x, rect.size.y,
     ]
 
 func _parcel_signature(parcel: Dictionary) -> String:
