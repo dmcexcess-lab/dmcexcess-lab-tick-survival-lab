@@ -2,7 +2,7 @@ name: Streaming and Materialization Orchestration contract
 
 on:
   push:
-    branches: [main]
+    branches: [main, work/system00f2-countryside-sources]
   workflow_dispatch:
 
 permissions:
