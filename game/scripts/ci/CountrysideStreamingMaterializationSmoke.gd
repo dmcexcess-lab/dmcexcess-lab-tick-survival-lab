@@ -21,13 +21,12 @@ var failures: Array[String] = []
 func _initialize() -> void:
     var planner: GlobalWorldPlanner = GlobalPlannerClass.new()
     var global_plan: GeneratedGlobalWorldPlan = planner.generate(GlobalFixtureClass.request())
-    _check(global_plan != null and global_plan.is_generated(), "System 00D v6 world generates before countryside streaming")
+    _check(global_plan != null and global_plan.is_generated(), "System 00D v6 world generates")
     if global_plan == null or not global_plan.is_generated():
         _finish()
         return
-
     var replay: GeneratedGlobalWorldPlan = planner.generate(GlobalFixtureClass.request())
-    _check(replay.is_generated() and replay.signature() == global_plan.signature(), "System 00D v6 signature remains exact")
+    _check(replay.is_generated() and replay.signature() == global_plan.signature(), "System 00D signature remains exact")
 
     var catalog: CountrysideSourceCatalog = CatalogClass.new(global_plan)
     _check(catalog.is_ready(), "countryside logical source catalog builds")
@@ -45,18 +44,17 @@ func _initialize() -> void:
     _finish()
 
 func _test_catalog(global_plan: GeneratedGlobalWorldPlan, catalog: CountrysideSourceCatalog) -> void:
-    _check(catalog.catalog_version() == 1, "countryside catalog is version 1")
-    _check(catalog.context_bounds() == global_plan.bounds, "canonical rural-open context covers the global fixture")
-    _check(bool(catalog.validate_source_bounds(global_plan).get("ok", false)), "catalog validates exact source ownership")
-    _check(not catalog.source_keys().is_empty() and catalog.source_keys().size() == catalog.source_ids().size(), "catalog has stable unique logical source identities")
+    _check(catalog.catalog_version() == 1, "catalog is explicitly version 1")
+    _check(catalog.context_bounds() == global_plan.bounds, "canonical rural-open context matches global bounds")
+    _check(bool(catalog.validate_source_bounds(global_plan).get("ok", false)), "catalog validates against the real global plan")
+    _check(not catalog.source_keys().is_empty() and catalog.source_keys().size() == catalog.source_ids().size(), "catalog has unique logical sources")
 
     var replay: CountrysideSourceCatalog = CatalogClass.new(global_plan)
-    _check(replay.is_ready() and replay.source_keys() == catalog.source_keys(), "same global plan reproduces identical countryside source keys")
-
+    _check(replay.is_ready() and replay.source_keys() == catalog.source_keys(), "same global plan reproduces identical source keys")
     var grid_256: StreamingRegionGrid = GridClass.new(global_plan.bounds, Vector2i(256, 256))
     var grid_320: StreamingRegionGrid = GridClass.new(global_plan.bounds, Vector2i(320, 320))
-    _check(grid_256.is_valid() and grid_320.is_valid() and grid_256.grid_size() != grid_320.grid_size(), "technical stream-grid geometry is replaceable")
-    _check(replay.source_keys() == catalog.source_keys(), "changing technical grid geometry cannot change countryside source identity")
+    _check(grid_256.is_valid() and grid_320.is_valid() and grid_256.grid_size() != grid_320.grid_size(), "technical stream grids may differ")
+    _check(replay.source_keys() == catalog.source_keys(), "technical stream-grid size does not define source identity")
 
     var seen: Dictionary = {}
     for source: Dictionary in catalog.sources():
@@ -64,40 +62,37 @@ func _test_catalog(global_plan: GeneratedGlobalWorldPlan, catalog: CountrysideSo
         var source_key: String = String(source.get("source_key", ""))
         var bounds: Rect2i = source.get("bounds", Rect2i())
         var parent: Dictionary = _geography_by_id(global_plan, String(source.get("parent_geography_id", "")))
-        _check(source_id.begins_with("rural.open.v1."), "source ID explicitly carries catalog version")
+        _check(source_id.begins_with("rural.open.v1."), "source ID carries catalog version")
         _check(source_key == "system20_rural_open:%s" % source_id and not seen.has(source_key), "source key is unique and kind-scoped")
         seen[source_key] = true
-        _check(not parent.is_empty() and _rect_inside(parent.get("rect", Rect2i()), bounds), "source remains inside one System 00D geography parent")
+        _check(not parent.is_empty() and _rect_inside(parent.get("rect", Rect2i()), bounds), "source stays inside one geography parent")
         for site: Dictionary in global_plan.area_sites:
-            _check(not _overlap(bounds, site.get("bounds", Rect2i())), "countryside source never overlaps settlement source ownership")
+            _check(not _overlap(bounds, site.get("bounds", Rect2i())), "source does not overlap settlement ownership")
         for river_rect: Rect2i in catalog.river_exclusion_rects():
-            _check(not _overlap(bounds, river_rect), "countryside source never overlaps unsupported river corridor")
+            _check(not _overlap(bounds, river_rect), "source does not overlap river corridor")
 
-    _check(_exact_dry_coverage(catalog), "all dry non-settlement/non-river cells are covered exactly once")
-    _check(_dry_land_beside_river_exists(global_plan, catalog), "dry land immediately beside the river remains source-owned")
+    _check(_exact_dry_coverage(catalog), "all dry cells are covered exactly once and exclusions zero times")
+    _check(_dry_land_beside_river_exists(global_plan, catalog), "dry land immediately beside river remains source-owned")
 
 func _test_preparation(global_plan: GeneratedGlobalWorldPlan, catalog: CountrysideSourceCatalog) -> void:
     var registry: MaterializationRegistry = RegistryClass.new()
     var countryside: CountrysideMaterializationSource = CountrysideSourceClass.new(registry, catalog)
-    _check(countryside.is_ready(), "countryside source adapter is ready")
-
     var roadless: Dictionary = _find_source(global_plan, catalog, false, false)
     var roadside: Dictionary = _find_source(global_plan, catalog, true, false)
-    _check(not roadless.is_empty(), "catalog contains real roadless dry countryside")
-    _check(not roadside.is_empty(), "catalog contains real roadside dry countryside")
+    _check(countryside.is_ready() and not roadless.is_empty() and not roadside.is_empty(), "adapter finds roadless and roadside countryside")
 
     if not roadless.is_empty():
         var prepared: Dictionary = countryside.prepare(global_plan, String(roadless.get("source_id", "")))
         var plan: GeneratedAreaPlan = prepared.get("plan") as GeneratedAreaPlan
-        _check(bool(prepared.get("ok", false)) and plan != null and plan.is_generated() and plan.roads.is_empty(), "roadless source prepares through real System 20C without inventing a road")
+        _check(bool(prepared.get("ok", false)) and plan != null and plan.is_generated() and plan.roads.is_empty(), "roadless source prepares through System 20C without a fake road")
 
     if not roadside.is_empty():
         var prepared: Dictionary = countryside.prepare(global_plan, String(roadside.get("source_id", "")))
         var plan: GeneratedAreaPlan = prepared.get("plan") as GeneratedAreaPlan
-        _check(bool(prepared.get("ok", false)) and plan != null and plan.is_generated() and not plan.roads.is_empty(), "roadside source prepares with inherited regional road truth")
+        _check(bool(prepared.get("ok", false)) and plan != null and plan.is_generated() and not plan.roads.is_empty(), "roadside source preserves real regional roads")
         if plan != null and plan.is_generated():
             for road: Dictionary in plan.roads:
-                _check(StringName(road.get("source", &"")) == &"inherited", "roadside countryside creates no local road")
+                _check(bool(road.get("inherited", false)), "rural-open roadside plan contains inherited roads only")
 
 func _test_mixed_materialization(global_plan: GeneratedGlobalWorldPlan, catalog: CountrysideSourceCatalog) -> void:
     var stack: Dictionary = _stack(catalog)
@@ -105,40 +100,34 @@ func _test_mixed_materialization(global_plan: GeneratedGlobalWorldPlan, catalog:
     var registry: MaterializationRegistry = stack.get("registry") as MaterializationRegistry
     var area_source: AreaSiteMaterializationSource = stack.get("area_source") as AreaSiteMaterializationSource
     var countryside: CountrysideMaterializationSource = stack.get("countryside") as CountrysideMaterializationSource
-    _check(materialization.is_ready(), "mixed-source materialization coordinator is ready")
-
     var rural: Dictionary = _find_source(global_plan, catalog, false, false)
+    _check(materialization.is_ready() and not rural.is_empty(), "mixed-source coordinator and countryside source are ready")
     if rural.is_empty():
-        _check(false, "mixed materialization has a countryside source")
         return
-    var site_id: String = String(global_plan.area_sites[0].get("id", ""))
+
     var handles: Array = [
-        area_source.source_handle_for_site(global_plan, site_id),
+        area_source.source_handle_for_site(global_plan, String(global_plan.area_sites[0].get("id", ""))),
         countryside.source_handle_for_id(String(rural.get("source_id", ""))),
     ]
     var mixed: Dictionary = materialization.ensure_sources(global_plan, handles)
-    _check(bool(mixed.get("ok", false)), "settlement + countryside commit through one atomic mixed-source ensure")
-    _check(_strings_sorted(mixed.get("newly_materialized", [])), "mixed source materialization order is stable by source key")
+    _check(bool(mixed.get("ok", false)) and _strings_sorted(mixed.get("newly_materialized", [])), "mixed settlement+countryside batch commits in stable key order")
 
     var all_site_ids: Array[String] = []
     for site: Dictionary in global_plan.area_sites:
         all_site_ids.append(String(site.get("id", "")))
-    var all_sites: Dictionary = materialization.ensure_area_sites(global_plan, all_site_ids)
-    _check(bool(all_sites.get("ok", false)), "existing area-site convenience API still materializes all five settlement sources")
-    _check(_registry_kind_count(registry, AreaSiteMaterializationSource.SOURCE_KIND) == 5, "all five settlement records coexist with countryside records")
-    _check(_registry_kind_count(registry, CountrysideSourceCatalog.SOURCE_KIND) >= 1, "countryside records coexist in the same registry")
-    _check(MaterializationRegistry.SNAPSHOT_SCHEMA_VERSION == 1, "second source kind keeps MaterializationRegistry schema v1")
-
+    _check(bool(materialization.ensure_area_sites(global_plan, all_site_ids).get("ok", false)), "legacy area-site API still ensures all five settlements")
+    _check(_registry_kind_count(registry, AreaSiteMaterializationSource.SOURCE_KIND) == 5, "all five settlement records coexist")
+    _check(_registry_kind_count(registry, CountrysideSourceCatalog.SOURCE_KIND) >= 1, "countryside record coexists with settlement records")
+    _check(MaterializationRegistry.SNAPSHOT_SCHEMA_VERSION == 1, "mixed source kinds keep registry schema v1")
     var snapshot: Dictionary = registry.snapshot()
     var restored: MaterializationRegistry = RegistryClass.new()
-    _check(restored.load_snapshot(snapshot) and restored.snapshot() == snapshot, "mixed-source registry snapshot round-trips deterministically")
+    _check(restored.load_snapshot(snapshot) and restored.snapshot() == snapshot, "mixed registry snapshot round-trips")
 
 func _test_revisit(global_plan: GeneratedGlobalWorldPlan, catalog: CountrysideSourceCatalog) -> void:
     var candidate: Dictionary = _find_source(global_plan, catalog, false, true)
-    _check(not candidate.is_empty(), "countryside with a real generated natural prop exists for revisit test")
+    _check(not candidate.is_empty(), "natural-prop countryside exists for revisit test")
     if candidate.is_empty():
         return
-
     var stack: Dictionary = _stack(catalog)
     var world: WorldState = stack.get("world") as WorldState
     var mutations: WorldMutationService = stack.get("mutations") as WorldMutationService
@@ -147,32 +136,30 @@ func _test_revisit(global_plan: GeneratedGlobalWorldPlan, catalog: CountrysideSo
     var countryside: CountrysideMaterializationSource = stack.get("countryside") as CountrysideMaterializationSource
     var streaming: WorldStreamingCoordinator = _streaming(global_plan, stack, 0)
 
-    var source_id: String = String(candidate.get("source_id", ""))
-    var prepared: Dictionary = countryside.prepare(global_plan, source_id)
+    var prepared: Dictionary = countryside.prepare(global_plan, String(candidate.get("source_id", "")))
     var plan: GeneratedAreaPlan = prepared.get("plan") as GeneratedAreaPlan
-    if not bool(prepared.get("ok", false)) or plan == null or not plan.is_generated() or plan.outdoor_props.is_empty():
+    if not bool(prepared.get("ok", false)) or plan == null or plan.outdoor_props.is_empty():
         _check(false, "revisit source prepares with a natural prop")
         return
     var prop_id: String = String(plan.outdoor_props[0].get("id", ""))
     var focus: Vector2i = _rect_center(candidate.get("bounds", Rect2i()))
-    var first: Dictionary = streaming.update_focus(focus)
-    _check(bool(first.get("ok", false)), "ordinary countryside focus materializes real WHAT")
-    _check(registry.has_source(String(candidate.get("source_key", ""))) and world.has_entity(prop_id), "focused countryside receives provenance and its prop exists")
-    _check(mutations.remove_entity(prop_id) and not world.has_entity(prop_id), "test removes one real generated countryside prop as persistent mutation")
+    _check(bool(streaming.update_focus(focus).get("ok", false)), "countryside focus materializes nearby logical sources")
+    _check(registry.has_source(String(candidate.get("source_key", ""))) and world.has_entity(prop_id), "focused source receives provenance and real prop")
+    _check(mutations.remove_entity(prop_id) and not world.has_entity(prop_id), "real countryside prop can be persistently removed")
 
     var away: Vector2i = _far_cell(global_plan.bounds, focus)
-    _check(bool(streaming.update_focus(away).get("ok", false)) and not streaming.is_cell_active(focus), "technical focus deactivates mutated countryside")
+    _check(bool(streaming.update_focus(away).get("ok", false)) and not streaming.is_cell_active(focus), "technical region deactivates without deleting world truth")
     var world_revision: int = world.revision()
     var door_revision: int = doors.revision()
     var registry_revision: int = registry.revision()
-    _check(bool(streaming.update_focus(focus).get("ok", false)), "mutated countryside can be revisited")
-    _check(not world.has_entity(prop_id), "revisit does not regenerate a removed countryside prop")
-    _check(world.revision() == world_revision and doors.revision() == door_revision and registry.revision() == registry_revision, "revisit performs zero persistent regeneration writes")
+    _check(bool(streaming.update_focus(focus).get("ok", false)), "countryside revisits")
+    _check(not world.has_entity(prop_id), "removed prop does not regenerate on revisit")
+    _check(world.revision() == world_revision and doors.revision() == door_revision and registry.revision() == registry_revision, "revisit causes zero persistent writes")
 
 func _test_mixed_rollback(global_plan: GeneratedGlobalWorldPlan, catalog: CountrysideSourceCatalog) -> void:
     var candidate: Dictionary = _find_source(global_plan, catalog, false, true)
     if candidate.is_empty():
-        _check(false, "rollback test has a virgin countryside source")
+        _check(false, "rollback countryside source exists")
         return
     var stack: Dictionary = _stack(catalog)
     var world: WorldState = stack.get("world") as WorldState
@@ -186,11 +173,11 @@ func _test_mixed_rollback(global_plan: GeneratedGlobalWorldPlan, catalog: Countr
     var source_id: String = String(candidate.get("source_id", ""))
     var prepared: Dictionary = countryside.prepare(global_plan, source_id)
     var plan: GeneratedAreaPlan = prepared.get("plan") as GeneratedAreaPlan
-    if plan == null or not plan.is_generated() or plan.outdoor_props.is_empty():
-        _check(false, "rollback countryside source exposes a deterministic prop ID")
+    if plan == null or plan.outdoor_props.is_empty():
+        _check(false, "rollback source exposes deterministic prop ID")
         return
     var collision_id: String = String(plan.outdoor_props[0].get("id", ""))
-    _check(mutations.create_entity(&"prop.test_countryside_collision", collision_id) == collision_id, "deliberate countryside entity-ID collision is installed")
+    _check(mutations.create_entity(&"prop.test_countryside_collision", collision_id) == collision_id, "forced countryside entity-ID collision installed")
 
     var handles: Array = [
         area_source.source_handle_for_site(global_plan, String(global_plan.area_sites[0].get("id", ""))),
@@ -200,27 +187,25 @@ func _test_mixed_rollback(global_plan: GeneratedGlobalWorldPlan, catalog: Countr
     var doors_before: Dictionary = doors.snapshot()
     var registry_before: Dictionary = registry.snapshot()
     var failed: Dictionary = materialization.ensure_sources(global_plan, handles)
-    _check(not bool(failed.get("ok", false)), "one countryside collision fails the whole mixed batch")
-    _check(world.snapshot() == world_before and doors.snapshot() == doors_before and registry.snapshot() == registry_before, "failed mixed batch rolls WHAT + Door State + registry back exactly")
+    _check(not bool(failed.get("ok", false)), "countryside collision fails entire mixed batch")
+    _check(world.snapshot() == world_before and doors.snapshot() == doors_before and registry.snapshot() == registry_before, "mixed failure rolls all three domains back exactly")
 
 func _test_river_gap(global_plan: GeneratedGlobalWorldPlan, catalog: CountrysideSourceCatalog) -> void:
     if global_plan.river_segments.is_empty():
-        _check(false, "canonical world has a river for unsupported-gap test")
+        _check(false, "canonical river exists")
         return
     var river: Dictionary = global_plan.river_segments[global_plan.river_segments.size() / 2]
     var start: Vector2i = river.get("start", Vector2i.ZERO)
     var finish: Vector2i = river.get("end", Vector2i.ZERO)
     var river_cell := Vector2i((start.x + finish.x) / 2, (start.y + finish.y) / 2)
-    _check(global_plan.bounds.has_point(river_cell), "river test cell is inside global world")
     if not global_plan.bounds.has_point(river_cell):
+        _check(false, "river test cell inside world")
         return
-
     var stack: Dictionary = _stack(catalog)
     var world: WorldState = stack.get("world") as WorldState
     var streaming: WorldStreamingCoordinator = _streaming(global_plan, stack, 0)
-    _check(bool(streaming.update_focus(river_cell).get("ok", false)), "river-region focus may materialize surrounding dry sources")
-    _check(catalog.descriptor_for_cell(river_cell).is_empty(), "river corridor cell has no countryside logical source")
-    _check(not world.has_terrain(river_cell), "known river cell remains honestly unmaterialized instead of becoming grass or road")
+    _check(bool(streaming.update_focus(river_cell).get("ok", false)), "river-region focus can materialize surrounding dry sources")
+    _check(catalog.descriptor_for_cell(river_cell).is_empty() and not world.has_terrain(river_cell), "river corridor stays source-free and unmaterialized")
 
 func _stack(catalog: CountrysideSourceCatalog) -> Dictionary:
     var world: WorldState = WorldStateClass.new()
@@ -231,25 +216,10 @@ func _stack(catalog: CountrysideSourceCatalog) -> Dictionary:
     var area_source: AreaSiteMaterializationSource = AreaSourceClass.new(registry)
     var countryside: CountrysideMaterializationSource = CountrysideSourceClass.new(registry, catalog)
     var materialization: WorldMaterializationCoordinator = MaterializationClass.new(world, mutations, doors, door_mutations, registry, area_source, countryside)
-    return {
-        "world": world,
-        "mutations": mutations,
-        "doors": doors,
-        "registry": registry,
-        "area_source": area_source,
-        "countryside": countryside,
-        "materialization": materialization,
-    }
+    return {"world": world, "mutations": mutations, "doors": doors, "registry": registry, "area_source": area_source, "countryside": countryside, "materialization": materialization}
 
 func _streaming(global_plan: GeneratedGlobalWorldPlan, stack: Dictionary, radius: int) -> WorldStreamingCoordinator:
-    return StreamingClass.new(
-        global_plan,
-        GridClass.new(global_plan.bounds, Vector2i(256, 256)),
-        stack.get("materialization") as WorldMaterializationCoordinator,
-        stack.get("area_source") as AreaSiteMaterializationSource,
-        radius,
-        stack.get("countryside") as CountrysideMaterializationSource
-    )
+    return StreamingClass.new(global_plan, GridClass.new(global_plan.bounds, Vector2i(256, 256)), stack.get("materialization") as WorldMaterializationCoordinator, stack.get("area_source") as AreaSiteMaterializationSource, radius, stack.get("countryside") as CountrysideMaterializationSource)
 
 func _find_source(global_plan: GeneratedGlobalWorldPlan, catalog: CountrysideSourceCatalog, require_road: bool, require_prop: bool) -> Dictionary:
     var projector: System20AreaRequestProjector = ProjectorClass.new()
@@ -295,34 +265,20 @@ func _exact_dry_coverage(catalog: CountrysideSourceCatalog) -> bool:
     var settlement_rects: Array[Rect2i] = catalog.settlement_exclusion_rects()
     var river_rects: Array[Rect2i] = catalog.river_exclusion_rects()
     var width: int = context.size.x
-
     for y in range(context.position.y, context.position.y + context.size.y):
         var counts := PackedByteArray()
         var excluded := PackedByteArray()
         counts.resize(width)
         excluded.resize(width)
         for rect: Rect2i in source_rects:
-            if y < rect.position.y or y >= rect.position.y + rect.size.y:
-                continue
-            var start_x: int = maxi(rect.position.x, context.position.x)
-            var end_x: int = mini(rect.position.x + rect.size.x, context.position.x + context.size.x)
-            for x in range(start_x, end_x):
-                var index: int = x - context.position.x
-                counts[index] = mini(2, int(counts[index]) + 1)
+            if y >= rect.position.y and y < rect.position.y + rect.size.y:
+                for x in range(maxi(rect.position.x, context.position.x), mini(rect.position.x + rect.size.x, context.position.x + context.size.x)):
+                    var index: int = x - context.position.x
+                    counts[index] = mini(2, int(counts[index]) + 1)
         for rect: Rect2i in settlement_rects:
-            if y < rect.position.y or y >= rect.position.y + rect.size.y:
-                continue
-            var start_x: int = maxi(rect.position.x, context.position.x)
-            var end_x: int = mini(rect.position.x + rect.size.x, context.position.x + context.size.x)
-            for x in range(start_x, end_x):
-                excluded[x - context.position.x] = 1
+            _mark_exclusion_row(rect, y, context, excluded)
         for rect: Rect2i in river_rects:
-            if y < rect.position.y or y >= rect.position.y + rect.size.y:
-                continue
-            var start_x: int = maxi(rect.position.x, context.position.x)
-            var end_x: int = mini(rect.position.x + rect.size.x, context.position.x + context.size.x)
-            for x in range(start_x, end_x):
-                excluded[x - context.position.x] = 1
+            _mark_exclusion_row(rect, y, context, excluded)
         for index in range(width):
             if excluded[index] == 1:
                 if counts[index] != 0:
@@ -331,14 +287,15 @@ func _exact_dry_coverage(catalog: CountrysideSourceCatalog) -> bool:
                 return false
     return true
 
+func _mark_exclusion_row(rect: Rect2i, y: int, context: Rect2i, excluded: PackedByteArray) -> void:
+    if y < rect.position.y or y >= rect.position.y + rect.size.y:
+        return
+    for x in range(maxi(rect.position.x, context.position.x), mini(rect.position.x + rect.size.x, context.position.x + context.size.x)):
+        excluded[x - context.position.x] = 1
+
 func _dry_land_beside_river_exists(global_plan: GeneratedGlobalWorldPlan, catalog: CountrysideSourceCatalog) -> bool:
     for corridor: Rect2i in catalog.river_exclusion_rects():
-        var candidates: Array[Vector2i] = [
-            Vector2i(corridor.position.x - 1, corridor.position.y + corridor.size.y / 2),
-            Vector2i(corridor.position.x + corridor.size.x, corridor.position.y + corridor.size.y / 2),
-            Vector2i(corridor.position.x + corridor.size.x / 2, corridor.position.y - 1),
-            Vector2i(corridor.position.x + corridor.size.x / 2, corridor.position.y + corridor.size.y),
-        ]
+        var candidates: Array[Vector2i] = [Vector2i(corridor.position.x - 1, corridor.position.y + corridor.size.y / 2), Vector2i(corridor.position.x + corridor.size.x, corridor.position.y + corridor.size.y / 2), Vector2i(corridor.position.x + corridor.size.x / 2, corridor.position.y - 1), Vector2i(corridor.position.x + corridor.size.x / 2, corridor.position.y + corridor.size.y)]
         for cell: Vector2i in candidates:
             if global_plan.bounds.has_point(cell) and not _inside_site(global_plan, cell) and not catalog.descriptor_for_cell(cell).is_empty():
                 return true
@@ -358,18 +315,15 @@ func _geography_by_id(global_plan: GeneratedGlobalWorldPlan, geography_id: Strin
     return {}
 
 func _far_cell(bounds: Rect2i, from_cell: Vector2i) -> Vector2i:
-    var candidates: Array[Vector2i] = [bounds.position, bounds.position + bounds.size - Vector2i.ONE]
-    var first_distance: int = absi(candidates[0].x - from_cell.x) + absi(candidates[0].y - from_cell.y)
-    var second_distance: int = absi(candidates[1].x - from_cell.x) + absi(candidates[1].y - from_cell.y)
-    return candidates[0] if first_distance >= second_distance else candidates[1]
+    var a: Vector2i = bounds.position
+    var b: Vector2i = bounds.position + bounds.size - Vector2i.ONE
+    return a if absi(a.x - from_cell.x) + absi(a.y - from_cell.y) >= absi(b.x - from_cell.x) + absi(b.y - from_cell.y) else b
 
 func _rect_center(rect: Rect2i) -> Vector2i:
     return Vector2i(rect.position.x + rect.size.x / 2, rect.position.y + rect.size.y / 2)
 
 func _rect_inside(outer: Rect2i, inner: Rect2i) -> bool:
-    if inner.size.x <= 0 or inner.size.y <= 0:
-        return false
-    return outer.has_point(inner.position) and outer.has_point(inner.position + inner.size - Vector2i.ONE)
+    return inner.size.x > 0 and inner.size.y > 0 and outer.has_point(inner.position) and outer.has_point(inner.position + inner.size - Vector2i.ONE)
 
 func _overlap(a: Rect2i, b: Rect2i) -> bool:
     if a.size.x <= 0 or a.size.y <= 0 or b.size.x <= 0 or b.size.y <= 0:
