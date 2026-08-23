@@ -4,9 +4,10 @@ class_name AreaProfileCatalog
 const RURAL_CROSSROADS: StringName = &"rural.crossroads"
 const SMALLTOWN_CENTER: StringName = &"smalltown.center"
 const RURAL_SCATTERED: StringName = &"rural.scattered"
+const RURAL_OPEN: StringName = &"rural.open"
 
 func has_profile(profile_id: StringName) -> bool:
-    return profile_id == RURAL_CROSSROADS or profile_id == SMALLTOWN_CENTER or profile_id == RURAL_SCATTERED
+    return profile_id == RURAL_CROSSROADS or profile_id == SMALLTOWN_CENTER or profile_id == RURAL_SCATTERED or profile_id == RURAL_OPEN
 
 func profile(profile_id: StringName) -> Dictionary:
     if profile_id == RURAL_CROSSROADS:
@@ -163,5 +164,32 @@ func profile(profile_id: StringName) -> Dictionary:
                 &"residential.house.farm_small",
                 &"residential.house.farm_large",
             ],
+        }
+    if profile_id == RURAL_OPEN:
+        return {
+            "id": RURAL_OPEN,
+            "version": 1,
+            "road_layout": &"inherit_only",
+            "signalize_first_inherited_intersection": false,
+            "land_use_mode": &"rural_open",
+            "inherited_roads_required": false,
+            "local_road_spurs": 0,
+            "commercial_count": 0,
+            "residential_count": 0,
+            "farmstead_count": 0,
+            "local_residential_target": 0,
+            "local_farmstead_target": 0,
+            "commercial_archetypes": [],
+            "residential_archetypes": [],
+            "farmstead_archetypes": [],
+            "rural_open_field_scale": 72,
+            "rural_open_field_threshold_lowland": 0.48,
+            "rural_open_field_threshold_rolling": 0.68,
+            "rural_open_road_clearance": 2,
+            "rural_open_power_clearance": 1,
+            "rural_open_natural_density_lowland": 0.010,
+            "rural_open_natural_density_rolling": 0.014,
+            "rural_open_natural_density_upland": 0.020,
+            "rural_open_natural_density_ridge": 0.024,
         }
     return {}
