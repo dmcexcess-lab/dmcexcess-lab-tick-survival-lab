@@ -1,5 +1,22 @@
 # Changelog
 
+## System 00D Global World Planning — Wastewater / Septic Infrastructure Slice 006 — 2026-08-22
+
+- Implemented the approved **System 00D Wastewater / Septic Infrastructure Slice 006** and bumped `temperate.rural.region` from **v5 to v6**.
+- Added focused pure owners `GlobalWastewaterInfrastructurePlanner.gd`, `GlobalWastewaterInfrastructureQuery.gd` and `GlobalWastewaterInfrastructureValidator.gd` under `game/scripts/generation/world/`.
+- Extended `GeneratedGlobalWorldPlan`, completeness checks and deterministic signatures with `wastewater_services`, `wastewater_nodes` and `wastewater_segments`.
+- Added one wastewater-service record for each current settlement: the small town uses municipal treatment, while the rural crossroads and three hamlets use `decentralized_septic` / `onsite_septic` intent.
+- Every rural septic service now carries `potable_source_clearance_required`, preserving the future well/septic safety constraint without inventing parcel-scale tank, drain-field or well coordinates before those local owners exist.
+- Added exactly two small-town municipal wastewater planning anchors: `settlement_collection` at the small-town center and `treatment_disposal` at a bounded 64-cell offset on legal major-road geometry inside the small-town planning site.
+- Added exactly one `municipal_collection_trunk` with stable source-road/source-route provenance. Wastewater planning runs after potable-water planning, reads the groundwater-source direction, excludes that direction for treatment placement, and rejects positive-length overlap with the potable-water municipal trunk.
+- Added independent validation for complete service classification, rural potable-source-clearance policy, exact two-node/one-trunk topology, road/site containment, ridge/boundary discipline, potable-water separation, ID uniqueness and exact collection-to-treatment connectivity.
+- Added read-only `System20AreaRequestProjector.wastewater_constraints_for_bounds()`. Candidate 006 exposes only its decentralized-septic intent and receives no fake septic tank, drain field or municipal sewer geometry; the future small-town window already exposes municipal wastewater service plus its two anchors and trunk.
+- Preserved `project_site()` exactly. Candidate 006 still receives the same inherited-road request and produces the exact accepted System 20 semantic output; `smalltown.center` remains honestly unsupported until its dedicated System 20 profile is designed.
+- Added `GlobalWorldPlanningV6Smoke.gd` and extended the System 00D workflow to prove v6 generation, same-seed replay, alternate-seed legality, potable-water/wastewater separation, all read-only infrastructure seams and Candidate 006 regression through Godot 4.7.1.
+- The first integrated Slice 006 code head `d3eaab10a522c371a98b6059846acb34220cac7e` passed `verify/system00d-global-world` (run `32610287488`) plus protected System 19, System 20, System 22 and Pages checks before final documentation promotion.
+- No physical sewer pipes, septic tanks, drain fields, manholes, treatment buildings, toilets/drains, sewage flow/backups, contamination/health mechanics, WHAT/WHEN state, streaming, population or outbreak behavior was faked into this slice.
+- With potable water and wastewater/septic topology now established, the next default development step is the real System 20 `smalltown.center` local profile rather than another global utility slice.
+
 ## System 00D Global World Planning — Potable Water Infrastructure Slice 005 — 2026-08-22
 
 - Implemented the approved **System 00D Potable Water Infrastructure Slice 005** and bumped `temperate.rural.region` from **v4 to v5**.
