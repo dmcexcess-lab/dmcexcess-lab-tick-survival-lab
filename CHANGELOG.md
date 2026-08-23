@@ -1,5 +1,22 @@
 # Changelog
 
+## System 20 Small-Town Center Candidate 001 — 2026-08-22
+
+- Implemented the approved **System 20 Small-Town Center Candidate 001** as `smalltown.center` **v1** while keeping `temperate.rural` at v3.
+- The real System 00D v6 site `area.smalltown.center.001` now projects into System 20 instead of failing as an unsupported profile. Candidate 001 consumes the existing inherited regional roads plus power, potable-water, wastewater and hydrology planning facts rather than redefining them locally.
+- Extended the existing `AreaGenerationRequest` / `GeneratedAreaPlan` seam with normalized inherited planning constraints, reusable local infrastructure reservations and semantic town blocks. Reservations are protected planning land only; they do not pretend to be finished substations, wells, towers, treatment works or utility mechanics.
+- Added `InfrastructureReservationPlanner.gd` and `TownBlockPlanner.gd`. Facility reservations are placed deterministically beside valid inherited-road anchors; corridor reservations preserve upstream geometry; town blocks are carved around blocking reservations rather than discarding otherwise usable town land.
+- Added a connected four-street internal paved `local_town` network: two cross streets and two connector/back streets, all 3 cells wide, internal to the area, unpainted, deterministic and reservation-aware.
+- Added four compact main-road commercial opportunities. The finalized System 19 library supplies exactly one Small Gas Station and one Rural Diner; the remaining commercial opportunities stay honestly vacant rather than receiving fake storefront/civic content.
+- Added ten residential opportunities with a majority on `local_town` frontage, using only the finalized Trailer, Small Farmhouse, Large Farmhouse and Compact Laundry House families.
+- Preserved the generic System 19 primary-door alignment and real road-flush `ground.parking*` frontage rules. Small-town occupied approaches end directly at their actual generated primary exterior doors.
+- Integration exposed two Candidate-006-era assumptions and fixed them at the contract level: regional road segments may legitimately terminate inside a local 256×256 planning window, and inherited-road parcel frontage is now clipped to the road's actual segment extent instead of assuming the road spans the full local axis.
+- Rural Crossroads Candidate 006 remains exact: its projected request signature and generated semantic signature are unchanged, with no small-town reservations or blocks injected.
+- Added dedicated `SmallTownCenterGenerationSmoke.gd`, expanded the System 20 workflow, and updated `GlobalWorldPlanningV6Smoke.gd` so the current v6 global plan must project and generate the real small-town site while `rural.scattered` remains honestly unsupported pending its own profile.
+- The first fully green implementation head is `3a5924f48acb3165c29c65c778802f6a209d98eb`; `verify/system00d-global-world`, `verify/system19-local-building`, `verify/system20-local-area`, `verify/system21-camera-view`, `verify/system22-area-critique` and `verify/pages-deploy` all succeeded on that exact head.
+- The live System 22 Web critique world intentionally remains Rural Crossroads Candidate 006. Candidate 001 is a proven pure/integration profile, not a presentation switch.
+- The next local-planning design target is the real System 20 `rural.scattered` / hamlet profile for the three remaining System 00D settlement sites.
+
 ## System 00D Global World Planning — Wastewater / Septic Infrastructure Slice 006 — 2026-08-22
 
 - Implemented the approved **System 00D Wastewater / Septic Infrastructure Slice 006** and bumped `temperate.rural.region` from **v5 to v6**.
