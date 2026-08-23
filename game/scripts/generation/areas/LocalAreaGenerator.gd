@@ -196,7 +196,7 @@ func _parcel_road_order(profile: Dictionary, roads: Array[Dictionary]) -> Array[
     return ordered
 
 func area_profile_ids() -> Array[StringName]:
-    return [AreaProfileCatalog.RURAL_CROSSROADS, AreaProfileCatalog.SMALLTOWN_CENTER]
+    return [AreaProfileCatalog.RURAL_CROSSROADS, AreaProfileCatalog.SMALLTOWN_CENTER, AreaProfileCatalog.RURAL_SCATTERED]
 
 func environment_profile_ids() -> Array[StringName]:
     return [EnvironmentProfileCatalog.TEMPERATE_RURAL]
