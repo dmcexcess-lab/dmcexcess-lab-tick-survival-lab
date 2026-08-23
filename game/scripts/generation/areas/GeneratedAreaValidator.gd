@@ -187,11 +187,18 @@ func _validate_road_boundary(request: AreaGenerationRequest, road: Dictionary, f
             continue
         if not allowed.has(cell):
             failures.append("unauthorized_road_boundary_exit")
-    if bool(road.get("inherited", false)):
-        var start: Vector2i = road.get("start", Vector2i.ZERO)
-        var finish: Vector2i = road.get("end", Vector2i.ZERO)
-        if not allowed.has(start) or not allowed.has(finish):
-            failures.append("inherited_road_boundary_constraint_lost")
+    if not bool(road.get("inherited", false)):
+        return
+    var start: Vector2i = road.get("start", Vector2i.ZERO)
+    var finish: Vector2i = road.get("end", Vector2i.ZERO)
+    if AreaGenerationRequest._is_boundary_cell(request.bounds, start) and not allowed.has(start):
+        failures.append("inherited_road_boundary_constraint_lost")
+    if AreaGenerationRequest._is_boundary_cell(request.bounds, finish) and not allowed.has(finish):
+        failures.append("inherited_road_boundary_constraint_lost")
+    for allowed_value: Variant in allowed:
+        var allowed_cell: Vector2i = allowed_value
+        if allowed_cell != start and allowed_cell != finish:
+            failures.append("inherited_road_boundary_constraint_spurious")
 
 func _validate_parcel_access(request: AreaGenerationRequest, parcel: Dictionary, failures: Array[String]) -> void:
     var building_id: String = String(parcel.get("building_instance_id", ""))
