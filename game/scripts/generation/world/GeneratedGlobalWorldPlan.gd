@@ -17,6 +17,9 @@ var power_segments: Array[Dictionary] = []
 var water_services: Array[Dictionary] = []
 var water_nodes: Array[Dictionary] = []
 var water_segments: Array[Dictionary] = []
+var wastewater_services: Array[Dictionary] = []
+var wastewater_nodes: Array[Dictionary] = []
+var wastewater_segments: Array[Dictionary] = []
 var area_sites: Array[Dictionary] = []
 var failure_reason: String = ""
 
@@ -32,7 +35,10 @@ func is_generated() -> bool:
         and not power_segments.is_empty() \
         and not water_services.is_empty() \
         and not water_nodes.is_empty() \
-        and not water_segments.is_empty()
+        and not water_segments.is_empty() \
+        and not wastewater_services.is_empty() \
+        and not wastewater_nodes.is_empty() \
+        and not wastewater_segments.is_empty()
 
 func signature() -> String:
     if not is_generated():
@@ -153,6 +159,36 @@ func signature() -> String:
             int(water_segment.get("ordinal", 0)),
             String(water_segment.get("source_road_id", "")),
             String(water_segment.get("source_route_id", "")),
+        ])
+    for wastewater_service: Dictionary in wastewater_services:
+        parts.append("wastewater_service=%s|%s|%s|%s|%s|%s" % [
+            String(wastewater_service.get("id", "")),
+            String(wastewater_service.get("settlement_id", "")),
+            String(wastewater_service.get("service_mode", &"")),
+            String(wastewater_service.get("disposal_type", &"")),
+            String(wastewater_service.get("network_id", "")),
+            String(wastewater_service.get("separation_policy", &"")),
+        ])
+    for wastewater_node: Dictionary in wastewater_nodes:
+        var wastewater_cell: Vector2i = wastewater_node.get("cell", Vector2i.ZERO)
+        parts.append("wastewater_node=%s|%s|%s|%d,%d|%s" % [
+            String(wastewater_node.get("id", "")),
+            String(wastewater_node.get("network_id", "")),
+            String(wastewater_node.get("kind", &"")),
+            wastewater_cell.x, wastewater_cell.y,
+            String(wastewater_node.get("settlement_id", "")),
+        ])
+    for wastewater_segment: Dictionary in wastewater_segments:
+        var wastewater_start: Vector2i = wastewater_segment.get("start", Vector2i.ZERO)
+        var wastewater_end: Vector2i = wastewater_segment.get("end", Vector2i.ZERO)
+        parts.append("wastewater_segment=%s|%s|%s|%d,%d>%d,%d|o%d|%s|%s" % [
+            String(wastewater_segment.get("id", "")),
+            String(wastewater_segment.get("network_id", "")),
+            String(wastewater_segment.get("wastewater_class", &"")),
+            wastewater_start.x, wastewater_start.y, wastewater_end.x, wastewater_end.y,
+            int(wastewater_segment.get("ordinal", 0)),
+            String(wastewater_segment.get("source_road_id", "")),
+            String(wastewater_segment.get("source_route_id", "")),
         ])
     for site: Dictionary in area_sites:
         var site_bounds: Rect2i = site.get("bounds", Rect2i())
