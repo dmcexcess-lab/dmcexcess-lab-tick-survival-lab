@@ -289,31 +289,47 @@ func _strings_sorted(values: Array) -> bool:
 
 func _exact_dry_coverage(catalog: CountrysideSourceCatalog) -> bool:
     var context: Rect2i = catalog.context_bounds()
-    var sources: Array[Dictionary] = catalog.sources()
+    var source_rects: Array[Rect2i] = []
+    for source: Dictionary in catalog.sources():
+        source_rects.append(source.get("bounds", Rect2i()))
     var settlement_rects: Array[Rect2i] = catalog.settlement_exclusion_rects()
     var river_rects: Array[Rect2i] = catalog.river_exclusion_rects()
+    var width: int = context.size.x
+
     for y in range(context.position.y, context.position.y + context.size.y):
-        for x in range(context.position.x, context.position.x + context.size.x):
-            var cell := Vector2i(x, y)
-            var excluded: bool = _cell_in_rects(cell, settlement_rects) or _cell_in_rects(cell, river_rects)
-            var count: int = 0
-            for source: Dictionary in sources:
-                var bounds: Rect2i = source.get("bounds", Rect2i())
-                if bounds.has_point(cell):
-                    count += 1
-                    if count > 1:
-                        return false
-            if excluded and count != 0:
-                return false
-            if not excluded and count != 1:
+        var counts := PackedByteArray()
+        var excluded := PackedByteArray()
+        counts.resize(width)
+        excluded.resize(width)
+        for rect: Rect2i in source_rects:
+            if y < rect.position.y or y >= rect.position.y + rect.size.y:
+                continue
+            var start_x: int = maxi(rect.position.x, context.position.x)
+            var end_x: int = mini(rect.position.x + rect.size.x, context.position.x + context.size.x)
+            for x in range(start_x, end_x):
+                var index: int = x - context.position.x
+                counts[index] = mini(2, int(counts[index]) + 1)
+        for rect: Rect2i in settlement_rects:
+            if y < rect.position.y or y >= rect.position.y + rect.size.y:
+                continue
+            var start_x: int = maxi(rect.position.x, context.position.x)
+            var end_x: int = mini(rect.position.x + rect.size.x, context.position.x + context.size.x)
+            for x in range(start_x, end_x):
+                excluded[x - context.position.x] = 1
+        for rect: Rect2i in river_rects:
+            if y < rect.position.y or y >= rect.position.y + rect.size.y:
+                continue
+            var start_x: int = maxi(rect.position.x, context.position.x)
+            var end_x: int = mini(rect.position.x + rect.size.x, context.position.x + context.size.x)
+            for x in range(start_x, end_x):
+                excluded[x - context.position.x] = 1
+        for index in range(width):
+            if excluded[index] == 1:
+                if counts[index] != 0:
+                    return false
+            elif counts[index] != 1:
                 return false
     return true
-
-func _cell_in_rects(cell: Vector2i, rects: Array[Rect2i]) -> bool:
-    for rect: Rect2i in rects:
-        if rect.has_point(cell):
-            return true
-    return false
 
 func _dry_land_beside_river_exists(global_plan: GeneratedGlobalWorldPlan, catalog: CountrysideSourceCatalog) -> bool:
     for corridor: Rect2i in catalog.river_exclusion_rects():
@@ -330,7 +346,8 @@ func _dry_land_beside_river_exists(global_plan: GeneratedGlobalWorldPlan, catalo
 
 func _inside_site(global_plan: GeneratedGlobalWorldPlan, cell: Vector2i) -> bool:
     for site: Dictionary in global_plan.area_sites:
-        if (site.get("bounds", Rect2i()) as Rect2i).has_point(cell):
+        var bounds: Rect2i = site.get("bounds", Rect2i())
+        if bounds.has_point(cell):
             return true
     return false
 
