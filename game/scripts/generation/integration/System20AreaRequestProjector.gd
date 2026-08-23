@@ -38,6 +38,20 @@ func project_site(plan: GeneratedGlobalWorldPlan, site_id: String) -> Dictionary
     if roads.is_empty():
         return {"ok": false, "failure_reason": "global_area_site_has_no_major_road", "request": null}
 
+    var planning_constraints: Array[Dictionary] = []
+    if area_profile_id == AreaProfileCatalog.SMALLTOWN_CENTER:
+        var constraint_result: Dictionary = _smalltown_planning_constraints(plan, site_bounds)
+        if not bool(constraint_result.get("ok", false)):
+            return {
+                "ok": false,
+                "failure_reason": String(constraint_result.get("failure_reason", "smalltown_planning_constraint_projection_failed")),
+                "request": null,
+            }
+        for constraint_value: Variant in constraint_result.get("constraints", []):
+            if typeof(constraint_value) != TYPE_DICTIONARY:
+                return {"ok": false, "failure_reason": "smalltown_planning_constraint_result_invalid", "request": null}
+            planning_constraints.append(constraint_value)
+
     var request: AreaGenerationRequest = AreaRequestClass.new(
         String(site.get("id", "")),
         int(site.get("seed", 0)),
@@ -45,11 +59,227 @@ func project_site(plan: GeneratedGlobalWorldPlan, site_id: String) -> Dictionary
         area_profile_id,
         environment_profile_id,
         roads,
-        []
+        [],
+        planning_constraints
     )
     if not request.is_valid():
         return {"ok": false, "failure_reason": "projected_system20_request_invalid", "request": null}
     return {"ok": true, "failure_reason": "", "request": request}
+
+func _smalltown_planning_constraints(plan: GeneratedGlobalWorldPlan, bounds: Rect2i) -> Dictionary:
+    var constraints: Array[Dictionary] = []
+
+    var water_result: Dictionary = water_constraints_for_bounds(plan, bounds)
+    if not bool(water_result.get("ok", false)):
+        return {"ok": false, "failure_reason": "smalltown_water_projection_failed", "constraints": constraints}
+    var water_services: Array = water_result.get("services", [])
+    if water_services.size() != 1 or typeof(water_services[0]) != TYPE_DICTIONARY \
+        or StringName((water_services[0] as Dictionary).get("service_mode", &"")) != &"municipal":
+        return {"ok": false, "failure_reason": "smalltown_municipal_water_service_missing", "constraints": constraints}
+
+    var wastewater_result: Dictionary = wastewater_constraints_for_bounds(plan, bounds)
+    if not bool(wastewater_result.get("ok", false)):
+        return {"ok": false, "failure_reason": "smalltown_wastewater_projection_failed", "constraints": constraints}
+    var wastewater_services: Array = wastewater_result.get("services", [])
+    if wastewater_services.size() != 1 or typeof(wastewater_services[0]) != TYPE_DICTIONARY \
+        or StringName((wastewater_services[0] as Dictionary).get("service_mode", &"")) != &"municipal":
+        return {"ok": false, "failure_reason": "smalltown_municipal_wastewater_service_missing", "constraints": constraints}
+
+    var hydrology_result: Dictionary = hydrology_constraints_for_bounds(plan, bounds)
+    if not bool(hydrology_result.get("ok", false)):
+        return {"ok": false, "failure_reason": "smalltown_hydrology_projection_failed", "constraints": constraints}
+    for river_value: Variant in hydrology_result.get("rivers", []):
+        if typeof(river_value) != TYPE_DICTIONARY:
+            continue
+        var river: Dictionary = river_value
+        constraints.append(_corridor_constraint(
+            "constraint.hydrology.%s" % String(river.get("segment_id", "river")),
+            String(river.get("segment_id", "")),
+            &"hydrology",
+            &"river",
+            river.get("start", Vector2i.ZERO),
+            river.get("end", Vector2i.ZERO),
+            int(river.get("width", 1)),
+            true
+        ))
+    for bridge_value: Variant in hydrology_result.get("bridges", []):
+        if typeof(bridge_value) != TYPE_DICTIONARY:
+            continue
+        var bridge: Dictionary = bridge_value
+        constraints.append(_point_constraint(
+            "constraint.hydrology.%s" % String(bridge.get("id", "bridge")),
+            String(bridge.get("id", "")),
+            &"hydrology",
+            &"bridge_intent",
+            &"service",
+            bridge.get("cell", Vector2i.ZERO),
+            false,
+            false,
+            "",
+            ""
+        ))
+
+    var power_result: Dictionary = power_constraints_for_bounds(plan, bounds)
+    if not bool(power_result.get("ok", false)):
+        return {"ok": false, "failure_reason": "smalltown_power_projection_failed", "constraints": constraints}
+    for power_segment_value: Variant in power_result.get("segments", []):
+        if typeof(power_segment_value) != TYPE_DICTIONARY:
+            continue
+        var power_segment: Dictionary = power_segment_value
+        constraints.append(_corridor_constraint(
+            "constraint.power.%s" % String(power_segment.get("id", "segment")),
+            String(power_segment.get("id", "")),
+            &"power",
+            StringName(power_segment.get("power_class", &"feeder")),
+            power_segment.get("start", Vector2i.ZERO),
+            power_segment.get("end", Vector2i.ZERO),
+            1,
+            false,
+            String(power_segment.get("network_id", ""))
+        ))
+    var found_substation: bool = false
+    for power_node_value: Variant in power_result.get("nodes", []):
+        if typeof(power_node_value) != TYPE_DICTIONARY:
+            continue
+        var power_node: Dictionary = power_node_value
+        var power_kind: StringName = StringName(power_node.get("kind", &""))
+        var power_role: StringName = &"facility" if power_kind == &"substation" else &"service"
+        if power_kind == &"substation":
+            found_substation = true
+        constraints.append(_point_constraint(
+            "constraint.power.%s" % String(power_node.get("id", "node")),
+            String(power_node.get("id", "")),
+            &"power",
+            power_kind,
+            power_role,
+            power_node.get("cell", Vector2i.ZERO),
+            power_role == &"facility",
+            power_role == &"facility",
+            String(power_node.get("settlement_id", "")),
+            String(power_node.get("network_id", ""))
+        ))
+    if not found_substation:
+        return {"ok": false, "failure_reason": "smalltown_substation_missing", "constraints": constraints}
+
+    for water_segment_value: Variant in water_result.get("segments", []):
+        if typeof(water_segment_value) != TYPE_DICTIONARY:
+            continue
+        var water_segment: Dictionary = water_segment_value
+        constraints.append(_corridor_constraint(
+            "constraint.water.%s" % String(water_segment.get("id", "segment")),
+            String(water_segment.get("id", "")),
+            &"potable_water",
+            StringName(water_segment.get("water_class", &"municipal_trunk")),
+            water_segment.get("start", Vector2i.ZERO),
+            water_segment.get("end", Vector2i.ZERO),
+            1,
+            false,
+            String(water_segment.get("network_id", ""))
+        ))
+    for water_node_value: Variant in water_result.get("nodes", []):
+        if typeof(water_node_value) != TYPE_DICTIONARY:
+            continue
+        var water_node: Dictionary = water_node_value
+        var water_kind: StringName = StringName(water_node.get("kind", &""))
+        var water_facility: bool = water_kind == &"groundwater_source" or water_kind == &"treatment_storage"
+        constraints.append(_point_constraint(
+            "constraint.water.%s" % String(water_node.get("id", "node")),
+            String(water_node.get("id", "")),
+            &"potable_water",
+            water_kind,
+            &"facility" if water_facility else &"service",
+            water_node.get("cell", Vector2i.ZERO),
+            water_facility,
+            water_facility,
+            String(water_node.get("settlement_id", "")),
+            String(water_node.get("network_id", ""))
+        ))
+
+    for waste_segment_value: Variant in wastewater_result.get("segments", []):
+        if typeof(waste_segment_value) != TYPE_DICTIONARY:
+            continue
+        var waste_segment: Dictionary = waste_segment_value
+        constraints.append(_corridor_constraint(
+            "constraint.wastewater.%s" % String(waste_segment.get("id", "segment")),
+            String(waste_segment.get("id", "")),
+            &"wastewater",
+            StringName(waste_segment.get("wastewater_class", &"municipal_collection_trunk")),
+            waste_segment.get("start", Vector2i.ZERO),
+            waste_segment.get("end", Vector2i.ZERO),
+            1,
+            false,
+            String(waste_segment.get("network_id", ""))
+        ))
+    for waste_node_value: Variant in wastewater_result.get("nodes", []):
+        if typeof(waste_node_value) != TYPE_DICTIONARY:
+            continue
+        var waste_node: Dictionary = waste_node_value
+        var waste_kind: StringName = StringName(waste_node.get("kind", &""))
+        var waste_facility: bool = waste_kind == &"treatment_disposal"
+        constraints.append(_point_constraint(
+            "constraint.wastewater.%s" % String(waste_node.get("id", "node")),
+            String(waste_node.get("id", "")),
+            &"wastewater",
+            waste_kind,
+            &"facility" if waste_facility else &"service",
+            waste_node.get("cell", Vector2i.ZERO),
+            waste_facility,
+            waste_facility,
+            String(waste_node.get("settlement_id", "")),
+            String(waste_node.get("network_id", ""))
+        ))
+
+    return {"ok": true, "failure_reason": "", "constraints": constraints}
+
+func _corridor_constraint(
+    id: String,
+    source_id: String,
+    domain: StringName,
+    kind: StringName,
+    start: Vector2i,
+    finish: Vector2i,
+    width: int,
+    blocks_local_roads: bool,
+    network_id: String = ""
+) -> Dictionary:
+    return {
+        "id": id,
+        "source_id": source_id,
+        "domain": domain,
+        "kind": kind,
+        "reservation_role": &"corridor",
+        "start": start,
+        "end": finish,
+        "width": maxi(1, width),
+        "blocks_parcels": true,
+        "blocks_local_roads": blocks_local_roads,
+        "network_id": network_id,
+    }
+
+func _point_constraint(
+    id: String,
+    source_id: String,
+    domain: StringName,
+    kind: StringName,
+    reservation_role: StringName,
+    cell: Vector2i,
+    blocks_parcels: bool,
+    blocks_local_roads: bool,
+    settlement_id: String,
+    network_id: String
+) -> Dictionary:
+    return {
+        "id": id,
+        "source_id": source_id,
+        "domain": domain,
+        "kind": kind,
+        "reservation_role": reservation_role,
+        "cell": cell,
+        "blocks_parcels": blocks_parcels,
+        "blocks_local_roads": blocks_local_roads,
+        "settlement_id": settlement_id,
+        "network_id": network_id,
+    }
 
 func road_constraints_for_bounds(plan: GeneratedGlobalWorldPlan, bounds: Rect2i) -> Dictionary:
     var roads: Array[Dictionary] = []
@@ -84,15 +314,11 @@ func road_constraints_for_bounds(plan: GeneratedGlobalWorldPlan, bounds: Rect2i)
         })
     return {"ok": true, "failure_reason": "", "roads": roads}
 
-## Read-only future seam. Slice 003 does not inject tactical river/bridge facts into
-## the current AreaGenerationRequest because System 20 tactical hydrology is not
-## designed. Callers may inspect global river/bridge facts without changing Candidate 006.
 func hydrology_constraints_for_bounds(plan: GeneratedGlobalWorldPlan, bounds: Rect2i) -> Dictionary:
     var rivers: Array[Dictionary] = []
     var bridges: Array[Dictionary] = []
     if plan == null or not plan.is_generated() or not _rect_inside(plan.bounds, bounds):
         return {"ok": false, "failure_reason": "invalid_global_hydrology_projection_bounds", "rivers": rivers, "bridges": bridges}
-
     for segment: Dictionary in plan.river_segments:
         if _segment_overlap_is_single_point(segment, bounds):
             continue
@@ -107,23 +333,17 @@ func hydrology_constraints_for_bounds(plan: GeneratedGlobalWorldPlan, bounds: Re
             "width": int(segment.get("width", 0)),
             "ordinal": int(segment.get("ordinal", 0)),
         })
-
     for bridge: Dictionary in plan.bridge_intents:
         var cell: Vector2i = bridge.get("cell", Vector2i(-999999, -999999))
         if bounds.has_point(cell):
             bridges.append(bridge.duplicate(true))
-
     return {"ok": true, "failure_reason": "", "rivers": rivers, "bridges": bridges}
 
-## Read-only Slice 004 seam. Regional power remains pure global planning truth;
-## `project_site()` intentionally does not inject poles/wires into the current
-## AreaGenerationRequest before local utility materialization is designed.
 func power_constraints_for_bounds(plan: GeneratedGlobalWorldPlan, bounds: Rect2i) -> Dictionary:
     var segments: Array[Dictionary] = []
     var nodes: Array[Dictionary] = []
     if plan == null or not plan.is_generated() or not _rect_inside(plan.bounds, bounds):
         return {"ok": false, "failure_reason": "invalid_global_power_projection_bounds", "segments": segments, "nodes": nodes}
-
     for segment: Dictionary in plan.power_segments:
         if _segment_overlap_is_single_point(segment, bounds):
             continue
@@ -140,24 +360,18 @@ func power_constraints_for_bounds(plan: GeneratedGlobalWorldPlan, bounds: Rect2i
             "source_road_id": String(segment.get("source_road_id", "")),
             "source_route_id": String(segment.get("source_route_id", "")),
         })
-
     for node: Dictionary in plan.power_nodes:
         var cell: Vector2i = node.get("cell", Vector2i(-999999, -999999))
         if bounds.has_point(cell):
             nodes.append(node.duplicate(true))
-
     return {"ok": true, "failure_reason": "", "segments": segments, "nodes": nodes}
 
-## Read-only Slice 005 seam. Potable-water service classification and municipal
-## connection anchors remain global planning truth. Current System 20 requests do
-## not receive wells, pipes, pumps or fixture-water state.
 func water_constraints_for_bounds(plan: GeneratedGlobalWorldPlan, bounds: Rect2i) -> Dictionary:
     var services: Array[Dictionary] = []
     var nodes: Array[Dictionary] = []
     var segments: Array[Dictionary] = []
     if plan == null or not plan.is_generated() or not _rect_inside(plan.bounds, bounds):
         return {"ok": false, "failure_reason": "invalid_global_water_projection_bounds", "services": services, "nodes": nodes, "segments": segments}
-
     for service: Dictionary in plan.water_services:
         var settlement_id: String = String(service.get("settlement_id", ""))
         var settlement: Dictionary = _settlement_by_id(plan.settlements, settlement_id)
@@ -166,12 +380,10 @@ func water_constraints_for_bounds(plan: GeneratedGlobalWorldPlan, bounds: Rect2i
         var center: Vector2i = settlement.get("center", Vector2i(-999999, -999999))
         if bounds.has_point(center):
             services.append(service.duplicate(true))
-
     for node: Dictionary in plan.water_nodes:
         var cell: Vector2i = node.get("cell", Vector2i(-999999, -999999))
         if bounds.has_point(cell):
             nodes.append(node.duplicate(true))
-
     for segment: Dictionary in plan.water_segments:
         if _segment_overlap_is_single_point(segment, bounds):
             continue
@@ -188,19 +400,14 @@ func water_constraints_for_bounds(plan: GeneratedGlobalWorldPlan, bounds: Rect2i
             "source_road_id": String(segment.get("source_road_id", "")),
             "source_route_id": String(segment.get("source_route_id", "")),
         })
-
     return {"ok": true, "failure_reason": "", "services": services, "nodes": nodes, "segments": segments}
 
-## Read-only Slice 006 seam. Wastewater service intent remains upstream planning
-## truth; current System 20 requests do not receive septic tanks, drain fields,
-## sewer pipes, treatment facilities or runtime sanitation state.
 func wastewater_constraints_for_bounds(plan: GeneratedGlobalWorldPlan, bounds: Rect2i) -> Dictionary:
     var services: Array[Dictionary] = []
     var nodes: Array[Dictionary] = []
     var segments: Array[Dictionary] = []
     if plan == null or not plan.is_generated() or not _rect_inside(plan.bounds, bounds):
         return {"ok": false, "failure_reason": "invalid_global_wastewater_projection_bounds", "services": services, "nodes": nodes, "segments": segments}
-
     for service: Dictionary in plan.wastewater_services:
         var settlement_id: String = String(service.get("settlement_id", ""))
         var settlement: Dictionary = _settlement_by_id(plan.settlements, settlement_id)
@@ -209,12 +416,10 @@ func wastewater_constraints_for_bounds(plan: GeneratedGlobalWorldPlan, bounds: R
         var center: Vector2i = settlement.get("center", Vector2i(-999999, -999999))
         if bounds.has_point(center):
             services.append(service.duplicate(true))
-
     for node: Dictionary in plan.wastewater_nodes:
         var cell: Vector2i = node.get("cell", Vector2i(-999999, -999999))
         if bounds.has_point(cell):
             nodes.append(node.duplicate(true))
-
     for segment: Dictionary in plan.wastewater_segments:
         if _segment_overlap_is_single_point(segment, bounds):
             continue
@@ -231,7 +436,6 @@ func wastewater_constraints_for_bounds(plan: GeneratedGlobalWorldPlan, bounds: R
             "source_road_id": String(segment.get("source_road_id", "")),
             "source_route_id": String(segment.get("source_route_id", "")),
         })
-
     return {"ok": true, "failure_reason": "", "services": services, "nodes": nodes, "segments": segments}
 
 func _segment_overlap_is_single_point(segment: Dictionary, bounds: Rect2i) -> bool:
