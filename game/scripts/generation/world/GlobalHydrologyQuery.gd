@@ -26,6 +26,29 @@ func rect_clear_of_rivers(rect: Rect2i, river_segments: Array[Dictionary], clear
             return false
     return true
 
+func segment_corridor_rect(segment: Dictionary, clearance: int = 0) -> Rect2i:
+    var start: Vector2i = segment.get("start", Vector2i.ZERO)
+    var finish: Vector2i = segment.get("end", Vector2i.ZERO)
+    var width: int = int(segment.get("width", 0))
+    if width <= 0:
+        return Rect2i()
+    var radius: int = width / 2 + maxi(0, clearance)
+    if start.y == finish.y:
+        var min_x: int = mini(start.x, finish.x)
+        var max_x: int = maxi(start.x, finish.x)
+        return Rect2i(
+            Vector2i(min_x - radius, start.y - radius),
+            Vector2i(max_x - min_x + radius * 2 + 1, radius * 2 + 1)
+        )
+    if start.x == finish.x:
+        var min_y: int = mini(start.y, finish.y)
+        var max_y: int = maxi(start.y, finish.y)
+        return Rect2i(
+            Vector2i(start.x - radius, min_y - radius),
+            Vector2i(radius * 2 + 1, max_y - min_y + radius * 2 + 1)
+        )
+    return Rect2i()
+
 func point_on_segment(point: Vector2i, segment: Dictionary) -> bool:
     var start: Vector2i = segment.get("start", Vector2i.ZERO)
     var finish: Vector2i = segment.get("end", Vector2i.ZERO)
@@ -71,26 +94,8 @@ func collinear_overlap_length(first: Dictionary, second: Dictionary) -> int:
     return 0
 
 func _segment_corridor_intersects_rect(segment: Dictionary, rect: Rect2i, clearance: int) -> bool:
-    var start: Vector2i = segment.get("start", Vector2i.ZERO)
-    var finish: Vector2i = segment.get("end", Vector2i.ZERO)
-    var width: int = maxi(1, int(segment.get("width", 1)))
-    var radius: int = width / 2 + maxi(0, clearance)
-    var corridor := Rect2i()
-    if start.y == finish.y:
-        var min_x: int = mini(start.x, finish.x)
-        var max_x: int = maxi(start.x, finish.x)
-        corridor = Rect2i(
-            Vector2i(min_x - radius, start.y - radius),
-            Vector2i(max_x - min_x + radius * 2 + 1, radius * 2 + 1)
-        )
-    elif start.x == finish.x:
-        var min_y: int = mini(start.y, finish.y)
-        var max_y: int = maxi(start.y, finish.y)
-        corridor = Rect2i(
-            Vector2i(start.x - radius, min_y - radius),
-            Vector2i(radius * 2 + 1, max_y - min_y + radius * 2 + 1)
-        )
-    else:
+    var corridor: Rect2i = segment_corridor_rect(segment, clearance)
+    if corridor.size.x <= 0 or corridor.size.y <= 0:
         return true
     return _rects_intersect(corridor, rect)
 

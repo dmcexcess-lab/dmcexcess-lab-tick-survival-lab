@@ -10,6 +10,7 @@ var _global_plan: GeneratedGlobalWorldPlan = null
 var _grid: StreamingRegionGrid = null
 var _materialization: WorldMaterializationCoordinator = null
 var _source: AreaSiteMaterializationSource = null
+var _countryside_source: CountrysideMaterializationSource = null
 var _active_radius: int = 1
 var _focus_cell: Vector2i = NO_FOCUS_CELL
 var _focus_region: Vector2i = StreamingRegionGrid.INVALID_COORD
@@ -20,21 +21,25 @@ func _init(
     grid: StreamingRegionGrid = null,
     materialization: WorldMaterializationCoordinator = null,
     source: AreaSiteMaterializationSource = null,
-    active_radius: int = 1
+    active_radius: int = 1,
+    countryside_source: CountrysideMaterializationSource = null
 ) -> void:
     _global_plan = global_plan
     _grid = grid
     _materialization = materialization
     _source = source
     _active_radius = active_radius
+    _countryside_source = countryside_source
 
 func is_ready() -> bool:
-    return _global_plan != null and _global_plan.is_generated() \
-        and _grid != null and _grid.is_valid() \
-        and _grid.world_bounds() == _global_plan.bounds \
-        and _materialization != null and _materialization.is_ready() \
-        and _source != null and _source.is_ready() \
-        and _active_radius >= 0
+    if _global_plan == null or not _global_plan.is_generated() \
+        or _grid == null or not _grid.is_valid() \
+        or _grid.world_bounds() != _global_plan.bounds \
+        or _materialization == null or not _materialization.is_ready() \
+        or _source == null or not _source.is_ready() \
+        or _active_radius < 0:
+        return false
+    return _countryside_source == null or _countryside_source.is_ready()
 
 func update_focus(cell: Vector2i) -> Dictionary:
     if not is_ready():
@@ -56,8 +61,16 @@ func update_focus(cell: Vector2i) -> Dictionary:
             return _failure("active_region_bounds_invalid")
         target_bounds.append(bounds)
 
-    var site_ids: Array[String] = _source.site_ids_intersecting(_global_plan, target_bounds)
-    var ensured: Dictionary = _materialization.ensure_area_sites(_global_plan, site_ids)
+    var handles: Array[Dictionary] = _source.source_handles_intersecting(_global_plan, target_bounds)
+    if _countryside_source != null:
+        var countryside_handles: Array[Dictionary] = _countryside_source.source_handles_intersecting(_global_plan, target_bounds)
+        for handle: Dictionary in countryside_handles:
+            handles.append(handle)
+    handles.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
+        return String(a.get("source_key", "")) < String(b.get("source_key", ""))
+    )
+
+    var ensured: Dictionary = _materialization.ensure_sources(_global_plan, handles)
     if not bool(ensured.get("ok", false)):
         return _failure("required_materialization_failed:%s" % String(ensured.get("failure_reason", "unknown")))
 

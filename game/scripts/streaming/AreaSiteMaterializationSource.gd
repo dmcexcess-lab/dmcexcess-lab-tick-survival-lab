@@ -28,6 +28,38 @@ func source_key_for_site(site_id: String) -> String:
         return ""
     return "system20_area_site:%s" % clean
 
+func source_handle_for_site(global_plan: GeneratedGlobalWorldPlan, site_id: String) -> Dictionary:
+    if global_plan == null or not global_plan.is_generated():
+        return {}
+    var clean_site_id: String = site_id.strip_edges()
+    var site: Dictionary = _site_by_id(global_plan.area_sites, clean_site_id)
+    if clean_site_id.is_empty() or site.is_empty():
+        return {}
+    var bounds: Rect2i = site.get("bounds", Rect2i())
+    var source_key: String = source_key_for_site(clean_site_id)
+    if source_key.is_empty() or bounds.size.x <= 0 or bounds.size.y <= 0:
+        return {}
+    return {
+        "source_kind": SOURCE_KIND,
+        "source_id": clean_site_id,
+        "source_key": source_key,
+        "bounds": bounds,
+    }
+
+func source_handles_intersecting(
+    global_plan: GeneratedGlobalWorldPlan,
+    bounds_list: Array[Rect2i]
+) -> Array[Dictionary]:
+    var result: Array[Dictionary] = []
+    for site_id: String in site_ids_intersecting(global_plan, bounds_list):
+        var handle: Dictionary = source_handle_for_site(global_plan, site_id)
+        if not handle.is_empty():
+            result.append(handle)
+    result.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
+        return String(a.get("source_key", "")) < String(b.get("source_key", ""))
+    )
+    return result
+
 func validate_source_bounds(global_plan: GeneratedGlobalWorldPlan) -> Dictionary:
     if global_plan == null or not global_plan.is_generated():
         return {"ok": false, "failure_reason": "invalid_global_plan"}
