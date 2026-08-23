@@ -10,7 +10,7 @@ Major systems move through **NOT DESIGNED -> DRAFT -> APPROVED -> IMPLEMENTED** 
 | 00A | Spatial Model — WHERE | **IMPLEMENTED** | `00A_SPATIAL_MODEL.md` |
 | 00B | Persistent World / Entity State — WHAT | **IMPLEMENTED** | `00B_PERSISTENT_WORLD_STATE.md` |
 | 00C | Tick / Action / Pause Kernel — WHEN | **IMPLEMENTED** | `00C_TICK_ACTION_PAUSE.md` |
-| 00D | Global World Planning / Generation | **IMPLEMENTED — SLICES 001–005** | `00D_GLOBAL_WORLD_PLANNING.md`, `00D3_GLOBAL_HYDROLOGY_BRIDGE_INTENT.md`, `00D4_GLOBAL_ELECTRICAL_INFRASTRUCTURE.md`, `00D5_GLOBAL_POTABLE_WATER_INFRASTRUCTURE.md` |
+| 00D | Global World Planning / Generation | **IMPLEMENTED — SLICES 001–006** | `00D_GLOBAL_WORLD_PLANNING.md`, `00D3_GLOBAL_HYDROLOGY_BRIDGE_INTENT.md`, `00D4_GLOBAL_ELECTRICAL_INFRASTRUCTURE.md`, `00D5_GLOBAL_POTABLE_WATER_INFRASTRUCTURE.md`, `00D6_GLOBAL_WASTEWATER_SEPTIC_INFRASTRUCTURE.md` |
 | 01 | Collision / Spatial Query | **IMPLEMENTED** | `01_COLLISION_SPATIAL_QUERY.md` |
 | 02 | Movement Actions | **IMPLEMENTED** | `02_MOVEMENT_ACTIONS.md` |
 | 03 | Actor Locomotion / Movement Capability | **IMPLEMENTED** | `03_ACTOR_LOCOMOTION_MOVEMENT_CAPABILITY.md` |
@@ -47,13 +47,13 @@ Major systems move through **NOT DESIGNED -> DRAFT -> APPROVED -> IMPLEMENTED** 
 | 00F | Streaming / Materialization | **NOT DESIGNED** | future design |
 | old-01 | Raid-map / extraction physical-world model | **SUPERSEDED** | `01_RAID_MAP_DATA.md` |
 
-## System 00D current implementation — Slices 001–005
+## System 00D current implementation — Slices 001–006
 
-Current profile: `temperate.rural.region` **v5**.
+Current profile: `temperate.rural.region` **v6**.
 
 The pure global planner establishes, in order:
 
-`geography -> hydrology -> settlements/sites -> major roads -> bridge intents -> regional electrical infrastructure -> potable water infrastructure -> broad planning regions`.
+`geography -> hydrology -> settlements/sites -> major roads -> bridge intents -> regional electrical infrastructure -> potable water infrastructure -> wastewater/septic infrastructure -> broad planning regions`.
 
 Current global fixture:
 
@@ -64,21 +64,19 @@ Current global fixture:
 - globally connected primary/secondary road network with real boundary gateways;
 - protected central straight cross with 640-cell half-span;
 - one deterministic boundary-to-boundary primary regional river outside that protected corridor;
-- major roads pay a high river-crossing cost and cannot run collinearly along a river centerline;
-- every actual perpendicular route/river/cell crossing has exactly one explicit bridge intent;
-- one deterministic regional electrical ingress on a real road boundary gateway;
-- one small-town substation and one electrical service node per settlement;
-- one connected road-following regional feeder network with source-road provenance and independent validation;
-- five potable-water service records: small-town municipal groundwater plus decentralized groundwater-source intent for the crossroads and three hamlets;
-- one small-town municipal backbone with `groundwater_source`, `treatment_storage`, and `settlement_service` planning anchors plus two road-contained trunk segments;
-- `System20AreaRequestProjector.hydrology_constraints_for_bounds()` exposes river + bridge facts read-only;
-- `System20AreaRequestProjector.power_constraints_for_bounds()` exposes feeder + power-node facts read-only;
-- `System20AreaRequestProjector.water_constraints_for_bounds()` exposes water service/municipal-anchor/trunk facts read-only;
-- central `project_site()` still produces the accepted System 20 road request and exact Candidate 006 semantic output;
+- one explicit bridge intent for every actual perpendicular road/river crossing;
+- one regional electrical ingress, one small-town substation, one electrical service node per settlement, and one connected road-following feeder network;
+- five potable-water services: small-town municipal groundwater plus four decentralized groundwater-source intents;
+- three small-town municipal water anchors and two road-contained water trunk segments;
+- five wastewater services: small-town municipal treatment plus four decentralized septic intents;
+- all rural septic records carry `potable_source_clearance_required`;
+- two small-town wastewater anchors and one road-contained collection trunk, selected away from the potable-water source/trunk corridor;
+- read-only hydrology, power, water and wastewater projection seams;
+- central `project_site()` still produces the accepted System 20 request and exact Candidate 006 semantic output;
 - unsupported future local profiles still fail honestly;
 - exact-head context `verify/system00d-global-world`.
 
-System 00D remains pure planning. It owns no tactical bridge implementation, utility poles/wires, energized electrical state, literal wells/towers/pipes, building plumbing, pressure/flow/water inventory, wastewater/septic behavior, WHAT mutation, renderer, camera, population, outbreak or streaming behavior.
+System 00D remains pure planning. It owns no tactical bridge implementation, utility poles/wires, energized electrical state, literal wells/towers/pipes, building plumbing, pressure/flow/water inventory, literal sewer/septic/treatment geometry, runtime sanitation, WHAT mutation, renderer, camera, population, outbreak or streaming behavior.
 
 ## System 19 finalized building grammar
 
@@ -114,11 +112,11 @@ Exact-head context: `verify/system20-local-area`.
 
 System 21 owns camera follow/pan/zoom/focus/recenter only and never mutates simulation.
 
-System 22 owns the bounded moving-window DEV presentation for the accepted 256×256 Candidate 006 local area. The live Web demo remains Candidate 006; System 00D rivers/bridge intents/power/water infrastructure remain headless global planning facts until downstream materialization systems are explicitly designed.
+System 22 owns the bounded moving-window DEV presentation for the accepted 256×256 Candidate 006 local area. The live Web demo remains Candidate 006; System 00D river/bridge/power/water/wastewater infrastructure remains headless global planning truth until downstream materialization systems are explicitly designed.
 
 ## Immediate next path
 
-Keep Slices 001–005 and Candidate 006 protected. The next major step must be separately designed. The clean North-Star choices are **wastewater/septic infrastructure** or the real System 20 profiles needed to refine planned `smalltown.center` / `rural.scattered` sites. Streaming remains later, after logical world geography/places/infrastructure are stable enough that partitions are purely technical.
+Keep Slices 001–006 and Candidate 006 protected. The next major step is the real System 20 **`smalltown.center`** profile, followed by `rural.scattered` / hamlet local profiles. Streaming remains later, after logical world geography/places/infrastructure and the required local profiles are stable enough that partitions are purely technical.
 
 ## Design rule
 
