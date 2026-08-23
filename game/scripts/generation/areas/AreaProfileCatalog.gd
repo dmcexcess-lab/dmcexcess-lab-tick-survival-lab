@@ -144,7 +144,7 @@ func profile(profile_id: StringName) -> Dictionary:
             "local_farmstead_target": 1,
             "rural_scattered_lane_count": 2,
             "rural_scattered_lane_width": 3,
-            "rural_scattered_branch_margin": 60,
+            "rural_scattered_branch_margin": 40,
             "rural_scattered_branch_separation": 44,
             "rural_scattered_first_leg": 54,
             "rural_scattered_tail_leg": 54,
