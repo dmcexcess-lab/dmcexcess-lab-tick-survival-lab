@@ -1,415 +1,298 @@
 # Tick Survival Lab — System 20C Rural-Open / Countryside Candidate 001
 
-Status: **DRAFT**
+Status: **IMPLEMENTED — CANDIDATE 001**
 
-Date: 2026-08-22
+Design date: 2026-08-22  
+Approval: user explicitly approved implementation on 2026-08-23.
 
 ## 1. Goal
 
-System 20C adds a real local-planning profile for ordinary countryside outside the five current settlement sites.
+System 20C provides real deterministic local planning for ordinary dry countryside outside the five current settlement sites.
 
-Candidate 001 is the first bounded step toward a continuously materializable world between settlements. It converts caller-assigned rural-open global bounds into deterministic semantic local terrain containing inherited regional roads, broad agricultural/wilderness land cover, and natural outdoor dressing while preserving System 00D geography and the existing System 20/19 boundaries.
-
-The central rule is:
+The core rule is:
 
 > **Countryside detail is computed from global world facts and global coordinates, not from streaming-region identity.**
 
-This candidate deliberately does not make 00F choose countryside source partitions. System 20C produces a valid rural-open local plan for caller-assigned logical bounds; a later System 00F Slice 002 may discover/own a stable logical countryside-source partition and feed those bounds into this profile.
+System 20C accepts caller-assigned logical bounds and creates dry rural-open terrain while preserving System 00D geography, regional roads and infrastructure corridors. It deliberately does not choose logical countryside source partitions; that remains a future System 00F responsibility.
 
-## 2. Why this must be a separate profile
+## 2. Implemented scope
 
-The three current System 20 profiles are settlement morphology:
+Candidate 001 implements:
 
-- `rural.crossroads` v5;
-- `smalltown.center` v1;
-- `rural.scattered` v1.
+1. `rural.open` area profile v1;
+2. public `System20AreaRequestProjector.project_rural_open_bounds()`;
+3. roadless local requests as a valid base request shape;
+4. profile-level road requirements so Crossroads, Small-Town and Rural-Scattered still require inherited roads;
+5. optional clipped `inherited_geography` records on `AreaGenerationRequest`;
+6. exact preservation of zero or more inherited System 00D regional roads;
+7. no local roads, settlement parcels, town blocks or buildings;
+8. deterministic dry grass/meadow base plus agricultural field cover on eligible geography;
+9. deterministic sparse tree/shrub/rock dressing using world seed + absolute global coordinates;
+10. stable natural-prop IDs derived from physical global cells;
+11. read-only consumption of intersecting power/water/wastewater corridors;
+12. explicit rejection of any bounds containing real river/bridge facts;
+13. exact split-vs-combined landscape seam equivalence tests;
+14. no System 00F source-catalog change and no live System 22 presentation switch.
 
-They all assume road-oriented human development and their current request validation requires at least one inherited road.
-
-The broad System 00D plan already contains `region.rural.open.001` with `area_profile_hint = rural.open`, but there is no System 20 `rural.open` implementation. As a result, 00F honestly leaves technical regions with no settlement site unmaterialized.
-
-Roadless woods/meadow and ordinary roadside acreage are not failed hamlets. They need their own morphology contract.
-
-## 3. Candidate 001 bounded scope
-
-Candidate 001 establishes:
-
-1. `rural.open` area profile version 1;
-2. a public global-plan -> rural-open bounded-request projection seam;
-3. optional inherited-road support, including **zero-road** requests;
-4. optional inherited global-geography context carried into the request;
-5. exact preservation/materialization of inherited regional roads when present;
-6. no locally invented roads;
-7. no settlement parcels, town blocks, commercial opportunities or buildings in this first countryside candidate;
-8. deterministic broad field/meadow/wilderness land cover driven by global geography + world-seed/global-coordinate noise;
-9. globally coordinate-stable trees/shrubs/rocks with stable IDs derived from physical cells rather than area-local ordinals;
-10. dry-land-only generation in Candidate 001: bounds intersecting the currently planned regional river/bridge intent fail explicitly instead of materializing fake grass across water;
-11. pure-plan and adjacent-window seam tests;
-12. no live System 22 presentation switch and no 00F source-partition change in this slice.
-
-This is useful world content, not a placeholder: roadless countryside becomes real terrain, roadside countryside preserves the actual global road, fields are physical land-cover facts, and vegetation is deterministic persistent WHAT material once a future source owner materializes the plan.
-
-## 4. Non-goals
+## 3. Non-goals
 
 Candidate 001 does not implement:
 
 - System 00F countryside source discovery/partitioning;
-- streaming-grid changes;
-- memory eviction/save storage;
-- physical river/water terrain;
-- bridge art/collision/traversal;
-- ponds/ditches/culverts/flooding;
-- tactical elevation or slopes;
-- new local roads/driveways;
-- rural property ownership/addresses;
-- isolated houses/farm buildings;
-- fences, gates, crops as interactable objects or farm ownership;
-- utility poles/wires or runtime electricity;
-- wells/septic tanks/plumbing/runtime water or sanitation;
-- population, households, jobs, vehicles, loot, corpses or outbreak state;
-- renderer/camera/player/WHEN/collision changes.
+- stream-region changes or memory eviction;
+- physical river/water terrain or bridge traversal/art/collision;
+- tactical elevation/slopes;
+- local roads, driveways, addresses or property ownership;
+- isolated homes/farms or agricultural outbuildings;
+- utility poles/wires, wells, septic hardware, or runtime utilities;
+- population, vehicles, loot, corpses or outbreak state;
+- rendering, camera, player, collision or WHEN changes.
 
-Sparse roadside homes/farms are intentionally deferred until the logical countryside-source ownership seam is fixed, so property/building footprints cannot become source-boundary artifacts.
+Sparse rural properties remain deferred until logical countryside-source ownership is explicit, preventing properties from accidentally becoming source-boundary artifacts.
 
-## 5. Owner / expected modules
+## 4. Public contract revision
 
-### Existing System 20 owners extended narrowly
+### `AreaGenerationRequest`
 
-- `AreaProfileCatalog.gd`
-  - add `RURAL_OPEN = rural.open` v1;
-  - mark inherited roads optional for this profile;
-  - select `inherit_only` road layout and `rural_open` land-use mode;
-  - zero settlement parcel/building targets.
-
-- `AreaGenerationRequest.gd`
-  - add optional `inherited_geography: Array[Dictionary]`;
-  - stop globally requiring `inherited_roads` to be non-empty;
-  - continue validating every road when roads are present;
-  - validate optional clipped geography records structurally.
-
-- `LocalAreaGenerator.gd`
-  - enforce profile-specific inherited-road requirements after profile resolution;
-  - compose the new rural-open landscape owner only for `rural.open`;
-  - leave existing profile paths semantically exact.
-
-- `LocalRoadPlanner.gd`
-  - `inherit_only` mode returns supplied inherited roads/intersections without creating local roads;
-  - an empty inherited-road collection is legal only when the resolved profile authorizes it.
-
-- `ParcelPlanner.gd`
-  - `rural_open` mode returns no settlement parcels in Candidate 001.
-
-- `GeneratedAreaValidator.gd`
-  - add rural-open profile invariants rather than weakening existing settlement validations.
-
-### New focused owner
-
-`RuralOpenLandscapePlanner.gd`
-
-Owns only rural-open land-cover and natural-prop planning.
-
-Responsibilities:
-
-- consume the request's clipped inherited geography;
-- consume the existing `temperate.rural` semantic families;
-- classify physical ground cells into base meadow/grass versus agricultural field using global-coordinate deterministic fields;
-- vary field eligibility/density by supplied landform/elevation context without creating tactical elevation;
-- avoid inherited road corridors and planning reservations;
-- generate natural props from world-seed/global-coordinate samples;
-- use globally stable cell-derived prop IDs;
-- remain independent of renderer/art indices, WHAT mutation, streaming, population and ownership.
-
-### Existing integration adapter extended narrowly
-
-`System20AreaRequestProjector.gd`
-
-Add a separate method conceptually equivalent to:
-
-`project_rural_open_bounds(plan, area_id, bounds) -> Dictionary`
-
-It does not alter `project_site()`.
-
-## 6. Public request contract revision
-
-### Existing fields remain
-
-- area ID;
-- seed;
-- bounds;
-- area/environment profile IDs;
-- inherited roads;
-- forbidden regions;
-- inherited planning constraints.
-
-### New optional field
+The request now also carries:
 
 `inherited_geography: Array[Dictionary]`
 
-Each record contains only clipped source truth needed locally:
+Each geography record contains:
 
-- stable source geography-cell ID;
-- clipped `rect` inside request bounds;
-- source grid coordinate if useful for provenance;
-- planning elevation integer;
-- semantic landform (`lowland`, `rolling`, `upland`, `ridge`).
+- stable source geography ID;
+- source grid coordinate;
+- clipped rect inside request bounds;
+- planning elevation `0..100`;
+- landform `lowland`, `rolling`, `upland`, or `ridge`.
 
-The field defaults empty. Existing `project_site()` and all existing fixtures remain empty unless a later separately approved profile chooses to consume geography context.
+The field defaults empty, preserving old callers.
 
-### Roadless request rule
+The base request type no longer declares an empty road collection invalid. This is a geometry correction: roadless world space is valid.
 
-`AreaGenerationRequest.is_valid()` no longer rejects an empty road array by itself.
+`LocalAreaGenerator` enforces resolved-profile road requirements instead:
 
-The resolved area profile decides whether roads are required:
+- `rural.crossroads` — inherited road required;
+- `smalltown.center` — inherited road required;
+- `rural.scattered` — inherited road required;
+- `rural.open` — zero or more inherited roads permitted.
 
-- Crossroads / Small-Town / Rural-Scattered: still require at least one inherited road and fail if absent;
-- Rural-Open: zero or more inherited roads are legal.
+### `GeneratedAreaPlan`
 
-This is a deliberate public-contract correction: roadlessness is valid local geography, not an invalid request.
+A generated `rural.open` plan may legally contain zero roads. Existing profile completeness semantics remain unchanged.
 
-## 7. Rural-open projection seam
+## 5. Rural-open profile
 
-`project_rural_open_bounds()` must:
+`AreaProfileCatalog.RURAL_OPEN = &"rural.open"`
 
-1. require a generated System 00D plan;
-2. require non-empty stable area ID and positive bounds fully inside the global world;
-3. require the requested bounds to belong to the broad `rural_open` planning context selected by the caller/source owner;
-4. reject positive overlap with any existing settlement `area_site` in Candidate 001;
-5. project actual major-road segments intersecting the bounds; zero roads is legal;
-6. project clipped global geography records covering the request bounds;
-7. project hydrology facts and **fail explicitly if a real river/bridge fact intersects Candidate 001 bounds**;
-8. project relevant infrastructure corridor facts as read-only planning constraints where they actually intersect, without inventing local facilities/service points;
-9. construct `AreaGenerationRequest` with:
-   - profile `rural.open`;
-   - environment `temperate.rural`;
-   - `seed = global_plan.seed` so adjacent rural-open plans share one landscape field;
-   - caller-supplied stable area ID/bounds;
-   - clipped roads/geography/planning constraints.
+Current version: **1**.
 
-The projector does not invent a countryside source grid. The caller owns logical source bounds.
+Profile behavior:
 
-## 8. Geography consumption
+- road layout: `inherit_only`;
+- inherited roads optional;
+- zero local-road creation;
+- zero commercial/residential/farmstead targets;
+- no building archetype pools;
+- global-coordinate field/noise parameters;
+- explicit road/infrastructure clearance for countryside dressing.
 
-System 00D geography remains planning-scale truth, not tactical height.
+`temperate.rural` remains v3 and supplies the existing ground/tree/shrub/rock semantic families.
 
-Candidate 001 uses it only to influence surface/ecology character:
+## 6. Projection seam
 
-- lowland: strongest agricultural eligibility, meadow/brush mix;
-- rolling: moderate agricultural eligibility, mixed meadow/woodlot;
-- upland: little/no agriculture, more brush/rock/tree pressure;
-- ridge: no agriculture, rock/brush/tree-biased rural ground.
+`System20AreaRequestProjector.project_rural_open_bounds(plan, area_id, bounds)`:
 
-No movement cost, LOS height, slope, cliff or elevation rendering is introduced.
+1. requires a generated System 00D plan and positive bounds inside that world;
+2. requires the broad `rural_open` planning context to contain the bounds;
+3. rejects positive overlap with any existing settlement `area_site`;
+4. queries hydrology and rejects any river/bridge intersection with `rural_open_hydrology_not_materializable`;
+5. projects real regional roads; zero roads is valid;
+6. clips System 00D geography so every request cell is covered exactly once;
+7. projects only intersecting power/potable-water/wastewater corridor facts, not service/facility inventions;
+8. builds a `rural.open + temperate.rural` request using the **global world seed**.
 
-All request cells must be covered by valid inherited geography. Missing geography fails rather than silently reverting to generic grass.
+`project_site()` remains unchanged for the five settlement sites.
 
-## 9. Land-cover rules
+## 7. Landscape owner
 
-The base physical surface remains compatible with `temperate.rural` v3 semantics.
+New owner:
 
-Candidate 001 creates two broad land-cover classes:
+`game/scripts/generation/areas/RuralOpenLandscapePlanner.gd`
 
-### Natural rural ground
+It owns only countryside land cover and natural props.
 
-Default grass/meadow base, with globally coherent natural-density fields.
+### Geography
 
-### Agricultural field ground
+Every accepted request cell must have one inherited geography record. Missing, overlapping or malformed coverage fails.
 
-Uses existing `ground.field_green` semantic.
+Geography affects ecology only; it does not create tactical height.
 
-Agricultural cells:
+- lowland: strongest agricultural eligibility;
+- rolling: moderate agricultural eligibility;
+- upland: no agricultural field cover;
+- ridge: no agricultural field cover.
 
-- are allowed only on eligible supplied landforms;
-- come from low-frequency global-coordinate deterministic fields rather than per-area random rectangles;
-- are excluded from inherited road corridors/road shoulders and blocking reservations;
-- do not imply parcel ownership, a household, crop inventory or an active farmer;
-- may continue seamlessly across adjacent rural-open request boundaries because the decision is a function of world seed + global cell, not local area origin.
+### Agricultural ground
 
-Candidate 001 may group same-semantic cells into plan ground-region records for efficiency, but grouping IDs are not persistent-world identity.
+Agricultural cells use existing `ground.field_green`.
 
-## 10. Natural-prop rules
+Field eligibility is derived from:
 
-Trees/shrubs/rocks use the existing `temperate.rural` semantic families.
-
-Unlike the existing settlement natural-noise implementation, Candidate 001 must not base patch coordinates on `cell - request.bounds.position`.
-
-Every rural-open natural decision uses:
-
-- the shared global world seed;
+- global world seed;
 - absolute global cell coordinates;
-- a stable salt/domain;
-- supplied landform context;
-- whether the cell is agricultural/natural/road-reserved.
+- low-frequency deterministic value noise;
+- inherited landform/elevation;
+- road/infrastructure clearance.
 
-This guarantees that changing caller bounds or generating adjacent windows does not shift the ecological field.
+Fields do not imply ownership, crops-as-items, households or active farming.
 
-Persistent prop IDs are derived from semantic domain + global cell, for example a stable encoding of:
+### Natural props
 
-`rural_open:natural:<global_x>:<global_y>`
+Candidate 001 uses only existing `temperate.rural` tree/shrub/rock families.
 
-rather than `area_id + ordinal`.
+All decisions use world seed + absolute global coordinates. IDs are:
 
-A cell can therefore never gain a different countryside prop identity merely because a future logical source partition changes.
+`rural_open.natural.<global_x>.<global_y>`
 
-## 11. Road rules
+Therefore changing caller/source bounds cannot change the persistent identity of a countryside prop at a given physical cell.
 
-Candidate 001 never invents a local road.
+Natural props avoid agricultural cells, inherited road corridors and projected infrastructure corridors.
 
-When global roads intersect the request:
+## 8. Road behavior
 
-- exact road IDs/classes/widths and clipped centerline geometry come from System 00D projection;
-- road surfaces/centerline paint use the existing System 20 / `temperate.rural` semantics;
-- legal boundary contacts remain supplied through the existing allowed-boundary-cell contract;
-- global road intersection geometry may be recorded normally;
-- no signal is invented for an ordinary countryside crossing;
-- vegetation/field cells avoid the road corridor and configured shoulder clearance.
+`rural.open` never creates a local road.
 
-A roadless request is equally valid.
+When a global road enters the request:
 
-## 12. Hydrology boundary for Candidate 001
+- ID/class/width/clipped geometry come from System 00D;
+- ordinary existing System 20 road surface/centerline semantics are reused;
+- intersections are uncontrolled;
+- legal boundary contacts retain existing authorization semantics;
+- landscape dressing clears the road corridor and shoulder.
 
-The current art/physics stack has no canonical physical river/water + bridge implementation.
+A completely roadless request is equally valid.
 
-Therefore Candidate 001 must **not** paint grass/fields across a known System 00D river and call countryside complete.
+Implementation did **not** need to modify `LocalRoadPlanner`: its existing inherited-road installation plus zero configured local spurs already provides the required `inherit_only` result. This was preferable to adding a redundant special-case path.
 
-If `hydrology_constraints_for_bounds()` returns any river segment or bridge intent, `project_rural_open_bounds()` fails with an explicit unsupported-hydrology reason.
+## 9. Settlement pipeline boundary
 
-This leaves honest source gaps around river-crossing countryside until a separately approved local hydrology/bridge materialization slice exists.
+`LocalAreaGenerator` branches to a focused rural-open path before settlement reservations/parcels/buildings.
 
-The global river/bridge truth remains unchanged and protected.
+Therefore Candidate 001 did not require changes to:
 
-## 13. Determinism / seam invariants
+- `InfrastructureReservationPlanner.gd`;
+- `ParcelPlanner.gd`;
+- `GeneratedAreaValidator.gd`.
 
-For rural-open plans:
+This is an implementation simplification, not a reduced contract. The rural-open plan still passes the existing generic validator, while the dedicated smoke locks the profile-specific zero-parcel/zero-building/road/hydrology/geography invariants.
 
-1. same global plan + area ID + bounds => exact same plan signature;
-2. field/natural cell classification depends on world seed + global coordinates, not request-local coordinates;
-3. adjacent non-overlapping requests agree at their shared edge with no ecology reset/banding;
-4. splitting a tested dry rural-open rectangle into adjacent sub-rectangles yields the same cell-level terrain/natural semantics as evaluating the combined rectangle, excluding only record grouping/order;
-5. inherited global roads clip continuously across neighboring request boundaries;
-6. stable natural-prop identity is cell-derived and independent of source-area ID;
-7. existing three profile outputs remain exact.
+The existing Crossroads/Small-Town/Rural-Scattered generation pipeline remains structurally unchanged after the new profile branch.
 
-## 14. Failure behavior
+## 10. Determinism / seam contract
 
-Candidate 001 fails explicitly for:
+For Candidate 001:
 
-- invalid global plan/request bounds;
-- unknown profile/environment;
-- malformed inherited geography;
-- incomplete geography coverage;
-- settlement-area-site overlap;
-- real hydrology/bridge intersection;
-- malformed inherited road or planning constraint;
-- any existing-profile roadless request;
-- local plan validation failure.
+1. same global plan + area ID + bounds gives the same plan signature;
+2. landscape classification is independent of request-local origin;
+3. natural prop identity is independent of area ID;
+4. adjacent requests do not restart ecological fields;
+5. evaluating two adjacent dry windows separately produces the same cell-level ground and prop truth as evaluating their combined rectangle;
+6. inherited regional roads retain exact identity/geometry;
+7. all three existing settlement-profile regressions remain protected.
 
-It does not reroll, silently add a road, substitute a hamlet profile, or erase conflicting global facts.
+## 11. Failure behavior
 
-## 15. Performance / mobile requirements
+Explicit failures include:
 
-- pure deterministic generation; no per-frame work;
-- cell-level landscape evaluation is bounded to caller-assigned local bounds;
-- use coordinate hashing/value fields rather than maintaining giant global noise arrays;
-- group terrain output where practical to avoid one Dictionary per cell;
-- natural props remain sparse;
-- no renderer or Safari-input dependency;
-- no asynchronous-worker placeholder.
+- invalid global plan/bounds/area ID;
+- no broad rural-open planning context;
+- overlap with a settlement area site;
+- malformed/incomplete inherited geography;
+- malformed inherited road or planning corridor;
+- river/bridge intersection;
+- an existing settlement profile requested without inherited roads;
+- generic final-plan validation failure.
 
-## 16. Acceptance / tests
+The profile does not reroll, fabricate roads, substitute settlement morphology, or paint grass over known water.
 
-Add dedicated `RuralOpenCountrysideGenerationSmoke.gd` and extend the System 20 exact-head workflow.
+## 12. Verification
 
-The smoke should prove at minimum:
+Dedicated smoke:
 
-1. `rural.open` v1 is a supported area profile;
-2. all existing Crossroads/Small-Town/Rural-Scattered profile versions and exact protected signatures remain unchanged;
-3. existing settlement requests still reject missing inherited roads at generation/profile validation even though the base request type now allows an empty road list;
-4. a real dry **roadless** rural-open window from the canonical System 00D v6 world projects/generates successfully;
-5. a real dry **roadside** rural-open window projects the exact global road IDs/geometry and generates successfully;
-6. no rural-open local roads, town blocks, parcels or building requests are produced;
-7. inherited geography fully covers each accepted request and affects land-cover eligibility;
-8. agricultural field ground exists in at least one suitable tested lowland/rolling window while upland/ridge tests never fabricate agriculture contrary to profile rules;
-9. trees/shrubs/rocks use only existing environment semantics and never occupy road/field-blocked cells illegally;
-10. adjacent dry windows have seam-stable cell-level landscape results;
-11. equivalent combined-vs-split dry bounds produce identical cell-level rural-open terrain/natural semantics;
-12. natural-prop IDs for the same global cell are identical independent of which test request contains that cell;
-13. a canonical bounds intersecting the regional river fails honestly with the explicit hydrology-not-yet-materializable reason;
-14. settlement-site-overlap projection fails rather than overwriting settlement morphology;
-15. System 00D v6 global signature remains unchanged;
-16. System 19, System 20 protected profile regressions, System 00F Slice 001, Systems 21/22 and Pages remain green;
-17. no live Web target changes.
+`game/scripts/ci/RuralOpenCountrysideGenerationSmoke.gd`
 
-## 17. Expected implementation impact after approval
+Workflow remains:
 
-Expected new file:
+`.github/workflows/local-area-generation.yml`
 
-- `game/scripts/generation/areas/RuralOpenLandscapePlanner.gd`;
-- `game/scripts/ci/RuralOpenCountrysideGenerationSmoke.gd`.
+Exact-head context:
 
-Expected narrow changes:
+`verify/system20-local-area`
 
-- `game/scripts/generation/areas/AreaGenerationRequest.gd`;
-- `game/scripts/generation/areas/AreaProfileCatalog.gd`;
-- `game/scripts/generation/areas/LocalAreaGenerator.gd`;
-- `game/scripts/generation/areas/LocalRoadPlanner.gd`;
-- `game/scripts/generation/areas/ParcelPlanner.gd`;
-- `game/scripts/generation/areas/GeneratedAreaValidator.gd`;
-- `game/scripts/generation/integration/System20AreaRequestProjector.gd`;
-- System 20 workflow + durable System 20/context/changelog docs.
+The smoke dynamically discovers real test windows from the canonical System 00D v6 world and proves:
 
-Protected / expected untouched:
+- roadless and roadside dry countryside;
+- exact regional-road inheritance;
+- full inherited-geography coverage;
+- lowland/rolling field legality;
+- upland/ridge no-agriculture behavior;
+- global-cell-stable natural prop identity;
+- natural/field/road/corridor exclusion;
+- deterministic replay;
+- split-vs-combined exact cell semantics;
+- real regional-river rejection;
+- settlement-site overlap rejection;
+- base roadless request validity plus continued settlement-profile road requirements.
 
-- System 00D generated-plan/profile/version/roads/geography/hydrology/infrastructure semantics;
+First fully green integrated code head:
+
+`cbc39f03d3568ca4fcbe7f294e350eb1c507bbda`
+
+On that exact SHA all seven current contexts succeeded:
+
+- `verify/system00d-global-world` — run `32625507767`;
+- `verify/system00f-streaming-materialization` — run `32625507886`;
+- `verify/system19-local-building` — run `32625507803`;
+- `verify/system20-local-area` — run `32625507729`;
+- `verify/system21-camera-view` — run `32625507813`;
+- `verify/system22-area-critique` — run `32625507775`;
+- `verify/pages-deploy` — run `32625507820`.
+
+## 13. Protected neighbors
+
+Candidate 001 changes no semantics in:
+
+- System 00D v6 planning;
 - System 19 building grammar/archetypes;
 - `AreaMaterializationCoordinator.gd`;
-- all System 00F Slice 001 source/registry/streaming code;
+- System 00F Slice 001 registry/source/stream-grid orchestration;
 - WHAT/WHEN;
 - collision/movement/doors;
-- Art assets/catalog/renderers;
+- Art/rendering;
 - camera/player/input/UI;
 - System 22 live critique composition.
 
-## 18. Future seams
+The live Web world remains Rural Crossroads Candidate 006.
 
-### 00F Slice 002 — countryside logical source catalog
+## 14. Future seams
 
-After 20C is proven, a separate 00F design may:
+### System 00F Slice 002 — logical countryside sources
 
-- choose stable non-overlapping logical countryside source bounds;
-- keep those source IDs independent from technical stream-region coordinates;
-- call `project_rural_open_bounds()` + `LocalAreaGenerator`;
-- compose countryside and existing settlement sources into one materialization discovery contract;
-- prove a different technical stream-region size does not alter countryside source identity or generated cell semantics.
+The next architecture step may define stable non-overlapping countryside materialization source bounds/IDs that are **independent from technical stream-region coordinates**, then compose those sources with the five existing settlement sources.
 
-00F does not get changed merely to make 20C tests convenient.
+It may call `project_rural_open_bounds()` but must not move countryside morphology into streaming.
 
 ### Local hydrology / bridges
 
-A later bounded System 20/global-to-local hydrology slice can turn existing river/bridge planning truth into physical semantic terrain/structures only after water/bridge art + traversal/collision ownership is explicit.
+A separate approved slice must convert existing global river/bridge intent into physical water/bridge terrain and traversal before river-intersecting countryside can materialize.
 
 ### Sparse rural properties
 
-Later rural-open candidates may add road-fronting isolated homes/farms after logical source ownership has rules that prevent property footprints from becoming source-boundary artifacts.
+Later rural-open candidates may add isolated road-fronting homes/farms after logical source ownership guarantees their footprints cannot depend on technical/source boundaries.
 
-### Population / ownership / addresses
+## 15. North-star fit
 
-Future systems can attach real ownership, addresses, households/jobs and pre-collapse land use without requiring Candidate 001 to fake those facts now.
+System 20C turns ordinary dry countryside into real deterministic physical world content without pretending unfinished water, properties, population or streaming ownership exists.
 
-## 19. North-star fit
-
-Candidate 001 advances the persistent-open-world target without lying about unfinished systems.
-
-It makes ordinary dry countryside a real deterministic physical place, preserves globally coherent roads/geography, supports roadless wilderness, and ensures adjacent local generation does not reveal source seams.
-
-It also preserves the key 00F architecture: technical stream regions do not define the world and do not choose countryside morphology.
-
-## 20. Decisions requiring detailed approval
-
-1. Implement `rural.open` v1 as **dry countryside terrain/land cover only**, with no properties/buildings/local roads yet.
-2. Allow zero inherited roads at the base request level, while existing settlement profiles continue to require them.
-3. Add optional inherited geography context to `AreaGenerationRequest`, populated only by the new rural-open projection seam in Candidate 001.
-4. Use the global world seed plus absolute world coordinates for all rural-open landscape decisions.
-5. Derive natural-prop identity from global cell, not area-local ordinal/source ID.
-6. Reject river/bridge-intersecting countryside honestly until local water/bridge materialization has its own approved contract.
-7. Keep System 00F completely unchanged in this slice; follow with a separate 00F Slice 002 for logical countryside source discovery/materialization.
-8. Keep the live System 22 Rural Crossroads presentation unchanged while proving countryside independently.
+It advances the continuous open-world goal while preserving the central architectural rule that logical world facts precede and outlive technical streaming partitions.
