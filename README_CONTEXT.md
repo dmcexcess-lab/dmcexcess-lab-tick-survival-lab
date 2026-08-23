@@ -22,7 +22,7 @@ System 00D plus Systems 14–22 and System 00F Slices 001–002 form the current
 
 **System 19 is finalized.** Current protected building library: Trailer v2, Small Farmhouse v2, Large Farmhouse v4, Compact Laundry House v1, Small Gas Station v1 and Rural Diner v2.
 
-**System 20 now has four implemented local profiles:**
+**System 20 has four implemented local profiles:**
 
 - Rural Crossroads Candidate 006 — `rural.crossroads` v5;
 - Small-Town Center Candidate 001 — `smalltown.center` v1;
@@ -42,9 +42,11 @@ Current logical source kinds are:
 
 Countryside source catalog v1 subtracts exact settlement-source bounds and the exact currently unsupported river corridors. Dry land is therefore materializable throughout the rural-open context while river corridor cells remain honestly source-free until physical local hydrology/bridges are implemented.
 
+**Active design:** `SYSTEM_DESIGNS/20D_RURAL_WATERCOURSE_BRIDGE_CANDIDATE_001.md` is **DRAFT**. It proposes the next bounded physical-generation slice: consume existing System 00D river/bridge facts and make them deterministic semantic water/bridge terrain while leaving 00F source discovery for a later 00F Slice 003.
+
 **System 21 Tactical Camera / View Control is implemented.**
 
-**System 22 Large-Area DEV Critique Runtime is implemented.** The live Web build still presents Rural Crossroads Candidate 006; neither 00F2 nor 20C changed the live presentation target.
+**System 22 Large-Area DEV Critique Runtime is implemented.** The live Web build still presents Rural Crossroads Candidate 006.
 
 ## 3. Foundation truth
 
@@ -77,6 +79,8 @@ Current global fixture:
 - one broad `region.rural.open.001` planning context with `area_profile_hint = rural.open`;
 - no WHAT mutation, renderer, population/outbreak or streaming ownership.
 
+System 00D hydrology already owns river IDs/segments, odd physical widths, exact road/river crossings and bridge intents. Local work must consume those facts rather than reroute them.
+
 Pure source lives under `game/scripts/generation/world/`; downstream projection adapter is `game/scripts/generation/integration/System20AreaRequestProjector.gd`.
 
 Exact-head context: `verify/system00d-global-world`.
@@ -85,11 +89,15 @@ Exact-head context: `verify/system00d-global-world`.
 
 Umbrella: `SYSTEM_DESIGNS/20_LOCAL_AREA_PARCEL_GENERATION.md`.
 
-Detailed designs:
+Implemented detailed designs:
 
 - `20A_SMALLTOWN_CENTER_CANDIDATE_001.md`;
 - `20B_RURAL_SCATTERED_CANDIDATE_001.md`;
 - `20C_RURAL_OPEN_COUNTRYSIDE_CANDIDATE_001.md`.
+
+Active DRAFT:
+
+- `20D_RURAL_WATERCOURSE_BRIDGE_CANDIDATE_001.md`.
 
 ### Crossroads 006
 
@@ -132,13 +140,29 @@ Focused owner:
 
 `AreaGenerationRequest` supports optional `inherited_geography`; base roadlessness is valid, while LocalAreaGenerator enforces profile-specific road requirements.
 
-`GeneratedAreaPlan` permits zero roads only for `rural.open`.
+`GeneratedAreaPlan` permits zero roads only for `rural.open` today.
 
-System 20C did not change System 00D, System 19, area materialization, WHAT/WHEN, runtime physics, presentation or player code. System 00F2 later consumes System 20C through its public arbitrary-bounds seam without changing countryside morphology.
+System 20C did not change System 00D, System 19, area materialization, WHAT/WHEN, runtime physics, presentation or player code. System 00F2 consumes System 20C through its public arbitrary-bounds seam without changing countryside morphology.
 
 Exact-head context: `verify/system20-local-area`.
 
 First green 20C integrated code head: `cbc39f03d3568ca4fcbe7f294e350eb1c507bbda`.
+
+### Proposed 20D Watercourse / Bridge 001
+
+The DRAFT proposes:
+
+- new `rural.watercourse` v1 while preserving every existing profile/version;
+- optional explicit inherited hydrology request facts;
+- request bounds wholly covered by real System 00D river corridor geometry;
+- physical `ground.water_river` terrain;
+- bridge-deck road terrain only when an explicit System 00D bridge intent authorizes it;
+- explicit hydrology provenance in generated plans;
+- no parcels/buildings/local roads/water props;
+- split-vs-combined exact global-cell terrain semantics;
+- no 00F source-discovery change in the 20D implementation.
+
+The 13 detailed decisions at the end of the DRAFT require explicit user approval before code.
 
 ## 6. System 00F current truth
 
@@ -176,7 +200,7 @@ Current behavior:
 - deactivation changes only technical active bookkeeping;
 - player/world mutations survive deactivation/revisit;
 - no memory eviction exists without an authoritative persistence-backed store;
-- river corridor cells remain source-free/unmaterialized until a separate local hydrology/bridge system exists.
+- river corridor cells remain source-free/unmaterialized.
 
 Exact-head context: `verify/system00f-streaming-materialization`.
 
@@ -190,25 +214,24 @@ The live Web build remains Rural Crossroads Candidate 006.
 
 ## 8. Immediate next path
 
-Settlement sites and supported dry countryside now have stable logical materialization ownership independent from the technical stream grid. The largest remaining physical-world hole is the intentionally unsupported river corridor.
+**Active design gate: review/approve or revise System 20D Rural Watercourse / Bridge Candidate 001.**
 
-**Recommended next bounded design: local physical river / bridge materialization.**
+The DRAFT intentionally separates two future steps:
 
-Required principles:
+1. **20D** — prove partition-independent local physical river/bridge terrain from existing System 00D truth;
+2. **00F Slice 003 later** — give that proven river corridor stable logical materialization source ownership/activation without changing 00F2 dry-countryside IDs.
 
-- consume existing System 00D river segments and bridge intents rather than rerouting hydrology locally;
-- create honest physical water/bridge terrain, collision/traversal and materialization ownership without teaching System 00F hydrology morphology;
-- preserve the current 00F2 countryside catalog/source identities or explicitly version/migrate them if river-source ownership requires a catalog change;
-- keep technical stream-region geometry independent from river/world identity.
+This prevents one river task from becoming a hidden System 20 + System 00F rewrite.
 
 Other separate future slices:
 
 - persistence/save owner before true memory eviction;
-- sparse isolated rural properties now that source-boundary ownership is stable;
+- sparse isolated rural properties now that dry source-boundary ownership is stable;
 - System 00E population/households/jobs/outbreak/player story;
 - richer System 19 content;
 - parcel addresses/ownership/zoning;
-- runtime utilities.
+- runtime utilities;
+- later water gameplay/presentation after physical river truth exists.
 
 ## 9. Invariants
 
@@ -226,8 +249,9 @@ Other separate future slices:
 12. Rural-open landscape classification and natural identity are global-coordinate stable.
 13. Countryside source identity is logical/catalog-versioned and independent from stream-region coordinates.
 14. Known river terrain is never silently replaced with grass/fields.
-15. Art is presentation truth, not physics.
-16. Phone/Safari remains first-class.
+15. Any physical bridge must be authorized by real global bridge intent; road overlap alone is insufficient.
+16. Art is presentation truth, not physics.
+17. Phone/Safari remains first-class.
 
 ## 10. Documentation source order
 
