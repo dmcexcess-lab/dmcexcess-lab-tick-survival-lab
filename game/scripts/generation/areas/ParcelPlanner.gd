@@ -17,13 +17,16 @@ func plan(
 
     var land_use_mode: StringName = StringName(profile.get("land_use_mode", &"rural_crossroads"))
     var center: Vector2i = intersections[0].get("cell", request.bounds.get_center())
-    if land_use_mode == &"smalltown_center":
+    if land_use_mode == &"smalltown_center" or land_use_mode == &"rural_scattered":
         center = Vector2i(
             request.bounds.position.x + request.bounds.size.x / 2,
             request.bounds.position.y + request.bounds.size.y / 2
         )
     var road_cells: Dictionary = _road_cell_set(roads)
-    for road: Dictionary in roads:
+    var frontage_roads: Array[Dictionary] = roads
+    if land_use_mode == &"rural_scattered":
+        frontage_roads = _rural_scattered_frontage_order(roads)
+    for road: Dictionary in frontage_roads:
         if not bool(road.get("parcel_frontage_enabled", true)):
             continue
         _append_road_frontage_parcels(request, profile, road, center, road_cells, parcels)
@@ -41,6 +44,8 @@ func plan(
 
     if land_use_mode == &"smalltown_center":
         _classify_smalltown_land_use(request.seed, profile, center, parcels)
+    elif land_use_mode == &"rural_scattered":
+        _classify_rural_scattered_land_use(request.seed, profile, center, parcels)
     else:
         _classify_rural_land_use(request.seed, profile, center, parcels)
     if _count_land_use(parcels, &"commercial_small") != int(profile.get("commercial_count", 0)) \
@@ -48,6 +53,16 @@ func plan(
         or _count_land_use(parcels, &"farmstead") != int(profile.get("farmstead_count", 0)):
         return {"ok": false, "failure_reason": "land_use_targets_unmet", "parcels": parcels}
     return {"ok": true, "failure_reason": "", "parcels": parcels}
+
+func _rural_scattered_frontage_order(roads: Array[Dictionary]) -> Array[Dictionary]:
+    var ordered: Array[Dictionary] = []
+    for road: Dictionary in roads:
+        if StringName(road.get("road_class", &"")) == &"local_rural":
+            ordered.append(road)
+    for road: Dictionary in roads:
+        if StringName(road.get("road_class", &"")) != &"local_rural":
+            ordered.append(road)
+    return ordered
 
 func _append_road_frontage_parcels(
     request: AreaGenerationRequest,
@@ -416,6 +431,51 @@ func _classify_rural_land_use(seed: int, profile: Dictionary, center: Vector2i, 
                 parcel["land_use"] = &"vacant"
             _:
                 parcel["land_use"] = &"wilderness"
+
+func _classify_rural_scattered_land_use(seed: int, profile: Dictionary, center: Vector2i, parcels: Array[Dictionary]) -> void:
+    parcels.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
+        var da: int = int(a.get("distance_to_center", 0))
+        var db: int = int(b.get("distance_to_center", 0))
+        if da != db:
+            return da < db
+        return String(a.get("id", "")) < String(b.get("id", ""))
+    )
+
+    var local_class: StringName = StringName(profile.get("local_frontage_road_class", &"local_rural"))
+    var residential_target: int = int(profile.get("residential_count", 4))
+    var local_residential_target: int = mini(residential_target, int(profile.get("local_residential_target", 3)))
+    var residential_used: int = _assign_local_land_use(parcels, &"residential", local_residential_target, false, local_class)
+    for parcel: Dictionary in parcels:
+        if residential_used >= residential_target:
+            break
+        if StringName(parcel.get("land_use", &"")) != &"unclassified":
+            continue
+        parcel["land_use"] = &"residential"
+        residential_used += 1
+
+    var farmstead_target: int = int(profile.get("farmstead_count", 2))
+    var local_farmstead_target: int = mini(farmstead_target, int(profile.get("local_farmstead_target", 1)))
+    var farmstead_used: int = _assign_local_land_use(parcels, &"farmstead", local_farmstead_target, true, local_class)
+    for index in range(parcels.size() - 1, -1, -1):
+        if farmstead_used >= farmstead_target:
+            break
+        var parcel: Dictionary = parcels[index]
+        if StringName(parcel.get("land_use", &"")) != &"unclassified":
+            continue
+        parcel["land_use"] = &"farmstead"
+        farmstead_used += 1
+
+    var edge_distance: int = int(profile.get("rural_scattered_edge_open_distance", 72))
+    for parcel: Dictionary in parcels:
+        if StringName(parcel.get("land_use", &"")) != &"unclassified":
+            continue
+        var far: bool = int(parcel.get("distance_to_center", 0)) >= edge_distance
+        var choice_count: int = 2 if far else 3
+        var choice: int = Seed.choose_index(seed, "rural_scattered_open:%s" % String(parcel.get("id", "")), choice_count)
+        if far:
+            parcel["land_use"] = &"agricultural" if choice == 0 else &"wilderness"
+        else:
+            parcel["land_use"] = &"agricultural" if choice == 0 else (&"vacant" if choice == 1 else &"wilderness")
 
 func _classify_smalltown_land_use(seed: int, profile: Dictionary, center: Vector2i, parcels: Array[Dictionary]) -> void:
     parcels.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
