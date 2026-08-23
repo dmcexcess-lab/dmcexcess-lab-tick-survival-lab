@@ -4,7 +4,9 @@ class_name LocalAreaGenerator
 const PlanClass = preload("res://scripts/generation/areas/GeneratedAreaPlan.gd")
 const AreaProfilesClass = preload("res://scripts/generation/areas/AreaProfileCatalog.gd")
 const EnvironmentProfilesClass = preload("res://scripts/generation/areas/EnvironmentProfileCatalog.gd")
+const ReservationPlannerClass = preload("res://scripts/generation/areas/InfrastructureReservationPlanner.gd")
 const RoadPlannerClass = preload("res://scripts/generation/areas/LocalRoadPlanner.gd")
+const BlockPlannerClass = preload("res://scripts/generation/areas/TownBlockPlanner.gd")
 const ParcelPlannerClass = preload("res://scripts/generation/areas/ParcelPlanner.gd")
 const AccessPlannerClass = preload("res://scripts/generation/areas/ParcelAccessPlanner.gd")
 const BuildingPlannerClass = preload("res://scripts/generation/areas/BuildingPlacementPlanner.gd")
@@ -14,7 +16,9 @@ const ValidatorClass = preload("res://scripts/generation/areas/GeneratedAreaVali
 
 var _area_profiles: AreaProfileCatalog
 var _environment_profiles: EnvironmentProfileCatalog
+var _reservation_planner: InfrastructureReservationPlanner
 var _road_planner: LocalRoadPlanner
+var _block_planner: TownBlockPlanner
 var _parcel_planner: ParcelPlanner
 var _access_planner: ParcelAccessPlanner
 var _building_planner: BuildingPlacementPlanner
@@ -25,7 +29,9 @@ var _validator: GeneratedAreaValidator
 func _init() -> void:
     _area_profiles = AreaProfilesClass.new()
     _environment_profiles = EnvironmentProfilesClass.new()
+    _reservation_planner = ReservationPlannerClass.new()
     _road_planner = RoadPlannerClass.new()
+    _block_planner = BlockPlannerClass.new()
     _parcel_planner = ParcelPlannerClass.new()
     _access_planner = AccessPlannerClass.new()
     _building_planner = BuildingPlannerClass.new()
@@ -47,7 +53,19 @@ func generate(request: AreaGenerationRequest) -> GeneratedAreaPlan:
 
     var area_profile: Dictionary = _area_profiles.profile(request.area_profile_id)
     var environment_profile: Dictionary = _environment_profiles.profile(request.environment_profile_id)
-    var road_result: Dictionary = _road_planner.plan(request, area_profile)
+
+    var reservation_result: Dictionary = _reservation_planner.plan(request, area_profile, request.inherited_roads)
+    if not bool(reservation_result.get("ok", false)):
+        plan.failure_reason = String(reservation_result.get("failure_reason", "infrastructure_reservation_planning_failed"))
+        return plan
+    var reservations: Array[Dictionary] = []
+    for reservation_value: Variant in reservation_result.get("reservations", []):
+        if typeof(reservation_value) != TYPE_DICTIONARY:
+            plan.failure_reason = "infrastructure_reservation_result_invalid"
+            return plan
+        reservations.append(reservation_value)
+
+    var road_result: Dictionary = _road_planner.plan(request, area_profile, reservations)
     if not bool(road_result.get("ok", false)):
         plan.failure_reason = String(road_result.get("failure_reason", "road_planning_failed"))
         return plan
@@ -64,7 +82,18 @@ func generate(request: AreaGenerationRequest) -> GeneratedAreaPlan:
             return plan
         intersections.append(intersection_value)
 
-    var parcel_result: Dictionary = _parcel_planner.plan(request, area_profile, roads, intersections)
+    var block_result: Dictionary = _block_planner.plan(request, area_profile, roads, reservations)
+    if not bool(block_result.get("ok", false)):
+        plan.failure_reason = String(block_result.get("failure_reason", "town_block_planning_failed"))
+        return plan
+    var blocks: Array[Dictionary] = []
+    for block_value: Variant in block_result.get("blocks", []):
+        if typeof(block_value) != TYPE_DICTIONARY:
+            plan.failure_reason = "town_block_planning_result_invalid"
+            return plan
+        blocks.append(block_value)
+
+    var parcel_result: Dictionary = _parcel_planner.plan(request, area_profile, roads, intersections, reservations)
     if not bool(parcel_result.get("ok", false)):
         plan.failure_reason = String(parcel_result.get("failure_reason", "parcel_planning_failed"))
         return plan
@@ -109,7 +138,7 @@ func generate(request: AreaGenerationRequest) -> GeneratedAreaPlan:
             return plan
         ground_regions.append(paved_value)
 
-    var outdoor_result: Dictionary = _outdoor_planner.plan(request, environment_profile, roads, intersections, parcels)
+    var outdoor_result: Dictionary = _outdoor_planner.plan(request, environment_profile, roads, intersections, parcels, reservations)
     if not bool(outdoor_result.get("ok", false)):
         plan.failure_reason = String(outdoor_result.get("failure_reason", "outdoor_dressing_failed"))
         return plan
@@ -132,8 +161,10 @@ func generate(request: AreaGenerationRequest) -> GeneratedAreaPlan:
     plan.area_profile_version = int(area_profile.get("version", 0))
     plan.environment_profile_id = request.environment_profile_id
     plan.environment_profile_version = int(environment_profile.get("version", 0))
+    plan.reservations = reservations
     plan.roads = roads
     plan.intersections = intersections
+    plan.blocks = blocks
     plan.parcels = parcels
     plan.building_requests = building_requests
     plan.ground_regions = ground_regions
@@ -148,7 +179,7 @@ func generate(request: AreaGenerationRequest) -> GeneratedAreaPlan:
     return plan
 
 func area_profile_ids() -> Array[StringName]:
-    return [AreaProfileCatalog.RURAL_CROSSROADS]
+    return [AreaProfileCatalog.RURAL_CROSSROADS, AreaProfileCatalog.SMALLTOWN_CENTER]
 
 func environment_profile_ids() -> Array[StringName]:
     return [EnvironmentProfileCatalog.TEMPERATE_RURAL]
