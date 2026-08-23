@@ -88,7 +88,7 @@ Returning to shelter with valuable supplies can still be an emergent survival de
 
 ## 2026-08-16 — Bases are emergent physical constructions/secured places anywhere
 
-**Decision:** There is no special base map or mandatory preselected base property. The player may build and secure a base anywhere in the persistent world where normal construction/occupancy rules allow it.
+**Decision:** There is no special base map or mandatory preselected special property. The player may build and secure a base anywhere in the persistent world where normal construction/occupancy rules allow it.
 
 A starting home may be useful but is not mechanically privileged. Existing buildings may be fortified; open land may be developed; multiple safe sites can coexist; bases may be abandoned or moved.
 
@@ -140,7 +140,7 @@ Higher-level base/community UI may summarize physical facts later, but should no
 
 - **WHERE — Spatial Model:** the global tactical-grid coordinate language, directions, footprints and structure/opening geometry;
 - **WHAT — Persistent World / Entity State:** what terrain, structures, objects, actors, items and durable mutations exist at those coordinates;
-- **WHEN — Tick / Action / Pause Kernel:** authoritative world ticks, action durations, scheduled execution, auto-pause and hard real-life pause.
+- **WHEN — Tick / Action / Pause Kernel:** authoritative world ticks, action durations, scheduling, auto-pause and hard real-life pause.
 
 Generation is a producer of initial WHAT using WHERE. Construction/destruction/gameplay mutate WHAT. Rendering reads WHAT through WHERE. Gameplay/action systems bridge WHERE/WHAT with WHEN; the scheduler does not learn mechanic-specific meanings.
 
@@ -302,7 +302,7 @@ The approved architecture separates these responsibilities:
 
 **Run endurance:** fatigue is still the existing 0..100 Needs pressure scale. Fatigue 80+ blocks Run start, each successful Run stride adds +1 fatigue, and start capability is latched for the committed action so crossing 80 after stride one does not cancel stride two.
 
-**Architecture:** MovementActionService does not import Health or Needs. `MovementDamageInterruptionService` and `MovementRunExertionService` coordinate through narrow public signals/APIs. No stamina state or persistent Run mode is introduced.
+**Architecture:** MovementActionService does not import Health or Needs. `MovementDamageInterruptionService` and the current exertion coordinator attach through narrow public signals/APIs. No stamina state or persistent Run mode is introduced.
 
 **Why:** This creates a meaningful tactical choice with minimal simulation clutter: Walk is slower but abortable under damage; Run crosses ground faster per square but commits the survivor to momentum and real fatigue cost.
 
@@ -318,7 +318,7 @@ The approved architecture separates these responsibilities:
 
 **Decision:** System 00F separates **logical materialization source identity** from **technical stream-region identity**.
 
-A technical region answers only whether a bounded part of the coordinate space is currently in the active proximity halo. It does not define towns, roads, parcels, buildings, persistent entity IDs, saves, or whether a place exists.
+A technical region answers only whether a bounded part of coordinate space is currently in the active proximity halo. It does not define towns, roads, parcels, buildings, persistent entity IDs, saves, or whether a place exists.
 
 For the initial streaming architecture:
 
@@ -330,10 +330,34 @@ For the initial streaming architecture:
 - a source-free technical region is valid and does not justify fake countryside generation;
 - true inactive-region memory eviction is forbidden until an authoritative persistence-backed store can preserve the same current-world truth while data is non-resident.
 
-**Why:** WHAT already owns one authoritative persistent current world. Treating “not active/not resident” as “does not exist” would create a second reality and would reset player consequences on revisit. Keeping source identity independent from stream-grid coordinates also allows later performance tuning without rewriting geography or saved-world identity.
+**Why:** WHAT already owns one authoritative persistent current world. Treating “not active/not resident” as “does not exist” would create a second reality and reset player consequences on revisit. Keeping source identity independent from stream-grid coordinates also allows later performance tuning without rewriting geography or saved-world identity.
 
 **Resolves:** the initial activation/materialization portion of the 2026-08-16 persistent-open-world decision's streaming question. Exact future save/storage/eviction representation remains separately unresolved.
 
 **Affected systems:** global/local generation, WHAT and typed persistent state, streaming/materialization, save/session persistence, population/outbreak detail scaling, rendering/AI activation consumers, construction/bases and any mechanic requiring revisit persistence.
 
 **Implementation:** `SYSTEM_DESIGNS/00F_STREAMING_MATERIALIZATION_ORCHESTRATION.md` and `game/scripts/streaming/`.
+
+---
+
+## 2026-08-23 — Countryside logical source identity is geography-derived, not stream-derived
+
+**Decision:** System 00F Slice 002 uses System 00D geography records as the stable logical parent lattice for dry countryside materialization sources. It subtracts exact settlement `area_site` bounds and exact currently unsupported river corridors; each remaining dry rectangle becomes a catalog-v1 `system20_rural_open` source.
+
+Source identity is a deterministic function of **catalog version + parent geography identity + final global bounds**. Technical stream-region coordinates, size and radius are never part of the source key.
+
+Current additional rules:
+
+- neighboring dry fragments are not merged in catalog v1;
+- settlement and countryside sources may be ensured together through one atomic mixed-source transaction;
+- `MaterializationRegistry` remains schema v1 because source kind/id/key and provenance are already generic;
+- revisiting materialized countryside never reruns System 20C or resets persistent changes;
+- river corridor cells remain intentionally source-free until local physical hydrology/bridge materialization exists.
+
+**Why:** This closes dry-countryside source ownership without turning a performance partition into persistent world identity. It keeps saved/materialized history stable under technical stream-grid tuning and preserves System 20C as morphology owner.
+
+**Resolves:** the countryside-source gap left open by the 2026-08-22 initial System 00F decision. Persistence-backed memory eviction and physical river/bridge materialization remain separate unresolved systems.
+
+**Affected systems:** System 00D geography/hydrology read seams, System 20C rural-open generation, System 00F source catalog/materialization/activation, WHAT persistence, future save/migration logic and later population/detail-resolution consumers.
+
+**Implementation:** `SYSTEM_DESIGNS/00F2_COUNTRYSIDE_LOGICAL_SOURCE_MATERIALIZATION.md`, `game/scripts/streaming/CountrysideSourceCatalog.gd`, `game/scripts/streaming/CountrysideMaterializationSource.gd`, `game/scripts/streaming/WorldMaterializationCoordinator.gd`, and `game/scripts/streaming/WorldStreamingCoordinator.gd`.

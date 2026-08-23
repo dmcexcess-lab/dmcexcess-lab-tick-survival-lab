@@ -16,7 +16,7 @@ Golden recovery commit: `1763958f44eb7f855fd49944c00d1ffe608c0abe`.
 
 ## 2. Current phase
 
-System 00D plus Systems 14–22 and System 00F Slice 001 form the current canonical world-planning/materialization/playable path. `game/scripts/reboot/` remains frozen/deprecated reference only.
+System 00D plus Systems 14–22 and System 00F Slices 001–002 form the current canonical world-planning/materialization/playable path. `game/scripts/reboot/` remains frozen/deprecated reference only.
 
 **System 00D Global World Planning Slices 001–006 are implemented.** The global plan establishes geography, settlements/sites, major roads, hydrology/bridge intent, regional electrical service, potable-water service and wastewater/septic topology before local generation.
 
@@ -33,13 +33,18 @@ All use `temperate.rural` v3.
 
 The first three cover all five current System 00D settlement sites. `rural.open` provides arbitrary dry countryside generation inside the broad global rural-open planning context.
 
-**System 00F Streaming / Materialization Slice 001 is implemented.** Technical stream regions drive one-time materialization of the five current settlement area-site sources. Materialization is one-way; activation is reversible; inactive facts remain in authoritative WHAT.
+**System 00F Streaming / Materialization Slices 001–002 are implemented.** Technical stream regions drive one-time materialization of stable logical sources while remaining independent from source identity. Materialization is one-way; activation is reversible; inactive facts remain in authoritative WHAT.
 
-00F does **not yet** discover/materialize the new arbitrary `rural.open` plans because a stable logical countryside-source catalog has not been designed yet.
+Current logical source kinds are:
+
+- `system20_area_site:<site_id>` for the five settlement sites;
+- `system20_rural_open:<source_id>` for geography-derived dry countryside fragments.
+
+Countryside source catalog v1 subtracts exact settlement-source bounds and the exact currently unsupported river corridors. Dry land is therefore materializable throughout the rural-open context while river corridor cells remain honestly source-free until physical local hydrology/bridges are implemented.
 
 **System 21 Tactical Camera / View Control is implemented.**
 
-**System 22 Large-Area DEV Critique Runtime is implemented.** The live Web build still presents Rural Crossroads Candidate 006; neither 00F nor 20C changed the live presentation target.
+**System 22 Large-Area DEV Critique Runtime is implemented.** The live Web build still presents Rural Crossroads Candidate 006; neither 00F2 nor 20C changed the live presentation target.
 
 ## 3. Foundation truth
 
@@ -121,15 +126,15 @@ Canonical rules:
 11. natural prop IDs are `rural_open.natural.<x>.<y>`, independent from area/source ID;
 12. split-vs-combined dry countryside plans produce identical cell-level landscape truth.
 
-New focused owner:
+Focused owner:
 
 `game/scripts/generation/areas/RuralOpenLandscapePlanner.gd`.
 
-`AreaGenerationRequest` now supports optional `inherited_geography`; base roadlessness is valid, while LocalAreaGenerator enforces profile-specific road requirements.
+`AreaGenerationRequest` supports optional `inherited_geography`; base roadlessness is valid, while LocalAreaGenerator enforces profile-specific road requirements.
 
 `GeneratedAreaPlan` permits zero roads only for `rural.open`.
 
-System 20C did not change System 00D, System 19, area materialization, 00F, WHAT/WHEN, runtime physics, presentation or player code.
+System 20C did not change System 00D, System 19, area materialization, WHAT/WHEN, runtime physics, presentation or player code. System 00F2 later consumes System 20C through its public arbitrary-bounds seam without changing countryside morphology.
 
 Exact-head context: `verify/system20-local-area`.
 
@@ -137,36 +142,45 @@ First green 20C integrated code head: `cbc39f03d3568ca4fcbe7f294e350eb1c507bbda`
 
 ## 6. System 00F current truth
 
-Design: `SYSTEM_DESIGNS/00F_STREAMING_MATERIALIZATION_ORCHESTRATION.md`.
+Umbrella: `SYSTEM_DESIGNS/00F_STREAMING_MATERIALIZATION_ORCHESTRATION.md`.
+
+Slice 002 detail: `SYSTEM_DESIGNS/00F2_COUNTRYSIDE_LOGICAL_SOURCE_MATERIALIZATION.md`.
 
 Canonical rule:
 
 > **Materialization is one-way; activation is reversible.**
 
-Implemented owners under `game/scripts/streaming/`:
+Implemented owners under `game/scripts/streaming/` include:
 
 - `StreamingRegionGrid.gd`;
 - `MaterializationRecord.gd`;
 - `MaterializationRegistry.gd`;
 - `AreaSiteMaterializationSource.gd`;
+- `CountrysideSourceCatalog.gd`;
+- `CountrysideMaterializationSource.gd`;
 - `WorldMaterializationCoordinator.gd`;
 - `WorldStreamingCoordinator.gd`.
 
-Slice 001 behavior:
+Current behavior:
 
 - technical region grid defaults to 256×256 with radius-1 active square;
 - region IDs are not logical world/source IDs;
-- current source keys are only `system20_area_site:<site_id>` for the five settlement sites;
-- an intersecting virgin settlement source is materialized exactly once through 00D -> 20 -> 19 -> WHAT/Door;
-- registry prevents revisit regeneration;
+- settlement source keys are `system20_area_site:<site_id>`;
+- countryside source keys are `system20_rural_open:<source_id>` from catalog v1;
+- countryside source identity derives from System 00D geography parent + final dry global rectangle, not stream-region coordinates;
+- exact settlement-source bounds and exact river corridors are excluded from countryside ownership;
+- every supported dry non-settlement/non-river cell belongs to exactly one countryside source;
+- intersecting virgin settlement/countryside sources materialize exactly once through public System 20/19 materialization paths;
+- mixed source batches commit atomically in stable source-key order;
+- registry prevents revisit regeneration and remains snapshot schema v1;
 - deactivation changes only technical active bookkeeping;
-- multi-source writes roll WHAT + Door State + registry back together on failure;
-- registry has deterministic schema-v1 snapshot/restore;
-- no memory eviction exists without an authoritative persistence-backed store.
-
-20C did not modify this contract. Source-free technical regions remain source-free until 00F Slice 002 can attach stable logical countryside sources.
+- player/world mutations survive deactivation/revisit;
+- no memory eviction exists without an authoritative persistence-backed store;
+- river corridor cells remain source-free/unmaterialized until a separate local hydrology/bridge system exists.
 
 Exact-head context: `verify/system00f-streaming-materialization`.
+
+Verified pre-promotion 00F2 code head: `abe3d56792b74d5dd08882bd4f06dbd76107f35d`.
 
 ## 7. System 21 / 22 presentation truth
 
@@ -176,22 +190,21 @@ The live Web build remains Rural Crossroads Candidate 006.
 
 ## 8. Immediate next path
 
-The countryside generator now exists. The next architectural gap is source ownership/materialization.
+Settlement sites and supported dry countryside now have stable logical materialization ownership independent from the technical stream grid. The largest remaining physical-world hole is the intentionally unsupported river corridor.
 
-**Recommended next bounded design: System 00F Slice 002 — countryside logical source catalog/materialization.**
+**Recommended next bounded design: local physical river / bridge materialization.**
 
-Required design principle:
+Required principles:
 
-- stable logical countryside source IDs/bounds must remain independent from technical stream-region coordinates;
-- 00F may call `project_rural_open_bounds()` but must not choose or alter countryside morphology;
-- settlement sources and countryside sources must coexist without overlap/ID conflict;
-- changing technical stream-region size must not alter countryside source identity or generated physical facts.
+- consume existing System 00D river segments and bridge intents rather than rerouting hydrology locally;
+- create honest physical water/bridge terrain, collision/traversal and materialization ownership without teaching System 00F hydrology morphology;
+- preserve the current 00F2 countryside catalog/source identities or explicitly version/migrate them if river-source ownership requires a catalog change;
+- keep technical stream-region geometry independent from river/world identity.
 
 Other separate future slices:
 
-- local physical river/bridge materialization;
 - persistence/save owner before true memory eviction;
-- sparse isolated rural properties after logical source ownership is safe;
+- sparse isolated rural properties now that source-boundary ownership is stable;
 - System 00E population/households/jobs/outbreak/player story;
 - richer System 19 content;
 - parcel addresses/ownership/zoning;
@@ -205,15 +218,16 @@ Other separate future slices:
 4. System 20 preserves inherited global facts and creates only profile-authorized local physical facts.
 5. System 19 owns building internals.
 6. System 00F owns materialization orchestration/technical activation, not morphology.
-7. Global planning regions, System 20 planning areas and technical stream regions are distinct concepts.
+7. Global planning regions, System 20 planning areas, logical materialization sources and technical stream regions are distinct concepts.
 8. **Technical streaming activation is not world existence.**
 9. **Materialization is one-way; activation is reversible.**
 10. Stream boundaries never invent or redefine roads, rivers, utilities, parcels or landscape.
 11. Deactivation never destroys persistent WHAT facts.
 12. Rural-open landscape classification and natural identity are global-coordinate stable.
-13. Known river terrain is never silently replaced with grass/fields.
-14. Art is presentation truth, not physics.
-15. Phone/Safari remains first-class.
+13. Countryside source identity is logical/catalog-versioned and independent from stream-region coordinates.
+14. Known river terrain is never silently replaced with grass/fields.
+15. Art is presentation truth, not physics.
+16. Phone/Safari remains first-class.
 
 ## 10. Documentation source order
 

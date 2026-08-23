@@ -1,5 +1,23 @@
 # Changelog
 
+## System 00F Slice 002 — Countryside Logical Source Materialization — 2026-08-23
+
+- Implemented the approved **System 00F Slice 002 — Countryside Logical Source Materialization** on top of the existing Slice 001 one-way materialization / reversible activation contract.
+- Added `CountrysideSourceCatalog.gd` with catalog version **1** and source kind `system20_rural_open`. Logical countryside sources derive from System 00D geography parents plus final global dry rectangles; technical stream-region coordinates and stream-region size are not part of source identity.
+- The catalog subtracts the exact five settlement `area_site` rectangles and the exact currently unsupported river corridor rectangles from the rural-open planning context. Dry land immediately beside rivers remains source-owned; river cells remain honestly unmaterialized until local physical hydrology/bridge work exists.
+- Countryside source IDs/keys are deterministic and catalog-versioned (`rural.open.v1...` / `system20_rural_open:<source_id>`), and every supported dry non-settlement/non-river cell is covered exactly once without positive source overlap.
+- Added `CountrysideMaterializationSource.gd`, which prepares virgin countryside only through the existing public `project_rural_open_bounds()` + `LocalAreaGenerator` System 20C pipeline. Streaming owns no countryside morphology.
+- Generalized `WorldMaterializationCoordinator` with `ensure_sources()` so settlement and countryside source handles can be prepared and committed in one stable-key-ordered atomic transaction. Existing `ensure_area_site()` / `ensure_area_sites()` APIs remain available.
+- `WorldStreamingCoordinator` now discovers both settlement and countryside logical sources intersecting the active technical-region halo, then performs one atomic mixed-source ensure before committing active-region state.
+- `MaterializationRegistry` remains schema **v1**; settlement and countryside provenance records coexist and snapshot/restore deterministically without a schema bump.
+- Revisit behavior is protected: after countryside materialization, removing a generated natural prop, deactivating the technical region and revisiting does not regenerate that prop and causes zero WHAT / Door State / registry writes.
+- Mixed-source failure remains transactional. A deliberately induced stable entity-ID collision in a virgin countryside source rolls WHAT, Door State and the registry back to their exact pre-batch snapshots.
+- Added/expanded `CountrysideStreamingMaterializationSmoke.gd` to cover catalog identity, alternate technical stream sizes, dry coverage, roadless/roadside preparation, mixed settlement+countryside materialization, registry compatibility, revisit persistence, rollback and the intentional river gap.
+- Verified code head before documentation promotion: `abe3d56792b74d5dd08882bd4f06dbd76107f35d`.
+- Exact code-head successes: System 00D run `32655369800`, System 00F run `32655369765`, System 19 run `32655369822`, System 20 run `32655369751`, System 21 run `32655369771`, System 22 run `32655369752`, Pages run `32655369795`.
+- System 20C profile/version and morphology are unchanged; System 00D v6, System 19, WHAT/WHEN, gameplay, camera/rendering and the live Rural Crossroads Candidate 006 presentation remain protected.
+- Recommended next bounded architecture design: **local physical river / bridge materialization**, closing the intentionally unsupported river corridor without moving hydrology ownership into streaming.
+
 ## System 20C Rural-Open / Countryside Candidate 001 — 2026-08-23
 
 - Implemented the user-approved **System 20C Rural-Open / Countryside Candidate 001** as `rural.open` **v1** while preserving `temperate.rural` v3 and all three existing settlement profiles.

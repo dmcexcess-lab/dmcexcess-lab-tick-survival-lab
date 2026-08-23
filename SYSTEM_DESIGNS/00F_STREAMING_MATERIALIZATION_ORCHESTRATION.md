@@ -1,30 +1,28 @@
 # Tick Survival Lab — System 00F Streaming / Materialization Orchestration
 
-Status: **IMPLEMENTED — SLICE 001**
+Status: **IMPLEMENTED — SLICES 001–002**
 
-Date: 2026-08-22
-
-Approval: user explicitly approved Slice 001 on 2026-08-22 after reviewing the DRAFT contract.
+Initial design/approval: 2026-08-22  
+Slice 002 lifecycle promotion: 2026-08-23
 
 ## 1. Goal
 
 System 00F turns the already-established logical world into **on-demand persistent local reality without allowing streaming partitions to define the world**.
 
-The current architecture already supplies:
+The current architecture supplies:
 
-- System 00D global geography, settlements/sites, major roads, hydrology and regional infrastructure;
-- System 20 local-area generation for all five current settlement sites;
+- System 00D global geography, settlements/sites, roads, hydrology and regional infrastructure;
+- System 20 local generation for all five settlement sites plus deterministic dry `rural.open` countryside;
 - System 19 finalized building generation;
-- `AreaMaterializationCoordinator` for one transactional initial System 20 area write into WHAT + Door State;
+- `AreaMaterializationCoordinator` for transactional initial System 20 writes into WHAT + Door State;
 - authoritative persistent WHAT state;
-- deterministic WHEN state;
-- separate render/camera presentation.
+- separate WHEN and presentation owners.
 
-The core 00F rule is:
+Core rule:
 
 > **Materialization is one-way; activation is reversible.**
 
-Once a logical source is materialized into persistent state, generation relinquishes ownership. Moving away may make technical stream regions inactive, but it never regenerates, resets or erases that place merely because it left the active set.
+Once a logical source is materialized into persistent state, generation relinquishes ownership. Moving away may make technical stream regions inactive, but it never regenerates, resets or erases the place merely because it left the active set.
 
 ## 2. Critical distinction: world, source, region, active state
 
@@ -36,11 +34,10 @@ System 00D / System 20 / System 19 decide generated initial facts. WHAT and type
 
 A source is a deterministic logical generation domain that may create virgin persistent facts once.
 
-Slice 001 supports:
+Current source kinds:
 
-- `system20_area_site` — one current System 00D `area_site`, projected through System 20 and written by the existing area materializer.
-
-The five current sources are the Crossroads, Small-Town and three Rural-Scattered hamlet sites.
+1. `system20_area_site` — one System 00D settlement `area_site`, projected through System 20 and written by the existing area materializer;
+2. `system20_rural_open` — one catalog-v1 dry countryside fragment derived from System 00D geography and exact global exclusions, prepared through System 20C.
 
 A source is **not** a streaming chunk.
 
@@ -48,45 +45,67 @@ A source is **not** a streaming chunk.
 
 A stream region is replaceable technical partition geometry used to decide what is near the current focus.
 
-Changing region size may change when a source is prefetched, but must not change:
+Changing region size/radius may change when a source is prefetched, but must not change:
 
 - global/local generation;
 - stable WHAT IDs;
-- roads, parcels or buildings;
-- source keys;
-- a generated plan signature;
+- roads, parcels, buildings or countryside morphology;
+- logical source keys;
+- generated plan signatures;
 - persistent player changes.
 
 ### Active region
 
-An active region is currently inside 00F's technical detailed-use halo. Activation is ephemeral and reversible.
+An active region is currently inside 00F's detailed-use halo. Activation is ephemeral and reversible.
 
-Active does not itself mean rendered, AI-simulated, populated, saved, generated or memory-resident under a future eviction cache. Those remain separate decisions.
+Active does not itself mean rendered, AI-simulated, populated, saved, newly generated or resident under a future eviction cache.
 
-## 3. Slice 001 implemented scope
+## 3. Slice 001 baseline
 
-Slice 001 implements:
+Slice 001 established:
 
-1. configurable technical stream-region geometry over an existing global plan;
-2. deterministic focus-cell -> active-region calculation;
-3. discovery of current System 00D area-site sources intersecting active technical regions;
-4. persistent-in-memory materialization provenance/registry state;
-5. atomic on-demand materialization of virgin area sites through the real 00D -> 20 -> 19 -> WHAT/Door State pipeline;
+1. configurable technical stream-region geometry;
+2. deterministic focus -> active-region calculation;
+3. discovery of settlement area-site sources intersecting active technical regions;
+4. persistent in-memory materialization provenance/registry state;
+5. atomic on-demand materialization through the real 00D -> 20 -> 19 -> WHAT/Door pipeline;
 6. reversible active-region bookkeeping/signals;
 7. strict no-regeneration behavior on revisit;
-8. registry snapshot/restore for a future save/session owner;
-9. exact rollback of multi-domain state if materialization fails.
+8. registry snapshot/restore;
+9. exact rollback if materialization fails.
 
-Slice 001 deliberately does **not** implement memory eviction or arbitrary open-countryside materialization.
+Slice 001 intentionally left arbitrary countryside source-free. That historical limitation is superseded for **dry countryside** by Slice 002. River corridor cells remain intentionally unsupported.
 
-The current System 00D world has broad rural-open planning truth between settlement sites, but no arbitrary countryside System 20 local source. A source-free active region therefore creates nothing rather than fabricating terrain or content.
+## 4. Slice 002 extension
 
-## 4. Non-goals
+Detailed design:
 
-00F Slice 001 does not own:
+`SYSTEM_DESIGNS/00F2_COUNTRYSIDE_LOGICAL_SOURCE_MATERIALIZATION.md`
+
+Slice 002 adds:
+
+- `CountrysideSourceCatalog.gd` catalog v1;
+- source kind `system20_rural_open`;
+- geography-derived logical parentage independent from stream-grid geometry;
+- exact settlement-site subtraction;
+- exact unsupported-river-corridor subtraction;
+- complete non-overlapping ownership of supported dry countryside;
+- `CountrysideMaterializationSource.gd` using only public System 20C seams;
+- uniform source handles across settlement/countryside source types;
+- generic atomic `ensure_sources()` mixed-source transactions;
+- dual-source discovery in `WorldStreamingCoordinator`;
+- mixed source kinds in existing Materialization Registry schema v1;
+- dedicated revisit/rollback/coverage verification.
+
+00F still does **not** own countryside morphology. System 20C does.
+
+## 5. Non-goals
+
+System 00F does not own:
 
 - global/local/building generation semantics;
-- arbitrary countryside generation;
+- countryside morphology;
+- local physical river/bridge generation;
 - population, households, jobs, outbreak or coarse simulation;
 - player movement;
 - AI detail policy;
@@ -99,96 +118,112 @@ The current System 00D world has broad rural-open planning truth between settlem
 - asynchronous worker behavior;
 - live System 22 presentation selection.
 
-## 5. Why inactive WHAT is not evicted
+## 6. Why inactive WHAT is not evicted
 
 WHAT is the single authoritative current world.
 
 Removing terrain/entities from WHAT merely because a stream region became inactive would currently be indistinguishable from destroying those facts. No persistence-backed inactive-region store exists yet to preserve authoritative truth elsewhere.
 
-Therefore Slice 001 leaves all successfully materialized persistent facts in WHAT when regions deactivate.
+Therefore materialized persistent facts remain in WHAT when regions deactivate.
 
 A future residency/eviction slice may remove cold data from hot memory only after an explicit backing-store contract makes non-residency invisible to gameplay meaning.
 
-## 6. Implemented owners
+## 7. Implemented owners
 
 Canonical code lives under `game/scripts/streaming/`.
 
 ### `StreamingRegionGrid.gd`
 
-Pure technical partition geometry.
+Pure technical partition geometry:
 
-Public behavior:
-
-- constructed from global world bounds + injected region size;
-- zero-based region coordinates relative to supplied world bounds;
-- `region_coord_for_cell(cell)`;
-- `region_bounds(coord)` with clipped edge regions;
-- `regions_around(coord, radius)` in deterministic row-major order;
-- `region_coords_for_bounds(bounds)`;
-- explicit invalid result for out-of-world cells rather than clamping.
-
-It imports no generation, WHAT, player, renderer or simulation owner.
+- configured from world bounds + injected region size;
+- deterministic coordinate/bounds queries;
+- clipped edge regions;
+- invalid out-of-world lookup rather than clamping;
+- no generation/WHAT/player/render/simulation ownership.
 
 ### `MaterializationRecord.gd`
 
-Immutable-style provenance record for one successful logical source.
-
-Fields:
+Immutable-style provenance for one successful logical source:
 
 - source key/kind/id;
-- global source bounds + seed;
-- area profile ID/version;
-- environment profile ID/version;
-- deterministic generated-area plan signature;
-- WHAT revision immediately after materialization;
-- Door State revision immediately after materialization.
-
-It supports validation, copy/equivalence and primitive snapshot encoding.
+- logical bounds + seed;
+- area/environment profile IDs/versions;
+- generated plan signature;
+- WHAT revision after materialization;
+- Door State revision after materialization.
 
 ### `MaterializationRegistry.gd`
 
-Owns only successful source provenance.
+Owns successful source provenance only:
 
-Public behavior:
+- source lookup;
+- sorted keys;
+- duplicate-rejecting insert;
+- deterministic schema-v1 snapshot/restore.
 
-- `has_source()`;
-- copy-returning `record()`;
-- sorted `source_keys()`;
-- duplicate-rejecting `mark_materialized()`;
-- schema-v1 deterministic `snapshot()` / atomic `load_snapshot()`.
-
-It performs no generation, WHAT mutation or file I/O.
+Schema v1 remains valid with both current source kinds.
 
 ### `AreaSiteMaterializationSource.gd`
 
-Read-only adapter from current System 00D sites to current System 20 local generation.
+Settlement-source adapter:
 
-Responsibilities:
+- stable `system20_area_site:<site_id>` keys;
+- exact source-bound validation;
+- technical-bound intersection discovery;
+- uniform source handles;
+- public `project_site()` + `LocalAreaGenerator` preparation only;
+- no persistent mutation.
 
-- stable `system20_area_site:<site_id>` source keys;
-- validate that current full-ground area-site source bounds are inside the world and do not positively overlap;
-- discover sites whose logical bounds intersect supplied technical bounds;
-- check registry before local generation;
-- call only public `System20AreaRequestProjector.project_site()` + `LocalAreaGenerator.generate()` seams;
-- return request/plan/provenance without mutating persistent state.
+### `CountrysideSourceCatalog.gd`
+
+Pure logical dry-countryside catalog:
+
+- catalog version 1;
+- source kind `system20_rural_open`;
+- reads System 00D geography as parent lattice;
+- subtracts exact settlement-source rectangles;
+- subtracts exact currently unsupported river corridors;
+- produces stable global-rectangle source IDs/keys;
+- validates no overlap and exact supported-dry coverage;
+- never calls System 20 or mutates WHAT.
+
+### `CountrysideMaterializationSource.gd`
+
+Countryside-source adapter:
+
+- resolves catalog descriptors/handles;
+- checks registry before generation;
+- prepares only through `project_rural_open_bounds()` + `LocalAreaGenerator`;
+- verifies exact rural-open identity/profile/bounds/seed;
+- no persistent mutation.
 
 ### `WorldMaterializationCoordinator.gd`
 
 Owns the cross-domain initial-write transaction.
 
-`ensure_area_site()` / `ensure_area_sites()`:
+Compatibility APIs:
 
-1. validate global plan and current source-bound contract;
-2. validate/deduplicate requested site IDs and derive stable source keys without local generation;
-3. classify already-materialized keys and skip them without calling System 20;
-4. prepare all missing sources before persistent writes;
-5. snapshot WHAT, Door State and Materialization Registry;
-6. materialize prepared sources in stable source-key order through existing `AreaMaterializationCoordinator`;
-7. construct/validate/insert each final provenance record only after its area write succeeds, using the actual resulting WHAT/Door revisions;
-8. on any area-write or registry failure, restore all three pre-batch snapshots exactly;
-9. report ordered newly/already-materialized keys.
+- `ensure_area_site()`;
+- `ensure_area_sites()`.
 
-It does not inspect parcel/building internals.
+Generic API:
+
+- `ensure_sources(global_plan, source_handles)`.
+
+Mixed-source lifecycle:
+
+1. validate plan/source catalogs/handles;
+2. classify already-materialized keys before generation;
+3. prepare all missing sources before persistent writes;
+4. stable-sort by source key;
+5. snapshot WHAT + Door State + registry once;
+6. materialize each prepared plan through `AreaMaterializationCoordinator`;
+7. record provenance after each successful area write;
+8. rollback all three domains if any write/registry insert fails;
+9. return ordered newly/already-materialized keys.
+
+It does not inspect parcel/building/landscape internals.
 
 ### `WorldStreamingCoordinator.gd`
 
@@ -196,50 +231,79 @@ Owns ephemeral active technical-region state.
 
 `update_focus(cell)`:
 
-1. rejects focus outside global bounds;
-2. resolves the focus technical region;
-3. computes the configured active square/Chebyshev neighborhood;
-4. discovers current area-site sources intersecting those technical bounds;
-5. atomically ensures missing sources;
-6. changes focus/active bookkeeping only after materialization succeeds;
-7. emits deterministic source-materialized and activated/deactivated notifications.
+1. validates focus/grid/plan;
+2. computes target technical region halo;
+3. gets target region bounds;
+4. discovers intersecting settlement handles;
+5. discovers intersecting countryside handles;
+6. stable-sorts them;
+7. calls one atomic `ensure_sources()`;
+8. commits focus/active bookkeeping only after materialization succeeds;
+9. emits deterministic materialized and activated/deactivated notifications.
 
-Reads:
+It consumes zero simulation ticks and imports no player/render/camera/AI/collision owner.
 
-- explicit caller-supplied global focus cell;
-- current generated global plan;
-- injected grid/materialization/source collaborators.
+## 8. Technical profile
 
-It imports no player, renderer, camera, AI, collision or WHEN owner and consumes zero simulation ticks.
-
-## 7. Technical profile
-
-Slice 001 defaults:
+Current defaults remain:
 
 - region size `Vector2i(256, 256)`;
 - origin = `GeneratedGlobalWorldPlan.bounds.position`;
 - active radius = 1 technical region using a square/Chebyshev neighborhood;
 - edge regions clip to global bounds.
 
-The current 1792×1792 fixture therefore happens to form 7×7 technical regions. **7×7 is not world identity.** A test also uses a different technical size while proving logical source identity does not change.
+The current fixture happens to form a 7×7 technical lattice. **7×7 and 256×256 are not world identity.** Dedicated tests use a different region size while proving logical countryside source keys do not change.
 
-## 8. Materialization/revisit invariants
+## 9. Current logical-source profile
+
+### Settlement sources
+
+Source key:
+
+`system20_area_site:<site_id>`
+
+There are five current settlement sources: Crossroads, Small-Town and three hamlets.
+
+### Dry countryside sources
+
+Source kind:
+
+`system20_rural_open`
+
+Catalog version:
+
+`1`
+
+Identity derives from:
+
+- catalog version;
+- parent System 00D geography identity;
+- final global dry rectangle.
+
+It never derives from stream-region coordinates.
+
+### Intentionally unsupported river corridor
+
+Current physical river corridor cells have no logical materialization source. Dry land immediately beside those corridors remains countryside-source-owned.
+
+Known water is therefore not replaced with grass and not widened into an unnecessary whole-geography hole.
+
+## 10. Materialization/revisit invariants
 
 Once a source key exists in the registry:
 
 - ensure returns it as already materialized;
-- System 20 is not called again;
-- System 19 is not rerun through area materialization;
+- System 20/System 19 are not rerun for it;
 - terrain/entities are not reset;
-- door state is not reset to CLOSED;
+- door state is not reset;
 - later typed mechanic state is not reset;
-- WHAT/Door/registry revisions do not advance merely because the player revisits.
+- persistent revisions do not advance merely because the source re-enters the active halo.
 
-A real generated Crossroads door changed to OPEN remains OPEN after its region deactivates and later reactivates unless an actual mechanic changes it.
+Dedicated countryside regression removes a generated natural prop, deactivates the region and revisits; the prop remains removed.
 
-## 9. Active-region invariants
+## 11. Active-region invariants
 
-Deactivation in Slice 001 changes **only** technical active bookkeeping.
+Deactivation changes **only** technical active bookkeeping.
 
 It does not:
 
@@ -248,17 +312,24 @@ It does not:
 - unregister doors;
 - mutate WHAT or Door State;
 - consume ticks;
-- tell render/camera/AI what to do.
+- tell renderer/camera/AI what to do.
 
-If required materialization fails, the previous focus and active set remain unchanged.
+If required materialization fails, prior focus/active state remains unchanged.
 
-## 10. Source overlap rule
+## 12. Source overlap / ownership rule
 
-Current `system20_area_site` sources materialize full ground across their logical bounds. Slice 001 therefore validates that these five source rectangles do not positively overlap before writes.
+Current settlement and countryside sources both own full terrain inside their logical bounds. Positive overlap among current full-ground sources is therefore invalid.
 
-This is a source-contract safety rule, not a general statement that future logical materialization sources can never overlap. A future source type with explicit ownership/merge semantics requires its own approved contract.
+00F verifies:
 
-## 11. Registry persistence boundary
+- settlement sources do not positively overlap each other;
+- countryside sources do not positively overlap each other;
+- countryside sources do not overlap settlement sources;
+- countryside sources do not overlap unsupported river corridor cells.
+
+Ownership ambiguity fails rather than relying on write order.
+
+## 13. Registry persistence boundary
 
 Registry schema v1 contains:
 
@@ -266,44 +337,42 @@ Registry schema v1 contains:
 - registry revision;
 - ordered materialization records.
 
-Load validates into temporary state first and swaps atomically.
+Load validates into temporary state and swaps atomically.
 
-This is technical provenance state, **not a user save format**. A future save/session owner must restore WHAT, typed mechanic stores and Materialization Registry coherently.
+This is technical provenance state, **not a user save format**. A future save/session owner must restore WHAT, typed mechanic stores and the Materialization Registry coherently.
 
-The active-region set is ephemeral and can be recomputed after restore from the caller's focus.
+The active-region set is ephemeral and recomputable.
 
-## 12. Failure behavior
+## 14. Failure behavior
 
 Explicit failures include:
 
 - invalid/un-generated global plan;
 - invalid stream grid/configuration;
 - focus outside world bounds;
-- unknown site;
+- malformed source catalog/handle;
+- source overlap/coverage inconsistency;
+- unknown source kind/id;
 - projection/local-generation failure;
-- overlapping current full-ground source bounds;
 - stable entity-ID collision;
 - malformed/conflicting registry state;
 - any partial multi-source write attempt.
 
 Failure never marks a source materialized.
 
-A technical active region with no logical materialization source is valid and performs no fake world creation.
+A technical region containing only currently unsupported river corridor is valid and fabricates no terrain there.
 
-## 13. Performance/mobile rules
+## 15. Performance/mobile rules
 
-- No per-frame generation loop exists.
-- Callers should update focus only when relevant spatial focus changes or explicit prefetch is desired.
-- Source discovery is bounded by active technical regions and the finite source catalog.
-- Materialization remains synchronous because no approved worker/background contract exists.
-- Correct persistence ownership takes priority over premature eviction optimization.
+- no per-frame generation loop;
+- no per-frame countryside-catalog rebuild;
+- source discovery uses the finite logical catalogs;
+- callers update focus only when spatial focus changes or prefetch is explicitly desired;
+- materialization remains synchronous because no approved worker contract exists;
+- correctness/persistence ownership takes priority over premature eviction;
 - WHEN/browser hard-pause semantics remain separate.
 
-## 14. Verification
-
-Dedicated smoke:
-
-`game/scripts/ci/StreamingMaterializationSmoke.gd`
+## 16. Verification
 
 Workflow:
 
@@ -313,67 +382,53 @@ Exact-head context:
 
 `verify/system00f-streaming-materialization`
 
-The smoke proves:
+Smokes:
 
-1. System 00D v6 deterministic truth remains unchanged;
-2. Crossroads Candidate 006 projected/generated semantic signature remains exact;
-3. default 256-cell grid gives the current fixture a technical 7×7 lattice;
-4. origin/corners/interior boundaries/out-of-world lookup behave correctly;
-5. negative/non-zero origins and clipped final regions work;
-6. all five sites have unique logical source keys independent of stream size;
-7. current full-ground source bounds do not overlap;
-8. Crossroads materializes through the real public pipeline on focus;
-9. provenance records profile/environment versions, area signature and persistent revisions;
-10. repeated focus performs no persistent writes;
-11. a real generated Crossroads door changed to OPEN survives deactivation and revisit with no regeneration revision changes;
-12. a deliberately installed future-site entity-ID collision causes failure and exact rollback of WHAT, Door State and registry;
-13. all five current sites can coexist in one authoritative WHAT and registry;
-14. repeated all-site ensure performs no writes;
-15. registry snapshot/restore round-trips exactly;
-16. out-of-world focus leaves active and persistent state unchanged;
-17. a source-free active technical region creates no countryside terrain/entities;
-18. protected System 00D/19/20/21/22 and Pages gates remain green.
+- `game/scripts/ci/StreamingMaterializationSmoke.gd` — Slice 001 settlement/technical-region baseline;
+- `game/scripts/ci/CountrysideStreamingMaterializationSmoke.gd` — Slice 002 catalog/mixed-source/countryside contract.
 
-First fully green integrated code head:
+Slice 001 first fully green integrated code head:
 
 `1841dc99e9f6731388dc9b730bb2959e38d575ba`
 
-00F run:
+Slice 002 verified implementation head before documentation promotion:
 
-`32621475876`
+`abe3d56792b74d5dd08882bd4f06dbd76107f35d`
 
-All exact-head contexts on that code head succeeded:
+Exact-head successes on the Slice 002 verified code head:
 
-- `verify/system00d-global-world`;
-- `verify/system00f-streaming-materialization`;
-- `verify/system19-local-building`;
-- `verify/system20-local-area`;
-- `verify/system21-camera-view`;
-- `verify/system22-area-critique`;
-- `verify/pages-deploy`.
+- `verify/system00d-global-world` — run `32655369800`;
+- `verify/system00f-streaming-materialization` — run `32655369765`;
+- `verify/system19-local-building` — run `32655369822`;
+- `verify/system20-local-area` — run `32655369751`;
+- `verify/system21-camera-view` — run `32655369771`;
+- `verify/system22-area-critique` — run `32655369752`;
+- `verify/pages-deploy` — run `32655369795`.
 
-## 15. Protected neighbors
+The final documentation-promotion head must independently pass those seven contexts before formal Slice 002 closure is claimed.
 
-Slice 001 leaves unchanged:
+## 17. Protected neighbors
 
-- System 00D profile/version/plan semantics;
-- System 19 generation;
-- all System 20 area morphology/contracts;
+00F Slices 001–002 leave semantics unchanged in:
+
+- System 00D v6 global planning/profile;
+- System 19 building generation;
+- all System 20 morphology/profile versions;
 - existing `AreaMaterializationCoordinator` behavior;
 - WHAT/WHEN foundation contracts;
 - collision/movement/door mechanics;
 - Art/render/camera/player/input/UI;
 - System 22 live Crossroads critique target.
 
-## 16. Future seams
+## 18. Future seams
 
-### Full countryside materialization
+### Local physical hydrology / bridges
 
-A future logical rural-open/countryside source should supply detailed world between current settlement sites. 00F should discover/consume that source rather than define its morphology.
+Recommended next bounded architecture design. It must consume existing System 00D river segments/bridge intents and give currently source-free river corridor cells honest physical materialization without making 00F own hydrology morphology.
 
 ### Population / System 00E
 
-00E may use active/residency information as an input to detailed-vs-coarse actor simulation. 00F does not own AI/outbreak resolution.
+00E may use active/residency information as one input to detailed-vs-coarse actor simulation. 00F does not own AI/outbreak resolution.
 
 ### Save / persistent storage
 
@@ -383,35 +438,49 @@ A future save/session owner can serialize WHAT + typed mechanic state + Material
 
 A later 00F residency slice may move persistent inactive data out of hot memory only behind an authoritative backing store.
 
-### Presentation
+### Sparse rural properties
 
-Renderers may eventually consume active/resident bounds, but presentation never owns source/materialization truth.
+Stable countryside logical ownership now exists, so a later System 20 content slice may add isolated rural properties without tying identity to technical stream boundaries.
 
-### Prefetch
+### Presentation / prefetch
 
-Future composition may choose focus/prefetch cells using player movement, vehicles, teleport destinations or other semantic intent without changing source identity or stream-grid rules.
+Renderers may consume active/resident bounds later, and vehicles may motivate different prefetch policy. Neither may redefine logical source identity.
 
-## 17. Approved decisions
+## 19. Approved decisions
 
-Approved by the user on 2026-08-22:
+### Slice 001 — 2026-08-22
 
-1. logical materialization sources and technical stream regions are distinct identities;
-2. materialization is one-way for a world lifetime; revisit never regenerates persistent places;
-3. activation is reversible, ephemeral and non-destructive;
-4. Slice 001 uses an injected 256×256 technical grid with radius-1 default, not as world identity;
-5. any active-region intersection with a virgin current area site materializes the entire logical site rather than clipping it to stream boundaries;
-6. inactive materialized facts stay in authoritative WHAT until a persistence-backed eviction contract exists;
-7. Slice 001 supports only the five real current System 00D area-site sources and does not fake arbitrary countryside;
+1. Logical materialization sources and technical stream regions are distinct identities.
+2. Materialization is one-way for a world lifetime; revisit never regenerates persistent places.
+3. Activation is reversible, ephemeral and non-destructive.
+4. Slice 001 uses an injected 256×256 technical grid with radius-1 default, not as world identity.
+5. Any active-region intersection with a virgin settlement site materializes the entire logical site rather than clipping it to stream boundaries.
+6. Inactive materialized facts stay in authoritative WHAT until a persistence-backed eviction contract exists.
+7. Slice 001 initially supported only the five System 00D area-site sources rather than faking countryside.
 8. System 22 remains on the accepted Crossroads critique world while 00F is independently proven.
 
-## 18. North-star fit
+### Slice 002 — 2026-08-23
+
+1. System 00D geography records are the logical parent lattice for dry countryside source identity.
+2. Exact settlement area-site bounds are subtracted instead of dropping entire geography records.
+3. Exact river corridors are subtracted, leaving only currently unsupported water cells source-free.
+4. Each remaining dry rectangle is a catalog-v1 `system20_rural_open` source.
+5. Source identity derives from catalog version + geography identity + global bounds, never stream coordinates.
+6. Neighboring dry fragments are not merged in v1.
+7. Settlement and countryside sources share one atomic mixed-source transaction while keeping separate adapters.
+8. The 256×256 radius-1 technical configuration remains unchanged and non-authoritative.
+9. Materialization Registry remains schema v1.
+10. System 22/live presentation remains unchanged.
+
+## 20. North-star fit
 
 00F is the bridge from globally coherent generated places to a persistent open world while preserving the project's core promises:
 
 - one continuous coordinate space;
 - no raid-instance reality;
-- no chunk-defined roads/utilities/parcels;
+- no chunk-defined roads/utilities/parcels/countryside;
 - persistent consequences on revisit;
 - generation creates initial truth only;
 - technical partitions remain replaceable implementation details;
-- future population/outbreak simulation may scale detail by relevance without changing what exists.
+- future population/outbreak simulation may scale detail by relevance without changing what exists;
+- unfinished river cells stay honestly unfinished instead of becoming fake terrain.

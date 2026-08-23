@@ -15,7 +15,7 @@ A System 20 planning area is a **logical generation domain, not a streaming chun
 3. **System 19** owns building/property internals for already-selected building envelopes.
 4. **AreaMaterializationCoordinator** performs the one-time initial validated area write into WHAT + Door State.
 5. **WHAT + typed mechanic state** own all subsequent persistent reality.
-6. **System 00F** may choose when a logical source is materialized/active, but stream regions never define System 20 morphology.
+6. **System 00F** chooses when stable logical sources are materialized/active, but source/stream partitions never define System 20 morphology.
 
 ## 2. Ownership / non-goals
 
@@ -26,7 +26,7 @@ System 20 does not own:
 - runtime utilities;
 - loot, vehicles, corpses or construction/destruction mechanics;
 - rendering, camera, player input or UI;
-- stream/storage partition geometry;
+- logical materialization-source decomposition or stream/storage partition geometry;
 - save-file encoding;
 - WHEN scheduling.
 
@@ -64,9 +64,9 @@ The base request type permits zero roads because roadless space is valid geograp
 
 Existing settlement profiles still require inherited roads. `rural.open` permits zero or more.
 
-Normalized planning constraints continue to use stable source IDs, domain/kind/reservation role, explicit point/cardinal geometry and blocking policy. Current domains include hydrology, power, potable water and wastewater.
+Normalized planning constraints use stable source IDs, domain/kind/reservation role, explicit point/cardinal geometry and blocking policy. Current domains include hydrology, power, potable water and wastewater.
 
-`inherited_geography` is currently consumed only by `rural.open` and contains stable source geography ID, clipped rect, source grid coordinate, planning elevation and landform.
+`inherited_geography` is consumed by `rural.open` and contains stable source geography ID, clipped rect, source grid coordinate, planning elevation and landform.
 
 ## 5. Generated plan contract
 
@@ -209,7 +209,7 @@ Detailed design: `20C_RURAL_OPEN_COUNTRYSIDE_CANDIDATE_001.md`.
 - projects intersecting power/water/wastewater corridors only;
 - uses the global world seed so adjacent requests share one landscape field.
 
-The method does not choose source partitions. The caller/next 00F slice owns logical source bounds.
+System 20 does not choose logical source partitions. **Implemented System 00F Slice 002** derives stable dry-countryside source bounds/IDs from System 00D geography and calls this public seam; technical stream-region geometry remains separate.
 
 ### 11.2 Morphology
 
@@ -264,7 +264,7 @@ Rural-Open Candidate 001 invokes no System 19 building content because it delibe
 
 System 20C did not modify this owner.
 
-System 00F Slice 001 currently composes this materializer only for the five existing System 00D area-site sources. Rural-open source discovery/materialization is the next separate 00F seam.
+**System 00F Slices 001–002** compose this materializer for settlement plus dry rural-open logical sources. Slice 002 chooses logical countryside source ownership only; it does not alter System 20C morphology. Current physical river corridors remain source-free/unmaterialized until local hydrology exists.
 
 ## 14. Determinism/versioning
 
@@ -278,7 +278,7 @@ Current versions:
 - `rural.open@1`;
 - `temperate.rural@3`.
 
-Rural-open natural persistent IDs depend on physical global cells rather than caller/source ID, preventing a future source-partition change from changing countryside identity.
+Rural-open natural persistent IDs depend on physical global cells rather than caller/source ID. System 00F2 source decomposition therefore does not change the identity of natural facts at a physical cell.
 
 ## 15. Verification
 
@@ -303,7 +303,7 @@ First green System 20C integrated code head:
 
 `cbc39f03d3568ca4fcbe7f294e350eb1c507bbda`
 
-On that SHA all seven current repository gates succeeded, including System 00F and Pages.
+System 00F2 later consumed this exact public morphology seam and remained green with System 20 on verified code head `abe3d56792b74d5dd08882bd4f06dbd76107f35d`.
 
 ## 16. Presentation/performance
 
@@ -330,15 +330,15 @@ System 20 fails rather than hiding invalid facts. Examples include:
 
 Known next extensions include:
 
-- **System 00F Slice 002** stable logical countryside source catalog/materialization, independent from technical stream regions;
-- local physical river/bridge materialization;
-- later isolated rural properties once source-boundary ownership is safe;
+- **local physical river/bridge materialization** using existing System 00D river/bridge intent without moving hydrology morphology into 00F;
+- later isolated rural properties now that stable countryside logical-source ownership exists;
 - addresses/ownership/zoning;
 - richer System 19 settlement/agricultural content;
 - private well/septic placement and local utility distribution;
 - runtime utilities;
 - households/businesses/jobs/population/outbreak;
-- vehicles/traffic.
+- vehicles/traffic;
+- a future countryside source-catalog migration only if new physical domains require changing logical source decomposition.
 
 ## 19. Approved decisions / history
 
@@ -351,8 +351,8 @@ Known next extensions include:
 7. Rural-open landscape truth uses global world seed + absolute coordinates.
 8. Rural-open natural prop identity is global-cell-derived, not area/source-derived.
 9. Candidate 001 is dry countryside only; known river/bridge intersections fail until physical local hydrology is separately approved.
-10. System 00F remains a separate source/materialization owner and was not rewritten by 20C.
+10. System 00F remains the separate logical source/materialization owner; implemented Slice 002 consumes System 20C without changing its profile/version/morphology.
 
 ## 20. System boundary summary
 
-System 00D owns global coherence; System 20 owns local physical generation; System 19 owns building internals; System 00F owns logical materialization orchestration/technical activation; WHAT owns persistent current reality; System 21 owns camera; System 22 owns DEV presentation. Streaming never defines physical world truth.
+System 00D owns global coherence; System 20 owns local physical generation; System 19 owns building internals; System 00F owns logical materialization-source orchestration/technical activation; WHAT owns persistent current reality; System 21 owns camera; System 22 owns DEV presentation. Streaming never defines physical world truth.

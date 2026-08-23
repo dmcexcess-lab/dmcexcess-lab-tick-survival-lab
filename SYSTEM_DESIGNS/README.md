@@ -11,7 +11,8 @@ Major systems move through **NOT DESIGNED -> DRAFT -> APPROVED -> IMPLEMENTED** 
 | 00B | Persistent World / Entity State — WHAT | **IMPLEMENTED** | `00B_PERSISTENT_WORLD_STATE.md` |
 | 00C | Tick / Action / Pause Kernel — WHEN | **IMPLEMENTED** | `00C_TICK_ACTION_PAUSE.md` |
 | 00D | Global World Planning / Generation | **IMPLEMENTED — SLICES 001–006** | `00D_GLOBAL_WORLD_PLANNING.md`, `00D3_GLOBAL_HYDROLOGY_BRIDGE_INTENT.md`, `00D4_GLOBAL_ELECTRICAL_INFRASTRUCTURE.md`, `00D5_GLOBAL_POTABLE_WATER_INFRASTRUCTURE.md`, `00D6_GLOBAL_WASTEWATER_SEPTIC_INFRASTRUCTURE.md` |
-| 00F | Streaming / Materialization | **IMPLEMENTED — SLICE 001** | `00F_STREAMING_MATERIALIZATION_ORCHESTRATION.md` |
+| 00F | Streaming / Materialization | **IMPLEMENTED — SLICES 001–002** | `00F_STREAMING_MATERIALIZATION_ORCHESTRATION.md`, `00F2_COUNTRYSIDE_LOGICAL_SOURCE_MATERIALIZATION.md` |
+| 00F2 | Countryside Logical Source Materialization | **IMPLEMENTED** | `00F2_COUNTRYSIDE_LOGICAL_SOURCE_MATERIALIZATION.md` |
 | 01 | Collision / Spatial Query | **IMPLEMENTED** | `01_COLLISION_SPATIAL_QUERY.md` |
 | 02 | Movement Actions | **IMPLEMENTED** | `02_MOVEMENT_ACTIONS.md` |
 | 03 | Actor Locomotion / Movement Capability | **IMPLEMENTED** | `03_ACTOR_LOCOMOTION_MOVEMENT_CAPABILITY.md` |
@@ -111,7 +112,7 @@ Exact-head context: `verify/system19-local-building`.
 
 Exact-head context: `verify/system20-local-area`.
 
-## System 00F Slice 001
+## System 00F Slices 001–002
 
 Canonical rule:
 
@@ -119,15 +120,22 @@ Canonical rule:
 
 Technical stream regions are not logical source identities.
 
-Current 00F source type remains only:
+Current logical source kinds:
 
-`system20_area_site:<site_id>`
+- `system20_area_site:<site_id>` for the five System 00D settlement sites;
+- `system20_rural_open:<source_id>` for catalog-v1 dry countryside fragments.
 
-for the five settlement sites. 00F therefore does **not yet** automatically materialize the new rural-open plans.
+Slice 002 derives countryside sources from System 00D geography parent identity plus final dry global rectangle. It subtracts exact settlement area-site bounds and exact unsupported river corridors, never stream-grid cells. Every supported dry non-settlement/non-river cell belongs to exactly one countryside source.
 
-Deactivation never deletes persistent WHAT. True memory eviction remains deferred until a persistence-backed store exists.
+`WorldMaterializationCoordinator.ensure_sources()` commits mixed settlement/countryside batches atomically in stable source-key order while preserving the area-site convenience APIs. `WorldStreamingCoordinator` discovers both source kinds from the existing active technical-region halo.
+
+Materialization Registry snapshot schema remains v1. Deactivation never deletes persistent WHAT, and revisit never regenerates already-materialized countryside or settlement facts. True memory eviction remains deferred until a persistence-backed store exists.
+
+The river corridor remains intentionally source-free until local physical hydrology/bridge materialization is designed and implemented.
 
 Exact-head context: `verify/system00f-streaming-materialization`.
+
+Verified pre-promotion 00F2 code head: `abe3d56792b74d5dd08882bd4f06dbd76107f35d`.
 
 ## System 21 / 22
 
@@ -137,19 +145,18 @@ The live Web build remains Rural Crossroads Candidate 006.
 
 ## Immediate next path
 
-The logical countryside generator now exists, but 00F does not yet have a stable logical countryside-source catalog.
+Settlement sites and supported dry countryside now have stable logical materialization ownership. The largest remaining continuous-world physical gap is the intentionally unsupported river corridor.
 
 Recommended next bounded design:
 
-**System 00F Slice 002 — countryside logical source catalog/materialization.**
+**Local physical river / bridge materialization.**
 
-Its key requirement is that countryside source IDs/bounds remain independent from technical stream-region coordinates while consuming `project_rural_open_bounds()`.
+It must consume existing System 00D river/bridge intent, preserve System 20/00F ownership boundaries, and must not make technical stream-region geometry define hydrology.
 
 Other separate future paths:
 
-- local physical river/bridge materialization;
 - persistence/save owner before true memory eviction;
-- later sparse rural properties after source ownership is safe;
+- later sparse rural properties now that logical source ownership is safe;
 - System 00E population/households/jobs/outbreak/player story;
 - richer System 19 settlement/agricultural content;
 - parcel addresses/ownership/zoning.
