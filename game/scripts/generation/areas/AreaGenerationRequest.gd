@@ -10,6 +10,7 @@ var area_profile_id: StringName = &""
 var environment_profile_id: StringName = &""
 var inherited_roads: Array[Dictionary] = []
 var forbidden_regions: Array[Rect2i] = []
+var inherited_planning_constraints: Array[Dictionary] = []
 
 func _init(
     p_area_id: String = "",
@@ -18,7 +19,8 @@ func _init(
     p_area_profile_id: StringName = &"",
     p_environment_profile_id: StringName = &"",
     p_inherited_roads: Array[Dictionary] = [],
-    p_forbidden_regions: Array[Rect2i] = []
+    p_forbidden_regions: Array[Rect2i] = [],
+    p_inherited_planning_constraints: Array[Dictionary] = []
 ) -> void:
     area_id = p_area_id.strip_edges()
     seed = p_seed
@@ -27,6 +29,7 @@ func _init(
     environment_profile_id = p_environment_profile_id
     inherited_roads = p_inherited_roads.duplicate(true)
     forbidden_regions = p_forbidden_regions.duplicate()
+    inherited_planning_constraints = p_inherited_planning_constraints.duplicate(true)
 
 func is_valid() -> bool:
     if not EntityId.is_valid(area_id):
@@ -43,6 +46,14 @@ func is_valid() -> bool:
     for region: Rect2i in forbidden_regions:
         if region.size.x <= 0 or region.size.y <= 0 or not _rect_inside(bounds, region):
             return false
+    var constraint_ids: Dictionary = {}
+    for constraint: Dictionary in inherited_planning_constraints:
+        if not _planning_constraint_valid(constraint):
+            return false
+        var constraint_id: String = String(constraint.get("id", ""))
+        if constraint_ids.has(constraint_id):
+            return false
+        constraint_ids[constraint_id] = true
     return true
 
 func _road_constraint_valid(road: Dictionary) -> bool:
@@ -69,6 +80,25 @@ func _road_constraint_valid(road: Dictionary) -> bool:
         if not _is_boundary_cell(bounds, cell):
             return false
     return true
+
+func _planning_constraint_valid(constraint: Dictionary) -> bool:
+    var constraint_id: String = String(constraint.get("id", "")).strip_edges()
+    var domain: StringName = StringName(constraint.get("domain", &""))
+    var kind: StringName = StringName(constraint.get("kind", &""))
+    var role: StringName = StringName(constraint.get("reservation_role", &""))
+    if not EntityId.is_valid(constraint_id) or String(domain).is_empty() or String(kind).is_empty():
+        return false
+    if role != &"facility" and role != &"corridor" and role != &"service":
+        return false
+    if role == &"corridor":
+        var start: Vector2i = constraint.get("start", Vector2i(-999999, -999999))
+        var finish: Vector2i = constraint.get("end", Vector2i(-999999, -999999))
+        var width: int = int(constraint.get("width", 0))
+        if width <= 0 or start == finish or (start.x != finish.x and start.y != finish.y):
+            return false
+        return bounds.has_point(start) and bounds.has_point(finish)
+    var cell: Vector2i = constraint.get("cell", Vector2i(-999999, -999999))
+    return bounds.has_point(cell)
 
 static func _is_boundary_cell(rect: Rect2i, cell: Vector2i) -> bool:
     if not rect.has_point(cell):
