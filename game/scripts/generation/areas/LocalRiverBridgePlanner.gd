@@ -170,7 +170,8 @@ func _rect_covered_by_rivers(rect: Rect2i, rivers: Array[Dictionary]) -> bool:
             var cell := Vector2i(x, y)
             var covered: bool = false
             for river: Dictionary in rivers:
-                if (river.get("corridor_rect", Rect2i()) as Rect2i).has_point(cell):
+                var corridor: Rect2i = river.get("corridor_rect", Rect2i())
+                if corridor.has_point(cell):
                     covered = true
                     break
             if not covered:
