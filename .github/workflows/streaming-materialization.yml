@@ -2,7 +2,7 @@ name: Streaming and Materialization Orchestration contract
 
 on:
   push:
-    branches: [main, work/system00f-slice001-streaming]
+    branches: [main]
   workflow_dispatch:
 
 permissions:
