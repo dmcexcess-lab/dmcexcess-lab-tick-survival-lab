@@ -51,6 +51,18 @@ func project_site(plan: GeneratedGlobalWorldPlan, site_id: String) -> Dictionary
             if typeof(constraint_value) != TYPE_DICTIONARY:
                 return {"ok": false, "failure_reason": "smalltown_planning_constraint_result_invalid", "request": null}
             planning_constraints.append(constraint_value)
+    elif area_profile_id == AreaProfileCatalog.RURAL_SCATTERED:
+        var scattered_result: Dictionary = _rural_scattered_planning_constraints(plan, site)
+        if not bool(scattered_result.get("ok", false)):
+            return {
+                "ok": false,
+                "failure_reason": String(scattered_result.get("failure_reason", "rural_scattered_planning_constraint_projection_failed")),
+                "request": null,
+            }
+        for constraint_value: Variant in scattered_result.get("constraints", []):
+            if typeof(constraint_value) != TYPE_DICTIONARY:
+                return {"ok": false, "failure_reason": "rural_scattered_planning_constraint_result_invalid", "request": null}
+            planning_constraints.append(constraint_value)
 
     var request: AreaGenerationRequest = AreaRequestClass.new(
         String(site.get("id", "")),
@@ -230,6 +242,155 @@ func _smalltown_planning_constraints(plan: GeneratedGlobalWorldPlan, bounds: Rec
         ))
 
     return {"ok": true, "failure_reason": "", "constraints": constraints}
+
+func _rural_scattered_planning_constraints(plan: GeneratedGlobalWorldPlan, site: Dictionary) -> Dictionary:
+    var constraints: Array[Dictionary] = []
+    var bounds: Rect2i = site.get("bounds", Rect2i())
+    var settlement_id: String = String(site.get("settlement_id", ""))
+    var settlement: Dictionary = _settlement_by_id(plan.settlements, settlement_id)
+    if settlement.is_empty():
+        return {"ok": false, "failure_reason": "rural_scattered_settlement_missing", "constraints": constraints}
+    var center: Vector2i = settlement.get("center", Vector2i(-999999, -999999))
+    if not bounds.has_point(center):
+        return {"ok": false, "failure_reason": "rural_scattered_settlement_center_invalid", "constraints": constraints}
+
+    var hydrology_result: Dictionary = hydrology_constraints_for_bounds(plan, bounds)
+    if not bool(hydrology_result.get("ok", false)):
+        return {"ok": false, "failure_reason": "rural_scattered_hydrology_projection_failed", "constraints": constraints}
+    for river_value: Variant in hydrology_result.get("rivers", []):
+        if typeof(river_value) != TYPE_DICTIONARY:
+            continue
+        var river: Dictionary = river_value
+        constraints.append(_corridor_constraint(
+            "constraint.hydrology.%s" % String(river.get("segment_id", "river")),
+            String(river.get("segment_id", "")),
+            &"hydrology",
+            &"river",
+            river.get("start", Vector2i.ZERO),
+            river.get("end", Vector2i.ZERO),
+            int(river.get("width", 1)),
+            true
+        ))
+    for bridge_value: Variant in hydrology_result.get("bridges", []):
+        if typeof(bridge_value) != TYPE_DICTIONARY:
+            continue
+        var bridge: Dictionary = bridge_value
+        constraints.append(_point_constraint(
+            "constraint.hydrology.%s" % String(bridge.get("id", "bridge")),
+            String(bridge.get("id", "")),
+            &"hydrology",
+            &"bridge_intent",
+            &"service",
+            bridge.get("cell", center),
+            false,
+            false,
+            settlement_id,
+            ""
+        ))
+
+    var power_result: Dictionary = power_constraints_for_bounds(plan, bounds)
+    if not bool(power_result.get("ok", false)):
+        return {"ok": false, "failure_reason": "rural_scattered_power_projection_failed", "constraints": constraints}
+    for power_segment_value: Variant in power_result.get("segments", []):
+        if typeof(power_segment_value) != TYPE_DICTIONARY:
+            continue
+        var power_segment: Dictionary = power_segment_value
+        constraints.append(_corridor_constraint(
+            "constraint.power.%s" % String(power_segment.get("id", "segment")),
+            String(power_segment.get("id", "")),
+            &"power",
+            StringName(power_segment.get("power_class", &"feeder")),
+            power_segment.get("start", Vector2i.ZERO),
+            power_segment.get("end", Vector2i.ZERO),
+            1,
+            false,
+            String(power_segment.get("network_id", ""))
+        ))
+    var found_power_service: bool = false
+    for power_node_value: Variant in power_result.get("nodes", []):
+        if typeof(power_node_value) != TYPE_DICTIONARY:
+            continue
+        var power_node: Dictionary = power_node_value
+        if String(power_node.get("settlement_id", "")) != settlement_id:
+            continue
+        if StringName(power_node.get("kind", &"")) != &"settlement_service":
+            continue
+        found_power_service = true
+        constraints.append(_point_constraint(
+            "constraint.power.%s" % String(power_node.get("id", "node")),
+            String(power_node.get("id", "")),
+            &"power",
+            &"settlement_service",
+            &"service",
+            power_node.get("cell", center),
+            false,
+            false,
+            settlement_id,
+            String(power_node.get("network_id", ""))
+        ))
+    if not found_power_service:
+        return {"ok": false, "failure_reason": "rural_scattered_power_service_missing", "constraints": constraints}
+
+    var water_result: Dictionary = water_constraints_for_bounds(plan, bounds)
+    if not bool(water_result.get("ok", false)):
+        return {"ok": false, "failure_reason": "rural_scattered_water_projection_failed", "constraints": constraints}
+    var water_service: Dictionary = _service_by_settlement(water_result.get("services", []), settlement_id)
+    if water_service.is_empty() \
+        or StringName(water_service.get("service_mode", &"")) != &"decentralized_source" \
+        or StringName(water_service.get("source_type", &"")) != &"groundwater":
+        return {"ok": false, "failure_reason": "rural_scattered_decentralized_water_service_missing", "constraints": constraints}
+    var water_constraint: Dictionary = _point_constraint(
+        "constraint.water.%s" % String(water_service.get("id", "service")),
+        String(water_service.get("id", "")),
+        &"potable_water",
+        &"decentralized_source",
+        &"service",
+        center,
+        false,
+        false,
+        settlement_id,
+        String(water_service.get("network_id", ""))
+    )
+    water_constraint["service_mode"] = StringName(water_service.get("service_mode", &""))
+    water_constraint["source_type"] = StringName(water_service.get("source_type", &""))
+    constraints.append(water_constraint)
+
+    var wastewater_result: Dictionary = wastewater_constraints_for_bounds(plan, bounds)
+    if not bool(wastewater_result.get("ok", false)):
+        return {"ok": false, "failure_reason": "rural_scattered_wastewater_projection_failed", "constraints": constraints}
+    var wastewater_service: Dictionary = _service_by_settlement(wastewater_result.get("services", []), settlement_id)
+    if wastewater_service.is_empty() \
+        or StringName(wastewater_service.get("service_mode", &"")) != &"decentralized_septic" \
+        or StringName(wastewater_service.get("disposal_type", &"")) != &"onsite_septic" \
+        or StringName(wastewater_service.get("separation_policy", &"")) != &"potable_source_clearance_required":
+        return {"ok": false, "failure_reason": "rural_scattered_decentralized_wastewater_service_missing", "constraints": constraints}
+    var wastewater_constraint: Dictionary = _point_constraint(
+        "constraint.wastewater.%s" % String(wastewater_service.get("id", "service")),
+        String(wastewater_service.get("id", "")),
+        &"wastewater",
+        &"decentralized_septic",
+        &"service",
+        center,
+        false,
+        false,
+        settlement_id,
+        String(wastewater_service.get("network_id", ""))
+    )
+    wastewater_constraint["service_mode"] = StringName(wastewater_service.get("service_mode", &""))
+    wastewater_constraint["disposal_type"] = StringName(wastewater_service.get("disposal_type", &""))
+    wastewater_constraint["separation_policy"] = StringName(wastewater_service.get("separation_policy", &""))
+    constraints.append(wastewater_constraint)
+
+    return {"ok": true, "failure_reason": "", "constraints": constraints}
+
+func _service_by_settlement(services: Array, settlement_id: String) -> Dictionary:
+    for service_value: Variant in services:
+        if typeof(service_value) != TYPE_DICTIONARY:
+            continue
+        var service: Dictionary = service_value
+        if String(service.get("settlement_id", "")) == settlement_id:
+            return service
+    return {}
 
 func _corridor_constraint(
     id: String,
