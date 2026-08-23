@@ -12,6 +12,7 @@ const AccessPlannerClass = preload("res://scripts/generation/areas/ParcelAccessP
 const BuildingPlannerClass = preload("res://scripts/generation/areas/BuildingPlacementPlanner.gd")
 const PavedFrontagePlannerClass = preload("res://scripts/generation/areas/CommercialPavedFrontagePlanner.gd")
 const OutdoorPlannerClass = preload("res://scripts/generation/areas/OutdoorPropertyDressingPlanner.gd")
+const RuralOpenLandscapePlannerClass = preload("res://scripts/generation/areas/RuralOpenLandscapePlanner.gd")
 const ValidatorClass = preload("res://scripts/generation/areas/GeneratedAreaValidator.gd")
 
 var _area_profiles: AreaProfileCatalog
@@ -24,6 +25,7 @@ var _access_planner: ParcelAccessPlanner
 var _building_planner: BuildingPlacementPlanner
 var _paved_frontage_planner: CommercialPavedFrontagePlanner
 var _outdoor_planner: OutdoorPropertyDressingPlanner
+var _rural_open_landscape_planner: RuralOpenLandscapePlanner
 var _validator: GeneratedAreaValidator
 
 func _init() -> void:
@@ -37,6 +39,7 @@ func _init() -> void:
     _building_planner = BuildingPlannerClass.new()
     _paved_frontage_planner = PavedFrontagePlannerClass.new()
     _outdoor_planner = OutdoorPlannerClass.new()
+    _rural_open_landscape_planner = RuralOpenLandscapePlannerClass.new()
     _validator = ValidatorClass.new()
 
 func generate(request: AreaGenerationRequest) -> GeneratedAreaPlan:
@@ -53,6 +56,11 @@ func generate(request: AreaGenerationRequest) -> GeneratedAreaPlan:
 
     var area_profile: Dictionary = _area_profiles.profile(request.area_profile_id)
     var environment_profile: Dictionary = _environment_profiles.profile(request.environment_profile_id)
+    if bool(area_profile.get("inherited_roads_required", true)) and request.inherited_roads.is_empty():
+        plan.failure_reason = "area_profile_requires_inherited_road"
+        return plan
+    if request.area_profile_id == AreaProfileCatalog.RURAL_OPEN:
+        return _generate_rural_open(request, area_profile, environment_profile)
 
     var reservation_result: Dictionary = _reservation_planner.plan(request, area_profile, request.inherited_roads)
     if not bool(reservation_result.get("ok", false)):
@@ -171,13 +179,102 @@ func generate(request: AreaGenerationRequest) -> GeneratedAreaPlan:
     plan.ground_regions = ground_regions
     plan.outdoor_props = outdoor_props
 
-    var validation: Dictionary = _validator.validate(request, plan)
-    if not bool(validation.get("ok", false)):
-        var failure_parts := PackedStringArray()
-        for failure_value: Variant in validation.get("failures", []):
-            failure_parts.append(String(failure_value))
-        plan.failure_reason = "area_validation_failed:%s" % ",".join(failure_parts)
+    _validate_final_plan(request, plan)
     return plan
+
+func _generate_rural_open(
+    request: AreaGenerationRequest,
+    area_profile: Dictionary,
+    environment_profile: Dictionary
+) -> GeneratedAreaPlan:
+    var plan := PlanClass.new()
+    var road_result: Dictionary = _road_planner.plan(request, area_profile, [])
+    if not bool(road_result.get("ok", false)):
+        plan.failure_reason = String(road_result.get("failure_reason", "rural_open_road_planning_failed"))
+        return plan
+
+    var roads: Array[Dictionary] = []
+    for road_value: Variant in road_result.get("roads", []):
+        if typeof(road_value) != TYPE_DICTIONARY:
+            plan.failure_reason = "rural_open_road_result_invalid"
+            return plan
+        var road: Dictionary = road_value
+        if not bool(road.get("inherited", false)):
+            plan.failure_reason = "rural_open_local_road_forbidden"
+            return plan
+        roads.append(road)
+
+    var intersections: Array[Dictionary] = []
+    for intersection_value: Variant in road_result.get("intersections", []):
+        if typeof(intersection_value) != TYPE_DICTIONARY:
+            plan.failure_reason = "rural_open_intersection_result_invalid"
+            return plan
+        var intersection: Dictionary = intersection_value
+        if StringName(intersection.get("control", &"")) != &"uncontrolled":
+            plan.failure_reason = "rural_open_controlled_intersection_forbidden"
+            return plan
+        intersections.append(intersection)
+
+    var surface_environment: Dictionary = environment_profile.duplicate(true)
+    surface_environment["tree_semantics"] = []
+    surface_environment["shrub_semantics"] = []
+    surface_environment["rock_semantics"] = []
+    var surface_result: Dictionary = _outdoor_planner.plan(request, surface_environment, roads, intersections, [], [])
+    if not bool(surface_result.get("ok", false)):
+        plan.failure_reason = String(surface_result.get("failure_reason", "rural_open_surface_planning_failed"))
+        return plan
+
+    var landscape_result: Dictionary = _rural_open_landscape_planner.plan(request, area_profile, environment_profile, roads)
+    if not bool(landscape_result.get("ok", false)):
+        plan.failure_reason = String(landscape_result.get("failure_reason", "rural_open_landscape_planning_failed"))
+        return plan
+
+    var ground_regions: Array[Dictionary] = []
+    for value: Variant in surface_result.get("ground_regions", []):
+        if typeof(value) != TYPE_DICTIONARY:
+            plan.failure_reason = "rural_open_surface_ground_invalid"
+            return plan
+        ground_regions.append(value)
+    for value: Variant in landscape_result.get("ground_regions", []):
+        if typeof(value) != TYPE_DICTIONARY:
+            plan.failure_reason = "rural_open_landscape_ground_invalid"
+            return plan
+        ground_regions.append(value)
+
+    var outdoor_props: Array[Dictionary] = []
+    for value: Variant in landscape_result.get("props", []):
+        if typeof(value) != TYPE_DICTIONARY:
+            plan.failure_reason = "rural_open_landscape_prop_invalid"
+            return plan
+        outdoor_props.append(value)
+
+    plan.area_id = request.area_id
+    plan.seed = request.seed
+    plan.bounds = request.bounds
+    plan.area_profile_id = request.area_profile_id
+    plan.area_profile_version = int(area_profile.get("version", 0))
+    plan.environment_profile_id = request.environment_profile_id
+    plan.environment_profile_version = int(environment_profile.get("version", 0))
+    plan.reservations = []
+    plan.roads = roads
+    plan.intersections = intersections
+    plan.blocks = []
+    plan.parcels = []
+    plan.building_requests = []
+    plan.ground_regions = ground_regions
+    plan.outdoor_props = outdoor_props
+
+    _validate_final_plan(request, plan)
+    return plan
+
+func _validate_final_plan(request: AreaGenerationRequest, plan: GeneratedAreaPlan) -> void:
+    var validation: Dictionary = _validator.validate(request, plan)
+    if bool(validation.get("ok", false)):
+        return
+    var failure_parts := PackedStringArray()
+    for failure_value: Variant in validation.get("failures", []):
+        failure_parts.append(String(failure_value))
+    plan.failure_reason = "area_validation_failed:%s" % ",".join(failure_parts)
 
 func _parcel_road_order(profile: Dictionary, roads: Array[Dictionary]) -> Array[Dictionary]:
     if StringName(profile.get("land_use_mode", &"rural_crossroads")) != &"smalltown_center":
@@ -196,7 +293,7 @@ func _parcel_road_order(profile: Dictionary, roads: Array[Dictionary]) -> Array[
     return ordered
 
 func area_profile_ids() -> Array[StringName]:
-    return [AreaProfileCatalog.RURAL_CROSSROADS, AreaProfileCatalog.SMALLTOWN_CENTER, AreaProfileCatalog.RURAL_SCATTERED]
+    return [AreaProfileCatalog.RURAL_CROSSROADS, AreaProfileCatalog.SMALLTOWN_CENTER, AreaProfileCatalog.RURAL_SCATTERED, AreaProfileCatalog.RURAL_OPEN]
 
 func environment_profile_ids() -> Array[StringName]:
     return [EnvironmentProfileCatalog.TEMPERATE_RURAL]
