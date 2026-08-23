@@ -11,7 +11,7 @@ func profile(profile_id: StringName) -> Dictionary:
         return {}
     return {
         "id": TEMPERATE_RURAL_REGION,
-        "version": 5,
+        "version": 6,
         "minimum_world_size": Vector2i(1536, 1536),
         "local_site_size": Vector2i(256, 256),
         "primary_width": 5,
@@ -42,6 +42,7 @@ func profile(profile_id: StringName) -> Dictionary:
 
         "water_treatment_anchor_offset": 24,
         "water_source_anchor_offset": 48,
+        "wastewater_treatment_anchor_offset": 64,
 
         "smalltown_distance_min": 520,
         "smalltown_distance_max": 620,
