@@ -46,7 +46,7 @@ Major systems move through **NOT DESIGNED -> DRAFT -> APPROVED -> IMPLEMENTED** 
 | 21 | Tactical Camera / View Control | **IMPLEMENTED** | `21_TACTICAL_CAMERA_VIEW_CONTROL.md` |
 | 22 | Large-Area DEV Critique Runtime | **IMPLEMENTED** | `22_LARGE_AREA_CRITIQUE_RUNTIME.md` |
 | 00E | Population / Household / Outbreak / Player Story | **NOT DESIGNED** | future design |
-| 00F | Streaming / Materialization | **NOT DESIGNED** | future design |
+| 00F | Streaming / Materialization Orchestration | **DRAFT** | `00F_STREAMING_MATERIALIZATION_ORCHESTRATION.md` |
 | old-01 | Raid-map / extraction physical-world model | **SUPERSEDED** | `01_RAID_MAP_DATA.md` |
 
 ## System 00D current implementation — Slices 001–006
@@ -155,7 +155,7 @@ System 22 owns the bounded moving-window DEV presentation for the accepted 256×
 
 ## Immediate next path
 
-Keep System 00D Slices 001–006 and all three System 20 profiles protected. The current five System 00D settlement sites now all have real local planning profiles, so the recommended next architecture design is **System 00F Streaming / Materialization**. Its partitions must remain technical/storage concerns that consume the logical global/local world truth rather than defining roads, utilities, parcels or settlements.
+Keep System 00D Slices 001–006 and all three System 20 profiles protected. System 00F Streaming / Materialization Orchestration is now **DRAFT** in `00F_STREAMING_MATERIALIZATION_ORCHESTRATION.md`. Its proposed first slice separates logical materialization sources from technical active regions, materializes current area sites once into persistent WHAT, and does not fake memory eviction or arbitrary countryside.
 
 Other valid separately designed next slices include richer System 19 settlement content, parcel addresses/ownership/zoning, and System 00E population/household/outbreak/player-story work.
 
