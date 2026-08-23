@@ -4,6 +4,7 @@ on:
   workflow_run:
     workflows:
       - Global World Planning contract
+      - Streaming and Materialization Orchestration contract
       - Local Building Generation and Archetype Lab contract
       - Local Area and Parcel Generation contract
       - Tactical Camera and View Control contract
@@ -34,6 +35,9 @@ jobs:
           case "$RUN_NAME" in
             "Global World Planning contract")
               context="verify/system00d-global-world"
+              ;;
+            "Streaming and Materialization Orchestration contract")
+              context="verify/system00f-streaming-materialization"
               ;;
             "Local Building Generation and Archetype Lab contract")
               context="verify/system19-local-building"
