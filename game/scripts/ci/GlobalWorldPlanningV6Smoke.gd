@@ -115,7 +115,7 @@ func _test_system20_projection(projector: System20AreaRequestProjector, plan: Ge
         _check(not smalltown_plan.reservations.is_empty(), "small-town local plan contains infrastructure reservations")
         _check(not smalltown_plan.blocks.is_empty(), "small-town local plan contains semantic town blocks")
 
-    var unsupported_result: Dictionary = projector.project_site(plan, "area.rural.hamlet.001")
+    var unsupported_result: Dictionary = projector.project_site(plan, "area.rural.scattered.001")
     _check(not bool(unsupported_result.get("ok", true)), "rural-scattered/hamlet local profile remains honestly unsupported")
     _check(String(unsupported_result.get("failure_reason", "")) == "system20_area_profile_unsupported", "unsupported hamlet still fails at profile adapter seam")
 
