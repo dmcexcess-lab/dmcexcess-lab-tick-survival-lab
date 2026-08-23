@@ -24,7 +24,7 @@ func _initialize() -> void:
     var plan: GeneratedGlobalWorldPlan = planner.generate(request)
 
     _test_global_plan(planner, validator, power_validator, water_validator, wastewater_validator, request, plan)
-    _test_candidate006_regression(projector, plan)
+    _test_system20_projection(projector, plan)
     _test_projection_seams(projector, plan)
 
     if failures.is_empty():
@@ -78,7 +78,7 @@ func _test_global_plan(
         _check(bool(wastewater_validator.validate(alternate_request, alternate).get("ok", false)), "alternate seed passes wastewater validation")
         _check(not _wastewater_overlaps_water(alternate), "alternate seed wastewater remains separated from potable-water trunk")
 
-func _test_candidate006_regression(projector: System20AreaRequestProjector, plan: GeneratedGlobalWorldPlan) -> void:
+func _test_system20_projection(projector: System20AreaRequestProjector, plan: GeneratedGlobalWorldPlan) -> void:
     if not plan.is_generated():
         return
     var projected_result: Dictionary = projector.project_site(plan, GlobalFixtureClass.CENTRAL_SITE_ID)
@@ -87,7 +87,8 @@ func _test_candidate006_regression(projector: System20AreaRequestProjector, plan
     if projected_request == null:
         return
     var baseline_request: AreaGenerationRequest = LocalFixtureClass.request(LocalFixtureClass.SEED)
-    _check(_area_request_signature(projected_request) == _area_request_signature(baseline_request), "Slice 006 leaves Candidate 006 request unchanged")
+    _check(_area_request_signature(projected_request) == _area_request_signature(baseline_request), "small-town support leaves Candidate 006 request unchanged")
+    _check(projected_request.inherited_planning_constraints.is_empty(), "Candidate 006 receives no new infrastructure-reservation constraints")
 
     var local_generator: LocalAreaGenerator = LocalGeneratorClass.new()
     var projected_plan: GeneratedAreaPlan = local_generator.generate(projected_request)
@@ -95,12 +96,28 @@ func _test_candidate006_regression(projector: System20AreaRequestProjector, plan
     _check(projected_plan.is_generated(), "Candidate 006 still generates from projected request")
     _check(baseline_plan.is_generated(), "Candidate 006 baseline still generates")
     if projected_plan.is_generated() and baseline_plan.is_generated():
-        _check(projected_plan.signature() == baseline_plan.signature(), "Slice 006 leaves Candidate 006 semantic output exact")
+        _check(projected_plan.signature() == baseline_plan.signature(), "small-town support leaves Candidate 006 semantic output exact")
         _check(projected_plan.area_profile_version == 5, "Candidate 006 remains rural.crossroads v5")
+        _check(projected_plan.reservations.is_empty() and projected_plan.blocks.is_empty(), "Candidate 006 gains no small-town reservation/block facts")
 
-    var unsupported_result: Dictionary = projector.project_site(plan, "area.smalltown.center.001")
-    _check(not bool(unsupported_result.get("ok", true)), "small-town local profile remains honestly unsupported")
-    _check(String(unsupported_result.get("failure_reason", "")) == "system20_area_profile_unsupported", "small-town unsupported failure remains at adapter seam")
+    var smalltown_result: Dictionary = projector.project_site(plan, "area.smalltown.center.001")
+    _check(bool(smalltown_result.get("ok", false)), "small-town global site now projects into System 20")
+    var smalltown_request: AreaGenerationRequest = smalltown_result.get("request") as AreaGenerationRequest
+    _check(smalltown_request != null and smalltown_request.is_valid(), "projected small-town request is valid")
+    if smalltown_request == null or not smalltown_request.is_valid():
+        return
+    _check(smalltown_request.area_profile_id == &"smalltown.center", "small-town site selects smalltown.center")
+    _check(not smalltown_request.inherited_planning_constraints.is_empty(), "small-town request carries normalized regional infrastructure facts")
+    var smalltown_plan: GeneratedAreaPlan = local_generator.generate(smalltown_request)
+    _check(smalltown_plan.is_generated(), "small-town Candidate 001 generates from exact v6 global facts")
+    if smalltown_plan.is_generated():
+        _check(smalltown_plan.area_profile_version == 1, "small-town Candidate 001 records profile v1")
+        _check(not smalltown_plan.reservations.is_empty(), "small-town local plan contains infrastructure reservations")
+        _check(not smalltown_plan.blocks.is_empty(), "small-town local plan contains semantic town blocks")
+
+    var unsupported_result: Dictionary = projector.project_site(plan, "area.rural.hamlet.001")
+    _check(not bool(unsupported_result.get("ok", true)), "rural-scattered/hamlet local profile remains honestly unsupported")
+    _check(String(unsupported_result.get("failure_reason", "")) == "system20_area_profile_unsupported", "unsupported hamlet still fails at profile adapter seam")
 
 func _test_projection_seams(projector: System20AreaRequestProjector, plan: GeneratedGlobalWorldPlan) -> void:
     if not plan.is_generated():
@@ -147,7 +164,7 @@ func _test_projection_seams(projector: System20AreaRequestProjector, plan: Gener
     _check((smalltown_water.get("segments", []) as Array).size() == 2, "small town still exposes two potable-water trunk segments")
 
     var smalltown_wastewater: Dictionary = projector.wastewater_constraints_for_bounds(plan, smalltown_bounds)
-    _check(bool(smalltown_wastewater.get("ok", false)), "small-town wastewater projection succeeds before local profile exists")
+    _check(bool(smalltown_wastewater.get("ok", false)), "small-town wastewater projection remains valid")
     var smalltown_services: Array = smalltown_wastewater.get("services", [])
     _check(smalltown_services.size() == 1, "small-town window exposes one wastewater-service record")
     if smalltown_services.size() == 1 and typeof(smalltown_services[0]) == TYPE_DICTIONARY:
