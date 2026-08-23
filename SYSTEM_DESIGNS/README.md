@@ -42,6 +42,7 @@ Major systems move through **NOT DESIGNED -> DRAFT -> APPROVED -> IMPLEMENTED** 
 | 19 | Local Building Generation / Building Grammar | **IMPLEMENTED — FINALIZED** | `19_LOCAL_BUILDING_GENERATION_ARCHETYPE_LAB.md` |
 | 20 | Local Area / Parcel Generation | **IMPLEMENTED — RURAL CROSSROADS 006 + SMALL-TOWN CENTER 001** | `20_LOCAL_AREA_PARCEL_GENERATION.md` |
 | 20A | Small-Town Center Candidate 001 | **IMPLEMENTED** | `20A_SMALLTOWN_CENTER_CANDIDATE_001.md` |
+| 20B | Rural-Scattered / Hamlet Candidate 001 | **DRAFT** | `20B_RURAL_SCATTERED_CANDIDATE_001.md` |
 | 21 | Tactical Camera / View Control | **IMPLEMENTED** | `21_TACTICAL_CAMERA_VIEW_CONTROL.md` |
 | 22 | Large-Area DEV Critique Runtime | **IMPLEMENTED** | `22_LARGE_AREA_CRITIQUE_RUNTIME.md` |
 | 00E | Population / Household / Outbreak / Player Story | **NOT DESIGNED** | future design |
@@ -75,7 +76,7 @@ Current global fixture:
 - read-only hydrology, power, water and wastewater projection seams;
 - central `project_site()` still produces the accepted Candidate 006 request and exact semantic output;
 - small-town `project_site()` now produces the implemented `smalltown.center` v1 request with normalized infrastructure planning constraints;
-- unsupported `rural.scattered` local profiles still fail honestly;
+- unsupported `rural.scattered` local profiles still fail honestly pending the DRAFT System 20B design;
 - exact-head context `verify/system00d-global-world`.
 
 System 00D remains pure planning. It owns no tactical bridge implementation, utility poles/wires, energized electrical state, literal wells/towers/pipes, building plumbing, pressure/flow/water inventory, literal sewer/septic/treatment geometry, runtime sanitation, WHAT mutation, renderer, camera, population, outbreak or streaming behavior.
@@ -135,7 +136,7 @@ System 22 owns the bounded moving-window DEV presentation for the accepted 256×
 
 ## Immediate next path
 
-Keep System 00D Slices 001–006, Rural Crossroads Candidate 006 and Small-Town Candidate 001 protected. The next major local-planning step is the real System 20 **`rural.scattered` / hamlet** profile for the three remaining global sites. Streaming remains later, after logical world geography/places/infrastructure and required local profiles are stable enough that partitions are purely technical.
+Keep System 00D Slices 001–006, Rural Crossroads Candidate 006 and Small-Town Candidate 001 protected. The next major local-planning step is the DRAFT System 20B **`rural.scattered` / hamlet Candidate 001** in `20B_RURAL_SCATTERED_CANDIDATE_001.md`, covering all three remaining global hamlet sites. It requires user approval before implementation. Streaming remains later, after logical world geography/places/infrastructure and required local profiles are stable enough that partitions are purely technical.
 
 ## Design rule
 
