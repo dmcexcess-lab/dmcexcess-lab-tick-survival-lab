@@ -87,12 +87,16 @@ func _append_inherited_straight_frontage(
     var maximum: int = int(profile.get("frontage_max", 36))
     var parcel_gap: int = int(profile.get("parcel_gap", 3))
     var axis: StringName = StringName(road.get("axis", &""))
+    var start: Vector2i = road.get("start", Vector2i.ZERO)
+    var finish: Vector2i = road.get("end", Vector2i.ZERO)
     var spans: Array[Vector2i] = []
 
     if axis == &"horizontal":
-        spans.append(Vector2i(request.bounds.position.x + edge_margin, center.x - radius - 1))
-        spans.append(Vector2i(center.x + radius + 1, request.bounds.position.x + request.bounds.size.x - edge_margin - 1))
-        var centerline_y: int = int(road.get("start", Vector2i.ZERO).y)
+        var road_min_x: int = maxi(mini(start.x, finish.x), request.bounds.position.x) + edge_margin
+        var road_max_x: int = mini(maxi(start.x, finish.x), request.bounds.position.x + request.bounds.size.x - 1) - edge_margin
+        spans.append(Vector2i(road_min_x, mini(center.x - radius - 1, road_max_x)))
+        spans.append(Vector2i(maxi(center.x + radius + 1, road_min_x), road_max_x))
+        var centerline_y: int = start.y
         for side: StringName in [&"north", &"south"]:
             for span: Vector2i in spans:
                 _append_axis_segment_parcels(
@@ -102,9 +106,11 @@ func _append_inherited_straight_frontage(
                 )
         return
 
-    spans.append(Vector2i(request.bounds.position.y + edge_margin, center.y - radius - 1))
-    spans.append(Vector2i(center.y + radius + 1, request.bounds.position.y + request.bounds.size.y - edge_margin - 1))
-    var centerline_x: int = int(road.get("start", Vector2i.ZERO).x)
+    var road_min_y: int = maxi(mini(start.y, finish.y), request.bounds.position.y) + edge_margin
+    var road_max_y: int = mini(maxi(start.y, finish.y), request.bounds.position.y + request.bounds.size.y - 1) - edge_margin
+    spans.append(Vector2i(road_min_y, mini(center.y - radius - 1, road_max_y)))
+    spans.append(Vector2i(maxi(center.y + radius + 1, road_min_y), road_max_y))
+    var centerline_x: int = start.x
     for side: StringName in [&"west", &"east"]:
         for span: Vector2i in spans:
             _append_axis_segment_parcels(
