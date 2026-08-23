@@ -3,9 +3,10 @@ class_name AreaProfileCatalog
 
 const RURAL_CROSSROADS: StringName = &"rural.crossroads"
 const SMALLTOWN_CENTER: StringName = &"smalltown.center"
+const RURAL_SCATTERED: StringName = &"rural.scattered"
 
 func has_profile(profile_id: StringName) -> bool:
-    return profile_id == RURAL_CROSSROADS or profile_id == SMALLTOWN_CENTER
+    return profile_id == RURAL_CROSSROADS or profile_id == SMALLTOWN_CENTER or profile_id == RURAL_SCATTERED
 
 func profile(profile_id: StringName) -> Dictionary:
     if profile_id == RURAL_CROSSROADS:
@@ -104,6 +105,54 @@ func profile(profile_id: StringName) -> Dictionary:
                 &"commercial.gas_station.small",
                 &"commercial.diner.rural_small",
             ],
+            "residential_archetypes": [
+                &"residential.trailer.singlewide",
+                &"residential.house.farm_small",
+                &"residential.house.farm_large",
+                &"residential.house.compact_laundry",
+            ],
+            "farmstead_archetypes": [
+                &"residential.house.farm_small",
+                &"residential.house.farm_large",
+            ],
+        }
+    if profile_id == RURAL_SCATTERED:
+        return {
+            "id": RURAL_SCATTERED,
+            "version": 1,
+            "road_layout": &"rural_scattered_lanes",
+            "signalize_first_inherited_intersection": false,
+            "land_use_mode": &"rural_scattered",
+            "local_frontage_road_class": &"local_rural",
+            "center_exclusion_radius": 8,
+            "edge_margin": 12,
+            "parcel_gap": 5,
+            "parcel_road_gap": 1,
+            "parcel_buildable_margin": 1,
+            "primary_parcel_depth": 24,
+            "secondary_parcel_depth": 24,
+            "local_parcel_depth": 22,
+            "frontage_min": 30,
+            "frontage_max": 38,
+            "local_frontage_min": 24,
+            "local_frontage_max": 30,
+            "local_frontage_end_margin": 5,
+            "commercial_count": 0,
+            "residential_count": 4,
+            "farmstead_count": 2,
+            "local_residential_target": 3,
+            "local_farmstead_target": 1,
+            "rural_scattered_lane_count": 2,
+            "rural_scattered_lane_width": 3,
+            "rural_scattered_branch_margin": 24,
+            "rural_scattered_branch_separation": 44,
+            "rural_scattered_first_leg": 54,
+            "rural_scattered_tail_leg": 34,
+            "rural_scattered_edge_open_distance": 72,
+            "residential_setback": 1,
+            "farmstead_setback": 4,
+            "commercial_setback": 1,
+            "commercial_archetypes": [],
             "residential_archetypes": [
                 &"residential.trailer.singlewide",
                 &"residential.house.farm_small",
