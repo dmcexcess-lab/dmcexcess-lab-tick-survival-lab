@@ -93,7 +93,8 @@ func generate(request: AreaGenerationRequest) -> GeneratedAreaPlan:
             return plan
         blocks.append(block_value)
 
-    var parcel_result: Dictionary = _parcel_planner.plan(request, area_profile, roads, intersections, reservations)
+    var parcel_roads: Array[Dictionary] = _parcel_road_order(area_profile, roads)
+    var parcel_result: Dictionary = _parcel_planner.plan(request, area_profile, parcel_roads, intersections, reservations)
     if not bool(parcel_result.get("ok", false)):
         plan.failure_reason = String(parcel_result.get("failure_reason", "parcel_planning_failed"))
         return plan
@@ -177,6 +178,22 @@ func generate(request: AreaGenerationRequest) -> GeneratedAreaPlan:
             failure_parts.append(String(failure_value))
         plan.failure_reason = "area_validation_failed:%s" % ",".join(failure_parts)
     return plan
+
+func _parcel_road_order(profile: Dictionary, roads: Array[Dictionary]) -> Array[Dictionary]:
+    if StringName(profile.get("land_use_mode", &"rural_crossroads")) != &"smalltown_center":
+        return roads
+    var ordered: Array[Dictionary] = []
+    for road: Dictionary in roads:
+        if StringName(road.get("road_class", &"")) == &"local_town":
+            ordered.append(road)
+    for road: Dictionary in roads:
+        if StringName(road.get("road_class", &"")) == &"primary":
+            ordered.append(road)
+    for road: Dictionary in roads:
+        var road_class: StringName = StringName(road.get("road_class", &""))
+        if road_class != &"local_town" and road_class != &"primary":
+            ordered.append(road)
+    return ordered
 
 func area_profile_ids() -> Array[StringName]:
     return [AreaProfileCatalog.RURAL_CROSSROADS, AreaProfileCatalog.SMALLTOWN_CENTER]
