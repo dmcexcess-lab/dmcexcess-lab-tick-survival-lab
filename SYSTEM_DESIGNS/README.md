@@ -11,6 +11,7 @@ Major systems move through **NOT DESIGNED -> DRAFT -> APPROVED -> IMPLEMENTED** 
 | 00B | Persistent World / Entity State — WHAT | **IMPLEMENTED** | `00B_PERSISTENT_WORLD_STATE.md` |
 | 00C | Tick / Action / Pause Kernel — WHEN | **IMPLEMENTED** | `00C_TICK_ACTION_PAUSE.md` |
 | 00D | Global World Planning / Generation | **IMPLEMENTED — SLICES 001–006** | `00D_GLOBAL_WORLD_PLANNING.md`, `00D3_GLOBAL_HYDROLOGY_BRIDGE_INTENT.md`, `00D4_GLOBAL_ELECTRICAL_INFRASTRUCTURE.md`, `00D5_GLOBAL_POTABLE_WATER_INFRASTRUCTURE.md`, `00D6_GLOBAL_WASTEWATER_SEPTIC_INFRASTRUCTURE.md` |
+| 00F | Streaming / Materialization | **IMPLEMENTED — SLICE 001** | `00F_STREAMING_MATERIALIZATION_ORCHESTRATION.md` |
 | 01 | Collision / Spatial Query | **IMPLEMENTED** | `01_COLLISION_SPATIAL_QUERY.md` |
 | 02 | Movement Actions | **IMPLEMENTED** | `02_MOVEMENT_ACTIONS.md` |
 | 03 | Actor Locomotion / Movement Capability | **IMPLEMENTED** | `03_ACTOR_LOCOMOTION_MOVEMENT_CAPABILITY.md` |
@@ -46,41 +47,32 @@ Major systems move through **NOT DESIGNED -> DRAFT -> APPROVED -> IMPLEMENTED** 
 | 21 | Tactical Camera / View Control | **IMPLEMENTED** | `21_TACTICAL_CAMERA_VIEW_CONTROL.md` |
 | 22 | Large-Area DEV Critique Runtime | **IMPLEMENTED** | `22_LARGE_AREA_CRITIQUE_RUNTIME.md` |
 | 00E | Population / Household / Outbreak / Player Story | **NOT DESIGNED** | future design |
-| 00F | Streaming / Materialization Orchestration | **DRAFT** | `00F_STREAMING_MATERIALIZATION_ORCHESTRATION.md` |
 | old-01 | Raid-map / extraction physical-world model | **SUPERSEDED** | `01_RAID_MAP_DATA.md` |
 
 ## System 00D current implementation — Slices 001–006
 
 Current profile: `temperate.rural.region` **v6**.
 
-The pure global planner establishes, in order:
+Pure order:
 
 `geography -> hydrology -> settlements/sites -> major roads -> bridge intents -> regional electrical infrastructure -> potable water infrastructure -> wastewater/septic infrastructure -> broad planning regions`.
 
 Current global fixture:
 
 - bounds `Rect2i(232,1232,1792,1792)`, seed `20001`;
-- 196 coarse 128-cell geography records with lowland/rolling/upland/ridge classes;
-- one central rural crossroads, one smalltown and three rural hamlets;
-- geography/hydrology-constrained settlement sites;
-- globally connected primary/secondary road network with real boundary gateways;
-- protected central straight cross with 640-cell half-span;
-- one deterministic boundary-to-boundary primary regional river outside that protected corridor;
-- one explicit bridge intent for every actual perpendicular road/river crossing;
-- one regional electrical ingress, one small-town substation, one electrical service node per settlement, and one connected road-following feeder network;
-- five potable-water services: small-town municipal groundwater plus four decentralized groundwater-source intents;
-- three small-town municipal water anchors and two road-contained water trunk segments;
-- five wastewater services: small-town municipal treatment plus four decentralized septic intents;
-- all rural septic records carry `potable_source_clearance_required`;
-- two small-town wastewater anchors and one road-contained collection trunk, selected away from the potable-water source/trunk corridor;
-- read-only hydrology, power, water and wastewater projection seams;
-- central `project_site()` produces the accepted Candidate 006 request and exact semantic output;
-- small-town `project_site()` produces the implemented `smalltown.center` v1 request with normalized infrastructure planning constraints;
-- all three rural hamlet sites now project to implemented `rural.scattered` v1 and generate successfully while preserving decentralized water/septic intent and exact inherited road truth;
-- road projection ignores pure boundary-tangent regional segments rather than treating them as entering inherited roads;
-- exact-head context `verify/system00d-global-world`.
+- 196 coarse geography records;
+- one Crossroads, one Small-Town and three rural hamlets;
+- connected major-road network with real gateways;
+- regional river + explicit bridge intent;
+- regional electrical topology;
+- mixed municipal/decentralized potable water;
+- mixed municipal/decentralized wastewater/septic;
+- five logical local-area site records;
+- all five sites project to real implemented System 20 profiles.
 
-System 00D remains pure planning. It owns no tactical bridge implementation, utility poles/wires, energized electrical state, literal wells/towers/pipes, building plumbing, pressure/flow/water inventory, literal sewer/septic/treatment geometry, runtime sanitation, WHAT mutation, renderer, camera, population, outbreak or streaming behavior.
+System 00D remains pure planning and owns no WHAT mutation, local morphology, renderer, population/outbreak or streaming behavior.
+
+Exact-head context: `verify/system00d-global-world`.
 
 ## System 19 finalized building grammar
 
@@ -93,72 +85,106 @@ Protected library:
 - `commercial.gas_station.small` v1;
 - `commercial.diner.rural_small` v2.
 
-New building profiles are ordinary content work unless the frozen System 19 public grammar contract proves insufficient.
+New profiles are ordinary content work unless the frozen grammar contract proves insufficient.
+
+Exact-head context: `verify/system19-local-building`.
 
 ## System 20 implemented profiles
 
 ### Rural Crossroads Candidate 006
 
-Protected live/local integration truth:
+Protected live/local anchor:
 
 - `rural.crossroads` v5 + `temperate.rural` v3;
-- exact inherited regional road constraints from System 00D;
-- two bent local gravel roads with real local frontage;
-- majority of houses/farms off the inherited highway;
-- compact meaningful setbacks;
-- straight primary-door-aligned property approaches;
-- deterministic two-dimensional vegetation;
-- one real gas-station parking/forecourt frontage extended flush to the road because the System 19 plan exposes `ground.parking*` at its road-facing edge;
-- no parking invented for buildings without a real parking edge;
-- initial materialization remains transactional and relinquishes ownership to WHAT afterward.
+- inherited regional roads + two local gravel roads;
+- gas station + diner + honest commercial vacancy;
+- residential/farmstead local-road majority;
+- close facade setbacks;
+- real primary-door-aligned access;
+- generic road-flush building-owned parking rule;
+- deterministic open-land dressing.
 
 ### Small-Town Center Candidate 001
 
-Implemented pure/integration truth:
-
 - `smalltown.center` v1 + `temperate.rural` v3;
-- consumes the real System 00D v6 small-town road, power, water, wastewater and hydrology planning facts;
-- `InfrastructureReservationPlanner.gd` converts upstream facility/corridor facts into reusable protected local land;
-- `TownBlockPlanner.gd` records semantic blocks without treating them as chunks;
-- a connected internal paved `local_town` network creates denser residential frontage while preserving inherited regional roads;
-- four commercial opportunities use gas station + diner + honest vacancies because the System 19 library remains intentionally limited;
-- ten residential opportunities favor local-town frontage;
-- inherited-road parcel frontage is clipped to actual inherited segment extent;
-- all occupied approaches preserve the real System 19 primary-door alignment rule;
-- Rural Crossroads Candidate 006 request and semantic signature remain exact.
+- consumes actual System 00D utility/hydrology facts;
+- infrastructure reservations + semantic blocks;
+- compact internal paved `local_town` network;
+- gas station + diner + honest commercial vacancies;
+- ten residential opportunities favoring local streets;
+- protected Crossroads regression remains exact.
 
 ### Rural-Scattered / Hamlet Candidate 001
 
-Implemented pure/integration truth:
-
 - `rural.scattered` v1 + `temperate.rural` v3;
-- covers `area.rural.scattered.001`, `.002`, and `.003` from the real System 00D v6 plan;
-- preserves exact inherited regional road IDs/geometry while ignoring boundary-only road tangencies;
-- consumes regional power plus decentralized groundwater and onsite-septic service intent through the existing planning-constraint seam;
-- creates no rural utility facility reservation because the global plan does not provide literal local well/septic/substation footprints;
-- preserves `potable_source_clearance_required` for future parcel-scale well/septic placement;
-- creates exactly two internal 3-cell gravel `local_rural` lanes from a selected horizontal or vertical inherited spine;
-- creates exactly four residential + two farmstead opportunities with at least four of six occupied properties on local-lane frontage;
-- creates zero commercial opportunities and no semantic town blocks;
-- keeps at least 72% of non-road area physically unbuilt;
-- uses only finalized System 19 residential/farmhouse archetypes and real primary-door approach alignment;
-- dedicated smoke covers all three canonical hamlets plus synthetic horizontal/vertical spine cases;
-- Rural Crossroads 006 and Small-Town 001 remain exact protected regressions.
+- all three current hamlets supported;
+- exact inherited road truth + two internal gravel lanes;
+- zero commercial, four residential, two farmstead targets;
+- >=4/6 occupied properties on local-lane frontage;
+- >=72% non-road area unbuilt;
+- decentralized groundwater/septic are service intent, not fake facilities;
+- Crossroads and Small-Town regressions remain exact.
 
 Exact-head context: `verify/system20-local-area`.
 
+## System 00F Streaming / Materialization — Slice 001
+
+Canonical design: `00F_STREAMING_MATERIALIZATION_ORCHESTRATION.md`.
+
+Implemented rule:
+
+> **Materialization is one-way; activation is reversible.**
+
+Technical stream regions and logical generation/materialization sources are separate identities.
+
+Current source type:
+
+- `system20_area_site:<site_id>` for the five real System 00D area sites.
+
+Implemented owners:
+
+- `StreamingRegionGrid.gd` — replaceable technical region geometry;
+- `MaterializationRecord.gd` — immutable-style source provenance;
+- `MaterializationRegistry.gd` — successful one-time source registry + schema-v1 snapshot;
+- `AreaSiteMaterializationSource.gd` — public 00D -> System 20 source adapter;
+- `WorldMaterializationCoordinator.gd` — atomic WHAT + Door State + registry multi-source transaction;
+- `WorldStreamingCoordinator.gd` — focus-driven active region bookkeeping + source ensuring.
+
+Default technical configuration is 256×256 stream regions with active radius 1. The current 1792×1792 fixture happens to be 7×7, but region size/lattice is not world identity.
+
+Materialized sources are never regenerated on revisit. Deactivation does not remove terrain/entities, reset doors, advance WHEN, or instruct rendering/AI. A real Crossroads OPEN door survives deactivate/revisit unchanged.
+
+True memory eviction is **not implemented** because no authoritative persistence-backed inactive-region store exists yet. A source-free technical region is valid and creates no fake countryside.
+
+First green integrated code head:
+
+`1841dc99e9f6731388dc9b730bb2959e38d575ba`
+
+Exact-head context:
+
+`verify/system00f-streaming-materialization`
+
 ## System 21 / 22 presentation truth
 
-System 21 owns camera follow/pan/zoom/focus/recenter only and never mutates simulation.
+System 21 owns camera behavior only. System 22 owns the bounded DEV critique presentation only.
 
-System 22 owns the bounded moving-window DEV presentation for the accepted 256×256 Rural Crossroads Candidate 006 local area. The live Web demo remains Candidate 006; Small-Town Candidate 001 and Rural-Scattered Candidate 001 remain tested pure/integration profiles until a separate presentation decision is made.
+The live Web demo remains Rural Crossroads Candidate 006. 00F Slice 001 is independently proven and does not switch the presentation path.
 
 ## Immediate next path
 
-Keep System 00D Slices 001–006 and all three System 20 profiles protected. System 00F Streaming / Materialization Orchestration is now **DRAFT** in `00F_STREAMING_MATERIALIZATION_ORCHESTRATION.md`. Its proposed first slice separates logical materialization sources from technical active regions, materializes current area sites once into persistent WHAT, and does not fake memory eviction or arbitrary countryside.
+Current global settlement sites and their one-time streaming/materialization orchestration are now established.
 
-Other valid separately designed next slices include richer System 19 settlement content, parcel addresses/ownership/zoning, and System 00E population/household/outbreak/player-story work.
+Recommended next bounded design:
+
+**System 20C Rural-Open / Countryside local materialization source** — provide honest detailed world between the five existing settlement sites so 00F can consume it without inventing geography or morphology.
+
+Other separately designable paths:
+
+- a persistence/save owner, required before true 00F memory eviction;
+- System 00E population/households/jobs/outbreak/player story;
+- richer System 19 settlement content;
+- parcel addresses/ownership/zoning.
 
 ## Design rule
 
-Every major system keeps a focused owner/public contract. System 00D owns global geography/hydrology/settlement/major-road/infrastructure coherence; System 20 owns local refinement; System 19 owns building internals; System 21 owns camera presentation; System 22 owns DEV large-area presentation; WHAT owns persistent runtime truth after materialization. Streaming consumes logical world truth and never defines it. Art remains presentation truth, not physics.
+System 00D owns global coherence; System 20 owns local morphology; System 19 owns building internals; System 00F owns materialization orchestration + technical activation; WHAT owns persistent runtime truth after materialization; System 21 owns camera; System 22 owns DEV presentation. Streaming never defines world truth, and Art remains presentation rather than physics.

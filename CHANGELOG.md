@@ -1,5 +1,22 @@
 # Changelog
 
+## System 00F Streaming / Materialization Orchestration — Slice 001 — 2026-08-22
+
+- Implemented the approved **System 00F Slice 001** without changing world-generation morphology, WHAT/WHEN foundations, player/camera/rendering, or the live System 22 critique target.
+- Added six focused owners under `game/scripts/streaming/`: `StreamingRegionGrid.gd`, `MaterializationRecord.gd`, `MaterializationRegistry.gd`, `AreaSiteMaterializationSource.gd`, `WorldMaterializationCoordinator.gd`, and `WorldStreamingCoordinator.gd`.
+- Locked the cross-system rule **materialization is one-way; activation is reversible**. Technical stream regions decide proximity only; they never become logical world/source identity.
+- Added injected 256×256 technical stream regions with radius-1 square activation as the Slice 001 default. The current 1792×1792 fixture therefore happens to be 7×7, but tests prove technical region size can change without changing logical materialization source keys.
+- Current logical source type is `system20_area_site:<site_id>`. All five existing System 00D area sites can be materialized through the real public `System20AreaRequestProjector -> LocalAreaGenerator -> AreaMaterializationCoordinator -> WHAT + Door State` pipeline.
+- Added a deterministic in-memory Materialization Registry carrying source identity, bounds/seed, area/environment profile versions, generated-area plan signature and post-materialization WHAT/Door revisions. Registry schema-v1 snapshot/restore is atomic but intentionally not a user save-file format.
+- Revisiting an already-materialized source skips System 20 and persistent writes entirely. A real generated Crossroads door changed to OPEN remains OPEN after its technical region deactivates and later reactivates, with no revisit regeneration revision changes.
+- Added atomic multi-source orchestration: missing sources are prepared before writes; WHAT + Door State + Materialization Registry are snapshotted; any later materialization/registry failure restores all three exact pre-attempt snapshots.
+- CI deliberately injects a stable entity-ID collision into a virgin future site and proves the failed attempt leaves no partial area and never falsely marks the source materialized.
+- Source-free technical regions are valid and create no fake countryside. Arbitrary rural-open local materialization remains a future logical source rather than being smuggled into 00F.
+- Slice 001 does not evict inactive persistent facts from WHAT. True memory eviction is deferred until an authoritative persistence-backed inactive-region store exists; deactivation alone never means destruction/nonexistence.
+- Added `StreamingMaterializationSmoke.gd`, `.github/workflows/streaming-materialization.yml`, and exact-head context `verify/system00f-streaming-materialization`.
+- The first fully green integrated code head is `1841dc99e9f6731388dc9b730bb2959e38d575ba`; System 00F run `32621475876` passed together with `verify/system00d-global-world`, `verify/system19-local-building`, `verify/system20-local-area`, `verify/system21-camera-view`, `verify/system22-area-critique`, and `verify/pages-deploy` on that exact SHA.
+- The live Web critique remains Rural Crossroads Candidate 006. The recommended next logical-world design is arbitrary rural-open/countryside local materialization so 00F can consume honest detailed space between the five current settlement sites.
+
 ## System 20 Rural-Scattered / Hamlet Candidate 001 — 2026-08-22
 
 - Implemented the approved **System 20B Rural-Scattered / Hamlet Candidate 001** as `rural.scattered` **v1** while keeping `temperate.rural` v3.

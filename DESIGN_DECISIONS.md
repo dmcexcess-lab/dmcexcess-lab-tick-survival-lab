@@ -38,7 +38,7 @@ If a later discussion changes a decision, do not erase history. Add a newer entr
 
 **Affected systems:** world model, generation, persistence, streaming, travel, bases, vehicles, population/outbreak simulation.
 
-**Unresolved:** exact streaming/storage partition size and activation model.
+**Unresolved at the time:** exact streaming/storage partition size and activation model. The initial activation/materialization model is resolved by the 2026-08-22 decision below; persistence-backed eviction remains separately unresolved.
 
 ---
 
@@ -311,3 +311,29 @@ The approved architecture separates these responsibilities:
 **Affected systems:** Movement, Actor Locomotion/Capability, Health observation, Needs/Fatigue, player input/controller, HUD-visible timing/status indirectly.
 
 **Detailed design:** `SYSTEM_DESIGNS/17_RUN_DAMAGE_INTERRUPTIBLE_WALKING.md`.
+
+---
+
+## 2026-08-22 — Streaming activation is not world existence; materialization is one-way
+
+**Decision:** System 00F separates **logical materialization source identity** from **technical stream-region identity**.
+
+A technical region answers only whether a bounded part of the coordinate space is currently in the active proximity halo. It does not define towns, roads, parcels, buildings, persistent entity IDs, saves, or whether a place exists.
+
+For the initial streaming architecture:
+
+- a virgin logical source may materialize exactly once into WHAT + typed state;
+- after successful materialization, generation permanently relinquishes ownership for that source key;
+- leaving an active region does not unmaterialize, reset, delete or regenerate persistent facts;
+- revisiting an already-materialized source performs no generation/materialization writes;
+- current 256×256 stream-region size and radius-1 activation are injected technical configuration, not generated-world identity;
+- a source-free technical region is valid and does not justify fake countryside generation;
+- true inactive-region memory eviction is forbidden until an authoritative persistence-backed store can preserve the same current-world truth while data is non-resident.
+
+**Why:** WHAT already owns one authoritative persistent current world. Treating “not active/not resident” as “does not exist” would create a second reality and would reset player consequences on revisit. Keeping source identity independent from stream-grid coordinates also allows later performance tuning without rewriting geography or saved-world identity.
+
+**Resolves:** the initial activation/materialization portion of the 2026-08-16 persistent-open-world decision's streaming question. Exact future save/storage/eviction representation remains separately unresolved.
+
+**Affected systems:** global/local generation, WHAT and typed persistent state, streaming/materialization, save/session persistence, population/outbreak detail scaling, rendering/AI activation consumers, construction/bases and any mechanic requiring revisit persistence.
+
+**Implementation:** `SYSTEM_DESIGNS/00F_STREAMING_MATERIALIZATION_ORCHESTRATION.md` and `game/scripts/streaming/`.
