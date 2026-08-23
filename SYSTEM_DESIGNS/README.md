@@ -42,10 +42,11 @@ Major systems move through **NOT DESIGNED -> DRAFT -> APPROVED -> IMPLEMENTED** 
 | 17A.1 | Overweight Walk Fatigue / Absolute Carry Ceiling Correction | **IMPLEMENTED** | `17A1_OVERWEIGHT_WALK_FATIGUE_HARD_CARRY_LIMIT.md` |
 | 18 | Door Interaction / Automatic Passage | **IMPLEMENTED** | `18_DOOR_INTERACTION_PASSAGE.md` |
 | 19 | Local Building Generation / Building Grammar | **IMPLEMENTED — FINALIZED** | `19_LOCAL_BUILDING_GENERATION_ARCHETYPE_LAB.md` |
-| 20 | Local Area / Parcel Generation | **IMPLEMENTED — CROSSROADS 006 + SMALL-TOWN 001 + RURAL-SCATTERED 001 + RURAL-OPEN 001** | `20_LOCAL_AREA_PARCEL_GENERATION.md` |
+| 20 | Local Area / Parcel Generation | **IMPLEMENTED — CROSSROADS 006 + SMALL-TOWN 001 + RURAL-SCATTERED 001 + RURAL-OPEN 001; 20D DRAFT ACTIVE** | `20_LOCAL_AREA_PARCEL_GENERATION.md` |
 | 20A | Small-Town Center Candidate 001 | **IMPLEMENTED** | `20A_SMALLTOWN_CENTER_CANDIDATE_001.md` |
 | 20B | Rural-Scattered / Hamlet Candidate 001 | **IMPLEMENTED** | `20B_RURAL_SCATTERED_CANDIDATE_001.md` |
 | 20C | Rural-Open / Countryside Candidate 001 | **IMPLEMENTED** | `20C_RURAL_OPEN_COUNTRYSIDE_CANDIDATE_001.md` |
+| 20D | Rural Watercourse / Bridge Candidate 001 | **DRAFT** | `20D_RURAL_WATERCOURSE_BRIDGE_CANDIDATE_001.md` |
 | 21 | Tactical Camera / View Control | **IMPLEMENTED** | `21_TACTICAL_CAMERA_VIEW_CONTROL.md` |
 | 22 | Large-Area DEV Critique Runtime | **IMPLEMENTED** | `22_LARGE_AREA_CRITIQUE_RUNTIME.md` |
 | 00E | Population / Household / Outbreak / Player Story | **NOT DESIGNED** | future design |
@@ -112,6 +113,24 @@ Exact-head context: `verify/system19-local-building`.
 
 Exact-head context: `verify/system20-local-area`.
 
+### Rural Watercourse / Bridge Candidate 001 — DRAFT
+
+The active DRAFT proposes `rural.watercourse` v1 as a separate physical-generation profile rather than broadening `rural.open`.
+
+Key proposed rules:
+
+- consume exact System 00D river corridor + bridge intents;
+- request bounds must be wholly real river corridor;
+- select river facts by physical corridor overlap, not centerline-only overlap;
+- `ground.water_river` is the water terrain semantic;
+- only an explicit bridge intent may replace water with `ground.road_plain` bridge deck;
+- generated plans carry explicit hydrology provenance;
+- zero local roads/parcels/blocks/buildings/props;
+- exact split-vs-combined terrain invariance;
+- no 00F/00F2 source-catalog change in 20D.
+
+This design is **not implementation-authorized until the user explicitly approves the detailed 20D DRAFT**.
+
 ## System 00F Slices 001–002
 
 Canonical rule:
@@ -131,7 +150,7 @@ Slice 002 derives countryside sources from System 00D geography parent identity 
 
 Materialization Registry snapshot schema remains v1. Deactivation never deletes persistent WHAT, and revisit never regenerates already-materialized countryside or settlement facts. True memory eviction remains deferred until a persistence-backed store exists.
 
-The river corridor remains intentionally source-free until local physical hydrology/bridge materialization is designed and implemented.
+The river corridor remains intentionally source-free. If 20D is later approved/implemented, **00F Slice 003** should be designed separately to add stable river-source ownership without changing current `system20_rural_open` catalog-v1 IDs.
 
 Exact-head context: `verify/system00f-streaming-materialization`.
 
@@ -145,24 +164,21 @@ The live Web build remains Rural Crossroads Candidate 006.
 
 ## Immediate next path
 
-Settlement sites and supported dry countryside now have stable logical materialization ownership. The largest remaining continuous-world physical gap is the intentionally unsupported river corridor.
+**Review the active System 20D Rural Watercourse / Bridge Candidate 001 DRAFT.**
 
-Recommended next bounded design:
-
-**Local physical river / bridge materialization.**
-
-It must consume existing System 00D river/bridge intent, preserve System 20/00F ownership boundaries, and must not make technical stream-region geometry define hydrology.
+If approved, implement only 20D physical generation first. After 20D is exact-head green, design 00F Slice 003 separately for stable river logical sources/materialization.
 
 Other separate future paths:
 
 - persistence/save owner before true memory eviction;
-- later sparse rural properties now that logical source ownership is safe;
+- later sparse rural properties now that logical dry source ownership is safe;
 - System 00E population/households/jobs/outbreak/player story;
 - richer System 19 settlement/agricultural content;
-- parcel addresses/ownership/zoning.
+- parcel addresses/ownership/zoning;
+- water gameplay/presentation after physical river truth exists.
 
 ## Design rule
 
 System 00D owns global coherence; System 20 owns local physical generation; System 19 owns building internals; System 00F owns logical materialization orchestration + technical activation; WHAT owns subsequent persistent truth; System 21 owns camera; System 22 owns DEV presentation.
 
-**Streaming never defines world geography or countryside morphology.**
+**Streaming never defines world geography, countryside morphology or river geometry.**
