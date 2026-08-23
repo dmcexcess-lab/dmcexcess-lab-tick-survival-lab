@@ -1,6 +1,6 @@
 # Tick Survival Lab — System 20B Rural-Scattered / Hamlet Candidate 001
 
-Status: **DRAFT**
+Status: **APPROVED**
 
 Date: 2026-08-22
 
@@ -16,7 +16,9 @@ The profile should represent a sparse roadside hamlet/country cluster rather tha
 
 The three global hamlet sites share one profile but must vary deterministically by their already-distinct site seeds and inherited road geometry.
 
-## 2. Proposed decisions for approval
+## 2. Approved decisions
+
+Approved by the user on 2026-08-22:
 
 1. Add `rural.scattered` **v1** as the third System 20 area profile; keep `temperate.rural` v3.
 2. Keep Rural Crossroads Candidate 006 and Small-Town Center Candidate 001 semantically exact.
@@ -171,7 +173,7 @@ For `rural.scattered`:
 
 Add `land_use_mode = rural_scattered` so parcel ranking uses the **site center** rather than the first generated intersection as its semantic reference.
 
-Proposed v1 profile targets:
+Approved v1 profile targets:
 
 - `commercial_count = 0`;
 - `residential_count = 4`;
