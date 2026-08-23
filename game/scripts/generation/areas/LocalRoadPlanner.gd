@@ -33,6 +33,19 @@ func plan(
             if typeof(road_value) != TYPE_DICTIONARY:
                 return {"ok": false, "failure_reason": "smalltown_street_result_invalid", "roads": roads, "intersections": intersections}
             roads.append(road_value)
+    elif layout == &"rural_scattered_lanes":
+        var scattered_result: Dictionary = _build_rural_scattered_lanes(request, profile, roads, reservations)
+        if not bool(scattered_result.get("ok", false)):
+            return {
+                "ok": false,
+                "failure_reason": String(scattered_result.get("failure_reason", "rural_scattered_lane_planning_failed")),
+                "roads": roads,
+                "intersections": intersections,
+            }
+        for road_value: Variant in scattered_result.get("roads", []):
+            if typeof(road_value) != TYPE_DICTIONARY:
+                return {"ok": false, "failure_reason": "rural_scattered_lane_result_invalid", "roads": roads, "intersections": intersections}
+            roads.append(road_value)
     else:
         var local_count: int = int(profile.get("local_road_spurs", 0))
         for ordinal in range(local_count):
@@ -257,6 +270,260 @@ func _build_local_town_street(
         "parcel_frontage_enabled": true,
         "town_role": role,
     }
+
+func _build_rural_scattered_lanes(
+    request: AreaGenerationRequest,
+    profile: Dictionary,
+    inherited_roads: Array[Dictionary],
+    reservations: Array[Dictionary]
+) -> Dictionary:
+    var center := Vector2i(
+        request.bounds.position.x + request.bounds.size.x / 2,
+        request.bounds.position.y + request.bounds.size.y / 2
+    )
+    var spine: Dictionary = _select_rural_scattered_spine(inherited_roads, center)
+    if spine.is_empty():
+        return {"ok": false, "failure_reason": "rural_scattered_spine_missing", "roads": []}
+    var axis: StringName = StringName(spine.get("axis", &""))
+    if axis != &"horizontal" and axis != &"vertical":
+        return {"ok": false, "failure_reason": "rural_scattered_spine_axis_invalid", "roads": []}
+
+    var lane_count: int = int(profile.get("rural_scattered_lane_count", 2))
+    var width: int = int(profile.get("rural_scattered_lane_width", 3))
+    var branch_margin: int = int(profile.get("rural_scattered_branch_margin", 24))
+    var branch_separation: int = int(profile.get("rural_scattered_branch_separation", 44))
+    var first_leg: int = int(profile.get("rural_scattered_first_leg", 54))
+    var tail_leg: int = int(profile.get("rural_scattered_tail_leg", 34))
+    if lane_count != 2 or width <= 0 or width % 2 == 0 or branch_margin < 0 or branch_separation <= 0 or first_leg <= 0 or tail_leg <= 0:
+        return {"ok": false, "failure_reason": "rural_scattered_lane_profile_invalid", "roads": []}
+
+    var anchors: Array[Vector2i] = _rural_scattered_branch_anchors(request, spine, inherited_roads, branch_margin, width)
+    if anchors.size() < 2:
+        return {"ok": false, "failure_reason": "rural_scattered_branch_anchors_insufficient", "roads": []}
+
+    var pairs: Array[Array] = []
+    for first_index in range(anchors.size()):
+        for second_index in range(first_index + 1, anchors.size()):
+            var a: Vector2i = anchors[first_index]
+            var b: Vector2i = anchors[second_index]
+            var separation: int = absi(a.x - b.x) + absi(a.y - b.y)
+            if separation < branch_separation:
+                continue
+            pairs.append([a, b])
+    if pairs.is_empty():
+        return {"ok": false, "failure_reason": "rural_scattered_branch_pair_unresolved", "roads": []}
+
+    pairs.sort_custom(func(a: Array, b: Array) -> bool:
+        var a0: Vector2i = a[0]
+        var a1: Vector2i = a[1]
+        var b0: Vector2i = b[0]
+        var b1: Vector2i = b[1]
+        var a_distance: int = absi(a0.x - center.x) + absi(a0.y - center.y) + absi(a1.x - center.x) + absi(a1.y - center.y)
+        var b_distance: int = absi(b0.x - center.x) + absi(b0.y - center.y) + absi(b1.x - center.x) + absi(b1.y - center.y)
+        if a_distance != b_distance:
+            return a_distance < b_distance
+        if a0.y != b0.y:
+            return a0.y < b0.y
+        if a0.x != b0.x:
+            return a0.x < b0.x
+        if a1.y != b1.y:
+            return a1.y < b1.y
+        return a1.x < b1.x
+    )
+
+    var pair_start: int = Seed.choose_index(request.seed, "rural_scattered:branch_pair_start", pairs.size())
+    if pair_start < 0:
+        return {"ok": false, "failure_reason": "rural_scattered_branch_pair_unresolved", "roads": []}
+    var side_flip: int = -1 if Seed.choose_index(request.seed, "rural_scattered:side_flip", 2) == 0 else 1
+
+    for pair_step in range(pairs.size()):
+        var pair: Array = pairs[(pair_start + pair_step) % pairs.size()]
+        var anchor_a: Vector2i = pair[0]
+        var anchor_b: Vector2i = pair[1]
+        if _axis_coordinate(anchor_a, axis) > _axis_coordinate(anchor_b, axis):
+            var swap: Vector2i = anchor_a
+            anchor_a = anchor_b
+            anchor_b = swap
+
+        var candidate: Array[Dictionary] = []
+        candidate.append(_build_rural_scattered_lane(request, 0, spine, anchor_a, side_flip, -1, width, first_leg, tail_leg))
+        candidate.append(_build_rural_scattered_lane(request, 1, spine, anchor_b, -side_flip, 1, width, first_leg, tail_leg))
+        if candidate[0].is_empty() or candidate[1].is_empty():
+            continue
+        if not _local_roads_legal(candidate, request, inherited_roads, reservations):
+            continue
+        if _roads_share_corridor_cells(candidate[0], candidate[1]):
+            continue
+        return {"ok": true, "failure_reason": "", "roads": candidate}
+
+    return {"ok": false, "failure_reason": "rural_scattered_lane_layout_unresolved", "roads": []}
+
+func _select_rural_scattered_spine(roads: Array[Dictionary], center: Vector2i) -> Dictionary:
+    var best: Dictionary = {}
+    var best_contains_center: bool = false
+    var best_distance: int = 2147483647
+    var best_class_rank: int = 2147483647
+    var best_id: String = ""
+    for road: Dictionary in roads:
+        var axis: StringName = StringName(road.get("axis", &""))
+        if axis != &"horizontal" and axis != &"vertical":
+            continue
+        var contains_center: bool = _point_on_road_path(center, road)
+        var distance: int = _distance_to_road_path(center, road)
+        var class_rank: int = _road_class_rank(StringName(road.get("road_class", &"")))
+        var road_id: String = String(road.get("road_id", ""))
+        var better: bool = false
+        if best.is_empty():
+            better = true
+        elif contains_center != best_contains_center:
+            better = contains_center
+        elif distance != best_distance:
+            better = distance < best_distance
+        elif class_rank != best_class_rank:
+            better = class_rank < best_class_rank
+        elif road_id < best_id:
+            better = true
+        if better:
+            best = road
+            best_contains_center = contains_center
+            best_distance = distance
+            best_class_rank = class_rank
+            best_id = road_id
+    return best
+
+func _rural_scattered_branch_anchors(
+    request: AreaGenerationRequest,
+    spine: Dictionary,
+    inherited_roads: Array[Dictionary],
+    branch_margin: int,
+    width: int
+) -> Array[Vector2i]:
+    var result: Array[Vector2i] = []
+    var path: Array = spine.get("path_cells", [])
+    if path.is_empty():
+        return result
+    var start: Vector2i = spine.get("start", Vector2i.ZERO)
+    var finish: Vector2i = spine.get("end", Vector2i.ZERO)
+    var radius: int = width / 2
+    var safe_bounds := Rect2i(
+        request.bounds.position + Vector2i(radius + 2, radius + 2),
+        request.bounds.size - Vector2i((radius + 2) * 2, (radius + 2) * 2)
+    )
+    for value: Variant in path:
+        if typeof(value) != TYPE_VECTOR2I:
+            continue
+        var cell: Vector2i = value
+        if not safe_bounds.has_point(cell):
+            continue
+        if absi(cell.x - start.x) + absi(cell.y - start.y) < branch_margin:
+            continue
+        if absi(cell.x - finish.x) + absi(cell.y - finish.y) < branch_margin:
+            continue
+        if _cell_on_other_inherited_road(cell, spine, inherited_roads):
+            continue
+        result.append(cell)
+    result.sort_custom(func(a: Vector2i, b: Vector2i) -> bool:
+        return a.y < b.y or (a.y == b.y and a.x < b.x)
+    )
+    return result
+
+func _build_rural_scattered_lane(
+    request: AreaGenerationRequest,
+    ordinal: int,
+    spine: Dictionary,
+    anchor: Vector2i,
+    side: int,
+    tail_direction: int,
+    width: int,
+    first_leg: int,
+    tail_leg: int
+) -> Dictionary:
+    var axis: StringName = StringName(spine.get("axis", &""))
+    var first: Vector2i = anchor
+    var finish: Vector2i = anchor
+    if axis == &"horizontal":
+        first = anchor + Vector2i(0, side * first_leg)
+        finish = first + Vector2i(tail_direction * tail_leg, 0)
+    elif axis == &"vertical":
+        first = anchor + Vector2i(side * first_leg, 0)
+        finish = first + Vector2i(0, tail_direction * tail_leg)
+    else:
+        return {}
+
+    var waypoints: Array[Vector2i] = [anchor, first, finish]
+    for point: Vector2i in waypoints:
+        if not request.bounds.has_point(point) or AreaGenerationRequest._is_boundary_cell(request.bounds, point):
+            return {}
+    var path_cells: Array[Vector2i] = _polyline_cells(waypoints)
+    if path_cells.is_empty() or not _path_has_full_corridor_inside(path_cells, width, request.bounds):
+        return {}
+    var corridor_cells: Array[Vector2i] = _polyline_corridor(path_cells, width, request.bounds)
+    if corridor_cells.is_empty():
+        return {}
+    return {
+        "road_id": "%s.road.local.rural.%02d" % [request.area_id, ordinal],
+        "road_class": &"local_rural",
+        "start": anchor,
+        "end": finish,
+        "width": width,
+        "axis": &"polyline",
+        "path_cells": path_cells,
+        "corridor_cells": corridor_cells,
+        "waypoints": waypoints,
+        "inherited": false,
+        "allowed_boundary_cells": [],
+        "surface_family": &"rural_gravel",
+        "paint_centerline": false,
+        "parcel_frontage_enabled": true,
+        "rural_scattered_lane": true,
+    }
+
+func _path_has_full_corridor_inside(path_cells: Array[Vector2i], width: int, bounds: Rect2i) -> bool:
+    var radius: int = width / 2
+    for cell: Vector2i in path_cells:
+        for dy in range(-radius, radius + 1):
+            for dx in range(-radius, radius + 1):
+                if not bounds.has_point(cell + Vector2i(dx, dy)):
+                    return false
+    return true
+
+func _cell_on_other_inherited_road(cell: Vector2i, spine: Dictionary, roads: Array[Dictionary]) -> bool:
+    var spine_id: String = String(spine.get("road_id", ""))
+    for road: Dictionary in roads:
+        if String(road.get("road_id", "")) == spine_id:
+            continue
+        if _point_on_road_path(cell, road):
+            return true
+    return false
+
+func _roads_share_corridor_cells(a: Dictionary, b: Dictionary) -> bool:
+    var cells: Dictionary = {}
+    for value: Variant in a.get("corridor_cells", []):
+        if typeof(value) == TYPE_VECTOR2I:
+            cells[value] = true
+    for value: Variant in b.get("corridor_cells", []):
+        if typeof(value) == TYPE_VECTOR2I and cells.has(value):
+            return true
+    return false
+
+func _distance_to_road_path(point: Vector2i, road: Dictionary) -> int:
+    var best: int = 2147483647
+    for value: Variant in road.get("path_cells", []):
+        if typeof(value) != TYPE_VECTOR2I:
+            continue
+        var cell: Vector2i = value
+        best = mini(best, absi(cell.x - point.x) + absi(cell.y - point.y))
+    return best
+
+func _road_class_rank(road_class: StringName) -> int:
+    if road_class == &"primary":
+        return 0
+    if road_class == &"secondary":
+        return 1
+    return 2
+
+func _axis_coordinate(cell: Vector2i, axis: StringName) -> int:
+    return cell.x if axis == &"horizontal" else cell.y
 
 func _local_roads_legal(
     local_roads: Array[Dictionary],
