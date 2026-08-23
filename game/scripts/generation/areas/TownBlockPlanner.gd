@@ -31,26 +31,36 @@ func plan(
     var candidates: Array[Rect2i] = []
 
     if axis == &"horizontal":
-        var x1: int = mini(int(cross_a.get("start", center).x), int(cross_b.get("start", center).x))
-        var x2: int = maxi(int(cross_a.get("start", center).x), int(cross_b.get("start", center).x))
+        var cross_a_start: Vector2i = cross_a.get("start", center)
+        var cross_b_start: Vector2i = cross_b.get("start", center)
+        var x1: int = mini(cross_a_start.x, cross_b_start.x)
+        var x2: int = maxi(cross_a_start.x, cross_b_start.x)
         var cross_half: int = maxi(int(cross_a.get("width", 3)), int(cross_b.get("width", 3))) / 2
-        var spine_y: int = int(spine.get("start", center).y)
+        var spine_start: Vector2i = spine.get("start", center)
+        var spine_y: int = spine_start.y
         var spine_half: int = int(spine.get("width", 1)) / 2
-        var north_y: int = mini(int(back_a.get("start", center).y), int(back_b.get("start", center).y))
-        var south_y: int = maxi(int(back_a.get("start", center).y), int(back_b.get("start", center).y))
+        var back_a_start: Vector2i = back_a.get("start", center)
+        var back_b_start: Vector2i = back_b.get("start", center)
+        var north_y: int = mini(back_a_start.y, back_b_start.y)
+        var south_y: int = maxi(back_a_start.y, back_b_start.y)
         var back_half: int = maxi(int(back_a.get("width", 3)), int(back_b.get("width", 3))) / 2
         var x_start: int = x1 + cross_half + 1
         var x_end: int = x2 - cross_half - 1
         candidates.append(_rect_from_inclusive(x_start, north_y + back_half + 1, x_end, spine_y - spine_half - 1))
         candidates.append(_rect_from_inclusive(x_start, spine_y + spine_half + 1, x_end, south_y - back_half - 1))
     elif axis == &"vertical":
-        var y1: int = mini(int(cross_a.get("start", center).y), int(cross_b.get("start", center).y))
-        var y2: int = maxi(int(cross_a.get("start", center).y), int(cross_b.get("start", center).y))
+        var cross_a_start: Vector2i = cross_a.get("start", center)
+        var cross_b_start: Vector2i = cross_b.get("start", center)
+        var y1: int = mini(cross_a_start.y, cross_b_start.y)
+        var y2: int = maxi(cross_a_start.y, cross_b_start.y)
         var cross_half: int = maxi(int(cross_a.get("width", 3)), int(cross_b.get("width", 3))) / 2
-        var spine_x: int = int(spine.get("start", center).x)
+        var spine_start: Vector2i = spine.get("start", center)
+        var spine_x: int = spine_start.x
         var spine_half: int = int(spine.get("width", 1)) / 2
-        var west_x: int = mini(int(back_a.get("start", center).x), int(back_b.get("start", center).x))
-        var east_x: int = maxi(int(back_a.get("start", center).x), int(back_b.get("start", center).x))
+        var back_a_start: Vector2i = back_a.get("start", center)
+        var back_b_start: Vector2i = back_b.get("start", center)
+        var west_x: int = mini(back_a_start.x, back_b_start.x)
+        var east_x: int = maxi(back_a_start.x, back_b_start.x)
         var back_half: int = maxi(int(back_a.get("width", 3)), int(back_b.get("width", 3))) / 2
         var y_start: int = y1 + cross_half + 1
         var y_end: int = y2 - cross_half - 1
@@ -63,8 +73,30 @@ func plan(
         center - Vector2i(half_extent, half_extent),
         Vector2i(half_extent * 2 + 1, half_extent * 2 + 1)
     )
+    var carved_candidates: Array[Rect2i] = []
+    for candidate: Rect2i in candidates:
+        if candidate.size.x <= 0 or candidate.size.y <= 0:
+            continue
+        var pieces: Array[Rect2i] = [candidate]
+        for reservation: Dictionary in reservations:
+            if not bool(reservation.get("blocks_parcels", false)):
+                continue
+            pieces = _subtract_rect_from_pieces(pieces, reservation.get("rect", Rect2i()))
+        for piece: Rect2i in pieces:
+            carved_candidates.append(piece)
+
+    carved_candidates.sort_custom(func(a: Rect2i, b: Rect2i) -> bool:
+        if a.position.y != b.position.y:
+            return a.position.y < b.position.y
+        if a.position.x != b.position.x:
+            return a.position.x < b.position.x
+        if a.size.y != b.size.y:
+            return a.size.y < b.size.y
+        return a.size.x < b.size.x
+    )
+
     var ordinal: int = 0
-    for rect: Rect2i in candidates:
+    for rect: Rect2i in carved_candidates:
         if rect.size.x < min_span or rect.size.y < min_span:
             continue
         if not _rect_inside(request.bounds, rect) or not _rect_inside(core_rect, rect):
@@ -83,6 +115,40 @@ func plan(
     if blocks.size() < 2:
         return {"ok": false, "failure_reason": "smalltown_blocks_insufficient", "blocks": blocks}
     return {"ok": true, "failure_reason": "", "blocks": blocks}
+
+func _subtract_rect_from_pieces(pieces: Array[Rect2i], cutter: Rect2i) -> Array[Rect2i]:
+    if cutter.size.x <= 0 or cutter.size.y <= 0:
+        return pieces
+    var result: Array[Rect2i] = []
+    for piece: Rect2i in pieces:
+        if not _rects_intersect(piece, cutter):
+            result.append(piece)
+            continue
+        var intersection: Rect2i = piece.intersection(cutter)
+        if intersection.size.x <= 0 or intersection.size.y <= 0:
+            result.append(piece)
+            continue
+
+        var piece_right: int = piece.position.x + piece.size.x
+        var piece_bottom: int = piece.position.y + piece.size.y
+        var cut_right: int = intersection.position.x + intersection.size.x
+        var cut_bottom: int = intersection.position.y + intersection.size.y
+
+        var top_height: int = intersection.position.y - piece.position.y
+        if top_height > 0:
+            result.append(Rect2i(piece.position, Vector2i(piece.size.x, top_height)))
+        var bottom_height: int = piece_bottom - cut_bottom
+        if bottom_height > 0:
+            result.append(Rect2i(Vector2i(piece.position.x, cut_bottom), Vector2i(piece.size.x, bottom_height)))
+
+        var middle_height: int = intersection.size.y
+        var left_width: int = intersection.position.x - piece.position.x
+        if left_width > 0 and middle_height > 0:
+            result.append(Rect2i(Vector2i(piece.position.x, intersection.position.y), Vector2i(left_width, middle_height)))
+        var right_width: int = piece_right - cut_right
+        if right_width > 0 and middle_height > 0:
+            result.append(Rect2i(Vector2i(cut_right, intersection.position.y), Vector2i(right_width, middle_height)))
+    return result
 
 func _road_by_flag(roads: Array[Dictionary], key: String) -> Dictionary:
     for road: Dictionary in roads:
