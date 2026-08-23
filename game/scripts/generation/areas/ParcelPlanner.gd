@@ -8,31 +8,45 @@ func plan(
     request: AreaGenerationRequest,
     profile: Dictionary,
     roads: Array[Dictionary],
-    intersections: Array[Dictionary]
+    intersections: Array[Dictionary],
+    reservations: Array[Dictionary] = []
 ) -> Dictionary:
     var parcels: Array[Dictionary] = []
     if request == null or not request.is_valid() or profile.is_empty() or roads.is_empty() or intersections.is_empty():
         return {"ok": false, "failure_reason": "invalid_parcel_planner_input", "parcels": parcels}
 
+    var land_use_mode: StringName = StringName(profile.get("land_use_mode", &"rural_crossroads"))
     var center: Vector2i = intersections[0].get("cell", request.bounds.get_center())
+    if land_use_mode == &"smalltown_center":
+        center = Vector2i(
+            request.bounds.position.x + request.bounds.size.x / 2,
+            request.bounds.position.y + request.bounds.size.y / 2
+        )
     var road_cells: Dictionary = _road_cell_set(roads)
     for road: Dictionary in roads:
         if not bool(road.get("parcel_frontage_enabled", true)):
             continue
         _append_road_frontage_parcels(request, profile, road, center, road_cells, parcels)
 
+    if not reservations.is_empty():
+        _remove_blocked_parcels(parcels, reservations)
+
     var required_total: int = int(profile.get("commercial_count", 0)) + int(profile.get("residential_count", 0)) + int(profile.get("farmstead_count", 0))
     if parcels.size() < required_total:
-        return {"ok": false, "failure_reason": "insufficient_rural_parcel_candidates", "parcels": parcels}
+        return {"ok": false, "failure_reason": "insufficient_parcel_candidates", "parcels": parcels}
     var required_local: int = int(profile.get("local_residential_target", 0)) + int(profile.get("local_farmstead_target", 0))
-    if _count_road_class_candidates(parcels, &"local_rural") < required_local:
+    var local_frontage_class: StringName = StringName(profile.get("local_frontage_road_class", &"local_rural"))
+    if _count_road_class_candidates(parcels, local_frontage_class) < required_local:
         return {"ok": false, "failure_reason": "insufficient_local_road_parcel_candidates", "parcels": parcels}
 
-    _classify_land_use(request.seed, profile, center, parcels)
+    if land_use_mode == &"smalltown_center":
+        _classify_smalltown_land_use(request.seed, profile, center, parcels)
+    else:
+        _classify_rural_land_use(request.seed, profile, center, parcels)
     if _count_land_use(parcels, &"commercial_small") != int(profile.get("commercial_count", 0)) \
         or _count_land_use(parcels, &"residential") != int(profile.get("residential_count", 0)) \
         or _count_land_use(parcels, &"farmstead") != int(profile.get("farmstead_count", 0)):
-        return {"ok": false, "failure_reason": "rural_land_use_targets_unmet", "parcels": parcels}
+        return {"ok": false, "failure_reason": "land_use_targets_unmet", "parcels": parcels}
     return {"ok": true, "failure_reason": "", "parcels": parcels}
 
 func _append_road_frontage_parcels(
@@ -44,6 +58,10 @@ func _append_road_frontage_parcels(
     parcels: Array[Dictionary]
 ) -> void:
     var axis: StringName = StringName(road.get("axis", &""))
+    var road_class: StringName = StringName(road.get("road_class", &""))
+    if (axis == &"horizontal" or axis == &"vertical") and road_class == &"local_town":
+        _append_local_straight_frontage(request, profile, road, center, road_cells, parcels)
+        return
     if axis == &"horizontal" or axis == &"vertical":
         _append_inherited_straight_frontage(request, profile, road, center, road_cells, parcels)
         return
@@ -62,7 +80,6 @@ func _append_inherited_straight_frontage(
     var depth: int = int(profile.get("primary_parcel_depth", 24)) if road_class == &"primary" else int(profile.get("secondary_parcel_depth", 24))
     var radius: int = int(profile.get("center_exclusion_radius", 20))
     var edge_margin: int = int(profile.get("edge_margin", 8))
-    var road_id: String = String(road.get("road_id", ""))
     var width: int = int(road.get("width", 1))
     var half_width: int = width / 2
     var gap_from_road: int = int(profile.get("parcel_road_gap", 1))
@@ -93,6 +110,48 @@ func _append_inherited_straight_frontage(
             _append_axis_segment_parcels(
                 request, profile, road, center, road_cells, parcels,
                 &"vertical", centerline_x, span.x, span.y, side,
+                depth, half_width, gap_from_road, minimum, maximum, parcel_gap
+            )
+
+func _append_local_straight_frontage(
+    request: AreaGenerationRequest,
+    profile: Dictionary,
+    road: Dictionary,
+    center: Vector2i,
+    road_cells: Dictionary,
+    parcels: Array[Dictionary]
+) -> void:
+    var start: Vector2i = road.get("start", Vector2i.ZERO)
+    var finish: Vector2i = road.get("end", Vector2i.ZERO)
+    var axis: StringName = StringName(road.get("axis", &""))
+    var depth: int = int(profile.get("local_parcel_depth", 22))
+    var half_width: int = int(road.get("width", 3)) / 2
+    var gap_from_road: int = int(profile.get("parcel_road_gap", 1))
+    var minimum: int = int(profile.get("local_frontage_min", 23))
+    var maximum: int = int(profile.get("local_frontage_max", 28))
+    var parcel_gap: int = int(profile.get("parcel_gap", 2))
+    var end_margin: int = int(profile.get("local_frontage_end_margin", 5))
+    if axis == &"horizontal":
+        var span_start: int = mini(start.x, finish.x) + end_margin
+        var span_end: int = maxi(start.x, finish.x) - end_margin
+        if span_end - span_start + 1 < minimum:
+            return
+        for side: StringName in [&"north", &"south"]:
+            _append_axis_segment_parcels(
+                request, profile, road, center, road_cells, parcels,
+                &"horizontal", start.y, span_start, span_end, side,
+                depth, half_width, gap_from_road, minimum, maximum, parcel_gap
+            )
+        return
+    if axis == &"vertical":
+        var span_start: int = mini(start.y, finish.y) + end_margin
+        var span_end: int = maxi(start.y, finish.y) - end_margin
+        if span_end - span_start + 1 < minimum:
+            return
+        for side: StringName in [&"west", &"east"]:
+            _append_axis_segment_parcels(
+                request, profile, road, center, road_cells, parcels,
+                &"vertical", start.x, span_start, span_end, side,
                 depth, half_width, gap_from_road, minimum, maximum, parcel_gap
             )
 
@@ -273,7 +332,20 @@ func _try_append_parcel(
         "building_entry_cell": Vector2i(-1, -1),
     })
 
-func _classify_land_use(seed: int, profile: Dictionary, center: Vector2i, parcels: Array[Dictionary]) -> void:
+func _remove_blocked_parcels(parcels: Array[Dictionary], reservations: Array[Dictionary]) -> void:
+    for index in range(parcels.size() - 1, -1, -1):
+        var rect: Rect2i = parcels[index].get("rect", Rect2i())
+        var blocked: bool = false
+        for reservation: Dictionary in reservations:
+            if not bool(reservation.get("blocks_parcels", false)):
+                continue
+            if _rects_intersect(rect, reservation.get("rect", Rect2i())):
+                blocked = true
+                break
+        if blocked:
+            parcels.remove_at(index)
+
+func _classify_rural_land_use(seed: int, profile: Dictionary, center: Vector2i, parcels: Array[Dictionary]) -> void:
     parcels.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
         var da: int = int(a.get("distance_to_center", 0))
         var db: int = int(b.get("distance_to_center", 0))
@@ -294,7 +366,13 @@ func _classify_land_use(seed: int, profile: Dictionary, center: Vector2i, parcel
 
     var residential_target: int = int(profile.get("residential_count", 6))
     var local_residential_target: int = mini(residential_target, int(profile.get("local_residential_target", 0)))
-    var residential_used: int = _assign_local_land_use(parcels, &"residential", local_residential_target, false)
+    var residential_used: int = _assign_local_land_use(
+        parcels,
+        &"residential",
+        local_residential_target,
+        false,
+        StringName(profile.get("local_frontage_road_class", &"local_rural"))
+    )
     for parcel: Dictionary in parcels:
         if residential_used >= residential_target:
             break
@@ -305,7 +383,13 @@ func _classify_land_use(seed: int, profile: Dictionary, center: Vector2i, parcel
 
     var farmstead_target: int = int(profile.get("farmstead_count", 4))
     var local_farmstead_target: int = mini(farmstead_target, int(profile.get("local_farmstead_target", 0)))
-    var farmstead_used: int = _assign_local_land_use(parcels, &"farmstead", local_farmstead_target, true)
+    var farmstead_used: int = _assign_local_land_use(
+        parcels,
+        &"farmstead",
+        local_farmstead_target,
+        true,
+        StringName(profile.get("local_frontage_road_class", &"local_rural"))
+    )
     for index in range(parcels.size() - 1, -1, -1):
         if farmstead_used >= farmstead_target:
             break
@@ -327,14 +411,71 @@ func _classify_land_use(seed: int, profile: Dictionary, center: Vector2i, parcel
             _:
                 parcel["land_use"] = &"wilderness"
 
-func _assign_local_land_use(parcels: Array[Dictionary], land_use: StringName, target: int, farthest_first: bool) -> int:
+func _classify_smalltown_land_use(seed: int, profile: Dictionary, center: Vector2i, parcels: Array[Dictionary]) -> void:
+    parcels.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
+        var da: int = int(a.get("distance_to_center", 0))
+        var db: int = int(b.get("distance_to_center", 0))
+        if da != db:
+            return da < db
+        return String(a.get("id", "")) < String(b.get("id", ""))
+    )
+
+    var commercial_target: int = int(profile.get("commercial_count", 4))
+    var commercial_used: int = 0
+    for parcel: Dictionary in parcels:
+        if commercial_used >= commercial_target:
+            break
+        if StringName(parcel.get("frontage_road_class", &"")) != &"primary":
+            continue
+        parcel["land_use"] = &"commercial_small"
+        commercial_used += 1
+
+    var residential_target: int = int(profile.get("residential_count", 10))
+    var local_class: StringName = StringName(profile.get("local_frontage_road_class", &"local_town"))
+    var local_target: int = mini(residential_target, int(profile.get("local_residential_target", 6)))
+    var residential_used: int = _assign_local_land_use(parcels, &"residential", local_target, false, local_class)
+
+    for parcel: Dictionary in parcels:
+        if residential_used >= residential_target:
+            break
+        if StringName(parcel.get("land_use", &"")) != &"unclassified":
+            continue
+        if StringName(parcel.get("frontage_road_class", &"")) == &"primary":
+            continue
+        parcel["land_use"] = &"residential"
+        residential_used += 1
+    for parcel: Dictionary in parcels:
+        if residential_used >= residential_target:
+            break
+        if StringName(parcel.get("land_use", &"")) != &"unclassified":
+            continue
+        parcel["land_use"] = &"residential"
+        residential_used += 1
+
+    var edge_distance: int = int(profile.get("town_edge_open_distance", 82))
+    for parcel: Dictionary in parcels:
+        if StringName(parcel.get("land_use", &"")) != &"unclassified":
+            continue
+        if int(parcel.get("distance_to_center", 0)) < edge_distance:
+            parcel["land_use"] = &"vacant"
+            continue
+        var choice: int = Seed.choose_index(seed, "town_open_land:%s" % String(parcel.get("id", "")), 3)
+        parcel["land_use"] = &"agricultural" if choice == 0 else (&"wilderness" if choice == 1 else &"vacant")
+
+func _assign_local_land_use(
+    parcels: Array[Dictionary],
+    land_use: StringName,
+    target: int,
+    farthest_first: bool,
+    road_class: StringName
+) -> int:
     if target <= 0:
         return 0
     var candidates: Array[Dictionary] = []
     for parcel: Dictionary in parcels:
         if StringName(parcel.get("land_use", &"")) != &"unclassified":
             continue
-        if StringName(parcel.get("frontage_road_class", &"")) != &"local_rural":
+        if StringName(parcel.get("frontage_road_class", &"")) != road_class:
             continue
         candidates.append(parcel)
     candidates.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
