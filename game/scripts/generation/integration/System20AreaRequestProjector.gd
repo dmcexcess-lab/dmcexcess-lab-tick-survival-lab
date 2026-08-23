@@ -78,6 +78,167 @@ func project_site(plan: GeneratedGlobalWorldPlan, site_id: String) -> Dictionary
         return {"ok": false, "failure_reason": "projected_system20_request_invalid", "request": null}
     return {"ok": true, "failure_reason": "", "request": request}
 
+func project_rural_open_bounds(
+    plan: GeneratedGlobalWorldPlan,
+    area_id: String,
+    bounds: Rect2i
+) -> Dictionary:
+    var clean_area_id: String = area_id.strip_edges()
+    if plan == null or not plan.is_generated() or clean_area_id.is_empty() or not _rect_inside(plan.bounds, bounds):
+        return {"ok": false, "failure_reason": "invalid_rural_open_projection_input", "request": null}
+    if not _rural_open_context_contains_bounds(plan, bounds):
+        return {"ok": false, "failure_reason": "rural_open_context_missing", "request": null}
+    for site: Dictionary in plan.area_sites:
+        var site_bounds: Rect2i = site.get("bounds", Rect2i())
+        if _rects_overlap_positive(bounds, site_bounds):
+            return {"ok": false, "failure_reason": "rural_open_overlaps_settlement_site", "request": null}
+
+    var hydrology_result: Dictionary = hydrology_constraints_for_bounds(plan, bounds)
+    if not bool(hydrology_result.get("ok", false)):
+        return {"ok": false, "failure_reason": "rural_open_hydrology_projection_failed", "request": null}
+    if not (hydrology_result.get("rivers", []) as Array).is_empty() or not (hydrology_result.get("bridges", []) as Array).is_empty():
+        return {"ok": false, "failure_reason": "rural_open_hydrology_not_materializable", "request": null}
+
+    var road_result: Dictionary = road_constraints_for_bounds(plan, bounds)
+    if not bool(road_result.get("ok", false)):
+        return {"ok": false, "failure_reason": "rural_open_road_projection_failed", "request": null}
+    var roads: Array[Dictionary] = []
+    for road_value: Variant in road_result.get("roads", []):
+        if typeof(road_value) != TYPE_DICTIONARY:
+            return {"ok": false, "failure_reason": "rural_open_road_projection_result_invalid", "request": null}
+        roads.append(road_value)
+
+    var geography_result: Dictionary = _rural_open_geography_for_bounds(plan, bounds)
+    if not bool(geography_result.get("ok", false)):
+        return {"ok": false, "failure_reason": String(geography_result.get("failure_reason", "rural_open_geography_projection_failed")), "request": null}
+    var inherited_geography: Array[Dictionary] = []
+    for geography_value: Variant in geography_result.get("geography", []):
+        if typeof(geography_value) != TYPE_DICTIONARY:
+            return {"ok": false, "failure_reason": "rural_open_geography_projection_result_invalid", "request": null}
+        inherited_geography.append(geography_value)
+
+    var planning_result: Dictionary = _rural_open_planning_constraints(plan, bounds)
+    if not bool(planning_result.get("ok", false)):
+        return {"ok": false, "failure_reason": String(planning_result.get("failure_reason", "rural_open_planning_constraint_projection_failed")), "request": null}
+    var planning_constraints: Array[Dictionary] = []
+    for constraint_value: Variant in planning_result.get("constraints", []):
+        if typeof(constraint_value) != TYPE_DICTIONARY:
+            return {"ok": false, "failure_reason": "rural_open_planning_constraint_result_invalid", "request": null}
+        planning_constraints.append(constraint_value)
+
+    var request: AreaGenerationRequest = AreaRequestClass.new(
+        clean_area_id,
+        plan.seed,
+        bounds,
+        AreaProfileCatalog.RURAL_OPEN,
+        EnvironmentProfileCatalog.TEMPERATE_RURAL,
+        roads,
+        [],
+        planning_constraints,
+        inherited_geography
+    )
+    if not request.is_valid():
+        return {"ok": false, "failure_reason": "projected_rural_open_request_invalid", "request": null}
+    return {"ok": true, "failure_reason": "", "request": request}
+
+func _rural_open_context_contains_bounds(plan: GeneratedGlobalWorldPlan, bounds: Rect2i) -> bool:
+    for region: Dictionary in plan.regions:
+        if StringName(region.get("kind", &"")) != &"rural_open":
+            continue
+        if StringName(region.get("area_profile_hint", &"")) != AreaProfileCatalog.RURAL_OPEN:
+            continue
+        var region_rect: Rect2i = region.get("rect", Rect2i())
+        if _rect_inside(region_rect, bounds):
+            return true
+    return false
+
+func _rural_open_geography_for_bounds(plan: GeneratedGlobalWorldPlan, bounds: Rect2i) -> Dictionary:
+    var geography: Array[Dictionary] = []
+    for source: Dictionary in plan.geography_cells:
+        var source_rect: Rect2i = source.get("rect", Rect2i())
+        var clipped: Rect2i = _rect_intersection(source_rect, bounds)
+        if clipped.size.x <= 0 or clipped.size.y <= 0:
+            continue
+        geography.append({
+            "id": String(source.get("id", "")),
+            "grid": source.get("grid", Vector2i(-999999, -999999)),
+            "rect": clipped,
+            "elevation": int(source.get("elevation", -1)),
+            "landform": StringName(source.get("landform", &"")),
+        })
+    if geography.is_empty():
+        return {"ok": false, "failure_reason": "rural_open_geography_missing", "geography": []}
+    geography.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
+        var a_rect: Rect2i = a.get("rect", Rect2i())
+        var b_rect: Rect2i = b.get("rect", Rect2i())
+        if a_rect.position.y != b_rect.position.y:
+            return a_rect.position.y < b_rect.position.y
+        if a_rect.position.x != b_rect.position.x:
+            return a_rect.position.x < b_rect.position.x
+        return String(a.get("id", "")) < String(b.get("id", ""))
+    )
+    return {"ok": true, "failure_reason": "", "geography": geography}
+
+func _rural_open_planning_constraints(plan: GeneratedGlobalWorldPlan, bounds: Rect2i) -> Dictionary:
+    var constraints: Array[Dictionary] = []
+    var power_result: Dictionary = power_constraints_for_bounds(plan, bounds)
+    if not bool(power_result.get("ok", false)):
+        return {"ok": false, "failure_reason": "rural_open_power_projection_failed", "constraints": constraints}
+    for value: Variant in power_result.get("segments", []):
+        if typeof(value) != TYPE_DICTIONARY:
+            continue
+        var segment: Dictionary = value
+        constraints.append(_corridor_constraint(
+            "constraint.power.%s" % String(segment.get("id", "segment")),
+            String(segment.get("id", "")),
+            &"power",
+            StringName(segment.get("power_class", &"feeder")),
+            segment.get("start", Vector2i.ZERO),
+            segment.get("end", Vector2i.ZERO),
+            1,
+            false,
+            String(segment.get("network_id", ""))
+        ))
+
+    var water_result: Dictionary = water_constraints_for_bounds(plan, bounds)
+    if not bool(water_result.get("ok", false)):
+        return {"ok": false, "failure_reason": "rural_open_water_projection_failed", "constraints": constraints}
+    for value: Variant in water_result.get("segments", []):
+        if typeof(value) != TYPE_DICTIONARY:
+            continue
+        var segment: Dictionary = value
+        constraints.append(_corridor_constraint(
+            "constraint.water.%s" % String(segment.get("id", "segment")),
+            String(segment.get("id", "")),
+            &"potable_water",
+            StringName(segment.get("water_class", &"municipal_trunk")),
+            segment.get("start", Vector2i.ZERO),
+            segment.get("end", Vector2i.ZERO),
+            1,
+            false,
+            String(segment.get("network_id", ""))
+        ))
+
+    var wastewater_result: Dictionary = wastewater_constraints_for_bounds(plan, bounds)
+    if not bool(wastewater_result.get("ok", false)):
+        return {"ok": false, "failure_reason": "rural_open_wastewater_projection_failed", "constraints": constraints}
+    for value: Variant in wastewater_result.get("segments", []):
+        if typeof(value) != TYPE_DICTIONARY:
+            continue
+        var segment: Dictionary = value
+        constraints.append(_corridor_constraint(
+            "constraint.wastewater.%s" % String(segment.get("id", "segment")),
+            String(segment.get("id", "")),
+            &"wastewater",
+            StringName(segment.get("wastewater_class", &"municipal_collection_trunk")),
+            segment.get("start", Vector2i.ZERO),
+            segment.get("end", Vector2i.ZERO),
+            1,
+            false,
+            String(segment.get("network_id", ""))
+        ))
+    return {"ok": true, "failure_reason": "", "constraints": constraints}
+
 func _smalltown_planning_constraints(plan: GeneratedGlobalWorldPlan, bounds: Rect2i) -> Dictionary:
     var constraints: Array[Dictionary] = []
 
@@ -671,6 +832,18 @@ func _settlement_by_id(settlements: Array[Dictionary], settlement_id: String) ->
         if String(settlement.get("id", "")) == settlement_id:
             return settlement
     return {}
+
+func _rect_intersection(a: Rect2i, b: Rect2i) -> Rect2i:
+    var start_x: int = maxi(a.position.x, b.position.x)
+    var start_y: int = maxi(a.position.y, b.position.y)
+    var end_x: int = mini(a.position.x + a.size.x, b.position.x + b.size.x)
+    var end_y: int = mini(a.position.y + a.size.y, b.position.y + b.size.y)
+    if end_x <= start_x or end_y <= start_y:
+        return Rect2i()
+    return Rect2i(Vector2i(start_x, start_y), Vector2i(end_x - start_x, end_y - start_y))
+
+func _rects_overlap_positive(a: Rect2i, b: Rect2i) -> bool:
+    return _rect_intersection(a, b).size.x > 0 and _rect_intersection(a, b).size.y > 0
 
 func _is_boundary_cell(rect: Rect2i, cell: Vector2i) -> bool:
     if not rect.has_point(cell):
