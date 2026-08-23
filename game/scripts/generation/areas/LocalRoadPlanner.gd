@@ -3,7 +3,11 @@ class_name LocalRoadPlanner
 
 const Seed = preload("res://scripts/generation/areas/AreaSeed.gd")
 
-func plan(request: AreaGenerationRequest, profile: Dictionary) -> Dictionary:
+func plan(
+    request: AreaGenerationRequest,
+    profile: Dictionary,
+    reservations: Array[Dictionary] = []
+) -> Dictionary:
     var roads: Array[Dictionary] = []
     var intersections: Array[Dictionary] = []
     if request == null or not request.is_valid() or profile.is_empty():
@@ -15,13 +19,29 @@ func plan(request: AreaGenerationRequest, profile: Dictionary) -> Dictionary:
             return {"ok": false, "failure_reason": "invalid_inherited_road", "roads": roads, "intersections": intersections}
         roads.append(built)
 
-    var local_count: int = int(profile.get("local_road_spurs", 0))
-    for ordinal in range(local_count):
-        var local_road: Dictionary = _build_local_rural_spur(request, profile, roads, ordinal)
-        if local_road.is_empty():
-            return {"ok": false, "failure_reason": "local_road_spur_failed", "roads": roads, "intersections": intersections}
-        roads.append(local_road)
+    var layout: StringName = StringName(profile.get("road_layout", &"rural_spurs"))
+    if layout == &"smalltown_grid":
+        var town_result: Dictionary = _build_smalltown_streets(request, profile, roads, reservations)
+        if not bool(town_result.get("ok", false)):
+            return {
+                "ok": false,
+                "failure_reason": String(town_result.get("failure_reason", "smalltown_street_planning_failed")),
+                "roads": roads,
+                "intersections": intersections,
+            }
+        for road_value: Variant in town_result.get("roads", []):
+            if typeof(road_value) != TYPE_DICTIONARY:
+                return {"ok": false, "failure_reason": "smalltown_street_result_invalid", "roads": roads, "intersections": intersections}
+            roads.append(road_value)
+    else:
+        var local_count: int = int(profile.get("local_road_spurs", 0))
+        for ordinal in range(local_count):
+            var local_road: Dictionary = _build_local_rural_spur(request, profile, roads, ordinal)
+            if local_road.is_empty():
+                return {"ok": false, "failure_reason": "local_road_spur_failed", "roads": roads, "intersections": intersections}
+            roads.append(local_road)
 
+    var signalize_first: bool = bool(profile.get("signalize_first_inherited_intersection", true))
     for first_index in range(roads.size()):
         for second_index in range(first_index + 1, roads.size()):
             var cell: Vector2i = _path_intersection_cell(roads[first_index], roads[second_index])
@@ -31,7 +51,7 @@ func plan(request: AreaGenerationRequest, profile: Dictionary) -> Dictionary:
                 "id": "%s.intersection.%03d" % [request.area_id, intersections.size()],
                 "cell": cell,
                 "road_ids": [String(roads[first_index].get("road_id", "")), String(roads[second_index].get("road_id", ""))],
-                "control": &"signalized" if intersections.is_empty() else &"uncontrolled",
+                "control": &"signalized" if signalize_first and intersections.size() == 0 else &"uncontrolled",
             })
 
     return {"ok": true, "failure_reason": "", "roads": roads, "intersections": intersections}
@@ -62,6 +82,226 @@ func _build_inherited_road(constraint: Dictionary) -> Dictionary:
         "paint_centerline": true,
         "parcel_frontage_enabled": true,
     }
+
+func _build_smalltown_streets(
+    request: AreaGenerationRequest,
+    profile: Dictionary,
+    inherited_roads: Array[Dictionary],
+    reservations: Array[Dictionary]
+) -> Dictionary:
+    var center := Vector2i(
+        request.bounds.position.x + request.bounds.size.x / 2,
+        request.bounds.position.y + request.bounds.size.y / 2
+    )
+    var spine: Dictionary = _select_town_spine(inherited_roads, center)
+    if spine.is_empty():
+        return {"ok": false, "failure_reason": "smalltown_spine_missing", "roads": []}
+    var axis: StringName = StringName(spine.get("axis", &""))
+    if axis != &"horizontal" and axis != &"vertical":
+        return {"ok": false, "failure_reason": "smalltown_spine_axis_invalid", "roads": []}
+    spine["town_spine"] = true
+
+    var cross_offsets: Array = profile.get("town_cross_offset_candidates", [48, 60, 72, 84])
+    var back_offsets: Array = profile.get("town_back_offset_candidates", [40, 52, 64, 76])
+    if cross_offsets.is_empty() or back_offsets.is_empty():
+        return {"ok": false, "failure_reason": "smalltown_street_offsets_missing", "roads": []}
+    var width: int = int(profile.get("local_town_width", 3))
+    var extension: int = int(profile.get("town_street_extension", 10))
+    if width <= 0 or width % 2 == 0 or extension < 0:
+        return {"ok": false, "failure_reason": "smalltown_street_profile_invalid", "roads": []}
+
+    var cross_start_index: int = Seed.choose_index(request.seed, "smalltown:cross_offset_start", cross_offsets.size())
+    var back_start_index: int = Seed.choose_index(request.seed, "smalltown:back_offset_start", back_offsets.size())
+    if cross_start_index < 0 or back_start_index < 0:
+        return {"ok": false, "failure_reason": "smalltown_street_seed_choice_failed", "roads": []}
+
+    for cross_step_a in range(cross_offsets.size()):
+        var cross_offset_a: int = int(cross_offsets[(cross_start_index + cross_step_a) % cross_offsets.size()])
+        for cross_step_b in range(cross_offsets.size()):
+            var cross_offset_b: int = int(cross_offsets[(cross_start_index + cross_step_b + 1) % cross_offsets.size()])
+            for back_step_a in range(back_offsets.size()):
+                var back_offset_a: int = int(back_offsets[(back_start_index + back_step_a) % back_offsets.size()])
+                for back_step_b in range(back_offsets.size()):
+                    var back_offset_b: int = int(back_offsets[(back_start_index + back_step_b + 1) % back_offsets.size()])
+                    var candidate: Array[Dictionary] = _smalltown_street_candidate(
+                        request,
+                        spine,
+                        center,
+                        width,
+                        extension,
+                        cross_offset_a,
+                        cross_offset_b,
+                        back_offset_a,
+                        back_offset_b
+                    )
+                    if candidate.size() != 4:
+                        continue
+                    if not _local_roads_legal(candidate, request, inherited_roads, reservations):
+                        continue
+                    return {"ok": true, "failure_reason": "", "roads": candidate}
+
+    return {"ok": false, "failure_reason": "smalltown_street_layout_unresolved", "roads": []}
+
+func _select_town_spine(roads: Array[Dictionary], center: Vector2i) -> Dictionary:
+    var fallback: Dictionary = {}
+    for road: Dictionary in roads:
+        if not _point_on_road_path(center, road):
+            continue
+        if fallback.is_empty():
+            fallback = road
+        if StringName(road.get("road_class", &"")) == &"primary":
+            return road
+    return fallback
+
+func _smalltown_street_candidate(
+    request: AreaGenerationRequest,
+    spine: Dictionary,
+    center: Vector2i,
+    width: int,
+    extension: int,
+    cross_offset_negative: int,
+    cross_offset_positive: int,
+    back_offset_negative: int,
+    back_offset_positive: int
+) -> Array[Dictionary]:
+    var roads: Array[Dictionary] = []
+    var axis: StringName = StringName(spine.get("axis", &""))
+    if axis == &"horizontal":
+        var x_negative: int = center.x - cross_offset_negative
+        var x_positive: int = center.x + cross_offset_positive
+        var y_negative: int = center.y - back_offset_negative
+        var y_positive: int = center.y + back_offset_positive
+        roads.append(_build_local_town_street(
+            request, 0, &"town_cross_negative",
+            Vector2i(x_negative, y_negative - extension),
+            Vector2i(x_negative, y_positive + extension), width
+        ))
+        roads.append(_build_local_town_street(
+            request, 1, &"town_cross_positive",
+            Vector2i(x_positive, y_negative - extension),
+            Vector2i(x_positive, y_positive + extension), width
+        ))
+        roads.append(_build_local_town_street(
+            request, 2, &"town_back_negative",
+            Vector2i(x_negative - extension, y_negative),
+            Vector2i(x_positive + extension, y_negative), width
+        ))
+        roads.append(_build_local_town_street(
+            request, 3, &"town_back_positive",
+            Vector2i(x_negative - extension, y_positive),
+            Vector2i(x_positive + extension, y_positive), width
+        ))
+    elif axis == &"vertical":
+        var y_negative: int = center.y - cross_offset_negative
+        var y_positive: int = center.y + cross_offset_positive
+        var x_negative: int = center.x - back_offset_negative
+        var x_positive: int = center.x + back_offset_positive
+        roads.append(_build_local_town_street(
+            request, 0, &"town_cross_negative",
+            Vector2i(x_negative - extension, y_negative),
+            Vector2i(x_positive + extension, y_negative), width
+        ))
+        roads.append(_build_local_town_street(
+            request, 1, &"town_cross_positive",
+            Vector2i(x_negative - extension, y_positive),
+            Vector2i(x_positive + extension, y_positive), width
+        ))
+        roads.append(_build_local_town_street(
+            request, 2, &"town_back_negative",
+            Vector2i(x_negative, y_negative - extension),
+            Vector2i(x_negative, y_positive + extension), width
+        ))
+        roads.append(_build_local_town_street(
+            request, 3, &"town_back_positive",
+            Vector2i(x_positive, y_negative - extension),
+            Vector2i(x_positive, y_positive + extension), width
+        ))
+    for road: Dictionary in roads:
+        if road.is_empty():
+            return []
+    return roads
+
+func _build_local_town_street(
+    request: AreaGenerationRequest,
+    ordinal: int,
+    role: StringName,
+    start: Vector2i,
+    finish: Vector2i,
+    width: int
+) -> Dictionary:
+    if start == finish or (start.x != finish.x and start.y != finish.y):
+        return {}
+    if not request.bounds.has_point(start) or not request.bounds.has_point(finish):
+        return {}
+    if AreaGenerationRequest._is_boundary_cell(request.bounds, start) or AreaGenerationRequest._is_boundary_cell(request.bounds, finish):
+        return {}
+    var axis: StringName = &"horizontal" if start.y == finish.y else &"vertical"
+    var path_cells: Array[Vector2i] = _line_cells(start, finish)
+    var corridor_cells: Array[Vector2i] = _straight_corridor(path_cells, axis, width)
+    for cell: Vector2i in corridor_cells:
+        if not request.bounds.has_point(cell):
+            return {}
+    return {
+        "road_id": "%s.road.local.town.%02d" % [request.area_id, ordinal],
+        "road_class": &"local_town",
+        "start": start,
+        "end": finish,
+        "width": width,
+        "axis": axis,
+        "path_cells": path_cells,
+        "corridor_cells": corridor_cells,
+        "inherited": false,
+        "allowed_boundary_cells": [],
+        "surface_family": &"paved_local",
+        "paint_centerline": false,
+        "parcel_frontage_enabled": true,
+        "town_role": role,
+    }
+
+func _local_roads_legal(
+    local_roads: Array[Dictionary],
+    request: AreaGenerationRequest,
+    inherited_roads: Array[Dictionary],
+    reservations: Array[Dictionary]
+) -> bool:
+    for road: Dictionary in local_roads:
+        for cell_value: Variant in road.get("corridor_cells", []):
+            if typeof(cell_value) != TYPE_VECTOR2I:
+                return false
+            var cell: Vector2i = cell_value
+            if not request.bounds.has_point(cell):
+                return false
+            for reservation: Dictionary in reservations:
+                if not bool(reservation.get("blocks_local_roads", false)):
+                    continue
+                var rect: Rect2i = reservation.get("rect", Rect2i())
+                if rect.has_point(cell):
+                    return false
+        for inherited: Dictionary in inherited_roads:
+            if _positive_length_collinear_overlap(road, inherited):
+                return false
+    return true
+
+func _positive_length_collinear_overlap(a: Dictionary, b: Dictionary) -> bool:
+    var a_start: Vector2i = a.get("start", Vector2i.ZERO)
+    var a_end: Vector2i = a.get("end", Vector2i.ZERO)
+    var b_start: Vector2i = b.get("start", Vector2i.ZERO)
+    var b_end: Vector2i = b.get("end", Vector2i.ZERO)
+    if a_start.y == a_end.y and b_start.y == b_end.y and a_start.y == b_start.y:
+        var overlap_min_x: int = maxi(mini(a_start.x, a_end.x), mini(b_start.x, b_end.x))
+        var overlap_max_x: int = mini(maxi(a_start.x, a_end.x), maxi(b_start.x, b_end.x))
+        return overlap_max_x > overlap_min_x
+    if a_start.x == a_end.x and b_start.x == b_end.x and a_start.x == b_start.x:
+        var overlap_min_y: int = maxi(mini(a_start.y, a_end.y), mini(b_start.y, b_end.y))
+        var overlap_max_y: int = mini(maxi(a_start.y, a_end.y), maxi(b_start.y, b_end.y))
+        return overlap_max_y > overlap_min_y
+    return false
+
+func _point_on_road_path(point: Vector2i, road: Dictionary) -> bool:
+    for value: Variant in road.get("path_cells", []):
+        if typeof(value) == TYPE_VECTOR2I and value == point:
+            return true
+    return false
 
 func _build_local_rural_spur(
     request: AreaGenerationRequest,
