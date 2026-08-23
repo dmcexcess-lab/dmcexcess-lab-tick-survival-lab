@@ -447,7 +447,7 @@ func road_constraints_for_bounds(plan: GeneratedGlobalWorldPlan, bounds: Rect2i)
     if plan == null or not plan.is_generated() or not _rect_inside(plan.bounds, bounds):
         return {"ok": false, "failure_reason": "invalid_global_road_projection_bounds", "roads": roads}
     for segment: Dictionary in plan.road_segments:
-        if _segment_overlap_is_single_point(segment, bounds):
+        if _segment_overlap_is_single_point(segment, bounds) or _segment_overlap_is_boundary_tangent(segment, bounds):
             continue
         var clipped: Dictionary = _clip_segment(segment, bounds)
         if clipped.is_empty():
@@ -592,6 +592,23 @@ func wastewater_constraints_for_bounds(plan: GeneratedGlobalWorldPlan, bounds: R
             "source_route_id": String(segment.get("source_route_id", "")),
         })
     return {"ok": true, "failure_reason": "", "services": services, "nodes": nodes, "segments": segments}
+
+func _segment_overlap_is_boundary_tangent(segment: Dictionary, bounds: Rect2i) -> bool:
+    var start: Vector2i = segment.get("start", Vector2i.ZERO)
+    var finish: Vector2i = segment.get("end", Vector2i.ZERO)
+    var min_x: int = bounds.position.x
+    var max_x: int = bounds.position.x + bounds.size.x - 1
+    var min_y: int = bounds.position.y
+    var max_y: int = bounds.position.y + bounds.size.y - 1
+    if start.y == finish.y and (start.y == min_y or start.y == max_y):
+        var overlap_min_x: int = maxi(mini(start.x, finish.x), min_x)
+        var overlap_max_x: int = mini(maxi(start.x, finish.x), max_x)
+        return overlap_max_x > overlap_min_x
+    if start.x == finish.x and (start.x == min_x or start.x == max_x):
+        var overlap_min_y: int = maxi(mini(start.y, finish.y), min_y)
+        var overlap_max_y: int = mini(maxi(start.y, finish.y), max_y)
+        return overlap_max_y > overlap_min_y
+    return false
 
 func _segment_overlap_is_single_point(segment: Dictionary, bounds: Rect2i) -> bool:
     var start: Vector2i = segment.get("start", Vector2i.ZERO)
