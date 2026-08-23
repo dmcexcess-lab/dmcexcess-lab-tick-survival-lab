@@ -191,6 +191,49 @@ func water_constraints_for_bounds(plan: GeneratedGlobalWorldPlan, bounds: Rect2i
 
     return {"ok": true, "failure_reason": "", "services": services, "nodes": nodes, "segments": segments}
 
+## Read-only Slice 006 seam. Wastewater service intent remains upstream planning
+## truth; current System 20 requests do not receive septic tanks, drain fields,
+## sewer pipes, treatment facilities or runtime sanitation state.
+func wastewater_constraints_for_bounds(plan: GeneratedGlobalWorldPlan, bounds: Rect2i) -> Dictionary:
+    var services: Array[Dictionary] = []
+    var nodes: Array[Dictionary] = []
+    var segments: Array[Dictionary] = []
+    if plan == null or not plan.is_generated() or not _rect_inside(plan.bounds, bounds):
+        return {"ok": false, "failure_reason": "invalid_global_wastewater_projection_bounds", "services": services, "nodes": nodes, "segments": segments}
+
+    for service: Dictionary in plan.wastewater_services:
+        var settlement_id: String = String(service.get("settlement_id", ""))
+        var settlement: Dictionary = _settlement_by_id(plan.settlements, settlement_id)
+        if settlement.is_empty():
+            continue
+        var center: Vector2i = settlement.get("center", Vector2i(-999999, -999999))
+        if bounds.has_point(center):
+            services.append(service.duplicate(true))
+
+    for node: Dictionary in plan.wastewater_nodes:
+        var cell: Vector2i = node.get("cell", Vector2i(-999999, -999999))
+        if bounds.has_point(cell):
+            nodes.append(node.duplicate(true))
+
+    for segment: Dictionary in plan.wastewater_segments:
+        if _segment_overlap_is_single_point(segment, bounds):
+            continue
+        var clipped: Dictionary = _clip_segment(segment, bounds)
+        if clipped.is_empty():
+            continue
+        segments.append({
+            "id": String(segment.get("id", "")),
+            "network_id": String(segment.get("network_id", "")),
+            "wastewater_class": StringName(segment.get("wastewater_class", &"")),
+            "start": clipped.get("start", Vector2i.ZERO),
+            "end": clipped.get("end", Vector2i.ZERO),
+            "ordinal": int(segment.get("ordinal", 0)),
+            "source_road_id": String(segment.get("source_road_id", "")),
+            "source_route_id": String(segment.get("source_route_id", "")),
+        })
+
+    return {"ok": true, "failure_reason": "", "services": services, "nodes": nodes, "segments": segments}
+
 func _segment_overlap_is_single_point(segment: Dictionary, bounds: Rect2i) -> bool:
     var start: Vector2i = segment.get("start", Vector2i.ZERO)
     var finish: Vector2i = segment.get("end", Vector2i.ZERO)
