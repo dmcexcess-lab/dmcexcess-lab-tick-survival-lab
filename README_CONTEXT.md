@@ -18,15 +18,15 @@ Golden recovery commit: `1763958f44eb7f855fd49944c00d1ffe608c0abe`.
 
 System 00D plus Systems 14–22 form the current canonical world-planning/playable path. `game/scripts/reboot/` remains frozen/deprecated reference only.
 
-**System 00D Global World Planning Slices 001–006 are implemented.** The global plan now establishes geography, settlement/site intent, globally coherent major roads, one deterministic regional river, explicit bridge intents, regional electrical service, potable-water service, and wastewater/septic service topology before System 20 local planning.
+**System 00D Global World Planning Slices 001–006 are implemented.** The global plan establishes geography, settlement/site intent, globally coherent major roads, one deterministic regional river, explicit bridge intents, regional electrical service, potable-water service, and wastewater/septic service topology before System 20 local planning.
 
 **System 19 is finalized.** New building profiles are ordinary content work unless the frozen grammar contract proves insufficient.
 
-**System 20 Rural Crossroads Candidate 006 is the accepted local-area integration anchor.** Current profiles remain `rural.crossroads` v5 + `temperate.rural` v3. Its roads, local frontage, farms, setbacks, door-aligned approaches, ecological noise and road-flush building-owned parking frontage remain protected.
+**System 20 now has two protected local profiles:** Rural Crossroads Candidate 006 (`rural.crossroads` v5) remains the accepted live integration anchor, and Small-Town Center Candidate 001 (`smalltown.center` v1) is implemented as the first real settlement profile consuming System 00D infrastructure truth. Both use `temperate.rural` v3.
 
 **System 21 Tactical Camera / View Control is implemented.** Player-follow is default; zoom, detached inspection, recenter, focus and scripted seams are presentation-only.
 
-**System 22 Large-Area DEV Critique Runtime is implemented.** The live game still materializes/renders Candidate 006. System 00D infrastructure remains upstream/headless planning truth.
+**System 22 Large-Area DEV Critique Runtime is implemented.** The live game still materializes/renders Rural Crossroads Candidate 006. Small-Town Candidate 001 is currently a proven pure/integration plan, not the live critique world.
 
 ## 3. Foundation truth
 
@@ -82,20 +82,18 @@ Current global fixture:
 
 Pure source lives under `game/scripts/generation/world/` and imports no System 19/20 owner. The separate integration adapter is `game/scripts/generation/integration/System20AreaRequestProjector.gd`.
 
-### Global -> local integration anchor
+### Global -> local integration
 
-Central site remains `area.rural.crossroads.001`, bounds `Rect2i(1000,2000,256,256)`, seed `20001`, using inherited roads `road.region.primary.001` + `road.region.secondary.001`, `rural.crossroads` + `temperate.rural`.
+Central site `area.rural.crossroads.001` remains the frozen Candidate 006 anchor. Its projected request and generated semantic signature remain exact and receive no infrastructure-reservation facts.
 
-`project_site()` still produces the exact accepted System 20 request shape and Candidate 006 semantic output. Slices 003–006 do not inject unsupported tactical bridge/power/water/wastewater content into `AreaGenerationRequest`.
+Small-town site `area.smalltown.center.001` now projects successfully to `smalltown.center` v1. Its request consumes normalized regional hydrology/power/potable-water/wastewater facts through `inherited_planning_constraints`, which System 20 converts into reusable facility/corridor reservations before local roads/parcels are planned.
 
-Read-only seams:
+Read-only seams remain:
 
 - `hydrology_constraints_for_bounds(plan, bounds)` -> clipped river + bridge facts;
 - `power_constraints_for_bounds(plan, bounds)` -> clipped feeder + power-node facts;
 - `water_constraints_for_bounds(plan, bounds)` -> settlement water-service intent + municipal water nodes/trunks where present;
 - `wastewater_constraints_for_bounds(plan, bounds)` -> settlement wastewater-service intent + municipal wastewater nodes/trunk where present.
-
-Candidate 006 exposes decentralized groundwater-source intent and decentralized-septic intent only: no municipal water/wastewater nodes or trunks and no visible well/septic infrastructure. The future small-town site already exposes both municipal water and wastewater planning anchors/trunks even though `smalltown.center` remains unsupported.
 
 Exact-head context: `verify/system00d-global-world`.
 
@@ -107,9 +105,38 @@ Protected library: Trailer v2, Small Farmhouse v2, Large Farmhouse v4, Compact L
 
 ## 7. System 20 current truth
 
-Design: `SYSTEM_DESIGNS/20_LOCAL_AREA_PARCEL_GENERATION.md`.
+Umbrella: `SYSTEM_DESIGNS/20_LOCAL_AREA_PARCEL_GENERATION.md`.
 
-Candidate 006 remains bounds `Rect2i(1000,2000,256,256)`, seed `20001`, `rural.crossroads` v5 + `temperate.rural` v3; inherited 5-cell primary + 3-cell secondary road; two internal bent gravel roads; majority local-road residential/farm frontage; gas station + diner + honest vacancy; close meaningful setbacks; primary-door-aligned approaches; road-flush building-owned parking where actually present; >=60% non-road area unbuilt; deterministic 2D natural dressing.
+Small-town design: `SYSTEM_DESIGNS/20A_SMALLTOWN_CENTER_CANDIDATE_001.md`.
+
+### Rural Crossroads Candidate 006 — protected live anchor
+
+- bounds `Rect2i(1000,2000,256,256)`, seed `20001`;
+- `rural.crossroads` v5 + `temperate.rural` v3;
+- inherited 5-cell primary + 3-cell secondary road;
+- two internal bent gravel roads;
+- majority local-road residential/farm frontage;
+- gas station + diner + honest vacancy;
+- close meaningful setbacks;
+- primary-door-aligned approaches;
+- road-flush building-owned parking where actually present;
+- >=60% non-road area unbuilt;
+- deterministic 2D natural dressing;
+- no small-town reservations/blocks injected.
+
+### Small-Town Center Candidate 001 — implemented pure/integration profile
+
+- `smalltown.center` v1 + `temperate.rural` v3;
+- consumes the actual System 00D v6 small-town inherited roads and regional utility/hydrology planning facts;
+- reusable infrastructure facility/corridor reservations protect future utility land without faking final facilities;
+- connected internal 3-cell paved `local_town` street network with no unauthorized boundary exits;
+- semantic town blocks carved around blocking reservations;
+- four center/main-road commercial opportunities: gas station + diner + at least two honest vacancies;
+- ten residential opportunities with a majority on `local_town` frontage;
+- inherited road frontage is clipped to the actual inherited segment extent;
+- straight approaches terminate at real System 19 primary doors;
+- existing road-flush building-owned parking rule remains active;
+- Candidate 006 request and semantic signature remain exact.
 
 `AreaMaterializationCoordinator.gd` remains one-time transactional initial WHAT + Door State materialization only. Streaming/save orchestration remains future System 00F.
 
@@ -119,16 +146,16 @@ Exact-head context: `verify/system20-local-area`.
 
 System 21 owns camera behavior only and never mutates simulation. System 22 owns the bounded DEV moving render-window composition only.
 
-The live Web build remains Candidate 006. Global river/bridge, electrical, potable-water and wastewater/septic facts are currently headless semantic planning truth by design.
+The live Web build remains Rural Crossroads Candidate 006. Small-Town Candidate 001 is deliberately not switched into the live critique runtime by its implementation slice.
 
 ## 9. Immediate next path
 
-1. Keep Candidate 006 frozen as the central local integration anchor.
-2. Keep System 00D Slices 001–006 protected as the current global geography/settlement/road/hydrology/utility baseline.
-3. **Move next into the real System 20 `smalltown.center` profile.** The regional utility skeleton is now stable enough that small-town parcels, civic/service opportunities and local streets can consume it rather than redefine it.
-4. Follow `smalltown.center` with the `rural.scattered` / hamlet profile needed by the remaining global sites.
+1. Keep Rural Crossroads Candidate 006 frozen as the central live/local integration anchor.
+2. Keep Small-Town Center Candidate 001 protected as the first infrastructure-aware local settlement profile.
+3. Keep System 00D Slices 001–006 protected as the global geography/settlement/road/hydrology/utility baseline.
+4. **Design the real System 20 `rural.scattered` / hamlet local profile next** for the three remaining planned global hamlet sites.
 5. Do not turn power facts into tactical electricity, potable-water facts into physical plumbing, or wastewater facts into physical sewer/septic mechanics until downstream owners are explicitly designed.
-6. Design System 00F streaming only after logical places/local profiles are stable enough that partitions are technical only.
+6. Design System 00F streaming only after the required logical local profiles are stable enough that partitions are technical only.
 7. Design System 00E population/outbreak/player story after stable world places provide real homes/workplaces/properties.
 
 ## 10. Invariants
@@ -148,6 +175,8 @@ The live Web build remains Candidate 006. Global river/bridge, electrical, potab
 13. Regional power nodes/feeders are planning truth, not tactical poles/wires or energized state.
 14. Potable-water services/anchors/trunks are planning truth, not literal wells/towers/pipes, plumbing, pressure or runtime water state.
 15. Wastewater services/anchors/trunk are planning truth, not literal septic/sewer/treatment geometry or runtime sanitation state.
+16. System 20 infrastructure reservations are protected local planning land, not fake final utility facilities.
+17. A regional road may terminate inside a local planning window; only actual boundary contact requires an authorized local boundary exit.
 
 ## 11. Documentation source order
 
