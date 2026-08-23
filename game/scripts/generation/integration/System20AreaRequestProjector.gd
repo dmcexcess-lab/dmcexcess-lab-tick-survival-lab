@@ -298,12 +298,6 @@ func road_constraints_for_bounds(plan: GeneratedGlobalWorldPlan, bounds: Rect2i)
             allowed.append(start)
         if _is_boundary_cell(bounds, finish) and finish != start:
             allowed.append(finish)
-        if allowed.is_empty():
-            return {
-                "ok": false,
-                "failure_reason": "global_major_road_fully_internal_to_system20_area_unsupported",
-                "roads": [],
-            }
         roads.append({
             "road_id": String(segment.get("road_id", "")),
             "road_class": StringName(segment.get("road_class", &"")),
