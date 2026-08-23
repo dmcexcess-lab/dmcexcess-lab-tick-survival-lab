@@ -87,7 +87,7 @@ func _test_system20_projection(projector: System20AreaRequestProjector, plan: Ge
     if projected_request == null:
         return
     var baseline_request: AreaGenerationRequest = LocalFixtureClass.request(LocalFixtureClass.SEED)
-    _check(_area_request_signature(projected_request) == _area_request_signature(baseline_request), "small-town support leaves Candidate 006 request unchanged")
+    _check(_area_request_signature(projected_request) == _area_request_signature(baseline_request), "additional System 20 profiles leave Candidate 006 request unchanged")
     _check(projected_request.inherited_planning_constraints.is_empty(), "Candidate 006 receives no new infrastructure-reservation constraints")
 
     var local_generator: LocalAreaGenerator = LocalGeneratorClass.new()
@@ -96,28 +96,43 @@ func _test_system20_projection(projector: System20AreaRequestProjector, plan: Ge
     _check(projected_plan.is_generated(), "Candidate 006 still generates from projected request")
     _check(baseline_plan.is_generated(), "Candidate 006 baseline still generates")
     if projected_plan.is_generated() and baseline_plan.is_generated():
-        _check(projected_plan.signature() == baseline_plan.signature(), "small-town support leaves Candidate 006 semantic output exact")
+        _check(projected_plan.signature() == baseline_plan.signature(), "additional System 20 profiles leave Candidate 006 semantic output exact")
         _check(projected_plan.area_profile_version == 5, "Candidate 006 remains rural.crossroads v5")
-        _check(projected_plan.reservations.is_empty() and projected_plan.blocks.is_empty(), "Candidate 006 gains no small-town reservation/block facts")
+        _check(projected_plan.reservations.is_empty() and projected_plan.blocks.is_empty(), "Candidate 006 gains no infrastructure reservation/block facts")
 
     var smalltown_result: Dictionary = projector.project_site(plan, "area.smalltown.center.001")
-    _check(bool(smalltown_result.get("ok", false)), "small-town global site now projects into System 20")
+    _check(bool(smalltown_result.get("ok", false)), "small-town global site still projects into System 20")
     var smalltown_request: AreaGenerationRequest = smalltown_result.get("request") as AreaGenerationRequest
-    _check(smalltown_request != null and smalltown_request.is_valid(), "projected small-town request is valid")
-    if smalltown_request == null or not smalltown_request.is_valid():
-        return
-    _check(smalltown_request.area_profile_id == &"smalltown.center", "small-town site selects smalltown.center")
-    _check(not smalltown_request.inherited_planning_constraints.is_empty(), "small-town request carries normalized regional infrastructure facts")
-    var smalltown_plan: GeneratedAreaPlan = local_generator.generate(smalltown_request)
-    _check(smalltown_plan.is_generated(), "small-town Candidate 001 generates from exact v6 global facts")
-    if smalltown_plan.is_generated():
-        _check(smalltown_plan.area_profile_version == 1, "small-town Candidate 001 records profile v1")
-        _check(not smalltown_plan.reservations.is_empty(), "small-town local plan contains infrastructure reservations")
-        _check(not smalltown_plan.blocks.is_empty(), "small-town local plan contains semantic town blocks")
+    _check(smalltown_request != null and smalltown_request.is_valid(), "projected small-town request remains valid")
+    if smalltown_request != null and smalltown_request.is_valid():
+        _check(smalltown_request.area_profile_id == &"smalltown.center", "small-town site selects smalltown.center")
+        _check(not smalltown_request.inherited_planning_constraints.is_empty(), "small-town request carries normalized regional infrastructure facts")
+        var smalltown_plan: GeneratedAreaPlan = local_generator.generate(smalltown_request)
+        _check(smalltown_plan.is_generated(), "small-town Candidate 001 still generates from exact v6 global facts")
+        if smalltown_plan.is_generated():
+            _check(smalltown_plan.area_profile_version == 1, "small-town Candidate 001 records profile v1")
+            _check(not smalltown_plan.reservations.is_empty(), "small-town local plan contains infrastructure reservations")
+            _check(not smalltown_plan.blocks.is_empty(), "small-town local plan contains semantic town blocks")
 
-    var unsupported_result: Dictionary = projector.project_site(plan, "area.rural.scattered.001")
-    _check(not bool(unsupported_result.get("ok", true)), "rural-scattered/hamlet local profile remains honestly unsupported")
-    _check(String(unsupported_result.get("failure_reason", "")) == "system20_area_profile_unsupported", "unsupported hamlet still fails at profile adapter seam")
+    for hamlet_site_id: String in [
+        "area.rural.scattered.001",
+        "area.rural.scattered.002",
+        "area.rural.scattered.003",
+    ]:
+        var hamlet_result: Dictionary = projector.project_site(plan, hamlet_site_id)
+        _check(bool(hamlet_result.get("ok", false)), "%s now projects into System 20" % hamlet_site_id)
+        var hamlet_request: AreaGenerationRequest = hamlet_result.get("request") as AreaGenerationRequest
+        _check(hamlet_request != null and hamlet_request.is_valid(), "%s projected request is valid" % hamlet_site_id)
+        if hamlet_request == null or not hamlet_request.is_valid():
+            continue
+        _check(hamlet_request.area_profile_id == &"rural.scattered", "%s selects rural.scattered" % hamlet_site_id)
+        _check(not hamlet_request.inherited_planning_constraints.is_empty(), "%s consumes regional service/infrastructure facts" % hamlet_site_id)
+        var hamlet_plan: GeneratedAreaPlan = local_generator.generate(hamlet_request)
+        _check(hamlet_plan.is_generated(), "%s Candidate 001 generates from exact v6 global facts" % hamlet_site_id)
+        if hamlet_plan.is_generated():
+            _check(hamlet_plan.area_profile_version == 1, "%s records rural.scattered v1" % hamlet_site_id)
+            _check(hamlet_plan.blocks.is_empty(), "%s remains block-free sparse rural morphology" % hamlet_site_id)
+            _check(hamlet_plan.building_requests.size() == 6, "%s produces six occupied rural properties" % hamlet_site_id)
 
 func _test_projection_seams(projector: System20AreaRequestProjector, plan: GeneratedGlobalWorldPlan) -> void:
     if not plan.is_generated():
