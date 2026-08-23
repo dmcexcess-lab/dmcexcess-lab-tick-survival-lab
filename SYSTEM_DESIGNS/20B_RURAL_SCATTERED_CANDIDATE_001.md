@@ -1,6 +1,6 @@
 # Tick Survival Lab — System 20B Rural-Scattered / Hamlet Candidate 001
 
-Status: **APPROVED**
+Status: **IMPLEMENTED**
 
 Date: 2026-08-22
 
@@ -14,7 +14,7 @@ Add the real `rural.scattered` System 20 local profile required by the three exi
 
 The profile should represent a sparse roadside hamlet/country cluster rather than another crossroads or miniature town: a real inherited regional road, a couple of short gravel local lanes, scattered homes/farmsteads, substantial open/agricultural land, no fake commercial center, and explicit consumption of the already-planned rural utility/service facts.
 
-The three global hamlet sites share one profile but must vary deterministically by their already-distinct site seeds and inherited road geometry.
+The three global hamlet sites share one profile but vary deterministically by their already-distinct site seeds and inherited road geometry.
 
 ## 2. Approved decisions
 
@@ -52,7 +52,7 @@ Candidate 001 does not implement:
 
 ## 4. Public contract impact
 
-No new System 20 public data contract is required.
+No new System 20 public data contract was required.
 
 Candidate 001 reuses the already-implemented:
 
@@ -69,9 +69,9 @@ Narrow catalog/API changes:
 
 ## 5. Protected untouched neighbors
 
-Implementation must not change:
+Implementation preserves:
 
-- System 00D v6 global plan semantics or profile version;
+- System 00D v6 global plan semantics and profile version;
 - Rural Crossroads Candidate 006 request/signature;
 - Small-Town Center Candidate 001 request/signature;
 - System 19 archetypes/grammar;
@@ -89,9 +89,9 @@ It also builds a bounded rural planning-constraint set from existing read-only s
 
 ### Hydrology
 
-If a river segment somehow intersects a future legal rural-scattered site, normalize it as a blocking `hydrology/corridor` exactly as Small-Town Candidate 001 does; bridge intents remain non-blocking service/provenance points.
+If a river segment intersects a future legal rural-scattered site, normalize it as a blocking `hydrology/corridor` exactly as Small-Town Candidate 001 does; bridge intents remain non-blocking service/provenance points.
 
-The current System 00D v6 hamlet placement already enforces river clearance, so the canonical three hamlet sites are expected to have no hydrology reservation. The seam remains general rather than assuming this forever.
+The current System 00D v6 hamlet placement already enforces river clearance, so the canonical three hamlet sites have no hydrology reservation. The seam remains general rather than assuming this forever.
 
 ### Electrical
 
@@ -125,7 +125,7 @@ This keeps the crucial future rule visible: when parcel-scale well/septic placem
 
 ## 7. Selecting the inherited hamlet spine
 
-The current Rural Crossroads local-road code assumes a horizontal primary road; that assumption must **not** be reused for hamlets.
+The Rural Crossroads local-road code assumes a horizontal primary road; that assumption is not reused for hamlets.
 
 `rural.scattered` selects one inherited segment as the local hamlet spine using this bounded rule:
 
@@ -139,23 +139,27 @@ The selected spine is only a local morphology reference. System 20 does not rewr
 
 ## 8. Rural lane morphology
 
-Add a dedicated `road_layout = rural_scattered_lanes` path in `LocalRoadPlanner`.
+`LocalRoadPlanner` implements a dedicated `road_layout = rural_scattered_lanes` path.
 
 Candidate 001 creates exactly two internal public gravel lanes.
 
 For each lane:
 
-1. enumerate usable branch-anchor path cells on the selected inherited spine, excluding a bounded margin near local-area boundaries, segment endpoints and inherited intersections;
+1. enumerate usable branch-anchor path cells on the selected inherited spine with a permissive bounded anchor pool;
 2. choose distinct branch anchors using named deterministic seed domains;
-3. choose opposite or otherwise separated sides of the spine where legal, so both lanes do not form one visual comb by default;
-4. extend perpendicular from the spine, then add one short lateral bend/tail;
-5. use 3-cell width and `road_class = local_rural`;
-6. use `ground.gravel_dark`, no centerline paint;
-7. enable parcel frontage;
-8. remain wholly internal to the 256×256 area;
-9. avoid hydrology/facility reservations and positive-length overlap with inherited/local roads;
-10. allow crossing a non-blocking regional utility corridor where necessary;
-11. fail honestly after exhausting the finite candidate set rather than rerolling indefinitely.
+3. require the two anchors to remain meaningfully separated;
+4. choose opposite or otherwise separated sides of the spine where legal, so both lanes do not form one visual comb by default;
+5. extend a long perpendicular developable branch from the spine, then add one short lateral bend/tail;
+6. use 3-cell width and `road_class = local_rural`;
+7. use the rural gravel surface family with no centerline paint;
+8. enable parcel frontage;
+9. require the full road corridor—not only its centerline—to remain wholly internal to the 256×256 area;
+10. avoid hydrology/facility reservations and positive-length overlap with inherited/local roads;
+11. allow crossing a non-blocking regional utility corridor where necessary;
+12. reject illegal near-edge anchors by actual full-corridor fit rather than globally over-constraining the anchor pool;
+13. fail honestly after exhausting the finite candidate set rather than rerolling indefinitely.
+
+The implemented v1 profile uses a 24-cell branch-anchor margin, 44-cell minimum anchor separation, 72-cell perpendicular branch, and 24-cell short lateral tail. Those values are profile data rather than public-contract constants.
 
 The two lanes create ordinary uncontrolled junctions with the inherited spine. Candidate 001 requires no traffic signal.
 
@@ -171,9 +175,9 @@ For `rural.scattered`:
 
 ## 10. Parcel morphology
 
-Add `land_use_mode = rural_scattered` so parcel ranking uses the **site center** rather than the first generated intersection as its semantic reference.
+`land_use_mode = rural_scattered` makes parcel ranking use the **site center** rather than the first generated intersection as its semantic reference.
 
-Approved v1 profile targets:
+Implemented v1 profile targets:
 
 - `commercial_count = 0`;
 - `residential_count = 4`;
@@ -181,9 +185,9 @@ Approved v1 profile targets:
 - `local_residential_target = 3`;
 - `local_farmstead_target = 1`;
 - at least 4/6 total occupied properties on `local_rural` frontage;
-- frontage/depth ranges similar to Rural Crossroads but with slightly wider gaps and more edge openness;
-- residential facade setback remains compact, around the existing rural 1-cell profile value;
-- farmstead setback remains modestly deeper, around 4 cells;
+- frontage/depth ranges similar to Rural Crossroads but with wider gaps and more edge openness;
+- residential facade setback remains the existing rural 1-cell value;
+- farmstead setback remains 4 cells;
 - no commercial setback policy is exercised.
 
 Classification order:
@@ -224,19 +228,19 @@ Existing System 20 rules remain mandatory:
 
 Reuse `temperate.rural` v3.
 
-Candidate 001 should feel more open than both existing profiles:
+Candidate 001 is more open than both existing profiles:
 
 - substantial two-dimensional tree/shrub/rock noise outside occupied/access/reserved geometry;
-- agricultural/field semantics around farmstead/open parcels where current rules already support them;
+- agricultural/field semantics around farmstead/open parcels where current rules support them;
 - one mailbox per occupied residential/farmstead property using the existing rule;
 - no traffic signal;
 - no fake civic props or utility hardware.
 
-Natural dressing must continue avoiding roads, approaches, buildings, active fields where required, and any blocking infrastructure/hydrology reservation.
+Natural dressing continues avoiding roads, approaches, buildings, active fields where required, and any blocking infrastructure/hydrology reservation.
 
 ## 13. Validation / acceptance
 
-Exact-head `verify/system20-local-area` and `verify/system00d-global-world` should prove:
+Exact-head `verify/system20-local-area` and `verify/system00d-global-world` prove:
 
 1. `rural.scattered` v1 is supported;
 2. all three current System 00D hamlet sites project successfully;
@@ -261,28 +265,31 @@ Exact-head `verify/system20-local-area` and `verify/system00d-global-world` shou
 21. Small-Town Candidate 001 remains exact;
 22. no System 00D/System 19/materialization/render/camera/player/WHAT/WHEN/streaming contract changes.
 
-A dedicated `RuralScatteredGenerationSmoke.gd` should test all three canonical hamlet sites rather than treating only one hand-picked seed as representative.
+`RuralScatteredGenerationSmoke.gd` tests all three canonical hamlet sites rather than treating one hand-picked seed as representative. It also directly tests both horizontal and vertical inherited-spine cases.
 
-## 14. Expected implementation surface
+## 14. Implemented surface
 
-Expected System 20 changes after approval:
+System 20 implementation changes are bounded to:
 
 - `AreaProfileCatalog.gd`;
-- `LocalAreaGenerator.gd` profile list only;
-- `System20AreaRequestProjector.gd` rural-scattered normalization;
-- `LocalRoadPlanner.gd` new orientation-agnostic rural-scattered lane branch;
+- `LocalAreaGenerator.gd` profile exposure only;
+- `System20AreaRequestProjector.gd` rural-scattered normalization plus the boundary-tangent road-projection correction discovered during integration;
+- `LocalRoadPlanner.gd` orientation-agnostic rural-scattered lane branch;
 - `ParcelPlanner.gd` rural-scattered center/classification path;
-- `GeneratedAreaValidator.gd` only if a profile-generic acceptance check is genuinely missing;
-- new `RuralScatteredGenerationSmoke.gd`;
-- `.github/workflows/local-area-generation.yml` to gate it;
-- `GlobalWorldPlanningV6Smoke.gd` to replace the current honest-unsupported regression with real three-site projection/generation checks;
+- `RuralScatteredGenerationSmoke.gd`;
+- `.github/workflows/local-area-generation.yml` gate coverage;
+- `GlobalWorldPlanningV6Smoke.gd` three-site projection/generation coverage;
 - canonical docs/changelog.
 
-No new major owner is proposed; this slice is a new System 20 profile using existing System 20 responsibilities.
+No new major owner was required; this slice is a new System 20 profile using existing System 20 responsibilities.
+
+### Integration correction discovered during implementation
+
+A regional road whose centerline lies purely along a local planning area's mathematical boundary is a **boundary tangency**, not a road that enters the area. `System20AreaRequestProjector.road_constraints_for_bounds()` now ignores positive-length boundary-tangent overlaps as well as single-point tangencies. This prevents a full-width inherited-road corridor from being falsely projected partly outside the local area while preserving real roads that actually enter/cross it.
 
 ## 15. Future seams
 
-After `rural.scattered`, the current five System 00D settlement sites will all have real System 20 local profiles.
+With `rural.scattered` implemented, the current five System 00D settlement sites all have real System 20 local profiles.
 
 That creates a clean point to choose among the next major layers:
 
@@ -295,4 +302,20 @@ The recommended architecture order remains: finish logical places first, then le
 
 ## 16. North-star fit
 
-A rural hamlet should feel like a real sparse place in the same continuous world, not a repeated tactical template. This design consumes the actual global road/utility/service facts, creates only the local roads/properties that belong to System 20, preserves substantial open land, and refuses to invent businesses or physical utility hardware that do not yet have real owners.
+A rural hamlet feels like a real sparse place in the same continuous world, not a repeated tactical template. This implementation consumes the actual global road/utility/service facts, creates only the local roads/properties that belong to System 20, preserves substantial open land, and refuses to invent businesses or physical utility hardware that do not yet have real owners.
+
+## 17. Implementation verification
+
+First fully green implementation head:
+
+`92d896d1d73cc67cb6df99b5e9102f9404fa21bc`
+
+On that exact code head, all relevant protected checks succeeded:
+
+- `verify/system00d-global-world`;
+- `verify/system19-local-building`;
+- `verify/system20-local-area`;
+- `verify/system21-camera-view`;
+- `verify/system22-area-critique`.
+
+Final documentation promotion is verified separately on the exact final repository head before the slice is considered formally closed.

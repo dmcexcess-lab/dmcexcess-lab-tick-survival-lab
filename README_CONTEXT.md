@@ -22,11 +22,11 @@ System 00D plus Systems 14–22 form the current canonical world-planning/playab
 
 **System 19 is finalized.** New building profiles are ordinary content work unless the frozen grammar contract proves insufficient.
 
-**System 20 now has two protected local profiles:** Rural Crossroads Candidate 006 (`rural.crossroads` v5) remains the accepted live integration anchor, and Small-Town Center Candidate 001 (`smalltown.center` v1) is implemented as the first real settlement profile consuming System 00D infrastructure truth. Both use `temperate.rural` v3.
+**System 20 now has three protected local profiles covering all five current System 00D settlement sites:** Rural Crossroads Candidate 006 (`rural.crossroads` v5) remains the accepted live integration anchor; Small-Town Center Candidate 001 (`smalltown.center` v1) is the infrastructure-aware settlement profile; and Rural-Scattered / Hamlet Candidate 001 (`rural.scattered` v1) covers all three planned hamlet sites. All three use `temperate.rural` v3.
 
 **System 21 Tactical Camera / View Control is implemented.** Player-follow is default; zoom, detached inspection, recenter, focus and scripted seams are presentation-only.
 
-**System 22 Large-Area DEV Critique Runtime is implemented.** The live game still materializes/renders Rural Crossroads Candidate 006. Small-Town Candidate 001 is currently a proven pure/integration plan, not the live critique world.
+**System 22 Large-Area DEV Critique Runtime is implemented.** The live game still materializes/renders Rural Crossroads Candidate 006. Small-Town Candidate 001 and Rural-Scattered Candidate 001 are proven pure/integration profiles, not live critique-world switches.
 
 ## 3. Foundation truth
 
@@ -41,7 +41,7 @@ One deterministic integer world tick, variable-duration actions/events, tactical
 
 ## 4. Implemented canonical stack
 
-Dedicated canonical validation includes WHERE / WHAT / WHEN; collision/movement/locomotion; recovered Art and layer renderers; Door State/System 18; hands/inventory/item transfer; actor stats/status domains; canonical HUD/player shell; run/exertion/encumbrance; finalized System 19 building grammar; System 20 local area/materialization; System 21 camera; System 22 critique runtime; and **System 00D geography + hydrology + settlements + major roads + bridge intent + regional electrical + potable-water + wastewater/septic infrastructure + read-only System 20 projection seams**.
+Dedicated canonical validation includes WHERE / WHAT / WHEN; collision/movement/locomotion; recovered Art and layer renderers; Door State/System 18; hands/inventory/item transfer; actor stats/status domains; canonical HUD/player shell; run/exertion/encumbrance; finalized System 19 building grammar; System 20 local area/materialization with crossroads, small-town and rural-scattered profiles; System 21 camera; System 22 critique runtime; and **System 00D geography + hydrology + settlements + major roads + bridge intent + regional electrical + potable-water + wastewater/septic infrastructure + read-only System 20 projection seams**.
 
 Art remains presentation truth; generation stores semantic IDs/facing only. Art is not physics.
 
@@ -86,7 +86,11 @@ Pure source lives under `game/scripts/generation/world/` and imports no System 1
 
 Central site `area.rural.crossroads.001` remains the frozen Candidate 006 anchor. Its projected request and generated semantic signature remain exact and receive no infrastructure-reservation facts.
 
-Small-town site `area.smalltown.center.001` now projects successfully to `smalltown.center` v1. Its request consumes normalized regional hydrology/power/potable-water/wastewater facts through `inherited_planning_constraints`, which System 20 converts into reusable facility/corridor reservations before local roads/parcels are planned.
+Small-town site `area.smalltown.center.001` projects successfully to `smalltown.center` v1. Its request consumes normalized regional hydrology/power/potable-water/wastewater facts through `inherited_planning_constraints`, which System 20 converts into reusable facility/corridor reservations before local roads/parcels are planned.
+
+All three hamlet sites now project successfully to `rural.scattered` v1. They retain exact inherited regional-road geometry and consume regional power plus decentralized groundwater/septic service intent without inventing rural substations, wells, septic tanks or drain fields. The existing `potable_source_clearance_required` septic policy remains visible for future parcel-scale placement.
+
+Road projection treats a regional segment lying solely along a local planning area's mathematical boundary as a boundary tangency rather than as an entering inherited road. This prevents false full-width corridors from extending outside the local area while preserving real road crossings/entries.
 
 Read-only seams remain:
 
@@ -108,6 +112,8 @@ Protected library: Trailer v2, Small Farmhouse v2, Large Farmhouse v4, Compact L
 Umbrella: `SYSTEM_DESIGNS/20_LOCAL_AREA_PARCEL_GENERATION.md`.
 
 Small-town design: `SYSTEM_DESIGNS/20A_SMALLTOWN_CENTER_CANDIDATE_001.md`.
+
+Rural-scattered design: `SYSTEM_DESIGNS/20B_RURAL_SCATTERED_CANDIDATE_001.md`.
 
 ### Rural Crossroads Candidate 006 — protected live anchor
 
@@ -138,6 +144,22 @@ Small-town design: `SYSTEM_DESIGNS/20A_SMALLTOWN_CENTER_CANDIDATE_001.md`.
 - existing road-flush building-owned parking rule remains active;
 - Candidate 006 request and semantic signature remain exact.
 
+### Rural-Scattered / Hamlet Candidate 001 — implemented three-site profile
+
+- `rural.scattered` v1 + `temperate.rural` v3;
+- all three System 00D v6 hamlet sites project/generate through the same profile while varying deterministically from their site seeds/road geometry;
+- exact inherited regional-road truth is retained;
+- two internal 3-cell gravel `local_rural` lanes branch from a selected cardinal inherited spine without unauthorized boundary exits;
+- direct synthetic tests prove both horizontal and vertical inherited spines;
+- exactly four residential + two farmstead opportunities, with at least four of six occupied properties on local-lane frontage;
+- zero commercial targets and no semantic town blocks;
+- only finalized System 19 residential/farmhouse archetypes are used;
+- decentralized groundwater and septic service records are consumed as non-blocking intent only, preserving `potable_source_clearance_required` without fake facilities;
+- regional power remains source-traceable and no rural substation is invented;
+- >=72% of non-road area remains physically unbuilt;
+- approaches still terminate at real System 19 primary doors;
+- Crossroads 006 and Small-Town 001 remain exact protected regressions.
+
 `AreaMaterializationCoordinator.gd` remains one-time transactional initial WHAT + Door State materialization only. Streaming/save orchestration remains future System 00F.
 
 Exact-head context: `verify/system20-local-area`.
@@ -146,17 +168,17 @@ Exact-head context: `verify/system20-local-area`.
 
 System 21 owns camera behavior only and never mutates simulation. System 22 owns the bounded DEV moving render-window composition only.
 
-The live Web build remains Rural Crossroads Candidate 006. Small-Town Candidate 001 is deliberately not switched into the live critique runtime by its implementation slice.
+The live Web build remains Rural Crossroads Candidate 006. Small-Town Candidate 001 and Rural-Scattered Candidate 001 are deliberately not switched into the live critique runtime by their implementation slices.
 
 ## 9. Immediate next path
 
 1. Keep Rural Crossroads Candidate 006 frozen as the central live/local integration anchor.
-2. Keep Small-Town Center Candidate 001 protected as the first infrastructure-aware local settlement profile.
+2. Keep Small-Town Center Candidate 001 and Rural-Scattered Candidate 001 protected as the remaining current System 20 settlement profiles.
 3. Keep System 00D Slices 001–006 protected as the global geography/settlement/road/hydrology/utility baseline.
-4. **Design the real System 20 `rural.scattered` / hamlet local profile next** for the three remaining planned global hamlet sites.
-5. Do not turn power facts into tactical electricity, potable-water facts into physical plumbing, or wastewater facts into physical sewer/septic mechanics until downstream owners are explicitly designed.
-6. Design System 00F streaming only after the required logical local profiles are stable enough that partitions are technical only.
-7. Design System 00E population/outbreak/player story after stable world places provide real homes/workplaces/properties.
+4. The recommended next architecture design is **System 00F streaming/materialization orchestration**, now that every current System 00D settlement site has a real logical local profile and streaming partitions can remain technical only.
+5. Richer System 19 settlement content, parcel addresses/ownership/zoning, or System 00E population/household/outbreak/player-story work remain valid alternative next slices, but should be separately designed and approved.
+6. Do not turn power facts into tactical electricity, potable-water facts into physical plumbing, or wastewater facts into physical sewer/septic mechanics until downstream owners are explicitly designed.
+7. Do not let System 00F redefine roads, rivers, utilities, parcels or settlement morphology; it must consume the logical world truth already established.
 
 ## 10. Invariants
 
@@ -177,6 +199,8 @@ The live Web build remains Rural Crossroads Candidate 006. Small-Town Candidate 
 15. Wastewater services/anchors/trunk are planning truth, not literal septic/sewer/treatment geometry or runtime sanitation state.
 16. System 20 infrastructure reservations are protected local planning land, not fake final utility facilities.
 17. A regional road may terminate inside a local planning window; only actual boundary contact requires an authorized local boundary exit.
+18. A regional road lying solely along a local planning-area boundary is tangential context, not an entering inherited road.
+19. Rural decentralized water/septic service intent does not authorize System 20 to invent parcel-scale well/septic geometry.
 
 ## 11. Documentation source order
 

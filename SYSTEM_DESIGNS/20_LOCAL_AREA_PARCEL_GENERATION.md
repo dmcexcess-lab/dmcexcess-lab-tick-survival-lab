@@ -1,10 +1,10 @@
 # Tick Survival Lab — System 20 Local Area / Parcel Generation
 
-Status: **IMPLEMENTED — RURAL CROSSROADS CANDIDATE 006 + SMALL-TOWN CENTER CANDIDATE 001 + INITIAL MATERIALIZATION**
+Status: **IMPLEMENTED — RURAL CROSSROADS CANDIDATE 006 + SMALL-TOWN CENTER CANDIDATE 001 + RURAL-SCATTERED CANDIDATE 001 + INITIAL MATERIALIZATION**
 
 Date: 2026-08-22
 
-System 20 is the local planning layer between System 00D global world planning and finalized System 19 building generation. The rural critique series established working rules for inherited roads, locally generated roads, parcel frontage, compact setbacks, outdoor ecology, readable property access, and real road-connected commercial paved frontage. Small-Town Center Candidate 001 extends that contract with reusable inherited planning constraints, infrastructure reservations, semantic town blocks and a denser local-street morphology while preserving Rural Crossroads Candidate 006 exactly.
+System 20 is the local planning layer between System 00D global world planning and finalized System 19 building generation. The rural critique series established working rules for inherited roads, locally generated roads, parcel frontage, compact setbacks, outdoor ecology, readable property access, and real road-connected commercial paved frontage. Small-Town Center Candidate 001 extended that contract with reusable inherited planning constraints, infrastructure reservations, semantic town blocks and a denser local-street morphology. Rural-Scattered Candidate 001 now completes the current five-site System 00D settlement set with sparse hamlet morphology that consumes the same global road/utility truth without inventing a village center or physical utility hardware. Rural Crossroads Candidate 006 remains preserved exactly as the live integration anchor.
 
 ## 1. Goal
 
@@ -80,7 +80,8 @@ Controls human morphology:
 Current implemented profiles:
 
 - `rural.crossroads` **v5**;
-- `smalltown.center` **v1**.
+- `smalltown.center` **v1**;
+- `rural.scattered` **v1**.
 
 ### Environment profile
 
@@ -105,7 +106,7 @@ All planning owners live under `game/scripts/generation/areas/`:
 - `AreaProfileCatalog.gd` — settlement morphology/versioning;
 - `EnvironmentProfileCatalog.gd` — ecological/surface semantics;
 - `InfrastructureReservationPlanner.gd` — deterministic local reservation rectangles/corridors from normalized global planning facts;
-- `LocalRoadPlanner.gd` — inherited roads, rural local roads, town local streets and intersections;
+- `LocalRoadPlanner.gd` — inherited roads, rural-crossroads spurs, small-town local streets, rural-scattered hamlet lanes and intersections;
 - `TownBlockPlanner.gd` — optional semantic `town_block` records carved around roads/reservations;
 - `ParcelPlanner.gd` — road-facing parcels and profile-specific land use;
 - `ParcelAccessPlanner.gd` — road/property access and final approaches;
@@ -196,6 +197,10 @@ Rural Crossroads history:
 Small-Town history:
 
 - Candidate 001: `smalltown.center@1 + temperate.rural@3`, infrastructure-aware reservations + town streets/blocks/parcels.
+
+Rural-Scattered history:
+
+- Candidate 001: `rural.scattered@1 + temperate.rural@3`, three-site hamlet projection + orientation-agnostic local gravel lanes + sparse residential/farmstead morphology.
 
 ## 9. System 19 boundary
 
@@ -301,30 +306,62 @@ Inherited-road parcel frontage is limited to the actual inherited segment extent
 
 All occupied approaches still end directly at the real System 19 primary exterior door, and any real building-owned parking frontage still follows the Candidate 006 road-flush rule.
 
-## 12. Verification
+## 12. Rural-Scattered / Hamlet Candidate 001 — `rural.scattered@1 + temperate.rural@3`
+
+Detailed design: `SYSTEM_DESIGNS/20B_RURAL_SCATTERED_CANDIDATE_001.md`.
+
+Candidate 001 consumes all three actual System 00D v6 hamlet sites:
+
+- `area.rural.scattered.001`;
+- `area.rural.scattered.002`;
+- `area.rural.scattered.003`.
+
+### 12.1 Global -> local constraints
+
+Each hamlet keeps its exact projected inherited regional-road IDs/geometry and receives source-traceable upstream facts:
+
+- regional power feeder corridor plus one non-blocking settlement-service point, with no invented rural substation;
+- decentralized groundwater-source service intent, with no invented private-well facility;
+- decentralized onsite-septic service intent carrying `potable_source_clearance_required`, with no invented tank/drain-field facility;
+- hydrology corridor/bridge provenance if a future legal hamlet site actually intersects such facts.
+
+A regional road that lies only along the mathematical boundary of a local planning area is treated as a **boundary tangency**, not as a road entering the site. Positive-length boundary-tangent centerline overlap is ignored during road projection; real crossing/entering roads remain projected normally.
+
+### 12.2 Local lane morphology
+
+The profile creates exactly two internal public 3-cell gravel `local_rural` lanes from a selected inherited hamlet spine. Spine selection is cardinal-orientation agnostic and works with both horizontal and vertical inherited roads.
+
+The current v1 morphology uses a permissive finite anchor pool and lets full-corridor legality reject bad edge candidates. Each lane has a long developable perpendicular branch and a short lateral bend/tail, giving real local frontage without creating new area-boundary exits or pretending to be a town grid.
+
+### 12.3 Parcels and land use
+
+Candidate 001 creates:
+
+- zero commercial opportunities;
+- exactly four residential opportunities;
+- exactly two farmstead opportunities;
+- at least four of six occupied properties on `local_rural` frontage;
+- at least three residential and one farmstead property on local-lane frontage;
+- no semantic town blocks;
+- at least 72% of non-road area physically unbuilt;
+- only the finalized Trailer, Small Farmhouse, Large Farmhouse and Compact Laundry House residential families, with farmhouse archetypes for farmstead slots.
+
+All occupied approaches still terminate directly at real System 19 primary doors. Natural/property dressing remains deterministic and broad, without fake civic or utility hardware.
+
+## 13. Verification
 
 `LocalAreaGenerationSmoke.gd` remains the exact Rural Crossroads Candidate 006 regression.
 
-`SmallTownCenterGenerationSmoke.gd` independently protects Candidate 001, including:
+`SmallTownCenterGenerationSmoke.gd` independently protects Small-Town Candidate 001, including projection from the current System 00D v6 world, legal infrastructure reservations/blocks, connected `local_town` streets, honest commercial vacancies, residential local-street majority, real primary-door access, parking semantics, determinism and Candidate 006 exactness.
 
-- successful projection from the current System 00D v6 world;
-- small-town profile/version;
-- connected internal `local_town` network;
-- legal blocks/reservations;
-- four commercial opportunities with gas station + diner + honest vacancies;
-- ten residential opportunities with local-town majority;
-- real primary-door access;
-- parking semantics;
-- reservation exclusion;
-- deterministic replay/variation;
-- Candidate 006 exactness.
+`RuralScatteredGenerationSmoke.gd` independently protects all three canonical hamlets and directly tests horizontal/vertical inherited spines. It verifies exact inherited road projection, decentralized power/water/septic service truth, no fake facilities/commercial center, exactly two internal gravel lanes, 4+2 occupancy, local-lane majority, real primary-door access, >=72% non-road unbuilt area, deterministic replay and bounded alternate-seed variation.
 
-`GlobalWorldPlanningV6Smoke.gd` protects the global -> local seam and keeps `rural.scattered` honestly unsupported until its dedicated profile exists.
+`GlobalWorldPlanningV6Smoke.gd` protects the global -> local seam and now requires the real crossroads, small-town and all three hamlet sites to project/generate through their implemented System 20 profiles.
 
 Dedicated workflow: `.github/workflows/local-area-generation.yml`.
 Exact-head context: `verify/system20-local-area`.
 
-## 13. Initial materialization owner
+## 14. Initial materialization owner
 
 `AreaMaterializationCoordinator.gd` consumes an already-generated plan and owns only the one-time initial write transaction:
 
@@ -339,46 +376,48 @@ Exact-head context: `verify/system20-local-area`.
 
 Long-term save-file format and streaming-region transactions remain future ownership.
 
-Small-Town Candidate 001 did **not** alter this owner or switch the live System 22 critique runtime. Its reservations remain pure planning facts and are not materialized as fake facility entities.
+Small-Town Candidate 001 and Rural-Scattered Candidate 001 did **not** alter this owner or switch the live System 22 critique runtime. Their upstream utility facts remain planning facts and are not materialized as fake facility entities.
 
-## 14. Presentation boundary
+## 15. Presentation boundary
 
 System 20 owns **no camera or viewer behavior**. The live critique presentation belongs to System 22 and consumes materialized WHAT plus System 21 camera services.
 
 The live Web build remains Rural Crossroads Candidate 006. Implementing a local profile does not automatically make it a presentation target.
 
-## 15. Performance / mobile
+## 16. Performance / mobile
 
-Planning/materialization remain bounded startup work, never per-frame systems. Reservation, block, street and parcel operations are bounded by the assigned local planning area and contain no unbounded reroll loop.
+Planning/materialization remain bounded startup work, never per-frame systems. Reservation, block, street, lane and parcel operations are bounded by the assigned local planning area and contain no unbounded reroll loop.
 
 System 22 continues to render only its bounded moving window rather than all 65,536 cells every frame.
 
-## 16. Failure behavior
+## 17. Failure behavior
 
 Whole-plan failures include invalid requests/profiles, contradictory inherited road facts, unauthorized local-road boundary exits, insufficient parcel/local-road capacity, illegal IDs/overlap, impossible infrastructure reservations, System 19 building rejection, a primary-door alignment that cannot remain inside its legal parcel, or a declared paved frontage that cannot legally reach its frontage road.
 
 Generation never hides invalid geometry with a presentation-only bend or fake content.
 
-## 17. Future extension seams
+## 18. Future extension seams
 
 Future System 20 profiles may add other settlement/rural morphologies while reusing the same request/plan contracts.
 
 Known future consumers/extensions include:
 
-- `rural.scattered` / hamlet local planning;
 - sidewalks, alleys and richer parking;
-- real storefront/civic System 19 content;
+- real storefront/civic/agricultural-outbuilding System 19 content;
 - parcel addresses/zoning/land value;
 - exact utility facility placement/materialization inside reserved land;
+- parcel-scale private well/septic placement honoring existing source-clearance policy;
 - local utility distribution to parcels/buildings;
 - runtime power/water/wastewater state;
 - households/businesses/jobs;
 - vehicles/traffic;
 - streaming/materialization.
 
-Future systems consume stable reservation/block/parcel facts rather than moving already-planned regional infrastructure.
+Future systems consume stable reservation/block/parcel/service facts rather than moving already-planned regional infrastructure.
 
-## 18. Approved decisions / critique history
+With all five current System 00D settlement sites now backed by real System 20 profiles, System 00F streaming/materialization orchestration can be designed without making streaming partitions define world geography.
+
+## 19. Approved decisions / critique history
 
 1. Begin with rural open wilderness/houses/farms and a tiny crossroads center.
 2. Keep one memorable traffic light.
@@ -393,5 +432,16 @@ Future systems consume stable reservation/block/parcel facts rather than moving 
 11. Candidate 005 aligned every occupied frontage approach directly to the actual generated System 19 primary exterior door without editing the prefab itself.
 12. Candidate 006 implemented generic road-flush real parking/forecourt frontage from public System 19 `ground.parking*` semantics and preserved Candidate 005 morphology.
 13. On 2026-08-22 the user approved Small-Town Center Candidate 001 after System 00D Slices 001–006 established stable regional infrastructure.
-14. Candidate 001 added infrastructure-aware planning constraints/reservations, semantic town blocks, connected paved local streets, denser residential/commercial morphology and honest vacancies while preserving Candidate 006 exactly.
-15. Integration clarified that regional roads may terminate inside a local planning window and that inherited parcel frontage must be clipped to actual segment extent.
+14. Small-Town Candidate 001 added infrastructure-aware planning constraints/reservations, semantic town blocks, connected paved local streets, denser residential/commercial morphology and honest vacancies while preserving Candidate 006 exactly.
+15. Small-Town integration clarified that regional roads may terminate inside a local planning window and that inherited parcel frontage must be clipped to actual segment extent.
+16. On 2026-08-22 the user approved Rural-Scattered / Hamlet Candidate 001 for all three remaining System 00D hamlet sites.
+17. Rural-Scattered Candidate 001 added orientation-independent sparse hamlet lanes, 4+2 residential/farmstead occupancy with a local-lane majority, decentralized rural utility-service consumption and zero fake commercial center while preserving both earlier profiles.
+18. Hamlet integration clarified that a regional road running solely along a local planning area's mathematical boundary is a boundary tangency and must not be projected as an entering inherited-road corridor.
+
+## 20. Implementation verification
+
+The first fully green Rural-Scattered implementation head is:
+
+`92d896d1d73cc67cb6df99b5e9102f9404fa21bc`
+
+On that exact code head, `verify/system00d-global-world`, `verify/system19-local-building`, `verify/system20-local-area`, `verify/system21-camera-view` and `verify/system22-area-critique` all succeeded. Final documentation promotion is verified again on the exact final repository head, including Pages deployment.

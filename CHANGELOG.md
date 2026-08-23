@@ -1,5 +1,23 @@
 # Changelog
 
+## System 20 Rural-Scattered / Hamlet Candidate 001 — 2026-08-22
+
+- Implemented the approved **System 20B Rural-Scattered / Hamlet Candidate 001** as `rural.scattered` **v1** while keeping `temperate.rural` v3.
+- All three real System 00D v6 hamlet sites—`area.rural.scattered.001`, `.002`, and `.003`—now project and generate through System 20.
+- Preserved exact inherited regional-road IDs/geometry and consumed source-traceable regional power plus decentralized groundwater and onsite-septic service intent through the existing `inherited_planning_constraints` seam.
+- Rural water/septic facts remain non-blocking service intent. No private well, septic tank, drain field or rural substation/facility coordinate is fabricated, and `potable_source_clearance_required` remains explicit for future parcel-scale placement.
+- Added an orientation-agnostic `rural_scattered_lanes` path in `LocalRoadPlanner`: exactly two internal 3-cell gravel `local_rural` lanes branch from a selected horizontal or vertical inherited spine using bounded deterministic candidates and full-corridor legality.
+- The final v1 lane geometry uses a permissive 24-cell branch-anchor margin, 44-cell minimum anchor separation, 72-cell developable perpendicular branch and short 24-cell lateral tail. Illegal near-edge candidates fail actual fit checks rather than being hidden by rerolls.
+- Added sparse hamlet parcel morphology with **0 commercial, 4 residential and 2 farmstead** occupied targets. At least four of six occupied properties use local-lane frontage, including at least three homes and one farmstead.
+- Kept at least **72% of non-road area physically unbuilt** and reused only the finalized System 19 Trailer, Small Farmhouse, Large Farmhouse and Compact Laundry House families; farmstead slots use farmhouse archetypes.
+- Preserved real System 19 primary-door approach alignment, deterministic natural dressing, no semantic town blocks, no traffic signal and no fake civic/utility hardware.
+- Integration exposed and fixed an upstream projection edge case: a regional road lying solely along a local site's mathematical boundary is now treated as a **boundary tangency**, not an entering inherited road. Real crossings/entries remain unchanged.
+- Added `RuralScatteredGenerationSmoke.gd`, covering all three canonical hamlets plus direct horizontal/vertical inherited-spine cases, deterministic replay/variation, occupancy/open-space/service constraints, and protected Crossroads/Small-Town regressions.
+- `GlobalWorldPlanningV6Smoke.gd` now requires all five current System 00D settlement sites to project/generate through their real System 20 profiles.
+- Rural Crossroads Candidate 006 and Small-Town Center Candidate 001 remain exact protected regressions; System 00D v6, System 19, materialization, camera/player/rendering and the System 22 live critique target remain unchanged.
+- The first fully green implementation code head is `92d896d1d73cc67cb6df99b5e9102f9404fa21bc`, where `verify/system00d-global-world`, `verify/system19-local-building`, `verify/system20-local-area`, `verify/system21-camera-view` and `verify/system22-area-critique` all succeeded.
+- The live Web critique world intentionally remains Rural Crossroads Candidate 006. With all five current settlement sites now backed by real System 20 profiles, System 00F streaming/materialization orchestration is the recommended next architecture design.
+
 ## System 20 Small-Town Center Candidate 001 — 2026-08-22
 
 - Implemented the approved **System 20 Small-Town Center Candidate 001** as `smalltown.center` **v1** while keeping `temperate.rural` at v3.
@@ -57,7 +75,7 @@
 - Extended `GeneratedGlobalWorldPlan` and its deterministic signature with `power_nodes` and `power_segments` while keeping System 00D free of System 19/20 ownership, WHAT mutation, renderer/art, camera/player and streaming dependencies.
 - The canonical regional fixture now has exactly one deterministic electrical-grid ingress at a real major-road boundary gateway, one small-town-associated substation, and one settlement-service node for each of the five current settlements.
 - Built the regional feeder network from the already connected major-road graph instead of inventing a second cross-country routing truth. Existing road endpoints, intersections, settlement centers and gateways become graph vertices; required ingress-to-service paths are unioned into one connected network.
-- Feeder segments retain stable source-road and source-route provenance. Primary road corridors are mildly preferred over secondary corridors when legal alternatives exist, but every feeder segment remains fully contained by actual major-road geometry.
+- Feeder segments retain stable source-road/source-route provenance. Primary road corridors are mildly preferred over secondary corridors when legal alternatives exist, but every feeder segment remains fully contained by actual major-road geometry.
 - Ridge avoidance remains inherited from global roads and is independently rechecked by the power validator. Only the selected regional ingress may terminate at the world boundary.
 - Added independent validation for one ingress, one small-town substation, complete five-settlement service coverage, valid node locations, unique IDs, road containment, ridge avoidance, boundary discipline, feeder connectivity and ingress reachability.
 - Added read-only `System20AreaRequestProjector.power_constraints_for_bounds()`, returning clipped feeder segments and power nodes without changing `AreaGenerationRequest` or silently materializing tactical infrastructure.

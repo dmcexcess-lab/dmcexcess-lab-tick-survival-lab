@@ -40,9 +40,9 @@ Major systems move through **NOT DESIGNED -> DRAFT -> APPROVED -> IMPLEMENTED** 
 | 17A.1 | Overweight Walk Fatigue / Absolute Carry Ceiling Correction | **IMPLEMENTED** | `17A1_OVERWEIGHT_WALK_FATIGUE_HARD_CARRY_LIMIT.md` |
 | 18 | Door Interaction / Automatic Passage | **IMPLEMENTED** | `18_DOOR_INTERACTION_PASSAGE.md` |
 | 19 | Local Building Generation / Building Grammar | **IMPLEMENTED — FINALIZED** | `19_LOCAL_BUILDING_GENERATION_ARCHETYPE_LAB.md` |
-| 20 | Local Area / Parcel Generation | **IMPLEMENTED — RURAL CROSSROADS 006 + SMALL-TOWN CENTER 001** | `20_LOCAL_AREA_PARCEL_GENERATION.md` |
+| 20 | Local Area / Parcel Generation | **IMPLEMENTED — CROSSROADS 006 + SMALL-TOWN 001 + RURAL-SCATTERED 001** | `20_LOCAL_AREA_PARCEL_GENERATION.md` |
 | 20A | Small-Town Center Candidate 001 | **IMPLEMENTED** | `20A_SMALLTOWN_CENTER_CANDIDATE_001.md` |
-| 20B | Rural-Scattered / Hamlet Candidate 001 | **DRAFT** | `20B_RURAL_SCATTERED_CANDIDATE_001.md` |
+| 20B | Rural-Scattered / Hamlet Candidate 001 | **IMPLEMENTED** | `20B_RURAL_SCATTERED_CANDIDATE_001.md` |
 | 21 | Tactical Camera / View Control | **IMPLEMENTED** | `21_TACTICAL_CAMERA_VIEW_CONTROL.md` |
 | 22 | Large-Area DEV Critique Runtime | **IMPLEMENTED** | `22_LARGE_AREA_CRITIQUE_RUNTIME.md` |
 | 00E | Population / Household / Outbreak / Player Story | **NOT DESIGNED** | future design |
@@ -74,9 +74,10 @@ Current global fixture:
 - all rural septic records carry `potable_source_clearance_required`;
 - two small-town wastewater anchors and one road-contained collection trunk, selected away from the potable-water source/trunk corridor;
 - read-only hydrology, power, water and wastewater projection seams;
-- central `project_site()` still produces the accepted Candidate 006 request and exact semantic output;
-- small-town `project_site()` now produces the implemented `smalltown.center` v1 request with normalized infrastructure planning constraints;
-- unsupported `rural.scattered` local profiles still fail honestly pending the DRAFT System 20B design;
+- central `project_site()` produces the accepted Candidate 006 request and exact semantic output;
+- small-town `project_site()` produces the implemented `smalltown.center` v1 request with normalized infrastructure planning constraints;
+- all three rural hamlet sites now project to implemented `rural.scattered` v1 and generate successfully while preserving decentralized water/septic intent and exact inherited road truth;
+- road projection ignores pure boundary-tangent regional segments rather than treating them as entering inherited roads;
 - exact-head context `verify/system00d-global-world`.
 
 System 00D remains pure planning. It owns no tactical bridge implementation, utility poles/wires, energized electrical state, literal wells/towers/pipes, building plumbing, pressure/flow/water inventory, literal sewer/septic/treatment geometry, runtime sanitation, WHAT mutation, renderer, camera, population, outbreak or streaming behavior.
@@ -126,17 +127,37 @@ Implemented pure/integration truth:
 - all occupied approaches preserve the real System 19 primary-door alignment rule;
 - Rural Crossroads Candidate 006 request and semantic signature remain exact.
 
+### Rural-Scattered / Hamlet Candidate 001
+
+Implemented pure/integration truth:
+
+- `rural.scattered` v1 + `temperate.rural` v3;
+- covers `area.rural.scattered.001`, `.002`, and `.003` from the real System 00D v6 plan;
+- preserves exact inherited regional road IDs/geometry while ignoring boundary-only road tangencies;
+- consumes regional power plus decentralized groundwater and onsite-septic service intent through the existing planning-constraint seam;
+- creates no rural utility facility reservation because the global plan does not provide literal local well/septic/substation footprints;
+- preserves `potable_source_clearance_required` for future parcel-scale well/septic placement;
+- creates exactly two internal 3-cell gravel `local_rural` lanes from a selected horizontal or vertical inherited spine;
+- creates exactly four residential + two farmstead opportunities with at least four of six occupied properties on local-lane frontage;
+- creates zero commercial opportunities and no semantic town blocks;
+- keeps at least 72% of non-road area physically unbuilt;
+- uses only finalized System 19 residential/farmhouse archetypes and real primary-door approach alignment;
+- dedicated smoke covers all three canonical hamlets plus synthetic horizontal/vertical spine cases;
+- Rural Crossroads 006 and Small-Town 001 remain exact protected regressions.
+
 Exact-head context: `verify/system20-local-area`.
 
 ## System 21 / 22 presentation truth
 
 System 21 owns camera follow/pan/zoom/focus/recenter only and never mutates simulation.
 
-System 22 owns the bounded moving-window DEV presentation for the accepted 256×256 Rural Crossroads Candidate 006 local area. The live Web demo remains Candidate 006; Small-Town Candidate 001 remains a tested pure/integration profile until a separate presentation decision is made.
+System 22 owns the bounded moving-window DEV presentation for the accepted 256×256 Rural Crossroads Candidate 006 local area. The live Web demo remains Candidate 006; Small-Town Candidate 001 and Rural-Scattered Candidate 001 remain tested pure/integration profiles until a separate presentation decision is made.
 
 ## Immediate next path
 
-Keep System 00D Slices 001–006, Rural Crossroads Candidate 006 and Small-Town Candidate 001 protected. The next major local-planning step is the DRAFT System 20B **`rural.scattered` / hamlet Candidate 001** in `20B_RURAL_SCATTERED_CANDIDATE_001.md`, covering all three remaining global hamlet sites. It requires user approval before implementation. Streaming remains later, after logical world geography/places/infrastructure and required local profiles are stable enough that partitions are purely technical.
+Keep System 00D Slices 001–006 and all three System 20 profiles protected. The current five System 00D settlement sites now all have real local planning profiles, so the recommended next architecture design is **System 00F Streaming / Materialization**. Its partitions must remain technical/storage concerns that consume the logical global/local world truth rather than defining roads, utilities, parcels or settlements.
+
+Other valid separately designed next slices include richer System 19 settlement content, parcel addresses/ownership/zoning, and System 00E population/household/outbreak/player-story work.
 
 ## Design rule
 
