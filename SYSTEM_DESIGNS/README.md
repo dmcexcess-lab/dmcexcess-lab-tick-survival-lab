@@ -40,7 +40,8 @@ Major systems move through **NOT DESIGNED -> DRAFT -> APPROVED -> IMPLEMENTED** 
 | 17A.1 | Overweight Walk Fatigue / Absolute Carry Ceiling Correction | **IMPLEMENTED** | `17A1_OVERWEIGHT_WALK_FATIGUE_HARD_CARRY_LIMIT.md` |
 | 18 | Door Interaction / Automatic Passage | **IMPLEMENTED** | `18_DOOR_INTERACTION_PASSAGE.md` |
 | 19 | Local Building Generation / Building Grammar | **IMPLEMENTED — FINALIZED** | `19_LOCAL_BUILDING_GENERATION_ARCHETYPE_LAB.md` |
-| 20 | Local Area / Parcel Generation | **IMPLEMENTED — RURAL CROSSROADS CANDIDATE 006** | `20_LOCAL_AREA_PARCEL_GENERATION.md` |
+| 20 | Local Area / Parcel Generation | **IMPLEMENTED — RURAL CROSSROADS 006 + SMALL-TOWN CENTER 001** | `20_LOCAL_AREA_PARCEL_GENERATION.md` |
+| 20A | Small-Town Center Candidate 001 | **IMPLEMENTED** | `20A_SMALLTOWN_CENTER_CANDIDATE_001.md` |
 | 21 | Tactical Camera / View Control | **IMPLEMENTED** | `21_TACTICAL_CAMERA_VIEW_CONTROL.md` |
 | 22 | Large-Area DEV Critique Runtime | **IMPLEMENTED** | `22_LARGE_AREA_CRITIQUE_RUNTIME.md` |
 | 00E | Population / Household / Outbreak / Player Story | **NOT DESIGNED** | future design |
@@ -72,8 +73,9 @@ Current global fixture:
 - all rural septic records carry `potable_source_clearance_required`;
 - two small-town wastewater anchors and one road-contained collection trunk, selected away from the potable-water source/trunk corridor;
 - read-only hydrology, power, water and wastewater projection seams;
-- central `project_site()` still produces the accepted System 20 request and exact Candidate 006 semantic output;
-- unsupported future local profiles still fail honestly;
+- central `project_site()` still produces the accepted Candidate 006 request and exact semantic output;
+- small-town `project_site()` now produces the implemented `smalltown.center` v1 request with normalized infrastructure planning constraints;
+- unsupported `rural.scattered` local profiles still fail honestly;
 - exact-head context `verify/system00d-global-world`.
 
 System 00D remains pure planning. It owns no tactical bridge implementation, utility poles/wires, energized electrical state, literal wells/towers/pipes, building plumbing, pressure/flow/water inventory, literal sewer/septic/treatment geometry, runtime sanitation, WHAT mutation, renderer, camera, population, outbreak or streaming behavior.
@@ -91,9 +93,11 @@ Protected library:
 
 New building profiles are ordinary content work unless the frozen System 19 public grammar contract proves insufficient.
 
-## System 20 Rural Crossroads Candidate 006
+## System 20 implemented profiles
 
-Current local integration truth:
+### Rural Crossroads Candidate 006
+
+Protected live/local integration truth:
 
 - `rural.crossroads` v5 + `temperate.rural` v3;
 - exact inherited regional road constraints from System 00D;
@@ -106,17 +110,32 @@ Current local integration truth:
 - no parking invented for buildings without a real parking edge;
 - initial materialization remains transactional and relinquishes ownership to WHAT afterward.
 
+### Small-Town Center Candidate 001
+
+Implemented pure/integration truth:
+
+- `smalltown.center` v1 + `temperate.rural` v3;
+- consumes the real System 00D v6 small-town road, power, water, wastewater and hydrology planning facts;
+- `InfrastructureReservationPlanner.gd` converts upstream facility/corridor facts into reusable protected local land;
+- `TownBlockPlanner.gd` records semantic blocks without treating them as chunks;
+- a connected internal paved `local_town` network creates denser residential frontage while preserving inherited regional roads;
+- four commercial opportunities use gas station + diner + honest vacancies because the System 19 library remains intentionally limited;
+- ten residential opportunities favor local-town frontage;
+- inherited-road parcel frontage is clipped to actual inherited segment extent;
+- all occupied approaches preserve the real System 19 primary-door alignment rule;
+- Rural Crossroads Candidate 006 request and semantic signature remain exact.
+
 Exact-head context: `verify/system20-local-area`.
 
 ## System 21 / 22 presentation truth
 
 System 21 owns camera follow/pan/zoom/focus/recenter only and never mutates simulation.
 
-System 22 owns the bounded moving-window DEV presentation for the accepted 256×256 Candidate 006 local area. The live Web demo remains Candidate 006; System 00D river/bridge/power/water/wastewater infrastructure remains headless global planning truth until downstream materialization systems are explicitly designed.
+System 22 owns the bounded moving-window DEV presentation for the accepted 256×256 Rural Crossroads Candidate 006 local area. The live Web demo remains Candidate 006; Small-Town Candidate 001 remains a tested pure/integration profile until a separate presentation decision is made.
 
 ## Immediate next path
 
-Keep Slices 001–006 and Candidate 006 protected. The next major step is the real System 20 **`smalltown.center`** profile, followed by `rural.scattered` / hamlet local profiles. Streaming remains later, after logical world geography/places/infrastructure and the required local profiles are stable enough that partitions are purely technical.
+Keep System 00D Slices 001–006, Rural Crossroads Candidate 006 and Small-Town Candidate 001 protected. The next major local-planning step is the real System 20 **`rural.scattered` / hamlet** profile for the three remaining global sites. Streaming remains later, after logical world geography/places/infrastructure and required local profiles are stable enough that partitions are purely technical.
 
 ## Design rule
 
