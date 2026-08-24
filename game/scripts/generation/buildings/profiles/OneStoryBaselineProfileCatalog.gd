@@ -189,7 +189,7 @@ func _townhomes_row3() -> Dictionary:
         var token: String = "unit_%d" % (unit + 1)
         rooms.append(_room("%s.living_kitchen" % token, Rect2i(x0, 7, 9, 5), &"ground.laminate_light"))
         rooms.append(_room("%s.bedroom" % token, Rect2i(x0, 1, 5, 5), &"ground.carpet_beige"))
-        rooms.append(_room("%s.bathroom" % token, Rect2i(x0 + 6, 1, 4, 5), &"ground.tile_white"))
+        rooms.append(_room("%s.bathroom" % token, Rect2i(x0 + 6, 1, 3, 5), &"ground.tile_white"))
         var exterior_role: String = "door.exterior.primary" if unit == 0 else "door.exterior.%s" % token
         doors.append(_door(exterior_role, Vector2i(x0 + 4, 12), &"door.house", Facing.Value.SOUTH))
         doors.append(_door("door.interior.%s.bedroom" % token, Vector2i(x0 + 2, 6), &"door.house", Facing.Value.NORTH))
