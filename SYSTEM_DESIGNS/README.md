@@ -1,6 +1,6 @@
 # Tick Survival Lab — System Design Index / Approval Ledger
 
-Canonical status/routing index. Read `PROJECT_NORTH_STAR.md` and `README_SOPS.md` first.
+Canonical status/routing index. Read `PROJECT_NORTH_STAR.md`, `README_SOPS.md`, `ROADMAP.md`, and `README_CONTEXT.md` first.
 
 | Order | System | Status | Canonical design |
 |---|---|---|---|
@@ -24,13 +24,13 @@ Canonical status/routing index. Read `PROJECT_NORTH_STAR.md` and `README_SOPS.md
 | 10 | Actor Hand Equipment Presentation | **IMPLEMENTED** | `10_ACTOR_HAND_EQUIPMENT_PRESENTATION.md` |
 | 11 | Inventory / Containment | **IMPLEMENTED** | `11_INVENTORY_CONTAINMENT.md` |
 | 12 | Item Transfer / Pickup / Drop / Equip | **IMPLEMENTED — personal + policy-aware external access** | `12_ITEM_TRANSFER_ACTIONS.md` |
-| 13 | Actor Stats / Status Architecture | **IMPLEMENTED via children** | `13_ACTOR_STATS_STATUS_ARCHITECTURE.md` |
-| 13A | Actor Health / Injury | **IMPLEMENTED** | `13A_ACTOR_HEALTH_INJURY.md` |
-| 13B | Actor Needs / Rest | **IMPLEMENTED** | `13B_ACTOR_NEEDS_REST.md` |
-| 13C | Actor Skills | **IMPLEMENTED** | `13C_ACTOR_SKILLS.md` |
+| 13 | Actor Stats / Status Architecture | **IMPLEMENTED via children; roadmap migration ahead** | `13_ACTOR_STATS_STATUS_ARCHITECTURE.md` |
+| 13A | Actor Health / Injury | **IMPLEMENTED scaffold; expanded Phase 4 gameplay ahead** | `13A_ACTOR_HEALTH_INJURY.md` |
+| 13B | Actor Needs / Rest | **IMPLEMENTED scaffold; stamina/exhaustion reconciliation ahead** | `13B_ACTOR_NEEDS_REST.md` |
+| 13C | Actor Skills | **IMPLEMENTED scaffold; final catalog replaced in Roadmap Phase 6** | `13C_ACTOR_SKILLS.md` |
 | 13D | Item Physical Properties | **IMPLEMENTED** | `13D_ITEM_PHYSICAL_PROPERTIES.md` |
 | 13E | Actor Carry / Encumbrance | **IMPLEMENTED** | `13E_ACTOR_CARRY_ENCUMBRANCE.md` |
-| 13F | Actor Moodlets / Status Derivation | **IMPLEMENTED** | `13F_ACTOR_MOODLETS.md` |
+| 13F | Actor Moodlets / Status Derivation | **IMPLEMENTED scaffold; expanded Phase 5 gameplay ahead** | `13F_ACTOR_MOODLETS.md` |
 | 14 | Canonical Playable Demo Integration | **IMPLEMENTED** | `14_CANONICAL_PLAYABLE_DEMO.md` |
 | 15 | Canonical HUD / Facing Inspection | **IMPLEMENTED** | `15_CANONICAL_HUD_FACING_INSPECTION.md` |
 | 16 | Canonical Player Shell / Inspectors / Stance | **IMPLEMENTED** | `16_CANONICAL_PLAYER_SHELL.md` |
@@ -46,15 +46,39 @@ Canonical status/routing index. Read `PROJECT_NORTH_STAR.md` and `README_SOPS.md
 | 24 | World Loot / Searchable Containers / Scavenging | **IMPLEMENTED — Candidate 001** | `24_WORLD_LOOT_SEARCHABLE_CONTAINERS.md` |
 | 25 | World Time / Ambient Daylight | **IMPLEMENTED — Candidate 001** | `25_WORLD_TIME_AMBIENT_DAYLIGHT.md` |
 | 26 | Spatial Sound / Hearing | **IMPLEMENTED — Candidate 001 + weather environment seam** | `26_SPATIAL_SOUND_HEARING.md` |
-| 27 | Physical Lighting / Illumination / Shadows | **IMPLEMENTED — Slices A+B+C + bounded-query optimization + weather optics input** | `27_PHYSICAL_LIGHTING_ILLUMINATION_SHADOWS.md` |
-| 28 | Weather / Atmosphere | **IMPLEMENTED — Slices A+B; C deferred** | `28_WEATHER_ATMOSPHERE.md` |
-| 00E | Population / Household / Outbreak / Player Story | **NOT DESIGNED** | future design |
+| 27 | Physical Lighting / Illumination / Shadows | **IMPLEMENTED — Slices A+B+C + bounded-query optimization + weather optics/lightning input** | `27_PHYSICAL_LIGHTING_ILLUMINATION_SHADOWS.md` |
+| 28 | Weather / Atmosphere | **IMPLEMENTED — Slices A+B+C** | `28_WEATHER_ATMOSPHERE.md` |
+| 00E | Population / Household / Outbreak / Player Story | **NOT DESIGNED — scheduled inside Roadmap Phase 8** | future design |
 
-## Current System 19 / 20 / 00F truth
+---
 
-System 19 exposes 24 callable one-story building archetypes and a stable generated-role -> entity-ID seam. System 20 owns ten area profiles and seven environment palettes with deterministic parcel-fit building selection. System 00F keeps logical source identity independent from technical stream regions and follows **materialization is one-way; activation is reversible**.
+## Roadmap routing
+
+`ROADMAP.md` is now the canonical post-System-28 ordering through Beta:
+
+1. Items / spoilage / interaction readability / world-object breadth;
+2. Crafting;
+3. three-tier Power + Water utilities, with active wastewater gameplay removed;
+4. player physical survival/health — hunger, thirst, sleep/exhaustion, health, stamina;
+5. Moodlets — comfort/fear/boredom plus escalating need-state presentation/consequences;
+6. final concrete skills + broad world/item interactions;
+7. Vehicles;
+8. Actor/NPC AI + combat + causal outbreak;
+9. final graphics/UI overhaul -> Beta.
+
+The roadmap does **not** pre-authorize all implementation. Each independently owned phase/system still follows DESCRIBE -> APPROVE -> IMPLEMENT -> VERIFY.
+
+---
+
+## Current Systems 19 / 20 / 00F truth
+
+System 19 exposes 24 callable one-story building archetypes and a stable generated-role -> entity-ID seam. System 20 owns ten area profiles and seven environment palettes with deterministic parcel-fit building selection. System 00F keeps logical source identity independent from technical stream regions and follows:
+
+> **materialization is one-way; activation is reversible.**
 
 Exact-head contexts: `verify/system19-local-building`, `verify/system20-local-area`, `verify/system00f-streaming-materialization`.
+
+---
 
 ## Current System 23 truth
 
@@ -64,9 +88,13 @@ System 23 geometry provides the 12-cell / 120-degree maximum candidate envelope 
 
 The live game injects System 27's acquisition adapter. Darkness and physical atmospheric extinction may shrink current acquired vision while physical light expands it toward illuminated targets. Opaque geometry remains authoritative first. REMEMBERED stays stale and UNSEEN stays true black.
 
-System 26 auditory observations remain orthogonal to visual fog and do not reveal terrain. Player-facing lifetime classification uses the perceived auditory cell, never exact hidden source truth: VISIBLE sound text fades by about one second; REMEMBERED/UNSEEN sound text latches at its uncertain location until the next observer action/unpause.
+System 26 auditory observations remain orthogonal to visual fog and do not reveal terrain. Player-facing lifetime classification uses the perceived auditory cell, never exact hidden source truth.
+
+Roadmap Phase 6 Awareness/Sneak must extend these existing observer/signal contracts rather than bypass them. Roadmap Phase 8 NPC AI receives ordinary observer knowledge rather than hidden world truth.
 
 Exact-head context: `verify/system23-perception`.
+
+---
 
 ## Current System 24 truth
 
@@ -74,13 +102,21 @@ Exact-head context: `verify/system23-perception`.
 
 Candidate 001 provides deterministic one-way persistent loot initialization into physical System 11 containers, location-aware tables, timed search and timed TAKE/STORE through System 12. Empty/looted containers do not automatically repopulate.
 
+Roadmap Phase 1 adds spoilage/icons/proximity interaction readability and broader object content; Phase 2 adds crafting on top of real items rather than reward-generation menus.
+
 Exact-head context: `verify/system24-loot`.
+
+---
 
 ## Current System 25 truth
 
 System 25 interprets authoritative WHEN ticks as scenario-local time without changing WHEN. Candidate 001 uses 5 ticks/second, starts day 0 at 08:00, and exposes a smooth 05:30–07:30 dawn / 18:30–20:30 dusk outdoor daylight baseline.
 
+System 27 consumes daylight downstream. System 28 uses the same WHEN clock and modulates it through continuous atmospheric optics/lightning without owning a second physical clock.
+
 Exact-head context: `verify/system25-world-time-light`.
+
+---
 
 ## Current System 26 truth
 
@@ -90,58 +126,83 @@ Candidate 001 separates exact `SoundEmission` truth from listener `HeardSoundObs
 
 Recognized player-facing cues prefer onomatopoeia (`*step step*`, `*thump thump*`, `*creak*`, `*SLAM*`), while low-confidence recognition remains honest `NOISE`/broader wording.
 
-System 28 Slice B now supplies rain/wind through the existing `AcousticEnvironmentModifier` seam. Weather raises detection thresholds and modestly worsens localization quality as competing background noise; rain particles are not fake sound emissions and current Candidate B adds no invented per-cell absorption cost.
+System 28 supplies rain/wind as competing background noise through the existing environment seam. Ordinary rain pixels are not fake sound emissions.
 
-Underlying heard observations age by WHEN ticks. Player presentation remains separate. Future AI consumes ordinary `HeardSoundObservation`, not the player renderer's latch.
+Current lightning does **not** invent thunder because the lightning event has no honest strike cell. A later geographic strike can feed ordinary System 26 propagation.
+
+Roadmap Phase 6 powered TVs/dialogue and Phase 8 NPC conversations should use real sound/information-source events downstream of real object/actor state.
 
 Exact-head context: `verify/system26-spatial-sound`.
+
+---
 
 ## Current System 27 truth
 
 > **Light is physical. Vision is observer-specific. Rendering visualizes lighting; gameplay and AI never read rendered pixels to decide what is illuminated.**
 
-Slice A owns deterministic headless illumination and useful-range policy. Slice B renders darkness/tint/glow/scatter below System 23. Slice C makes observer acquisition consume physical target conditions through the neutral System 23 provider seam.
+System 27 owns deterministic headless illumination, target-condition useful-range policy, and rich visible lighting. System 23 consumes the neutral acquisition adapter.
 
-The acquisition policy now combines target luminance with physical `visibility_extinction` supplied through `AtmosphericOptics`. Radius-1 near awareness remains protected and atmosphere can only reduce the 12-cell geometric envelope, never bypass opaque LOS.
+Weather feeds continuous cloud/rain/fog/wetness values through `AtmosphericOptics`. Slice C now also supplies a short `transient_sky_light` from the real WHEN lightning event.
 
-System 28 Slice B supplies continuous cloud/rain/fog/wetness atmosphere inputs through the existing `AtmosphericOptics` contract. System 27 remains the physical illumination/shadow owner and its existing wet-reflection treatment now consumes real Weather wetness.
+The physical lightning regression proves the same event brightens an exterior from 0.025 to 0.845 useful luminance and transmits 0.356 useful luminance into a roofed interior through a real window portal.
 
-The provider guarantees a 25×25 observer-centered light-query envelope only when the presentation field does not already cover the survivor's full 12-cell geometric vision area. Camera movement therefore does not become gameplay vision truth.
-
-The bounded optimization caches materialized/topology/optical facts, evaluates local emitters only inside useful-range rectangles, prepares presentation queries once per map refresh and reuses lighting image buffers. The 80×96 / four-light regression remains 1,676 emitter candidates and 688 optical-ray candidates versus 30,720 naive full-field-per-emitter visits.
+Roadmap Phase 3 powered fixtures and Phase 6 TVs/appliances must activate real light emitters through source-state adapters; emissive art alone never creates physical light.
 
 Exact-head context: `verify/system27-physical-lighting`.
+
+---
 
 ## Current System 28 truth
 
 > **Weather is simulation truth; weather animation is presentation.**
 
-Slices A+B are implemented. Physical Weather is deterministic and event-driven through WHEN; clear/overcast/rain/storm/fog expose continuous precipitation/cloud/fog/wind values plus analytic wetness. No per-tick Weather loop exists.
+Slices A+B+C are implemented.
 
-The low-resolution presentation owner animates at a bounded 20 Hz, stays below System 23, shelter-masks rain through cached sky exposure and uses no per-particle child Nodes. Calm clear weather may sleep between rare leaf/paper/dust events.
+Physical Weather remains deterministic/event-driven through WHEN with clear/overcast/rain/storm/fog profiles, continuous precipitation/cloud/fog/wind values, analytic wetness, quantized environment revisions, snapshot schema v2 and deterministic storm lightning.
 
-Slice B adds physical consequences through neutral existing seams:
+Presentation is now explicitly a **screen-space low-resolution atmosphere overlay**. Camera movement is a compatibility no-op for Weather presentation and requests zero Weather redraws. Rain/fog/debris therefore do not trail, clear or disappear during repeated movement/camera updates.
 
-- continuous Weather -> System 27 `AtmosphericOptics`;
-- real wetness -> existing wet-surface light presentation;
-- fog/rain extinction -> System 27/System 23 acquisition range;
-- rain/wind -> System 26 background detection/localization masking.
+Weather still retains shelter rejection by mapping a screen rain sample to the corresponding current world cell. It remains below System 23 so this cannot reveal hidden structure truth.
 
-The user-found A presentation issues are also closed: camera movement requests a compensated Weather redraw without advancing the 20 Hz phase/WHEN, and the viewport clear color is true black so unrendered technical space no longer appears as grey chunk edges against UNSEEN fog.
+Physical environment integration remains:
 
-Focused B fixture: clear bright range 12, representative fog bright range 5, storm hearing threshold addition 19, one camera compensation redraw with zero Weather/WHEN advancement.
+- Weather -> System 27 atmospheric optics;
+- wetness -> restrained wet-surface lighting response;
+- fog/rain extinction -> illumination-aware System 23 acquisition;
+- rain/wind -> System 26 hearing masking.
 
-First fully green executable Slice B head: `db4681dc53ce6955e9585f4f5b380fe8efef634c`.
+Slice C adds:
 
-Slice C lightning remains deferred.
+- deterministic `LightningEvent`;
+- one-tick physical sky flash through System 27;
+- real portal transmission and System 23 acquisition consequences;
+- stable-seeded low-res bolt presentation;
+- DEV `STRIKE` that schedules a real future WHEN event;
+- no fake thunder/damage/fire.
+
+Focused verified outputs on executable head `21014fe5915e47344b4b8d5f48e52fa69c386254`:
+
+- `WEATHER_OVERLAY_CAMERA_REDRAWS=0` after repeated camera updates;
+- `WEATHER_C_LIGHTNING_BEFORE=0.025`;
+- `WEATHER_C_LIGHTNING_FLASH=0.845`;
+- `WEATHER_C_LIGHTNING_PORTAL=0.356`;
+- `WEATHER_C_LIGHTNING_SEED=629519319`.
+
+All 13 required executable-head contexts were green on that head, including Pages.
 
 Exact-head context: `verify/system28-weather`.
 
+---
+
 ## Current presentation
 
-The live Rural Crossroads critique build has canonical scavenging, time/daylight, physical sound, physical lighting, illumination/atmosphere-aware vision, and low-resolution animated Weather A+B. Weather profile forcing now changes both visible atmosphere and real physical visibility/hearing conditions. Sound remains yellow onomatopoeia/uncertainty text. Active flashlight/lamp/neon/streetlight sources remain explicitly DEV-only until real equipment/power owners exist.
+The live Rural Crossroads critique build has canonical scavenging, time/daylight, physical sound, physical lighting, illumination/atmosphere-aware vision, screen-space low-resolution Weather and real physical lightning.
 
-## Required exact-head stack
+Weather DEV controls sit below the existing STATS / INVENTORY / MENU header row. Active flashlight/lamp/neon/streetlight sources remain explicitly DEV-only until Roadmap Phase 3/6 real equipment/power/object state replaces them.
+
+---
+
+## Required executable-head stack
 
 - `verify/system00d-global-world`
 - `verify/system00f-streaming-materialization`
