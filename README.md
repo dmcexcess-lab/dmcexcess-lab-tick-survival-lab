@@ -18,13 +18,13 @@ The canonical modular stack includes:
 - **WHAT** — one authoritative persistent current world;
 - **WHEN** — deterministic tick/action/pause kernel;
 - **System 00D** — global world planning (geography, settlements, roads, hydrology/bridge intent, regional utilities);
-- **System 19** — local building grammar;
-- **System 20** — local area generation for crossroads, small-town, scattered rural, dry countryside and physical watercourse/bridges;
+- **System 19** — local building grammar with 24 callable archetypes: six protected references plus an 18-profile one-story baseline library;
+- **System 20** — local area generation with ten area profiles and seven environment palettes spanning current rural content plus reusable suburban, urban, commercial, industrial and civic baselines;
 - **System 00F** — logical materialization + technical streaming activation;
 - **System 23** — deterministic facing-based LOS, true unexplored fog, stale remembered-world knowledge and last-seen living-actor observations;
 - modular collision, movement, actor state, inventory/equipment, doors, rendering, camera, HUD/player-shell and DEV critique systems.
 
-The live project boots the canonical modular `CanonicalDemoMain.gd` composition stack.
+The live project boots the canonical modular `CanonicalDemoMain.gd` composition stack. The expanded baseline generators are reusable content; they do not silently replace the current Rural Crossroads live critique fixture.
 
 ## World model
 
@@ -33,6 +33,16 @@ The physical world is persistent and logically continuous, not a sequence of rai
 Global planning owns world-spanning coherence before local detail. Streaming partitions are technical only. Once virgin generated facts are materialized, WHAT and typed mechanic stores own subsequent current reality.
 
 There is no required extraction-shooter loop. The survivor may roam, relocate, fortify existing places, build elsewhere, maintain multiple safe sites or remain nomadic.
+
+## Baseline building and area model
+
+Current city-density content remains deliberately **one story**. Buildings become denser and more interesting through realistic rooms, useful adjacency, horizontal units and justified circulation—not fake upper floors.
+
+The baseline building library includes suburban houses, townhomes, one-story multi-unit housing, a roadside motel, convenience/grocery/pharmacy/hardware/office commercial buildings, clinic/police/fire/school/church civic buildings, warehouse/workshop industrial buildings and a barn. Multi-unit homes and motel rooms can have independent exterior entrances while one designated primary door remains the higher-level placement anchor.
+
+System 20 provides reusable `suburban.neighborhood`, `urban.mixed`, `commercial.corridor`, `industrial.district` and `civic.campus` morphologies in addition to the five existing rural/watercourse profiles. Baseline building selection is deterministic and parcel-fit aware, and occupied residential, farmstead, commercial, civic and industrial parcels receive real access to generated primary entrances.
+
+Environment profiles are local palettes, not global geography authority. Woodland/coastal/marsh vocabulary does not allow a local generator to invent a forest, coast or marsh that global planning has not established.
 
 ## Time model
 
