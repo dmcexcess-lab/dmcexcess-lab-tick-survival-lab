@@ -11,7 +11,7 @@
 - Preserved the future Spatial Sound seam: synthetic auditory descriptors may render over visible, remembered or completely unexplored black fog without revealing/exploring terrain. System 23 does not fabricate or propagate sound events.
 - Perception recomputation is event-driven and consumes zero WHEN ticks. Newly materialized but unobserved world remains true black; technical streaming activation is never treated as exploration.
 - Added deterministic memory snapshot/restore coverage and a focused repeated-FOV benchmark requiring average recomputation below one 60 Hz frame-scale budget on the CI fixture.
-- Added `PerceptionFogMemorySmoke.gd`, `.github/workflows/perception-fog-memory.yml`, and exact-head context `verify/system23-perception`; integrated perception into the canonical demo composition without moving gameplay truth into rendering.
+- Added `PerceptionFogMemorySmoke.gd`, `.github/workflows/perception.yml`, and exact-head context `verify/system23-perception`; integrated perception into the canonical demo composition without moving gameplay truth into rendering.
 - Corrected the final contract fixtures for typed memory snapshot handling and collinear closed-door/window LOS targets without changing the implemented LOS rules.
 - First fully green executable implementation head after the final LOS fixture correction: `87fb517265ba1defc395068d09ccb7059e16d114`.
 - On that exact executable head, `verify/system23-perception` and all seven protected exact-head gates were green: System 00D, 00F, 19, 20, 21, 22 and Pages.
