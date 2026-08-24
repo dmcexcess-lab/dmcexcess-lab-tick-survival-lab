@@ -20,17 +20,34 @@ Golden archaeology commit: `1763958f44eb7f855fd49944c00d1ffe608c0abe`.
 - **00B WHAT** — implemented single authoritative persistent current world.
 - **00C WHEN** — implemented deterministic tick/action/pause kernel.
 - **00D Global World Planning** — implemented `temperate.rural.region` v6: geography, five settlements/sites, major roads, river/bridge intent, regional electrical, potable-water and wastewater/septic planning.
-- **19 Building Generation** — finalized current rural/small-town building grammar/library.
-- **20 Local Area Generation** — implemented current profiles:
+- **19 Building Generation** — finalized grammar plus **24 callable archetypes**: six protected rural/small-town references and 18 baseline one-story residential/lodging/commercial/civic/industrial/agricultural profiles.
+- **20 Local Area Generation** — implemented ten area profiles:
   - `rural.crossroads` v5;
   - `smalltown.center` v1;
   - `rural.scattered` v1;
   - `rural.open` v1;
   - `rural.watercourse` v1;
-  - environment `temperate.rural` v3.
+  - `suburban.neighborhood` v1;
+  - `urban.mixed` v1;
+  - `commercial.corridor` v1;
+  - `industrial.district` v1;
+  - `civic.campus` v1.
+- **20 Environment profiles** — `temperate.rural` v3 plus suburban, urban, industrial, woodland, coastal and marsh v1 palettes.
 - **00F Streaming / Materialization** — implemented settlement + dry-countryside logical sources, one-way materialization, reversible technical activation, registry snapshot schema v1, no destructive eviction.
 - **21 Camera** and **22 Large-Area DEV Critique Runtime** — implemented. Live presentation remains the Rural Crossroads critique world.
 - **23 Perception / LOS / Fog Memory** — implemented Candidate 001: deterministic facing-based LOS, true black unexplored fog, stale remembered environment, per-observer memory, last-seen living-actor observations, and perception-layer support for future auditory cues.
+
+## Baseline world-content rules
+
+1. **City density is horizontal for the current game.** New baseline buildings are one story; complexity comes from useful rooms, adjacency, units and realistic circulation rather than fake upper floors.
+2. **Lodging is roadside motel content, not a fake multi-story hotel.** Denser residential content is represented as townhomes or one-story multi-unit rows.
+3. **Multi-unit exterior access is physical.** Individual units/rooms may have separate exterior doors; one designated primary exterior door remains System 20's placement/access anchor.
+4. **Door approaches are reserved circulation.** Blocking props do not materialize on room cells immediately adjacent to a door.
+5. **Area building selection is parcel-fit aware.** Baseline profiles deterministically choose from their allowed System 19 archetypes that physically fit the parcel; no reroll loop or clipping is used.
+6. **All occupied land uses get real access.** Residential, farmstead, commercial, civic and industrial buildings receive finalized frontage-to-primary-entry access paths.
+7. **Environment palette is not geography truth.** Woodland/coastal/marsh palettes are reusable local vocabulary only; they do not authorize System 20 to invent a forest/coast/marsh that System 00D has not planned.
+
+First exact executable head with the expanded System 19/20 baseline libraries and the complete protected stack green: `2e7a6e0da27a02f8058a3a79538cd9cb55a48cef`.
 
 ## Important world rules
 
@@ -97,17 +114,21 @@ The first fully green executable System 23 head after the final LOS fixture corr
 
 ## Deferred seams
 
+The baseline suburb/urban/commercial/industrial/civic profiles are reusable System 20 content, not proof that the current System 00D rural-region fixture already contains those district types. Future global geography/settlement work may select them when its own planning truth authorizes them.
+
 A future **00F river-source provider** remains a known clean seam when continuous streamed river traversal is actually needed; it is not the default next task merely because System 20 watercourse generation exists.
 
 Real Spatial Sound is a natural gameplay follow-up because the System 23 contract already defines hearing as independent from sight. Lighting, infected AI/combat, scavenging/search pressure, and population/outbreak remain later choices rather than being silently bundled into perception.
 
 ## Verification contexts used for protected world-stack changes
 
-System 23 owning context:
+Owning/current contexts:
 
+- `verify/system19-local-building`
+- `verify/system20-local-area`
 - `verify/system23-perception`
 
-Seven protected exact-head gates:
+Protected exact-head stack:
 
 - `verify/system00d-global-world`
 - `verify/system00f-streaming-materialization`
