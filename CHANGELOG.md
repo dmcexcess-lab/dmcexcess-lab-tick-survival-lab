@@ -1,5 +1,24 @@
 # Changelog
 
+## Baseline Building / Area / Environment Profile Library — 2026-08-23
+
+- Expanded finalized System 19 with **18 reusable one-story baseline building profiles**, bringing the callable registry to **24 archetypes total** while preserving the six accepted reference buildings unchanged.
+- Added baseline residential profiles for a small suburban house, family suburban house, three-unit townhome row and four-unit one-story multi-unit row. Current city-density content is horizontal: complexity comes from rooms, adjacency and units rather than unimplemented upper floors.
+- Added `lodging.motel.roadside` and deliberately did not create a fake multi-story hotel abstraction. Motel guest rooms and horizontal multi-unit homes use real independent exterior entrances; one designated primary exterior door remains the stable System 20 placement/access anchor.
+- Added commercial profiles for convenience store, neighborhood grocery, pharmacy, hardware store and small office; civic profiles for clinic, police station, fire station, elementary school and church; industrial/agricultural profiles for small warehouse, workshop and medium barn.
+- Added `OneStoryBaselineProfileCatalog.gd` and the shared `OneStoryProfileBuildingGenerator.gd` so the baseline library is profile/content work rather than eighteen copied generator implementations.
+- Derived a reusable circulation rule during verification: blocking props do not materialize on any room cell immediately adjacent to a door. This fixed a common `room_connectivity_failed` failure without hand-editing individual floorplans and makes door approaches grammar-owned reserved circulation.
+- Expanded System 19 regression coverage to all 18 baseline profiles across all four rotations, deterministic replay, shared structural validation, multi-unit exterior-access rules and art-semantic resolution while retaining the six protected-reference regression checks.
+- Added five System 20 settlement morphology profiles: `suburban.neighborhood`, `urban.mixed`, `commercial.corridor`, `industrial.district` and `civic.campus`, all v1 and all owned by the existing System 20 contract rather than new peer systems.
+- Added `BaselineGridParcelPlanner.gd` for shared baseline-grid parcel classification across residential, commercial, civic and industrial uses while reusing the established local-town street morphology.
+- Fixed the common access contract exposed by the new land uses: occupied civic and industrial parcels now finalize the same real road/frontage-to-generated-primary-entry access path as residential, farmstead and commercial parcels.
+- Made baseline building selection **deterministically parcel-fit aware**. The planner scans the ordered profile-authorized System 19 pool for a legal descriptor fit before committing an archetype; it uses no reroll loop and fails honestly if no allowed building fits.
+- Added six new environment palettes alongside `temperate.rural` v3: `temperate.suburban`, `temperate.urban`, `temperate.industrial`, `temperate.woodland`, `temperate.coastal` and `temperate.marsh`, all v1.
+- Environment palettes are explicitly local vocabulary, not global geography authority. Woodland/coastal/marsh palettes do not authorize System 20 to invent a forest, coast, marsh or other landform not established by System 00D or a future global geography owner.
+- Added `BaselineAreaProfilesSmoke.gd` and extended the System 20 workflow to verify all five new morphologies, all seven environment palettes/art semantics, exact target land-use counts, real System 19 building generation/validation and deterministic replay.
+- First exact executable head where the expanded System 19 library, baseline System 20 area/environment library and all eight exact-head contexts were green: `2e7a6e0da27a02f8058a3a79538cd9cb55a48cef`.
+- On that executable head the successful contexts were `verify/system00d-global-world`, `verify/system00f-streaming-materialization`, `verify/system19-local-building`, `verify/system20-local-area`, `verify/system21-camera-view`, `verify/system22-area-critique`, `verify/system23-perception` and `verify/pages-deploy`.
+
 ## System 23 Perception / LOS / Fog Memory — 2026-08-23
 
 - Implemented the approved Candidate 001 perception contract with deterministic four-way facing LOS, a 12-cell range, 120-degree forward cone and radius-1 all-around near awareness.
