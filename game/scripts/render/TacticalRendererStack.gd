@@ -5,7 +5,7 @@ const GroundRendererClass = preload("res://scripts/render/GroundLayerRenderer.gd
 const StructureRendererClass = preload("res://scripts/render/StructureLayerRenderer.gd")
 const PropRendererClass = preload("res://scripts/render/PropLayerRenderer.gd")
 const ActorRendererClass = preload("res://scripts/render/ActorLayerRenderer.gd")
-const PerceptionOverlayClass = preload("res://scripts/render/PerceptionOverlayRenderer.gd")
+const PerceptionOverlayClass = preload("res://scripts/render/AmbientPerceptionOverlayRenderer.gd")
 
 ## Layer orchestration only. All drawing remains in the existing focused renderers.
 
@@ -13,7 +13,7 @@ var _ground: GroundLayerRenderer = null
 var _structures: StructureLayerRenderer = null
 var _props: PropLayerRenderer = null
 var _actors: ActorLayerRenderer = null
-var _perception: PerceptionOverlayRenderer = null
+var _perception: AmbientPerceptionOverlayRenderer = null
 var _configured: bool = false
 
 func _ready() -> void:
@@ -50,13 +50,20 @@ func configure_perception(
     _ensure_layers()
     return _perception.configure(perception_service, memory_store, art_catalog, observer_id)
 
+func set_perception_ambient_light_level(level: float) -> bool:
+    _ensure_layers()
+    return _perception.set_ambient_light_level(level)
+
 func set_auditory_cues(cues: Array) -> bool:
     _ensure_layers()
     return _perception.set_auditory_cues(cues)
 
 func perception_debug_snapshot() -> Dictionary:
     _ensure_layers()
-    return _perception.planned_cell_counts()
+    var result: Dictionary = _perception.planned_cell_counts()
+    result["ambient_light_level"] = _perception.ambient_light_level()
+    result["memory_luminance"] = _perception.memory_luminance()
+    return result
 
 func set_visible_window(origin: Vector2i, size_cells: Vector2i, cell_pixels: float) -> bool:
     _ensure_layers()
