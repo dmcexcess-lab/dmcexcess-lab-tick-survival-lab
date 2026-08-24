@@ -21,6 +21,7 @@ System 23 owns:
 - deterministic visual-field queries for an observer cell + cardinal facing;
 - current visual occlusion policy for structures/openings;
 - per-observer explored/remembered knowledge state;
+- stale last-observed environmental snapshots, including static furniture/clutter;
 - stale last-seen living-actor observations;
 - `VISIBLE / REMEMBERED / UNSEEN` presentation semantics;
 - the fog/memory overlay and its future auditory-cue layering seam.
@@ -30,7 +31,7 @@ System 23 reads but does not own:
 - WHERE cells, facing and structure axis;
 - WHAT terrain/entity/placement truth;
 - Door State OPEN/CLOSED truth;
-- Art Catalog mappings used to redraw remembered environmental snapshots;
+- Art Catalog mappings used to redraw remembered terrain, structures and static props/fixtures;
 - controlled-survivor identity supplied by composition;
 - camera visible-window state;
 - current WHEN tick for observation timestamps only.
@@ -56,6 +57,7 @@ Every queried cell for one observer resolves to exactly one visual knowledge sta
 - observed at least once previously;
 - not currently in live LOS;
 - rendered from the observer's **last observed environmental snapshot**, darkened;
+- remembered environment includes terrain, structural shell/door state, and last-observed static furniture/clutter owned by `prop.*` or `fixture.*` semantics;
 - hidden current WHAT/Door changes do not update the visual memory;
 - stale last-seen actor markers and auditory cues may be shown.
 
@@ -139,9 +141,10 @@ Relevant recompute triggers include:
 - observer facing change;
 - relevant structure placement/removal;
 - relevant Door State change;
+- relevant static prop/fixture placement/removal;
 - world reset;
 - perception-profile change;
-- newly materialized terrain/structures inside the potential field.
+- newly materialized terrain/structures/objects inside the potential field.
 
 A WHEN tick advancing by itself does not require LOS recomputation.
 
@@ -168,9 +171,18 @@ Candidate 001 remembers:
   - stable structure entity ID;
   - semantic type;
   - H/V structure axis;
-  - observed OPEN/CLOSED door state.
+  - observed OPEN/CLOSED door state;
+- static furniture/clutter anchored in that observed cell when represented as `prop.*` or `fixture.*`:
+  - stable entity ID;
+  - semantic type;
+  - anchor cell;
+  - observed facing.
 
-Candidate 001 does not persist remote live copies of ordinary props, loose items, vegetation or actors inside the environmental cell snapshot.
+The static-object snapshot is deliberately observer knowledge, not a remote reference to the current live object. If furniture is moved, removed or replaced while hidden, the remembered copy stays stale until the cell is seen again.
+
+Candidate 001 still does **not** copy loose items, vehicles, vegetation or actors into the environmental cell snapshot. Actors continue to use the separate last-seen record described below.
+
+Perception-memory snapshot schema is now **v2** so static prop/fixture observations serialize deterministically with the rest of observer knowledge. System 23 still does not own save-file orchestration.
 
 ### Stale-memory rule
 
@@ -180,9 +192,10 @@ Examples:
 
 - a remembered CLOSED door remains remembered CLOSED if someone opens it out of sight;
 - a wall destroyed out of sight remains remembered until re-observed;
-- terrain changed out of sight remains remembered as last observed.
+- terrain changed out of sight remains remembered as last observed;
+- a remembered sofa remains where it was last seen if it is moved or removed out of sight.
 
-Re-observation replaces the stale environmental snapshot with the newly observed truth.
+Re-observation replaces the stale environmental snapshot with the newly observed truth, including clearing remembered furniture/clutter that is now visibly absent.
 
 ## 8. Last-seen living actors
 
@@ -232,16 +245,18 @@ Canonical draw order:
 
 1. live Ground/Structure/Prop/Actor layers draw current truth;
 2. `PerceptionOverlayRenderer` paints black over every non-VISIBLE cell;
-3. REMEMBERED cells redraw the stored environmental snapshot above black using the Art Catalog with dark memory modulation;
+3. REMEMBERED cells redraw the stored terrain, structural shell and static furniture/clutter snapshots above black using the Art Catalog with dark memory modulation;
 4. stale last-seen markers draw above remembered environment;
 5. auditory cues draw above fog/memory regardless of visual state.
 
-This guarantees that generated hidden chunks, moved actors, opened doors, destroyed walls and similar current hidden facts cannot leak through remembered fog.
+Remembered props/fixtures reuse the same semantic Art Catalog and prop-orientation rules as the live Prop renderer, but they draw only from stored memory records. The overlay never asks hidden WHAT what furniture currently exists.
+
+This guarantees that generated hidden chunks, moved furniture, moved actors, opened doors, destroyed walls and similar current hidden facts cannot leak through remembered fog.
 
 Candidate 001 targets:
 
 - true fog: fully opaque `Color.BLACK`;
-- remembered terrain/structures: approximately 30% normal luminance while remaining legible;
+- remembered terrain/structures/furniture/clutter: approximately 30% normal luminance while remaining legible;
 - last-seen actors: recognizable but clearly stale/ghosted;
 - visible cells: no Candidate 001 perception darkening.
 
@@ -262,6 +277,7 @@ Candidate 001 is designed for phone/Safari:
 - bounded 12-cell query radius;
 - event-driven recomputation;
 - sparse observer memory behind a replaceable API;
+- remembered static objects store only compact stable ID/semantic/anchor/facing records;
 - no per-world-entity render Nodes;
 - live renderers remain visible-window bounded;
 - remembered presentation plans only cells intersecting the current camera window.
@@ -276,7 +292,7 @@ Perception fails by reducing information, never by granting magical sight:
 - missing/unmaterialized target terrain => no plausible remembered terrain;
 - malformed/unknown blocking structure => blocks sight;
 - missing Door State => blocks sight;
-- invalid memory record => no plausible remembered rendering;
+- invalid memory/prop record => no plausible remembered rendering;
 - invalid auditory cue descriptor => omitted/diagnosed without revealing world truth.
 
 ## 14. Implemented owners
@@ -303,7 +319,7 @@ The draft's proposed separate `VisionOcclusionQuery.gd` was not needed; cohesive
 
 ## 15. Protected boundaries
 
-System 23 implementation preserved the ownership/contracts of:
+System 23 implementation preserves the ownership/contracts of:
 
 - WHERE / WHAT / WHEN;
 - Collision / Movement / Actor Locomotion;
@@ -327,7 +343,7 @@ Clean future extensions remain for:
 - vegetation/vehicle visual occlusion profiles;
 - crouch/traits/injuries/skills changing observer profile;
 - AI/infected use of the stateless LOS query;
-- remembered props/items/vehicles where gameplay warrants them;
+- remembered loose items, vehicles and vegetation where gameplay warrants them;
 - communicated/shared knowledge between survivors;
 - compressed/persistence-backed perception-memory storage;
 - last-seen age/uncertainty presentation;
@@ -347,12 +363,15 @@ The dedicated `PerceptionFogMemorySmoke.gd` contract proves the implemented Cand
 - true black UNSEEN presentation;
 - UNSEEN -> VISIBLE -> REMEMBERED transitions;
 - stale remembered door/structure truth;
-- re-observation refresh;
+- static furniture/clutter capture while visible;
+- hidden furniture removal leaving the stale remembered object unchanged;
+- re-observation clearing furniture/clutter that is now visibly absent;
+- remembered furniture/clutter presentation planning above dark fog;
 - stale last-seen actor behavior under hidden movement/death;
 - stale-marker contradiction and actor re-observation elsewhere;
 - auditory cue layering over true fog without exploration;
 - materialization without exploration;
-- deterministic memory snapshot/restore;
+- deterministic perception-memory snapshot/restore using schema v2;
 - zero WHEN-tick consumption;
 - repeated-FOV performance budget.
 
@@ -364,7 +383,11 @@ First fully green executable implementation head after the final collinear LOS f
 
 `87fb517265ba1defc395068d09ccb7059e16d114`
 
-On that exact executable head, `verify/system23-perception` and all seven protected gates — System 00D, 00F, 19, 20, 21, 22 and Pages — were green.
+First fully green executable head with remembered static furniture/clutter:
+
+`a08ccf8064f318e283acab6a3f73aa10e59f2acf`
+
+On `a08ccf8064f318e283acab6a3f73aa10e59f2acf`, `verify/system23-perception` and all seven protected gates — System 00D, 00F, 19, 20, 21, 22 and Pages — were green.
 
 ## 18. Locked implementation decisions
 
@@ -377,9 +400,9 @@ On that exact executable head, `verify/system23-perception` and all seven protec
 7. Candidate 001 uses range 12, 120-degree forward cone, and radius-1 all-around near awareness.
 8. LOS is deterministic integer cell tracing with Perception-owned structure opacity, independent from Collision/art.
 9. Walls/CLOSED doors block; OPEN doors/windows transmit in Candidate 001.
-10. Environmental memory initially stores terrain + structural shell/observed door state only.
+10. Environmental memory stores terrain + structural shell/observed door state + last-observed anchored `prop.*`/`fixture.*` furniture/clutter. Loose items, vehicles and vegetation remain separate future extensions.
 11. Last-seen living actors are stale observations, not hidden tracking.
-12. Hidden live changes never update remembered visual truth.
+12. Hidden live changes never update remembered visual truth, including hidden furniture/clutter changes.
 13. Existing live renderers remain current-truth renderers; the perception overlay hides non-visible truth and redraws stored memory.
 14. Spatial Sound generation, lighting, weather/smoke, AI and advanced opacity remain separate future systems.
 15. Perception updates are event-driven and consume zero WHEN ticks.
