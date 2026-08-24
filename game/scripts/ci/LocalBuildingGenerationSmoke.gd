@@ -3,30 +3,14 @@ extends SceneTree
 const RequestClass = preload("res://scripts/generation/buildings/BuildingGenerationRequest.gd")
 const GeneratorClass = preload("res://scripts/generation/buildings/LocalBuildingGenerator.gd")
 const ValidatorClass = preload("res://scripts/generation/buildings/GeneratedBuildingValidator.gd")
+const BaselineProfilesClass = preload("res://scripts/generation/buildings/profiles/OneStoryBaselineProfileCatalog.gd")
 const TrailerClass = preload("res://scripts/generation/buildings/archetypes/TrailerBuildingGenerator.gd")
 const SmallFarmhouseClass = preload("res://scripts/generation/buildings/archetypes/FarmhouseBuildingGenerator.gd")
 const LargeFarmhouseClass = preload("res://scripts/generation/buildings/archetypes/LargeFarmhouseBuildingGenerator.gd")
 const CompactLaundryHouseClass = preload("res://scripts/generation/buildings/archetypes/CompactLaundryHouseBuildingGenerator.gd")
 const GasStationClass = preload("res://scripts/generation/buildings/archetypes/GasStationBuildingGenerator.gd")
-const SmallFixtureClass = preload("res://scripts/demo/SmallFarmhouseCritiqueFixture.gd")
-const LargeFixtureClass = preload("res://scripts/demo/FarmhouseCritiqueFixture.gd")
-const CompactLaundryFixtureClass = preload("res://scripts/demo/CompactLaundryHouseCritiqueFixture.gd")
-const GasStationFixtureClass = preload("res://scripts/demo/GasStationCritiqueFixture.gd")
-const WorldStateClass = preload("res://scripts/foundation/world/WorldState.gd")
-const WorldMutationClass = preload("res://scripts/foundation/world/WorldMutationService.gd")
-const CollisionCatalogClass = preload("res://scripts/simulation/collision/CollisionCatalog.gd")
-const CollisionOverridesClass = preload("res://scripts/simulation/collision/CollisionOverrideState.gd")
-const SpatialQueryClass = preload("res://scripts/simulation/collision/SpatialQueryService.gd")
-const BaseTraversalClass = preload("res://scripts/simulation/movement/MovementTraversalPolicy.gd")
-const MovementClass = preload("res://scripts/simulation/movement/PassageAwareMovementActionService.gd")
-const TickKernelClass = preload("res://scripts/foundation/time/TickKernel.gd")
-const DoorStateClass = preload("res://scripts/simulation/doors/DoorStateStore.gd")
-const DoorMutationClass = preload("res://scripts/simulation/doors/DoorStateMutationService.gd")
-const DoorTransitionClass = preload("res://scripts/simulation/doors/DoorPhysicalTransitionService.gd")
-const DoorPassageClass = preload("res://scripts/simulation/doors/DoorMovementPassageResolver.gd")
-const DoorValue = preload("res://scripts/simulation/doors/DoorStateValue.gd")
+const DinerClass = preload("res://scripts/generation/buildings/archetypes/RuralDinerBuildingGenerator.gd")
 const ArtCatalogClass = preload("res://scripts/art/ArtCatalog.gd")
-const RendererStackClass = preload("res://scripts/render/TacticalRendererStack.gd")
 const Facing = preload("res://scripts/foundation/spatial/SpatialFacing.gd")
 
 var failures: Array[String] = []
@@ -34,15 +18,9 @@ var failures: Array[String] = []
 func _initialize() -> void:
     var generator := GeneratorClass.new()
     var validator := ValidatorClass.new()
-    _test_trailer_preserved(generator, validator)
-    _test_small_farmhouse_preserved(generator, validator)
-    _test_large_farmhouse_generation(generator, validator)
-    _test_compact_laundry_house_generation(generator, validator)
-    _test_gas_station_generation(generator, validator)
-    _test_small_farmhouse_fixture()
-    _test_large_farmhouse_fixture()
-    _test_compact_laundry_house_fixture()
-    _test_gas_station_fixture()
+    _test_protected_reference_library(generator, validator)
+    _test_baseline_one_story_library(generator, validator)
+    _test_multiunit_access_model(generator, validator)
     if failures.is_empty():
         print("LOCAL_BUILDING_GENERATION_SMOKE_OK")
         quit(0)
@@ -51,450 +29,153 @@ func _initialize() -> void:
         push_error("LOCAL_BUILDING_GENERATION_SMOKE_FAIL: %s" % failure)
     quit(1)
 
-func _test_trailer_preserved(generator: LocalBuildingGenerator, validator: GeneratedBuildingValidator) -> void:
-    var request := RequestClass.new("building.test.trailer", TrailerClass.ARCHETYPE_ID, 19001, Rect2i(20, 30, 5, 12), Facing.Value.NORTH, Facing.Value.EAST)
-    var plan_a: GeneratedBuildingPlan = generator.generate(request)
-    var plan_b: GeneratedBuildingPlan = generator.generate(request)
-    _check(plan_a.is_generated() and plan_a.signature() == plan_b.signature(), "trailer v2 remains deterministic")
-    _check(plan_a.archetype_version == 2, "saved trailer baseline remains version 2")
-    _check(bool(validator.validate(plan_a).get("ok", false)), "saved trailer v2 still validates")
-    _check(plan_a.footprint_rect == Rect2i(20, 30, 5, 12), "saved trailer remains 5x12")
-    _check(_room_cell_count(plan_a, "living_kitchen") == 12, "saved trailer living/kitchen remains 3x4")
-    _check(_room_cell_count(plan_a, "bathroom") == 6, "saved trailer bathroom remains 3x2")
-    _check(_room_cell_count(plan_a, "bedroom") == 6, "saved trailer bedroom remains 3x2")
-    _check(_all_exterior_walls_are(plan_a, &"wall.plaster"), "saved trailer keeps light plaster shell")
+func _test_protected_reference_library(generator: LocalBuildingGenerator, validator: GeneratedBuildingValidator) -> void:
+    var expected: Array = [
+        [TrailerClass.ARCHETYPE_ID, Vector2i(5, 12), Facing.Value.EAST, 2],
+        [SmallFarmhouseClass.ARCHETYPE_ID, Vector2i(13, 9), Facing.Value.NORTH, 2],
+        [LargeFarmhouseClass.ARCHETYPE_ID, Vector2i(21, 9), Facing.Value.NORTH, 4],
+        [CompactLaundryHouseClass.ARCHETYPE_ID, Vector2i(17, 13), Facing.Value.SOUTH, 1],
+        [GasStationClass.ARCHETYPE_ID, Vector2i(19, 15), Facing.Value.SOUTH, 1],
+        [DinerClass.ARCHETYPE_ID, Vector2i(17, 11), Facing.Value.SOUTH, 2],
+    ]
+    _check(generator.supported_archetypes().size() == 24, "registry exposes six protected references plus eighteen baseline profiles")
+    _check(generator.placement_descriptors().size() == 24, "every registered building exposes a placement descriptor")
+    for row: Array in expected:
+        var archetype_id: StringName = row[0]
+        var descriptor: BuildingArchetypePlacementDescriptor = generator.placement_descriptor(archetype_id)
+        _check(descriptor != null and descriptor.is_valid(), "%s protected descriptor remains valid" % String(archetype_id))
+        if descriptor == null:
+            continue
+        _check(descriptor.canonical_size() == row[1], "%s canonical size is preserved" % String(archetype_id))
+        _check(descriptor.canonical_frontage() == int(row[2]), "%s canonical frontage is preserved" % String(archetype_id))
+        _check(descriptor.archetype_version() == int(row[3]), "%s version is preserved" % String(archetype_id))
+        _check(descriptor.supported_orientations().size() == 4, "%s still supports all cardinal rotations" % String(archetype_id))
+        for orientation: int in [Facing.Value.NORTH, Facing.Value.EAST, Facing.Value.SOUTH, Facing.Value.WEST]:
+            var size: Vector2i = descriptor.required_size(orientation)
+            var frontage: int = descriptor.frontage_for_orientation(orientation)
+            var request := RequestClass.new(
+                "building.smoke.protected.%s.%d" % [String(archetype_id).replace(".", "_"), orientation],
+                archetype_id,
+                77100 + orientation,
+                Rect2i(Vector2i(100, 100), size),
+                orientation,
+                frontage
+            )
+            var plan: GeneratedBuildingPlan = generator.generate(request)
+            _check(plan.is_generated(), "%s rotation %d still generates" % [String(archetype_id), orientation])
+            if plan.is_generated():
+                _check(bool(validator.validate(plan).get("ok", false)), "%s rotation %d still validates" % [String(archetype_id), orientation])
 
-func _test_small_farmhouse_preserved(generator: LocalBuildingGenerator, validator: GeneratedBuildingValidator) -> void:
-    var request := RequestClass.new("building.test.farmhouse.small", SmallFarmhouseClass.ARCHETYPE_ID, 19002, Rect2i(60, 70, 13, 9), Facing.Value.NORTH, Facing.Value.NORTH)
-    var plan_a: GeneratedBuildingPlan = generator.generate(request)
-    var plan_b: GeneratedBuildingPlan = generator.generate(request)
-    _check(plan_a.is_generated() and plan_a.signature() == plan_b.signature(), "small farmhouse remains deterministic")
-    _check(plan_a.archetype_version == 2, "saved small farmhouse remains version 2")
-    _check(bool(validator.validate(plan_a).get("ok", false)), "saved small farmhouse validates")
-    _check(plan_a.footprint_rect == Rect2i(60, 70, 13, 9), "saved small farmhouse remains 13x9")
-    _check(_room_cell_count(plan_a, "living_kitchen") == 33, "saved small farmhouse keeps 11x3 living/kitchen")
-    _check(_room_cell_count(plan_a, "bedroom_1") == 9, "saved small farmhouse bedroom 1 remains 3x3")
-    _check(_room_cell_count(plan_a, "bathroom") == 9, "saved small farmhouse bathroom remains 3x3")
-    _check(_room_cell_count(plan_a, "bedroom_2") == 9, "saved small farmhouse bedroom 2 remains 3x3")
-    _check(_structure_kind_count(plan_a, "door") == 5, "saved small farmhouse keeps five doors")
-    _check(_structure_kind_count(plan_a, "window") == 7, "saved small farmhouse keeps seven windows")
-    _check(_all_exterior_walls_are(plan_a, &"wall.plaster"), "saved small farmhouse keeps plaster shell")
-    _check(_role_cell(plan_a, "door.exterior.primary") == Vector2i(63, 70), "saved small farmhouse front door unchanged")
-    var east_request := RequestClass.new("building.test.farmhouse.small.east", SmallFarmhouseClass.ARCHETYPE_ID, 19002, Rect2i(90, 100, 9, 13), Facing.Value.EAST, Facing.Value.EAST)
-    var east_plan: GeneratedBuildingPlan = generator.generate(east_request)
-    _check(east_plan.is_generated() and east_plan.footprint_rect.size == Vector2i(9, 13), "small farmhouse still rotates to 9x13")
-    _check(bool(validator.validate(east_plan).get("ok", false)), "rotated small farmhouse still validates")
-
-func _test_large_farmhouse_generation(generator: LocalBuildingGenerator, validator: GeneratedBuildingValidator) -> void:
-    var supported: Array[StringName] = generator.supported_archetypes()
-    _check(supported.has(TrailerClass.ARCHETYPE_ID), "registry keeps trailer")
-    _check(supported.has(SmallFarmhouseClass.ARCHETYPE_ID), "registry keeps small farmhouse")
-    _check(supported.has(LargeFarmhouseClass.ARCHETYPE_ID), "registry exposes large farmhouse")
-    var request := RequestClass.new("building.test.farmhouse.large", LargeFarmhouseClass.ARCHETYPE_ID, 19003, Rect2i(60, 70, 21, 9), Facing.Value.NORTH, Facing.Value.NORTH)
-    var plan_a: GeneratedBuildingPlan = generator.generate(request)
-    var plan_b: GeneratedBuildingPlan = generator.generate(request)
-    _check(plan_a.is_generated() and plan_a.signature() == plan_b.signature(), "large farmhouse is deterministic")
-    _check(plan_a.archetype_version == 4, "large farmhouse clustered-clutter critique bumps to version 4")
-    _check(bool(validator.validate(plan_a).get("ok", false)), "large farmhouse north plan validates")
-    _check(plan_a.footprint_rect == Rect2i(60, 70, 21, 9), "large farmhouse structure remains compact 21x9")
-    _check(_room_cell_count(plan_a, "living_room") == 30, "large farmhouse living room remains separate 10x3")
-    _check(_room_cell_count(plan_a, "kitchen") == 24, "large farmhouse kitchen remains separate 8x3")
-    for purpose: String in ["bedroom_1", "bathroom_1", "bedroom_2", "bathroom_2", "bedroom_3"]:
-        _check(_room_cell_count(plan_a, purpose) == 9, "%s remains compact 3x3" % purpose)
-    _check(_room_cell_count(plan_a, "hall") == 0 and _room_cell_count(plan_a, "corridor") == 0, "large farmhouse still has no dedicated hallway room")
-    _check(_structure_kind_count(plan_a, "door") == 7, "large farmhouse keeps two exterior plus five private-room doors")
-    _check(_structure_kind_count(plan_a, "window") == 11, "large farmhouse keeps eleven windows")
-    _check(_all_exterior_walls_are(plan_a, &"wall.plaster"), "large farmhouse uses plaster exterior walls")
-    _check(_role_cell(plan_a, "door.exterior.primary") == Vector2i(65, 70), "large farmhouse front door remains unchanged")
-    _check(_role_cell(plan_a, "door.interior.living_kitchen") == Vector2i(-1, -1), "living/kitchen divider still owns no door")
-    _check(_structure_kind_at(plan_a, Vector2i(71, 72)) == "wall", "former living/kitchen door cell remains solid wall")
-    _check(not _has_structure_at(plan_a, Vector2i(71, 73)), "lower living/kitchen divider remains open")
-    _check(_role_cell(plan_a, "door.interior.bedroom_1") == Vector2i(62, 74), "bedroom 1 structure remains unchanged")
-    _check(_role_cell(plan_a, "door.interior.bathroom_1") == Vector2i(66, 74), "bathroom 1 structure remains unchanged")
-    _check(_role_cell(plan_a, "door.interior.bedroom_2") == Vector2i(70, 74), "bedroom 2 structure remains unchanged")
-    _check(_role_cell(plan_a, "door.interior.bathroom_2") == Vector2i(74, 74), "bathroom 2 structure remains unchanged")
-    _check(_role_cell(plan_a, "door.interior.bedroom_3") == Vector2i(78, 74), "bedroom 3 structure remains unchanged")
-    for x in range(72, 80):
-        var runner_cell := Vector2i(x, 73)
-        _check(_ground_semantic_at(plan_a, runner_cell) == &"ground.laminate_light", "kitchen wood runner remains at %s" % str(runner_cell))
-        _check(not _has_prop_at(plan_a, runner_cell), "kitchen wood runner stays clutter-free at %s" % str(runner_cell))
-    _check(plan_a.props.size() == 24, "large farmhouse uses more small clustered props instead of stretched sparse dressing")
-    _check(_prop_role_cell(plan_a, "prop.living.bookshelf") == Vector2i(61, 71), "living cluster gains wall bookshelf")
-    _check(_prop_role_cell(plan_a, "prop.living.end_table") == Vector2i(62, 71), "living cluster gains nearby end table")
-    _check(_prop_role_cell(plan_a, "prop.living.coffee_table") == Vector2i(62, 72), "coffee table sits inside seating cluster")
-    _check(_prop_role_cell(plan_a, "prop.living.sofa") == Vector2i(61, 73), "sofa remains in compact living cluster")
-    _check(_prop_role_cell(plan_a, "prop.living.armchair") == Vector2i(63, 72), "armchair stays clustered while leaving bedroom approach open")
-    _check(not _has_prop_at(plan_a, Vector2i(62, 73)), "bedroom 1 approach cell remains clear of clustered props")
-    _check(_prop_role_cell(plan_a, "prop.living.entry_rug") == Vector2i(65, 71), "front door gains throw rug")
-    _check(not _prop_blocking_for_role(plan_a, "prop.living.entry_rug"), "entry rug is decorative and nonblocking")
-    _check(_manhattan(_prop_role_cell(plan_a, "prop.living.sofa"), _prop_role_cell(plan_a, "prop.living.coffee_table")) <= 2, "sofa stays within two tiles of coffee table")
-    _check(_manhattan(_prop_role_cell(plan_a, "prop.living.armchair"), _prop_role_cell(plan_a, "prop.living.coffee_table")) <= 2, "armchair stays within two tiles of coffee table")
-    _check(_manhattan(_prop_role_cell(plan_a, "prop.living.bookshelf"), _prop_role_cell(plan_a, "prop.living.end_table")) <= 2, "living wall clutter stays clustered")
-    _check(_prop_role_cell(plan_a, "prop.kitchen.fridge") == Vector2i(73, 71), "kitchen fridge remains on north appliance wall")
-    _check(_prop_role_cell(plan_a, "prop.kitchen.counter") == Vector2i(74, 71), "counter fills appliance run between fridge and sink")
-    _check(_prop_role_cell(plan_a, "prop.kitchen.sink") == Vector2i(75, 71), "sink remains on north appliance wall")
-    _check(_manhattan(_prop_role_cell(plan_a, "prop.kitchen.fridge"), _prop_role_cell(plan_a, "prop.kitchen.counter")) == 1, "fridge and counter are adjacent")
-    _check(_manhattan(_prop_role_cell(plan_a, "prop.kitchen.counter"), _prop_role_cell(plan_a, "prop.kitchen.sink")) == 1, "counter and sink are adjacent")
-    _check(_prop_role_cell(plan_a, "prop.kitchen.chair") == Vector2i(77, 72), "breakfast table gains adjacent chair")
-    _check(_prop_role_cell(plan_a, "prop.kitchen.table") == Vector2i(78, 72), "breakfast table remains near east wall")
-    _check(_manhattan(_prop_role_cell(plan_a, "prop.kitchen.chair"), _prop_role_cell(plan_a, "prop.kitchen.table")) == 1, "breakfast table and chair form a tight cluster")
-    _check(_prop_semantic_for_role(plan_a, "prop.living.bookshelf") == &"prop.bookshelf_tall", "living bookshelf uses supported semantic")
-    _check(_prop_semantic_for_role(plan_a, "prop.kitchen.counter") == &"prop.counter_straight", "kitchen filler uses supported counter semantic")
-    _check(_prop_semantic_for_role(plan_a, "prop.kitchen.chair") == &"prop.dining_chair", "breakfast chair uses supported semantic")
-    _check(_prop_semantic_for_role(plan_a, "prop.living.entry_rug") == &"prop.rug", "entry rug uses supported clutter semantic")
-    _check(_prop_facing_for_role(plan_a, "prop.living.end_table") == Facing.Value.SOUTH, "end table faces south")
-    _check(_prop_facing_for_role(plan_a, "prop.living.coffee_table") == Facing.Value.SOUTH, "coffee table faces south")
-    _check(_prop_facing_for_role(plan_a, "prop.kitchen.table") == Facing.Value.WEST, "breakfast table faces west")
-    var east_request := RequestClass.new("building.test.farmhouse.large.east", LargeFarmhouseClass.ARCHETYPE_ID, 19003, Rect2i(100, 110, 9, 21), Facing.Value.EAST, Facing.Value.EAST)
-    var east_plan: GeneratedBuildingPlan = generator.generate(east_request)
-    _check(east_plan.is_generated() and east_plan.footprint_rect.size == Vector2i(9, 21), "compact large farmhouse rotates to 9x21")
-    _check(bool(validator.validate(east_plan).get("ok", false)), "rotated compact large farmhouse validates")
-    var too_small := RequestClass.new("building.test.farmhouse.large.small", LargeFarmhouseClass.ARCHETYPE_ID, 1, Rect2i(0, 0, 20, 9), Facing.Value.NORTH, Facing.Value.NORTH)
-    _check(not generator.generate(too_small).is_generated(), "too-small compact large farmhouse envelope fails explicitly")
-
-func _test_compact_laundry_house_generation(generator: LocalBuildingGenerator, validator: GeneratedBuildingValidator) -> void:
-    var supported: Array[StringName] = generator.supported_archetypes()
-    _check(supported.has(CompactLaundryHouseClass.ARCHETYPE_ID), "registry exposes accepted compact laundry house")
-    _check(supported.size() == 6, "registry contains the five saved examples plus diner grammar trial")
-
-    var request := RequestClass.new(
-        "building.test.house.compact_laundry",
-        CompactLaundryHouseClass.ARCHETYPE_ID,
-        19004,
-        Rect2i(60, 70, 17, 13),
-        Facing.Value.NORTH,
-        Facing.Value.SOUTH
-    )
-    var plan_a: GeneratedBuildingPlan = generator.generate(request)
-    var plan_b: GeneratedBuildingPlan = generator.generate(request)
-    _check(plan_a.is_generated() and plan_a.signature() == plan_b.signature(), "accepted compact laundry house remains deterministic")
-    _check(plan_a.archetype_version == 1, "accepted compact laundry house remains version 1")
-    _check(bool(validator.validate(plan_a).get("ok", false)), "accepted compact laundry house north plan validates")
-    _check(plan_a.footprint_rect == Rect2i(60, 70, 17, 13), "compact laundry house uses 17x13 bounding envelope")
-    _check(_room_cell_count(plan_a, "bedroom_1") == 16, "compact laundry house bedroom 1 is 4x4")
-    _check(_room_cell_count(plan_a, "kitchen") == 24, "compact laundry house kitchen is 6x4")
-    _check(_room_cell_count(plan_a, "laundry") == 9, "compact laundry house has a real 3x3 laundry room")
-    _check(_room_cell_count(plan_a, "bathroom") == 9, "compact laundry house bathroom is 3x3")
-    _check(_room_cell_count(plan_a, "living_room") == 37, "compact laundry house living room is irregular and central")
-    _check(_room_cell_count(plan_a, "entry") == 3, "compact laundry house has a small dedicated entry")
-    _check(_room_cell_count(plan_a, "bedroom_2") == 12, "compact laundry house bedroom 2 is 4x3")
-    _check(_room_cell_count(plan_a, "hall") == 0 and _room_cell_count(plan_a, "corridor") == 0, "compact laundry house uses no dedicated hallway")
-    _check(_structure_kind_count(plan_a, "door") == 5, "compact laundry house has one exterior plus four interior doors")
-    _check(_structure_kind_count(plan_a, "window") == 10, "compact laundry house has ten windows")
-    _check(_all_exterior_walls_are(plan_a, &"wall.plaster"), "compact laundry house uses plaster exterior walls")
-    _check(_role_cell(plan_a, "door.exterior.primary") == Vector2i(67, 82), "compact laundry house front door is on the south entry bump")
-    _check(_role_cell(plan_a, "door.interior.bedroom_1") == Vector2i(64, 75), "bedroom 1 opens directly into the living hub")
-    _check(_role_cell(plan_a, "door.interior.laundry") == Vector2i(72, 72), "laundry opens directly from the kitchen")
-    _check(_role_cell(plan_a, "door.interior.bathroom") == Vector2i(72, 76), "bathroom opens directly from the living hub")
-    _check(_role_cell(plan_a, "door.interior.bedroom_2") == Vector2i(71, 79), "bedroom 2 opens directly from the living hub")
-    _check(not _has_structure_at(plan_a, Vector2i(67, 75)) and not _has_structure_at(plan_a, Vector2i(68, 75)), "kitchen and living use a two-cell doorless opening")
-    _check(_ground_semantic_at(plan_a, Vector2i(67, 75)) == &"ground.laminate_dark" and _ground_semantic_at(plan_a, Vector2i(68, 75)) == &"ground.laminate_dark", "kitchen/living opening uses wood threshold flooring")
-
-    _check(plan_a.props.size() == 33, "compact laundry house keeps its 33 clustered props")
-    _check(_prop_role_cell(plan_a, "prop.laundry.washer") == Vector2i(73, 71), "laundry contains a real washer")
-    _check(_prop_role_cell(plan_a, "prop.laundry.dryer") == Vector2i(74, 71), "laundry contains a real dryer")
-    _check(_prop_role_cell(plan_a, "prop.laundry.utility_sink") == Vector2i(73, 73), "laundry includes a utility sink")
-    _check(_prop_role_cell(plan_a, "prop.laundry.hamper") == Vector2i(75, 73), "laundry includes a hamper")
-    _check(_prop_semantic_for_role(plan_a, "prop.laundry.washer") == &"prop.washer_front", "laundry washer uses recovered final-prop art")
-    _check(_prop_semantic_for_role(plan_a, "prop.laundry.dryer") == &"prop.dryer_front", "laundry dryer uses recovered final-prop art")
-    _check(_prop_role_cell(plan_a, "prop.kitchen.fridge") == Vector2i(66, 71), "kitchen starts with refrigerator on the north wall")
-    _check(_prop_role_cell(plan_a, "prop.kitchen.sink") == Vector2i(68, 71), "kitchen sink sits in the contiguous north-wall run")
-    _check(_prop_role_cell(plan_a, "prop.kitchen.stove") == Vector2i(70, 71), "kitchen stove sits in the contiguous north-wall run")
-    _check(_prop_role_cell(plan_a, "prop.kitchen.table") == Vector2i(68, 73), "kitchen keeps a small table near the center")
-    _check(_manhattan(_prop_role_cell(plan_a, "prop.kitchen.table"), _prop_role_cell(plan_a, "prop.kitchen.chair")) == 1, "kitchen chair remains adjacent to table")
-    _check(_prop_role_cell(plan_a, "prop.entry.rug") == Vector2i(67, 81), "entry has a rug directly inside the front door")
-    _check(not _prop_blocking_for_role(plan_a, "prop.entry.rug"), "entry rug is passable")
-    _check(_manhattan(_prop_role_cell(plan_a, "prop.living.sofa"), _prop_role_cell(plan_a, "prop.living.coffee_table")) == 2, "living sofa and coffee table stay in one local cluster")
-    _check(_manhattan(_prop_role_cell(plan_a, "prop.living.sofa"), _prop_role_cell(plan_a, "prop.living.end_table")) == 1, "living end table stays beside the sofa")
-    for role: String in [
-        "prop.bedroom_1.nightstand",
-        "prop.kitchen.table",
-        "prop.living.coffee_table",
-        "prop.living.end_table",
-        "prop.bedroom_2.nightstand",
-        "prop.entry.table"
-    ]:
-        var facing: int = _prop_facing_for_role(plan_a, role)
-        _check(facing == Facing.Value.SOUTH or facing == Facing.Value.WEST, "%s uses south/west table facing" % role)
-
-    var east_request := RequestClass.new(
-        "building.test.house.compact_laundry.east",
-        CompactLaundryHouseClass.ARCHETYPE_ID,
-        19004,
-        Rect2i(100, 110, 13, 17),
-        Facing.Value.EAST,
-        Facing.Value.WEST
-    )
-    var east_plan: GeneratedBuildingPlan = generator.generate(east_request)
-    _check(east_plan.is_generated() and east_plan.footprint_rect.size == Vector2i(13, 17), "compact laundry house rotates to 13x17")
-    _check(bool(validator.validate(east_plan).get("ok", false)), "rotated compact laundry house validates")
-
-    var too_small := RequestClass.new("building.test.house.compact_laundry.small", CompactLaundryHouseClass.ARCHETYPE_ID, 1, Rect2i(0, 0, 16, 13), Facing.Value.NORTH, Facing.Value.SOUTH)
-    _check(not generator.generate(too_small).is_generated(), "too-small compact laundry house envelope fails explicitly")
-    var wrong_frontage := RequestClass.new("building.test.house.compact_laundry.frontage", CompactLaundryHouseClass.ARCHETYPE_ID, 1, Rect2i(0, 0, 17, 13), Facing.Value.NORTH, Facing.Value.NORTH)
-    _check(not generator.generate(wrong_frontage).is_generated(), "compact laundry house rejects frontage inconsistent with its south-front canonical plan")
-
-func _test_gas_station_generation(generator: LocalBuildingGenerator, validator: GeneratedBuildingValidator) -> void:
-    var supported: Array[StringName] = generator.supported_archetypes()
-    _check(supported.has(GasStationClass.ARCHETYPE_ID), "registry exposes small gas station")
-    _check(supported.size() == 6, "registry exposes five saved archetypes plus diner grammar trial")
-
-    var request := RequestClass.new(
-        "building.test.gas_station.small",
-        GasStationClass.ARCHETYPE_ID,
-        19005,
-        Rect2i(60, 70, 19, 15),
-        Facing.Value.NORTH,
-        Facing.Value.SOUTH
-    )
-    var plan_a: GeneratedBuildingPlan = generator.generate(request)
-    var plan_b: GeneratedBuildingPlan = generator.generate(request)
-    _check(plan_a.is_generated() and plan_a.signature() == plan_b.signature(), "gas station is deterministic")
-    _check(plan_a.archetype_version == 1, "gas station begins at archetype version 1")
-    _check(bool(validator.validate(plan_a).get("ok", false)), "gas station north plan validates")
-    _check(plan_a.footprint_rect == Rect2i(60, 70, 19, 15), "gas station uses 19x15 property envelope")
-    _check(_room_cell_count(plan_a, "storage") == 15, "gas station has a 5x3 storage room")
-    _check(_room_cell_count(plan_a, "office") == 12, "gas station has a 4x3 office")
-    _check(_room_cell_count(plan_a, "bathroom") == 9, "gas station has a 3x3 bathroom")
-    _check(_room_cell_count(plan_a, "sales_floor") == 76, "gas station has a broad connected sales floor")
-    _check(_room_cell_count(plan_a, "hall") == 0 and _room_cell_count(plan_a, "corridor") == 0, "gas station has no wasted dedicated hallway")
-    _check(_structure_kind_count(plan_a, "door") == 5, "gas station has primary/service exterior doors plus three back-room doors")
-    _check(_structure_kind_count(plan_a, "window") == 10, "gas station has ten storefront/side/back windows")
-    _check(_role_cell(plan_a, "door.exterior.primary") == Vector2i(69, 79), "gas station primary entrance faces the forecourt")
-    _check(_role_cell(plan_a, "door.exterior.service") == Vector2i(63, 70), "storage room owns a rear service exit")
-    _check(_role_cell(plan_a, "door.interior.storage") == Vector2i(63, 74), "storage opens directly to sales floor")
-    _check(_role_cell(plan_a, "door.interior.office") == Vector2i(69, 74), "office opens directly to sales floor")
-    _check(_role_cell(plan_a, "door.interior.bathroom") == Vector2i(73, 74), "bathroom opens directly to sales floor")
-    _check(_ground_semantic_at(plan_a, Vector2i(69, 80)) == &"ground.concrete_clean", "storefront gets a concrete apron")
-    _check(_ground_semantic_at(plan_a, Vector2i(69, 81)) == &"ground.parking_faded", "forecourt uses faded parking/asphalt surface")
-
-    _check(plan_a.props.size() == 33, "gas station uses 33 purposeful clustered props")
-    _check(_prop_semantic_for_role(plan_a, "prop.storage.rack_left") == &"prop.warehouse_rack", "storage uses warehouse rack art")
-    _check(_prop_semantic_for_role(plan_a, "prop.office.desk") == &"prop.office_desk", "office uses real office desk art")
-    _check(_prop_semantic_for_role(plan_a, "prop.bathroom.toilet") == &"prop.toilet_modern", "bathroom uses real toilet art")
-    _check(_prop_semantic_for_role(plan_a, "prop.sales.checkout") == &"prop.checkout", "sales floor has a real checkout")
-    _check(_prop_semantic_for_role(plan_a, "prop.sales.aisle_1_shelf_1") == &"prop.retail_shelf", "sales floor uses recovered retail shelves")
-    _check(_prop_role_cell(plan_a, "prop.forecourt.pump_left_1") == Vector2i(65, 82), "left pump island begins at expected forecourt cell")
-    _check(_prop_role_cell(plan_a, "prop.forecourt.pump_right_1") == Vector2i(72, 82), "right pump island begins at expected forecourt cell")
-    _check(_prop_semantic_for_role(plan_a, "prop.forecourt.pump_left_1") == &"prop.gas_pump", "forecourt uses real gas-pump semantic")
-    _check(_prop_semantic_for_role(plan_a, "prop.forecourt.sign") == &"prop.gas_sign", "forecourt gets a gas-station sign")
-    for y in range(80, 83):
-        _check(not _has_prop_at(plan_a, Vector2i(69, y)), "primary customer approach remains clear at y=%d" % y)
-
-    var east_request := RequestClass.new(
-        "building.test.gas_station.small.east",
-        GasStationClass.ARCHETYPE_ID,
-        19005,
-        Rect2i(100, 110, 15, 19),
-        Facing.Value.EAST,
-        Facing.Value.WEST
-    )
-    var east_plan: GeneratedBuildingPlan = generator.generate(east_request)
-    _check(east_plan.is_generated() and east_plan.footprint_rect.size == Vector2i(15, 19), "gas station rotates to 15x19")
-    _check(bool(validator.validate(east_plan).get("ok", false)), "rotated gas station validates")
-
-    var too_small := RequestClass.new("building.test.gas_station.small.small", GasStationClass.ARCHETYPE_ID, 1, Rect2i(0, 0, 18, 15), Facing.Value.NORTH, Facing.Value.SOUTH)
-    _check(not generator.generate(too_small).is_generated(), "too-small gas station envelope fails explicitly")
-    var wrong_frontage := RequestClass.new("building.test.gas_station.small.frontage", GasStationClass.ARCHETYPE_ID, 1, Rect2i(0, 0, 19, 15), Facing.Value.NORTH, Facing.Value.NORTH)
-    _check(not generator.generate(wrong_frontage).is_generated(), "gas station rejects frontage inconsistent with its south-facing forecourt")
-
-func _test_small_farmhouse_fixture() -> void:
-    var world := WorldStateClass.new()
-    var mutations := WorldMutationClass.new(world)
-    var collision_catalog := CollisionCatalogClass.new()
-    var collision_overrides := CollisionOverridesClass.new()
-    var traversal := BaseTraversalClass.new()
-    var doors := DoorStateClass.new()
-    var door_mutations := DoorMutationClass.new(doors, world)
-    _check(SmallFixtureClass.build(world, mutations, collision_catalog, traversal, doors, door_mutations), "saved small farmhouse fixture materializes")
-    _verify_fixture(world, mutations, collision_catalog, collision_overrides, traversal, doors, door_mutations, SmallFixtureClass.PLAYER_ID, SmallFixtureClass.EXTERIOR_DOOR_ID, SmallFixtureClass.MAP_ORIGIN, SmallFixtureClass.MAP_SIZE, SmallFixtureClass.CELL_PIXELS, 5, Vector2i(4, 1), "small farmhouse")
-
-func _test_large_farmhouse_fixture() -> void:
-    var world := WorldStateClass.new()
-    var mutations := WorldMutationClass.new(world)
-    var collision_catalog := CollisionCatalogClass.new()
-    var collision_overrides := CollisionOverridesClass.new()
-    var traversal := BaseTraversalClass.new()
-    var doors := DoorStateClass.new()
-    var door_mutations := DoorMutationClass.new(doors, world)
-    _check(LargeFixtureClass.build(world, mutations, collision_catalog, traversal, doors, door_mutations), "large farmhouse critique fixture materializes")
-    _verify_fixture(world, mutations, collision_catalog, collision_overrides, traversal, doors, door_mutations, LargeFixtureClass.PLAYER_ID, LargeFixtureClass.EXTERIOR_DOOR_ID, LargeFixtureClass.MAP_ORIGIN, LargeFixtureClass.MAP_SIZE, LargeFixtureClass.CELL_PIXELS, 7, Vector2i(6, 1), "large farmhouse")
-
-func _test_compact_laundry_house_fixture() -> void:
-    var world := WorldStateClass.new()
-    var mutations := WorldMutationClass.new(world)
-    var collision_catalog := CollisionCatalogClass.new()
-    var collision_overrides := CollisionOverridesClass.new()
-    var traversal := BaseTraversalClass.new()
-    var doors := DoorStateClass.new()
-    var door_mutations := DoorMutationClass.new(doors, world)
-    _check(CompactLaundryFixtureClass.build(world, mutations, collision_catalog, traversal, doors, door_mutations), "accepted compact laundry house fixture materializes")
-    _verify_fixture(
-        world,
-        mutations,
-        collision_catalog,
-        collision_overrides,
-        traversal,
-        doors,
-        door_mutations,
-        CompactLaundryFixtureClass.PLAYER_ID,
-        CompactLaundryFixtureClass.EXTERIOR_DOOR_ID,
-        CompactLaundryFixtureClass.MAP_ORIGIN,
-        CompactLaundryFixtureClass.MAP_SIZE,
-        CompactLaundryFixtureClass.CELL_PIXELS,
-        5,
-        Vector2i(8, 13),
-        "compact laundry house"
-    )
-
-func _test_gas_station_fixture() -> void:
-    var world := WorldStateClass.new()
-    var mutations := WorldMutationClass.new(world)
-    var collision_catalog := CollisionCatalogClass.new()
-    var collision_overrides := CollisionOverridesClass.new()
-    var traversal := BaseTraversalClass.new()
-    var doors := DoorStateClass.new()
-    var door_mutations := DoorMutationClass.new(doors, world)
-    _check(GasStationFixtureClass.build(world, mutations, collision_catalog, traversal, doors, door_mutations), "gas station critique fixture materializes")
-    _verify_fixture(
-        world,
-        mutations,
-        collision_catalog,
-        collision_overrides,
-        traversal,
-        doors,
-        door_mutations,
-        GasStationFixtureClass.PLAYER_ID,
-        GasStationFixtureClass.EXTERIOR_DOOR_ID,
-        GasStationFixtureClass.MAP_ORIGIN,
-        GasStationFixtureClass.MAP_SIZE,
-        GasStationFixtureClass.CELL_PIXELS,
-        5,
-        Vector2i(10, 10),
-        "gas station"
-    )
-
-func _verify_fixture(world: WorldState, mutations: WorldMutationService, collision_catalog: CollisionCatalog, collision_overrides: CollisionOverrideState, traversal: MovementTraversalPolicy, doors: DoorStateStore, door_mutations: DoorStateMutationService, player_id: String, exterior_door_id: String, map_origin: Vector2i, map_size: Vector2i, cell_pixels: float, expected_door_count: int, expected_entry_cell: Vector2i, label: String) -> void:
-    _check(world.has_entity(exterior_door_id), "%s stable exterior door exists" % label)
-    _check(doors.door_ids().size() == expected_door_count, "%s enrolls expected door count" % label)
-    for door_id: String in doors.door_ids():
-        _check(doors.state(door_id) == DoorValue.CLOSED, "%s generated doors begin closed" % label)
-    var coverage_query := SpatialQueryClass.new(world, collision_catalog, collision_overrides)
-    var coverage: Dictionary = coverage_query.collision_coverage_report()
-    _check((coverage.get("missing_required_profiles", []) as Array).is_empty(), "%s collision coverage complete" % label)
+func _test_baseline_one_story_library(generator: LocalBuildingGenerator, validator: GeneratedBuildingValidator) -> void:
+    var catalog := BaselineProfilesClass.new()
     var art := ArtCatalogClass.new()
-    for entity_id: String in world.entity_ids():
-        var entity: WorldEntityRecord = world.entity(entity_id)
-        if entity == null:
+    var profile_ids: Array[StringName] = catalog.profile_ids()
+    _check(profile_ids.size() == 18, "baseline building library contains eighteen one-story profiles")
+    for profile_id: StringName in profile_ids:
+        var profile: Dictionary = catalog.profile(profile_id)
+        _check(not profile.is_empty(), "%s profile resolves" % String(profile_id))
+        _check(int(profile.get("story_count", 0)) == 1, "%s is explicitly one story" % String(profile_id))
+        _check(int(profile.get("version", 0)) == 1, "%s starts at profile version 1" % String(profile_id))
+        var rooms: Array = profile.get("rooms", [])
+        _check(rooms.size() >= 3, "%s has a real multi-room floor plan" % String(profile_id))
+        for room_value: Variant in rooms:
+            var room: Dictionary = room_value
+            var purpose: String = String(room.get("purpose", "")).to_lower()
+            _check(not purpose.contains("stair") and not purpose.contains("elevator"), "%s contains no fake multi-story circulation" % String(profile_id))
+
+        var descriptor: BuildingArchetypePlacementDescriptor = generator.placement_descriptor(profile_id)
+        _check(descriptor != null and descriptor.is_valid(), "%s exposes a valid placement descriptor" % String(profile_id))
+        if descriptor == null:
             continue
-        var semantic: String = String(entity.semantic_type)
-        if semantic.begins_with("wall."):
-            _check(art.resolve_wall(entity.semantic_type).is_found(), "%s wall has art" % label)
-        elif semantic.begins_with("door."):
-            _check(art.resolve_door(entity.semantic_type, false).is_found(), "%s door has art" % label)
-        elif semantic.begins_with("window."):
-            _check(art.resolve_window(entity.semantic_type).is_found(), "%s window has art" % label)
-        elif semantic.begins_with("prop."):
-            _check(art.resolve_prop(entity.semantic_type).is_found(), "%s prop has art" % label)
-    for y in range(map_size.y):
-        for x in range(map_size.x):
-            _check(art.resolve_ground(world.terrain_at(map_origin + Vector2i(x, y))).is_found(), "%s critique terrain has art" % label)
-    var transition := DoorTransitionClass.new(world, doors, door_mutations, collision_overrides)
-    var passage := DoorPassageClass.new(world, doors, transition)
-    var kernel := TickKernelClass.new(player_id)
-    var movement := MovementClass.new(world, mutations, coverage_query, kernel, traversal, passage)
-    var enter = movement.request_step_forward(player_id)
-    _check(enter != null and enter.is_accepted(), "%s front door accepts automatic Walk passage" % label)
-    kernel.run_until_stop()
-    _check(doors.state(exterior_door_id) == DoorValue.OPEN, "%s front door opens through System 18" % label)
-    _check(world.placement(player_id).anchor == expected_entry_cell, "%s player enters expected front doorway" % label)
-    var stack := RendererStackClass.new()
-    get_root().add_child(stack)
-    _check(stack.configure(world, art, doors, player_id), "%s renderer stack configures" % label)
-    _check(stack.set_visible_window(map_origin, map_size, cell_pixels), "%s critique lot fits configured visible window" % label)
-    var diagnostics: Dictionary = stack.planned_diagnostic_counts()
-    _check(int(diagnostics.get("ground", -1)) == 0 and int(diagnostics.get("structure", -1)) == 0 and int(diagnostics.get("prop", -1)) == 0 and int(diagnostics.get("actor", -1)) == 0, "%s renders without diagnostics" % label)
-    stack.queue_free()
+        _check(descriptor.archetype_version() == 1, "%s descriptor reports version 1" % String(profile_id))
+        _check(descriptor.supported_orientations().size() == 4, "%s supports all four rotations" % String(profile_id))
 
-func _room_cell_count(plan: GeneratedBuildingPlan, purpose: String) -> int:
-    for room: Dictionary in plan.rooms:
-        if String(room.get("purpose", "")) == purpose:
-            var cells: Array = room.get("cells", [])
-            return cells.size()
-    return 0
+        var north_size: Vector2i = descriptor.required_size(Facing.Value.NORTH)
+        var north_frontage: int = descriptor.frontage_for_orientation(Facing.Value.NORTH)
+        var replay_request := RequestClass.new(
+            "building.smoke.baseline.replay.%s" % String(profile_id).replace(".", "_"),
+            profile_id,
+            88001,
+            Rect2i(Vector2i(200, 220), north_size),
+            Facing.Value.NORTH,
+            north_frontage
+        )
+        var plan_a: GeneratedBuildingPlan = generator.generate(replay_request)
+        var plan_b: GeneratedBuildingPlan = generator.generate(replay_request)
+        _check(plan_a.is_generated() and plan_a.signature() == plan_b.signature(), "%s deterministic replay is stable" % String(profile_id))
 
-func _structure_kind_count(plan: GeneratedBuildingPlan, kind: String) -> int:
-    var count: int = 0
-    for structure: Dictionary in plan.structures:
-        if String(structure.get("kind", "")) == kind:
-            count += 1
-    return count
+        for orientation: int in [Facing.Value.NORTH, Facing.Value.EAST, Facing.Value.SOUTH, Facing.Value.WEST]:
+            var size: Vector2i = descriptor.required_size(orientation)
+            var frontage: int = descriptor.frontage_for_orientation(orientation)
+            var request := RequestClass.new(
+                "building.smoke.baseline.%s.%d" % [String(profile_id).replace(".", "_"), orientation],
+                profile_id,
+                88020 + orientation,
+                Rect2i(Vector2i(300, 340), size),
+                orientation,
+                frontage
+            )
+            var plan: GeneratedBuildingPlan = generator.generate(request)
+            _check(plan.is_generated(), "%s rotation %d generates" % [String(profile_id), orientation])
+            if not plan.is_generated():
+                continue
+            _check(bool(validator.validate(plan).get("ok", false)), "%s rotation %d validates" % [String(profile_id), orientation])
+            _check(_plan_art_resolves(plan, art), "%s rotation %d uses only registered art semantics" % [String(profile_id), orientation])
 
-func _all_exterior_walls_are(plan: GeneratedBuildingPlan, semantic: StringName) -> bool:
-    var saw_wall: bool = false
-    for structure: Dictionary in plan.structures:
-        if not String(structure.get("role", "")).begins_with("wall.exterior"):
+func _test_multiunit_access_model(generator: LocalBuildingGenerator, validator: GeneratedBuildingValidator) -> void:
+    var expectations := {
+        BaselineProfilesClass.TOWNHOMES_ROW3: 3,
+        BaselineProfilesClass.MULTIUNIT_ROW4: 4,
+        BaselineProfilesClass.ROADSIDE_MOTEL: 4,
+    }
+    for profile_id: Variant in expectations.keys():
+        var typed_id: StringName = StringName(profile_id)
+        var descriptor: BuildingArchetypePlacementDescriptor = generator.placement_descriptor(typed_id)
+        _check(descriptor != null, "%s descriptor exists for independent-access test" % String(typed_id))
+        if descriptor == null:
             continue
-        saw_wall = true
-        if structure.get("semantic", &"") != semantic:
+        var request := RequestClass.new(
+            "building.smoke.multiunit.%s" % String(typed_id).replace(".", "_"),
+            typed_id,
+            99001,
+            Rect2i(Vector2i(20, 20), descriptor.required_size(Facing.Value.NORTH)),
+            Facing.Value.NORTH,
+            descriptor.frontage_for_orientation(Facing.Value.NORTH)
+        )
+        var plan: GeneratedBuildingPlan = generator.generate(request)
+        _check(plan.is_generated() and bool(validator.validate(plan).get("ok", false)), "%s validates with independent exterior unit access" % String(typed_id))
+        _check(_exterior_door_count(plan) == int(expectations[profile_id]), "%s has the intended number of exterior unit entrances" % String(typed_id))
+    _check(not generator.supported_archetypes().has(&"lodging.hotel"), "baseline uses roadside motel representation rather than a fake multi-story hotel")
+
+func _plan_art_resolves(plan: GeneratedBuildingPlan, art: ArtCatalog) -> bool:
+    for ground: Dictionary in plan.ground_entries:
+        if not art.resolve_ground(StringName(ground.get("semantic", &""))).is_found():
             return false
-    return saw_wall
-
-func _role_cell(plan: GeneratedBuildingPlan, role: String) -> Vector2i:
     for structure: Dictionary in plan.structures:
-        if String(structure.get("role", "")) == role:
-            return structure.get("cell", Vector2i(-1, -1))
-    return Vector2i(-1, -1)
-
-func _structure_kind_at(plan: GeneratedBuildingPlan, cell: Vector2i) -> String:
-    for structure: Dictionary in plan.structures:
-        if structure.get("cell", Vector2i(-1, -1)) == cell:
-            return String(structure.get("kind", ""))
-    return ""
-
-func _has_structure_at(plan: GeneratedBuildingPlan, cell: Vector2i) -> bool:
-    return not _structure_kind_at(plan, cell).is_empty()
-
-func _ground_semantic_at(plan: GeneratedBuildingPlan, cell: Vector2i) -> StringName:
-    for entry: Dictionary in plan.ground_entries:
-        if entry.get("cell", Vector2i(-1, -1)) == cell:
-            var semantic: StringName = entry.get("semantic", &"")
-            return semantic
-    return &""
-
-func _has_prop_at(plan: GeneratedBuildingPlan, cell: Vector2i) -> bool:
+        var semantic: StringName = StringName(structure.get("semantic", &""))
+        match String(structure.get("kind", "")):
+            "wall":
+                if not art.resolve_wall(semantic).is_found():
+                    return false
+            "door":
+                if not art.resolve_door(semantic, false).is_found():
+                    return false
+            "window":
+                if not art.resolve_window(semantic).is_found():
+                    return false
+            _:
+                return false
     for prop: Dictionary in plan.props:
-        if prop.get("cell", Vector2i(-1, -1)) == cell:
-            return true
-    return false
-
-func _prop_role_cell(plan: GeneratedBuildingPlan, role: String) -> Vector2i:
-    for prop: Dictionary in plan.props:
-        if String(prop.get("role", "")) == role:
-            return prop.get("cell", Vector2i(-1, -1))
-    return Vector2i(-1, -1)
-
-func _prop_semantic_for_role(plan: GeneratedBuildingPlan, role: String) -> StringName:
-    for prop: Dictionary in plan.props:
-        if String(prop.get("role", "")) == role:
-            var semantic: StringName = prop.get("semantic", &"")
-            return semantic
-    return &""
-
-func _prop_facing_for_role(plan: GeneratedBuildingPlan, role: String) -> int:
-    for prop: Dictionary in plan.props:
-        if String(prop.get("role", "")) == role:
-            return int(prop.get("facing", -1))
-    return -1
-
-func _prop_blocking_for_role(plan: GeneratedBuildingPlan, role: String) -> bool:
-    for prop: Dictionary in plan.props:
-        if String(prop.get("role", "")) == role:
-            return bool(prop.get("blocking", true))
+        if not art.resolve_prop(StringName(prop.get("semantic", &""))).is_found():
+            return false
     return true
 
-func _manhattan(a: Vector2i, b: Vector2i) -> int:
-    return absi(a.x - b.x) + absi(a.y - b.y)
+func _exterior_door_count(plan: GeneratedBuildingPlan) -> int:
+    var count: int = 0
+    for structure: Dictionary in plan.structures:
+        if String(structure.get("kind", "")) == "door" and String(structure.get("role", "")).begins_with("door.exterior."):
+            count += 1
+    return count
 
 func _check(condition: bool, message: String) -> void:
     if not condition:
