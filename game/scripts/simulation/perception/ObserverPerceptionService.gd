@@ -125,7 +125,36 @@ func _refresh_environment_memory(cells: Array[Vector2i]) -> void:
         var remembered_structure: Dictionary = {}
         if bool(structure.get("present", false)):
             remembered_structure = structure.duplicate(true)
-        _memory.remember_environment(_observer_id, cell, tick, _world.terrain_at(cell), remembered_structure)
+        _memory.remember_environment(
+            _observer_id,
+            cell,
+            tick,
+            _world.terrain_at(cell),
+            remembered_structure,
+            _rememberable_props_anchored_at(cell)
+        )
+
+func _rememberable_props_anchored_at(cell: Vector2i) -> Array[Dictionary]:
+    var result: Array[Dictionary] = []
+    var entity_ids: Array[String] = _world.entities_at(cell, Layers.Channel.OBJECT)
+    entity_ids.sort()
+    for entity_id: String in entity_ids:
+        var entity: WorldEntityRecord = _world.entity(entity_id)
+        var placement: WorldPlacement = _world.placement(entity_id)
+        if entity == null or placement == null or placement.channel != Layers.Channel.OBJECT:
+            continue
+        if placement.anchor != cell or not FacingRules.is_valid(placement.facing):
+            continue
+        var semantic: String = String(entity.semantic_type).strip_edges()
+        if not semantic.begins_with("prop.") and not semantic.begins_with("fixture."):
+            continue
+        result.append({
+            "entity_id": entity_id,
+            "semantic_type": semantic,
+            "anchor": placement.anchor,
+            "facing": placement.facing,
+        })
+    return result
 
 func _refresh_actor_memory(cells: Array[Vector2i]) -> void:
     var seen_actor_ids: Dictionary = {}
