@@ -9,7 +9,8 @@ const PropOrientation = preload("res://scripts/art/PropArtOrientationCatalog.gd"
 signal redraw_requested(reason: StringName)
 
 const TRUE_FOG_COLOR := Color(0.0, 0.0, 0.0, 1.0)
-const MEMORY_MODULATION := Color(0.30, 0.30, 0.30, 1.0)
+const MEMORY_DAY_LUMINANCE: float = 0.30
+const MEMORY_NIGHT_LUMINANCE: float = 0.10
 const LAST_SEEN_MODULATION := Color(0.48, 0.54, 0.66, 0.50)
 const SOUND_CUE_COLOR := Color(1.0, 0.82, 0.20, 0.95)
 const NPC_DRAW_SCALE: float = 29.0 / 32.0
@@ -34,6 +35,7 @@ var _cell_pixels: float = 0.0
 var _view_valid: bool = false
 var _texture_cache: Dictionary = {}
 var _auditory_cues: Array[Dictionary] = []
+var _ambient_light_level: float = 1.0
 
 func configure(
     perception: ObserverPerceptionService,
@@ -98,6 +100,26 @@ func set_auditory_cues(cues: Array) -> bool:
 func auditory_cues() -> Array[Dictionary]:
     return _auditory_cues.duplicate(true)
 
+func set_ambient_light_level(level: float) -> bool:
+    if is_nan(level) or is_inf(level):
+        return false
+    var normalized: float = clampf(level, 0.0, 1.0)
+    if is_equal_approx(normalized, _ambient_light_level):
+        return true
+    _ambient_light_level = normalized
+    _request_redraw(&"ambient_light_changed")
+    return true
+
+func ambient_light_level() -> float:
+    return _ambient_light_level
+
+func memory_luminance() -> float:
+    return lerpf(MEMORY_NIGHT_LUMINANCE, MEMORY_DAY_LUMINANCE, _ambient_light_level)
+
+func memory_modulation() -> Color:
+    var luminance: float = memory_luminance()
+    return Color(luminance, luminance, luminance, 1.0)
+
 func planned_cell_counts() -> Dictionary:
     var counts := {"visible": 0, "remembered": 0, "unseen": 0, "remembered_props": 0, "last_seen": 0, "auditory": 0}
     if not is_configured() or not _view_valid:
@@ -151,15 +173,16 @@ func _draw_remembered_cell(cell: Vector2i, destination: Rect2) -> void:
     var terrain := StringName(String(memory.get("terrain_semantic", "")))
     if String(terrain).strip_edges().is_empty():
         return
+    var modulation: Color = memory_modulation()
     var ground_selection: ArtSelection = _resolve_remembered_ground(cell, terrain)
-    _draw_selection(ground_selection, destination, MEMORY_MODULATION)
+    _draw_selection(ground_selection, destination, modulation)
 
     var structure_value: Variant = memory.get("structure", {})
     if typeof(structure_value) == TYPE_DICTIONARY:
         var structure: Dictionary = structure_value
         if not structure.is_empty():
             var structure_selection: ArtSelection = _resolve_remembered_structure(structure)
-            _draw_selection(structure_selection, destination, MEMORY_MODULATION)
+            _draw_selection(structure_selection, destination, modulation)
 
     var props_value: Variant = memory.get("props", [])
     if typeof(props_value) != TYPE_ARRAY:
@@ -180,7 +203,7 @@ func _draw_remembered_prop(prop: Dictionary) -> void:
         return
     var selection: ArtSelection = _catalog.resolve_prop(semantic)
     var quarter_turns: int = PropOrientation.quarter_turns(selection, facing)
-    _draw_selection(selection, _cell_rect(anchor), MEMORY_MODULATION, quarter_turns)
+    _draw_selection(selection, _cell_rect(anchor), memory_modulation(), quarter_turns)
 
 func _resolve_remembered_ground(cell: Vector2i, semantic_id: StringName) -> ArtSelection:
     var token: String = _leaf_token(semantic_id)
