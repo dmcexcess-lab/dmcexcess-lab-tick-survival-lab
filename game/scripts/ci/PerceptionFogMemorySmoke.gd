@@ -49,16 +49,16 @@ func _test_profile_and_los() -> void:
     _check(profile.max_range == 12, "Candidate001 range is 12")
     _check(profile.near_awareness_radius == 1, "Candidate001 near awareness is radius 1")
 
-    _check(vision.can_see(CENTER, Facing.Value.NORTH, CENTER + Vector2i(0, -5), profile), "north facing sees north target")
-    _check(not vision.can_see(CENTER, Facing.Value.SOUTH, CENTER + Vector2i(0, -5), profile), "south facing does not see north target")
+    _check(vision.can_see(CENTER, Facing.Value.NORTH, CENTER + Vector2i(0, -3), profile), "north facing sees north target")
+    _check(not vision.can_see(CENTER, Facing.Value.SOUTH, CENTER + Vector2i(0, -3), profile), "south facing does not see north target")
     _check(vision.can_see(CENTER, Facing.Value.EAST, CENTER + Vector2i(5, 0), profile), "east facing rotates cone")
     _check(vision.can_see(CENTER, Facing.Value.SOUTH, CENTER + Vector2i(0, 5), profile), "south facing rotates cone")
     _check(vision.can_see(CENTER, Facing.Value.WEST, CENTER + Vector2i(-5, 0), profile), "west facing rotates cone")
     _check(vision.can_see(CENTER, Facing.Value.NORTH, CENTER + Vector2i(0, 1), profile), "radius-one cell behind observer remains visible")
     _check(profile.contains_offset(Vector2i(0, -12), Facing.Value.NORTH), "range boundary is included")
     _check(not profile.contains_offset(Vector2i(0, -13), Facing.Value.NORTH), "beyond range boundary is excluded")
-    _check(profile.contains_offset(Vector2i(3, -2), Facing.Value.NORTH), "120-degree integer cone includes exact boundary")
-    _check(not profile.contains_offset(Vector2i(4, -2), Facing.Value.NORTH), "120-degree integer cone excludes outside boundary")
+    _check(profile.contains_offset(Vector2i(3, -2), Facing.Value.NORTH), "integer cone includes inside-edge candidate")
+    _check(not profile.contains_offset(Vector2i(4, -2), Facing.Value.NORTH), "integer cone excludes outside candidate")
 
     _check(vision.can_see(CENTER, Facing.Value.NORTH, Vector2i(20, 16), profile), "opaque wall target itself is visible")
     _check(not vision.can_see(CENTER, Facing.Value.NORTH, Vector2i(20, 15), profile), "wall blocks cell beyond")
@@ -84,6 +84,9 @@ func _test_memory_last_seen_and_sound_layering() -> void:
     var mutations: WorldMutationService = env["mutations"]
     var door_state: DoorStateStore = env["door_state"]
     var door_mutations: DoorStateMutationService = env["door_mutations"]
+    var unseen_cell := Vector2i(0, 0)
+    _check(mutations.clear_terrain(unseen_cell), "remove far terrain before perception enrollment")
+
     var kernel := TickKernelClass.new(OBSERVER_ID)
     var memory := MemoryClass.new()
     var service := PerceptionClass.new(world, door_state, kernel, memory, OBSERVER_ID, ProfileClass.new())
@@ -102,7 +105,7 @@ func _test_memory_last_seen_and_sound_layering() -> void:
     _check(not memory.last_seen_actor(OBSERVER_ID, ACTOR_A_ID).is_empty(), "visible actor A creates last-seen observation")
     _check(not memory.last_seen_actor(OBSERVER_ID, ACTOR_B_ID).is_empty(), "visible actor B creates last-seen observation")
 
-    _check(_face_actor(mutations, OBSERVER_ID, Facing.Value.SOUTH), "observer turns south")
+    _check(_face_actor(world, mutations, OBSERVER_ID, Facing.Value.SOUTH), "observer turns south")
     _check(service.knowledge_state(north_memory_cell) == PerceptionClass.KnowledgeState.REMEMBERED, "turning away changes explored north cell to remembered")
     _check(door_mutations.set_state(DOOR_ID, DoorValues.OPEN), "hidden door opens")
     var stale_door_memory: Dictionary = memory.environment_memory(OBSERVER_ID, Vector2i(22, 16))
@@ -111,26 +114,25 @@ func _test_memory_last_seen_and_sound_layering() -> void:
 
     _check(_move_actor(mutations, ACTOR_A_ID, Vector2i(8, 20), Facing.Value.WEST), "hidden actor A moves")
     var stale_actor_a: Dictionary = memory.last_seen_actor(OBSERVER_ID, ACTOR_A_ID)
-    _check(stale_actor_a.get("cell", Vector2i.ZERO) == Vector2i(24, 18), "hidden actor movement does not move last-seen marker")
+    _check(stale_actor_a.get("cell", Vector2i.ZERO) == Vector2i(23, 18), "hidden actor movement does not move last-seen marker")
 
     _check(mutations.remove_entity(ACTOR_B_ID), "hidden actor B is removed")
     _check(not memory.last_seen_actor(OBSERVER_ID, ACTOR_B_ID).is_empty(), "hidden actor removal does not magically erase last-seen marker")
 
-    _check(_face_actor(mutations, OBSERVER_ID, Facing.Value.WEST), "observer turns west")
+    _check(_face_actor(world, mutations, OBSERVER_ID, Facing.Value.WEST), "observer turns west")
     var updated_actor_a: Dictionary = memory.last_seen_actor(OBSERVER_ID, ACTOR_A_ID)
     _check(updated_actor_a.get("cell", Vector2i.ZERO) == Vector2i(8, 20), "seeing actor A elsewhere updates last-seen observation")
 
-    _check(_face_actor(mutations, OBSERVER_ID, Facing.Value.NORTH), "observer returns north")
+    _check(_face_actor(world, mutations, OBSERVER_ID, Facing.Value.NORTH), "observer returns north")
     _check(memory.last_seen_actor(OBSERVER_ID, ACTOR_B_ID).is_empty(), "seeing actor B's old empty cell disproves stale marker")
     var refreshed_door_memory: Dictionary = memory.environment_memory(OBSERVER_ID, Vector2i(22, 16))
     var refreshed_structure: Dictionary = refreshed_door_memory.get("structure", {})
     _check(String(refreshed_structure.get("door_state", "")) == "open", "re-observation refreshes remembered door state")
 
-    var unseen_cell := Vector2i(0, 0)
-    _check(service.knowledge_state(unseen_cell) == PerceptionClass.KnowledgeState.UNSEEN, "far unexplored cell remains unseen")
-    _check(mutations.set_terrain(unseen_cell, &"ground.concrete_clean"), "unseen live terrain can change/materialize")
+    _check(service.knowledge_state(unseen_cell) == PerceptionClass.KnowledgeState.UNSEEN, "far unmaterialized cell starts unseen")
+    _check(mutations.set_terrain(unseen_cell, &"ground.concrete_clean"), "unseen terrain materializes after perception enrollment")
     _check(service.knowledge_state(unseen_cell) == PerceptionClass.KnowledgeState.UNSEEN, "new hidden world truth does not count as exploration")
-    _check(not memory.has_seen_cell(OBSERVER_ID, unseen_cell), "technical/world mutation alone does not mark unseen cell explored")
+    _check(not memory.has_seen_cell(OBSERVER_ID, unseen_cell), "materialization alone does not mark unseen cell explored")
 
     var overlay := OverlayClass.new()
     var catalog := ArtCatalogClass.new()
@@ -173,8 +175,8 @@ func _build_environment() -> Dictionary:
     _check(mutations.set_terrain_rect(Rect2i(Vector2i.ZERO, Vector2i(41, 41)), &"ground.grass"), "seed 41x41 materialized terrain")
 
     _check(_create_actor(mutations, OBSERVER_ID, CENTER, Facing.Value.NORTH, &"actor.survivor"), "create perception observer")
-    _check(_create_actor(mutations, ACTOR_A_ID, Vector2i(24, 18), Facing.Value.WEST, &"actor.infected"), "create actor A")
-    _check(_create_actor(mutations, ACTOR_B_ID, Vector2i(16, 18), Facing.Value.EAST, &"actor.infected"), "create actor B")
+    _check(_create_actor(mutations, ACTOR_A_ID, Vector2i(23, 18), Facing.Value.WEST, &"actor.infected"), "create actor A")
+    _check(_create_actor(mutations, ACTOR_B_ID, Vector2i(17, 18), Facing.Value.EAST, &"actor.infected"), "create actor B")
 
     _check(_create_structure(mutations, "perception.wall", Vector2i(20, 16), &"wall.house"), "create opaque wall")
     _check(_create_structure(mutations, DOOR_ID, Vector2i(22, 16), &"door.house"), "create door")
@@ -220,8 +222,12 @@ func _create_structure(
         StructureGeometry.Axis.HORIZONTAL
     )
 
-func _face_actor(mutations: WorldMutationService, actor_id: String, facing: int) -> bool:
-    var world: WorldState = mutations._state
+func _face_actor(
+    world: WorldState,
+    mutations: WorldMutationService,
+    actor_id: String,
+    facing: int
+) -> bool:
     var placement: WorldPlacement = world.placement(actor_id)
     if placement == null:
         return false
