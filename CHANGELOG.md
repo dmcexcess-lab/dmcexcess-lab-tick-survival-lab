@@ -1,5 +1,29 @@
 # Changelog
 
+## System 24 World Loot / Searchable Containers / Scavenging — 2026-08-23
+
+- Implemented approved System 24 Candidate 001: **loot exists before search**. Eligible physical furniture is explicitly enrolled as System 11 containers and receives deterministic stable unplaced `item.*` WHAT entities during one-way virgin source initialization; search never rolls rewards into existence.
+- Added the required two-layer item taxonomy: every Candidate 001 definition is top-level `USABLE` or `JUNK`, plus a practical primary family such as food, drink, kitchen, medical, tools, farming, construction, electrical, household, sanitation, office, clothing, outdoors, automotive, industrial, recreational or misc, with optional cross-cutting tags.
+- Junk is real persistent weighted item truth rather than decorative/fake filler. Candidate content includes context-appropriate packaging, broken household/tool/farming/electrical/office/sanitation items alongside useful supplies.
+- Added `LootItemCatalog.gd` with readable labels, taxonomy and positive integer-gram weights registered through the existing System 13D physical-property catalog.
+- Added `LootContainerProfileCatalog.gd` with building-aware classification. The same retail-shelf semantic produces different grocery/pharmacy/hardware/convenience/gas-station stock, while household fridges/pantries/vanities/dressers, medical cabinets, office storage, warehouse racks, tool cabinets and farm storage receive their own profiles.
+- Audited the six protected older building archetypes as well as the newer baseline library so rural houses and the gas station are not second-class loot content. Gas-station endcaps/storage pallets and protected-house dressers/vanities are covered explicitly.
+- Added `GeneratedBuildingPlan.entity_id_for_role(role)` as the public System 19 generated-role -> materialized-entity identity seam and moved `GeneratedBuildingMaterializer` onto that same helper so System 24 never duplicates a private ID convention.
+- Added `LootState.gd` snapshot schema v1. System 24 persists source/container initialization provenance only; **System 11 remains sole current-contents truth**.
+- Added deterministic `LootSourceInitializer.gd`: complete source plan/preflight first, then WHAT item creation + System 11 enrollment/containment + System 24 provenance. Already-initialized sources are successful no-ops and never repopulate after looting.
+- Added exact rollback across WHAT + System 11 + System 24. `WorldLootSmoke.gd` uses a CI-only fault-injecting containment mutation service to fail on the second item after mutation has already begun and proves all three domains restore byte-equivalent snapshots.
+- Added shared physical interaction reach: actor footprint plus one-cell-forward fringe in current facing.
+- Added timed `scavenge.search_container` WHEN action. Search is `CANCELABLE`, costs profile-specific time (currently 8/10/12/15-tick classes), revalidates actor/container placement and reach, and reads **current** System 11 contents at completion so concurrent changes are reflected rather than hidden behind a stale request snapshot.
+- Extended System 12 additively with neutral `ItemContainerAccessPolicy` and `PolicyAwareItemTransferActionService`. The original `ItemTransferActionService` remains personal-container-only and keeps its historical regressions unchanged.
+- Added `LootWorldContainerAccessPolicy` so only initialized, physically reachable world containers are admitted to System 12. TAKE / STORE therefore use the existing timed transfer coordinator, including stale-version checks, cancellation, destination revalidation and compensation.
+- Corrected the carry-admission assumption exposed by external containers: external-container -> hand/personal-container transitions can add carried mass and now use the existing System 13E acquisition policy at request/commit, with post-source-removal revalidation on the two-step hand path. Rejected over-hard-limit acquisition moves nothing and spends zero ticks.
+- Live Candidate 001 registers **5 ticks** for every System 12 item-transfer action type. Taking, storing, dropping/placing and equipping remain System 12 timing, not a duplicate System 24 clock.
+- Added `LootContainerInspectionQuery.gd`, `LootPlayerInteractionController.gd` and phone-first `LootContainerPanel.gd`. A successful search shows container contents with `USABLE/JUNK`, family, label and weight, current/soft/hard carry totals, TAKE controls and direct-pack STORE controls.
+- Integrated persistent scavenging into the live Rural Crossroads critique runtime. The deterministic area buildings are loot-initialized after physical materialization; ordinary world/camera controls are blocked while the loot panel is open, but the kernel is not hard-paused so TAKE/STORE actions can spend their real ticks.
+- Added `.github/workflows/world-loot.yml` and permanent exact-head context `verify/system24-loot`. The workflow covers taxonomy/context classification, deterministic/no-respawn initialization, legitimate empty sources, snapshot roundtrip, injected mid-transaction rollback, timed search, completion-time live contents, timed external TAKE/STORE, carry ceiling, Systems 11/12/13E/19 regressions and canonical demo startup.
+- First fully green executable System 24 head: `411099a3c39b7abeeb189e8a176491cb7e410b6d`.
+- On that exact executable head all nine required contexts were green: `verify/system24-loot`, `verify/system23-perception`, `verify/system22-area-critique`, `verify/system21-camera-view`, `verify/system20-local-area`, `verify/system19-local-building`, `verify/system00f-streaming-materialization`, `verify/system00d-global-world` and `verify/pages-deploy`.
+
 ## System 23 Remembered Furniture / Clutter — 2026-08-23
 
 - Extended the implemented System 23 REMEMBERED state so previously observed static `prop.*` and `fixture.*` furniture/clutter remains visible as dark stale memory after leaving LOS.
