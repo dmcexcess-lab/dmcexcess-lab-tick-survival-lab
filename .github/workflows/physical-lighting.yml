@@ -20,7 +20,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Validate System 27 Slice A boundaries
+      - name: Validate System 27 Slice A+B boundaries
         shell: bash
         run: |
           set -euxo pipefail
@@ -31,12 +31,22 @@ jobs:
           test -f game/scripts/simulation/lighting/IlluminationSample.gd
           test -f game/scripts/simulation/lighting/VisionLightRangePolicy.gd
           test -f game/scripts/simulation/lighting/PhysicalLightingService.gd
+          test -f game/scripts/render/PhysicalLightingPresentationRenderer.gd
+          test -f game/scripts/demo/DemoLightingSourceAdapter.gd
+          test -f game/shaders/physical_lighting_multiply.gdshader
+          test -f game/shaders/physical_lighting_glow.gdshader
           test -f game/scripts/ci/PhysicalLightingSmoke.gd
+          test -f game/scripts/ci/PhysicalLightingPresentationSmoke.gd
           grep -q 'class_name PhysicalLightingService' game/scripts/simulation/lighting/PhysicalLightingService.gd
-          grep -q 'class_name IlluminationSample' game/scripts/simulation/lighting/IlluminationSample.gd
+          grep -q 'class_name PhysicalLightingPresentationRenderer' game/scripts/render/PhysicalLightingPresentationRenderer.gd
+          grep -q 'class_name DemoLightingSourceAdapter' game/scripts/demo/DemoLightingSourceAdapter.gd
           grep -q 'effective_range_for_luminance' game/scripts/simulation/lighting/VisionLightRangePolicy.gd
           grep -q 'wall produces physical flashlight shadow' game/scripts/ci/PhysicalLightingSmoke.gd
-          grep -q 'fog reduces useful distant local light' game/scripts/ci/PhysicalLightingSmoke.gd
+          grep -q 'presentation uses backend flashlight shadow' game/scripts/ci/PhysicalLightingPresentationSmoke.gd
+          grep -q 'render_mode unshaded, blend_mul' game/shaders/physical_lighting_multiply.gdshader
+          grep -q 'render_mode unshaded, blend_add' game/shaders/physical_lighting_glow.gdshader
+          grep -q '_lighting.z_index = 40' game/scripts/render/TacticalRendererStack.gd
+          grep -q '_perception.z_index = 100' game/scripts/render/TacticalRendererStack.gd
           ! grep -R -q 'PointLight2D\|LightOccluder2D\|CanvasModulate' game/scripts/simulation/lighting
           ! grep -R -q 'scripts/generation\|scripts/streaming\|scripts/simulation/sound\|scripts/simulation/loot\|scripts/simulation/combat' game/scripts/simulation/lighting
           ! grep -R -q 'func _process\|func _physics_process' game/scripts/simulation/lighting
@@ -54,7 +64,7 @@ jobs:
         run: |
           set -euxo pipefail
           ./Godot_v4.7.1-stable_linux.x86_64 --headless --editor --path "$GITHUB_WORKSPACE/game" --quit 2>&1 | tee "$RUNNER_TEMP/import.log"
-          if grep -Eqi 'SCRIPT ERROR|Parse Error|Failed to load script' "$RUNNER_TEMP/import.log"; then exit 1; fi
+          if grep -Eqi 'SCRIPT ERROR|Parse Error|Failed to load script|Shader error' "$RUNNER_TEMP/import.log"; then exit 1; fi
 
       - name: System 27 physical lighting smoke
         shell: bash
@@ -63,7 +73,15 @@ jobs:
           ./Godot_v4.7.1-stable_linux.x86_64 --headless --path "$GITHUB_WORKSPACE/game" --quit-after 60 --script res://scripts/ci/PhysicalLightingSmoke.gd 2>&1 | tee "$RUNNER_TEMP/lighting27.log"
           grep -q 'PHYSICAL_LIGHTING_SMOKE_OK' "$RUNNER_TEMP/lighting27.log"
           grep -q 'PHYSICAL_LIGHTING_REBUILD_AVG_US=' "$RUNNER_TEMP/lighting27.log"
-          if grep -Eqi 'SCRIPT ERROR|Parse Error|Failed to load script' "$RUNNER_TEMP/lighting27.log"; then exit 1; fi
+          if grep -Eqi 'SCRIPT ERROR|Parse Error|Failed to load script|Shader error' "$RUNNER_TEMP/lighting27.log"; then exit 1; fi
+
+      - name: System 27 rich presentation smoke
+        shell: bash
+        run: |
+          set -euxo pipefail
+          ./Godot_v4.7.1-stable_linux.x86_64 --headless --path "$GITHUB_WORKSPACE/game" --quit-after 60 --script res://scripts/ci/PhysicalLightingPresentationSmoke.gd 2>&1 | tee "$RUNNER_TEMP/lighting27-presentation.log"
+          grep -q 'PHYSICAL_LIGHTING_PRESENTATION_SMOKE_OK' "$RUNNER_TEMP/lighting27-presentation.log"
+          if grep -Eqi 'SCRIPT ERROR|Parse Error|Failed to load script|Shader error' "$RUNNER_TEMP/lighting27-presentation.log"; then exit 1; fi
 
       - name: System 25 world-time regression
         shell: bash
@@ -87,7 +105,7 @@ jobs:
           set -euxo pipefail
           ./Godot_v4.7.1-stable_linux.x86_64 --headless --path "$GITHUB_WORKSPACE/game" --quit-after 2 2>&1 | tee "$RUNNER_TEMP/startup.log"
           grep -q 'CANONICAL_DEMO_BOOT_OK' "$RUNNER_TEMP/startup.log"
-          if grep -Eqi 'SCRIPT ERROR|Parse Error|Failed to load script|CANONICAL_DEMO_BOOT_FAILED' "$RUNNER_TEMP/startup.log"; then exit 1; fi
+          if grep -Eqi 'SCRIPT ERROR|Parse Error|Failed to load script|CANONICAL_DEMO_BOOT_FAILED|Shader error' "$RUNNER_TEMP/startup.log"; then exit 1; fi
 
       - name: Publish System 27 exact-head status
         if: always()
@@ -106,7 +124,7 @@ jobs:
             cancelled) state=error ;;
             *) state=error ;;
           esac
-          payload=$(printf '{"state":"%s","context":"verify/system27-physical-lighting","description":"System 27 physical illumination Slice A","target_url":"%s"}' "$state" "$RUN_URL")
+          payload=$(printf '{"state":"%s","context":"verify/system27-physical-lighting","description":"System 27 physical lighting Slice A+B","target_url":"%s"}' "$state" "$RUN_URL")
           curl --fail --silent --show-error \
             -X POST \
             -H "Authorization: Bearer $GH_TOKEN" \

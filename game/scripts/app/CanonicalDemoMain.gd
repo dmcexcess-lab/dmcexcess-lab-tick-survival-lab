@@ -11,6 +11,8 @@ const WorldTimeProfileClass = preload("res://scripts/simulation/world_time/World
 const WorldTimeServiceClass = preload("res://scripts/simulation/world_time/WorldTimeService.gd")
 const DaylightProfileClass = preload("res://scripts/simulation/world_time/DaylightProfile.gd")
 const OutdoorAmbientLightServiceClass = preload("res://scripts/simulation/world_time/OutdoorAmbientLightService.gd")
+const PhysicalLightingClass = preload("res://scripts/simulation/lighting/PhysicalLightingService.gd")
+const DemoLightingSourceClass = preload("res://scripts/demo/DemoLightingSourceAdapter.gd")
 const BaseTraversalPolicyClass = preload("res://scripts/simulation/movement/MovementTraversalPolicy.gd")
 const MovementActionServiceClass = preload("res://scripts/simulation/movement/PassageAwareMovementActionService.gd")
 const MovementDamageInterruptionClass = preload("res://scripts/simulation/movement/MovementDamageInterruptionService.gd")
@@ -97,6 +99,8 @@ var _spatial_query: SpatialQueryService = null
 var _kernel: TickKernel = null
 var _world_time: WorldTimeService = null
 var _ambient_daylight: OutdoorAmbientLightService = null
+var _physical_lighting: PhysicalLightingService = null
+var _demo_lighting_sources: DemoLightingSourceAdapter = null
 var _base_traversal: MovementTraversalPolicy = null
 var _locomotion_state: ActorLocomotionState = null
 var _locomotion_mutations: ActorLocomotionMutationService = null
@@ -200,6 +204,8 @@ func _boot_canonical_demo() -> bool:
     _kernel = TickKernelClass.new(FixtureClass.PLAYER_ID)
     if not _boot_world_time():
         return false
+    if not _boot_physical_lighting():
+        return false
 
     if not _boot_item_transfer_and_loot_actions():
         return false
@@ -251,6 +257,8 @@ func _boot_canonical_demo() -> bool:
 
     _art_catalog = ArtCatalogClass.new()
     if not _world_view.configure(_world, _art_catalog, _door_state, FixtureClass.PLAYER_ID):
+        return false
+    if not _world_view.configure_physical_lighting(_physical_lighting, _world, _door_state):
         return false
     if not _world_view.configure_perception(
         _perception,
@@ -351,6 +359,16 @@ func _boot_world_time() -> bool:
     _world_time = WorldTimeServiceClass.new(_kernel, time_profile)
     _ambient_daylight = OutdoorAmbientLightServiceClass.new(_world_time, daylight_profile)
     return _world_time.is_ready() and _ambient_daylight.is_ready()
+
+func _boot_physical_lighting() -> bool:
+    _physical_lighting = PhysicalLightingClass.new(_world, _door_state, _ambient_daylight)
+    _demo_lighting_sources = DemoLightingSourceClass.new(_world, FixtureClass.PLAYER_ID)
+    if not _demo_lighting_sources.is_ready():
+        return false
+    if not _physical_lighting.set_emitters(_demo_lighting_sources.emitters()):
+        return false
+    _demo_lighting_sources.emitters_changed.connect(_on_demo_lighting_emitters_changed)
+    return true
 
 func _boot_actor_status() -> bool:
     _hand_state = HandStateClass.new()
@@ -478,6 +496,11 @@ func _sync_player_sound_cues() -> bool:
 
 func _on_ambient_light_changed(level: float, _phase: StringName, _snapshot: Dictionary) -> void:
     _world_view.set_perception_ambient_light_level(level)
+    _world_view.refresh_physical_lighting(&"ambient_light_changed")
+
+func _on_demo_lighting_emitters_changed(values: Array) -> void:
+    if _physical_lighting != null:
+        _physical_lighting.set_emitters(values)
 
 func _on_sound_observations_changed(listener_id: String) -> void:
     if listener_id == FixtureClass.PLAYER_ID:

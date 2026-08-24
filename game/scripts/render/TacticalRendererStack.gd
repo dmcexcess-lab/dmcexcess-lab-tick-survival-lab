@@ -5,6 +5,7 @@ const GroundRendererClass = preload("res://scripts/render/GroundLayerRenderer.gd
 const StructureRendererClass = preload("res://scripts/render/StructureLayerRenderer.gd")
 const PropRendererClass = preload("res://scripts/render/PropLayerRenderer.gd")
 const ActorRendererClass = preload("res://scripts/render/ActorLayerRenderer.gd")
+const LightingRendererClass = preload("res://scripts/render/PhysicalLightingPresentationRenderer.gd")
 const PerceptionOverlayClass = preload("res://scripts/render/PerceptionOverlayRenderer.gd")
 
 ## Layer orchestration only. All drawing remains in the existing focused renderers.
@@ -13,6 +14,7 @@ var _ground: GroundLayerRenderer = null
 var _structures: StructureLayerRenderer = null
 var _props: PropLayerRenderer = null
 var _actors: ActorLayerRenderer = null
+var _lighting: PhysicalLightingPresentationRenderer = null
 var _perception: PerceptionOverlayRenderer = null
 var _configured: bool = false
 
@@ -40,6 +42,24 @@ func configure(
         return false
     _configured = true
     return true
+
+func configure_physical_lighting(
+    lighting_service: PhysicalLightingService,
+    world: WorldState,
+    door_state: DoorStateStore
+) -> bool:
+    _ensure_layers()
+    return _lighting.configure(lighting_service, world, door_state)
+
+func refresh_physical_lighting(reason: StringName = &"external") -> bool:
+    _ensure_layers()
+    if not _lighting.is_configured():
+        return false
+    return _lighting.refresh(reason)
+
+func physical_lighting_debug_snapshot() -> Dictionary:
+    _ensure_layers()
+    return _lighting.presentation_snapshot()
 
 func configure_perception(
     perception_service: ObserverPerceptionService,
@@ -69,10 +89,14 @@ func set_visible_window(origin: Vector2i, size_cells: Vector2i, cell_pixels: flo
     _ensure_layers()
     if not _configured:
         return false
+    var lighting_ok: bool = true
+    if _lighting.is_configured():
+        lighting_ok = _lighting.set_visible_window(origin, size_cells, cell_pixels)
     return _ground.set_visible_window(origin, size_cells, cell_pixels) \
         and _structures.set_visible_window(origin, size_cells, cell_pixels) \
         and _props.set_visible_window(origin, size_cells, cell_pixels) \
         and _actors.set_visible_window(origin, size_cells, cell_pixels) \
+        and lighting_ok \
         and _perception.set_visible_window(origin, size_cells, cell_pixels)
 
 func is_configured() -> bool:
@@ -127,6 +151,11 @@ func _ensure_layers() -> void:
     _actors.name = "Actors"
     _actors.z_index = 30
     add_child(_actors)
+
+    _lighting = LightingRendererClass.new()
+    _lighting.name = "PhysicalLighting"
+    _lighting.z_index = 40
+    add_child(_lighting)
 
     _perception = PerceptionOverlayClass.new()
     _perception.name = "Perception"
