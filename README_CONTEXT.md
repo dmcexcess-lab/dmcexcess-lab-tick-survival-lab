@@ -25,11 +25,11 @@ Golden archaeology commit: `1763958f44eb7f855fd49944c00d1ffe608c0abe`.
 - **20 Local Area Generation** — ten area profiles / seven environment palettes.
 - **00F Streaming / Materialization** — settlement + dry-countryside logical sources; one-way materialization, reversible activation.
 - **21 Camera** / **22 Large-Area DEV Critique Runtime** — implemented.
-- **23 Perception / LOS / Fog Memory** — facing LOS, true-black unexplored fog, stale remembered environment/static furniture, last-seen actors and auditory presentation.
+- **23 Perception / LOS / Fog Memory** — geometric facing LOS, illumination-aware current acquisition, true-black unexplored fog, stale remembered environment/static furniture, last-seen actors and auditory presentation.
 - **24 World Loot / Searchable Containers / Scavenging** — persistent virgin loot, timed search, timed TAKE/STORE and playable scavenging UI.
 - **25 World Time / Ambient Daylight** — authoritative-tick-derived scenario clock and smooth outdoor daylight baseline.
 - **26 Spatial Sound / Hearing** — physical acoustic propagation, listener-specific hearing and yellow-word cues.
-- **27 Physical Lighting / Illumination / Shadows** — **Slices A+B implemented**: headless physical illumination + target-light useful-range policy, plus live visible darkness/tint/glow/scatter presentation. Slice C observer acquisition remains pending.
+- **27 Physical Lighting / Illumination / Shadows** — **Slices A+B+C implemented**: headless physical illumination, rich visible lighting, and target-light-dependent observer acquisition through System 23.
 
 ## Core rules
 
@@ -44,14 +44,23 @@ Golden archaeology commit: `1763958f44eb7f855fd49944c00d1ffe608c0abe`.
 9. WHEN owns integer simulation ticks only; System 25 interprets them as scenario-local clock time.
 10. **Sound is physical; hearing is an estimate.**
 11. **Light is physical; vision is observer-specific.** Gameplay/AI lighting never reads rendered pixels.
+12. Geometric LOS is a maximum candidate envelope; current visual acquisition may be smaller because of physical illumination.
 
 ## System 23 perception truth
 
-Visual states remain `UNSEEN` true black, `REMEMBERED` stale last-observed truth, and `VISIBLE` current live truth. Current geometric LOS remains a 12-cell, 120-degree cone plus radius-1 near awareness; memory schema is v2.
+Visual states remain:
+
+- `UNSEEN` — true black, never actually acquired;
+- `REMEMBERED` — stale last-acquired observer facts;
+- `VISIBLE` — current truth that passed both geometric LOS and the configured visual-acquisition gate.
+
+Candidate geometry remains a 12-cell, 120-degree forward cone plus radius-1 all-around near awareness. Memory schema remains v2.
+
+System 23 now exposes neutral `VisualAcquisitionProvider`. The historical/default provider passes all geometric candidates; the live canonical composition injects System 27's `IlluminationVisualAcquisitionProvider`.
+
+Only acquired cells refresh environment/actor memory. A target may therefore be geometrically clear yet remain UNSEEN/REMEMBERED because it is too dark. Re-lighting the target can make it current VISIBLE truth. Opaque geometry still blocks first.
 
 REMEMBERED luminance follows System 25 broad ambient daylight. System 26 auditory observations may appear as yellow words without revealing terrain.
-
-System 27 Slice B is rendered below System 23, so hidden current lights/glow are covered by the observer-knowledge mask. **The live System 23 visible-cell set is still not illumination-gated.** Slice C will apply the existing target-light useful-range policy without moving memory ownership out of Perception.
 
 Exact-head owner: `verify/system23-perception`.
 
@@ -65,9 +74,9 @@ Exact-head owner: `verify/system24-loot`.
 
 ## System 25 world-time / daylight truth
 
-Candidate 001 uses 5 ticks/second, starts day 0 at 08:00:00, dawn 05:30–07:30, day 07:30–18:30, dusk 18:30–20:30 and night baseline 0.08. Time is derived directly from `world_tick`; hard pause freezes it automatically.
+Candidate 001 uses 5 ticks/second, starts day 0 at 08:00:00, dawn 05:30–07:30, day 07:30–18:30, dusk 18:30–20:30 and night baseline 0.08. Time derives directly from `world_tick`; hard pause freezes it automatically.
 
-System 27 consumes this daylight downstream. System 25 remains the clock/daylight owner.
+System 27 consumes this daylight downstream. Ambient changes now also trigger System 23 acquisition recomputation because changing physical light can change what is currently visible without movement.
 
 Exact-head owner: `verify/system25-world-time-light`.
 
@@ -87,50 +96,61 @@ Exact-head owner: `verify/system26-spatial-sound`.
 
 ### Slice A — physical truth
 
-Implemented:
+Implemented physical facts include:
 
-- neutral clear/overcast/rain/fog/storm-compatible `AtmosphericOptics` input;
-- flashlight/lamp/streetlight/neon semantic profiles;
-- exact active `LightEmitter` descriptors supplied by source owners;
-- per-cell sky/direct/portal/local useful luminance, tint, direction, glare and scatter;
-- structure-envelope enclosure/sky exposure;
-- window/OPEN-door daylight portals;
-- wall/door/window local-light transmission and physical tactical shadows;
+- clear/overcast/rain/fog/storm-compatible atmosphere inputs;
+- semantic flashlight/lamp/streetlight/neon emitter profiles;
+- per-cell sky/direct/portal/local luminance, tint, direction, glare and scatter;
+- structure-envelope interior/sky exposure;
+- window and OPEN-door daylight portals;
+- wall/door/window local-light transmission and tactical shadows;
 - no diffuse relay through opaque walls/closed doors;
-- fog extinction + scatter behavior;
-- deterministic source composition;
 - target-cell-light useful-range policy.
 
-Candidate useful range maps luminance 0.0 -> 2 cells and 1.0 -> the 12-cell geometric maximum with a `sqrt(luminance)` response and protected near awareness. The **target cell's illumination** drives range, so standing under a lamp does not grant vision into distant darkness.
+Candidate useful range:
 
-### Slice B — visible presentation
+- luminance `0.0` -> 2 cells;
+- luminance `1.0` -> 12-cell geometric maximum;
+- `sqrt(luminance)` response;
+- radius-1 near awareness protected.
+
+The **target cell's illumination** drives range. Standing under a lamp does not grant long-range sight into an unlit target.
+
+### Slice B — presentation
 
 Implemented:
 
-- `PhysicalLightingPresentationRenderer` builds two bounded tactical light maps from Slice A samples;
-- multiplicative darkness/tint canvas shader;
-- additive local/portal/glare/scatter glow shader;
-- edge-aware smoothing preserves hard physical shadow discontinuities;
-- emissive cores reflect semantic source tint;
-- atmosphere scatter and wetness feed visible treatment;
-- renderer order is current world/actors -> physical lighting -> System 23 Perception mask;
-- no presentation loop advances WHEN.
+- two bounded physical-light maps;
+- multiplicative darkness/tint shader;
+- additive glow/portal/scatter/wet-reflection shader;
+- edge-aware smoothing preserving physical shadow discontinuities;
+- current world/actors -> physical lighting -> System 23 knowledge-mask ordering;
+- DEV-only player flashlight + fixed diner lamp/neon/streetlight until real equipment/power/Weather source owners exist.
 
-The current Rural Crossroads critique build uses an explicitly DEV-only `DemoLightingSourceAdapter`: player-following flashlight plus fixed diner lamp, blue neon and streetlight. This exists only to exercise Slice B before real equipment/battery/switch/electrical/Weather source owners exist.
+Physical shadows currently use structure/door/window optical truth. Arbitrary furniture/prop optical classification remains deferred.
 
-Physical shadows currently use structure/door/window optical geometry. Arbitrary furniture/prop optical occlusion is a future System 27 refinement rather than a fake shadow feature.
+### Slice C — observer acquisition
 
-### Slice C — pending
+Implemented:
 
-System 23 has not yet applied target-light useful range to current acquisition. Slice C will make darkness shrink actual acquired vision and let physical illumination expand acquisition toward lit targets for both player and future AI observers.
+- neutral System 23 `VisualAcquisitionProvider` seam;
+- System 27 `IlluminationVisualAcquisitionProvider` adapter;
+- geometric candidates are filtered by target illumination before becoming `VISIBLE`;
+- only acquired cells refresh memory;
+- third-party light can expose a target;
+- bright light cannot reveal through opaque geometry;
+- previously observed cells return to `REMEMBERED` when light falls;
+- stale last-seen actors are not magically tracked through darkness;
+- the lighting adapter guarantees an observer-centered 25×25 query envelope when the camera's current presentation field does not cover the whole 12-cell vision envelope, so camera panning cannot change gameplay vision;
+- when the presentation field already covers the observer envelope, C reuses it instead of forcing a second normal lighting rebuild.
 
-First fully green Slice B executable head:
+No Actor AI behavior is implemented yet, but the observer seam is ready for future survivor/infected/animal perception.
 
-`a7a95466e70853d9abbd5de9ca1a1d5610672eaf`
+First fully green Slice C executable head:
+
+`09d1c059760c06ef9791c4d405746caddc107dcf`
 
 All twelve required contexts were green on that exact head.
-
-Slice A representative backend rebuild on the Slice B runner: `4085.20 µs` average (~4.09 ms). The full 80×96 canonical critique runtime also passed startup with Slice B enabled.
 
 Exact-head owner: `verify/system27-physical-lighting`.
 
@@ -140,19 +160,23 @@ Known scale seams:
 
 - inactive materialized facts remain resident in WHAT and new-source 00F commits still own one full persistent-state rollback snapshot;
 - System 26 sound must be re-profiled before large simultaneous actor populations;
-- System 27 many-moving-light/population-scale fields need later profiling/caching even though the current physical fixture and full critique startup pass;
-- Slice B light-map presentation is bounded to the active render window and gameplay never reads its GPU textures.
+- System 27 physical-light fixture on the Slice C green runner: ~4.23 ms average for representative 17×17 changing-flashlight rebuild;
+- legacy geometry-only System 23 FOV on that run: ~4.06 ms average;
+- focused illumination-aware perception recompute: ~11.84 ms average;
+- user direction is to keep current lighting/perception cost for now and see whether real later systems/actors make it materially worse before optimizing;
+- many moving lights and many simultaneous observers remain explicit future profiling/caching seams.
 
 ## Major deferred seams
 
-- System 27 Slice C illumination-aware System 23 acquisition / neutral AI observer seam;
+- Actor AI / infected behavior using the current visual/hearing observation substrate;
 - prop/furniture optical-material classification for physical shadowing;
+- `NONE / SILHOUETTE / DETAIL`, dark adaptation and observer acuity refinements;
 - Weather owner feeding System 27 atmosphere optics;
 - electricity/generators/batteries/switches feeding real active light sources;
 - population / households / causal outbreak / player story (00E);
 - usable food/drink and medical treatment actions;
 - condition/durability/spoilage;
-- infected AI/combat and firearm/ammunition mechanics;
+- combat and firearm/ammunition mechanics;
 - crafting/recycling;
 - locks/keys/forced entry;
 - corpse loot/decay;

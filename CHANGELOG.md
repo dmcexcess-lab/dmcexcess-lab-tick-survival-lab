@@ -1,5 +1,23 @@
 # Changelog
 
+## System 27 Physical Lighting / Illumination / Shadows — Slice C — 2026-08-23
+
+- Implemented the user-approved Slice C under the explicit direction **“we keep it for now, lets move on and see if it gets worse the more systems we add. approved for C.”** Current lighting/perception cost is therefore measured and retained rather than pre-optimized before real Actor AI/population workloads exist.
+- Added neutral `VisualAcquisitionProvider.gd` to System 23. Geometry-only pass-through remains the default so historical/focused Perception compositions do not silently import or depend on System 27.
+- Added `IlluminationVisualAcquisitionProvider.gd` as the System 27 -> System 23 adapter. It uses the existing target-cell physical-light useful-range policy; System 23 still owns `VISIBLE`, memory refresh and observer knowledge.
+- `ObserverPerceptionService` now resolves **geometry first -> acquisition second -> memory last**. Only geometric candidates accepted by the configured acquisition provider enter `VISIBLE`, refresh environmental memory or refresh current actor observations.
+- The live canonical Rural Crossroads composition now injects the System 27 illumination provider. A distant geometrically clear target may therefore remain unseen in darkness, become current truth when physically illuminated, and return to stale REMEMBERED knowledge when light falls.
+- Third-party physical light can illuminate a target for the controlled observer. Bright targets still cannot be acquired through opaque geometry because System 23 LOS is resolved before the light gate.
+- Radius-1 near awareness remains protected through the existing Candidate 001 range policy. Current light response remains 2 useful cells at luminance 0.0 toward the 12-cell geometric maximum at luminance 1.0 with `sqrt(luminance)` response.
+- The first C implementation passed the focused illumination/perception contract but failed canonical startup because the new provider initially required a lighting field that Slice B's renderer had not established yet. Investigation exposed the more important architecture issue that gameplay lighting could not depend on camera/render initialization.
+- Repaired the boundary so `IlluminationVisualAcquisitionProvider` guarantees the observer's complete physical-light query envelope itself. Candidate 001 uses a 25×25 observer-centered field when the current presentation field does not already contain the survivor's full 12-cell geometric vision envelope.
+- Normal camera-following play reuses the existing presentation field when it already contains that envelope; camera panning elsewhere triggers the bounded observer query field instead. Camera position can therefore neither grant nor remove gameplay vision, without forcing an unconditional second lighting rebuild every normal turn.
+- System 25 ambient changes now also request observer recomputation because time-of-day light can change current visual acquisition even when no actor or door moved.
+- Added `IlluminationPerceptionSmoke.gd` and extended both System 23 and System 27 workflows. Coverage proves dark-target rejection, protected near awareness, no memory refresh from unacquired darkness, lit-target acquisition, stale actor/environment memory after losing light, third-party illumination, opaque-geometry priority, camera-independent query demand, zero WHEN-tick cost and canonical startup.
+- First fully green executable Slice C head: `09d1c059760c06ef9791c4d405746caddc107dcf`.
+- On that exact executable head all twelve required contexts were green: `verify/system27-physical-lighting`, `verify/system26-spatial-sound`, `verify/system25-world-time-light`, `verify/system24-loot`, `verify/system23-perception`, `verify/system22-area-critique`, `verify/system21-camera-view`, `verify/system20-local-area`, `verify/system19-local-building`, `verify/system00f-streaming-materialization`, `verify/system00d-global-world` and `verify/pages-deploy`.
+- Performance markers on the fully green System 27 runner: representative 17×17 physical-light rebuild **4,230.32 µs (~4.23 ms)**; legacy geometry-only FOV **4,058.41 µs (~4.06 ms)**; focused illumination-aware perception recompute **11,838.67 µs (~11.84 ms)**. These are explicit baselines for later Actor AI/population profiling, not a request to optimize now.
+
 ## System 27 Physical Lighting / Illumination / Shadows — Slice B — 2026-08-23
 
 - Implemented the user-approved Slice B following the exact approval **“Approved B.”** Slice B is presentation downstream of the already-authoritative Slice A physical-light backend; rendering does not become gameplay or AI lighting truth.
