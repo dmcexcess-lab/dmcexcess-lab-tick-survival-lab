@@ -3,7 +3,7 @@ class_name PerceptionMemoryStore
 
 ## Persistent observer knowledge, separate from WHAT. Internal storage is intentionally replaceable.
 
-const SNAPSHOT_SCHEMA_VERSION: int = 1
+const SNAPSHOT_SCHEMA_VERSION: int = 2
 
 var _observers: Dictionary = {}
 
@@ -45,12 +45,16 @@ func remember_environment(
     cell: Vector2i,
     observed_tick: int,
     terrain_semantic: StringName,
-    structure_snapshot: Dictionary = {}
+    structure_snapshot: Dictionary = {},
+    prop_snapshots: Array[Dictionary] = []
 ) -> bool:
     if observed_tick < 0 or String(terrain_semantic).strip_edges().is_empty():
         return false
     var record: Dictionary = _observer_record(observer_id)
     if record.is_empty():
+        return false
+    var normalized: Dictionary = _normalize_props(prop_snapshots)
+    if not bool(normalized.get("ok", false)):
         return false
     var cells: Dictionary = record["cells"]
     cells[cell] = {
@@ -58,6 +62,7 @@ func remember_environment(
         "observed_tick": observed_tick,
         "terrain_semantic": String(terrain_semantic),
         "structure": structure_snapshot.duplicate(true),
+        "props": normalized.get("props", []).duplicate(true),
     }
     return true
 
@@ -150,11 +155,25 @@ func snapshot() -> Dictionary:
         for cell: Vector2i in cell_keys:
             var memory: Dictionary = cells[cell]
             var stored_structure: Dictionary = memory.get("structure", {})
+            var stored_props: Array = memory.get("props", [])
+            var prop_entries: Array = []
+            for prop_value: Variant in stored_props:
+                if typeof(prop_value) != TYPE_DICTIONARY:
+                    continue
+                var prop: Dictionary = prop_value
+                var anchor: Vector2i = prop.get("anchor", cell)
+                prop_entries.append({
+                    "entity_id": String(prop.get("entity_id", "")),
+                    "semantic_type": String(prop.get("semantic_type", "")),
+                    "anchor": [anchor.x, anchor.y],
+                    "facing": int(prop.get("facing", -1)),
+                })
             cell_entries.append({
                 "cell": [cell.x, cell.y],
                 "observed_tick": int(memory.get("observed_tick", 0)),
                 "terrain_semantic": String(memory.get("terrain_semantic", "")),
                 "structure": stored_structure.duplicate(true),
+                "props": prop_entries,
             })
         var actor_entries: Array = []
         for actor_memory: Dictionary in actor_observations(observer_id):
@@ -201,14 +220,36 @@ func load_snapshot(data: Dictionary) -> bool:
             var terrain: String = String(cell_data.get("terrain_semantic", "")).strip_edges()
             var observed_tick: int = int(cell_data.get("observed_tick", -1))
             var structure_value: Variant = cell_data.get("structure", {})
-            if terrain.is_empty() or observed_tick < 0 or typeof(structure_value) != TYPE_DICTIONARY or cells.has(cell):
+            var props_value: Variant = cell_data.get("props", [])
+            if terrain.is_empty() or observed_tick < 0 or typeof(structure_value) != TYPE_DICTIONARY or typeof(props_value) != TYPE_ARRAY or cells.has(cell):
                 return false
             var structure_data: Dictionary = structure_value
+            var restored_props: Array[Dictionary] = []
+            for prop_value: Variant in props_value:
+                if typeof(prop_value) != TYPE_DICTIONARY:
+                    return false
+                var prop_data: Dictionary = prop_value
+                var entity_id: String = String(prop_data.get("entity_id", "")).strip_edges()
+                var semantic: String = String(prop_data.get("semantic_type", "")).strip_edges()
+                var anchor_value: Variant = prop_data.get("anchor", [])
+                var facing: int = int(prop_data.get("facing", -1))
+                if entity_id.is_empty() or semantic.is_empty() or typeof(anchor_value) != TYPE_ARRAY or anchor_value.size() != 2 or facing < 0 or facing > 3:
+                    return false
+                restored_props.append({
+                    "entity_id": entity_id,
+                    "semantic_type": semantic,
+                    "anchor": Vector2i(int(anchor_value[0]), int(anchor_value[1])),
+                    "facing": facing,
+                })
+            var normalized: Dictionary = _normalize_props(restored_props)
+            if not bool(normalized.get("ok", false)):
+                return false
             cells[cell] = {
                 "cell": cell,
                 "observed_tick": observed_tick,
                 "terrain_semantic": terrain,
                 "structure": structure_data.duplicate(true),
+                "props": normalized.get("props", []).duplicate(true),
             }
         for actor_value: Variant in actors_value:
             if typeof(actor_value) != TYPE_DICTIONARY:
@@ -234,6 +275,31 @@ func load_snapshot(data: Dictionary) -> bool:
 
     _observers = restored
     return true
+
+func _normalize_props(values: Array) -> Dictionary:
+    var result: Array[Dictionary] = []
+    var seen_ids: Dictionary = {}
+    for value: Variant in values:
+        if typeof(value) != TYPE_DICTIONARY:
+            return {"ok": false, "props": []}
+        var prop: Dictionary = value
+        var entity_id: String = String(prop.get("entity_id", "")).strip_edges()
+        var semantic: String = String(prop.get("semantic_type", "")).strip_edges()
+        var anchor_value: Variant = prop.get("anchor", null)
+        var facing: int = int(prop.get("facing", -1))
+        if entity_id.is_empty() or semantic.is_empty() or typeof(anchor_value) != TYPE_VECTOR2I or facing < 0 or facing > 3 or seen_ids.has(entity_id):
+            return {"ok": false, "props": []}
+        seen_ids[entity_id] = true
+        result.append({
+            "entity_id": entity_id,
+            "semantic_type": semantic,
+            "anchor": anchor_value,
+            "facing": facing,
+        })
+    result.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
+        return String(a.get("entity_id", "")) < String(b.get("entity_id", ""))
+    )
+    return {"ok": true, "props": result}
 
 func _observer_record(observer_id: String) -> Dictionary:
     if not _observers.has(observer_id):
