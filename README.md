@@ -21,6 +21,7 @@ The canonical modular stack includes:
 - **System 19** — local building grammar;
 - **System 20** — local area generation for crossroads, small-town, scattered rural, dry countryside and physical watercourse/bridges;
 - **System 00F** — logical materialization + technical streaming activation;
+- **System 23** — deterministic facing-based LOS, true unexplored fog, stale remembered-world knowledge and last-seen living-actor observations;
 - modular collision, movement, actor state, inventory/equipment, doors, rendering, camera, HUD/player-shell and DEV critique systems.
 
 The live project boots the canonical modular `CanonicalDemoMain.gd` composition stack.
@@ -51,6 +52,16 @@ Canonical space uses:
 - semantic world data independent from renderer atlas assumptions.
 
 Art is presentation, not physics.
+
+## Perception model
+
+System 23 uses three observer-knowledge states:
+
+- `UNSEEN` — completely black visual world information;
+- `REMEMBERED` — darkened stale last-observed environment;
+- `VISIBLE` — current live world truth.
+
+Hidden live mutations never update remembered visual truth. Future spatial-sound cues may appear over any visual state without revealing the terrain beneath them.
 
 ## Development process
 
