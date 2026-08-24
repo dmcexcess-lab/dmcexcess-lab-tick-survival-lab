@@ -42,7 +42,7 @@ Canonical status/routing index. Read `PROJECT_NORTH_STAR.md` and `README_SOPS.md
 | 20 | Local Area Generation | **IMPLEMENTED — five current profiles** | `20_LOCAL_AREA_PARCEL_GENERATION.md` |
 | 21 | Tactical Camera / View Control | **IMPLEMENTED** | `21_TACTICAL_CAMERA_VIEW_CONTROL.md` |
 | 22 | Large-Area DEV Critique Runtime | **IMPLEMENTED** | `22_LARGE_AREA_CRITIQUE_RUNTIME.md` |
-| 23 | Perception / LOS / Fog Memory | **DRAFT** | `23_PERCEPTION_LOS_FOG_MEMORY.md` |
+| 23 | Perception / LOS / Fog Memory | **IMPLEMENTED — Candidate 001** | `23_PERCEPTION_LOS_FOG_MEMORY.md` |
 | 00E | Population / Household / Outbreak / Player Story | **NOT DESIGNED** | future design |
 
 ## Current System 00D truth
@@ -92,13 +92,13 @@ Exact-head context: `verify/system00f-streaming-materialization`.
 
 ## Current presentation
 
-System 21 owns camera only. System 22 owns the bounded DEV critique runtime only. The live Web build still presents the Rural Crossroads critique world.
+System 21 owns camera only. System 22 owns the bounded DEV critique runtime only. The live Web build still presents the Rural Crossroads critique world, now with canonical System 23 perception/fog integrated into the demo stack.
 
-## Active design
+## Current System 23 truth
 
-**System 23 Perception / LOS / Fog Memory — DRAFT.**
+**System 23 Perception / LOS / Fog Memory — IMPLEMENTED Candidate 001.**
 
-Current proposed player-facing knowledge model:
+Canonical player-facing knowledge model:
 
 - `UNSEEN` = completely black visual world information;
 - `REMEMBERED` = darkened stale last-observed terrain/structural memory;
@@ -106,4 +106,12 @@ Current proposed player-facing knowledge model:
 - auditory indicators may render over any of the three states, including true black unexplored fog, without revealing/exploring terrain;
 - last-seen living-actor markers are stale observations, not hidden tracking.
 
-Implementation is not authorized until the user approves `23_PERCEPTION_LOS_FOG_MEMORY.md`.
+Candidate 001 uses deterministic four-way facing LOS with a 12-cell range, 120-degree forward cone and radius-1 near awareness. Walls and closed doors block; open doors and windows transmit; malformed/unknown structure opacity fails closed. Memory is keyed by stable observer actor ID and hidden live changes never update stale visual memory.
+
+Existing live renderers remain current-truth renderers. `PerceptionOverlayRenderer` masks all non-visible live truth with black and redraws only stored remembered snapshots above that mask.
+
+Exact-head context: `verify/system23-perception`.
+
+First fully green executable implementation head after final LOS fixture correction: `87fb517265ba1defc395068d09ccb7059e16d114`.
+
+Seven protected exact-head gates remain System 00D, 00F, 19, 20, 21, 22 and Pages.
