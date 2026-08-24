@@ -2,13 +2,27 @@ extends RefCounted
 class_name GlobalWorldProfileCatalog
 
 const TEMPERATE_RURAL_REGION: StringName = &"temperate.rural.region"
+const TEMPERATE_ISLAND_REGION: StringName = &"temperate.island.region"
 
 func has_profile(profile_id: StringName) -> bool:
-    return profile_id == TEMPERATE_RURAL_REGION
+    return profile_id == TEMPERATE_RURAL_REGION or profile_id == TEMPERATE_ISLAND_REGION
 
 func profile(profile_id: StringName) -> Dictionary:
-    if profile_id != TEMPERATE_RURAL_REGION:
-        return {}
+    if profile_id == TEMPERATE_RURAL_REGION:
+        return _rural_profile()
+    if profile_id == TEMPERATE_ISLAND_REGION:
+        var result: Dictionary = _rural_profile()
+        result["id"] = TEMPERATE_ISLAND_REGION
+        result["version"] = 1
+        result["island_enabled"] = true
+        result["island_ocean_margin"] = 48
+        result["island_shore_width"] = 12
+        result["island_coast_wobble"] = 18
+        result["island_coast_scale"] = 96
+        return result
+    return {}
+
+func _rural_profile() -> Dictionary:
     return {
         "id": TEMPERATE_RURAL_REGION,
         "version": 6,
