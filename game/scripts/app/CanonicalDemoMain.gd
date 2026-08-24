@@ -12,6 +12,7 @@ const WorldTimeServiceClass = preload("res://scripts/simulation/world_time/World
 const DaylightProfileClass = preload("res://scripts/simulation/world_time/DaylightProfile.gd")
 const OutdoorAmbientLightServiceClass = preload("res://scripts/simulation/world_time/OutdoorAmbientLightService.gd")
 const PhysicalLightingClass = preload("res://scripts/simulation/lighting/PhysicalLightingService.gd")
+const LightingAcquisitionClass = preload("res://scripts/simulation/lighting/IlluminationVisualAcquisitionProvider.gd")
 const DemoLightingSourceClass = preload("res://scripts/demo/DemoLightingSourceAdapter.gd")
 const BaseTraversalPolicyClass = preload("res://scripts/simulation/movement/MovementTraversalPolicy.gd")
 const MovementActionServiceClass = preload("res://scripts/simulation/movement/PassageAwareMovementActionService.gd")
@@ -260,6 +261,8 @@ func _boot_canonical_demo() -> bool:
         return false
     if not _world_view.configure_physical_lighting(_physical_lighting, _world, _door_state):
         return false
+    if not _perception.set_acquisition_provider(LightingAcquisitionClass.new(_physical_lighting)):
+        return false
     if not _world_view.configure_perception(
         _perception,
         _perception_memory,
@@ -497,6 +500,8 @@ func _sync_player_sound_cues() -> bool:
 func _on_ambient_light_changed(level: float, _phase: StringName, _snapshot: Dictionary) -> void:
     _world_view.set_perception_ambient_light_level(level)
     _world_view.refresh_physical_lighting(&"ambient_light_changed")
+    if _perception != null:
+        _perception.recompute(&"ambient_light_changed")
 
 func _on_demo_lighting_emitters_changed(values: Array) -> void:
     if _physical_lighting != null:

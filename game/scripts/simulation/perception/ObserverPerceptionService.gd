@@ -2,12 +2,15 @@ extends RefCounted
 class_name ObserverPerceptionService
 
 const VisionQueryClass = preload("res://scripts/simulation/perception/VisionQuery.gd")
+const AcquisitionProviderClass = preload("res://scripts/simulation/perception/VisualAcquisitionProvider.gd")
 const ChangeClass = preload("res://scripts/foundation/world/WorldChange.gd")
 const Layers = preload("res://scripts/foundation/spatial/SpatialLayer.gd")
 const FacingRules = preload("res://scripts/foundation/spatial/SpatialFacing.gd")
 
 ## Event-driven controlled-observer visibility + knowledge refresh.
 ## It advances no time and never mutates WHAT or Door State.
+## Geometric LOS is filtered through a neutral acquisition provider before
+## current truth is admitted into VISIBLE or refreshed into observer memory.
 
 signal perception_changed(reason: StringName)
 
@@ -24,6 +27,7 @@ var _memory: PerceptionMemoryStore = null
 var _observer_id: String = ""
 var _profile: VisionProfile = null
 var _vision: VisionQuery = null
+var _acquisition: VisualAcquisitionProvider = null
 var _visible: Dictionary = {}
 var _recompute_count: int = 0
 
@@ -33,7 +37,8 @@ func _init(
     kernel: TickKernel = null,
     memory_store: PerceptionMemoryStore = null,
     observer_id: String = "",
-    profile: VisionProfile = null
+    profile: VisionProfile = null,
+    acquisition_provider: VisualAcquisitionProvider = null
 ) -> void:
     _world = world_state
     _door_state = door_state
@@ -42,15 +47,16 @@ func _init(
     _observer_id = observer_id.strip_edges()
     _profile = profile.copy() if profile != null else VisionProfile.new()
     _vision = VisionQueryClass.new(_world, _door_state)
+    _acquisition = acquisition_provider if acquisition_provider != null else AcquisitionProviderClass.new()
     if _memory != null and not _observer_id.is_empty():
         _memory.enroll_observer(_observer_id)
     _connect_signals()
     recompute(&"configured")
 
 func is_ready() -> bool:
-    if _world == null or _door_state == null or _kernel == null or _memory == null or _vision == null:
+    if _world == null or _door_state == null or _kernel == null or _memory == null or _vision == null or _acquisition == null:
         return false
-    if _observer_id.is_empty() or _profile == null or not _profile.is_valid() or not _vision.is_ready():
+    if _observer_id.is_empty() or _profile == null or not _profile.is_valid() or not _vision.is_ready() or not _acquisition.is_ready():
         return false
     if not _memory.has_observer(_observer_id):
         return false
@@ -70,6 +76,16 @@ func set_profile(value: VisionProfile) -> bool:
     recompute(&"profile_changed")
     return true
 
+func set_acquisition_provider(value: VisualAcquisitionProvider) -> bool:
+    if value == null or not value.is_ready():
+        return false
+    _acquisition = value
+    recompute(&"acquisition_provider_changed")
+    return true
+
+func acquisition_provider() -> VisualAcquisitionProvider:
+    return _acquisition
+
 func recompute(reason: StringName = &"manual") -> bool:
     _recompute_count += 1
     if not is_ready():
@@ -80,13 +96,17 @@ func recompute(reason: StringName = &"manual") -> bool:
         return false
 
     var observer_placement: WorldPlacement = _world.placement(_observer_id)
-    var cells: Array[Vector2i] = _vision.visible_cells(observer_placement.anchor, observer_placement.facing, _profile)
+    var geometric_cells: Array[Vector2i] = _vision.visible_cells(observer_placement.anchor, observer_placement.facing, _profile)
+    var acquired_cells: Array[Vector2i] = []
     _visible.clear()
-    for cell: Vector2i in cells:
+    for cell: Vector2i in geometric_cells:
+        if not _acquisition.allows_target(_observer_id, observer_placement.anchor, cell, _profile):
+            continue
         _visible[cell] = true
+        acquired_cells.append(cell)
 
-    _refresh_environment_memory(cells)
-    _refresh_actor_memory(cells)
+    _refresh_environment_memory(acquired_cells)
+    _refresh_actor_memory(acquired_cells)
     perception_changed.emit(reason)
     return true
 

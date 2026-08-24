@@ -20,7 +20,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Validate System 27 Slice A+B boundaries
+      - name: Validate System 27 Slice A+B+C boundaries
         shell: bash
         run: |
           set -euxo pipefail
@@ -31,18 +31,23 @@ jobs:
           test -f game/scripts/simulation/lighting/IlluminationSample.gd
           test -f game/scripts/simulation/lighting/VisionLightRangePolicy.gd
           test -f game/scripts/simulation/lighting/PhysicalLightingService.gd
+          test -f game/scripts/simulation/lighting/IlluminationVisualAcquisitionProvider.gd
+          test -f game/scripts/simulation/perception/VisualAcquisitionProvider.gd
           test -f game/scripts/render/PhysicalLightingPresentationRenderer.gd
           test -f game/scripts/demo/DemoLightingSourceAdapter.gd
           test -f game/shaders/physical_lighting_multiply.gdshader
           test -f game/shaders/physical_lighting_glow.gdshader
           test -f game/scripts/ci/PhysicalLightingSmoke.gd
           test -f game/scripts/ci/PhysicalLightingPresentationSmoke.gd
+          test -f game/scripts/ci/IlluminationPerceptionSmoke.gd
           grep -q 'class_name PhysicalLightingService' game/scripts/simulation/lighting/PhysicalLightingService.gd
           grep -q 'class_name PhysicalLightingPresentationRenderer' game/scripts/render/PhysicalLightingPresentationRenderer.gd
+          grep -q 'class_name IlluminationVisualAcquisitionProvider' game/scripts/simulation/lighting/IlluminationVisualAcquisitionProvider.gd
           grep -q 'class_name DemoLightingSourceAdapter' game/scripts/demo/DemoLightingSourceAdapter.gd
           grep -q 'effective_range_for_luminance' game/scripts/simulation/lighting/VisionLightRangePolicy.gd
           grep -q 'wall produces physical flashlight shadow' game/scripts/ci/PhysicalLightingSmoke.gd
           grep -q 'presentation uses backend flashlight shadow' game/scripts/ci/PhysicalLightingPresentationSmoke.gd
+          grep -q 'physical target illumination expands actual acquired vision' game/scripts/ci/IlluminationPerceptionSmoke.gd
           grep -q 'render_mode unshaded, blend_mul' game/shaders/physical_lighting_multiply.gdshader
           grep -q 'render_mode unshaded, blend_add' game/shaders/physical_lighting_glow.gdshader
           grep -q '_lighting.z_index = 40' game/scripts/render/TacticalRendererStack.gd
@@ -82,6 +87,15 @@ jobs:
           ./Godot_v4.7.1-stable_linux.x86_64 --headless --path "$GITHUB_WORKSPACE/game" --quit-after 60 --script res://scripts/ci/PhysicalLightingPresentationSmoke.gd 2>&1 | tee "$RUNNER_TEMP/lighting27-presentation.log"
           grep -q 'PHYSICAL_LIGHTING_PRESENTATION_SMOKE_OK' "$RUNNER_TEMP/lighting27-presentation.log"
           if grep -Eqi 'SCRIPT ERROR|Parse Error|Failed to load script|Shader error' "$RUNNER_TEMP/lighting27-presentation.log"; then exit 1; fi
+
+      - name: System 27 illumination-aware perception smoke
+        shell: bash
+        run: |
+          set -euxo pipefail
+          ./Godot_v4.7.1-stable_linux.x86_64 --headless --path "$GITHUB_WORKSPACE/game" --quit-after 30 --script res://scripts/ci/IlluminationPerceptionSmoke.gd 2>&1 | tee "$RUNNER_TEMP/lighting27-perception.log"
+          grep -q 'ILLUMINATION_PERCEPTION_SMOKE_OK' "$RUNNER_TEMP/lighting27-perception.log"
+          grep -q 'PERCEPTION_LIGHTING_RECOMPUTE_AVG_US=' "$RUNNER_TEMP/lighting27-perception.log"
+          if grep -Eqi 'SCRIPT ERROR|Parse Error|Failed to load script|Shader error' "$RUNNER_TEMP/lighting27-perception.log"; then exit 1; fi
 
       - name: System 25 world-time regression
         shell: bash
@@ -124,7 +138,7 @@ jobs:
             cancelled) state=error ;;
             *) state=error ;;
           esac
-          payload=$(printf '{"state":"%s","context":"verify/system27-physical-lighting","description":"System 27 physical lighting Slice A+B","target_url":"%s"}' "$state" "$RUN_URL")
+          payload=$(printf '{"state":"%s","context":"verify/system27-physical-lighting","description":"System 27 physical lighting Slices A+B+C","target_url":"%s"}' "$state" "$RUN_URL")
           curl --fail --silent --show-error \
             -X POST \
             -H "Authorization: Bearer $GH_TOKEN" \

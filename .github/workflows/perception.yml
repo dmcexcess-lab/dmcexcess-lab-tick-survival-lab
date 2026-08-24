@@ -26,16 +26,22 @@ jobs:
           test -f SYSTEM_DESIGNS/23_PERCEPTION_LOS_FOG_MEMORY.md
           test -f game/scripts/simulation/perception/VisionProfile.gd
           test -f game/scripts/simulation/perception/VisionQuery.gd
+          test -f game/scripts/simulation/perception/VisualAcquisitionProvider.gd
           test -f game/scripts/simulation/perception/PerceptionMemoryStore.gd
           test -f game/scripts/simulation/perception/ObserverPerceptionService.gd
+          test -f game/scripts/simulation/lighting/IlluminationVisualAcquisitionProvider.gd
           test -f game/scripts/render/PerceptionOverlayRenderer.gd
           test -f game/scripts/ci/PerceptionFogMemorySmoke.gd
           test -f game/scripts/ci/PerceptionAmbientMemorySmoke.gd
+          test -f game/scripts/ci/IlluminationPerceptionSmoke.gd
           ! test -f game/scripts/demo/DemoAmbientLightCycle.gd
+          grep -q 'class_name VisualAcquisitionProvider' game/scripts/simulation/perception/VisualAcquisitionProvider.gd
+          grep -q '_acquisition.allows_target' game/scripts/simulation/perception/ObserverPerceptionService.gd
+          grep -q 'class_name IlluminationVisualAcquisitionProvider' game/scripts/simulation/lighting/IlluminationVisualAcquisitionProvider.gd
           grep -q 'MEMORY_NIGHT_LUMINANCE' game/scripts/render/PerceptionOverlayRenderer.gd
           grep -q 'set_perception_ambient_light_level' game/scripts/render/TacticalRendererStack.gd
           ! grep -R -q 'func _process\|func _physics_process' game/scripts/simulation/perception game/scripts/render/PerceptionOverlayRenderer.gd
-          ! grep -R -q 'scripts/simulation/collision\|scripts/generation\|scripts/streaming' game/scripts/simulation/perception
+          ! grep -R -q 'scripts/simulation/collision\|scripts/simulation/lighting\|scripts/generation\|scripts/streaming' game/scripts/simulation/perception
           ! grep -R -q 'WorldMutationService\|DoorStateMutationService' game/scripts/simulation/perception game/scripts/render/PerceptionOverlayRenderer.gd
 
       - name: Install Godot 4.7.1
@@ -69,6 +75,15 @@ jobs:
           ./Godot_v4.7.1-stable_linux.x86_64 --headless --path "$GITHUB_WORKSPACE/game" --quit-after 20 --script res://scripts/ci/PerceptionAmbientMemorySmoke.gd 2>&1 | tee "$RUNNER_TEMP/perception23-ambient.log"
           grep -q 'PERCEPTION_AMBIENT_MEMORY_SMOKE_OK' "$RUNNER_TEMP/perception23-ambient.log"
           if grep -Eqi 'SCRIPT ERROR|Parse Error|Failed to load script' "$RUNNER_TEMP/perception23-ambient.log"; then exit 1; fi
+
+      - name: System 27 illumination-aware acquisition smoke
+        shell: bash
+        run: |
+          set -euxo pipefail
+          ./Godot_v4.7.1-stable_linux.x86_64 --headless --path "$GITHUB_WORKSPACE/game" --quit-after 30 --script res://scripts/ci/IlluminationPerceptionSmoke.gd 2>&1 | tee "$RUNNER_TEMP/perception27-light.log"
+          grep -q 'ILLUMINATION_PERCEPTION_SMOKE_OK' "$RUNNER_TEMP/perception27-light.log"
+          grep -q 'PERCEPTION_LIGHTING_RECOMPUTE_AVG_US=' "$RUNNER_TEMP/perception27-light.log"
+          if grep -Eqi 'SCRIPT ERROR|Parse Error|Failed to load script' "$RUNNER_TEMP/perception27-light.log"; then exit 1; fi
 
       - name: Door state and interaction regression
         shell: bash
