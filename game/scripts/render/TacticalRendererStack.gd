@@ -5,6 +5,7 @@ const GroundRendererClass = preload("res://scripts/render/GroundLayerRenderer.gd
 const StructureRendererClass = preload("res://scripts/render/StructureLayerRenderer.gd")
 const PropRendererClass = preload("res://scripts/render/PropLayerRenderer.gd")
 const ActorRendererClass = preload("res://scripts/render/ActorLayerRenderer.gd")
+const PerceptionOverlayClass = preload("res://scripts/render/PerceptionOverlayRenderer.gd")
 
 ## Layer orchestration only. All drawing remains in the existing focused renderers.
 
@@ -12,6 +13,7 @@ var _ground: GroundLayerRenderer = null
 var _structures: StructureLayerRenderer = null
 var _props: PropLayerRenderer = null
 var _actors: ActorLayerRenderer = null
+var _perception: PerceptionOverlayRenderer = null
 var _configured: bool = false
 
 func _ready() -> void:
@@ -39,6 +41,23 @@ func configure(
     _configured = true
     return true
 
+func configure_perception(
+    perception_service: ObserverPerceptionService,
+    memory_store: PerceptionMemoryStore,
+    art_catalog: ArtCatalog,
+    observer_id: String
+) -> bool:
+    _ensure_layers()
+    return _perception.configure(perception_service, memory_store, art_catalog, observer_id)
+
+func set_auditory_cues(cues: Array) -> bool:
+    _ensure_layers()
+    return _perception.set_auditory_cues(cues)
+
+func perception_debug_snapshot() -> Dictionary:
+    _ensure_layers()
+    return _perception.planned_cell_counts()
+
 func set_visible_window(origin: Vector2i, size_cells: Vector2i, cell_pixels: float) -> bool:
     _ensure_layers()
     if not _configured:
@@ -46,7 +65,8 @@ func set_visible_window(origin: Vector2i, size_cells: Vector2i, cell_pixels: flo
     return _ground.set_visible_window(origin, size_cells, cell_pixels) \
         and _structures.set_visible_window(origin, size_cells, cell_pixels) \
         and _props.set_visible_window(origin, size_cells, cell_pixels) \
-        and _actors.set_visible_window(origin, size_cells, cell_pixels)
+        and _actors.set_visible_window(origin, size_cells, cell_pixels) \
+        and _perception.set_visible_window(origin, size_cells, cell_pixels)
 
 func is_configured() -> bool:
     return _configured
@@ -100,6 +120,11 @@ func _ensure_layers() -> void:
     _actors.name = "Actors"
     _actors.z_index = 30
     add_child(_actors)
+
+    _perception = PerceptionOverlayClass.new()
+    _perception.name = "Perception"
+    _perception.z_index = 100
+    add_child(_perception)
 
 static func _count_diagnostics(commands: Array) -> int:
     var count: int = 0
