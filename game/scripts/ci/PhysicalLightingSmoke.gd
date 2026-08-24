@@ -125,10 +125,12 @@ func _test_weather_optics() -> void:
     _check(fog_sample.local_artificial < clear_sample.local_artificial, "fog reduces useful distant local light")
     _check(fog_sample.scatter > clear_sample.scatter, "fog increases light scatter descriptor")
 
-    _check(service.set_atmosphere(AtmosphereClass.clear(12)), "clear daylight atmosphere restored")
-    var clear_day: float = service.illumination_at(Vector2i(6, -6)).direct_celestial
-    _check(service.set_atmosphere(AtmosphereClass.overcast(13)), "overcast atmosphere accepted")
-    var overcast_day: float = service.illumination_at(Vector2i(6, -6)).direct_celestial
+    var day_service: PhysicalLightingService = _lighting_for_fixture(fixture, false)
+    _check(day_service.set_atmosphere(AtmosphereClass.clear(12)), "clear daylight atmosphere restored")
+    var clear_day: float = day_service.illumination_at(Vector2i(6, -6)).direct_celestial
+    _check(day_service.set_atmosphere(AtmosphereClass.overcast(13)), "overcast atmosphere accepted")
+    var overcast_day: float = day_service.illumination_at(Vector2i(6, -6)).direct_celestial
+    _check(clear_day > 0.0, "clear daytime direct sunlight is nonzero")
     _check(overcast_day < clear_day * 0.30, "overcast suppresses direct sunlight strongly")
 
 func _test_light_driven_vision_range() -> void:
