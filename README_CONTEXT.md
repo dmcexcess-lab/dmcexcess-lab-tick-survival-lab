@@ -35,6 +35,7 @@ Canonical roadmap: `ROADMAP.md`.
 - **26 Spatial Sound / Hearing** — physical acoustic propagation, listener-specific hearing/localization, yellow onomatopoeia cues and Weather masking seam.
 - **27 Physical Lighting / Illumination / Shadows** — headless physical illumination, rich presentation, illumination-aware observer acquisition, bounded-query optimization, Weather optics and transient lightning input.
 - **28 Weather / Atmosphere** — **Slices A+B+C implemented**: deterministic WHEN-driven Weather, analytic wetness, screen-space low-res atmosphere, real lighting/visibility/hearing consequences and deterministic physical lightning.
+- **29 World Interaction Affordance / Reach** — **DRAFT — awaiting approval**, Roadmap Phase 1A.
 
 ---
 
@@ -58,26 +59,36 @@ Canonical roadmap: `ROADMAP.md`.
 16. **Weather graphics are screen-space atmosphere. Camera movement itself is not Weather work.**
 17. Lightning is a real WHEN event; its physical flash feeds System 27, while its bolt is presentation tied to the same event.
 18. Current lightning has no strike cell, therefore there is no fake spatial thunder/damage/fire yet.
+19. **Fatigue is the stamina/endurance concept. There is no separate stamina meter.** Sleep pressure/exhaustion remains the longer-horizon sleep need.
+20. **Interaction highlights explain real available actions; they never create use/action truth.**
+
+---
+
+## Active roadmap work — Phase 1
+
+Phase 1 has now been decomposed in `ROADMAP.md`:
+
+1A. **Interaction affordance + reach** — System 29 DRAFT; generalize current System-24 contact-forward reach and highlight only real currently perceived usable targets.
+
+1B. **Item freshness/spoilage** — typed per-instance freshness, analytic authoritative-time aging, future refrigeration-rate seam, no per-item tick loop.
+
+1C. **Semantic inventory/menu icons** — low-resolution UI icon catalog with deterministic coverage of current loot/menu semantics.
+
+1D. **Large/multi-cell object visual geometry** — presentation-owned large draw span/pivot/overhang so multi-cell trees/traffic furniture actually look large without changing collision from art pixels.
+
+1E. **Content expansion/integration** — more perishables, mundane items and world props/fixtures/vegetation using the new foundations.
+
+Recommended first implementation remains **1A / System 29**, but its design is DRAFT until approved.
 
 ---
 
 ## Current System 23 perception truth
 
-Visual states:
-
-- `UNSEEN` — true black, never acquired;
-- `REMEMBERED` — stale last-acquired observer facts;
-- `VISIBLE` — current truth that passed geometric LOS and physical acquisition.
-
-Candidate geometry remains a 12-cell, 120-degree forward cone plus radius-1 all-around near awareness. Memory schema remains v2.
-
-System 23 exposes neutral `VisualAcquisitionProvider`; the live composition injects System 27's `IlluminationVisualAcquisitionProvider`.
+Visual states remain `UNSEEN`, `REMEMBERED`, and `VISIBLE`. Candidate geometry is a 12-cell, 120-degree forward cone plus radius-1 near awareness. System 23 exposes neutral `VisualAcquisitionProvider`; the live composition injects System 27's illumination/atmosphere-aware provider.
 
 Only acquired cells refresh environment/actor memory. A target may be geometrically clear yet remain UNSEEN/REMEMBERED because it is too dark or too strongly extinguished by atmosphere. Opaque geometry still blocks first.
 
-Representative Weather fixture: clear bright range 12 cells; representative fog reduces the same bright-condition useful range to 5 cells.
-
-Roadmap Phase 6 Awareness/Sneak must extend observer/signal contracts rather than bypass them. Roadmap Phase 8 NPC AI must consume observer knowledge rather than hidden truth.
+System 29 player highlights must require current VISIBLE target knowledge and may not expose a technically reachable hidden object.
 
 Exact-head owner: `verify/system23-perception`.
 
@@ -89,7 +100,9 @@ Exact-head owner: `verify/system23-perception`.
 
 Searchable furniture is real System 11 container truth. Deterministic `item.*` entities are created once during virgin source initialization; System 24 owns provenance while System 11 owns current contents. Search and TAKE/STORE spend WHEN time and external acquisition respects System 13E carry limits.
 
-Roadmap Phase 1 adds spoilage, icons, proximity interaction highlighting and broader object content. Phase 2 adds crafting from real items.
+Current `LootInteractionReach` is shared by search and external-container access: actor footprint plus one-cell-forward fringe. Proposed System 29 moves this exact rule into a neutral owner without changing range behavior.
+
+Roadmap Phase 1B adds spoilage on the real stable item identities already created here; Phase 2 crafting consumes those same items.
 
 Exact-head owner: `verify/system24-loot`.
 
@@ -99,7 +112,7 @@ Exact-head owner: `verify/system24-loot`.
 
 Candidate 001 uses 5 ticks/second, starts day 0 at 08:00:00, dawn 05:30–07:30, day 07:30–18:30, dusk 18:30–20:30 and night baseline 0.08. Time derives directly from `world_tick`; hard pause freezes it automatically.
 
-System 27 consumes daylight downstream. System 28 uses the same WHEN clock and modulates it through Weather optics/lightning without owning a second physical clock.
+Roadmap Phase 1B spoilage should derive freshness analytically from authoritative tick position rather than introduce a second clock/per-item scheduler.
 
 Exact-head owner: `verify/system25-world-time-light`.
 
@@ -109,20 +122,11 @@ Exact-head owner: `verify/system25-world-time-light`.
 
 > **Sound is physical. Hearing is an estimate.**
 
-Exact transient sound truth is separated from listener observations. Material-aware propagation reads current WHAT + Door State; survivor hearing derives from existing skills/needs; localization uncertainty cannot flip true actor-relative front/rear/left/right signs; observation age uses WHEN ticks only.
+Material-aware propagation reads current WHAT + Door State; survivor hearing derives from existing stats/status; localization uncertainty cannot flip true actor-relative front/rear/left/right signs; observation age uses WHEN ticks only.
 
-Recognized player-facing sounds prefer onomatopoeia:
+Recognized player-facing sounds prefer onomatopoeia (`*step step*`, `*thump thump*`, `*creak*`, `*SLAM*`). Weather rain/wind masks hearing as competing background noise without creating fake rain emissions.
 
-- Walk: `NOISE -> *scuff* -> *step step*`;
-- Run: `NOISE -> *thump thump* -> *step step step*`;
-- normal door: `NOISE -> *thunk* -> *creak*`;
-- loud door: `NOISE -> *BANG* -> *SLAM*`.
-
-Weather rain/wind is competing background noise: propagation-cost addition remains 0, detection threshold rises, localization degrades modestly, and ordinary rain pixels create no `SoundEmission`.
-
-Representative storm fixture: +19 detection-threshold addition.
-
-Current lightning intentionally creates no thunder because the implemented event has no honest strike cell. A future geographic strike can feed ordinary System 26 propagation/delay/localization.
+Current lightning intentionally creates no thunder because the implemented event has no honest strike cell.
 
 Exact-head owner: `verify/system26-spatial-sound`.
 
@@ -132,27 +136,11 @@ Exact-head owner: `verify/system26-spatial-sound`.
 
 > **Light is physical. Vision is observer-specific. Rendering visualizes lighting; gameplay and AI never read rendered pixels to decide what is illuminated.**
 
-Implemented physical facts include semantic flashlight/lamp/streetlight/neon emitters; per-cell sky/direct/portal/local luminance, tint, direction, glare and scatter; enclosure/portal treatment; structure light transmission/shadows; and target-condition useful-range policy.
+Implemented physical facts include semantic DEV flashlight/lamp/streetlight/neon emitters; per-cell sky/direct/portal/local luminance; enclosure/portal treatment; structure transmission/shadows; weather optics/wetness; target-condition useful-range policy; and transient physical lightning.
 
-Weather feeds continuous optics:
-
-- cloud/overcast suppresses direct sky harder than diffuse sky;
-- rain adds moderate loss/scatter/extinction;
-- storm strongly suppresses direct sky;
-- fog produces strong scatter/extinction;
-- real Weather wetness drives restrained wet-surface response.
-
-Slice C adds transient `AtmosphericOptics.transient_sky_light` from the real LightningEvent.
-
-Verified physical lightning fixture:
-
-- storm-night exterior before flash: **0.025**;
-- same exterior during flash: **0.845**;
-- roofed interior through real window portal: **0.356**.
+Verified lightning fixture: storm-night exterior 0.025 -> 0.845 during flash; roofed interior through a real window portal 0.356.
 
 The bounded 80×96 / four-light regression remains 7,680 field cells, 1,676 emitter candidates and 688 optical-ray candidates.
-
-Roadmap Phase 3/6 powered fixtures must feed actual emitter state into this owner; emissive art alone remains non-physical.
 
 Exact-head owner: `verify/system27-physical-lighting`.
 
@@ -162,120 +150,59 @@ Exact-head owner: `verify/system27-physical-lighting`.
 
 > **Weather is simulation truth; weather animation is presentation.**
 
-Slices A+B+C are implemented.
+Slices A+B+C are implemented. Physical Weather is deterministic/event-driven through WHEN with clear/overcast/rain/storm/fog state, analytic wetness, quantized environment revisions, snapshot schema v2 and deterministic lightning.
 
-### Physical Weather
+Rain/fog/debris are a low-resolution screen-space overlay. Camera movement does not redraw/clear/reseed/phase-shift Weather. Focused regression reports zero Weather redraws after repeated camera updates.
 
-`WeatherService` owns scenario-wide clear/overcast/rain/storm/fog state, continuous precipitation/cloud/fog/wind fields, analytic wetness, quantized environment revision, deterministic transitions and deterministic lightning.
+Weather drives System 27 optics/wetness/visibility and System 26 hearing masking. Lightning supplies a one-tick real physical sky flash plus a short stable-seeded cosmetic bolt.
 
-There is no per-tick Weather loop. One meaningful profile transition is scheduled through WHEN; state/wetness are analytically derived from authoritative tick position.
-
-Weather snapshot schema is **v2**, including scheduled/active lightning state.
-
-### Screen-space presentation
-
-`WeatherPresentationRenderer` remains one low-overhead owner with no per-particle child Nodes.
-
-Caps:
-
-- 20 Hz / 50 ms active atmosphere cadence;
-- max four cosmetic catch-up steps;
-- virtual axis <=256;
-- max 180 rain candidates;
-- max 36 fog patches;
-- max 3 cosmetic debris records.
-
-Rain/fog/debris are now explicitly a **screen-space overlay**. Camera movement does not redraw, clear, phase-shift or reseed Weather. Origin-only render-window movement also leaves the atmosphere alone.
-
-Focused regression: `WEATHER_OVERLAY_CAMERA_REDRAWS=0` after forty rapid camera-position updates.
-
-Rain may still map a current screen sample to a world cell for shelter rejection. Weather remains below System 23, so shelter suppression cannot reveal hidden structure truth.
-
-### Physical environment integration
-
-Weather drives:
-
-- System 27 atmospheric optics;
-- real wetness into wet-surface lighting response;
-- physical visibility extinction in observer acquisition;
-- System 26 rain/wind detection/localization masking.
-
-Cosmetic animation causes zero physical Lighting/Perception recomputes.
-
-### Lightning
-
-Storms schedule deterministic lightning through WHEN. Candidate normal delay is 30–120 ticks. Physical flash duration is one WHEN tick.
-
-The same event supplies:
-
-- stable ID;
-- start/end tick;
-- normalized intensity;
-- deterministic bolt seed;
-- transient physical System 27 sky light;
-- stable-seeded low-res bolt presentation.
-
-The visual bolt has a short ~0.32 s cosmetic envelope and may visually outlast the one-tick physical flash without extending physical illumination.
-
-DEV `STRIKE` schedules a real future lightning event and is valid in storm Weather.
-
-No thunder/damage/fire is faked until lightning gains real strike geography and those real owners exist.
-
-### DEV controls
-
-Rural Crossroads intentionally begins in RAIN for critique. DEV controls expose CLR, OVR, RAIN, STM, FOG, STRIKE and BLOW LEAF.
-
-The panel now sits below the existing STATS / INVENTORY / MENU header row so it is not hidden by the player-shell buttons.
-
-### Verification
-
-First fully green executable Weather C head:
-
-`21014fe5915e47344b4b8d5f48e52fa69c386254`
-
-Focused outputs:
-
-- `WEATHER_B_CLEAR_RANGE=12`;
-- `WEATHER_B_FOG_RANGE=5`;
-- `WEATHER_B_STORM_HEARING_MASK=19`;
-- `WEATHER_OVERLAY_CAMERA_REDRAWS=0`;
-- `WEATHER_C_LIGHTNING_BEFORE=0.025`;
-- `WEATHER_C_LIGHTNING_FLASH=0.845`;
-- `WEATHER_C_LIGHTNING_PORTAL=0.356`;
-- `WEATHER_C_LIGHTNING_SEED=629519319`.
-
-All 13 required executable-head contexts were green on that exact head, including `verify/pages-deploy`.
+First fully green executable Weather C head: `21014fe5915e47344b4b8d5f48e52fa69c386254`; all 13 required contexts green including Pages.
 
 Exact-head owner: `verify/system28-weather`.
 
 ---
 
+## Physical-survival correction
+
+Roadmap Phase 4 final target is:
+
+- hunger;
+- thirst;
+- sleep pressure / exhaustion;
+- health / injury;
+- **fatigue**.
+
+The user's clarification is explicit: **stamina is fatigue**. Do not add a parallel stamina state. Current fatigue is already the short-horizon exertion/endurance pressure; Phase 4 expands its tuning/consequences while keeping sleep/exhaustion as the separate long-horizon need.
+
+---
+
 ## Canonical roadmap through Beta
 
-`ROADMAP.md` supersedes older informal ordering.
-
-1. **Items/readability** — spoilage, icons, usable-object/container proximity highlighting, more/multi-cell world objects.
+1. **Items/readability** — Phase 1A–1E above.
 2. **Crafting** — physical recipes, time, real inputs/outputs/workstations.
 3. **Power + Water** — three-tier causal infrastructure; standalone wastewater gameplay removed.
-4. **Player physical survival/health** — hunger, thirst, sleep/exhaustion, health, stamina; reconcile current fatigue rather than duplicating it.
+4. **Player physical survival/health** — hunger, thirst, sleep/exhaustion, health, fatigue.
 5. **Moodlets** — comfort, fear, boredom and escalating hunger/thirst/sleep states with real capability/speed consequences.
-6. **Skills/interactions** — Awareness, Sneak, First Aid, Cooking, Carpentry, Mechanical, Electrical, Fishing, Farming; migrate away from current generic skill scaffold; ordinary powered objects such as TVs gain real state/light/sound-word interactions.
+6. **Skills/interactions** — Awareness, Sneak, First Aid, Cooking, Carpentry, Mechanical, Electrical, Fishing, Farming; migrate away from current generic skill scaffold; powered objects such as TVs gain real state/light/sound-word interactions.
 7. **Vehicles** — cars, trucks, motorcycles, bicycles, skateboards; later Mad-Max-style car/truck modification.
 8. **Actor/NPC AI + combat + outbreak** — infected/survivor/follower/raider behavior, all combat, mood/context idle conversations, causal outbreak/population behavior.
 9. **Final graphics/UI overhaul** — final button placement, art/readability, item/prop shadows, mobile/desktop polish. **Completion begins Beta.**
 
-Save/load, schema handling, profiling and persistence-backed streaming eviction remain cross-cutting engineering gates inserted when required; they do not change the numbered gameplay order.
+Save/load, schema handling, profiling and persistence-backed streaming eviction remain cross-cutting engineering gates inserted when required.
 
 ---
 
 ## Major deferred/migration seams
 
-- Roadmap Phase 1 spoilage/item-content/UI-interaction work;
+- System 29 / Phase 1A interaction affordance implementation;
+- Phase 1B spoilage/freshness;
+- Phase 1C semantic icons;
+- Phase 1D large-object visual geometry;
+- Phase 1E item/object content expansion;
 - crafting;
 - three-tier power/water utilities;
 - current wastewater global-planning data cleanup/inert status;
-- Phase-4 stamina/exhaustion design versus current fatigue scaffold;
-- full lethal hunger/thirst/sleep/health consequences;
+- full lethal hunger/thirst/sleep/health/fatigue consequences;
 - Phase-5 comfort/fear/boredom and consequential mood modifiers;
 - Phase-6 final skill catalog migration;
 - first aid treatment/infection;
