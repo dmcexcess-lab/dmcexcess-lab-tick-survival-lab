@@ -42,12 +42,12 @@ Canonical status/routing index. Read `PROJECT_NORTH_STAR.md` and `README_SOPS.md
 | 20 | Local Area Generation | **IMPLEMENTED — ten area / seven environment profiles** | `20_LOCAL_AREA_PARCEL_GENERATION.md` |
 | 21 | Tactical Camera / View Control | **IMPLEMENTED** | `21_TACTICAL_CAMERA_VIEW_CONTROL.md` |
 | 22 | Large-Area DEV Critique Runtime | **IMPLEMENTED** | `22_LARGE_AREA_CRITIQUE_RUNTIME.md` |
-| 23 | Perception / LOS / Fog Memory | **IMPLEMENTED — geometry + light-aware acquisition + memory/audio presentation** | `23_PERCEPTION_LOS_FOG_MEMORY.md` |
+| 23 | Perception / LOS / Fog Memory | **IMPLEMENTED — geometry + light/atmosphere-aware acquisition + memory/audio presentation** | `23_PERCEPTION_LOS_FOG_MEMORY.md` |
 | 24 | World Loot / Searchable Containers / Scavenging | **IMPLEMENTED — Candidate 001** | `24_WORLD_LOOT_SEARCHABLE_CONTAINERS.md` |
 | 25 | World Time / Ambient Daylight | **IMPLEMENTED — Candidate 001** | `25_WORLD_TIME_AMBIENT_DAYLIGHT.md` |
-| 26 | Spatial Sound / Hearing | **IMPLEMENTED — Candidate 001 + onomatopoeia / cue lifetime refinement** | `26_SPATIAL_SOUND_HEARING.md` |
-| 27 | Physical Lighting / Illumination / Shadows | **IMPLEMENTED — Slices A+B+C + bounded-query optimization** | `27_PHYSICAL_LIGHTING_ILLUMINATION_SHADOWS.md` |
-| 28 | Weather / Atmosphere | **IMPLEMENTED — Slice A; B/C deferred** | `28_WEATHER_ATMOSPHERE.md` |
+| 26 | Spatial Sound / Hearing | **IMPLEMENTED — Candidate 001 + weather environment seam** | `26_SPATIAL_SOUND_HEARING.md` |
+| 27 | Physical Lighting / Illumination / Shadows | **IMPLEMENTED — Slices A+B+C + bounded-query optimization + weather optics input** | `27_PHYSICAL_LIGHTING_ILLUMINATION_SHADOWS.md` |
+| 28 | Weather / Atmosphere | **IMPLEMENTED — Slices A+B; C deferred** | `28_WEATHER_ATMOSPHERE.md` |
 | 00E | Population / Household / Outbreak / Player Story | **NOT DESIGNED** | future design |
 
 ## Current System 19 / 20 / 00F truth
@@ -62,7 +62,7 @@ Exact-head contexts: `verify/system19-local-building`, `verify/system20-local-ar
 
 System 23 geometry provides the 12-cell / 120-degree maximum candidate envelope plus radius-1 near awareness. A neutral `VisualAcquisitionProvider` filters geometric candidates before they become `VISIBLE`; only acquired cells refresh observer memory.
 
-The live game injects System 27's target-light acquisition adapter. Darkness can therefore shrink current acquired vision while physical light expands it toward illuminated targets. Opaque geometry remains authoritative first. REMEMBERED stays stale and UNSEEN stays true black.
+The live game injects System 27's acquisition adapter. Darkness and physical atmospheric extinction may shrink current acquired vision while physical light expands it toward illuminated targets. Opaque geometry remains authoritative first. REMEMBERED stays stale and UNSEEN stays true black.
 
 System 26 auditory observations remain orthogonal to visual fog and do not reveal terrain. Player-facing lifetime classification uses the perceived auditory cell, never exact hidden source truth: VISIBLE sound text fades by about one second; REMEMBERED/UNSEEN sound text latches at its uncertain location until the next observer action/unpause.
 
@@ -90,11 +90,9 @@ Candidate 001 separates exact `SoundEmission` truth from listener `HeardSoundObs
 
 Recognized player-facing cues prefer onomatopoeia (`*step step*`, `*thump thump*`, `*creak*`, `*SLAM*`), while low-confidence recognition remains honest `NOISE`/broader wording.
 
-Underlying heard observations age by WHEN ticks. Player presentation is separate: a cue whose perceived cell is VISIBLE is a ~1-second transient fade; one whose perceived cell is REMEMBERED/UNSEEN is latched at that approximate cell until the listener starts the next action. Opaque cue/group IDs allow replacement and suppression without exposing exact source identity.
+System 28 Slice B now supplies rain/wind through the existing `AcousticEnvironmentModifier` seam. Weather raises detection thresholds and modestly worsens localization quality as competing background noise; rain particles are not fake sound emissions and current Candidate B adds no invented per-cell absorption cost.
 
-Future AI consumes ordinary `HeardSoundObservation`, not the player renderer's latch.
-
-Latest fully green executable refinement head: `aa5e1b622c8efe555d22e5d56514b9490776be16`.
+Underlying heard observations age by WHEN ticks. Player presentation remains separate. Future AI consumes ordinary `HeardSoundObservation`, not the player renderer's latch.
 
 Exact-head context: `verify/system26-spatial-sound`.
 
@@ -102,13 +100,15 @@ Exact-head context: `verify/system26-spatial-sound`.
 
 > **Light is physical. Vision is observer-specific. Rendering visualizes lighting; gameplay and AI never read rendered pixels to decide what is illuminated.**
 
-Slice A owns deterministic headless illumination and the target-cell useful-range policy. Slice B renders darkness/tint/glow/scatter below System 23. Slice C makes live observer acquisition consume physical target illumination through a neutral System 23 provider seam.
+Slice A owns deterministic headless illumination and useful-range policy. Slice B renders darkness/tint/glow/scatter below System 23. Slice C makes observer acquisition consume physical target conditions through the neutral System 23 provider seam.
 
-The current provider guarantees a 25×25 observer-centered light-query envelope only when the presentation field does not already cover the survivor's full 12-cell geometric vision area. Camera movement therefore does not become gameplay vision truth, while normal camera-following play can reuse the current lighting field.
+The acquisition policy now combines target luminance with physical `visibility_extinction` supplied through `AtmosphericOptics`. Radius-1 near awareness remains protected and atmosphere can only reduce the 12-cell geometric envelope, never bypass opaque LOS.
 
-The 2026-08-24 optimization keeps all existing physical/visual rules but caches materialized/topology/optical facts, evaluates local emitters only inside their useful-range rectangles, prepares presentation queries once per map refresh, and reuses lighting image buffers. An 80×96 / four-light CI fixture proves 1,676 bounded emitter candidates and 688 optical-ray candidates versus 30,720 naive full-field-per-emitter visits.
+System 28 Slice B supplies continuous cloud/rain/fog/wetness atmosphere inputs through the existing `AtmosphericOptics` contract. System 27 remains the physical illumination/shadow owner and its existing wet-reflection treatment now consumes real Weather wetness.
 
-Latest fully green optimized pre-Weather executable head: `5958d887807e5b64c9fc4cf5d3d45c7dfd4083d2`.
+The provider guarantees a 25×25 observer-centered light-query envelope only when the presentation field does not already cover the survivor's full 12-cell geometric vision area. Camera movement therefore does not become gameplay vision truth.
+
+The bounded optimization caches materialized/topology/optical facts, evaluates local emitters only inside useful-range rectangles, prepares presentation queries once per map refresh and reuses lighting image buffers. The 80×96 / four-light regression remains 1,676 emitter candidates and 688 optical-ray candidates versus 30,720 naive full-field-per-emitter visits.
 
 Exact-head context: `verify/system27-physical-lighting`.
 
@@ -116,21 +116,30 @@ Exact-head context: `verify/system27-physical-lighting`.
 
 > **Weather is simulation truth; weather animation is presentation.**
 
-Slice A is implemented. Physical Weather is deterministic and event-driven through WHEN; clear/overcast/rain/storm/fog expose continuous precipitation/cloud/fog/wind values plus analytic wetness. No per-tick Weather loop exists.
+Slices A+B are implemented. Physical Weather is deterministic and event-driven through WHEN; clear/overcast/rain/storm/fog expose continuous precipitation/cloud/fog/wind values plus analytic wetness. No per-tick Weather loop exists.
 
-The low-resolution presentation owner animates at a bounded 20 Hz, remains below System 23, shelter-masks rain through cached sky exposure, and uses no per-particle child Nodes. Calm clear weather can remain visually alive with rare leaf/paper/dust motion while retaining a hard three-piece cosmetic cap and no gameplay identity.
+The low-resolution presentation owner animates at a bounded 20 Hz, stays below System 23, shelter-masks rain through cached sky exposure and uses no per-particle child Nodes. Calm clear weather may sleep between rare leaf/paper/dust events.
 
-The Rural Crossroads critique build starts in DEV rain for immediate inspection and exposes CLEAR/OVERCAST/RAIN/STORM/FOG plus `BLOW LEAF` controls.
+Slice B adds physical consequences through neutral existing seams:
 
-Slices B/C remain deferred: Weather does not yet alter System 27 physical optics, System 26 hearing, or System 23 visibility through fog/rain, and lightning is not implemented yet.
+- continuous Weather -> System 27 `AtmosphericOptics`;
+- real wetness -> existing wet-surface light presentation;
+- fog/rain extinction -> System 27/System 23 acquisition range;
+- rain/wind -> System 26 background detection/localization masking.
 
-First fully green executable Slice A head: `dcb400b8507c23a2fc5bdaecf551bc5c0512acce`.
+The user-found A presentation issues are also closed: camera movement requests a compensated Weather redraw without advancing the 20 Hz phase/WHEN, and the viewport clear color is true black so unrendered technical space no longer appears as grey chunk edges against UNSEEN fog.
+
+Focused B fixture: clear bright range 12, representative fog bright range 5, storm hearing threshold addition 19, one camera compensation redraw with zero Weather/WHEN advancement.
+
+First fully green executable Slice B head: `db4681dc53ce6955e9585f4f5b380fe8efef634c`.
+
+Slice C lightning remains deferred.
 
 Exact-head context: `verify/system28-weather`.
 
 ## Current presentation
 
-The live Rural Crossroads critique build has canonical scavenging, time/daylight, physical sound, physical lighting, illumination-aware vision, and **low-resolution animated Weather A**. Sound is represented with yellow onomatopoeia/uncertainty text. Active flashlight/lamp/neon/streetlight sources remain explicitly DEV-only until real equipment/power owners exist. Weather A is also exposed through a clearly labeled DEV selector while climate/world-front logic remains future work.
+The live Rural Crossroads critique build has canonical scavenging, time/daylight, physical sound, physical lighting, illumination/atmosphere-aware vision, and low-resolution animated Weather A+B. Weather profile forcing now changes both visible atmosphere and real physical visibility/hearing conditions. Sound remains yellow onomatopoeia/uncertainty text. Active flashlight/lamp/neon/streetlight sources remain explicitly DEV-only until real equipment/power owners exist.
 
 ## Required exact-head stack
 
