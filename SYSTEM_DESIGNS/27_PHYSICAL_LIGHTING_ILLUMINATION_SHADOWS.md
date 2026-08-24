@@ -1,14 +1,22 @@
 # Tick Survival Lab — System 27 Physical Lighting / Illumination / Shadows
 
-Status: **IMPLEMENTED — Slice A physical illumination backend; Slices B/C remain future implementation**
+Status: **IMPLEMENTED — Slices A + B; Slice C pending**
 
 Slice A approval, 2026-08-23:
 
 > **“ok lets start with A. the vision cone shrinks and grows with light level.”**
 
+Slice B approval, 2026-08-23:
+
+> **“Approved B.”**
+
 First fully green Slice A executable head:
 
 `b43b9d02d206658ce8155e485a2ab72be454cc0e`
+
+First fully green Slice B executable head:
+
+`a7a95466e70853d9abbd5de9ca1a1d5610672eaf`
 
 Exact-head context:
 
@@ -18,7 +26,7 @@ Core rule:
 
 > **Light is physical. Vision is observer-specific. Rendering visualizes lighting; gameplay and AI never read rendered pixels to decide what is illuminated.**
 
-System 27 is the authoritative physical-lighting domain. It deliberately separates deterministic headless illumination truth from rich visual presentation.
+System 27 owns authoritative physical illumination. Slice A provides deterministic headless physical truth and the light-to-useful-vision-range policy. Slice B visualizes that same truth. Slice C will make System 23 observer acquisition consume it.
 
 ---
 
@@ -26,24 +34,25 @@ System 27 is the authoritative physical-lighting domain. It deliberately separat
 
 Lighting is an identity system rather than a global tint.
 
-The complete System 27 direction is intended to support:
+The complete System 27 direction supports:
 
-- smooth dawn/day/dusk/night from System 25;
-- weather/atmosphere affecting useful light and presentation;
-- physical indoor/outdoor differences;
+- System 25 dawn/day/dusk/night;
+- weather/atmosphere attenuation and scatter;
+- physical indoor/outdoor light differences;
 - daylight through windows/open doors;
-- artificial light spilling through openings;
-- flashlights/headlamps as physical directional sources;
-- lamps, streetlights, neon, vending machines and later fire/vehicles;
-- physical tactical shadows;
-- later rich 2D shadow/glow/beam presentation;
-- illumination-dependent visual perception;
-- the same physical lighting truth for player and future NPC/infected observers.
+- artificial light through openings;
+- flashlights/headlamps as directional physical sources;
+- lamps, streetlights and neon;
+- tactical shadows;
+- visible darkness, tint, glow and scatter;
+- illumination-dependent visual acquisition;
+- one physical-light contract shared by player and future NPC/infected observers.
 
 System distinction:
 
-- **System 23 geometry** answers whether a candidate lies in unobstructed observer LOS;
-- **System 27 lighting** answers how much useful physical light reaches a world cell;
+- **System 23 geometry** answers whether a candidate is in unobstructed observer LOS;
+- **System 27 simulation** answers how much useful physical light reaches each world cell;
+- **System 27 presentation** visualizes those samples without becoming authority;
 - **observer perception** later combines geometry + illumination + observer capability into acquired knowledge.
 
 ---
@@ -52,7 +61,7 @@ System distinction:
 
 ### Slice A — IMPLEMENTED
 
-Authoritative headless illumination backend:
+Authoritative headless physical lighting:
 
 - `AtmosphericOptics.gd`;
 - `LightEmitterProfile.gd`;
@@ -60,42 +69,55 @@ Authoritative headless illumination backend:
 - `IlluminationSample.gd`;
 - `VisionLightRangePolicy.gd`;
 - `PhysicalLightingService.gd`;
-- `PhysicalLightingSmoke.gd`;
-- `.github/workflows/physical-lighting.yml`.
+- `PhysicalLightingSmoke.gd`.
 
-Slice A is simulation truth only. It does **not** add visible darkness, Godot lights, glow, shadow sprites/shaders, live flashlight item use or live System 23 illumination gating yet.
+### Slice B — IMPLEMENTED
 
-### Slice B — NOT IMPLEMENTED
+Rich visible-world presentation from Slice A truth:
 
-Rich visual lighting/shadow/glow presentation.
+- `PhysicalLightingPresentationRenderer.gd`;
+- `physical_lighting_multiply.gdshader`;
+- `physical_lighting_glow.gdshader`;
+- renderer-stack integration below Perception;
+- canonical-demo integration;
+- `DemoLightingSourceAdapter.gd` as an explicitly DEV-only source provider until real source-owning systems exist;
+- `PhysicalLightingPresentationSmoke.gd`.
 
 ### Slice C — NOT IMPLEMENTED
 
 System 23 illumination-aware current visual acquisition and the neutral observer seam future AI consumes.
 
-These remain bounded later implementation slices under this one System 27 contract.
+Slice C remains a bounded later implementation slice under this System 27 contract.
 
 ---
 
 ## 3. Ownership
 
-System 27 owns:
+System 27 simulation owns:
 
 - deterministic bounded illumination fields;
-- normalized useful luminance queries;
+- normalized useful luminance;
 - broad physical light tint;
 - dominant incoming light direction summary;
 - glare/scatter summaries;
-- semantic local-emitter profiles;
-- sky/direct/local light composition downstream of System 25;
+- semantic emitter profiles/descriptors;
+- sky/direct/local composition downstream of System 25;
 - current structure/door/window optical transmission;
-- Candidate 001 enclosure/sky-exposure derivation;
-- outdoor-light portal transfer into enclosed space;
+- enclosure/sky-exposure approximation;
+- window/open-door outdoor-light portal transfer;
 - deterministic direct local-light shadow/occlusion truth;
 - small diffuse local spill approximation;
 - atmospheric-optics input contract;
-- light-derived useful-vision-range policy;
-- future presentation descriptors/seams.
+- target-light-derived useful-vision-range policy.
+
+System 27 presentation owns:
+
+- converting current illumination samples into visible darkness/tint maps;
+- soft additive glow/halo/scatter treatment;
+- wet-surface reflection presentation cheat;
+- emissive-core emphasis;
+- presentation-only smoothing while preserving hard physical discontinuities;
+- renderer ordering relative to current-truth world layers and System 23 knowledge masking.
 
 System 27 reads but does not own:
 
@@ -105,41 +127,39 @@ System 27 reads but does not own:
 - System 25 time/daylight;
 - future Weather state;
 - future power/battery/fuel/switch truth;
-- future equipment/use state that determines whether portable lights are active.
+- future item/equipment state that determines whether portable lights are active.
 
 System 27 does **not** own:
 
-- System 23 visual memory/observer knowledge;
+- System 23 memory/observer knowledge;
 - actor AI decisions;
-- weather simulation;
+- Weather simulation;
 - electrical/grid simulation;
-- item-use/toggle actions;
+- item toggle/use actions;
 - battery/fuel quantities;
-- construction/roof persistence generally;
-- rendering as simulation authority;
 - save-file orchestration.
 
 Dependency direction:
 
-`WHEN -> System 25 + physical world/source providers -> System 27 -> observer perception -> player/NPC knowledge`
+`WHEN -> System 25 + physical world/source providers -> System 27 physical truth -> observer perception -> player/NPC knowledge`
 
-Rendering is downstream of System 27 and never sits in the gameplay truth chain.
+Rendering branches downstream from System 27 physical truth and never enters that authority chain.
 
 ---
 
-## 4. `IlluminationSample`
+## 4. Physical sample contract
 
-`PhysicalLightingService.illumination_at(cell)` returns deterministic world-space physical light truth independent of camera/GPU.
+`PhysicalLightingService.illumination_at(cell)` returns deterministic world-space light truth independent of camera/GPU.
 
-Candidate fields:
+`IlluminationSample` includes:
 
 - global cell;
 - diffuse sky contribution;
 - direct/celestial contribution;
 - portal contribution;
 - local/artificial contribution;
-- normalized useful luminance;
-- broad light tint;
+- normalized useful luminance `[0,1]`;
+- broad tint;
 - dominant incoming direction where meaningful;
 - glare;
 - atmospheric scatter;
@@ -148,43 +168,22 @@ Candidate fields:
 - Door State revision;
 - lighting revision.
 
-Useful luminance is gameplay-relative, not fake calibrated lux, and is clamped to `[0,1]`.
-
-Presentation may later use energy beyond that normalized gameplay scale for bloom/HDR-looking effects without changing physical acquisition rules.
+Useful luminance is gameplay-relative rather than fake calibrated lux. Presentation is allowed to exaggerate bloom/halo without changing that gameplay scale.
 
 ---
 
-## 5. Candidate 001 backend composition
-
-### 5.1 Outdoor light
+## 5. Outdoor daylight and atmosphere
 
 System 25 remains the clock/daylight owner.
 
-System 27 splits current outdoor light into:
+Candidate clear full-day composition:
 
-- diffuse sky light;
-- direct celestial light.
+- diffuse sky share `0.72`;
+- direct celestial share `0.28`.
 
-Candidate shares at full clear daylight:
+System 25 night baseline `0.08` remains low outdoor ambient rather than zero illumination.
 
-- diffuse: `0.72`;
-- direct: `0.28`.
-
-System 25's night baseline `0.08` remains a low outdoor ambient baseline rather than zero illumination.
-
-### 5.2 Atmosphere
-
-`AtmosphericOptics` is a neutral provider-shaped input. System 27 does not own Weather.
-
-Candidate snapshots currently exist for controlled tests:
-
-- clear;
-- overcast;
-- rain;
-- fog;
-- storm.
-
-The contract includes:
+`AtmosphericOptics` is a neutral provider-shaped input. Controlled profiles currently cover clear, overcast, rain, fog and storm behavior. The contract carries:
 
 - diffuse-sky transmission;
 - direct-light transmission;
@@ -195,114 +194,92 @@ The contract includes:
 - visibility-extinction pressure;
 - revision.
 
-Important physical distinction:
+Important physical rule:
 
-> Fog can make a beam's scatter more visible while simultaneously reducing the beam's useful distant illumination.
+> **Fog may make a beam visually more apparent through scatter while simultaneously reducing its useful distant illumination.**
 
-Overcast suppresses direct sunlight much more strongly than diffuse sky light.
+Overcast suppresses direct sunlight much more strongly than diffuse sky.
 
 ---
 
 ## 6. Interior / sky exposure
 
-Candidate 001 uses a replaceable structure-envelope approximation until an explicit Roof/Shelter owner exists.
-
-Within a bounded lighting field:
+Until an explicit Roof/Shelter owner exists, Candidate 001 uses a replaceable structure-envelope approximation inside the bounded field:
 
 1. perimeter terrain seeds exterior space;
-2. flood fill travels through non-structure terrain;
-3. structure cells form the enclosure boundary;
-4. unreachable ordinary cells are treated as enclosed/roofed baseline cells.
+2. flood fill travels through non-envelope terrain;
+3. structures form enclosure boundaries;
+4. unreachable ordinary cells become enclosed/roofed baseline cells.
 
-Door/window cells remain part of the envelope for roof classification regardless of whether a door is currently OPEN. Opening the front door therefore does not make the house roof disappear.
+Door/window cells remain part of the envelope regardless of door open state; opening a door does not make a roof disappear.
 
-This heuristic is intentionally replaceable. A future explicit Roof/Shelter provider may supersede it without changing illumination consumers.
-
-Known limitation: a deliberately roofless enclosed courtyard cannot be distinguished from a roofed room using structure envelope alone.
+Known limitation: a roofless enclosed courtyard cannot yet be distinguished from a roofed room using structure envelope alone.
 
 ---
 
-## 7. Portal daylight
+## 7. Portal light
 
 Windows and OPEN doors transmit outdoor light into enclosed space.
 
 Candidate transmission:
 
-- window: `0.72`;
-- OPEN door: `0.95`;
-- CLOSED door: no direct portal transmission;
-- wall/unknown structure: no direct portal transmission.
+- window `0.72`;
+- OPEN door `0.95`;
+- CLOSED door no direct portal transmission;
+- wall/unknown structure no direct portal transmission.
 
-Portal influence decays through an enclosed area with a bounded diffuse transfer pass rather than making the entire building inherit outdoor brightness.
+Portal influence decays through enclosed space rather than making a whole building inherit outdoor brightness.
 
-Expected physical ordering is proven:
+Proven ordering:
 
 `clear exterior > window/open-door interior > deep enclosed interior`.
 
-Closing an exterior door removes its open-door portal contribution on the next lighting query/rebuild.
+Door state changes invalidate the field and visibly alter portal presentation.
 
 ---
 
 ## 8. Local emitters
 
-`LightEmitter` is exact active-source truth supplied to System 27.
+`LightEmitter` is exact active-source truth supplied to System 27. It contains stable emitter ID, origin, facing, semantic profile, active state and revision.
 
-It contains:
+Source owners remain responsible for whether a light is actually active. System 27 does not invent batteries, switches or grid power.
 
-- stable emitter ID;
-- origin cell;
-- facing;
-- semantic `LightEmitterProfile`;
-- active state;
-- revision.
-
-Source systems remain responsible for whether an emitter is truly active. System 27 does not invent power, battery charge or switch state.
-
-Candidate profile shapes:
+Supported profile shapes:
 
 - `OMNI`;
 - `CONE`.
 
-Initial semantic profile constructors include:
+Initial profile constructors:
 
 - flashlight;
 - lamp;
 - streetlight;
 - neon.
 
-Profiles define useful range, base luminance, tint, falloff, directional cone width and a small diffuse-spill fraction.
+Profiles define useful range, base luminance, tint, falloff, cone width and diffuse-spill fraction.
 
 ---
 
-## 9. Direct local light / tactical shadows
+## 9. Tactical physical shadows
 
-Physical local-light shadows are deterministic grid truth.
+Direct local-light shadows are deterministic grid truth.
 
-For a candidate cell the solver:
-
-1. checks source range/shape;
-2. traces an optical path from source to candidate;
-3. applies source falloff;
-4. applies atmosphere distance extinction;
-5. applies wall/door/window transmission;
-6. stores physical local-light contribution if energy remains.
+For a candidate cell, the solver checks source range/shape, traces an optical path, applies falloff and atmosphere extinction, applies structure/opening transmission, and stores surviving local-light contribution.
 
 Rules:
 
 - wall blocks direct local light;
-- CLOSED door blocks direct local light;
+- CLOSED door blocks;
 - OPEN door transmits strongly;
 - window transmits at reduced strength;
-- unknown/malformed structure fails dark/conservatively;
-- direct light does not bend around corners like System 26 sound.
+- malformed/unknown structure fails dark;
+- direct light does not bend around corners as sound does.
 
-A small one-cell diffuse spill approximation may soften nearby darkness.
+A small local diffuse spill may soften neighboring darkness, with the invariant:
 
-A bug caught by the first System 27 contract established an important invariant:
+> **An opaque wall/closed-door surface may be illuminated but may not relay diffuse light through itself.**
 
-> **An opaque wall/closed-door surface may itself be illuminated, but it may not relay diffuse spill through itself into the space behind it.**
-
-That correction is part of the first fully green executable head.
+Current shadow occluders are the optical geometry Slice A actually models: structures, doors and windows. Arbitrary prop/furniture optical occlusion remains a later refinement; Slice B does not fake prop shadows that the simulation backend does not own.
 
 ---
 
@@ -312,186 +289,210 @@ User requirement:
 
 > **“the vision cone shrinks and grows with light level.”**
 
-Slice A implements the physical policy consumed by later observer integration.
+Candidate 001:
+
+- geometric System 23 maximum remains 12 cells;
+- zero-light useful range floor is 2 cells;
+- radius-1 near awareness remains protected;
+- target luminance uses a `sqrt(luminance)` response;
+- increasing target illumination monotonically expands useful range;
+- luminance 1.0 restores full geometric range.
 
 Crucial rule:
 
-> **Useful range is based on the physical illumination of the candidate/target cell, not merely the light level at the observer's feet.**
+> **Useful range is based on the illumination of the candidate/target cell, not merely the light at the observer's feet.**
 
-Standing under a lamp therefore does not grant long-distance vision into an unlit room.
+Standing under a lamp therefore does not grant long-range vision into darkness. A flashlight expands useful range only toward cells it physically illuminates.
 
-Candidate 001 policy:
-
-- current geometric maximum remains `12` cells;
-- zero-light useful range floor is `2` cells;
-- System 23 radius-1 near awareness remains protected;
-- normalized target luminance is converted with a `sqrt(luminance)` response;
-- increasing target illumination monotonically expands useful range;
-- luminance `1.0` restores the full geometric maximum;
-- local light can expand useful range only toward cells that it actually illuminates.
-
-Public Slice A queries:
+Public queries:
 
 - `effective_vision_range_at(target_cell, geometric_max_range, near_awareness_radius)`;
 - `target_within_light_range(origin, target, geometric_max_range, near_awareness_radius)`.
 
-Slice A does **not** yet mutate System 23's live visible-cell set. That is Slice C so observer knowledge/memory stays owned by Perception.
+Slice C will make System 23 consume this policy. Slice B does not mutate observer knowledge.
 
 ---
 
-## 11. Why the vision cone is not the flashlight cone
+## 11. Slice B presentation architecture
 
-The geometric System 23 FOV and physical light are separate facts.
+### 11.1 Renderer ordering
 
-Future acquisition will conceptually be:
+Canonical layer order is:
 
-`geometric LOS candidate -> target illumination -> observer capability -> current visual acquisition`
+- Ground `z=0`;
+- Structures `z=10`;
+- Props `z=20`;
+- Actors `z=30`;
+- Physical Lighting `z=40`;
+- Perception `z=100`.
 
-A flashlight is therefore a physical directional source inside/across the larger potential visual field. Another actor's light may illuminate a target for the player, and later the same fact may help an infected observer acquire that target.
+This ordering is intentional. Lighting affects the current visible world, while System 23 remains the final observer-knowledge mask. UNSEEN stays true black and REMEMBERED stays stale even if a hidden current light changes behind it.
 
-No observer or AI should query rendered pixels or receive hidden emitter identity merely because System 27 knows it.
+### 11.2 Physical light maps
+
+`PhysicalLightingPresentationRenderer` builds two compact images over the current tactical render window:
+
+1. **multiply map** — physical useful luminance in alpha and light tint in RGB;
+2. **glow map** — local/artificial, portal, glare and scatter energy with physical tint.
+
+The images become `ImageTexture`s scaled by cell pixel size. This is a presentation representation of headless samples; no gameplay query reads these textures.
+
+### 11.3 Darkness/tint shader
+
+`physical_lighting_multiply.gdshader` uses multiplicative blending to darken/tint existing world art.
+
+It uses edge-aware four-neighbor smoothing:
+
+- similar luminance can blend softly;
+- large luminance differences reduce cross-edge blending;
+- physical wall/door shadow discontinuities therefore remain tactical rather than becoming blurred light leaks.
+
+Darkness has a low blue-black floor instead of flattening the entire image to featureless black. System 23 still owns actual UNSEEN black.
+
+### 11.4 Glow/scatter/reflection shader
+
+`physical_lighting_glow.gdshader` uses additive blending for:
+
+- local-light halo;
+- portal glow;
+- glare;
+- atmospheric scatter;
+- a restrained vertical wet-surface reflection sample driven by atmosphere wetness.
+
+Emitter-origin pixels receive profile-tinted emissive-core emphasis. This lets warm lamps/streetlights, blue neon and flashlight energy read differently while remaining derived from physical descriptors.
+
+### 11.5 Event-driven updates
+
+Presentation owns no frame-time clock. It refreshes from relevant world/door/light input changes and the canonical System 25 ambient callback. Both physical and presentation rebuilds consume zero WHEN ticks.
+
+There is no second presentation-only time-of-day cycle.
 
 ---
 
-## 12. Determinism / time / caching
+## 12. DEV source provider boundary
 
-System 27:
+The current critique build needs active lights to exercise Slice B before the eventual source-owning systems exist.
 
-- consumes zero WHEN ticks itself;
-- has no `_process()` or `_physics_process()` simulation advancement;
-- uses System 25 current tick-derived daylight;
-- rebuilds cached topology/light results on relevant revisions/inputs;
-- sorts emitter descriptors by stable ID so caller ordering does not change results;
+`DemoLightingSourceAdapter` is therefore explicitly DEV-only and allowed by the repository no-fake-completion rule.
+
+It supplies:
+
+- `dev.light.player_flashlight` following the controlled survivor's current WHAT cell/facing;
+- fixed diner lamp;
+- fixed blue diner neon;
+- fixed streetlight.
+
+It does **not** claim:
+
+- a flashlight item is equipped;
+- a battery has charge;
+- a diner has electrical service;
+- a switch is on;
+- the regional grid is alive;
+- Weather currently exists.
+
+Future equipment/power/weather providers replace this adapter at the `LightEmitter` / `AtmosphericOptics` seams without changing the physical solver or Slice B renderer.
+
+---
+
+## 13. Hidden-light memory rule
+
+System 27 must never leak hidden current world truth through System 23.
+
+- globally known daylight/weather may affect broad remembered presentation;
+- hidden local lights do not remotely refresh REMEMBERED facts;
+- true-black UNSEEN remains black because Perception renders above lighting;
+- visible spill onto an actually acquired cell may be observed there;
+- observing spill does not automatically disclose the hidden source identity/location.
+
+---
+
+## 14. Determinism / time / performance
+
+System 27 simulation:
+
+- consumes zero WHEN ticks;
+- has no `_process()` / `_physics_process()` simulation advancement;
+- sorts emitters by stable ID;
+- rebuilds from relevant revisions/inputs;
 - keeps camera/GPU out of physical queries.
 
-Current detailed field is explicitly bounded. Future active-world/AI orchestration may request fields outside the camera, while distant coarse simulation may later use region summaries.
+Slice B presentation:
 
-Technical stream-region boundaries must never become physical darkness boundaries.
+- also consumes zero WHEN ticks;
+- builds bounded current-window image maps;
+- performs visual smoothing in GPU canvas shaders;
+- keeps gameplay truth in Slice A.
 
----
+Slice B green-run Slice A benchmark:
 
-## 13. Performance
+`PHYSICAL_LIGHTING_REBUILD_AVG_US=4085.20`
 
-Focused CI fixture:
+Approximately **4.09 ms average** for the representative 17×17 changing-flashlight physical rebuild on the GitHub runner.
 
-- 17×17 detailed field;
-- enclosed room;
-- window + stateful door;
-- repeatedly moving/revision-changing flashlight.
-
-First fully green executable head measured:
-
-`PHYSICAL_LIGHTING_REBUILD_AVG_US=4297.78`
-
-That is approximately **4.30 ms average** for the representative bounded rebuild on the GitHub runner, below the current 50 ms regression ceiling.
-
-This is not a claim that arbitrary full-world lighting is free. Large actor populations and many moving lights require later profiling/caching before scale assumptions are made.
+The full 80×96 canonical critique runtime passed startup with Slice B enabled. That is not a claim that arbitrary population-scale many-light scenes are free; many moving emitters remain a profiling/caching seam before large NPC/infected populations.
 
 ---
 
-## 14. Slice A verification
+## 15. Verification
 
-Dedicated smoke:
+Dedicated smokes:
 
-`game/scripts/ci/PhysicalLightingSmoke.gd`
+- `game/scripts/ci/PhysicalLightingSmoke.gd`;
+- `game/scripts/ci/PhysicalLightingPresentationSmoke.gd`.
 
 Dedicated workflow/context:
 
-`.github/workflows/physical-lighting.yml`
+- `.github/workflows/physical-lighting.yml`;
+- `verify/system27-physical-lighting`.
 
-`verify/system27-physical-lighting`
+Slice A coverage includes enclosure/daylight, portals, structure/opening transmission, flashlight shadows, atmosphere behavior, source determinism, zero-tick physical queries and light-driven useful-range behavior.
 
-The contract proves:
+Slice B coverage proves:
 
-- project parses under Godot 4.7.1;
-- clear daytime exterior is bright;
-- enclosed interior is materially darker;
-- window portal increases interior daylight;
-- OPEN door portal increases interior daylight;
-- closing a door reduces that portal contribution;
-- a wall creates a direct flashlight shadow;
-- window transmits flashlight at reduced strength;
-- CLOSED door blocks flashlight transmission;
-- OPEN door restores flashlight transmission;
-- opaque surfaces do not leak diffuse light through themselves;
-- fog reduces useful distant local light;
-- fog increases scatter descriptor;
-- overcast suppresses direct sunlight strongly;
-- multiple emitters compose deterministically regardless of caller ordering;
-- lighting queries/rebuilds spend zero WHEN ticks;
-- useful vision range grows monotonically with target luminance;
-- zero light gives Candidate 001 range 2;
-- full light restores range 12;
-- lighting a target can expand useful range toward it;
-- System 25 regression remains green;
-- System 23 regression remains green;
-- canonical demo still boots.
+- both shaders import under Godot 4.7.1;
+- multiply and glow light maps build at tactical-field size;
+- luminance contrast from the physical backend reaches presentation;
+- local/portal energy reaches glow presentation;
+- rain wetness reaches the shader input;
+- fog scatter reaches the shader input;
+- a real backend wall shadow produces lower visual local-light/glow energy behind the wall;
+- presentation refresh consumes zero WHEN ticks;
+- DEV flashlight origin/facing follows the controlled actor's real WHAT placement;
+- System 25 and System 23 regressions remain green;
+- canonical demo boots with the full Slice B stack.
 
-On executable head `b43b9d02d206658ce8155e485a2ab72be454cc0e`, all twelve required exact-head contexts were green, including System 27, standalone System 23 and Pages.
+On executable head `a7a95466e70853d9abbd5de9ca1a1d5610672eaf`, all twelve required exact-head contexts were green, including standalone System 23 and Pages.
 
 ---
 
-## 15. Slice B — rich physical-light presentation
+## 16. Slice C — observer acquisition
 
-Future Slice B should visualize System 27 rather than invent separate light truth.
-
-Target presentation includes:
-
-- live-world darkness/light composite;
-- semantic `LightOccluder2D`-style shadow geometry or equivalent custom shader/SDF path;
-- flashlight cone/hotspot/spill;
-- moving shadows behind major props;
-- window/open-door light shafts/spill;
-- lamps/streetlights;
-- emissive cores;
-- neon color wash + soft halo;
-- fog beam/halo scatter;
-- rain/wet-surface colored reflection cheats;
-- stylized time-dependent outdoor shadows;
-- Web/mobile culling/performance controls.
-
-Semantic world geometry remains the shadow source. Sprite alpha pixels are not physics.
-
----
-
-## 16. Slice C — System 23 / observer integration
-
-Future Slice C applies the implemented range/illumination contract to current visual acquisition.
+Future Slice C applies the existing target-light contract to current visual acquisition.
 
 Required behavior:
 
 - geometric LOS remains the maximum candidate envelope;
-- darkness can prevent a distant candidate inside LOS from becoming current acquired truth;
-- increasing physical illumination expands useful range toward that lit target;
+- darkness prevents sufficiently distant geometric candidates from becoming current acquired truth;
+- increasing physical illumination expands useful range toward the lit target;
 - local light cannot reveal through opaque geometry;
 - another source/actor can illuminate a target for an observer;
-- UNSEEN presentation remains true black;
 - only actually acquired current truth refreshes System 23 memory;
-- hidden local-light changes do not update stale REMEMBERED facts by themselves;
+- hidden local-light changes do not update stale REMEMBERED facts;
 - future NPC/infected observers consume the same physical-light/perception contract rather than night-vision cheats.
 
-Potential later refinement: `NONE / SILHOUETTE / DETAIL` acquisition tiers and observer dark adaptation. Those are perception mechanics, not Slice A physical-light state.
+Potential later refinements such as `NONE / SILHOUETTE / DETAIL`, dark adaptation and observer-specific acuity belong to observer perception rather than physical light truth.
 
 ---
 
-## 17. Hidden-light memory rule
+## 17. Future provider/refinement seams
 
-System 27 must not become an information leak through System 23.
-
-- globally known daylight/weather may affect broad remembered presentation;
-- an unseen local lamp turning on/off must not remotely refresh stale remembered room truth;
-- if hidden light physically spills onto a currently acquired visible cell, that spill is observable there;
-- observing spill does not automatically reveal the hidden source entity/location.
-
----
-
-## 18. Future provider seams
-
-System 27 is ready to receive later truth from:
+System 27 is ready for later truth from:
 
 - Weather / atmosphere;
 - explicit Roof/Shelter/Construction;
 - curtains/blinds/boards/broken windows;
+- prop/furniture optical-material classification;
 - electrical grid / switches;
 - generators;
 - portable battery lights;
@@ -505,17 +506,15 @@ Those providers determine source/environment state. They do not replace System 2
 
 ---
 
-## 19. North-star fit
-
-Lighting is explicitly an identity-depth system in the North Star.
+## 18. North-star fit
 
 The implementation follows the mini-Zomboid rule:
 
 - no photon/path-traced global simulation;
 - no hidden full 3D physics world;
 - no sprite-pixel lighting physics;
-- but causal physical relationships remain.
+- causal physical illumination, occlusion and presentation remain interconnected.
 
-The core gameplay question is:
+The core gameplay question remains:
 
 > **What is actually illuminated here, how far can this observer physically make things out, and what tactical risk does creating light introduce?**
