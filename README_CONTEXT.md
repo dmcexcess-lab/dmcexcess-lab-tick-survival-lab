@@ -29,7 +29,8 @@ Golden archaeology commit: `1763958f44eb7f855fd49944c00d1ffe608c0abe`.
 - **24 World Loot / Searchable Containers / Scavenging** — persistent virgin loot, timed search, timed TAKE/STORE and playable scavenging UI.
 - **25 World Time / Ambient Daylight** — authoritative-tick-derived scenario clock and smooth outdoor daylight baseline.
 - **26 Spatial Sound / Hearing** — physical acoustic propagation, listener-specific hearing/localization, onomatopoeia yellow-word cues and seen-vs-unseen player cue lifetime.
-- **27 Physical Lighting / Illumination / Shadows** — **Slices A+B+C implemented**: headless physical illumination, rich visible lighting, and target-light-dependent observer acquisition through System 23.
+- **27 Physical Lighting / Illumination / Shadows** — **Slices A+B+C implemented and bounded-query optimized**: headless physical illumination, rich visible lighting, target-light-dependent observer acquisition, cached topology/optics and range-bounded local-emitter work.
+- **28 Weather / Atmosphere** — **DRAFT, not implemented**: proposed deterministic weather truth with low-resolution always-animated presentation and physical lighting/sound/perception integration.
 
 ## Core rules
 
@@ -46,6 +47,7 @@ Golden archaeology commit: `1763958f44eb7f855fd49944c00d1ffe608c0abe`.
 11. **Light is physical; vision is observer-specific.** Gameplay/AI lighting never reads rendered pixels.
 12. Geometric LOS is a maximum candidate envelope; current visual acquisition may be smaller because of physical illumination.
 13. Player sound presentation may temporarily preserve an uncertain heard location, but it never gains exact hidden source truth or visual exploration.
+14. Proposed System 28 direction: physical Weather would advance only through WHEN while low-resolution weather animation may continue cosmetically during player decision pause. This remains DRAFT until approved.
 
 ## System 23 perception truth
 
@@ -166,13 +168,46 @@ Implemented:
 
 No Actor AI behavior is implemented yet, but the observer seam is ready for future survivor/infected/animal perception.
 
-First fully green Slice C executable head:
+### 2026-08-24 optimization
 
-`09d1c059760c06ef9791c4d405746caddc107dcf`
+The physical rules and visual output were intentionally preserved while avoidable work was removed:
 
-All twelve required contexts were green on that exact head.
+- field/materialized-cell lists and structure classification are cached by world/bounds revision;
+- door/window/opaque transmission is cached and only door-dependent optics rebuild on Door State revision;
+- portal transfer iterates cached portal candidates instead of rescanning every field cell;
+- emitter signatures are computed when emitter sets change, not on every sample query;
+- each local emitter evaluates only its useful-range intersection rectangle before radius/cone/ray tests;
+- `prepare_query()` / `illumination_at_prepared()` let immediate presentation batches validate lighting state once instead of once per rendered cell;
+- the presentation renderer reuses its two `Image` buffers while size is unchanged.
+
+A dedicated 80×96 CI fixture with flashlight/lamp/streetlight/neon proves **7,680** materialized field cells but only **1,676** local-emitter candidates and **688** optical-ray candidates. The previous naive full-field-per-emitter approach would have visited **30,720** field cells before range checks.
+
+Latest fully green optimized executable head:
+
+`5958d887807e5b64c9fc4cf5d3d45c7dfd4083d2`
+
+All twelve required contexts were green on that exact head, including Pages.
 
 Exact-head owner: `verify/system27-physical-lighting`.
+
+## System 28 Weather / Atmosphere draft
+
+> **Weather is simulation truth; weather animation is presentation.**
+
+`SYSTEM_DESIGNS/28_WEATHER_ATMOSPHERE.md` is DRAFT and awaiting approval. Proposed Candidate 001 includes:
+
+- clear, overcast, rain, storm and fog;
+- compact deterministic cloud/precipitation/fog/wind/wetness state scheduled through WHEN;
+- intentionally low-resolution nearest-scaled rain/fog presentation;
+- rain/fog animation that may keep moving while the survivor is paused deciding, without advancing physical weather or world time;
+- roof/sky-exposure-aware precipitation so rain does not simply draw through enclosed buildings;
+- System 27 `AtmosphericOptics` integration for actual daylight, local-light extinction, scatter, wet reflections and visibility consequence;
+- System 26 environment masking for heavy rain/wind rather than fake repeated rain sounds;
+- deterministic lightning events whose physical flash is rendered by System 27 and can therefore temporarily change real System 23 acquisition;
+- a stable-seeded low-res pixel bolt tied to the same physical lightning event;
+- lightning damage/fire deferred until their real owners exist.
+
+No System 28 runtime code exists yet.
 
 ## Current performance state
 
@@ -180,11 +215,10 @@ Known scale seams:
 
 - inactive materialized facts remain resident in WHAT and new-source 00F commits still own one full persistent-state rollback snapshot;
 - System 26 sound must be re-profiled before large simultaneous actor populations;
-- System 27 physical-light fixture on the Slice C green runner: ~4.23 ms average for representative 17×17 changing-flashlight rebuild;
-- legacy geometry-only System 23 FOV on that run: ~4.06 ms average;
-- focused illumination-aware perception recompute: ~11.84 ms average;
-- user direction is to keep current lighting/perception cost for now and see whether real later systems/actors make it materially worse before optimizing;
-- many moving lights and many simultaneous observers remain explicit future profiling/caching seams;
+- old pre-optimization System 27 Slice C reference: ~4.23 ms representative 17×17 changing-flashlight rebuild and ~11.84 ms focused light-aware perception;
+- optimized exact head `5958d887...` measured ~2.67 ms / ~9.26 ms on its runner; the immediately preceding optimized runner measured ~1.73 ms / ~6.49 ms, demonstrating normal CI timing noise but a consistent material reduction;
+- the durable performance regression is structural: four local lights in an 80×96 field are bounded to 1,676 candidate cells / 688 ray cells instead of 30,720 naive full-field visits;
+- many simultaneous moving lights and many simultaneous observers remain explicit future profiling/caching seams;
 - sound cue fading adds only a short-lived presentation timer while a visible word is fading; latched unseen markers have no continuous simulation scan.
 
 ## Major deferred seams
@@ -192,7 +226,7 @@ Known scale seams:
 - Actor AI / infected behavior using the current visual/hearing observation substrate;
 - prop/furniture optical-material classification for physical shadowing;
 - `NONE / SILHOUETTE / DETAIL`, dark adaptation and observer acuity refinements;
-- Weather owner feeding System 27 atmosphere optics;
+- System 28 Weather implementation if/when its current draft is approved;
 - electricity/generators/batteries/switches feeding real active light sources;
 - population / households / causal outbreak / player story (00E);
 - usable food/drink and medical treatment actions;
