@@ -10,6 +10,7 @@ enum Kind {
     PLACEMENT_REMOVED,
     TERRAIN_SET,
     TERRAIN_REMOVED,
+    TERRAIN_BATCH_SET,
 }
 
 var sequence: int = 0
@@ -20,13 +21,21 @@ var after_cells: Array[Vector2i] = []
 var terrain_cell: Vector2i = Vector2i.ZERO
 var terrain_before: StringName = &""
 var terrain_after: StringName = &""
+## Batch terrain changes use exactly one of terrain_rect or terrain_cells.
+## A rectangular batch may conservatively describe cells that were already equal to terrain_after;
+## consumers may treat the payload as a dirty/replay region.
+var terrain_rect: Rect2i = Rect2i()
+var terrain_cells: Array[Vector2i] = []
 
 func _init(change_kind: int = -1, changed_entity_id: String = "") -> void:
     kind = change_kind
     entity_id = changed_entity_id
 
 func is_valid() -> bool:
-    return kind >= Kind.ENTITY_CREATED and kind <= Kind.TERRAIN_REMOVED
+    return kind >= Kind.ENTITY_CREATED and kind <= Kind.TERRAIN_BATCH_SET
+
+func is_terrain_change() -> bool:
+    return kind == Kind.TERRAIN_SET or kind == Kind.TERRAIN_REMOVED or kind == Kind.TERRAIN_BATCH_SET
 
 func copy() -> WorldChange:
     var result := WorldChange.new(kind, entity_id)
@@ -36,6 +45,8 @@ func copy() -> WorldChange:
     result.terrain_cell = terrain_cell
     result.terrain_before = terrain_before
     result.terrain_after = terrain_after
+    result.terrain_rect = terrain_rect
+    result.terrain_cells = terrain_cells.duplicate()
     return result
 
 static func label(change_kind: int) -> String:
@@ -52,5 +63,7 @@ static func label(change_kind: int) -> String:
             return "terrain_set"
         Kind.TERRAIN_REMOVED:
             return "terrain_removed"
+        Kind.TERRAIN_BATCH_SET:
+            return "terrain_batch_set"
         _:
             return "invalid"

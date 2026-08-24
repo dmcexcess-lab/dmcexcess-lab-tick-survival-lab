@@ -68,6 +68,13 @@ func update_focus(cell: Vector2i) -> Dictionary:
     var target_focus_region: Vector2i = _grid.region_coord_for_cell(cell)
     if target_focus_region == StreamingRegionGrid.INVALID_COORD:
         return _failure("focus_region_unresolved")
+
+    ## Moving inside the same technical region cannot change the active neighborhood or discover
+    ## a new logical source. Update the precise focus cell and avoid all provider/catalog/materialization work.
+    if has_focus() and target_focus_region == _focus_region:
+        _focus_cell = cell
+        return _success([], [], true, [], [])
+
     var target_regions: Array[Vector2i] = _grid.regions_around(target_focus_region, _active_radius)
     if target_regions.is_empty():
         return _failure("active_region_set_empty")
@@ -111,17 +118,8 @@ func update_focus(cell: Vector2i) -> Dictionary:
     if not activated.is_empty() or not deactivated.is_empty():
         active_regions_changed.emit(activated.duplicate(), deactivated.duplicate())
 
-    return {
-        "ok": true,
-        "failure_reason": "",
-        "focus_cell": _focus_cell,
-        "focus_region": _focus_region,
-        "active_regions": _active_regions.duplicate(),
-        "activated": activated,
-        "deactivated": deactivated,
-        "newly_materialized": ensured.get("newly_materialized", []),
-        "already_materialized": ensured.get("already_materialized", []),
-    }
+    var already: Array = ensured.get("already_materialized", [])
+    return _success(newly, already, false, activated, deactivated)
 
 func has_focus() -> bool:
     return _focus_cell != NO_FOCUS_CELL
@@ -182,6 +180,26 @@ func _difference(a: Array[Vector2i], b: Array[Vector2i]) -> Array[Vector2i]:
             result.append(value)
     return result
 
+func _success(
+    newly_materialized: Array,
+    already_materialized: Array,
+    fast_path: bool,
+    activated: Array,
+    deactivated: Array
+) -> Dictionary:
+    return {
+        "ok": true,
+        "failure_reason": "",
+        "focus_cell": _focus_cell,
+        "focus_region": _focus_region,
+        "active_regions": _active_regions.duplicate(),
+        "activated": activated.duplicate(),
+        "deactivated": deactivated.duplicate(),
+        "newly_materialized": newly_materialized.duplicate(),
+        "already_materialized": already_materialized.duplicate(),
+        "fast_path": fast_path,
+    }
+
 func _failure(reason: String) -> Dictionary:
     return {
         "ok": false,
@@ -193,4 +211,5 @@ func _failure(reason: String) -> Dictionary:
         "deactivated": [],
         "newly_materialized": [],
         "already_materialized": [],
+        "fast_path": false,
     }

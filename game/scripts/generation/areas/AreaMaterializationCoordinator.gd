@@ -35,7 +35,16 @@ func is_ready() -> bool:
     return _world != null and _mutations != null and _mutations.is_ready() \
         and _door_state != null and _door_mutations != null and _door_mutations.is_ready()
 
+## Standalone transaction owner: snapshots WHAT + Door State and restores on failure.
 func materialize(request: AreaGenerationRequest, plan: GeneratedAreaPlan) -> bool:
+    return _materialize(request, plan, true)
+
+## For callers such as System 00F that already own the enclosing WHAT/Door/registry transaction.
+## Failure may leave partial writes for the caller to roll back; this method never takes a nested snapshot.
+func materialize_in_transaction(request: AreaGenerationRequest, plan: GeneratedAreaPlan) -> bool:
+    return _materialize(request, plan, false)
+
+func _materialize(request: AreaGenerationRequest, plan: GeneratedAreaPlan, owns_transaction: bool) -> bool:
     if not is_ready() or request == null or plan == null:
         return false
     var area_validation: Dictionary = _area_validator.validate(request, plan)
@@ -61,13 +70,16 @@ func materialize(request: AreaGenerationRequest, plan: GeneratedAreaPlan) -> boo
             return false
         planned_ids[prop_id] = true
 
-    var world_snapshot: Dictionary = _world.snapshot()
-    var door_snapshot: Dictionary = _door_state.snapshot()
+    var world_snapshot: Dictionary = {}
+    var door_snapshot: Dictionary = {}
+    if owns_transaction:
+        world_snapshot = _world.snapshot()
+        door_snapshot = _door_state.snapshot()
 
     if not _materialize_ground(plan):
-        return _rollback(world_snapshot, door_snapshot)
+        return _rollback_if_owned(owns_transaction, world_snapshot, door_snapshot)
     if not _materialize_outdoor_props(plan):
-        return _rollback(world_snapshot, door_snapshot)
+        return _rollback_if_owned(owns_transaction, world_snapshot, door_snapshot)
 
     var building_materializer := BuildingMaterializerClass.new(
         _world,
@@ -77,8 +89,8 @@ func materialize(request: AreaGenerationRequest, plan: GeneratedAreaPlan) -> boo
         _building_validator
     )
     for building_plan: GeneratedBuildingPlan in building_plans:
-        if not building_materializer.materialize(building_plan):
-            return _rollback(world_snapshot, door_snapshot)
+        if not building_materializer.materialize_in_transaction(building_plan):
+            return _rollback_if_owned(owns_transaction, world_snapshot, door_snapshot)
     return true
 
 func generated_building_plans(plan: GeneratedAreaPlan) -> Array[GeneratedBuildingPlan]:
@@ -106,17 +118,17 @@ func _materialize_ground(plan: GeneratedAreaPlan) -> bool:
             return false
         if region.has("rect"):
             var rect: Rect2i = region.get("rect", Rect2i())
-            for y in range(rect.position.y, rect.position.y + rect.size.y):
-                for x in range(rect.position.x, rect.position.x + rect.size.x):
-                    if not _mutations.set_terrain(Vector2i(x, y), semantic):
-                        return false
+            if not _mutations.set_terrain_rect(rect, semantic):
+                return false
         else:
+            var cells: Array[Vector2i] = []
             for value: Variant in region.get("cells", []):
                 if typeof(value) != TYPE_VECTOR2I:
                     return false
                 var cell: Vector2i = value
-                if not _mutations.set_terrain(cell, semantic):
-                    return false
+                cells.append(cell)
+            if not _mutations.set_terrain_cells(cells, semantic):
+                return false
     return true
 
 func _materialize_outdoor_props(plan: GeneratedAreaPlan) -> bool:
@@ -140,7 +152,9 @@ func _preflight_building_ids(plan: GeneratedBuildingPlan, planned_ids: Dictionar
         planned_ids[entity_id] = true
     return true
 
-func _rollback(world_snapshot: Dictionary, door_snapshot: Dictionary) -> bool:
+func _rollback_if_owned(owns_transaction: bool, world_snapshot: Dictionary, door_snapshot: Dictionary) -> bool:
+    if not owns_transaction:
+        return false
     _world.load_snapshot(world_snapshot)
     _door_state.load_snapshot(door_snapshot)
     return false

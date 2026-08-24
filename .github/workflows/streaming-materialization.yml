@@ -34,11 +34,16 @@ jobs:
           test -f game/scripts/streaming/WorldStreamingCoordinator.gd
           test -f game/scripts/ci/StreamingMaterializationSmoke.gd
           test -f game/scripts/ci/CountrysideStreamingMaterializationSmoke.gd
+          test -f game/scripts/ci/PerformanceRazorSmoke.gd
           ! grep -R -q 'scripts/render\|scripts/camera\|scripts/player\|scripts/ui\|scripts/reboot\|foundation/time\|simulation/collision' game/scripts/streaming
           ! grep -R -q 'Texture2D\|Camera2D\|_draw\|_process\|_physics_process' game/scripts/streaming
           grep -q 'source_providers' game/scripts/streaming/WorldMaterializationCoordinator.gd
           grep -q 'source_providers' game/scripts/streaming/WorldStreamingCoordinator.gd
           ! grep -q '_countryside_source\|_watercourse_source' game/scripts/streaming/WorldMaterializationCoordinator.gd game/scripts/streaming/WorldStreamingCoordinator.gd
+          grep -q '_area_materializer.materialize_in_transaction' game/scripts/streaming/WorldMaterializationCoordinator.gd
+          grep -q 'building_materializer.materialize_in_transaction' game/scripts/generation/areas/AreaMaterializationCoordinator.gd
+          grep -q 'set_terrain_rect' game/scripts/generation/areas/AreaMaterializationCoordinator.gd
+          grep -q 'TERRAIN_BATCH_SET' game/scripts/foundation/world/WorldChange.gd
 
       - name: Install Godot 4.7.1
         shell: bash
@@ -54,6 +59,14 @@ jobs:
           set -euxo pipefail
           ./Godot_v4.7.1-stable_linux.x86_64 --headless --editor --path "$GITHUB_WORKSPACE/game" --quit 2>&1 | tee "$RUNNER_TEMP/import.log"
           if grep -Eqi 'SCRIPT ERROR|Parse Error|Failed to load script' "$RUNNER_TEMP/import.log"; then exit 1; fi
+
+      - name: Performance razor contract
+        shell: bash
+        run: |
+          set -euxo pipefail
+          ./Godot_v4.7.1-stable_linux.x86_64 --headless --path "$GITHUB_WORKSPACE/game" --quit-after 30 --script res://scripts/ci/PerformanceRazorSmoke.gd 2>&1 | tee "$RUNNER_TEMP/performance-razor.log"
+          grep -q 'PERFORMANCE_RAZOR_SMOKE_OK' "$RUNNER_TEMP/performance-razor.log"
+          if grep -Eqi 'SCRIPT ERROR|Parse Error|Failed to load script|PERFORMANCE_RAZOR_SMOKE_FAIL' "$RUNNER_TEMP/performance-razor.log"; then exit 1; fi
 
       - name: Settlement materialization regression
         shell: bash

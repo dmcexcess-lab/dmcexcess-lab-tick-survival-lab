@@ -139,6 +139,9 @@ func ensure_sources(global_plan: GeneratedGlobalWorldPlan, source_handles: Array
         return String(a.get("source_key", "")) < String(b.get("source_key", ""))
     )
 
+    ## 00F owns the only full persistent-state snapshot for this multi-source transaction.
+    ## AreaMaterializationCoordinator is called through its enclosing-transaction seam to avoid
+    ## copying a progressively larger WHAT once per logical source.
     var world_snapshot: Dictionary = _world.snapshot()
     var door_snapshot: Dictionary = _door_state.snapshot()
     var registry_snapshot: Dictionary = _registry.snapshot()
@@ -147,7 +150,7 @@ func ensure_sources(global_plan: GeneratedGlobalWorldPlan, source_handles: Array
     for entry: Dictionary in prepared:
         var request: AreaGenerationRequest = entry.get("request") as AreaGenerationRequest
         var plan: GeneratedAreaPlan = entry.get("plan") as GeneratedAreaPlan
-        if request == null or plan == null or not _area_materializer.materialize(request, plan):
+        if request == null or plan == null or not _area_materializer.materialize_in_transaction(request, plan):
             if not _rollback(world_snapshot, door_snapshot, registry_snapshot):
                 return _failure("materialization_failed_and_rollback_failed", already)
             return _failure("area_materialization_failed:%s" % String(entry.get("source_id", "")), already)

@@ -251,6 +251,10 @@ func _disconnect_world_signals() -> void:
 func _on_world_changed(change: WorldChange) -> void:
     if change == null or not _view_valid:
         return
+    if change.kind == ChangeClass.Kind.TERRAIN_BATCH_SET:
+        if _batch_affects_visible_ground(change):
+            _request_redraw(&"terrain_changed")
+        return
     if change.kind != ChangeClass.Kind.TERRAIN_SET and change.kind != ChangeClass.Kind.TERRAIN_REMOVED:
         return
     if _cell_affects_visible_ground(change.terrain_cell):
@@ -260,6 +264,25 @@ func _on_world_reset() -> void:
     _texture_cache.clear()
     _diagnostic_reasons.clear()
     _request_redraw(&"world_reset")
+
+func _batch_affects_visible_ground(change: WorldChange) -> bool:
+    if change == null or not _view_valid:
+        return false
+    if change.terrain_rect.size.x > 0 and change.terrain_rect.size.y > 0:
+        var visible := Rect2i(_visible_origin, _visible_size)
+        var left_halo := Rect2i(Vector2i(visible.position.x - 1, visible.position.y), Vector2i(1, visible.size.y))
+        var right_halo := Rect2i(Vector2i(visible.end.x, visible.position.y), Vector2i(1, visible.size.y))
+        var top_halo := Rect2i(Vector2i(visible.position.x, visible.position.y - 1), Vector2i(visible.size.x, 1))
+        var bottom_halo := Rect2i(Vector2i(visible.position.x, visible.end.y), Vector2i(visible.size.x, 1))
+        return change.terrain_rect.intersects(visible) \
+            or change.terrain_rect.intersects(left_halo) \
+            or change.terrain_rect.intersects(right_halo) \
+            or change.terrain_rect.intersects(top_halo) \
+            or change.terrain_rect.intersects(bottom_halo)
+    for cell: Vector2i in change.terrain_cells:
+        if _cell_affects_visible_ground(cell):
+            return true
+    return false
 
 func _cell_affects_visible_ground(cell: Vector2i) -> bool:
     if not _view_valid:
