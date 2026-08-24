@@ -1,5 +1,21 @@
 # Changelog
 
+## System 25 World Time / Ambient Daylight + Remembered Fog — 2026-08-23
+
+- Added a real System 25 scenario-time interpretation layer downstream of WHEN. WHEN remains integer-tick authority and knows nothing about seconds, hours, days, dawn or night.
+- Candidate 001 maps **5 ticks = 1 simulation second**, 300 ticks/minute, 18,000 ticks/hour and 432,000 ticks/day, with the scenario starting at day 0, 08:00:00. The clock is fully derived from `TickKernel.world_tick()` and owns no second advancing counter.
+- Added `DaylightProfile.gd` and `OutdoorAmbientLightService.gd` with a smooth temperate baseline: dawn 05:30–07:30, full daylight 07:30–18:30, dusk 18:30–20:30, night level 0.08 and full-day level 1.0.
+- Integrated System 25 into the canonical Rural Crossroads composition. Any action that advances WHEN ticks advances derived world time/daylight; normal decision pause and hard pause do not.
+- Extended canonical `PerceptionOverlayRenderer` with a normalized ambient-light presentation input. REMEMBERED terrain/structures/static furniture retain 0.30 luminance in full daylight and darken toward 0.10 as ambient light falls. Candidate 001 baseline night produces remembered luminance ~= 0.116.
+- `UNSEEN` remains fully opaque black at every ambient level. Ambient changes do not mutate perception memory, poll hidden WHAT, reveal terrain, or alter stale last-seen facts.
+- VISIBLE-world global darkness is intentionally deferred until interiors, windows, local/artificial lights, electrical state, flashlights/fire and weather can be modeled physically rather than with a fake global tint.
+- Removed the temporary demo-only ambient cycle after System 25 became the single time/daylight authority.
+- Added `WorldTimeAmbientSmoke.gd`, `PerceptionAmbientMemorySmoke.gd`, `.github/workflows/world-time-ambient.yml`, and permanent exact-head context `verify/system25-world-time-light`.
+- Verification proves tick/time mapping, midnight rollover, hard-pause behavior, WHEN restore determinism, daylight phase/interpolation, System 23 ambient-memory behavior, true-black UNSEEN, WHEN regression, System 23 regression and canonical startup.
+- Corrected the System 25 approval record to use the user's actual instruction granting implementation discretion rather than an erroneous generated quote.
+- First fully green executable head: `6b6680c5b8eb4d8db2c4097df093abace661d5c7`.
+- On that executable head all ten required contexts were green: `verify/system25-world-time-light`, `verify/system24-loot`, `verify/system23-perception`, `verify/system22-area-critique`, `verify/system21-camera-view`, `verify/system20-local-area`, `verify/system19-local-building`, `verify/system00f-streaming-materialization`, `verify/system00d-global-world` and `verify/pages-deploy`.
+
 ## System 24 World Loot / Searchable Containers / Scavenging — 2026-08-23
 
 - Implemented approved System 24 Candidate 001: **loot exists before search**. Eligible physical furniture is explicitly enrolled as System 11 containers and receives deterministic stable unplaced `item.*` WHAT entities during one-way virgin source initialization; search never rolls rewards into existence.
