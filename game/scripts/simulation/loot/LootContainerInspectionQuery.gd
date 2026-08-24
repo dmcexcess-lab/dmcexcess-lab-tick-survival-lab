@@ -32,6 +32,11 @@ func is_ready() -> bool:
     return _world != null and _containment != null and _loot_state != null \
         and _items != null and _profiles != null and _weight_query != null and _carry_query != null
 
+func item_definition(semantic_type: StringName) -> Dictionary:
+    if not is_ready():
+        return {}
+    return _items.definition(semantic_type)
+
 func searchable_container_ids_at(cell: Vector2i) -> Array[String]:
     var result: Array[String] = []
     if not is_ready():
