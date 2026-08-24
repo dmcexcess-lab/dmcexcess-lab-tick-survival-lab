@@ -2,12 +2,13 @@ extends Node2D
 class_name GroundLayerRenderer
 
 const SelectionClass = preload("res://scripts/art/ArtSelection.gd")
+const WaterCoastCatalogClass = preload("res://scripts/art/WaterCoastArtCatalog.gd")
 const CommandClass = preload("res://scripts/render/GroundDrawCommand.gd")
 const ChangeClass = preload("res://scripts/foundation/world/WorldChange.gd")
 const RoadTopology = preload("res://scripts/art/RoadArtTopology.gd")
 
 ## Canonical ground-only presentation layer.
-## Reads WHAT terrain + ArtCatalog selections; mutates no simulation state.
+## Reads WHAT terrain + semantic art selections; mutates no simulation state.
 
 signal redraw_requested(reason: StringName)
 
@@ -40,6 +41,7 @@ const ROAD_LIKE_TOKENS := {
 
 var _world: WorldState = null
 var _catalog: ArtCatalog = null
+var _water_coast_catalog: WaterCoastArtCatalog = WaterCoastCatalogClass.new()
 var _visible_origin: Vector2i = Vector2i.ZERO
 var _visible_size: Vector2i = Vector2i.ZERO
 var _cell_pixels: float = 0.0
@@ -60,7 +62,7 @@ func configure(world_state: WorldState, art_catalog: ArtCatalog) -> bool:
     return true
 
 func is_configured() -> bool:
-    return _world != null and _catalog != null
+    return _world != null and _catalog != null and _water_coast_catalog != null
 
 func set_visible_window(origin: Vector2i, size_cells: Vector2i, cell_pixels: float) -> bool:
     if size_cells.x <= 0 or size_cells.y <= 0 or cell_pixels <= 0.0:
@@ -157,6 +159,8 @@ func _draw() -> void:
             _draw_diagnostic(command.destination)
 
 func _resolve_ground_selection(cell: Vector2i, semantic_id: StringName) -> ArtSelection:
+    if _water_coast_catalog.supports_ground(semantic_id):
+        return _water_coast_catalog.resolve_ground(semantic_id)
     var token: String = _leaf_token(semantic_id)
     match token:
         "road":
