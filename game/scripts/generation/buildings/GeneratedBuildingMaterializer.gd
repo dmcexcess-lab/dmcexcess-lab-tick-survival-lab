@@ -57,8 +57,8 @@ func _materialize(plan: GeneratedBuildingPlan, owns_transaction: bool) -> bool:
     if not _materialize_ground_entries(plan):
         return _rollback_if_owned(owns_transaction, world_snapshot, door_snapshot)
     for entry: Dictionary in plan.structures:
-        var entity_id: String = _entity_id(plan.instance_id, String(entry.get("role", "")))
-        if _mutations.create_entity(entry.get("semantic", &""), entity_id) != entity_id:
+        var entity_id: String = plan.entity_id_for_role(String(entry.get("role", "")))
+        if entity_id.is_empty() or _mutations.create_entity(entry.get("semantic", &""), entity_id) != entity_id:
             return _rollback_if_owned(owns_transaction, world_snapshot, door_snapshot)
         if not _mutations.set_placement(
             entity_id,
@@ -73,8 +73,8 @@ func _materialize(plan: GeneratedBuildingPlan, owns_transaction: bool) -> bool:
             if not _door_mutations.enroll(entity_id, DoorValue.CLOSED):
                 return _rollback_if_owned(owns_transaction, world_snapshot, door_snapshot)
     for entry: Dictionary in plan.props:
-        var entity_id: String = _entity_id(plan.instance_id, String(entry.get("role", "")))
-        if _mutations.create_entity(entry.get("semantic", &""), entity_id) != entity_id:
+        var entity_id: String = plan.entity_id_for_role(String(entry.get("role", "")))
+        if entity_id.is_empty() or _mutations.create_entity(entry.get("semantic", &""), entity_id) != entity_id:
             return _rollback_if_owned(owns_transaction, world_snapshot, door_snapshot)
         if not _mutations.set_placement(
             entity_id,
@@ -111,8 +111,8 @@ func _preflight(plan: GeneratedBuildingPlan) -> bool:
     var planned_ids: Dictionary = {}
     for entry: Dictionary in plan.structures + plan.props:
         var role: String = String(entry.get("role", ""))
-        var entity_id: String = _entity_id(plan.instance_id, role)
-        if planned_ids.has(entity_id) or _world.has_entity(entity_id):
+        var entity_id: String = plan.entity_id_for_role(role)
+        if entity_id.is_empty() or planned_ids.has(entity_id) or _world.has_entity(entity_id):
             return false
         planned_ids[entity_id] = true
         var cell: Vector2i = entry.get("cell", Vector2i.ZERO)
@@ -127,6 +127,3 @@ func _rollback_if_owned(owns_transaction: bool, world_snapshot: Dictionary, door
     _world.load_snapshot(world_snapshot)
     _door_state.load_snapshot(door_snapshot)
     return false
-
-static func _entity_id(instance_id: String, role: String) -> String:
-    return "%s.%s" % [instance_id, role]
