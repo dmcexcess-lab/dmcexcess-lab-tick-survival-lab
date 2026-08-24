@@ -26,7 +26,7 @@ func assign_access(parcels: Array[Dictionary], roads: Array[Dictionary]) -> Dict
 func finalize_driveways(parcels: Array[Dictionary]) -> Dictionary:
     for parcel: Dictionary in parcels:
         var land_use: StringName = StringName(parcel.get("land_use", &""))
-        if land_use != &"residential" and land_use != &"farmstead" and land_use != &"commercial_small":
+        if not _land_use_can_host_building(land_use):
             parcel["driveway_cells"] = []
             continue
         var entry: Vector2i = parcel.get("building_entry_cell", Vector2i(-1, -1))
@@ -39,6 +39,13 @@ func finalize_driveways(parcels: Array[Dictionary]) -> Dictionary:
             return {"ok": false, "failure_reason": "occupied_parcel_access_missing"}
         parcel["driveway_cells"] = _frontage_path(start, entry, frontage)
     return {"ok": true, "failure_reason": ""}
+
+func _land_use_can_host_building(land_use: StringName) -> bool:
+    return land_use == &"residential" \
+        or land_use == &"farmstead" \
+        or land_use == &"commercial_small" \
+        or land_use == &"civic" \
+        or land_use == &"industrial"
 
 func _parcel_edge_access(rect: Rect2i, frontage: int) -> Vector2i:
     var center_x: int = rect.position.x + rect.size.x / 2
