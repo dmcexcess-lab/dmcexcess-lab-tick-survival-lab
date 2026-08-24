@@ -228,18 +228,32 @@ func _materialize_props(
     room_cells: Dictionary,
     opening_by_cell: Dictionary
 ) -> void:
+    var reserved_approach_cells: Dictionary = _door_approach_cells(room_cells, opening_by_cell)
     for prop_value: Variant in _profile.get("props", []):
         var prop: Dictionary = prop_value
         var cell: Vector2i = prop.get("cell", Vector2i.ZERO)
         if not room_cells.has(cell) or opening_by_cell.has(cell):
+            continue
+        var blocking: bool = bool(prop.get("blocking", true))
+        if blocking and reserved_approach_cells.has(cell):
             continue
         plan.props.append({
             "role": String(prop.get("role", "")),
             "cell": _global_cell(cell, canonical_size, request),
             "semantic": StringName(prop.get("semantic", &"")),
             "facing": _rotate_facing(int(prop.get("facing", Facing.Value.SOUTH)), request.orientation),
-            "blocking": bool(prop.get("blocking", true)),
+            "blocking": blocking,
         })
+
+func _door_approach_cells(room_cells: Dictionary, opening_by_cell: Dictionary) -> Dictionary:
+    var reserved: Dictionary = {}
+    for opening_cell_value: Variant in opening_by_cell.keys():
+        var opening_cell: Vector2i = opening_cell_value
+        for offset: Vector2i in [Vector2i.UP, Vector2i.RIGHT, Vector2i.DOWN, Vector2i.LEFT]:
+            var approach: Vector2i = opening_cell + offset
+            if room_cells.has(approach):
+                reserved[approach] = true
+    return reserved
 
 func _auto_window_allowed(cell: Vector2i, size: Vector2i, room_cells: Dictionary) -> bool:
     var sides: Array = _profile.get("window_sides", [])
