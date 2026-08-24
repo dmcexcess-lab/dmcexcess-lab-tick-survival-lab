@@ -47,7 +47,7 @@ Canonical status/routing index. Read `PROJECT_NORTH_STAR.md` and `README_SOPS.md
 | 25 | World Time / Ambient Daylight | **IMPLEMENTED — Candidate 001** | `25_WORLD_TIME_AMBIENT_DAYLIGHT.md` |
 | 26 | Spatial Sound / Hearing | **IMPLEMENTED — Candidate 001 + onomatopoeia / cue lifetime refinement** | `26_SPATIAL_SOUND_HEARING.md` |
 | 27 | Physical Lighting / Illumination / Shadows | **IMPLEMENTED — Slices A+B+C + bounded-query optimization** | `27_PHYSICAL_LIGHTING_ILLUMINATION_SHADOWS.md` |
-| 28 | Weather / Atmosphere | **DRAFT — awaiting approval** | `28_WEATHER_ATMOSPHERE.md` |
+| 28 | Weather / Atmosphere | **IMPLEMENTED — Slice A; B/C deferred** | `28_WEATHER_ATMOSPHERE.md` |
 | 00E | Population / Household / Outbreak / Player Story | **NOT DESIGNED** | future design |
 
 ## Current System 19 / 20 / 00F truth
@@ -60,11 +60,11 @@ Exact-head contexts: `verify/system19-local-building`, `verify/system20-local-ar
 
 > **Black = I know nothing. Dark = I remember this place. Full = I can currently acquire what is actually happening.**
 
-System 23 geometry still provides the 12-cell / 120-degree maximum candidate envelope plus radius-1 near awareness. A neutral `VisualAcquisitionProvider` filters geometric candidates before they become `VISIBLE`; only acquired cells refresh observer memory.
+System 23 geometry provides the 12-cell / 120-degree maximum candidate envelope plus radius-1 near awareness. A neutral `VisualAcquisitionProvider` filters geometric candidates before they become `VISIBLE`; only acquired cells refresh observer memory.
 
 The live game injects System 27's target-light acquisition adapter. Darkness can therefore shrink current acquired vision while physical light expands it toward illuminated targets. Opaque geometry remains authoritative first. REMEMBERED stays stale and UNSEEN stays true black.
 
-System 26 auditory observations remain orthogonal to visual fog and do not reveal terrain. Player-facing lifetime classification uses the **perceived auditory cell**, never exact hidden source truth: VISIBLE sound text fades by about one second; REMEMBERED/UNSEEN sound text latches at its uncertain location until the next observer action/unpause.
+System 26 auditory observations remain orthogonal to visual fog and do not reveal terrain. Player-facing lifetime classification uses the perceived auditory cell, never exact hidden source truth: VISIBLE sound text fades by about one second; REMEMBERED/UNSEEN sound text latches at its uncertain location until the next observer action/unpause.
 
 Exact-head context: `verify/system23-perception`.
 
@@ -88,11 +88,11 @@ Exact-head context: `verify/system25-world-time-light`.
 
 Candidate 001 separates exact `SoundEmission` truth from listener `HeardSoundObservation` knowledge. Weighted material-aware propagation uses current WHAT + Door State; listener hearing derives from a neutral provider seam and current survivor stats/status. Localization uncertainty cannot flip true actor-relative front/rear/left/right signs.
 
-Recognized player-facing cues now prefer onomatopoeia (`*step step*`, `*thump thump*`, `*creak*`, `*SLAM*`), while low-confidence recognition remains honest `NOISE`/broader wording.
+Recognized player-facing cues prefer onomatopoeia (`*step step*`, `*thump thump*`, `*creak*`, `*SLAM*`), while low-confidence recognition remains honest `NOISE`/broader wording.
 
-Underlying heard observations continue to age by WHEN ticks. Player presentation is separate: a cue whose **perceived cell** is VISIBLE is a ~1-second transient fade; one whose perceived cell is REMEMBERED/UNSEEN is latched at that approximate cell until the listener starts the next action. Opaque cue/group IDs allow replacement and suppression without exposing exact source identity.
+Underlying heard observations age by WHEN ticks. Player presentation is separate: a cue whose perceived cell is VISIBLE is a ~1-second transient fade; one whose perceived cell is REMEMBERED/UNSEEN is latched at that approximate cell until the listener starts the next action. Opaque cue/group IDs allow replacement and suppression without exposing exact source identity.
 
-Future AI still consumes ordinary `HeardSoundObservation`, not the player renderer's latch.
+Future AI consumes ordinary `HeardSoundObservation`, not the player renderer's latch.
 
 Latest fully green executable refinement head: `aa5e1b622c8efe555d22e5d56514b9490776be16`.
 
@@ -106,25 +106,31 @@ Slice A owns deterministic headless illumination and the target-cell useful-rang
 
 The current provider guarantees a 25×25 observer-centered light-query envelope only when the presentation field does not already cover the survivor's full 12-cell geometric vision area. Camera movement therefore does not become gameplay vision truth, while normal camera-following play can reuse the current lighting field.
 
-The 2026-08-24 optimization keeps all existing physical/visual rules but caches materialized/topology/optical facts, evaluates local emitters only inside their useful-range rectangles, prepares presentation queries once per map refresh, and reuses lighting image buffers. An 80×96 / four-light CI fixture now proves 1,676 bounded emitter candidates and 688 optical-ray candidates versus 30,720 naive full-field-per-emitter visits.
+The 2026-08-24 optimization keeps all existing physical/visual rules but caches materialized/topology/optical facts, evaluates local emitters only inside their useful-range rectangles, prepares presentation queries once per map refresh, and reuses lighting image buffers. An 80×96 / four-light CI fixture proves 1,676 bounded emitter candidates and 688 optical-ray candidates versus 30,720 naive full-field-per-emitter visits.
 
-Latest fully green optimized executable head: `5958d887807e5b64c9fc4cf5d3d45c7dfd4083d2`.
-
-On that runner, the representative 17×17 changing-flashlight rebuild measured ~2.67 ms and focused light-aware perception ~9.26 ms, versus the earlier Slice C reference ~4.23 ms / ~11.84 ms. A preceding optimized runner measured ~1.73 ms / ~6.49 ms, so timing is treated as noisy; the bounded-work-count regression is the durable optimization proof.
+Latest fully green optimized pre-Weather executable head: `5958d887807e5b64c9fc4cf5d3d45c7dfd4083d2`.
 
 Exact-head context: `verify/system27-physical-lighting`.
 
-## Current System 28 draft direction
+## Current System 28 truth
 
 > **Weather is simulation truth; weather animation is presentation.**
 
-The draft proposes deterministic WHEN-driven clear/overcast/rain/storm/fog state, wind and wetness; deliberately low-resolution nearest-scaled rain/fog that can keep animating while the decision-paused world is still; shelter-aware precipitation; System 27 atmosphere/visibility integration; System 26 rain/wind masking; and deterministic lightning events whose physical flash is supplied through System 27 so actual observer acquisition can change during a strike.
+Slice A is implemented. Physical Weather is deterministic and event-driven through WHEN; clear/overcast/rain/storm/fog expose continuous precipitation/cloud/fog/wind values plus analytic wetness. No per-tick Weather loop exists.
 
-No System 28 runtime code is authorized by DRAFT status.
+The low-resolution presentation owner animates at a bounded 20 Hz, remains below System 23, shelter-masks rain through cached sky exposure, and uses no per-particle child Nodes. Calm clear weather can remain visually alive with rare leaf/paper/dust motion while retaining a hard three-piece cosmetic cap and no gameplay identity.
+
+The Rural Crossroads critique build starts in DEV rain for immediate inspection and exposes CLEAR/OVERCAST/RAIN/STORM/FOG plus `BLOW LEAF` controls.
+
+Slices B/C remain deferred: Weather does not yet alter System 27 physical optics, System 26 hearing, or System 23 visibility through fog/rain, and lightning is not implemented yet.
+
+First fully green executable Slice A head: `dcb400b8507c23a2fc5bdaecf551bc5c0512acce`.
+
+Exact-head context: `verify/system28-weather`.
 
 ## Current presentation
 
-The live Rural Crossroads critique build has canonical scavenging, time/daylight, physical sound, physical lighting and illumination-aware vision. Sound is represented with yellow onomatopoeia/uncertainty text rather than conventional audio. Active flashlight/lamp/neon/streetlight sources are still explicitly DEV-only until real equipment/power/Weather owners exist. Weather is not live yet.
+The live Rural Crossroads critique build has canonical scavenging, time/daylight, physical sound, physical lighting, illumination-aware vision, and **low-resolution animated Weather A**. Sound is represented with yellow onomatopoeia/uncertainty text. Active flashlight/lamp/neon/streetlight sources remain explicitly DEV-only until real equipment/power owners exist. Weather A is also exposed through a clearly labeled DEV selector while climate/world-front logic remains future work.
 
 ## Required exact-head stack
 
@@ -139,4 +145,5 @@ The live Rural Crossroads critique build has canonical scavenging, time/daylight
 - `verify/system25-world-time-light`
 - `verify/system26-spatial-sound`
 - `verify/system27-physical-lighting`
+- `verify/system28-weather`
 - `verify/pages-deploy`
