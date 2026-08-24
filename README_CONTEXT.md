@@ -75,13 +75,29 @@ Known scale seam: System 00F still intentionally owns one full persistent-state 
 
 Verified performance code head: `0b10957bb586162634e9da3c1a4415aef528fd2d`.
 
-## Next development choice
+## Active design — System 23 Perception / LOS / Fog Memory
 
-There is **no automatically active next design** after the cleanup/performance pass.
+Status: **DRAFT — awaiting approval**.
 
-The project has enough world substrate to justify shifting attention back toward the playable survival loop. Before adding more generation/streaming infrastructure, prefer a gameplay-value review of systems such as perception/LOS, spatial sound, infected/AI/combat, scavenging/search pressure, or population/outbreak behavior.
+The next bounded gameplay system is now `SYSTEM_DESIGNS/23_PERCEPTION_LOS_FOG_MEMORY.md`.
 
-A future **00F river-source provider** remains a known clean seam when continuous streamed river traversal is actually needed; it is not the default next task merely because System 20 watercourse generation now exists.
+Current proposed player-facing knowledge model:
+
+- **UNSEEN / true fog** — completely black visual world information;
+- **REMEMBERED fog** — darkened stale last-observed terrain and structural shell, including the last observed door state;
+- **VISIBLE** — normal current live world truth;
+- **last-seen living actors** — stale remembered markers that do not secretly follow hidden actors;
+- **sound indicators** — may appear over visible, remembered, or completely unexplored true black fog, but never reveal the terrain underneath and never mark a cell explored.
+
+The proposed LOS model is reusable by future AI but Candidate 001 persistent memory is maintained only for the controlled survivor. Existing live renderers remain current-truth renderers; perception masks all non-visible current truth with black and redraws only stored remembered snapshots above that mask.
+
+Implementation is not authorized until the user explicitly approves the System 23 DRAFT.
+
+## Deferred seams
+
+A future **00F river-source provider** remains a known clean seam when continuous streamed river traversal is actually needed; it is not the default next task merely because System 20 watercourse generation exists.
+
+After System 23, real Spatial Sound is a natural gameplay follow-up because the fog contract already defines that hearing is independent of sight. Lighting, infected AI/combat, scavenging/search pressure, and population/outbreak remain later choices rather than being silently bundled into perception.
 
 ## Verification contexts used for protected world-stack changes
 
@@ -92,3 +108,7 @@ A future **00F river-source provider** remains a known clean seam when continuou
 - `verify/system21-camera-view`
 - `verify/system22-area-critique`
 - `verify/pages-deploy`
+
+Proposed new System 23 exact-head context after implementation:
+
+- `verify/system23-perception`
