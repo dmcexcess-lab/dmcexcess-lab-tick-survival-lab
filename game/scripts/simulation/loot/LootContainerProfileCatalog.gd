@@ -64,19 +64,19 @@ func classify(archetype_id: StringName, role_value: String, semantic_type: Strin
     if semantic == "prop.refrigerator_white":
         if archetype == "commercial.diner.rural_small":
             return &"commercial.diner.cold"
-        if archetype in ["commercial.grocery.neighborhood", "commercial.convenience_store.small"]:
+        if archetype in ["commercial.grocery.neighborhood", "commercial.convenience_store.small", "commercial.gas_station.small"]:
             return &"retail.cold"
         return &"household.fridge"
 
     if semantic == "prop.pantry":
         return &"kitchen.pantry"
 
-    if semantic in ["prop.walkin_cooler", "prop.chest_freezer", "prop.produce_display"]:
+    if semantic in ["prop.walkin_cooler", "prop.chest_freezer", "prop.produce_display", "prop.ice_box"]:
         return &"retail.cold"
 
-    if semantic == "prop.retail_shelf":
+    if semantic in ["prop.retail_shelf", "prop.retail_endcap"]:
         match archetype:
-            "commercial.convenience_store.small":
+            "commercial.convenience_store.small", "commercial.gas_station.small":
                 return &"retail.convenience"
             "commercial.grocery.neighborhood":
                 return &"retail.grocery"
@@ -87,6 +87,12 @@ func classify(archetype_id: StringName, role_value: String, semantic_type: Strin
 
     if semantic == "prop.medicine_cabinet":
         return &"medical.cabinet"
+
+    if semantic == "prop.bathroom_vanity":
+        return &"household.bathroom_vanity"
+
+    if semantic == "prop.dresser_wide":
+        return &"household.dresser"
 
     if semantic == "prop.file_cabinet_tall":
         if archetype == "commercial.pharmacy.small" and role.contains("pharmacy"):
@@ -102,9 +108,12 @@ func classify(archetype_id: StringName, role_value: String, semantic_type: Strin
         return &"tools.service"
 
     if semantic == "prop.warehouse_rack":
-        if archetype == "commercial.diner.rural_small":
-            return &"commercial.food.stock"
-        if archetype in ["commercial.grocery.neighborhood", "commercial.convenience_store.small"]:
+        if archetype in [
+            "commercial.diner.rural_small",
+            "commercial.gas_station.small",
+            "commercial.grocery.neighborhood",
+            "commercial.convenience_store.small",
+        ]:
             return &"commercial.food.stock"
         if archetype == "commercial.pharmacy.small":
             return &"medical.stock"
@@ -117,6 +126,17 @@ func classify(archetype_id: StringName, role_value: String, semantic_type: Strin
         return &"industrial.stock"
 
     if semantic == "prop.pallet_stack":
+        if archetype in [
+            "commercial.diner.rural_small",
+            "commercial.gas_station.small",
+            "commercial.grocery.neighborhood",
+            "commercial.convenience_store.small",
+        ]:
+            return &"commercial.food.stock"
+        if archetype == "commercial.pharmacy.small":
+            return &"medical.stock"
+        if archetype == "commercial.hardware_store.small":
+            return &"retail.hardware"
         if archetype == "agricultural.barn.medium":
             return &"farming.storage"
         return &"industrial.stock"
@@ -136,6 +156,18 @@ func _build_profiles() -> void:
         _e(&"item.kitchen.can_opener", 3), _e(&"item.kitchen.matches_box", 3),
         _e(&"item.junk.empty_food_can", 5), _e(&"item.junk.food_wrapper", 6),
         _e(&"item.junk.broken_mug", 2),
+    ])
+    _add_profile(&"household.bathroom_vanity", 1, 8, 0, 3, [
+        _e(&"item.sanitation.soap_bar", 9), _e(&"item.medical.bandage_roll", 5),
+        _e(&"item.medical.disinfectant", 3), _e(&"item.medical.painkillers", 3),
+        _e(&"item.household.trash_bags_roll", 2), _e(&"item.junk.empty_medicine_bottle", 6),
+        _e(&"item.junk.empty_cleaner_bottle", 4), _e(&"item.junk.dirty_rag", 4),
+    ])
+    _add_profile(&"household.dresser", 1, 8, 0, 3, [
+        _e(&"item.clothing.work_gloves", 5), _e(&"item.material.rag_bundle", 4),
+        _e(&"item.electrical.batteries_pack", 2), _e(&"item.office.notebook", 2),
+        _e(&"item.junk.old_receipts", 5), _e(&"item.junk.cracked_phone_charger", 3),
+        _e(&"item.junk.broken_toy", 3), _e(&"item.junk.dirty_rag", 4),
     ])
     _add_profile(&"commercial.diner.cold", 1, 10, 1, 5, [
         _e(&"item.drink.water_bottle", 12), _e(&"item.drink.soda_can", 9),
