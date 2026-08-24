@@ -28,6 +28,7 @@ Golden archaeology commit: `1763958f44eb7f855fd49944c00d1ffe608c0abe`.
 - **23 Perception / LOS / Fog Memory** — facing LOS, true-black unexplored fog, stale remembered environment/static furniture, last-seen actors, ambient-responsive remembered presentation.
 - **24 World Loot / Searchable Containers / Scavenging** — real persistent virgin loot, timed search, timed TAKE/STORE, `USABLE/JUNK + family`, playable scavenging UI.
 - **25 World Time / Ambient Daylight** — authoritative-tick-derived scenario clock and smooth outdoor dawn/day/dusk/night baseline feeding System 23 remembered-fog brightness.
+- **26 Spatial Sound / Hearing** — **DRAFT**: physical weighted propagation, listener-specific stat/status-driven hearing/localization/recognition, and yellow textual sound cues. No implementation authorization yet.
 
 ## Core world rules
 
@@ -121,6 +122,31 @@ First fully green executable System 25 head: `6b6680c5b8eb4d8db2c4097df093abace6
 
 Exact-head owner: `verify/system25-world-time-light`.
 
+## System 26 draft direction
+
+Core proposed rule:
+
+> **Sound is physical. Hearing is an estimate. Poor perception makes the estimate broader and less specific; it does not put an impossible sound on the wrong side of the survivor.**
+
+Draft Candidate 001 proposes:
+
+- exact physical `SoundEmission` truth separate from listener-specific `HeardSoundObservation` knowledge;
+- deterministic bounded weighted propagation through current materialized geometry rather than radius-only/visual-LOS checks;
+- walls, closed/open doors and windows use distinct acoustic attenuation rather than all being absolute blockers;
+- actor stats/status drive hearing detection, recognition and localization through a derived profile rather than a new persistent Perception stat;
+- current proposed survivor profile uses Survival skill positively and Fatigue/Sleep Pressure negatively, while domain skills may improve recognition of specific sound families;
+- yellow textual sound words replace the current synthetic crosshair cue;
+- poor hearing primarily increases distance uncertainty and word vagueness, while hard actor-relative direction constraints prevent a real rear sound from being displayed in front and preserve broad left/right side information;
+- deterministic cue placement never rerolls every frame;
+- off-screen heard sounds get viewport-edge words based on the **perceived** bearing;
+- cue lifetime advances only with WHEN ticks, so auto-pause/hard pause leaves a just-heard cue readable;
+- repeated events such as footsteps refresh/group one cue instead of spamming one permanent marker per step;
+- future infected/NPC AI should consume the same uncertain heard observations instead of exact hidden source coordinates.
+
+Canonical draft: `SYSTEM_DESIGNS/26_SPATIAL_SOUND_HEARING.md`.
+
+Status: **DRAFT — awaiting approval; no code implementation authorized.**
+
 ## Current performance state
 
 The 2026-08-23 materialization razor retained modular ownership while adding coalesced WHAT terrain writes, one outer 00F rollback transaction, same-region streaming fast paths and coalesced renderer invalidation.
@@ -133,7 +159,6 @@ Known long-horizon scale seam: inactive materialized facts remain resident in WH
 - food/drink and medical effects;
 - condition/durability/spoilage;
 - visible-world/local/artificial lighting and weather attenuation;
-- real spatial sound;
 - infected AI/combat and firearm/ammunition mechanics;
 - crafting/recycling;
 - locks/keys/forced entry;
@@ -143,7 +168,8 @@ Known long-horizon scale seam: inactive materialized facts remain resident in WH
 - outbreak-driven virgin loot depletion;
 - generic quantity/stack mechanics;
 - persistence-backed streaming eviction;
-- calendar date/season/latitude beyond System 25's scenario-local day/time profile.
+- calendar date/season/latitude beyond System 25's scenario-local day/time profile;
+- global/coarse off-screen sound propagation beyond the active System 26 local-detail draft.
 
 ## Required exact-head contexts
 
