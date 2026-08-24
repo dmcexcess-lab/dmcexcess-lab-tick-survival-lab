@@ -1,18 +1,23 @@
 extends RefCounted
 class_name AreaProfileCatalog
 
+const BaselineProfilesClass = preload("res://scripts/generation/areas/BaselineAreaProfileCatalog.gd")
+
 const RURAL_CROSSROADS: StringName = &"rural.crossroads"
 const SMALLTOWN_CENTER: StringName = &"smalltown.center"
 const RURAL_SCATTERED: StringName = &"rural.scattered"
 const RURAL_OPEN: StringName = &"rural.open"
 const RURAL_WATERCOURSE: StringName = &"rural.watercourse"
 
+var _baseline_profiles := BaselineProfilesClass.new()
+
 func has_profile(profile_id: StringName) -> bool:
     return profile_id == RURAL_CROSSROADS \
         or profile_id == SMALLTOWN_CENTER \
         or profile_id == RURAL_SCATTERED \
         or profile_id == RURAL_OPEN \
-        or profile_id == RURAL_WATERCOURSE
+        or profile_id == RURAL_WATERCOURSE \
+        or _baseline_profiles.has_profile(profile_id)
 
 func profile(profile_id: StringName) -> Dictionary:
     if profile_id == RURAL_CROSSROADS:
@@ -216,4 +221,4 @@ func profile(profile_id: StringName) -> Dictionary:
             "farmstead_archetypes": [],
             "river_ground_semantic": &"ground.water_river",
         }
-    return {}
+    return _baseline_profiles.profile(profile_id)
