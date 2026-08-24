@@ -30,7 +30,18 @@ const WeightQueryClass = preload("res://scripts/simulation/items/properties/Item
 const CarryStateClass = preload("res://scripts/simulation/actors/carry/ActorCarryState.gd")
 const CarryQueryClass = preload("res://scripts/simulation/actors/carry/ActorCarryQuery.gd")
 const CarryMobilityProviderClass = preload("res://scripts/simulation/actors/carry/ActorCarryMobilityModifierProvider.gd")
+const CarryAcquisitionClass = preload("res://scripts/simulation/actors/carry/ActorCarryAcquisitionPolicy.gd")
 const MoodletServiceClass = preload("res://scripts/simulation/actors/moodlets/ActorMoodletService.gd")
+const ItemTransferActionTypes = preload("res://scripts/simulation/items/transfer/ItemTransferActionType.gd")
+const ItemTransferTimingClass = preload("res://scripts/simulation/items/transfer/ItemTransferTimingPolicy.gd")
+const PolicyTransferClass = preload("res://scripts/simulation/items/transfer/PolicyAwareItemTransferActionService.gd")
+const LootItemCatalogClass = preload("res://scripts/simulation/loot/LootItemCatalog.gd")
+const LootContainerCatalogClass = preload("res://scripts/simulation/loot/LootContainerProfileCatalog.gd")
+const LootStateClass = preload("res://scripts/simulation/loot/LootState.gd")
+const LootInitializerClass = preload("res://scripts/simulation/loot/LootSourceInitializer.gd")
+const LootAccessClass = preload("res://scripts/simulation/loot/LootWorldContainerAccessPolicy.gd")
+const LootSearchClass = preload("res://scripts/simulation/loot/LootSearchActionService.gd")
+const LootInspectionClass = preload("res://scripts/simulation/loot/LootContainerInspectionQuery.gd")
 const StatusSummaryClass = preload("res://scripts/ui/ActorStatusSummaryQuery.gd")
 const InspectionQueryClass = preload("res://scripts/ui/FacingInspectionQuery.gd")
 const StatsInspectorClass = preload("res://scripts/ui/ActorStatsInspectorQuery.gd")
@@ -48,8 +59,11 @@ const ObserverPerceptionClass = preload("res://scripts/simulation/perception/Obs
 const FixtureClass = preload("res://scripts/demo/RuralCrossroadsCritiqueFixture.gd")
 const ControllerClass = preload("res://scripts/player/DemoPlayerActionController.gd")
 const DoorControllerClass = preload("res://scripts/player/DoorPlayerInteractionController.gd")
+const LootControllerClass = preload("res://scripts/player/LootPlayerInteractionController.gd")
 
 ## Canonical demo bootstrap/composition only.
+
+const LIVE_ITEM_TRANSFER_TICKS: int = 5
 
 @onready var _world_view: TacticalRendererStack = $WorldView
 @onready var _camera_controller: TacticalCameraController = $CameraRig
@@ -62,6 +76,7 @@ const DoorControllerClass = preload("res://scripts/player/DoorPlayerInteractionC
 @onready var _camera_controls: CameraControls = $CameraControls
 @onready var _hud: CanonicalStatusHud = $Hud
 @onready var _shell: CanonicalPlayerShell = $PlayerShell
+@onready var _loot_panel: LootContainerPanel = $LootPanel
 
 var _world: WorldState = null
 var _world_mutations: WorldMutationService = null
@@ -90,7 +105,17 @@ var _physical_catalog: ItemPhysicalPropertyCatalog = null
 var _weight_query: ItemWeightQuery = null
 var _carry_state: ActorCarryState = null
 var _carry_query: ActorCarryQuery = null
+var _carry_acquisition: ItemAcquisitionCapacityPolicy = null
 var _moodlet_service: ActorMoodletService = null
+var _loot_items: LootItemCatalog = null
+var _loot_profiles: LootContainerProfileCatalog = null
+var _loot_state: LootState = null
+var _loot_initializer: LootSourceInitializer = null
+var _loot_access: ItemContainerAccessPolicy = null
+var _item_transfer_timing: ItemTransferTimingPolicy = null
+var _item_transfer: ItemTransferActionService = null
+var _loot_search: LootSearchActionService = null
+var _loot_inspection: LootContainerInspectionQuery = null
 var _status_summary: ActorStatusSummaryQuery = null
 var _inspection_query: FacingInspectionQuery = null
 var _stats_inspector: ActorStatsInspectorQuery = null
@@ -106,6 +131,9 @@ var _perception_memory: PerceptionMemoryStore = null
 var _perception: ObserverPerceptionService = null
 var _controller: DemoPlayerActionController = null
 var _door_controller: DoorPlayerInteractionController = null
+var _loot_controller: LootPlayerInteractionController = null
+var _shell_blocks_interaction: bool = false
+var _loot_blocks_interaction: bool = false
 
 func _ready() -> void:
     if not _boot_canonical_demo():
@@ -139,6 +167,8 @@ func _boot_canonical_demo() -> bool:
         return false
     if not _boot_actor_status():
         return false
+    if not _initialize_fixture_loot():
+        return false
 
     _movement_capability = MovementCapabilityClass.new(_locomotion_state)
     if not _movement_capability.register_provider(NeedsMobilityProviderClass.new(_needs_state)):
@@ -148,6 +178,9 @@ func _boot_canonical_demo() -> bool:
     _actor_traversal = ActorTraversalPolicyClass.new(_base_traversal, _movement_capability)
     _spatial_query = SpatialQueryClass.new(_world, _collision_catalog, _collision_overrides)
     _kernel = TickKernelClass.new(FixtureClass.PLAYER_ID)
+
+    if not _boot_item_transfer_and_loot_actions():
+        return false
 
     _door_transition = DoorTransitionClass.new(_world, _door_state, _door_mutations, _collision_overrides)
     _door_passage = DoorPassageClass.new(_world, _door_state, _door_transition)
@@ -246,20 +279,39 @@ func _boot_canonical_demo() -> bool:
     _inventory_inspector = InventoryInspectorClass.new(_world, _hand_state, _inventory_state, _weight_query, _carry_query)
     if not _shell.configure(_kernel, _stats_inspector, _inventory_inspector, FixtureClass.PLAYER_ID):
         return false
+    if not _loot_panel.configure(_loot_inspection, _inventory_inspector, FixtureClass.PLAYER_ID):
+        return false
     if not _controls.configure_stance(_locomotion_state, FixtureClass.PLAYER_ID):
         return false
 
     _controller = ControllerClass.new(_movement, _kernel, FixtureClass.PLAYER_ID, _stance_actions, _locomotion_state)
     _door_controller = DoorControllerClass.new(_world, _door_actions, _kernel, FixtureClass.PLAYER_ID)
-    if not _controller.is_ready() or not _controller.stance_ready() or not _door_controller.is_ready():
+    _loot_controller = LootControllerClass.new(
+        _loot_search,
+        _item_transfer,
+        _loot_inspection,
+        _kernel,
+        FixtureClass.PLAYER_ID
+    )
+    if not _controller.is_ready() or not _controller.stance_ready() \
+        or not _door_controller.is_ready() or not _loot_controller.is_ready():
         return false
 
     _keyboard.action_intent.connect(Callable(_controller, "submit_intent"))
     _controls.action_intent.connect(Callable(_controller, "submit_intent"))
     _door_pointer.world_cell_primary.connect(Callable(_door_controller, "submit_world_cell"))
+    _door_pointer.world_cell_primary.connect(Callable(_loot_controller, "submit_world_cell"))
     _controller.action_resolved.connect(Callable(_hud, "present_action_result"))
     _door_controller.action_resolved.connect(Callable(_hud, "present_action_result"))
-    _shell.interaction_blocked_changed.connect(_on_interaction_blocked_changed)
+    _loot_controller.action_resolved.connect(Callable(_hud, "present_action_result"))
+    _loot_controller.action_resolved.connect(Callable(_loot_panel, "present_action_result"))
+    _loot_controller.container_opened.connect(Callable(_loot_panel, "open_container"))
+    _loot_controller.container_changed.connect(Callable(_loot_panel, "refresh"))
+    _loot_panel.take_requested.connect(Callable(_loot_controller, "request_take"))
+    _loot_panel.store_requested.connect(Callable(_loot_controller, "request_store"))
+    _shell.interaction_blocked_changed.connect(_on_shell_interaction_blocked_changed)
+    _loot_panel.interaction_blocked_changed.connect(_on_loot_interaction_blocked_changed)
+    _refresh_interaction_enabled()
     return true
 
 func _boot_actor_status() -> bool:
@@ -280,18 +332,97 @@ func _boot_actor_status() -> bool:
     _skill_state = SkillStateClass.new(_world)
     if not _skill_state.enroll_actor(FixtureClass.PLAYER_ID):
         return false
+
+    _loot_items = LootItemCatalogClass.new()
+    _loot_profiles = LootContainerCatalogClass.new()
+    if not _loot_profiles.validate_items(_loot_items):
+        return false
     _physical_catalog = PhysicalCatalogClass.new()
+    if not _loot_items.register_physical_profiles(_physical_catalog):
+        return false
     _weight_query = WeightQueryClass.new(_world, _physical_catalog)
     _carry_state = CarryStateClass.new(_world)
     if not _carry_state.enroll_actor(FixtureClass.PLAYER_ID):
         return false
     _carry_query = CarryQueryClass.new(_world, _hand_state, _inventory_state, _weight_query, _carry_state)
+    _carry_acquisition = CarryAcquisitionClass.new(_carry_query)
+    if not _carry_acquisition.is_ready():
+        return false
     _moodlet_service = MoodletServiceClass.new(_health_state, _needs_state, _carry_query)
     return true
 
-func _on_interaction_blocked_changed(blocked: bool) -> void:
-    _keyboard.set_enabled(not blocked)
-    _controls.set_enabled(not blocked)
-    _door_pointer.set_enabled(not blocked)
-    _camera_input.set_enabled(not blocked)
-    _camera_controls.set_enabled(not blocked)
+func _initialize_fixture_loot() -> bool:
+    _loot_state = LootStateClass.new()
+    _loot_initializer = LootInitializerClass.new(
+        _world,
+        _world_mutations,
+        _inventory_state,
+        _inventory_mutations,
+        _loot_state,
+        _loot_items,
+        _loot_profiles,
+        _physical_catalog
+    )
+    if not _loot_initializer.is_ready():
+        return false
+    var building_plans: Array[GeneratedBuildingPlan] = FixtureClass.generated_building_plans()
+    if building_plans.is_empty():
+        return false
+    var result: Dictionary = _loot_initializer.initialize_source(
+        FixtureClass.LOOT_SOURCE_KEY,
+        FixtureClass.LOOT_SOURCE_KIND,
+        FixtureClass.LOOT_SOURCE_ID,
+        building_plans
+    )
+    if not bool(result.get("ok", false)):
+        push_error("CanonicalDemoMain: loot initialization failed: %s" % String(result.get("reason", "unknown")))
+        return false
+    return true
+
+func _boot_item_transfer_and_loot_actions() -> bool:
+    _item_transfer_timing = ItemTransferTimingClass.new()
+    for action_type: StringName in ItemTransferActionTypes.ALL:
+        if not _item_transfer_timing.register_duration(action_type, LIVE_ITEM_TRANSFER_TICKS):
+            return false
+
+    _loot_access = LootAccessClass.new(_world, _loot_state, _inventory_state)
+    _item_transfer = PolicyTransferClass.new(
+        _world,
+        _world_mutations,
+        _hand_state,
+        _hand_mutations,
+        _inventory_state,
+        _inventory_mutations,
+        _kernel,
+        _item_transfer_timing,
+        null,
+        _carry_acquisition,
+        _loot_access
+    )
+    _loot_search = LootSearchClass.new(_world, _inventory_state, _loot_state, _loot_profiles, _kernel)
+    _loot_inspection = LootInspectionClass.new(
+        _world,
+        _inventory_state,
+        _loot_state,
+        _loot_items,
+        _loot_profiles,
+        _weight_query,
+        _carry_query
+    )
+    return _item_transfer.is_ready() and _loot_search.is_ready() and _loot_inspection.is_ready()
+
+func _on_shell_interaction_blocked_changed(blocked: bool) -> void:
+    _shell_blocks_interaction = blocked
+    _refresh_interaction_enabled()
+
+func _on_loot_interaction_blocked_changed(blocked: bool) -> void:
+    _loot_blocks_interaction = blocked
+    _refresh_interaction_enabled()
+
+func _refresh_interaction_enabled() -> void:
+    var enabled: bool = not _shell_blocks_interaction and not _loot_blocks_interaction
+    _keyboard.set_enabled(enabled)
+    _controls.set_enabled(enabled)
+    _door_pointer.set_enabled(enabled)
+    _camera_input.set_enabled(enabled)
+    _camera_controls.set_enabled(enabled)
