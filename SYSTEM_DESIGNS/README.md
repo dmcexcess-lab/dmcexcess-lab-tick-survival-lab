@@ -46,7 +46,7 @@ Canonical status/routing index. Read `PROJECT_NORTH_STAR.md` and `README_SOPS.md
 | 24 | World Loot / Searchable Containers / Scavenging | **IMPLEMENTED — Candidate 001** | `24_WORLD_LOOT_SEARCHABLE_CONTAINERS.md` |
 | 25 | World Time / Ambient Daylight | **IMPLEMENTED — Candidate 001** | `25_WORLD_TIME_AMBIENT_DAYLIGHT.md` |
 | 26 | Spatial Sound / Hearing | **IMPLEMENTED — Candidate 001** | `26_SPATIAL_SOUND_HEARING.md` |
-| 27 | Physical Lighting / Illumination / Shadows | **DRAFT — awaiting approval** | `27_PHYSICAL_LIGHTING_ILLUMINATION_SHADOWS.md` |
+| 27 | Physical Lighting / Illumination / Shadows | **IMPLEMENTED — Slice A backend; B/C pending** | `27_PHYSICAL_LIGHTING_ILLUMINATION_SHADOWS.md` |
 | 00E | Population / Household / Outbreak / Player Story | **NOT DESIGNED** | future design |
 
 ## Current System 19 / 20 / 00F truth
@@ -59,7 +59,9 @@ Exact-head contexts: `verify/system19-local-building`, `verify/system20-local-ar
 
 Visual knowledge remains `UNSEEN` true black, `REMEMBERED` stale observer memory, and `VISIBLE` current live truth. Remembered environment presentation follows System 25 ambient daylight.
 
-System 23 now also presents System 26 listener-specific auditory descriptors as yellow text above any visual state. Sound cues do not reveal/explore terrain and System 23 does not own their physical propagation/localization.
+System 23 also presents System 26 listener-specific auditory descriptors as yellow text above any visual state. Sound cues do not reveal/explore terrain and System 23 does not own physical sound propagation/localization.
+
+System 27 Slice A now provides the physical light-derived useful-range contract that later Slice C will consume. The current live System 23 visible-cell set is not yet illumination-gated.
 
 Exact-head context: `verify/system23-perception`.
 
@@ -85,25 +87,29 @@ Candidate 001 separates exact `SoundEmission` truth from listener `HeardSoundObs
 
 Localization uncertainty is deterministic and physically constrained: true front/rear/left/right actor-relative signs cannot flip. Yellow words may appear over completely black fog without revealing terrain, and cue lifetime advances only with WHEN ticks.
 
-Current live emitters are successful Walk steps, each Run stride and truthful normal/loud Door transitions. Future infected/animals can provide different hearing profiles; weather/background masking has a neutral environment-modifier seam.
-
 First fully green executable head: `2d3dcfa6fc8646cda62a5e775beb1ac7c8d04d08`.
 
 Exact-head context: `verify/system26-spatial-sound`.
 
-## Current System 27 draft direction
+## Current System 27 truth
 
 > **Light is physical. Vision is observer-specific. Rendering visualizes lighting; gameplay and AI never read rendered pixels to decide what is illuminated.**
 
-The draft proposes one cohesive System 27 with three implementation slices: deterministic headless illumination physics; rich 2D lighting/shadow/glow presentation using the same source/occluder descriptors; then System 23 illumination-dependent visual acquisition for the player and future NPC/infected observers.
+Slice A implements a deterministic headless illumination field using System 25 daylight, enclosure/sky exposure, window/open-door portal transfer, local flashlight/lamp/streetlight/neon emitter profiles, wall/door/window optical transmission and neutral weather/atmosphere inputs.
 
-Time of day, weather optics, enclosure/sky exposure, windows/doors, local emitters, flashlight beams, portal spill and tactical shadows all feed the authoritative illumination field. Hidden current local lights must not leak through stale REMEMBERED fog.
+The backend exposes per-cell useful luminance plus tint/direction/glare/scatter summaries. The user-required useful-vision-range policy is target-light based: Candidate 001 ranges from 2 cells at zero light to the 12-cell geometric maximum at full light with a square-root response and protected near awareness. Standing in light does not grant vision into an unlit target cell.
 
-No code is authorized by DRAFT status.
+First fully green Slice A executable head: `b43b9d02d206658ce8155e485a2ab72be454cc0e`.
+
+Representative bounded rebuild benchmark on that runner: `4297.78 µs` average.
+
+Slice B rich visual shadows/glow and Slice C live System 23 acquisition integration remain unimplemented.
+
+Exact-head context: `verify/system27-physical-lighting`.
 
 ## Current presentation
 
-The live Web build is the Rural Crossroads critique world with canonical perception, scavenging, world time/daylight and spatial-sound yellow-word feedback integrated. VISIBLE-world physical lighting and infected actors remain deferred.
+The live Web build is the Rural Crossroads critique world with canonical perception, scavenging, world time/daylight and spatial-sound yellow-word feedback integrated. System 27 Slice A is headless backend truth; visible physical lighting/shadows/glow remain Slice B and live light-dependent System 23 range remains Slice C.
 
 ## Required exact-head stack
 
@@ -117,4 +123,5 @@ The live Web build is the Rural Crossroads critique world with canonical percept
 - `verify/system24-loot`
 - `verify/system25-world-time-light`
 - `verify/system26-spatial-sound`
+- `verify/system27-physical-lighting`
 - `verify/pages-deploy`
