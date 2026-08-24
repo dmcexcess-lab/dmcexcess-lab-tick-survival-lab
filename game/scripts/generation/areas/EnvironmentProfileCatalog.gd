@@ -68,7 +68,7 @@ func profile(profile_id: StringName) -> Dictionary:
                 TEMPERATE_WOODLAND, 1,
                 &"ground.forest_floor", &"ground.gravel_dark", &"ground.driveway_gravel", &"ground.field_dry",
                 [&"prop.pine_tree", &"prop.deciduous_large", &"prop.deciduous_small"],
-                [&"prop.dense_bush", &"prop.sapling", &"prop.fern_patch"],
+                [&"prop.dense_bush", &"prop.sapling", &"prop.leaf_litter"],
                 [&"prop.mossy_rock", &"prop.rock_cluster", &"prop.rock_small"],
                 0.0300, &"prop.wood_fence", &"prop.curb_mailbox"
             )
