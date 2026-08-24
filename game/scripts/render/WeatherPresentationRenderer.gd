@@ -1,7 +1,7 @@
 extends Node2D
 class_name WeatherPresentationRenderer
 
-## One low-overhead, low-resolution presentation owner for System 28 Slice A.
+## One low-overhead, low-resolution presentation owner for System 28.
 ## No rain/fog/debris object is a Node or simulation entity.
 
 const PRESENTATION_STEP_SECONDS: float = 0.05
@@ -29,6 +29,13 @@ var _view_valid: bool = false
 var _weather_pixel_size: int = MIN_WEATHER_PIXEL_SIZE
 var _virtual_size: Vector2i = Vector2i.ZERO
 
+var _camera_local_position: Vector2 = Vector2.ZERO
+var _camera_position_valid: bool = false
+var _camera_anchor_world_pixels: Vector2 = Vector2.ZERO
+var _camera_last_world_pixels: Vector2 = Vector2.ZERO
+var _camera_anchor_valid: bool = false
+var _camera_motion_redraws: int = 0
+
 var _accumulator: float = 0.0
 var _presentation_step: int = 0
 var _presentation_updates: int = 0
@@ -50,8 +57,9 @@ func configure(weather_service: WeatherService, sky_exposure: SkyExposureQuery) 
         return false
     _weather = weather_service
     _sky = sky_exposure
-    _rng_state = int(weather_service.presentation_descriptor().get("presentation_seed", 0x13579b)) | 1
-    _ambient_countdown = _next_ambient_delay(float(weather_service.presentation_descriptor().get("wind_strength", 0.0)))
+    _last_descriptor = weather_service.presentation_descriptor()
+    _rng_state = int(_last_descriptor.get("presentation_seed", 0x13579b)) | 1
+    _ambient_countdown = _next_ambient_delay(float(_last_descriptor.get("wind_strength", 0.0)))
     set_process(true)
     return true
 
@@ -61,10 +69,13 @@ func is_configured() -> bool:
 func set_visible_window(origin: Vector2i, size_cells: Vector2i, cell_pixels: float) -> bool:
     if size_cells.x <= 0 or size_cells.y <= 0 or cell_pixels <= 0.0:
         return false
+    var pixel_scale_changed: bool = _cell_pixels > 0.0 and not is_equal_approx(_cell_pixels, cell_pixels)
     _visible_origin = origin
     _visible_size = size_cells
     _cell_pixels = cell_pixels
     _view_valid = true
+    if pixel_scale_changed:
+        _camera_anchor_valid = false
     var pixel_width: int = int(ceil(float(size_cells.x) * cell_pixels))
     var pixel_height: int = int(ceil(float(size_cells.y) * cell_pixels))
     _weather_pixel_size = maxi(
@@ -77,6 +88,25 @@ func set_visible_window(origin: Vector2i, size_cells: Vector2i, cell_pixels: flo
     )
     _debris.clear()
     _needs_clear_redraw = true
+    queue_redraw()
+    _redraw_requests += 1
+    return true
+
+func set_camera_local_position(local_position: Vector2) -> bool:
+    if not _view_valid:
+        return false
+    _camera_local_position = local_position
+    _camera_position_valid = true
+    var world_pixels: Vector2 = _camera_world_pixels()
+    if not _camera_anchor_valid:
+        _camera_anchor_world_pixels = world_pixels
+        _camera_last_world_pixels = world_pixels
+        _camera_anchor_valid = true
+        return true
+    if world_pixels.distance_squared_to(_camera_last_world_pixels) <= 0.0001:
+        return true
+    _camera_last_world_pixels = world_pixels
+    _camera_motion_redraws += 1
     queue_redraw()
     _redraw_requests += 1
     return true
@@ -128,6 +158,10 @@ func presentation_snapshot() -> Dictionary:
         "continuous_active": continuous,
         "sleeping": not continuous and _debris.is_empty(),
         "weather_kind": String(_last_descriptor.get("weather_kind", "")),
+        "camera_position_valid": _camera_position_valid,
+        "camera_motion_redraws": _camera_motion_redraws,
+        "camera_offset_pixels": _camera_offset_pixels(),
+        "camera_virtual_offset": _camera_virtual_offset(),
     }
 
 func _process(delta: float) -> void:
@@ -178,10 +212,17 @@ func _draw_rain(descriptor: Dictionary) -> void:
     var wind_strength: float = float(descriptor.get("wind_strength", 0.0))
     var color: Color = STORM_RAIN_COLOR if precipitation > 0.80 else RAIN_COLOR
     var bounds := Rect2i(_visible_origin, _visible_size)
+    var camera_virtual: Vector2i = _camera_virtual_offset()
     for i in range(count):
         var h: int = _mix(seed, i * 97 + 13)
-        var x: int = posmod(h + int(float(_presentation_step) * wind.x * wind_strength * 3.0), maxi(1, _virtual_size.x))
-        var y: int = posmod(int(h / 257) + _presentation_step * (2 + int(round(precipitation * 3.0))), maxi(1, _virtual_size.y))
+        var x: int = posmod(
+            h + int(float(_presentation_step) * wind.x * wind_strength * 3.0) + camera_virtual.x,
+            maxi(1, _virtual_size.x)
+        )
+        var y: int = posmod(
+            int(h / 257) + _presentation_step * (2 + int(round(precipitation * 3.0))) + camera_virtual.y,
+            maxi(1, _virtual_size.y)
+        )
         var cell := _visible_origin + Vector2i(
             clampi(int(floor(float(x * _weather_pixel_size) / _cell_pixels)), 0, _visible_size.x - 1),
             clampi(int(floor(float(y * _weather_pixel_size) / _cell_pixels)), 0, _visible_size.y - 1)
@@ -204,12 +245,13 @@ func _draw_fog(descriptor: Dictionary) -> void:
     var seed: int = int(descriptor.get("presentation_seed", 1)) ^ 0x55aa31
     var wind: Vector2 = descriptor.get("wind_direction", Vector2.RIGHT)
     var wind_strength: float = float(descriptor.get("wind_strength", 0.0))
+    var camera_virtual: Vector2i = _camera_virtual_offset()
     for i in range(count):
         var h: int = _mix(seed, i * 131 + 29)
         var drift_x: int = int(float(_presentation_step) * wind.x * maxf(0.15, wind_strength) * 0.35)
         var drift_y: int = int(float(_presentation_step) * wind.y * maxf(0.15, wind_strength) * 0.18)
-        var x: int = posmod(h + drift_x, maxi(1, _virtual_size.x))
-        var y: int = posmod(int(h / 193) + drift_y, maxi(1, _virtual_size.y))
+        var x: int = posmod(h + drift_x + camera_virtual.x, maxi(1, _virtual_size.x))
+        var y: int = posmod(int(h / 193) + drift_y + camera_virtual.y, maxi(1, _virtual_size.y))
         var w: int = 6 + posmod(int(h / 31), 18)
         var hgt: int = 2 + posmod(int(h / 53), 6)
         var alpha: float = 0.025 + 0.055 * fog
@@ -227,6 +269,7 @@ func _draw_fog(descriptor: Dictionary) -> void:
 
 func _draw_debris(descriptor: Dictionary) -> void:
     var wind: Vector2 = descriptor.get("wind_direction", Vector2.RIGHT)
+    var camera_offset: Vector2 = _camera_offset_pixels()
     for event: Dictionary in _debris:
         var progress: float = clampf(float(event.get("progress", 0.0)), 0.0, 1.0)
         var lane: float = float(event.get("lane", 0.5))
@@ -236,7 +279,7 @@ func _draw_debris(descriptor: Dictionary) -> void:
         var px := Vector2(
             x_norm * float(_visible_size.x) * _cell_pixels,
             clampf(lane + wobble, 0.04, 0.96) * float(_visible_size.y) * _cell_pixels
-        )
+        ) + camera_offset
         var kind: String = String(event.get("kind", "leaf"))
         var color: Color = LEAF_COLOR
         var size_pixels := Vector2(float(_weather_pixel_size * 2), float(_weather_pixel_size))
@@ -297,6 +340,28 @@ func _continuous_weather_active(descriptor: Dictionary) -> bool:
     if descriptor.is_empty():
         return false
     return float(descriptor.get("precipitation", 0.0)) >= 0.04 or float(descriptor.get("fog_density", 0.0)) >= 0.10
+
+func _camera_world_pixels() -> Vector2:
+    return Vector2(float(_visible_origin.x), float(_visible_origin.y)) * _cell_pixels + _camera_local_position
+
+func _camera_offset_pixels() -> Vector2:
+    if not _camera_position_valid or not _camera_anchor_valid or _visible_size.x <= 0 or _visible_size.y <= 0:
+        return Vector2.ZERO
+    var raw: Vector2 = _camera_world_pixels() - _camera_anchor_world_pixels
+    var span := Vector2(float(_visible_size.x) * _cell_pixels, float(_visible_size.y) * _cell_pixels)
+    return Vector2(_centered_mod(raw.x, span.x), _centered_mod(raw.y, span.y))
+
+func _camera_virtual_offset() -> Vector2i:
+    var offset: Vector2 = _camera_offset_pixels()
+    return Vector2i(
+        int(round(offset.x / float(maxi(1, _weather_pixel_size)))),
+        int(round(offset.y / float(maxi(1, _weather_pixel_size))))
+    )
+
+static func _centered_mod(value: float, span: float) -> float:
+    if span <= 0.0:
+        return value
+    return fposmod(value + span * 0.5, span) - span * 0.5
 
 func _random_unit() -> float:
     _rng_state = int((_rng_state * 1103515245 + 12345) & 0x7fffffff)

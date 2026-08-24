@@ -16,6 +16,8 @@ const LightingAcquisitionClass = preload("res://scripts/simulation/lighting/Illu
 const DemoLightingSourceClass = preload("res://scripts/demo/DemoLightingSourceAdapter.gd")
 const WeatherServiceClass = preload("res://scripts/simulation/weather/WeatherService.gd")
 const SkyExposureClass = preload("res://scripts/simulation/weather/SkyExposureQuery.gd")
+const WeatherOpticsClass = preload("res://scripts/simulation/weather/WeatherAtmosphericOpticsAdapter.gd")
+const WeatherAcousticClass = preload("res://scripts/simulation/weather/WeatherAcousticEnvironmentModifier.gd")
 const BaseTraversalPolicyClass = preload("res://scripts/simulation/movement/MovementTraversalPolicy.gd")
 const MovementActionServiceClass = preload("res://scripts/simulation/movement/PassageAwareMovementActionService.gd")
 const MovementDamageInterruptionClass = preload("res://scripts/simulation/movement/MovementDamageInterruptionService.gd")
@@ -299,6 +301,7 @@ func _boot_canonical_demo() -> bool:
         return false
 
     _camera_controller.presentation_changed.connect(Callable(_camera_controls, "present_camera_state"))
+    _camera_controller.presentation_changed.connect(Callable(_world_view, "set_camera_presentation"))
     _camera_input.zoom_in_requested.connect(Callable(_camera_controller, "zoom_in"))
     _camera_input.zoom_out_requested.connect(Callable(_camera_controller, "zoom_out"))
     _camera_input.pan_requested.connect(Callable(_camera_controller, "pan_screen_pixels"))
@@ -393,7 +396,9 @@ func _boot_weather() -> bool:
     # visual inspection. DEV controls can force every Candidate 001 profile.
     _weather = WeatherServiceClass.new(_kernel, 28028, &"rain")
     _sky_exposure = SkyExposureClass.new(_world)
-    return _weather.is_ready() and _sky_exposure.is_ready()
+    if not _weather.is_ready() or not _sky_exposure.is_ready():
+        return false
+    return _physical_lighting.set_atmosphere(WeatherOpticsClass.current_optics(_weather))
 
 func _boot_actor_status() -> bool:
     _hand_state = HandStateClass.new()
@@ -495,7 +500,15 @@ func _boot_item_transfer_and_loot_actions() -> bool:
 func _boot_spatial_sound() -> bool:
     _sound_profiles = SoundProfilesClass.new()
     _acoustic_materials = AcousticMaterialsClass.new()
-    _acoustic_propagation = AcousticPropagationClass.new(_world, _door_state, _acoustic_materials)
+    var weather_environment := WeatherAcousticClass.new(_weather)
+    if not weather_environment.is_ready():
+        return false
+    _acoustic_propagation = AcousticPropagationClass.new(
+        _world,
+        _door_state,
+        _acoustic_materials,
+        weather_environment
+    )
     _hearing_profile = HearingProfileClass.new(_skill_state, _needs_state)
     _heard_sounds = HeardSoundStoreClass.new()
     _spatial_sound = SpatialSoundClass.new(
@@ -504,7 +517,8 @@ func _boot_spatial_sound() -> bool:
         _sound_profiles,
         _acoustic_propagation,
         _hearing_profile,
-        _heard_sounds
+        _heard_sounds,
+        weather_environment
     )
     if not _spatial_sound.is_ready() or not _spatial_sound.register_listener(FixtureClass.PLAYER_ID):
         return false
@@ -533,6 +547,13 @@ func _on_demo_lighting_emitters_changed(values: Array) -> void:
 func _on_weather_changed(snapshot: Dictionary) -> void:
     if _weather_controls != null:
         _weather_controls.present_weather(snapshot)
+    if _weather == null or _physical_lighting == null:
+        return
+    if not _physical_lighting.set_atmosphere(WeatherOpticsClass.current_optics(_weather)):
+        return
+    _world_view.refresh_physical_lighting(&"weather_environment_changed")
+    if _perception != null:
+        _perception.recompute(&"weather_environment_changed")
 
 func _on_dev_weather_force_requested(profile_id: StringName) -> void:
     if _weather != null:

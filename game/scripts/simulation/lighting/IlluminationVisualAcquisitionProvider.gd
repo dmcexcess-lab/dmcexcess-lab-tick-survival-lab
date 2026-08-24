@@ -1,8 +1,11 @@
 extends VisualAcquisitionProvider
 class_name IlluminationVisualAcquisitionProvider
 
+const VisionRangePolicy = preload("res://scripts/simulation/lighting/VisionLightRangePolicy.gd")
+
 ## System 27 -> System 23 adapter. Physical lighting supplies target-cell
-## useful range; System 23 remains sole owner of observer knowledge/memory.
+## luminance + atmospheric visibility; System 23 remains sole owner of observer
+## knowledge/memory.
 ##
 ## The lighting service is a bounded query/cache context, not a camera-owned
 ## truth surface. Before an acquisition batch this adapter guarantees that the
@@ -31,9 +34,11 @@ func allows_target(
         return false
     if not _ensure_observer_field(origin, profile) or not _lighting.is_ready():
         return false
-    return _lighting.target_within_light_range(
-        origin,
-        target,
+    var optics: AtmosphericOptics = _lighting.atmosphere()
+    return VisionRangePolicy.target_within_visual_range(
+        target - origin,
+        _lighting.luminance_at(target),
+        optics.visibility_extinction,
         profile.max_range,
         profile.near_awareness_radius
     )
@@ -42,6 +47,11 @@ func target_luminance(target: Vector2i) -> float:
     if _lighting == null or not _lighting.is_ready():
         return 0.0
     return _lighting.luminance_at(target)
+
+func visibility_extinction() -> float:
+    if _lighting == null:
+        return 0.0
+    return _lighting.atmosphere().visibility_extinction
 
 func _ensure_observer_field(origin: Vector2i, profile: VisionProfile) -> bool:
     var radius: int = profile.max_range
