@@ -1,5 +1,23 @@
 # Changelog
 
+## System 27 Physical Lighting / Illumination / Shadows — Slice A — 2026-08-23
+
+- Implemented the approved System 27 Slice A around the rule **“Light is physical. Vision is observer-specific.”** The lighting backend is deterministic simulation truth and never reads rendered pixels for gameplay or future AI decisions.
+- Added `AtmosphericOptics.gd`, `LightEmitterProfile.gd`, `LightEmitter.gd`, `IlluminationSample.gd`, `VisionLightRangePolicy.gd` and `PhysicalLightingService.gd` under the focused lighting domain.
+- Added a headless per-cell illumination model that separates diffuse sky, direct celestial, portal and local/artificial contributions and exposes normalized useful luminance plus tint, dominant direction, glare and atmospheric scatter.
+- System 25 remains the clock/daylight owner. System 27 consumes its current outdoor daylight and keeps Weather behind a neutral optics contract with clear/overcast/rain/fog/storm-compatible snapshots rather than inventing a Weather owner.
+- Added Candidate 001 structure-envelope sky exposure so enclosed interiors are physically darker than outdoors. Windows and OPEN doors transmit decaying daylight into enclosed space while CLOSED doors and walls do not become fake daylight portals.
+- Added semantic flashlight/lamp/streetlight/neon emitter profiles. Direct local light is shape/range/falloff aware, walls and CLOSED doors block it, OPEN doors transmit strongly, windows transmit at reduced strength, and a small diffuse spill pass softens nearby darkness.
+- The first System 27 contract caught a real transport bug where a lit closed-door surface could relay diffuse spill into the room behind it. The owner now enforces that an opaque surface may be illuminated but may not relay diffuse light through itself.
+- Fog now reduces useful distant local-light transmission while increasing the separate scatter descriptor; overcast suppresses direct sunlight much more strongly than diffuse sky.
+- Implemented the user-requested light-driven useful-vision-range policy. Candidate 001 maps target-cell luminance from **2 cells at zero light to the existing 12-cell geometric maximum at full light** with a square-root response while preserving radius-1 near awareness.
+- Useful range is deliberately based on the **target cell's physical illumination**, not merely the light level at the observer's feet. Standing under a lamp therefore does not grant long-range vision into an unlit room; illuminating a distant target can expand useful range toward that target.
+- Slice A exposes the range contract but does not yet alter System 23's live visible-cell set. Illumination-aware observer acquisition remains Slice C so Perception continues to own observer knowledge/memory. Rich visible shadows, glows, flashlight beams and neon presentation remain Slice B.
+- Added `PhysicalLightingSmoke.gd`, `.github/workflows/physical-lighting.yml`, and permanent exact-head context `verify/system27-physical-lighting`. Coverage includes enclosure/daylight, window/door portals, flashlight shadows/transmission, atmosphere behavior, multi-source determinism, zero-tick queries, useful-range behavior, System 25/System 23 regressions and canonical startup.
+- First fully green executable Slice A head: `b43b9d02d206658ce8155e485a2ab72be454cc0e`.
+- On that exact executable head all twelve required contexts were green: `verify/system27-physical-lighting`, `verify/system26-spatial-sound`, `verify/system25-world-time-light`, `verify/system24-loot`, `verify/system23-perception`, `verify/system22-area-critique`, `verify/system21-camera-view`, `verify/system20-local-area`, `verify/system19-local-building`, `verify/system00f-streaming-materialization`, `verify/system00d-global-world` and `verify/pages-deploy`.
+- Representative 17×17 moving/revision-changing flashlight rebuild benchmark on that runner: **4,297.78 µs average (~4.30 ms)**. Many moving lights / large active AI fields remain an explicit future scale seam to profile before population-scale assumptions.
+
 ## System 26 Spatial Sound / Hearing — 2026-08-23
 
 - Implemented approved System 26 Candidate 001 around the rule **“Sound is physical. Hearing is an estimate.”** Exact transient `SoundEmission` truth is separated from listener-specific `HeardSoundObservation` knowledge so player UI and future AI do not receive magical hidden-source coordinates.
