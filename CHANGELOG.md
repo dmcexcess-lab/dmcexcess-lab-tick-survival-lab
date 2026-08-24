@@ -1,5 +1,25 @@
 # Changelog
 
+## System 28 Weather / Atmosphere — Slice B — 2026-08-24
+
+- Implemented the user-approved Weather B scope and folded in two A playtest defects reported with the approval: weather visibly trailed camera/player movement, and unrendered technical space appeared grey against System 23 true-black fog.
+- Added `WeatherAtmosphericOpticsAdapter` as the neutral System 28 -> System 27 seam. It maps continuous precipitation/cloud/fog/wetness values into the existing `AtmosphericOptics` contract rather than making Lighting switch on Weather profile names.
+- Candidate clear normalizes to essentially neutral atmosphere. Increasing cloud/rain/fog suppresses direct/diffuse sky appropriately, attenuates local light, increases scatter/extinction, and adds a restrained cool atmospheric tint. System 27 remains the physical illumination/shadow/portal owner.
+- Real analytic Weather wetness now feeds the existing System 27 `wet_surface_factor`, so the already-implemented restrained wet-road/surface glow response uses physical WHEN-driven wetness rather than a DEV preset or rain-particle count.
+- Extended System 27's acquisition policy from light-only range to physical **light + atmospheric visibility extinction**. Opaque System 23 LOS still resolves first; atmosphere can only reduce the 12-cell geometric envelope and radius-1 near awareness remains protected.
+- Focused full-light visibility fixture: clear remains **12 cells**; representative physical fog extinction reduces the same bright-condition useful range to **5 cells**.
+- Added `WeatherAcousticEnvironmentModifier` through System 26's existing neutral environment seam. Candidate B treats rain/wind as competing background noise: precipitation/wind raise hearing detection threshold and modestly reduce localization quality while adding no fake repeated rain emissions and no invented per-cell absorption cost.
+- Representative storm fixture produces a **+19 detection-threshold addition** relative to the underlying hearing decision and worsens localization quality versus clear conditions.
+- Physical Lighting/Perception refresh only on quantized `WeatherService.weather_changed` environment revisions. The 20 Hz cosmetic rain/fog/debris phase causes zero physical System 27/23 recomputes.
+- Fixed weather movement lag without raising the 20 Hz simulation/animation budget: camera presentation changes now request an immediate compensated Weather redraw using camera/world offset. That redraw advances zero Weather presentation steps and zero WHEN ticks; shelter masking still resolves the correct world cell for each coarse rain sample.
+- Render-window recentering combines `visible_origin * cell_pixels + camera_local_position`, preventing technical window shifts from becoming an atmospheric jump.
+- Fixed the visible grey unrendered/chunk boundary by setting Godot's default viewport clear color to **true black**. No fake terrain, expanded render truth or System 23 streaming knowledge was introduced.
+- Added `WeatherEnvironmentIntegrationSmoke.gd` and expanded `verify/system28-weather` to cover A+B boundaries, continuous optics, real wetness, fog visibility, rain/wind hearing masking, camera compensation, black unrendered fallback, System 27/26/23 regressions and canonical startup.
+- System 27's optimized structural regression remained intact on the B runner: 7,680 field cells, 1,676 local-emitter candidates and 688 optical-ray candidates; representative light rebuild ~2.55 ms and focused illumination-aware perception ~9.55 ms on that runner.
+- First fully green executable Weather B head: `db4681dc53ce6955e9585f4f5b380fe8efef634c`.
+- On that exact executable head all **13 required contexts** were green, including `verify/system28-weather`, System 23/26/27 and `verify/pages-deploy`.
+- Slice C lightning/physical flash/pixel bolt/thunder remains deferred; no fake lightning was added in B.
+
 ## System 28 Weather / Atmosphere — Slice A — 2026-08-24
 
 - Implemented the user-approved Weather A scope with the explicit direction that weather be **low-resolution, always atmospherically alive, and low overhead**. Physical Weather and presentation-time animation remain deliberately separate.
