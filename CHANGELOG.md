@@ -1,5 +1,20 @@
 # Changelog
 
+## Materialization Performance Razor — 2026-08-23
+
+- Implemented the user-approved behavior-preserving performance pass on verified executable head `0b10957bb586162634e9da3c1a4415aef528fd2d`.
+- Kept modular ownership intact; profiling/regression evidence pointed to transaction copying and per-cell mutation traffic, not the number of focused systems/classes.
+- Added coalesced WHAT terrain mutation records so large rectangular/sparse ground writes advance revision and emit change notification once per semantic batch instead of once per changed cell. Existing single-cell mutation APIs remain unchanged.
+- Updated `GroundLayerRenderer` only at its invalidation seam so a relevant bulk terrain change requests one redraw while distant/diagonal-only batches do not spuriously redraw the current view.
+- Removed nested full-world snapshots during enclosing materialization transactions: standalone building/area materializers remain independently transactional, while System 20 and System 00F explicitly reuse their enclosing rollback owner through `materialize_in_transaction()` seams.
+- System 00F still owns one outer WHAT + Door State + Materialization Registry snapshot for a new-source batch; exact rollback behavior and registry schema v1 are unchanged.
+- Added a same-technical-region streaming fast path: the precise focus cell updates, but provider discovery/catalog validation/ensure-materialization work is skipped until the technical focus region actually changes.
+- Added `PerformanceRazorSmoke.gd` under the existing System 00F contract to prove 4096-cell coalesced mutation behavior, redraw coalescing, no-op rewrites, standalone/enclosing snapshot ownership, and zero provider/materialization work on same-region movement.
+- All seven protected exact-head contexts passed on the executable code head: System 00D, 00F, 19, 20, 21, 22 and Pages.
+- On the same GitHub runner class and same multi-scenario 00F regression workloads, settlement materialization improved from ~55.6s to ~13.9s (about **75% faster / 4.0× throughput**) and countryside from ~63.4s to ~10.7s (about **83% faster / 5.9× throughput**). These are CI regression-suite timings, not literal player-facing load latency.
+- No area/building morphology, profile versions, deterministic signatures, stable IDs, Materialization Registry schema, WHEN semantics, gameplay rules or live presentation behavior changed.
+- Remaining long-horizon scale seam: one outer full-state rollback snapshot and non-evicting WHAT residency still grow with explored world size. Persistence-backed residency/eviction or a write-journal transaction representation remains future work only when separately designed and justified by profiling.
+
 ## Architecture / Repository Razor Cleanup — 2026-08-23
 
 - Performed the user-approved one-time architecture/process cleanup before adding another world-generation or streaming slice.

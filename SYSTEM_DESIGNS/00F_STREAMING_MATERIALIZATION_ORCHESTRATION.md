@@ -135,10 +135,13 @@ The registry is technical provenance, not a second world truth and not the final
 4. classifies already-materialized vs missing sources **before generation**;
 5. never calls System 20 for an already-materialized source;
 6. prepares all missing sources through their providers before persistent writes;
-7. snapshots WHAT, Door State and Materialization Registry;
-8. materializes prepared plans in stable source-key order through the existing `AreaMaterializationCoordinator`;
-9. appends a registry record only after each source succeeds;
-10. restores all three snapshots exactly if any later source/materialization/registry step fails.
+7. takes the **one enclosing persistent-state rollback snapshot** for WHAT, Door State and Materialization Registry;
+8. materializes prepared plans in stable source-key order through `AreaMaterializationCoordinator.materialize_in_transaction()`;
+9. area materialization in turn uses the enclosing-transaction seam of generated-building materialization, so neither the area nor each building copies the entire accumulated world again;
+10. appends a registry record only after each source succeeds;
+11. restores all three outer snapshots exactly if any later source/materialization/registry step fails.
+
+Standalone System 20/building materializer APIs remain independently transactional. The no-nested-snapshot seam is used only when an enclosing owner already guarantees rollback.
 
 Legacy `ensure_area_site()` / `ensure_area_sites()` remain convenience APIs layered on the common provider path.
 
@@ -161,13 +164,14 @@ Tests prove both a player-opened settlement door and a persistently removed coun
 
 1. rejects focus outside world bounds;
 2. resolves the technical focus region;
-3. computes the configured active neighborhood;
-4. asks every registered discovery provider for logical sources intersecting the active technical bounds;
-5. atomically ensures all discovered sources;
-6. commits focus/active-region changes only after required materialization succeeds;
-7. emits deterministic activation/deactivation/materialization notifications.
+3. if focus remains inside the already-active technical focus region, updates the precise focus cell and returns through a **same-region fast path** with zero provider discovery, catalog validation, ensure/materialization work or activation delta;
+4. otherwise computes the configured active neighborhood;
+5. asks every registered discovery provider for logical sources intersecting the active technical bounds;
+6. atomically ensures all discovered sources;
+7. commits focus/active-region changes only after required materialization succeeds;
+8. emits deterministic activation/deactivation/materialization notifications.
 
-This consumes zero WHEN ticks. Callers decide when a changed player/focus cell warrants an update.
+This consumes zero WHEN ticks. Callers may therefore update focus on every relevant player-cell movement without paying discovery/materialization overhead until the technical region actually changes.
 
 ## 9. Deactivation is non-destructive
 
@@ -194,11 +198,25 @@ That seam exists, but implementing it is not automatically the next project prio
 
 ## 11. Performance
 
+The approved 2026-08-23 performance razor preserves the ownership architecture while reducing hot-path copying and mutation traffic:
+
 - no per-frame regeneration;
 - provider discovery is bounded to the active technical neighborhood;
+- same-region focus movement bypasses discovery/ensure completely;
 - already-materialized sources return without local generation;
-- current materialization is synchronous because there is no approved worker/background persistence contract;
-- ownership correctness takes priority over speculative async/cache complexity.
+- System 20 ground regions and generated-building floor runs use coalesced WHAT terrain mutations rather than one revision/change signal per cell;
+- the Ground renderer consumes coalesced terrain dirty geometry and requests at most one redraw per relevant batch;
+- a multi-source 00F transaction owns one full WHAT + Door State + registry rollback snapshot; nested area/building materializers reuse that transaction instead of taking additional whole-world snapshots;
+- standalone materializer APIs keep their original independent transaction behavior;
+- current materialization remains synchronous because there is no approved worker/background persistence contract.
+
+Measured on the same GitHub runner class and the same multi-scenario 00F regressions, settlement materialization improved from about **55.6s to 13.9s** (~75% faster / ~4.0× throughput) and countryside from about **63.4s to 10.7s** (~83% faster / ~5.9× throughput). These are CI regression-suite timings, not literal player-facing load latency.
+
+The remaining scale concern is the **one outer full-state snapshot** plus non-evicting WHAT residency as the explored world grows. A future write-journal/transaction representation and persistence-backed inactive-region residency may address that only when profiling/world-size pressure justifies a separately approved storage contract.
+
+Ownership correctness still takes priority over speculative async/cache complexity.
+
+Verified performance code head: `0b10957bb586162634e9da3c1a4415aef528fd2d`.
 
 ## 12. Tests
 
@@ -218,6 +236,9 @@ The System 00F suite proves:
 - exact rollback on deliberately induced future-source ID collisions;
 - invalid-focus no-op behavior;
 - source-free river cells remain unmaterialized;
+- same-region focus performs zero provider discovery/materialization work;
+- coalesced 4096-cell terrain writes advance WHAT revision once and invalidate visible ground once;
+- standalone materializers retain rollback snapshots while enclosing transactions take no nested full-world snapshots;
 - protected System 00D/19/20/21/22 behavior remains compatible.
 
 ## 13. Non-goals

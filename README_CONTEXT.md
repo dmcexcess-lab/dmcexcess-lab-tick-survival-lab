@@ -60,9 +60,24 @@ Completed candidate/slice discussion docs are not active peer systems once their
 
 Materialization source adapters follow one common provider contract instead of requiring coordinator fields/branches per source kind.
 
+## Current performance state
+
+The 2026-08-23 performance razor preserved the modular ownership model and optimized the actual hot path instead of merging systems:
+
+- initial terrain materialization uses coalesced WHAT terrain mutations rather than one change/revision/signal per cell;
+- standalone building/area materializers remain transactional, while an enclosing System 00F transaction reuses one outer WHAT + Door State + registry rollback snapshot instead of taking another full-world snapshot per area/building;
+- moving focus within the same technical streaming region uses a zero-discovery/zero-materialization fast path;
+- `GroundLayerRenderer` understands coalesced terrain dirty geometry so one relevant terrain batch requests one redraw rather than one redraw per cell.
+
+On the same GitHub runner class and the same 00F regression workloads, the settlement suite improved from about **55.6s to 13.9s** (~75% faster / ~4.0× throughput) and the countryside suite from about **63.4s to 10.7s** (~83% faster / ~5.9× throughput). These are multi-scenario CI regression timings, not literal player-facing load latency.
+
+Known scale seam: System 00F still intentionally owns one full persistent-state snapshot for an atomic new-source batch, and inactive materialized facts remain resident in WHAT. Persistence-backed residency/eviction or a write-journal transaction model remains future work when measured world-size/mobile memory pressure justifies it.
+
+Verified performance code head: `0b10957bb586162634e9da3c1a4415aef528fd2d`.
+
 ## Next development choice
 
-There is **no automatically active next design** after the cleanup pass.
+There is **no automatically active next design** after the cleanup/performance pass.
 
 The project has enough world substrate to justify shifting attention back toward the playable survival loop. Before adding more generation/streaming infrastructure, prefer a gameplay-value review of systems such as perception/LOS, spatial sound, infected/AI/combat, scavenging/search pressure, or population/outbreak behavior.
 

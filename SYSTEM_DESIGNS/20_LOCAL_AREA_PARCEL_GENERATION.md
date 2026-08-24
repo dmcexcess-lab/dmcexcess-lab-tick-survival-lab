@@ -220,7 +220,19 @@ Rules:
 
 ## 11. Materialization boundary
 
-`AreaMaterializationCoordinator` transactionally writes a valid generated area into WHAT + Door State using existing world mutation contracts.
+`AreaMaterializationCoordinator` writes a valid generated area into WHAT + Door State using existing world mutation contracts. Materialization performance must not change generated plan morphology, IDs, profile versions or signatures.
+
+Transaction ownership is explicit:
+
+- standalone `AreaMaterializationCoordinator.materialize()` owns one WHAT + Door State rollback snapshot;
+- when System 00F already owns a larger atomic source batch, it calls `materialize_in_transaction()` so the area does not copy the entire accumulated world again;
+- generated-building materialization follows the same rule: standalone callers retain an independent transaction, while System 20 calls the building `materialize_in_transaction()` seam under the area/00F transaction.
+
+Ground materialization is coalesced:
+
+- rectangular semantic ground regions use one bulk WHAT terrain mutation/change record per region;
+- sparse semantic ground regions use one deterministic sparse terrain batch per region;
+- generated-building floor entries preserve their original order while consecutive equal-semantic runs are emitted as sparse batches rather than one mutation/revision/signal per floor cell.
 
 System 20 does not retain authority after successful materialization. A revisit must never regenerate a materialized place merely because its generator can reproduce the original plan.
 
@@ -264,11 +276,13 @@ Current System 20 workflow exercises:
 - Rural-Watercourse physical width, bridge authorization, split-vs-combined invariance, materialization and traversal-policy proof;
 - canonical demo startup regression.
 
+System 00F's performance contract additionally proves coalesced terrain change/revision behavior, renderer invalidation compatibility, standalone-vs-enclosing transaction snapshot ownership, and the same-region streaming fast path without changing System 20 generation output.
+
 Exact-head context:
 
 `verify/system20-local-area`
 
-System 20D's first clean implementation head was `1ef3bd08e9d1a4ef258a2013c3af133ce6605002`, where the complete protected seven-context world stack was green before this cleanup refactor.
+System 20D's first clean implementation head was `1ef3bd08e9d1a4ef258a2013c3af133ce6605002`, where the complete protected seven-context world stack was green before the architecture/performance cleanup refactors.
 
 ## 15. Future extensions
 
