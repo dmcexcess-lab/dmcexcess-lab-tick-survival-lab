@@ -6,18 +6,20 @@
 - Kept the core architecture intact: WHERE / WHAT / WHEN, System 00D global planning, System 19 building grammar, System 20 local generation, System 00F materialization/activation, rendering, movement and typed simulation domains remain independent owners.
 - Tightened the modularity rule: **replaceability, not file count**. Profiles, candidate numbers, revisions and implementation slices no longer automatically become peer systems/documents/files.
 - Merged the duplicated design workflow into `README_SOPS.md` and retired `DESIGN_WORKFLOW.md` as a second active process authority.
-- Retired `MODULAR_REBUILD_MASTER_DESIGN.md` from the active tree. Its valuable enduring rules are now represented by the North Star/SOP/current system contracts; obsolete raid/strategic-map assumptions remain recoverable through Git history rather than precedence exceptions.
-- Reduced `README_CONTEXT.md` to current-state routing instead of duplicating the System 00D/20/00F manuals.
+- Retired `MODULAR_REBUILD_MASTER_DESIGN.md` from the active tree. Enduring rules now live in the North Star/SOP/current system contracts; obsolete raid/strategic-map assumptions remain recoverable through Git history rather than precedence exceptions.
+- Reduced `README_CONTEXT.md` to current-state routing instead of duplicating the System 00D/20/00F manuals, and replaced the stale root README with the current modular/open-world project description.
 - Simplified `SYSTEM_DESIGNS/README.md` to the status/routing ledger.
 - Consolidated completed System 20 candidate contracts into `20_LOCAL_AREA_PARCEL_GENERATION.md`; removed the active 20A/20B/20C/20D candidate files after preserving their final rules in the owning design and their detailed history in Git/changelog.
 - Consolidated System 00F Slice 002 into the 00F umbrella and removed the separate active 00F2 design file.
-- Replaced the stale Foundation umbrella DRAFT wording with a short **IMPLEMENTED via children** relationship document.
 - Removed the superseded raid-map physical-world design from the active design directory. Its history remains in Git and the persistent-open-world supersession remains recorded in `DESIGN_DECISIONS.md`.
-- Removed the frozen `game/scripts/reboot/` reference runtime after confirming `main.tscn` boots the canonical modular `CanonicalDemoMain.gd` stack and no canonical code search imports `scripts/reboot`. Golden archaeology remains anchored by commit `1763958f44eb7f855fd49944c00d1ffe608c0abe`.
+- Removed the frozen `game/scripts/reboot/` runtime after confirming `main.tscn` boots the canonical modular `CanonicalDemoMain.gd` stack. Golden archaeology remains anchored by commit `1763958f44eb7f855fd49944c00d1ffe608c0abe`.
+- Removed the older pre-modular root runtime cluster under `game/scripts/` (mini-world/extraction/map-preview/golden tactical generator/presentation/scheduler/perception/weather helpers) and its abandoned smoke tests. These files were recovery sources, not canonical runtime dependencies; their exact blobs remain available from the golden/history commits.
+- Removed obsolete top-level architecture notes whose active assumptions had been superseded: reboot/prefab workshop, extraction raid, focused raid interiors, mini-world streetscape, travel-depth gateway, old world-generation/navigation audit, stale extraction-era roadmap and the old First Fire reuse mapping. Current game intent remains in `DESIGN.md`/North Star; implementation history remains in Git/changelog.
 - Refactored System 00F coordinators to normalize materialization adapters through one provider collection keyed by `source_kind`, while retaining the existing area-site/countryside convenience constructor/API surface. Future source kinds no longer require another coordinator field/branch.
-- Added common provider methods to the existing settlement and countryside source adapters. The existing 00F tests therefore exercise both current source kinds through the generic provider internals.
+- Added common provider methods to the existing settlement and countryside source adapters. Existing 00F tests therefore exercise both current source kinds through the generic provider internals.
 - Made `GeneratedAreaPlan.is_generated()` profile-neutral. Generic plan existence no longer hardcodes `rural.open` / `rural.watercourse` exceptions; profile-specific content requirements remain the generator/validator's responsibility.
 - After deeper inspection, **kept** `System20WatercourseRequestProjection.gd`: it contains cohesive watercourse projection geometry and prevents the already-broad integration projector from growing further. It is documented as an internal helper, not a peer system.
+- Simplified Pages deployment to validate/export the canonical modular runtime instead of carrying reboot-era regression obligations. Dedicated subsystem workflows remain responsible for subsystem contracts.
 - Updated System 20 / 00F workflows so CI follows the consolidated canonical design files rather than deleted candidate/slice docs.
 - New SOP policy: full exact-head regression remains mandatory for executable/config/workflow changes; later documentation-only status/changelog closure may rely on the already-green code SHA plus lightweight consistency checks instead of rerunning every expensive Godot suite.
 - Stale `work/*` branches were audited, but branch-ref deletion is not exposed by the connected GitHub tool and therefore is not falsely claimed as completed.
@@ -25,7 +27,7 @@
 
 ## System 20D Rural Watercourse / Bridge — 2026-08-23
 
-- Implemented `rural.watercourse` v1 on the clean code head `1ef3bd08e9d1a4ef258a2013c3af133ce6605002` before the razor cleanup.
+- Implemented `rural.watercourse` v1 on clean code head `1ef3bd08e9d1a4ef258a2013c3af133ce6605002` before the razor cleanup.
 - System 00D remains authoritative for river route/width and bridge intent; System 20 only projects/materializes those facts into semantic local terrain.
 - Added physical `ground.water_river` and bridge-deck `ground.road_plain` terrain, with bridge overwrite permitted only by a matching real System 00D bridge intent.
 - Added explicit inherited hydrology request facts and generated hydrology provenance, plus exact split-vs-combined terrain invariance.

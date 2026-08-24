@@ -21,7 +21,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Validate transition source
+      - name: Validate canonical project surface
         shell: bash
         run: |
           set -euxo pipefail
@@ -30,137 +30,29 @@ jobs:
           test -f DESIGN_DECISIONS.md
           test -f README_CONTEXT.md
           test -f README_SOPS.md
-          test -f DESIGN_WORKFLOW.md
           test -f SYSTEM_DESIGNS/README.md
-          test -f SYSTEM_DESIGNS/00_FOUNDATION_WHERE_WHAT_WHEN.md
           test -f SYSTEM_DESIGNS/00A_SPATIAL_MODEL.md
           test -f SYSTEM_DESIGNS/00B_PERSISTENT_WORLD_STATE.md
           test -f SYSTEM_DESIGNS/00C_TICK_ACTION_PAUSE.md
-          test -f SYSTEM_DESIGNS/01_COLLISION_SPATIAL_QUERY.md
-          test -f SYSTEM_DESIGNS/14_CANONICAL_PLAYABLE_DEMO.md
-          test -f MODULAR_REBUILD_MASTER_DESIGN.md
-          test -f REBOOT_CORE.md
-          test -f PREFAB_WORKSHOP.md
+          test -f SYSTEM_DESIGNS/00D_GLOBAL_WORLD_PLANNING.md
+          test -f SYSTEM_DESIGNS/00F_STREAMING_MATERIALIZATION_ORCHESTRATION.md
+          test -f SYSTEM_DESIGNS/19_LOCAL_BUILDING_GENERATION_ARCHETYPE_LAB.md
+          test -f SYSTEM_DESIGNS/20_LOCAL_AREA_PARCEL_GENERATION.md
+          test -f SYSTEM_DESIGNS/21_TACTICAL_CAMERA_VIEW_CONTROL.md
+          test -f SYSTEM_DESIGNS/22_LARGE_AREA_CRITIQUE_RUNTIME.md
           grep -q 'Ultima-style turn-based mini Zomboid' PROJECT_NORTH_STAR.md
-          grep -q 'reduced complexity, not reduced consequence or mood' PROJECT_NORTH_STAR.md
-          grep -q 'Persistent open world replaces separate-raid world as foundation' DESIGN_DECISIONS.md
-          grep -q 'DESCRIBE -> APPROVE -> IMPLEMENT -> VERIFY' DESIGN_WORKFLOW.md
-          grep -q 'One major system per implementation slice' README_SOPS.md
-          grep -q 'Main is composition, not implementation' MODULAR_REBUILD_MASTER_DESIGN.md
-          grep -q 'Status: \*\*IMPLEMENTED' SYSTEM_DESIGNS/00A_SPATIAL_MODEL.md
-          grep -q 'Status: \*\*IMPLEMENTED' SYSTEM_DESIGNS/00B_PERSISTENT_WORLD_STATE.md
-          grep -q 'Status: \*\*IMPLEMENTED' SYSTEM_DESIGNS/00C_TICK_ACTION_PAUSE.md
-          grep -q '1763958f44eb7f855fd49944c00d1ffe608c0abe' MODULAR_REBUILD_MASTER_DESIGN.md
+          grep -q 'DESCRIBE -> APPROVE -> IMPLEMENT -> VERIFY' README_SOPS.md
+          grep -q 'replaceability' README_SOPS.md
           test -f game/project.godot
           test -f game/export_presets.cfg
           test -f game/main.tscn
-          test -f game/assets/tactical_atlas.svg
-          test -f game/assets/clutter_atlas.svg
-          test -f game/assets/world_art_atlas.svg
-          test -f game/assets/building_props_atlas.svg
-          test -f game/assets/final_environment_surfaces_atlas.svg
-          test -f game/assets/final_environment_props_atlas.svg
-          test -f game/assets/player_north.svg
-          test -f game/assets/player_east.svg
-          test -f game/assets/player_south.svg
-          test -f game/assets/player_west.svg
-          # Canonical modular foundation slice 00A: WHERE / Spatial Model.
-          test -f game/scripts/foundation/spatial/SpatialFacing.gd
-          test -f game/scripts/foundation/spatial/SpatialFootprint.gd
-          test -f game/scripts/foundation/spatial/SpatialStructureGeometry.gd
-          test -f game/scripts/foundation/spatial/SpatialLayer.gd
-          test -f game/scripts/foundation/spatial/SpatialModel.gd
-          test -f game/scripts/ci/SpatialModelSmoke.gd
-          grep -q 'class_name SpatialFacing' game/scripts/foundation/spatial/SpatialFacing.gd
-          grep -q 'class_name SpatialFootprint' game/scripts/foundation/spatial/SpatialFootprint.gd
-          grep -q 'class_name SpatialStructureGeometry' game/scripts/foundation/spatial/SpatialStructureGeometry.gd
-          grep -q 'class_name SpatialLayer' game/scripts/foundation/spatial/SpatialLayer.gd
-          grep -q 'class_name SpatialModel' game/scripts/foundation/spatial/SpatialModel.gd
-          # Canonical modular foundation slice 00B: WHAT / Persistent World State.
-          test -f game/scripts/foundation/world/WorldEntityId.gd
-          test -f game/scripts/foundation/world/WorldEntityRecord.gd
-          test -f game/scripts/foundation/world/WorldPlacement.gd
-          test -f game/scripts/foundation/world/TerrainStore.gd
-          test -f game/scripts/foundation/world/EntityStore.gd
-          test -f game/scripts/foundation/world/PlacementStore.gd
-          test -f game/scripts/foundation/world/OccupancyIndex.gd
-          test -f game/scripts/foundation/world/WorldChange.gd
-          test -f game/scripts/foundation/world/WorldState.gd
-          test -f game/scripts/foundation/world/WorldMutationService.gd
-          test -f game/scripts/ci/WorldStateSmoke.gd
-          grep -q 'class_name WorldEntityId' game/scripts/foundation/world/WorldEntityId.gd
-          grep -q 'class_name WorldEntityRecord' game/scripts/foundation/world/WorldEntityRecord.gd
-          grep -q 'class_name WorldPlacement' game/scripts/foundation/world/WorldPlacement.gd
-          grep -q 'class_name TerrainStore' game/scripts/foundation/world/TerrainStore.gd
-          grep -q 'class_name EntityStore' game/scripts/foundation/world/EntityStore.gd
-          grep -q 'class_name PlacementStore' game/scripts/foundation/world/PlacementStore.gd
-          grep -q 'class_name OccupancyIndex' game/scripts/foundation/world/OccupancyIndex.gd
-          grep -q 'class_name WorldChange' game/scripts/foundation/world/WorldChange.gd
-          grep -q 'class_name WorldState' game/scripts/foundation/world/WorldState.gd
-          grep -q 'class_name WorldMutationService' game/scripts/foundation/world/WorldMutationService.gd
-          ! grep -R -q 'scripts/reboot' game/scripts/foundation/world
-          ! grep -R -q 'TickScheduler' game/scripts/foundation/world
-          # Canonical modular foundation slice 00C: WHEN / Tick Action Pause.
-          test -f game/scripts/foundation/time/TickRules.gd
-          test -f game/scripts/foundation/time/ActionPhase.gd
-          test -f game/scripts/foundation/time/TimedAction.gd
-          test -f game/scripts/foundation/time/ScheduledEvent.gd
-          test -f game/scripts/foundation/time/TickEventQueue.gd
-          test -f game/scripts/foundation/time/TickKernel.gd
-          test -f game/scripts/ci/TickKernelSmoke.gd
-          grep -q 'class_name TickRules' game/scripts/foundation/time/TickRules.gd
-          grep -q 'class_name ActionPhase' game/scripts/foundation/time/ActionPhase.gd
-          grep -q 'class_name TimedAction' game/scripts/foundation/time/TimedAction.gd
-          grep -q 'class_name ScheduledEvent' game/scripts/foundation/time/ScheduledEvent.gd
-          grep -q 'class_name TickEventQueue' game/scripts/foundation/time/TickEventQueue.gd
-          grep -q 'class_name TickKernel' game/scripts/foundation/time/TickKernel.gd
-          ! grep -R -q 'scripts/reboot' game/scripts/foundation/time
-          ! grep -R -q 'foundation/world' game/scripts/foundation/time
-          ! grep -R -q 'foundation/spatial' game/scripts/foundation/time
-          # Canonical downstream collision / spatial query system.
-          test -f game/scripts/simulation/collision/CollisionProfile.gd
-          test -f game/scripts/simulation/collision/CollisionCatalog.gd
-          test -f game/scripts/simulation/collision/CollisionOverrideState.gd
-          test -f game/scripts/simulation/collision/SpatialQueryResult.gd
-          test -f game/scripts/simulation/collision/SpatialQueryService.gd
-          test -f game/scripts/ci/CollisionSpatialQuerySmoke.gd
-          grep -q 'class_name CollisionProfile' game/scripts/simulation/collision/CollisionProfile.gd
-          grep -q 'class_name CollisionCatalog' game/scripts/simulation/collision/CollisionCatalog.gd
-          grep -q 'class_name CollisionOverrideState' game/scripts/simulation/collision/CollisionOverrideState.gd
-          grep -q 'class_name SpatialQueryResult' game/scripts/simulation/collision/SpatialQueryResult.gd
-          grep -q 'class_name SpatialQueryService' game/scripts/simulation/collision/SpatialQueryService.gd
-          ! grep -R -q 'scripts/reboot' game/scripts/simulation/collision
-          ! grep -R -q 'foundation/time' game/scripts/simulation/collision
-          # Reboot remains frozen recovery/reference code and must continue to pass its
-          # own regressions, but it is no longer the live main-scene entry point.
-          test -f game/scripts/reboot/RebootArt.gd
-          test -f game/scripts/reboot/RebootSiteGenerator.gd
-          test -f game/scripts/reboot/RebootPlayer.gd
-          test -f game/scripts/reboot/RebootMain.gd
-          test -f game/scripts/reboot/RebootPrefabLibrary.gd
-          test -f game/scripts/reboot/RebootPrefabEditor.gd
-          test -f game/scripts/ci/RebootSmoke.gd
-          test -f game/scripts/ci/RebootPrefabSmoke.gd
-          grep -q 'class_name RebootArt' game/scripts/reboot/RebootArt.gd
-          grep -q 'class_name RebootSiteGenerator' game/scripts/reboot/RebootSiteGenerator.gd
-          grep -q '"rural_road"' game/scripts/reboot/RebootSiteGenerator.gd
-          grep -q 'class_name RebootPlayer' game/scripts/reboot/RebootPlayer.gd
-          grep -q 'class_name RebootMain' game/scripts/reboot/RebootMain.gd
-          grep -q 'class_name RebootPrefabLibrary' game/scripts/reboot/RebootPrefabLibrary.gd
-          grep -q 'class_name RebootPrefabEditor' game/scripts/reboot/RebootPrefabEditor.gd
-          # Live canonical demo composition.
           test -f game/scripts/app/CanonicalDemoMain.gd
-          test -f game/scripts/demo/CanonicalDemoFixture.gd
           test -f game/scripts/render/TacticalRendererStack.gd
-          test -f game/scripts/input/PlayerActionIntent.gd
-          test -f game/scripts/input/KeyboardInputAdapter.gd
-          test -f game/scripts/player/DemoPlayerActionController.gd
-          test -f game/scripts/ui/DemoMovementControls.gd
           test -f game/scripts/ci/CanonicalDemoSmoke.gd
           grep -q 'CanonicalDemoMain.gd' game/main.tscn
-          ! grep -q 'scripts/reboot/RebootMain.gd' game/main.tscn
           grep -q 'run/main_scene="res://main.tscn"' game/project.godot
-          ! grep -q 'autoload' game/project.godot
+          ! test -d game/scripts/reboot
+          ! find game/scripts -maxdepth 1 -type f -name '*.gd' | grep -q .
 
       - name: Install Godot 4.7.1 and export templates
         shell: bash
@@ -180,54 +72,6 @@ jobs:
           set -euxo pipefail
           ./Godot_v4.7.1-stable_linux.x86_64 --headless --editor --path "$GITHUB_WORKSPACE/game" --quit 2>&1 | tee "$RUNNER_TEMP/import.log"
           if grep -Eqi 'SCRIPT ERROR|Parse Error|Failed to load script' "$RUNNER_TEMP/import.log"; then exit 1; fi
-
-      - name: Spatial model contract smoke
-        shell: bash
-        run: |
-          set -euxo pipefail
-          ./Godot_v4.7.1-stable_linux.x86_64 --headless --path "$GITHUB_WORKSPACE/game" --script res://scripts/ci/SpatialModelSmoke.gd 2>&1 | tee "$RUNNER_TEMP/spatial-smoke.log"
-          grep -q 'SPATIAL_MODEL_SMOKE_OK' "$RUNNER_TEMP/spatial-smoke.log"
-          if grep -Eqi 'SCRIPT ERROR|Parse Error|Failed to load script' "$RUNNER_TEMP/spatial-smoke.log"; then exit 1; fi
-
-      - name: Persistent world state contract smoke
-        shell: bash
-        run: |
-          set -euxo pipefail
-          ./Godot_v4.7.1-stable_linux.x86_64 --headless --path "$GITHUB_WORKSPACE/game" --script res://scripts/ci/WorldStateSmoke.gd 2>&1 | tee "$RUNNER_TEMP/world-state-smoke.log"
-          grep -q 'WORLD_STATE_SMOKE_OK' "$RUNNER_TEMP/world-state-smoke.log"
-          if grep -Eqi 'SCRIPT ERROR|Parse Error|Failed to load script' "$RUNNER_TEMP/world-state-smoke.log"; then exit 1; fi
-
-      - name: Tick action pause contract smoke
-        shell: bash
-        run: |
-          set -euxo pipefail
-          ./Godot_v4.7.1-stable_linux.x86_64 --headless --path "$GITHUB_WORKSPACE/game" --script res://scripts/ci/TickKernelSmoke.gd 2>&1 | tee "$RUNNER_TEMP/tick-kernel-smoke.log"
-          grep -q 'TICK_KERNEL_SMOKE_OK' "$RUNNER_TEMP/tick-kernel-smoke.log"
-          if grep -Eqi 'SCRIPT ERROR|Parse Error|Failed to load script' "$RUNNER_TEMP/tick-kernel-smoke.log"; then exit 1; fi
-
-      - name: Collision spatial query contract smoke
-        shell: bash
-        run: |
-          set -euxo pipefail
-          ./Godot_v4.7.1-stable_linux.x86_64 --headless --path "$GITHUB_WORKSPACE/game" --script res://scripts/ci/CollisionSpatialQuerySmoke.gd 2>&1 | tee "$RUNNER_TEMP/collision-spatial-smoke.log"
-          grep -q 'COLLISION_SPATIAL_QUERY_SMOKE_OK' "$RUNNER_TEMP/collision-spatial-smoke.log"
-          if grep -Eqi 'SCRIPT ERROR|Parse Error|Failed to load script' "$RUNNER_TEMP/collision-spatial-smoke.log"; then exit 1; fi
-
-      - name: Reboot reference core smoke
-        shell: bash
-        run: |
-          set -euxo pipefail
-          ./Godot_v4.7.1-stable_linux.x86_64 --headless --path "$GITHUB_WORKSPACE/game" --script res://scripts/ci/RebootSmoke.gd 2>&1 | tee "$RUNNER_TEMP/reboot-smoke.log"
-          grep -q 'REBOOT_CORE_SMOKE_OK' "$RUNNER_TEMP/reboot-smoke.log"
-          if grep -Eqi 'SCRIPT ERROR|Parse Error|Failed to load script' "$RUNNER_TEMP/reboot-smoke.log"; then exit 1; fi
-
-      - name: Prefab workshop reference smoke
-        shell: bash
-        run: |
-          set -euxo pipefail
-          ./Godot_v4.7.1-stable_linux.x86_64 --headless --path "$GITHUB_WORKSPACE/game" --script res://scripts/ci/RebootPrefabSmoke.gd 2>&1 | tee "$RUNNER_TEMP/prefab-smoke.log"
-          grep -q 'REBOOT_PREFAB_SMOKE_OK' "$RUNNER_TEMP/prefab-smoke.log"
-          if grep -Eqi 'SCRIPT ERROR|Parse Error|Failed to load script' "$RUNNER_TEMP/prefab-smoke.log"; then exit 1; fi
 
       - name: Canonical demo integration smoke
         shell: bash
