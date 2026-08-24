@@ -46,6 +46,7 @@ Canonical status/routing index. Read `PROJECT_NORTH_STAR.md` and `README_SOPS.md
 | 24 | World Loot / Searchable Containers / Scavenging | **IMPLEMENTED — Candidate 001** | `24_WORLD_LOOT_SEARCHABLE_CONTAINERS.md` |
 | 25 | World Time / Ambient Daylight | **IMPLEMENTED — Candidate 001** | `25_WORLD_TIME_AMBIENT_DAYLIGHT.md` |
 | 26 | Spatial Sound / Hearing | **IMPLEMENTED — Candidate 001** | `26_SPATIAL_SOUND_HEARING.md` |
+| 27 | Physical Lighting / Illumination / Shadows | **DRAFT — awaiting approval** | `27_PHYSICAL_LIGHTING_ILLUMINATION_SHADOWS.md` |
 | 00E | Population / Household / Outbreak / Player Story | **NOT DESIGNED** | future design |
 
 ## Current System 19 / 20 / 00F truth
@@ -89,6 +90,16 @@ Current live emitters are successful Walk steps, each Run stride and truthful no
 First fully green executable head: `2d3dcfa6fc8646cda62a5e775beb1ac7c8d04d08`.
 
 Exact-head context: `verify/system26-spatial-sound`.
+
+## Current System 27 draft direction
+
+> **Light is physical. Vision is observer-specific. Rendering visualizes lighting; gameplay and AI never read rendered pixels to decide what is illuminated.**
+
+The draft proposes one cohesive System 27 with three implementation slices: deterministic headless illumination physics; rich 2D lighting/shadow/glow presentation using the same source/occluder descriptors; then System 23 illumination-dependent visual acquisition for the player and future NPC/infected observers.
+
+Time of day, weather optics, enclosure/sky exposure, windows/doors, local emitters, flashlight beams, portal spill and tactical shadows all feed the authoritative illumination field. Hidden current local lights must not leak through stale REMEMBERED fog.
+
+No code is authorized by DRAFT status.
 
 ## Current presentation
 
