@@ -22,6 +22,8 @@ var _multiply_sprite: Sprite2D = null
 var _glow_sprite: Sprite2D = null
 var _multiply_texture: ImageTexture = null
 var _glow_texture: ImageTexture = null
+var _multiply_image: Image = null
+var _glow_image: Image = null
 var _texture_size: Vector2i = Vector2i.ZERO
 
 var _presentation_revision: int = 0
@@ -30,6 +32,7 @@ var _last_build_usec: int = 0
 var _last_min_luminance: float = 0.0
 var _last_max_luminance: float = 0.0
 var _last_glow_cells: int = 0
+var _last_lighting_revision: int = 0
 
 func _ready() -> void:
     _ensure_layers()
@@ -83,8 +86,11 @@ func refresh(reason: StringName = &"external") -> bool:
         return false
 
     var started: int = Time.get_ticks_usec()
-    var multiply_image := Image.create(_visible_size.x, _visible_size.y, false, Image.FORMAT_RGBA8)
-    var glow_image := Image.create(_visible_size.x, _visible_size.y, false, Image.FORMAT_RGBA8)
+    _ensure_images()
+    if _multiply_image == null or _glow_image == null:
+        return false
+
+    var prepared_revision: int = _lighting.prepare_query()
     var optics: AtmosphericOptics = _lighting.atmosphere()
     var min_luminance: float = 1.0
     var max_luminance: float = 0.0
@@ -93,17 +99,17 @@ func refresh(reason: StringName = &"external") -> bool:
     for local_y in range(_visible_size.y):
         for local_x in range(_visible_size.x):
             var cell := _visible_origin + Vector2i(local_x, local_y)
-            var sample: IlluminationSample = _lighting.illumination_at(cell)
+            var sample: IlluminationSample = _lighting.illumination_at_prepared(cell, prepared_revision)
             var tint: Color = _display_tint(sample, optics)
             var luminance: float = clampf(sample.useful_luminance, 0.0, 1.0)
             min_luminance = minf(min_luminance, luminance)
             max_luminance = maxf(max_luminance, luminance)
-            multiply_image.set_pixel(local_x, local_y, Color(tint.r, tint.g, tint.b, luminance))
+            _multiply_image.set_pixel(local_x, local_y, Color(tint.r, tint.g, tint.b, luminance))
 
             var glow_strength: float = _glow_strength(sample)
             if glow_strength > 0.01:
                 glow_cells += 1
-            glow_image.set_pixel(local_x, local_y, Color(tint.r, tint.g, tint.b, glow_strength))
+            _glow_image.set_pixel(local_x, local_y, Color(tint.r, tint.g, tint.b, glow_strength))
 
     for emitter: LightEmitter in _lighting.emitters():
         if not emitter.active or emitter.profile == null:
@@ -113,9 +119,9 @@ func refresh(reason: StringName = &"external") -> bool:
             continue
         var core_strength: float = clampf(emitter.profile.base_luminance, 0.0, 1.0)
         var core_color: Color = emitter.profile.tint
-        glow_image.set_pixel(local.x, local.y, Color(core_color.r, core_color.g, core_color.b, core_strength))
+        _glow_image.set_pixel(local.x, local.y, Color(core_color.r, core_color.g, core_color.b, core_strength))
 
-    _upload_maps(multiply_image, glow_image)
+    _upload_maps()
     _apply_atmosphere_uniforms(optics)
     _presentation_revision += 1
     _last_reason = reason
@@ -123,6 +129,7 @@ func refresh(reason: StringName = &"external") -> bool:
     _last_min_luminance = 0.0 if min_luminance > 1.0 else min_luminance
     _last_max_luminance = max_luminance
     _last_glow_cells = glow_cells
+    _last_lighting_revision = prepared_revision
     presentation_rebuilt.emit(reason, _presentation_revision)
     return true
 
@@ -152,6 +159,7 @@ func presentation_snapshot() -> Dictionary:
         "presentation_revision": _presentation_revision,
         "last_reason": String(_last_reason),
         "last_build_usec": _last_build_usec,
+        "last_lighting_revision": _last_lighting_revision,
         "min_luminance": _last_min_luminance,
         "max_luminance": _last_max_luminance,
         "glow_cells": _last_glow_cells,
@@ -187,16 +195,22 @@ func _ensure_layers() -> void:
     _glow_sprite.z_index = 1
     add_child(_glow_sprite)
 
-func _upload_maps(multiply_image: Image, glow_image: Image) -> void:
+func _ensure_images() -> void:
+    if _multiply_image != null and _glow_image != null and _multiply_image.get_size() == _visible_size and _glow_image.get_size() == _visible_size:
+        return
+    _multiply_image = Image.create(_visible_size.x, _visible_size.y, false, Image.FORMAT_RGBA8)
+    _glow_image = Image.create(_visible_size.x, _visible_size.y, false, Image.FORMAT_RGBA8)
+
+func _upload_maps() -> void:
     var size_changed: bool = _texture_size != _visible_size
     if _multiply_texture == null or size_changed:
-        _multiply_texture = ImageTexture.create_from_image(multiply_image)
+        _multiply_texture = ImageTexture.create_from_image(_multiply_image)
     else:
-        _multiply_texture.update(multiply_image)
+        _multiply_texture.update(_multiply_image)
     if _glow_texture == null or size_changed:
-        _glow_texture = ImageTexture.create_from_image(glow_image)
+        _glow_texture = ImageTexture.create_from_image(_glow_image)
     else:
-        _glow_texture.update(glow_image)
+        _glow_texture.update(_glow_image)
     _texture_size = _visible_size
 
     _multiply_sprite.texture = _multiply_texture
