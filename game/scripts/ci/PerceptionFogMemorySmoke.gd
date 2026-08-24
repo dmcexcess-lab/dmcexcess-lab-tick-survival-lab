@@ -21,6 +21,10 @@ const OBSERVER_ID := "perception.observer"
 const ACTOR_A_ID := "perception.actor.a"
 const ACTOR_B_ID := "perception.actor.b"
 const DOOR_ID := "perception.door"
+const REMOVED_PROP_ID := "perception.prop.removed"
+const STABLE_PROP_ID := "perception.prop.stable"
+const REMOVED_PROP_CELL := Vector2i(24, 17)
+const STABLE_PROP_CELL := Vector2i(16, 17)
 const CENTER := Vector2i(20, 20)
 
 var _failures: Array[String] = []
@@ -95,9 +99,15 @@ func _test_memory_last_seen_and_sound_layering() -> void:
     var initial_tick: int = kernel.world_tick()
     _check(initial_tick == 0, "perception fixture starts at tick zero")
 
-    var north_memory_cell := Vector2i(24, 17)
+    var north_memory_cell := REMOVED_PROP_CELL
     _check(service.knowledge_state(north_memory_cell) == PerceptionClass.KnowledgeState.VISIBLE, "initial north cell is visible")
     _check(memory.has_seen_cell(OBSERVER_ID, north_memory_cell), "visible cell records explored memory")
+    var visible_prop_memory: Dictionary = memory.environment_memory(OBSERVER_ID, REMOVED_PROP_CELL)
+    var visible_props: Array = visible_prop_memory.get("props", [])
+    _check(visible_props.size() == 1, "visible furniture is captured in environmental memory")
+    if visible_props.size() == 1:
+        _check(String(visible_props[0].get("entity_id", "")) == REMOVED_PROP_ID, "remembered furniture keeps stable entity identity")
+        _check(String(visible_props[0].get("semantic_type", "")) == "prop.sofa", "remembered furniture keeps semantic art identity")
 
     var closed_door_memory: Dictionary = memory.environment_memory(OBSERVER_ID, Vector2i(22, 16))
     var closed_structure: Dictionary = closed_door_memory.get("structure", {})
@@ -111,6 +121,11 @@ func _test_memory_last_seen_and_sound_layering() -> void:
     var stale_door_memory: Dictionary = memory.environment_memory(OBSERVER_ID, Vector2i(22, 16))
     var stale_structure: Dictionary = stale_door_memory.get("structure", {})
     _check(String(stale_structure.get("door_state", "")) == "closed", "hidden live door change does not update remembered door")
+
+    _check(mutations.remove_entity(REMOVED_PROP_ID), "hidden furniture is removed from live WHAT")
+    var stale_prop_memory: Dictionary = memory.environment_memory(OBSERVER_ID, REMOVED_PROP_CELL)
+    var stale_props: Array = stale_prop_memory.get("props", [])
+    _check(stale_props.size() == 1 and String(stale_props[0].get("entity_id", "")) == REMOVED_PROP_ID, "hidden furniture removal does not update stale remembered clutter")
 
     _check(_move_actor(mutations, ACTOR_A_ID, Vector2i(8, 20), Facing.Value.WEST), "hidden actor A moves")
     var stale_actor_a: Dictionary = memory.last_seen_actor(OBSERVER_ID, ACTOR_A_ID)
@@ -128,18 +143,22 @@ func _test_memory_last_seen_and_sound_layering() -> void:
     var refreshed_door_memory: Dictionary = memory.environment_memory(OBSERVER_ID, Vector2i(22, 16))
     var refreshed_structure: Dictionary = refreshed_door_memory.get("structure", {})
     _check(String(refreshed_structure.get("door_state", "")) == "open", "re-observation refreshes remembered door state")
+    var refreshed_prop_memory: Dictionary = memory.environment_memory(OBSERVER_ID, REMOVED_PROP_CELL)
+    _check((refreshed_prop_memory.get("props", []) as Array).is_empty(), "re-observation clears stale furniture that is now visibly absent")
 
     _check(service.knowledge_state(unseen_cell) == PerceptionClass.KnowledgeState.UNSEEN, "far unmaterialized cell starts unseen")
     _check(mutations.set_terrain(unseen_cell, &"ground.concrete_clean"), "unseen terrain materializes after perception enrollment")
     _check(service.knowledge_state(unseen_cell) == PerceptionClass.KnowledgeState.UNSEEN, "new hidden world truth does not count as exploration")
     _check(not memory.has_seen_cell(OBSERVER_ID, unseen_cell), "materialization alone does not mark unseen cell explored")
 
+    _check(_face_actor(world, mutations, OBSERVER_ID, Facing.Value.SOUTH), "observer turns away again for remembered-prop presentation")
     var overlay := OverlayClass.new()
     var catalog := ArtCatalogClass.new()
     _check(overlay.configure(service, memory, catalog, OBSERVER_ID), "perception overlay configures")
     _check(overlay.set_visible_window(Vector2i.ZERO, Vector2i(41, 41), 8.0), "overlay accepts world-sized test view")
     _check(overlay.set_auditory_cues([{"cell": unseen_cell, "radius_cells": 2, "strength": 0.7, "category": "impact"}]), "synthetic auditory cue accepted")
     var counts: Dictionary = overlay.planned_cell_counts()
+    _check(int(counts.get("remembered_props", 0)) >= 1, "overlay plans remembered furniture/clutter above dark fog")
     _check(int(counts.get("auditory", 0)) == 1, "auditory cue is planned over true fog")
     _check(int(counts.get("unseen", 0)) > 0, "true fog remains present under auditory cue")
     _check(service.knowledge_state(unseen_cell) == PerceptionClass.KnowledgeState.UNSEEN, "auditory cue does not convert true fog to remembered")
@@ -160,9 +179,16 @@ func _test_memory_last_seen_and_sound_layering() -> void:
 func _test_memory_snapshot_roundtrip() -> void:
     var memory := MemoryClass.new()
     _check(memory.enroll_observer("observer.one"), "snapshot observer enrolls")
-    _check(memory.remember_environment("observer.one", Vector2i(-3, 8), 42, &"ground.grass", {"present": false}), "snapshot environment stores")
+    var remembered_props: Array[Dictionary] = [{
+        "entity_id": "prop.remembered",
+        "semantic_type": "prop.sofa",
+        "anchor": Vector2i(-3, 8),
+        "facing": Facing.Value.EAST,
+    }]
+    _check(memory.remember_environment("observer.one", Vector2i(-3, 8), 42, &"ground.grass", {"present": false}, remembered_props), "snapshot environment with prop stores")
     _check(memory.remember_actor("observer.one", "actor.remembered", &"actor.infected", Vector2i(4, -2), Facing.Value.EAST, 43), "snapshot actor stores")
     var snapshot: Dictionary = memory.snapshot()
+    _check(int(snapshot.get("schema_version", 0)) == 2, "perception memory snapshot schema records prop-capable v2")
     var restored := MemoryClass.new()
     _check(restored.load_snapshot(snapshot), "memory snapshot restores")
     _check(restored.snapshot() == snapshot, "memory snapshot roundtrip is deterministic")
@@ -177,6 +203,8 @@ func _build_environment() -> Dictionary:
     _check(_create_actor(mutations, OBSERVER_ID, CENTER, Facing.Value.NORTH, &"actor.survivor"), "create perception observer")
     _check(_create_actor(mutations, ACTOR_A_ID, Vector2i(23, 18), Facing.Value.WEST, &"actor.infected"), "create actor A")
     _check(_create_actor(mutations, ACTOR_B_ID, Vector2i(17, 18), Facing.Value.EAST, &"actor.infected"), "create actor B")
+    _check(_create_prop(mutations, REMOVED_PROP_ID, REMOVED_PROP_CELL, Facing.Value.EAST, &"prop.sofa"), "create removable remembered furniture")
+    _check(_create_prop(mutations, STABLE_PROP_ID, STABLE_PROP_CELL, Facing.Value.SOUTH, &"prop.refrigerator_white"), "create stable remembered clutter")
 
     _check(_create_structure(mutations, "perception.wall", Vector2i(20, 16), &"wall.house"), "create opaque wall")
     _check(_create_structure(mutations, DOOR_ID, Vector2i(22, 16), &"door.house"), "create door")
@@ -204,6 +232,17 @@ func _create_actor(
     if mutations.create_entity(semantic, actor_id) != actor_id:
         return false
     return mutations.set_placement(actor_id, Layers.Channel.ACTOR, cell, facing, Footprint.single_cell())
+
+func _create_prop(
+    mutations: WorldMutationService,
+    entity_id: String,
+    cell: Vector2i,
+    facing: int,
+    semantic: StringName
+) -> bool:
+    if mutations.create_entity(semantic, entity_id) != entity_id:
+        return false
+    return mutations.set_placement(entity_id, Layers.Channel.OBJECT, cell, facing, Footprint.single_cell())
 
 func _create_structure(
     mutations: WorldMutationService,
