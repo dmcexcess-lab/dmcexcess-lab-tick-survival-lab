@@ -1,5 +1,22 @@
 # Changelog
 
+## System 23 Perception / LOS / Fog Memory — 2026-08-23
+
+- Implemented the approved Candidate 001 perception contract with deterministic four-way facing LOS, a 12-cell range, 120-degree forward cone and radius-1 all-around near awareness.
+- Added `VisionProfile.gd`, `VisionQuery.gd`, `PerceptionMemoryStore.gd` and `ObserverPerceptionService.gd` under the focused perception domain. The draft's proposed separate `VisionOcclusionQuery.gd` was not needed; cohesive tracing/opacity logic remains inside `VisionQuery.gd`.
+- Walls and CLOSED doors block sight while remaining visible themselves; OPEN doors and windows transmit LOS. Unknown/malformed structure opacity and missing required door truth fail closed rather than granting information.
+- Added true three-state observer knowledge: `UNSEEN` is completely black, `REMEMBERED` is dark stale last-observed terrain/structural shell, and `VISIBLE` uses current live world truth.
+- Added observer-keyed sparse perception memory with last-observed terrain/structure/door snapshots and stale last-seen living-actor observations. Hidden movement, death, door changes or other live mutations never remotely update remembered visual truth.
+- Added `PerceptionOverlayRenderer.gd`. Existing live Ground/Structure/Prop/Actor renderers remain current-truth renderers; the overlay blacks all non-visible cells and redraws only stored remembered snapshots above that mask.
+- Preserved the future Spatial Sound seam: synthetic auditory descriptors may render over visible, remembered or completely unexplored black fog without revealing/exploring terrain. System 23 does not fabricate or propagate sound events.
+- Perception recomputation is event-driven and consumes zero WHEN ticks. Newly materialized but unobserved world remains true black; technical streaming activation is never treated as exploration.
+- Added deterministic memory snapshot/restore coverage and a focused repeated-FOV benchmark requiring average recomputation below one 60 Hz frame-scale budget on the CI fixture.
+- Added `PerceptionFogMemorySmoke.gd`, `.github/workflows/perception-fog-memory.yml`, and exact-head context `verify/system23-perception`; integrated perception into the canonical demo composition without moving gameplay truth into rendering.
+- Corrected the final contract fixtures for typed memory snapshot handling and collinear closed-door/window LOS targets without changing the implemented LOS rules.
+- First fully green executable implementation head after the final LOS fixture correction: `87fb517265ba1defc395068d09ccb7059e16d114`.
+- On that exact executable head, `verify/system23-perception` and all seven protected exact-head gates were green: System 00D, 00F, 19, 20, 21, 22 and Pages.
+- Documentation promotion is status-only: no executable/config/workflow behavior is changed by the promotion commits.
+
 ## Materialization Performance Razor — 2026-08-23
 
 - Implemented the user-approved behavior-preserving performance pass on verified executable head `0b10957bb586162634e9da3c1a4415aef528fd2d`.
