@@ -6,7 +6,7 @@ on:
       - Global World Planning contract
       - Streaming and Materialization Orchestration contract
       - Local Building Generation and Archetype Lab contract
-      - Local Area and Parcel Generation contract
+      - Local Area Generation contract
       - Tactical Camera and View Control contract
       - Large Area Critique Runtime contract
       - Build and deploy Tick Survival Lab
@@ -42,7 +42,7 @@ jobs:
             "Local Building Generation and Archetype Lab contract")
               context="verify/system19-local-building"
               ;;
-            "Local Area and Parcel Generation contract")
+            "Local Area Generation contract")
               context="verify/system20-local-area"
               ;;
             "Tactical Camera and View Control contract")
