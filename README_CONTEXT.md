@@ -14,148 +14,129 @@ Live build: `https://dmcexcess-lab.github.io/dmcexcess-lab-tick-survival-lab/`
 
 Golden archaeology commit: `1763958f44eb7f855fd49944c00d1ffe608c0abe`.
 
-## Current canonical world stack
+## Current canonical world/gameplay stack
 
 - **00A WHERE** — implemented global integer-cell spatial model.
 - **00B WHAT** — implemented single authoritative persistent current world.
-- **00C WHEN** — implemented deterministic tick/action/pause kernel.
-- **00D Global World Planning** — implemented `temperate.rural.region` v6: geography, five settlements/sites, major roads, river/bridge intent, regional electrical, potable-water and wastewater/septic planning.
+- **00C WHEN** — implemented deterministic variable-duration tick/action/pause kernel.
+- **00D Global World Planning** — implemented `temperate.rural.region` v6.
+- **01–18 gameplay foundation** — collision, movement, locomotion, art/rendering, doors, hands, inventory, timed item transfer, health/needs/skills/item weight/carry/moodlets, canonical player shell/HUD, run/exertion and door passage are implemented.
 - **19 Building Generation** — finalized grammar plus **24 callable archetypes**: six protected rural/small-town references and 18 baseline one-story residential/lodging/commercial/civic/industrial/agricultural profiles.
-- **20 Local Area Generation** — implemented ten area profiles:
-  - `rural.crossroads` v5;
-  - `smalltown.center` v1;
-  - `rural.scattered` v1;
-  - `rural.open` v1;
-  - `rural.watercourse` v1;
-  - `suburban.neighborhood` v1;
-  - `urban.mixed` v1;
-  - `commercial.corridor` v1;
-  - `industrial.district` v1;
-  - `civic.campus` v1.
-- **20 Environment profiles** — `temperate.rural` v3 plus suburban, urban, industrial, woodland, coastal and marsh v1 palettes.
-- **00F Streaming / Materialization** — implemented settlement + dry-countryside logical sources, one-way materialization, reversible technical activation, registry snapshot schema v1, no destructive eviction.
-- **21 Camera** and **22 Large-Area DEV Critique Runtime** — implemented. Live presentation remains the Rural Crossroads critique world.
-- **23 Perception / LOS / Fog Memory** — implemented Candidate 001: deterministic facing-based LOS, true black unexplored fog, stale remembered terrain/structures/door state plus static furniture/clutter, per-observer memory, last-seen living-actor observations, and perception-layer support for future auditory cues.
-- **24 World Loot / Searchable Containers / Scavenging** — **DRAFT, awaiting approval**. Proposed next major gameplay system.
-
-## Active next design — System 24 Loot
-
-Draft: `SYSTEM_DESIGNS/24_WORLD_LOOT_SEARCHABLE_CONTAINERS.md`.
-
-Core proposed rule:
-
-> **Loot exists before you search for it. Searching spends time to discover and access real persistent contents; it never rolls a reward into existence.**
-
-The draft reuses the already-implemented inventory stack rather than replacing it:
-
-- furniture/fixtures remain real placed WHAT entities;
-- appropriate generated props become explicitly enrolled System 11 containers;
-- virgin stable `item.*` entities are initialized once and immediately contained;
-- System 24 persists the container's loot profile/provenance and source initialization record, but System 11 owns all current contents afterward;
-- search is a timed WHEN action returning current contents;
-- taking/storing continues through System 12 via a proposed injectable world-container access policy;
-- empty/looted containers never automatically repopulate;
-- Candidate 001 useful item content covers food, drink, medicine, tools and materials using real package entities and 13D weights;
-- generic quantity/condition, firearm/ammo mechanics, eating, treatment, crafting, corpse loot, vehicles and NPC scavenging stay with future owning systems.
-
-The draft uses public System 19 building archetype + prop role + semantic context so a grocery shelf, pharmacy shelf and hardware shelf can have different contents even when they share a physical shelf semantic. That classification is persisted at virgin initialization so later gameplay does not depend on generator internals.
+- **20 Local Area Generation** — ten area profiles and seven environment palettes.
+- **00F Streaming / Materialization** — settlement + dry-countryside logical sources, one-way materialization, reversible technical activation, no destructive eviction.
+- **21 Camera** and **22 Large-Area DEV Critique Runtime** — implemented.
+- **23 Perception / LOS / Fog Memory** — deterministic facing LOS, true black unexplored fog, stale remembered terrain/structures/doors/static furniture and last-seen living actors.
+- **24 World Loot / Searchable Containers / Scavenging** — implemented Candidate 001: real persistent virgin loot, searchable physical furniture, timed search, timed TAKE/STORE through System 12, `USABLE/JUNK + family` taxonomy, one-way no-respawn initialization and playable mobile scavenging UI.
 
 ## Baseline world-content rules
 
-1. **City density is horizontal for the current game.** New baseline buildings are one story; complexity comes from useful rooms, adjacency, units and realistic circulation rather than fake upper floors.
-2. **Lodging is roadside motel content, not a fake multi-story hotel.** Denser residential content is represented as townhomes or one-story multi-unit rows.
-3. **Multi-unit exterior access is physical.** Individual units/rooms may have separate exterior doors; one designated primary exterior door remains System 20's placement/access anchor.
-4. **Door approaches are reserved circulation.** Blocking props do not materialize on room cells immediately adjacent to a door.
-5. **Area building selection is parcel-fit aware.** Baseline profiles deterministically choose from their allowed System 19 archetypes that physically fit the parcel; no reroll loop or clipping is used.
-6. **All occupied land uses get real access.** Residential, farmstead, commercial, civic and industrial buildings receive finalized frontage-to-primary-entry access paths.
-7. **Environment palette is not geography truth.** Woodland/coastal/marsh palettes are reusable local vocabulary only; they do not authorize System 20 to invent a forest/coast/marsh that System 00D has not planned.
+1. **City density is horizontal for the current game.** Baseline buildings are one story; complexity comes from rooms, adjacency and units rather than fake upper floors.
+2. **Lodging is roadside motel content**, not fake multi-story hotels. Denser housing is townhomes / one-story multi-unit rows.
+3. **Multi-unit exterior access is physical.** Individual units/rooms may have separate exterior doors; one primary exterior door remains System 20's placement/access anchor.
+4. **Door approaches are reserved circulation.** Blocking props do not materialize on immediate room-side door approaches.
+5. **Area building selection is parcel-fit aware.** No reroll loop or clipping.
+6. **All occupied land uses get real access.** Residential, farmstead, commercial, civic and industrial parcels receive road/frontage-to-entry access.
+7. **Environment palette is not geography truth.** Woodland/coastal/marsh palettes do not authorize global landforms System 00D has not planned.
 
-First exact executable head with the expanded System 19/20 baseline libraries and the complete protected stack green: `2e7a6e0da27a02f8058a3a79538cd9cb55a48cef`.
-
-## Important world rules
+## Persistent world rules
 
 1. System 00D owns global coherence; local/streaming partitions never invent world-spanning geometry.
-2. System 20 converts global facts into local physical semantic terrain/areas; System 19 owns building internals.
-3. Generation owns virgin creation only. WHAT and typed mechanic stores own current reality after materialization.
+2. System 20 converts global facts into local physical areas; System 19 owns building interiors.
+3. Generation owns virgin creation only. WHAT and typed mechanic stores own current reality afterward.
 4. Technical streaming activation is not world existence.
 5. Materialization is one-way; activation is reversible.
 6. 00F logical source identity is independent from technical stream-region geometry.
-7. Current 00F source kinds are settlement sites and catalog-v1 dry countryside. Physical river/bridge terrain now exists in System 20, but the river corridor intentionally has no 00F logical source kind yet.
-8. Water is never replaced with fake dry terrain; bridges require actual System 00D bridge intent.
-9. Art is presentation, not physics.
-10. Phone/Safari remains first-class.
-11. Perception knowledge is observer-specific and never substitutes hidden current world truth for stale memory.
+7. Water is never replaced with fake dry terrain; bridges require real System 00D bridge intent.
+8. Art is presentation, not physics.
+9. Phone/Safari remains first-class.
+10. Perception knowledge is observer-specific and never substitutes hidden current truth for stale memory.
 
-## Current architecture cleanup state
+## System 23 perception truth
 
-Active process/design authority is intentionally small:
+Player-facing visual knowledge has three terrain/environment states:
 
-- North Star;
-- design-decision log;
-- this current-state index;
-- one SOP/workflow document (`README_SOPS.md`);
-- the System Design status ledger;
-- current canonical per-system designs;
-- changelog/history.
+- `UNSEEN` — true black;
+- `REMEMBERED` — dark stale last-observed terrain, structural/door state and anchored static `prop.*` / `fixture.*` furniture/clutter;
+- `VISIBLE` — current live world truth.
 
-Completed candidate/slice discussion docs are not active peer systems once their rules have been folded into the owning canonical system design.
+Candidate 001 vision uses a 12-cell 120-degree facing cone plus radius-1 near awareness. Walls/closed doors block; open doors/windows transmit; unknown opacity fails closed.
 
-Materialization source adapters follow one common provider contract instead of requiring coordinator fields/branches per source kind.
+Furniture/clutter memory stores stable ID, semantic, anchor and facing. Hidden moves/removals remain stale until re-observation. Perception-memory snapshots are schema v2.
+
+Exact-head owner: `verify/system23-perception`.
+
+## System 24 loot truth
+
+Core rule:
+
+> **Loot exists before you search for it.**
+
+Candidate 001 behavior:
+
+- eligible physical furniture is explicitly enrolled as real System 11 containers;
+- deterministic virgin `item.*` WHAT entities are created and contained **once** when a physical source is loot-initialized;
+- System 24 persists source/container provenance only; System 11 remains sole current-contents truth;
+- initialized empty/looted containers never repopulate;
+- exact WHAT + System 11 + System 24 rollback protects failed source initialization;
+- loot definitions require top-level `USABLE` or `JUNK`, plus a primary practical family such as food, drink, kitchen, medical, tools, farming, construction, electrical, household, office, sanitation, industrial, etc.;
+- junk is real persistent weighted item truth, not fake filler;
+- location-aware profiles distinguish grocery/pharmacy/hardware/convenience/gas-station shelves and cover household fridges, pantries, vanities, dressers, medical storage, office storage, warehouse/tool/farm storage and other current furniture;
+- search is a real `CANCELABLE` WHEN action and reads current contents at completion;
+- search reach and world-container transfer access use actor footprint + one-cell-forward fringe;
+- TAKE / STORE / placing remain System 12 item transfers and spend ticks;
+- live Candidate 001 transfer timing is 5 ticks per System 12 action type;
+- external container -> personal acquisition uses the existing System 13E hard carry ceiling;
+- the live Rural Crossroads critique runtime initializes its deterministic buildings for loot and provides a phone-friendly search/TAKE/STORE panel.
+
+System 12 now exposes an additive neutral `ItemContainerAccessPolicy` seam. The original `ItemTransferActionService` remains personal-only; `PolicyAwareItemTransferActionService` adds optional external access while preserving the old contract and regressions.
+
+System 19 now exposes `GeneratedBuildingPlan.entity_id_for_role(role)` so downstream systems can refer to generated physical entities without duplicating materializer identity rules.
+
+First fully green executable System 24 head:
+
+`411099a3c39b7abeeb189e8a176491cb7e410b6d`.
+
+Exact-head owner:
+
+`verify/system24-loot`.
+
+On that exact executable head all nine required contexts were green: System 24, 23, 22, 21, 20, 19, 00F, 00D and Pages.
 
 ## Current performance state
 
-The 2026-08-23 performance razor preserved the modular ownership model and optimized the actual hot path instead of merging systems:
+The 2026-08-23 performance razor preserved modular ownership while removing the measured materialization hot path:
 
-- initial terrain materialization uses coalesced WHAT terrain mutations rather than one change/revision/signal per cell;
-- standalone building/area materializers remain transactional, while an enclosing System 00F transaction reuses one outer WHAT + Door State + registry rollback snapshot instead of taking another full-world snapshot per area/building;
-- moving focus within the same technical streaming region uses a zero-discovery/zero-materialization fast path;
-- `GroundLayerRenderer` understands coalesced terrain dirty geometry so one relevant terrain batch requests one redraw rather than one redraw per cell.
+- coalesced WHAT terrain mutation batches;
+- one outer System 00F transaction snapshot instead of nested per-area/building full-world snapshots;
+- same-technical-region zero-discovery/zero-materialization fast path;
+- coalesced terrain renderer invalidation.
 
-On the same GitHub runner class and the same 00F regression workloads, the settlement suite improved from about **55.6s to 13.9s** (~75% faster / ~4.0× throughput) and the countryside suite from about **63.4s to 10.7s** (~83% faster / ~5.9× throughput). These are multi-scenario CI regression timings, not literal player-facing load latency.
-
-Known scale seam: System 00F still intentionally owns one full persistent-state snapshot for an atomic new-source batch, and inactive materialized facts remain resident in WHAT. Persistence-backed residency/eviction or a write-journal transaction model remains future work when measured world-size/mobile memory pressure justifies it.
-
-Verified performance code head: `0b10957bb586162634e9da3c1a4415aef528fd2d`.
-
-## System 23 Perception / LOS / Fog Memory
-
-Status: **IMPLEMENTED — Candidate 001**.
-
-Canonical player-facing knowledge model:
-
-- **UNSEEN / true fog** — completely black visual world information;
-- **REMEMBERED fog** — darkened stale last-observed terrain, structural shell/door state, and anchored static `prop.*`/`fixture.*` furniture/clutter;
-- **VISIBLE** — normal current live world truth;
-- **last-seen living actors** — stale remembered markers that do not secretly follow hidden actors;
-- **sound indicators** — the perception layer can accept future auditory cues over visible, remembered, or completely unexplored true black fog without revealing the terrain underneath or marking a cell explored.
-
-Candidate 001 uses a 12-cell deterministic 120-degree facing cone plus radius-1 all-around near awareness. Walls and closed doors block LOS; open doors and windows transmit. Unknown/malformed structure opacity fails closed. Persistent memory is maintained per stable observer actor ID; the current canonical demo maintains full memory for the controlled survivor.
-
-Static furniture/clutter memory stores compact stable ID, semantic, anchor and facing observations. Hidden furniture moves/removals do not update those records; seeing the cell again refreshes or clears them. Loose items, vehicles and vegetation are not yet included in environmental memory. Perception-memory snapshots are schema v2.
-
-Existing live renderers remain current-truth renderers. `PerceptionOverlayRenderer` blacks all non-visible cells and redraws only stored remembered snapshots above the black mask, including remembered static furniture/clutter through the normal Art Catalog/orientation rules, preventing hidden live state from leaking through memory.
-
-The first fully green executable System 23 head after the final LOS fixture correction is `87fb517265ba1defc395068d09ccb7059e16d114`.
-
-The first fully green executable head with remembered static furniture/clutter is `a08ccf8064f318e283acab6a3f73aa10e59f2acf`. On that exact code head, `verify/system23-perception` and all seven protected exact-head contexts were green.
+Known scale seam: inactive materialized facts remain resident in WHAT and a new-source 00F transaction still owns one full persistent-state rollback snapshot. Persistence-backed eviction/write journals remain future work when measured world-size/mobile pressure justifies them.
 
 ## Deferred seams
 
-The baseline suburb/urban/commercial/industrial/civic profiles are reusable System 20 content, not proof that the current System 00D rural-region fixture already contains those district types. Future global geography/settlement work may select them when its own planning truth authorizes them.
+Major intentionally deferred domains include:
 
-A future **00F river-source provider** remains a known clean seam when continuous streamed river traversal is actually needed; it is not the default next task merely because System 20 watercourse generation exists.
+- population / households / causal outbreak / player story (00E);
+- food/drink effects;
+- medical treatment effects;
+- item condition/durability and food spoilage;
+- lighting and real spatial sound;
+- infected AI/combat and firearm/ammunition mechanics;
+- crafting/recycling;
+- container locks/keys/forced entry;
+- corpse loot/decay;
+- vehicles/cargo;
+- NPC scavenging/ownership/theft;
+- outbreak-driven virgin loot depletion;
+- generic item quantity/stack mechanics;
+- persistence-backed streaming eviction.
 
-Real Spatial Sound remains an important gameplay follow-up, but the active proposed next major system is System 24 loot/scavenging. Lighting, infected AI/combat, and population/outbreak remain later choices rather than being silently bundled into loot.
+A future 00F river-source provider remains a clean seam when continuous streamed river traversal actually requires it.
 
-## Verification contexts used for protected world-stack changes
+## Verification contexts
 
-Owning/current contexts:
-
-- `verify/system19-local-building`
-- `verify/system20-local-area`
-- `verify/system23-perception`
-
-Protected exact-head stack:
+Current world/gameplay exact-head contexts:
 
 - `verify/system00d-global-world`
 - `verify/system00f-streaming-materialization`
@@ -163,4 +144,6 @@ Protected exact-head stack:
 - `verify/system20-local-area`
 - `verify/system21-camera-view`
 - `verify/system22-area-critique`
+- `verify/system23-perception`
+- `verify/system24-loot`
 - `verify/pages-deploy`
