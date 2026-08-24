@@ -45,6 +45,7 @@ Canonical status/routing index. Read `PROJECT_NORTH_STAR.md` and `README_SOPS.md
 | 23 | Perception / LOS / Fog Memory | **IMPLEMENTED — Candidate 001 + ambient memory shading** | `23_PERCEPTION_LOS_FOG_MEMORY.md` |
 | 24 | World Loot / Searchable Containers / Scavenging | **IMPLEMENTED — Candidate 001** | `24_WORLD_LOOT_SEARCHABLE_CONTAINERS.md` |
 | 25 | World Time / Ambient Daylight | **IMPLEMENTED — Candidate 001** | `25_WORLD_TIME_AMBIENT_DAYLIGHT.md` |
+| 26 | Spatial Sound / Hearing | **DRAFT — awaiting approval** | `26_SPATIAL_SOUND_HEARING.md` |
 | 00E | Population / Household / Outbreak / Player Story | **NOT DESIGNED** | future design |
 
 ## Current System 19 truth
@@ -102,6 +103,16 @@ Visible-world/local/artificial lighting, weather attenuation, season/latitude an
 First fully green executable head: `6b6680c5b8eb4d8db2c4097df093abace661d5c7`.
 
 Exact-head context: `verify/system25-world-time-light`.
+
+## Current System 26 draft direction
+
+System 26 separates exact physical sound emissions from listener-specific heard observations. Candidate 001 proposes deterministic weighted propagation through current walls/doors/windows, stat/status-driven detection/recognition/localization, and yellow textual cues that may appear over true-black fog without revealing terrain.
+
+Poor hearing primarily increases distance uncertainty and word vagueness. Hard actor-relative localization constraints preserve broad direction: a true rear sound cannot be displayed in front of the listener, and broad left/right side information is likewise preserved.
+
+Future infected/NPC AI is intended to consume the same uncertain listener observations rather than exact source coordinates.
+
+Status: **DRAFT — no implementation authorized yet**.
 
 ## Current presentation
 
