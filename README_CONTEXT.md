@@ -25,12 +25,12 @@ Golden archaeology commit: `1763958f44eb7f855fd49944c00d1ffe608c0abe`.
 - **20 Local Area Generation** — ten area profiles / seven environment palettes.
 - **00F Streaming / Materialization** — settlement + dry-countryside logical sources; one-way materialization, reversible activation.
 - **21 Camera** / **22 Large-Area DEV Critique Runtime** — implemented.
-- **23 Perception / LOS / Fog Memory** — facing LOS, true-black unexplored fog, stale remembered environment/static furniture, last-seen actors, ambient-responsive remembered presentation.
+- **23 Perception / LOS / Fog Memory** — facing LOS, true-black unexplored fog, stale remembered environment/static furniture, last-seen actors and auditory presentation layer.
 - **24 World Loot / Searchable Containers / Scavenging** — real persistent virgin loot, timed search, timed TAKE/STORE, `USABLE/JUNK + family`, playable scavenging UI.
-- **25 World Time / Ambient Daylight** — authoritative-tick-derived scenario clock and smooth outdoor dawn/day/dusk/night baseline feeding System 23 remembered-fog brightness.
-- **26 Spatial Sound / Hearing** — **DRAFT**: physical weighted propagation, listener-specific stat/status-driven hearing/localization/recognition, and yellow textual sound cues. No implementation authorization yet.
+- **25 World Time / Ambient Daylight** — authoritative-tick-derived scenario clock and smooth outdoor dawn/day/dusk/night baseline feeding remembered-fog brightness.
+- **26 Spatial Sound / Hearing** — deterministic physical acoustic propagation, stat/status-sensitive listener hearing, constrained localization uncertainty and yellow-word auditory cues.
 
-## Core world rules
+## Core rules
 
 1. System 00D owns global coherence; local/stream partitions do not invent world-spanning truth.
 2. System 20 turns global facts into local physical areas; System 19 owns building interiors.
@@ -40,37 +40,22 @@ Golden archaeology commit: `1763958f44eb7f855fd49944c00d1ffe608c0abe`.
 6. Art is presentation, not physics.
 7. Phone/Safari remains first-class.
 8. Perception knowledge is observer-specific and never substitutes hidden current truth for stale memory.
-9. WHEN owns integer simulation ticks only; downstream System 25 interprets those ticks as scenario-local clock time.
-
-## Baseline content rules
-
-- Current city density is horizontal, not fake upper floors.
-- Lodging is roadside motel content; denser housing is townhome / one-story multi-unit content.
-- Blocking props cannot occupy immediate room-side door circulation.
-- Parcel building selection is deterministic and fit-aware; no clipping/reroll loop.
-- Occupied residential/farmstead/commercial/civic/industrial parcels get real frontage-to-entry access.
-- Environment palettes are vocabulary, not permission to invent global geography.
+9. WHEN owns integer simulation ticks only; System 25 interprets them as scenario-local clock time.
+10. **Sound is physical; hearing is an estimate.** Exact sound-source truth is not observer knowledge.
 
 ## System 23 perception truth
 
-Player-facing visual knowledge:
+Visual states remain:
 
-- `UNSEEN` — fully opaque black at every time of day;
-- `REMEMBERED` — stale last-observed terrain, structure/door state and anchored static `prop.*` / `fixture.*` furniture/clutter;
-- `VISIBLE` — current live world truth.
+- `UNSEEN` — fully opaque black;
+- `REMEMBERED` — stale last-observed environment/static furniture;
+- `VISIBLE` — current live truth.
 
-Candidate 001 LOS uses a 12-cell, 120-degree facing cone plus radius-1 near awareness. Walls/closed doors block; open doors/windows transmit; malformed/unknown opacity fails closed.
+Candidate LOS is a 12-cell, 120-degree cone plus radius-1 near awareness. Memory schema is v2.
 
-Remembered static furniture stores stable ID, semantic, anchor and facing. Hidden moves/removals remain stale until re-observation. Perception-memory snapshot schema is v2.
+REMEMBERED luminance follows current System 25 outdoor ambient daylight: 0.30 at full daylight toward 0.10 at zero ambient; Candidate night ambient 0.08 yields ~=0.116 remembered luminance.
 
-REMEMBERED environmental luminance is now presentation-driven by current System 25 outdoor ambient daylight:
-
-- full daylight input -> `0.30` luminance;
-- zero ambient input -> `0.10` luminance;
-- interpolate between them;
-- Candidate 001 night ambient is `0.08`, producing remembered luminance ~= `0.116`.
-
-Memory does not store historical lighting and ambient changes never reveal hidden current WHAT. Last-seen actor markers and auditory indicators remain separate presentation channels.
+System 23 now presents live System 26 auditory descriptors as yellow words above any visual knowledge state. Auditory cues never reveal terrain or mark visual exploration.
 
 Exact-head owner: `verify/system23-perception`.
 
@@ -78,85 +63,74 @@ Exact-head owner: `verify/system23-perception`.
 
 > **Loot exists before you search for it.**
 
-- searchable furniture is real System 11 container truth;
-- deterministic stable `item.*` entities are created once during source loot initialization;
-- System 24 owns provenance, System 11 owns current contents;
-- looted/empty containers never automatically repopulate;
-- failed virgin initialization rolls WHAT + System 11 + System 24 back exactly;
-- each loot semantic has `USABLE` or `JUNK` plus one primary family and optional tags;
-- container tables are building/furniture-context aware;
-- search is timed and reads current contents at completion;
-- TAKE/STORE/place remain timed System 12 actions;
-- external acquisition respects System 13E's hard carry ceiling;
-- the live Rural Crossroads fixture exposes a phone-friendly search/TAKE/STORE panel.
-
-System 12's neutral `ItemContainerAccessPolicy` seam allows policy-aware external world containers without weakening the original personal-container service.
+Searchable furniture is real System 11 container truth. Deterministic `item.*` entities are created once during source loot initialization; System 24 owns provenance while System 11 owns current contents. Empty/looted containers never automatically repopulate. Search is timed, TAKE/STORE remain System 12 actions, and external acquisition respects System 13E's hard carry ceiling.
 
 Exact-head owner: `verify/system24-loot`.
 
 ## System 25 world-time / daylight truth
 
-System 25 interprets, but never advances, authoritative WHEN time.
-
-Candidate 001 world-time profile:
+Candidate 001:
 
 - 5 ticks / simulation second;
 - 300 ticks / minute;
 - 18,000 ticks / hour;
 - 432,000 ticks / day;
-- scenario starts day 0 at 08:00:00.
+- scenario starts day 0 at 08:00:00;
+- dawn 05:30–07:30;
+- full daylight 07:30–18:30;
+- dusk 18:30–20:30;
+- night baseline 0.08.
 
-Candidate 001 outdoor daylight:
-
-- dawn: 05:30 -> 07:30;
-- full daylight: 07:30 -> 18:30;
-- dusk: 18:30 -> 20:30;
-- night baseline: `0.08`;
-- full daylight: `1.0`.
-
-`WorldTimeService` derives day/time directly from current `world_tick`; it owns no second clock. `OutdoorAmbientLightService` produces the normalized daylight scalar/phase and emits changes when authoritative time changes. Hard pause therefore freezes the clock/daylight automatically.
-
-Visible-world lighting is deliberately deferred until interiors, windows, local lights, power, fire/flashlights and weather can be modeled honestly.
-
-First fully green executable System 25 head: `6b6680c5b8eb4d8db2c4097df093abace661d5c7`.
+System 25 derives time directly from `world_tick`; hard pause therefore freezes it automatically. Visible-world lighting remains deferred.
 
 Exact-head owner: `verify/system25-world-time-light`.
 
-## System 26 draft direction
+## System 26 spatial-sound truth
 
-Core proposed rule:
+> **Sound is physical. Hearing is an estimate.**
 
-> **Sound is physical. Hearing is an estimate. Poor perception makes the estimate broader and less specific; it does not put an impossible sound on the wrong side of the survivor.**
+Candidate 001:
 
-Draft Candidate 001 proposes:
+- exact `SoundEmission` physical truth is separated from listener `HeardSoundObservation` knowledge;
+- listener observations contain perceived position/strength/word/certainty but no exact hidden source cell/entity;
+- propagation is one bounded deterministic weighted eight-neighbor acoustic field per emission through materialized WHAT + Door State;
+- cardinal/diagonal travel costs are 10/14;
+- open door/window/closed door/wall attenuation additions are 4/36/64/124, unknown structure 132;
+- high-loss barriers can be heard through when sufficiently loud, while the solver chooses cheaper routes around them when available;
+- survivor hearing derives from base 50 + Survival (up to +40) - fatigue (up to -15) - sleep pressure (up to -20);
+- poor hearing mainly widens range/bearing uncertainty and reduces recognition specificity;
+- **hard localization rule:** true front/rear/left/right signs can never flip; a sound behind the survivor cannot be displayed in front;
+- localization is deterministic per event/listener, never rerolled by rendering;
+- yellow words include `NOISE`, `MOVEMENT`, `FOOTSTEPS`, `IMPACT`, `THUD` and may appear over black fog;
+- off-screen words clamp to the edge using the perceived location, not exact source truth;
+- cue age uses WHEN ticks only, so auto/hard pause preserves cues while the player decides;
+- repeated source/category groups refresh one cue;
+- live physical emitters are successful Walk steps, each Run stride and truthful Door transitions; no fake ambient threat noises are generated;
+- neutral `HearingProfileProvider` and `AcousticEnvironmentModifier` seams preserve future infected/animal hearing and weather/background masking.
 
-- exact physical `SoundEmission` truth separate from listener-specific `HeardSoundObservation` knowledge;
-- deterministic bounded weighted propagation through current materialized geometry rather than radius-only/visual-LOS checks;
-- walls, closed/open doors and windows use distinct acoustic attenuation rather than all being absolute blockers;
-- actor stats/status drive hearing detection, recognition and localization through a derived profile rather than a new persistent Perception stat;
-- current proposed survivor profile uses Survival skill positively and Fatigue/Sleep Pressure negatively, while domain skills may improve recognition of specific sound families;
-- yellow textual sound words replace the current synthetic crosshair cue;
-- poor hearing primarily increases distance uncertainty and word vagueness, while hard actor-relative direction constraints prevent a real rear sound from being displayed in front and preserve broad left/right side information;
-- deterministic cue placement never rerolls every frame;
-- off-screen heard sounds get viewport-edge words based on the **perceived** bearing;
-- cue lifetime advances only with WHEN ticks, so auto-pause/hard pause leaves a just-heard cue readable;
-- repeated events such as footsteps refresh/group one cue instead of spamming one permanent marker per step;
-- future infected/NPC AI should consume the same uncertain heard observations instead of exact hidden source coordinates.
+First fully green executable System 26 head:
 
-Canonical draft: `SYSTEM_DESIGNS/26_SPATIAL_SOUND_HEARING.md`.
+`2d3dcfa6fc8646cda62a5e775beb1ac7c8d04d08`.
 
-Status: **DRAFT — awaiting approval; no code implementation authorized.**
+On that exact head all eleven required contexts were green.
+
+Candidate common walk-footstep propagation benchmark on that runner: `13268.29 µs` average across 100 fields, under the 16 ms target but explicitly a future many-emitter scale seam.
+
+Exact-head owner: `verify/system26-spatial-sound`.
 
 ## Current performance state
 
-The 2026-08-23 materialization razor retained modular ownership while adding coalesced WHAT terrain writes, one outer 00F rollback transaction, same-region streaming fast paths and coalesced renderer invalidation.
+The 2026-08-23 materialization razor retains coalesced WHAT writes, one outer 00F rollback transaction, same-region streaming fast paths and coalesced renderer invalidation.
 
-Known long-horizon scale seam: inactive materialized facts remain resident in WHAT and new-source 00F commits still own one full persistent-state rollback snapshot. Persistence-backed eviction/write journals remain future work when profiling justifies them.
+Known scale seams:
+
+- inactive materialized facts remain resident in WHAT and new-source 00F commits still own one full persistent-state rollback snapshot;
+- Candidate 001 sound propagation meets its single-field budget but needs re-profiling before large simultaneous infected/NPC populations.
 
 ## Major deferred seams
 
 - population / households / causal outbreak / player story (00E);
-- food/drink and medical effects;
+- usable food/drink and medical treatment actions;
 - condition/durability/spoilage;
 - visible-world/local/artificial lighting and weather attenuation;
 - infected AI/combat and firearm/ammunition mechanics;
@@ -168,8 +142,8 @@ Known long-horizon scale seam: inactive materialized facts remain resident in WH
 - outbreak-driven virgin loot depletion;
 - generic quantity/stack mechanics;
 - persistence-backed streaming eviction;
-- calendar date/season/latitude beyond System 25's scenario-local day/time profile;
-- global/coarse off-screen sound propagation beyond the active System 26 local-detail draft.
+- calendar date/season/latitude beyond System 25;
+- real conventional audio playback, if ever desired.
 
 ## Required exact-head contexts
 
@@ -182,4 +156,5 @@ Known long-horizon scale seam: inactive materialized facts remain resident in WH
 - `verify/system23-perception`
 - `verify/system24-loot`
 - `verify/system25-world-time-light`
+- `verify/system26-spatial-sound`
 - `verify/pages-deploy`
