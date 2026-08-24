@@ -490,6 +490,7 @@ func _boot_spatial_sound() -> bool:
     if not _action_sound_emitters.is_ready():
         return false
     _spatial_sound.listener_observations_changed.connect(_on_sound_observations_changed)
+    _spatial_sound.listener_decision_unpaused.connect(_on_sound_listener_decision_unpaused)
     return true
 
 func _sync_player_sound_cues() -> bool:
@@ -510,6 +511,10 @@ func _on_demo_lighting_emitters_changed(values: Array) -> void:
 func _on_sound_observations_changed(listener_id: String) -> void:
     if listener_id == FixtureClass.PLAYER_ID:
         _sync_player_sound_cues()
+
+func _on_sound_listener_decision_unpaused(listener_id: String) -> void:
+    if listener_id == FixtureClass.PLAYER_ID:
+        _world_view.notify_observer_decision_unpaused()
 
 func _on_shell_interaction_blocked_changed(blocked: bool) -> void:
     _shell_blocks_interaction = blocked

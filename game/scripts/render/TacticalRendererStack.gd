@@ -78,6 +78,10 @@ func set_auditory_cues(cues: Array) -> bool:
     _ensure_layers()
     return _perception.set_auditory_cues(cues)
 
+func notify_observer_decision_unpaused() -> int:
+    _ensure_layers()
+    return _perception.notify_observer_decision_unpaused()
+
 func perception_debug_snapshot() -> Dictionary:
     _ensure_layers()
     var result: Dictionary = _perception.planned_cell_counts()

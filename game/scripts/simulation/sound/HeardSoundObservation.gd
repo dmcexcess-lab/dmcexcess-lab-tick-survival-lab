@@ -33,7 +33,7 @@ func _init(
     perceived_cell = estimated_cell
     perceived_strength = clampf(strength, 0.0, 1.0)
     certainty = clampf(localization_certainty, 0.0, 1.0)
-    display_word = word.strip_edges().to_upper()
+    display_word = word.strip_edges()
     recognized_category = category
     expiry_tick = expires_at
     group_id = repeated_group_id.strip_edges()

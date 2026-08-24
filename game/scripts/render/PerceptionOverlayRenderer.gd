@@ -13,6 +13,11 @@ const MEMORY_DAY_LUMINANCE: float = 0.30
 const MEMORY_NIGHT_LUMINANCE: float = 0.10
 const LAST_SEEN_MODULATION := Color(0.48, 0.54, 0.66, 0.50)
 const SOUND_CUE_COLOR := Color(1.0, 0.82, 0.20, 0.95)
+const SEEN_SOUND_LIFETIME_MSEC: int = 1000
+const SEEN_SOUND_FADE_START_MSEC: int = 350
+const SOUND_FADE_PULSE_SECONDS: float = 0.05
+const SOUND_MODE_SEEN: String = "seen_transient"
+const SOUND_MODE_UNSEEN: String = "unseen_latched"
 const NPC_DRAW_SCALE: float = 29.0 / 32.0
 const FNV1A_OFFSET_BASIS: int = 2166136261
 const FNV1A_PRIME: int = 16777619
@@ -35,7 +40,13 @@ var _cell_pixels: float = 0.0
 var _view_valid: bool = false
 var _texture_cache: Dictionary = {}
 var _auditory_cues: Array[Dictionary] = []
+var _auditory_upstream_ids: Dictionary = {}
+var _auditory_suppressed_ids: Dictionary = {}
+var _auditory_fade_timer: Timer = null
 var _ambient_light_level: float = 1.0
+
+func _ready() -> void:
+    _ensure_auditory_timer()
 
 func configure(
     perception: ObserverPerceptionService,
@@ -80,6 +91,7 @@ func set_visible_window(origin: Vector2i, size_cells: Vector2i, cell_pixels: flo
 
 func set_auditory_cues(cues: Array) -> bool:
     var normalized: Array[Dictionary] = []
+    var incoming_ids: Dictionary = {}
     for value: Variant in cues:
         if typeof(value) != TYPE_DICTIONARY:
             return false
@@ -87,28 +99,94 @@ func set_auditory_cues(cues: Array) -> bool:
         var cell_value: Variant = cue.get("cell", null)
         if typeof(cell_value) != TYPE_VECTOR2I:
             return false
+        var cell: Vector2i = cell_value
         var category: String = String(cue.get("category", "sound")).strip_edges()
         if category.is_empty():
             category = "sound"
-        var word: String = String(cue.get("word", category)).strip_edges().to_upper()
+        var word: String = String(cue.get("word", category)).strip_edges()
         if word.is_empty():
             word = "NOISE"
+        var heard_tick: int = int(cue.get("heard_tick", -1))
+        var cue_id: String = String(cue.get("cue_id", "")).strip_edges()
+        if cue_id.is_empty():
+            cue_id = _legacy_cue_id(cell, category, word, heard_tick)
+        var group_id: String = String(cue.get("group_id", "")).strip_edges()
+        if group_id.is_empty():
+            group_id = cue_id
+        if incoming_ids.has(cue_id):
+            return false
+        incoming_ids[cue_id] = true
         normalized.append({
-            "cell": cell_value,
+            "cue_id": cue_id,
+            "group_id": group_id,
+            "cell": cell,
             "radius_cells": maxi(0, int(cue.get("radius_cells", 0))),
             "strength": clampf(float(cue.get("strength", 1.0)), 0.0, 1.0),
             "certainty": clampf(float(cue.get("certainty", 1.0)), 0.0, 1.0),
             "category": category,
             "word": word,
-            "heard_tick": int(cue.get("heard_tick", -1)),
+            "heard_tick": heard_tick,
             "expiry_tick": int(cue.get("expiry_tick", -1)),
         })
-    _auditory_cues = normalized
+
+    for key: Variant in _auditory_suppressed_ids.keys():
+        var suppressed_id: String = String(key)
+        if not incoming_ids.has(suppressed_id):
+            _auditory_suppressed_ids.erase(suppressed_id)
+    _auditory_upstream_ids = incoming_ids.duplicate()
+
+    var now_msec: int = Time.get_ticks_msec()
+    for cue: Dictionary in normalized:
+        var cue_id: String = String(cue.get("cue_id", ""))
+        if _auditory_suppressed_ids.has(cue_id):
+            continue
+        var group_id: String = String(cue.get("group_id", ""))
+        _remove_replaced_group_cue(group_id, cue_id)
+        var existing_index: int = _auditory_cue_index(cue_id)
+        if existing_index >= 0:
+            var existing: Dictionary = _auditory_cues[existing_index]
+            cue["presentation_mode"] = existing.get("presentation_mode", SOUND_MODE_UNSEEN)
+            cue["started_msec"] = int(existing.get("started_msec", now_msec))
+            _auditory_cues[existing_index] = cue
+            continue
+        var mode: String = SOUND_MODE_UNSEEN
+        if is_configured() and _perception.knowledge_state(cue.get("cell", Vector2i.ZERO)) == ObserverPerceptionService.KnowledgeState.VISIBLE:
+            mode = SOUND_MODE_SEEN
+        cue["presentation_mode"] = mode
+        cue["started_msec"] = now_msec
+        _auditory_cues.append(cue)
+
+    _prune_seen_cues(now_msec)
+    _update_auditory_timer()
     _request_redraw(&"auditory_cues_changed")
     return true
 
 func auditory_cues() -> Array[Dictionary]:
+    _prune_seen_cues(Time.get_ticks_msec())
     return _auditory_cues.duplicate(true)
+
+func notify_observer_decision_unpaused() -> int:
+    var removed: int = 0
+    for index in range(_auditory_cues.size() - 1, -1, -1):
+        var cue: Dictionary = _auditory_cues[index]
+        if String(cue.get("presentation_mode", "")) != SOUND_MODE_UNSEEN:
+            continue
+        var cue_id: String = String(cue.get("cue_id", ""))
+        if _auditory_upstream_ids.has(cue_id):
+            _auditory_suppressed_ids[cue_id] = true
+        _auditory_cues.remove_at(index)
+        removed += 1
+    if removed > 0:
+        _update_auditory_timer()
+        _request_redraw(&"auditory_unseen_cues_cleared")
+    return removed
+
+static func seen_cue_alpha_for_age_msec(age_msec: int) -> float:
+    if age_msec <= SEEN_SOUND_FADE_START_MSEC:
+        return 1.0
+    if age_msec >= SEEN_SOUND_LIFETIME_MSEC:
+        return 0.0
+    return 1.0 - float(age_msec - SEEN_SOUND_FADE_START_MSEC) / float(SEEN_SOUND_LIFETIME_MSEC - SEEN_SOUND_FADE_START_MSEC)
 
 func set_ambient_light_level(level: float) -> bool:
     if is_nan(level) or is_inf(level):
@@ -131,7 +209,18 @@ func memory_modulation() -> Color:
     return Color(luminance, luminance, luminance, 1.0)
 
 func planned_cell_counts() -> Dictionary:
-    var counts := {"visible": 0, "remembered": 0, "unseen": 0, "remembered_props": 0, "last_seen": 0, "auditory": 0, "auditory_offscreen": 0}
+    _prune_seen_cues(Time.get_ticks_msec())
+    var counts := {
+        "visible": 0,
+        "remembered": 0,
+        "unseen": 0,
+        "remembered_props": 0,
+        "last_seen": 0,
+        "auditory": 0,
+        "auditory_offscreen": 0,
+        "auditory_seen_transient": 0,
+        "auditory_unseen_latched": 0,
+    }
     if not is_configured() or not _view_valid:
         return counts
     for local_y in range(_visible_size.y):
@@ -155,6 +244,10 @@ func planned_cell_counts() -> Dictionary:
     for cue: Dictionary in _auditory_cues:
         var cue_cell: Vector2i = cue.get("cell", Vector2i.ZERO)
         counts["auditory"] += 1
+        if String(cue.get("presentation_mode", "")) == SOUND_MODE_SEEN:
+            counts["auditory_seen_transient"] += 1
+        else:
+            counts["auditory_unseen_latched"] += 1
         if not _cell_in_view(cue_cell):
             counts["auditory_offscreen"] += 1
     return counts
@@ -275,22 +368,28 @@ func _draw_last_seen_actors() -> void:
         _draw_selection(selection, destination, LAST_SEEN_MODULATION)
 
 func _draw_auditory_cues() -> void:
+    var now_msec: int = Time.get_ticks_msec()
     for cue: Dictionary in _auditory_cues:
         var cell: Vector2i = cue.get("cell", Vector2i.ZERO)
-        var word: String = String(cue.get("word", "NOISE")).strip_edges().to_upper()
+        var word: String = String(cue.get("word", "NOISE")).strip_edges()
         if word.is_empty():
             word = "NOISE"
         var position: Vector2 = _cell_rect(cell).get_center() if _cell_in_view(cell) else _offscreen_sound_position(cell)
         var display_word: String = word if _cell_in_view(cell) else _offscreen_word(word, cell)
-        _draw_sound_word(display_word, position, cue)
+        _draw_sound_word(display_word, position, cue, now_msec)
 
-func _draw_sound_word(word: String, center: Vector2, cue: Dictionary) -> void:
+func _draw_sound_word(word: String, center: Vector2, cue: Dictionary, now_msec: int) -> void:
     var strength: float = clampf(float(cue.get("strength", 1.0)), 0.0, 1.0)
     var certainty: float = clampf(float(cue.get("certainty", 1.0)), 0.0, 1.0)
+    var presentation_alpha: float = 1.0
+    if String(cue.get("presentation_mode", "")) == SOUND_MODE_SEEN:
+        presentation_alpha = seen_cue_alpha_for_age_msec(maxi(0, now_msec - int(cue.get("started_msec", now_msec))))
+    if presentation_alpha <= 0.0:
+        return
     var font: Font = ThemeDB.fallback_font
     var font_size: int = clampi(int(round(_cell_pixels * (0.42 + strength * 0.16))), 10, 22)
     var color := SOUND_CUE_COLOR
-    color.a = clampf(0.62 + strength * 0.28 + certainty * 0.08, 0.62, 0.98)
+    color.a = clampf(0.62 + strength * 0.28 + certainty * 0.08, 0.62, 0.98) * presentation_alpha
     var width: float = maxf(_cell_pixels * 3.5, 96.0)
     var baseline := Vector2(center.x - width * 0.5, center.y + float(font_size) * 0.35)
     draw_string(font, baseline, word, HORIZONTAL_ALIGNMENT_CENTER, width, font_size, color)
@@ -397,6 +496,66 @@ func _default_variant_for_actor_id(actor_id: String) -> int:
         hash_value = ((hash_value ^ byte_value) * FNV1A_PRIME) & UINT32_MASK
     return int(hash_value % ArtCatalog.LIVING_ACTOR_VARIANTS)
 
+func _auditory_cue_index(cue_id: String) -> int:
+    for index in range(_auditory_cues.size()):
+        if String(_auditory_cues[index].get("cue_id", "")) == cue_id:
+            return index
+    return -1
+
+func _remove_replaced_group_cue(group_id: String, keep_cue_id: String) -> void:
+    if group_id.is_empty():
+        return
+    for index in range(_auditory_cues.size() - 1, -1, -1):
+        var cue: Dictionary = _auditory_cues[index]
+        if String(cue.get("group_id", "")) == group_id and String(cue.get("cue_id", "")) != keep_cue_id:
+            _auditory_cues.remove_at(index)
+
+func _prune_seen_cues(now_msec: int) -> int:
+    var removed: int = 0
+    for index in range(_auditory_cues.size() - 1, -1, -1):
+        var cue: Dictionary = _auditory_cues[index]
+        if String(cue.get("presentation_mode", "")) != SOUND_MODE_SEEN:
+            continue
+        var age_msec: int = maxi(0, now_msec - int(cue.get("started_msec", now_msec)))
+        if age_msec < SEEN_SOUND_LIFETIME_MSEC:
+            continue
+        var cue_id: String = String(cue.get("cue_id", ""))
+        if _auditory_upstream_ids.has(cue_id):
+            _auditory_suppressed_ids[cue_id] = true
+        _auditory_cues.remove_at(index)
+        removed += 1
+    return removed
+
+func _has_seen_transient_cues() -> bool:
+    for cue: Dictionary in _auditory_cues:
+        if String(cue.get("presentation_mode", "")) == SOUND_MODE_SEEN:
+            return true
+    return false
+
+func _ensure_auditory_timer() -> void:
+    if _auditory_fade_timer != null or not is_inside_tree():
+        return
+    _auditory_fade_timer = Timer.new()
+    _auditory_fade_timer.name = "AuditoryCueFadeTimer"
+    _auditory_fade_timer.wait_time = SOUND_FADE_PULSE_SECONDS
+    _auditory_fade_timer.one_shot = false
+    _auditory_fade_timer.process_callback = Timer.TIMER_PROCESS_IDLE
+    _auditory_fade_timer.timeout.connect(_on_auditory_fade_timer_timeout)
+    add_child(_auditory_fade_timer)
+
+func _update_auditory_timer() -> void:
+    _ensure_auditory_timer()
+    if _auditory_fade_timer == null:
+        return
+    if _has_seen_transient_cues():
+        if _auditory_fade_timer.is_stopped():
+            _auditory_fade_timer.start()
+    elif not _auditory_fade_timer.is_stopped():
+        _auditory_fade_timer.stop()
+
+func _legacy_cue_id(cell: Vector2i, category: String, word: String, heard_tick: int) -> String:
+    return "legacy.%d.%d.%d.%s.%s" % [cell.x, cell.y, heard_tick, category, word]
+
 func _connect_perception() -> void:
     if _perception == null:
         return
@@ -413,6 +572,12 @@ func _disconnect_perception() -> void:
 
 func _on_perception_changed(_reason: StringName) -> void:
     _request_redraw(&"perception_changed")
+
+func _on_auditory_fade_timer_timeout() -> void:
+    var removed: int = _prune_seen_cues(Time.get_ticks_msec())
+    if removed > 0 or _has_seen_transient_cues():
+        _request_redraw(&"auditory_seen_fade")
+    _update_auditory_timer()
 
 func _request_redraw(reason: StringName) -> void:
     redraw_requested.emit(reason)

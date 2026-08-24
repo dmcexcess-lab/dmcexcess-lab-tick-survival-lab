@@ -73,6 +73,9 @@ func _test_profiles_and_hearing(env: Dictionary) -> void:
     _check(profiles.is_valid(), "sound profile catalog validates")
     _check(profiles.power(ProfilesClass.WALK_STEP) == 120, "walk acoustic budget is 120")
     _check(profiles.power(ProfilesClass.RUN_STRIDE) > profiles.power(ProfilesClass.WALK_STEP), "run is louder than walk")
+    _check(profiles.recognition_word(ProfilesClass.WALK_STEP, 2) == "*step step*", "recognized walking uses onomatopoeia")
+    _check(profiles.recognition_word(ProfilesClass.DOOR_LOUD, 2) == "*SLAM*", "recognized loud door uses onomatopoeia")
+    _check(profiles.recognition_word(ProfilesClass.WALK_STEP, 0) == "NOISE", "unrecognized sound stays honestly broad")
     var hearing := HearingClass.new(env["skills"], env["needs"])
     var poor: Dictionary = hearing.profile(POOR_ID)
     var strong: Dictionary = hearing.profile(STRONG_ID)
@@ -158,6 +161,10 @@ func _test_detection_localization_and_knowledge(env: Dictionary) -> void:
     var first: Vector2i = stable_service.active_observations(POOR_ID)[0].perceived_cell
     var descriptors: Array[Dictionary] = stable_service.presentation_descriptors(POOR_ID)
     _check(descriptors.size() == 1 and descriptors[0].get("cell", Vector2i.ZERO) == first, "presentation uses stored perceived cell without rerolling")
+    if descriptors.size() == 1:
+        _check(not String(descriptors[0].get("cue_id", "")).is_empty(), "presentation descriptor exposes stable opaque cue id")
+        _check(not String(descriptors[0].get("group_id", "")).is_empty(), "presentation descriptor exposes opaque repeated group id")
+        _check(not descriptors[0].has("origin_cell") and not descriptors[0].has("source_entity_id"), "presentation descriptor still exposes no exact hidden source truth")
 
 func _test_grouping_pause_expiry_and_snapshot(env: Dictionary) -> void:
     var kernel := TickKernelClass.new()
@@ -171,6 +178,14 @@ func _test_grouping_pause_expiry_and_snapshot(env: Dictionary) -> void:
     _check(restored_store.load_snapshot(snapshot), "active heard observations restore")
     _check(restored_store.snapshot() == snapshot, "heard-observation snapshot roundtrip deterministic")
 
+    var unpause_events: Array[String] = []
+    service.listener_decision_unpaused.connect(func(listener_id: String) -> void:
+        unpause_events.append(listener_id)
+    )
+    _check(kernel.begin_action(STRONG_ID, &"sound.test.action", 1) > 0, "listener action starts for presentation-unpause signal")
+    _check(unpause_events.size() == 1 and unpause_events[0] == STRONG_ID, "registered listener action start emits decision-unpaused presentation lifecycle")
+    kernel.run_until_stop()
+
     var before_tick: int = kernel.world_tick()
     kernel.set_hard_paused(true)
     _check(kernel.schedule_event(40, "sound-test", &"noop") > 0, "schedule future tick for cue aging")
@@ -180,19 +195,34 @@ func _test_grouping_pause_expiry_and_snapshot(env: Dictionary) -> void:
     kernel.set_hard_paused(false)
     kernel.run_until_stop()
     _check(kernel.world_tick() == 40, "world advances after hard pause released")
-    _check(service.active_observations(STRONG_ID).is_empty(), "cue expires only after authoritative world ticks pass expiry")
+    _check(service.active_observations(STRONG_ID).is_empty(), "physical heard observation still expires by authoritative world ticks")
 
 func _test_text_descriptor_contract() -> void:
     var overlay := OverlayClass.new()
-    _check(overlay.set_auditory_cues([{
+    var descriptor := {
+        "cue_id": "cue.text.1",
+        "group_id": "group.text",
         "cell": Vector2i(100, 100),
         "strength": 0.75,
         "certainty": 0.25,
         "category": "movement",
-        "word": "footsteps",
-    }]), "text auditory descriptor accepted by perception overlay")
+        "word": "*step step*",
+    }
+    _check(overlay.set_auditory_cues([descriptor]), "onomatopoeia auditory descriptor accepted by perception overlay")
     var cues: Array[Dictionary] = overlay.auditory_cues()
-    _check(cues.size() == 1 and String(cues[0].get("word", "")) == "FOOTSTEPS", "auditory presentation normalizes yellow word vocabulary")
+    _check(cues.size() == 1 and String(cues[0].get("word", "")) == "*step step*", "auditory presentation preserves onomatopoeia case and punctuation")
+    _check(cues.size() == 1 and String(cues[0].get("presentation_mode", "")) == OverlayClass.SOUND_MODE_UNSEEN, "unconfigured cue defaults to conservative unseen latch")
+    _check(overlay.notify_observer_decision_unpaused() == 1, "unseen latch clears on next observer unpause")
+    _check(overlay.auditory_cues().is_empty(), "cleared unseen cue is gone")
+    _check(overlay.set_auditory_cues([descriptor]), "upstream may still report cleared cue")
+    _check(overlay.auditory_cues().is_empty(), "cleared cue stays suppressed while same upstream observation remains")
+    _check(overlay.set_auditory_cues([]), "upstream observation can disappear")
+    _check(overlay.set_auditory_cues([descriptor]), "same id may be accepted again only after upstream absence")
+    _check(overlay.auditory_cues().size() == 1, "suppression resets after upstream observation disappears")
+    _check(is_equal_approx(OverlayClass.seen_cue_alpha_for_age_msec(0), 1.0), "seen cue begins fully visible")
+    var mid_alpha: float = OverlayClass.seen_cue_alpha_for_age_msec(675)
+    _check(mid_alpha > 0.0 and mid_alpha < 1.0, "seen cue fades during its one-second presentation lifetime")
+    _check(is_zero_approx(OverlayClass.seen_cue_alpha_for_age_msec(1000)), "seen cue reaches zero alpha at one second")
 
 func _benchmark_common_footstep(env: Dictionary) -> void:
     var propagation := PropagationClass.new(env["world"], env["doors"], MaterialsClass.new())

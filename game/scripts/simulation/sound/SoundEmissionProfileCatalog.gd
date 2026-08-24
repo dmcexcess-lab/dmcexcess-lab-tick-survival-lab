@@ -2,7 +2,9 @@ extends RefCounted
 class_name SoundEmissionProfileCatalog
 
 ## Candidate 001 source acoustic/recognition vocabulary. Budgets are gameplay
-## acoustic units, deliberately not calibrated decibels.
+## acoustic units, deliberately not calibrated decibels. Player-facing labels
+## prefer readable onomatopoeia once the listener recognizes the sound well
+## enough; vague tiers stay deliberately broad rather than guessing.
 
 const WALK_STEP: StringName = &"movement.walk_step"
 const RUN_STRIDE: StringName = &"movement.run_stride"
@@ -19,8 +21,8 @@ const _PROFILES := {
         "power": 120,
         "category": "movement",
         "unknown_word": "NOISE",
-        "broad_word": "MOVEMENT",
-        "specific_word": "FOOTSTEPS",
+        "broad_word": "*scuff*",
+        "specific_word": "*step step*",
         "recognition_difficulty": 48,
         "domain_skill": "survival",
         "cue_lifetime_ticks": 30,
@@ -29,8 +31,8 @@ const _PROFILES := {
         "power": 200,
         "category": "movement",
         "unknown_word": "NOISE",
-        "broad_word": "MOVEMENT",
-        "specific_word": "FOOTSTEPS",
+        "broad_word": "*thump thump*",
+        "specific_word": "*step step step*",
         "recognition_difficulty": 38,
         "domain_skill": "survival",
         "cue_lifetime_ticks": 35,
@@ -39,8 +41,8 @@ const _PROFILES := {
         "power": 180,
         "category": "impact",
         "unknown_word": "NOISE",
-        "broad_word": "IMPACT",
-        "specific_word": "THUD",
+        "broad_word": "*thunk*",
+        "specific_word": "*creak*",
         "recognition_difficulty": 45,
         "domain_skill": "survival",
         "cue_lifetime_ticks": 35,
@@ -49,8 +51,8 @@ const _PROFILES := {
         "power": 240,
         "category": "impact",
         "unknown_word": "NOISE",
-        "broad_word": "IMPACT",
-        "specific_word": "THUD",
+        "broad_word": "*BANG*",
+        "specific_word": "*SLAM*",
         "recognition_difficulty": 35,
         "domain_skill": "survival",
         "cue_lifetime_ticks": 40,
@@ -59,8 +61,8 @@ const _PROFILES := {
         "power": 320,
         "category": "impact",
         "unknown_word": "NOISE",
-        "broad_word": "IMPACT",
-        "specific_word": "THUD",
+        "broad_word": "*thud*",
+        "specific_word": "*THUD*",
         "recognition_difficulty": 40,
         "domain_skill": "survival",
         "cue_lifetime_ticks": 35,

@@ -13,6 +13,7 @@ const ObservationClass = preload("res://scripts/simulation/sound/HeardSoundObser
 
 signal sound_heard(listener_id, observation)
 signal listener_observations_changed(listener_id)
+signal listener_decision_unpaused(listener_id)
 signal emission_resolved(event_id, listeners_heard)
 
 const FNV1A_OFFSET_BASIS: int = 2166136261
@@ -47,6 +48,8 @@ func _init(
     if _kernel != null:
         if not _kernel.world_tick_advanced.is_connected(_on_world_tick_advanced):
             _kernel.world_tick_advanced.connect(_on_world_tick_advanced)
+        if not _kernel.action_started.is_connected(_on_action_started):
+            _kernel.action_started.connect(_on_action_started)
         if not _kernel.timing_state_reset.is_connected(_on_timing_state_reset):
             _kernel.timing_state_reset.connect(_on_timing_state_reset)
     if _observations != null and not _observations.observations_changed.is_connected(_on_store_changed):
@@ -125,6 +128,8 @@ func presentation_descriptors(listener_id: String) -> Array[Dictionary]:
     var result: Array[Dictionary] = []
     for observation: HeardSoundObservation in active_observations(listener_id):
         result.append({
+            "cue_id": observation.cue_id,
+            "group_id": observation.group_id,
             "cell": observation.perceived_cell,
             "strength": observation.perceived_strength,
             "certainty": observation.certainty,
@@ -287,6 +292,14 @@ static func _fnv1a(value: String) -> int:
 
 func _on_world_tick_advanced(_previous_tick: int, new_tick: int) -> void:
     _observations.prune_expired(new_tick)
+
+func _on_action_started(action: TimedAction) -> void:
+    if action == null:
+        return
+    var listener_id: String = action.actor_id.strip_edges()
+    if listener_id.is_empty() or not _observations.has_listener(listener_id):
+        return
+    listener_decision_unpaused.emit(listener_id)
 
 func _on_timing_state_reset() -> void:
     if _observations == null or _kernel == null:

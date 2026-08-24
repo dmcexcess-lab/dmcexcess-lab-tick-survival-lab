@@ -156,14 +156,44 @@ func _test_memory_last_seen_and_sound_layering() -> void:
     var catalog := ArtCatalogClass.new()
     _check(overlay.configure(service, memory, catalog, OBSERVER_ID), "perception overlay configures")
     _check(overlay.set_visible_window(Vector2i.ZERO, Vector2i(41, 41), 8.0), "overlay accepts world-sized test view")
-    _check(overlay.set_auditory_cues([{"cell": unseen_cell, "radius_cells": 2, "strength": 0.7, "category": "impact"}]), "synthetic auditory cue accepted")
+    var unseen_sound := {
+        "cue_id": "perception.sound.unseen",
+        "group_id": "perception.group.unseen",
+        "cell": unseen_cell,
+        "radius_cells": 2,
+        "strength": 0.7,
+        "certainty": 0.4,
+        "category": "impact",
+        "word": "*thud*",
+    }
+    var seen_sound := {
+        "cue_id": "perception.sound.seen",
+        "group_id": "perception.group.seen",
+        "cell": CENTER,
+        "strength": 0.8,
+        "certainty": 1.0,
+        "category": "movement",
+        "word": "*step step*",
+    }
+    _check(service.knowledge_state(CENTER) == PerceptionClass.KnowledgeState.VISIBLE, "observer cell remains visible for seen-sound classification")
+    _check(overlay.set_auditory_cues([unseen_sound, seen_sound]), "seen and unseen auditory cues accepted")
     var counts: Dictionary = overlay.planned_cell_counts()
     _check(int(counts.get("remembered_props", 0)) >= 1, "overlay plans remembered furniture/clutter above dark fog")
-    _check(int(counts.get("auditory", 0)) == 1, "auditory cue is planned over true fog")
+    _check(int(counts.get("auditory", 0)) == 2, "both auditory cues are planned")
+    _check(int(counts.get("auditory_seen_transient", 0)) == 1, "visible perceived-cell sound is classified as transient")
+    _check(int(counts.get("auditory_unseen_latched", 0)) == 1, "unseen perceived-cell sound is classified as latched")
     _check(int(counts.get("unseen", 0)) > 0, "true fog remains present under auditory cue")
     _check(service.knowledge_state(unseen_cell) == PerceptionClass.KnowledgeState.UNSEEN, "auditory cue does not convert true fog to remembered")
     _check(not memory.has_seen_cell(OBSERVER_ID, unseen_cell), "auditory cue does not explore underlying terrain")
     _check(OverlayClass.TRUE_FOG_COLOR == Color.BLACK, "true fog presentation is fully black")
+
+    _check(overlay.set_auditory_cues([]), "upstream auditory list can become empty")
+    var latched_counts: Dictionary = overlay.planned_cell_counts()
+    _check(int(latched_counts.get("auditory_unseen_latched", 0)) == 1, "unseen sound marker survives upstream tick expiry until next unpause")
+    _check(overlay.notify_observer_decision_unpaused() == 1, "next observer unpause clears unseen hearing marker")
+    var after_unpause_counts: Dictionary = overlay.planned_cell_counts()
+    _check(int(after_unpause_counts.get("auditory_unseen_latched", 0)) == 0, "unseen marker is gone after unpause")
+    _check(int(after_unpause_counts.get("auditory_seen_transient", 0)) <= 1, "seen sound lifetime remains independent one-second presentation fade")
 
     _check(kernel.world_tick() == initial_tick, "all perception/memory observation updates consume zero WHEN ticks")
 
