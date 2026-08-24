@@ -1,6 +1,6 @@
 # Tick Survival Lab — System 20 Local Area Generation
 
-Status: **IMPLEMENTED — five current profiles**
+Status: **IMPLEMENTED — ten current area profiles**
 
 System 20 turns caller-bounded global planning facts into deterministic local physical area plans. It owns local roads/blocks/parcels/access/property dressing where the selected profile authorizes them, but it never owns global geography, regional road routing, river routing, persistent gameplay truth, streaming activation, rendering or building interiors.
 
@@ -8,7 +8,15 @@ Core rule:
 
 > **System 00D decides large-scale world truth; System 20 preserves that truth while adding profile-authorized local physical detail.**
 
-Environment profile: `temperate.rural` v3.
+Current environment profiles:
+
+- `temperate.rural` v3;
+- `temperate.suburban` v1;
+- `temperate.urban` v1;
+- `temperate.industrial` v1;
+- `temperate.woodland` v1;
+- `temperate.coastal` v1;
+- `temperate.marsh` v1.
 
 Current area profiles:
 
@@ -16,7 +24,12 @@ Current area profiles:
 - `smalltown.center` v1;
 - `rural.scattered` v1;
 - `rural.open` v1;
-- `rural.watercourse` v1.
+- `rural.watercourse` v1;
+- `suburban.neighborhood` v1;
+- `urban.mixed` v1;
+- `commercial.corridor` v1;
+- `industrial.district` v1;
+- `civic.campus` v1.
 
 The former Candidate 001/006 documents are implementation history. Their final rules are consolidated here; detailed drafting history remains in Git/changelog.
 
@@ -30,6 +43,7 @@ The former Candidate 001/006 documents are implementation history. Their final r
 - infrastructure reservation geometry used to protect local planning space;
 - semantic blocks/parcels/land use where the profile uses them;
 - building placement descriptors sent to System 19;
+- deterministic selection among profile-authorized building archetypes that physically fit a parcel;
 - access/driveway/parking alignment to real generated building entries;
 - local environmental/property dressing;
 - rural-open landscape generation;
@@ -104,6 +118,8 @@ Public seams include:
 
 Projection never reroutes upstream truth.
 
+The five new baseline settlement morphology profiles are currently callable local content profiles; they do not imply that System 00D already places those district types in the canonical rural-region fixture. A future global planner may select them when its own geography/settlement truth authorizes them.
+
 ## 5. Settlement pipeline
 
 For settlement-style profiles the canonical pipeline is:
@@ -116,17 +132,21 @@ For settlement-style profiles the canonical pipeline is:
 6. optionally derive semantic town blocks;
 7. plan parcels/frontage;
 8. classify land use;
-9. determine access anchors;
-10. request System 19 building placement descriptors;
-11. generate/validate System 19 building plans;
-12. align access to actual primary exterior doors;
-13. detect actual public System 19 parking ground;
-14. create frontage-normal approaches/parking extension where legal;
-15. apply environment/property dressing;
-16. validate the complete area;
-17. return pure plan.
+9. determine road/property access anchors;
+10. read System 19 placement descriptors for the profile-authorized archetype pool;
+11. choose deterministically from archetypes that physically fit the parcel;
+12. generate/validate the chosen System 19 building plan;
+13. align property access to the actual primary exterior door;
+14. finalize frontage-normal driveway/access paths for any occupied residential, farmstead, commercial, civic or industrial parcel;
+15. detect actual public System 19 parking ground;
+16. create frontage-normal approaches/parking extension where legal;
+17. apply environment/property dressing;
+18. validate the complete area;
+19. return pure plan.
 
-System 20 never reaches into System 19 private internals.
+System 20 never reaches into System 19 private room/furniture internals.
+
+Fit filtering is not a reroll loop. Given the same request/profile/seed/parcel, the ordered allowed pool and first legal fit are deterministic. If no allowed archetype fits, generation fails honestly instead of clipping a building or silently violating parcel geometry.
 
 ## 6. `rural.crossroads` v5
 
@@ -156,11 +176,13 @@ Canonical rules:
 - deterministic infrastructure reservations protect local planning land without pretending to be finished runtime utility facilities;
 - four connected 3-cell paved local-town streets supplement the inherited regional spine;
 - semantic town blocks are reservation/road aware;
-- four compact main-road commercial opportunities currently contain one Small Gas Station, one Rural Diner and honest vacancies where the current System 19 library has no suitable additional storefront;
+- four compact main-road commercial opportunities currently contain one Small Gas Station, one Rural Diner and honest vacancies where the protected historical pool has no additional entries;
 - ten residential opportunities use the current residential library;
 - real primary-door access and actual parking-frontage rules are preserved;
 - regional road segments may legitimately end inside the local site;
 - inherited frontage is clipped to actual inherited segment extent.
+
+The protected small-town profile retains its historical selection behavior. Baseline fit-filter selection is additive and does not rewrite this reference morphology/signature.
 
 ## 8. `rural.scattered` v1
 
@@ -218,7 +240,94 @@ Rules:
 
 `LocalRiverBridgePlanner.gd` is the focused local physical-water/bridge owner. `GlobalHydrologyQuery.bridge_deck_rect()` is read-only geometry derived from the already-authoritative bridge intent.
 
-## 11. Materialization boundary
+## 11. Baseline settlement morphology library
+
+On 2026-08-23 System 20 gained five reusable one-story settlement/district morphology profiles. They all reuse the proven paved `smalltown_grid` road grammar but own different density, parcel-depth, land-use and System 19 archetype pools.
+
+### `suburban.neighborhood` v1
+
+Recommended environment: `temperate.suburban` v1.
+
+Baseline composition:
+
+- 2 small-commercial parcels;
+- 10 residential parcels;
+- 1 civic parcel;
+- residential pool includes small/family houses and horizontal townhomes;
+- civic anchor uses the small clinic profile.
+
+### `urban.mixed` v1
+
+Recommended environment: `temperate.urban` v1.
+
+Baseline composition:
+
+- 5 small-commercial parcels;
+- 8 residential parcels;
+- 2 civic parcels;
+- residential density is represented by one-story townhomes/multi-unit rows rather than upper floors;
+- commercial/civic pools use the baseline System 19 store/office/clinic/police profiles.
+
+### `commercial.corridor` v1
+
+Recommended environment: `temperate.suburban` v1.
+
+Baseline composition:
+
+- 6 commercial parcels;
+- 2 residential parcels;
+- 1 civic parcel;
+- 1 industrial parcel;
+- commercial pool includes the one-story roadside motel plus grocery/hardware/pharmacy/convenience/office profiles.
+
+This profile exposed and now protects the parcel-fit selection rule: the planner filters to legal descriptor fits before committing an archetype, rather than selecting a large building and failing after placement.
+
+### `industrial.district` v1
+
+Recommended environment: `temperate.industrial` v1.
+
+Baseline composition:
+
+- 2 commercial parcels;
+- 6 industrial parcels;
+- industrial pool uses one-story warehouse/workshop profiles.
+
+Industrial parcels use the same real frontage-to-primary-entry access invariant as every other occupied property; they are not allowed to become inaccessible simply because their land-use token differs from residential/commercial.
+
+### `civic.campus` v1
+
+Recommended environment: `temperate.suburban` v1.
+
+Baseline composition:
+
+- 1 commercial parcel;
+- 2 residential parcels;
+- 5 civic parcels;
+- civic pool contains school, fire station, police station, clinic and church.
+
+Civic parcels likewise receive real finalized access paths to their generated primary entrances.
+
+## 12. Environment palette library
+
+Environment profiles describe local surface/dressing choices. They do **not** create global geography.
+
+Current palettes:
+
+- `temperate.rural` v3 — established rural baseline;
+- `temperate.suburban` v1 — lawns, cleaner paved access, lower natural density;
+- `temperate.urban` v1 — concrete/alley surfaces, very sparse vegetation;
+- `temperate.industrial` v1 — cracked/oily concrete, chainlink, sparse rough vegetation;
+- `temperate.woodland` v1 — forest floor, denser trees/shrubs/rocks;
+- `temperate.coastal` v1 — sand/light gravel/coastal vegetation palette;
+- `temperate.marsh` v1 — marsh ground, reeds/cattails/wet rough vegetation palette.
+
+Critical boundary:
+
+> **A palette is presentation-ready local environment vocabulary, not permission to invent a coast, marsh, forest region, river or other global landform.**
+
+System 00D or another future global geography owner must establish the corresponding world truth before an integrated world generator selects a geography-dependent palette. Synthetic/focused System 20 tests may invoke a palette directly to validate the content contract.
+
+## 13. Materialization boundary
 
 `AreaMaterializationCoordinator` writes a valid generated area into WHAT + Door State using existing world mutation contracts. Materialization performance must not change generated plan morphology, IDs, profile versions or signatures.
 
@@ -238,7 +347,7 @@ System 20 does not retain authority after successful materialization. A revisit 
 
 Hydrology provenance itself is generation metadata; physical water/bridge truth reaches WHAT through ordinary semantic ground regions.
 
-## 12. Validation principles
+## 14. Validation principles
 
 The generic validator enforces structural/global invariants such as:
 
@@ -251,9 +360,11 @@ The generic validator enforces structural/global invariants such as:
 - System 19 subplan validity;
 - hydrology-feature coherence and bridge authorization for the watercourse profile.
 
+Every parcel gets deterministic road/property access anchors during planning. Final driveway/access cells are emitted only when a supported land-use parcel actually contains a generated building. Occupied residential, farmstead, commercial, civic and industrial parcels all share that invariant.
+
 Profile-specific cardinality/content rules are kept out of `GeneratedAreaPlan.is_generated()`.
 
-## 13. Protected replacement boundaries
+## 15. Protected replacement boundaries
 
 A System 20 rewrite must not require changes to:
 
@@ -265,7 +376,7 @@ A System 20 rewrite must not require changes to:
 
 Likewise changing technical streaming size must not change a System 20 plan for the same logical request.
 
-## 14. Tests
+## 16. Tests
 
 Current System 20 workflow exercises:
 
@@ -274,6 +385,10 @@ Current System 20 workflow exercises:
 - Rural-Scattered generation across all three hamlets;
 - Rural-Open roadless/roadside/landform and split-vs-combined invariance;
 - Rural-Watercourse physical width, bridge authorization, split-vs-combined invariance, materialization and traversal-policy proof;
+- the five-profile baseline settlement morphology library;
+- all seven environment palettes and their art-semantic coverage;
+- every baseline target producing a real System 19 building request that passes System 19 validation;
+- deterministic replay of every baseline area profile;
 - canonical demo startup regression.
 
 System 00F's performance contract additionally proves coalesced terrain change/revision behavior, renderer invalidation compatibility, standalone-vs-enclosing transaction snapshot ownership, and the same-region streaming fast path without changing System 20 generation output.
@@ -282,9 +397,11 @@ Exact-head context:
 
 `verify/system20-local-area`
 
-System 20D's first clean implementation head was `1ef3bd08e9d1a4ef258a2013c3af133ce6605002`, where the complete protected seven-context world stack was green before the architecture/performance cleanup refactors.
+The first exact executable head where the baseline building/area/environment libraries and the complete protected world stack were simultaneously green was `2e7a6e0da27a02f8058a3a79538cd9cb55a48cef`.
 
-## 15. Future extensions
+System 20D's first clean watercourse implementation head was `1ef3bd08e9d1a4ef258a2013c3af133ce6605002`.
+
+## 17. Future extensions
 
 Future additions such as sparse isolated rural properties, more building/content families, addresses/ownership/zoning, water gameplay, bridge condition/destruction, flooding/wetlands, or new area morphology should extend this owning System 20 contract unless they introduce a genuinely independent state/lifecycle domain.
 
