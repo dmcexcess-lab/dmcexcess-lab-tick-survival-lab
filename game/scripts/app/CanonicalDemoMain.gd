@@ -42,6 +42,9 @@ const DoorTransitionClass = preload("res://scripts/simulation/doors/DoorPhysical
 const DoorPassageClass = preload("res://scripts/simulation/doors/DoorMovementPassageResolver.gd")
 const DoorActionClass = preload("res://scripts/simulation/doors/DoorInteractionActionService.gd")
 const DoorDamageInterruptionClass = preload("res://scripts/simulation/doors/DoorDamageInterruptionService.gd")
+const VisionProfileClass = preload("res://scripts/simulation/perception/VisionProfile.gd")
+const PerceptionMemoryClass = preload("res://scripts/simulation/perception/PerceptionMemoryStore.gd")
+const ObserverPerceptionClass = preload("res://scripts/simulation/perception/ObserverPerceptionService.gd")
 const FixtureClass = preload("res://scripts/demo/RuralCrossroadsCritiqueFixture.gd")
 const ControllerClass = preload("res://scripts/player/DemoPlayerActionController.gd")
 const DoorControllerClass = preload("res://scripts/player/DoorPlayerInteractionController.gd")
@@ -99,6 +102,8 @@ var _door_transition: DoorPhysicalTransitionService = null
 var _door_passage: DoorMovementPassageResolver = null
 var _door_actions: DoorInteractionActionService = null
 var _door_damage_interrupt: DoorDamageInterruptionService = null
+var _perception_memory: PerceptionMemoryStore = null
+var _perception: ObserverPerceptionService = null
 var _controller: DemoPlayerActionController = null
 var _door_controller: DoorPlayerInteractionController = null
 
@@ -175,8 +180,27 @@ func _boot_canonical_demo() -> bool:
     if not _door_actions.is_ready() or not _door_damage_interrupt.is_ready():
         return false
 
+    _perception_memory = PerceptionMemoryClass.new()
+    _perception = ObserverPerceptionClass.new(
+        _world,
+        _door_state,
+        _kernel,
+        _perception_memory,
+        FixtureClass.PLAYER_ID,
+        VisionProfileClass.new()
+    )
+    if not _perception.is_ready():
+        return false
+
     _art_catalog = ArtCatalogClass.new()
     if not _world_view.configure(_world, _art_catalog, _door_state, FixtureClass.PLAYER_ID):
+        return false
+    if not _world_view.configure_perception(
+        _perception,
+        _perception_memory,
+        _art_catalog,
+        FixtureClass.PLAYER_ID
+    ):
         return false
 
     var initial_render_origin: Vector2i = FixtureClass.initial_render_origin(_world)
