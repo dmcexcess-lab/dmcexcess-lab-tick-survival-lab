@@ -16,8 +16,21 @@ const SURVIVOR: StringName = &"actor.survivor"
 const DINER_ARCHETYPE: StringName = &"commercial.diner.rural_small"
 const BASE_WALK_TICKS: int = 10
 
+## Bounded DEV source identity for System 24 composition. This describes the same
+## deterministic critique area already materialized by this fixture; it is not a
+## replacement for future 00F gameplay composition.
+const LOOT_SOURCE_KEY: String = "dev.rural_crossroads"
+const LOOT_SOURCE_KIND: StringName = &"dev_area"
+const LOOT_SOURCE_ID: String = "rural_crossroads"
+
 static func generate_plan(seed: int = PlanFixtureClass.SEED) -> GeneratedAreaPlan:
     return AreaGeneratorClass.new().generate(PlanFixtureClass.request(seed))
+
+static func generated_building_plans(seed: int = PlanFixtureClass.SEED) -> Array[GeneratedBuildingPlan]:
+    var plan: GeneratedAreaPlan = generate_plan(seed)
+    if plan == null or not plan.is_generated():
+        return []
+    return AreaMaterializerClass.new().generated_building_plans(plan)
 
 static func build(
     world: WorldState,
