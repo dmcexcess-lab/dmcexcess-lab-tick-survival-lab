@@ -139,7 +139,7 @@ Higher-level base/community UI may summarize physical facts later, but should no
 **Decision:** The lowest-level simulation architecture is organized around three narrowly owned truths rather than around the map generator:
 
 - **WHERE — Spatial Model:** the global tactical-grid coordinate language, directions, footprints and structure/opening geometry;
-- **WHAT — Persistent World / Entity State:** what terrain, structures, objects, actors, items and durable mutations exist at those coordinates;
+- **WHAT — Persistent World / Entity State:** what terrain, structures, objects, actors, items and durable mutations exist;
 - **WHEN — Tick / Action / Pause Kernel:** authoritative world ticks, action durations, scheduling, auto-pause and hard real-life pause.
 
 Generation is a producer of initial WHAT using WHERE. Construction/destruction/gameplay mutate WHAT. Rendering reads WHAT through WHERE. Gameplay/action systems bridge WHERE/WHAT with WHEN; the scheduler does not learn mechanic-specific meanings.
@@ -289,7 +289,7 @@ The approved architecture separates these responsibilities:
 
 ## 2026-08-16 — Walk is damage-interruptible; Run is a committed two-cell action
 
-**Decision:** Movement now distinguishes cautious Walk from committed Run rather than treating all movement as the same interruption class.
+**Decision:** Movement distinguishes cautious Walk from committed Run rather than treating all movement as the same interruption class.
 
 - Walk Forward/Back moves one cell and uses WHEN `CANCELABLE`.
 - Run Forward is an explicit action, never a persistent run mode; it moves two straight cells through two physical stride phases and uses WHEN `COMMITTED`.
@@ -361,3 +361,25 @@ Current additional rules:
 **Affected systems:** System 00D geography/hydrology read seams, System 20C rural-open generation, System 00F source catalog/materialization/activation, WHAT persistence, future save/migration logic and later population/detail-resolution consumers.
 
 **Implementation:** `SYSTEM_DESIGNS/00F2_COUNTRYSIDE_LOGICAL_SOURCE_MATERIALIZATION.md`, `game/scripts/streaming/CountrysideSourceCatalog.gd`, `game/scripts/streaming/CountrysideMaterializationSource.gd`, `game/scripts/streaming/WorldMaterializationCoordinator.gd`, and `game/scripts/streaming/WorldStreamingCoordinator.gd`.
+
+---
+
+## 2026-08-24 — Physical Weather uses WHEN; atmosphere presentation may animate during decision pause
+
+**Decision:** System 28 separates authoritative physical Weather time from cosmetic presentation time.
+
+Physical Weather truth—including profile transitions, precipitation/cloud/fog/wind values, wetness, environment revision and future lightning-event creation—advances only from authoritative WHEN state/events. Decision pause and hard pause therefore freeze all physical Weather consequences.
+
+Weather presentation may continue using render delta while the player is deciding. Rain may fall, fog may drift, and a presentation-only leaf/paper/dust event may cross the view while actors/world time remain frozen. These cosmetic frames advance zero WHEN ticks and create no physical lighting, perception, hearing, wetness, AI or persistent-world changes.
+
+**Performance rule:** Candidate 001 active Weather presentation targets 20 Hz, uses one coarse renderer with no per-particle Nodes, bounds its virtual presentation axis to 256, and caps cosmetic debris at three records. Calm clear Weather may stop requesting redraws between rare ambient events.
+
+**Information rule:** primary Weather presentation is below System 23's perception mask. Shelter-aware rain suppression therefore cannot reveal hidden roof/building geometry in unexplored black fog.
+
+**Ownership rule:** Slice A does not make Weather a second Lighting/Hearing/Perception owner. Future Slice B must feed System 27/System 26 through neutral environment seams and publish physical changes only from quantized Weather revisions. Future Slice C lightning is a real WHEN-created Weather event whose illumination belongs to System 27; its visible bolt remains presentation.
+
+**Why:** This keeps the turn-based simulation deterministic and interruption-safe while making the paused world feel atmospherically alive at very low overhead.
+
+**Affected systems:** WHEN, Weather, presentation/rendering, Perception, Lighting, Sound/Hearing, future Actor AI, save orchestration.
+
+**Implementation:** `SYSTEM_DESIGNS/28_WEATHER_ATMOSPHERE.md`, `game/scripts/simulation/weather/`, `game/scripts/render/WeatherPresentationRenderer.gd`.
