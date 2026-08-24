@@ -24,6 +24,10 @@ const WINDOW_TRANSMISSION: float = 0.72
 const OPEN_DOOR_TRANSMISSION: float = 0.95
 const LOCAL_SPILL_STEP_SCALE: float = 0.50
 
+const STRUCTURE_WINDOW: int = 1
+const STRUCTURE_DOOR: int = 2
+const STRUCTURE_OPAQUE: int = 3
+
 const CARDINALS: Array[Vector2i] = [
     Vector2i(0, -1),
     Vector2i(1, 0),
@@ -40,6 +44,16 @@ var _emitters: Array[LightEmitter] = []
 var _field_bounds: Rect2i = Rect2i()
 var _field_valid: bool = false
 
+var _field_cells: Array[Vector2i] = []
+var _materialized_cells: Array[Vector2i] = []
+var _materialized_lookup: Dictionary = {}
+var _structure_cells: Array[Vector2i] = []
+var _structure_kind: Dictionary = {}
+var _door_id_by_cell: Dictionary = {}
+var _direct_transmission_cache: Dictionary = {}
+var _portal_transmission_cache: Dictionary = {}
+var _portal_cells: Array[Vector2i] = []
+
 var _sky_exposed: Dictionary = {}
 var _portal_factor: Dictionary = {}
 var _samples: Dictionary = {}
@@ -54,8 +68,13 @@ var _last_world_revision: int = -1
 var _last_door_revision: int = -1
 var _last_ambient_level: float = -1.0
 var _last_atmosphere_revision: int = -1
-var _last_emitter_signature: String = ""
+var _emitter_revision: int = 0
+var _last_emitter_revision: int = -1
+var _emitter_signature_value: String = ""
 var _lighting_revision: int = 0
+
+var _last_emitter_candidate_cells: int = 0
+var _last_emitter_ray_cells: int = 0
 
 func _init(
     world_state: WorldState = null,
@@ -82,8 +101,7 @@ func set_field_bounds(bounds: Rect2i) -> bool:
         return true
     _field_bounds = bounds
     _field_valid = true
-    _geometry_world_revision = -1
-    _geometry_door_revision = -1
+    _invalidate_geometry_cache()
     _invalidate_light_cache()
     return true
 
@@ -114,7 +132,17 @@ func set_emitters(values: Array) -> bool:
     accepted.sort_custom(func(a: LightEmitter, b: LightEmitter) -> bool:
         return a.emitter_id < b.emitter_id
     )
+
+    var parts: PackedStringArray = []
+    for emitter: LightEmitter in accepted:
+        parts.append(emitter.signature())
+    var next_signature: String = "||".join(parts)
+    if next_signature == _emitter_signature_value:
+        return true
+
     _emitters = accepted
+    _emitter_signature_value = next_signature
+    _emitter_revision += 1
     _invalidate_light_cache()
     return true
 
@@ -122,6 +150,20 @@ func emitters() -> Array[LightEmitter]:
     var result: Array[LightEmitter] = []
     for emitter: LightEmitter in _emitters:
         result.append(emitter.copy())
+    return result
+
+func prepare_query() -> int:
+    _ensure_current()
+    return _lighting_revision
+
+func illumination_at_prepared(cell: Vector2i, prepared_revision: int) -> IlluminationSample:
+    if prepared_revision != _lighting_revision:
+        return illumination_at(cell)
+    if _samples.has(cell):
+        var stored: IlluminationSample = _samples[cell]
+        return stored.copy()
+    var result := SampleClass.new(cell)
+    _stamp_sample(result)
     return result
 
 func illumination_at(cell: Vector2i) -> IlluminationSample:
@@ -174,10 +216,17 @@ func debug_snapshot() -> Dictionary:
         "ambient_light_level": 0.0 if _ambient == null else _ambient.ambient_light_level(),
         "atmosphere_revision": -1 if _atmosphere == null else _atmosphere.revision,
         "field_bounds": [_field_bounds.position.x, _field_bounds.position.y, _field_bounds.size.x, _field_bounds.size.y],
+        "field_cells": _field_cells.size(),
+        "materialized_field_cells": _materialized_cells.size(),
+        "structure_cells": _structure_cells.size(),
+        "portal_candidate_cells": _portal_cells.size(),
         "sky_exposed_cells": _sky_exposed.size(),
         "portal_influenced_cells": _portal_factor.size(),
         "sample_count": _samples.size(),
         "emitter_count": _emitters.size(),
+        "emitter_revision": _emitter_revision,
+        "last_emitter_candidate_cells": _last_emitter_candidate_cells,
+        "last_emitter_ray_cells": _last_emitter_ray_cells,
     }
 
 func _ensure_current() -> void:
@@ -187,13 +236,12 @@ func _ensure_current() -> void:
     var world_revision: int = _world.revision()
     var door_revision: int = _doors.revision()
     var ambient_level: float = _ambient.ambient_light_level()
-    var emitter_signature: String = _emitter_signature()
     if (
         world_revision == _last_world_revision
         and door_revision == _last_door_revision
         and is_equal_approx(ambient_level, _last_ambient_level)
         and _atmosphere.revision == _last_atmosphere_revision
-        and emitter_signature == _last_emitter_signature
+        and _emitter_revision == _last_emitter_revision
         and not _samples.is_empty()
     ):
         return
@@ -203,7 +251,7 @@ func _ensure_current() -> void:
     _last_door_revision = door_revision
     _last_ambient_level = ambient_level
     _last_atmosphere_revision = _atmosphere.revision
-    _last_emitter_signature = emitter_signature
+    _last_emitter_revision = _emitter_revision
     _lighting_revision += 1
     for value: Variant in _samples.values():
         var sample: IlluminationSample = value
@@ -213,14 +261,90 @@ func _ensure_current() -> void:
 func _ensure_geometry() -> void:
     var world_revision: int = _world.revision()
     if world_revision != _geometry_world_revision or _geometry_bounds != _field_bounds:
-        _rebuild_sky_exposure()
+        _rebuild_field_geometry()
         _geometry_world_revision = world_revision
         _geometry_door_revision = -1
         _geometry_bounds = _field_bounds
+
     var door_revision: int = _doors.revision()
     if door_revision != _geometry_door_revision:
+        _rebuild_optical_transmission()
         _rebuild_portal_transfer()
         _geometry_door_revision = door_revision
+
+func _rebuild_field_geometry() -> void:
+    _field_cells.clear()
+    _materialized_cells.clear()
+    _materialized_lookup.clear()
+    _structure_cells.clear()
+    _structure_kind.clear()
+    _door_id_by_cell.clear()
+    _direct_transmission_cache.clear()
+    _portal_transmission_cache.clear()
+    _portal_cells.clear()
+    _sky_exposed.clear()
+    _portal_factor.clear()
+
+    if not _field_valid:
+        return
+
+    var end_x: int = _field_bounds.position.x + _field_bounds.size.x
+    var end_y: int = _field_bounds.position.y + _field_bounds.size.y
+    for y in range(_field_bounds.position.y, end_y):
+        for x in range(_field_bounds.position.x, end_x):
+            var cell := Vector2i(x, y)
+            _field_cells.append(cell)
+            if not _world.has_terrain(cell):
+                continue
+            _materialized_cells.append(cell)
+            _materialized_lookup[cell] = true
+
+            var structure_ids: Array[String] = _world.entities_at(cell, Layers.Channel.STRUCTURE)
+            if structure_ids.is_empty():
+                continue
+            _structure_cells.append(cell)
+            if structure_ids.size() != 1:
+                _structure_kind[cell] = STRUCTURE_OPAQUE
+                continue
+            var entity: WorldEntityRecord = _world.entity(structure_ids[0])
+            if entity == null:
+                _structure_kind[cell] = STRUCTURE_OPAQUE
+                continue
+            var semantic: String = String(entity.semantic_type)
+            if semantic.begins_with("window."):
+                _structure_kind[cell] = STRUCTURE_WINDOW
+            elif semantic.begins_with("door."):
+                _structure_kind[cell] = STRUCTURE_DOOR
+                _door_id_by_cell[cell] = structure_ids[0]
+            else:
+                _structure_kind[cell] = STRUCTURE_OPAQUE
+
+    _rebuild_sky_exposure()
+
+func _rebuild_optical_transmission() -> void:
+    _direct_transmission_cache.clear()
+    _portal_transmission_cache.clear()
+    _portal_cells.clear()
+
+    for cell: Vector2i in _structure_cells:
+        var kind: int = int(_structure_kind.get(cell, STRUCTURE_OPAQUE))
+        var direct: float = 0.0
+        var portal: float = 0.0
+        match kind:
+            STRUCTURE_WINDOW:
+                direct = WINDOW_TRANSMISSION
+                portal = WINDOW_TRANSMISSION
+            STRUCTURE_DOOR:
+                var door_id: String = String(_door_id_by_cell.get(cell, ""))
+                if not door_id.is_empty() and _doors.state(door_id) == DoorValues.OPEN:
+                    direct = OPEN_DOOR_TRANSMISSION
+                    portal = OPEN_DOOR_TRANSMISSION
+            _:
+                direct = 0.0
+        _direct_transmission_cache[cell] = direct
+        if portal > 0.0:
+            _portal_transmission_cache[cell] = portal
+            _portal_cells.append(cell)
 
 func _rebuild_sky_exposure() -> void:
     _sky_exposed.clear()
@@ -249,13 +373,13 @@ func _rebuild_sky_exposure() -> void:
             var neighbor: Vector2i = cell + direction
             if not _field_bounds.has_point(neighbor) or queued.has(neighbor):
                 continue
-            if not _world.has_terrain(neighbor) or _is_envelope_structure(neighbor):
+            if not _materialized_lookup.has(neighbor) or _structure_kind.has(neighbor):
                 continue
             queued[neighbor] = true
             queue.append(neighbor)
 
 func _queue_exterior_seed(cell: Vector2i, queue: Array[Vector2i], queued: Dictionary) -> void:
-    if queued.has(cell) or not _world.has_terrain(cell) or _is_envelope_structure(cell):
+    if queued.has(cell) or not _materialized_lookup.has(cell) or _structure_kind.has(cell):
         return
     queued[cell] = true
     queue.append(cell)
@@ -269,15 +393,13 @@ func _rebuild_portal_transfer() -> void:
     var queue_strength: Array[float] = []
     var queue_steps: Array[int] = []
 
-    for cell: Vector2i in _all_field_cells():
-        if not _world.has_terrain(cell):
-            continue
-        var transmission: float = _portal_transmission(cell)
+    for cell: Vector2i in _portal_cells:
+        var transmission: float = float(_portal_transmission_cache.get(cell, 0.0))
         if transmission <= 0.0 or not _touches_sky_exposed(cell):
             continue
         for direction: Vector2i in CARDINALS:
             var interior: Vector2i = cell + direction
-            if not _field_bounds.has_point(interior) or not _world.has_terrain(interior):
+            if not _field_bounds.has_point(interior) or not _materialized_lookup.has(interior):
                 continue
             if _sky_exposed.has(interior):
                 continue
@@ -300,7 +422,7 @@ func _rebuild_portal_transfer() -> void:
             continue
         for direction: Vector2i in CARDINALS:
             var neighbor: Vector2i = cell + direction
-            if not _field_bounds.has_point(neighbor) or not _world.has_terrain(neighbor):
+            if not _field_bounds.has_point(neighbor) or not _materialized_lookup.has(neighbor):
                 continue
             if _sky_exposed.has(neighbor):
                 continue
@@ -322,6 +444,8 @@ func _rebuild_samples(ambient_level: float) -> void:
     _color_accum.clear()
     _color_weight.clear()
     _dominant_strength.clear()
+    _last_emitter_candidate_cells = 0
+    _last_emitter_ray_cells = 0
 
     var day_factor: float = clampf(
         (ambient_level - NIGHT_BASELINE_REFERENCE) / (1.0 - NIGHT_BASELINE_REFERENCE),
@@ -342,14 +466,12 @@ func _rebuild_samples(ambient_level: float) -> void:
     var sky_color: Color = _atmosphere_tinted(_sky_color(day_factor))
     var direct_color: Color = _atmosphere_tinted(_direct_color(day_factor))
 
-    for cell: Vector2i in _all_field_cells():
-        if not _world.has_terrain(cell):
-            continue
+    for cell: Vector2i in _materialized_cells:
         var sample := SampleClass.new(cell)
         if _sky_exposed.has(cell):
             sample.sky_diffuse = diffuse_outdoor
             sample.direct_celestial = direct_outdoor
-        elif _is_envelope_structure(cell) and _touches_sky_exposed(cell):
+        elif _structure_kind.has(cell) and _touches_sky_exposed(cell):
             sample.sky_diffuse = diffuse_outdoor * 0.82
             sample.direct_celestial = direct_outdoor * 0.72
         else:
@@ -366,8 +488,10 @@ func _rebuild_samples(ambient_level: float) -> void:
             _apply_emitter(emitter)
 
     var current_time: Dictionary = _ambient.current_snapshot()
-    for cell_value: Variant in _samples.keys():
-        var cell: Vector2i = cell_value
+    var world_tick: int = int(current_time.get("world_tick", 0))
+    var world_revision: int = _world.revision()
+    var door_revision: int = _doors.revision()
+    for cell: Vector2i in _materialized_cells:
         var sample: IlluminationSample = _samples[cell]
         sample.useful_luminance = clampf(
             sample.sky_diffuse + sample.direct_celestial + sample.portal + sample.local_artificial,
@@ -383,32 +507,50 @@ func _rebuild_samples(ambient_level: float) -> void:
                 clampf(accum.z / weight, 0.0, 1.0),
                 1.0
             )
-        sample.world_tick = int(current_time.get("world_tick", 0))
-        sample.world_revision = _world.revision()
-        sample.door_revision = _doors.revision()
+        sample.world_tick = world_tick
+        sample.world_revision = world_revision
+        sample.door_revision = door_revision
 
 func _apply_emitter(emitter: LightEmitter) -> void:
     var profile: LightEmitterProfile = emitter.profile
     var direct_field: Dictionary = {}
-    for cell: Vector2i in _all_field_cells():
-        if not _world.has_terrain(cell):
-            continue
-        var offset: Vector2i = cell - emitter.origin_cell
-        var distance: float = Vector2(float(offset.x), float(offset.y)).length()
-        if distance > float(profile.useful_range):
-            continue
-        if profile.shape == LightEmitterProfile.Shape.CONE and not _inside_cone(offset, emitter.facing, profile.cone_half_angle_degrees):
-            continue
-        var transmission: float = _transmission_between(emitter.origin_cell, cell)
-        if transmission <= 0.0:
-            continue
-        var normalized_distance: float = clampf(distance / float(profile.useful_range + 1), 0.0, 1.0)
-        var falloff: float = pow(1.0 - normalized_distance, profile.falloff_exponent)
-        var atmospheric_loss: float = pow(clampf(_atmosphere.local_light_transmission, 0.0, 1.0), distance)
-        var amount: float = profile.base_luminance * falloff * transmission * atmospheric_loss
-        if amount <= 0.001:
-            continue
-        direct_field[cell] = amount
+    var radius: int = profile.useful_range
+    var candidate_bounds: Rect2i = _emitter_candidate_bounds(emitter.origin_cell, radius)
+    if candidate_bounds.size.x <= 0 or candidate_bounds.size.y <= 0:
+        return
+
+    var range_squared: int = radius * radius
+    var cone_enabled: bool = profile.shape == LightEmitterProfile.Shape.CONE
+    var cone_forward: Vector2i = FacingRules.vector(emitter.facing) if cone_enabled and FacingRules.is_valid(emitter.facing) else Vector2i.ZERO
+    var cone_threshold: float = cos(deg_to_rad(profile.cone_half_angle_degrees)) if cone_enabled else -1.0
+    var local_transmission: float = clampf(_atmosphere.local_light_transmission, 0.0, 1.0)
+
+    var end_x: int = candidate_bounds.position.x + candidate_bounds.size.x
+    var end_y: int = candidate_bounds.position.y + candidate_bounds.size.y
+    for y in range(candidate_bounds.position.y, end_y):
+        for x in range(candidate_bounds.position.x, end_x):
+            var cell := Vector2i(x, y)
+            if not _materialized_lookup.has(cell):
+                continue
+            _last_emitter_candidate_cells += 1
+            var offset: Vector2i = cell - emitter.origin_cell
+            var distance_squared: int = offset.length_squared()
+            if distance_squared > range_squared:
+                continue
+            var distance: float = sqrt(float(distance_squared))
+            if cone_enabled and not _inside_prepared_cone(offset, distance, cone_forward, cone_threshold):
+                continue
+            _last_emitter_ray_cells += 1
+            var transmission: float = _transmission_between(emitter.origin_cell, cell)
+            if transmission <= 0.0:
+                continue
+            var normalized_distance: float = clampf(distance / float(radius + 1), 0.0, 1.0)
+            var falloff: float = pow(1.0 - normalized_distance, profile.falloff_exponent)
+            var atmospheric_loss: float = pow(local_transmission, distance)
+            var amount: float = profile.base_luminance * falloff * transmission * atmospheric_loss
+            if amount <= 0.001:
+                continue
+            direct_field[cell] = amount
 
     var spill_field: Dictionary = {}
     if profile.diffuse_spill > 0.0:
@@ -419,7 +561,7 @@ func _apply_emitter(emitter: LightEmitter) -> void:
             var source_amount: float = float(direct_field[source_cell])
             for direction: Vector2i in CARDINALS:
                 var neighbor: Vector2i = source_cell + direction
-                if not _field_bounds.has_point(neighbor) or not _world.has_terrain(neighbor):
+                if not _field_bounds.has_point(neighbor) or not _materialized_lookup.has(neighbor):
                     continue
                 var step_transmission: float = _cell_diffuse_transmission(neighbor)
                 if step_transmission <= 0.0:
@@ -434,6 +576,17 @@ func _apply_emitter(emitter: LightEmitter) -> void:
     for cell_value: Variant in spill_field.keys():
         var cell: Vector2i = cell_value
         _add_local_light(cell, float(spill_field[cell]), emitter, false)
+
+func _emitter_candidate_bounds(origin: Vector2i, radius: int) -> Rect2i:
+    var min_x: int = maxi(_field_bounds.position.x, origin.x - radius)
+    var min_y: int = maxi(_field_bounds.position.y, origin.y - radius)
+    var field_end_x: int = _field_bounds.position.x + _field_bounds.size.x - 1
+    var field_end_y: int = _field_bounds.position.y + _field_bounds.size.y - 1
+    var max_x: int = mini(field_end_x, origin.x + radius)
+    var max_y: int = mini(field_end_y, origin.y + radius)
+    if max_x < min_x or max_y < min_y:
+        return Rect2i()
+    return Rect2i(min_x, min_y, max_x - min_x + 1, max_y - min_y + 1)
 
 func _add_local_light(cell: Vector2i, amount: float, emitter: LightEmitter, direct: bool = true) -> void:
     if not _samples.has(cell) or amount <= 0.0:
@@ -450,16 +603,13 @@ func _add_local_light(cell: Vector2i, amount: float, emitter: LightEmitter, dire
             signi(emitter.origin_cell.y - cell.y)
         )
 
-func _inside_cone(offset: Vector2i, facing: int, half_angle_degrees: float) -> bool:
+func _inside_prepared_cone(offset: Vector2i, distance: float, forward: Vector2i, threshold: float) -> bool:
     if offset == Vector2i.ZERO:
         return true
-    if not FacingRules.is_valid(facing):
+    if forward == Vector2i.ZERO or distance <= 0.0:
         return false
-    var forward_i: Vector2i = FacingRules.vector(facing)
-    var forward := Vector2(float(forward_i.x), float(forward_i.y))
-    var direction := Vector2(float(offset.x), float(offset.y)).normalized()
-    var threshold: float = cos(deg_to_rad(half_angle_degrees))
-    return forward.dot(direction) >= threshold
+    var projection: float = float(offset.x * forward.x + offset.y * forward.y)
+    return projection / distance >= threshold
 
 func _transmission_between(origin: Vector2i, target: Vector2i) -> float:
     if origin == target:
@@ -509,8 +659,15 @@ func _transmission_between(origin: Vector2i, target: Vector2i) -> float:
     return clampf(transmission, 0.0, 1.0)
 
 func _cell_direct_transmission(cell: Vector2i) -> float:
+    if _materialized_lookup.has(cell):
+        if _direct_transmission_cache.has(cell):
+            return float(_direct_transmission_cache[cell])
+        return 1.0
     if not _world.has_terrain(cell):
         return 0.0
+    return _uncached_direct_transmission(cell)
+
+func _uncached_direct_transmission(cell: Vector2i) -> float:
     var structure_ids: Array[String] = _world.entities_at(cell, Layers.Channel.STRUCTURE)
     if structure_ids.is_empty():
         return 1.0
@@ -528,23 +685,6 @@ func _cell_direct_transmission(cell: Vector2i) -> float:
 
 func _cell_diffuse_transmission(cell: Vector2i) -> float:
     return _cell_direct_transmission(cell)
-
-func _portal_transmission(cell: Vector2i) -> float:
-    var structure_ids: Array[String] = _world.entities_at(cell, Layers.Channel.STRUCTURE)
-    if structure_ids.size() != 1:
-        return 0.0
-    var entity: WorldEntityRecord = _world.entity(structure_ids[0])
-    if entity == null:
-        return 0.0
-    var semantic: String = String(entity.semantic_type)
-    if semantic.begins_with("window."):
-        return WINDOW_TRANSMISSION
-    if semantic.begins_with("door.") and _doors.state(structure_ids[0]) == DoorValues.OPEN:
-        return OPEN_DOOR_TRANSMISSION
-    return 0.0
-
-func _is_envelope_structure(cell: Vector2i) -> bool:
-    return not _world.entities_at(cell, Layers.Channel.STRUCTURE).is_empty()
 
 func _touches_sky_exposed(cell: Vector2i) -> bool:
     for direction: Vector2i in CARDINALS:
@@ -573,23 +713,6 @@ func _atmosphere_tinted(color: Color) -> Color:
         1.0
     )
 
-func _all_field_cells() -> Array[Vector2i]:
-    var result: Array[Vector2i] = []
-    if not _field_valid:
-        return result
-    var end_x: int = _field_bounds.position.x + _field_bounds.size.x
-    var end_y: int = _field_bounds.position.y + _field_bounds.size.y
-    for y in range(_field_bounds.position.y, end_y):
-        for x in range(_field_bounds.position.x, end_x):
-            result.append(Vector2i(x, y))
-    return result
-
-func _emitter_signature() -> String:
-    var parts: PackedStringArray = []
-    for emitter: LightEmitter in _emitters:
-        parts.append(emitter.signature())
-    return "||".join(parts)
-
 func _stamp_sample(sample: IlluminationSample) -> void:
     if sample == null:
         return
@@ -599,10 +722,26 @@ func _stamp_sample(sample: IlluminationSample) -> void:
     if _ambient != null and _ambient.is_ready():
         sample.world_tick = int(_ambient.current_snapshot().get("world_tick", 0))
 
+func _invalidate_geometry_cache() -> void:
+    _geometry_world_revision = -1
+    _geometry_door_revision = -1
+    _geometry_bounds = Rect2i()
+    _field_cells.clear()
+    _materialized_cells.clear()
+    _materialized_lookup.clear()
+    _structure_cells.clear()
+    _structure_kind.clear()
+    _door_id_by_cell.clear()
+    _direct_transmission_cache.clear()
+    _portal_transmission_cache.clear()
+    _portal_cells.clear()
+    _sky_exposed.clear()
+    _portal_factor.clear()
+
 func _invalidate_light_cache() -> void:
     _samples.clear()
     _last_world_revision = -1
     _last_door_revision = -1
     _last_ambient_level = -1.0
     _last_atmosphere_revision = -1
-    _last_emitter_signature = ""
+    _last_emitter_revision = -1
