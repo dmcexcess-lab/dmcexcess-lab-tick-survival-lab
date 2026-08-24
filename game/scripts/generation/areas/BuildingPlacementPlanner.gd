@@ -33,33 +33,61 @@ func place(request: AreaGenerationRequest, profile: Dictionary, parcels: Array[D
     var farmstead_offset: int = Seed.choose_index(request.seed, "building_selection:farmstead", farmstead_pool.size())
     var civic_offset: int = Seed.choose_index(request.seed, "building_selection:civic", civic_pool.size())
     var industrial_offset: int = Seed.choose_index(request.seed, "building_selection:industrial", industrial_pool.size())
+    var use_fit_filtered_baseline: bool = StringName(profile.get("land_use_mode", &"")) == &"baseline_grid"
+    var baseline_cursors: Dictionary = {
+        &"commercial_small": 0,
+        &"residential": maxi(0, residential_offset),
+        &"farmstead": maxi(0, farmstead_offset),
+        &"civic": maxi(0, civic_offset),
+        &"industrial": maxi(0, industrial_offset),
+    }
 
     for parcel: Dictionary in parcels:
         var land_use: StringName = StringName(parcel.get("land_use", &""))
         var archetype_id: StringName = &""
-        match land_use:
-            &"commercial_small":
-                if commercial_index < commercial_pool.size():
-                    archetype_id = StringName(commercial_pool[commercial_index])
-                commercial_index += 1
-            &"residential":
-                if not residential_pool.is_empty():
-                    archetype_id = StringName(residential_pool[(residential_index + residential_offset) % residential_pool.size()])
-                residential_index += 1
-            &"farmstead":
-                if not farmstead_pool.is_empty():
-                    archetype_id = StringName(farmstead_pool[(farmstead_index + farmstead_offset) % farmstead_pool.size()])
-                farmstead_index += 1
-            &"civic":
-                if not civic_pool.is_empty():
-                    archetype_id = StringName(civic_pool[(civic_index + civic_offset) % civic_pool.size()])
-                civic_index += 1
-            &"industrial":
-                if not industrial_pool.is_empty():
-                    archetype_id = StringName(industrial_pool[(industrial_index + industrial_offset) % industrial_pool.size()])
-                industrial_index += 1
-            _:
+        if use_fit_filtered_baseline:
+            var baseline_pool: Array = _pool_for_land_use(
+                land_use,
+                commercial_pool,
+                residential_pool,
+                farmstead_pool,
+                civic_pool,
+                industrial_pool
+            )
+            if baseline_pool.is_empty():
                 continue
+            var cursor: int = int(baseline_cursors.get(land_use, 0))
+            var selection: Dictionary = _select_fitting_archetype(profile, parcel, baseline_pool, cursor)
+            if not bool(selection.get("ok", false)):
+                return {"ok": false, "failure_reason": "building_does_not_fit_parcel", "building_requests": building_requests}
+            archetype_id = StringName(selection.get("archetype_id", &""))
+            var selected_index: int = int(selection.get("selected_index", -1))
+            if selected_index >= 0:
+                baseline_cursors[land_use] = (selected_index + 1) % baseline_pool.size()
+        else:
+            match land_use:
+                &"commercial_small":
+                    if commercial_index < commercial_pool.size():
+                        archetype_id = StringName(commercial_pool[commercial_index])
+                    commercial_index += 1
+                &"residential":
+                    if not residential_pool.is_empty():
+                        archetype_id = StringName(residential_pool[(residential_index + residential_offset) % residential_pool.size()])
+                    residential_index += 1
+                &"farmstead":
+                    if not farmstead_pool.is_empty():
+                        archetype_id = StringName(farmstead_pool[(farmstead_index + farmstead_offset) % farmstead_pool.size()])
+                    farmstead_index += 1
+                &"civic":
+                    if not civic_pool.is_empty():
+                        archetype_id = StringName(civic_pool[(civic_index + civic_offset) % civic_pool.size()])
+                    civic_index += 1
+                &"industrial":
+                    if not industrial_pool.is_empty():
+                        archetype_id = StringName(industrial_pool[(industrial_index + industrial_offset) % industrial_pool.size()])
+                    industrial_index += 1
+                _:
+                    continue
 
         if archetype_id == &"":
             continue
@@ -81,6 +109,58 @@ func place(request: AreaGenerationRequest, profile: Dictionary, parcels: Array[D
         parcel["road_flush_paved_frontage"] = paved_frontage.duplicate(true)
 
     return {"ok": true, "failure_reason": "", "building_requests": building_requests}
+
+func _pool_for_land_use(
+    land_use: StringName,
+    commercial_pool: Array,
+    residential_pool: Array,
+    farmstead_pool: Array,
+    civic_pool: Array,
+    industrial_pool: Array
+) -> Array:
+    match land_use:
+        &"commercial_small":
+            return commercial_pool
+        &"residential":
+            return residential_pool
+        &"farmstead":
+            return farmstead_pool
+        &"civic":
+            return civic_pool
+        &"industrial":
+            return industrial_pool
+    return []
+
+func _select_fitting_archetype(
+    profile: Dictionary,
+    parcel: Dictionary,
+    pool: Array,
+    start_index: int
+) -> Dictionary:
+    if pool.is_empty():
+        return {"ok": true, "archetype_id": &"", "selected_index": -1}
+    var normalized_start: int = posmod(start_index, pool.size())
+    for step in range(pool.size()):
+        var index: int = (normalized_start + step) % pool.size()
+        var archetype_id: StringName = StringName(pool[index])
+        if _archetype_fits_parcel(profile, parcel, archetype_id):
+            return {"ok": true, "archetype_id": archetype_id, "selected_index": index}
+    return {"ok": false, "archetype_id": &"", "selected_index": -1}
+
+func _archetype_fits_parcel(profile: Dictionary, parcel: Dictionary, archetype_id: StringName) -> bool:
+    var descriptor: BuildingArchetypePlacementDescriptor = _building_generator.placement_descriptor(archetype_id)
+    if descriptor == null or not descriptor.is_valid():
+        return false
+    var frontage: int = int(parcel.get("frontage_side", -1))
+    var orientation: int = _orientation_for_frontage(descriptor, frontage)
+    if orientation < 0:
+        return false
+    var size: Vector2i = descriptor.required_size(orientation)
+    var buildable: Rect2i = parcel.get("buildable_rect", Rect2i())
+    var setback: int = _setback_for_land_use(profile, StringName(parcel.get("land_use", &"")))
+    var parcel_access: Vector2i = parcel.get("parcel_access_cell", Vector2i(-1, -1))
+    var envelope: Rect2i = _envelope_for_access(buildable, size, frontage, parcel_access, setback)
+    return _rect_inside(buildable, envelope)
 
 func _place_one(
     area_request: AreaGenerationRequest,
