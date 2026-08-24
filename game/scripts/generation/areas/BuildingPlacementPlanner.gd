@@ -22,11 +22,17 @@ func place(request: AreaGenerationRequest, profile: Dictionary, parcels: Array[D
     var commercial_index: int = 0
     var residential_index: int = 0
     var farmstead_index: int = 0
+    var civic_index: int = 0
+    var industrial_index: int = 0
     var residential_pool: Array = profile.get("residential_archetypes", [])
     var farmstead_pool: Array = profile.get("farmstead_archetypes", [])
     var commercial_pool: Array = profile.get("commercial_archetypes", [])
+    var civic_pool: Array = profile.get("civic_archetypes", [])
+    var industrial_pool: Array = profile.get("industrial_archetypes", [])
     var residential_offset: int = Seed.choose_index(request.seed, "building_selection:residential", residential_pool.size())
     var farmstead_offset: int = Seed.choose_index(request.seed, "building_selection:farmstead", farmstead_pool.size())
+    var civic_offset: int = Seed.choose_index(request.seed, "building_selection:civic", civic_pool.size())
+    var industrial_offset: int = Seed.choose_index(request.seed, "building_selection:industrial", industrial_pool.size())
 
     for parcel: Dictionary in parcels:
         var land_use: StringName = StringName(parcel.get("land_use", &""))
@@ -44,6 +50,14 @@ func place(request: AreaGenerationRequest, profile: Dictionary, parcels: Array[D
                 if not farmstead_pool.is_empty():
                     archetype_id = StringName(farmstead_pool[(farmstead_index + farmstead_offset) % farmstead_pool.size()])
                 farmstead_index += 1
+            &"civic":
+                if not civic_pool.is_empty():
+                    archetype_id = StringName(civic_pool[(civic_index + civic_offset) % civic_pool.size()])
+                civic_index += 1
+            &"industrial":
+                if not industrial_pool.is_empty():
+                    archetype_id = StringName(industrial_pool[(industrial_index + industrial_offset) % industrial_pool.size()])
+                industrial_index += 1
             _:
                 continue
 
@@ -179,6 +193,10 @@ func _setback_for_land_use(profile: Dictionary, land_use: StringName) -> int:
             return int(profile.get("commercial_setback", 1))
         &"farmstead":
             return int(profile.get("farmstead_setback", 8))
+        &"civic":
+            return int(profile.get("civic_setback", 1))
+        &"industrial":
+            return int(profile.get("industrial_setback", 1))
         _:
             return int(profile.get("residential_setback", 3))
 
