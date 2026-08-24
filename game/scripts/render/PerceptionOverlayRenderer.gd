@@ -2,6 +2,7 @@ extends Node2D
 class_name PerceptionOverlayRenderer
 
 const RoadTopology = preload("res://scripts/art/RoadArtTopology.gd")
+const PropOrientation = preload("res://scripts/art/PropArtOrientationCatalog.gd")
 
 ## Presentation-only knowledge mask. Hidden live world is blacked out before stale memory redraw.
 
@@ -98,7 +99,7 @@ func auditory_cues() -> Array[Dictionary]:
     return _auditory_cues.duplicate(true)
 
 func planned_cell_counts() -> Dictionary:
-    var counts := {"visible": 0, "remembered": 0, "unseen": 0, "last_seen": 0, "auditory": 0}
+    var counts := {"visible": 0, "remembered": 0, "unseen": 0, "remembered_props": 0, "last_seen": 0, "auditory": 0}
     if not is_configured() or not _view_valid:
         return counts
     for local_y in range(_visible_size.y):
@@ -109,6 +110,10 @@ func planned_cell_counts() -> Dictionary:
                     counts["visible"] += 1
                 ObserverPerceptionService.KnowledgeState.REMEMBERED:
                     counts["remembered"] += 1
+                    var memory: Dictionary = _memory.environment_memory(_observer_id, cell)
+                    var props_value: Variant = memory.get("props", [])
+                    if typeof(props_value) == TYPE_ARRAY:
+                        counts["remembered_props"] += props_value.size()
                 _:
                     counts["unseen"] += 1
     for observation: Dictionary in _memory.actor_observations(_observer_id):
@@ -150,13 +155,32 @@ func _draw_remembered_cell(cell: Vector2i, destination: Rect2) -> void:
     _draw_selection(ground_selection, destination, MEMORY_MODULATION)
 
     var structure_value: Variant = memory.get("structure", {})
-    if typeof(structure_value) != TYPE_DICTIONARY:
+    if typeof(structure_value) == TYPE_DICTIONARY:
+        var structure: Dictionary = structure_value
+        if not structure.is_empty():
+            var structure_selection: ArtSelection = _resolve_remembered_structure(structure)
+            _draw_selection(structure_selection, destination, MEMORY_MODULATION)
+
+    var props_value: Variant = memory.get("props", [])
+    if typeof(props_value) != TYPE_ARRAY:
         return
-    var structure: Dictionary = structure_value
-    if structure.is_empty():
+    for prop_value: Variant in props_value:
+        if typeof(prop_value) != TYPE_DICTIONARY:
+            continue
+        _draw_remembered_prop(prop_value)
+
+func _draw_remembered_prop(prop: Dictionary) -> void:
+    var semantic := StringName(String(prop.get("semantic_type", "")))
+    var anchor_value: Variant = prop.get("anchor", null)
+    var facing: int = int(prop.get("facing", -1))
+    if String(semantic).strip_edges().is_empty() or typeof(anchor_value) != TYPE_VECTOR2I:
         return
-    var structure_selection: ArtSelection = _resolve_remembered_structure(structure)
-    _draw_selection(structure_selection, destination, MEMORY_MODULATION)
+    var anchor: Vector2i = anchor_value
+    if not _cell_in_view(anchor):
+        return
+    var selection: ArtSelection = _catalog.resolve_prop(semantic)
+    var quarter_turns: int = PropOrientation.quarter_turns(selection, facing)
+    _draw_selection(selection, _cell_rect(anchor), MEMORY_MODULATION, quarter_turns)
 
 func _resolve_remembered_ground(cell: Vector2i, semantic_id: StringName) -> ArtSelection:
     var token: String = _leaf_token(semantic_id)
@@ -230,19 +254,31 @@ func _draw_auditory_cues() -> void:
         draw_line(center - Vector2(radius * 0.55, 0.0), center + Vector2(radius * 0.55, 0.0), SOUND_CUE_COLOR, line_width)
         draw_line(center - Vector2(0.0, radius * 0.55), center + Vector2(0.0, radius * 0.55), SOUND_CUE_COLOR, line_width)
 
-func _draw_selection(selection: ArtSelection, destination: Rect2, modulation: Color) -> bool:
+func _draw_selection(selection: ArtSelection, destination: Rect2, modulation: Color, quarter_turns: int = 0) -> bool:
     if selection == null or not selection.is_found() or selection.source == null:
         return false
     var texture: Texture2D = _texture_for_selection(selection)
     if texture == null:
         return false
+
+    var turns: int = ((quarter_turns % 4) + 4) % 4
+    var target: Rect2 = destination
+    if turns != 0:
+        var center: Vector2 = destination.position + destination.size * 0.5
+        draw_set_transform(center, float(turns) * PI * 0.5, Vector2.ONE)
+        target = Rect2(-destination.size * 0.5, destination.size)
+
+    var drawn: bool = false
     if selection.is_atlas_region():
-        draw_texture_rect_region(texture, destination, selection.region(), modulation, false, true)
-        return true
-    if not selection.source.atlas:
-        draw_texture_rect(texture, destination, false, modulation, false)
-        return true
-    return false
+        draw_texture_rect_region(texture, target, selection.region(), modulation, false, true)
+        drawn = true
+    elif not selection.source.atlas:
+        draw_texture_rect(texture, target, false, modulation, false)
+        drawn = true
+
+    if turns != 0:
+        draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+    return drawn
 
 func _texture_for_selection(selection: ArtSelection) -> Texture2D:
     if selection == null or selection.source == null:
