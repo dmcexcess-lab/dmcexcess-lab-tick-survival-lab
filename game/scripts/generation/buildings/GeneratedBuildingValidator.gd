@@ -11,7 +11,7 @@ func validate(plan: GeneratedBuildingPlan) -> Dictionary:
     var roles: Dictionary = {}
     var structure_cells: Dictionary = {}
     var door_cells: Dictionary = {}
-    var exterior_door_count: int = 0
+    var primary_exterior_door_count: int = 0
     for entry: Dictionary in plan.structures:
         var role: String = String(entry.get("role", ""))
         var cell: Vector2i = entry.get("cell", Vector2i(2147483647, 2147483647))
@@ -32,8 +32,8 @@ func validate(plan: GeneratedBuildingPlan) -> Dictionary:
         if kind == "door":
             door_cells[cell] = true
             if role == "door.exterior.primary":
-                exterior_door_count += 1
-    if exterior_door_count != 1:
+                primary_exterior_door_count += 1
+    if primary_exterior_door_count != 1:
         failures.append("exterior_door_count_invalid")
 
     var prop_cells: Dictionary = {}
@@ -86,12 +86,14 @@ func _rooms_reachable(
     prop_cells: Dictionary,
     door_cells: Dictionary
 ) -> bool:
-    var exterior: Vector2i = Vector2i(2147483647, 2147483647)
+    var exterior_doors: Array[Vector2i] = []
     for entry: Dictionary in plan.structures:
-        if String(entry.get("role", "")) == "door.exterior.primary":
-            exterior = entry.get("cell", exterior)
-            break
-    if exterior.x == 2147483647:
+        if String(entry.get("kind", "")) != "door":
+            continue
+        if not String(entry.get("role", "")).begins_with("door.exterior."):
+            continue
+        exterior_doors.append(entry.get("cell", Vector2i(2147483647, 2147483647)))
+    if exterior_doors.is_empty():
         return false
 
     var allowed: Dictionary = {}
@@ -105,11 +107,19 @@ func _rooms_reachable(
     for cell: Variant in structure_cells.keys():
         if String(structure_cells[cell]) != "door":
             allowed.erase(cell)
-    if not allowed.has(exterior):
+
+    var visited: Dictionary = {}
+    var queue: Array[Vector2i] = []
+    for exterior: Vector2i in exterior_doors:
+        if not allowed.has(exterior):
+            continue
+        if visited.has(exterior):
+            continue
+        visited[exterior] = true
+        queue.append(exterior)
+    if queue.is_empty():
         return false
 
-    var visited: Dictionary = {exterior: true}
-    var queue: Array[Vector2i] = [exterior]
     var directions: Array[Vector2i] = [Vector2i.UP, Vector2i.RIGHT, Vector2i.DOWN, Vector2i.LEFT]
     while not queue.is_empty():
         var current: Vector2i = queue.pop_front()
