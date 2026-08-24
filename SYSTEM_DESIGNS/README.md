@@ -43,6 +43,7 @@ Canonical status/routing index. Read `PROJECT_NORTH_STAR.md` and `README_SOPS.md
 | 21 | Tactical Camera / View Control | **IMPLEMENTED** | `21_TACTICAL_CAMERA_VIEW_CONTROL.md` |
 | 22 | Large-Area DEV Critique Runtime | **IMPLEMENTED** | `22_LARGE_AREA_CRITIQUE_RUNTIME.md` |
 | 23 | Perception / LOS / Fog Memory | **IMPLEMENTED — Candidate 001** | `23_PERCEPTION_LOS_FOG_MEMORY.md` |
+| 24 | World Loot / Searchable Containers / Scavenging | **DRAFT — awaiting approval** | `24_WORLD_LOOT_SEARCHABLE_CONTAINERS.md` |
 | 00E | Population / Household / Outbreak / Player Story | **NOT DESIGNED** | future design |
 
 ## Current System 00D truth
@@ -147,5 +148,9 @@ Exact-head context: `verify/system23-perception`.
 First fully green executable implementation head after final LOS fixture correction: `87fb517265ba1defc395068d09ccb7059e16d114`.
 
 First fully green executable head with remembered static furniture/clutter: `a08ccf8064f318e283acab6a3f73aa10e59f2acf`.
+
+## Proposed System 24 direction
+
+System 24 is currently **DRAFT**. It proposes real persistent world loot initialized once into physical generated furniture/fixtures, timed search actions, location-aware loot profiles, and a narrow System 12 world-container access policy extension. Search never rolls loot into existence; emptied containers remain empty on revisit. Initial useful physical item content covers food, drink, medicine, tools and materials while firearm/ammo mechanics remain deferred to their future owner.
 
 Seven protected exact-head gates remain System 00D, 00F, 19, 20, 21, 22 and Pages.
