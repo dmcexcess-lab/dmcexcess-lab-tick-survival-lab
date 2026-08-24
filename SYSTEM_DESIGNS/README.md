@@ -45,7 +45,7 @@ Canonical status/routing index. Read `PROJECT_NORTH_STAR.md` and `README_SOPS.md
 | 23 | Perception / LOS / Fog Memory | **IMPLEMENTED — geometry + light-aware acquisition + memory/audio presentation** | `23_PERCEPTION_LOS_FOG_MEMORY.md` |
 | 24 | World Loot / Searchable Containers / Scavenging | **IMPLEMENTED — Candidate 001** | `24_WORLD_LOOT_SEARCHABLE_CONTAINERS.md` |
 | 25 | World Time / Ambient Daylight | **IMPLEMENTED — Candidate 001** | `25_WORLD_TIME_AMBIENT_DAYLIGHT.md` |
-| 26 | Spatial Sound / Hearing | **IMPLEMENTED — Candidate 001** | `26_SPATIAL_SOUND_HEARING.md` |
+| 26 | Spatial Sound / Hearing | **IMPLEMENTED — Candidate 001 + onomatopoeia / cue lifetime refinement** | `26_SPATIAL_SOUND_HEARING.md` |
 | 27 | Physical Lighting / Illumination / Shadows | **IMPLEMENTED — Slices A+B+C** | `27_PHYSICAL_LIGHTING_ILLUMINATION_SHADOWS.md` |
 | 00E | Population / Household / Outbreak / Player Story | **NOT DESIGNED** | future design |
 
@@ -59,11 +59,11 @@ Exact-head contexts: `verify/system19-local-building`, `verify/system20-local-ar
 
 > **Black = I know nothing. Dark = I remember this place. Full = I can currently acquire what is actually happening.**
 
-System 23 geometry still provides the 12-cell / 120-degree maximum candidate envelope plus radius-1 near awareness. A neutral `VisualAcquisitionProvider` now filters geometric candidates before they become `VISIBLE`; only acquired cells refresh observer memory.
+System 23 geometry still provides the 12-cell / 120-degree maximum candidate envelope plus radius-1 near awareness. A neutral `VisualAcquisitionProvider` filters geometric candidates before they become `VISIBLE`; only acquired cells refresh observer memory.
 
 The live game injects System 27's target-light acquisition adapter. Darkness can therefore shrink current acquired vision while physical light expands it toward illuminated targets. Opaque geometry remains authoritative first. REMEMBERED stays stale and UNSEEN stays true black.
 
-System 26 auditory observations remain yellow words orthogonal to visual fog and do not reveal terrain.
+System 26 auditory observations remain orthogonal to visual fog and do not reveal terrain. Player-facing lifetime classification uses the **perceived auditory cell**, never exact hidden source truth: VISIBLE sound text fades by about one second; REMEMBERED/UNSEEN sound text latches at its uncertain location until the next observer action/unpause.
 
 Exact-head context: `verify/system23-perception`.
 
@@ -87,13 +87,21 @@ Exact-head context: `verify/system25-world-time-light`.
 
 Candidate 001 separates exact `SoundEmission` truth from listener `HeardSoundObservation` knowledge. Weighted material-aware propagation uses current WHAT + Door State; listener hearing derives from a neutral provider seam and current survivor stats/status. Localization uncertainty cannot flip true actor-relative front/rear/left/right signs.
 
+Recognized player-facing cues now prefer onomatopoeia (`*step step*`, `*thump thump*`, `*creak*`, `*SLAM*`), while low-confidence recognition remains honest `NOISE`/broader wording.
+
+Underlying heard observations continue to age by WHEN ticks. Player presentation is separate: a cue whose **perceived cell** is VISIBLE is a ~1-second transient fade; one whose perceived cell is REMEMBERED/UNSEEN is latched at that approximate cell until the listener starts the next action. Opaque cue/group IDs allow replacement and suppression without exposing exact source identity.
+
+Future AI still consumes ordinary `HeardSoundObservation`, not the player renderer's latch.
+
+Latest fully green executable refinement head: `aa5e1b622c8efe555d22e5d56514b9490776be16`.
+
 Exact-head context: `verify/system26-spatial-sound`.
 
 ## Current System 27 truth
 
 > **Light is physical. Vision is observer-specific. Rendering visualizes lighting; gameplay and AI never read rendered pixels to decide what is illuminated.**
 
-Slice A owns deterministic headless illumination and the target-cell useful-range policy. Slice B renders darkness/tint/glow/scatter below System 23. Slice C now makes live observer acquisition consume physical target illumination through a neutral System 23 provider seam.
+Slice A owns deterministic headless illumination and the target-cell useful-range policy. Slice B renders darkness/tint/glow/scatter below System 23. Slice C makes live observer acquisition consume physical target illumination through a neutral System 23 provider seam.
 
 The current provider guarantees a 25×25 observer-centered light-query envelope only when the presentation field does not already cover the survivor's full 12-cell geometric vision area. Camera movement therefore does not become gameplay vision truth, while normal camera-following play can reuse the current lighting field.
 
@@ -105,7 +113,7 @@ Exact-head context: `verify/system27-physical-lighting`.
 
 ## Current presentation
 
-The live Rural Crossroads critique build has canonical scavenging, time/daylight, physical sound, physical lighting and illumination-aware vision. Active flashlight/lamp/neon/streetlight sources are still explicitly DEV-only until real equipment/power/Weather owners exist.
+The live Rural Crossroads critique build has canonical scavenging, time/daylight, physical sound, physical lighting and illumination-aware vision. Sound is represented with yellow onomatopoeia/uncertainty text rather than conventional audio. Active flashlight/lamp/neon/streetlight sources are still explicitly DEV-only until real equipment/power/Weather owners exist.
 
 ## Required exact-head stack
 

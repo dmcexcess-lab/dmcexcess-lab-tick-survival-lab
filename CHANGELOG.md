@@ -1,5 +1,21 @@
 # Changelog
 
+## System 26 Spatial Sound / Hearing — Onomatopoeia + Cue Lifetime Refinement — 2026-08-24
+
+- Implemented the user direction **“lets replaces some or most of them with their onimonapias. like *step step* for seen noises they fade after a sec, for unseen sounds they stay in the aprrox position until the next unpause.”** Physical propagation, hearing thresholds and localization uncertainty are unchanged.
+- Replaced most recognized generic movement/door labels with readable onomatopoeia while keeping low-confidence recognition honest and broad: Walk `NOISE -> *scuff* -> *step step*`; Run `NOISE -> *thump thump* -> *step step step*`; normal door `NOISE -> *thunk* -> *creak*`; loud door `NOISE -> *BANG* -> *SLAM*`.
+- `HeardSoundObservation` now preserves display-word case/punctuation instead of forcing all text uppercase. Observation snapshot structure remains unchanged.
+- `SpatialSoundService.presentation_descriptors()` now supplies stable opaque `cue_id` and `group_id` values. They allow presentation replacement/suppression while still exposing neither exact source cell nor hidden source entity ID.
+- Added a neutral listener action-start lifecycle signal. Player presentation uses it to identify the next decision unpause without changing Movement/Door source semantics or turning the renderer into a WHEN owner.
+- Player cue lifetime now uses the **perceived/estimated cue cell's System 23 visibility state**, not hidden exact source visibility. This preserves the rule that presentation never gets extra source truth merely to decide how long a word should remain.
+- If that perceived cell is `VISIBLE` when the cue arrives, the yellow word is a short transient: full-strength briefly, fading after ~350 ms and reaching zero by ~1 real second. The real-time timer is presentation-only, runs only while a visible cue is fading and advances zero WHEN ticks.
+- If the perceived cell is `REMEMBERED` or `UNSEEN`, the cue latches at that same uncertain location while the player is paused deciding. It may outlive the underlying transient heard observation's normal tick expiry for display purposes, then clears when the controlled listener starts the next action/unpauses.
+- Repeated cues in the same opaque group replace/update one marker instead of leaving a breadcrumb trail. Cleared/faded cue IDs are suppressed until the upstream observation disappears so an already-dismissed marker cannot instantly reappear because of observation-store lifetime.
+- Underlying System 26 `HeardSoundObservation` remains authoritative listener knowledge for future AI/save semantics and still ages only by WHEN ticks. The seen fade/unseen latch is player presentation only; future AI never receives the renderer's latch as memory.
+- Extended `SpatialSoundSmoke.gd` and `PerceptionFogMemorySmoke.gd` to prove onomatopoeia vocabulary, opaque descriptor identity, no exact-source leakage, one-second fade math, listener-unpause lifecycle, unseen marker persistence after upstream expiry/removal, configured VISIBLE-vs-UNSEEN classification, unpause clearing and no visual exploration.
+- First fully green executable refinement head: `aa5e1b622c8efe555d22e5d56514b9490776be16`.
+- On that exact executable head all twelve required contexts were green: `verify/system27-physical-lighting`, `verify/system26-spatial-sound`, `verify/system25-world-time-light`, `verify/system24-loot`, `verify/system23-perception`, `verify/system22-area-critique`, `verify/system21-camera-view`, `verify/system20-local-area`, `verify/system19-local-building`, `verify/system00f-streaming-materialization`, `verify/system00d-global-world` and `verify/pages-deploy`.
+
 ## System 27 Physical Lighting / Illumination / Shadows — Slice C — 2026-08-23
 
 - Implemented the user-approved Slice C under the explicit direction **“we keep it for now, lets move on and see if it gets worse the more systems we add. approved for C.”** Current lighting/perception cost is therefore measured and retained rather than pre-optimized before real Actor AI/population workloads exist.

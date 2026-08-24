@@ -28,7 +28,7 @@ Golden archaeology commit: `1763958f44eb7f855fd49944c00d1ffe608c0abe`.
 - **23 Perception / LOS / Fog Memory** — geometric facing LOS, illumination-aware current acquisition, true-black unexplored fog, stale remembered environment/static furniture, last-seen actors and auditory presentation.
 - **24 World Loot / Searchable Containers / Scavenging** — persistent virgin loot, timed search, timed TAKE/STORE and playable scavenging UI.
 - **25 World Time / Ambient Daylight** — authoritative-tick-derived scenario clock and smooth outdoor daylight baseline.
-- **26 Spatial Sound / Hearing** — physical acoustic propagation, listener-specific hearing and yellow-word cues.
+- **26 Spatial Sound / Hearing** — physical acoustic propagation, listener-specific hearing/localization, onomatopoeia yellow-word cues and seen-vs-unseen player cue lifetime.
 - **27 Physical Lighting / Illumination / Shadows** — **Slices A+B+C implemented**: headless physical illumination, rich visible lighting, and target-light-dependent observer acquisition through System 23.
 
 ## Core rules
@@ -45,6 +45,7 @@ Golden archaeology commit: `1763958f44eb7f855fd49944c00d1ffe608c0abe`.
 10. **Sound is physical; hearing is an estimate.**
 11. **Light is physical; vision is observer-specific.** Gameplay/AI lighting never reads rendered pixels.
 12. Geometric LOS is a maximum candidate envelope; current visual acquisition may be smaller because of physical illumination.
+13. Player sound presentation may temporarily preserve an uncertain heard location, but it never gains exact hidden source truth or visual exploration.
 
 ## System 23 perception truth
 
@@ -56,11 +57,13 @@ Visual states remain:
 
 Candidate geometry remains a 12-cell, 120-degree forward cone plus radius-1 all-around near awareness. Memory schema remains v2.
 
-System 23 now exposes neutral `VisualAcquisitionProvider`. The historical/default provider passes all geometric candidates; the live canonical composition injects System 27's `IlluminationVisualAcquisitionProvider`.
+System 23 exposes neutral `VisualAcquisitionProvider`. The historical/default provider passes all geometric candidates; the live canonical composition injects System 27's `IlluminationVisualAcquisitionProvider`.
 
 Only acquired cells refresh environment/actor memory. A target may therefore be geometrically clear yet remain UNSEEN/REMEMBERED because it is too dark. Re-lighting the target can make it current VISIBLE truth. Opaque geometry still blocks first.
 
-REMEMBERED luminance follows System 25 broad ambient daylight. System 26 auditory observations may appear as yellow words without revealing terrain.
+REMEMBERED luminance follows System 25 broad ambient daylight.
+
+System 26 auditory descriptors may appear above any visual state without revealing terrain. For player presentation, cue lifetime is decided from the **perceived cell's** System 23 state: a VISIBLE cue fades out by about one second; a REMEMBERED/UNSEEN cue latches at the same approximate perceived location until the player's next committed action/unpause. This does not change visual memory or query the exact hidden source.
 
 Exact-head owner: `verify/system23-perception`.
 
@@ -76,7 +79,7 @@ Exact-head owner: `verify/system24-loot`.
 
 Candidate 001 uses 5 ticks/second, starts day 0 at 08:00:00, dawn 05:30–07:30, day 07:30–18:30, dusk 18:30–20:30 and night baseline 0.08. Time derives directly from `world_tick`; hard pause freezes it automatically.
 
-System 27 consumes this daylight downstream. Ambient changes now also trigger System 23 acquisition recomputation because changing physical light can change what is currently visible without movement.
+System 27 consumes this daylight downstream. Ambient changes also trigger System 23 acquisition recomputation because changing physical light can change what is currently visible without movement.
 
 Exact-head owner: `verify/system25-world-time-light`.
 
@@ -84,9 +87,26 @@ Exact-head owner: `verify/system25-world-time-light`.
 
 > **Sound is physical. Hearing is an estimate.**
 
-Exact transient sound truth is separated from listener observations. Material-aware propagation reads current WHAT + Door State; survivor hearing derives from existing skills/needs; localization uncertainty cannot flip true front/rear/left/right signs; cue age uses WHEN ticks only.
+Exact transient sound truth is separated from listener observations. Material-aware propagation reads current WHAT + Door State; survivor hearing derives from existing skills/needs; localization uncertainty cannot flip true front/rear/left/right signs; simulation observation age uses WHEN ticks only.
 
-First fully green executable head: `2d3dcfa6fc8646cda62a5e775beb1ac7c8d04d08`.
+Recognized player-facing sounds now prefer onomatopoeia:
+
+- Walk: `NOISE -> *scuff* -> *step step*`;
+- Run: `NOISE -> *thump thump* -> *step step step*`;
+- normal door: `NOISE -> *thunk* -> *creak*`;
+- loud door: `NOISE -> *BANG* -> *SLAM*`.
+
+Low-confidence recognition remains broad rather than inventing the wrong sound.
+
+Player cue lifetime is presentation-only and separate from the underlying `HeardSoundObservation`:
+
+- perceived-cell VISIBLE cue: transient, fades to zero by ~1 real second;
+- perceived-cell REMEMBERED/UNSEEN cue: latches at the stored approximate position until that listener next begins an action/unpauses;
+- repeated opaque cue groups replace/update rather than leave trails;
+- cleared/faded cue IDs are suppressed until their upstream observation disappears so they do not immediately pop back in;
+- future AI still consumes ordinary heard observations and never receives this player UI latch as memory.
+
+Latest fully green executable refinement head: `aa5e1b622c8efe555d22e5d56514b9490776be16`.
 
 Exact-head owner: `verify/system26-spatial-sound`.
 
@@ -164,7 +184,8 @@ Known scale seams:
 - legacy geometry-only System 23 FOV on that run: ~4.06 ms average;
 - focused illumination-aware perception recompute: ~11.84 ms average;
 - user direction is to keep current lighting/perception cost for now and see whether real later systems/actors make it materially worse before optimizing;
-- many moving lights and many simultaneous observers remain explicit future profiling/caching seams.
+- many moving lights and many simultaneous observers remain explicit future profiling/caching seams;
+- sound cue fading adds only a short-lived presentation timer while a visible word is fading; latched unseen markers have no continuous simulation scan.
 
 ## Major deferred seams
 

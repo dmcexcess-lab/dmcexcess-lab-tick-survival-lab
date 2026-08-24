@@ -28,7 +28,8 @@ System 23 owns:
 - deciding which actually acquired cells refresh memory;
 - fog/memory presentation masking/redrawing;
 - presentation-only broad ambient input for remembered shading;
-- drawing supplied System 26 auditory descriptors above visual fog/memory.
+- drawing supplied System 26 auditory descriptors above visual fog/memory;
+- player-facing auditory cue lifetime treatment based only on observer-safe perceived-cell visibility.
 
 System 23 reads but does not own:
 
@@ -36,7 +37,7 @@ System 23 reads but does not own:
 - Door State;
 - Art Catalog;
 - System 25 broad ambient daylight;
-- System 26 heard-sound descriptors;
+- System 26 heard-sound descriptors and opaque cue/group IDs;
 - current visual-acquisition decisions supplied through the neutral `VisualAcquisitionProvider` seam.
 
 System 23 does **not**:
@@ -47,7 +48,8 @@ System 23 does **not**:
 - decide Actor AI behavior;
 - own Weather/time;
 - mutate gameplay truth;
-- poll hidden current WHAT to repair stale memory.
+- poll hidden current WHAT to repair stale memory;
+- ask System 26 for an exact hidden sound source merely to decide how a cue is displayed.
 
 ---
 
@@ -203,16 +205,38 @@ System 27 physical visible-world lighting renders below the Perception overlay, 
 
 System 23 does not own physical sound.
 
-System 26 supplies listener-specific auditory presentation descriptors. System 23 draws them as yellow words over any visual knowledge state, including completely black UNSEEN terrain.
+System 26 supplies listener-specific auditory descriptors containing only observer-safe perceived information plus opaque cue/group identity. System 23 draws them as yellow text over any visual knowledge state, including completely black UNSEEN terrain.
+
+Recognized sounds now usually use onomatopoeia such as `*step step*`, `*thud*`, `*creak*` or `*SLAM*`; genuinely uncertain recognition may remain `NOISE`.
 
 Auditory cues:
 
 - do not reveal/explore terrain;
 - do not refresh visual memory;
 - use perceived rather than hidden exact source location;
-- may clamp to the viewport edge when offscreen.
+- may clamp to the viewport edge when offscreen;
+- preserve the same approximate perceived location rather than rerolling during presentation.
 
-Thus a survivor may hear `FOOTSTEPS` from darkness without visually learning what lies there.
+### Seen-vs-unseen presentation lifetime
+
+The split uses the **perceived cue cell's System 23 knowledge state**, never hidden exact source visibility.
+
+If the perceived cell is currently `VISIBLE` when the cue arrives:
+
+- the cue is a short transient sound word;
+- it remains strong briefly and fades to zero by roughly one real-time second;
+- that timer is presentation-only and advances zero WHEN ticks.
+
+If the perceived cell is `REMEMBERED` or `UNSEEN` when the cue arrives:
+
+- the cue is latched at that approximate location while the player is making the current decision;
+- it can outlive the underlying System 26 observation's normal tick expiry for display purposes;
+- it clears on the observer's next committed action / decision unpause;
+- clearing it does not alter System 26 simulation knowledge or System 23 visual memory.
+
+Repeated opaque groups update/replace one cue rather than leaving a trail.
+
+This lets a survivor keep a useful temporary `*step step*` marker in darkness while deciding what to do, without turning sound into visual exploration or exact hidden-source knowledge.
 
 ---
 
@@ -228,7 +252,9 @@ Relevant current triggers include:
 - profile/acquisition-provider changes;
 - explicit System 25 ambient-light changes in canonical composition because illumination can alter acquisition without movement.
 
-System 23 has no wall-clock visual-simulation owner and does not advance during idle rendering.
+System 23 owns no wall-clock **simulation** clock. The only current wall-clock activity is the bounded player-facing fade timer for a visible sound word; it runs only while such a cue exists and changes presentation only.
+
+Unseen sound markers require no per-frame simulation work while latched.
 
 ---
 
@@ -243,6 +269,7 @@ Required invariants:
 - light spill may matter only where current acquisition actually succeeds;
 - seeing spill does not automatically disclose a hidden source identity/location;
 - sound never marks visual exploration;
+- sound cue lifetime classification never queries exact hidden sound-source truth;
 - renderer/camera state never determines physical observer truth.
 
 ---
@@ -261,7 +288,9 @@ That is approximately **4.06 ms geometry-only** versus **11.84 ms lighting-aware
 
 The user explicitly chose to keep the current behavior and monitor scaling as more systems/actors are added rather than pre-optimize now.
 
-Before population-scale NPC/infected observers are introduced, profile multi-observer workloads against this baseline and optimize only if measured cost requires it.
+The auditory presentation refinement adds no permanent per-frame sound simulation. Only currently visible transient words schedule short redraw pulses during their one-second fade.
+
+Before population-scale NPC/infected observers are introduced, profile multi-observer workloads against the existing baseline and optimize only if measured cost requires it.
 
 ---
 
@@ -292,7 +321,11 @@ Coverage includes:
 - stale environment and actor memory;
 - remembered furniture/clutter;
 - ambient remembered shading;
-- yellow-word auditory presentation without exploration;
+- auditory presentation without exploration;
+- configured seen perceived-cell sound classified transient;
+- configured UNSEEN perceived-cell sound classified latched;
+- unseen marker surviving upstream observation expiry/removal until unpause;
+- unseen marker clearing at next unpause while true fog stays unexplored;
 - dark geometric targets rejected by illumination-aware acquisition;
 - physically lit targets becoming current VISIBLE truth;
 - third-party illumination;
@@ -304,7 +337,7 @@ Coverage includes:
 - geometry-only and illumination-aware performance markers;
 - canonical startup.
 
-On System 27 Slice C executable head `09d1c059760c06ef9791c4d405746caddc107dcf`, `verify/system23-perception` and all protected exact-head contexts including Pages were green.
+The latest auditory presentation refinement is executable-proven on `aa5e1b622c8efe555d22e5d56514b9490776be16`, where `verify/system23-perception`, `verify/system26-spatial-sound` and all other protected exact-head contexts including Pages were green.
 
 ---
 
