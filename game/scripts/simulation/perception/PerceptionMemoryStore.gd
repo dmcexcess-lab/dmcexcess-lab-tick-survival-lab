@@ -143,16 +143,18 @@ func snapshot() -> Dictionary:
         var cells: Dictionary = record["cells"]
         var cell_keys: Array[Vector2i] = []
         for cell_value: Variant in cells.keys():
-            cell_keys.append(cell_value as Vector2i)
+            var cell: Vector2i = cell_value
+            cell_keys.append(cell)
         cell_keys.sort_custom(_cell_less)
         var cell_entries: Array = []
         for cell: Vector2i in cell_keys:
             var memory: Dictionary = cells[cell]
+            var stored_structure: Dictionary = memory.get("structure", {})
             cell_entries.append({
                 "cell": [cell.x, cell.y],
                 "observed_tick": int(memory.get("observed_tick", 0)),
                 "terrain_semantic": String(memory.get("terrain_semantic", "")),
-                "structure": (memory.get("structure", {}) as Dictionary).duplicate(true),
+                "structure": stored_structure.duplicate(true),
             })
         var actor_entries: Array = []
         for actor_memory: Dictionary in actor_observations(observer_id):
@@ -201,11 +203,12 @@ func load_snapshot(data: Dictionary) -> bool:
             var structure_value: Variant = cell_data.get("structure", {})
             if terrain.is_empty() or observed_tick < 0 or typeof(structure_value) != TYPE_DICTIONARY or cells.has(cell):
                 return false
+            var structure_data: Dictionary = structure_value
             cells[cell] = {
                 "cell": cell,
                 "observed_tick": observed_tick,
                 "terrain_semantic": terrain,
-                "structure": (structure_value as Dictionary).duplicate(true),
+                "structure": structure_data.duplicate(true),
             }
         for actor_value: Variant in actors_value:
             if typeof(actor_value) != TYPE_DICTIONARY:
