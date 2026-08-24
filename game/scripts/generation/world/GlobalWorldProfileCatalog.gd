@@ -15,9 +15,13 @@ func profile(profile_id: StringName) -> Dictionary:
         result["id"] = TEMPERATE_ISLAND_REGION
         result["version"] = 1
         result["island_enabled"] = true
-        result["island_ocean_margin"] = 48
-        result["island_shore_width"] = 12
-        result["island_coast_wobble"] = 18
+        # The mature rural skeleton can place a 256x256 site as close as the
+        # second 128-cell geography column/row. Keep enough visible ocean and
+        # coastline to read as an island without clipping those established
+        # settlement sites or silently relocating their accepted identities.
+        result["island_ocean_margin"] = 24
+        result["island_shore_width"] = 8
+        result["island_coast_wobble"] = 8
         result["island_coast_scale"] = 96
         return result
     return {}
