@@ -14,6 +14,8 @@ const OutdoorAmbientLightServiceClass = preload("res://scripts/simulation/world_
 const PhysicalLightingClass = preload("res://scripts/simulation/lighting/PhysicalLightingService.gd")
 const LightingAcquisitionClass = preload("res://scripts/simulation/lighting/IlluminationVisualAcquisitionProvider.gd")
 const DemoLightingSourceClass = preload("res://scripts/demo/DemoLightingSourceAdapter.gd")
+const WeatherServiceClass = preload("res://scripts/simulation/weather/WeatherService.gd")
+const SkyExposureClass = preload("res://scripts/simulation/weather/SkyExposureQuery.gd")
 const BaseTraversalPolicyClass = preload("res://scripts/simulation/movement/MovementTraversalPolicy.gd")
 const MovementActionServiceClass = preload("res://scripts/simulation/movement/PassageAwareMovementActionService.gd")
 const MovementDamageInterruptionClass = preload("res://scripts/simulation/movement/MovementDamageInterruptionService.gd")
@@ -91,6 +93,7 @@ const LIVE_ITEM_TRANSFER_TICKS: int = 5
 @onready var _hud: CanonicalStatusHud = $Hud
 @onready var _shell: CanonicalPlayerShell = $PlayerShell
 @onready var _loot_panel: LootContainerPanel = $LootPanel
+@onready var _weather_controls: WeatherDevControls = $WeatherControls
 
 var _world: WorldState = null
 var _world_mutations: WorldMutationService = null
@@ -102,6 +105,8 @@ var _world_time: WorldTimeService = null
 var _ambient_daylight: OutdoorAmbientLightService = null
 var _physical_lighting: PhysicalLightingService = null
 var _demo_lighting_sources: DemoLightingSourceAdapter = null
+var _weather: WeatherService = null
+var _sky_exposure: SkyExposureQuery = null
 var _base_traversal: MovementTraversalPolicy = null
 var _locomotion_state: ActorLocomotionState = null
 var _locomotion_mutations: ActorLocomotionMutationService = null
@@ -207,6 +212,8 @@ func _boot_canonical_demo() -> bool:
         return false
     if not _boot_physical_lighting():
         return false
+    if not _boot_weather():
+        return false
 
     if not _boot_item_transfer_and_loot_actions():
         return false
@@ -260,6 +267,8 @@ func _boot_canonical_demo() -> bool:
     if not _world_view.configure(_world, _art_catalog, _door_state, FixtureClass.PLAYER_ID):
         return false
     if not _world_view.configure_physical_lighting(_physical_lighting, _world, _door_state):
+        return false
+    if not _world_view.configure_weather(_weather, _sky_exposure):
         return false
     if not _perception.set_acquisition_provider(LightingAcquisitionClass.new(_physical_lighting)):
         return false
@@ -323,6 +332,8 @@ func _boot_canonical_demo() -> bool:
         return false
     if not _controls.configure_stance(_locomotion_state, FixtureClass.PLAYER_ID):
         return false
+    if not _weather_controls.configure(_weather):
+        return false
 
     _controller = ControllerClass.new(_movement, _kernel, FixtureClass.PLAYER_ID, _stance_actions, _locomotion_state)
     _door_controller = DoorControllerClass.new(_world, _door_actions, _kernel, FixtureClass.PLAYER_ID)
@@ -351,6 +362,10 @@ func _boot_canonical_demo() -> bool:
     _loot_panel.store_requested.connect(Callable(_loot_controller, "request_store"))
     _shell.interaction_blocked_changed.connect(_on_shell_interaction_blocked_changed)
     _loot_panel.interaction_blocked_changed.connect(_on_loot_interaction_blocked_changed)
+    _weather_controls.force_weather_requested.connect(_on_dev_weather_force_requested)
+    _weather_controls.ambient_event_requested.connect(_on_dev_weather_ambient_requested)
+    _weather.weather_changed.connect(_on_weather_changed)
+    _weather_controls.present_weather(_weather.debug_snapshot())
     _refresh_interaction_enabled()
     return true
 
@@ -372,6 +387,13 @@ func _boot_physical_lighting() -> bool:
         return false
     _demo_lighting_sources.emitters_changed.connect(_on_demo_lighting_emitters_changed)
     return true
+
+func _boot_weather() -> bool:
+    # Rural Crossroads is a DEV critique composition, so begin in RAIN for immediate
+    # visual inspection. DEV controls can force every Candidate 001 profile.
+    _weather = WeatherServiceClass.new(_kernel, 28028, &"rain")
+    _sky_exposure = SkyExposureClass.new(_world)
+    return _weather.is_ready() and _sky_exposure.is_ready()
 
 func _boot_actor_status() -> bool:
     _hand_state = HandStateClass.new()
@@ -507,6 +529,17 @@ func _on_ambient_light_changed(level: float, _phase: StringName, _snapshot: Dict
 func _on_demo_lighting_emitters_changed(values: Array) -> void:
     if _physical_lighting != null:
         _physical_lighting.set_emitters(values)
+
+func _on_weather_changed(snapshot: Dictionary) -> void:
+    if _weather_controls != null:
+        _weather_controls.present_weather(snapshot)
+
+func _on_dev_weather_force_requested(profile_id: StringName) -> void:
+    if _weather != null:
+        _weather.force_profile(profile_id)
+
+func _on_dev_weather_ambient_requested(kind: StringName) -> void:
+    _world_view.force_weather_ambient_event(kind)
 
 func _on_sound_observations_changed(listener_id: String) -> void:
     if listener_id == FixtureClass.PLAYER_ID:

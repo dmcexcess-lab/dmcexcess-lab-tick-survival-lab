@@ -6,6 +6,7 @@ const StructureRendererClass = preload("res://scripts/render/StructureLayerRende
 const PropRendererClass = preload("res://scripts/render/PropLayerRenderer.gd")
 const ActorRendererClass = preload("res://scripts/render/ActorLayerRenderer.gd")
 const LightingRendererClass = preload("res://scripts/render/PhysicalLightingPresentationRenderer.gd")
+const WeatherRendererClass = preload("res://scripts/render/WeatherPresentationRenderer.gd")
 const PerceptionOverlayClass = preload("res://scripts/render/PerceptionOverlayRenderer.gd")
 
 ## Layer orchestration only. All drawing remains in the existing focused renderers.
@@ -15,6 +16,7 @@ var _structures: StructureLayerRenderer = null
 var _props: PropLayerRenderer = null
 var _actors: ActorLayerRenderer = null
 var _lighting: PhysicalLightingPresentationRenderer = null
+var _weather: WeatherPresentationRenderer = null
 var _perception: PerceptionOverlayRenderer = null
 var _configured: bool = false
 
@@ -61,6 +63,18 @@ func physical_lighting_debug_snapshot() -> Dictionary:
     _ensure_layers()
     return _lighting.presentation_snapshot()
 
+func configure_weather(weather_service: WeatherService, sky_exposure: SkyExposureQuery) -> bool:
+    _ensure_layers()
+    return _weather.configure(weather_service, sky_exposure)
+
+func force_weather_ambient_event(kind: StringName = &"leaf") -> bool:
+    _ensure_layers()
+    return _weather.force_ambient_event(kind)
+
+func weather_debug_snapshot() -> Dictionary:
+    _ensure_layers()
+    return _weather.presentation_snapshot()
+
 func configure_perception(
     perception_service: ObserverPerceptionService,
     memory_store: PerceptionMemoryStore,
@@ -96,11 +110,15 @@ func set_visible_window(origin: Vector2i, size_cells: Vector2i, cell_pixels: flo
     var lighting_ok: bool = true
     if _lighting.is_configured():
         lighting_ok = _lighting.set_visible_window(origin, size_cells, cell_pixels)
+    var weather_ok: bool = true
+    if _weather.is_configured():
+        weather_ok = _weather.set_visible_window(origin, size_cells, cell_pixels)
     return _ground.set_visible_window(origin, size_cells, cell_pixels) \
         and _structures.set_visible_window(origin, size_cells, cell_pixels) \
         and _props.set_visible_window(origin, size_cells, cell_pixels) \
         and _actors.set_visible_window(origin, size_cells, cell_pixels) \
         and lighting_ok \
+        and weather_ok \
         and _perception.set_visible_window(origin, size_cells, cell_pixels)
 
 func is_configured() -> bool:
@@ -160,6 +178,11 @@ func _ensure_layers() -> void:
     _lighting.name = "PhysicalLighting"
     _lighting.z_index = 40
     add_child(_lighting)
+
+    _weather = WeatherRendererClass.new()
+    _weather.name = "Weather"
+    _weather.z_index = 50
+    add_child(_weather)
 
     _perception = PerceptionOverlayClass.new()
     _perception.name = "Perception"
