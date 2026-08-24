@@ -179,7 +179,7 @@ func _render() -> void:
     else:
         for item_value: Variant in contents:
             var item: Dictionary = item_value
-            _append_item_row(item, true)
+            _append_item_row(item)
 
     _append_heading("YOUR PACK")
     var inventory_result: Dictionary = _inventory.query(_actor_id)
@@ -191,7 +191,7 @@ func _render() -> void:
             var item: Dictionary = item_value
             _append_personal_row(item)
 
-func _append_item_row(item: Dictionary, can_take: bool) -> void:
+func _append_item_row(item: Dictionary) -> void:
     var row := HBoxContainer.new()
     row.add_theme_constant_override("separation", 8)
     _body.add_child(row)
@@ -207,22 +207,21 @@ func _append_item_row(item: Dictionary, can_take: bool) -> void:
     label.add_theme_font_size_override("font_size", 14)
     row.add_child(label)
 
-    if can_take:
-        var item_id: String = String(item.get("item_id", ""))
-        var button := Button.new()
-        button.text = "TAKE"
-        button.custom_minimum_size = Vector2(100, 48)
-        button.focus_mode = Control.FOCUS_NONE
-        button.disabled = item_id.is_empty() or not bool(item.get("valid", false))
-        button.pressed.connect(func() -> void:
-            take_requested.emit(_container_id, item_id)
-        )
-        row.add_child(button)
+    var item_id: String = String(item.get("item_id", ""))
+    var button := Button.new()
+    button.text = "TAKE"
+    button.custom_minimum_size = Vector2(100, 48)
+    button.focus_mode = Control.FOCUS_NONE
+    button.disabled = item_id.is_empty() or not bool(item.get("valid", false))
+    button.pressed.connect(func() -> void:
+        take_requested.emit(_container_id, item_id)
+    )
+    row.add_child(button)
 
 func _append_personal_row(item: Dictionary) -> void:
     var item_id: String = String(item.get("item_id", ""))
-    var semantic: String = String(item.get("semantic_type", ""))
-    var definition: Dictionary = _inspection._items.definition(StringName(semantic))
+    var semantic: StringName = StringName(item.get("semantic_type", &""))
+    var definition: Dictionary = _inspection.item_definition(semantic)
     var label_text: String = String(item.get("label", "Unknown Item"))
     var utility: String = String(definition.get("utility_class", "ITEM")).to_upper()
     var family: String = String(definition.get("family", "misc")).capitalize()
