@@ -9,6 +9,7 @@ on:
       - Local Area Generation contract
       - Tactical Camera and View Control contract
       - Large Area Critique Runtime contract
+      - Perception LOS Fog Memory contract
       - Build and deploy Tick Survival Lab
     types: [completed]
 
@@ -50,6 +51,9 @@ jobs:
               ;;
             "Large Area Critique Runtime contract")
               context="verify/system22-area-critique"
+              ;;
+            "Perception LOS Fog Memory contract")
+              context="verify/system23-perception"
               ;;
             "Build and deploy Tick Survival Lab")
               context="verify/pages-deploy"
