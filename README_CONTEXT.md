@@ -36,6 +36,29 @@ Golden archaeology commit: `1763958f44eb7f855fd49944c00d1ffe608c0abe`.
 - **00F Streaming / Materialization** — implemented settlement + dry-countryside logical sources, one-way materialization, reversible technical activation, registry snapshot schema v1, no destructive eviction.
 - **21 Camera** and **22 Large-Area DEV Critique Runtime** — implemented. Live presentation remains the Rural Crossroads critique world.
 - **23 Perception / LOS / Fog Memory** — implemented Candidate 001: deterministic facing-based LOS, true black unexplored fog, stale remembered terrain/structures/door state plus static furniture/clutter, per-observer memory, last-seen living-actor observations, and perception-layer support for future auditory cues.
+- **24 World Loot / Searchable Containers / Scavenging** — **DRAFT, awaiting approval**. Proposed next major gameplay system.
+
+## Active next design — System 24 Loot
+
+Draft: `SYSTEM_DESIGNS/24_WORLD_LOOT_SEARCHABLE_CONTAINERS.md`.
+
+Core proposed rule:
+
+> **Loot exists before you search for it. Searching spends time to discover and access real persistent contents; it never rolls a reward into existence.**
+
+The draft reuses the already-implemented inventory stack rather than replacing it:
+
+- furniture/fixtures remain real placed WHAT entities;
+- appropriate generated props become explicitly enrolled System 11 containers;
+- virgin stable `item.*` entities are initialized once and immediately contained;
+- System 24 persists the container's loot profile/provenance and source initialization record, but System 11 owns all current contents afterward;
+- search is a timed WHEN action returning current contents;
+- taking/storing continues through System 12 via a proposed injectable world-container access policy;
+- empty/looted containers never automatically repopulate;
+- Candidate 001 useful item content covers food, drink, medicine, tools and materials using real package entities and 13D weights;
+- generic quantity/condition, firearm/ammo mechanics, eating, treatment, crafting, corpse loot, vehicles and NPC scavenging stay with future owning systems.
+
+The draft uses public System 19 building archetype + prop role + semantic context so a grocery shelf, pharmacy shelf and hardware shelf can have different contents even when they share a physical shelf semantic. That classification is persisted at virgin initialization so later gameplay does not depend on generator internals.
 
 ## Baseline world-content rules
 
@@ -122,7 +145,7 @@ The baseline suburb/urban/commercial/industrial/civic profiles are reusable Syst
 
 A future **00F river-source provider** remains a known clean seam when continuous streamed river traversal is actually needed; it is not the default next task merely because System 20 watercourse generation exists.
 
-Real Spatial Sound is a natural gameplay follow-up because the System 23 contract already defines hearing as independent from sight. Lighting, infected AI/combat, scavenging/search pressure, and population/outbreak remain later choices rather than being silently bundled into perception.
+Real Spatial Sound remains an important gameplay follow-up, but the active proposed next major system is System 24 loot/scavenging. Lighting, infected AI/combat, and population/outbreak remain later choices rather than being silently bundled into loot.
 
 ## Verification contexts used for protected world-stack changes
 
