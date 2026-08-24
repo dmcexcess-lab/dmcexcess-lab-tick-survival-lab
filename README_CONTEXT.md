@@ -35,7 +35,7 @@ Golden archaeology commit: `1763958f44eb7f855fd49944c00d1ffe608c0abe`.
 - **20 Environment profiles** — `temperate.rural` v3 plus suburban, urban, industrial, woodland, coastal and marsh v1 palettes.
 - **00F Streaming / Materialization** — implemented settlement + dry-countryside logical sources, one-way materialization, reversible technical activation, registry snapshot schema v1, no destructive eviction.
 - **21 Camera** and **22 Large-Area DEV Critique Runtime** — implemented. Live presentation remains the Rural Crossroads critique world.
-- **23 Perception / LOS / Fog Memory** — implemented Candidate 001: deterministic facing-based LOS, true black unexplored fog, stale remembered environment, per-observer memory, last-seen living-actor observations, and perception-layer support for future auditory cues.
+- **23 Perception / LOS / Fog Memory** — implemented Candidate 001: deterministic facing-based LOS, true black unexplored fog, stale remembered terrain/structures/door state plus static furniture/clutter, per-observer memory, last-seen living-actor observations, and perception-layer support for future auditory cues.
 
 ## Baseline world-content rules
 
@@ -101,16 +101,20 @@ Status: **IMPLEMENTED — Candidate 001**.
 Canonical player-facing knowledge model:
 
 - **UNSEEN / true fog** — completely black visual world information;
-- **REMEMBERED fog** — darkened stale last-observed terrain and structural shell, including the last observed door state;
+- **REMEMBERED fog** — darkened stale last-observed terrain, structural shell/door state, and anchored static `prop.*`/`fixture.*` furniture/clutter;
 - **VISIBLE** — normal current live world truth;
 - **last-seen living actors** — stale remembered markers that do not secretly follow hidden actors;
 - **sound indicators** — the perception layer can accept future auditory cues over visible, remembered, or completely unexplored true black fog without revealing the terrain underneath or marking a cell explored.
 
 Candidate 001 uses a 12-cell deterministic 120-degree facing cone plus radius-1 all-around near awareness. Walls and closed doors block LOS; open doors and windows transmit. Unknown/malformed structure opacity fails closed. Persistent memory is maintained per stable observer actor ID; the current canonical demo maintains full memory for the controlled survivor.
 
-Existing live renderers remain current-truth renderers. `PerceptionOverlayRenderer` blacks all non-visible cells and redraws only stored remembered snapshots above the black mask, preventing hidden live state from leaking through memory.
+Static furniture/clutter memory stores compact stable ID, semantic, anchor and facing observations. Hidden furniture moves/removals do not update those records; seeing the cell again refreshes or clears them. Loose items, vehicles and vegetation are not yet included in environmental memory. Perception-memory snapshots are schema v2.
 
-The first fully green executable System 23 head after the final LOS fixture correction is `87fb517265ba1defc395068d09ccb7059e16d114`. On that exact code head, `verify/system23-perception` and all seven protected exact-head contexts were green.
+Existing live renderers remain current-truth renderers. `PerceptionOverlayRenderer` blacks all non-visible cells and redraws only stored remembered snapshots above the black mask, including remembered static furniture/clutter through the normal Art Catalog/orientation rules, preventing hidden live state from leaking through memory.
+
+The first fully green executable System 23 head after the final LOS fixture correction is `87fb517265ba1defc395068d09ccb7059e16d114`.
+
+The first fully green executable head with remembered static furniture/clutter is `a08ccf8064f318e283acab6a3f73aa10e59f2acf`. On that exact code head, `verify/system23-perception` and all seven protected exact-head contexts were green.
 
 ## Deferred seams
 
