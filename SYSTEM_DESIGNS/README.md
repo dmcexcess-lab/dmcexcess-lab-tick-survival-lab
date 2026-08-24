@@ -38,8 +38,8 @@ Canonical status/routing index. Read `PROJECT_NORTH_STAR.md` and `README_SOPS.md
 | 17A | Movement Exertion / Encumbrance / Run Impact | **IMPLEMENTED** | `17A_MOVEMENT_EXERTION_ENCUMBRANCE_RUN_IMPACT.md` |
 | 17A.1 | Overweight Walk Fatigue / Carry Ceiling | **IMPLEMENTED** | `17A1_OVERWEIGHT_WALK_FATIGUE_HARD_CARRY_LIMIT.md` |
 | 18 | Door Interaction / Automatic Passage | **IMPLEMENTED** | `18_DOOR_INTERACTION_PASSAGE.md` |
-| 19 | Local Building Generation / Grammar | **IMPLEMENTED — FINALIZED CURRENT LIBRARY** | `19_LOCAL_BUILDING_GENERATION_ARCHETYPE_LAB.md` |
-| 20 | Local Area Generation | **IMPLEMENTED — five current profiles** | `20_LOCAL_AREA_PARCEL_GENERATION.md` |
+| 19 | Local Building Generation / Grammar | **IMPLEMENTED — FINALIZED, 24-archetype library** | `19_LOCAL_BUILDING_GENERATION_ARCHETYPE_LAB.md` |
+| 20 | Local Area Generation | **IMPLEMENTED — ten area / seven environment profiles** | `20_LOCAL_AREA_PARCEL_GENERATION.md` |
 | 21 | Tactical Camera / View Control | **IMPLEMENTED** | `21_TACTICAL_CAMERA_VIEW_CONTROL.md` |
 | 22 | Large-Area DEV Critique Runtime | **IMPLEMENTED** | `22_LARGE_AREA_CRITIQUE_RUNTIME.md` |
 | 23 | Perception / LOS / Fog Memory | **IMPLEMENTED — Candidate 001** | `23_PERCEPTION_LOS_FOG_MEMORY.md` |
@@ -53,25 +53,53 @@ Exact-head context: `verify/system00d-global-world`.
 
 ## Current System 19 truth
 
-Current protected library: Trailer v2, Small Farmhouse v2, Large Farmhouse v4, Compact Laundry House v1, Small Gas Station v1, Rural Diner v2.
+Protected reference library:
+
+- Trailer v2;
+- Small Farmhouse v2;
+- Large Farmhouse v4;
+- Compact Laundry House v1;
+- Small Gas Station v1;
+- Rural Diner v2.
+
+Baseline library adds 18 one-story profiles for suburban houses, horizontal townhomes/multi-unit housing, roadside motel lodging, commercial stores/offices, civic buildings, warehouse/workshop and barn content. Total callable registry: **24 archetypes**.
+
+Baseline city-density rule: **more rooms/units and realistic circulation, not fake upper floors**. Multi-unit housing/motel rooms use independent exterior access while one designated primary exterior door remains the System 20 placement anchor. Blocking props never materialize on door-approach circulation cells.
 
 Exact-head context: `verify/system19-local-building`.
 
 ## Current System 20 truth
 
-Environment: `temperate.rural` v3.
+Environment profiles:
 
-Implemented profiles are all owned by the single System 20 contract:
+- `temperate.rural` v3;
+- `temperate.suburban` v1;
+- `temperate.urban` v1;
+- `temperate.industrial` v1;
+- `temperate.woodland` v1;
+- `temperate.coastal` v1;
+- `temperate.marsh` v1.
+
+Area profiles owned by the single System 20 contract:
 
 - `rural.crossroads` v5;
 - `smalltown.center` v1;
 - `rural.scattered` v1;
 - `rural.open` v1;
-- `rural.watercourse` v1.
+- `rural.watercourse` v1;
+- `suburban.neighborhood` v1;
+- `urban.mixed` v1;
+- `commercial.corridor` v1;
+- `industrial.district` v1;
+- `civic.campus` v1.
+
+The five baseline settlement morphologies use deterministic parcel-fit archetype selection and real finalized access for occupied residential, farmstead, commercial, civic and industrial parcels. Environment palettes are local vocabulary only; woodland/coastal/marsh palettes do not grant permission to invent corresponding 00D geography.
 
 Candidate numbers are implementation history, not peer-system identity. Their final rules live in `20_LOCAL_AREA_PARCEL_GENERATION.md`; detailed historical drafts remain available in Git history/changelog.
 
 Exact-head context: `verify/system20-local-area`.
+
+First exact executable head with the 24-archetype System 19 library, five new System 20 morphologies, seven environment palettes and the full protected stack green: `2e7a6e0da27a02f8058a3a79538cd9cb55a48cef`.
 
 ## Current System 00F truth
 
@@ -93,6 +121,8 @@ Exact-head context: `verify/system00f-streaming-materialization`.
 ## Current presentation
 
 System 21 owns camera only. System 22 owns the bounded DEV critique runtime only. The live Web build still presents the Rural Crossroads critique world, now with canonical System 23 perception/fog integrated into the demo stack.
+
+The expanded baseline profile libraries are generator content and do not silently replace the current live critique fixture.
 
 ## Current System 23 truth
 
