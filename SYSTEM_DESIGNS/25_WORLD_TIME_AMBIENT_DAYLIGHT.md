@@ -1,235 +1,220 @@
 # Tick Survival Lab — System 25 World Time / Ambient Daylight
 
-Status: **APPROVED — implementation authorized 2026-08-23**
+Status: **IMPLEMENTED — Candidate 001, 2026-08-23**
 
-Approval basis: after asking for remembered fog darkness to vary with overall light/time of day, the user explicitly chose the durable architecture over a demo-only curve: **“lets set it up right even if i cant test it.”**
+Approval basis: the user requested that REMEMBERED fog vary with overall light/time of day and explicitly gave implementation discretion: **“maybe just as simple as linking it to time of day instead of trying to keep track of varying light levels. but do what you think you can.”** System 25 is the durable implementation of that request rather than a demo-only fake clock.
+
+First fully green executable head: `6b6680c5b8eb4d8db2c4097df093abace661d5c7`.
+
+Exact-head context: `verify/system25-world-time-light`.
 
 ## 1. Goal
 
-Add a real simulation-time interpretation layer without teaching WHEN what a minute, hour, day, dawn or night means.
-
-System 25 provides:
-
-- a validated mapping from authoritative WHEN ticks to simulation-local day/time;
-- a deterministic outdoor daylight baseline derived from that time;
-- a small public presentation/mechanics seam that can later feed lighting, weather, schedules, crops, utilities, outbreak simulation and perception.
+Provide a real simulation-time interpretation layer downstream of WHEN and a deterministic outdoor daylight baseline that other systems can consume without teaching WHEN what seconds, hours, dawn or night mean.
 
 Immediate player-facing use:
 
-> System 23 REMEMBERED fog uses the current ambient-light value so remembered places are darker at night and brighter during the day while remaining distinct from true-black UNSEEN fog.
+> System 23 REMEMBERED fog uses current outdoor ambient daylight, becoming darker at night and brighter by day while UNSEEN remains true black.
 
 ## 2. Ownership
 
 System 25 owns:
 
 - tick-to-simulation-time interpretation;
-- scenario-local day index and time-of-day derivation;
-- the baseline daylight profile for dawn/day/dusk/night;
-- normalized outdoor daylight output and phase labeling;
-- deterministic change signals when authoritative time advances.
+- scenario-local day index and time of day;
+- a baseline dawn/day/dusk/night curve;
+- normalized outdoor daylight and phase labels;
+- change notification when authoritative WHEN time changes.
 
-System 25 reads but does not own:
-
-- `TickKernel.world_tick()` and timing/reset signals.
+System 25 reads but does not own `TickKernel.world_tick()` and its advancement/reset signals.
 
 System 25 does **not** own:
 
-- WHEN scheduling or advancement;
-- wall-clock/real-world time;
-- absolute historical calendar/era;
-- seasons/latitude/astronomy;
-- weather/cloud cover;
-- indoor/local light sources;
-- flashlights, fires, generators, streetlights or electrical grids;
-- LOS/vision-range mechanics;
-- renderer draw rules other than consumers using its public light value;
-- save orchestration.
-
-## 3. WHEN remains mechanic-agnostic
+- WHEN scheduling or tick advancement;
+- wall-clock time;
+- Gregorian calendar/date/season/latitude;
+- weather attenuation;
+- indoor lighting;
+- artificial/local lights, power grids, flashlights or fire;
+- LOS or vision-range mechanics;
+- save-file orchestration.
 
 Canonical dependency direction:
 
-`WHEN integer world tick -> System 25 time interpretation -> daylight/lighting consumers`
+`WHEN world_tick -> System 25 time interpretation -> daylight consumers`
 
-WHEN remains unchanged and continues to know only integer simulation ticks.
+## 3. Candidate 001 world-time profile
 
-System 25 may be replaced or retuned without changing scheduled action/event semantics.
+`WorldTimeProfile` is scenario configuration.
 
-## 4. World-time profile
-
-`WorldTimeProfile` is validated scenario configuration.
-
-Candidate 001 live baseline:
+Live baseline:
 
 - **5 ticks = 1 simulation second**;
 - **300 ticks = 1 simulation minute**;
 - **18,000 ticks = 1 simulation hour**;
 - **432,000 ticks = 1 simulation day**;
-- scenario-local start is **day 0, 08:00:00**.
+- scenario-local start: **day 0, 08:00:00**.
 
-This makes current common action timings physically plausible without forcing WHEN to adopt the interpretation:
+This makes current common actions physically legible without changing WHEN:
 
 - 3-tick turn ~= 0.6 s;
-- 5-tick item TAKE/STORE ~= 1.0 s;
+- 5-tick TAKE/STORE ~= 1.0 s;
 - 10-tick one-cell walk ~= 2.0 s;
-- 8–15 tick container search ~= 1.6–3.0 s.
+- 8–15 tick search ~= 1.6–3.0 s.
 
-These values are gameplay tuning, not foundation identity. Changing the profile later does not rewrite WHEN.
+These are gameplay tuning values, not foundation identity.
 
-## 5. Derived clock contract
+## 4. Derived clock
 
-`WorldTimeService` is derived from current `world_tick` plus `WorldTimeProfile`; it does not maintain a second advancing clock.
+`WorldTimeService` derives its complete clock from current `world_tick`; it owns no second advancing counter.
 
-A current time snapshot exposes at least:
+A time snapshot includes:
 
-- authoritative `world_tick`;
-- elapsed simulation seconds from the scenario origin;
-- scenario-local `day_index`;
-- `second_of_day`;
+- authoritative world tick;
+- elapsed simulation seconds;
+- subsecond tick;
+- day index;
+- second of day;
 - hour/minute/second;
 - normalized day fraction.
 
-Time never advances from render frames or wall clock. Hard pause therefore changes no System 25 time because WHEN changes no tick.
+Hard pause changes no System 25 time because WHEN advances no ticks. WHEN snapshot/restore deterministically restores the same derived clock.
 
-Crossing midnight increments `day_index` deterministically.
+Candidate 001 intentionally uses day index + time of day rather than inventing a historical calendar date.
 
-## 6. Calendar scope
+## 5. Daylight profile
 
-Candidate 001 deliberately uses **scenario-local day index + time of day**, not an invented Gregorian date/year.
+`DaylightProfile` is separate from the clock.
 
-Future world/scenario design may map day index to an actual date, season and latitude without changing the tick/time contract.
-
-## 7. Daylight profile
-
-`DaylightProfile` is validated configuration separate from the clock.
-
-Candidate 001 temperate baseline:
+Temperate Candidate 001 baseline:
 
 - dawn begins: **05:30**;
 - full daylight: **07:30**;
 - dusk begins: **18:30**;
 - night begins: **20:30**;
-- normalized night daylight: **0.08**;
-- normalized full daylight: **1.00**.
+- night daylight level: **0.08**;
+- full daylight level: **1.00**.
 
-Dawn and dusk interpolate smoothly rather than stepping abruptly.
+Dawn and dusk interpolate smoothly with no abrupt lighting step.
 
-Phase labels are:
+Phase labels:
 
 - `night`
 - `dawn`
 - `day`
 - `dusk`
 
-The fixed Candidate 001 profile is a baseline only. Seasons/latitude may later replace/update it.
+## 6. Outdoor ambient-light service
 
-## 8. Ambient daylight service
+`OutdoorAmbientLightService` consumes `WorldTimeService` + `DaylightProfile` and exposes:
 
-`OutdoorAmbientLightService` consumes `WorldTimeService` and `DaylightProfile` and exposes:
+- normalized ambient daylight `[0,1]`;
+- current daylight phase;
+- copied current time/daylight snapshot;
+- `ambient_light_changed(level, phase, snapshot)`.
 
-- current normalized daylight `[0,1]`;
-- current phase;
-- a copied time/daylight snapshot;
-- a change signal when authoritative time or the daylight profile changes.
+The service performs no frame polling and advances zero ticks.
 
-It owns no render state and advances zero ticks.
+Weather remains a separate future multiplier rather than being baked into baseline daylight.
 
-Weather is intentionally not folded into this service. A later lighting/environment owner may combine baseline daylight with cloud/fog/storm attenuation and local artificial sources.
+## 7. System 23 integration
 
-## 9. System 23 integration
-
-System 23 gains one presentation-only input:
+`PerceptionOverlayRenderer` accepts:
 
 `set_ambient_light_level(level_0_to_1)`
 
 Rules:
 
-- environmental memory remains stale last-observed world truth;
-- remembered records do **not** store remembered historical lighting;
-- hidden WHAT is never polled;
-- current ambient light changes only how remembered snapshots are presented;
-- true `UNSEEN` stays fully opaque black at every time of day;
-- `VISIBLE` current-world renderers are not darkened by this slice.
+- REMEMBERED content remains stale last-observed knowledge;
+- memory does not store historical lighting;
+- hidden current WHAT is never queried;
+- ambient daylight changes presentation only;
+- UNSEEN stays fully opaque black at all times;
+- VISIBLE current-world rendering is not globally darkened by this slice;
+- last-seen actor markers and auditory cues remain separate information/presentation channels.
 
-Candidate 001 remembered environmental luminance:
+Remembered environmental luminance:
 
-- full daylight: preserve the existing **0.30** memory luminance;
-- deepest ambient darkness: **0.10** memory luminance;
-- interpolate between those values from the supplied ambient-light level.
+- full daylight: **0.30**;
+- zero ambient input: **0.10**;
+- interpolate between them from current ambient daylight.
 
-This keeps REMEMBERED readable but clearly darker at night while preserving the hard information boundary between REMEMBERED and UNSEEN.
+With Candidate 001's night baseline of `0.08`, remembered luminance is approximately `0.116`: clearly darker than day while still distinct from true-black unexplored fog.
 
-Last-seen actor marker styling remains separately readable and is not made mechanically authoritative by ambient changes.
+The canonical Rural Crossroads composition wires `OutdoorAmbientLightService.ambient_light_changed` into `TacticalRendererStack.set_perception_ambient_light_level`.
 
-## 10. Why visible world lighting is deferred
+## 8. Why visible-world darkness is deferred
 
-A real visible-world lighting pass must eventually account for:
+A believable live-world lighting system must eventually account for outdoor daylight, interiors/roofing, windows/openings, weather, local emitters, electrical state, flashlights/fire and light-dependent sight.
 
-- outdoor daylight;
-- interiors/roofing;
-- windows/openings;
-- local light emitters;
-- power state;
-- flashlights/fire;
-- weather attenuation;
-- vision-range consequences.
+Globally tinting all live sprites here would bypass those physical rules. System 25 therefore establishes the correct time/daylight seam first and uses it for the requested remembered-fog behavior only.
 
-Darkening all live sprites globally in this slice would look like progress while bypassing those physical rules. Candidate 001 therefore establishes the correct clock/daylight seam and uses it only for the requested remembered-fog presentation.
+## 9. Persistence / restore
 
-## 11. Persistence / restore
+System 25 owns no additional mutable time counter.
 
-System 25 stores no second mutable time counter.
+Deterministic restore needs:
 
-Deterministic restore requires:
-
-- restored WHEN `world_tick`;
-- the same scenario `WorldTimeProfile`;
+- restored WHEN world tick;
+- the same `WorldTimeProfile`;
 - the applicable `DaylightProfile`.
 
-A future scenario/save owner may persist those profiles/epoch choices. System 25 does not own the save file.
+Future scenario/save orchestration may persist profile/epoch choices. System 25 does not own the save file.
 
-## 12. Performance / mobile
+## 10. Performance
 
-- no `_process()` or wall-clock polling;
-- no per-cell lighting simulation;
-- one derived calculation when WHEN advances/reset or profile changes;
-- Perception overlay simply redraws with one normalized scalar;
-- no world scan.
+- no `_process()` / `_physics_process()` time advancement;
+- no wall-clock polling;
+- no world or cell scan;
+- derived calculation only when WHEN advances/resets or daylight profile changes;
+- one normalized scalar consumed by the perception overlay.
 
-## 13. Verification requirements
+## 11. Verification
 
-Dedicated System 25 CI must prove:
+Dedicated smoke: `game/scripts/ci/WorldTimeAmbientSmoke.gd`.
+
+Dedicated workflow: `.github/workflows/world-time-ambient.yml`.
+
+The smoke proves:
 
 - exact tick -> second/minute/hour/day mapping;
 - midnight rollover;
-- hard pause produces no time change because WHEN produces no tick change;
-- deterministic mapping after WHEN snapshot/restore;
-- dawn/day/dusk/night phase boundaries;
-- smooth normalized dawn/dusk interpolation;
-- System 23 remembered luminance responds to ambient light while true fog remains black;
-- no System 25 `_process()`/wall-clock advancement;
-- WHEN regression;
-- System 23 perception regression;
-- canonical demo startup.
+- hard pause produces zero clock advancement;
+- deterministic WHEN snapshot/restore mapping;
+- dawn/day/dusk/night boundaries;
+- smooth dawn/dusk interpolation;
+- System 23 ambient-memory luminance behavior;
+- UNSEEN remains true black.
 
-Exact-head context:
+The workflow also runs WHEN, System 23 and canonical-demo startup regressions.
 
-`verify/system25-world-time-light`
+On executable head `6b6680c5b8eb4d8db2c4097df093abace661d5c7`, all ten exact-head contexts were green:
 
-## 14. Future seams
+- `verify/system25-world-time-light`;
+- `verify/system24-loot`;
+- `verify/system23-perception`;
+- `verify/system22-area-critique`;
+- `verify/system21-camera-view`;
+- `verify/system20-local-area`;
+- `verify/system19-local-building`;
+- `verify/system00f-streaming-materialization`;
+- `verify/system00d-global-world`;
+- `verify/pages-deploy`.
 
-System 25 intentionally prepares for:
+## 12. Future seams
+
+System 25 prepares cleanly for:
 
 - actual scenario calendar/date/season;
 - latitude/day-length variation;
 - weather attenuation;
 - visible-world ambient lighting;
-- artificial/local light sources;
+- indoor/local/artificial light sources;
 - light-dependent effective vision;
-- survivor schedules/sleep;
-- crops/agriculture;
-- utilities/streetlights;
-- outbreak/population schedules and curfews;
+- survivor schedules and sleep behavior;
+- agriculture/crops;
+- utility/streetlight schedules;
+- outbreak/population schedule simulation;
 - time/date HUD presentation.
 
-None of those future systems should require WHEN to learn what a clock means.
+None of those should require WHEN to learn what a clock means.
