@@ -3,11 +3,13 @@ class_name LocalAreaGenerator
 
 const PlanClass = preload("res://scripts/generation/areas/GeneratedAreaPlan.gd")
 const AreaProfilesClass = preload("res://scripts/generation/areas/AreaProfileCatalog.gd")
+const BaselineAreaProfilesClass = preload("res://scripts/generation/areas/BaselineAreaProfileCatalog.gd")
 const EnvironmentProfilesClass = preload("res://scripts/generation/areas/EnvironmentProfileCatalog.gd")
 const ReservationPlannerClass = preload("res://scripts/generation/areas/InfrastructureReservationPlanner.gd")
 const RoadPlannerClass = preload("res://scripts/generation/areas/LocalRoadPlanner.gd")
 const BlockPlannerClass = preload("res://scripts/generation/areas/TownBlockPlanner.gd")
 const ParcelPlannerClass = preload("res://scripts/generation/areas/ParcelPlanner.gd")
+const BaselineGridParcelPlannerClass = preload("res://scripts/generation/areas/BaselineGridParcelPlanner.gd")
 const AccessPlannerClass = preload("res://scripts/generation/areas/ParcelAccessPlanner.gd")
 const BuildingPlannerClass = preload("res://scripts/generation/areas/BuildingPlacementPlanner.gd")
 const PavedFrontagePlannerClass = preload("res://scripts/generation/areas/CommercialPavedFrontagePlanner.gd")
@@ -22,6 +24,7 @@ var _reservation_planner: InfrastructureReservationPlanner
 var _road_planner: LocalRoadPlanner
 var _block_planner: TownBlockPlanner
 var _parcel_planner: ParcelPlanner
+var _baseline_grid_parcel_planner: BaselineGridParcelPlanner
 var _access_planner: ParcelAccessPlanner
 var _building_planner: BuildingPlacementPlanner
 var _paved_frontage_planner: CommercialPavedFrontagePlanner
@@ -37,6 +40,7 @@ func _init() -> void:
     _road_planner = RoadPlannerClass.new()
     _block_planner = BlockPlannerClass.new()
     _parcel_planner = ParcelPlannerClass.new()
+    _baseline_grid_parcel_planner = BaselineGridParcelPlannerClass.new()
     _access_planner = AccessPlannerClass.new()
     _building_planner = BuildingPlannerClass.new()
     _paved_frontage_planner = PavedFrontagePlannerClass.new()
@@ -107,7 +111,11 @@ func generate(request: AreaGenerationRequest) -> GeneratedAreaPlan:
         blocks.append(block_value)
 
     var parcel_roads: Array[Dictionary] = _parcel_road_order(area_profile, roads)
-    var parcel_result: Dictionary = _parcel_planner.plan(request, area_profile, parcel_roads, intersections, reservations)
+    var parcel_result: Dictionary
+    if StringName(area_profile.get("land_use_mode", &"")) == &"baseline_grid":
+        parcel_result = _baseline_grid_parcel_planner.plan(request, area_profile, parcel_roads, intersections, reservations)
+    else:
+        parcel_result = _parcel_planner.plan(request, area_profile, parcel_roads, intersections, reservations)
     if not bool(parcel_result.get("ok", false)):
         plan.failure_reason = String(parcel_result.get("failure_reason", "parcel_planning_failed"))
         return plan
@@ -355,7 +363,8 @@ func _validate_final_plan(request: AreaGenerationRequest, plan: GeneratedAreaPla
     plan.failure_reason = "area_validation_failed:%s" % ",".join(failure_parts)
 
 func _parcel_road_order(profile: Dictionary, roads: Array[Dictionary]) -> Array[Dictionary]:
-    if StringName(profile.get("land_use_mode", &"rural_crossroads")) != &"smalltown_center":
+    var mode: StringName = StringName(profile.get("land_use_mode", &"rural_crossroads"))
+    if mode != &"smalltown_center" and mode != &"baseline_grid":
         return roads
     var ordered: Array[Dictionary] = []
     for road: Dictionary in roads:
@@ -377,7 +386,12 @@ func area_profile_ids() -> Array[StringName]:
         AreaProfileCatalog.RURAL_SCATTERED,
         AreaProfileCatalog.RURAL_OPEN,
         AreaProfileCatalog.RURAL_WATERCOURSE,
+        BaselineAreaProfileCatalog.SUBURBAN_NEIGHBORHOOD,
+        BaselineAreaProfileCatalog.URBAN_MIXED,
+        BaselineAreaProfileCatalog.COMMERCIAL_CORRIDOR,
+        BaselineAreaProfileCatalog.INDUSTRIAL_DISTRICT,
+        BaselineAreaProfileCatalog.CIVIC_CAMPUS,
     ]
 
 func environment_profile_ids() -> Array[StringName]:
-    return [EnvironmentProfileCatalog.TEMPERATE_RURAL]
+    return _environment_profiles.profile_ids()
