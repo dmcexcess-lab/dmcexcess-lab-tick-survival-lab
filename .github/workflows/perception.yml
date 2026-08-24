@@ -29,10 +29,15 @@ jobs:
           test -f game/scripts/simulation/perception/PerceptionMemoryStore.gd
           test -f game/scripts/simulation/perception/ObserverPerceptionService.gd
           test -f game/scripts/render/PerceptionOverlayRenderer.gd
+          test -f game/scripts/render/AmbientPerceptionOverlayRenderer.gd
+          test -f game/scripts/demo/DemoAmbientLightCycle.gd
           test -f game/scripts/ci/PerceptionFogMemorySmoke.gd
-          ! grep -R -q 'func _process\|func _physics_process' game/scripts/simulation/perception game/scripts/render/PerceptionOverlayRenderer.gd
+          test -f game/scripts/ci/PerceptionAmbientMemorySmoke.gd
+          grep -q 'MEMORY_NIGHT_LUMINANCE' game/scripts/render/AmbientPerceptionOverlayRenderer.gd
+          grep -q 'set_perception_ambient_light_level' game/scripts/render/TacticalRendererStack.gd
+          ! grep -R -q 'func _process\|func _physics_process' game/scripts/simulation/perception game/scripts/render/PerceptionOverlayRenderer.gd game/scripts/render/AmbientPerceptionOverlayRenderer.gd
           ! grep -R -q 'scripts/simulation/collision\|scripts/generation\|scripts/streaming' game/scripts/simulation/perception
-          ! grep -R -q 'WorldMutationService\|DoorStateMutationService' game/scripts/simulation/perception game/scripts/render/PerceptionOverlayRenderer.gd
+          ! grep -R -q 'WorldMutationService\|DoorStateMutationService' game/scripts/simulation/perception game/scripts/render/PerceptionOverlayRenderer.gd game/scripts/render/AmbientPerceptionOverlayRenderer.gd
 
       - name: Install Godot 4.7.1
         shell: bash
@@ -57,6 +62,14 @@ jobs:
           grep -q 'PERCEPTION_FOG_MEMORY_SMOKE_OK' "$RUNNER_TEMP/perception23.log"
           grep -q 'PERCEPTION_FOV_BENCH_AVG_US=' "$RUNNER_TEMP/perception23.log"
           if grep -Eqi 'SCRIPT ERROR|Parse Error|Failed to load script' "$RUNNER_TEMP/perception23.log"; then exit 1; fi
+
+      - name: System 23 ambient remembered-fog smoke
+        shell: bash
+        run: |
+          set -euxo pipefail
+          ./Godot_v4.7.1-stable_linux.x86_64 --headless --path "$GITHUB_WORKSPACE/game" --quit-after 20 --script res://scripts/ci/PerceptionAmbientMemorySmoke.gd 2>&1 | tee "$RUNNER_TEMP/perception23-ambient.log"
+          grep -q 'PERCEPTION_AMBIENT_MEMORY_SMOKE_OK' "$RUNNER_TEMP/perception23-ambient.log"
+          if grep -Eqi 'SCRIPT ERROR|Parse Error|Failed to load script' "$RUNNER_TEMP/perception23-ambient.log"; then exit 1; fi
 
       - name: Door state and interaction regression
         shell: bash
