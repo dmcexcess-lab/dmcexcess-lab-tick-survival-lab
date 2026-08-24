@@ -46,7 +46,8 @@ Canonical status/routing index. Read `PROJECT_NORTH_STAR.md` and `README_SOPS.md
 | 24 | World Loot / Searchable Containers / Scavenging | **IMPLEMENTED — Candidate 001** | `24_WORLD_LOOT_SEARCHABLE_CONTAINERS.md` |
 | 25 | World Time / Ambient Daylight | **IMPLEMENTED — Candidate 001** | `25_WORLD_TIME_AMBIENT_DAYLIGHT.md` |
 | 26 | Spatial Sound / Hearing | **IMPLEMENTED — Candidate 001 + onomatopoeia / cue lifetime refinement** | `26_SPATIAL_SOUND_HEARING.md` |
-| 27 | Physical Lighting / Illumination / Shadows | **IMPLEMENTED — Slices A+B+C** | `27_PHYSICAL_LIGHTING_ILLUMINATION_SHADOWS.md` |
+| 27 | Physical Lighting / Illumination / Shadows | **IMPLEMENTED — Slices A+B+C + bounded-query optimization** | `27_PHYSICAL_LIGHTING_ILLUMINATION_SHADOWS.md` |
+| 28 | Weather / Atmosphere | **DRAFT — awaiting approval** | `28_WEATHER_ATMOSPHERE.md` |
 | 00E | Population / Household / Outbreak / Player Story | **NOT DESIGNED** | future design |
 
 ## Current System 19 / 20 / 00F truth
@@ -105,15 +106,25 @@ Slice A owns deterministic headless illumination and the target-cell useful-rang
 
 The current provider guarantees a 25×25 observer-centered light-query envelope only when the presentation field does not already cover the survivor's full 12-cell geometric vision area. Camera movement therefore does not become gameplay vision truth, while normal camera-following play can reuse the current lighting field.
 
-First fully green Slice C executable head: `09d1c059760c06ef9791c4d405746caddc107dcf`.
+The 2026-08-24 optimization keeps all existing physical/visual rules but caches materialized/topology/optical facts, evaluates local emitters only inside their useful-range rectangles, prepares presentation queries once per map refresh, and reuses lighting image buffers. An 80×96 / four-light CI fixture now proves 1,676 bounded emitter candidates and 688 optical-ray candidates versus 30,720 naive full-field-per-emitter visits.
 
-Measured on that green runner: physical 17×17 rebuild ~4.23 ms, geometry-only FOV ~4.06 ms, focused light-aware perception recompute ~11.84 ms. Per user direction, retain current behavior and monitor scaling as Actor AI/population arrives before optimizing.
+Latest fully green optimized executable head: `5958d887807e5b64c9fc4cf5d3d45c7dfd4083d2`.
+
+On that runner, the representative 17×17 changing-flashlight rebuild measured ~2.67 ms and focused light-aware perception ~9.26 ms, versus the earlier Slice C reference ~4.23 ms / ~11.84 ms. A preceding optimized runner measured ~1.73 ms / ~6.49 ms, so timing is treated as noisy; the bounded-work-count regression is the durable optimization proof.
 
 Exact-head context: `verify/system27-physical-lighting`.
 
+## Current System 28 draft direction
+
+> **Weather is simulation truth; weather animation is presentation.**
+
+The draft proposes deterministic WHEN-driven clear/overcast/rain/storm/fog state, wind and wetness; deliberately low-resolution nearest-scaled rain/fog that can keep animating while the decision-paused world is still; shelter-aware precipitation; System 27 atmosphere/visibility integration; System 26 rain/wind masking; and deterministic lightning events whose physical flash is supplied through System 27 so actual observer acquisition can change during a strike.
+
+No System 28 runtime code is authorized by DRAFT status.
+
 ## Current presentation
 
-The live Rural Crossroads critique build has canonical scavenging, time/daylight, physical sound, physical lighting and illumination-aware vision. Sound is represented with yellow onomatopoeia/uncertainty text rather than conventional audio. Active flashlight/lamp/neon/streetlight sources are still explicitly DEV-only until real equipment/power/Weather owners exist.
+The live Rural Crossroads critique build has canonical scavenging, time/daylight, physical sound, physical lighting and illumination-aware vision. Sound is represented with yellow onomatopoeia/uncertainty text rather than conventional audio. Active flashlight/lamp/neon/streetlight sources are still explicitly DEV-only until real equipment/power/Weather owners exist. Weather is not live yet.
 
 ## Required exact-head stack
 
