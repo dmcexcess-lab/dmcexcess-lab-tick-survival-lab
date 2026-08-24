@@ -64,7 +64,8 @@ func _test_protected_reference_library(generator: LocalBuildingGenerator, valida
             var plan: GeneratedBuildingPlan = generator.generate(request)
             _check(plan.is_generated(), "%s rotation %d still generates" % [String(archetype_id), orientation])
             if plan.is_generated():
-                _check(bool(validator.validate(plan).get("ok", false)), "%s rotation %d still validates" % [String(archetype_id), orientation])
+                var validation: Dictionary = validator.validate(plan)
+                _check(bool(validation.get("ok", false)), "%s rotation %d still validates%s" % [String(archetype_id), orientation, _validation_suffix(validation)])
 
 func _test_baseline_one_story_library(generator: LocalBuildingGenerator, validator: GeneratedBuildingValidator) -> void:
     var catalog := BaselineProfilesClass.new()
@@ -119,7 +120,8 @@ func _test_baseline_one_story_library(generator: LocalBuildingGenerator, validat
             _check(plan.is_generated(), "%s rotation %d generates" % [String(profile_id), orientation])
             if not plan.is_generated():
                 continue
-            _check(bool(validator.validate(plan).get("ok", false)), "%s rotation %d validates" % [String(profile_id), orientation])
+            var validation: Dictionary = validator.validate(plan)
+            _check(bool(validation.get("ok", false)), "%s rotation %d validates%s" % [String(profile_id), orientation, _validation_suffix(validation)])
             _check(_plan_art_resolves(plan, art), "%s rotation %d uses only registered art semantics" % [String(profile_id), orientation])
 
 func _test_multiunit_access_model(generator: LocalBuildingGenerator, validator: GeneratedBuildingValidator) -> void:
@@ -143,9 +145,15 @@ func _test_multiunit_access_model(generator: LocalBuildingGenerator, validator: 
             descriptor.frontage_for_orientation(Facing.Value.NORTH)
         )
         var plan: GeneratedBuildingPlan = generator.generate(request)
-        _check(plan.is_generated() and bool(validator.validate(plan).get("ok", false)), "%s validates with independent exterior unit access" % String(typed_id))
+        var validation: Dictionary = validator.validate(plan) if plan.is_generated() else {"ok": false, "failures": [plan.failure_reason]}
+        _check(plan.is_generated() and bool(validation.get("ok", false)), "%s validates with independent exterior unit access%s" % [String(typed_id), _validation_suffix(validation)])
         _check(_exterior_door_count(plan) == int(expectations[profile_id]), "%s has the intended number of exterior unit entrances" % String(typed_id))
     _check(not generator.supported_archetypes().has(&"lodging.hotel"), "baseline uses roadside motel representation rather than a fake multi-story hotel")
+
+func _validation_suffix(validation: Dictionary) -> String:
+    if bool(validation.get("ok", false)):
+        return ""
+    return " failures=%s" % str(validation.get("failures", []))
 
 func _plan_art_resolves(plan: GeneratedBuildingPlan, art: ArtCatalog) -> bool:
     for ground: Dictionary in plan.ground_entries:
