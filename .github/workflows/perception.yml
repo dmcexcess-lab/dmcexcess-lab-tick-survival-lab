@@ -29,9 +29,9 @@ jobs:
           test -f game/scripts/simulation/perception/PerceptionMemoryStore.gd
           test -f game/scripts/simulation/perception/ObserverPerceptionService.gd
           test -f game/scripts/render/PerceptionOverlayRenderer.gd
-          test -f game/scripts/demo/DemoAmbientLightCycle.gd
           test -f game/scripts/ci/PerceptionFogMemorySmoke.gd
           test -f game/scripts/ci/PerceptionAmbientMemorySmoke.gd
+          ! test -f game/scripts/demo/DemoAmbientLightCycle.gd
           grep -q 'MEMORY_NIGHT_LUMINANCE' game/scripts/render/PerceptionOverlayRenderer.gd
           grep -q 'set_perception_ambient_light_level' game/scripts/render/TacticalRendererStack.gd
           ! grep -R -q 'func _process\|func _physics_process' game/scripts/simulation/perception game/scripts/render/PerceptionOverlayRenderer.gd
