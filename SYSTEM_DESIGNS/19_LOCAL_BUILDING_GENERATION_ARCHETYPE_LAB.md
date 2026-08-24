@@ -2,11 +2,11 @@
 
 Status: **IMPLEMENTED — FINALIZED**
 
-Date: 2026-08-20
+Date: 2026-08-20; baseline profile library expanded 2026-08-23.
 
 System 19 is the canonical local physical-building owner between higher-level parcel planning and persistent WHAT.
 
-On 2026-08-20 the user explicitly finalized the system after accepting the grammar behavior and Rural Diner v2, superseding the earlier provisional requirement to build a second arbitrary proof building before finalization. The user also directed that new building profiles may be added later as ordinary content work after the first System 20 area test rather than reopening this architecture.
+On 2026-08-20 the user explicitly finalized the system after accepting the grammar behavior and Rural Diner v2, superseding the earlier provisional requirement to build a second arbitrary proof building before finalization. New building profiles are ordinary content work after finalization unless the stable grammar/placement contract itself proves insufficient.
 
 ## 1. Goal
 
@@ -59,11 +59,12 @@ Owns generic physical correctness only:
 - unique stable roles/cells where required;
 - footprint containment;
 - structure-axis correctness;
-- one primary exterior door;
+- exactly one designated primary exterior door for caller placement/access anchoring;
+- additional explicit exterior doors where a multi-unit program requires independent access;
 - no illegal structure/prop contradiction;
 - no blocking prop in doorways;
 - valid room records;
-- conceptual reachability from the primary entrance.
+- conceptual reachability of every room from at least one legitimate exterior entrance.
 
 Building-type-specific quality remains outside this generic validator.
 
@@ -96,9 +97,55 @@ These examples produced and validated the final grammar rules:
 - `commercial.gas_station.small` v1 — accepted after “perfect”;
 - `commercial.diner.rural_small` v2 — accepted grammar proof after the user called the first version “very good” and requested additional tables.
 
-These are regression references. New profiles do not silently mutate them.
+These six are protected regression references. New profiles do not silently mutate them.
 
-## 6. Final building-quality grammar
+## 6. Baseline one-story profile library
+
+On 2026-08-23 the callable library expanded with **18 profile-driven one-story buildings**, bringing the registered System 19 library to **24 archetypes total** while preserving the six protected references.
+
+Canonical baseline rule:
+
+> **Density and complexity are horizontal. A city building becomes more useful through rooms, units, adjacency and access—not through fake upper floors.**
+
+All 18 new profiles declare `story_count = 1`, support all four cardinal rotations, use real room-purpose regions and pass the shared structural validator. Ordinary houses avoid hallway filler; corridors are used only where the program actually needs shared circulation, such as civic/office/school layouts.
+
+Residential/lodging baseline:
+
+- `residential.house.suburban_small`;
+- `residential.house.suburban_family`;
+- `residential.townhomes.row3`;
+- `residential.multiunit.row4`;
+- `lodging.motel.roadside`.
+
+The baseline deliberately does **not** invent a multi-story hotel/apartment abstraction. “Hotel” density is represented as a roadside motel with individual room entrances; denser residential use is represented by horizontal townhomes or one-story multi-unit buildings with independent exterior unit access.
+
+Commercial baseline:
+
+- `commercial.convenience_store.small`;
+- `commercial.grocery.neighborhood`;
+- `commercial.pharmacy.small`;
+- `commercial.hardware_store.small`;
+- `commercial.office.small`.
+
+Civic baseline:
+
+- `civic.clinic.small`;
+- `civic.police_station.small`;
+- `civic.fire_station.small`;
+- `civic.school.elementary_small`;
+- `civic.church.small`.
+
+Industrial/agricultural baseline:
+
+- `industrial.warehouse.small`;
+- `industrial.workshop.small`;
+- `agricultural.barn.medium`.
+
+`OneStoryBaselineProfileCatalog.gd` owns these content declarations. `OneStoryProfileBuildingGenerator.gd` owns their common one-story shell/room/opening/rotation materialization rules rather than duplicating eighteen generator implementations.
+
+A reusable circulation invariant was added during verification: **every door-adjacent room approach is reserved from blocking dressing**. A profile may describe a blocking furnishing there, but the common generator does not materialize it in that reserved approach cell. This prevents furniture placement from invalidating an otherwise realistic floor plan and keeps circulation policy in the grammar owner rather than profile-by-profile patches.
+
+## 7. Final building-quality grammar
 
 Exact dimensions and prop counts from one example are **not** universal laws.
 
@@ -118,9 +165,10 @@ The final reusable rules are:
 12. **Same version + request + seed is deterministic.** Same-seed rule changes require version bumps.
 13. **Seed variation must be meaningful and legal.** Profiles may alter topology/ordering without breaking functional rules.
 14. **Profile-specific requirements stay profile-specific.** A bathroom, office, kitchen, storage room, etc. is required only when that profile declares it.
-15. **Art-facing quirks are presentation constraints, not architecture.** Current recovered table sprites use SOUTH/WEST facing choices where needed; System 07A remains the presentation owner.
+15. **Horizontal multi-unit access is real access.** Separate units may own separate exterior doors; one designated primary door remains the higher-level placement anchor.
+16. **Art-facing quirks are presentation constraints, not architecture.** Current recovered table sprites use SOUTH/WEST facing choices where needed; System 07A remains the presentation owner.
 
-## 7. Reusable grammar owners
+## 8. Reusable grammar owners
 
 ### `grammar/BuildingGrammarProfile.gd`
 Declares a building program: canonical envelope/frontage, room purposes, sizes/ranges, topology strategy, service requirements, semantic themes, dressing families and deterministic legal variants.
@@ -134,9 +182,12 @@ Owns reusable functional dressing families rather than individual building ident
 ### `grammar/BuildingGrammarQualityValidator.gd`
 Owns profile-aware quality checks separately from generic structural validity: required program fulfillment, circulation clearance, density ceilings, local clustering, work-run continuity and other declared quality rules.
 
+### `grammar/OneStoryProfileBuildingGenerator.gd`
+Owns the broad baseline one-story profile materialization path: rooms/floors, shell and interior wall cells, explicit doors, automatic legal windows, rotation and door-approach circulation reservation.
+
 Thin archetype wrappers/profile files provide content instead of duplicating layout algorithms.
 
-## 8. Rural Diner grammar proof
+## 9. Rural Diner grammar proof
 
 `commercial.diner.rural_small` v2 is the accepted first shared-grammar proof.
 
@@ -166,24 +217,28 @@ Four legal seeded back-of-house arrangements are available. The storage service 
 
 `BuildingGrammarSmoke.gd` exercises 32 consecutive diner seeds across all four rotations in addition to deterministic replay, frontage/envelope failures, materialization, collision/art coverage, door traversal and renderer diagnostics.
 
-## 9. DEV critique control
+## 10. DEV critique control
 
 `BuildingGrammarDevControls.gd` + `BuildingGrammarDevSeedSession.gd` are explicit DEV tooling.
 
 `NEW BUILDING` advances the current critique seed and reloads through the normal request -> generation -> validation -> materialization path. It does not rewrite a live persistent world in place and is not normal survival/world-generation behavior.
 
-## 10. Final callable registry at finalization
+## 11. Current callable registry
 
-- `residential.trailer.singlewide`
-- `residential.house.farm_small`
-- `residential.house.farm_large`
-- `residential.house.compact_laundry`
-- `commercial.gas_station.small`
-- `commercial.diner.rural_small`
+Protected reference archetypes:
+
+- `residential.trailer.singlewide`;
+- `residential.house.farm_small`;
+- `residential.house.farm_large`;
+- `residential.house.compact_laundry`;
+- `commercial.gas_station.small`;
+- `commercial.diner.rural_small`.
+
+Baseline profile archetypes are the 18 entries listed in Section 6. Total callable library: **24**.
 
 Additional profiles may be registered later when world/area content needs them. Doing so does not reopen System 19 unless the stable placement/profile/quality contracts themselves prove insufficient.
 
-## 11. Frozen boundaries
+## 12. Frozen boundaries
 
 Production `generation/buildings/` must not depend on:
 
@@ -198,18 +253,22 @@ Production `generation/buildings/` must not depend on:
 
 Art is presentation truth, not physics.
 
-## 12. Verification contract
+## 13. Verification contract
 
 System 19 remains protected by:
 
-- `LocalBuildingGenerationSmoke.gd` for accepted/preserved archetypes;
+- `LocalBuildingGenerationSmoke.gd` for all six protected references plus the 18-profile baseline library across all cardinal rotations, deterministic replay, shared validation, multi-unit exterior-access rules and art-semantic coverage;
 - `BuildingGrammarSmoke.gd` for descriptors, grammar quality, deterministic variation and the diner proof;
 - System 18 integration checks;
 - canonical startup/Web deployment checks.
 
 Intentional output changes to a saved archetype/profile require the appropriate version bump and updated focused regression expectations.
 
-## 13. Final approved decisions
+The first exact executable head where the expanded 24-archetype library and the baseline System 20 integration were simultaneously green was `2e7a6e0da27a02f8058a3a79538cd9cb55a48cef`.
+
+Exact-head context: `verify/system19-local-building`.
+
+## 14. Final approved decisions
 
 1. System 19 owns local building/property generation only.
 2. Caller supplies instance ID, archetype, seed, envelope, orientation and frontage.
@@ -220,3 +279,4 @@ Intentional output changes to a saved archetype/profile require the appropriate 
 7. Higher-level planners consume only the read-only placement descriptor plus normal public generation requests.
 8. New building profiles are content work by default.
 9. System 19 was explicitly finalized by the user on 2026-08-20; the earlier second-arbitrary-building gate is superseded.
+10. Baseline urban density remains one-story and horizontal until a separately approved vertical-space model exists.
