@@ -1,5 +1,36 @@
 # Changelog
 
+## System 28 Weather / Atmosphere — Slice C + screen-space presentation correction — 2026-08-24
+
+- Implemented approved Weather Slice C on executable head `21014fe5915e47344b4b8d5f48e52fa69c386254`.
+- Replaced the prior camera-compensated world-relative Weather presentation with the simpler player-approved architecture: **rain/fog/debris are a screen-space atmosphere overlay**. Camera movement now requests zero Weather redraws, advances zero presentation steps, never clears/reseeds the field, and cannot make Weather disappear during repeated movement.
+- Focused regression sends forty rapid camera-position updates and reports `WEATHER_OVERLAY_CAMERA_REDRAWS=0`.
+- Shelter-aware rain remains possible by mapping each current screen sample to the corresponding world cell only when sky-exposure rejection is needed. This lookup does not make the atmosphere world-anchored and Weather remains below System 23 so hidden geometry cannot leak.
+- Added `LightningEvent` and upgraded Weather snapshot/state to schema v2 with deterministic scheduled/active lightning state.
+- Storm lightning is scheduled through WHEN with a deterministic 30–120 tick normal delay. The physical flash lasts one WHEN tick; DEV `STRIKE` schedules a real future event rather than forcing a renderer-only whiteout.
+- Added transient physical sky-light input to System 27. The same LightningEvent that drives the bolt physically brightens the illumination field, passes through existing window/opening portal logic and can genuinely change System 23 acquisition.
+- Focused physical lightning fixture: storm-night exterior **0.025 -> 0.845** useful luminance during the flash; roofed interior through a real window portal reaches **0.356**.
+- Added a stable-seeded low-resolution bolt presentation tied to the same LightningEvent. Its ~0.32 s cosmetic lifetime may outlast the one-tick physical flash without keeping physical illumination active.
+- Thunder remains deliberately deferred. Current lightning has no honest strike cell, so inventing a spatial System 26 thunder origin would violate **Sound is physical; hearing is an estimate.** The future geographic strike seam is also where lightning damage/fire can attach.
+- Moved the DEV Weather panel below the existing STATS / INVENTORY / MENU header row and above ordinary HUD/world presentation. Controls now include CLR, OVR, RAIN, STM, FOG, STRIKE and BLOW LEAF.
+- `verify/system28-weather` now covers A+B+C plus protected System 27/26/23 regressions and canonical startup.
+- All **13 required executable-head contexts** were green on `21014fe5915e47344b4b8d5f48e52fa69c386254`, including `verify/pages-deploy`.
+
+## Canonical Roadmap through Beta — 2026-08-24
+
+- Added `ROADMAP.md` as the canonical priority order after System 28.
+- Normalized the user's explicit numbering as: **1 Items/readability, 2 Crafting, 3 Power+Water, 4 physical survival/health, 5 Moodlets, 6 Skills/interactions, 7 Vehicles, 8 AI+combat+outbreak, 9 final graphics/UI -> Beta.**
+- Phase 1 includes spoilage, inventory/menu icons, proximity highlighting for actually usable nearby containers/objects, and broader/multi-cell world objects such as larger stoplights and four-cell/2×2 trees.
+- Phase 3 locks a causal **three-tier** utility model: robust broad main facility, semi-frequent local substation/pump-station failures, and vulnerable local distribution/service damaged by cars/trees/etc. Standalone wastewater/sewer gameplay is removed from the active roadmap; existing generated wastewater data may remain inert until deliberate cleanup.
+- Phase 4's final physical-survival target is hunger, thirst, sleep/exhaustion, health and stamina. The existing fatigue scaffold must be reconciled with stamina/exhaustion rather than duplicated; death from exhaustion is an intended eventual terminal consequence.
+- Phase 5 expands Moodlets beyond labels: comfort, fear, boredom and escalating hunger/thirst/sleep states may create action-speed/capability consequences while underlying physical truth remains with its owning systems.
+- Phase 6 replaces the current generic skill catalog with Awareness, Sneak, First Aid, Cooking, Carpentry, Mechanical, Electrical, Fishing and Farming. Hunting is deliberately emergent from Sneak + future shooting/combat proficiency + crafted trap placement, not a separate Hunting stat.
+- Phase 6 also closes broad object interactions: powered TVs/appliances/switches use real power/state first, then feed real System 27 light and localized yellow-word sound/information presentation downstream.
+- Phase 7 covers cars, trucks, motorcycles, bicycles and skateboards, with eventual Mad-Max-style physical modifications for cars/trucks.
+- Phase 8 groups the late actor layer: infected/survivor/follower/raider AI, all combat, mood/context follower conversations and causal outbreak/population behavior. It remains multiple bounded system designs internally rather than one monolith.
+- Phase 9 is the final graphics/UI pass: control placement, mobile/desktop usability, icons/readability, item/prop shadows and final polish. **Finishing Phase 9 is the planned Beta start gate.**
+- Save/load, schema policy, large-scale profiling and persistence-backed streaming eviction remain non-numbered engineering gates inserted when needed without changing gameplay phase order.
+
 ## System 28 Weather / Atmosphere — Slice B — 2026-08-24
 
 - Implemented the user-approved Weather B scope and folded in two A playtest defects reported with the approval: weather visibly trailed camera/player movement, and unrendered technical space appeared grey against System 23 true-black fog.
