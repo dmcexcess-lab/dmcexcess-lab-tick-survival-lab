@@ -414,6 +414,8 @@ func _apply_emitter(emitter: LightEmitter) -> void:
     if profile.diffuse_spill > 0.0:
         for cell_value: Variant in direct_field.keys():
             var source_cell: Vector2i = cell_value
+            if source_cell != emitter.origin_cell and _cell_diffuse_transmission(source_cell) <= 0.0:
+                continue
             var source_amount: float = float(direct_field[source_cell])
             for direction: Vector2i in CARDINALS:
                 var neighbor: Vector2i = source_cell + direction
@@ -478,8 +480,8 @@ func _transmission_between(origin: Vector2i, target: Vector2i) -> float:
     while ix < nx or iy < ny:
         var decision: int = (1 + 2 * ix) * ny - (1 + 2 * iy) * nx
         if decision == 0:
-            var side_x: Vector2i = current + Vector2i(step_x, 0)
-            var side_y: Vector2i = current + Vector2i(0, step_y)
+            var side_x := current + Vector2i(step_x, 0)
+            var side_y := current + Vector2i(0, step_y)
             var tx: float = _cell_direct_transmission(side_x)
             var ty: float = _cell_direct_transmission(side_y)
             if tx <= 0.0 and ty <= 0.0:
