@@ -28,6 +28,7 @@ func _initialize() -> void:
     _test_weather_optics()
     _test_light_driven_vision_range()
     _test_determinism_and_zero_tick_cost()
+    _test_large_field_emitter_bounds()
     _profile_rebuild_cost()
 
     if _failures.is_empty():
@@ -172,6 +173,47 @@ func _test_determinism_and_zero_tick_cost() -> void:
     _check(is_equal_approx(float(sample_a["useful_luminance"]), float(sample_b["useful_luminance"])), "emitter input ordering does not change luminance")
     _check(sample_a["tint"] == sample_b["tint"], "emitter input ordering does not change tint")
     _check(kernel.world_tick() == before_tick, "lighting queries and rebuilds consume zero WHEN ticks")
+
+func _test_large_field_emitter_bounds() -> void:
+    var world := WorldStateClass.new()
+    var mutation := WorldMutationClass.new(world)
+    var bounds := Rect2i(-40, -48, 80, 96)
+    _check(mutation.set_terrain_rect(bounds, &"ground.asphalt"), "large lighting fixture terrain created")
+    var doors := DoorStateClass.new()
+    var kernel := TickKernelClass.new()
+    var clock := WorldTimeServiceClass.new(kernel, WorldTimeProfileClass.new())
+    var flat_night := DaylightProfileClass.new(
+        DaylightProfileClass.DEFAULT_DAWN_START_SECOND,
+        DaylightProfileClass.DEFAULT_DAY_START_SECOND,
+        DaylightProfileClass.DEFAULT_DUSK_START_SECOND,
+        DaylightProfileClass.DEFAULT_NIGHT_START_SECOND,
+        0.08,
+        0.08
+    )
+    var ambient := AmbientServiceClass.new(clock, flat_night)
+    var service := LightingClass.new(world, doors, ambient)
+    _check(service.set_field_bounds(bounds), "large lighting fixture bounds accepted")
+    _check(service.set_atmosphere(AtmosphereClass.clear()), "large lighting fixture atmosphere accepted")
+
+    var emitters: Array = [
+        EmitterClass.new("large.flashlight", Vector2i(0, 0), Facing.Value.NORTH, EmitterProfileClass.flashlight(), true, 1),
+        EmitterClass.new("large.lamp", Vector2i(-15, 10), Facing.Value.NORTH, EmitterProfileClass.lamp(), true, 1),
+        EmitterClass.new("large.streetlight", Vector2i(15, -12), Facing.Value.SOUTH, EmitterProfileClass.streetlight(), true, 1),
+        EmitterClass.new("large.neon", Vector2i(20, 18), Facing.Value.WEST, EmitterProfileClass.neon(), true, 1),
+    ]
+    _check(service.set_emitters(emitters), "large lighting fixture emitters accepted")
+    service.prepare_query()
+    var debug: Dictionary = service.debug_snapshot()
+    var field_cells: int = int(debug.get("materialized_field_cells", 0))
+    var emitter_candidates: int = int(debug.get("last_emitter_candidate_cells", 999999))
+    var ray_cells: int = int(debug.get("last_emitter_ray_cells", 999999))
+    print("PHYSICAL_LIGHTING_LARGE_FIELD_CELLS=%d" % field_cells)
+    print("PHYSICAL_LIGHTING_LARGE_FIELD_EMITTER_CANDIDATES=%d" % emitter_candidates)
+    print("PHYSICAL_LIGHTING_LARGE_FIELD_RAY_CELLS=%d" % ray_cells)
+    _check(field_cells == 7680, "large fixture matches 80x96 critique-scale field")
+    _check(emitter_candidates <= 1700, "four local emitters scan only bounded influence rectangles, not the whole 80x96 field")
+    _check(ray_cells < emitter_candidates, "range/cone pruning reduces bounded candidates before optical ray tests")
+    _check(emitter_candidates * 10 < field_cells * emitters.size(), "bounded local-light work is over an order of magnitude below naive full-field-per-emitter scan")
 
 func _profile_rebuild_cost() -> void:
     var fixture: Dictionary = _build_room_fixture(DoorValues.OPEN)
