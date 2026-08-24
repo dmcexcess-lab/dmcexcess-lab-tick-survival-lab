@@ -17,6 +17,15 @@ var failure_reason: String = ""
 func is_generated() -> bool:
     return failure_reason.is_empty() and not instance_id.is_empty() and footprint_rect.size.x > 0 and footprint_rect.size.y > 0
 
+## Public stable System 19 seam for consumers that need to refer to the materialized
+## entity corresponding to a generated structure/prop role without duplicating the
+## materializer's ID convention.
+func entity_id_for_role(role: String) -> String:
+    var normalized: String = role.strip_edges()
+    if instance_id.strip_edges().is_empty() or normalized.is_empty():
+        return ""
+    return "%s.%s" % [instance_id, normalized]
+
 func snapshot() -> Dictionary:
     var ground_out: Array = []
     for entry: Dictionary in ground_entries:
