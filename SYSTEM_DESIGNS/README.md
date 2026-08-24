@@ -42,6 +42,7 @@ Canonical status/routing index. Read `PROJECT_NORTH_STAR.md` and `README_SOPS.md
 | 20 | Local Area Generation | **IMPLEMENTED — five current profiles** | `20_LOCAL_AREA_PARCEL_GENERATION.md` |
 | 21 | Tactical Camera / View Control | **IMPLEMENTED** | `21_TACTICAL_CAMERA_VIEW_CONTROL.md` |
 | 22 | Large-Area DEV Critique Runtime | **IMPLEMENTED** | `22_LARGE_AREA_CRITIQUE_RUNTIME.md` |
+| 23 | Perception / LOS / Fog Memory | **DRAFT** | `23_PERCEPTION_LOS_FOG_MEMORY.md` |
 | 00E | Population / Household / Outbreak / Player Story | **NOT DESIGNED** | future design |
 
 ## Current System 00D truth
@@ -95,6 +96,14 @@ System 21 owns camera only. System 22 owns the bounded DEV critique runtime only
 
 ## Active design
 
-**None.**
+**System 23 Perception / LOS / Fog Memory — DRAFT.**
 
-Do not automatically continue world-generation/streaming work merely because a future seam exists. Select the next design from gameplay value against the North Star.
+Current proposed player-facing knowledge model:
+
+- `UNSEEN` = completely black visual world information;
+- `REMEMBERED` = darkened stale last-observed terrain/structural memory;
+- `VISIBLE` = current live world truth;
+- auditory indicators may render over any of the three states, including true black unexplored fog, without revealing/exploring terrain;
+- last-seen living-actor markers are stale observations, not hidden tracking.
+
+Implementation is not authorized until the user approves `23_PERCEPTION_LOS_FOG_MEMORY.md`.
