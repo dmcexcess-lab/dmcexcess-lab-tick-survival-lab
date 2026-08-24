@@ -1,5 +1,27 @@
 # Changelog
 
+## System 28 Weather / Atmosphere — Slice A — 2026-08-24
+
+- Implemented the user-approved Weather A scope with the explicit direction that weather be **low-resolution, always atmospherically alive, and low overhead**. Physical Weather and presentation-time animation remain deliberately separate.
+- Added `WeatherProfile`, `WeatherState`, and `WeatherService`. Candidate 001 profiles are `clear`, `overcast`, `rain`, `storm`, and `fog`, with continuous precipitation/cloud/fog/wind values underneath the readable profile.
+- Weather transitions are deterministic and event-driven through WHEN. System 28 schedules one meaningful transition event rather than running a per-tick weather simulation loop; current continuous values are analytically sampled from authoritative tick position.
+- Added analytic wetness using an anchor value/tick plus profile wetting/drying rates. Rain/storm increase wetness only when WHEN advances; clear weather dries only when WHEN advances; cosmetic raindrops have no relationship to physical wetness.
+- Added 12-band quantized environment signatures so future Slice B Lighting/Hearing consumers can refresh on meaningful physical Weather changes rather than every tiny interpolation or presentation frame.
+- Added Weather snapshot schema v1 preserving current/target profile, transition ticks, wetness anchor, revision/serials, scheduled event serial and deterministic future transition state.
+- Added cached `SkyExposureQuery` for Slice A precipitation masking. Current structure-envelope approximation treats structure cells—including door/window semantics—as enclosure boundaries, so opening a door does not magically make the whole room unroofed.
+- Added one `WeatherPresentationRenderer` at z=50, above physical lighting and below System 23 perception. Shelter-aware rain therefore cannot reveal hidden roof geometry through true-black unexplored fog.
+- Weather presentation intentionally creates **zero per-raindrop/per-fog/per-debris child Nodes**. It draws one coarse procedural low-resolution field with a virtual-axis cap of 256 and nearest/blocky visual language while System 27 lighting remains smooth.
+- Continuous rain/fog presentation targets **20 Hz / 50 ms** independent of display FPS. Long-frame presentation catch-up is capped to four cosmetic steps and advances zero WHEN ticks.
+- Rain uses at most 180 coarse candidate streaks, 1–3 weather pixels long, with wind-driven slant and shelter rejection. Fog uses at most 36 chunky low-alpha drifting patches.
+- Added calm-day ambient motion: presentation-only leaf, paper, or dust events. Calm clear weather normally has zero active debris and at most one; breezier weather may use two; hard maximum is three. These have no WHAT identity, inventory, collision, System 26 sound or AI meaning.
+- Clear weather stops requesting redraws between ambient events, retaining only the cheap presentation countdown/branch until a leaf/paper/dust event starts.
+- Added `WeatherDevControls`: CLEAR/OVERCAST/RAIN/STORM/FOG plus `BLOW LEAF`. The Rural Crossroads critique composition starts in DEV RAIN so Weather A is visible immediately after deployment.
+- Slice A deliberately does **not** feed System 27 `AtmosphericOptics`, System 26 acoustic masking, or System 23 fog/rain extinction yet; those remain Slice B. Lightning/physical flash/bolt/thunder remain Slice C.
+- Added `.github/workflows/weather.yml` and `WeatherSmoke.gd`. Focused structural output on the first fully green executable head: `WEATHER_VIRTUAL_PIXELS=1296`, `WEATHER_ACTIVE_DEBRIS=1`, `WEATHER_PRESENTATION_UPDATES=4` for a deliberate 0.5 s long-frame input.
+- Existing optimized System 27 regression remained intact on the Weather owner runner: 7,680 active field cells, 1,676 local-emitter candidates, 688 optical-ray candidates; representative physical-light rebuild measured ~2.53 ms on that runner.
+- First fully green executable Weather A head: `dcb400b8507c23a2fc5bdaecf551bc5c0512acce`.
+- On that exact executable head all **13 required contexts** were green: `verify/system28-weather`, `verify/system27-physical-lighting`, `verify/system26-spatial-sound`, `verify/system25-world-time-light`, `verify/system24-loot`, `verify/system23-perception`, `verify/system22-area-critique`, `verify/system21-camera-view`, `verify/system20-local-area`, `verify/system19-local-building`, `verify/system00f-streaming-materialization`, `verify/system00d-global-world`, and `verify/pages-deploy`.
+
 ## System 27 Physical Lighting — Pre-Weather Optimization — 2026-08-24
 
 - Implemented the requested bounded optimization pass before adding Weather, without reducing lighting resolution, useful ranges, shadow/portal rules, visual quality, or illumination-aware perception behavior.
