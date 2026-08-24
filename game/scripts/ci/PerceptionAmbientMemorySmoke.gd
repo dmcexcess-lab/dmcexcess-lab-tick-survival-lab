@@ -1,6 +1,6 @@
 extends SceneTree
 
-const AmbientOverlayClass = preload("res://scripts/render/AmbientPerceptionOverlayRenderer.gd")
+const OverlayClass = preload("res://scripts/render/PerceptionOverlayRenderer.gd")
 const DemoCycleClass = preload("res://scripts/demo/DemoAmbientLightCycle.gd")
 
 var _failures: Array[String] = []
@@ -18,7 +18,7 @@ func _initialize() -> void:
     quit(1)
 
 func _test_memory_luminance_input() -> void:
-    var overlay := AmbientOverlayClass.new()
+    var overlay := OverlayClass.new()
     _check(is_equal_approx(overlay.ambient_light_level(), 1.0), "ambient overlay defaults to full daylight input")
     _check(is_equal_approx(overlay.memory_luminance(), 0.30), "day remembered luminance preserves Candidate001 30 percent")
 
