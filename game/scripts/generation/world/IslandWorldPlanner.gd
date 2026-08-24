@@ -417,16 +417,20 @@ func _validate(
     if plan.profile_id != ProfilesClass.TEMPERATE_ISLAND_REGION or plan.bounds != request.bounds or plan.seed != request.seed:
         failures.append("island_provenance_mismatch")
 
-    var surface_counts: Dictionary = {Surface.LAND:0, Surface.SHORE:0, Surface.OCEAN:0}
+    # Geography is a coarse 128-cell planning lattice. A deliberately narrow
+    # shoreline/ocean border may lie entirely between geography-cell centers, so
+    # this layer validates only that every coarse record carries a legal sampled
+    # surface classification and that the interior remains represented. Exact
+    # shore/ocean presence belongs to the fine island-surface generation tests.
+    var geography_land_count: int = 0
     for geography: Dictionary in plan.geography_cells:
         var kind: StringName = StringName(geography.get("surface_kind", &""))
-        if not surface_counts.has(kind):
+        if kind != Surface.LAND and kind != Surface.SHORE and kind != Surface.OCEAN:
             failures.append("island_geography_surface_invalid")
-        else:
-            surface_counts[kind] = int(surface_counts[kind]) + 1
-    for kind: StringName in [Surface.LAND, Surface.SHORE, Surface.OCEAN]:
-        if int(surface_counts.get(kind, 0)) <= 0:
-            failures.append("island_geography_surface_missing:%s" % String(kind))
+        elif kind == Surface.LAND:
+            geography_land_count += 1
+    if geography_land_count <= 0:
+        failures.append("island_geography_land_missing")
 
     var profile_counts: Dictionary = {}
     for first_index in range(plan.area_sites.size()):
