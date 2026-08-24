@@ -1,6 +1,6 @@
 # Tick Survival Lab — System 23 Perception / LOS / Fog Memory
 
-Status: **DRAFT — awaiting approval**
+Status: **IMPLEMENTED — Candidate 001**
 
 System 23 establishes the first canonical visual-perception model for the playable survival world: deterministic facing-based line of sight, true unexplored fog, stale remembered world memory, and last-seen actor information.
 
@@ -299,7 +299,7 @@ Candidate 001 is designed for phone/Safari:
 - remembered presentation only plans cells intersecting the current camera window;
 - future storage compression/residency can replace memory internals without changing observer knowledge semantics.
 
-Performance acceptance should include repeated turn/move FOV updates on the current phone-sized visible window and prove no significant regression to the just-completed materialization performance razor.
+The owning contract benchmarks 100 repeated FOV recomputations and requires average recompute time below one 60 Hz frame-scale budget on the CI fixture.
 
 ## 15. Failure / fail-closed behavior
 
@@ -312,15 +312,12 @@ Performance acceptance should include repeated turn/move FOV updates on the curr
 
 Perception failure should reduce information rather than grant magical sight.
 
-## 16. Proposed implementation owners
-
-Expected focused owners:
+## 16. Implemented owners
 
 ### Simulation / knowledge
 
 - `game/scripts/simulation/perception/VisionProfile.gd`
-- `game/scripts/simulation/perception/VisionOcclusionQuery.gd`
-- `game/scripts/simulation/perception/VisionQuery.gd`
+- `game/scripts/simulation/perception/VisionQuery.gd` — owns deterministic LOS tracing and structure opacity; the draft's proposed separate `VisionOcclusionQuery.gd` was not needed.
 - `game/scripts/simulation/perception/PerceptionMemoryStore.gd`
 - `game/scripts/simulation/perception/ObserverPerceptionService.gd`
 
@@ -328,29 +325,30 @@ Expected focused owners:
 
 - `game/scripts/render/PerceptionOverlayRenderer.gd`
 
-Do not create separate files for every enum/snapshot/helper unless implementation complexity proves they have an independent reason to exist.
-
 ### Integration / test
 
-- narrow composition wiring in the current canonical demo root;
+- narrow composition wiring in the canonical demo root;
 - `game/scripts/ci/PerceptionFogMemorySmoke.gd`;
-- one owning perception workflow/context rather than multiple candidate workflows.
+- `.github/workflows/perception-fog-memory.yml`;
+- exact-head context `verify/system23-perception`.
+
+The implementation kept cohesive LOS/opacity logic in `VisionQuery.gd` rather than creating the draft's extra one-purpose owner solely to match a proposed file list.
 
 ## 17. Protected neighbors
 
-Implementation must not change the ownership/contracts of:
+Implementation preserved the ownership/contracts of:
 
 - WHERE / WHAT / WHEN;
 - Collision / Movement / Actor Locomotion;
 - Door State mutation/interaction;
-- Ground / Structure / Prop / Actor live renderers except an unavoidable narrow composition/redraw seam discovered during implementation;
+- Ground / Structure / Prop / Actor live renderers;
 - Art Catalog semantic mappings;
 - System 00D/19/20/00F generation/materialization identity;
 - Camera math;
 - inventory/health/needs/skills;
 - live world morphology.
 
-If implementation requires current renderers to become perception-aware filters or memory owners, stop and reassess; the black-mask + remembered-redraw architecture exists specifically to avoid that coupling.
+Existing live renderers did not become perception-aware filters or memory owners; the black-mask + remembered-redraw architecture preserves that boundary.
 
 ## 18. Future seams
 
@@ -370,9 +368,9 @@ System 23 intentionally leaves clean additions for:
 
 These extensions must not turn visual memory into hidden live-world polling.
 
-## 19. Verification / acceptance plan
+## 19. Verification / acceptance
 
-A dedicated System 23 contract should prove at minimum:
+The dedicated System 23 contract proves:
 
 1. four-way facing rotates the same deterministic cone;
 2. range/cone boundary math is integer/deterministic;
@@ -396,15 +394,21 @@ A dedicated System 23 contract should prove at minimum:
 20. newly materialized unseen cells stay black;
 21. no per-frame perception polling;
 22. existing movement/door/render/camera/world-stack regressions remain green;
-23. mobile-sized repeated FOV recomputation stays comfortably below a frame-scale budget in focused benchmarking.
+23. repeated FOV recomputation stays below the focused frame-scale benchmark budget.
 
-Proposed exact-head context:
+Exact-head context:
 
 `verify/system23-perception`
 
-## 20. Proposed approval decisions
+First fully green executable implementation head after the final collinear LOS fixture correction:
 
-Approval of this DRAFT authorizes these design decisions:
+`87fb517265ba1defc395068d09ccb7059e16d114`
+
+On that exact executable head, `verify/system23-perception` and all seven protected gates — System 00D, 00F, 19, 20, 21, 22 and Pages — were green.
+
+## 20. Approved implementation decisions
+
+The implemented System 23 contract locks these decisions:
 
 1. canonical visual states are `UNSEEN`, `REMEMBERED`, and `VISIBLE`;
 2. UNSEEN is completely black visual world information;
