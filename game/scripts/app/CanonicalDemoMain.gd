@@ -7,6 +7,10 @@ const CollisionCatalogClass = preload("res://scripts/simulation/collision/Collis
 const CollisionOverridesClass = preload("res://scripts/simulation/collision/CollisionOverrideState.gd")
 const SpatialQueryClass = preload("res://scripts/simulation/collision/SpatialQueryService.gd")
 const TickKernelClass = preload("res://scripts/foundation/time/TickKernel.gd")
+const WorldTimeProfileClass = preload("res://scripts/simulation/world_time/WorldTimeProfile.gd")
+const WorldTimeServiceClass = preload("res://scripts/simulation/world_time/WorldTimeService.gd")
+const DaylightProfileClass = preload("res://scripts/simulation/world_time/DaylightProfile.gd")
+const OutdoorAmbientLightServiceClass = preload("res://scripts/simulation/world_time/OutdoorAmbientLightService.gd")
 const BaseTraversalPolicyClass = preload("res://scripts/simulation/movement/MovementTraversalPolicy.gd")
 const MovementActionServiceClass = preload("res://scripts/simulation/movement/PassageAwareMovementActionService.gd")
 const MovementDamageInterruptionClass = preload("res://scripts/simulation/movement/MovementDamageInterruptionService.gd")
@@ -57,7 +61,6 @@ const VisionProfileClass = preload("res://scripts/simulation/perception/VisionPr
 const PerceptionMemoryClass = preload("res://scripts/simulation/perception/PerceptionMemoryStore.gd")
 const ObserverPerceptionClass = preload("res://scripts/simulation/perception/ObserverPerceptionService.gd")
 const FixtureClass = preload("res://scripts/demo/RuralCrossroadsCritiqueFixture.gd")
-const DemoAmbientLightCycleClass = preload("res://scripts/demo/DemoAmbientLightCycle.gd")
 const ControllerClass = preload("res://scripts/player/DemoPlayerActionController.gd")
 const DoorControllerClass = preload("res://scripts/player/DoorPlayerInteractionController.gd")
 const LootControllerClass = preload("res://scripts/player/LootPlayerInteractionController.gd")
@@ -85,6 +88,8 @@ var _collision_catalog: CollisionCatalog = null
 var _collision_overrides: CollisionOverrideState = null
 var _spatial_query: SpatialQueryService = null
 var _kernel: TickKernel = null
+var _world_time: WorldTimeService = null
+var _ambient_daylight: OutdoorAmbientLightService = null
 var _base_traversal: MovementTraversalPolicy = null
 var _locomotion_state: ActorLocomotionState = null
 var _locomotion_mutations: ActorLocomotionMutationService = null
@@ -179,6 +184,8 @@ func _boot_canonical_demo() -> bool:
     _actor_traversal = ActorTraversalPolicyClass.new(_base_traversal, _movement_capability)
     _spatial_query = SpatialQueryClass.new(_world, _collision_catalog, _collision_overrides)
     _kernel = TickKernelClass.new(FixtureClass.PLAYER_ID)
+    if not _boot_world_time():
+        return false
 
     if not _boot_item_transfer_and_loot_actions():
         return false
@@ -236,12 +243,9 @@ func _boot_canonical_demo() -> bool:
         FixtureClass.PLAYER_ID
     ):
         return false
-    if not _world_view.set_perception_ambient_light_level(
-        DemoAmbientLightCycleClass.ambient_light_for_tick(_kernel.world_tick())
-    ):
+    if not _world_view.set_perception_ambient_light_level(_ambient_daylight.ambient_light_level()):
         return false
-    _kernel.world_tick_advanced.connect(_on_world_tick_advanced)
-    _kernel.timing_state_reset.connect(_on_timing_state_reset)
+    _ambient_daylight.ambient_light_changed.connect(_on_ambient_light_changed)
 
     var initial_render_origin: Vector2i = FixtureClass.initial_render_origin(_world)
     if not _large_area_view.configure(
@@ -320,6 +324,15 @@ func _boot_canonical_demo() -> bool:
     _loot_panel.interaction_blocked_changed.connect(_on_loot_interaction_blocked_changed)
     _refresh_interaction_enabled()
     return true
+
+func _boot_world_time() -> bool:
+    var time_profile := WorldTimeProfileClass.new()
+    var daylight_profile := DaylightProfileClass.new()
+    if not time_profile.is_valid() or not daylight_profile.is_valid():
+        return false
+    _world_time = WorldTimeServiceClass.new(_kernel, time_profile)
+    _ambient_daylight = OutdoorAmbientLightServiceClass.new(_world_time, daylight_profile)
+    return _world_time.is_ready() and _ambient_daylight.is_ready()
 
 func _boot_actor_status() -> bool:
     _hand_state = HandStateClass.new()
@@ -418,12 +431,8 @@ func _boot_item_transfer_and_loot_actions() -> bool:
     )
     return _item_transfer.is_ready() and _loot_search.is_ready() and _loot_inspection.is_ready()
 
-func _on_world_tick_advanced(_previous_tick: int, new_tick: int) -> void:
-    _world_view.set_perception_ambient_light_level(DemoAmbientLightCycleClass.ambient_light_for_tick(new_tick))
-
-func _on_timing_state_reset() -> void:
-    if _kernel != null:
-        _world_view.set_perception_ambient_light_level(DemoAmbientLightCycleClass.ambient_light_for_tick(_kernel.world_tick()))
+func _on_ambient_light_changed(level: float, _phase: StringName, _snapshot: Dictionary) -> void:
+    _world_view.set_perception_ambient_light_level(level)
 
 func _on_shell_interaction_blocked_changed(blocked: bool) -> void:
     _shell_blocks_interaction = blocked
