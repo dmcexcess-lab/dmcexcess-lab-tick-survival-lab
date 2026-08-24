@@ -3,14 +3,24 @@ class_name WeatherService
 
 const ProfileClass = preload("res://scripts/simulation/weather/WeatherProfile.gd")
 const StateClass = preload("res://scripts/simulation/weather/WeatherState.gd")
+const LightningClass = preload("res://scripts/simulation/weather/LightningEvent.gd")
 
 signal weather_changed(snapshot)
 signal weather_transition_completed(previous_profile, arrived_profile, world_tick)
+signal lightning_started(event)
+signal lightning_ended(event_id, world_tick)
 
 const OWNER_KEY: String = "system28.weather"
 const EVENT_TRANSITION: StringName = &"weather.transition.complete"
+const EVENT_LIGHTNING_START: StringName = &"weather.lightning.start"
+const EVENT_LIGHTNING_END: StringName = &"weather.lightning.end"
+const LIGHTNING_KIND_START: StringName = &"start"
+const LIGHTNING_KIND_END: StringName = &"end"
+const LIGHTNING_FLASH_TICKS: int = 1
+const LIGHTNING_MIN_DELAY_TICKS: int = 30
+const LIGHTNING_MAX_DELAY_TICKS: int = 120
 const QUANTIZATION_BANDS: int = 12
-const SNAPSHOT_SCHEMA_VERSION: int = 1
+const SNAPSHOT_SCHEMA_VERSION: int = 2
 
 var _kernel: TickKernel = null
 var _profiles: Dictionary = {}
@@ -47,6 +57,15 @@ func current_sample(world_tick: int = -1) -> Dictionary:
         direction = Vector2.RIGHT
     else:
         direction = direction.normalized()
+
+    var lightning_flash: float = 0.0
+    if (
+        not _state.active_lightning_id.is_empty()
+        and tick >= _state.active_lightning_start_tick
+        and tick < _state.active_lightning_end_tick
+    ):
+        lightning_flash = _state.active_lightning_intensity
+
     return {
         "world_tick": tick,
         "weather_kind": String(current.kind if t < 0.5 else target.kind),
@@ -61,6 +80,11 @@ func current_sample(world_tick: int = -1) -> Dictionary:
         "wetness": wetness_at(tick),
         "environment_revision": _state.environment_revision,
         "transition_serial": _state.transition_serial,
+        "lightning_flash": lightning_flash,
+        "lightning_event_id": _state.active_lightning_id,
+        "lightning_bolt_seed": _state.active_lightning_seed,
+        "lightning_start_tick": _state.active_lightning_start_tick,
+        "lightning_end_tick": _state.active_lightning_end_tick,
     }
 
 func presentation_descriptor() -> Dictionary:
@@ -89,6 +113,18 @@ func wetness_at(world_tick: int = -1) -> float:
     var delta: float = float(elapsed) * (start_rate + end_rate) * 0.5
     return clampf(_state.wetness_anchor + delta, 0.0, 1.0)
 
+func active_lightning() -> LightningEvent:
+    if not is_ready() or _state.active_lightning_id.is_empty():
+        return null
+    var event := LightningClass.new(
+        _state.active_lightning_id,
+        _state.active_lightning_start_tick,
+        _state.active_lightning_end_tick,
+        _state.active_lightning_intensity,
+        _state.active_lightning_seed
+    )
+    return event if event.is_valid() else null
+
 func force_profile(profile_id: StringName) -> bool:
     # Explicit DEV/testing seam. Production climate logic uses scheduled transitions.
     var profile: WeatherProfile = _profile(profile_id)
@@ -98,6 +134,7 @@ func force_profile(profile_id: StringName) -> bool:
     var current_wetness: float = wetness_at(tick) if is_ready() else 0.0
     if _state.scheduled_event_serial > 0:
         _kernel.cancel_event(_state.scheduled_event_serial)
+    _cancel_lightning_state()
     _state.current_profile_id = profile.profile_id
     _state.target_profile_id = profile.profile_id
     _state.transition_start_tick = tick
@@ -108,9 +145,21 @@ func force_profile(profile_id: StringName) -> bool:
     _state.environment_revision += 1
     if not _plan_next_transition(profile.profile_id):
         return false
+    if profile.kind == ProfileClass.KIND_STORM and not _schedule_lightning_start(true):
+        return false
     _publish_quantized_if_needed(true)
     weather_changed.emit(debug_snapshot())
     return true
+
+func force_lightning() -> bool:
+    # Explicit DEV/testing seam. A forced flash is still a real future WHEN event.
+    if not is_ready() or not _current_source_is_storm() or not _state.active_lightning_id.is_empty():
+        return false
+    if _state.lightning_event_serial > 0:
+        _kernel.cancel_event(_state.lightning_event_serial)
+        _state.lightning_event_serial = 0
+        _state.lightning_event_kind = &""
+    return _schedule_lightning_start(true)
 
 func environment_revision() -> int:
     return 0 if _state == null else _state.environment_revision
@@ -141,7 +190,6 @@ func load_snapshot(data: Dictionary) -> bool:
 func debug_snapshot() -> Dictionary:
     if not is_ready():
         return {"ready": false}
-    var sample: Dictionary = current_sample()
     return {
         "ready": true,
         "scenario_seed": _scenario_seed,
@@ -154,7 +202,11 @@ func debug_snapshot() -> Dictionary:
         "scheduled_event_serial": _state.scheduled_event_serial,
         "environment_revision": _state.environment_revision,
         "quantized_signature": _state.quantized_signature,
-        "sample": sample,
+        "lightning_serial": _state.lightning_serial,
+        "lightning_event_serial": _state.lightning_event_serial,
+        "lightning_event_kind": String(_state.lightning_event_kind),
+        "active_lightning": {} if active_lightning() == null else active_lightning().to_dictionary(),
+        "sample": current_sample(),
     }
 
 func _initialize(initial_profile_id: StringName) -> void:
@@ -168,6 +220,8 @@ func _initialize(initial_profile_id: StringName) -> void:
     _state.environment_revision = 1
     _state.transition_serial = 0
     _plan_next_transition(initial_profile_id)
+    if _current_source_is_storm():
+        _schedule_lightning_start(false)
     _publish_quantized_if_needed(true)
 
 func _plan_next_transition(source_profile_id: StringName) -> bool:
@@ -202,6 +256,35 @@ func _plan_next_transition(source_profile_id: StringName) -> bool:
     _state.scheduled_event_serial = event_serial
     return true
 
+func _schedule_lightning_start(immediate: bool) -> bool:
+    if not is_ready() or not _current_source_is_storm() or not _state.active_lightning_id.is_empty():
+        return false
+    if _state.lightning_event_serial > 0:
+        return _state.lightning_event_kind == LIGHTNING_KIND_START
+    var delay: int = 1 if immediate else _next_lightning_delay()
+    var due_tick: int = _kernel.world_tick() + delay
+    var event_serial: int = _kernel.schedule_event(
+        due_tick,
+        OWNER_KEY,
+        EVENT_LIGHTNING_START,
+        "lightning",
+        {"planned_lightning_serial": _state.lightning_serial + 1}
+    )
+    if event_serial <= 0:
+        return false
+    _state.lightning_event_serial = event_serial
+    _state.lightning_event_kind = LIGHTNING_KIND_START
+    return true
+
+func _next_lightning_delay() -> int:
+    var span: int = LIGHTNING_MAX_DELAY_TICKS - LIGHTNING_MIN_DELAY_TICKS + 1
+    var seed: int = _stable_mix(
+        _scenario_seed,
+        _state.lightning_serial + 1,
+        "lightning-delay:%s" % String(_state.current_profile_id)
+    )
+    return LIGHTNING_MIN_DELAY_TICKS + posmod(seed, span)
+
 func _connect_kernel() -> void:
     if _kernel == null:
         return
@@ -213,14 +296,24 @@ func _connect_kernel() -> void:
         _kernel.world_tick_advanced.connect(advanced)
 
 func _on_external_event_due(event: ScheduledEvent) -> void:
-    if event == null or event.owner_key != OWNER_KEY or event.event_type != EVENT_TRANSITION:
+    if event == null or event.owner_key != OWNER_KEY:
         return
+    match event.event_type:
+        EVENT_TRANSITION:
+            _resolve_transition(event)
+        EVENT_LIGHTNING_START:
+            _resolve_lightning_start(event)
+        EVENT_LIGHTNING_END:
+            _resolve_lightning_end(event)
+
+func _resolve_transition(event: ScheduledEvent) -> void:
     if _state == null or event.serial != _state.scheduled_event_serial:
         return
     var tick: int = event.due_tick
     var previous: StringName = _state.current_profile_id
     var arrived: StringName = _state.target_profile_id
     var arrived_wetness: float = wetness_at(tick)
+    _cancel_lightning_state()
     _state.current_profile_id = arrived
     _state.target_profile_id = arrived
     _state.wetness_anchor = arrived_wetness
@@ -232,9 +325,94 @@ func _on_external_event_due(event: ScheduledEvent) -> void:
     _state.scheduled_event_serial = 0
     if not _plan_next_transition(arrived):
         return
+    if _current_source_is_storm():
+        _schedule_lightning_start(false)
     _publish_quantized_if_needed(true)
     weather_transition_completed.emit(previous, arrived, tick)
     weather_changed.emit(debug_snapshot())
+
+func _resolve_lightning_start(event: ScheduledEvent) -> void:
+    if (
+        _state == null
+        or event.serial != _state.lightning_event_serial
+        or _state.lightning_event_kind != LIGHTNING_KIND_START
+    ):
+        return
+    _state.lightning_event_serial = 0
+    _state.lightning_event_kind = &""
+    if not _current_source_is_storm():
+        return
+
+    var tick: int = event.due_tick
+    _state.lightning_serial += 1
+    var bolt_seed: int = _stable_mix(_scenario_seed, _state.lightning_serial, "lightning:%d" % tick)
+    var intensity: float = 0.78 + float(posmod(bolt_seed, 23)) / 100.0
+    intensity = clampf(intensity, 0.78, 1.0)
+    var event_id: String = "lightning.%d.%d" % [tick, _state.lightning_serial]
+    var end_tick: int = tick + LIGHTNING_FLASH_TICKS
+    var end_serial: int = _kernel.schedule_event(
+        end_tick,
+        OWNER_KEY,
+        EVENT_LIGHTNING_END,
+        event_id,
+        {"event_id": event_id}
+    )
+    if end_serial <= 0:
+        return
+
+    _state.active_lightning_id = event_id
+    _state.active_lightning_start_tick = tick
+    _state.active_lightning_end_tick = end_tick
+    _state.active_lightning_intensity = intensity
+    _state.active_lightning_seed = bolt_seed
+    _state.lightning_event_serial = end_serial
+    _state.lightning_event_kind = LIGHTNING_KIND_END
+    _state.environment_revision += 1
+
+    var lightning: LightningEvent = active_lightning()
+    if lightning != null:
+        lightning_started.emit(lightning.copy())
+    weather_changed.emit(debug_snapshot())
+
+func _resolve_lightning_end(event: ScheduledEvent) -> void:
+    if (
+        _state == null
+        or event.serial != _state.lightning_event_serial
+        or _state.lightning_event_kind != LIGHTNING_KIND_END
+        or _state.active_lightning_id.is_empty()
+    ):
+        return
+    var ended_id: String = _state.active_lightning_id
+    _clear_active_lightning()
+    _state.lightning_event_serial = 0
+    _state.lightning_event_kind = &""
+    _state.environment_revision += 1
+    lightning_ended.emit(ended_id, event.due_tick)
+    weather_changed.emit(debug_snapshot())
+    if _current_source_is_storm():
+        _schedule_lightning_start(false)
+
+func _cancel_lightning_state() -> void:
+    if _state == null:
+        return
+    if _state.lightning_event_serial > 0 and _kernel != null:
+        _kernel.cancel_event(_state.lightning_event_serial)
+    _state.lightning_event_serial = 0
+    _state.lightning_event_kind = &""
+    _clear_active_lightning()
+
+func _clear_active_lightning() -> void:
+    _state.active_lightning_id = ""
+    _state.active_lightning_start_tick = -1
+    _state.active_lightning_end_tick = -1
+    _state.active_lightning_intensity = 0.0
+    _state.active_lightning_seed = 0
+
+func _current_source_is_storm() -> bool:
+    if _state == null:
+        return false
+    var profile: WeatherProfile = _profile(_state.current_profile_id)
+    return profile != null and profile.kind == ProfileClass.KIND_STORM
 
 func _on_world_tick_advanced(_previous_tick: int, _new_tick: int) -> void:
     _publish_quantized_if_needed(false)

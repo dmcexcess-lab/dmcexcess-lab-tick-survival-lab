@@ -20,7 +20,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Validate System 28 Slices A+B boundaries
+      - name: Validate System 28 Slices A+B+C boundaries
         shell: bash
         run: |
           set -euxo pipefail
@@ -28,6 +28,7 @@ jobs:
           test -f game/scripts/simulation/weather/WeatherProfile.gd
           test -f game/scripts/simulation/weather/WeatherState.gd
           test -f game/scripts/simulation/weather/WeatherService.gd
+          test -f game/scripts/simulation/weather/LightningEvent.gd
           test -f game/scripts/simulation/weather/SkyExposureQuery.gd
           test -f game/scripts/simulation/weather/WeatherAtmosphericOpticsAdapter.gd
           test -f game/scripts/simulation/weather/WeatherAcousticEnvironmentModifier.gd
@@ -35,21 +36,29 @@ jobs:
           test -f game/scripts/ui/WeatherDevControls.gd
           test -f game/scripts/ci/WeatherSmoke.gd
           test -f game/scripts/ci/WeatherEnvironmentIntegrationSmoke.gd
+          test -f game/scripts/ci/WeatherLightningSmoke.gd
           grep -q 'class_name WeatherService' game/scripts/simulation/weather/WeatherService.gd
+          grep -q 'class_name LightningEvent' game/scripts/simulation/weather/LightningEvent.gd
           grep -q 'class_name WeatherAtmosphericOpticsAdapter' game/scripts/simulation/weather/WeatherAtmosphericOpticsAdapter.gd
           grep -q 'class_name WeatherAcousticEnvironmentModifier' game/scripts/simulation/weather/WeatherAcousticEnvironmentModifier.gd
           grep -q 'class_name WeatherPresentationRenderer' game/scripts/render/WeatherPresentationRenderer.gd
           grep -q 'PRESENTATION_STEP_SECONDS: float = 0.05' game/scripts/render/WeatherPresentationRenderer.gd
           grep -q 'MAX_DEBRIS: int = 3' game/scripts/render/WeatherPresentationRenderer.gd
-          grep -q 'set_camera_local_position' game/scripts/render/WeatherPresentationRenderer.gd
+          grep -q 'screen_space_overlay' game/scripts/render/WeatherPresentationRenderer.gd
+          grep -q 'camera_motion_redraws.*0' game/scripts/render/WeatherPresentationRenderer.gd
+          grep -q 'transient_sky_light' game/scripts/simulation/lighting/AtmosphericOptics.gd
           grep -q 'target_within_visual_range' game/scripts/simulation/lighting/IlluminationVisualAcquisitionProvider.gd
           grep -q 'environment/defaults/default_clear_color=Color(0, 0, 0, 1)' game/project.godot
           grep -q '_weather.z_index = 50' game/scripts/render/TacticalRendererStack.gd
           grep -q '_perception.z_index = 100' game/scripts/render/TacticalRendererStack.gd
-          ! grep -R -q 'LightningEvent' game/scripts/simulation/weather game/scripts/render/WeatherPresentationRenderer.gd
+          grep -q 'layer = 35' game/scripts/ui/WeatherDevControls.gd
+          grep -q 'panel.position = Vector2(344, 66)' game/scripts/ui/WeatherDevControls.gd
           ! grep -R -q 'PhysicalLightingService\|SpatialSoundService\|AcousticPropagationQuery\|ObserverPerceptionService' game/scripts/simulation/weather
           ! grep -R -q 'scripts/generation\|scripts/streaming' game/scripts/simulation/weather
           ! grep -R -q 'Sprite2D.new\|GPUParticles\|CPUParticles' game/scripts/render/WeatherPresentationRenderer.gd
+          ! test -e game/scripts/simulation/weather/WeatherState.gd.tmp_DO_NOT_USE
+          ! test -e game/scripts/simulation/weather/WeatherState2_IGNORE
+          ! test -e NO_MORE_TEMP_IGNORE
 
       - name: Install Godot 4.7.1
         shell: bash
@@ -86,8 +95,20 @@ jobs:
           grep -q 'WEATHER_B_CLEAR_RANGE=' "$RUNNER_TEMP/weather28-b.log"
           grep -q 'WEATHER_B_FOG_RANGE=' "$RUNNER_TEMP/weather28-b.log"
           grep -q 'WEATHER_B_STORM_HEARING_MASK=' "$RUNNER_TEMP/weather28-b.log"
-          grep -q 'WEATHER_B_CAMERA_REDRAWS=' "$RUNNER_TEMP/weather28-b.log"
+          grep -q 'WEATHER_OVERLAY_CAMERA_REDRAWS=0' "$RUNNER_TEMP/weather28-b.log"
           if grep -Eqi 'SCRIPT ERROR|Parse Error|Failed to load script|Shader error' "$RUNNER_TEMP/weather28-b.log"; then exit 1; fi
+
+      - name: System 28 Weather C lightning smoke
+        shell: bash
+        run: |
+          set -euxo pipefail
+          ./Godot_v4.7.1-stable_linux.x86_64 --headless --path "$GITHUB_WORKSPACE/game" --quit-after 60 --script res://scripts/ci/WeatherLightningSmoke.gd 2>&1 | tee "$RUNNER_TEMP/weather28-c.log"
+          grep -q 'WEATHER_C_LIGHTNING_SMOKE_OK' "$RUNNER_TEMP/weather28-c.log"
+          grep -q 'WEATHER_C_LIGHTNING_BEFORE=' "$RUNNER_TEMP/weather28-c.log"
+          grep -q 'WEATHER_C_LIGHTNING_FLASH=' "$RUNNER_TEMP/weather28-c.log"
+          grep -q 'WEATHER_C_LIGHTNING_PORTAL=' "$RUNNER_TEMP/weather28-c.log"
+          grep -q 'WEATHER_C_LIGHTNING_SEED=' "$RUNNER_TEMP/weather28-c.log"
+          if grep -Eqi 'SCRIPT ERROR|Parse Error|Failed to load script|Shader error' "$RUNNER_TEMP/weather28-c.log"; then exit 1; fi
 
       - name: System 27 physical-lighting regression
         shell: bash
@@ -146,7 +167,7 @@ jobs:
             cancelled) state=error ;;
             *) state=error ;;
           esac
-          payload=$(printf '{"state":"%s","context":"verify/system28-weather","description":"System 28 Weather Slices A+B","target_url":"%s"}' "$state" "$RUN_URL")
+          payload=$(printf '{"state":"%s","context":"verify/system28-weather","description":"System 28 Weather Slices A+B+C","target_url":"%s"}' "$state" "$RUN_URL")
           curl --fail --silent --show-error \
             -X POST \
             -H "Authorization: Bearer $GH_TOKEN" \

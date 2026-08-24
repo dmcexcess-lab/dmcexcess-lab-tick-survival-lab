@@ -23,6 +23,8 @@ const PORTAL_MAX_STEPS: int = 8
 const WINDOW_TRANSMISSION: float = 0.72
 const OPEN_DOOR_TRANSMISSION: float = 0.95
 const LOCAL_SPILL_STEP_SCALE: float = 0.50
+const TRANSIENT_SKY_DIFFUSE_SHARE: float = 0.58
+const TRANSIENT_SKY_DIRECT_SHARE: float = 0.42
 
 const STRUCTURE_WINDOW: int = 1
 const STRUCTURE_DOOR: int = 2
@@ -215,6 +217,7 @@ func debug_snapshot() -> Dictionary:
         "door_revision": -1 if _doors == null else _doors.revision(),
         "ambient_light_level": 0.0 if _ambient == null else _ambient.ambient_light_level(),
         "atmosphere_revision": -1 if _atmosphere == null else _atmosphere.revision,
+        "transient_sky_light": 0.0 if _atmosphere == null else _atmosphere.transient_sky_light,
         "field_bounds": [_field_bounds.position.x, _field_bounds.position.y, _field_bounds.size.x, _field_bounds.size.y],
         "field_cells": _field_cells.size(),
         "materialized_field_cells": _materialized_cells.size(),
@@ -462,26 +465,37 @@ func _rebuild_samples(ambient_level: float) -> void:
         0.0,
         1.0
     )
-    var outdoor_total: float = clampf(diffuse_outdoor + direct_outdoor, 0.0, 1.0)
+    var transient_sky: float = clampf(_atmosphere.transient_sky_light, 0.0, 1.0)
+    var transient_diffuse: float = transient_sky * TRANSIENT_SKY_DIFFUSE_SHARE
+    var transient_direct: float = transient_sky * TRANSIENT_SKY_DIRECT_SHARE
+    var outdoor_total: float = clampf(diffuse_outdoor + direct_outdoor + transient_sky, 0.0, 1.0)
     var sky_color: Color = _atmosphere_tinted(_sky_color(day_factor))
     var direct_color: Color = _atmosphere_tinted(_direct_color(day_factor))
+    var transient_color: Color = _atmosphere.transient_sky_tint
 
     for cell: Vector2i in _materialized_cells:
         var sample := SampleClass.new(cell)
         if _sky_exposed.has(cell):
-            sample.sky_diffuse = diffuse_outdoor
-            sample.direct_celestial = direct_outdoor
+            sample.sky_diffuse = clampf(diffuse_outdoor + transient_diffuse, 0.0, 1.0)
+            sample.direct_celestial = clampf(direct_outdoor + transient_direct, 0.0, 1.0)
         elif _structure_kind.has(cell) and _touches_sky_exposed(cell):
-            sample.sky_diffuse = diffuse_outdoor * 0.82
-            sample.direct_celestial = direct_outdoor * 0.72
+            sample.sky_diffuse = clampf(diffuse_outdoor * 0.82 + transient_diffuse * 0.82, 0.0, 1.0)
+            sample.direct_celestial = clampf(direct_outdoor * 0.72 + transient_direct * 0.72, 0.0, 1.0)
         else:
             sample.sky_diffuse = ambient_level * INTERIOR_AMBIENT_SHARE * _atmosphere.diffuse_sky_transmission
 
         sample.portal = clampf(float(_portal_factor.get(cell, 0.0)) * outdoor_total * PORTAL_SCALE, 0.0, 1.0)
         _samples[cell] = sample
-        _accumulate_color(cell, sample.sky_diffuse, sky_color)
-        _accumulate_color(cell, sample.direct_celestial, direct_color)
-        _accumulate_color(cell, sample.portal, sky_color)
+        _accumulate_color(cell, minf(sample.sky_diffuse, diffuse_outdoor), sky_color)
+        _accumulate_color(cell, minf(sample.direct_celestial, direct_outdoor), direct_color)
+        if transient_sky > 0.0:
+            var transient_amount: float = 0.0
+            if _sky_exposed.has(cell):
+                transient_amount = transient_sky
+            elif _structure_kind.has(cell) and _touches_sky_exposed(cell):
+                transient_amount = transient_sky * 0.77
+            _accumulate_color(cell, transient_amount, transient_color)
+        _accumulate_color(cell, sample.portal, sky_color.lerp(transient_color, transient_sky))
 
     for emitter: LightEmitter in _emitters:
         if emitter.active and emitter.is_valid():

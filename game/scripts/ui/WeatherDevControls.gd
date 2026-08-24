@@ -8,7 +8,8 @@ var _service: WeatherService = null
 var _status: Label = null
 
 func _ready() -> void:
-    layer = 28
+    # Above ordinary HUD/controls, below the PlayerShell modal at layer 40.
+    layer = 35
     _build_ui()
 
 func configure(service: WeatherService) -> bool:
@@ -24,18 +25,22 @@ func present_weather(snapshot: Dictionary) -> void:
     if _status == null:
         return
     var sample: Dictionary = snapshot.get("sample", {})
-    _status.text = "DEV WEATHER  %s  rain %d%%  fog %d%%  wind %d%%" % [
+    var flash: String = "  FLASH" if float(sample.get("lightning_flash", 0.0)) > 0.0 else ""
+    _status.text = "DEV WEATHER  %s  rain %d%%  fog %d%%  wind %d%%%s" % [
         String(sample.get("weather_kind", "?" )).to_upper(),
         int(round(float(sample.get("precipitation", 0.0)) * 100.0)),
         int(round(float(sample.get("fog_density", 0.0)) * 100.0)),
         int(round(float(sample.get("wind_strength", 0.0)) * 100.0)),
+        flash,
     ]
 
 func _build_ui() -> void:
     if _status != null:
         return
     var panel := PanelContainer.new()
-    panel.position = Vector2(344, 8)
+    # The canonical STATS / INVENTORY / MENU header occupies y=16..58.
+    # Keep Weather visibly below it instead of fighting the existing controls.
+    panel.position = Vector2(344, 66)
     panel.size = Vector2(288, 78)
     add_child(panel)
     var box := VBoxContainer.new()

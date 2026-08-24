@@ -19,6 +19,7 @@ static func from_sample(sample: Dictionary) -> AtmosphericOptics:
     var cloud_cover: float = clampf(float(sample.get("cloud_cover", 0.0)), 0.0, 1.0)
     var fog_density: float = clampf(float(sample.get("fog_density", 0.0)), 0.0, 1.0)
     var wetness: float = clampf(float(sample.get("wetness", 0.0)), 0.0, 1.0)
+    var lightning_flash: float = clampf(float(sample.get("lightning_flash", 0.0)), 0.0, 1.0)
 
     # Candidate 001 clear weather intentionally carries a little cloud/haze.
     # Normalize that baseline away so CLEAR remains essentially neutral while
@@ -72,5 +73,7 @@ static func from_sample(sample: Dictionary) -> AtmosphericOptics:
         tint,
         wetness,
         visibility_extinction,
-        maxi(0, int(sample.get("environment_revision", 0)))
+        maxi(0, int(sample.get("environment_revision", 0))),
+        lightning_flash,
+        Color(0.78, 0.88, 1.0, 1.0)
     )
