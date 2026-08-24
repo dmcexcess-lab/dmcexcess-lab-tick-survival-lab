@@ -42,37 +42,23 @@ Canonical status/routing index. Read `PROJECT_NORTH_STAR.md` and `README_SOPS.md
 | 20 | Local Area Generation | **IMPLEMENTED — ten area / seven environment profiles** | `20_LOCAL_AREA_PARCEL_GENERATION.md` |
 | 21 | Tactical Camera / View Control | **IMPLEMENTED** | `21_TACTICAL_CAMERA_VIEW_CONTROL.md` |
 | 22 | Large-Area DEV Critique Runtime | **IMPLEMENTED** | `22_LARGE_AREA_CRITIQUE_RUNTIME.md` |
-| 23 | Perception / LOS / Fog Memory | **IMPLEMENTED — Candidate 001 + ambient memory shading** | `23_PERCEPTION_LOS_FOG_MEMORY.md` |
+| 23 | Perception / LOS / Fog Memory | **IMPLEMENTED — Candidate 001 + ambient/audio presentation** | `23_PERCEPTION_LOS_FOG_MEMORY.md` |
 | 24 | World Loot / Searchable Containers / Scavenging | **IMPLEMENTED — Candidate 001** | `24_WORLD_LOOT_SEARCHABLE_CONTAINERS.md` |
 | 25 | World Time / Ambient Daylight | **IMPLEMENTED — Candidate 001** | `25_WORLD_TIME_AMBIENT_DAYLIGHT.md` |
-| 26 | Spatial Sound / Hearing | **DRAFT — awaiting approval** | `26_SPATIAL_SOUND_HEARING.md` |
+| 26 | Spatial Sound / Hearing | **IMPLEMENTED — Candidate 001** | `26_SPATIAL_SOUND_HEARING.md` |
 | 00E | Population / Household / Outbreak / Player Story | **NOT DESIGNED** | future design |
 
-## Current System 19 truth
+## Current System 19 / 20 / 00F truth
 
-System 19 exposes 24 callable one-story building archetypes. `GeneratedBuildingPlan.entity_id_for_role(role)` is the public role -> stable materialized entity-ID seam. Blocking props stay off door-approach circulation.
+System 19 exposes 24 callable one-story building archetypes and a stable generated-role -> entity-ID seam. System 20 owns ten area profiles and seven environment palettes with deterministic parcel-fit building selection. System 00F keeps logical source identity independent from technical stream regions and follows **materialization is one-way; activation is reversible**.
 
-Exact-head context: `verify/system19-local-building`.
-
-## Current System 20 / 00F truth
-
-System 20 owns ten local area profiles and seven environment palettes. Settlement morphology uses deterministic parcel-fit building selection and real access for occupied land uses. Environment palettes are vocabulary, not global geography authority.
-
-System 00F follows **materialization is one-way; activation is reversible**. Logical source identity remains independent from technical stream-region geometry. System 24 loot initialization is an idempotent post-materialization seam rather than embedded 00F state.
-
-Exact-head contexts: `verify/system20-local-area`, `verify/system00f-streaming-materialization`.
+Exact-head contexts: `verify/system19-local-building`, `verify/system20-local-area`, `verify/system00f-streaming-materialization`.
 
 ## Current System 23 truth
 
-Visual knowledge:
+Visual knowledge remains `UNSEEN` true black, `REMEMBERED` stale observer memory, and `VISIBLE` current live truth. Remembered environment presentation follows System 25 ambient daylight.
 
-- `UNSEEN` — always true black;
-- `REMEMBERED` — stale terrain/structure/door/static furniture snapshots;
-- `VISIBLE` — current live truth.
-
-Candidate 001 LOS is a 12-cell, 120-degree forward cone with radius-1 near awareness. Memory snapshot schema is v2. Hidden changes never remotely update stale memory.
-
-REMEMBERED environmental presentation now accepts current ambient daylight from System 25. Full daylight preserves 0.30 memory luminance; lower ambient light smoothly darkens memory toward 0.10 without becoming UNSEEN. Last-seen actors and auditory cues remain separate channels.
+System 23 now also presents System 26 listener-specific auditory descriptors as yellow text above any visual state. Sound cues do not reveal/explore terrain and System 23 does not own their physical propagation/localization.
 
 Exact-head context: `verify/system23-perception`.
 
@@ -80,43 +66,33 @@ Exact-head context: `verify/system23-perception`.
 
 > **Loot exists before you search for it.**
 
-Candidate 001 provides deterministic one-way persistent loot initialization into physical System 11 furniture containers, `USABLE/JUNK + family` item taxonomy, location-aware loot profiles, timed search and timed TAKE/STORE through System 12. Empty/looted containers do not automatically repopulate.
+Candidate 001 provides deterministic one-way persistent loot initialization into physical System 11 containers, location-aware tables, timed search and timed TAKE/STORE through System 12. Empty/looted containers do not automatically repopulate.
 
 Exact-head context: `verify/system24-loot`.
 
 ## Current System 25 truth
 
-System 25 interprets authoritative WHEN ticks as scenario-local time without modifying WHEN or maintaining a second advancing clock.
-
-Candidate 001:
-
-- 5 ticks = 1 simulation second;
-- scenario begins day 0 at 08:00;
-- dawn 05:30–07:30;
-- daylight 07:30–18:30;
-- dusk 18:30–20:30;
-- outdoor night baseline 0.08, day baseline 1.0;
-- `OutdoorAmbientLightService` feeds the current ambient scalar into System 23 remembered presentation.
-
-Visible-world/local/artificial lighting, weather attenuation, season/latitude and calendar date remain future seams.
-
-First fully green executable head: `6b6680c5b8eb4d8db2c4097df093abace661d5c7`.
+System 25 interprets authoritative WHEN ticks as scenario-local time without changing WHEN. Candidate 001 uses 5 ticks/second, starts day 0 at 08:00, and exposes a smooth 05:30–07:30 dawn / 18:30–20:30 dusk outdoor daylight baseline.
 
 Exact-head context: `verify/system25-world-time-light`.
 
-## Current System 26 draft direction
+## Current System 26 truth
 
-System 26 separates exact physical sound emissions from listener-specific heard observations. Candidate 001 proposes deterministic weighted propagation through current walls/doors/windows, stat/status-driven detection/recognition/localization, and yellow textual cues that may appear over true-black fog without revealing terrain.
+> **Sound is physical. Hearing is an estimate.**
 
-Poor hearing primarily increases distance uncertainty and word vagueness. Hard actor-relative localization constraints preserve broad direction: a true rear sound cannot be displayed in front of the listener, and broad left/right side information is likewise preserved.
+Candidate 001 separates exact `SoundEmission` truth from listener `HeardSoundObservation` knowledge. Weighted material-aware propagation uses current WHAT + Door State; listener hearing derives from the neutral hearing-provider seam, with the live survivor adapter using Survival, fatigue and sleep pressure.
 
-Future infected/NPC AI is intended to consume the same uncertain listener observations rather than exact source coordinates.
+Localization uncertainty is deterministic and physically constrained: true front/rear/left/right actor-relative signs cannot flip. Yellow words may appear over completely black fog without revealing terrain, and cue lifetime advances only with WHEN ticks.
 
-Status: **DRAFT — no implementation authorized yet**.
+Current live emitters are successful Walk steps, each Run stride and truthful normal/loud Door transitions. Future infected/animals can provide different hearing profiles; weather/background masking has a neutral environment-modifier seam.
+
+First fully green executable head: `2d3dcfa6fc8646cda62a5e775beb1ac7c8d04d08`.
+
+Exact-head context: `verify/system26-spatial-sound`.
 
 ## Current presentation
 
-The live Web build is the Rural Crossroads critique world with canonical System 23 perception, System 24 scavenging and System 25 time/daylight integrated. System 25 currently affects REMEMBERED fog only; VISIBLE-world physical lighting is intentionally deferred.
+The live Web build is the Rural Crossroads critique world with canonical perception, scavenging, world time/daylight and spatial-sound yellow-word feedback integrated. VISIBLE-world physical lighting and infected actors remain deferred.
 
 ## Required exact-head stack
 
@@ -129,4 +105,5 @@ The live Web build is the Rural Crossroads critique world with canonical System 
 - `verify/system23-perception`
 - `verify/system24-loot`
 - `verify/system25-world-time-light`
+- `verify/system26-spatial-sound`
 - `verify/pages-deploy`
