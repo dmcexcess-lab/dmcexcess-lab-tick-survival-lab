@@ -1,358 +1,277 @@
-# Tick Survival Lab — System 20 Local Area / Parcel Generation
+# Tick Survival Lab — System 20 Local Area Generation
 
-Status: **IMPLEMENTED — RURAL CROSSROADS 006 + SMALL-TOWN 001 + RURAL-SCATTERED 001 + RURAL-OPEN 001 + INITIAL MATERIALIZATION**
+Status: **IMPLEMENTED — five current profiles**
 
-Updated: 2026-08-23
+System 20 turns caller-bounded global planning facts into deterministic local physical area plans. It owns local roads/blocks/parcels/access/property dressing where the selected profile authorizes them, but it never owns global geography, regional road routing, river routing, persistent gameplay truth, streaming activation, rendering or building interiors.
 
-System 20 is the local physical-planning layer between System 00D global world planning and System 19 building generation. It preserves caller-owned global facts, adds only profile-authorized local morphology, and may transactionally create initial WHAT + Door State through its separate materialization owner.
+Core rule:
 
-A System 20 planning area is a **logical generation domain, not a streaming chunk**.
+> **System 00D decides large-scale world truth; System 20 preserves that truth while adding profile-authorized local physical detail.**
 
-## 1. Canonical hierarchy
-
-1. **System 00D** owns global geography, settlements/planning regions, major roads, hydrology and regional infrastructure.
-2. **System 20** refines caller-assigned global bounds into local roads/land cover/reservations/blocks/parcels/access/building requests/environment according to the resolved profile.
-3. **System 19** owns building/property internals for already-selected building envelopes.
-4. **AreaMaterializationCoordinator** performs the one-time initial validated area write into WHAT + Door State.
-5. **WHAT + typed mechanic state** own all subsequent persistent reality.
-6. **System 00F** chooses when stable logical sources are materialized/active, but source/stream partitions never define System 20 morphology.
-
-## 2. Ownership / non-goals
-
-System 20 does not own:
-
-- global settlement/geography/river/major-road/infrastructure planning;
-- households, population, jobs or outbreak simulation;
-- runtime utilities;
-- loot, vehicles, corpses or construction/destruction mechanics;
-- rendering, camera, player input or UI;
-- logical materialization-source decomposition or stream/storage partition geometry;
-- save-file encoding;
-- WHEN scheduling.
-
-System 20 may create local roads only when the resolved profile authorizes them. It may reserve land around supplied infrastructure facts, but reservations are planning land rather than fake finished facilities.
-
-## 3. Area/environment profiles
+Environment profile: `temperate.rural` v3.
 
 Current area profiles:
 
-- `rural.crossroads` **v5**;
-- `smalltown.center` **v1**;
-- `rural.scattered` **v1**;
-- `rural.open` **v1**.
+- `rural.crossroads` v5;
+- `smalltown.center` v1;
+- `rural.scattered` v1;
+- `rural.open` v1;
+- `rural.watercourse` v1.
 
-Current environment profile:
+The former Candidate 001/006 documents are implementation history. Their final rules are consolidated here; detailed drafting history remains in Git/changelog.
 
-- `temperate.rural` **v3**.
+## 1. Ownership
 
-Area profiles own morphology/human land-use rules. Environment profiles own surface/ecology semantic families.
+### System 20 owns
 
-## 4. Public request contract
+- projection-ready local request interpretation;
+- inherited-road installation inside the local bounds;
+- profile-authorized local-road layout;
+- infrastructure reservation geometry used to protect local planning space;
+- semantic blocks/parcels/land use where the profile uses them;
+- building placement descriptors sent to System 19;
+- access/driveway/parking alignment to real generated building entries;
+- local environmental/property dressing;
+- rural-open landscape generation;
+- physical river/bridge semantic terrain from already-established System 00D hydrology;
+- deterministic `GeneratedAreaPlan` output and validation.
+
+### System 20 reads but does not own
+
+- System 00D geography, settlements/sites, roads, utilities, river segments and bridge intents;
+- System 19 building grammar/archetypes;
+- WHERE geometry rules.
+
+### System 20 does not own
+
+- WHAT after materialization;
+- WHEN;
+- 00F source identity/activation;
+- art/render/camera/input/UI;
+- population/outbreak/AI;
+- runtime utility behavior;
+- swimming/wading/flood simulation.
+
+## 2. Public request contract
 
 `AreaGenerationRequest` carries:
 
-- stable area ID;
+- `area_id`;
 - seed;
-- global bounds;
+- positive global `bounds`;
 - area/environment profile IDs;
-- zero or more inherited major-road records;
-- forbidden regions;
-- normalized inherited planning constraints;
-- optional clipped `inherited_geography` records.
+- `inherited_roads`;
+- `forbidden_regions`;
+- `inherited_planning_constraints`;
+- optional `inherited_geography`;
+- optional `inherited_hydrology`.
 
-The base request type permits zero roads because roadless space is valid geography. The resolved profile decides whether roads are required.
+Optional collections default empty so existing profile callers remain compatible.
 
-Existing settlement profiles still require inherited roads. `rural.open` permits zero or more.
+Profile-specific legality belongs in the generator/validator, not in generic record existence checks.
 
-Normalized planning constraints use stable source IDs, domain/kind/reservation role, explicit point/cardinal geometry and blocking policy. Current domains include hydrology, power, potable water and wastewater.
+## 3. Generated plan contract
 
-`inherited_geography` is consumed by `rural.open` and contains stable source geography ID, clipped rect, source grid coordinate, planning elevation and landform.
-
-## 5. Generated plan contract
-
-`GeneratedAreaPlan` contains/signs:
+`GeneratedAreaPlan` carries provenance plus:
 
 - reservations;
 - roads/intersections;
-- optional town blocks;
+- blocks;
 - parcels;
 - System 19 building requests;
+- hydrology features;
 - semantic ground regions;
-- outdoor props;
-- area/environment profile versions.
+- outdoor props.
 
-A valid `rural.open` plan may have zero roads. Existing profile completeness rules remain unchanged.
+`GeneratedAreaPlan.is_generated()` checks only generic structural completion/provenance. It does **not** know that a named profile requires roads, parcels, hydrology or any other profile-specific content. Those requirements belong to `LocalAreaGenerator` and `GeneratedAreaValidator`.
 
-## 6. Implemented owners
+`signature()` deterministically includes all generated semantic/provenance collections.
 
-Canonical planning code lives under `game/scripts/generation/areas/`:
+## 4. Integration projector
 
-- `AreaSeed.gd` — deterministic named/2D hashing;
-- `AreaGenerationRequest.gd` — public local-generation input;
-- `GeneratedAreaPlan.gd` — pure semantic output;
-- `AreaProfileCatalog.gd`;
-- `EnvironmentProfileCatalog.gd`;
-- `InfrastructureReservationPlanner.gd`;
-- `LocalRoadPlanner.gd`;
-- `TownBlockPlanner.gd`;
-- `ParcelPlanner.gd`;
-- `ParcelAccessPlanner.gd`;
-- `BuildingPlacementPlanner.gd`;
-- `CommercialPavedFrontagePlanner.gd`;
-- `OutdoorPropertyDressingPlanner.gd`;
-- `RuralOpenLandscapePlanner.gd` — dry countryside land cover/global-coordinate natural props;
-- `GeneratedAreaValidator.gd`;
-- `LocalAreaGenerator.gd` — coordinator only;
-- `AreaMaterializationCoordinator.gd` — separate initial WHAT/Door transaction.
+Primary integration owner:
 
-Integration adapter:
+`game/scripts/generation/integration/System20AreaRequestProjector.gd`
 
-`game/scripts/generation/integration/System20AreaRequestProjector.gd`.
+Public seams include:
 
-Planning imports no renderer/camera/player/runtime simulation owner.
+- `project_site(plan, site_id)`;
+- `project_rural_open_bounds(plan, area_id, bounds)`;
+- `project_watercourse_bounds(plan, area_id, bounds)`;
+- read-only road/hydrology/power/water/wastewater queries for bounds.
 
-## 7. Settlement-profile pipeline
+`System20WatercourseRequestProjection.gd` is an **internal cohesive projection helper**, not a peer system. It contains the physical-corridor/bridge-deck projection logic so the already broad integration owner does not become a single giant method file.
 
-For Crossroads, Small-Town and Rural-Scattered the existing pipeline remains:
+Projection never reroutes upstream truth.
 
-1. validate request and resolve profiles;
-2. convert inherited planning constraints into legal reservations;
-3. install exact inherited roads;
+## 5. Settlement pipeline
+
+For settlement-style profiles the canonical pipeline is:
+
+1. validate request/profile;
+2. convert inherited planning constraints into local reservations where relevant;
+3. install inherited roads exactly;
 4. add profile-authorized local roads;
 5. derive intersections;
-6. derive optional blocks;
-7. produce legal road-facing parcel candidates;
-8. classify land use and access;
-9. place buildings only through public System 19 descriptors/generation;
-10. align occupied approaches to the actual generated `door.exterior.primary`;
-11. connect only real public `ground.parking*` frontage to its road;
-12. add property/environment dressing;
-13. validate the complete plan.
+6. optionally derive semantic town blocks;
+7. plan parcels/frontage;
+8. classify land use;
+9. determine access anchors;
+10. request System 19 building placement descriptors;
+11. generate/validate System 19 building plans;
+12. align access to actual primary exterior doors;
+13. detect actual public System 19 parking ground;
+14. create frontage-normal approaches/parking extension where legal;
+15. apply environment/property dressing;
+16. validate the complete area;
+17. return pure plan.
 
-There is no unbounded reroll loop.
+System 20 never reaches into System 19 private internals.
 
-## 8. Rural Crossroads Candidate 006
+## 6. `rural.crossroads` v5
 
-`rural.crossroads@5 + temperate.rural@3` remains the protected live/local integration anchor.
+Protected live/reference local profile.
 
-Key accepted facts:
+Canonical current fixture retains:
 
-- 256×256 logical area;
-- exact inherited primary + secondary crossing;
-- two internal bent 3-cell gravel `local_rural` roads;
-- one signalized inherited crossroads;
-- gas station + diner + one honest commercial vacancy;
-- 6 residential + 4 farmstead occupied opportunities;
-- at least 6/10 residential/farm properties on local roads;
-- compact meaningful setbacks;
-- all approaches end on actual System 19 primary doors;
-- generic road-flush real parking/forecourt frontage only when the generated building exposes `ground.parking*`;
-- >=60% non-road area physically unbuilt;
-- deterministic mixed-coordinate ecological dressing.
+- inherited E/W primary + N/S secondary crossing;
+- two deterministic internal 3-cell gravel local-rural roads;
+- majority residential/farm local-road frontage;
+- current gas station + diner + honest commercial vacancy;
+- residential/farm use from the current finalized System 19 library;
+- compact setbacks;
+- real generated primary-door approaches;
+- road-flush parking only when the generated building actually exposes public `ground.parking*`;
+- at least 60% non-road unbuilt area;
+- deterministic natural/property dressing.
 
-Its request/signature remains a hard regression as newer profiles are added.
+This remains the live System 22 critique target.
 
-## 9. Small-Town Center Candidate 001
+## 7. `smalltown.center` v1
 
-Detailed design: `20A_SMALLTOWN_CENTER_CANDIDATE_001.md`.
+Consumes actual System 00D inherited roads plus power, potable-water, wastewater and hydrology planning facts.
 
-`smalltown.center@1 + temperate.rural@3` consumes the real System 00D small-town site.
+Canonical rules:
 
-It adds:
+- deterministic infrastructure reservations protect local planning land without pretending to be finished runtime utility facilities;
+- four connected 3-cell paved local-town streets supplement the inherited regional spine;
+- semantic town blocks are reservation/road aware;
+- four compact main-road commercial opportunities currently contain one Small Gas Station, one Rural Diner and honest vacancies where the current System 19 library has no suitable additional storefront;
+- ten residential opportunities use the current residential library;
+- real primary-door access and actual parking-frontage rules are preserved;
+- regional road segments may legitimately end inside the local site;
+- inherited frontage is clipped to actual inherited segment extent.
 
-- normalized global power/water/wastewater/hydrology constraints;
-- deterministic infrastructure facility/corridor reservations;
-- compact connected internal paved `local_town` streets;
-- semantic town blocks carved around blocking reservations;
-- four small-commercial opportunities: gas station + diner + honest vacancies;
-- ten residential opportunities favoring local-town frontage;
-- inherited-road frontage limited to actual inherited segment extent;
-- real System 19 door alignment and parking rules.
+## 8. `rural.scattered` v1
 
-Regional roads may legitimately terminate inside the local planning window; only actual boundary contacts require authorized exits.
+Covers all three current hamlet sites.
 
-## 10. Rural-Scattered / Hamlet Candidate 001
+Canonical rules:
 
-Detailed design: `20B_RURAL_SCATTERED_CANDIDATE_001.md`.
-
-`rural.scattered@1 + temperate.rural@3` covers all three current hamlet sites.
-
-It provides:
-
-- exact inherited regional-road truth;
-- two internal 3-cell gravel `local_rural` lanes using horizontal/vertical-agnostic spine selection;
+- exact inherited regional roads remain authoritative;
+- exactly two deterministic internal 3-cell gravel local-rural lanes;
 - zero commercial center;
-- exactly 4 residential + 2 farmstead occupied opportunities;
-- at least 4/6 occupied properties on local lanes;
-- no semantic town blocks;
-- >=72% non-road area unbuilt;
-- decentralized groundwater/septic retained as service intent only;
-- no fake rural substation/well/septic facilities;
-- exact primary-door property access.
+- exactly four residential + two farmstead occupied opportunities in the current profile;
+- at least four of six occupied properties use local-lane frontage, including at least three homes and one farmstead;
+- at least 72% of non-road area remains physically unbuilt;
+- decentralized groundwater and onsite-septic records are service intent only—no fake well/tank/drainfield coordinate is invented;
+- no semantic town blocks or traffic signal;
+- actual System 19 entry/access rules remain shared with other settlement profiles.
 
-A regional road lying only along the mathematical local-area boundary is tangential context rather than an entering road.
+A regional road that only lies tangentially along a local mathematical boundary is not treated as entering inherited road geometry.
 
-## 11. Rural-Open / Countryside Candidate 001
+## 9. `rural.open` v1
 
-Detailed design: `20C_RURAL_OPEN_COUNTRYSIDE_CANDIDATE_001.md`.
+Arbitrary caller-bounded **dry countryside** inside the broad System 00D rural-open planning context.
 
-`rural.open@1 + temperate.rural@3` provides arbitrary **dry** countryside planning for caller-assigned logical bounds inside the broad System 00D rural-open planning context.
+Rules:
 
-### 11.1 Projection
+- bounds may not positively overlap a settlement area site;
+- zero or more inherited regional roads are legal;
+- clipped System 00D geography must explain the request area;
+- intersecting regional utility corridors are read-only planning context;
+- no local roads, settlement parcels, town blocks or buildings are created;
+- lowland/rolling land may receive globally coherent agricultural `ground.field_green` cover; upland/ridge do not receive fabricated fields;
+- sparse tree/shrub/rock decisions use global world seed + absolute global coordinates;
+- natural prop IDs are global-cell based (`rural_open.natural.<x>.<y>`) rather than source/request-local identity;
+- split-vs-combined accepted dry bounds must produce identical cell-level landscape truth;
+- any real river/bridge intersection is rejected by the dry profile rather than replaced with fake dry terrain.
 
-`System20AreaRequestProjector.project_rural_open_bounds(plan, area_id, bounds)`:
+00F catalog-v1 countryside sources consume this seam without changing morphology.
 
-- rejects overlap with the five settlement area sites;
-- rejects any real river/bridge intersection until local hydrology exists;
-- projects zero or more actual regional roads;
-- clips complete global geography context;
-- projects intersecting power/water/wastewater corridors only;
-- uses the global world seed so adjacent requests share one landscape field.
+## 10. `rural.watercourse` v1
 
-System 20 does not choose logical source partitions. **Implemented System 00F Slice 002** derives stable dry-countryside source bounds/IDs from System 00D geography and calls this public seam; technical stream-region geometry remains separate.
+Physical local river/bridge terrain from existing System 00D hydrology.
 
-### 11.2 Morphology
+Rules:
 
-Candidate 001 creates:
+- request bounds must be wholly covered by real physical System 00D river corridor geometry;
+- physical overlap uses declared river width, not centerline-only intersection;
+- river ground semantic is `ground.water_river`;
+- only an explicit matching System 00D bridge intent may overwrite water with bridge-deck road terrain;
+- Candidate 001 bridge deck geometry is exactly road width × river width centered on the global crossing, oriented by bridge axis;
+- bridge-deck ground currently reuses `ground.road_plain` for traversal truth; bridge identity remains explicit hydrology provenance rather than art-driven physics;
+- a road crossing water without bridge intent never silently becomes traversable bridge terrain;
+- no local roads, parcels, blocks, buildings or decorative water props are generated;
+- split-vs-combined accepted watercourse bounds must produce identical final terrain, including partial bridge-deck fragments;
+- System 20 does not create 00F logical river source identity.
 
-- no local roads;
-- no town blocks;
-- no settlement parcels;
-- no building requests;
-- grass/meadow base;
-- `ground.field_green` agriculture on eligible lowland/rolling cells only;
-- no agriculture on upland/ridge;
-- sparse globally coordinate-stable trees/shrubs/rocks;
-- global-cell-derived natural prop IDs.
+`LocalRiverBridgePlanner.gd` is the focused local physical-water/bridge owner. `GlobalHydrologyQuery.bridge_deck_rect()` is read-only geometry derived from the already-authoritative bridge intent.
 
-Landscape decisions use world seed + absolute global coordinates, not `cell - request.bounds.position`.
+## 11. Materialization boundary
 
-Consequently, split and combined dry countryside requests produce identical cell-level ground and natural-prop truth.
+`AreaMaterializationCoordinator` transactionally writes a valid generated area into WHAT + Door State using existing world mutation contracts.
 
-### 11.3 Implementation boundary
+System 20 does not retain authority after successful materialization. A revisit must never regenerate a materialized place merely because its generator can reproduce the original plan.
 
-The rural-open path branches before the settlement reservation/parcel/building pipeline. Existing `LocalRoadPlanner` already supports the required inheritance-only result when no local spurs are configured, so no redundant road-planner special case was added.
+Hydrology provenance itself is generation metadata; physical water/bridge truth reaches WHAT through ordinary semantic ground regions.
 
-`ParcelPlanner`, `InfrastructureReservationPlanner` and the generic validator did not require semantic changes.
+## 12. Validation principles
 
-## 12. System 19 boundary
+The generic validator enforces structural/global invariants such as:
 
-System 20 uses only public System 19 contracts:
+- unique stable generated IDs;
+- bounds containment;
+- legal inherited/local road boundary behavior;
+- parcel/road/reservation separation;
+- actual access/building coherence;
+- ground/prop containment;
+- System 19 subplan validity;
+- hydrology-feature coherence and bridge authorization for the watercourse profile.
 
-- placement descriptor;
-- generated building request/plan;
-- validator;
-- public primary-entry and ground semantics;
-- building materializer during initial area materialization.
+Profile-specific cardinality/content rules are kept out of `GeneratedAreaPlan.is_generated()`.
 
-System 20 does not inspect individual archetype internals.
+## 13. Protected replacement boundaries
 
-Rural-Open Candidate 001 invokes no System 19 building content because it deliberately creates no properties/buildings.
+A System 20 rewrite must not require changes to:
 
-## 13. Initial materialization
+- System 00D world identity/routing;
+- System 19 building internals;
+- WHAT/WHEN;
+- renderer/art/camera/player/input/UI;
+- 00F technical partition geometry.
 
-`AreaMaterializationCoordinator.gd` remains the lower-level one-time initial write owner:
+Likewise changing technical streaming size must not change a System 20 plan for the same logical request.
 
-1. validate generated area;
-2. regenerate/validate System 19 subplans where present;
-3. preflight stable IDs;
-4. snapshot WHAT + Door State;
-5. write terrain/outdoor props/buildings;
-6. initialize generated doors CLOSED;
-7. rollback on failure;
-8. relinquish generation ownership on success.
+## 14. Tests
 
-System 20C did not modify this owner.
+Current System 20 workflow exercises:
 
-**System 00F Slices 001–002** compose this materializer for settlement plus dry rural-open logical sources. Slice 002 chooses logical countryside source ownership only; it does not alter System 20C morphology. Current physical river corridors remain source-free/unmaterialized until local hydrology exists.
-
-## 14. Determinism/versioning
-
-Intentional same-seed output-rule changes bump the owning area/environment profile.
-
-Current versions:
-
-- `rural.crossroads@5`;
-- `smalltown.center@1`;
-- `rural.scattered@1`;
-- `rural.open@1`;
-- `temperate.rural@3`.
-
-Rural-open natural persistent IDs depend on physical global cells rather than caller/source ID. System 00F2 source decomposition therefore does not change the identity of natural facts at a physical cell.
-
-## 15. Verification
-
-Dedicated System 20 smokes:
-
-- `LocalAreaGenerationSmoke.gd` — Crossroads Candidate 006;
-- `SmallTownCenterGenerationSmoke.gd`;
-- `RuralScatteredGenerationSmoke.gd`;
-- `RuralOpenCountrysideGenerationSmoke.gd`.
-
-The rural-open smoke proves real roadless/roadside windows, geography/field legality, global-cell props, river/settlement rejection, deterministic replay and split-vs-combined exact seam semantics.
-
-Workflow:
-
-`.github/workflows/local-area-generation.yml`
+- Rural Crossroads regression;
+- Small-Town Center generation;
+- Rural-Scattered generation across all three hamlets;
+- Rural-Open roadless/roadside/landform and split-vs-combined invariance;
+- Rural-Watercourse physical width, bridge authorization, split-vs-combined invariance, materialization and traversal-policy proof;
+- canonical demo startup regression.
 
 Exact-head context:
 
 `verify/system20-local-area`
 
-First green System 20C integrated code head:
+System 20D's first clean implementation head was `1ef3bd08e9d1a4ef258a2013c3af133ce6605002`, where the complete protected seven-context world stack was green before this cleanup refactor.
 
-`cbc39f03d3568ca4fcbe7f294e350eb1c507bbda`
+## 15. Future extensions
 
-System 00F2 later consumed this exact public morphology seam and remained green with System 20 on verified code head `abe3d56792b74d5dd08882bd4f06dbd76107f35d`.
+Future additions such as sparse isolated rural properties, more building/content families, addresses/ownership/zoning, water gameplay, bridge condition/destruction, flooding/wetlands, or new area morphology should extend this owning System 20 contract unless they introduce a genuinely independent state/lifecycle domain.
 
-## 16. Presentation/performance
-
-System 20 owns no viewer/camera behavior. The live Web critique still uses Rural Crossroads Candidate 006 through System 22.
-
-Planning is bounded caller-triggered work rather than per-frame computation. Countryside uses coordinate hashing/value fields rather than giant global noise arrays.
-
-## 17. Failure behavior
-
-System 20 fails rather than hiding invalid facts. Examples include:
-
-- invalid/malformed request/profile;
-- missing required inherited roads for settlement profiles;
-- incomplete/malformed rural-open geography;
-- unauthorized local-road boundary exits;
-- insufficient settlement parcel capacity;
-- invalid reservations/overlap;
-- impossible building/door/access geometry;
-- rural-open settlement-site overlap;
-- rural-open river/bridge intersection;
-- generic final-plan validation failure.
-
-## 18. Future seams
-
-Known next extensions include:
-
-- **local physical river/bridge materialization** using existing System 00D river/bridge intent without moving hydrology morphology into 00F;
-- later isolated rural properties now that stable countryside logical-source ownership exists;
-- addresses/ownership/zoning;
-- richer System 19 settlement/agricultural content;
-- private well/septic placement and local utility distribution;
-- runtime utilities;
-- households/businesses/jobs/population/outbreak;
-- vehicles/traffic;
-- a future countryside source-catalog migration only if new physical domains require changing logical source decomposition.
-
-## 19. Approved decisions / history
-
-1. System 20 planning areas are global-coordinate logical domains, not stream chunks.
-2. Rural Crossroads Candidate 006 remains the accepted live anchor.
-3. Small-Town 001 added infrastructure-aware town morphology without changing global infrastructure ownership.
-4. Rural-Scattered 001 added sparse three-site hamlet morphology without a fake commercial center.
-5. On 2026-08-23 the user approved System 20C Rural-Open Candidate 001.
-6. Roadlessness is valid base geography; individual profiles decide whether roads are required.
-7. Rural-open landscape truth uses global world seed + absolute coordinates.
-8. Rural-open natural prop identity is global-cell-derived, not area/source-derived.
-9. Candidate 001 is dry countryside only; known river/bridge intersections fail until physical local hydrology is separately approved.
-10. System 00F remains the separate logical source/materialization owner; implemented Slice 002 consumes System 20C without changing its profile/version/morphology.
-
-## 20. System boundary summary
-
-System 00D owns global coherence; System 20 owns local physical generation; System 19 owns building internals; System 00F owns logical materialization-source orchestration/technical activation; WHAT owns persistent current reality; System 21 owns camera; System 22 owns DEV presentation. Streaming never defines physical world truth.
+Do not create another permanent “System 20X” document merely because a new profile is implemented.

@@ -29,6 +29,9 @@ func is_ready() -> bool:
     return _registry != null and _catalog != null and _catalog.is_ready() \
         and _projector != null and _generator != null
 
+func source_kind() -> StringName:
+    return SOURCE_KIND
+
 func catalog() -> CountrysideSourceCatalog:
     return _catalog
 
@@ -36,6 +39,14 @@ func validate_source_bounds(global_plan: GeneratedGlobalWorldPlan) -> Dictionary
     if not is_ready():
         return {"ok": false, "failure_reason": "countryside_materialization_source_not_ready"}
     return _catalog.validate_source_bounds(global_plan)
+
+func source_handle(global_plan: GeneratedGlobalWorldPlan, source_id: String) -> Dictionary:
+    if global_plan == null or not global_plan.is_generated():
+        return {}
+    var validation: Dictionary = validate_source_bounds(global_plan)
+    if not bool(validation.get("ok", false)):
+        return {}
+    return source_handle_for_id(source_id)
 
 func source_handle_for_id(source_id: String) -> Dictionary:
     if not is_ready():

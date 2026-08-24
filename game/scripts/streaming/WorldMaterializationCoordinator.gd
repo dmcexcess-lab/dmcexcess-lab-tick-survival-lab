@@ -10,9 +10,10 @@ var _mutations: WorldMutationService = null
 var _door_state: DoorStateStore = null
 var _door_mutations: DoorStateMutationService = null
 var _registry: MaterializationRegistry = null
-var _source: AreaSiteMaterializationSource = null
-var _countryside_source: CountrysideMaterializationSource = null
 var _area_materializer: AreaMaterializationCoordinator = null
+var _providers: Array = []
+var _provider_by_kind: Dictionary = {}
+var _provider_configuration_valid: bool = true
 
 func _init(
     world: WorldState = null,
@@ -21,25 +22,44 @@ func _init(
     door_mutations: DoorStateMutationService = null,
     registry: MaterializationRegistry = null,
     source: AreaSiteMaterializationSource = null,
-    countryside_source: CountrysideMaterializationSource = null
+    countryside_source: Variant = null,
+    source_providers: Array = []
 ) -> void:
     _world = world
     _mutations = mutations
     _door_state = door_state
     _door_mutations = door_mutations
     _registry = registry
-    _source = source if source != null else AreaSourceClass.new(registry)
-    _countryside_source = countryside_source
     _area_materializer = AreaMaterializerClass.new(world, mutations, door_state, door_mutations)
 
+    var area_source: AreaSiteMaterializationSource = source if source != null else AreaSourceClass.new(registry)
+    _register_provider(area_source)
+    _register_provider(countryside_source)
+    for provider: Variant in source_providers:
+        _register_provider(provider)
+
 func is_ready() -> bool:
-    return _world != null and _mutations != null and _mutations.is_ready() \
-        and _door_state != null and _door_mutations != null and _door_mutations.is_ready() \
-        and _registry != null and _source != null and _source.is_ready() \
-        and _area_materializer != null and _area_materializer.is_ready()
+    if not _provider_configuration_valid \
+        or _world == null or _mutations == null or not _mutations.is_ready() \
+        or _door_state == null or _door_mutations == null or not _door_mutations.is_ready() \
+        or _registry == null \
+        or _area_materializer == null or not _area_materializer.is_ready() \
+        or _providers.is_empty() \
+        or not supports_source_kind(AreaSourceClass.SOURCE_KIND):
+        return false
+    for provider: Variant in _providers:
+        if not _provider_ready(provider):
+            return false
+    return true
 
 func registry() -> MaterializationRegistry:
     return _registry
+
+func source_providers() -> Array:
+    return _providers.duplicate()
+
+func supports_source_kind(source_kind: StringName) -> bool:
+    return _provider_by_kind.has(source_kind)
 
 func ensure_area_site(global_plan: GeneratedGlobalWorldPlan, site_id: String) -> Dictionary:
     return ensure_area_sites(global_plan, [site_id])
@@ -47,10 +67,16 @@ func ensure_area_site(global_plan: GeneratedGlobalWorldPlan, site_id: String) ->
 func ensure_area_sites(global_plan: GeneratedGlobalWorldPlan, site_ids: Array) -> Dictionary:
     if not is_ready() or global_plan == null or not global_plan.is_generated():
         return _failure("invalid_world_materialization_input")
+    var provider: Variant = _provider_for_kind(AreaSourceClass.SOURCE_KIND)
+    if provider == null:
+        return _failure("area_site_materialization_source_missing")
     var handles: Array[Dictionary] = []
     for site_value: Variant in site_ids:
         var site_id: String = String(site_value).strip_edges()
-        var handle: Dictionary = _source.source_handle_for_site(global_plan, site_id)
+        var handle_value: Variant = provider.call("source_handle", global_plan, site_id)
+        if typeof(handle_value) != TYPE_DICTIONARY:
+            return _failure("unknown_area_site:%s" % site_id)
+        var handle: Dictionary = handle_value
         if handle.is_empty():
             return _failure("unknown_area_site:%s" % site_id)
         handles.append(handle)
@@ -148,16 +174,43 @@ func ensure_sources(global_plan: GeneratedGlobalWorldPlan, source_handles: Array
 
     return _success(newly, already)
 
+func _register_provider(provider: Variant) -> void:
+    if provider == null:
+        return
+    if typeof(provider) != TYPE_OBJECT or not provider.has_method("source_kind"):
+        _provider_configuration_valid = false
+        return
+    var source_kind: StringName = StringName(provider.call("source_kind"))
+    if String(source_kind).is_empty():
+        _provider_configuration_valid = false
+        return
+    if _provider_by_kind.has(source_kind):
+        if _provider_by_kind[source_kind] == provider:
+            return
+        _provider_configuration_valid = false
+        return
+    _providers.append(provider)
+    _provider_by_kind[source_kind] = provider
+
+func _provider_ready(provider: Variant) -> bool:
+    if provider == null or typeof(provider) != TYPE_OBJECT:
+        return false
+    for method_name: String in ["is_ready", "source_kind", "source_handle", "validate_source_bounds", "prepare"]:
+        if not provider.has_method(method_name):
+            return false
+    return bool(provider.call("is_ready"))
+
+func _provider_for_kind(source_kind: StringName) -> Variant:
+    return _provider_by_kind.get(source_kind, null)
+
 func _validate_source_catalogs(global_plan: GeneratedGlobalWorldPlan) -> Dictionary:
-    var site_check: Dictionary = _source.validate_source_bounds(global_plan)
-    if not bool(site_check.get("ok", false)):
-        return site_check
-    if _countryside_source != null:
-        if not _countryside_source.is_ready():
-            return {"ok": false, "failure_reason": "countryside_materialization_source_not_ready"}
-        var countryside_check: Dictionary = _countryside_source.validate_source_bounds(global_plan)
-        if not bool(countryside_check.get("ok", false)):
-            return countryside_check
+    for provider: Variant in _providers:
+        var result_value: Variant = provider.call("validate_source_bounds", global_plan)
+        if typeof(result_value) != TYPE_DICTIONARY:
+            return {"ok": false, "failure_reason": "materialization_source_validation_invalid"}
+        var result: Dictionary = result_value
+        if not bool(result.get("ok", false)):
+            return result
     return {"ok": true, "failure_reason": ""}
 
 func _canonical_handle(global_plan: GeneratedGlobalWorldPlan, supplied: Dictionary) -> Dictionary:
@@ -165,25 +218,30 @@ func _canonical_handle(global_plan: GeneratedGlobalWorldPlan, supplied: Dictiona
     var source_id: String = String(supplied.get("source_id", "")).strip_edges()
     if source_id.is_empty():
         return {}
-    if source_kind == AreaSiteMaterializationSource.SOURCE_KIND:
-        return _source.source_handle_for_site(global_plan, source_id)
-    if source_kind == CountrysideSourceCatalog.SOURCE_KIND:
-        if _countryside_source == null or not _countryside_source.is_ready():
-            return {}
-        return _countryside_source.source_handle_for_id(source_id)
-    return {}
+    var provider: Variant = _provider_for_kind(source_kind)
+    if provider == null:
+        return {}
+    var handle_value: Variant = provider.call("source_handle", global_plan, source_id)
+    if typeof(handle_value) != TYPE_DICTIONARY:
+        return {}
+    return handle_value
 
 func _prepare_handle(global_plan: GeneratedGlobalWorldPlan, handle: Dictionary) -> Dictionary:
     var source_kind: StringName = StringName(handle.get("source_kind", &""))
     var source_id: String = String(handle.get("source_id", ""))
-    if source_kind == AreaSiteMaterializationSource.SOURCE_KIND:
-        return _source.prepare(global_plan, source_id)
-    if source_kind == CountrysideSourceCatalog.SOURCE_KIND and _countryside_source != null:
-        return _countryside_source.prepare(global_plan, source_id)
-    return {
-        "ok": false,
-        "failure_reason": "unsupported_materialization_source_kind:%s" % String(source_kind),
-    }
+    var provider: Variant = _provider_for_kind(source_kind)
+    if provider == null:
+        return {
+            "ok": false,
+            "failure_reason": "unsupported_materialization_source_kind:%s" % String(source_kind),
+        }
+    var result_value: Variant = provider.call("prepare", global_plan, source_id)
+    if typeof(result_value) != TYPE_DICTIONARY:
+        return {
+            "ok": false,
+            "failure_reason": "materialization_source_prepare_result_invalid:%s" % String(source_kind),
+        }
+    return result_value
 
 func _handles_equivalent(a: Dictionary, b: Dictionary) -> bool:
     if a.is_empty() or b.is_empty():

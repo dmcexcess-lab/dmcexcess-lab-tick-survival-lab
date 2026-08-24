@@ -24,7 +24,6 @@ jobs:
         run: |
           set -euxo pipefail
           test -f SYSTEM_DESIGNS/00F_STREAMING_MATERIALIZATION_ORCHESTRATION.md
-          test -f SYSTEM_DESIGNS/00F2_COUNTRYSIDE_LOGICAL_SOURCE_MATERIALIZATION.md
           test -f game/scripts/streaming/StreamingRegionGrid.gd
           test -f game/scripts/streaming/MaterializationRecord.gd
           test -f game/scripts/streaming/MaterializationRegistry.gd
@@ -37,6 +36,9 @@ jobs:
           test -f game/scripts/ci/CountrysideStreamingMaterializationSmoke.gd
           ! grep -R -q 'scripts/render\|scripts/camera\|scripts/player\|scripts/ui\|scripts/reboot\|foundation/time\|simulation/collision' game/scripts/streaming
           ! grep -R -q 'Texture2D\|Camera2D\|_draw\|_process\|_physics_process' game/scripts/streaming
+          grep -q 'source_providers' game/scripts/streaming/WorldMaterializationCoordinator.gd
+          grep -q 'source_providers' game/scripts/streaming/WorldStreamingCoordinator.gd
+          ! grep -q '_countryside_source\|_watercourse_source' game/scripts/streaming/WorldMaterializationCoordinator.gd game/scripts/streaming/WorldStreamingCoordinator.gd
 
       - name: Install Godot 4.7.1
         shell: bash
@@ -53,7 +55,7 @@ jobs:
           ./Godot_v4.7.1-stable_linux.x86_64 --headless --editor --path "$GITHUB_WORKSPACE/game" --quit 2>&1 | tee "$RUNNER_TEMP/import.log"
           if grep -Eqi 'SCRIPT ERROR|Parse Error|Failed to load script' "$RUNNER_TEMP/import.log"; then exit 1; fi
 
-      - name: System 00F Slice 001 regression
+      - name: Settlement materialization regression
         shell: bash
         run: |
           set -euxo pipefail
@@ -61,7 +63,7 @@ jobs:
           grep -q 'STREAMING_MATERIALIZATION_SMOKE_OK' "$RUNNER_TEMP/streaming00f.log"
           if grep -Eqi 'SCRIPT ERROR|Parse Error|Failed to load script|STREAMING_MATERIALIZATION_SMOKE_FAIL' "$RUNNER_TEMP/streaming00f.log"; then exit 1; fi
 
-      - name: System 00F Slice 002 countryside source contract
+      - name: Countryside source/materialization contract
         shell: bash
         run: |
           set -euxo pipefail

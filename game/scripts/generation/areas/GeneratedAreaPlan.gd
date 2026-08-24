@@ -20,14 +20,10 @@ var outdoor_props: Array[Dictionary] = []
 var failure_reason: String = ""
 
 func is_generated() -> bool:
-    var roads_satisfied: bool = not roads.is_empty() \
-        or area_profile_id == &"rural.open" \
-        or area_profile_id == &"rural.watercourse"
     return failure_reason.is_empty() \
         and not area_id.is_empty() \
         and bounds.size.x > 0 and bounds.size.y > 0 \
-        and area_profile_version > 0 and environment_profile_version > 0 \
-        and roads_satisfied
+        and area_profile_version > 0 and environment_profile_version > 0
 
 func signature() -> String:
     if not is_generated():

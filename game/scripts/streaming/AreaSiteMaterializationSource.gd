@@ -22,11 +22,17 @@ func _init(
 func is_ready() -> bool:
     return _registry != null and _projector != null and _generator != null
 
+func source_kind() -> StringName:
+    return SOURCE_KIND
+
 func source_key_for_site(site_id: String) -> String:
     var clean: String = site_id.strip_edges()
     if clean.is_empty():
         return ""
     return "system20_area_site:%s" % clean
+
+func source_handle(global_plan: GeneratedGlobalWorldPlan, source_id: String) -> Dictionary:
+    return source_handle_for_site(global_plan, source_id)
 
 func source_handle_for_site(global_plan: GeneratedGlobalWorldPlan, site_id: String) -> Dictionary:
     if global_plan == null or not global_plan.is_generated():

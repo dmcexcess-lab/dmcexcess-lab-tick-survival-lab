@@ -9,8 +9,9 @@ const NO_FOCUS_CELL: Vector2i = Vector2i(-999999999, -999999999)
 var _global_plan: GeneratedGlobalWorldPlan = null
 var _grid: StreamingRegionGrid = null
 var _materialization: WorldMaterializationCoordinator = null
-var _source: AreaSiteMaterializationSource = null
-var _countryside_source: CountrysideMaterializationSource = null
+var _providers: Array = []
+var _provider_by_kind: Dictionary = {}
+var _provider_configuration_valid: bool = true
 var _active_radius: int = 1
 var _focus_cell: Vector2i = NO_FOCUS_CELL
 var _focus_region: Vector2i = StreamingRegionGrid.INVALID_COORD
@@ -20,26 +21,43 @@ func _init(
     global_plan: GeneratedGlobalWorldPlan = null,
     grid: StreamingRegionGrid = null,
     materialization: WorldMaterializationCoordinator = null,
-    source: AreaSiteMaterializationSource = null,
+    source: Variant = null,
     active_radius: int = 1,
-    countryside_source: CountrysideMaterializationSource = null
+    countryside_source: Variant = null,
+    source_providers: Array = []
 ) -> void:
     _global_plan = global_plan
     _grid = grid
     _materialization = materialization
-    _source = source
     _active_radius = active_radius
-    _countryside_source = countryside_source
+
+    _register_provider(source)
+    _register_provider(countryside_source)
+    for provider: Variant in source_providers:
+        _register_provider(provider)
+    if _materialization != null:
+        for provider: Variant in _materialization.source_providers():
+            _register_provider(provider)
 
 func is_ready() -> bool:
-    if _global_plan == null or not _global_plan.is_generated() \
+    if not _provider_configuration_valid \
+        or _global_plan == null or not _global_plan.is_generated() \
         or _grid == null or not _grid.is_valid() \
         or _grid.world_bounds() != _global_plan.bounds \
         or _materialization == null or not _materialization.is_ready() \
-        or _source == null or not _source.is_ready() \
-        or _active_radius < 0:
+        or _active_radius < 0 \
+        or _providers.is_empty():
         return false
-    return _countryside_source == null or _countryside_source.is_ready()
+    for provider: Variant in _providers:
+        if not _provider_ready(provider):
+            return false
+        var source_kind: StringName = StringName(provider.call("source_kind"))
+        if not _materialization.supports_source_kind(source_kind):
+            return false
+    return true
+
+func source_providers() -> Array:
+    return _providers.duplicate()
 
 func update_focus(cell: Vector2i) -> Dictionary:
     if not is_ready():
@@ -61,11 +79,15 @@ func update_focus(cell: Vector2i) -> Dictionary:
             return _failure("active_region_bounds_invalid")
         target_bounds.append(bounds)
 
-    var handles: Array[Dictionary] = _source.source_handles_intersecting(_global_plan, target_bounds)
-    if _countryside_source != null:
-        var countryside_handles: Array[Dictionary] = _countryside_source.source_handles_intersecting(_global_plan, target_bounds)
-        for handle: Dictionary in countryside_handles:
-            handles.append(handle)
+    var handles: Array[Dictionary] = []
+    for provider: Variant in _providers:
+        var discovered_value: Variant = provider.call("source_handles_intersecting", _global_plan, target_bounds)
+        if typeof(discovered_value) != TYPE_ARRAY:
+            return _failure("materialization_source_discovery_invalid:%s" % String(provider.call("source_kind")))
+        for handle_value: Variant in discovered_value:
+            if typeof(handle_value) != TYPE_DICTIONARY:
+                return _failure("materialization_source_handle_invalid:%s" % String(provider.call("source_kind")))
+            handles.append(handle_value)
     handles.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
         return String(a.get("source_key", "")) < String(b.get("source_key", ""))
     )
@@ -126,6 +148,32 @@ func is_cell_active(cell: Vector2i) -> bool:
         return false
     var coord: Vector2i = _grid.region_coord_for_cell(cell)
     return coord != StreamingRegionGrid.INVALID_COORD and _active_regions.has(coord)
+
+func _register_provider(provider: Variant) -> void:
+    if provider == null:
+        return
+    if typeof(provider) != TYPE_OBJECT or not provider.has_method("source_kind"):
+        _provider_configuration_valid = false
+        return
+    var source_kind: StringName = StringName(provider.call("source_kind"))
+    if String(source_kind).is_empty():
+        _provider_configuration_valid = false
+        return
+    if _provider_by_kind.has(source_kind):
+        if _provider_by_kind[source_kind] == provider:
+            return
+        _provider_configuration_valid = false
+        return
+    _providers.append(provider)
+    _provider_by_kind[source_kind] = provider
+
+func _provider_ready(provider: Variant) -> bool:
+    if provider == null or typeof(provider) != TYPE_OBJECT:
+        return false
+    for method_name: String in ["is_ready", "source_kind", "source_handles_intersecting"]:
+        if not provider.has_method(method_name):
+            return false
+    return bool(provider.call("is_ready"))
 
 func _difference(a: Array[Vector2i], b: Array[Vector2i]) -> Array[Vector2i]:
     var result: Array[Vector2i] = []

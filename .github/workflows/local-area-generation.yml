@@ -1,4 +1,4 @@
-name: Local Area and Parcel Generation contract
+name: Local Area Generation contract
 
 on:
   push:
@@ -24,10 +24,6 @@ jobs:
         run: |
           set -euxo pipefail
           test -f SYSTEM_DESIGNS/20_LOCAL_AREA_PARCEL_GENERATION.md
-          test -f SYSTEM_DESIGNS/20A_SMALLTOWN_CENTER_CANDIDATE_001.md
-          test -f SYSTEM_DESIGNS/20B_RURAL_SCATTERED_CANDIDATE_001.md
-          test -f SYSTEM_DESIGNS/20C_RURAL_OPEN_COUNTRYSIDE_CANDIDATE_001.md
-          test -f SYSTEM_DESIGNS/20D_RURAL_WATERCOURSE_BRIDGE_CANDIDATE_001.md
           test -f game/scripts/generation/areas/AreaSeed.gd
           test -f game/scripts/generation/areas/AreaGenerationRequest.gd
           test -f game/scripts/generation/areas/GeneratedAreaPlan.gd
@@ -45,6 +41,7 @@ jobs:
           test -f game/scripts/generation/areas/LocalRiverBridgePlanner.gd
           test -f game/scripts/generation/areas/GeneratedAreaValidator.gd
           test -f game/scripts/generation/areas/LocalAreaGenerator.gd
+          test -f game/scripts/generation/integration/System20AreaRequestProjector.gd
           test -f game/scripts/generation/integration/System20WatercourseRequestProjection.gd
           test -f game/scripts/demo/RuralCrossroadsPlanFixture.gd
           test -f game/scripts/ci/LocalAreaGenerationSmoke.gd
@@ -80,7 +77,7 @@ jobs:
           grep -q 'BUILDING_GRAMMAR_SMOKE_OK' "$RUNNER_TEMP/buildinggrammar.log"
           if grep -Eqi 'SCRIPT ERROR|Parse Error|Failed to load script' "$RUNNER_TEMP/building19.log" "$RUNNER_TEMP/buildinggrammar.log"; then exit 1; fi
 
-      - name: System 20 Rural Crossroads Candidate 006 regression
+      - name: rural.crossroads regression
         shell: bash
         run: |
           set -euxo pipefail
@@ -88,7 +85,7 @@ jobs:
           grep -q 'LOCAL_AREA_GENERATION_SMOKE_OK' "$RUNNER_TEMP/area20-rural.log"
           if grep -Eqi 'SCRIPT ERROR|Parse Error|Failed to load script' "$RUNNER_TEMP/area20-rural.log"; then exit 1; fi
 
-      - name: System 20 Small-Town Center Candidate 001 contract
+      - name: smalltown.center contract
         shell: bash
         run: |
           set -euxo pipefail
@@ -96,7 +93,7 @@ jobs:
           grep -q 'SMALLTOWN_CENTER_GENERATION_SMOKE_OK' "$RUNNER_TEMP/area20-smalltown.log"
           if grep -Eqi 'SCRIPT ERROR|Parse Error|Failed to load script' "$RUNNER_TEMP/area20-smalltown.log"; then exit 1; fi
 
-      - name: System 20 Rural-Scattered Candidate 001 contract
+      - name: rural.scattered contract
         shell: bash
         run: |
           set -euxo pipefail
@@ -104,7 +101,7 @@ jobs:
           grep -q 'RURAL_SCATTERED_GENERATION_SMOKE_OK' "$RUNNER_TEMP/area20-scattered.log"
           if grep -Eqi 'SCRIPT ERROR|Parse Error|Failed to load script' "$RUNNER_TEMP/area20-scattered.log"; then exit 1; fi
 
-      - name: System 20 Rural-Open Countryside Candidate 001 contract
+      - name: rural.open contract
         shell: bash
         run: |
           set -euxo pipefail
@@ -112,7 +109,7 @@ jobs:
           grep -q 'RURAL_OPEN_COUNTRYSIDE_GENERATION_SMOKE_OK' "$RUNNER_TEMP/area20-rural-open.log"
           if grep -Eqi 'SCRIPT ERROR|Parse Error|Failed to load script' "$RUNNER_TEMP/area20-rural-open.log"; then exit 1; fi
 
-      - name: System 20 Rural Watercourse Bridge Candidate 001 contract
+      - name: rural.watercourse contract
         shell: bash
         run: |
           set -euxo pipefail
