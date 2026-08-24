@@ -8,7 +8,7 @@ Canonical status/routing index. Read `PROJECT_NORTH_STAR.md` and `README_SOPS.md
 | 00A | Spatial Model — WHERE | **IMPLEMENTED** | `00A_SPATIAL_MODEL.md` |
 | 00B | Persistent World State — WHAT | **IMPLEMENTED** | `00B_PERSISTENT_WORLD_STATE.md` |
 | 00C | Tick / Action / Pause — WHEN | **IMPLEMENTED** | `00C_TICK_ACTION_PAUSE.md` |
-| 00D | Global World Planning / Generation | **IMPLEMENTED — v6** | `00D_GLOBAL_WORLD_PLANNING.md` + current infrastructure children |
+| 00D | Global World Planning / Generation | **IMPLEMENTED — v6** | `00D_GLOBAL_WORLD_PLANNING.md` + infrastructure children |
 | 00F | Streaming / Materialization | **IMPLEMENTED — settlement + dry countryside** | `00F_STREAMING_MATERIALIZATION_ORCHESTRATION.md` |
 | 01 | Collision / Spatial Query | **IMPLEMENTED** | `01_COLLISION_SPATIAL_QUERY.md` |
 | 02 | Movement Actions | **IMPLEMENTED** | `02_MOVEMENT_ACTIONS.md` |
@@ -42,61 +42,36 @@ Canonical status/routing index. Read `PROJECT_NORTH_STAR.md` and `README_SOPS.md
 | 20 | Local Area Generation | **IMPLEMENTED — ten area / seven environment profiles** | `20_LOCAL_AREA_PARCEL_GENERATION.md` |
 | 21 | Tactical Camera / View Control | **IMPLEMENTED** | `21_TACTICAL_CAMERA_VIEW_CONTROL.md` |
 | 22 | Large-Area DEV Critique Runtime | **IMPLEMENTED** | `22_LARGE_AREA_CRITIQUE_RUNTIME.md` |
-| 23 | Perception / LOS / Fog Memory | **IMPLEMENTED — Candidate 001** | `23_PERCEPTION_LOS_FOG_MEMORY.md` |
+| 23 | Perception / LOS / Fog Memory | **IMPLEMENTED — Candidate 001 + ambient memory shading** | `23_PERCEPTION_LOS_FOG_MEMORY.md` |
 | 24 | World Loot / Searchable Containers / Scavenging | **IMPLEMENTED — Candidate 001** | `24_WORLD_LOOT_SEARCHABLE_CONTAINERS.md` |
+| 25 | World Time / Ambient Daylight | **IMPLEMENTED — Candidate 001** | `25_WORLD_TIME_AMBIENT_DAYLIGHT.md` |
 | 00E | Population / Household / Outbreak / Player Story | **NOT DESIGNED** | future design |
 
 ## Current System 19 truth
 
-System 19 exposes 24 callable building archetypes: six protected rural/small-town references plus 18 reusable one-story baseline profiles.
-
-Baseline city-density rule: more rooms/units and realistic circulation, not fake upper floors. Door approaches remain reserved from blocking props.
-
-`GeneratedBuildingPlan.entity_id_for_role(role)` is the public stable role -> materialized entity-ID seam used by the materializer and downstream physical-world consumers such as System 24.
+System 19 exposes 24 callable one-story building archetypes. `GeneratedBuildingPlan.entity_id_for_role(role)` is the public role -> stable materialized entity-ID seam. Blocking props stay off door-approach circulation.
 
 Exact-head context: `verify/system19-local-building`.
 
-## Current System 20 truth
+## Current System 20 / 00F truth
 
-Environment profiles:
+System 20 owns ten local area profiles and seven environment palettes. Settlement morphology uses deterministic parcel-fit building selection and real access for occupied land uses. Environment palettes are vocabulary, not global geography authority.
 
-- `temperate.rural` v3;
-- suburban, urban, industrial, woodland, coastal and marsh v1.
+System 00F follows **materialization is one-way; activation is reversible**. Logical source identity remains independent from technical stream-region geometry. System 24 loot initialization is an idempotent post-materialization seam rather than embedded 00F state.
 
-Area profiles:
-
-- `rural.crossroads` v5;
-- `smalltown.center` v1;
-- `rural.scattered` v1;
-- `rural.open` v1;
-- `rural.watercourse` v1;
-- `suburban.neighborhood` v1;
-- `urban.mixed` v1;
-- `commercial.corridor` v1;
-- `industrial.district` v1;
-- `civic.campus` v1.
-
-Baseline settlement morphologies use deterministic parcel-fit archetype selection and real access for occupied residential/farmstead/commercial/civic/industrial parcels. Environment palettes remain local vocabulary, not global geography authority.
-
-Exact-head context: `verify/system20-local-area`.
-
-## Current System 00F truth
-
-> **Materialization is one-way; activation is reversible.**
-
-Current source kinds are settlement sites and catalog-v1 dry countryside fragments. Technical stream regions remain independent from logical source identity; inactive materialized truth remains authoritative WHAT.
-
-System 24 does not embed loot state in 00F. Loot initialization is a separately idempotent post-materialization seam for a physically ready source.
-
-Exact-head context: `verify/system00f-streaming-materialization`.
+Exact-head contexts: `verify/system20-local-area`, `verify/system00f-streaming-materialization`.
 
 ## Current System 23 truth
 
-`UNSEEN` is true black, `REMEMBERED` is dark stale observed world state, and `VISIBLE` uses current live truth. Candidate 001 uses deterministic four-way facing LOS with a 12-cell 120-degree cone plus radius-1 near awareness.
+Visual knowledge:
 
-Remembered static furniture/clutter stores stable ID, semantic, anchor and facing. Hidden moves/removals remain stale until re-observed. Loose items, vehicles and vegetation remain separate extensions.
+- `UNSEEN` — always true black;
+- `REMEMBERED` — stale terrain/structure/door/static furniture snapshots;
+- `VISIBLE` — current live truth.
 
-Perception-memory snapshots are schema v2.
+Candidate 001 LOS is a 12-cell, 120-degree forward cone with radius-1 near awareness. Memory snapshot schema is v2. Hidden changes never remotely update stale memory.
+
+REMEMBERED environmental presentation now accepts current ambient daylight from System 25. Full daylight preserves 0.30 memory luminance; lower ambient light smoothly darkens memory toward 0.10 without becoming UNSEEN. Last-seen actors and auditory cues remain separate channels.
 
 Exact-head context: `verify/system23-perception`.
 
@@ -104,29 +79,35 @@ Exact-head context: `verify/system23-perception`.
 
 > **Loot exists before you search for it.**
 
-Candidate 001:
-
-- explicit searchable physical furniture -> System 11 containers;
-- deterministic stable unplaced `item.*` entities created once during source loot initialization;
-- System 24 source/container provenance, System 11 current contents;
-- no automatic repopulation after looting;
-- exact rollback across WHAT + System 11 + System 24 after partial initialization failure;
-- mandatory `USABLE` / `JUNK` utility class plus primary domain family and optional tags;
-- context-aware fridge/pantry/dresser/vanity/retail/medical/office/tool/warehouse/farm profiles;
-- timed `scavenge.search_container` action reading current contents at completion;
-- System 12 `ItemContainerAccessPolicy` extension for physically reachable world containers;
-- timed TAKE/STORE via System 12, with external acquisition checked against the System 13E hard carry ceiling;
-- live Rural Crossroads scavenging UI with phone-friendly TAKE/STORE controls.
-
-First fully green executable head: `411099a3c39b7abeeb189e8a176491cb7e410b6d`.
+Candidate 001 provides deterministic one-way persistent loot initialization into physical System 11 furniture containers, `USABLE/JUNK + family` item taxonomy, location-aware loot profiles, timed search and timed TAKE/STORE through System 12. Empty/looted containers do not automatically repopulate.
 
 Exact-head context: `verify/system24-loot`.
 
+## Current System 25 truth
+
+System 25 interprets authoritative WHEN ticks as scenario-local time without modifying WHEN or maintaining a second advancing clock.
+
+Candidate 001:
+
+- 5 ticks = 1 simulation second;
+- scenario begins day 0 at 08:00;
+- dawn 05:30–07:30;
+- daylight 07:30–18:30;
+- dusk 18:30–20:30;
+- outdoor night baseline 0.08, day baseline 1.0;
+- `OutdoorAmbientLightService` feeds the current ambient scalar into System 23 remembered presentation.
+
+Visible-world/local/artificial lighting, weather attenuation, season/latitude and calendar date remain future seams.
+
+First fully green executable head: `6b6680c5b8eb4d8db2c4097df093abace661d5c7`.
+
+Exact-head context: `verify/system25-world-time-light`.
+
 ## Current presentation
 
-The live Web build remains the Rural Crossroads critique world, now with canonical System 23 perception and System 24 scavenging integrated. Its generated buildings initialize persistent loot in the current DEV composition; this does not turn the DEV fixture into a new 00F source model.
+The live Web build is the Rural Crossroads critique world with canonical System 23 perception, System 24 scavenging and System 25 time/daylight integrated. System 25 currently affects REMEMBERED fog only; VISIBLE-world physical lighting is intentionally deferred.
 
-## Required protected stack
+## Required exact-head stack
 
 - `verify/system00d-global-world`
 - `verify/system00f-streaming-materialization`
@@ -136,4 +117,5 @@ The live Web build remains the Rural Crossroads critique world, now with canonic
 - `verify/system22-area-critique`
 - `verify/system23-perception`
 - `verify/system24-loot`
+- `verify/system25-world-time-light`
 - `verify/pages-deploy`
