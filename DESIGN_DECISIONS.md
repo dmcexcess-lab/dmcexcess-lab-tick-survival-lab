@@ -2,7 +2,7 @@
 
 This is the durable log for **approved or clearly settled cross-cutting decisions** that affect more than one subsystem.
 
-It is not a brainstorming file. Detailed mechanics belong in `SYSTEM_DESIGNS/`. Current work status belongs in `README_CONTEXT.md`. This log exists so later work can recover the reason behind a major direction instead of inferring it from implementation.
+It is not a brainstorming file. Detailed mechanics belong in `SYSTEM_DESIGNS/`. Priority/order belongs in `ROADMAP.md`. Current work status belongs in `README_CONTEXT.md`. This log exists so later work can recover the reason behind a major direction instead of inferring it from implementation.
 
 If a later discussion changes a decision, do not erase history. Add a newer entry that explicitly supersedes the old one.
 
@@ -46,7 +46,7 @@ If a later discussion changes a decision, do not erase history. Add a newer entr
 
 **Decision:** Extraction-shooter structure is no longer part of the current game identity or required gameplay loop.
 
-The player exists continuously in the open world. There is no required raid boundary, extraction zone, gear-in/gear-out transaction, staging screen, or forced return-to-base loop. The player may roam indefinitely, move home, establish multiple safe locations, abandon them, or live nomadically.
+The player exists continuously in the open world. There is no required raid boundary, extraction zone, gear-in/gear-out transaction, staging screen, or forced return-to-base loop. The player may roam indefinitely, move home, establish multiple safe places, or live nomadically.
 
 Returning to shelter with valuable supplies can still be an emergent survival decision, but it is not a separate extraction mechanic.
 
@@ -275,7 +275,7 @@ The approved architecture separates these responsibilities:
 
 - moodlets should not duplicate HP/needs/carry values as another persistent state bag unless a future effect genuinely owns duration/source/history;
 - carried weight should not be persisted as a second total that can drift from real physical items;
-- fatigue and sleep remain distinct because they represent short-horizon exertion versus longer-horizon sleep pressure/debt.
+- fatigue and sleep remain distinct in the current implementation because they represent short-horizon exertion versus longer-horizon sleep pressure/debt.
 
 **Why:** This preserves the user's desired simple character sheet while keeping the simulation replaceable and extensible. It also fixes the historical tendency for golden Tick `PlayerActor.gd` and First Fire survivor dictionaries to accumulate unrelated state in one owner.
 
@@ -284,6 +284,8 @@ The approved architecture separates these responsibilities:
 **Detailed umbrella:** `SYSTEM_DESIGNS/13_ACTOR_STATS_STATUS_ARCHITECTURE.md`.
 
 **Implementation rule:** the umbrella approval does not authorize all children at once; each independently implementable child still requires its own bounded design/approval.
+
+**Later roadmap revision:** the 2026-08-24 physical-survival decision below makes stamina part of the final target and explicitly requires current fatigue to be reconciled rather than blindly preserved as a duplicate meter.
 
 ---
 
@@ -302,7 +304,7 @@ The approved architecture separates these responsibilities:
 
 **Run endurance:** fatigue is still the existing 0..100 Needs pressure scale. Fatigue 80+ blocks Run start, each successful Run stride adds +1 fatigue, and start capability is latched for the committed action so crossing 80 after stride one does not cancel stride two.
 
-**Architecture:** MovementActionService does not import Health or Needs. `MovementDamageInterruptionService` and the current exertion coordinator attach through narrow public signals/APIs. No stamina state or persistent Run mode is introduced.
+**Architecture:** MovementActionService does not import Health or Needs. `MovementDamageInterruptionService` and the current exertion coordinator attach through narrow public signals/APIs. No stamina state or persistent Run mode is introduced **in the current implementation**.
 
 **Why:** This creates a meaningful tactical choice with minimal simulation clutter: Walk is slower but abortable under damage; Run crosses ground faster per square but commits the survivor to momentum and real fatigue cost.
 
@@ -311,6 +313,8 @@ The approved architecture separates these responsibilities:
 **Affected systems:** Movement, Actor Locomotion/Capability, Health observation, Needs/Fatigue, player input/controller, HUD-visible timing/status indirectly.
 
 **Detailed design:** `SYSTEM_DESIGNS/17_RUN_DAMAGE_INTERRUPTIBLE_WALKING.md`.
+
+**Later roadmap revision:** Roadmap Phase 4 now includes a real stamina/exhaustion target. That future design supersedes “no stamina” as the final game direction while preserving the current executable behavior until a deliberate migration occurs.
 
 ---
 
@@ -368,7 +372,7 @@ Current additional rules:
 
 **Decision:** System 28 separates authoritative physical Weather time from cosmetic presentation time.
 
-Physical Weather truth—including profile transitions, precipitation/cloud/fog/wind values, wetness, environment revision and future lightning-event creation—advances only from authoritative WHEN state/events. Decision pause and hard pause therefore freeze all physical Weather consequences.
+Physical Weather truth—including profile transitions, precipitation/cloud/fog/wind values, wetness and environment revision—advances only from authoritative WHEN state/events. Decision pause and hard pause therefore freeze all physical Weather consequences.
 
 Weather presentation may continue using render delta while the player is deciding. Rain may fall, fog may drift, and a presentation-only leaf/paper/dust event may cross the view while actors/world time remain frozen. These cosmetic frames advance zero WHEN ticks and create no physical lighting, perception, hearing, wetness, AI or persistent-world changes.
 
@@ -376,10 +380,132 @@ Weather presentation may continue using render delta while the player is decidin
 
 **Information rule:** primary Weather presentation is below System 23's perception mask. Shelter-aware rain suppression therefore cannot reveal hidden roof/building geometry in unexplored black fog.
 
-**Ownership rule:** Slice A does not make Weather a second Lighting/Hearing/Perception owner. Future Slice B must feed System 27/System 26 through neutral environment seams and publish physical changes only from quantized Weather revisions. Future Slice C lightning is a real WHEN-created Weather event whose illumination belongs to System 27; its visible bolt remains presentation.
+**Ownership rule:** Weather feeds System 27/System 26 through neutral environment seams. Lightning is a real WHEN-created Weather event whose physical illumination belongs to System 27; its visible bolt remains presentation.
 
 **Why:** This keeps the turn-based simulation deterministic and interruption-safe while making the paused world feel atmospherically alive at very low overhead.
 
 **Affected systems:** WHEN, Weather, presentation/rendering, Perception, Lighting, Sound/Hearing, future Actor AI, save orchestration.
 
 **Implementation:** `SYSTEM_DESIGNS/28_WEATHER_ATMOSPHERE.md`, `game/scripts/simulation/weather/`, `game/scripts/render/WeatherPresentationRenderer.gd`.
+
+---
+
+## 2026-08-24 — Weather presentation is screen-space; lightning is physical
+
+**Decision:** The final System-28 A+B+C presentation architecture is simpler than the earlier camera-compensation attempt.
+
+Rain, fog and cosmetic debris are a **screen-space atmosphere overlay**. Camera movement and origin-only render-window recentering do not redraw, clear, reseed or phase-shift Weather. Shelter rejection may map a screen sample to its current world cell, but the atmospheric pattern itself is not world-anchored.
+
+Storm lightning is a deterministic WHEN event with stable identity/timing/intensity/seed. Its flash enters System 27 as transient physical sky light, so windows/portals/interiors and System 23 acquisition respond to the same physical event. The chunky visible bolt is presentation tied to that event.
+
+Current lightning has no exact strike cell. Therefore **no spatial thunder, strike damage or fire is invented yet**. Those consequences attach only when an honest geographic strike exists.
+
+**Why:** Weather has a deliberately narrow gameplay footprint; camera-relative graphical particles gain no value from world anchoring, while physical consequences still need causal simulation truth. This removes visible movement lag and prevents repeated movement from starving/disappearing the atmosphere without weakening lighting/visibility/wetness/hearing consequences.
+
+**Affected systems:** Weather presentation, Camera integration seam, System 27 Lighting, System 23 Perception, future System 26 thunder, future fire/damage.
+
+**Executable evidence:** `21014fe5915e47344b4b8d5f48e52fa69c386254` — all 13 required contexts green including Pages.
+
+---
+
+## 2026-08-24 — Three-tier power/water utilities; wastewater gameplay removed
+
+**Decision:** Power and water use a causal **three-tier distribution hierarchy**, not one global utility switch.
+
+Power target:
+
+1. a robust main generation facility/source supplies roughly one-half to one-third of the broad map/region and takes a long time to fail;
+2. substations supply several local/technical areas and fail semi-often;
+3. local lines/structure service fail relatively often and may be physically broken by trees, vehicle impacts, damage or later player/NPC action.
+
+Water follows the same hierarchy:
+
+1. broad main treatment/water-works source;
+2. local pump stations;
+3. local mains/hydrants/structure-service distribution.
+
+The dedicated water design decides exact source vocabulary/topology, but the three levels and local-vs-regional failure behavior are locked.
+
+**Wastewater/sewer gameplay is removed from the active roadmap.** Existing System-00D wastewater planning may remain inert historical/generated data until deliberate cleanup/migration; its existence does not justify a future wastewater gameplay system by itself.
+
+**Why:** Partial causal outages create much better survival decisions than a single scripted shutdown, and vulnerable local distribution creates physical repair/damage gameplay for trees, vehicles, Mechanical/Electrical skills and bases.
+
+**Affected systems:** 00D infrastructure planning, future utilities, WHAT persistence, System 27 powered emitters, object interactions, Mechanical/Electrical skills, vehicles, construction/base systems.
+
+---
+
+## 2026-08-24 — Physical-survival target includes stamina; Moodlets become consequential
+
+**Decision:** Roadmap Phase 4's final physical-survival target is:
+
+- hunger;
+- thirst;
+- sleep/exhaustion;
+- health/injury;
+- stamina.
+
+Current Health/Needs/fatigue code is a scaffold. The Phase-4 design must **reconcile existing fatigue with stamina/exhaustion** rather than preserve redundant meters just because they already exist. The earlier “no stamina state” decision remains a description of current Run implementation, not the final game target.
+
+Severe unmet physical needs may become lethal; **death from exhaustion is an intended possible terminal consequence** once the owning rules exist.
+
+Roadmap Phase 5 Moodlets include comfort, fear, boredom plus readable escalating hunger/thirst/sleep states. Moodlets are not merely labels: severity may feed state/action-speed/capability modifiers through narrow provider seams. Underlying hunger/thirst/sleep/health truth remains with its physical owner instead of being duplicated in Moodlets.
+
+**Why:** This preserves a compact character model while making survival state materially affect what the player can do and how long actions take.
+
+**Affected systems:** 13A/13B/13F, movement/action capability, HUD/inspectors, item use, future AI, save orchestration.
+
+---
+
+## 2026-08-24 — Final skill direction is concrete action skills; Hunting is emergent
+
+**Decision:** The current generic System-13C catalog (Combat / Scavenging / Survival / Medical / Technical / Social) is an implemented scaffold, not the final skill identity.
+
+Roadmap Phase 6 migrates toward these concrete action skills:
+
+- Awareness;
+- Sneak;
+- First Aid;
+- Cooking;
+- Carpentry;
+- Mechanical;
+- Electrical;
+- Fishing;
+- Farming.
+
+First Aid includes treatment/infection-care proficiency. Carpentry covers base construction. Mechanical covers vehicles, plumbing/mechanical work and related machinery. Electrical covers electrical systems. Awareness/Sneak must plug into the existing perception/sound substrate rather than bypass it.
+
+**Hunting is not a separate skill.** Hunting emerges from Sneak, whatever final shooting/combat proficiency Phase 8 establishes, and crafted trap placement/use.
+
+Phase 6 also closes broad ordinary-object interactions. A powered TV, for example, is active only from real power/object state; when on it may feed real System 27 glow/light and localized yellow-word audible/dialogue presentation. Presentation never invents the object's active state.
+
+**Why:** Concrete skills map directly to player actions and allow emergent combinations without an extra skill for every activity.
+
+**Affected systems:** 13C Skills, Systems 23/26/27, treatment/infection, crafting/building, utilities, vehicles, farming/fishing, item/object interactions, future combat.
+
+---
+
+## 2026-08-24 — Canonical roadmap order through Beta
+
+**Decision:** `ROADMAP.md` is the canonical major-phase order after System 28:
+
+1. Items / spoilage / interaction readability / world-object breadth;
+2. Crafting;
+3. Power + Water utilities;
+4. Player physical survival / health;
+5. Moodlets;
+6. Final skills + broad world/item interactions;
+7. Vehicles;
+8. Actor/NPC AI + all combat + causal outbreak;
+9. Final graphics/UI overhaul.
+
+Roadmap Phase 7 includes cars, trucks, motorcycles, bicycles and skateboards; cars/trucks may eventually receive physical Mad-Max-style modifications.
+
+Roadmap Phase 8 includes infected, survivor, follower and raider AI; player/NPC combat; mood/context idle follower conversations; and the population/coarse behavior needed for the causal outbreak/00E direction. This is one roadmap phase, **not one monolithic code system**.
+
+Roadmap Phase 9 audits final button placement, mobile/desktop UI, icons/readability and item/prop shadows. **Completing Phase 9 is the planned Beta start gate.**
+
+Save/load, schema policy, performance profiling and persistence-backed streaming eviction remain cross-cutting engineering gates inserted when necessary without changing the numbered gameplay order.
+
+**Why:** The order builds physical objects/utilities and survivor rules before asking AI to use them, then postpones final UI/graphics decisions until the actual Beta gameplay surface is known.
+
+**Affected systems:** all post-System-28 work.
