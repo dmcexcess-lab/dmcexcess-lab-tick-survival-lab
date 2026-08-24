@@ -1,6 +1,6 @@
 # Tick Survival Lab — System 28 Weather / Atmosphere
 
-Status: **IMPLEMENTED — Slice A; Slices B/C deferred**
+Status: **IMPLEMENTED — Slices A+B; Slice C deferred**
 
 User direction, 2026-08-24:
 
@@ -10,11 +10,13 @@ Refinement:
 
 > **“focus on low overhead, it will be always animated, even on calm days a leaf or piece of trash can blow by every now and then.”**
 
+Slice-B playtest approval also identified two presentation defects that are now part of the implemented contract: Weather must not visibly trail the moving camera/render window, and unrendered space must not appear grey against System 23 true-black fog.
+
 Core rule:
 
 > **Weather is simulation truth; weather animation is presentation. Physical weather advances only through WHEN. The atmosphere may remain visually alive while the turn-based world is paused, and that animation must stay bounded, low-resolution and cheap.**
 
-The detailed pre-implementation design remains recoverable in Git history at `9bed8f81b3f34363a9458519d46a73d54917a8d1`. This document is the canonical current contract after Slice A implementation.
+The detailed pre-implementation design remains recoverable in Git history at `9bed8f81b3f34363a9458519d46a73d54917a8d1`.
 
 ---
 
@@ -26,13 +28,15 @@ System 28 owns:
 - Candidate 001 weather profiles and transition selection;
 - transition scheduling through WHEN;
 - continuous precipitation/cloud/fog/wind truth derived from authoritative world ticks;
-- analytic regional/scenario wetness;
-- weather environment revisions;
+- analytic scenario wetness;
+- quantized weather environment revisions;
 - Weather snapshot/restore;
 - low-resolution weather presentation descriptors;
 - presentation-time rain/fog/debris motion;
 - a tiny cosmetic ambient-motion pool;
 - shelter/sky-exposure precipitation query for the current roof approximation;
+- neutral Weather -> System 27 atmospheric-optics mapping;
+- neutral Weather -> System 26 acoustic-environment masking;
 - DEV-only weather forcing controls for critique/testing.
 
 System 28 reads:
@@ -42,20 +46,21 @@ System 28 reads:
 
 System 28 does **not** own:
 
-- physical illumination or vision range;
-- System 23 observer memory/knowledge;
-- System 26 acoustic propagation/hearing;
+- physical illumination or shadow solving — System 27;
+- observer LOS/memory/knowledge — System 23;
+- sound propagation/heard-observation ownership — System 26;
 - actor AI;
 - health/damage/fire;
 - explicit roof/construction truth;
 - electricity/power;
 - flooding/hydrology;
-- crop simulation;
 - persistent loose-item/trash entities merely because cosmetic debris crossed the screen.
 
-Canonical direction:
+Canonical physical direction:
 
-`WHEN -> System 28 physical weather truth -> presentation now; neutral environment adapters later -> Systems 27/26/23`
+`WHEN -> System 28 weather truth -> neutral optics/acoustic descriptors -> Systems 27/26 -> System 23 observer acquisition/knowledge`
+
+Presentation branches from the same Weather truth but never becomes gameplay authority.
 
 ---
 
@@ -63,36 +68,25 @@ Canonical direction:
 
 ### 2.1 Physical simulation time
 
-Authoritative weather advances only through WHEN.
+Authoritative Weather advances only through WHEN.
 
-It controls:
-
-- weather transition timing;
-- current continuous weather values;
-- physical wetness;
-- environment revision;
-- future lightning-event creation.
+It controls transition timing, continuous physical weather values, wetness, environment revision, downstream environment descriptors and future lightning-event creation.
 
 Decision pause and hard pause therefore freeze physical Weather automatically.
 
 ### 2.2 Presentation time
 
-Weather presentation may use render delta for:
+Weather presentation may use render delta for rain streak travel, fog drift, cosmetic leaf/paper/dust movement and later the short visual envelope of an already-created lightning event.
 
-- rain streak travel;
-- fog drift;
-- cosmetic leaf/paper/dust movement;
-- later, the short visual envelope of an already-created lightning event.
+Presentation time advances **zero WHEN ticks** and cannot change physical weather, wetness, lighting truth, perception truth, hearing truth or AI state.
 
-Presentation time advances **zero WHEN ticks** and cannot change physical weather, wetness, lighting, perception, hearing or AI state.
-
-Browser/app backgrounding may simply stop rendering. Weather presentation does not try to catch up thousands of cosmetic drops afterward.
+Browser/app backgrounding may simply stop rendering. Weather presentation does not catch up an unbounded cosmetic backlog afterward.
 
 ---
 
 ## 3. Candidate 001 profiles
 
-Implemented profiles:
+Implemented readable profiles:
 
 - `clear`;
 - `overcast`;
@@ -100,18 +94,9 @@ Implemented profiles:
 - `storm`;
 - `fog`.
 
-Each profile carries compact continuous values for:
+Each profile carries compact continuous values for precipitation, cloud cover, fog density, normalized wind direction, wind strength, wetting rate, drying rate and deterministic duration range.
 
-- precipitation `[0,1]`;
-- cloud cover `[0,1]`;
-- fog density `[0,1]`;
-- normalized wind direction;
-- wind strength `[0,1]`;
-- wetting rate;
-- drying rate;
-- deterministic duration range.
-
-The profile name is readable state; continuous fields are the actual current Weather sample.
+The profile name is readable state. Continuous fields are the downstream physical truth.
 
 ---
 
@@ -119,15 +104,9 @@ The profile name is readable state; continuous fields are the actual current Wea
 
 `WeatherService` schedules one meaningful transition event through WHEN rather than running a weather simulation loop every tick.
 
-Next profile and duration derive from stable facts:
+Next profile and duration derive from stable scenario seed, current profile and transition serial. Current continuous weather is analytically interpolated from transition start/end ticks; queries do not mutate state merely because another tick passed.
 
-- scenario/weather seed;
-- current profile;
-- transition serial.
-
-Current continuous weather is analytically interpolated from transition start/end ticks. Queries do not mutate state merely because another tick passed.
-
-Current Candidate transition neighborhood:
+Candidate transition neighborhood:
 
 - clear -> clear / overcast / fog;
 - overcast -> clear / rain / fog;
@@ -141,305 +120,286 @@ Candidate 001 is scenario-wide. Weather identity is deliberately unrelated to Sy
 
 ## 5. Quantized environment revision
 
-Smooth weather truth does not publish a heavyweight downstream revision for every tiny interpolated change.
+Smooth Weather truth does not publish expensive downstream refreshes for every tiny interpolation change.
 
-Candidate 001 uses **12 quantization bands** for the compact environment signature. The signature includes meaningful bands of precipitation/cloud/fog/wind/wetness and broad wind direction.
+Candidate 001 uses **12 quantization bands** in a compact signature covering meaningful precipitation/cloud/fog/wind/wetness bands plus broad wind direction. A changed signature advances `environment_revision` and emits `weather_changed`.
 
-A changed signature advances `environment_revision` and emits a Weather change notification.
+Slice B composition consumes that signal to refresh System 27 physical illumination and System 23 acquisition. Cosmetic 20 Hz animation emits no physical Weather revision and therefore requests no lighting/perception recompute.
 
-This is the future seam for Slice B so Lighting/Perception/Hearing can update on meaningful physical weather changes rather than 20 presentation frames per second.
-
-Cosmetic animation itself never advances `environment_revision`.
+System 26's Weather acoustic adapter samples the same current physical Weather state when a real sound is evaluated; rain pixels themselves never become sound events.
 
 ---
 
 ## 6. Analytic wetness
 
-Wetness is physical Weather state but is not maintained by a fine-grained recurring event.
+Wetness is physical Weather state but is not maintained by a fine recurring event or particle count.
 
-System 28 stores:
-
-- wetness anchor value;
-- wetness anchor tick.
-
-`wetness_at(tick)` derives the current value from elapsed WHEN time and the current transition's wetting/drying rates, clamped `[0,1]`.
+System 28 stores a wetness anchor value + anchor tick and analytically derives `wetness_at(tick)` from elapsed WHEN time and current transition wetting/drying rates.
 
 Consequences:
 
 - rain/storm increase wetness only when WHEN advances;
-- clear conditions dry only when WHEN advances;
+- dry weather reduces it only when WHEN advances;
 - waiting at decision pause changes no wetness;
-- cosmetic raindrop count has no relationship to physical wetness.
+- cosmetic rain density has no authority over wetness.
 
-Per-cell puddle hydrology remains intentionally out of scope.
+Slice B passes the real current wetness value into System 27 `AtmosphericOptics.wet_surface_factor`, so the already-existing restrained wet-surface reflection treatment now responds to authoritative Weather.
+
+Per-cell puddle hydrology remains out of scope.
 
 ---
 
 ## 7. Snapshot / restore
 
-System 28 snapshot schema v1 preserves:
+System 28 snapshot schema v1 preserves scenario seed, current/target profiles, transition start/end ticks, wetness anchor/tick, environment revision, transition serial, scheduled Weather event serial and quantized signature.
 
-- scenario seed;
-- current and target profile IDs;
-- transition start/end ticks;
-- wetness anchor and anchor tick;
-- environment revision;
-- transition serial;
-- scheduled Weather event serial;
-- quantized signature.
-
-Weather is restored together with the owning WHEN snapshot by future save orchestration. Cosmetic rain/fog/debris presentation state is deliberately not persistent.
+Weather is restored with the owning WHEN snapshot by future save orchestration. Exact cosmetic raindrops/fog patches/debris are intentionally not persistent.
 
 ---
 
 ## 8. Shelter / sky exposure
 
-Slice A adds `SkyExposureQuery`, a cached read-only enclosure approximation for precipitation presentation.
+`SkyExposureQuery` is a cached read-only enclosure approximation for precipitation presentation.
 
-Current rule:
+Current rules:
 
-- materialized non-structure space reachable from the active bounds perimeter is sky-exposed;
-- structure cells form the enclosure boundary;
+- materialized non-structure space reachable from active-bounds perimeter is sky exposed;
+- structure cells form enclosure boundaries;
 - enclosed interior cells are sheltered;
 - a door/window remains part of the roof/enclosure boundary regardless of OPEN/CLOSED passage state.
 
-Therefore opening the front door does not make the whole house rain-exposed.
+Opening a front door therefore does not make the whole house rain exposed.
 
-The query is cached by bounds + WHAT revision. A future explicit Roof/Shelter owner may replace this approximation without changing Weather presentation behavior.
+The query is cached by bounds + WHAT revision. A future explicit Roof/Shelter owner may replace this approximation without rewriting Weather presentation.
 
 ---
 
 ## 9. Low-resolution presentation
 
-`WeatherPresentationRenderer` is one `Node2D` owner.
+`WeatherPresentationRenderer` is one `Node2D` owner. It creates no Node per raindrop, fog patch or debris piece and uses no Sprite/CPU/GPU particle swarm.
 
-It deliberately creates:
+Weather presentation uses coarse primitives and a virtual-pixel scale while System 27 lighting remains smooth.
 
-- no Node per raindrop;
-- no Node per fog patch;
-- no Node per leaf/paper/dust piece;
-- no Sprite2D/CPU/GPU particle swarm.
+Implemented bounds:
 
-Presentation is drawn as coarse primitives using a virtual pixel scale.
+- target **20 Hz / 50 ms** active presentation cadence;
+- maximum four cosmetic catch-up steps after a long frame;
+- virtual axis <= 256;
+- maximum 180 rain candidates;
+- maximum 36 fog patches;
+- maximum three cosmetic debris records.
 
-### 9.1 Resolution bound
-
-Weather pixel size begins at 4 physical pixels and grows when necessary so either virtual axis stays at or below 256.
-
-The weather graphics therefore stay intentionally chunky while System 27 lighting remains smooth.
-
-### 9.2 Cadence
-
-Active weather targets **20 Hz / 50 ms presentation steps** even if the display renders faster.
-
-Long-frame cosmetic catch-up is capped at four presentation steps. Cosmetic weather never tries to simulate an unbounded backlog.
-
-Between presentation steps the cost is essentially the normal `_process` accumulator/branch.
+Clear weather stops requesting continuous redraws when no debris event is active.
 
 ---
 
-## 10. Rain
+## 10. Rain / fog / calm motion
 
-Rain is a deterministic procedural coarse streak field derived from:
+Rain is a deterministic coarse streak field from presentation seed, phase, precipitation, wind and active render window. Streaks are shelter masked against the real world cell represented by each coarse sample.
 
-- Weather presentation seed;
-- presentation step;
-- precipitation intensity;
-- wind vector;
-- active render window.
+Fog uses at most 36 broad low-alpha coarse patches with slow wind-driven drift.
 
-Candidate bounds:
+Clear weather may occasionally show one leaf, paper scrap or dust wisp. These have no WHAT identity, inventory, collision, System 26 sound or AI meaning. Active debris caps are calm 1, breezy 2, strong wind 3.
 
-- maximum 180 candidate streaks;
-- 1–3 coarse weather-pixel segments per streak;
-- wind controls slant;
-- storm uses greater density/weight;
-- shelter query rejects roofed/interior precipitation.
-
-The exact drops have no persistent world identity and may recycle with camera/window changes.
+The DEV panel retains `BLOW LEAF` for immediate inspection.
 
 ---
 
-## 11. Fog
+## 11. Camera-motion correction
 
-Fog presentation is deliberately chunky and cheap:
+Slice A exposed a presentation artifact: because Weather was drawn inside the large world render window, smooth camera movement could move the world-relative weather field between its 20 Hz phase updates and make precipitation appear to trail or lag.
 
-- maximum 36 broad coarse patches;
-- low alpha;
-- slow wind-driven drift;
-- no individual fog-object lifecycle.
+Slice B keeps the 20 Hz animation budget but adds a separate camera-presentation anchor:
 
-This is presentation only. Actual optical extinction/scatter belongs to Slice B through System 27.
+- camera presentation changes request an immediate Weather redraw;
+- camera movement updates a coarse camera offset used by rain/fog/debris drawing;
+- that redraw advances **zero Weather presentation steps** and **zero WHEN ticks**;
+- shelter masking still maps each final coarse rain sample to the corresponding world cell;
+- render-window shifts use `visible_origin * cell_pixels + camera_local_position` so technical window recentering does not become an atmospheric jump.
 
----
-
-## 12. Calm-day ambient motion
-
-Clear weather may remain visually alive with rare cosmetic motion:
-
-- leaf;
-- paper scrap;
-- dust wisp.
-
-These have no WHAT identity, collision, inventory, System 26 sound or AI meaning.
-
-Hard active caps:
-
-- calm wind: max 1;
-- breezy: max 2;
-- strong wind: max 3;
-- global hard maximum: **3**.
-
-Typical calm delay is based around roughly 15–40 presentation seconds and is shortened by wind.
-
-When clear weather has no active debris, the renderer stops requesting redraws until an ambient event begins. It retains only the cheap presentation-time countdown/branch.
-
-The DEV Weather controls include a `BLOW LEAF` action for immediate inspection.
+This is presentation compensation only; no new physical Weather clock or per-frame simulation loop was introduced.
 
 ---
 
-## 13. Perception-safe layering
+## 12. Perception-safe layering and black fallback
 
-Canonical presentation order is now:
+Canonical order remains:
 
 1. world/actors;
 2. System 27 physical lighting;
-3. **System 28 low-res Weather presentation** at z=50;
+3. System 28 low-res Weather at z=50;
 4. System 23 perception/knowledge mask at z=100;
 5. UI.
 
-Weather therefore cannot reveal hidden roofs/building shapes merely because rain stops over an unexplored structure. UNSEEN remains black and REMEMBERED remains observer memory.
+Weather therefore cannot reveal hidden roofs/building shapes merely because rain stops over an unexplored structure.
 
-Slice A does not add a weather foreground pass above perception.
+A second A playtest exposed the engine's default grey clear color outside/in-between the large render window. `project.godot` now sets the viewport default clear color to true black. Unrendered technical space therefore no longer announces an approaching render-window/chunk boundary against System 23 black fog.
 
----
-
-## 14. DEV critique integration
-
-The Rural Crossroads critique composition starts in **RAIN** intentionally so Weather A is immediately visible after deployment.
-
-A clearly labeled DEV Weather panel can force:
-
-- CLEAR;
-- OVERCAST;
-- RAIN;
-- STORM;
-- FOG;
-- one calm leaf event.
-
-The DEV control calls `WeatherService.force_profile()` through composition. It is test tooling, not the production climate-selection mechanism.
+This fix does **not** create fake terrain or make System 23 reason about rendering partitions.
 
 ---
 
-## 15. Performance contract
+## 13. Slice B physical optics
+
+`WeatherAtmosphericOpticsAdapter` maps continuous Weather fields into System 27's existing `AtmosphericOptics` contract. System 27 does not switch on Weather profile names.
+
+Current mapping behavior:
+
+- Candidate clear baseline is normalized to essentially neutral optics;
+- cloud/overcast pressure suppresses direct sky more strongly than diffuse sky;
+- rain adds moderate daylight suppression, local-light attenuation, scatter and visibility extinction;
+- storm suppresses direct sky strongly and carries high wet-surface response as physical wetness accumulates;
+- fog produces the strongest scatter/extinction treatment;
+- atmosphere tint shifts modestly cooler as cloud/rain/fog pressure increases;
+- Weather `environment_revision` is reused as the optics revision.
+
+System 27 remains the only owner of physical illumination/shadows/portal transfer. Weather supplies environment inputs only.
+
+---
+
+## 14. Slice B visibility extinction
+
+System 23 still resolves opaque geometry first and remains the sole owner of `VISIBLE`, REMEMBERED and UNSEEN.
+
+System 27's acquisition policy now combines:
+
+- target-cell physical luminance;
+- `AtmosphericOptics.visibility_extinction`;
+- the existing 12-cell geometric maximum;
+- protected radius-1 near awareness.
+
+The atmosphere never extends vision beyond the geometric LOS envelope; it can only reduce useful acquisition distance.
+
+Candidate CI examples at full target luminance:
+
+- clear extinction -> full **12-cell** useful range;
+- representative fog extinction ~0.60 -> **5-cell** useful range.
+
+Thus a bright distant object can still disappear into physical fog without changing System 23's LOS geometry or reading rendered haze pixels.
+
+---
+
+## 15. Slice B acoustic masking
+
+`WeatherAcousticEnvironmentModifier` plugs into System 26's existing neutral environment seam.
+
+Candidate B intentionally models rain/wind as **competing background noise**, not as thousands of fake rain emissions or invented per-cell acoustic absorption:
+
+- propagation-cost addition remains 0;
+- precipitation + wind raise the listener detection threshold;
+- precipitation + wind modestly reduce localization quality;
+- ordinary rain particles create no `SoundEmission`;
+- System 26 still owns propagation, hearing decisions and uncertain localization.
+
+Representative storm CI fixture adds **+19** to the detection threshold and worsens localization quality relative to clear conditions.
+
+Future directional wind propagation can be added only if gameplay/profiling justifies it.
+
+---
+
+## 16. DEV critique integration
+
+The Rural Crossroads critique composition still begins in RAIN intentionally for immediate inspection.
+
+DEV controls can force CLEAR, OVERCAST, RAIN, STORM, FOG and one calm leaf event. These are explicit testing tools, not production climate/front logic.
+
+Because Slice B is live, forcing profiles now changes physical lighting/visibility and hearing environment as well as the visible weather presentation.
+
+---
+
+## 17. Performance contract
 
 System 28 remains bounded by viewport/presentation demand, not world size.
 
-Implemented structural limits include:
+Implemented structural limits include one Weather renderer, 20 Hz active cadence, max virtual axis 256, max 180 rain candidates, max 36 fog patches, max three debris records, zero per-particle child Nodes, one meaningful scheduled physical Weather transition, analytic wetness and quantized downstream physical revisions.
 
-- one Weather renderer;
-- 20 Hz active presentation cadence;
-- max virtual axis 256;
-- max 180 rain candidates;
-- max 36 fog patches;
-- max 3 ambient debris records;
-- zero per-particle child Nodes;
-- one scheduled meaningful physical Weather transition at a time;
-- analytic wetness instead of fine recurring updates;
-- no lighting/perception/sound recompute from cosmetic animation in Slice A.
+Camera-motion correction adds event-driven redraws on actual camera presentation changes but does not add a second animation/simulation step.
 
-Focused CI fixture output on first fully green executable head:
+First Slice-A fixture:
 
 - `WEATHER_VIRTUAL_PIXELS=1296`;
 - `WEATHER_ACTIVE_DEBRIS=1`;
-- `WEATHER_PRESENTATION_UPDATES=4` for a deliberately supplied 0.5 s long-frame step, proving bounded catch-up.
+- `WEATHER_PRESENTATION_UPDATES=4` for an intentionally supplied 0.5 s long frame.
 
-System 27's existing bounded lighting regression remained unchanged on the Weather runner: 7,680 field cells, 1,676 emitter candidates, 688 optical-ray candidates.
+Slice-B fixture:
 
----
+- `WEATHER_B_CLEAR_RANGE=12`;
+- `WEATHER_B_FOG_RANGE=5`;
+- `WEATHER_B_STORM_HEARING_MASK=19`;
+- `WEATHER_B_CAMERA_REDRAWS=1`.
 
-## 16. Slice B — deferred
-
-Not implemented by Slice A.
-
-Planned responsibilities:
-
-- System 28 -> System 27 `AtmosphericOptics` adapter;
-- overcast/rain/storm effects on daylight and local light;
-- physical fog/rain visibility extinction;
-- wet-surface reflection response from real Weather wetness;
-- System 28 -> System 26 background acoustic masking;
-- quantized physical Weather revision drives those consumers;
-- cosmetic animation still causes zero physical recomputes.
-
-System 28 will supply neutral descriptors/adapters. System 27 remains lighting owner; System 26 remains hearing owner; System 23 remains observer-knowledge owner.
+On the first fully green B runner, System 27's 80x96 / four-light structural regression remained 7,680 field cells, 1,676 local-emitter candidates and 688 optical-ray candidates. Representative light rebuild was ~2.55 ms and focused illumination-aware perception ~9.55 ms; timings remain runner-noisy and structural bounds are the durable proof.
 
 ---
 
-## 17. Slice C — deferred lightning
+## 18. Slice C — deferred lightning
 
-Not implemented by Slice A.
+Not implemented by Slices A/B.
 
 Planned contract:
 
 - deterministic `LightningEvent` scheduled through WHEN;
 - transient physical System 27 lightning contribution;
-- actual portal/shadow/illumination response;
+- real portal/shadow/illumination response;
 - System 23 may genuinely acquire something during the physical flash;
 - low-res stable-seeded pixel bolt tied to the same event;
-- optional normal System 26 thunder emission/delay;
-- no actor damage/fire until their real owners explicitly consume Lightning events.
+- optional ordinary System 26 thunder emission/delay;
+- no actor damage/fire until those real owners explicitly consume Lightning events.
 
 ---
 
-## 18. Verification
+## 19. Verification
 
 Exact-head owner:
 
 `verify/system28-weather`
 
-Slice A smoke proves:
+Slice A coverage remains in `WeatherSmoke.gd`.
 
-- same seed creates same next profile/duration;
-- exactly one meaningful transition event is scheduled;
-- physical rain wetness changes only after WHEN advances;
-- Weather + WHEN snapshot/restore preserves future transition truth;
-- presentation can advance while world tick and physical wetness remain fixed;
-- 20 Hz presentation contract;
-- bounded long-frame catch-up;
-- virtual presentation surface remains bounded;
-- room center is sheltered while outside is exposed;
-- door semantic in the envelope does not make the interior unroofed;
-- zero per-particle child Nodes;
-- calm leaf event respects the one-piece calm cap;
-- System 27 and System 23 regressions;
+Slice B coverage in `WeatherEnvironmentIntegrationSmoke.gd` proves:
+
+- clear/rain/fog/storm continuous Weather -> physical optics mapping;
+- real analytic Weather wetness enters System 27 wet-surface factor;
+- optics revision follows quantized Weather environment revision;
+- visibility extinction reduces useful acquisition range while radius-1 near awareness remains protected;
+- rain/wind raise hearing threshold and reduce localization through the neutral System 26 environment seam;
+- acoustic propagation geometry is not replaced with fake rain absorption;
+- camera motion requests an immediate compensated Weather redraw without advancing presentation phase or WHEN;
+- unrendered viewport clear color is true black;
+- System 27 physical-light and illumination-aware perception regressions;
+- System 26 spatial-sound regression;
+- System 23 perception regression;
 - canonical demo startup.
 
-First fully green executable Slice A head:
+First fully green executable Slice B head:
 
-`dcb400b8507c23a2fc5bdaecf551bc5c0512acce`
+`db4681dc53ce6955e9585f4f5b380fe8efef634c`
 
-All **13 required exact-head contexts** were green on that executable head, including `verify/system28-weather` and `verify/pages-deploy`.
+All **13 required exact-head contexts** were green on that executable head, including `verify/system28-weather`, System 23/26/27 and `verify/pages-deploy`.
 
 ---
 
-## 19. Approved decisions
+## 20. Approved decisions
 
 1. Weather is System 28, not a renderer-only effect.
 2. Physical Weather advances only through WHEN.
-3. Cosmetic Weather presentation may continue during decision pause using presentation time only.
+3. Cosmetic Weather may continue during decision pause using presentation time only.
 4. Candidate profiles are clear, overcast, rain, storm and fog with continuous fields beneath them.
-5. Physical state is event-driven/analytic; there is no per-tick Weather simulation loop.
+5. Physical Weather is event-driven/analytic; there is no per-tick Weather simulation loop.
 6. Wetness is analytic and independent of cosmetic particle count.
-7. Environment revision is quantized rather than publishing every tiny interpolated field change.
+7. Environment revision is quantized rather than publishing every tiny interpolated change.
 8. Weather identity is not System 00F stream-region identity.
-9. Slice A presentation is one coarse low-res owner with no per-particle Nodes.
-10. Active rain/fog presentation targets 20 Hz.
-11. Calm clear weather may sleep between rare presentation-only leaf/paper/dust events.
-12. Cosmetic ambient debris is capped at three, has no gameplay identity and may reset across camera/window changes.
+9. Presentation is one coarse low-res owner with no per-particle Nodes.
+10. Active rain/fog presentation targets 20 Hz; camera compensation may redraw immediately without advancing that phase.
+11. Calm clear weather may sleep between rare presentation-only debris events.
+12. Cosmetic debris is capped at three and has no gameplay identity.
 13. Rain is shelter/sky-exposure masked.
-14. Slice A Weather remains below System 23 to prevent hidden geometry leaks.
-15. Slice B physical lighting/visibility/hearing integration remains deferred and must use neutral existing owner seams.
-16. Slice C lightning remains a real future Weather event feeding System 27 physical lighting, not a fake screen flash.
-17. Lightning damage/fire remains deferred until real owners exist.
-18. Performance verification prefers structural bounded-work proofs over fragile microbenchmarks.
+14. Weather stays below System 23 to prevent hidden-geometry leaks.
+15. Unrendered technical canvas fallback is true black, not a visible grey streaming boundary.
+16. Weather feeds System 27 only through `AtmosphericOptics`; Lighting remains illumination owner.
+17. Physical visibility combines light + atmospheric extinction downstream of opaque LOS geometry; System 23 remains observer-knowledge owner.
+18. Weather feeds System 26 as background detection/localization masking, not fake repeated rain sounds.
+19. Cosmetic animation causes zero System 27/23 physical recomputes; quantized Weather revisions drive them.
+20. Slice C lightning remains a real future Weather event feeding System 27 physical lighting, not a fake screen flash.
+21. Lightning damage/fire remains deferred until real owners exist.
+22. Performance verification prefers structural bounded-work proofs over fragile microbenchmarks.
