@@ -63,12 +63,12 @@ func _test_profile_and_los() -> void:
     _check(vision.can_see(CENTER, Facing.Value.NORTH, Vector2i(20, 16), profile), "opaque wall target itself is visible")
     _check(not vision.can_see(CENTER, Facing.Value.NORTH, Vector2i(20, 15), profile), "wall blocks cell beyond")
     _check(vision.can_see(CENTER, Facing.Value.NORTH, Vector2i(22, 16), profile), "closed door target itself is visible")
-    _check(not vision.can_see(CENTER, Facing.Value.NORTH, Vector2i(22, 14), profile), "closed door blocks beyond")
+    _check(not vision.can_see(CENTER, Facing.Value.NORTH, Vector2i(23, 14), profile), "closed door blocks collinear cell beyond")
 
     var door_mutations: DoorStateMutationService = env["door_mutations"]
     _check(door_mutations.set_state(DOOR_ID, DoorValues.OPEN), "door can be opened for LOS test")
-    _check(vision.can_see(CENTER, Facing.Value.NORTH, Vector2i(22, 14), profile), "open door transmits LOS")
-    _check(vision.can_see(CENTER, Facing.Value.NORTH, Vector2i(18, 14), profile), "window transmits LOS")
+    _check(vision.can_see(CENTER, Facing.Value.NORTH, Vector2i(23, 14), profile), "open door transmits LOS")
+    _check(vision.can_see(CENTER, Facing.Value.NORTH, Vector2i(17, 14), profile), "window transmits LOS")
     _check(door_mutations.set_state(DOOR_ID, DoorValues.CLOSED), "door restored closed")
 
     var diagonal_origin := Vector2i(5, 5)
