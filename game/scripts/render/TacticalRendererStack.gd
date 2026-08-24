@@ -5,7 +5,7 @@ const GroundRendererClass = preload("res://scripts/render/GroundLayerRenderer.gd
 const StructureRendererClass = preload("res://scripts/render/StructureLayerRenderer.gd")
 const PropRendererClass = preload("res://scripts/render/PropLayerRenderer.gd")
 const ActorRendererClass = preload("res://scripts/render/ActorLayerRenderer.gd")
-const PerceptionOverlayClass = preload("res://scripts/render/AmbientPerceptionOverlayRenderer.gd")
+const PerceptionOverlayClass = preload("res://scripts/render/PerceptionOverlayRenderer.gd")
 
 ## Layer orchestration only. All drawing remains in the existing focused renderers.
 
@@ -13,7 +13,7 @@ var _ground: GroundLayerRenderer = null
 var _structures: StructureLayerRenderer = null
 var _props: PropLayerRenderer = null
 var _actors: ActorLayerRenderer = null
-var _perception: AmbientPerceptionOverlayRenderer = null
+var _perception: PerceptionOverlayRenderer = null
 var _configured: bool = false
 
 func _ready() -> void:
