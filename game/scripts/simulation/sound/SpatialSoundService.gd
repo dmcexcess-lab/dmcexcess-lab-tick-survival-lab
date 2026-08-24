@@ -223,8 +223,8 @@ func _localize(
         return {"cell": listener.anchor, "certainty": 1.0}
     var forward: Vector2i = Facing.vector(listener.facing)
     var right := Vector2i(-forward.y, forward.x)
-    var true_forward: int = true_delta.dot(forward)
-    var true_right: int = true_delta.dot(right)
+    var true_forward: int = true_delta.x * forward.x + true_delta.y * forward.y
+    var true_right: int = true_delta.x * right.x + true_delta.y * right.y
     var hearing_score: int = int(hearing_profile.get("hearing_score", 50))
     var muffle: float = clampf(float(barrier_cost) / float(maxi(1, emission.acoustic_power)), 0.0, 1.0)
     var environment_adjustment: float = _environment.localization_quality_adjustment(listener.entity_id, emission.profile_id, listener.anchor)
