@@ -9,10 +9,11 @@ At the start of every new prompt that requests repository/code changes, read cur
 1. `PROJECT_NORTH_STAR.md`;
 2. `DESIGN_DECISIONS.md` when the change touches cross-system direction;
 3. `README_CONTEXT.md`;
-4. this SOP;
-5. `SYSTEM_DESIGNS/README.md`;
-6. the active APPROVED/IMPLEMENTED system design(s);
-7. current `main` SHA and relevant source/history.
+4. `ROADMAP.md` when priority/order/scope may matter;
+5. this SOP;
+6. `SYSTEM_DESIGNS/README.md`;
+7. the active APPROVED/IMPLEMENTED system design(s);
+8. current `main` SHA and relevant source/history.
 
 Refresh once per coherent prompt, not before every edit.
 
@@ -32,6 +33,8 @@ Before solving a local problem, ask whether the proposed change still serves the
 
 Do not optimize a local implementation around superseded raid/extraction assumptions.
 
+`ROADMAP.md` controls current major-phase order, but does not override the North Star or subsystem ownership rules.
+
 ## 3. Design lifecycle
 
 Major new systems and meaningful rewrites use:
@@ -47,6 +50,8 @@ Statuses:
 - `RECOVERY SOURCE` — historical behavior/art worth mining, not current architecture.
 
 A new major system requires an approved design before code. A profile/content addition inside an already-established system does **not** automatically require a new peer system document; use the owning system design unless the addition changes a stable system contract or genuinely introduces an independently changeable domain.
+
+A roadmap phase is not blanket authorization to implement everything named in that phase at once.
 
 ## 4. Scope gate
 
@@ -104,7 +109,7 @@ When a public contract changes, state the change before editing dependent module
 
 Do not add placeholders and present them as finished systems.
 
-Do not add fake AI, fake persistence, fake outbreak results, fake utility hardware, fake terrain, fake physics, or presentation tricks that conceal missing world truth.
+Do not add fake AI, fake persistence, fake outbreak results, fake utility hardware, fake terrain, fake physics, fake power, fake sound sources, or presentation tricks that conceal missing world truth.
 
 A deliberate DEV fixture/tool is allowed when it is clearly labeled, independently owned where necessary, and not used as a silent substitute for canonical gameplay.
 
@@ -135,7 +140,7 @@ For changes to code, assets used at runtime, Godot configuration, or CI/workflow
 
 ### Documentation-only closure
 
-A later documentation-only status/changelog correction does **not** require rerunning every expensive Godot contract merely because the commit SHA changed. Instead:
+A later documentation-only status/changelog/roadmap correction does **not** require rerunning every expensive Godot contract merely because the commit SHA changed. Instead:
 
 - verify the diff is documentation-only;
 - cite the already-green implementation SHA as executable evidence;
@@ -153,10 +158,11 @@ Current canonical history is Git itself. Historical implementations do not need 
 
 ## 12. Documentation discipline
 
-Active canonical docs should answer different questions:
+Active canonical docs answer different questions:
 
 - `PROJECT_NORTH_STAR.md` — what game/experience are we building?
 - `DESIGN_DECISIONS.md` — what cross-system choices were settled and why?
+- `ROADMAP.md` — what major gameplay phase comes next and in what order?
 - `README_CONTEXT.md` — where are we now and what is active/next?
 - `SYSTEM_DESIGNS/README.md` — status/routing ledger;
 - `SYSTEM_DESIGNS/<system>.md` — canonical current contract for that system;
@@ -165,7 +171,7 @@ Active canonical docs should answer different questions:
 
 Completed candidate/slice discussion files should be folded into their owning canonical system document when they no longer represent independently useful active contracts. Git history preserves the detailed drafting path.
 
-Do not keep two active documents that both claim authority over the same process or system state.
+Do not keep two active documents that both claim authority over the same process, roadmap, or system state.
 
 ## 13. Recovery / historical code
 
@@ -189,7 +195,7 @@ Frozen/deprecated source may be removed from the active tree once:
 
 Composition roots may construct services, inject dependencies, connect high-level signals, select initial controllers/modes, and perform minimal lifecycle bookkeeping.
 
-They must not own rendering rules, gameplay input interpretation, world generation, collision, movement, doors, inventory, simulation timing, persistence, camera math, UI geometry, art mapping, weather/perception/sound, or subsystem validation.
+They must not own rendering rules, gameplay input interpretation, world generation, collision, movement, doors, inventory, simulation timing, persistence, camera math, UI geometry, art mapping, weather/perception/sound, utilities, AI, or subsystem validation.
 
 A composition root can be long because the application has many services. Do not split it into fake bootstrap managers merely to reduce line count.
 
@@ -197,7 +203,7 @@ A composition root can be long because the application has many services. Do not
 
 Inspect first. Ask a targeted question only when unresolved ambiguity could materially change architecture, destructive scope, stable contracts, persistence, timing, historical target, mobile interaction, or player-visible semantics.
 
-Do not ask about ordinary typos when intent is clear.
+Do not ask about ordinary typos when intent is clear. When explicit numbering and surrounding content resolve an omitted label cleanly, preserve the user's intended order and record the normalization rather than creating unnecessary friction.
 
 ## 16. Mobile/browser requirement
 
