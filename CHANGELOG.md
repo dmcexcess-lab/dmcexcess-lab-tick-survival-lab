@@ -1,5 +1,17 @@
 # Changelog
 
+## System 23 Remembered Furniture / Clutter — 2026-08-23
+
+- Extended the implemented System 23 REMEMBERED state so previously observed static `prop.*` and `fixture.*` furniture/clutter remains visible as dark stale memory after leaving LOS.
+- Environmental memory now records compact last-observed static-object facts: stable entity ID, semantic type, anchor cell and facing. These records are observer knowledge and never poll hidden current WHAT.
+- Hidden furniture movement/removal leaves the remembered object unchanged until the cell is re-observed; seeing the cell again refreshes or clears the stale object snapshot.
+- `PerceptionOverlayRenderer` redraws remembered furniture/clutter above true-black fog using the same Art Catalog and prop-orientation rules as live prop presentation, while the live Prop renderer remains current-truth only.
+- Loose items, vehicles and vegetation remain separate future memory extensions rather than being bundled into this change.
+- Bumped deterministic perception-memory snapshots to schema v2 to serialize remembered static props/fixtures. System 23 still does not own save-file orchestration.
+- Extended `PerceptionFogMemorySmoke.gd` to prove visible furniture capture, hidden removal remaining stale, re-observation clearing the stale object, remembered-prop presentation planning, deterministic schema-v2 snapshot roundtrip, zero WHEN-tick consumption and the existing FOV performance budget.
+- First exact executable head with remembered static furniture/clutter: `a08ccf8064f318e283acab6a3f73aa10e59f2acf`.
+- On that executable head all eight exact-head contexts were green: `verify/system00d-global-world`, `verify/system00f-streaming-materialization`, `verify/system19-local-building`, `verify/system20-local-area`, `verify/system21-camera-view`, `verify/system22-area-critique`, `verify/system23-perception` and `verify/pages-deploy`.
+
 ## Baseline Building / Area / Environment Profile Library — 2026-08-23
 
 - Expanded finalized System 19 with **18 reusable one-story baseline building profiles**, bringing the callable registry to **24 archetypes total** while preserving the six accepted reference buildings unchanged.
