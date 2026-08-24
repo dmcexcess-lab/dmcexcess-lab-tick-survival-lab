@@ -1,5 +1,26 @@
 # Changelog
 
+## System 27 Physical Lighting — Pre-Weather Optimization — 2026-08-24
+
+- Implemented the requested bounded optimization pass before adding Weather, without reducing lighting resolution, useful ranges, shadow/portal rules, visual quality, or illumination-aware perception behavior.
+- `PhysicalLightingService` now caches active-field materialized cells, structure classification, optical transmission and portal candidates by the appropriate world/bounds/door revisions instead of repeatedly rediscovering the same geometry during light evaluation.
+- Local emitter work is now spatially bounded before expensive range/cone/optical-ray checks. Flashlight, lamp, streetlight and neon evaluate only the intersection of their useful-range square with the active field rather than scanning every active-field cell first.
+- Emitter-set signatures are computed only when source adapters supply a changed emitter set. Ordinary illumination samples compare a compact emitter revision rather than rebuilding joined signatures repeatedly.
+- Added `prepare_query()` / `illumination_at_prepared()` for immediate non-mutating batch readers. `PhysicalLightingPresentationRenderer` prepares System 27 once per map refresh instead of rerunning revision checks for every visible light-map cell.
+- The presentation renderer now reuses its multiply/glow `Image` buffers while dimensions remain unchanged instead of allocating two fresh images per lighting refresh. Output maps/shaders are unchanged.
+- Added durable work-count instrumentation and an 80×96 critique-scale regression. With four representative local emitters, the optimized solver sees 7,680 materialized cells but considers only **1,676 emitter candidate cells**, of which **688** reach optical-ray evaluation. The naive previous full-field-per-emitter loop would have visited **30,720** field cells before those checks.
+- On the fully green executable head, representative 17×17 changing-flashlight rebuild measured **2,674.32 µs (~2.67 ms)** and focused illumination-aware perception measured **9,255.77 µs (~9.26 ms)**, versus the earlier Slice C reference **4,230.32 µs (~4.23 ms)** / **11,838.67 µs (~11.84 ms)**. A preceding optimized CI runner measured ~1.73 ms / ~6.49 ms, so timing remains treated as runner-noisy while the bounded work-count is the stable proof.
+- Fully green optimized executable head: `5958d887807e5b64c9fc4cf5d3d45c7dfd4083d2`.
+- On that exact executable head all twelve required contexts were green, including `verify/system27-physical-lighting`, System 23/26 regressions and `verify/pages-deploy`.
+
+## System 28 Weather / Atmosphere — Design Draft — 2026-08-24
+
+- Added `SYSTEM_DESIGNS/28_WEATHER_ATMOSPHERE.md` as **DRAFT — awaiting approval**. No Weather runtime code is implemented or authorized yet.
+- Proposed core rule: **Weather is simulation truth; weather animation is presentation.** Physical weather transitions/wetness/light/sound consequences advance only through WHEN, while low-resolution pixel rain/fog may continue animating cosmetically during the player's decision pause.
+- Candidate 001 proposes clear, overcast, rain, storm and fog; compact deterministic precipitation/cloud/fog/wind/wetness state; low-res nearest-scaled precipitation/fog; shelter-aware rain; System 27 `AtmosphericOptics` integration; System 26 rain/wind masking; and future visibility-extinction integration.
+- Lightning is designed as a real deterministic Weather event. Its flash feeds System 27 physical illumination so windows/doors/interiors and actual System 23 acquisition respond to the same event; the visible bolt is a stable-seeded chunky pixel presentation tied to that event rather than a separate fake screen flash.
+- Lightning damage/fire remains deferred until those real owning systems exist. Thunder is a future/narrow System 26 consumer of the same event and must retain normal uncertain hearing/localization.
+
 ## System 26 Spatial Sound / Hearing — Onomatopoeia + Cue Lifetime Refinement — 2026-08-24
 
 - Implemented the user direction **“lets replaces some or most of them with their onimonapias. like *step step* for seen noises they fade after a sec, for unseen sounds they stay in the aprrox position until the next unpause.”** Physical propagation, hearing thresholds and localization uncertainty are unchanged.
