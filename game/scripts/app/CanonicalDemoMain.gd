@@ -57,6 +57,7 @@ const VisionProfileClass = preload("res://scripts/simulation/perception/VisionPr
 const PerceptionMemoryClass = preload("res://scripts/simulation/perception/PerceptionMemoryStore.gd")
 const ObserverPerceptionClass = preload("res://scripts/simulation/perception/ObserverPerceptionService.gd")
 const FixtureClass = preload("res://scripts/demo/RuralCrossroadsCritiqueFixture.gd")
+const DemoAmbientLightCycleClass = preload("res://scripts/demo/DemoAmbientLightCycle.gd")
 const ControllerClass = preload("res://scripts/player/DemoPlayerActionController.gd")
 const DoorControllerClass = preload("res://scripts/player/DoorPlayerInteractionController.gd")
 const LootControllerClass = preload("res://scripts/player/LootPlayerInteractionController.gd")
@@ -235,6 +236,12 @@ func _boot_canonical_demo() -> bool:
         FixtureClass.PLAYER_ID
     ):
         return false
+    if not _world_view.set_perception_ambient_light_level(
+        DemoAmbientLightCycleClass.ambient_light_for_tick(_kernel.world_tick())
+    ):
+        return false
+    _kernel.world_tick_advanced.connect(_on_world_tick_advanced)
+    _kernel.timing_state_reset.connect(_on_timing_state_reset)
 
     var initial_render_origin: Vector2i = FixtureClass.initial_render_origin(_world)
     if not _large_area_view.configure(
@@ -410,6 +417,13 @@ func _boot_item_transfer_and_loot_actions() -> bool:
         _carry_query
     )
     return _item_transfer.is_ready() and _loot_search.is_ready() and _loot_inspection.is_ready()
+
+func _on_world_tick_advanced(_previous_tick: int, new_tick: int) -> void:
+    _world_view.set_perception_ambient_light_level(DemoAmbientLightCycleClass.ambient_light_for_tick(new_tick))
+
+func _on_timing_state_reset() -> void:
+    if _kernel != null:
+        _world_view.set_perception_ambient_light_level(DemoAmbientLightCycleClass.ambient_light_for_tick(_kernel.world_tick()))
 
 func _on_shell_interaction_blocked_changed(blocked: bool) -> void:
     _shell_blocks_interaction = blocked
