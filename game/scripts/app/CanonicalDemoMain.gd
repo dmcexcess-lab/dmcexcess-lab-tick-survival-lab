@@ -46,6 +46,13 @@ const LootInitializerClass = preload("res://scripts/simulation/loot/LootSourceIn
 const LootAccessClass = preload("res://scripts/simulation/loot/LootWorldContainerAccessPolicy.gd")
 const LootSearchClass = preload("res://scripts/simulation/loot/LootSearchActionService.gd")
 const LootInspectionClass = preload("res://scripts/simulation/loot/LootContainerInspectionQuery.gd")
+const SoundProfilesClass = preload("res://scripts/simulation/sound/SoundEmissionProfileCatalog.gd")
+const AcousticMaterialsClass = preload("res://scripts/simulation/sound/AcousticMaterialCatalog.gd")
+const AcousticPropagationClass = preload("res://scripts/simulation/sound/AcousticPropagationQuery.gd")
+const HearingProfileClass = preload("res://scripts/simulation/sound/SurvivorHearingProfileProvider.gd")
+const HeardSoundStoreClass = preload("res://scripts/simulation/sound/HeardSoundObservationStore.gd")
+const SpatialSoundClass = preload("res://scripts/simulation/sound/SpatialSoundService.gd")
+const ActionSoundEmitterClass = preload("res://scripts/simulation/sound/ActionSoundEmitterAdapter.gd")
 const StatusSummaryClass = preload("res://scripts/ui/ActorStatusSummaryQuery.gd")
 const InspectionQueryClass = preload("res://scripts/ui/FacingInspectionQuery.gd")
 const StatsInspectorClass = preload("res://scripts/ui/ActorStatsInspectorQuery.gd")
@@ -122,6 +129,13 @@ var _item_transfer_timing: ItemTransferTimingPolicy = null
 var _item_transfer: ItemTransferActionService = null
 var _loot_search: LootSearchActionService = null
 var _loot_inspection: LootContainerInspectionQuery = null
+var _sound_profiles: SoundEmissionProfileCatalog = null
+var _acoustic_materials: AcousticMaterialCatalog = null
+var _acoustic_propagation: AcousticPropagationQuery = null
+var _hearing_profile: SurvivorHearingProfileProvider = null
+var _heard_sounds: HeardSoundObservationStore = null
+var _spatial_sound: SpatialSoundService = null
+var _action_sound_emitters: ActionSoundEmitterAdapter = null
 var _status_summary: ActorStatusSummaryQuery = null
 var _inspection_query: FacingInspectionQuery = null
 var _stats_inspector: ActorStatsInspectorQuery = null
@@ -232,6 +246,8 @@ func _boot_canonical_demo() -> bool:
     )
     if not _perception.is_ready():
         return false
+    if not _boot_spatial_sound():
+        return false
 
     _art_catalog = ArtCatalogClass.new()
     if not _world_view.configure(_world, _art_catalog, _door_state, FixtureClass.PLAYER_ID):
@@ -244,6 +260,8 @@ func _boot_canonical_demo() -> bool:
     ):
         return false
     if not _world_view.set_perception_ambient_light_level(_ambient_daylight.ambient_light_level()):
+        return false
+    if not _sync_player_sound_cues():
         return false
     _ambient_daylight.ambient_light_changed.connect(_on_ambient_light_changed)
 
@@ -431,8 +449,39 @@ func _boot_item_transfer_and_loot_actions() -> bool:
     )
     return _item_transfer.is_ready() and _loot_search.is_ready() and _loot_inspection.is_ready()
 
+func _boot_spatial_sound() -> bool:
+    _sound_profiles = SoundProfilesClass.new()
+    _acoustic_materials = AcousticMaterialsClass.new()
+    _acoustic_propagation = AcousticPropagationClass.new(_world, _door_state, _acoustic_materials)
+    _hearing_profile = HearingProfileClass.new(_skill_state, _needs_state)
+    _heard_sounds = HeardSoundStoreClass.new()
+    _spatial_sound = SpatialSoundClass.new(
+        _world,
+        _kernel,
+        _sound_profiles,
+        _acoustic_propagation,
+        _hearing_profile,
+        _heard_sounds
+    )
+    if not _spatial_sound.is_ready() or not _spatial_sound.register_listener(FixtureClass.PLAYER_ID):
+        return false
+    _action_sound_emitters = ActionSoundEmitterClass.new(_movement, _door_transition, _spatial_sound)
+    if not _action_sound_emitters.is_ready():
+        return false
+    _spatial_sound.listener_observations_changed.connect(_on_sound_observations_changed)
+    return true
+
+func _sync_player_sound_cues() -> bool:
+    if _spatial_sound == null:
+        return false
+    return _world_view.set_auditory_cues(_spatial_sound.presentation_descriptors(FixtureClass.PLAYER_ID))
+
 func _on_ambient_light_changed(level: float, _phase: StringName, _snapshot: Dictionary) -> void:
     _world_view.set_perception_ambient_light_level(level)
+
+func _on_sound_observations_changed(listener_id: String) -> void:
+    if listener_id == FixtureClass.PLAYER_ID:
+        _sync_player_sound_cues()
 
 func _on_shell_interaction_blocked_changed(blocked: bool) -> void:
     _shell_blocks_interaction = blocked

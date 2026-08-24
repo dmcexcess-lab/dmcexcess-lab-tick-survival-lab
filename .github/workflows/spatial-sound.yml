@@ -1,0 +1,144 @@
+name: Spatial Sound Hearing contract
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  statuses: write
+
+concurrency:
+  group: spatial-sound-hearing-contract
+  cancel-in-progress: true
+
+jobs:
+  spatial-sound:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate System 26 boundaries
+        shell: bash
+        run: |
+          set -euxo pipefail
+          test -f SYSTEM_DESIGNS/26_SPATIAL_SOUND_HEARING.md
+          test -f game/scripts/simulation/sound/SoundEmission.gd
+          test -f game/scripts/simulation/sound/SoundEmissionProfileCatalog.gd
+          test -f game/scripts/simulation/sound/AcousticMaterialCatalog.gd
+          test -f game/scripts/simulation/sound/AcousticEnvironmentModifier.gd
+          test -f game/scripts/simulation/sound/AcousticPropagationQuery.gd
+          test -f game/scripts/simulation/sound/HearingProfileProvider.gd
+          test -f game/scripts/simulation/sound/SurvivorHearingProfileProvider.gd
+          test -f game/scripts/simulation/sound/HeardSoundObservation.gd
+          test -f game/scripts/simulation/sound/HeardSoundObservationStore.gd
+          test -f game/scripts/simulation/sound/SpatialSoundService.gd
+          test -f game/scripts/simulation/sound/ActionSoundEmitterAdapter.gd
+          test -f game/scripts/ci/SpatialSoundSmoke.gd
+          grep -q 'class_name SpatialSoundService' game/scripts/simulation/sound/SpatialSoundService.gd
+          grep -q 'class_name AcousticPropagationQuery' game/scripts/simulation/sound/AcousticPropagationQuery.gd
+          grep -q 'class_name HeardSoundObservation' game/scripts/simulation/sound/HeardSoundObservation.gd
+          grep -q 'extends HearingProfileProvider' game/scripts/simulation/sound/SurvivorHearingProfileProvider.gd
+          grep -q 'estimated_forward = mini(-1, estimated_forward)' game/scripts/simulation/sound/SpatialSoundService.gd
+          grep -q 'estimated_forward = maxi(1, estimated_forward)' game/scripts/simulation/sound/SpatialSoundService.gd
+          grep -q 'estimated_right = mini(-1, estimated_right)' game/scripts/simulation/sound/SpatialSoundService.gd
+          grep -q 'estimated_right = maxi(1, estimated_right)' game/scripts/simulation/sound/SpatialSoundService.gd
+          grep -q 'ThemeDB.fallback_font' game/scripts/render/PerceptionOverlayRenderer.gd
+          grep -q 'ActionSoundEmitterClass' game/scripts/app/CanonicalDemoMain.gd
+          ! grep -q 'origin_cell\|source_entity_id' game/scripts/simulation/sound/HeardSoundObservation.gd
+          ! grep -R -q 'func _process\|func _physics_process' game/scripts/simulation/sound
+          ! grep -R -q 'scripts/generation\|scripts/streaming\|scripts/simulation/loot\|scripts/simulation/combat\|scripts/simulation/weather' game/scripts/simulation/sound
+
+      - name: Install Godot 4.7.1
+        shell: bash
+        run: |
+          set -euxo pipefail
+          curl -L -o godot.zip https://github.com/godotengine/godot-builds/releases/download/4.7.1-stable/Godot_v4.7.1-stable_linux.x86_64.zip
+          unzip -q godot.zip
+          chmod +x Godot_v4.7.1-stable_linux.x86_64
+
+      - name: Import and parse project
+        shell: bash
+        run: |
+          set -euxo pipefail
+          ./Godot_v4.7.1-stable_linux.x86_64 --headless --editor --path "$GITHUB_WORKSPACE/game" --quit 2>&1 | tee "$RUNNER_TEMP/import.log"
+          if grep -Eqi 'SCRIPT ERROR|Parse Error|Failed to load script' "$RUNNER_TEMP/import.log"; then exit 1; fi
+
+      - name: System 26 spatial sound smoke
+        shell: bash
+        run: |
+          set -euxo pipefail
+          ./Godot_v4.7.1-stable_linux.x86_64 --headless --path "$GITHUB_WORKSPACE/game" --quit-after 30 --script res://scripts/ci/SpatialSoundSmoke.gd 2>&1 | tee "$RUNNER_TEMP/spatial-sound26.log"
+          grep -q 'SPATIAL_SOUND_SMOKE_OK' "$RUNNER_TEMP/spatial-sound26.log"
+          grep -q 'SPATIAL_SOUND_FOOTSTEP_AVG_US=' "$RUNNER_TEMP/spatial-sound26.log"
+          if grep -Eqi 'SCRIPT ERROR|Parse Error|Failed to load script' "$RUNNER_TEMP/spatial-sound26.log"; then exit 1; fi
+
+      - name: WHEN regression
+        shell: bash
+        run: |
+          set -euxo pipefail
+          ./Godot_v4.7.1-stable_linux.x86_64 --headless --path "$GITHUB_WORKSPACE/game" --script res://scripts/ci/TickKernelSmoke.gd 2>&1 | tee "$RUNNER_TEMP/when00c.log"
+          grep -q 'TICK_KERNEL_SMOKE_OK' "$RUNNER_TEMP/when00c.log"
+          if grep -Eqi 'SCRIPT ERROR|Parse Error|Failed to load script' "$RUNNER_TEMP/when00c.log"; then exit 1; fi
+
+      - name: Movement and Run regressions
+        shell: bash
+        run: |
+          set -euxo pipefail
+          ./Godot_v4.7.1-stable_linux.x86_64 --headless --path "$GITHUB_WORKSPACE/game" --script res://scripts/ci/MovementActionsSmoke.gd 2>&1 | tee "$RUNNER_TEMP/movement.log"
+          grep -q 'MOVEMENT_ACTIONS_SMOKE_OK' "$RUNNER_TEMP/movement.log"
+          ./Godot_v4.7.1-stable_linux.x86_64 --headless --path "$GITHUB_WORKSPACE/game" --script res://scripts/ci/RunDamageWalkingSmoke.gd 2>&1 | tee "$RUNNER_TEMP/run17.log"
+          grep -q 'RUN_DAMAGE_WALKING_SMOKE_OK' "$RUNNER_TEMP/run17.log"
+          if grep -Eqi 'SCRIPT ERROR|Parse Error|Failed to load script' "$RUNNER_TEMP/movement.log" "$RUNNER_TEMP/run17.log"; then exit 1; fi
+
+      - name: Door regression
+        shell: bash
+        run: |
+          set -euxo pipefail
+          ./Godot_v4.7.1-stable_linux.x86_64 --headless --path "$GITHUB_WORKSPACE/game" --quit-after 20 --script res://scripts/ci/DoorInteractionSmoke.gd 2>&1 | tee "$RUNNER_TEMP/door18.log"
+          grep -q 'DOOR_INTERACTION_SMOKE_OK' "$RUNNER_TEMP/door18.log"
+          if grep -Eqi 'SCRIPT ERROR|Parse Error|Failed to load script' "$RUNNER_TEMP/door18.log"; then exit 1; fi
+
+      - name: System 23 perception regression
+        shell: bash
+        run: |
+          set -euxo pipefail
+          ./Godot_v4.7.1-stable_linux.x86_64 --headless --path "$GITHUB_WORKSPACE/game" --quit-after 30 --script res://scripts/ci/PerceptionFogMemorySmoke.gd 2>&1 | tee "$RUNNER_TEMP/perception23.log"
+          grep -q 'PERCEPTION_FOG_MEMORY_SMOKE_OK' "$RUNNER_TEMP/perception23.log"
+          if grep -Eqi 'SCRIPT ERROR|Parse Error|Failed to load script' "$RUNNER_TEMP/perception23.log"; then exit 1; fi
+
+      - name: Canonical demo startup regression
+        shell: bash
+        run: |
+          set -euxo pipefail
+          ./Godot_v4.7.1-stable_linux.x86_64 --headless --path "$GITHUB_WORKSPACE/game" --quit-after 2 2>&1 | tee "$RUNNER_TEMP/startup.log"
+          grep -q 'CANONICAL_DEMO_BOOT_OK' "$RUNNER_TEMP/startup.log"
+          if grep -Eqi 'SCRIPT ERROR|Parse Error|Failed to load script|CANONICAL_DEMO_BOOT_FAILED' "$RUNNER_TEMP/startup.log"; then exit 1; fi
+
+      - name: Publish System 26 exact-head status
+        if: always()
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SHA: ${{ github.sha }}
+          REPOSITORY: ${{ github.repository }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          JOB_STATUS: ${{ job.status }}
+        run: |
+          set -euo pipefail
+          case "$JOB_STATUS" in
+            success) state=success ;;
+            failure) state=failure ;;
+            cancelled) state=error ;;
+            *) state=error ;;
+          esac
+          payload=$(printf '{"state":"%s","context":"verify/system26-spatial-sound","description":"System 26 spatial sound hearing contract","target_url":"%s"}' "$state" "$RUN_URL")
+          curl --fail --silent --show-error \
+            -X POST \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.github.com/repos/$REPOSITORY/statuses/$SHA" \
+            -d "$payload"

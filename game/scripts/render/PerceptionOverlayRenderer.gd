@@ -87,11 +87,21 @@ func set_auditory_cues(cues: Array) -> bool:
         var cell_value: Variant = cue.get("cell", null)
         if typeof(cell_value) != TYPE_VECTOR2I:
             return false
+        var category: String = String(cue.get("category", "sound")).strip_edges()
+        if category.is_empty():
+            category = "sound"
+        var word: String = String(cue.get("word", category)).strip_edges().to_upper()
+        if word.is_empty():
+            word = "NOISE"
         normalized.append({
             "cell": cell_value,
             "radius_cells": maxi(0, int(cue.get("radius_cells", 0))),
             "strength": clampf(float(cue.get("strength", 1.0)), 0.0, 1.0),
-            "category": String(cue.get("category", "sound")),
+            "certainty": clampf(float(cue.get("certainty", 1.0)), 0.0, 1.0),
+            "category": category,
+            "word": word,
+            "heard_tick": int(cue.get("heard_tick", -1)),
+            "expiry_tick": int(cue.get("expiry_tick", -1)),
         })
     _auditory_cues = normalized
     _request_redraw(&"auditory_cues_changed")
@@ -121,7 +131,7 @@ func memory_modulation() -> Color:
     return Color(luminance, luminance, luminance, 1.0)
 
 func planned_cell_counts() -> Dictionary:
-    var counts := {"visible": 0, "remembered": 0, "unseen": 0, "remembered_props": 0, "last_seen": 0, "auditory": 0}
+    var counts := {"visible": 0, "remembered": 0, "unseen": 0, "remembered_props": 0, "last_seen": 0, "auditory": 0, "auditory_offscreen": 0}
     if not is_configured() or not _view_valid:
         return counts
     for local_y in range(_visible_size.y):
@@ -144,8 +154,9 @@ func planned_cell_counts() -> Dictionary:
             counts["last_seen"] += 1
     for cue: Dictionary in _auditory_cues:
         var cue_cell: Vector2i = cue.get("cell", Vector2i.ZERO)
-        if _cell_in_view(cue_cell):
-            counts["auditory"] += 1
+        counts["auditory"] += 1
+        if not _cell_in_view(cue_cell):
+            counts["auditory_offscreen"] += 1
     return counts
 
 func _draw() -> void:
@@ -266,16 +277,51 @@ func _draw_last_seen_actors() -> void:
 func _draw_auditory_cues() -> void:
     for cue: Dictionary in _auditory_cues:
         var cell: Vector2i = cue.get("cell", Vector2i.ZERO)
-        if not _cell_in_view(cell):
-            continue
-        var rect: Rect2 = _cell_rect(cell)
-        var center: Vector2 = rect.get_center()
-        var strength: float = float(cue.get("strength", 1.0))
-        var radius: float = maxf(3.0, _cell_pixels * (0.12 + 0.08 * strength))
-        var line_width: float = maxf(1.5, _cell_pixels * 0.05)
-        draw_circle(center, radius, SOUND_CUE_COLOR, false, line_width)
-        draw_line(center - Vector2(radius * 0.55, 0.0), center + Vector2(radius * 0.55, 0.0), SOUND_CUE_COLOR, line_width)
-        draw_line(center - Vector2(0.0, radius * 0.55), center + Vector2(0.0, radius * 0.55), SOUND_CUE_COLOR, line_width)
+        var word: String = String(cue.get("word", "NOISE")).strip_edges().to_upper()
+        if word.is_empty():
+            word = "NOISE"
+        var position: Vector2 = _cell_rect(cell).get_center() if _cell_in_view(cell) else _offscreen_sound_position(cell)
+        var display_word: String = word if _cell_in_view(cell) else _offscreen_word(word, cell)
+        _draw_sound_word(display_word, position, cue)
+
+func _draw_sound_word(word: String, center: Vector2, cue: Dictionary) -> void:
+    var strength: float = clampf(float(cue.get("strength", 1.0)), 0.0, 1.0)
+    var certainty: float = clampf(float(cue.get("certainty", 1.0)), 0.0, 1.0)
+    var font: Font = ThemeDB.fallback_font
+    var font_size: int = clampi(int(round(_cell_pixels * (0.42 + strength * 0.16))), 10, 22)
+    var color := SOUND_CUE_COLOR
+    color.a = clampf(0.62 + strength * 0.28 + certainty * 0.08, 0.62, 0.98)
+    var width: float = maxf(_cell_pixels * 3.5, 96.0)
+    var baseline := Vector2(center.x - width * 0.5, center.y + float(font_size) * 0.35)
+    draw_string(font, baseline, word, HORIZONTAL_ALIGNMENT_CENTER, width, font_size, color)
+
+func _offscreen_sound_position(cell: Vector2i) -> Vector2:
+    var viewport_size := Vector2(float(_visible_size.x) * _cell_pixels, float(_visible_size.y) * _cell_pixels)
+    var center := viewport_size * 0.5
+    var view_center_cell := Vector2(
+        float(_visible_origin.x) + float(_visible_size.x) * 0.5,
+        float(_visible_origin.y) + float(_visible_size.y) * 0.5
+    )
+    var delta := Vector2(float(cell.x) - view_center_cell.x, float(cell.y) - view_center_cell.y)
+    var margin: float = maxf(14.0, _cell_pixels * 0.55)
+    var position := center + delta * _cell_pixels
+    if absf(delta.x) >= absf(delta.y):
+        position.x = margin if delta.x < 0.0 else viewport_size.x - margin
+        position.y = clampf(position.y, margin, viewport_size.y - margin)
+    else:
+        position.y = margin if delta.y < 0.0 else viewport_size.y - margin
+        position.x = clampf(position.x, margin, viewport_size.x - margin)
+    return position
+
+func _offscreen_word(word: String, cell: Vector2i) -> String:
+    var view_center_cell := Vector2(
+        float(_visible_origin.x) + float(_visible_size.x) * 0.5,
+        float(_visible_origin.y) + float(_visible_size.y) * 0.5
+    )
+    var delta := Vector2(float(cell.x) - view_center_cell.x, float(cell.y) - view_center_cell.y)
+    if absf(delta.x) >= absf(delta.y):
+        return "< %s" % word if delta.x < 0.0 else "%s >" % word
+    return "^ %s" % word if delta.y < 0.0 else "v %s" % word
 
 func _draw_selection(selection: ArtSelection, destination: Rect2, modulation: Color, quarter_turns: int = 0) -> bool:
     if selection == null or not selection.is_found() or selection.source == null:
