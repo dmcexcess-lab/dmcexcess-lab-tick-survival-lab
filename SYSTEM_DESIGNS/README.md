@@ -131,17 +131,21 @@ The expanded baseline profile libraries are generator content and do not silentl
 Canonical player-facing knowledge model:
 
 - `UNSEEN` = completely black visual world information;
-- `REMEMBERED` = darkened stale last-observed terrain/structural memory;
+- `REMEMBERED` = darkened stale last-observed terrain, structural shell/door state, and anchored static `prop.*`/`fixture.*` furniture/clutter;
 - `VISIBLE` = current live world truth;
 - auditory indicators may render over any of the three states, including true black unexplored fog, without revealing/exploring terrain;
 - last-seen living-actor markers are stale observations, not hidden tracking.
 
 Candidate 001 uses deterministic four-way facing LOS with a 12-cell range, 120-degree forward cone and radius-1 near awareness. Walls and closed doors block; open doors and windows transmit; malformed/unknown structure opacity fails closed. Memory is keyed by stable observer actor ID and hidden live changes never update stale visual memory.
 
-Existing live renderers remain current-truth renderers. `PerceptionOverlayRenderer` masks all non-visible live truth with black and redraws only stored remembered snapshots above that mask.
+Static remembered furniture/clutter stores stable ID, semantic, anchor and facing. Hidden movement/removal remains stale until re-observation, when the snapshot refreshes or clears. Loose items, vehicles and vegetation remain future extensions. Perception-memory snapshots are schema v2.
+
+Existing live renderers remain current-truth renderers. `PerceptionOverlayRenderer` masks all non-visible live truth with black and redraws only stored remembered snapshots above that mask, including remembered static props/fixtures through the normal Art Catalog/orientation rules.
 
 Exact-head context: `verify/system23-perception`.
 
 First fully green executable implementation head after final LOS fixture correction: `87fb517265ba1defc395068d09ccb7059e16d114`.
+
+First fully green executable head with remembered static furniture/clutter: `a08ccf8064f318e283acab6a3f73aa10e59f2acf`.
 
 Seven protected exact-head gates remain System 00D, 00F, 19, 20, 21, 22 and Pages.
