@@ -9,7 +9,6 @@ permissions:
 
 jobs:
   apply:
-    if: ${{ !contains(github.event.head_commit.message, 'Apply performance consumer patch') }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -31,7 +30,6 @@ jobs:
                   raise SystemExit(f"{path}: expected {count} matches, found {actual}\n--- needle ---\n{old}")
               p.write_text(s.replace(old, new, count))
 
-          # System 27: static field geometry depends only on terrain + STRUCTURE placement.
           path = 'game/scripts/simulation/lighting/PhysicalLightingService.gd'
           replace(path,
               'const VisionRangePolicy = preload("res://scripts/simulation/lighting/VisionLightRangePolicy.gd")\n',
@@ -238,7 +236,6 @@ func _apply_emitter(emitter: LightEmitter) -> void:
     _last_door_revision = -1
 ''')
 
-          # Lighting presentation: redraw only for visible geometry or real light inputs.
           path = 'game/scripts/render/PhysicalLightingPresentationRenderer.gd'
           replace(path,
               'const GLOW_SHADER: Shader = preload("res://shaders/physical_lighting_glow.gdshader")\n',
@@ -345,7 +342,6 @@ func _cells_touch_visible(cells: Array[Vector2i]) -> bool:
 func _on_world_reset() -> void:
 ''')
 
-          # Weather P0 telemetry only; no visual/physics change.
           path = 'game/scripts/render/WeatherPresentationRenderer.gd'
           replace(path,
               'class_name WeatherPresentationRenderer\n',
@@ -380,7 +376,6 @@ func _draw_rain(descriptor: Dictionary) -> void:
 func _draw_rain(descriptor: Dictionary) -> void:
 ''')
 
-          # Canonical DEV view: compact 2 Hz performance panel.
           path = 'game/scripts/render/TacticalRendererStack.gd'
           replace(path,
               'const PerceptionOverlayClass = preload("res://scripts/render/PerceptionOverlayRenderer.gd")\n',
@@ -408,7 +403,6 @@ static func _count_diagnostics(commands: Array) -> int:
 static func _count_diagnostics(commands: Array) -> int:
 ''')
 
-          # Remove this one-shot staging workflow from the resulting coherent commit.
           Path('.github/workflows/perf-gate-apply.yml').unlink()
           PY
 
