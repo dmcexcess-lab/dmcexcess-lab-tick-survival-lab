@@ -2,7 +2,7 @@ extends RefCounted
 class_name ActorInventoryInspectorQuery
 
 ## Read-only System 16 inventory/loadout inspection over WHAT + 09 + 11 + 13D/13E.
-## It preserves stable item identity and never mutates possession state.
+## System 30 freshness is an optional read-only enrichment; possession truth stays unchanged.
 
 const MAX_DEPTH: int = 64
 const MAX_ITEMS: int = 4096
@@ -12,26 +12,30 @@ var _hands: ActorHandEquipmentState = null
 var _inventory: InventoryContainmentState = null
 var _weight_query: ItemWeightQuery = null
 var _carry_query: ActorCarryQuery = null
+var _freshness_query: ItemFreshnessQuery = null
 
 func _init(
     world_state: WorldState = null,
     hand_state: ActorHandEquipmentState = null,
     inventory_state: InventoryContainmentState = null,
     weight_query: ItemWeightQuery = null,
-    carry_query: ActorCarryQuery = null
+    carry_query: ActorCarryQuery = null,
+    freshness_query: ItemFreshnessQuery = null
 ) -> void:
     _world = world_state
     _hands = hand_state
     _inventory = inventory_state
     _weight_query = weight_query
     _carry_query = carry_query
+    _freshness_query = freshness_query
 
 func is_ready() -> bool:
     return _world != null \
         and _hands != null \
         and _inventory != null \
         and _weight_query != null \
-        and _carry_query != null
+        and _carry_query != null \
+        and (_freshness_query == null or _freshness_query.is_ready())
 
 func query(actor_id: String) -> Dictionary:
     var normalized: String = actor_id.strip_edges()
@@ -72,35 +76,18 @@ func query(actor_id: String) -> Dictionary:
         "carry": _carry_query.query(normalized).duplicate(true),
     }
 
-func _hand_entry(
-    hand_label: String,
-    slot_name: String,
-    item_id: String,
-    visited: Dictionary,
-    count_ref: Array[int]
-) -> Dictionary:
-    var value: Dictionary = {
+func _hand_entry(hand_label: String, slot_name: String, item_id: String, visited: Dictionary, count_ref: Array[int]) -> Dictionary:
+    return {
         "hand_label": hand_label,
         "slot": slot_name,
         "empty": false,
         "item": _item_entry(item_id, 0, visited, count_ref),
     }
-    return value
 
 static func _empty_hand(hand_label: String, slot_name: String) -> Dictionary:
-    return {
-        "hand_label": hand_label,
-        "slot": slot_name,
-        "empty": true,
-        "item": {},
-    }
+    return {"hand_label": hand_label, "slot": slot_name, "empty": true, "item": {}}
 
-func _item_entry(
-    item_id: String,
-    depth: int,
-    visited: Dictionary,
-    count_ref: Array[int]
-) -> Dictionary:
+func _item_entry(item_id: String, depth: int, visited: Dictionary, count_ref: Array[int]) -> Dictionary:
     var base: Dictionary = {
         "item_id": item_id,
         "semantic_type": &"",
@@ -109,6 +96,10 @@ func _item_entry(
         "reason": "",
         "weight_known": false,
         "weight_grams": 0,
+        "freshness_known": false,
+        "freshness_stage": &"",
+        "freshness_age_permille": 0,
+        "freshness_label_suffix": "",
         "children": [],
     }
     if item_id.is_empty():
@@ -148,12 +139,26 @@ func _item_entry(
     else:
         base["reason"] = String(weight.get("reason", "weight_unknown"))
 
+    _enrich_freshness(base, item_id)
+
     var children: Array = []
     if _inventory.has_container(item_id):
         for child_id: String in _inventory.direct_contents(item_id):
             children.append(_item_entry(child_id, depth + 1, visited, count_ref))
     base["children"] = children
     return base
+
+func _enrich_freshness(entry: Dictionary, item_id: String) -> void:
+    if _freshness_query == null:
+        return
+    var freshness: Dictionary = _freshness_query.query(item_id)
+    if int(freshness.get("status", -1)) != ItemFreshnessQuery.Status.KNOWN:
+        return
+    var stage: StringName = StringName(freshness.get("stage", &""))
+    entry["freshness_known"] = true
+    entry["freshness_stage"] = stage
+    entry["freshness_age_permille"] = int(freshness.get("age_permille", 0))
+    entry["freshness_label_suffix"] = " — %s" % String(stage)
 
 static func _failure(reason: String) -> Dictionary:
     return {
