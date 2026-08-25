@@ -41,6 +41,19 @@ Core rule:
 
 > **A highlight explains an already-valid interaction. It never creates interaction truth.**
 
+### Performance architecture gate — IMPLEMENTED + CI VERIFIED
+
+Before Phase 1B, the approved non-numbered P0/P1/P2 performance pass was implemented on exact executable head `0398a2a49d84e6067f7610727aecacf4c05fe41f`.
+
+- WHAT now exposes cache-oriented terrain/per-channel placement revisions while preserving the global authoritative revision;
+- explicit bulk materialization emits one compact completion summary while truth still mutates immediately;
+- lighting and sky-exposure geometry no longer invalidate on ordinary ACTOR/OBJECT churn;
+- perception, interaction and loot-provider wakeups coalesce explicit streaming batches;
+- the live DEV renderer exposes compact performance telemetry;
+- all **42 workflow runs** on the executable SHA completed successfully and all **15 required exact-head contexts** are green.
+
+**Remaining gate before 1B implementation: human iPhone/Safari acceptance of ordinary movement/streaming feel.** GPU Weather and predictive/amortized streaming remain deferred unless measurement or that playtest justifies them.
+
 ### 1B — Item freshness / spoilage — NEXT DESIGN TARGET
 
 Goal: add the first durable per-instance item-condition state without creating a generic metadata bag or a per-tick spoilage loop.
@@ -58,7 +71,7 @@ Planned direction:
 - shelf-stable/canned goods do not receive pointless per-instance ticking state merely because Spoilage exists;
 - expand the current food catalog enough to exercise genuinely short-, medium- and long-life perishables.
 
-**1B is next for bounded design. This roadmap status is not blanket authorization to implement it without the normal DESCRIBE -> APPROVE -> IMPLEMENT -> VERIFY lifecycle.**
+**1B is next for bounded design after human phone/Safari performance acceptance. This roadmap status is not blanket authorization to implement it without the normal DESCRIBE -> APPROVE -> IMPLEMENT -> VERIFY lifecycle.**
 
 ### 1C — Semantic inventory/menu icons
 
@@ -116,7 +129,7 @@ Phase 1 is complete when:
 
 **Completed first implementation:** **1A Interaction affordance + reach / System 29 Candidate 001.**
 
-**Recommended next bounded design:** **1B Item freshness / spoilage.**
+**Recommended next bounded design after human phone/Safari performance acceptance:** **1B Item freshness / spoilage.**
 
 ---
 
@@ -351,7 +364,7 @@ These do not reorder the gameplay phases, but must be inserted when required by 
 
 - save/load orchestration before newly persistent gameplay state becomes unsafe to lose;
 - schema migration/invalidation policy while pre-Beta remains free to invalidate old saves;
-- performance profiling before population-scale AI, many simultaneous observers, moving lights, vehicles or large utility damage graphs;
+- **first performance architecture gate COMPLETE:** P0/P1/P2 invalidation/batching/telemetry pass verified on `0398a2a49d84e6067f7610727aecacf4c05fe41f`; repeat profiling before population-scale AI, many simultaneous observers, moving lights, vehicles or large utility damage graphs;
 - persistence-backed streaming eviction only after it can preserve the same current WHAT truth;
 - mobile/browser hard-pause and input regressions remain required throughout.
 
