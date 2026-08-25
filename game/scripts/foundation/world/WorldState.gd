@@ -8,11 +8,16 @@ const TerrainStoreClass = preload("res://scripts/foundation/world/TerrainStore.g
 const EntityStoreClass = preload("res://scripts/foundation/world/EntityStore.gd")
 const PlacementStoreClass = preload("res://scripts/foundation/world/PlacementStore.gd")
 const OccupancyIndexClass = preload("res://scripts/foundation/world/OccupancyIndex.gd")
+const ChangeBatchClass = preload("res://scripts/foundation/world/WorldChangeBatch.gd")
+const Layers = preload("res://scripts/foundation/spatial/SpatialLayer.gd")
+const PerformanceTelemetry = preload("res://scripts/foundation/diagnostics/PerformanceTelemetry.gd")
 
 ## Authoritative WHAT read/query facade and state composition.
+## Global revision remains authoritative; domain revisions are cache invalidation hints.
 ## Normal writes go through WorldMutationService.
 
 signal changed(change)
+signal batch_changed(batch)
 signal world_reset
 
 const SNAPSHOT_SCHEMA_VERSION: int = 1
@@ -23,9 +28,45 @@ var _placements: PlacementStore = PlacementStoreClass.new()
 var _occupancy: OccupancyIndex = OccupancyIndexClass.new()
 var _next_entity_serial: int = 1
 var _revision: int = 0
+var _terrain_revision: int = 0
+var _placement_revisions: Dictionary = {}
+var _batch_depth: int = 0
+var _active_batch: WorldChangeBatch = null
 
 func revision() -> int:
     return _revision
+
+func terrain_revision() -> int:
+    return _terrain_revision
+
+func placement_revision(channel: int) -> int:
+    return int(_placement_revisions.get(channel, 0))
+
+func begin_change_batch(label: StringName = &"world_batch") -> bool:
+    if _batch_depth == 0:
+        _active_batch = ChangeBatchClass.new(label)
+    _batch_depth += 1
+    return true
+
+func end_change_batch() -> WorldChangeBatch:
+    if _batch_depth <= 0:
+        return null
+    _batch_depth -= 1
+    if _batch_depth > 0:
+        return null
+    var completed: WorldChangeBatch = _active_batch
+    _active_batch = null
+    if completed != null and completed.change_count > 0:
+        PerformanceTelemetry.record_batch(completed)
+        batch_changed.emit(completed.copy())
+    return completed.copy() if completed != null else null
+
+func cancel_change_batch() -> void:
+    _batch_depth = 0
+    _active_batch = null
+
+func is_change_batch_active() -> bool:
+    return _batch_depth > 0 and _active_batch != null
 
 func has_entity(entity_id: String) -> bool:
     return _entities.has(entity_id)
@@ -70,20 +111,14 @@ func snapshot() -> Dictionary:
 func load_snapshot(data: Dictionary) -> bool:
     if int(data.get("schema_version", -1)) != SNAPSHOT_SCHEMA_VERSION:
         return false
-
     var restored_next_serial: int = int(data.get("next_entity_serial", -1))
     var restored_revision: int = int(data.get("revision", -1))
     if restored_next_serial < 1 or restored_revision < 0:
         return false
-
     var terrain_value: Variant = data.get("terrain", [])
     var entities_value: Variant = data.get("entities", [])
     var placements_value: Variant = data.get("placements", [])
-    if typeof(terrain_value) != TYPE_ARRAY:
-        return false
-    if typeof(entities_value) != TYPE_ARRAY:
-        return false
-    if typeof(placements_value) != TYPE_ARRAY:
+    if typeof(terrain_value) != TYPE_ARRAY or typeof(entities_value) != TYPE_ARRAY or typeof(placements_value) != TYPE_ARRAY:
         return false
 
     var restored_terrain: TerrainStore = TerrainStoreClass.new()
@@ -113,22 +148,24 @@ func load_snapshot(data: Dictionary) -> bool:
         if typeof(value) != TYPE_DICTIONARY:
             return false
         var placed: WorldPlacement = PlacementClass.from_snapshot(value)
-        if placed == null:
-            return false
-        if not restored_entities.has(placed.entity_id) or restored_placements.has(placed.entity_id):
+        if placed == null or not restored_entities.has(placed.entity_id) or restored_placements.has(placed.entity_id):
             return false
         if not restored_placements.set_placement(placed):
             return false
 
     var restored_occupancy: OccupancyIndex = OccupancyIndexClass.new()
     restored_occupancy.rebuild(restored_placements)
-
     _terrain = restored_terrain
     _entities = restored_entities
     _placements = restored_placements
     _occupancy = restored_occupancy
     _next_entity_serial = restored_next_serial
     _revision = restored_revision
+    _terrain_revision = restored_revision
+    _placement_revisions.clear()
+    for channel in range(Layers.Channel.TERRAIN, Layers.Channel.EFFECT + 1):
+        _placement_revisions[channel] = restored_revision
+    cancel_change_batch()
     world_reset.emit()
     return true
 
@@ -186,4 +223,16 @@ func _commit_change(change: WorldChange) -> void:
         return
     _revision += 1
     change.sequence = _revision
+    if change.is_terrain_change():
+        _terrain_revision += 1
+    var touched: Dictionary = {}
+    if change.before_channel >= 0:
+        touched[change.before_channel] = true
+    if change.after_channel >= 0:
+        touched[change.after_channel] = true
+    for channel_value: Variant in touched.keys():
+        var channel: int = int(channel_value)
+        _placement_revisions[channel] = int(_placement_revisions.get(channel, 0)) + 1
+    if _active_batch != null:
+        _active_batch.include(change)
     changed.emit(change.copy())
