@@ -61,6 +61,27 @@ Focused branch run: `32812289707`.
 
 The canonical executable is the final `main` head carrying this change after the complete required exact-head suite and Pages deployment are green.
 
+## P3B — visual de-tiling / density tuning — 2026-08-24
+
+Post-P3 desktop playtesting confirmed the performance architecture worked, but the finer 2 px rain exposed a different visual flaw: the original shader still selected streaks from a repeating five-row band/phase pattern. At the smaller scale the pattern read as dense horizontal striping rather than irregular rainfall.
+
+P3B keeps the P3 architecture intact and changes shader distribution only:
+
+- **2 px base Weather scale remains unchanged**;
+- rain no longer uses the old `floor(cell.y / 5)` / five-row phase lattice;
+- rain now uses larger **jittered macro-cells**, with at most one independently phased streak candidate per patch;
+- a still-coarser cluster hash biases neighboring patches wetter/drier so density varies across the screen instead of looking uniformly stamped;
+- streak position, vertical phase, 1–3 weather-pixel length and brightness are deterministically varied from the presentation seed;
+- medium rain is intentionally much sparser while storm precipitation can still become visibly dense;
+- fog replaces aligned rectangular patch selection with staggered rows and small diamond-like pixel clouds;
+- no new textures, Nodes, particle systems, CPU redraws, screen-to-world conversions or shelter queries were introduced.
+
+The performance bargain remains exactly P3: one fullscreen atmosphere shader, zero CPU continuous-rain/fog redraw loop, and camera movement changes only shelter-mapping uniforms.
+
+P3B verification additionally locks out the old row-band expressions in Weather CI and requires the jittered-macro/cluster/staggered-fog shader structure to compile under Godot 4.7.1.
+
 ## Remaining playtest question
 
-This pass removes Weather itself as a CPU redraw/query burden. If Safari still visibly stops all rendering during a movement action, the next measured suspect is synchronous action/streaming execution starving the browser render frame—not a need for more Weather simulation complexity.
+P3B needs a human visual check because automated tests can prove architecture and shader compilation but cannot judge whether rain *looks* naturally sparse. The preferred comparison is ordinary rain around **50–60% precipitation** with the DEV/performance panel visible, matching the screenshot that exposed the striping.
+
+If movement remains smooth and the de-tiled distribution reads correctly, Weather presentation is considered accepted. If the whole scene still pauses during movement, the next measured suspect is synchronous action/streaming execution rather than additional Weather complexity.
