@@ -1,8 +1,12 @@
 # Tick Survival Lab — Performance Architecture Gate
 
-Status: **APPROVED — P0/P1/P2 first executable pass**
+Status: **IMPLEMENTED + CI VERIFIED — P0/P1/P2 first executable pass**
 
 Approved: **2026-08-24**
+
+Implemented / exact-head verified: **2026-08-24**
+
+First fully green executable head: `0398a2a49d84e6067f7610727aecacf4c05fe41f`.
 
 Roadmap role: **non-numbered engineering gate before Phase 1B**.
 
@@ -46,8 +50,10 @@ Permanent context: `verify/performance-architecture`.
 
 Focused contract proves a 128-object batch emits one completed summary, OBJECT revision changes without terrain/STRUCTURE revision changes, ACTOR/OBJECT churn causes zero lighting-geometry/sample and shelter-mask rebuilds, while a real STRUCTURE change still causes exactly one rebuild after query. Existing performance, lighting, streaming, interaction and startup regressions remain protected.
 
+Executable head `0398a2a49d84e6067f7610727aecacf4c05fe41f` finished **42/42 associated workflow runs successfully** and all **15 required exact-head contexts** were green, including `verify/performance-architecture` and `verify/pages-deploy`.
+
 ## Deferred measured follow-up
 
 P3 GPU Weather presentation and P5 predictive/amortized streaming are not automatically authorized. Measure the post-P2 playable build first and design either only if it remains a meaningful Safari bottleneck.
 
-**Phase 1B Item Freshness / Spoilage remains frozen until this gate has a green exact-head executable and human phone/Safari testing confirms ordinary movement no longer has unacceptable stalls.**
+**The CI/executable half of this gate is complete. Phase 1B Item Freshness / Spoilage remains frozen only until human phone/Safari testing confirms ordinary movement no longer has unacceptable stalls.**
