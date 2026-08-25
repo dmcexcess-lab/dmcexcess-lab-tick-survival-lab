@@ -4,6 +4,10 @@ class_name InteractionHighlightRenderer
 ## Presentation-only System-29 highlight layer. It draws a restrained pixel-native
 ## corner outline for already-valid, currently-visible interaction targets. It emits
 ## no physical light and never decides whether an action exists.
+##
+## Signal-driven refreshes are coalesced to one deferred refresh. Streaming and
+## perception can legitimately emit several synchronous invalidations during one
+## committed player step; presentation only needs the final state before drawing.
 
 signal redraw_requested(reason: StringName)
 
@@ -15,6 +19,8 @@ var _visible_size: Vector2i = Vector2i.ZERO
 var _cell_pixels: float = 0.0
 var _view_valid: bool = false
 var _highlights: Array[Dictionary] = []
+var _refresh_queued: bool = false
+var _queued_reason: StringName = &""
 
 func configure(query: InteractionAffordanceQuery) -> bool:
     if query == null or not query.is_ready():
@@ -24,6 +30,8 @@ func configure(query: InteractionAffordanceQuery) -> bool:
     var callback := Callable(self, "_on_affordances_changed")
     if not _query.affordances_changed.is_connected(callback):
         _query.affordances_changed.connect(callback)
+    _refresh_queued = false
+    _queued_reason = &""
     _refresh(&"configured")
     return true
 
@@ -109,12 +117,27 @@ func _refresh(reason: StringName) -> void:
     _highlights = [] if _query == null else _query.highlight_descriptors()
     _request_redraw(reason)
 
+func _queue_refresh(reason: StringName) -> void:
+    _queued_reason = reason
+    if _refresh_queued:
+        return
+    _refresh_queued = true
+    call_deferred("_flush_queued_refresh")
+
+func _flush_queued_refresh() -> void:
+    if not _refresh_queued:
+        return
+    _refresh_queued = false
+    var reason: StringName = _queued_reason
+    _queued_reason = &""
+    _refresh(reason)
+
 func _request_redraw(reason: StringName) -> void:
     redraw_requested.emit(reason)
     queue_redraw()
 
 func _on_affordances_changed(_reason: StringName) -> void:
-    _refresh(&"affordances_changed")
+    _queue_refresh(&"affordances_changed")
 
 func _disconnect_query() -> void:
     if _query == null:

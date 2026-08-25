@@ -8,6 +8,11 @@ const PerceptionClass = preload("res://scripts/simulation/perception/ObserverPer
 ## System-29 composition/query owner. It discovers only actor-local reachable OBJECT
 ## occupancy, asks real mechanic providers for offers, then applies System-23 current
 ## knowledge before exposing player-facing highlight descriptors.
+##
+## World-change invalidation keeps a tiny cached copy of the actor's interaction
+## reach. Streaming can emit many unrelated placement changes synchronously; those
+## changes must not each allocate/re-query actor reach merely to prove they are far
+## away. The authoritative reach query is still used for actual offers/reach checks.
 
 signal affordances_changed(reason: StringName)
 
@@ -16,6 +21,7 @@ var _reach: WorldInteractionReachQuery = null
 var _perception: ObserverPerceptionService = null
 var _actor_id: String = ""
 var _providers: Array[InteractionOfferProvider] = []
+var _reachable_cell_cache: Dictionary = {}
 
 func _init(
     world_state: WorldState = null,
@@ -28,6 +34,7 @@ func _init(
     _perception = perception_service
     _actor_id = actor_id.strip_edges()
     _connect_sources()
+    _rebuild_reachable_cell_cache()
 
 func is_ready() -> bool:
     return _world != null \
@@ -175,29 +182,40 @@ func _connect_sources() -> void:
         if not _perception.perception_changed.is_connected(changed):
             _perception.perception_changed.connect(changed)
 
+func _rebuild_reachable_cell_cache() -> void:
+    _reachable_cell_cache.clear()
+    if _reach == null or not _reach.is_ready() or _actor_id.is_empty():
+        return
+    for cell: Vector2i in _reach.reachable_cells(_actor_id, WorldInteractionReachQuery.CONTACT_FORWARD):
+        _reachable_cell_cache[cell] = true
+
+func _change_intersects_cached_reach(change: WorldChange) -> bool:
+    if _reachable_cell_cache.is_empty():
+        return false
+    for cell: Vector2i in change.before_cells:
+        if _reachable_cell_cache.has(cell):
+            return true
+    for cell: Vector2i in change.after_cells:
+        if _reachable_cell_cache.has(cell):
+            return true
+    return false
+
 func _on_world_changed(change: WorldChange) -> void:
     if change == null:
         return
     if change.entity_id == _actor_id:
+        _rebuild_reachable_cell_cache()
         affordances_changed.emit(&"actor_changed")
         return
     if change.kind != Change.Kind.PLACEMENT_SET \
         and change.kind != Change.Kind.PLACEMENT_REMOVED \
         and change.kind != Change.Kind.ENTITY_REMOVED:
         return
-    var local_cells: Dictionary = {}
-    for cell: Vector2i in _reach.reachable_cells(_actor_id, WorldInteractionReachQuery.CONTACT_FORWARD):
-        local_cells[cell] = true
-    for cell: Vector2i in change.before_cells:
-        if local_cells.has(cell):
-            affordances_changed.emit(&"reachable_object_changed")
-            return
-    for cell: Vector2i in change.after_cells:
-        if local_cells.has(cell):
-            affordances_changed.emit(&"reachable_object_changed")
-            return
+    if _change_intersects_cached_reach(change):
+        affordances_changed.emit(&"reachable_object_changed")
 
 func _on_world_reset() -> void:
+    _reachable_cell_cache.clear()
     affordances_changed.emit(&"world_reset")
 
 func _on_perception_changed(_reason: StringName) -> void:

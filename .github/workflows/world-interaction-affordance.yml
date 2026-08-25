@@ -31,13 +31,17 @@ jobs:
           test -f game/scripts/simulation/interaction/InteractionAffordanceQuery.gd
           test -f game/scripts/simulation/loot/LootSearchInteractionOfferProvider.gd
           test -f game/scripts/render/InteractionHighlightRenderer.gd
+          test -f game/scripts/ci/InteractionCountingReachQuery.gd
           test -f game/scripts/ci/WorldInteractionAffordanceSmoke.gd
+          test -f game/scripts/ci/WorldInteractionStreamingBurstSmoke.gd
           test ! -f game/scripts/simulation/loot/LootInteractionReach.gd
           grep -q 'Status: \*\*APPROVED\|Status: \*\*IMPLEMENTED' SYSTEM_DESIGNS/29_WORLD_INTERACTION_AFFORDANCE_REACH.md
           grep -q 'CONTACT_FORWARD' game/scripts/simulation/interaction/WorldInteractionReachQuery.gd
           grep -q 'entities_at' game/scripts/simulation/interaction/WorldInteractionReachQuery.gd
+          grep -q '_reachable_cell_cache' game/scripts/simulation/interaction/InteractionAffordanceQuery.gd
           grep -q 'knowledge_state' game/scripts/simulation/interaction/InteractionAffordanceQuery.gd
           grep -q 'scavenge.search_container' game/scripts/simulation/loot/LootSearchInteractionOfferProvider.gd
+          grep -q '_queue_refresh' game/scripts/render/InteractionHighlightRenderer.gd
           grep -q 'InteractionHighlightRenderer' game/scripts/render/TacticalRendererStack.gd
           ! grep -R -F -q 'entity_ids()' game/scripts/simulation/interaction game/scripts/simulation/loot/LootSearchInteractionOfferProvider.gd
           ! grep -R -E -q 'func _process|func _physics_process' game/scripts/simulation/interaction game/scripts/render/InteractionHighlightRenderer.gd
@@ -67,6 +71,14 @@ jobs:
           ./Godot_v4.7.1-stable_linux.x86_64 --headless --path "$GITHUB_WORKSPACE/game" --quit-after 30 --script res://scripts/ci/WorldInteractionAffordanceSmoke.gd 2>&1 | tee "$RUNNER_TEMP/interaction29.log"
           grep -q 'WORLD_INTERACTION_AFFORDANCE_SMOKE_OK' "$RUNNER_TEMP/interaction29.log"
           if grep -Eqi 'SCRIPT ERROR|Parse Error|Failed to load script' "$RUNNER_TEMP/interaction29.log"; then exit 1; fi
+
+      - name: System 29 streaming-burst regression
+        shell: bash
+        run: |
+          set -euxo pipefail
+          ./Godot_v4.7.1-stable_linux.x86_64 --headless --path "$GITHUB_WORKSPACE/game" --quit-after 30 --script res://scripts/ci/WorldInteractionStreamingBurstSmoke.gd 2>&1 | tee "$RUNNER_TEMP/interaction29-streaming.log"
+          grep -q 'WORLD_INTERACTION_STREAMING_BURST_SMOKE_OK' "$RUNNER_TEMP/interaction29-streaming.log"
+          if grep -Eqi 'SCRIPT ERROR|Parse Error|Failed to load script' "$RUNNER_TEMP/interaction29-streaming.log"; then exit 1; fi
 
       - name: System 24 reach and loot regression
         shell: bash
