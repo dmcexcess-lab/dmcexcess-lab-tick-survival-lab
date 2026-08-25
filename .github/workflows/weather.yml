@@ -2,7 +2,7 @@ name: Weather Atmosphere contract
 
 on:
   push:
-    branches: [main, weather-p3-revamp]
+    branches: [main]
   workflow_dispatch:
 
 permissions:
