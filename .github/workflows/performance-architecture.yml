@@ -1,0 +1,121 @@
+name: Performance Architecture contract
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  statuses: write
+
+concurrency:
+  group: performance-architecture-contract
+  cancel-in-progress: true
+
+jobs:
+  performance-architecture:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate performance architecture boundaries
+        shell: bash
+        run: |
+          set -euxo pipefail
+          test -f SYSTEM_DESIGNS/PERFORMANCE_ARCHITECTURE.md
+          test -f game/scripts/foundation/world/WorldChangeBatch.gd
+          test -f game/scripts/foundation/diagnostics/PerformanceTelemetry.gd
+          test -f game/scripts/ui/PerformanceDevPanel.gd
+          test -f game/scripts/ci/PerformanceArchitectureSmoke.gd
+          grep -q 'batch_changed' game/scripts/foundation/world/WorldState.gd
+          grep -q 'terrain_revision' game/scripts/foundation/world/WorldState.gd
+          grep -q 'placement_revision' game/scripts/foundation/world/WorldState.gd
+          grep -q 'streaming_materialization' game/scripts/streaming/WorldMaterializationCoordinator.gd
+          grep -q 'placement_revision(Layers.Channel.STRUCTURE)' game/scripts/simulation/lighting/PhysicalLightingService.gd
+          grep -q 'placement_revision(Layers.Channel.STRUCTURE)' game/scripts/simulation/weather/SkyExposureQuery.gd
+          grep -q '_on_world_batch_changed' game/scripts/simulation/perception/ObserverPerceptionService.gd
+          grep -q '_on_world_batch_changed' game/scripts/simulation/interaction/InteractionAffordanceQuery.gd
+          grep -q 'PerformanceDevPanel' game/scripts/render/TacticalRendererStack.gd
+
+      - name: Install Godot 4.7.1
+        shell: bash
+        run: |
+          set -euxo pipefail
+          curl -L -o godot.zip https://github.com/godotengine/godot-builds/releases/download/4.7.1-stable/Godot_v4.7.1-stable_linux.x86_64.zip
+          unzip -q godot.zip
+          chmod +x Godot_v4.7.1-stable_linux.x86_64
+
+      - name: Import and parse project
+        shell: bash
+        run: |
+          set -euxo pipefail
+          ./Godot_v4.7.1-stable_linux.x86_64 --headless --editor --path "$GITHUB_WORKSPACE/game" --quit 2>&1 | tee "$RUNNER_TEMP/import.log"
+          if grep -Eqi 'SCRIPT ERROR|Parse Error|Failed to load script' "$RUNNER_TEMP/import.log"; then exit 1; fi
+
+      - name: Performance architecture focused contract
+        shell: bash
+        run: |
+          set -euxo pipefail
+          ./Godot_v4.7.1-stable_linux.x86_64 --headless --path "$GITHUB_WORKSPACE/game" --quit-after 30 --script res://scripts/ci/PerformanceArchitectureSmoke.gd 2>&1 | tee "$RUNNER_TEMP/performance-architecture.log"
+          grep -q 'PERFORMANCE_ARCHITECTURE_SMOKE_OK' "$RUNNER_TEMP/performance-architecture.log"
+          grep -q 'PERF_ARCH_BATCH_SIGNALS=1' "$RUNNER_TEMP/performance-architecture.log"
+          grep -q 'PERF_ARCH_LIGHT_GEOMETRY_ACTOR_DELTA=0' "$RUNNER_TEMP/performance-architecture.log"
+          grep -q 'PERF_ARCH_LIGHT_GEOMETRY_OBJECT_DELTA=0' "$RUNNER_TEMP/performance-architecture.log"
+          grep -q 'PERF_ARCH_LIGHT_GEOMETRY_STRUCTURE_DELTA=1' "$RUNNER_TEMP/performance-architecture.log"
+          grep -q 'PERF_ARCH_SKY_ACTOR_DELTA=0' "$RUNNER_TEMP/performance-architecture.log"
+          grep -q 'PERF_ARCH_SKY_OBJECT_DELTA=0' "$RUNNER_TEMP/performance-architecture.log"
+          grep -q 'PERF_ARCH_SKY_STRUCTURE_DELTA=1' "$RUNNER_TEMP/performance-architecture.log"
+          if grep -Eqi 'SCRIPT ERROR|Parse Error|Failed to load script' "$RUNNER_TEMP/performance-architecture.log"; then exit 1; fi
+
+      - name: Existing performance razor regression
+        shell: bash
+        run: |
+          set -euxo pipefail
+          ./Godot_v4.7.1-stable_linux.x86_64 --headless --path "$GITHUB_WORKSPACE/game" --quit-after 30 --script res://scripts/ci/PerformanceRazorSmoke.gd 2>&1 | tee "$RUNNER_TEMP/performance-razor.log"
+          grep -q 'PERFORMANCE_RAZOR_SMOKE_OK' "$RUNNER_TEMP/performance-razor.log"
+
+      - name: Physical lighting protected regression
+        shell: bash
+        run: |
+          set -euxo pipefail
+          ./Godot_v4.7.1-stable_linux.x86_64 --headless --path "$GITHUB_WORKSPACE/game" --quit-after 30 --script res://scripts/ci/PhysicalLightingSmoke.gd 2>&1 | tee "$RUNNER_TEMP/lighting.log"
+          grep -q 'PHYSICAL_LIGHTING_SMOKE_OK' "$RUNNER_TEMP/lighting.log"
+
+      - name: Interaction streaming-burst protected regression
+        shell: bash
+        run: |
+          set -euxo pipefail
+          ./Godot_v4.7.1-stable_linux.x86_64 --headless --path "$GITHUB_WORKSPACE/game" --quit-after 30 --script res://scripts/ci/WorldInteractionStreamingBurstSmoke.gd 2>&1 | tee "$RUNNER_TEMP/interaction-streaming.log"
+          grep -q 'WORLD_INTERACTION_STREAMING_BURST_SMOKE_OK' "$RUNNER_TEMP/interaction-streaming.log"
+
+      - name: Streaming materialization protected regression
+        shell: bash
+        run: |
+          set -euxo pipefail
+          ./Godot_v4.7.1-stable_linux.x86_64 --headless --path "$GITHUB_WORKSPACE/game" --quit-after 30 --script res://scripts/ci/StreamingMaterializationSmoke.gd 2>&1 | tee "$RUNNER_TEMP/streaming.log"
+          grep -q 'STREAMING_MATERIALIZATION_SMOKE_OK' "$RUNNER_TEMP/streaming.log"
+
+      - name: Canonical demo startup regression
+        shell: bash
+        run: |
+          set -euxo pipefail
+          ./Godot_v4.7.1-stable_linux.x86_64 --headless --path "$GITHUB_WORKSPACE/game" --quit-after 2 2>&1 | tee "$RUNNER_TEMP/startup.log"
+          grep -q 'CANONICAL_DEMO_BOOT_OK' "$RUNNER_TEMP/startup.log"
+          if grep -Eqi 'SCRIPT ERROR|Parse Error|Failed to load script|CANONICAL_DEMO_BOOT_FAILED' "$RUNNER_TEMP/startup.log"; then exit 1; fi
+
+      - name: Publish performance architecture exact-head status
+        if: always()
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SHA: ${{ github.sha }}
+          REPOSITORY: ${{ github.repository }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          JOB_STATUS: ${{ job.status }}
+        run: |
+          set -euo pipefail
+          case "$JOB_STATUS" in success) state=success ;; failure) state=failure ;; *) state=error ;; esac
+          payload=$(printf '{"state":"%s","context":"verify/performance-architecture","description":"Cross-system performance architecture contract","target_url":"%s"}' "$state" "$RUN_URL")
+          curl --fail --silent --show-error -X POST -H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/vnd.github+json" -H "X-GitHub-Api-Version: 2022-11-28" "https://api.github.com/repos/$REPOSITORY/statuses/$SHA" -d "$payload"
