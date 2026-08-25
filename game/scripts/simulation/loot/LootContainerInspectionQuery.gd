@@ -10,6 +10,7 @@ var _items: LootItemCatalog = null
 var _profiles: LootContainerProfileCatalog = null
 var _weight_query: ItemWeightQuery = null
 var _carry_query: ActorCarryQuery = null
+var _freshness_query: ItemFreshnessQuery = null
 
 func _init(
     world_state: WorldState = null,
@@ -18,7 +19,8 @@ func _init(
     item_catalog: LootItemCatalog = null,
     profile_catalog: LootContainerProfileCatalog = null,
     weight_query: ItemWeightQuery = null,
-    carry_query: ActorCarryQuery = null
+    carry_query: ActorCarryQuery = null,
+    freshness_query: ItemFreshnessQuery = null
 ) -> void:
     _world = world_state
     _containment = containment_state
@@ -27,10 +29,12 @@ func _init(
     _profiles = profile_catalog
     _weight_query = weight_query
     _carry_query = carry_query
+    _freshness_query = freshness_query
 
 func is_ready() -> bool:
     return _world != null and _containment != null and _loot_state != null \
-        and _items != null and _profiles != null and _weight_query != null and _carry_query != null
+        and _items != null and _profiles != null and _weight_query != null and _carry_query != null \
+        and (_freshness_query == null or _freshness_query.is_ready())
 
 func item_definition(semantic_type: StringName) -> Dictionary:
     if not is_ready():
@@ -94,6 +98,10 @@ func _item_entry(item_id: String) -> Dictionary:
         "tags": [],
         "weight_known": false,
         "weight_grams": 0,
+        "freshness_known": false,
+        "freshness_stage": &"",
+        "freshness_age_permille": 0,
+        "freshness_label_suffix": "",
         "valid": false,
     }
     if not _world.has_entity(item_id):
@@ -115,8 +123,21 @@ func _item_entry(item_id: String) -> Dictionary:
     if int(weight.get("status", -1)) == ItemWeightQuery.Status.KNOWN:
         result["weight_known"] = true
         result["weight_grams"] = int(weight.get("weight_grams", 0))
+    _enrich_freshness(result, item_id)
     result["valid"] = true
     return result
+
+func _enrich_freshness(entry: Dictionary, item_id: String) -> void:
+    if _freshness_query == null:
+        return
+    var freshness: Dictionary = _freshness_query.query(item_id)
+    if int(freshness.get("status", -1)) != ItemFreshnessQuery.Status.KNOWN:
+        return
+    var stage: StringName = StringName(freshness.get("stage", &""))
+    entry["freshness_known"] = true
+    entry["freshness_stage"] = stage
+    entry["freshness_age_permille"] = int(freshness.get("age_permille", 0))
+    entry["freshness_label_suffix"] = " — %s" % String(stage)
 
 static func _container_label(profile_id: StringName, semantic_type: StringName) -> String:
     var profile_text: String = String(profile_id)
