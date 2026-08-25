@@ -5,6 +5,7 @@ signal active_regions_changed(activated, deactivated)
 signal source_materialized(source_key, source_id, bounds)
 
 const NO_FOCUS_CELL: Vector2i = Vector2i(-999999999, -999999999)
+const PerformanceTelemetry = preload("res://scripts/foundation/diagnostics/PerformanceTelemetry.gd")
 
 var _global_plan: GeneratedGlobalWorldPlan = null
 var _grid: StreamingRegionGrid = null
@@ -16,6 +17,10 @@ var _active_radius: int = 1
 var _focus_cell: Vector2i = NO_FOCUS_CELL
 var _focus_region: Vector2i = StreamingRegionGrid.INVALID_COORD
 var _active_regions: Array[Vector2i] = []
+var _update_count: int = 0
+var _same_region_fast_path_count: int = 0
+var _last_update_usec: int = 0
+var _last_materialized_source_count: int = 0
 
 func _init(
     global_plan: GeneratedGlobalWorldPlan = null,
@@ -60,40 +65,44 @@ func source_providers() -> Array:
     return _providers.duplicate()
 
 func update_focus(cell: Vector2i) -> Dictionary:
+    var started: int = Time.get_ticks_usec()
+    _update_count += 1
+    _last_materialized_source_count = 0
     if not is_ready():
-        return _failure("streaming_coordinator_not_ready")
+        return _finish_update(_failure("streaming_coordinator_not_ready"), started)
     if not _global_plan.bounds.has_point(cell):
-        return _failure("focus_outside_world_bounds")
+        return _finish_update(_failure("focus_outside_world_bounds"), started)
 
     var target_focus_region: Vector2i = _grid.region_coord_for_cell(cell)
     if target_focus_region == StreamingRegionGrid.INVALID_COORD:
-        return _failure("focus_region_unresolved")
+        return _finish_update(_failure("focus_region_unresolved"), started)
 
     ## Moving inside the same technical region cannot change the active neighborhood or discover
     ## a new logical source. Update the precise focus cell and avoid all provider/catalog/materialization work.
     if has_focus() and target_focus_region == _focus_region:
         _focus_cell = cell
-        return _success([], [], true, [], [])
+        _same_region_fast_path_count += 1
+        return _finish_update(_success([], [], true, [], []), started)
 
     var target_regions: Array[Vector2i] = _grid.regions_around(target_focus_region, _active_radius)
     if target_regions.is_empty():
-        return _failure("active_region_set_empty")
+        return _finish_update(_failure("active_region_set_empty"), started)
 
     var target_bounds: Array[Rect2i] = []
     for coord: Vector2i in target_regions:
         var bounds: Rect2i = _grid.region_bounds(coord)
         if bounds.size.x <= 0 or bounds.size.y <= 0:
-            return _failure("active_region_bounds_invalid")
+            return _finish_update(_failure("active_region_bounds_invalid"), started)
         target_bounds.append(bounds)
 
     var handles: Array[Dictionary] = []
     for provider: Variant in _providers:
         var discovered_value: Variant = provider.call("source_handles_intersecting", _global_plan, target_bounds)
         if typeof(discovered_value) != TYPE_ARRAY:
-            return _failure("materialization_source_discovery_invalid:%s" % String(provider.call("source_kind")))
+            return _finish_update(_failure("materialization_source_discovery_invalid:%s" % String(provider.call("source_kind"))), started)
         for handle_value: Variant in discovered_value:
             if typeof(handle_value) != TYPE_DICTIONARY:
-                return _failure("materialization_source_handle_invalid:%s" % String(provider.call("source_kind")))
+                return _finish_update(_failure("materialization_source_handle_invalid:%s" % String(provider.call("source_kind"))), started)
             handles.append(handle_value)
     handles.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
         return String(a.get("source_key", "")) < String(b.get("source_key", ""))
@@ -101,7 +110,7 @@ func update_focus(cell: Vector2i) -> Dictionary:
 
     var ensured: Dictionary = _materialization.ensure_sources(_global_plan, handles)
     if not bool(ensured.get("ok", false)):
-        return _failure("required_materialization_failed:%s" % String(ensured.get("failure_reason", "unknown")))
+        return _finish_update(_failure("required_materialization_failed:%s" % String(ensured.get("failure_reason", "unknown"))), started)
 
     var activated: Array[Vector2i] = _difference(target_regions, _active_regions)
     var deactivated: Array[Vector2i] = _difference(_active_regions, target_regions)
@@ -110,6 +119,7 @@ func update_focus(cell: Vector2i) -> Dictionary:
     _active_regions = target_regions.duplicate()
 
     var newly: Array = ensured.get("newly_materialized", [])
+    _last_materialized_source_count = newly.size()
     for key_value: Variant in newly:
         var source_key: String = String(key_value)
         var value: MaterializationRecord = _materialization.registry().record(source_key)
@@ -119,7 +129,7 @@ func update_focus(cell: Vector2i) -> Dictionary:
         active_regions_changed.emit(activated.duplicate(), deactivated.duplicate())
 
     var already: Array = ensured.get("already_materialized", [])
-    return _success(newly, already, false, activated, deactivated)
+    return _finish_update(_success(newly, already, false, activated, deactivated), started)
 
 func has_focus() -> bool:
     return _focus_cell != NO_FOCUS_CELL
@@ -146,6 +156,25 @@ func is_cell_active(cell: Vector2i) -> bool:
         return false
     var coord: Vector2i = _grid.region_coord_for_cell(cell)
     return coord != StreamingRegionGrid.INVALID_COORD and _active_regions.has(coord)
+
+func debug_snapshot() -> Dictionary:
+    return {
+        "update_count": _update_count,
+        "same_region_fast_path_count": _same_region_fast_path_count,
+        "last_update_usec": _last_update_usec,
+        "last_materialized_source_count": _last_materialized_source_count,
+        "focus_cell": _focus_cell,
+        "focus_region": _focus_region,
+        "active_region_count": _active_regions.size(),
+    }
+
+func _finish_update(result: Dictionary, started_usec: int) -> Dictionary:
+    _last_update_usec = Time.get_ticks_usec() - started_usec
+    PerformanceTelemetry.record_timing(&"stream_update", _last_update_usec)
+    PerformanceTelemetry.record_value(&"stream_updates", _update_count)
+    PerformanceTelemetry.record_value(&"stream_fast_paths", _same_region_fast_path_count)
+    PerformanceTelemetry.record_value(&"stream_last_sources", _last_materialized_source_count)
+    return result
 
 func _register_provider(provider: Variant) -> void:
     if provider == null:
