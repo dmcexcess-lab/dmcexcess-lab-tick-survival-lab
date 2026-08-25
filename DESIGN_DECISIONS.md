@@ -509,3 +509,23 @@ Save/load, schema policy, performance profiling and persistence-backed streaming
 **Why:** The order builds physical objects/utilities and survivor rules before asking AI to use them, then postpones final UI/graphics decisions until the actual Beta gameplay surface is known.
 
 **Affected systems:** all post-System-28 work.
+
+---
+
+## 2026-08-24 — Fatigue is the stamina/endurance concept
+
+**Decision:** Roadmap Phase 4's physical-survival target is:
+
+- hunger;
+- thirst;
+- sleep/exhaustion;
+- health/injury;
+- **fatigue**.
+
+**Fatigue is the stamina/endurance concept. There is no parallel stamina meter.** Fatigue remains the short-horizon exertion/endurance pressure from running, carrying and other strenuous work. Sleep pressure/exhaustion remains the separate long-horizon need for sleep.
+
+**Supersedes:** the vocabulary/state-shape portion of the earlier same-day “Physical-survival target includes stamina” entry. That earlier entry remains historical context; its decisions that extreme unmet needs may become lethal and that Moodlets become consequential remain in force.
+
+**Why:** The intended gameplay does not require two state variables describing short-horizon endurance. Reusing and expanding the existing fatigue domain preserves the compact mini-Zomboid model while keeping sleep/exhaustion meaningfully distinct.
+
+**Affected systems:** 13B Needs/Rest, 17A movement exertion, Roadmap Phase 4, action/movement capability providers, HUD/inspectors and future save orchestration.
