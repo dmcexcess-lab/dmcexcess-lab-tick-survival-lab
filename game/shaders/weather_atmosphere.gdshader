@@ -71,6 +71,10 @@ float rain_streak(vec2 local, vec2 anchor, float streak_len, float macro_w, floa
 // reading as the same stamp. A stable hash chooses solo, staggered-pair, close-
 // echo, long-accent or clustered-pair motifs. Companion strokes are deliberately
 // dim and bounded; heavy storms alone may add one faint third accent.
+//
+// P3D: fixed macro columns receive stable seed-derived vertical phase offsets
+// before row assignment. A separate per-cell vertical hash drives Y placement,
+// breaking the shared top-to-bottom cadence without changing candidate density.
 float rain_layer(vec2 screen_px) {
     if (precipitation < 0.04) {
         return 0.0;
@@ -84,9 +88,18 @@ float rain_layer(vec2 screen_px) {
 
     float macro_w = floor(mix(16.0, 10.0, precipitation) + 0.5);
     float macro_h = floor(mix(24.0, 15.0, precipitation) + 0.5);
-    vec2 macro_size = vec2(macro_w, macro_h);
-    vec2 macro_cell = floor(cell / macro_size);
-    vec2 local = cell - macro_cell * macro_size;
+    float column_index = floor(cell.x / macro_w);
+    float column_phase_hash = hash21(vec2(
+        column_index * 1.91 + presentation_seed * 0.0013,
+        97.0
+    ));
+    float column_phase_y = floor(column_phase_hash * macro_h);
+    float staggered_cell_y = cell.y + column_phase_y;
+    vec2 macro_cell = vec2(column_index, floor(staggered_cell_y / macro_h));
+    vec2 local = vec2(
+        cell.x - macro_cell.x * macro_w,
+        mod(staggered_cell_y, macro_h)
+    );
 
     vec2 cluster_cell = floor((macro_cell + vec2(1.0, 2.0)) / vec2(4.0, 3.0));
     float cluster_bias = hash21(cluster_cell + vec2(presentation_seed * 0.0017, 61.0));
@@ -101,13 +114,17 @@ float rain_layer(vec2 screen_px) {
     }
 
     float detail_hash = hash21(macro_cell + vec2(47.0, presentation_seed * 0.0023 + 11.0));
+    float vertical_hash = hash21(macro_cell * vec2(1.19, 3.07) + vec2(
+        presentation_seed * 0.0021 + 149.0,
+        37.0
+    ));
     float motif_hash = hash21(macro_cell * vec2(1.37, 2.11) + vec2(presentation_seed * 0.0011 + 17.0, 83.0));
     float secondary_hash = hash21(macro_cell * vec2(2.31, 1.17) + vec2(29.0, presentation_seed * 0.0019 + 43.0));
     float tertiary_hash = hash21(macro_cell * vec2(1.73, 2.57) + vec2(presentation_seed * 0.0027 + 71.0, 13.0));
     float motif_id = floor(motif_hash * 5.0);
 
     float anchor_x = floor(fract(detail_hash * 7.13) * macro_w);
-    float anchor_y = floor(fract(detail_hash * 13.71) * macro_h);
+    float anchor_y = floor(vertical_hash * macro_h);
     float streak_seed = fract(detail_hash * 17.17);
     float primary_len = 1.0 + step(0.66, streak_seed);
     if (motif_id > 2.5 && motif_id < 3.5) {
@@ -139,7 +156,7 @@ float rain_layer(vec2 screen_px) {
 
     if (has_secondary) {
         float secondary_anchor_x = floor(fract(secondary_hash * 7.71) * macro_w);
-        float secondary_anchor_y = floor(fract(secondary_hash * 13.19) * macro_h);
+        float secondary_anchor_y = floor(fract(vertical_hash * 7.31 + secondary_hash * 0.37) * macro_h);
         if (motif_id > 1.5 && motif_id < 2.5) {
             float echo_side = -1.0 + 2.0 * step(0.5, fract(secondary_hash * 5.13));
             secondary_anchor_x = mod(anchor_x + echo_side * (1.0 + floor(fract(secondary_hash * 9.41) * 2.0)) + macro_w, macro_w);
@@ -170,7 +187,7 @@ float rain_layer(vec2 screen_px) {
 
     if (motif_id > 3.5 && precipitation > 0.72) {
         float tertiary_anchor_x = floor(fract(tertiary_hash * 9.17) * macro_w);
-        float tertiary_anchor_y = floor(fract(tertiary_hash * 15.73) * macro_h);
+        float tertiary_anchor_y = floor(fract(vertical_hash * 17.73 + tertiary_hash * 0.41) * macro_h);
         float tertiary_y = mod(tertiary_anchor_y + frame * fall_step, macro_h);
         float tertiary_x = mod(
             tertiary_anchor_x + floor(frame * wind.x * mix(0.30, 0.62, fract(tertiary_hash * 23.37))) + macro_w,

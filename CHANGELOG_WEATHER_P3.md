@@ -108,8 +108,26 @@ P3C adds no CPU work, texture, Node, particle system, world/shelter query, shade
 
 Weather CI now locks the motif hashes/helper structure as well as the explicit downward-anchor contract.
 
+## P3D — vertical de-grid — 2026-08-24
+
+Human screenshot review after P3C showed that left/right motif variation improved, but the screen still exposed a top-to-bottom cadence. The cause was structural rather than motif count: every macro-column still shared identical `macro_h` row boundaries, and primary X/Y placement was derived from the same detail hash.
+
+P3D preserves all P3/P3B/P3C density and motion rules while breaking that vertical rhythm:
+
+- each fixed macro-column receives a deterministic seed-derived **vertical phase offset** before macro rows are assigned;
+- neighboring columns therefore no longer share horizontal macro-row boundaries;
+- each macro-cell receives a separate `vertical_hash` for Y placement instead of deriving both X and Y anchors from the same `detail_hash`;
+- secondary and tertiary Y anchors mix the independent vertical hash with their existing motif hashes so companion strokes do not recreate the same cadence;
+- the column offset and per-cell vertical hash are stable presentation facts, not time-varying noise;
+- explicit streak anchors still move toward increasing screen Y, so P3D does not reintroduce lattice scrolling or the old northward-motion bug;
+- candidate occupancy, cluster bias, macro width/height, precipitation thresholds, 2 px scale and 1–2 pixel streak language remain unchanged.
+
+P3D adds no CPU work, Nodes, particles, textures, shelter/world queries, loops, allocations, extra shader pass or draw call. It adds only two bounded deterministic hash evaluations to the existing rain fragment path: one for column phase and one for independent per-cell vertical phase.
+
+Weather CI now requires the P3D column phase/staggered-row structure and independent `vertical_hash`, while rejecting the old primary `anchor_y` derivation from `detail_hash`.
+
 ## Remaining playtest question
 
-P3C needs a human visual check because automated tests can prove architecture and shader compilation but cannot judge whether the five motif families sufficiently hide cell repetition. The preferred comparison remains ordinary rain around **50–60% precipitation** with the DEV/performance panel visible.
+P3D needs one human visual check because automated verification can prove the shader structure, compilation, preserved performance boundaries and downward-motion contract, but cannot judge whether the visible top-to-bottom cadence is sufficiently hidden.
 
-If the motif repetition is no longer obvious and movement remains smooth, Weather presentation is considered accepted. If repetition remains visible, the next tuning should reweight/expand the existing shader motifs rather than add particles or CPU work.
+The preferred comparison remains ordinary rain around **50–60% precipitation** at roughly the same zoom as the P3C screenshot. If the vertical rows are no longer obvious and movement remains smooth, Weather presentation is considered accepted. Further tuning should remain inside the existing deterministic shader vocabulary rather than add particles or CPU work.
