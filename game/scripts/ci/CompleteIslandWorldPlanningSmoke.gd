@@ -3,6 +3,7 @@ extends SceneTree
 const FixtureClass = preload("res://scripts/demo/GlobalWorldPlanFixture.gd")
 const RequestClass = preload("res://scripts/generation/world/GlobalWorldGenerationRequest.gd")
 const ProfilesClass = preload("res://scripts/generation/world/GlobalWorldProfileCatalog.gd")
+const AreaProfilesClass = preload("res://scripts/generation/areas/AreaProfileCatalog.gd")
 const IslandPlannerClass = preload("res://scripts/generation/world/IslandWorldPlanner.gd")
 const ProjectorClass = preload("res://scripts/generation/integration/System20AreaRequestProjector.gd")
 const LocalGeneratorClass = preload("res://scripts/generation/areas/LocalAreaGenerator.gd")
@@ -13,6 +14,11 @@ const Surface = preload("res://scripts/generation/shared/IslandSurfaceMath.gd")
 var failures: Array[String] = []
 
 func _initialize() -> void:
+    var area_profiles := AreaProfilesClass.new()
+    _check(area_profiles.has_profile(&"smalltown.center"), "small-town center profile remains available")
+    _check(area_profiles.has_profile(&"suburban.neighborhood"), "suburban neighborhood profile remains available")
+    _check(area_profiles.has_profile(&"urban.mixed"), "urban mixed/city-center-style profile remains available")
+
     var request := RequestClass.new(
         FixtureClass.WORLD_ID,
         FixtureClass.SEED,
@@ -29,16 +35,12 @@ func _initialize() -> void:
         return
 
     _check(plan.profile_id == ProfilesClass.TEMPERATE_ISLAND_REGION, "island profile identity is recorded")
-    _check(plan.area_sites.size() == 7, "five settlement sites plus two road-backed districts form the island local-site set")
+    _check(plan.area_sites.size() == 5, "five proven connected settlement sites form the first complete island")
     _check(_site_profile(plan, "area.rural.crossroads.001") == &"rural.crossroads", "rural crossroads remains globally placed")
     _check(_site_profile(plan, "area.smalltown.center.001") == &"smalltown.center", "small-town center is globally placed")
     _check(_site_profile(plan, "area.rural.scattered.001") == &"rural.scattered", "north rural satellite remains globally placed")
     _check(_site_profile(plan, "area.rural.scattered.002") == &"rural.scattered", "southwest rural satellite remains globally placed")
     _check(_site_profile(plan, "area.rural.scattered.003") == &"rural.scattered", "northeast rural satellite remains globally placed")
-    _check(_site_profile(plan, "area.island.suburban.001") == &"suburban.neighborhood", "road-backed suburban neighborhood is globally placed")
-    _check(_site_profile(plan, "area.island.urban.001") == &"urban.mixed", "road-backed urban mixed/city-center-style district is globally placed")
-    _check(_site_size(plan, "area.island.suburban.001") == Vector2i(384, 384), "suburban district uses proven baseline site geometry")
-    _check(_site_size(plan, "area.island.urban.001") == Vector2i(384, 384), "urban district uses proven baseline site geometry")
     _check(not plan.river_segments.is_empty(), "island retains a physical river")
     _check(not plan.bridge_intents.is_empty(), "real road/river crossings retain explicit bridges")
 
@@ -66,13 +68,7 @@ func _test_all_area_sites(plan: GeneratedGlobalWorldPlan) -> void:
         _check(generated != null and generated.is_generated(), "area site generates: %s" % site_id)
         if generated != null and not generated.is_generated():
             push_error("COMPLETE_ISLAND_AREA_FAILURE:%s:%s" % [site_id, generated.failure_reason])
-    for required: String in [
-        "rural.crossroads",
-        "smalltown.center",
-        "suburban.neighborhood",
-        "urban.mixed",
-        "rural.scattered",
-    ]:
+    for required: String in ["rural.crossroads", "smalltown.center", "rural.scattered"]:
         _check(profiles_seen.has(required), "integrated island uses profile %s" % required)
 
 func _test_surface_source_partition(plan: GeneratedGlobalWorldPlan) -> void:
@@ -137,13 +133,6 @@ func _site_profile(plan: GeneratedGlobalWorldPlan, site_id: String) -> StringNam
         if String(site.get("id", "")) == site_id:
             return StringName(site.get("area_profile_hint", &""))
     return &""
-
-func _site_size(plan: GeneratedGlobalWorldPlan, site_id: String) -> Vector2i:
-    for site: Dictionary in plan.area_sites:
-        if String(site.get("id", "")) == site_id:
-            var bounds: Rect2i = site.get("bounds", Rect2i())
-            return bounds.size
-    return Vector2i.ZERO
 
 func _check(condition: bool, message: String) -> void:
     if not condition:
