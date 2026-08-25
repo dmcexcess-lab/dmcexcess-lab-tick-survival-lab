@@ -71,7 +71,7 @@ P3B keeps the P3 architecture intact and changes shader distribution only:
 - rain no longer uses the old `floor(cell.y / 5)` / five-row phase lattice;
 - rain now uses larger **jittered macro-cells**, with at most one independently phased streak candidate per patch;
 - a still-coarser cluster hash biases neighboring patches wetter/drier so density varies across the screen instead of looking uniformly stamped;
-- streak position, vertical phase, 1–3 weather-pixel length and brightness are deterministically varied from the presentation seed;
+- streak position, vertical phase, **1–2 weather-pixel length** and brightness are deterministically varied from the presentation seed;
 - medium rain is intentionally much sparser while storm precipitation can still become visibly dense;
 - fog replaces aligned rectangular patch selection with staggered rows and small diamond-like pixel clouds;
 - no new textures, Nodes, particle systems, CPU redraws, screen-to-world conversions or shelter queries were introduced.
