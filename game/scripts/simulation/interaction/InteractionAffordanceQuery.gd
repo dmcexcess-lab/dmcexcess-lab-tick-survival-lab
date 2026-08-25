@@ -4,15 +4,15 @@ class_name InteractionAffordanceQuery
 const Layers = preload("res://scripts/foundation/spatial/SpatialLayer.gd")
 const Change = preload("res://scripts/foundation/world/WorldChange.gd")
 const PerceptionClass = preload("res://scripts/simulation/perception/ObserverPerceptionService.gd")
+const PerformanceTelemetry = preload("res://scripts/foundation/diagnostics/PerformanceTelemetry.gd")
 
 ## System-29 composition/query owner. It discovers only actor-local reachable OBJECT
 ## occupancy, asks real mechanic providers for offers, then applies System-23 current
 ## knowledge before exposing player-facing highlight descriptors.
 ##
 ## World-change invalidation keeps a tiny cached copy of the actor's interaction
-## reach. Streaming can emit many unrelated placement changes synchronously; those
-## changes must not each allocate/re-query actor reach merely to prove they are far
-## away. The authoritative reach query is still used for actual offers/reach checks.
+## reach. Streaming can emit many unrelated placement changes synchronously; explicit
+## WHAT batches are consumed once through their compact dirty summary.
 
 signal affordances_changed(reason: StringName)
 
@@ -22,6 +22,8 @@ var _perception: ObserverPerceptionService = null
 var _actor_id: String = ""
 var _providers: Array[InteractionOfferProvider] = []
 var _reachable_cell_cache: Dictionary = {}
+var _provider_batch_dirty: bool = false
+var _query_count: int = 0
 
 func _init(
     world_state: WorldState = null,
@@ -70,11 +72,14 @@ func candidate_target_ids() -> Array[String]:
     return _reach.candidate_object_ids(_actor_id, WorldInteractionReachQuery.CONTACT_FORWARD)
 
 func offers() -> Array[InteractionOffer]:
+    var started: int = Time.get_ticks_usec()
     var result: Array[InteractionOffer] = []
     if not is_ready():
+        _record_query(started)
         return result
     var candidates: Array[String] = candidate_target_ids()
     if candidates.is_empty() or _providers.is_empty():
+        _record_query(started)
         return result
     var candidate_set: Dictionary = {}
     for target_id: String in candidates:
@@ -89,6 +94,7 @@ func offers() -> Array[InteractionOffer]:
                 continue
             result.append(offer.copy())
     result.sort_custom(_offer_less)
+    _record_query(started)
     return result
 
 func highlight_descriptors() -> Array[Dictionary]:
@@ -144,6 +150,11 @@ func highlight_descriptors() -> Array[Dictionary]:
     result.sort_custom(_descriptor_less)
     return result
 
+func _record_query(started_usec: int) -> void:
+    _query_count += 1
+    PerformanceTelemetry.record_timing(&"interaction_query", Time.get_ticks_usec() - started_usec)
+    PerformanceTelemetry.record_value(&"interaction_queries", _query_count)
+
 func _offer_is_current(offer: InteractionOffer, candidate_set: Dictionary) -> bool:
     if offer == null or not offer.is_valid() or not offer.available:
         return false
@@ -172,9 +183,12 @@ func _same_cell_set(a: Array[Vector2i], b: Array[Vector2i]) -> bool:
 func _connect_sources() -> void:
     if _world != null:
         var changed := Callable(self, "_on_world_changed")
+        var batch_changed := Callable(self, "_on_world_batch_changed")
         var reset := Callable(self, "_on_world_reset")
         if not _world.changed.is_connected(changed):
             _world.changed.connect(changed)
+        if not _world.batch_changed.is_connected(batch_changed):
+            _world.batch_changed.connect(batch_changed)
         if not _world.world_reset.is_connected(reset):
             _world.world_reset.connect(reset)
     if _perception != null:
@@ -200,8 +214,19 @@ func _change_intersects_cached_reach(change: WorldChange) -> bool:
             return true
     return false
 
+func _dirty_rect_intersects_cached_reach(rect: Rect2i) -> bool:
+    if rect.size.x <= 0 or rect.size.y <= 0 or _reachable_cell_cache.is_empty():
+        return false
+    for value: Variant in _reachable_cell_cache.keys():
+        var cell: Vector2i = value
+        if rect.has_point(cell):
+            return true
+    return false
+
 func _on_world_changed(change: WorldChange) -> void:
     if change == null:
+        return
+    if _world.is_change_batch_active():
         return
     if change.entity_id == _actor_id:
         _rebuild_reachable_cell_cache()
@@ -211,10 +236,33 @@ func _on_world_changed(change: WorldChange) -> void:
         and change.kind != Change.Kind.PLACEMENT_REMOVED \
         and change.kind != Change.Kind.ENTITY_REMOVED:
         return
-    if _change_intersects_cached_reach(change):
+    if change.affects_channel(Layers.Channel.OBJECT) and _change_intersects_cached_reach(change):
         affordances_changed.emit(&"reachable_object_changed")
 
+func _on_world_batch_changed(batch: WorldChangeBatch) -> void:
+    if batch == null:
+        return
+    var actor: WorldPlacement = _world.placement(_actor_id)
+    var actor_dirty: bool = false
+    if batch.channel_changed(Layers.Channel.ACTOR):
+        var actor_rect: Rect2i = batch.dirty_rect_for_channel(Layers.Channel.ACTOR)
+        actor_dirty = actor != null and actor_rect.has_point(actor.anchor)
+        if not actor_dirty:
+            actor_dirty = _dirty_rect_intersects_cached_reach(actor_rect)
+    if actor_dirty:
+        _rebuild_reachable_cell_cache()
+        affordances_changed.emit(&"actor_batch_changed")
+        _provider_batch_dirty = false
+        return
+
+    var object_dirty: bool = batch.channel_changed(Layers.Channel.OBJECT) \
+        and _dirty_rect_intersects_cached_reach(batch.dirty_rect_for_channel(Layers.Channel.OBJECT))
+    if object_dirty or _provider_batch_dirty:
+        _provider_batch_dirty = false
+        affordances_changed.emit(&"world_batch_changed")
+
 func _on_world_reset() -> void:
+    _provider_batch_dirty = false
     _reachable_cell_cache.clear()
     affordances_changed.emit(&"world_reset")
 
@@ -222,6 +270,9 @@ func _on_perception_changed(_reason: StringName) -> void:
     affordances_changed.emit(&"perception_changed")
 
 func _on_provider_availability_changed(_reason: StringName) -> void:
+    if _world != null and _world.is_change_batch_active():
+        _provider_batch_dirty = true
+        return
     affordances_changed.emit(&"provider_availability_changed")
 
 func _offer_less(a: InteractionOffer, b: InteractionOffer) -> bool:
