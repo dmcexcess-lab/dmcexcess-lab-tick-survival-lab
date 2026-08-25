@@ -53,6 +53,9 @@ const LootInitializerClass = preload("res://scripts/simulation/loot/LootSourceIn
 const LootAccessClass = preload("res://scripts/simulation/loot/LootWorldContainerAccessPolicy.gd")
 const LootSearchClass = preload("res://scripts/simulation/loot/LootSearchActionService.gd")
 const LootInspectionClass = preload("res://scripts/simulation/loot/LootContainerInspectionQuery.gd")
+const InteractionReachClass = preload("res://scripts/simulation/interaction/WorldInteractionReachQuery.gd")
+const InteractionAffordanceClass = preload("res://scripts/simulation/interaction/InteractionAffordanceQuery.gd")
+const LootInteractionOfferProviderClass = preload("res://scripts/simulation/loot/LootSearchInteractionOfferProvider.gd")
 const SoundProfilesClass = preload("res://scripts/simulation/sound/SoundEmissionProfileCatalog.gd")
 const AcousticMaterialsClass = preload("res://scripts/simulation/sound/AcousticMaterialCatalog.gd")
 const AcousticPropagationClass = preload("res://scripts/simulation/sound/AcousticPropagationQuery.gd")
@@ -141,6 +144,9 @@ var _item_transfer_timing: ItemTransferTimingPolicy = null
 var _item_transfer: ItemTransferActionService = null
 var _loot_search: LootSearchActionService = null
 var _loot_inspection: LootContainerInspectionQuery = null
+var _interaction_reach: WorldInteractionReachQuery = null
+var _loot_interaction_offers: LootSearchInteractionOfferProvider = null
+var _interaction_affordances: InteractionAffordanceQuery = null
 var _sound_profiles: SoundEmissionProfileCatalog = null
 var _acoustic_materials: AcousticMaterialCatalog = null
 var _acoustic_propagation: AcousticPropagationQuery = null
@@ -273,6 +279,10 @@ func _boot_canonical_demo() -> bool:
     if not _world_view.configure_weather(_weather, _sky_exposure):
         return false
     if not _perception.set_acquisition_provider(LightingAcquisitionClass.new(_physical_lighting)):
+        return false
+    if not _boot_interaction_affordances():
+        return false
+    if not _world_view.configure_interaction_affordances(_interaction_affordances):
         return false
     if not _world_view.configure_perception(
         _perception,
@@ -471,7 +481,10 @@ func _boot_item_transfer_and_loot_actions() -> bool:
         if not _item_transfer_timing.register_duration(action_type, LIVE_ITEM_TRANSFER_TICKS):
             return false
 
-    _loot_access = LootAccessClass.new(_world, _loot_state, _inventory_state)
+    _interaction_reach = InteractionReachClass.new(_world)
+    if not _interaction_reach.is_ready():
+        return false
+    _loot_access = LootAccessClass.new(_world, _loot_state, _inventory_state, _interaction_reach)
     _item_transfer = PolicyTransferClass.new(
         _world,
         _world_mutations,
@@ -485,7 +498,14 @@ func _boot_item_transfer_and_loot_actions() -> bool:
         _carry_acquisition,
         _loot_access
     )
-    _loot_search = LootSearchClass.new(_world, _inventory_state, _loot_state, _loot_profiles, _kernel)
+    _loot_search = LootSearchClass.new(
+        _world,
+        _inventory_state,
+        _loot_state,
+        _loot_profiles,
+        _kernel,
+        _interaction_reach
+    )
     _loot_inspection = LootInspectionClass.new(
         _world,
         _inventory_state,
@@ -496,6 +516,26 @@ func _boot_item_transfer_and_loot_actions() -> bool:
         _carry_query
     )
     return _item_transfer.is_ready() and _loot_search.is_ready() and _loot_inspection.is_ready()
+
+func _boot_interaction_affordances() -> bool:
+    if _interaction_reach == null or not _interaction_reach.is_ready() or _perception == null or not _perception.is_ready():
+        return false
+    _loot_interaction_offers = LootInteractionOfferProviderClass.new(
+        _world,
+        _inventory_state,
+        _loot_state,
+        _loot_profiles,
+        _interaction_reach
+    )
+    _interaction_affordances = InteractionAffordanceClass.new(
+        _world,
+        _interaction_reach,
+        _perception,
+        FixtureClass.PLAYER_ID
+    )
+    if not _loot_interaction_offers.is_ready() or not _interaction_affordances.is_ready():
+        return false
+    return _interaction_affordances.register_provider(_loot_interaction_offers)
 
 func _boot_spatial_sound() -> bool:
     _sound_profiles = SoundProfilesClass.new()
