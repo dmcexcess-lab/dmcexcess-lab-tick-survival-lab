@@ -1,6 +1,8 @@
 # Tick Survival Lab — System 29 World Interaction Affordance / Reach
 
-Status: **DRAFT — awaiting approval**
+Status: **APPROVED — Candidate 001**
+
+Approved: **2026-08-24**
 
 Roadmap owner: **Phase 1A — Interaction affordance + reach foundation**.
 
@@ -92,9 +94,9 @@ Future action owners may request additional explicitly designed reach profiles i
 
 ## 4. Neutral interaction offers
 
-System 29 needs a presentation-safe descriptor similar in spirit to the existing sound/perception descriptors.
+System 29 uses a presentation-safe descriptor similar in spirit to the existing sound/perception descriptors.
 
-Proposed `InteractionOffer` fields:
+`InteractionOffer` fields:
 
 - `actor_id`;
 - `target_entity_id`;
@@ -114,7 +116,7 @@ System 29 does not infer offers from `prop.*`, `fixture.*`, `item.*` names. A re
 
 ## 5. Provider seam
 
-Proposed neutral provider contract:
+Neutral provider contract:
 
 `InteractionOfferProvider.offers_for_actor(actor_id, candidate_target_ids) -> Array[InteractionOffer]`
 
@@ -143,9 +145,9 @@ Later providers can attach without changing the highlight renderer.
 
 ## 6. System-24 migration
 
-`LootInteractionReach` is currently the duplicated-domain candidate to retire or reduce to a compatibility-free internal migration.
+`LootInteractionReach` is the duplicated-domain owner to retire during Candidate 001 implementation.
 
-System 24 search validation and `LootWorldContainerAccessPolicy` should consume the System-29 reach contract instead.
+System 24 search validation and `LootWorldContainerAccessPolicy` consume the System-29 reach contract instead.
 
 Acceptance requirement:
 
@@ -182,17 +184,15 @@ Visual target:
 - readable on phone;
 - presentation only.
 
-Proposed first style:
+First style:
 
 - 1–2 screen-pixel outline/tick marks around the target's **real visible footprint cells**;
-- warm/yellow-white readability color consistent with the current interaction/sound vocabulary without pretending to be physical emitted light;
+- warm/yellow-white readability treatment consistent with the current interaction/sound vocabulary without pretending to be physical emitted light;
 - optional very slow presentation-only alpha pulse while the game waits at decision pause;
 - no bloom and no System-27 light contribution;
 - one highlight command per stable target, even if multiple actions/providers refer to it.
 
-The highlight renderer should sit above live world lighting but below modal/UI surfaces and remain constrained by System-23 knowledge.
-
-Exact z-order will be chosen against the current Tactical renderer stack during implementation; the rule is semantic, not a hardcoded draft number.
+The highlight renderer sits above live world lighting/weather and below System-23 perception/modal UI surfaces. System-23 filtering is still performed before presentation so the highlight itself never conveys hidden truth.
 
 ---
 
@@ -266,19 +266,19 @@ Diagnostics may be exposed in DEV/test mode, but ordinary play should not draw f
 
 ## 12. Public-contract impact
 
-Expected additive contracts:
+Additive contracts:
 
-- `WorldInteractionReachQuery` or equivalently named neutral reach owner;
+- `WorldInteractionReachQuery`;
 - `InteractionOffer`;
 - `InteractionOfferProvider`;
 - `InteractionAffordanceQuery`;
 - `InteractionHighlightRenderer`.
 
-Expected migration:
+Migration:
 
 - System 24 replaces private `LootInteractionReach` usage with System 29's `CONTACT_FORWARD` contract.
 
-No WHAT schema change and no save migration should be required because Candidate 001 System 29 owns no persistent gameplay state.
+No WHAT schema change and no save migration is required because Candidate 001 System 29 owns no persistent gameplay state.
 
 ---
 
@@ -299,7 +299,7 @@ Implementation must preserve:
 
 ## 14. Verification plan
 
-Focused headless/query tests should prove:
+Focused headless/query tests must prove:
 
 - current System-24 reachable/unreachable fixtures are unchanged by the generalized reach owner;
 - forward facing matters exactly as before;
@@ -312,7 +312,7 @@ Focused headless/query tests should prove:
 - UNSEEN target does not highlight;
 - partial multi-cell visibility does not reveal hidden cells;
 - multiple offers deduplicate target highlight deterministically;
-- queries and cosmetic pulse consume zero WHEN ticks;
+- queries and cosmetic presentation consume zero WHEN ticks;
 - actor-local occupancy bounds are respected; no full-world entity scan;
 - System 24 / System 23 / canonical player shell / startup regressions stay green.
 
@@ -350,7 +350,7 @@ This keeps interaction readable in the small top-down world without turning the 
 
 ---
 
-## 17. Decisions proposed for approval
+## 17. Approved decisions
 
 1. System 29 owns neutral world interaction reach + player-facing affordance composition, not action execution.
 2. Candidate 001 preserves System 24's current actor-footprint + one-cell-forward `CONTACT_FORWARD` reach exactly.
@@ -360,3 +360,5 @@ This keeps interaction readable in the small top-down world without turning the 
 6. Candidate highlight is a restrained pixel outline/marker over visible target footprint, not physical light.
 7. Discovery is actor-local and event-driven; no full-world scan or per-object Nodes.
 8. Candidate 001 adds no universal Interact button or action execution controller yet.
+
+Implementation remains subject to exact-head verification before this document is marked IMPLEMENTED.
