@@ -6,11 +6,13 @@ const AcquisitionProviderClass = preload("res://scripts/simulation/perception/Vi
 const ChangeClass = preload("res://scripts/foundation/world/WorldChange.gd")
 const Layers = preload("res://scripts/foundation/spatial/SpatialLayer.gd")
 const FacingRules = preload("res://scripts/foundation/spatial/SpatialFacing.gd")
+const PerformanceTelemetry = preload("res://scripts/foundation/diagnostics/PerformanceTelemetry.gd")
 
 ## Event-driven controlled-observer visibility + knowledge refresh.
 ## It advances no time and never mutates WHAT or Door State.
 ## Geometric LOS is filtered through a neutral acquisition provider before
 ## current truth is admitted into VISIBLE or refreshed into observer memory.
+## Explicit WHAT batches are consumed once through their local dirty summary.
 
 signal perception_changed(reason: StringName)
 
@@ -87,12 +89,14 @@ func acquisition_provider() -> VisualAcquisitionProvider:
     return _acquisition
 
 func recompute(reason: StringName = &"manual") -> bool:
+    var started: int = Time.get_ticks_usec()
     _recompute_count += 1
     if not is_ready():
         var had_visible: bool = not _visible.is_empty()
         _visible.clear()
         if had_visible:
             perception_changed.emit(reason)
+        _record_recompute(started)
         return false
 
     var observer_placement: WorldPlacement = _world.placement(_observer_id)
@@ -108,7 +112,12 @@ func recompute(reason: StringName = &"manual") -> bool:
     _refresh_environment_memory(acquired_cells)
     _refresh_actor_memory(acquired_cells)
     perception_changed.emit(reason)
+    _record_recompute(started)
     return true
+
+func _record_recompute(started_usec: int) -> void:
+    PerformanceTelemetry.record_timing(&"perception_recompute", Time.get_ticks_usec() - started_usec)
+    PerformanceTelemetry.record_value(&"perception_recomputes", _recompute_count)
 
 func recompute_count() -> int:
     return _recompute_count
@@ -209,9 +218,12 @@ func _refresh_actor_memory(cells: Array[Vector2i]) -> void:
 func _connect_signals() -> void:
     if _world != null:
         var world_changed := Callable(self, "_on_world_changed")
+        var batch_changed := Callable(self, "_on_world_batch_changed")
         var world_reset := Callable(self, "_on_world_reset")
         if not _world.changed.is_connected(world_changed):
             _world.changed.connect(world_changed)
+        if not _world.batch_changed.is_connected(batch_changed):
+            _world.batch_changed.connect(batch_changed)
         if not _world.world_reset.is_connected(world_reset):
             _world.world_reset.connect(world_reset)
     if _door_state != null:
@@ -230,6 +242,8 @@ func _connect_signals() -> void:
 
 func _on_world_changed(change: WorldChange) -> void:
     if change == null:
+        return
+    if _world.is_change_batch_active():
         return
     var observer_placement: WorldPlacement = _world.placement(_observer_id)
     if observer_placement == null:
@@ -251,6 +265,34 @@ func _on_world_changed(change: WorldChange) -> void:
                 recompute(&"nearby_placement_changed")
         _:
             return
+
+func _on_world_batch_changed(batch: WorldChangeBatch) -> void:
+    if batch == null:
+        return
+    var observer_placement: WorldPlacement = _world.placement(_observer_id)
+    if observer_placement == null:
+        recompute(&"observer_missing_after_batch")
+        return
+    if _batch_near_observer(batch, observer_placement.anchor):
+        recompute(&"nearby_world_batch_changed")
+
+func _batch_near_observer(batch: WorldChangeBatch, observer_cell: Vector2i) -> bool:
+    var range_value: int = _profile.max_range if _profile != null else 0
+    var potential := Rect2i(
+        observer_cell - Vector2i(range_value, range_value),
+        Vector2i(range_value * 2 + 1, range_value * 2 + 1)
+    )
+    if batch.terrain_changed:
+        var terrain_rect: Rect2i = batch.terrain_dirty_bounds()
+        if terrain_rect.size.x > 0 and terrain_rect.size.y > 0 and potential.intersects(terrain_rect):
+            return true
+    for channel: int in [Layers.Channel.STRUCTURE, Layers.Channel.OBJECT, Layers.Channel.ACTOR]:
+        if not batch.channel_changed(channel):
+            continue
+        var dirty: Rect2i = batch.dirty_rect_for_channel(channel)
+        if dirty.size.x > 0 and dirty.size.y > 0 and potential.intersects(dirty):
+            return true
+    return false
 
 func _on_world_reset() -> void:
     recompute(&"world_reset")
