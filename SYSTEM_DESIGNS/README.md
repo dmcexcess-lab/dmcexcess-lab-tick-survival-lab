@@ -49,6 +49,7 @@ Canonical status/routing index. Read `PROJECT_NORTH_STAR.md`, `README_SOPS.md`, 
 | 27 | Physical Lighting / Illumination / Shadows | **IMPLEMENTED — Slices A+B+C + bounded-query optimization + weather optics/lightning input** | `27_PHYSICAL_LIGHTING_ILLUMINATION_SHADOWS.md` |
 | 28 | Weather / Atmosphere | **IMPLEMENTED — Slices A+B+C** | `28_WEATHER_ATMOSPHERE.md` |
 | 29 | World Interaction Affordance / Reach | **IMPLEMENTED — Candidate 001; Roadmap Phase 1A** | `29_WORLD_INTERACTION_AFFORDANCE_REACH.md` |
+| PERF | Performance Architecture Gate | **IMPLEMENTED + CI VERIFIED — P0/P1/P2** | `PERFORMANCE_ARCHITECTURE.md` |
 | 00E | Population / Household / Outbreak / Player Story | **NOT DESIGNED — scheduled inside Roadmap Phase 8** | future design |
 
 ---
@@ -60,6 +61,8 @@ Canonical status/routing index. Read `PROJECT_NORTH_STAR.md`, `README_SOPS.md`, 
 ### Phase 1 internal order
 
 1A. **Interaction affordance + reach** — **COMPLETE: System 29 Candidate 001**, exact playable head `5b88d9172df51561ea760913873f62bd2cdc422a`.
+
+**Performance Architecture Gate — IMPLEMENTED + CI VERIFIED:** exact executable head `0398a2a49d84e6067f7610727aecacf4c05fe41f`; 42/42 associated workflow runs successful and all 15 required contexts green. Human iPhone/Safari acceptance remains before Phase 1B implementation.
 
 1B. **Item freshness/spoilage** — **NEXT DESIGN TARGET**: typed per-instance freshness, analytic world-time aging, future refrigeration-rate seam; no per-item tick loop.
 
@@ -107,6 +110,20 @@ First fully green System-29 foundation head: `9ccbb91f167c376b6ea4a4d7ff82ede342
 First fully green playable-island System-29 head: `5b88d9172df51561ea760913873f62bd2cdc422a`.
 
 Exact-head context: `verify/system29-interaction-affordance`.
+
+---
+
+## Current performance architecture truth
+
+The approved non-numbered P0/P1/P2 gate is implemented under the rule:
+
+> **A world mutation may update truth many times; expensive consumers wake only for the domains and completed batches they actually depend on.**
+
+WHAT now supplies terrain/per-placement-channel revisions and explicit compact bulk summaries without replacing the global authoritative revision. 00F owns the materialization batch boundary. System 27 lighting geometry and Weather sky exposure depend only on geometry-relevant domains; Systems 23/29 and the System-24 interaction provider coalesce explicit bulk-stream wakeups. A compact DEV panel exposes neutral performance telemetry.
+
+First fully green executable head: `0398a2a49d84e6067f7610727aecacf4c05fe41f`. All **42 associated workflows** succeeded; all **15 required exact-head contexts** are green. Permanent context: `verify/performance-architecture`.
+
+GPU Weather and predictive/amortized streaming are deferred measured follow-ups. Human iPhone/Safari acceptance is the final gate before Phase 1B implementation proceeds.
 
 ---
 
@@ -181,7 +198,7 @@ The live build is the **complete streamed island critique/playable composition**
 
 The player still begins in the central Rural Crossroads/diner area, but that area exists inside the complete island rather than being the entire playable world.
 
-Weather DEV controls remain below the STATS / INVENTORY / MENU header row. Active flashlight/lamp/neon/streetlight sources remain explicitly DEV-only until Roadmap Phase 3/6 real equipment/power/object state replaces them.
+Weather DEV controls remain below the STATS / INVENTORY / MENU header row. Active flashlight/lamp/neon/streetlight sources remain explicitly DEV-only until Roadmap Phase 3/6 real equipment/power/object state replaces them. The compact performance panel is DEV telemetry only.
 
 ---
 
@@ -200,6 +217,7 @@ Weather DEV controls remain below the STATS / INVENTORY / MENU header row. Activ
 - `verify/system27-physical-lighting`
 - `verify/system28-weather`
 - `verify/system29-interaction-affordance`
+- `verify/performance-architecture`
 - `verify/pages-deploy`
 
-All 14 are green on executable head `5b88d9172df51561ea760913873f62bd2cdc422a`.
+All **15 required contexts** are green on performance-gate executable head `0398a2a49d84e6067f7610727aecacf4c05fe41f`; all **42 workflow runs** associated with that SHA completed successfully.
