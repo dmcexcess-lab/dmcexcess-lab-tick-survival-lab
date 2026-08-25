@@ -1,20 +1,20 @@
 # Tick Survival Lab — Current Context
 
-> Read `PROJECT_NORTH_STAR.md`, `ROADMAP.md`, `README_SOPS.md`, `SYSTEM_DESIGNS/README.md`, current `main`, and the relevant system design before repository changes.
+> Read `PROJECT_NORTH_STAR.md`, `PERFORMANCE_NORTH_STAR.md`, `ROADMAP.md`, `README_SOPS.md`, `SYSTEM_DESIGNS/README.md`, current `main`, and the relevant system design before repository changes.
 
 ## Game
 
 > **Ultima-style turn-based mini Zomboid.**
 >
 > **Mini means reduced complexity, not reduced consequence or mood.**
+>
+> **The low-resolution 2D presentation and turn-based simulation are deliberate performance advantages. Spend that budget on simulation depth, persistence, world scale and responsiveness — not avoidable work.**
 
 Repository: `dmcexcess-lab/dmcexcess-lab-tick-survival-lab`
 
 Live build: `https://dmcexcess-lab.github.io/dmcexcess-lab-tick-survival-lab/`
 
 Golden archaeology commit: `1763958f44eb7f855fd49944c00d1ffe608c0abe`.
-
-Canonical roadmap: `ROADMAP.md`.
 
 ---
 
@@ -23,169 +23,123 @@ Canonical roadmap: `ROADMAP.md`.
 The canonical DEV/playable composition is the **complete streamed island**.
 
 - Global bounds: 1792×1792 tactical cells (`Rect2i(232,1232,1792,1792)`).
-- System 00D `temperate.island.region` v1 adds deterministic LAND / SHORE / OCEAN over the proven rural-v6 settlement/road/hydrology skeleton.
-- Five globally connected sites remain deliberately proven: one `rural.crossroads`, one `smalltown.center`, and three `rural.scattered` hamlets.
-- System 00F materializes settlement sites, exact river/watercourse corridors and island-surface sources as non-overlapping logical source families.
-- Technical streaming uses 128×128 regions with active radius 1 and follows the controlled survivor. Technical regions are performance configuration, never world identity.
-- Ocean and ordinary river water are non-traversable; only explicit globally planned bridge crossings become traversable road deck.
-
-The complete-island composition was first proven on `3f1a98c3daea879cf7ffdbea717d88461e39438f`.
+- System 00D `temperate.island.region` v1 overlays deterministic LAND / SHORE / OCEAN on the proven rural-v6 settlement/road/hydrology skeleton.
+- Five globally connected sites remain proven: one `rural.crossroads`, one `smalltown.center`, three `rural.scattered` hamlets.
+- System 00F materializes non-overlapping settlement, river/watercourse and island-surface logical sources.
+- Technical streaming is 128×128 with active radius 1 and follows the survivor. Technical regions are performance configuration, never world identity.
+- Ocean/ordinary river water is non-traversable except explicit planned bridge deck.
 
 ---
 
-## Current canonical stack
+## Current implemented stack
 
-- **00A WHERE** — global integer-cell spatial truth.
-- **00B WHAT** — authoritative persistent current world.
-- **00C WHEN** — deterministic variable-duration tick/action/pause kernel.
-- **00D Global World Planning** — rural v6 + complete island v1.
-- **01–18** — collision, movement, locomotion, art/rendering, doors, hands, inventory, timed transfer, actor-status scaffolds, carry, HUD/player shell, run/exertion and door passage.
-- **19 Building Generation** — finalized 24-archetype one-story library.
-- **20 Local Area Generation** — ten area profiles / seven environment palettes, including real river/bridge physicalization.
-- **00F Streaming / Materialization** — settlement + countryside + island surface + watercourse logical sources; materialization one-way, activation reversible.
-- **21 Camera / 22 Large-Area DEV Critique** — implemented.
-- **23 Perception / LOS / Fog Memory** — observer-specific VISIBLE / REMEMBERED / UNSEEN truth with physical-light/atmosphere-aware acquisition.
-- **24 World Loot / Searchable Containers** — persistent virgin loot, timed search/TAKE/STORE; shared System-29 reach.
-- **25 World Time / Ambient Daylight** — authoritative-tick-derived scenario clock/daylight.
-- **26 Spatial Sound / Hearing** — physical propagation, listener-specific uncertain hearing, Weather background masking.
-- **27 Physical Lighting** — headless illumination/shadows/portals, Weather optics/wetness and transient physical lightning.
-- **28 Weather / Atmosphere** — **IMPLEMENTED: Slices A+B+C + P3 GPU presentation revamp**.
-- **29 World Interaction Affordance / Reach** — **IMPLEMENTED Candidate 001**, Roadmap Phase 1A.
-- **Performance Architecture Gate** — **IMPLEMENTED P0/P1/P2 + Weather P3**: domain revisions/batching, dependency-correct invalidation, telemetry and GPU Weather presentation.
+Foundation and gameplay through **System 29** are implemented, including persistent WHAT, deterministic WHEN, complete-island generation/streaming, inventory/transfer/carry, 24 building archetypes, ten local-area profiles, perception, persistent loot/search, world time/daylight, spatial sound, physical lighting, Weather and interaction affordance/reach.
 
-System-29 first green playable head: `5b88d9172df51561ea760913873f62bd2cdc422a`.
+Important current rules:
 
-P0/P1/P2 first fully green performance executable: `0398a2a49d84e6067f7610727aecacf4c05fe41f`.
-
-Weather P3 final exact executable is the canonical `main` head carrying this context after full verification.
+1. Generation creates virgin truth once; WHAT + typed mechanic stores own current reality afterward.
+2. Technical streaming activation is not world existence.
+3. Art/rendering is presentation, never physics/simulation authority.
+4. Phone/Safari is first-class.
+5. Sound is physical; hearing is an estimate.
+6. Light is physical; vision is observer-specific.
+7. Weather is simulation truth; weather animation is presentation.
+8. Fatigue is the stamina/endurance concept; there is no parallel stamina meter.
+9. Interaction highlights explain already-valid actions; they never create action truth.
+10. Expensive consumers wake only for the domains/completed batches they actually depend on.
 
 ---
 
-## Core rules
+## Performance architecture / Weather gate — HUMAN ACCEPTED
 
-1. System 00D owns global coherence; local/stream partitions do not invent world-spanning truth.
-2. System 20 turns global facts into local physical areas; System 19 owns building interiors.
-3. Generation creates virgin truth once. WHAT and typed mechanic stores own current reality afterward.
-4. Technical streaming activation is not world existence.
-5. Materialization is one-way; activation is reversible.
-6. Art/rendering is presentation, never physics.
-7. Phone/Safari is first-class.
-8. Perception knowledge is observer-specific and never substitutes hidden current truth for stale memory.
-9. WHEN owns integer simulation ticks only; System 25 interprets them as scenario-local time.
-10. **Sound is physical; hearing is an estimate.**
-11. **Light is physical; vision is observer-specific.** Gameplay/AI never read rendered pixels as lighting truth.
-12. **Weather is simulation truth; weather animation is presentation.**
-13. Weather feeds Lighting/Hearing through neutral environment seams; it is not a second light/perception/sound engine.
-14. **Continuous Weather graphics are one screen-space GPU atmosphere surface. Camera movement is not Weather animation work.**
-15. Rain shelter rejection may read cached world truth only to decide where rain appears; it does not make rain animation world-driven.
-16. Lightning is a real WHEN event; its physical flash feeds System 27 while its visible bolt is presentation tied to the same event.
-17. Current lightning has no strike cell, therefore there is no fake spatial thunder/damage/fire.
-18. **Fatigue is the stamina/endurance concept. There is no separate stamina meter.**
-19. **Interaction highlights explain real available actions; they never create action truth.**
-20. **A world mutation may update truth many times; expensive consumers wake only for the domains and completed batches they actually depend on.**
+The P0/P1/P2 performance architecture plus Weather P3/P3B/P3C/P3D is now accepted by human playtest.
 
----
+First P0/P1/P2 fully green executable: `0398a2a49d84e6067f7610727aecacf4c05fe41f`.
 
-## Current System 28 Weather truth
+Human-accepted Weather P3D executable:
 
-Physical Weather remains unchanged by P3:
+`6016fe5098804e3e6aba6c9f5f9658282036a697`
 
-- clear / overcast / rain / storm / fog are deterministic WHEN-driven physical states with continuous values underneath;
-- wetness is analytic from authoritative world ticks;
-- quantized environment revisions feed System 27 optics/visibility and System 26 hearing masking;
-- decision/hard pause freezes physical Weather automatically;
-- storm lightning is a deterministic real WHEN event with one-tick physical flash and real System-27 portal/shadow consequences;
-- thunder/damage/fire remain deferred until honest strike geography exists.
+P3/P3D result:
 
-P3 changes **presentation only**:
+- continuous rain/fog is one persistent GPU atmosphere surface;
+- no CPU continuous-rain/fog redraw loop;
+- camera movement does zero Weather redraws and does not restart animation;
+- shelter is a cached low-resolution texture;
+- base Weather art scale is 2 screen pixels;
+- rain falls explicitly toward increasing screen Y;
+- P3B de-tiles density, P3C varies local motifs, P3D breaks shared vertical macro-row cadence;
+- physical Weather/wetness/light/hearing/vision truth is unchanged;
+- P3D exact head completed 42/42 associated workflows and all 15 required exact-head contexts successfully.
 
-- one `WeatherPresentationRenderer` owns exactly one `WeatherAtmosphereSurface`;
-- one CanvasItem shader renders cosmetic rain/fog/debris/lightning;
-- rain/fog animation uses shader `TIME`, not a CPU redraw loop;
-- base Weather art scale is **2 screen pixels**, down from the former forced 4 px minimum;
-- rain cadence is 14 visual frames/sec; fog drift cadence is 4 visual frames/sec;
-- the former CPU loops for up to 180 rain candidates and 36 fog rectangles are removed;
-- rain no longer performs a screen→world conversion and `SkyExposureQuery` call per candidate;
-- shelter is one cached nearest-neighbor texture, one texel per current render-window tactical cell;
-- camera movement updates only shelter-mapping shader uniforms: **0 Weather redraws, 0 shelter-texture rebuilds, 0 WHEN ticks**;
-- CPU presentation housekeeping is 10 Hz and limited to <=3 debris records, lightning lifetime and a cheap shelter-revision poll;
-- clear/ordinary overcast hides the atmosphere surface when no debris/lightning is active.
-
-Focused P3 proof:
-
-- `WEATHER_CPU_CONTINUOUS_REDRAWS=0`;
-- `WEATHER_OVERLAY_CAMERA_REDRAWS=0` after forty camera changes;
-- `WEATHER_OVERLAY_MASK_REBUILDS=1` for the fixture's single initial mask;
-- clear useful visual range 12 cells / representative fog range 5;
-- representative storm hearing mask +19;
-- lightning physical fixture remains 0.025 → 0.845 exterior and 0.356 through a real window portal.
-
-Exact-head owner: `verify/system28-weather`.
+**The pre-1B human performance gate is CLOSED.** Predictive/amortized streaming remains measured follow-up only if future evidence justifies it.
 
 ---
 
-## Current performance architecture truth
+## Active work — Roadmap Phase 1B
 
-P0/P1/P2 remain implemented:
+### System 30 Item Freshness / Spoilage — DRAFT
 
-- WHAT retains global authoritative revision plus terrain/per-placement-channel revisions;
-- explicit bulk WHAT transactions publish compact completed `WorldChangeBatch` summaries;
-- System 00F brackets rollback-safe materialization with those notification batches;
-- System 27 lighting geometry and `SkyExposureQuery` key to terrain + STRUCTURE truth rather than every WHAT mutation;
-- ACTOR and ordinary OBJECT churn do not invalidate static lighting/shelter geometry;
-- Systems 23/29 coalesce explicit streaming bursts into bounded local refresh decisions;
-- System 24 suppresses intermediate offer-provider broadcasts inside those batches;
-- live DEV telemetry exposes streaming, lighting, perception, interaction, Weather CPU housekeeping/mask work and shelter rebuilds.
+Canonical draft:
 
-P0/P1/P2 first fully green executable `0398a2a49d84e6067f7610727aecacf4c05fe41f` completed 42/42 associated workflow runs and all 15 required exact-head contexts.
+`SYSTEM_DESIGNS/30_ITEM_FRESHNESS_SPOILAGE.md`
 
-P3 now removes the remaining Weather-specific CPU/canvas presentation path. If human Safari testing shows Weather remains visually continuous but player movement still starves render frames, the next measured target is the synchronous action/streaming path—not additional Weather complexity. P5 predictive/amortized streaming remains deferred unless measurements justify it.
+Lifecycle:
 
-Exact performance context: `verify/performance-architecture`.
+**DESCRIBE COMPLETE -> awaiting APPROVE -> then IMPLEMENT -> VERIFY**
 
----
+Core proposed rule:
 
-## Active roadmap work — Phase 1
+> **Food ages because authoritative world time passes through its storage environment. No item gets a timer.**
 
-1A. **Interaction affordance + reach** — COMPLETE: System 29 Candidate 001.
+Candidate architecture:
 
-1B. **Item freshness/spoilage** — NEXT DESIGN TARGET: typed per-instance freshness, analytic authoritative-time aging, future refrigeration-rate seam, no per-item tick loop.
+- explicit semantic perishable profiles only;
+- typed per-instance freshness records only for perishables;
+- FRESH / AGING / STALE / SPOILED derived analytically;
+- no per-item `_process`, timer or WHEN spoilage event;
+- integer fixed-point cumulative spoilage-exposure clocks;
+- ambient Candidate 001 exposure now; future real refrigeration plugs in through a neutral context clock rather than waking every item;
+- virgin world perishables use logical scenario origin tick 0, so late technical materialization never creates magically fresh food;
+- bounded deterministic initial-age variation prevents every identical food item from aging in lockstep;
+- refrigerators do **not** fake cooling until Phase 3 provides real power/appliance truth;
+- inventory/container inspection shows coarse freshness state;
+- Phase 4 later owns eating/drinking/health consequences.
 
-1C. **Semantic inventory/menu icons** — low-resolution deterministic icon vocabulary.
-
-1D. **Large/multi-cell object visual geometry** — presentation-owned draw span/pivot/overhang independent from collision footprint.
-
-1E. **Content expansion/integration** — more perishables, ordinary items and world props/fixtures/vegetation.
-
-**Current gate: human iPhone/Safari acceptance of the P3 Weather/performance build. After acceptance, the next bounded work is DESCRIBE Phase 1B. 1B implementation is not pre-authorized.**
+**System 30 code is not yet authorized. User approval of the draft is the next gate.**
 
 ---
 
-## Physical-survival correction
+## Phase 1 remaining order
 
-Roadmap Phase 4 final physical set is hunger, thirst, sleep pressure/exhaustion, health/injury and **fatigue**.
+1A. Interaction affordance + reach — **COMPLETE**.
 
-**Fatigue is the stamina/endurance concept. Do not add a parallel stamina state.** Fatigue is short-horizon exertion/endurance pressure; sleep pressure/exhaustion is the separate long-horizon need.
+1B. Item freshness/spoilage — **DESCRIBE COMPLETE; awaiting approval**.
 
----
+1C. Semantic inventory/menu icons.
 
-## Canonical roadmap through Beta
+1D. Large/multi-cell object visual geometry.
 
-1. Items/readability — 1A complete; 1B–1E ahead.
-2. Crafting.
-3. Three-tier Power + Water; standalone wastewater gameplay removed.
-4. Physical survival/health — hunger, thirst, sleep/exhaustion, health, fatigue.
-5. Moodlets — comfort, fear, boredom and escalating need-state consequences.
-6. Skills/interactions — Awareness, Sneak, First Aid, Cooking, Carpentry, Mechanical, Electrical, Fishing, Farming; real powered-object state/interactions.
-7. Vehicles — cars, trucks, motorcycles, bicycles, skateboards; later physical vehicle modification.
-8. Actor/NPC AI + combat + causal outbreak.
-9. Final graphics/UI overhaul → Beta.
+1E. Content expansion/integration.
 
-Save/load, schema handling, profiling and persistence-backed streaming eviction remain cross-cutting engineering gates inserted when required.
+Then: Crafting -> Power + Water -> physical survival/health -> Moodlets -> Skills/interactions -> Vehicles -> AI/combat/outbreak -> final graphics/UI -> Beta.
 
 ---
 
-## Required executable-head contexts
+## Relevant 1B ownership boundaries
+
+- System 11 owns containment.
+- System 12 owns timed physical item transitions.
+- System 13D owns semantic physical weight.
+- System 24 owns what virgin loot exists and keeps the rule **loot exists before you search for it**.
+- System 25 interprets authoritative WHEN ticks as simulation time.
+- System 30 may consume those seams but must not replace them.
+- Phase 3 Power/Refrigeration later provides real cold-storage exposure; System 30 must not import/fake Power.
+- Phase 4 later interprets freshness for nutrition/sickness/health consequences.
+
+---
+
+## Required executable-head contexts currently
 
 - `verify/system00d-global-world`
 - `verify/system00f-streaming-materialization`
@@ -202,3 +156,5 @@ Save/load, schema handling, profiling and persistence-backed streaming eviction 
 - `verify/system29-interaction-affordance`
 - `verify/performance-architecture`
 - `verify/pages-deploy`
+
+If System 30 is approved/implemented, proposed new permanent context: `verify/system30-item-freshness`.
