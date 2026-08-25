@@ -80,6 +80,12 @@ The performance bargain remains exactly P3: one fullscreen atmosphere shader, ze
 
 P3B verification additionally locks out the old row-band expressions in Weather CI and requires the jittered-macro/cluster/staggered-fog shader structure to compile under Godot 4.7.1.
 
+### P3B downward-motion hotfix
+
+Human playtest caught a pure presentation sign error after the de-tiling pass: the shader sampled the vertical rain field with `+ frame * fall_step`, so the visible streak pattern traveled upward. The sample offset is now `- frame * fall_step`, which makes the visible rain travel downward in screen coordinates. Weather CI explicitly requires the downward form and rejects the old upward form.
+
+This hotfix changes no density, streak scale, shelter logic, physical Weather state or performance architecture.
+
 ## Remaining playtest question
 
 P3B needs a human visual check because automated tests can prove architecture and shader compilation but cannot judge whether rain *looks* naturally sparse. The preferred comparison is ordinary rain around **50–60% precipitation** with the DEV/performance panel visible, matching the screenshot that exposed the striping.
