@@ -134,10 +134,12 @@ func _enrich_freshness(entry: Dictionary, item_id: String) -> void:
     if int(freshness.get("status", -1)) != ItemFreshnessQuery.Status.KNOWN:
         return
     var stage: StringName = StringName(freshness.get("stage", &""))
+    var suffix: String = " — %s" % String(stage)
     entry["freshness_known"] = true
     entry["freshness_stage"] = stage
     entry["freshness_age_permille"] = int(freshness.get("age_permille", 0))
-    entry["freshness_label_suffix"] = " — %s" % String(stage)
+    entry["freshness_label_suffix"] = suffix
+    entry["label"] = String(entry.get("label", "Unknown Item")) + suffix
 
 static func _container_label(profile_id: StringName, semantic_type: StringName) -> String:
     var profile_text: String = String(profile_id)
