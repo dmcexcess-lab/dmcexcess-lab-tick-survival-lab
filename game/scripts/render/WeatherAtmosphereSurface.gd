@@ -20,9 +20,13 @@ var _descriptor_updates: int = 0
 var _mapping_updates: int = 0
 var _debris_updates: int = 0
 var _lightning_updates: int = 0
+var _continuous_active: bool = false
+var _debris_active: bool = false
+var _lightning_active: bool = false
 
 func _ready() -> void:
     _ensure_material()
+    _sync_visibility()
 
 func is_ready() -> bool:
     _ensure_material()
@@ -71,12 +75,16 @@ func set_weather_descriptor(descriptor: Dictionary) -> bool:
         direction = Vector2.RIGHT
     else:
         direction = direction.normalized()
-    _shader_material.set_shader_parameter("precipitation", clampf(float(descriptor.get("precipitation", 0.0)), 0.0, 1.0))
-    _shader_material.set_shader_parameter("fog_density", clampf(float(descriptor.get("fog_density", 0.0)), 0.0, 1.0))
+    var precipitation_value: float = clampf(float(descriptor.get("precipitation", 0.0)), 0.0, 1.0)
+    var fog_value: float = clampf(float(descriptor.get("fog_density", 0.0)), 0.0, 1.0)
+    _shader_material.set_shader_parameter("precipitation", precipitation_value)
+    _shader_material.set_shader_parameter("fog_density", fog_value)
     _shader_material.set_shader_parameter("wind_direction", direction)
     _shader_material.set_shader_parameter("wind_strength", clampf(float(descriptor.get("wind_strength", 0.0)), 0.0, 1.0))
     _shader_material.set_shader_parameter("presentation_seed", float(int(descriptor.get("presentation_seed", 1))))
+    _continuous_active = precipitation_value >= 0.04 or fog_value >= 0.08
     _descriptor_updates += 1
+    _sync_visibility()
     return true
 
 func set_debris(records: Array[Dictionary], wind_direction: Vector2) -> bool:
@@ -101,7 +109,9 @@ func set_debris(records: Array[Dictionary], wind_direction: Vector2) -> bool:
             data = Vector4(x_norm, clampf(lane + wobble, 0.04, 0.96), 1.0, 1.0)
         _shader_material.set_shader_parameter("debris%d" % i, data)
         _shader_material.set_shader_parameter("debris_kind%d" % i, kind)
+    _debris_active = not records.is_empty()
     _debris_updates += 1
+    _sync_visibility()
     return true
 
 func start_lightning(seed: int, intensity: float, start_time_seconds: float, duration_seconds: float) -> bool:
@@ -113,7 +123,9 @@ func start_lightning(seed: int, intensity: float, start_time_seconds: float, dur
     _shader_material.set_shader_parameter("lightning_intensity", clampf(intensity, 0.0, 1.0))
     _shader_material.set_shader_parameter("lightning_start_time", maxf(0.0, start_time_seconds))
     _shader_material.set_shader_parameter("lightning_duration", duration_seconds)
+    _lightning_active = true
     _lightning_updates += 1
+    _sync_visibility()
     return true
 
 func clear_lightning() -> void:
@@ -121,12 +133,16 @@ func clear_lightning() -> void:
     if _shader_material == null:
         return
     _shader_material.set_shader_parameter("lightning_active", 0.0)
+    _lightning_active = false
     _lightning_updates += 1
+    _sync_visibility()
 
 func debug_snapshot() -> Dictionary:
     return {
         "ready": is_ready(),
         "surface_size": _surface_size,
+        "visible": visible,
+        "continuous_active": _continuous_active,
         "exposure_texture_ready": _exposure_texture != null,
         "mask_uv_origin": _mask_uv_origin,
         "mask_uv_scale": _mask_uv_scale,
@@ -155,3 +171,6 @@ func _ensure_material() -> void:
     _shader_material.set_shader_parameter("fog_pixel_size", FOG_PIXEL_SIZE)
     _shader_material.set_shader_parameter("fog_fps", FOG_FPS)
     material = _shader_material
+
+func _sync_visibility() -> void:
+    visible = _continuous_active or _debris_active or _lightning_active
