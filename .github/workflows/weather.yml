@@ -10,7 +10,7 @@ permissions:
   statuses: write
 
 concurrency:
-  group: weather-contract
+  group: weather-contract-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
@@ -20,7 +20,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Validate System 28 Slices A+B+C boundaries
+      - name: Validate System 28 Slices A+B+C plus P3 presentation boundaries
         shell: bash
         run: |
           set -euxo pipefail
@@ -33,6 +33,8 @@ jobs:
           test -f game/scripts/simulation/weather/WeatherAtmosphericOpticsAdapter.gd
           test -f game/scripts/simulation/weather/WeatherAcousticEnvironmentModifier.gd
           test -f game/scripts/render/WeatherPresentationRenderer.gd
+          test -f game/scripts/render/WeatherAtmosphereSurface.gd
+          test -f game/shaders/weather_atmosphere.gdshader
           test -f game/scripts/ui/WeatherDevControls.gd
           test -f game/scripts/ci/WeatherSmoke.gd
           test -f game/scripts/ci/WeatherEnvironmentIntegrationSmoke.gd
@@ -42,10 +44,18 @@ jobs:
           grep -q 'class_name WeatherAtmosphericOpticsAdapter' game/scripts/simulation/weather/WeatherAtmosphericOpticsAdapter.gd
           grep -q 'class_name WeatherAcousticEnvironmentModifier' game/scripts/simulation/weather/WeatherAcousticEnvironmentModifier.gd
           grep -q 'class_name WeatherPresentationRenderer' game/scripts/render/WeatherPresentationRenderer.gd
-          grep -q 'PRESENTATION_STEP_SECONDS: float = 0.05' game/scripts/render/WeatherPresentationRenderer.gd
+          grep -q 'class_name WeatherAtmosphereSurface' game/scripts/render/WeatherAtmosphereSurface.gd
+          grep -q 'PRESENTATION_STEP_SECONDS: float = 0.10' game/scripts/render/WeatherPresentationRenderer.gd
+          grep -q 'WEATHER_PIXEL_SIZE: int = 2' game/scripts/render/WeatherPresentationRenderer.gd
           grep -q 'MAX_DEBRIS: int = 3' game/scripts/render/WeatherPresentationRenderer.gd
-          grep -q 'screen_space_overlay' game/scripts/render/WeatherPresentationRenderer.gd
+          grep -q 'shader_atmosphere' game/scripts/render/WeatherPresentationRenderer.gd
+          grep -q 'cpu_continuous_redraws.*0' game/scripts/render/WeatherPresentationRenderer.gd
           grep -q 'camera_motion_redraws.*0' game/scripts/render/WeatherPresentationRenderer.gd
+          grep -q 'set_camera_presentation' game/scripts/render/WeatherPresentationRenderer.gd
+          grep -q 'TIME \* rain_fps' game/shaders/weather_atmosphere.gdshader
+          grep -q 'rain_pixel_size = 2.0' game/shaders/weather_atmosphere.gdshader
+          ! grep -q 'func _draw_rain' game/scripts/render/WeatherPresentationRenderer.gd
+          ! grep -q 'func _draw_fog' game/scripts/render/WeatherPresentationRenderer.gd
           grep -q 'transient_sky_light' game/scripts/simulation/lighting/AtmosphericOptics.gd
           grep -q 'target_within_visual_range' game/scripts/simulation/lighting/IlluminationVisualAcquisitionProvider.gd
           grep -q 'environment/defaults/default_clear_color=Color(0, 0, 0, 1)' game/project.godot
@@ -55,7 +65,7 @@ jobs:
           grep -q 'panel.position = Vector2(344, 66)' game/scripts/ui/WeatherDevControls.gd
           ! grep -R -q 'PhysicalLightingService\|SpatialSoundService\|AcousticPropagationQuery\|ObserverPerceptionService' game/scripts/simulation/weather
           ! grep -R -q 'scripts/generation\|scripts/streaming' game/scripts/simulation/weather
-          ! grep -R -q 'Sprite2D.new\|GPUParticles\|CPUParticles' game/scripts/render/WeatherPresentationRenderer.gd
+          ! grep -R -q 'Sprite2D.new\|GPUParticles\|CPUParticles' game/scripts/render/WeatherPresentationRenderer.gd game/scripts/render/WeatherAtmosphereSurface.gd
           ! test -e game/scripts/simulation/weather/WeatherState.gd.tmp_DO_NOT_USE
           ! test -e game/scripts/simulation/weather/WeatherState2_IGNORE
           ! test -e NO_MORE_TEMP_IGNORE
@@ -75,7 +85,7 @@ jobs:
           ./Godot_v4.7.1-stable_linux.x86_64 --headless --editor --path "$GITHUB_WORKSPACE/game" --quit 2>&1 | tee "$RUNNER_TEMP/import.log"
           if grep -Eqi 'SCRIPT ERROR|Parse Error|Failed to load script|Shader error' "$RUNNER_TEMP/import.log"; then exit 1; fi
 
-      - name: System 28 Weather A regression
+      - name: System 28 Weather A/P3 regression
         shell: bash
         run: |
           set -euxo pipefail
@@ -84,6 +94,7 @@ jobs:
           grep -q 'WEATHER_VIRTUAL_PIXELS=' "$RUNNER_TEMP/weather28-a.log"
           grep -q 'WEATHER_ACTIVE_DEBRIS=' "$RUNNER_TEMP/weather28-a.log"
           grep -q 'WEATHER_PRESENTATION_UPDATES=' "$RUNNER_TEMP/weather28-a.log"
+          grep -q 'WEATHER_CPU_CONTINUOUS_REDRAWS=0' "$RUNNER_TEMP/weather28-a.log"
           if grep -Eqi 'SCRIPT ERROR|Parse Error|Failed to load script|Shader error' "$RUNNER_TEMP/weather28-a.log"; then exit 1; fi
 
       - name: System 28 Weather B environment integration smoke
@@ -96,6 +107,7 @@ jobs:
           grep -q 'WEATHER_B_FOG_RANGE=' "$RUNNER_TEMP/weather28-b.log"
           grep -q 'WEATHER_B_STORM_HEARING_MASK=' "$RUNNER_TEMP/weather28-b.log"
           grep -q 'WEATHER_OVERLAY_CAMERA_REDRAWS=0' "$RUNNER_TEMP/weather28-b.log"
+          grep -q 'WEATHER_OVERLAY_MASK_REBUILDS=' "$RUNNER_TEMP/weather28-b.log"
           if grep -Eqi 'SCRIPT ERROR|Parse Error|Failed to load script|Shader error' "$RUNNER_TEMP/weather28-b.log"; then exit 1; fi
 
       - name: System 28 Weather C lightning smoke
@@ -167,7 +179,7 @@ jobs:
             cancelled) state=error ;;
             *) state=error ;;
           esac
-          payload=$(printf '{"state":"%s","context":"verify/system28-weather","description":"System 28 Weather Slices A+B+C","target_url":"%s"}' "$state" "$RUN_URL")
+          payload=$(printf '{"state":"%s","context":"verify/system28-weather","description":"System 28 Weather Slices A+B+C + P3 presentation","target_url":"%s"}' "$state" "$RUN_URL")
           curl --fail --silent --show-error \
             -X POST \
             -H "Authorization: Bearer $GH_TOKEN" \

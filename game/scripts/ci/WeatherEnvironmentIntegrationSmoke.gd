@@ -83,7 +83,7 @@ func _test_weather_acoustic_masking() -> void:
 func _test_screen_space_weather_overlay() -> void:
     var world := WorldStateClass.new()
     var mutation := WorldMutationClass.new(world)
-    var bounds := Rect2i(-4, -4, 9, 9)
+    var bounds := Rect2i(-16, -16, 33, 33)
     _check(mutation.set_terrain_rect(bounds, &"ground.concrete"), "overlay weather fixture terrain")
     var kernel := TickKernelClass.new()
     var weather := WeatherServiceClass.new(kernel, 9001, &"rain")
@@ -91,19 +91,33 @@ func _test_screen_space_weather_overlay() -> void:
     var renderer := WeatherRendererClass.new()
     get_root().add_child(renderer)
     _check(renderer.configure(weather, sky), "screen-space weather renderer configured")
-    _check(renderer.set_visible_window(bounds.position, bounds.size, 16.0), "screen-space weather view configured")
+    _check(renderer.set_visible_window(bounds.position, bounds.size, 24.0), "screen-space weather view configured")
+    _check(renderer.set_camera_presentation({
+        "camera_global_position": Vector2(396.0, 396.0),
+        "camera_zoom": Vector2.ONE,
+    }), "initial camera mapping accepted")
     var before: Dictionary = renderer.presentation_snapshot()
+    var before_surface: Dictionary = before.get("surface", {})
     var tick_before: int = kernel.world_tick()
     for i in range(40):
-        _check(renderer.set_camera_local_position(Vector2(64.0 + float(i * 16), 64.0)), "camera compatibility call accepted")
+        _check(renderer.set_camera_presentation({
+            "camera_global_position": Vector2(396.0 + float(i * 4), 396.0),
+            "camera_zoom": Vector2.ONE,
+        }), "camera mapping update accepted")
     var after: Dictionary = renderer.presentation_snapshot()
-    _check(bool(after.get("screen_space_overlay", false)), "weather presentation is explicitly screen-space")
+    var after_surface: Dictionary = after.get("surface", {})
+    _check(bool(after.get("screen_space_overlay", false)), "weather presentation remains explicitly screen-space")
+    _check(bool(after.get("shader_atmosphere", false)), "rain/fog animation is GPU shader driven")
     _check(int(after.get("camera_motion_redraws", -1)) == 0, "camera motion causes zero weather redraws")
     _check(int(after.get("redraw_requests", -1)) == int(before.get("redraw_requests", -2)), "rapid movement cannot clear or redraw the overlay")
-    _check(int(after.get("presentation_updates", -1)) == int(before.get("presentation_updates", -2)), "camera movement does not advance weather phase")
+    _check(int(after.get("presentation_updates", -1)) == int(before.get("presentation_updates", -2)), "camera movement does not advance CPU weather phase")
+    _check(int(after_surface.get("mapping_updates", 0)) > int(before_surface.get("mapping_updates", 0)), "camera changes only update shelter mapping uniforms")
+    _check(int(after.get("exposure_mask_rebuilds", -1)) == int(before.get("exposure_mask_rebuilds", -2)), "camera movement does not rebuild shelter texture")
+    _check(int(after.get("cpu_continuous_redraws", -1)) == 0, "continuous rain has no CPU redraw loop")
     _check(kernel.world_tick() == tick_before, "screen-space overlay movement seam advances zero WHEN ticks")
-    _check(renderer.advance_presentation(0.05) == 1, "overlay still advances on its own 20 Hz presentation cadence")
+    _check(renderer.advance_presentation(0.10) == 1, "low-rate CPU housekeeping remains independent from GPU rain time")
     print("WEATHER_OVERLAY_CAMERA_REDRAWS=%d" % int(after.get("camera_motion_redraws", -1)))
+    print("WEATHER_OVERLAY_MASK_REBUILDS=%d" % int(after.get("exposure_mask_rebuilds", -1)))
     renderer.queue_free()
 
 func _test_unrendered_background_is_black() -> void:

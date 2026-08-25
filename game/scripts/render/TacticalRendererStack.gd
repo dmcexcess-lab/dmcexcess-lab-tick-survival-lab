@@ -75,10 +75,7 @@ func set_camera_presentation(snapshot: Dictionary) -> bool:
     _ensure_layers()
     if not _weather.is_configured():
         return true
-    var camera_value: Variant = snapshot.get("camera_global_position", null)
-    if typeof(camera_value) != TYPE_VECTOR2:
-        return false
-    return _weather.set_camera_local_position(to_local(camera_value))
+    return _weather.set_camera_presentation(snapshot)
 
 func force_weather_ambient_event(kind: StringName = &"leaf") -> bool:
     _ensure_layers()
