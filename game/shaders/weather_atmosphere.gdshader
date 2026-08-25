@@ -53,6 +53,10 @@ float segment_distance(vec2 p, vec2 a, vec2 b) {
     return length(pa - ba * h);
 }
 
+// P3B: sparse jittered macro-cells replace the old five-row rain bands.
+// Each larger patch can host one independently phased streak, while a still
+// coarser hash biases nearby patches together. The 2 px pixel-art scale stays
+// intact without exposing a repeating horizontal lattice.
 float rain_layer(vec2 screen_px) {
     if (precipitation < 0.04) {
         return 0.0;
@@ -60,27 +64,48 @@ float rain_layer(vec2 screen_px) {
 
     float px = max(1.0, rain_pixel_size);
     float frame = floor(TIME * rain_fps);
-    float fall_speed = mix(2.0, 5.0, precipitation);
+    float fall_step = floor(mix(2.0, 4.0, precipitation) + 0.5);
     vec2 wind = wind_direction * wind_strength;
-    vec2 shifted = screen_px / px;
-    shifted.y += frame * fall_speed;
-    shifted.x -= frame * wind.x * 0.85;
+    vec2 shifted = floor(screen_px / px);
+    shifted.y += frame * fall_step;
+    shifted.x -= floor(frame * wind.x * 0.55);
 
-    vec2 cell = floor(shifted);
-    vec2 local = fract(shifted);
-    float row_seed = hash21(vec2(cell.x, floor(cell.y / 5.0)) + vec2(presentation_seed * 0.001, 0.0));
-    float density = mix(0.018, 0.070, precipitation);
-    if (row_seed > density) {
+    float macro_w = floor(mix(16.0, 10.0, precipitation) + 0.5);
+    float macro_h = floor(mix(24.0, 15.0, precipitation) + 0.5);
+    vec2 macro_size = vec2(macro_w, macro_h);
+    vec2 macro_cell = floor(shifted / macro_size);
+    vec2 local = shifted - macro_cell * macro_size;
+
+    vec2 cluster_cell = floor((macro_cell + vec2(1.0, 2.0)) / vec2(4.0, 3.0));
+    float cluster_bias = hash21(cluster_cell + vec2(presentation_seed * 0.0017, 61.0));
+    float candidate_hash = hash21(macro_cell + vec2(presentation_seed * 0.0031, 23.0));
+    float candidate_chance = clamp(
+        mix(0.14, 0.62, precipitation) + (cluster_bias - 0.5) * 0.28,
+        0.05,
+        0.82
+    );
+    if (candidate_hash > candidate_chance) {
         return 0.0;
     }
 
-    float streak_len = 1.0 + step(0.52, hash21(cell + vec2(17.0, 29.0)));
-    float phase = mod(cell.y + floor(hash21(cell + 4.0) * 5.0), 5.0);
-    float in_streak = 1.0 - step(streak_len, phase);
-    float narrow = 1.0 - step(0.78, local.x);
-    return in_streak * narrow;
+    float detail_hash = hash21(macro_cell + vec2(47.0, presentation_seed * 0.0023 + 11.0));
+    float anchor_x = floor(fract(detail_hash * 7.13) * macro_w);
+    float anchor_y = floor(fract(detail_hash * 13.71) * macro_h);
+    float streak_seed = fract(detail_hash * 17.17);
+    float streak_len = 1.0 + step(0.60, streak_seed) + step(0.90, streak_seed);
+    float phase_y = mod(local.y - anchor_y + macro_h, macro_h);
+    float dx = abs(local.x - anchor_x);
+    dx = min(dx, macro_w - dx);
+
+    float in_streak = 1.0 - step(streak_len, phase_y);
+    float one_weather_pixel_wide = 1.0 - step(0.5, dx);
+    float brightness = mix(0.42, 1.0, fract(detail_hash * 31.31));
+    return in_streak * one_weather_pixel_wide * brightness;
 }
 
+// P3B fog uses staggered coarse rows and small diamond-like pixel clouds.
+// It remains deliberately low-frequency and cheap, but no longer presents as
+// aligned rectangular tiles when the 2 px base pixel is visible.
 float fog_layer(vec2 screen_px) {
     if (fog_density < 0.08) {
         return 0.0;
@@ -89,17 +114,34 @@ float fog_layer(vec2 screen_px) {
     float px = max(1.0, fog_pixel_size);
     float frame = floor(TIME * fog_fps);
     vec2 wind = wind_direction * max(0.12, wind_strength);
-    vec2 coarse = screen_px / (px * vec2(8.0, 4.0));
-    coarse -= vec2(frame * wind.x * 0.10, frame * wind.y * 0.05);
+    vec2 shifted = floor(screen_px / px);
+    shifted -= floor(vec2(frame * wind.x * 0.40, frame * wind.y * 0.22));
+
+    float fog_row = floor(shifted.y / 10.0);
+    float row_jitter = (hash21(vec2(fog_row, presentation_seed * 0.0019 + 71.0)) - 0.5) * 14.0;
+    vec2 coarse = vec2(shifted.x + row_jitter, shifted.y) / vec2(18.0, 10.0);
     vec2 cell = floor(coarse);
     vec2 local = fract(coarse);
 
-    float n0 = hash21(cell + vec2(presentation_seed * 0.002, 41.0));
-    float n1 = hash21(cell + vec2(73.0, 19.0));
-    float threshold = mix(0.88, 0.56, fog_density);
-    float present = step(threshold, n0);
-    float clipped = 1.0 - step(0.84 + n1 * 0.12, local.x);
-    return present * clipped;
+    float presence_hash = hash21(cell + vec2(presentation_seed * 0.002, 41.0));
+    float threshold = mix(0.95, 0.50, fog_density);
+    if (presence_hash < threshold) {
+        return 0.0;
+    }
+
+    float shape_hash = hash21(cell + vec2(73.0, 19.0));
+    vec2 center = vec2(
+        0.50 + (fract(shape_hash * 7.7) - 0.5) * 0.18,
+        0.50 + (fract(shape_hash * 13.3) - 0.5) * 0.18
+    );
+    vec2 radius = vec2(
+        0.38 + fract(shape_hash * 17.9) * 0.10,
+        0.32 + fract(shape_hash * 23.1) * 0.10
+    );
+    vec2 normalized_delta = abs(local - center) / radius;
+    float cloud = 1.0 - step(1.0, normalized_delta.x + normalized_delta.y);
+    float strength = mix(0.45, 1.0, presence_hash);
+    return cloud * strength;
 }
 
 vec4 debris_layer(vec2 screen_px, vec2 screen_size, vec4 data, float kind) {
