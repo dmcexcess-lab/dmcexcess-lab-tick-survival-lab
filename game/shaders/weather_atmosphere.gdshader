@@ -92,7 +92,7 @@ float rain_layer(vec2 screen_px) {
     float anchor_x = floor(fract(detail_hash * 7.13) * macro_w);
     float anchor_y = floor(fract(detail_hash * 13.71) * macro_h);
     float streak_seed = fract(detail_hash * 17.17);
-    float streak_len = 1.0 + step(0.60, streak_seed) + step(0.90, streak_seed);
+    float streak_len = 1.0 + step(0.72, streak_seed);
     float phase_y = mod(local.y - anchor_y + macro_h, macro_h);
     float dx = abs(local.x - anchor_x);
     dx = min(dx, macro_w - dx);
