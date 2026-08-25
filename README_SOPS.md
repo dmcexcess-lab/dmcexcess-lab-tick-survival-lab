@@ -7,13 +7,14 @@ Status: **canonical development process**.
 At the start of every new prompt that requests repository/code changes, read current:
 
 1. `PROJECT_NORTH_STAR.md`;
-2. `DESIGN_DECISIONS.md` when the change touches cross-system direction;
-3. `README_CONTEXT.md`;
-4. `ROADMAP.md` when priority/order/scope may matter;
-5. this SOP;
-6. `SYSTEM_DESIGNS/README.md`;
-7. the active APPROVED/IMPLEMENTED system design(s);
-8. current `main` SHA and relevant source/history.
+2. `PERFORMANCE_NORTH_STAR.md`;
+3. `DESIGN_DECISIONS.md` when the change touches cross-system direction;
+4. `README_CONTEXT.md`;
+5. `ROADMAP.md` when priority/order/scope may matter;
+6. this SOP;
+7. `SYSTEM_DESIGNS/README.md`;
+8. the active APPROVED/IMPLEMENTED system design(s);
+9. current `main` SHA and relevant source/history.
 
 Refresh once per coherent prompt, not before every edit.
 
@@ -29,11 +30,15 @@ Core rule:
 
 > **Mini means reduced complexity, not reduced consequence or mood.**
 
-Before solving a local problem, ask whether the proposed change still serves the persistent open-world, discrete-time survival game described by `PROJECT_NORTH_STAR.md`.
+Performance rule:
+
+> **The low-resolution 2D presentation and turn-based simulation are deliberate performance advantages. Spend that budget on simulation depth, persistence, world scale and responsiveness — not avoidable work.**
+
+Before solving a local problem, ask whether the proposed change still serves the persistent open-world, discrete-time survival game described by `PROJECT_NORTH_STAR.md` and the performance doctrine in `PERFORMANCE_NORTH_STAR.md`.
 
 Do not optimize a local implementation around superseded raid/extraction assumptions.
 
-`ROADMAP.md` controls current major-phase order, but does not override the North Star or subsystem ownership rules.
+`ROADMAP.md` controls current major-phase order, but does not override the North Star, performance doctrine or subsystem ownership rules.
 
 ## 3. Design lifecycle
 
@@ -161,6 +166,7 @@ Current canonical history is Git itself. Historical implementations do not need 
 Active canonical docs answer different questions:
 
 - `PROJECT_NORTH_STAR.md` — what game/experience are we building?
+- `PERFORMANCE_NORTH_STAR.md` — what computational bargain must every system preserve?
 - `DESIGN_DECISIONS.md` — what cross-system choices were settled and why?
 - `ROADMAP.md` — what major gameplay phase comes next and in what order?
 - `README_CONTEXT.md` — where are we now and what is active/next?
@@ -208,3 +214,24 @@ Do not ask about ordinary typos when intent is clear. When explicit numbering an
 ## 16. Mobile/browser requirement
 
 Phone/Safari is first-class. Input/lifecycle systems must consider touch/mouse de-duplication, keyboard availability, focus loss, and the North Star's hard real-life pause requirement where relevant.
+
+## 17. Performance-first architecture gate
+
+Performance is evaluated **before** an implementation becomes expensive, not only after a playtest exposes a stall.
+
+For every new system or meaningful rewrite, inspect its asymptotic and recurring cost explicitly:
+
+- What work happens per render frame?
+- What work happens per simulation tick/action?
+- What work happens per active entity?
+- What work happens when a streamed region materializes or activates?
+- Does any local query scan the whole world or a much larger set than necessary?
+- Can the same truth be derived analytically, cached behind a revision, batched, coalesced, computed at a coarser distant resolution, or updated only on relevant events?
+- Is presentation doing CPU work that belongs naturally on the GPU?
+- Is one runtime Node/timer/process/scheduled event being created per persistent entity without a gameplay reason?
+
+Prefer bounded work whose cost follows the smallest relevant active set. A turn-based system must not wake merely because a render frame occurred. A low-resolution presentation must not become expensive through unnecessary draw-call, transform, allocation, polling or signal overhead.
+
+Do not accept an avoidably expensive design on the basis that current desktop hardware handles it. Preserve computational headroom for later population, outbreak, AI, utilities, vehicles, persistence and world-scale simulation.
+
+Performance work must remain honest: optimization may change representation, scheduling, caching, resolution or presentation technique, but it must not silently remove causal world truth or meaningful consequences.
