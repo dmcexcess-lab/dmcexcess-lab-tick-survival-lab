@@ -17,6 +17,7 @@ var _containment: InventoryContainmentState = null
 var _loot_state: LootState = null
 var _profiles: LootContainerProfileCatalog = null
 var _reach: WorldInteractionReachQuery = null
+var _batch_dirty: bool = false
 
 func _init(
     world_state: WorldState = null,
@@ -82,6 +83,13 @@ func offers_for_actor(actor_id: String, candidate_target_ids: Array[String]) -> 
     return result
 
 func _connect_sources() -> void:
+    if _world != null:
+        var batch_changed := Callable(self, "_on_world_batch_changed")
+        var world_reset := Callable(self, "_on_world_reset")
+        if not _world.batch_changed.is_connected(batch_changed):
+            _world.batch_changed.connect(batch_changed)
+        if not _world.world_reset.is_connected(world_reset):
+            _world.world_reset.connect(world_reset)
     if _loot_state != null:
         var initialized := Callable(self, "_on_loot_source_initialized")
         var reset := Callable(self, "_on_loot_state_reset")
@@ -100,17 +108,34 @@ func _connect_sources() -> void:
         if not _containment.containment_reset.is_connected(reset):
             _containment.containment_reset.connect(reset)
 
+func _emit_or_defer(reason: StringName) -> void:
+    if _world != null and _world.is_change_batch_active():
+        _batch_dirty = true
+        return
+    availability_changed.emit(reason)
+
+func _on_world_batch_changed(_batch: WorldChangeBatch) -> void:
+    if not _batch_dirty:
+        return
+    _batch_dirty = false
+    availability_changed.emit(&"world_batch_completed")
+
+func _on_world_reset() -> void:
+    _batch_dirty = false
+
 func _on_loot_source_initialized(_source_key: String, _revision: int) -> void:
-    availability_changed.emit(&"loot_source_initialized")
+    _emit_or_defer(&"loot_source_initialized")
 
 func _on_loot_state_reset() -> void:
+    _batch_dirty = false
     availability_changed.emit(&"loot_state_reset")
 
 func _on_container_enrolled(_container_id: String, _version: int) -> void:
-    availability_changed.emit(&"container_enrolled")
+    _emit_or_defer(&"container_enrolled")
 
 func _on_container_removed(_container_id: String, _previous_version: int) -> void:
-    availability_changed.emit(&"container_removed")
+    _emit_or_defer(&"container_removed")
 
 func _on_containment_reset() -> void:
+    _batch_dirty = false
     availability_changed.emit(&"containment_reset")
