@@ -7,7 +7,6 @@ const PlanClass = preload("res://scripts/generation/world/GeneratedGlobalWorldPl
 const ProfilesClass = preload("res://scripts/generation/world/GlobalWorldProfileCatalog.gd")
 const BridgePlannerClass = preload("res://scripts/generation/world/GlobalBridgeIntentPlanner.gd")
 const HydrologyQueryClass = preload("res://scripts/generation/world/GlobalHydrologyQuery.gd")
-const DistrictSitePlannerClass = preload("res://scripts/generation/world/IslandDistrictSitePlanner.gd")
 const Surface = preload("res://scripts/generation/shared/IslandSurfaceMath.gd")
 
 const INVALID_CELL := Vector2i(-999999, -999999)
@@ -15,7 +14,6 @@ const INVALID_CELL := Vector2i(-999999, -999999)
 var _base_planner: GlobalWorldPlanner = BasePlannerClass.new()
 var _bridges: GlobalBridgeIntentPlanner = BridgePlannerClass.new()
 var _hydrology: GlobalHydrologyQuery = HydrologyQueryClass.new()
-var _district_sites: IslandDistrictSitePlanner = DistrictSitePlannerClass.new()
 var _profiles: GlobalWorldProfileCatalog = ProfilesClass.new()
 
 func generate(request: GlobalWorldGenerationRequest) -> GeneratedGlobalWorldPlan:
@@ -29,8 +27,7 @@ func generate(request: GlobalWorldGenerationRequest) -> GeneratedGlobalWorldPlan
         return failed
 
     # Compose the island over the proven rural regional skeleton. Coast/ocean truth
-    # and two road-backed 384x384 district sites are additive; the mature regional
-    # road/settlement graph is not replaced or rerouted.
+    # is additive; the mature connected road/settlement graph stays authoritative.
     var base_request := RequestClass.new(
         request.world_id,
         request.seed,
@@ -61,17 +58,7 @@ func generate(request: GlobalWorldGenerationRequest) -> GeneratedGlobalWorldPlan
     if not bool(base_sites_result.get("ok", false)):
         plan.failure_reason = String(base_sites_result.get("failure_reason", "island_base_site_adaptation_failed"))
         return plan
-    var district_result: Dictionary = _district_sites.append_required_districts(
-        base_sites_result.get("area_sites", []),
-        plan.road_segments,
-        plan.river_segments,
-        request,
-        island_profile
-    )
-    if not bool(district_result.get("ok", false)):
-        plan.failure_reason = String(district_result.get("failure_reason", "island_district_site_planning_failed"))
-        return plan
-    plan.area_sites = district_result.get("area_sites", [])
+    plan.area_sites = base_sites_result.get("area_sites", [])
 
     var bridge_result: Dictionary = _bridges.plan(plan.road_segments, plan.river_segments)
     if not bool(bridge_result.get("ok", false)):
@@ -342,13 +329,7 @@ func _validate(
             if _rects_overlap(rect, plan.area_sites[second_index].get("bounds", Rect2i())):
                 failures.append("island_area_site_overlap")
 
-    for required: String in [
-        "rural.crossroads",
-        "smalltown.center",
-        "suburban.neighborhood",
-        "urban.mixed",
-        "rural.scattered",
-    ]:
+    for required: String in ["rural.crossroads", "smalltown.center", "rural.scattered"]:
         if int(profile_counts.get(required, 0)) <= 0:
             failures.append("island_required_profile_missing:%s" % required)
 
