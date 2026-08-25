@@ -58,8 +58,10 @@ jobs:
           grep -q 'cluster_bias' game/shaders/weather_atmosphere.gdshader
           grep -q 'candidate_chance' game/shaders/weather_atmosphere.gdshader
           grep -q 'row_jitter' game/shaders/weather_atmosphere.gdshader
-          grep -q 'shifted.y -= frame \* fall_step' game/shaders/weather_atmosphere.gdshader
-          ! grep -q 'shifted.y += frame \* fall_step' game/shaders/weather_atmosphere.gdshader
+          grep -q 'vec2 cell = floor(screen_px / px)' game/shaders/weather_atmosphere.gdshader
+          grep -q 'animated_anchor_y = mod(anchor_y + frame \* fall_step, macro_h)' game/shaders/weather_atmosphere.gdshader
+          grep -q 'phase_y = mod(local.y - animated_anchor_y + macro_h, macro_h)' game/shaders/weather_atmosphere.gdshader
+          ! grep -Eq 'shifted\.y [+-]= frame \* fall_step' game/shaders/weather_atmosphere.gdshader
           ! grep -q 'floor(cell.y / 5.0)' game/shaders/weather_atmosphere.gdshader
           ! grep -q 'phase = mod(cell.y' game/shaders/weather_atmosphere.gdshader
           ! grep -q 'func _draw_rain' game/scripts/render/WeatherPresentationRenderer.gd
