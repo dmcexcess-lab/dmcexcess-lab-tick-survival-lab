@@ -1,6 +1,10 @@
 # Tick Survival Lab — System 30 Item Freshness / Spoilage
 
-Status: **DRAFT — Roadmap Phase 1B DESCRIBE complete; awaiting user approval before implementation**
+Status: **IMPLEMENTED + CI VERIFIED — Roadmap Phase 1B Candidate 001**
+
+First fully green executable head: `39716f27b7f91b7007645ceae02dedc47601bf87`
+
+Permanent exact-head context: `verify/system30-item-freshness`
 
 Roadmap role: **Phase 1B — Item freshness / spoilage**.
 
@@ -8,21 +12,27 @@ Core rule:
 
 > **Food ages because authoritative world time passes through its storage environment. No item gets a timer.**
 
-This system adds persistent, per-instance freshness to explicitly perishable physical items while preserving the project's performance doctrine: no per-item `_process`, no scheduled spoilage event per apple, no world scan when time advances, and no fake refrigeration before real power/appliance state exists.
-
 ---
 
-## 1. Goal
+## 1. Implemented result
 
-Add the smallest causal model that preserves the important survival decisions:
+System 30 adds persistent per-instance freshness for explicitly perishable physical items while preserving the project's event-driven performance doctrine.
 
-- fresh food is more valuable than old food;
-- food can become stale/spoiled while the player is elsewhere;
-- stockpiling perishables has time pressure;
-- later refrigeration can slow aging without replacing item identity or rewriting this system;
-- a distant refrigerator first streamed on day 5 must not receive magically day-5-new food merely because the physical item entities were materialized late.
+Candidate 001 implements:
 
-Phase 1B makes freshness **real and readable**. It does not yet implement eating/drinking consequences; Phase 4 owns hunger/thirst/health effects.
+- explicit semantic freshness profiles;
+- sparse typed freshness records keyed by stable `item.*` entity ID;
+- deterministic bounded virgin-stock starting age;
+- analytic freshness queries from authoritative WHEN ticks;
+- cumulative storage-exposure contexts;
+- ambient exposure as the only live storage context;
+- FRESH / AGING / STALE / SPOILED derived labels;
+- System-24 transactional virgin-loot enrollment and rollback;
+- read-only inventory/container freshness labels;
+- snapshot/restore of freshness state;
+- a neutral reanchor seam for future real refrigeration.
+
+It does **not** implement food consumption, nutrition, sickness, cooking, refrigeration, appliance power, generic item condition, or quantity/stack semantics.
 
 ---
 
@@ -30,525 +40,259 @@ Phase 1B makes freshness **real and readable**. It does not yet implement eating
 
 System 30 owns:
 
-- explicit perishable semantic-type profiles;
-- typed persistent freshness records keyed by stable `item.*` entity ID;
-- deterministic virgin-item initial age;
-- analytical freshness queries from authoritative WHEN ticks;
-- monotonic effective spoilage exposure;
-- a neutral storage-environment exposure seam;
-- the Candidate 001 ambient environment implementation;
-- enrollment/removal/reanchor mutation for freshness state;
-- snapshot/restore of freshness records;
-- read-only freshness descriptors consumed by inventory/container inspection.
+- which semantic item types are perishable;
+- perishable profile lifetimes and profile versions;
+- sparse per-instance freshness records;
+- deterministic virgin initial age;
+- current freshness derivation;
+- storage-exposure context IDs/anchors;
+- freshness record enrollment/removal/reanchor;
+- freshness snapshot/restore;
+- copied read descriptors for UI/consumers.
 
-System 30 does **not** own:
+System 30 does not own:
 
-- WHAT item identity or placement;
+- WHAT identity/placement;
 - System 11 containment;
 - System 09 hand assignment;
-- System 12 item transfer timing/disposition;
-- System 24 loot planning/current container contents;
-- System 25 clock/calendar presentation;
-- power, appliance state or refrigeration — Roadmap Phase 3;
-- physical temperature/weather heat transfer;
-- eating/drinking, nutrition, sickness or poisoning — Roadmap Phase 4;
-- cooking — Roadmap Phase 6;
-- crafting creation rules — Roadmap Phase 2;
-- UI layout/art/icons — Phase 1C / Phase 9;
-- generic durability/condition for non-food items;
-- item quantity/stack semantics.
+- System 12 transfer timing/disposition;
+- System 13D weight;
+- System 24 loot probability/current contents;
+- System 25 time ownership;
+- Weather or physical temperature;
+- Phase-3 Power/Refrigeration;
+- Phase-4 eating/drinking/health consequences;
+- Phase-6 cooking;
+- UI art/icon vocabulary.
 
-Freshness is a typed mechanic store, not another WHAT metadata dictionary.
+Freshness remains a typed mechanic domain rather than WHAT metadata.
 
 ---
 
-## 3. Existing contracts reused
+## 3. Candidate 001 profiles
 
-System 30 composes existing truth rather than replacing it:
+Only semantic types with an `ItemFreshnessProfile` are perishable. No profile means shelf-stable for System 30 and therefore no persistent freshness record.
 
-- **WHAT:** stable physical `item.*` identity;
-- **WHEN:** one authoritative integer `world_tick`;
-- **System 25 `WorldTimeProfile`:** scenario tick-rate conversion for human-readable shelf-life content authoring;
-- **System 11:** current containment when a future storage-environment resolver needs it;
-- **System 12:** future exact transfer-completion seam for environment reanchoring;
-- **System 24:** virgin loot creation and deterministic stable item IDs;
-- **System 13D:** item physical properties remain separate; freshness is not weight/condition metadata.
+The implemented Candidate-001 set is:
 
-System 30 never creates a second clock.
+- `item.food.apple`
+- `item.food.bread_loaf`
+- `item.food.milk_carton`
+- `item.food.raw_chicken`
+- `item.food.deli_meat`
+- `item.food.fresh_salad`
 
----
+Existing canned/shelf-stable items remain non-perishable unless a later explicit profile says otherwise.
 
-## 4. Perishable profile catalog
-
-Only semantic item types with an explicit `ItemFreshnessProfile` are perishable.
-
-No profile means **shelf-stable / not modeled as perishable** for this system. System 30 therefore creates no pointless persistent state for canned beans, tools, batteries, bandages, nails, junk, etc.
-
-Candidate profile facts:
-
-- `semantic_type: StringName`;
-- `ambient_lifetime_ticks: int` — positive lifetime at ordinary ambient exposure;
-- `virgin_initial_age_max_permille: int` — bounded deterministic age variation for pre-existing world stock;
-- `profile_version: int`.
-
-Human-facing content may be authored in hours/days and converted once through the injected `WorldTimeProfile` into integer ticks. Runtime aging remains integer/fixed-point and deterministic.
-
-No floating wall-clock age is stored.
+Profile authoring uses `WorldTimeProfile` to convert human-scale shelf-life tuning into authoritative integer simulation ticks. Virgin stock may begin with deterministic age variation up to the profile's configured cap; Candidate 001 uses a maximum of 20%.
 
 ---
 
-## 5. Readable freshness states
+## 4. Readable states
 
-Candidate 001 uses one simple normalized progression:
+Freshness state is derived from effective age relative to profile ambient lifetime:
 
-- **FRESH:** effective age `< 60%` of ambient lifetime;
-- **AGING:** `60% <= age < 85%`;
-- **STALE:** `85% <= age < 100%`;
-- **SPOILED:** effective age `>= 100%`.
+- **FRESH:** `< 60%`
+- **AGING:** `>= 60%` and `< 85%`
+- **STALE:** `>= 85%` and `< 100%`
+- **SPOILED:** `>= 100%`
 
-The query also exposes integer `age_permille` / `remaining_permille` for mechanics and DEV inspection, but ordinary player UI should primarily show the coarse semantic state.
+The query also exposes integer age/remaining information for mechanics and DEV verification. Ordinary UI uses the coarse semantic label.
 
-These states are **derived**, not separately scheduled mutations.
+Crossing a threshold creates no timer event and performs no record mutation.
 
-Crossing FRESH -> AGING or STALE -> SPOILED emits no timer event and writes no record merely because time passed.
-
-Freshness never improves automatically. A colder environment can slow or stop future aging, but cannot make old food young again.
+Freshness never improves automatically.
 
 ---
 
-## 6. Performance architecture — cumulative exposure clocks
+## 5. Cumulative exposure architecture
 
-This is the central 1B architecture.
+Candidate 001 has one live provider:
 
-Use fixed-point **spoilage exposure units**:
+- context ID: `ambient`
+- cumulative exposure at authoritative tick `T`: `T` ambient exposure ticks.
 
-- `EXPOSURE_SCALE = 1000`;
-- ambient exposure advances by `1000` units per authoritative world tick;
-- a profile's ambient lifetime is `ambient_lifetime_ticks * EXPOSURE_SCALE`.
+Per-item records store saved effective age plus an exposure-context anchor. Current age is calculated in O(1):
 
-A storage environment exposes a **monotonic cumulative exposure clock**, not a per-item timer.
+`current_age = saved_age + max(0, exposure_now - exposure_anchor)`
 
-Neutral seam concept:
+No elapsed-tick replay occurs.
 
-- `environment_key_for_item(item_id) -> StringName`;
-- `cumulative_exposure_units(environment_key, world_tick) -> int`.
+The provider abstraction is deliberately neutral. Phase 3 may later supply a real refrigerated context whose cumulative exposure advances more slowly according to real power/appliance truth. A power-state change updates that context's clock rather than waking every contained item.
 
-Candidate 001 has exactly one live environment:
-
-- key: `ambient`;
-- cumulative exposure at tick `T`: `T * 1000`.
-
-### Why cumulative clocks matter
-
-Later Phase-3 refrigeration can own one context clock per real refrigerated storage context. If power is on, that context clock may advance slowly; if power fails, it may advance faster. The refrigerator/context reanchors its **one clock** when its rate changes.
-
-It does **not** wake every milk carton inside it.
-
-A regional blackout therefore must not produce a perishable-item update storm.
-
-System 30 does not decide the future cold-rate numbers. Phase 3 supplies real power/appliance truth through this seam.
+System 30 does not import Power.
 
 ---
 
-## 7. Per-instance freshness record
+## 6. Logical origin and streaming
 
-Only perishable physical items receive a record.
-
-Candidate record fields:
-
-- `item_id: String`;
-- `effective_age_units_at_anchor: int`;
-- `environment_key: StringName`;
-- `environment_exposure_units_at_anchor: int`;
-- `logical_origin_tick: int`;
-- `profile_version: int`;
-- `record_revision: int`.
-
-The record does **not** duplicate:
-
-- item semantic type;
-- item location;
-- container ID;
-- current freshness label;
-- current remaining lifetime.
-
-Those are read/derived from their real owners.
-
-### Query equation
-
-At current authoritative tick `T`:
-
-`current_age = age_at_anchor + max(0, environment_exposure(environment_key, T) - environment_exposure_at_anchor)`
-
-The semantic state is then derived from `current_age / profile_lifetime`.
-
-No loop over elapsed ticks occurs.
-
----
-
-## 8. Logical origin time — materialization must not create fresh food
-
-Virgin world loot is logically part of the scenario before the player streams its building.
+Virgin world loot is logically present from scenario origin even when its technical source materializes later.
 
 Therefore:
 
-> **Pre-existing virgin perishable loot uses scenario origin tick 0, not the tick when its technical source happens to materialize.**
+> **System-24 virgin perishables enroll with logical origin tick 0.**
 
-Example:
+A grocery first streamed on day 5 therefore does not generate day-5-new milk. Its stable item IDs are materialized at that time, but System 30 analytically catches their age up from scenario origin in one calculation.
 
-- player spends five simulation days near the starting town;
-- a distant grocery is first materialized on day 5;
-- System 24 deterministically creates its stable virgin item entities at that time for technical reasons;
-- System 30 enrolls those perishables with logical origin tick `0`;
-- their current freshness is immediately derived as five days of appropriate exposure, not zero days.
-
-This preserves one persistent logical world across streaming boundaries without pre-simulating every item.
-
-Newly created gameplay items later use their **real creation tick** unless their owning creation mechanic deliberately supplies another causal age policy.
+Future gameplay-created food should use its real creation tick unless its owning creation mechanic explicitly supplies another causal origin policy.
 
 ---
 
-## 9. Deterministic initial-age variation
+## 7. System-24 transaction integration
 
-Pre-existing store/household food should not all cross freshness boundaries on the same world tick.
+`LootSourceInitializer` accepts an optional `ItemFreshnessMutationService` dependency.
 
-Each profile may permit a bounded `virgin_initial_age_max_permille`.
+For each created virgin loot item:
 
-For virgin world loot:
+1. System 24 creates the real WHAT item exactly as before.
+2. If the semantic type is perishable, System 30 enrolls it at logical origin tick 0.
+3. System 11 containment is committed through the existing path.
+4. System 24 commits its source provenance/current-content state.
 
-- stable item ID + semantic profile + fixed salt determine initial age deterministically;
-- the value is in `[0, profile_max]`;
-- Candidate 001 proposal: normally cap virgin initial age at **20%** of shelf life.
+System-24 source initialization snapshots WHAT, containment, loot state **and freshness state**. Any injected failure restores all four domains, so no orphan freshness record or half-created perishable survives rollback.
 
-The same world seed/item ID always yields the same starting age.
-
-Newly created/crafted food defaults to zero initial age unless its creator explicitly provides a different future rule.
-
-Random wall-clock RNG is forbidden.
-
----
-
-## 10. Enrollment / mutation contract
-
-Proposed owner: `ItemFreshnessMutationService`.
-
-### `enroll_item(item_id, logical_origin_tick, initial_environment_key)`
-
-Requires:
-
-- real WHAT `item.*` entity;
-- an explicit freshness profile for its semantic type;
-- non-negative origin tick;
-- origin tick not later than current authoritative tick;
-- known valid environment key/exposure at the origin tick;
-- no existing freshness record.
-
-Enrollment computes deterministic virgin initial age only when the caller requests virgin/pre-existing initialization. Dynamically created items use zero initial age by default.
-
-### `remove_item(item_id)`
-
-Explicit cleanup primitive for deleted/consumed/destroyed items. WHAT deletion does not silently cascade another mechanic store.
-
-### `reanchor_environment(item_id, new_environment_key, at_tick)`
-
-Preserves current effective age exactly, then starts future exposure against the new context clock.
-
-It must be monotonic: reanchoring cannot reduce age.
-
-Candidate 001's live environment is always `ambient`, so ordinary transfers do not need to perform pointless freshness writes today. The public reanchor seam exists so Phase 3 can activate real refrigeration without redesigning the record.
-
-If a future environment resolver reports a current context different from the record's anchored context without a proper reanchor, freshness query should fail closed with an explicit environment-context mismatch rather than silently calculate false age.
-
----
-
-## 11. Future containment/refrigeration integration
-
-Phase 1B does **not** fake cold storage.
-
-A refrigerator/cold-storage prop remains an ordinary ambient container until Roadmap Phase 3 supplies real appliance + power truth.
-
-When refrigeration becomes real:
-
-1. the refrigeration owner exposes a cumulative exposure context;
-2. System 12 / a narrow post-transfer storage-context coordinator reanchors an item when it actually moves between ambient and cold context;
-3. moving an item-container whose descendants inherit storage context may reanchor only that **moved local subtree**, never scan all world items;
-4. power/rate changes update the refrigerator/context clock once; they do not mutate each contained item;
-5. System 30 continues using the same freshness query equation.
-
-No System-30 import of the Power system is permitted.
-
----
-
-## 12. System 24 virgin-loot integration
-
-System 24 remains owner of what virgin loot exists and of the stable item IDs it creates.
-
-Phase 1B adds a narrow perishable-enrollment seam during successful virgin item creation:
-
-- System 24 creates the real WHAT item as today;
-- if its semantic type has a System-30 freshness profile, the item is enrolled using logical origin tick `0` and the current Candidate-001 ambient context;
-- System 24's rollback transaction must include freshness enrollment so an injected initialization failure cannot leave orphan freshness state or a perishable item missing required freshness state;
-- non-perishable items do nothing in System 30.
-
-This changes no loot probability merely because freshness exists.
+Production loot probability tables and search/TAKE/STORE timing are unchanged.
 
 System 24's rule remains:
 
 > **Loot exists before you search for it.**
 
-Freshness simply makes the existing physical item age.
-
 ---
 
-## 13. Candidate 001 perishable content
+## 8. Query contract
 
-Phase 1B should expand food content only enough to prove short/medium/long aging. Broad mundane-content expansion remains Phase 1E.
+`ItemFreshnessQuery` returns one of:
 
-Proposed first set:
+- `KNOWN` — perishable, enrolled, profile/context valid;
+- `SHELF_STABLE` — no freshness profile and intentionally no freshness record;
+- `UNKNOWN` — missing item/required state/provider truth or query not ready;
+- `INVALID` — malformed/non-item identity or contradictory state/profile data.
 
-| Item | Ambient lifetime | Virgin initial-age cap |
-|---|---:|---:|
-| Milk Carton | 12 h | 20% |
-| Raw Meat Package | 12 h | 20% |
-| Fresh Berries | 24 h | 20% |
-| Bread Loaf | 72 h | 20% |
-| Apple (existing) | 120 h | 20% |
-| Cheese Block | 168 h | 20% |
-
-These are gameplay tuning values, not claims of laboratory food-safety accuracy.
-
-Expected location use:
-
-- milk/raw meat/cheese: household, diner/store and grocery cold-storage loot profiles;
-- berries/apple: household/grocery produce-appropriate profiles;
-- bread: household pantry/grocery profiles.
-
-Until Phase 3, a refrigerator is only the location where the item was found; it does not yet slow spoilage.
-
-Existing canned beans/soup, crackers, cereal, energy bars and ordinary sealed drinks remain non-perishable in Candidate 001 unless a later explicit profile says otherwise.
-
-No opened-package state is invented.
-
----
-
-## 14. Read/query contract
-
-Proposed `ItemFreshnessQuery` statuses:
-
-- `KNOWN` — perishable + enrolled + context/profile valid;
-- `NOT_PERISHABLE` — no freshness profile; intentional shelf-stable result;
-- `UNKNOWN` — missing item, missing required record, profile-version mismatch, stale environment context, or unavailable exposure truth;
-- `INVALID` — non-item identity / malformed request.
-
-A KNOWN result exposes copied values such as:
+A known result includes copied values such as:
 
 - item ID / semantic type;
-- semantic freshness state;
-- `age_permille`;
-- `remaining_permille`;
-- effective age units;
-- profile lifetime units;
-- environment key;
-- logical origin tick.
+- freshness stage;
+- age ticks / profile lifetime ticks;
+- age permille;
+- exposure context ID;
+- logical origin tick;
+- record version.
 
-Missing perishable state is never silently treated as FRESH.
+Missing required perishable state never silently reads as FRESH.
+
+`query(item_id)` reads the live authoritative TickKernel world tick. `query_at_tick(item_id, tick)` exists for deterministic headless verification and bounded simulation consumers that already possess an authoritative tick value.
 
 ---
 
-## 15. Player-facing Phase 1B presentation
+## 9. Player-facing integration
 
-Freshness is shown through the existing inventory/container inspection surfaces, not a new modal subsystem.
+The existing inventory and searchable-container inspection queries accept an optional freshness query.
 
-Candidate text:
+Perishable rows receive a coarse suffix such as:
 
 - `Apple — FRESH`
 - `Bread Loaf — AGING`
 - `Milk Carton — STALE`
-- `Raw Meat Package — SPOILED`
+- `Raw Chicken — SPOILED`
 
-Only perishable items receive a freshness suffix.
+Shelf-stable items receive no freshness suffix.
 
-Player UI does not need exact percentages. DEV/test inspection may expose `age_permille` and environment key.
+UI remains read-only and performs no continuous freshness update. Opening/refreshing the relevant inspection surface simply asks for current truth.
 
-The existing turn-based decision pause means an open inventory/container panel does not need a per-frame freshness updater. It queries when opened/refreshed after actions/time advancement.
-
-Phase 1C may later add semantic icons without changing freshness truth.
+Phase 1C may add semantic icons without changing freshness ownership.
 
 ---
 
-## 16. Signals / derived-state rule
+## 10. Snapshot / mutation contract
 
-System 30 signals only real record mutations, such as:
+`ItemFreshnessState` is sparse and versioned. Records are serialized deterministically by stable item ID.
 
-- item enrolled;
-- environment reanchored;
-- item freshness record removed;
-- snapshot reset.
+`ItemFreshnessMutationService` owns:
 
-It does **not** emit a signal merely because world time crossed a FRESH/AGING/STALE/SPOILED threshold.
+- virgin enrollment;
+- explicit record removal;
+- environment reanchor;
+- transaction-facing snapshot/restore helpers.
 
-Threshold labels are derived on query.
+Time passing alone never calls the mutation service.
 
-A future mechanic that needs to know food state at an action boundary queries current truth at that boundary.
-
----
-
-## 17. Snapshot / restore
-
-Candidate snapshot schema: **v1**.
-
-Snapshot contains:
-
-- global freshness revision;
-- freshness records sorted by stable item ID.
-
-It does not serialize:
-
-- derived current state labels;
-- current world tick;
-- duplicate item semantic type/location/container;
-- environment provider internals owned by future Power/Refrigeration systems.
-
-Load validates shape, IDs, non-negative monotonic exposure values, known record/profile versions and duplicate IDs before live mutation.
-
-Cross-domain WHAT validation may be deferred to save orchestration, following the existing typed-store pattern.
+Reanchor preserves effective age and changes only the future exposure context/anchor. It cannot reduce age.
 
 ---
 
-## 18. Performance contract
+## 11. Performance contract
 
 ### Per render frame
 
 **Zero System-30 simulation work.**
 
-### Per WHEN tick/action globally
+### Per WHEN advance
 
-**Zero perishable-item iteration.** Time advancing does not wake System 30.
+**Zero perishable-item iteration.**
 
 ### Per persistent item
 
-No Node, timer, `_process`, scheduled WHEN event or signal subscription per item.
+No Node, timer, `_process`, `_physics_process`, scheduled spoilage event, or per-item time subscription.
 
-Only explicitly perishable items consume a small typed record.
+Only explicitly perishable items consume freshness state.
 
 ### Query
 
-One requested item costs constant-time profile/state lookup plus the current environment exposure calculation. Inventory/container UI queries only items it is actually displaying.
+Constant-time profile/state/provider lookup for the requested item. Inventory/container readers query only rows they are actually building.
 
 ### Streaming/materialization
 
-Work scales with **new perishable items in the source being initialized**, not elapsed world time and not total world items.
-
-A day-20 item catches up with one subtraction; it does not replay twenty days.
-
-### Future refrigeration
-
-Power/rate change cost belongs to the affected environment context, not every contained perishable item. Item moves may reanchor only the moved item/local contained subtree when a real non-ambient context exists.
-
-No full-world freshness scan is allowed for ordinary play.
+Work scales with newly materialized perishables in the source, never with elapsed world time or total world-item count.
 
 ---
 
-## 19. Verification plan
+## 12. Verification
 
-A dedicated System-30 smoke/contract should prove at minimum:
+`game/scripts/ci/ItemFreshnessSmoke.gd` proves:
 
-1. explicit perishable profile registration and copy safety;
-2. no freshness record/state for shelf-stable items;
-3. deterministic virgin initial-age variation from stable item ID;
-4. exact FRESH / AGING / STALE / SPOILED boundaries;
-5. monotonic age from authoritative `world_tick`;
-6. decision/hard pause produces zero freshness advancement because WHEN does not advance;
-7. a virgin item physically materialized on a later day still ages from logical origin tick 0;
-8. query performs no per-tick catch-up loop;
-9. snapshot round-trip is deterministic;
-10. missing required perishable record fails closed rather than appearing fresh;
-11. fake test environment clocks can slow exposure without modifying item records each tick;
-12. changing one environment clock rate requires no per-item mutation;
-13. explicit environment reanchor preserves age exactly and never rejuvenates food;
-14. stale environment-context mismatch fails closed;
-15. System-24 injected rollback restores WHAT + System 11 + System 24 + System 30 together for newly enrolled perishables;
-16. inventory and searched-container inspection expose coarse freshness labels;
-17. protected System 11/12/13D/24/25 behavior remains green;
-18. structural CI rejects `_process`, per-item timers and per-item scheduled spoilage events in System 30.
+- six Candidate-001 perishables are registered;
+- shelf-stable items receive no freshness record;
+- deterministic virgin starting age is bounded;
+- FRESH / AGING / STALE / SPOILED thresholds are exact;
+- query/time passage performs zero freshness mutation;
+- late technical materialization uses logical origin tick 0;
+- freshness snapshot round-trip is deterministic;
+- System 24 creates and enrolls a deterministic perishable transactionally;
+- searchable-container inspection exposes freshness;
+- actor-inventory inspection exposes freshness after transfer;
+- injected containment failure restores WHAT, containment, loot and freshness exactly;
+- no orphan freshness record survives rollback.
 
-Permanent exact-head context proposal after implementation:
+`.github/workflows/item-freshness.yml` additionally runs:
 
-`verify/system30-item-freshness`
+- Godot import/parse;
+- System-30 smoke;
+- System-24 loot regression;
+- System-25 world-time regression;
+- canonical live-demo startup;
+- structural no-loop/no-cross-domain-import checks.
 
-That would increase the required executable-head set from 15 to 16 contexts.
-
----
-
-## 20. Expected implementation modules after approval
-
-Proposed cohesive module set:
-
-- `game/scripts/simulation/items/freshness/ItemFreshnessProfile.gd`
-- `.../ItemFreshnessProfileCatalog.gd`
-- `.../ItemFreshnessRecord.gd`
-- `.../ItemFreshnessState.gd`
-- `.../SpoilageEnvironmentProvider.gd`
-- `.../AmbientSpoilageEnvironmentProvider.gd`
-- `.../ItemFreshnessQuery.gd`
-- `.../ItemFreshnessMutationService.gd`
-- focused System-24 creation/rollback integration;
-- existing inventory/container read-query integration;
-- `game/scripts/ci/ItemFreshnessSmoke.gd`;
-- `.github/workflows/item-freshness.yml`.
-
-Do not split every arithmetic helper into another public module.
+Executable `39716f27b7f91b7007645ceae02dedc47601bf87` completed all **16 required exact-head contexts** successfully, including `verify/system30-item-freshness` and `verify/pages-deploy`.
 
 ---
 
-## 21. Protected neighboring modules during implementation
+## 13. Protected future seams
 
-Implementation must not rewrite:
+Phase 3 may add real refrigeration only by providing real storage-environment exposure truth and invoking the existing reanchor seam at causal storage-context changes.
 
-- WHERE / WHAT / WHEN foundations;
-- System 11 containment graph;
-- System 12 transition semantics/timing;
-- System 13D weight truth;
-- System 24 loot existence/search semantics;
-- System 25 world-time interpretation;
-- System 28 Weather;
-- System 29 interaction reach;
-- streaming identity/materialization rules.
+Phase 4 may query freshness when food/drink is consumed; System 30 still does not own nutrition, sickness or Health.
 
-Narrow additive wiring/read-query changes are allowed where explicitly required by the approved System-30 contract.
+Phase 6 may add cooking/food transformation through real item creation/transition rules rather than mutating freshness labels directly.
+
+No future system should introduce per-item spoilage timers merely for convenience.
 
 ---
 
-## 22. Approval candidates
+## 14. Lifecycle
 
-If this draft is approved, the following become the Candidate 001 implementation contract:
+**DESCRIBE — COMPLETE**  
+**APPROVE — COMPLETE**  
+**IMPLEMENT — COMPLETE**  
+**VERIFY — COMPLETE**
 
-1. System 30 is a peer typed item-condition domain, not WHAT metadata and not part of System 24.
-2. Only explicit semantic freshness profiles are perishable.
-3. FRESH / AGING / STALE / SPOILED are derived at 60% / 85% / 100% of profile lifetime.
-4. Runtime aging is integer fixed-point analytical exposure from authoritative WHEN ticks.
-5. No per-item tick loop, timer, Node or scheduled spoilage event exists.
-6. Storage environments expose cumulative exposure clocks.
-7. Candidate 001 implements ambient exposure only; refrigerators do **not** fake cooling before real Phase-3 power/appliance state.
-8. Virgin world perishables use logical scenario origin tick 0 even when technically materialized later.
-9. Virgin stock receives deterministic bounded initial-age variation, normally up to 20% of shelf life.
-10. Freshness is monotonic; colder storage may slow future aging but never reverse it.
-11. Missing required perishable state/profile/context truth fails closed rather than reading as fresh.
-12. System 24 enrolls new virgin perishable item entities transactionally without changing the rule that loot exists before search.
-13. Ordinary UI shows coarse freshness labels only; no continuous UI updater exists.
-14. Phase 4 later consumes freshness for eating/drinking health/need consequences rather than System 30 owning nutrition/health.
-15. Phase 3 later supplies real refrigeration through the environment seam without System 30 importing Power.
-
----
-
-## 23. Lifecycle
-
-Current lifecycle state:
-
-**DESCRIBE — COMPLETE**
-
-Next step:
-
-**APPROVE — user approval required before code.**
-
-Implementation is not authorized by this draft alone.
+Roadmap Phase 1B is complete. The next bounded target is **Phase 1C — Semantic inventory/menu icons**, beginning at DESCRIBE; its implementation is not pre-authorized by completion of System 30.

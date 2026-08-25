@@ -2,134 +2,120 @@
 
 Status: **canonical priority roadmap**.
 
-This file answers **what major gameplay work comes next and in what order**. It does not replace system designs. Each phase is still implemented through bounded, approved subsystem designs under `README_SOPS.md`.
+This file answers what major gameplay work comes next and in what order. It does not replace system designs. Each independently owned phase/system still follows `README_SOPS.md` and the normal **DESCRIBE -> APPROVE -> IMPLEMENT -> VERIFY** lifecycle.
 
-Current game identity remains:
+Current game identity:
 
 > **Ultima-style turn-based mini Zomboid.**
 >
 > **Mini means reduced complexity, not reduced consequence or mood.**
 
-The numbered order below reflects the 2026-08-24 roadmap update. Existing foundations and Systems 19–29 are the platform underneath it.
-
 ---
 
 ## Phase 1 — Items, spoilage, interaction readability, and world-object breadth
 
-Goal: make the physical world and the things in it much more useful/readable before deeper character systems arrive.
+Goal: make the physical world and the things in it more useful/readable before deeper character systems arrive.
 
-Phase 1 is **not one implementation system**. It is deliberately split into five bounded pieces so later crafting, utilities, skills, vehicles and AI can reuse the same item/interaction foundations.
+### 1A — Interaction affordance + reach — COMPLETE
 
-### 1A — Interaction affordance + reach foundation — IMPLEMENTED
-
-System 29 Candidate 001 is implemented and fully verified on executable head `5b88d9172df51561ea760913873f62bd2cdc422a`.
-
-Implemented result:
-
-- the former System-24 private reach rule is generalized into neutral System-29 `CONTACT_FORWARD` without changing range: actor footprint plus one-cell-forward fringe in current facing;
-- System-24 search and external-container TAKE/STORE access consume the same shared reach contract;
-- action owners publish honest read-only `InteractionOffer` descriptors for real actions they already own; presentation never invents a USE action because an object looks interactive;
-- the first real provider is searchable System-24 containers and the first offer is `SEARCH`;
-- System 23 knowledge remains authoritative: `REMEMBERED` and `UNSEEN` targets do not highlight;
-- partial multi-cell targets expose only currently `VISIBLE` footprint cells;
-- discovery queries only the small actor-local OBJECT occupancy set, never all world entities;
-- one presentation-only renderer draws restrained warm/yellow-white pixel corner markers above world lighting/weather and below System-23 perception;
-- query/presentation work consumes zero simulation ticks;
-- no universal Interact button or action-execution controller was introduced.
+System 29 Candidate 001 is implemented.
 
 Core rule:
 
 > **A highlight explains an already-valid interaction. It never creates interaction truth.**
 
-### Performance architecture gate — IMPLEMENTED + CI VERIFIED
+Implemented result includes shared `CONTACT_FORWARD` reach, real read-only interaction offers, System-23 visibility gating, bounded local OBJECT discovery, and presentation-only highlights.
 
-Before Phase 1B, the approved non-numbered P0/P1/P2 performance pass was implemented on exact executable head `0398a2a49d84e6067f7610727aecacf4c05fe41f`.
+### Performance architecture gate — COMPLETE + HUMAN ACCEPTED
 
-- WHAT now exposes cache-oriented terrain/per-channel placement revisions while preserving the global authoritative revision;
-- explicit bulk materialization emits one compact completion summary while truth still mutates immediately;
-- lighting and sky-exposure geometry no longer invalidate on ordinary ACTOR/OBJECT churn;
-- perception, interaction and loot-provider wakeups coalesce explicit streaming batches;
-- the live DEV renderer exposes compact performance telemetry;
-- all **42 workflow runs** on the executable SHA completed successfully and all **15 required exact-head contexts** are green.
+The P0/P1/P2 performance architecture and subsequent Weather presentation optimization are complete and human-accepted on phone/Safari.
 
-**Remaining gate before 1B implementation: human iPhone/Safari acceptance of ordinary movement/streaming feel.** GPU Weather and predictive/amortized streaming remain deferred unless measurement or that playtest justifies them.
+First P0/P1/P2 fully green executable: `0398a2a49d84e6067f7610727aecacf4c05fe41f`.
 
-### 1B — Item freshness / spoilage — NEXT DESIGN TARGET
+Human-accepted Weather P3D executable: `6016fe5098804e3e6aba6c9f5f9658282036a697`.
 
-Goal: add the first durable per-instance item-condition state without creating a generic metadata bag or a per-tick spoilage loop.
+Predictive/amortized streaming remains a measured follow-up only if evidence later justifies it.
 
-Planned direction:
+### 1B — Item freshness / spoilage — COMPLETE
 
-- semantic item types define whether they are perishable and their baseline shelf-life/spoilage profile;
-- only perishable physical item entities receive typed per-instance freshness state;
-- freshness derives analytically from authoritative world ticks, using anchor tick/state + current spoilage-rate environment rather than scheduling a repeating event for every apple/milk carton;
-- candidate readable states: **FRESH -> AGING -> STALE -> SPOILED**;
-- spoilage does not replace the stable item ID; UI/consumers read the same item plus current freshness state;
-- Phase 1 makes freshness visible in inventory/container inspection even though Phase 4 owns eating/drinking health/need effects;
-- default environment is ambient storage;
-- expose a narrow storage/spoilage-rate provider seam so Phase-3 powered refrigeration can slow spoilage later without rewriting item state;
-- shelf-stable/canned goods do not receive pointless per-instance ticking state merely because Spoilage exists;
-- expand the current food catalog enough to exercise genuinely short-, medium- and long-life perishables.
+System 30 Candidate 001 is implemented and verified.
 
-**1B is next for bounded design after human phone/Safari performance acceptance. This roadmap status is not blanket authorization to implement it without the normal DESCRIBE -> APPROVE -> IMPLEMENT -> VERIFY lifecycle.**
+First fully green executable: `39716f27b7f91b7007645ceae02dedc47601bf87`.
 
-### 1C — Semantic inventory/menu icons
+Core rule:
 
-Goal: stop making the phone UI rely on text-only rows/buttons while keeping icons presentation-only.
+> **Food ages because authoritative world time passes through its storage environment. No item gets a timer.**
+
+Implemented result:
+
+- explicit perishable semantic profiles;
+- sparse typed per-instance freshness records;
+- FRESH / AGING / STALE / SPOILED derived analytically;
+- no per-item tick loop, timer, Node or scheduled spoilage event;
+- ambient cumulative exposure provider plus neutral future storage-context seam;
+- deterministic bounded virgin starting age;
+- virgin world perishables use logical scenario origin tick 0 even when streamed later;
+- System 24 enrolls perishables inside the same rollback-safe source-initialization transaction;
+- production loot probabilities/search/transfer timing are unchanged;
+- inventory/container inspection exposes coarse freshness labels;
+- refrigeration remains inactive until Phase 3 supplies real power/appliance truth;
+- Phase 4 later owns eating/drinking/health consequences.
+
+All **16 required exact-head contexts** are green on the executable, including `verify/system30-item-freshness` and `verify/pages-deploy`.
+
+### 1C — Semantic inventory/menu icons — NEXT DESCRIBE TARGET
+
+Goal: stop making phone UI rely on text-only rows/buttons while keeping icons presentation-only.
 
 Planned direction:
 
 - one small low-resolution semantic UI icon catalog/atlas;
-- dedicated icons for the core shell controls such as Stats, Inventory and Menu;
+- dedicated icons for core shell controls such as Stats, Inventory and Menu;
 - every current loot semantic resolves deterministically to an inventory icon;
-- multiple related items may intentionally share a well-designed glyph/family silhouette where unique art adds no value, but supported inventory rows should not be blank;
-- current held-item art may be reused only when it fits cleanly; held-world presentation does not become UI authority;
-- icons remain nearest-neighbor/pixel-readable and phone-size first;
-- item labels, weight, utility/family and later freshness remain real data beside the icon; the icon never substitutes for semantic truth.
+- related items may intentionally share a readable family glyph where unique art adds no value;
+- current held-item art may be reused only when it fits cleanly;
+- nearest-neighbor/pixel-readable and phone-size first;
+- labels, weight, freshness, utility/family and later condition remain real data beside the icon;
+- icons never become semantic or gameplay authority.
+
+**1C implementation is not pre-authorized. Begin with DESCRIBE.**
 
 ### 1D — Large/multi-cell object visual geometry
 
-Goal: let physical multi-cell objects actually **look** large instead of drawing one 1-cell recovered sprite at their anchor.
-
-Current WHAT/WHERE already supports arbitrary whole-cell footprints. The missing piece is presentation geometry.
+Goal: let physical multi-cell objects actually look large instead of drawing one recovered one-cell sprite at their anchor.
 
 Planned direction:
 
-- add a presentation-owned large-object visual descriptor with draw span, pivot/anchor offset, native facing/rotation policy and optional visual overhang;
-- physical footprint remains collision/world truth and can differ from decorative canopy/pole overhang;
-- Prop renderer continues to emit one command per stable entity; it does not repeat one icon across every occupied cell or stretch arbitrary recovered art;
-- explicit large art is authored/resolved semantically;
-- first requested examples include **2×2 / four-cell large trees** and visually larger traffic/stop lights;
-- tree canopy may visually overhang its blocking trunk/footprint when explicitly authored, without turning pixels into collision;
-- this visual-geometry seam later supports vehicles and final prop shadows without rewriting WHAT identity.
+- presentation-owned visual descriptor with draw span, pivot/anchor offset, native facing/rotation policy and optional visual overhang;
+- physical footprint remains collision/world truth and may differ from decorative overhang;
+- one render command per stable entity rather than repeating/stretched icons per occupied cell;
+- explicit large art resolved semantically;
+- first examples include 2×2/four-cell large trees and larger traffic/stop lights;
+- future vehicles and final prop shadows reuse this presentation seam.
 
-### 1E — Phase-1 content expansion + integration pass
+### 1E — Phase-1 content expansion + integration
 
-Goal: use the above foundations to make ordinary locations richer before moving to Crafting.
+Goal: use 1A–1D foundations to make ordinary locations richer before Crafting.
 
 Planned direction:
 
-- broaden loot/item content, especially perishables and mundane survival materials;
-- broaden prop/fixture/vegetation content in existing System-19/20 building/area profiles;
-- add larger trees, traffic furniture and other scale-appropriate objects using 1D rather than fake one-cell art;
-- add real interaction capability only where an owning action exists; decorative or future-interaction objects remain honest physical/decorative objects rather than fake buttons;
-- tune highlight density, icon readability and spoilage labels together on phone/Safari;
-- retain System 24's core rule: **loot exists before you search for it.**
+- broaden mundane survival item/loot content and perishables;
+- broaden props/fixtures/vegetation in existing building/area profiles;
+- add large trees/traffic furniture using 1D rather than fake one-cell art;
+- add interaction capability only where a real owning action exists;
+- tune highlight density, icon readability and freshness labels together on phone/Safari;
+- retain System 24's rule: **loot exists before you search for it.**
 
 ### Phase-1 completion gate
 
 Phase 1 is complete when:
 
-- nearby usable containers/objects are visibly identifiable from real reach + perception truth;
-- perishable items age deterministically over world time with no per-item tick loop;
-- inventory/menu surfaces have a coherent low-res icon vocabulary;
-- multi-cell objects can have intentionally large authored visuals independent from collision footprints;
-- representative buildings/areas actually use the broader item/object vocabulary;
-- no future Crafting/Power/Skills behavior is faked to make Phase 1 look more complete than it is.
-
-**Completed first implementation:** **1A Interaction affordance + reach / System 29 Candidate 001.**
-
-**Recommended next bounded design after human phone/Safari performance acceptance:** **1B Item freshness / spoilage.**
+- nearby usable containers/objects are identifiable from real reach + perception truth;
+- perishables age deterministically with no per-item tick loop;
+- inventory/menu surfaces have a coherent low-resolution icon vocabulary;
+- multi-cell objects may have intentionally large authored visuals independent from collision footprints;
+- representative buildings/areas use the broader item/object vocabulary;
+- no future Crafting/Power/Skills behavior is faked to make Phase 1 look complete.
 
 ---
 
@@ -137,94 +123,75 @@ Phase 1 is complete when:
 
 Goal: make collected materials physically useful.
 
-Planned direction:
+Direction:
 
 - recipes consume real persistent inputs and create real persistent outputs;
 - crafting spends WHEN time;
-- tools/workstations/required conditions are real world/item facts rather than menu-only gates;
+- tools/workstations/conditions are real world/item facts rather than menu-only gates;
 - outputs enter ordinary inventory/world containment;
-- later Phase-6 skills modify capability, quality, speed, recipe access, or outcome through narrow skill seams rather than being baked into the crafting owner;
-- carpentry/base-building, traps, repairs and specialized utility/vehicle work may reuse the same general crafting/action substrate while remaining owned by their relevant systems.
+- later Phase-6 skills modify capability/quality/speed/access through narrow seams rather than being baked into crafting ownership;
+- carpentry/base building, traps, repairs and specialized utility/vehicle work may reuse the same action substrate while retaining clear ownership.
 
 ---
 
-## Phase 3 — Power and water utilities
+## Phase 3 — Power and Water
 
-Goal: add a causal, damageable three-tier utility network that can fail locally or regionally instead of using a global on/off switch.
+Goal: add causal, damageable three-tier utility networks rather than global on/off switches.
 
-### Power — three tiers
+### Power hierarchy
 
-1. **Main generation facility / major source**
-   - supplies roughly one-half to one-third of the playable map/region;
-   - robust and slow to fail after collapse;
-   - its loss creates broad regional consequences.
+1. **Main generation / major source** — broad regional supply, robust and slow to fail.
+2. **Substations / local distribution facilities** — several areas, semi-frequent failure.
+3. **Distribution lines / structure service** — vulnerable local branches damaged by trees, vehicles, combat or later player/NPC actions.
 
-2. **Substations / local distribution facilities**
-   - each supplies several technical/local areas;
-   - fail semi-often compared with the main facility;
-   - allow partial neighborhoods/districts to go dark while other areas remain powered.
-
-3. **Distribution lines / structure service**
-   - bring power to individual structures/local branches;
-   - fail relatively often;
-   - may be physically broken by falling trees, vehicle impacts, damage, or later player/NPC actions;
-   - local failure does not require the whole upstream network to be dead.
-
-### Water — same causal hierarchy
+### Water hierarchy
 
 1. **Main treatment/water-works source** — broad regional supply and slow failure.
-2. **Pump stations / local distribution facilities** — several areas, semi-frequent failure.
-3. **Local mains, hydrants and structure service** — vulnerable local distribution/access points and repair/damage seams.
+2. **Pump stations / local distribution** — several areas, semi-frequent failure.
+3. **Local mains/hydrants/structure service** — vulnerable local access and repair/damage seams.
 
-The exact water-source vocabulary (treatment plant, reservoir/intake, etc.) is finalized in the dedicated design; the important locked rule is the **same three-tier causal hierarchy** as power.
+Standalone wastewater/sewer gameplay is removed from the active roadmap. Existing generated wastewater planning may remain inert until deliberate cleanup/migration.
 
-### Wastewater
+Downstream rules:
 
-**Standalone wastewater/sewer gameplay is removed from the active roadmap.** Existing System-00D wastewater planning may remain inert historical/generated data until a deliberate cleanup/migration pass; it must not force a wastewater gameplay system back into scope.
-
-### Downstream seams
-
-- powered lights, neon, TVs, pumps and appliances feed their real active state into System 27 rather than faking emissive art;
+- powered lights/neon/TVs/pumps/appliances feed real active state into existing physical systems;
 - utility failures are persistent world consequences;
-- Phase-6 Mechanical/Electrical skills later attach to repair/maintenance actions;
-- Phase-7 vehicles can damage local distribution without utilities importing vehicle logic;
-- tree-fall/damage systems can use the same damage seam later;
-- Phase-1 spoilage's storage-environment seam can consume real refrigeration availability here.
+- Mechanical/Electrical skills later attach to real repair actions;
+- vehicles/trees may damage local distribution through ordinary damage seams;
+- System 30's storage-environment seam may consume **real** refrigeration availability here; no fake refrigeration before that truth exists.
 
 ---
 
 ## Phase 4 — Player physical survival and health
 
-Goal: turn the existing actor-status scaffolds into the complete playable physical survival loop.
+Goal: turn existing actor-status scaffolds into the complete physical survival loop.
 
 Final target set:
 
-- **hunger**;
-- **thirst**;
-- **sleep / exhaustion**;
-- **health / injury**;
-- **fatigue**.
+- hunger;
+- thirst;
+- sleep / exhaustion;
+- health / injury;
+- fatigue.
 
 **Fatigue is the stamina/endurance concept. There is no separate stamina meter.**
 
-The current implementation already contains fatigue, hunger, thirst, sleep pressure and Health scaffolds. Phase 4 expands/tunes those real domains rather than adding a duplicate stamina state.
-
 Conceptual split:
 
-- **fatigue** = short-horizon exertion/endurance pressure from running, carrying and other strenuous actions;
-- **sleep pressure/exhaustion** = long-horizon need for sleep and eventual severe sleep-deprivation consequences.
+- fatigue = short-horizon exertion/endurance pressure from running, carrying and strenuous actions;
+- sleep pressure/exhaustion = long-horizon need for sleep and severe sleep-deprivation consequences.
 
-Consequences should affect capability and action speed through normal action/movement providers. Extreme unmet needs can become lethal; **death from exhaustion is an intended possible terminal consequence** once the owning physical-survival rules are implemented.
+Food/drink/sleep/treatment become real actions here or through later specialized skill ownership. System 30 freshness is read when appropriate but does not own nutrition/sickness/Health.
 
-Food/drink/sleep/treatment actions become real item/world interactions here or through the Phase-6 specialized skill layer as appropriate.
+Extreme unmet needs may become lethal; death from exhaustion remains an intended possible terminal consequence.
 
 ---
 
 ## Phase 5 — Moodlets and mental/comfort pressure
 
-Goal: make the survivor's state readable and consequential without creating a giant psychology simulator.
+Goal: make survivor state readable and consequential without creating a giant psychology simulator.
 
-Requested mood/status families:
+Target families include:
 
 - comfort;
 - fear;
@@ -233,65 +200,41 @@ Requested mood/status families:
 - thirst;
 - sleep/exhaustion.
 
-These escalate through meaningful severity states and can cause gameplay consequences such as action-speed/capability penalties and behavioral pressure.
-
-Ownership rule:
-
-- hunger/thirst/sleep/fatigue truth remains owned by the physical-survival systems;
-- Moodlets derive/read those truths rather than duplicating them;
-- comfort/fear/boredom may own the minimum persistent state/history genuinely required by their mechanics;
-- Moodlets may expose derived modifier providers, but do not become a second Health/Needs engine.
+Underlying hunger/thirst/sleep/fatigue truth remains with physical-survival owners. Moodlets derive/read those facts rather than duplicating them. Comfort/fear/boredom may own only the minimum persistent history genuinely required.
 
 ---
 
 ## Phase 6 — Final skills and broad item/world interactions
 
-Goal: replace the current generic skill scaffold with the concrete skills that actually correspond to player actions.
+Target skill catalog:
 
-### Target skill catalog
+- Awareness;
+- Sneak;
+- First Aid;
+- Cooking;
+- Carpentry;
+- Mechanical;
+- Electrical;
+- Fishing;
+- Farming.
 
-- **Awareness**;
-- **Sneak**;
-- **First Aid**;
-- **Cooking**;
-- **Carpentry**;
-- **Mechanical**;
-- **Electrical**;
-- **Fishing**;
-- **Farming**.
+The current generic Combat / Scavenging / Survival / Medical / Technical / Social catalog is an implementation scaffold, not final identity; migrate rather than layer duplicates.
 
-The existing generic Combat / Scavenging / Survival / Medical / Technical / Social catalog is a current implementation scaffold, **not the final skill identity**. Phase 6 deliberately migrates it rather than layering duplicate skills on top.
+**Hunting is not a separate skill.** It emerges from Sneak, future shooting/combat proficiency and crafted trap placement.
 
-### Skill/action meaning
+General object-interaction rule:
 
-- Awareness plugs into observer/perception capability without bypassing Systems 23/26/27 truth;
-- Sneak affects how visible/audible the actor is and later how AI detects them;
-- First Aid owns skill influence on treatment and infection care, while Health/Infection retain physical truth;
-- Cooking acts on real food/items;
-- Carpentry covers physical base construction and related crafted structures;
-- Mechanical covers vehicles, plumbing/mechanical repair and other appropriate machinery;
-- Electrical covers electrical repair/installation/use;
-- Fishing and Farming own their respective action proficiency.
+> **Real state first, presentation downstream.**
 
-**Hunting is not a separate skill.** Hunting emerges from how quietly the player moves, how well the relevant future combat/shooting mechanics perform, or where/how a crafted trap is placed. Phase 8 defines the final combat/shooting proficiency shape; this roadmap does not invent a redundant Hunting stat.
-
-### Final general object interactions
-
-This phase also closes the broad interaction vocabulary for ordinary world objects. Example explicitly requested:
-
-- a TV can be switched on only if its real state/power allows it;
-- an active TV can emit real System-27 glow/light;
-- its audible/dialogue information can appear as localized yellow words through the sound/knowledge presentation path rather than through a decorative fake source.
-
-The same pattern applies to switches, appliances, fixtures and interactable machinery: **real state first, presentation downstream.**
+Example: a TV switches on only if real state/power permits, then may feed real light and localized sound/information presentation.
 
 ---
 
 ## Phase 7 — Vehicles
 
-Goal: make transportation another persistent physical system using the same world/time/collision rules.
+Goal: make transport another persistent physical system using the same world/time/collision rules.
 
-Vehicle classes requested:
+Requested classes:
 
 - cars;
 - trucks;
@@ -299,24 +242,11 @@ Vehicle classes requested:
 - bicycles;
 - skateboards.
 
-Long-term vehicle direction:
-
-- persistent condition/damage/cargo;
-- movement through the authoritative tick/action system;
-- collision and world damage;
-- utility-line/tree/object interaction through normal damage seams;
-- Mechanical skill integration;
-- cars and trucks can eventually be modified **Mad-Max-style** with physical upgrades rather than abstract vehicle levels.
-
-Exact fuel/battery, momentum, occupancy and modification-slot designs remain dedicated vehicle-system decisions.
+Long-term direction includes persistent condition/damage/cargo, authoritative action-time movement, collision/world damage, utility/tree/object interaction, Mechanical skill integration, and eventually physical Mad-Max-style car/truck modifications rather than abstract levels.
 
 ---
 
 ## Phase 8 — Actor/NPC AI, combat, and causal outbreak
-
-Goal: make the completed physical/sensory world populate itself with dangerous and believable actors.
-
-This phase intentionally groups the late, strongly coupled actor layer, but it will still be implemented as multiple bounded system designs.
 
 Scope includes:
 
@@ -324,34 +254,31 @@ Scope includes:
 - survivor AI;
 - follower AI;
 - raider/hostile-human AI;
-- all player/NPC combat needed for the Beta game loop;
+- player/NPC combat needed for the Beta loop;
 - melee and firearm/shooting behavior;
-- NPC use of the same physical vision, light, hearing, weather, movement, utilities, items and vehicles available to the player;
+- NPC use of the same physical vision/light/hearing/weather/movement/utilities/items/vehicles available to the player;
 - follower/player idle conversations influenced by mood/personality/context;
-- survivor/raider behavior and social decisions;
 - population/household/coarse distant behavior needed for the causal outbreak;
-- outbreak spread/collapse behavior and the existing 00E player-story direction.
+- outbreak spread/collapse and the existing 00E player-story direction.
 
-AI receives observer knowledge, not hidden world truth. It does not read framebuffer lighting, exact hidden sound sources, or omniscient object lists.
+AI receives observer knowledge, not hidden world truth. It never reads framebuffer lighting, exact hidden sound sources or omniscient object lists.
 
-Idle conversation may use the project's yellow-word presentation style, but the conversation decision/content must come from real actor state/context rather than renderer randomness.
+This phase is intentionally grouped late but will still be split into bounded system designs internally.
 
 ---
 
-## Phase 9 — Final graphics and UI overhaul → Beta
+## Phase 9 — Final graphics and UI overhaul -> Beta
 
-Goal: perform the final presentation/usability pass only after the major gameplay systems reveal what the interface actually needs.
+Scope includes:
 
-Scope explicitly includes:
-
-- audit every player button/control and put it in the best place for actual play;
-- phone/Safari and desktop layouts both remain first-class;
+- audit/control placement for actual play;
+- phone/Safari and desktop as first-class layouts;
 - final inventory/menu/icon consistency;
 - final interaction/highlight readability;
 - final world-art/content cleanup;
-- add/finish convincing shadows on items/props where appropriate while keeping System 27/backend truth authoritative;
+- convincing item/prop shadows while System 27 remains authoritative;
 - polish lighting/weather/sound-word presentation without changing simulation ownership;
-- remove obsolete DEV UI from ordinary player flow or clearly isolate it;
+- isolate/remove obsolete DEV UI from normal player flow;
 - final accessibility/readability/performance pass.
 
 **Completion of Phase 9 is the planned Beta start gate.**
@@ -360,27 +287,27 @@ Scope explicitly includes:
 
 ## Non-numbered engineering gates
 
-These do not reorder the gameplay phases, but must be inserted when required by persistence/safety/scale:
+Insert when required without changing gameplay phase order:
 
-- save/load orchestration before newly persistent gameplay state becomes unsafe to lose;
-- schema migration/invalidation policy while pre-Beta remains free to invalidate old saves;
-- **first performance architecture gate COMPLETE:** P0/P1/P2 invalidation/batching/telemetry pass verified on `0398a2a49d84e6067f7610727aecacf4c05fe41f`; repeat profiling before population-scale AI, many simultaneous observers, moving lights, vehicles or large utility damage graphs;
-- persistence-backed streaming eviction only after it can preserve the same current WHAT truth;
-- mobile/browser hard-pause and input regressions remain required throughout.
+- save/load orchestration before new persistent state becomes unsafe to lose;
+- schema migration/invalidation policy while pre-Beta may still invalidate old saves;
+- performance profiling before population-scale AI, many simultaneous observers, moving lights, vehicles or large utility damage graphs;
+- persistence-backed streaming eviction only when current WHAT truth remains preserved;
+- mobile/browser hard-pause and input regressions throughout.
 
 ---
 
 ## Roadmap discipline
 
-The roadmap is an **order and scope guide**, not blanket authorization to code nine phases at once.
+For each bounded phase/system:
 
-For each phase:
-
-1. recover the current implementation truth;
-2. DESCRIBE the bounded owning system/refactor;
+1. recover current implementation truth;
+2. DESCRIBE the bounded owner/refactor;
 3. obtain approval when required;
 4. IMPLEMENT through stable seams;
 5. VERIFY the exact executable head;
-6. update this roadmap/context if the completed work changes what comes next.
+6. update roadmap/context when completed work changes what comes next.
 
 Newest explicit user direction supersedes older roadmap ordering, but implemented historical systems remain current truth until deliberately migrated.
+
+**Current next step: DESCRIBE Phase 1C Semantic inventory/menu icons.**
