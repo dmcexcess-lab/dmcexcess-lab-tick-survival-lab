@@ -34,12 +34,17 @@ jobs:
           test -f game/scripts/simulation/items/freshness/ItemFreshnessQuery.gd
           test -f game/scripts/simulation/items/freshness/ItemFreshnessMutationService.gd
           test -f game/scripts/ci/ItemFreshnessSmoke.gd
+          test -f game/scripts/ci/ItemFreshnessTestLootProfileCatalog.gd
           grep -q 'FRESH: StringName' game/scripts/simulation/items/freshness/ItemFreshnessQuery.gd
           grep -q 'AGING: StringName' game/scripts/simulation/items/freshness/ItemFreshnessQuery.gd
           grep -q 'STALE: StringName' game/scripts/simulation/items/freshness/ItemFreshnessQuery.gd
           grep -q 'SPOILED: StringName' game/scripts/simulation/items/freshness/ItemFreshnessQuery.gd
           grep -q 'exposure_ticks_at' game/scripts/simulation/items/freshness/AmbientSpoilageEnvironmentProvider.gd
           grep -q 'origin_world_tick' game/scripts/simulation/items/freshness/ItemFreshnessRecord.gd
+          grep -q '_freshness_mutations' game/scripts/simulation/loot/LootSourceInitializer.gd
+          grep -q 'snapshot_state' game/scripts/simulation/loot/LootSourceInitializer.gd
+          grep -q '_freshness_query' game/scripts/app/CanonicalDemoMain.gd
+          grep -q '_freshness_mutations' game/scripts/app/CanonicalDemoMain.gd
           ! grep -R -q 'func _process\|func _physics_process' game/scripts/simulation/items/freshness
           ! grep -R -q 'schedule_event\|begin_action' game/scripts/simulation/items/freshness
           ! grep -R -q 'scripts/simulation/weather\|scripts/simulation/lighting\|scripts/simulation/actors/health' game/scripts/simulation/items/freshness

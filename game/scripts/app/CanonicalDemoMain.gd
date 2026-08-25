@@ -38,6 +38,11 @@ const NeedsMobilityProviderClass = preload("res://scripts/simulation/actors/need
 const SkillStateClass = preload("res://scripts/simulation/actors/skills/ActorSkillState.gd")
 const PhysicalCatalogClass = preload("res://scripts/simulation/items/properties/ItemPhysicalPropertyCatalog.gd")
 const WeightQueryClass = preload("res://scripts/simulation/items/properties/ItemWeightQuery.gd")
+const FreshProfileCatalogClass = preload("res://scripts/simulation/items/freshness/ItemFreshnessProfileCatalog.gd")
+const FreshStateClass = preload("res://scripts/simulation/items/freshness/ItemFreshnessState.gd")
+const FreshAmbientClass = preload("res://scripts/simulation/items/freshness/AmbientSpoilageEnvironmentProvider.gd")
+const FreshMutationClass = preload("res://scripts/simulation/items/freshness/ItemFreshnessMutationService.gd")
+const FreshQueryClass = preload("res://scripts/simulation/items/freshness/ItemFreshnessQuery.gd")
 const CarryStateClass = preload("res://scripts/simulation/actors/carry/ActorCarryState.gd")
 const CarryQueryClass = preload("res://scripts/simulation/actors/carry/ActorCarryQuery.gd")
 const CarryMobilityProviderClass = preload("res://scripts/simulation/actors/carry/ActorCarryMobilityModifierProvider.gd")
@@ -106,6 +111,7 @@ var _collision_catalog: CollisionCatalog = null
 var _collision_overrides: CollisionOverrideState = null
 var _spatial_query: SpatialQueryService = null
 var _kernel: TickKernel = null
+var _world_time_profile: WorldTimeProfile = null
 var _world_time: WorldTimeService = null
 var _ambient_daylight: OutdoorAmbientLightService = null
 var _physical_lighting: PhysicalLightingService = null
@@ -131,6 +137,11 @@ var _needs_state: ActorNeedsState = null
 var _skill_state: ActorSkillState = null
 var _physical_catalog: ItemPhysicalPropertyCatalog = null
 var _weight_query: ItemWeightQuery = null
+var _freshness_profiles: ItemFreshnessProfileCatalog = null
+var _freshness_state: ItemFreshnessState = null
+var _freshness_ambient: AmbientSpoilageEnvironmentProvider = null
+var _freshness_mutations: ItemFreshnessMutationService = null
+var _freshness_query: ItemFreshnessQuery = null
 var _carry_state: ActorCarryState = null
 var _carry_query: ActorCarryQuery = null
 var _carry_acquisition: ItemAcquisitionCapacityPolicy = null
@@ -183,6 +194,9 @@ func _ready() -> void:
 func _boot_canonical_demo() -> bool:
     _world = WorldStateClass.new()
     _world_mutations = WorldMutationClass.new(_world)
+    _world_time_profile = WorldTimeProfileClass.new()
+    if not _world_time_profile.is_valid():
+        return false
     _collision_catalog = CollisionCatalogClass.new()
     _collision_overrides = CollisionOverridesClass.new()
     _base_traversal = BaseTraversalPolicyClass.new()
@@ -217,6 +231,8 @@ func _boot_canonical_demo() -> bool:
     _spatial_query = SpatialQueryClass.new(_world, _collision_catalog, _collision_overrides)
     _kernel = TickKernelClass.new(FixtureClass.PLAYER_ID)
     if not _boot_world_time():
+        return false
+    if not _boot_item_freshness_query():
         return false
     if not _boot_physical_lighting():
         return false
@@ -338,7 +354,7 @@ func _boot_canonical_demo() -> bool:
         return false
 
     _stats_inspector = StatsInspectorClass.new(_status_summary, _health_state, _skill_state, _locomotion_state)
-    _inventory_inspector = InventoryInspectorClass.new(_world, _hand_state, _inventory_state, _weight_query, _carry_query)
+    _inventory_inspector = InventoryInspectorClass.new(_world, _hand_state, _inventory_state, _weight_query, _carry_query, _freshness_query)
     if not _shell.configure(_kernel, _stats_inspector, _inventory_inspector, FixtureClass.PLAYER_ID):
         return false
     if not _loot_panel.configure(_loot_inspection, _inventory_inspector, FixtureClass.PLAYER_ID):
@@ -383,13 +399,19 @@ func _boot_canonical_demo() -> bool:
     return true
 
 func _boot_world_time() -> bool:
-    var time_profile := WorldTimeProfileClass.new()
     var daylight_profile := DaylightProfileClass.new()
-    if not time_profile.is_valid() or not daylight_profile.is_valid():
+    if _world_time_profile == null or not _world_time_profile.is_valid() or not daylight_profile.is_valid():
         return false
-    _world_time = WorldTimeServiceClass.new(_kernel, time_profile)
+    _world_time = WorldTimeServiceClass.new(_kernel, _world_time_profile)
     _ambient_daylight = OutdoorAmbientLightServiceClass.new(_world_time, daylight_profile)
     return _world_time.is_ready() and _ambient_daylight.is_ready()
+
+func _boot_item_freshness_query() -> bool:
+    if _freshness_state == null or _freshness_profiles == null or _freshness_ambient == null:
+        return false
+    var providers: Array[SpoilageEnvironmentProvider] = [_freshness_ambient]
+    _freshness_query = FreshQueryClass.new(_world, _freshness_state, _freshness_profiles, _kernel, providers)
+    return _freshness_query.is_ready()
 
 func _boot_physical_lighting() -> bool:
     _physical_lighting = PhysicalLightingClass.new(_world, _door_state, _ambient_daylight)
@@ -437,6 +459,15 @@ func _boot_actor_status() -> bool:
     if not _loot_items.register_physical_profiles(_physical_catalog):
         return false
     _weight_query = WeightQueryClass.new(_world, _physical_catalog)
+
+    _freshness_profiles = FreshProfileCatalogClass.new(_world_time_profile)
+    _freshness_state = FreshStateClass.new()
+    _freshness_ambient = FreshAmbientClass.new()
+    var freshness_providers: Array[SpoilageEnvironmentProvider] = [_freshness_ambient]
+    _freshness_mutations = FreshMutationClass.new(_world, _freshness_state, _freshness_profiles, freshness_providers)
+    if not _freshness_mutations.is_ready():
+        return false
+
     _carry_state = CarryStateClass.new(_world)
     if not _carry_state.enroll_actor(FixtureClass.PLAYER_ID):
         return false
@@ -457,7 +488,8 @@ func _initialize_fixture_loot() -> bool:
         _loot_state,
         _loot_items,
         _loot_profiles,
-        _physical_catalog
+        _physical_catalog,
+        _freshness_mutations
     )
     if not _loot_initializer.is_ready():
         return false
@@ -513,7 +545,8 @@ func _boot_item_transfer_and_loot_actions() -> bool:
         _loot_items,
         _loot_profiles,
         _weight_query,
-        _carry_query
+        _carry_query,
+        _freshness_query
     )
     return _item_transfer.is_ready() and _loot_search.is_ready() and _loot_inspection.is_ready()
 

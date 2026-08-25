@@ -11,6 +11,7 @@ var _loot_state: LootState = null
 var _items: LootItemCatalog = null
 var _containers: LootContainerProfileCatalog = null
 var _physical: ItemPhysicalPropertyCatalog = null
+var _freshness_mutations: ItemFreshnessMutationService = null
 
 func _init(
     world_state: WorldState = null,
@@ -20,7 +21,8 @@ func _init(
     loot_state: LootState = null,
     item_catalog: LootItemCatalog = null,
     container_catalog: LootContainerProfileCatalog = null,
-    physical_catalog: ItemPhysicalPropertyCatalog = null
+    physical_catalog: ItemPhysicalPropertyCatalog = null,
+    freshness_mutations: ItemFreshnessMutationService = null
 ) -> void:
     _world = world_state
     _world_mutations = world_mutations
@@ -30,6 +32,7 @@ func _init(
     _items = item_catalog
     _containers = container_catalog
     _physical = physical_catalog
+    _freshness_mutations = freshness_mutations
 
 func is_ready() -> bool:
     return _world != null \
@@ -39,7 +42,8 @@ func is_ready() -> bool:
         and _loot_state != null \
         and _items != null \
         and _containers != null and _containers.validate_items(_items) \
-        and _physical != null
+        and _physical != null \
+        and (_freshness_mutations == null or _freshness_mutations.is_ready())
 
 func plan_source(source_key: String, building_plans: Array) -> Dictionary:
     var key: String = source_key.strip_edges()
@@ -168,10 +172,17 @@ func initialize_source(
             var expected_weight: int = _items.weight_grams(semantic)
             if not _physical.has_profile(semantic) or _physical.weight_grams(semantic) != expected_weight:
                 return _failure("loot_item_weight_unknown:%s" % String(semantic))
+            if _freshness_mutations != null \
+                and _freshness_mutations.is_perishable(semantic) \
+                and _freshness_mutations.has_record(item_id):
+                return _failure("loot_item_freshness_prepopulated:%s" % item_id)
 
     var world_snapshot: Dictionary = _world.snapshot()
     var containment_snapshot: Dictionary = _containment.snapshot()
     var loot_snapshot: Dictionary = _loot_state.snapshot()
+    var freshness_snapshot: Dictionary = {}
+    if _freshness_mutations != null:
+        freshness_snapshot = _freshness_mutations.snapshot_state()
     var created_item_ids: Array[String] = []
     var state_container_records: Array[Dictionary] = []
 
@@ -180,15 +191,18 @@ func initialize_source(
         var container_id: String = String(container.get("container_id", ""))
         if not _containment.has_container(container_id):
             if not _containment_mutations.enroll_container(container_id):
-                return _rollback_failure(world_snapshot, containment_snapshot, loot_snapshot, "loot_container_enroll_failed:%s" % container_id)
+                return _rollback_failure(world_snapshot, containment_snapshot, loot_snapshot, freshness_snapshot, "loot_container_enroll_failed:%s" % container_id)
         for item_value: Variant in container.get("items", []):
             var item: Dictionary = item_value
             var item_id: String = String(item.get("item_id", ""))
             var semantic: StringName = StringName(item.get("semantic", &""))
             if _world_mutations.create_entity(semantic, item_id) != item_id:
-                return _rollback_failure(world_snapshot, containment_snapshot, loot_snapshot, "loot_item_create_failed:%s" % item_id)
+                return _rollback_failure(world_snapshot, containment_snapshot, loot_snapshot, freshness_snapshot, "loot_item_create_failed:%s" % item_id)
+            if _freshness_mutations != null and _freshness_mutations.is_perishable(semantic):
+                if not _freshness_mutations.enroll_virgin_item(item_id, 0):
+                    return _rollback_failure(world_snapshot, containment_snapshot, loot_snapshot, freshness_snapshot, "loot_item_freshness_enroll_failed:%s" % item_id)
             if not _containment_mutations.set_container(item_id, container_id):
-                return _rollback_failure(world_snapshot, containment_snapshot, loot_snapshot, "loot_item_contain_failed:%s" % item_id)
+                return _rollback_failure(world_snapshot, containment_snapshot, loot_snapshot, freshness_snapshot, "loot_item_contain_failed:%s" % item_id)
             created_item_ids.append(item_id)
         state_container_records.append({
             "container_id": container_id,
@@ -205,7 +219,7 @@ func initialize_source(
         _containers.catalog_version(),
         state_container_records
     ):
-        return _rollback_failure(world_snapshot, containment_snapshot, loot_snapshot, "loot_state_commit_failed")
+        return _rollback_failure(world_snapshot, containment_snapshot, loot_snapshot, freshness_snapshot, "loot_state_commit_failed")
 
     var container_ids: Array[String] = []
     for record: Dictionary in state_container_records:
@@ -225,12 +239,16 @@ func _rollback_failure(
     world_snapshot: Dictionary,
     containment_snapshot: Dictionary,
     loot_snapshot: Dictionary,
+    freshness_snapshot: Dictionary,
     reason: String
 ) -> Dictionary:
     var world_ok: bool = _world.load_snapshot(world_snapshot)
     var containment_ok: bool = _containment.load_snapshot(containment_snapshot)
     var loot_ok: bool = _loot_state.load_snapshot(loot_snapshot)
-    if not world_ok or not containment_ok or not loot_ok:
+    var freshness_ok: bool = true
+    if _freshness_mutations != null:
+        freshness_ok = _freshness_mutations.restore_state(freshness_snapshot)
+    if not world_ok or not containment_ok or not loot_ok or not freshness_ok:
         return _failure("loot_initialization_failed_and_rollback_failed:%s" % reason)
     return _failure(reason)
 

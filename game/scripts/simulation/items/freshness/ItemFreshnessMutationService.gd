@@ -27,6 +27,17 @@ func is_ready() -> bool:
 func is_perishable(semantic_type: StringName) -> bool:
     return is_ready() and _profiles.has_profile(semantic_type)
 
+func has_record(item_id: String) -> bool:
+    return is_ready() and _state.has_item(item_id)
+
+func snapshot_state() -> Dictionary:
+    if not is_ready():
+        return {}
+    return _state.snapshot()
+
+func restore_state(snapshot: Dictionary) -> bool:
+    return is_ready() and _state.load_snapshot(snapshot)
+
 func enroll_virgin_item(item_id: String, origin_world_tick: int = 0) -> bool:
     var key: String = item_id.strip_edges()
     if not is_ready() or key.is_empty() or origin_world_tick < 0 or _state.has_item(key):
