@@ -18,6 +18,8 @@ var kind: int = -1
 var entity_id: String = ""
 var before_cells: Array[Vector2i] = []
 var after_cells: Array[Vector2i] = []
+var before_channel: int = -1
+var after_channel: int = -1
 var terrain_cell: Vector2i = Vector2i.ZERO
 var terrain_before: StringName = &""
 var terrain_after: StringName = &""
@@ -37,11 +39,16 @@ func is_valid() -> bool:
 func is_terrain_change() -> bool:
     return kind == Kind.TERRAIN_SET or kind == Kind.TERRAIN_REMOVED or kind == Kind.TERRAIN_BATCH_SET
 
+func affects_channel(channel: int) -> bool:
+    return before_channel == channel or after_channel == channel
+
 func copy() -> WorldChange:
     var result := WorldChange.new(kind, entity_id)
     result.sequence = sequence
     result.before_cells = before_cells.duplicate()
     result.after_cells = after_cells.duplicate()
+    result.before_channel = before_channel
+    result.after_channel = after_channel
     result.terrain_cell = terrain_cell
     result.terrain_before = terrain_before
     result.terrain_after = terrain_after

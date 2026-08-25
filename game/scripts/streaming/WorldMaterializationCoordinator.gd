@@ -141,16 +141,20 @@ func ensure_sources(global_plan: GeneratedGlobalWorldPlan, source_handles: Array
 
     ## 00F owns the only full persistent-state snapshot for this multi-source transaction.
     ## AreaMaterializationCoordinator is called through its enclosing-transaction seam to avoid
-    ## copying a progressively larger WHAT once per logical source.
+    ## copying a progressively larger WHAT once per logical source. WHAT notification batching
+    ## is deliberately nested inside the same transaction: state is still written immediately,
+    ## while expensive migrated observers consume one compact summary after commit.
     var world_snapshot: Dictionary = _world.snapshot()
     var door_snapshot: Dictionary = _door_state.snapshot()
     var registry_snapshot: Dictionary = _registry.snapshot()
     var newly: Array[String] = []
+    _world.begin_change_batch(&"streaming_materialization")
 
     for entry: Dictionary in prepared:
         var request: AreaGenerationRequest = entry.get("request") as AreaGenerationRequest
         var plan: GeneratedAreaPlan = entry.get("plan") as GeneratedAreaPlan
         if request == null or plan == null or not _area_materializer.materialize_in_transaction(request, plan):
+            _world.cancel_change_batch()
             if not _rollback(world_snapshot, door_snapshot, registry_snapshot):
                 return _failure("materialization_failed_and_rollback_failed", already)
             return _failure("area_materialization_failed:%s" % String(entry.get("source_id", "")), already)
@@ -170,11 +174,13 @@ func ensure_sources(global_plan: GeneratedGlobalWorldPlan, source_handles: Array
             _door_state.revision()
         )
         if not record.is_valid() or not _registry.mark_materialized(record):
+            _world.cancel_change_batch()
             if not _rollback(world_snapshot, door_snapshot, registry_snapshot):
                 return _failure("registry_commit_failed_and_rollback_failed", already)
             return _failure("materialization_registry_commit_failed:%s" % String(entry.get("source_id", "")), already)
         newly.append(record.source_key)
 
+    _world.end_change_batch()
     return _success(newly, already)
 
 func _register_provider(provider: Variant) -> void:
