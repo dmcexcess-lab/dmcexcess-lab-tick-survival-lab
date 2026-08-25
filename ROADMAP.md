@@ -10,7 +10,7 @@ Current game identity remains:
 >
 > **Mini means reduced complexity, not reduced consequence or mood.**
 
-The numbered order below reflects the 2026-08-24 roadmap update. Existing foundations and Systems 19–28 are the platform underneath it.
+The numbered order below reflects the 2026-08-24 roadmap update. Existing foundations and Systems 19–29 are the platform underneath it.
 
 ---
 
@@ -20,25 +20,28 @@ Goal: make the physical world and the things in it much more useful/readable bef
 
 Phase 1 is **not one implementation system**. It is deliberately split into five bounded pieces so later crafting, utilities, skills, vehicles and AI can reuse the same item/interaction foundations.
 
-### 1A — Interaction affordance + reach foundation
+### 1A — Interaction affordance + reach foundation — IMPLEMENTED
 
-Goal: make it immediately obvious which nearby physical objects the survivor can actually interact with **right now**, without turning rendering into interaction authority.
+System 29 Candidate 001 is implemented and fully verified on executable head `5b88d9172df51561ea760913873f62bd2cdc422a`.
 
-Planned direction:
+Implemented result:
 
-- extract/generalize the current System-24 `LootInteractionReach` rule into a neutral world-interaction reach/query seam;
-- preserve current baseline reach unless a dedicated owner says otherwise: actor footprint plus the one-cell-forward fringe in current facing;
-- action owners publish honest `InteractionOffer`-style descriptors for real actions they already own; presentation never invents a USE action because an object looks interactive;
-- first real provider is searchable System-24 containers;
-- future providers include workstations, powered fixtures, TVs/appliances, utility hardware and vehicles without rewriting the highlight renderer;
-- System 23 knowledge remains authoritative: an unseen target cannot become highlighted merely because it is technically in geometric reach;
-- query only the small actor-local neighborhood, never scan the world;
-- highlight the target's real physical footprint with a restrained pixel outline/marker suitable for phone play;
-- repeated decision-pause presentation may pulse cosmetically, but this creates zero simulation ticks and does not alter reach/action truth.
+- the former System-24 private reach rule is generalized into neutral System-29 `CONTACT_FORWARD` without changing range: actor footprint plus one-cell-forward fringe in current facing;
+- System-24 search and external-container TAKE/STORE access consume the same shared reach contract;
+- action owners publish honest read-only `InteractionOffer` descriptors for real actions they already own; presentation never invents a USE action because an object looks interactive;
+- the first real provider is searchable System-24 containers and the first offer is `SEARCH`;
+- System 23 knowledge remains authoritative: `REMEMBERED` and `UNSEEN` targets do not highlight;
+- partial multi-cell targets expose only currently `VISIBLE` footprint cells;
+- discovery queries only the small actor-local OBJECT occupancy set, never all world entities;
+- one presentation-only renderer draws restrained warm/yellow-white pixel corner markers above world lighting/weather and below System-23 perception;
+- query/presentation work consumes zero simulation ticks;
+- no universal Interact button or action-execution controller was introduced.
 
-This is intentionally more than a container-specific glow: it is the reusable **what can I act on from here?** seam for the rest of the roadmap.
+Core rule:
 
-### 1B — Item freshness / spoilage
+> **A highlight explains an already-valid interaction. It never creates interaction truth.**
+
+### 1B — Item freshness / spoilage — NEXT DESIGN TARGET
 
 Goal: add the first durable per-instance item-condition state without creating a generic metadata bag or a per-tick spoilage loop.
 
@@ -54,6 +57,8 @@ Planned direction:
 - expose a narrow storage/spoilage-rate provider seam so Phase-3 powered refrigeration can slow spoilage later without rewriting item state;
 - shelf-stable/canned goods do not receive pointless per-instance ticking state merely because Spoilage exists;
 - expand the current food catalog enough to exercise genuinely short-, medium- and long-life perishables.
+
+**1B is next for bounded design. This roadmap status is not blanket authorization to implement it without the normal DESCRIBE -> APPROVE -> IMPLEMENT -> VERIFY lifecycle.**
 
 ### 1C — Semantic inventory/menu icons
 
@@ -109,7 +114,9 @@ Phase 1 is complete when:
 - representative buildings/areas actually use the broader item/object vocabulary;
 - no future Crafting/Power/Skills behavior is faked to make Phase 1 look more complete than it is.
 
-**Recommended first implementation:** **1A Interaction affordance + reach**, because every later object-interaction phase benefits from it and the current System-24 container reach logic already provides a proven starting rule.
+**Completed first implementation:** **1A Interaction affordance + reach / System 29 Candidate 001.**
+
+**Recommended next bounded design:** **1B Item freshness / spoilage.**
 
 ---
 

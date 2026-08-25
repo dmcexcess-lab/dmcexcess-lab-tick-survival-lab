@@ -43,12 +43,12 @@ Canonical status/routing index. Read `PROJECT_NORTH_STAR.md`, `README_SOPS.md`, 
 | 21 | Tactical Camera / View Control | **IMPLEMENTED** | `21_TACTICAL_CAMERA_VIEW_CONTROL.md` |
 | 22 | Large-Area DEV Critique Runtime | **IMPLEMENTED** | `22_LARGE_AREA_CRITIQUE_RUNTIME.md` |
 | 23 | Perception / LOS / Fog Memory | **IMPLEMENTED — geometry + light/atmosphere-aware acquisition + memory/audio presentation** | `23_PERCEPTION_LOS_FOG_MEMORY.md` |
-| 24 | World Loot / Searchable Containers / Scavenging | **IMPLEMENTED — Candidate 001** | `24_WORLD_LOOT_SEARCHABLE_CONTAINERS.md` |
+| 24 | World Loot / Searchable Containers / Scavenging | **IMPLEMENTED — Candidate 001; shared System-29 reach** | `24_WORLD_LOOT_SEARCHABLE_CONTAINERS.md` |
 | 25 | World Time / Ambient Daylight | **IMPLEMENTED — Candidate 001** | `25_WORLD_TIME_AMBIENT_DAYLIGHT.md` |
 | 26 | Spatial Sound / Hearing | **IMPLEMENTED — Candidate 001 + weather environment seam** | `26_SPATIAL_SOUND_HEARING.md` |
 | 27 | Physical Lighting / Illumination / Shadows | **IMPLEMENTED — Slices A+B+C + bounded-query optimization + weather optics/lightning input** | `27_PHYSICAL_LIGHTING_ILLUMINATION_SHADOWS.md` |
 | 28 | Weather / Atmosphere | **IMPLEMENTED — Slices A+B+C** | `28_WEATHER_ATMOSPHERE.md` |
-| 29 | World Interaction Affordance / Reach | **APPROVED — Candidate 001; Roadmap Phase 1A** | `29_WORLD_INTERACTION_AFFORDANCE_REACH.md` |
+| 29 | World Interaction Affordance / Reach | **IMPLEMENTED — Candidate 001; Roadmap Phase 1A** | `29_WORLD_INTERACTION_AFFORDANCE_REACH.md` |
 | 00E | Population / Household / Outbreak / Player Story | **NOT DESIGNED — scheduled inside Roadmap Phase 8** | future design |
 
 ---
@@ -59,9 +59,9 @@ Canonical status/routing index. Read `PROJECT_NORTH_STAR.md`, `README_SOPS.md`, 
 
 ### Phase 1 internal order
 
-1A. **Interaction affordance + reach** — **System 29 APPROVED; implementation authorized 2026-08-24**. Generalize current System-24 forward-contact reach and highlight only real, currently perceived usable targets.
+1A. **Interaction affordance + reach** — **COMPLETE: System 29 Candidate 001**, exact playable head `5b88d9172df51561ea760913873f62bd2cdc422a`.
 
-1B. **Item freshness/spoilage** — typed per-instance freshness, analytic world-time aging, future refrigeration-rate seam; no per-item tick loop.
+1B. **Item freshness/spoilage** — **NEXT DESIGN TARGET**: typed per-instance freshness, analytic world-time aging, future refrigeration-rate seam; no per-item tick loop.
 
 1C. **Semantic inventory/menu icons** — low-resolution UI icon vocabulary with deterministic coverage of current loot/menu semantics.
 
@@ -84,21 +84,35 @@ The roadmap does **not** pre-authorize all implementation. Each independently ow
 
 ---
 
-## Approved System 29 Candidate 001
+## Current System 29 truth
 
 > **A highlight explains an already-valid interaction. It never creates interaction truth.**
 
-Candidate 001 preserves System 24's existing actor-footprint + one-cell-forward reach exactly and moves that rule into a neutral reusable owner. Real mechanic providers publish read-only interaction offers; System 29 composes those offers, filters player presentation through current System-23 `VISIBLE` knowledge, and draws a restrained pixel highlight over only the target's currently visible physical footprint cells.
+Candidate 001 is implemented.
 
-The first provider is System-24 searchable containers and the first offer is `SEARCH`. Candidate 001 deliberately does not add a universal Interact button or execute actions. Discovery is actor-local through WHAT occupancy and must not scan all world entities.
+- `WorldInteractionReachQuery.CONTACT_FORWARD` owns the neutral actor-footprint + one-cell-forward reach rule.
+- The old System-24 `LootInteractionReach` file is removed.
+- System-24 timed search and external TAKE/STORE access consume the same shared reach query in the live composition with zero reach rebalance.
+- `InteractionOfferProvider` lets real mechanic owners publish read-only actions without giving renderers mutation authority.
+- The first provider is System-24 searchable containers and publishes `scavenge.search_container` / `SEARCH` only for real currently valid searchable containers.
+- `InteractionAffordanceQuery` discovers candidates only through WHAT OBJECT occupancy in the tiny reachable-cell set; no full-world entity scan exists.
+- System-23 current `VISIBLE` knowledge gates player presentation. `REMEMBERED` and `UNSEEN` targets never reveal current usability; partially visible multi-cell objects expose only visible footprint cells.
+- One `InteractionHighlightRenderer` at z=90 draws restrained warm/yellow-white pixel corner markers below System-23 perception z=100.
+- Multiple real offers deduplicate to one target highlight while retaining action identities.
+- Query and presentation work spend zero WHEN ticks.
+- Candidate 001 adds no universal Interact button or action execution controller.
 
-System 29 remains **APPROVED** until its implementation and focused exact-head contract are green; only then should this ledger mark it IMPLEMENTED.
+First fully green System-29 foundation head: `9ccbb91f167c376b6ea4a4d7ff82ede3427ae122`.
+
+First fully green playable-island System-29 head: `5b88d9172df51561ea760913873f62bd2cdc422a`.
+
+Exact-head context: `verify/system29-interaction-affordance`.
 
 ---
 
 ## Current world-generation / materialization truth
 
-System 00D now has two protected world profiles:
+System 00D has two protected world profiles:
 
 - `temperate.rural.region` v6 — mature connected rural-region planning;
 - `temperate.island.region` v1 — additive complete-island composition over that proven skeleton with deterministic LAND / SHORE / OCEAN, shoreline-clipped roads, recomputed bridge intent and adapted power ingress.
@@ -129,7 +143,7 @@ System 23 geometry provides the 12-cell / 120-degree maximum candidate envelope 
 
 The live game injects System 27's acquisition adapter. Darkness and physical atmospheric extinction may shrink current acquired vision while physical light expands it toward illuminated targets. Opaque geometry remains authoritative first. REMEMBERED stays stale and UNSEEN stays true black.
 
-System 29's player highlight must consume this existing knowledge rather than expose hidden WHAT targets. Roadmap Phase 6 Awareness/Sneak must extend observer/signal contracts rather than bypass them. Roadmap Phase 8 NPC AI receives ordinary observer knowledge rather than hidden world truth.
+System 29 consumes this existing knowledge rather than exposing hidden WHAT targets. Roadmap Phase 6 Awareness/Sneak must extend observer/signal contracts rather than bypass them. Roadmap Phase 8 NPC AI receives ordinary observer knowledge rather than hidden world truth.
 
 Exact-head context: `verify/system23-perception`.
 
@@ -141,7 +155,9 @@ Exact-head context: `verify/system23-perception`.
 
 Candidate 001 provides deterministic one-way persistent loot initialization into physical System 11 containers, location-aware tables, timed search and timed TAKE/STORE through System 12. Empty/looted containers do not automatically repopulate.
 
-Before the approved System-29 migration, System 24 owns `LootInteractionReach`, shared by search and external container access. System 29 Candidate 001 moves that exact rule into a neutral owner with zero reach rebalance. Roadmap Phase 1 then adds spoilage/icons/content; Phase 2 adds crafting on top of real items rather than reward-generation menus.
+System 24 no longer owns neutral reach geometry. Search and `LootWorldContainerAccessPolicy` consume System-29 `CONTACT_FORWARD`; System 24 owns the real searchable-container provider that publishes `SEARCH` offers into System 29.
+
+Roadmap Phase 1B adds spoilage/icons/content; Phase 2 adds crafting on top of real items rather than reward-generation menus.
 
 Exact-head context: `verify/system24-loot`.
 
@@ -161,15 +177,15 @@ Exact-head context: `verify/system24-loot`.
 
 ## Current presentation
 
-The live build is the **complete streamed island critique/playable composition** with scavenging, time/daylight, physical sound, physical lighting, illumination/atmosphere-aware vision, screen-space low-resolution Weather and real physical lightning.
+The live build is the **complete streamed island critique/playable composition** with scavenging, interaction highlighting, time/daylight, physical sound, physical lighting, illumination/atmosphere-aware vision, screen-space low-resolution Weather and real physical lightning.
 
-The player still begins in the central Rural Crossroads/diner area, but that area now exists inside the complete island rather than being the entire playable world.
+The player still begins in the central Rural Crossroads/diner area, but that area exists inside the complete island rather than being the entire playable world.
 
 Weather DEV controls remain below the STATS / INVENTORY / MENU header row. Active flashlight/lamp/neon/streetlight sources remain explicitly DEV-only until Roadmap Phase 3/6 real equipment/power/object state replaces them.
 
 ---
 
-## Required executable-head stack before System 29 implementation closes
+## Required executable-head stack
 
 - `verify/system00d-global-world`
 - `verify/system00f-streaming-materialization`
@@ -183,6 +199,7 @@ Weather DEV controls remain below the STATS / INVENTORY / MENU header row. Activ
 - `verify/system26-spatial-sound`
 - `verify/system27-physical-lighting`
 - `verify/system28-weather`
+- `verify/system29-interaction-affordance`
 - `verify/pages-deploy`
 
-System 29 implementation must add `verify/system29-interaction-affordance` and pass it on the exact executable head before being marked IMPLEMENTED.
+All 14 are green on executable head `5b88d9172df51561ea760913873f62bd2cdc422a`.

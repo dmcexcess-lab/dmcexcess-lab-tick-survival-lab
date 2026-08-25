@@ -1,8 +1,14 @@
 # Tick Survival Lab — System 29 World Interaction Affordance / Reach
 
-Status: **APPROVED — Candidate 001**
+Status: **IMPLEMENTED — Candidate 001**
 
 Approved: **2026-08-24**
+
+Implemented: **2026-08-24**
+
+First fully green playable executable head: `5b88d9172df51561ea760913873f62bd2cdc422a`.
+
+Exact-head owner: `verify/system29-interaction-affordance`.
 
 Roadmap owner: **Phase 1A — Interaction affordance + reach foundation**.
 
@@ -14,33 +20,17 @@ Core rule:
 
 > **A highlight explains an already-valid interaction. It never creates interaction truth.**
 
-The player should be able to glance at the tactical view and immediately understand which nearby, currently perceived physical objects can actually be acted on from the survivor's present position/facing. The renderer must not guess this from sprite type, semantic name, proximity alone, or hidden WHAT truth.
+The player can glance at the tactical view and understand which nearby, currently perceived physical objects can actually be acted on from the survivor's present position/facing. The renderer never guesses this from sprite type, semantic name, proximity alone, or hidden WHAT truth.
 
 ---
 
-## 1. Why this is a separate foundation
-
-Current System 24 already contains a proven reach rule in `LootInteractionReach`:
-
-- actor footprint;
-- plus the one-cell-forward fringe in current facing;
-- target must be a current placed OBJECT.
-
-Both timed search and world-container TAKE/STORE access reuse that rule.
-
-The roadmap will shortly add many other real interactions: crafting workstations, utility hardware, switches, TVs/appliances, vehicle access, treatment stations and other world objects. Duplicating a slightly different reach/highlight rule inside each owner would create drift.
-
-System 29 therefore generalizes **reach + available-interaction presentation**, while each mechanic still owns whether its action actually exists and whether it is currently legal.
-
----
-
-## 2. Ownership
+## 1. Ownership
 
 System 29 owns:
 
 - neutral actor-to-world-object interaction reach vocabulary;
 - current reachable-cell calculation for supported reach profiles;
-- a neutral read-only interaction-offer descriptor;
+- read-only `InteractionOffer` descriptors;
 - composition/query of offers supplied by real mechanic owners;
 - knowledge-safe filtering of offers for player presentation;
 - low-resolution nearby-object highlight presentation;
@@ -65,22 +55,26 @@ System 29 does **not** own:
 
 ---
 
-## 3. Candidate 001 reach profile
+## 2. `CONTACT_FORWARD` reach profile
 
-First profile:
+Candidate 001 implements one neutral reach profile:
 
 `CONTACT_FORWARD`
 
-Reachable cells are exactly the current System-24 rule:
+Reachable cells are exactly the historical System-24 behavior:
 
 1. every cell in the actor's current physical footprint;
 2. every corresponding cell one cardinal step forward in current actor facing.
 
-A target is geometrically reachable when any of its current physical footprint cells intersects that set.
+A target is geometrically reachable when any current OBJECT footprint cell intersects that set.
 
-This preserves existing System-24 search/external-container behavior exactly while moving the rule to a reusable owner.
+The implementation lives in:
 
-Candidate 001 deliberately does **not** add:
+`game/scripts/simulation/interaction/WorldInteractionReachQuery.gd`
+
+It validates a placed living survivor on ACTOR with valid facing and uses WHAT `entities_at(cell, OBJECT)` only on the tiny reachable-cell set when discovering candidates.
+
+Candidate 001 deliberately grants no:
 
 - diagonal reach;
 - two-cell reach;
@@ -88,185 +82,163 @@ Candidate 001 deliberately does **not** add:
 - automatic turning;
 - click-anything-from-across-the-room behavior.
 
-Future action owners may request additional explicitly designed reach profiles if a real mechanic needs them. They do not hand System 29 arbitrary distance numbers per call.
+Future action owners may request separately designed reach profiles if a real mechanic needs them. They do not hand System 29 arbitrary distance numbers per call.
 
 ---
 
-## 4. Neutral interaction offers
+## 3. Interaction offers
 
-System 29 uses a presentation-safe descriptor similar in spirit to the existing sound/perception descriptors.
-
-`InteractionOffer` fields:
+`InteractionOffer` is a read-only presentation/query descriptor containing:
 
 - `actor_id`;
 - `target_entity_id`;
-- opaque/semantic `action_id`;
-- readable short label such as `SEARCH`;
+- semantic `action_id`;
+- readable short label;
 - reach profile ID;
 - copied current target footprint cells;
 - presentation priority;
-- optional compact presentation category such as `container`, `fixture`, `vehicle`;
-- `available = true` only when the owning provider says the real action is currently available.
+- compact presentation category;
+- `available`.
 
 An offer contains **no mutation callback** and no direct renderer-to-gameplay function reference.
 
-System 29 does not infer offers from `prop.*`, `fixture.*`, `item.*` names. A refrigerator is highlighted because a real owner publishes a legal offer for that stable entity, not because its sprite resembles a refrigerator.
+System 29 never infers offers from `prop.*`, `fixture.*`, `item.*` names or art. A refrigerator highlights because a real mechanic owner publishes a legal offer for that stable entity.
 
----
-
-## 5. Provider seam
-
-Neutral provider contract:
+Neutral provider seam:
 
 `InteractionOfferProvider.offers_for_actor(actor_id, candidate_target_ids) -> Array[InteractionOffer]`
 
 Providers remain owned by their mechanic domains.
 
-Candidate 001 provider:
-
-### System 24 searchable-container provider
-
-It may offer:
-
-`SEARCH`
-
-only for current physical containers that:
-
-- are initialized/enrolled real System-24 searchable containers;
-- still exist in WHAT on OBJECT;
-- pass the shared System-29 reach query;
-- satisfy any existing System-24 action preconditions that are safe/read-only to expose.
-
-System 24's actual search service remains authoritative at request and commit. A highlight is never a promise that state cannot change before the action commits.
-
-Later providers can attach without changing the highlight renderer.
-
 ---
 
-## 6. System-24 migration
+## 4. System-24 provider and reach migration
 
-`LootInteractionReach` is the duplicated-domain owner to retire during Candidate 001 implementation.
+Candidate 001's first real provider is:
 
-System 24 search validation and `LootWorldContainerAccessPolicy` consume the System-29 reach contract instead.
+`LootSearchInteractionOfferProvider`
 
-Acceptance requirement:
+It publishes `scavenge.search_container` / `SEARCH` only for current physical containers that:
+
+- are initialized real System-24 searchable containers;
+- remain enrolled as real System-11 containers;
+- still exist in WHAT on OBJECT;
+- pass shared System-29 `CONTACT_FORWARD` reach;
+- retain a valid current System-24 loot profile/search duration.
+
+System 24's actual search service remains authoritative at request and commit. A highlight is not a mutation path and is not a promise that state cannot change before action commit.
+
+The former private `game/scripts/simulation/loot/LootInteractionReach.gd` owner is removed. Both:
+
+- `LootSearchActionService`; and
+- `LootWorldContainerAccessPolicy`
+
+now consume `WorldInteractionReachQuery.CONTACT_FORWARD`.
+
+The live playable composition injects the **same shared reach-query instance** into search and external-container access. Existing constructors retain a compatibility fallback that creates the same neutral query for isolated historical/focused callers.
+
+Acceptance rule was and remains:
 
 > Every previously reachable/unreachable System-24 container remains exactly reachable/unreachable after the migration.
 
-This is a behavior-preserving ownership refactor, not a stealth rebalance of looting range.
+The protected System-24 exact-head regression is green on the final playable System-29 executable head.
 
 ---
 
-## 7. Perception / hidden-information rule
+## 5. Perception / hidden-information rule
 
 System 23 remains the sole owner of visual knowledge.
 
 For player-facing highlight presentation:
 
-- a target with no currently `VISIBLE` physical footprint cell produces **no highlight**;
-- `REMEMBERED` is not sufficient for a current-use highlight because it is stale knowledge;
+- a target with no currently `VISIBLE` physical footprint cell produces no highlight;
+- `REMEMBERED` is stale knowledge and is not sufficient;
 - `UNSEEN` is never highlighted;
-- if a multi-cell object is only partially visible, presentation draws only currently visible portions/cells unless later visual-geometry metadata safely supports a better clipped outline;
-- an offer may exist mechanically in the query layer while being suppressed from player presentation by System 23 knowledge.
+- a partially visible multi-cell target exposes only currently `VISIBLE` footprint cells;
+- a valid mechanical offer may exist while being suppressed from player presentation by System 23 knowledge.
 
-Thus highlighting cannot reveal a dark refrigerator, hidden cabinet, object behind a wall, or an unrendered/unexplored structure merely because WHAT says it is in reach.
+Thus System 29 cannot reveal a dark refrigerator, hidden cabinet, object behind a wall, or unexplored/unrendered object merely because WHAT says it is in reach.
 
 System 29 never changes System-23 memory/exploration state.
 
 ---
 
-## 8. Candidate 001 highlight presentation
+## 6. Affordance composition and bounded discovery
 
-Visual target:
+`InteractionAffordanceQuery` performs the complete Candidate-001 read path:
 
-- low-resolution/pixel-native;
-- restrained rather than neon-gamey;
-- readable on phone;
-- presentation only.
-
-First style:
-
-- 1–2 screen-pixel outline/tick marks around the target's **real visible footprint cells**;
-- warm/yellow-white readability treatment consistent with the current interaction/sound vocabulary without pretending to be physical emitted light;
-- optional very slow presentation-only alpha pulse while the game waits at decision pause;
-- no bloom and no System-27 light contribution;
-- one highlight command per stable target, even if multiple actions/providers refer to it.
-
-The highlight renderer sits above live world lighting/weather and below System-23 perception/modal UI surfaces. System-23 filtering is still performed before presentation so the highlight itself never conveys hidden truth.
-
----
-
-## 9. Multiple targets / multiple offers
-
-Several nearby objects may be usable simultaneously.
-
-Candidate ordering:
-
-1. presentation priority;
-2. target anchor distance within the tiny reachable set;
-3. target stable ID;
-4. action ID.
-
-The renderer may highlight more than one reachable target. Candidate 001 does **not** automatically choose or execute one.
-
-If a later player-control design adds an `INTERACT` intent, target/action selection belongs to a dedicated controller using the same offers; it does not require rewriting reach or highlight truth.
-
-This avoids prematurely designing a radial menu or tap-target system merely to satisfy the Phase-1 highlight request.
-
----
-
-## 10. Discovery / performance
-
-System 29 must remain effectively constant-cost with world size.
-
-Candidate approach:
-
-1. compute the actor's tiny current reachable-cell set;
+1. compute the actor's tiny `CONTACT_FORWARD` reachable-cell set;
 2. inspect WHAT OBJECT occupancy only in those cells;
 3. deduplicate stable target IDs;
-4. ask registered providers about those candidates;
-5. apply System-23 visible-state filter for presentation;
-6. emit a tiny highlight command list.
+4. ask registered mechanic providers about those candidates;
+5. revalidate offer target identity, current footprint and shared reach;
+6. apply System-23 `VISIBLE` filtering for player presentation;
+7. deduplicate multiple offers to one target highlight while preserving action IDs/labels;
+8. return deterministic presentation descriptors.
 
-No full-world scan.
+There is no full-world `entity_ids()` scan.
 
-Typical `CONTACT_FORWARD` survivor footprint means only the actor's own cell(s) plus one forward fringe are inspected.
+Ordering is deterministic by presentation priority, actor-relative target distance, stable target ID and action ID.
 
-No Node per interactable object. One renderer owns all highlight drawing.
+No per-object Nodes exist. No `_process()` or `_physics_process()` world-query loop exists.
 
-No `_process()` world query loop. Recompute on meaningful invalidation such as:
+Meaningful invalidation comes from:
 
 - controlled actor move/turn/placement change;
-- current perception recompute affecting nearby cells;
-- reachable target placement/removal;
-- provider-specific availability revision;
+- relevant nearby object placement/removal;
 - world reset;
-- active controlled actor change later.
+- System-23 perception changes;
+- provider availability changes.
 
-A cosmetic pulse may animate presentation delta only while highlights exist; it advances zero WHEN ticks.
+All of these are read/presentation invalidations and spend zero WHEN ticks.
 
 ---
 
-## 11. Failure behavior
+## 7. Highlight presentation
+
+`InteractionHighlightRenderer` is one presentation-only Node2D owned by the tactical renderer stack.
+
+Candidate 001 style:
+
+- low-resolution/pixel-native;
+- restrained warm/yellow-white corner ticks;
+- 1–2 screen-pixel line weight depending on cell scale;
+- only currently visible target footprint cells;
+- one rendered target descriptor even when several actions/providers refer to it;
+- no bloom;
+- no System-27 physical-light contribution.
+
+Renderer-stack placement is z=90:
+
+- above live physical world/light/weather presentation;
+- below System-23 perception overlay at z=100 and modal UI.
+
+System-23 knowledge filtering occurs before drawing as well, so layer order is not used as a substitute for hidden-information correctness.
+
+Candidate 001 intentionally adds **no universal Interact button**, no tap-to-select action execution and no radial/list interaction menu.
+
+---
+
+## 8. Failure behavior
 
 Fail closed / no highlight when:
 
 - actor is missing/unplaced/not a supported living survivor;
 - facing is invalid;
 - target placement is missing/stale;
-- target is not on the expected physical channel for the provider;
+- target is not on the provider's expected physical channel;
 - provider is not ready;
 - target no longer passes reach;
 - System 23 says no target footprint cell is currently VISIBLE;
 - an offer descriptor is malformed.
 
-Diagnostics may be exposed in DEV/test mode, but ordinary play should not draw fake fallback interaction markers.
+Presentation never creates a fake fallback action marker.
 
 ---
 
-## 12. Public-contract impact
+## 9. Public-contract impact
 
-Additive contracts:
+Implemented additive contracts:
 
 - `WorldInteractionReachQuery`;
 - `InteractionOffer`;
@@ -274,17 +246,17 @@ Additive contracts:
 - `InteractionAffordanceQuery`;
 - `InteractionHighlightRenderer`.
 
-Migration:
+Implemented migration:
 
-- System 24 replaces private `LootInteractionReach` usage with System 29's `CONTACT_FORWARD` contract.
+- System 24 no longer owns a private geometric reach implementation; search and external container access consume System 29 `CONTACT_FORWARD`.
 
-No WHAT schema change and no save migration is required because Candidate 001 System 29 owns no persistent gameplay state.
+There is no WHAT schema change and no save migration because Candidate 001 System 29 owns no persistent gameplay state.
 
 ---
 
-## 13. Protected neighbors
+## 10. Protected neighbors
 
-Implementation must preserve:
+Implementation preserves:
 
 - System 24 deterministic loot/search timing/current-content behavior;
 - System 12 transfer mutation and external-container carry policy;
@@ -292,39 +264,79 @@ Implementation must preserve:
 - System 27 physical lighting truth;
 - WHERE/WHAT footprint/facing semantics;
 - WHEN zero-tick read/query behavior;
-- current mobile player-shell input blocking/modal behavior;
+- mobile player-shell input blocking/modal behavior;
 - existing Prop renderer ownership.
 
 ---
 
-## 14. Verification plan
+## 11. Verification
 
-Focused headless/query tests must prove:
+Focused smoke:
 
-- current System-24 reachable/unreachable fixtures are unchanged by the generalized reach owner;
-- forward facing matters exactly as before;
+`game/scripts/ci/WorldInteractionAffordanceSmoke.gd`
+
+Workflow:
+
+`.github/workflows/world-interaction-affordance.yml`
+
+Permanent exact-head context:
+
+`verify/system29-interaction-affordance`
+
+The focused contract proves:
+
+- single-cell survivor reach is exactly actor cell + one forward cell;
+- facing matters and turning changes both real reach and highlight target;
+- behind and diagonal objects are not accidentally reachable;
 - multi-cell target intersection works;
-- no diagonal/behind reach is accidentally granted;
-- only real provider offers produce highlights;
-- an ordinary decorative nearby prop with no provider/action does not highlight;
-- VISIBLE target can highlight;
-- REMEMBERED target does not highlight;
-- UNSEEN target does not highlight;
+- actor-local WHAT occupancy discovery does not perform a full-world scan;
+- decorative nearby props with no mechanic provider do not highlight;
+- real searchable containers publish `SEARCH`;
+- `VISIBLE` targets can highlight;
+- `REMEMBERED` and `UNSEEN` targets do not highlight;
 - partial multi-cell visibility does not reveal hidden cells;
-- multiple offers deduplicate target highlight deterministically;
-- queries and cosmetic presentation consume zero WHEN ticks;
-- actor-local occupancy bounds are respected; no full-world entity scan;
-- System 24 / System 23 / canonical player shell / startup regressions stay green.
+- multiple offers deduplicate to one target highlight deterministically while retaining action identities;
+- query and renderer work consume zero WHEN ticks;
+- System 24 reach/loot behavior remains green;
+- System 23 perception remains green;
+- canonical player-shell behavior and startup remain green.
 
-Human/mobile acceptance:
+First fully green **foundation** head: `9ccbb91f167c376b6ea4a4d7ff82ede3427ae122`.
 
-- on iPhone/Safari it is immediately obvious which nearby searchable container is in current interaction reach;
-- highlight is readable but does not drown out lighting/fog/weather;
-- turning away removes a forward-only highlight exactly when the real search action becomes unreachable.
+First fully green **playable-island integration** head: `5b88d9172df51561ea760913873f62bd2cdc422a`.
+
+All **14 required exact-head contexts** are green on the playable integration head:
+
+- `verify/system00d-global-world`;
+- `verify/system00f-streaming-materialization`;
+- `verify/system19-local-building`;
+- `verify/system20-local-area`;
+- `verify/system21-camera-view`;
+- `verify/system22-area-critique`;
+- `verify/system23-perception`;
+- `verify/system24-loot`;
+- `verify/system25-world-time-light`;
+- `verify/system26-spatial-sound`;
+- `verify/system27-physical-lighting`;
+- `verify/system28-weather`;
+- `verify/system29-interaction-affordance`;
+- `verify/pages-deploy`.
 
 ---
 
-## 15. Deferred
+## 12. Human/mobile acceptance remaining
+
+Automated implementation verification is complete. Ordinary playtest acceptance should still check on iPhone/Safari that:
+
+- the highlight is immediately readable at phone scale;
+- it does not drown out lighting/fog/weather;
+- turning away removes a forward-only highlight exactly when the real search action becomes unreachable.
+
+Visual tuning discovered by playtest remains a bounded System-29 presentation refinement, not a reason to change reach/action authority.
+
+---
+
+## 13. Deferred
 
 System 29 Candidate 001 does **not** implement:
 
@@ -344,21 +356,6 @@ Those may consume the same contract later.
 
 ---
 
-## 16. North-star fit
+## 14. North-star fit
 
-This keeps interaction readable in the small top-down world without turning the game into a glowing-object arcade layer. It exposes **real causal affordances** from the same physical state/actions that already govern looting, and establishes a cheap reusable interface for the increasingly interactive world planned through Beta.
-
----
-
-## 17. Approved decisions
-
-1. System 29 owns neutral world interaction reach + player-facing affordance composition, not action execution.
-2. Candidate 001 preserves System 24's current actor-footprint + one-cell-forward `CONTACT_FORWARD` reach exactly.
-3. System 24 migrates search/external-container reach to the shared contract with zero range rebalance.
-4. Only real mechanic providers may publish offers; sprite/semantic appearance alone never creates a highlight.
-5. Player highlights require current System-23 VISIBLE knowledge; REMEMBERED/UNSEEN cannot reveal current usability.
-6. Candidate highlight is a restrained pixel outline/marker over visible target footprint, not physical light.
-7. Discovery is actor-local and event-driven; no full-world scan or per-object Nodes.
-8. Candidate 001 adds no universal Interact button or action execution controller yet.
-
-Implementation remains subject to exact-head verification before this document is marked IMPLEMENTED.
+This keeps interaction readable in the small top-down world without turning the game into a glowing-object arcade layer. It exposes **real causal affordances** from the same physical state/actions that already govern looting and establishes a cheap reusable interface for the increasingly interactive world planned through Beta.

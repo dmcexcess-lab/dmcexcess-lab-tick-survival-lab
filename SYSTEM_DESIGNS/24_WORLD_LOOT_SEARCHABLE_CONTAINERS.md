@@ -1,10 +1,14 @@
 # Tick Survival Lab — System 24 World Loot / Searchable Containers / Scavenging
 
-Status: **IMPLEMENTED — Candidate 001**
+Status: **IMPLEMENTED — Candidate 001 + System-29 reach migration**
 
 Implemented: **2026-08-23**
 
-First fully green executable head: `411099a3c39b7abeeb189e8a176491cb7e410b6d`.
+System-29 reach migration: **2026-08-24**
+
+First fully green original executable head: `411099a3c39b7abeeb189e8a176491cb7e410b6d`.
+
+Shared-reach playable verification head: `5b88d9172df51561ea760913873f62bd2cdc422a`.
 
 Exact-head owner: `verify/system24-loot`.
 
@@ -28,12 +32,14 @@ System 24 owns:
 - baseline loot item taxonomy/content definitions;
 - baseline location-aware weighted loot profiles;
 - timed world-container search;
-- physical world-container reach/access policy for System 12;
+- read-only searchable-container interaction-offer provider for System 29;
+- world-container access policy for System 12 using shared System-29 reach;
 - read-only searched-container inspection;
 - the playable scavenging panel/controller integration.
 
 System 24 does **not** own:
 
+- neutral actor-to-object reach geometry — System 29 owns `CONTACT_FORWARD`;
 - current item containment after initialization — System 11 owns that;
 - hand/personal inventory truth — Systems 09/11 own that;
 - item movement — System 12 owns that;
@@ -54,7 +60,8 @@ System 24 composes existing truth instead of replacing it:
 - **13E Carry:** soft capacity + hard possession ceiling;
 - **19 Building Generation:** public building archetype, generated prop role/semantic and role-to-entity-ID seam;
 - **20 / 00F:** physical area/source generation and materialization;
-- **23 Perception:** visual knowledge of furniture, never hidden contents.
+- **23 Perception:** visual knowledge of furniture, never hidden contents;
+- **29 Interaction Affordance / Reach:** neutral `CONTACT_FORWARD` reach and player-facing offer/highlight composition.
 
 ## 4. Loot taxonomy
 
@@ -154,13 +161,15 @@ Current profiles cover, among others:
 
 Not every prop is searchable. Capability is explicit, not inferred merely because something looks like furniture.
 
+This same explicit capability rule is now the source of System-29 `SEARCH` offers: decorative furniture never highlights merely because it resembles a container.
+
 ## 8. System 19 public identity seam
 
 `GeneratedBuildingPlan.entity_id_for_role(role)` is the public stable mapping from generated role to the materialized entity ID:
 
 `<building_instance_id>.<role>`
 
-`GeneratedBuildingMaterializer` now uses that same public helper. System 24 therefore never duplicates or reverse-engineers a private materializer ID convention.
+`GeneratedBuildingMaterializer` uses that same public helper. System 24 therefore never duplicates or reverse-engineers a private materializer ID convention.
 
 ## 9. Persistent System 24 state
 
@@ -187,6 +196,8 @@ A container record stores:
 It does **not** store current item contents.
 
 Current contents remain solely System 11 truth.
+
+System 29 adds no System-24 persistent state and requires no loot/save schema migration.
 
 ## 10. One-way deterministic initialization
 
@@ -219,9 +230,9 @@ System 24 state is intentionally **not embedded inside System 00F**.
 
 00F remains the owner of physical source materialization/activation. System 24 exposes a separately idempotent initialization seam for an already-materialized source and can be invoked immediately after physical materialization by composition.
 
-The current canonical critique runtime initializes loot immediately after its deterministic System 20 area has materialized. Future open-world 00F composition can call the same System 24 seam after a logical source becomes physically ready without changing 00F's registry/transaction contract.
+The current playable island composition initializes the existing spawn-area loot source after deterministic physical materialization. Future broader 00F/loot integration can call the same idempotent System-24 seam after additional logical sources become physically ready without changing 00F's registry/transaction contract.
 
-## 12. Timed search
+## 12. Timed search and shared reach
 
 Search action:
 
@@ -241,11 +252,13 @@ Request validation requires:
 - placed living survivor;
 - initialized/enrolled world container;
 - target OBJECT placement;
-- actor footprint or one-cell-forward interaction reach;
+- System-29 `CONTACT_FORWARD` reach;
 - valid profile/timing;
 - actor not already busy.
 
-Commit revalidates actor/container placement and reach.
+Commit revalidates actor/container placement and the same shared System-29 reach contract.
+
+`CONTACT_FORWARD` is exactly the historical System-24 rule: actor footprint plus one-cell-forward fringe in current facing. The migration changes ownership, not gameplay range.
 
 Crucially, search reads **current System 11 contents at completion**. Another actor/item transition may change the container while the search is underway; the result reflects what actually remains after the elapsed ticks rather than a stale request-time snapshot.
 
@@ -261,7 +274,9 @@ System 24 does not implement item transfer mutations.
 
 - still exist as current physical truth;
 - remain enrolled in System 11;
-- are currently within the same actor-footprint/one-cell-forward reach rule as search.
+- are currently reachable through System-29 `CONTACT_FORWARD`.
+
+The live playable composition injects the same `WorldInteractionReachQuery` instance into both `LootSearchActionService` and `LootWorldContainerAccessPolicy`, preventing independent range drift.
 
 TAKE and STORE therefore use normal System 12 transitions and inherit:
 
@@ -283,9 +298,25 @@ An external container -> hand or external container -> personal container transf
 
 Normal personal repacking/equip/unequip still does not count as acquiring new carried mass.
 
-## 14. Player UI
+## 14. System-29 searchable-container offers
 
-The canonical critique runtime includes a phone-first `LootContainerPanel`.
+`LootSearchInteractionOfferProvider` is the System-24-owned read-only provider into System 29.
+
+It publishes `scavenge.search_container` / `SEARCH` only when the target:
+
+- has real System-24 loot provenance;
+- remains a real System-11 container;
+- remains placed as an OBJECT in WHAT;
+- is currently in shared `CONTACT_FORWARD` reach;
+- retains a valid loot profile/version and positive search duration.
+
+It performs no search, transfer or mutation. System 24's timed search remains authoritative at action request and commit.
+
+System 29 then applies current System-23 visibility before drawing a player highlight. System 24 never receives hidden-perception authority merely because it supplies an offer.
+
+## 15. Player UI
+
+The canonical runtime includes a phone-first `LootContainerPanel`.
 
 After a successful search it shows:
 
@@ -299,15 +330,19 @@ The panel does not mutate containment and does not hard-pause WHEN. The game is 
 
 While the panel is open, ordinary world/camera controls are blocked so UI taps cannot simultaneously issue world actions.
 
-## 15. Perception boundary
+System-29 highlighting is separate presentation and adds no universal Interact button or alternate mutation path.
+
+## 16. Perception boundary
 
 System 23 may remember the physical refrigerator/cabinet/rack as stale furniture.
 
 It does **not** remember or reveal hidden live contents. Container contents are learned through physical search and queried from current System 11 truth.
 
-## 16. Candidate 001 verification
+System 29 also requires current System-23 `VISIBLE` knowledge before presenting the container as currently usable. A mechanically reachable REMEMBERED/UNSEEN container therefore does not reveal itself through highlighting.
 
-`game/scripts/ci/WorldLootSmoke.gd` plus `.github/workflows/world-loot.yml` prove:
+## 17. Verification
+
+`game/scripts/ci/WorldLootSmoke.gd` plus `.github/workflows/world-loot.yml` prove the original System-24 rules including:
 
 - required `USABLE/JUNK + family` taxonomy;
 - contextual building-aware container profiles;
@@ -318,42 +353,33 @@ It does **not** remember or reveal hidden live contents. Container contents are 
 - one-way no-repopulation behavior;
 - legitimate zero-container source initialization;
 - deterministic System 24 snapshot round trip;
-- **exact WHAT + System 11 + System 24 rollback after an injected mid-initialization failure**;
+- exact WHAT + System 11 + System 24 rollback after injected mid-initialization failure;
 - configured search tick spending;
 - completion-time current contents after concurrent change;
 - external System 12 TAKE and STORE;
 - explicit transfer tick spending;
 - external acquisition hard-carry-limit rejection with no item movement;
-- System 11, System 12, System 13E, System 19 and canonical demo regressions.
+- protected System 11, 12, 13E, 19 and canonical demo regressions.
 
-The workflow publishes permanent exact-head context:
+The workflow also now structurally requires the old `LootInteractionReach.gd` to be absent and both search/access owners to consume `WorldInteractionReachQuery`.
 
-`verify/system24-loot`
+System-29 focused regression additionally proves the shared reach/facing behavior, searchable-offer publication, decorative no-offer behavior and visibility-safe highlighting.
 
-First executable head where System 24 and the complete protected stack were green:
+Permanent exact-head contexts:
 
-`411099a3c39b7abeeb189e8a176491cb7e410b6d`
+- `verify/system24-loot`;
+- `verify/system29-interaction-affordance`.
 
-Successful contexts on that exact head:
+On executable head `5b88d9172df51561ea760913873f62bd2cdc422a`, both contexts and the complete 14-context protected stack are green.
 
-- `verify/system24-loot`
-- `verify/system23-perception`
-- `verify/system22-area-critique`
-- `verify/system21-camera-view`
-- `verify/system20-local-area`
-- `verify/system19-local-building`
-- `verify/system00f-streaming-materialization`
-- `verify/system00d-global-world`
-- `verify/pages-deploy`
-
-## 17. Deferred seams
+## 18. Deferred seams
 
 Deliberately deferred:
 
+- Phase-1B food freshness/spoilage/refrigeration;
 - food/drink effects;
 - medical treatment effects;
 - generic condition/durability;
-- spoilage/refrigeration mechanics;
 - locks/keys/forced container access;
 - item quantity/stack splitting;
 - firearms/ammunition;

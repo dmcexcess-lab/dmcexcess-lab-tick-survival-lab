@@ -1,5 +1,23 @@
 # Changelog
 
+## System 29 World Interaction Affordance / Reach — Candidate 001 — 2026-08-24
+
+- Implemented the approved Roadmap Phase 1A foundation under the rule **“A highlight explains an already-valid interaction. It never creates interaction truth.”**
+- Added neutral `WorldInteractionReachQuery.CONTACT_FORWARD`, preserving the historical System-24 actor-footprint + one-cell-forward reach exactly with no diagonal/two-cell/through-wall/auto-turn expansion.
+- Removed the old private `LootInteractionReach.gd`. `LootSearchActionService` and `LootWorldContainerAccessPolicy` now consume the shared System-29 reach contract; the live playable composition injects one shared reach-query instance into both paths.
+- Added read-only `InteractionOffer` / `InteractionOfferProvider` contracts and `InteractionAffordanceQuery`. Providers own real mechanic availability; System 29 never infers a USE action from art, semantic names or proximity alone.
+- Added the first real provider, `LootSearchInteractionOfferProvider`, which publishes `scavenge.search_container` / `SEARCH` only for real initialized System-24 searchable containers with valid current profile/reach state.
+- Candidate discovery is bounded to WHAT OBJECT occupancy in the survivor's tiny reachable-cell set. No full-world entity scan and no per-object interaction Nodes are used.
+- Player-facing highlight descriptors are filtered through current System-23 `VISIBLE` knowledge. `REMEMBERED` and `UNSEEN` targets do not reveal current usability; partially visible multi-cell targets expose only currently visible footprint cells.
+- Added one event-driven `InteractionHighlightRenderer` at z=90, above live world lighting/weather and below System-23 perception z=100. It draws restrained warm/yellow-white pixel corner markers and contributes no physical light.
+- Multiple real offers deduplicate to one target highlight while preserving action identities. Query/presentation work consumes zero WHEN ticks.
+- Candidate 001 deliberately adds no universal Interact button, no tap-selection execution and no radial/list action menu.
+- Added `.github/workflows/world-interaction-affordance.yml` and `WorldInteractionAffordanceSmoke.gd`, covering forward/behind/diagonal reach, multi-cell intersection, local-only discovery, real-vs-decorative offers, VISIBLE/REMEMBERED/UNSEEN filtering, partial visibility, deterministic dedup, zero-WHEN-tick presentation and facing-change behavior.
+- First fully green System-29 foundation head: `9ccbb91f167c376b6ea4a4d7ff82ede3427ae122`.
+- First fully green **playable-island integration** head: `5b88d9172df51561ea760913873f62bd2cdc422a`.
+- All **14 required exact-head contexts** are green on the playable integration head, including `verify/system29-interaction-affordance` and `verify/pages-deploy`.
+- Roadmap Phase 1A is complete. **Phase 1B Item Freshness / Spoilage is the next bounded design target; its implementation is not pre-authorized by this completion.**
+
 ## System 28 Weather / Atmosphere — Slice C + screen-space presentation correction — 2026-08-24
 
 - Implemented approved Weather Slice C on executable head `21014fe5915e47344b4b8d5f48e52fa69c386254`.
@@ -22,7 +40,7 @@
 - Normalized the user's explicit numbering as: **1 Items/readability, 2 Crafting, 3 Power+Water, 4 physical survival/health, 5 Moodlets, 6 Skills/interactions, 7 Vehicles, 8 AI+combat+outbreak, 9 final graphics/UI -> Beta.**
 - Phase 1 includes spoilage, inventory/menu icons, proximity highlighting for actually usable nearby containers/objects, and broader/multi-cell world objects such as larger stoplights and four-cell/2×2 trees.
 - Phase 3 locks a causal **three-tier** utility model: robust broad main facility, semi-frequent local substation/pump-station failures, and vulnerable local distribution/service damaged by cars/trees/etc. Standalone wastewater/sewer gameplay is removed from the active roadmap; existing generated wastewater data may remain inert until deliberate cleanup.
-- Phase 4's final physical-survival target is hunger, thirst, sleep/exhaustion, health and stamina. The existing fatigue scaffold must be reconciled with stamina/exhaustion rather than duplicated; death from exhaustion is an intended eventual terminal consequence.
+- Phase 4's earlier roadmap wording named stamina; this is superseded by the later same-day decision that **fatigue is the stamina/endurance concept and there is no separate stamina meter**. Death from exhaustion remains an intended eventual terminal consequence.
 - Phase 5 expands Moodlets beyond labels: comfort, fear, boredom and escalating hunger/thirst/sleep states may create action-speed/capability consequences while underlying physical truth remains with its owning systems.
 - Phase 6 replaces the current generic skill catalog with Awareness, Sneak, First Aid, Cooking, Carpentry, Mechanical, Electrical, Fishing and Farming. Hunting is deliberately emergent from Sneak + future shooting/combat proficiency + crafted trap placement, not a separate Hunting stat.
 - Phase 6 also closes broad object interactions: powered TVs/appliances/switches use real power/state first, then feed real System 27 light and localized yellow-word sound/information presentation downstream.

@@ -20,7 +20,7 @@ Canonical roadmap: `ROADMAP.md`.
 
 ## Current playable world
 
-The canonical DEV/playable composition is now the **complete streamed island**, not the former standalone Rural Crossroads critique world.
+The canonical DEV/playable composition is the **complete streamed island**, not the former standalone Rural Crossroads critique world.
 
 - Global bounds: 1792×1792 tactical cells (`Rect2i(232,1232,1792,1792)`).
 - System 00D `temperate.island.region` v1 adds deterministic LAND / SHORE / OCEAN surface truth over the proven rural-v6 settlement/road/hydrology skeleton.
@@ -30,7 +30,7 @@ The canonical DEV/playable composition is now the **complete streamed island**, 
 - Current technical streaming uses 128×128 regions with active radius 1 and follows the controlled survivor's real placement. Those technical regions are performance configuration, never world identity.
 - Ocean and ordinary river water are real non-traversable terrain. A river crossing becomes traversable only where System 00D contains matching explicit bridge intent.
 
-The complete-island playable composition was first proven on executable head `3f1a98c3daea879cf7ffdbea717d88461e39438f`; current `main` may contain later documentation/contract refreshes.
+The complete-island playable composition was first proven on executable head `3f1a98c3daea879cf7ffdbea717d88461e39438f`.
 
 ---
 
@@ -46,12 +46,14 @@ The complete-island playable composition was first proven on executable head `3f
 - **00F Streaming / Materialization** — **IMPLEMENTED: settlement + rural countryside + complete-island surface + river/watercourse logical sources**; one-way materialization, reversible activation.
 - **21 Camera** / **22 Large-Area DEV Critique Runtime** — implemented.
 - **23 Perception / LOS / Fog Memory** — geometric facing LOS, physical-light/atmosphere-aware current acquisition, true-black unexplored fog, stale remembered environment/static furniture, last-seen actors and auditory presentation.
-- **24 World Loot / Searchable Containers / Scavenging** — persistent virgin loot, timed search, timed TAKE/STORE and playable scavenging UI.
+- **24 World Loot / Searchable Containers / Scavenging** — persistent virgin loot, timed search, timed TAKE/STORE and playable scavenging UI; neutral interaction geometry now comes from System 29.
 - **25 World Time / Ambient Daylight** — authoritative-tick-derived scenario clock and smooth outdoor daylight baseline.
 - **26 Spatial Sound / Hearing** — physical acoustic propagation, listener-specific hearing/localization, yellow onomatopoeia cues and Weather masking seam.
 - **27 Physical Lighting / Illumination / Shadows** — headless physical illumination, rich presentation, illumination-aware observer acquisition, bounded-query optimization, Weather optics and transient lightning input.
 - **28 Weather / Atmosphere** — **IMPLEMENTED, Slices A+B+C**: deterministic WHEN-driven Weather, analytic wetness, screen-space low-res atmosphere, real lighting/visibility/hearing consequences and deterministic physical lightning.
-- **29 World Interaction Affordance / Reach** — **APPROVED — Candidate 001**, Roadmap Phase 1A; implementation authorized 2026-08-24.
+- **29 World Interaction Affordance / Reach** — **IMPLEMENTED — Candidate 001**, Roadmap Phase 1A.
+
+System-29 first fully green playable executable head: `5b88d9172df51561ea760913873f62bd2cdc422a`.
 
 ---
 
@@ -84,9 +86,9 @@ The complete-island playable composition was first proven on executable head `3f
 
 Phase 1 is decomposed in `ROADMAP.md`:
 
-1A. **Interaction affordance + reach** — **System 29 APPROVED, implementation authorized**. Generalize current System-24 contact-forward reach and highlight only real currently perceived usable targets.
+1A. **Interaction affordance + reach** — **COMPLETE: System 29 Candidate 001.**
 
-1B. **Item freshness/spoilage** — typed per-instance freshness, analytic authoritative-time aging, future refrigeration-rate seam, no per-item tick loop.
+1B. **Item freshness/spoilage** — **NEXT DESIGN TARGET**: typed per-instance freshness, analytic authoritative-time aging, future refrigeration-rate seam, no per-item tick loop.
 
 1C. **Semantic inventory/menu icons** — low-resolution UI icon catalog with deterministic coverage of current loot/menu semantics.
 
@@ -94,7 +96,7 @@ Phase 1 is decomposed in `ROADMAP.md`:
 
 1E. **Content expansion/integration** — more perishables, mundane items and world props/fixtures/vegetation using the new foundations.
 
-**Current implementation target: Phase 1A / System 29 Candidate 001.**
+**Current next step: DESCRIBE Phase 1B / item freshness-spoilage. 1B implementation is not pre-authorized merely because 1A is complete.**
 
 ---
 
@@ -104,7 +106,7 @@ Visual states remain `UNSEEN`, `REMEMBERED`, and `VISIBLE`. Candidate geometry i
 
 Only acquired cells refresh environment/actor memory. A target may be geometrically clear yet remain UNSEEN/REMEMBERED because it is too dark or too strongly extinguished by atmosphere. Opaque geometry still blocks first.
 
-System 29 player highlights must require current VISIBLE target knowledge and may not expose a technically reachable hidden object.
+System 29 player highlights consume this existing truth: only current `VISIBLE` target footprint cells may be presented as usable.
 
 Exact-head owner: `verify/system23-perception`.
 
@@ -116,7 +118,9 @@ Exact-head owner: `verify/system23-perception`.
 
 Searchable furniture is real System 11 container truth. Deterministic `item.*` entities are created once during virgin source initialization; System 24 owns provenance while System 11 owns current contents. Search and TAKE/STORE spend WHEN time and external acquisition respects System 13E carry limits.
 
-Before System 29 implementation, `LootInteractionReach` is shared by search and external-container access: actor footprint plus one-cell-forward fringe. Approved System 29 moves this exact behavior into a neutral owner with **zero reach rebalance**.
+The old private `LootInteractionReach` owner is removed. System-24 search and external-container access both consume System-29 `WorldInteractionReachQuery.CONTACT_FORWARD`, preserving the historical actor-footprint + one-cell-forward rule with zero reach rebalance. The live composition injects one shared reach-query instance into both paths.
+
+System 24 also owns the first System-29 mechanic provider: real searchable containers publish `SEARCH`; decorative nearby objects do not acquire fake interaction truth.
 
 Roadmap Phase 1B adds spoilage on the real stable item identities already created here; Phase 2 crafting consumes those same items.
 
@@ -124,74 +128,43 @@ Exact-head owner: `verify/system24-loot`.
 
 ---
 
-## Current System 25 world-time / daylight truth
+## Current Systems 25–28 truth
 
-Candidate 001 uses 5 ticks/second, starts day 0 at 08:00:00, dawn 05:30–07:30, day 07:30–18:30, dusk 18:30–20:30 and night baseline 0.08. Time derives directly from `world_tick`; hard pause freezes it automatically.
+**25 World Time:** Candidate 001 uses 5 ticks/second, starts day 0 at 08:00:00, dawn 05:30–07:30, day 07:30–18:30, dusk 18:30–20:30 and night baseline 0.08. Time derives directly from `world_tick`; hard pause freezes it automatically. Phase 1B freshness should derive age analytically from authoritative ticks. Exact context: `verify/system25-world-time-light`.
 
-Roadmap Phase 1B spoilage should derive freshness analytically from authoritative tick position rather than introduce a second clock/per-item scheduler.
+**26 Spatial Sound:** **Sound is physical; hearing is an estimate.** Material-aware propagation reads current WHAT + Door State; survivor hearing derives from existing stats/status; localization uncertainty remains listener knowledge. Weather masks hearing as competing background noise. Current lightning has no fake thunder. Exact context: `verify/system26-spatial-sound`.
 
-Exact-head owner: `verify/system25-world-time-light`.
+**27 Physical Lighting:** **Light is physical; vision is observer-specific.** Gameplay/AI never read rendered pixels as illumination truth. Weather optics/wetness and physical lightning feed the same backend. Exact context: `verify/system27-physical-lighting`.
 
----
-
-## Current System 26 spatial-sound truth
-
-> **Sound is physical. Hearing is an estimate.**
-
-Material-aware propagation reads current WHAT + Door State; survivor hearing derives from existing stats/status; localization uncertainty cannot flip true actor-relative front/rear/left/right signs; observation age uses WHEN ticks only.
-
-Recognized player-facing sounds prefer onomatopoeia (`*step step*`, `*thump thump*`, `*creak*`, `*SLAM*`). Weather rain/wind masks hearing as competing background noise without creating fake rain emissions.
-
-Current lightning intentionally creates no thunder because the implemented event has no honest strike cell.
-
-Exact-head owner: `verify/system26-spatial-sound`.
+**28 Weather:** **Weather is simulation truth; weather animation is presentation.** Physical clear/overcast/rain/storm/fog, analytic wetness and deterministic lightning are WHEN-driven. Rain/fog/debris are a low-resolution screen-space overlay whose animation advances zero simulation ticks. Exact context: `verify/system28-weather`.
 
 ---
 
-## Current System 27 physical-lighting truth
-
-> **Light is physical. Vision is observer-specific. Rendering visualizes lighting; gameplay and AI never read rendered pixels to decide what is illuminated.**
-
-Implemented physical facts include semantic DEV flashlight/lamp/streetlight/neon emitters; per-cell sky/direct/portal/local luminance; enclosure/portal treatment; structure transmission/shadows; weather optics/wetness; target-condition useful-range policy; and transient physical lightning.
-
-Verified lightning fixture: storm-night exterior 0.025 -> 0.845 during flash; roofed interior through a real window portal 0.356.
-
-The bounded 80×96 / four-light regression remains 7,680 field cells, 1,676 emitter candidates and 688 optical-ray candidates.
-
-Exact-head owner: `verify/system27-physical-lighting`.
-
----
-
-## Current System 28 Weather / Atmosphere truth
-
-> **Weather is simulation truth; weather animation is presentation.**
-
-Slices A+B+C are implemented. Physical Weather is deterministic/event-driven through WHEN with clear/overcast/rain/storm/fog state, analytic wetness, quantized environment revisions, snapshot schema v2 and deterministic lightning.
-
-Rain/fog/debris are a low-resolution screen-space overlay. Camera movement does not redraw/clear/reseed/phase-shift Weather. Focused regression reports zero Weather redraws after repeated camera updates.
-
-Weather drives System 27 optics/wetness/visibility and System 26 hearing masking. Lightning supplies a one-tick real physical sky flash plus a short stable-seeded cosmetic bolt.
-
-First fully green executable Weather C head: `21014fe5915e47344b4b8d5f48e52fa69c386254`; all 13 then-required contexts green including Pages.
-
-Exact-head owner: `verify/system28-weather`.
-
----
-
-## Approved System 29 Candidate 001
+## Current System 29 interaction truth
 
 > **A highlight explains an already-valid interaction. It never creates interaction truth.**
 
-- Neutral `CONTACT_FORWARD` reach preserves System 24's actor-footprint + one-cell-forward behavior exactly.
-- Real mechanic owners publish read-only interaction offers; appearance alone never invents a USE action.
-- First provider is System 24 searchable containers and first real offer is `SEARCH`.
-- Player-facing highlights require System-23 current `VISIBLE` knowledge; REMEMBERED/UNSEEN cannot reveal usability.
-- Partial multi-cell visibility exposes only currently visible footprint cells.
-- Discovery queries only the actor-local reachable cells through WHAT occupancy; no full-world scan and no per-object Nodes.
-- Highlight presentation is a restrained pixel marker/outline, not System-27 physical light.
-- Candidate 001 adds no universal Interact button and does not execute actions.
+Implemented Candidate 001:
 
-Canonical design: `SYSTEM_DESIGNS/29_WORLD_INTERACTION_AFFORDANCE_REACH.md`.
+- neutral `CONTACT_FORWARD` = actor footprint + one-cell-forward fringe;
+- System-24 search and external TAKE/STORE share the same reach owner;
+- real mechanics publish read-only `InteractionOffer` descriptors;
+- first provider is System-24 searchable containers / `SEARCH`;
+- candidate discovery reads OBJECT occupancy only in the tiny reachable-cell set and performs no full-world entity scan;
+- System-23 `VISIBLE` is required for player highlighting; `REMEMBERED` and `UNSEEN` never reveal current usability;
+- partially visible multi-cell objects expose only currently visible footprint cells;
+- one event-driven renderer at z=90 draws restrained warm/yellow-white pixel corner markers below the System-23 perception overlay;
+- multiple offers deduplicate to one target highlight while preserving action identities;
+- query/presentation work spends zero WHEN ticks;
+- Candidate 001 adds no universal Interact button or action execution.
+
+Exact-head owner: `verify/system29-interaction-affordance`.
+
+First fully green foundation head: `9ccbb91f167c376b6ea4a4d7ff82ede3427ae122`.
+
+First fully green playable-island head: `5b88d9172df51561ea760913873f62bd2cdc422a`.
+
+Human iPhone/Safari visual-tuning acceptance remains useful, but the executable contract is complete.
 
 ---
 
@@ -211,7 +184,7 @@ Roadmap Phase 4 final target is:
 
 ## Canonical roadmap through Beta
 
-1. **Items/readability** — Phase 1A–1E above.
+1. **Items/readability** — Phase 1A complete; 1B–1E ahead.
 2. **Crafting** — physical recipes, time, real inputs/outputs/workstations.
 3. **Power + Water** — three-tier causal infrastructure; standalone wastewater gameplay removed.
 4. **Player physical survival/health** — hunger, thirst, sleep/exhaustion, health, fatigue.
@@ -227,7 +200,6 @@ Save/load, schema handling, profiling and persistence-backed streaming eviction 
 
 ## Major deferred/migration seams
 
-- System 29 / Phase 1A implementation is the active authorized change until verified;
 - Phase 1B spoilage/freshness;
 - Phase 1C semantic icons;
 - Phase 1D large-object visual geometry;
@@ -253,7 +225,7 @@ Save/load, schema handling, profiling and persistence-backed streaming eviction 
 
 ---
 
-## Required executable-head contexts before System 29 lands
+## Required executable-head contexts
 
 - `verify/system00d-global-world`
 - `verify/system00f-streaming-materialization`
@@ -267,6 +239,7 @@ Save/load, schema handling, profiling and persistence-backed streaming eviction 
 - `verify/system26-spatial-sound`
 - `verify/system27-physical-lighting`
 - `verify/system28-weather`
+- `verify/system29-interaction-affordance`
 - `verify/pages-deploy`
 
-System 29 implementation must add its own focused exact-head context before being marked IMPLEMENTED.
+All 14 were green on executable head `5b88d9172df51561ea760913873f62bd2cdc422a`.
