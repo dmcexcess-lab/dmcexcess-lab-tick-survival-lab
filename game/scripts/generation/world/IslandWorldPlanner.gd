@@ -7,6 +7,7 @@ const PlanClass = preload("res://scripts/generation/world/GeneratedGlobalWorldPl
 const ProfilesClass = preload("res://scripts/generation/world/GlobalWorldProfileCatalog.gd")
 const BridgePlannerClass = preload("res://scripts/generation/world/GlobalBridgeIntentPlanner.gd")
 const HydrologyQueryClass = preload("res://scripts/generation/world/GlobalHydrologyQuery.gd")
+const DistrictSitePlannerClass = preload("res://scripts/generation/world/IslandDistrictSitePlanner.gd")
 const Surface = preload("res://scripts/generation/shared/IslandSurfaceMath.gd")
 
 const INVALID_CELL := Vector2i(-999999, -999999)
@@ -14,6 +15,7 @@ const INVALID_CELL := Vector2i(-999999, -999999)
 var _base_planner: GlobalWorldPlanner = BasePlannerClass.new()
 var _bridges: GlobalBridgeIntentPlanner = BridgePlannerClass.new()
 var _hydrology: GlobalHydrologyQuery = HydrologyQueryClass.new()
+var _district_sites: IslandDistrictSitePlanner = DistrictSitePlannerClass.new()
 var _profiles: GlobalWorldProfileCatalog = ProfilesClass.new()
 
 func generate(request: GlobalWorldGenerationRequest) -> GeneratedGlobalWorldPlan:
@@ -27,7 +29,8 @@ func generate(request: GlobalWorldGenerationRequest) -> GeneratedGlobalWorldPlan
         return failed
 
     # Compose the island over the proven rural regional skeleton. Coast/ocean truth
-    # is new; the mature connected road/settlement graph stays authoritative.
+    # and two road-backed 384x384 district sites are additive; the mature regional
+    # road/settlement graph is not replaced or rerouted.
     var base_request := RequestClass.new(
         request.world_id,
         request.seed,
@@ -47,18 +50,28 @@ func generate(request: GlobalWorldGenerationRequest) -> GeneratedGlobalWorldPlan
     plan.profile_version = int(island_profile.get("version", 1))
     plan.geography_cells = _decorate_geography(base.geography_cells, request, island_profile)
     plan.river_segments = base.river_segments.duplicate(true)
-    plan.settlements = _adapt_settlements(base.settlements)
-
-    var sites_result: Dictionary = _adapt_area_sites(base.area_sites, plan.river_segments, request, island_profile)
-    if not bool(sites_result.get("ok", false)):
-        plan.failure_reason = String(sites_result.get("failure_reason", "island_area_site_planning_failed"))
-        return plan
-    plan.area_sites = sites_result.get("area_sites", [])
+    plan.settlements = base.settlements.duplicate(true)
 
     plan.road_segments = _clip_base_roads(base.road_segments, request, island_profile)
     if plan.road_segments.is_empty():
         plan.failure_reason = "island_road_clipping_failed"
         return plan
+
+    var base_sites_result: Dictionary = _copy_base_sites(base.area_sites, plan.river_segments, request, island_profile)
+    if not bool(base_sites_result.get("ok", false)):
+        plan.failure_reason = String(base_sites_result.get("failure_reason", "island_base_site_adaptation_failed"))
+        return plan
+    var district_result: Dictionary = _district_sites.append_required_districts(
+        base_sites_result.get("area_sites", []),
+        plan.road_segments,
+        plan.river_segments,
+        request,
+        island_profile
+    )
+    if not bool(district_result.get("ok", false)):
+        plan.failure_reason = String(district_result.get("failure_reason", "island_district_site_planning_failed"))
+        return plan
+    plan.area_sites = district_result.get("area_sites", [])
 
     var bridge_result: Dictionary = _bridges.plan(plan.road_segments, plan.river_segments)
     if not bool(bridge_result.get("ok", false)):
@@ -105,19 +118,7 @@ func _decorate_geography(
         result.append(cell)
     return result
 
-func _adapt_settlements(source: Array[Dictionary]) -> Array[Dictionary]:
-    var result: Array[Dictionary] = []
-    for value: Dictionary in source:
-        var settlement: Dictionary = value.duplicate(true)
-        match String(settlement.get("id", "")):
-            "settlement.rural.hamlet.001":
-                settlement["kind"] = &"suburban_satellite"
-            "settlement.rural.hamlet.002":
-                settlement["kind"] = &"urban_satellite"
-        result.append(settlement)
-    return result
-
-func _adapt_area_sites(
+func _copy_base_sites(
     source: Array[Dictionary],
     rivers: Array[Dictionary],
     request: GlobalWorldGenerationRequest,
@@ -127,50 +128,29 @@ func _adapt_area_sites(
     for value: Dictionary in source:
         var site: Dictionary = value.duplicate(true)
         site["site_role"] = &"primary"
-        match String(site.get("id", "")):
-            "area.rural.scattered.001":
-                site["area_profile_hint"] = &"suburban.neighborhood"
-                site["environment_profile_hint"] = &"temperate.suburban"
-                site["site_role"] = &"suburban_satellite"
-            "area.rural.scattered.002":
-                site["area_profile_hint"] = &"urban.mixed"
-                site["environment_profile_hint"] = &"temperate.urban"
-                site["site_role"] = &"urban_satellite"
         var rect: Rect2i = site.get("bounds", Rect2i())
-        if not _site_legal(rect, sites, rivers, request, profile):
-            return {
-                "ok": false,
-                "failure_reason": "island_site_not_on_connected_land:%s" % String(site.get("id", "")),
-                "area_sites": [],
-            }
+        if not _rect_inside(request.bounds, rect):
+            return _site_failure("island_base_site_out_of_bounds:%s" % String(site.get("id", "")))
+        if not Surface.rect_is_land(
+            request.bounds,
+            request.seed,
+            rect,
+            int(profile.get("island_ocean_margin", 24)),
+            int(profile.get("island_shore_width", 8)),
+            int(profile.get("island_coast_wobble", 8)),
+            int(profile.get("island_coast_scale", 96))
+        ):
+            return _site_failure("island_base_site_not_land:%s" % String(site.get("id", "")))
+        if not _hydrology.rect_clear_of_rivers(rect, rivers, int(profile.get("settlement_river_clearance", 16))):
+            return _site_failure("island_base_site_hits_river:%s" % String(site.get("id", "")))
+        for existing: Dictionary in sites:
+            if _rects_overlap(rect, existing.get("bounds", Rect2i())):
+                return _site_failure("island_base_site_overlap:%s" % String(site.get("id", "")))
         sites.append(site)
     return {"ok": true, "failure_reason": "", "area_sites": sites}
 
-func _site_legal(
-    rect: Rect2i,
-    existing: Array[Dictionary],
-    rivers: Array[Dictionary],
-    request: GlobalWorldGenerationRequest,
-    profile: Dictionary
-) -> bool:
-    if not _rect_inside(request.bounds, rect):
-        return false
-    if not Surface.rect_is_land(
-        request.bounds,
-        request.seed,
-        rect,
-        int(profile.get("island_ocean_margin", 24)),
-        int(profile.get("island_shore_width", 8)),
-        int(profile.get("island_coast_wobble", 8)),
-        int(profile.get("island_coast_scale", 96))
-    ):
-        return false
-    if not _hydrology.rect_clear_of_rivers(rect, rivers, int(profile.get("settlement_river_clearance", 16))):
-        return false
-    for site: Dictionary in existing:
-        if _rects_overlap(rect, site.get("bounds", Rect2i())):
-            return false
-    return true
+func _site_failure(reason: String) -> Dictionary:
+    return {"ok": false, "failure_reason": reason, "area_sites": []}
 
 func _clip_base_roads(
     source: Array[Dictionary],
