@@ -5,7 +5,7 @@ const Layers = preload("res://scripts/foundation/spatial/SpatialLayer.gd")
 const PlacementClass = preload("res://scripts/foundation/world/WorldPlacement.gd")
 const PhaseClass = preload("res://scripts/foundation/time/ActionPhase.gd")
 const TickRulesClass = preload("res://scripts/foundation/time/TickRules.gd")
-const Reach = preload("res://scripts/simulation/loot/LootInteractionReach.gd")
+const ReachClass = preload("res://scripts/simulation/interaction/WorldInteractionReachQuery.gd")
 
 signal search_completed(actor_id, action_serial, container_id, contents, container_version)
 signal search_failed(actor_id, action_serial, container_id, reason)
@@ -19,19 +19,22 @@ var _containment: InventoryContainmentState = null
 var _loot_state: LootState = null
 var _profiles: LootContainerProfileCatalog = null
 var _kernel: TickKernel = null
+var _reach: WorldInteractionReachQuery = null
 
 func _init(
     world_state: WorldState = null,
     containment_state: InventoryContainmentState = null,
     loot_state: LootState = null,
     profile_catalog: LootContainerProfileCatalog = null,
-    tick_kernel: TickKernel = null
+    tick_kernel: TickKernel = null,
+    reach_query: WorldInteractionReachQuery = null
 ) -> void:
     _world = world_state
     _containment = containment_state
     _loot_state = loot_state
     _profiles = profile_catalog
     _kernel = tick_kernel
+    _reach = reach_query if reach_query != null else ReachClass.new(_world)
     if _kernel != null:
         if not _kernel.action_phase.is_connected(_on_action_phase):
             _kernel.action_phase.connect(_on_action_phase)
@@ -39,7 +42,8 @@ func _init(
             _kernel.action_finished.connect(_on_action_finished)
 
 func is_ready() -> bool:
-    return _world != null and _containment != null and _loot_state != null and _profiles != null and _kernel != null
+    return _world != null and _containment != null and _loot_state != null and _profiles != null \
+        and _kernel != null and _reach != null and _reach.is_ready()
 
 func request_search(actor_id: String, container_id: String) -> Dictionary:
     var actor: String = actor_id.strip_edges()
@@ -64,7 +68,7 @@ func request_search(actor_id: String, container_id: String) -> Dictionary:
         return _rejected("invalid_search_container")
     if not _loot_state.has_container(container) or not _containment.has_container(container):
         return _rejected("loot_container_not_initialized")
-    if not Reach.is_reachable(_world, actor, container):
+    if not _reach.target_reachable(actor, container, ReachClass.CONTACT_FORWARD):
         return _rejected("out_of_reach")
 
     var record: Dictionary = _loot_state.container_record(container)
@@ -151,7 +155,7 @@ func _commit_search(action: TimedAction) -> void:
         or int(record.get("loot_profile_version", -1)) != int(payload.get("loot_profile_version", -2)):
         _fail(action, "loot_container_profile_changed")
         return
-    if not Reach.is_reachable(_world, action.actor_id, container_id):
+    if not _reach.target_reachable(action.actor_id, container_id, ReachClass.CONTACT_FORWARD):
         _fail(action, "out_of_reach")
         return
 

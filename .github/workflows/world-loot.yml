@@ -27,10 +27,11 @@ jobs:
           test -f SYSTEM_DESIGNS/24_WORLD_LOOT_SEARCHABLE_CONTAINERS.md
           test -f game/scripts/simulation/items/transfer/ItemContainerAccessPolicy.gd
           test -f game/scripts/simulation/items/transfer/PolicyAwareItemTransferActionService.gd
+          test -f game/scripts/simulation/interaction/WorldInteractionReachQuery.gd
           test -f game/scripts/simulation/loot/LootItemCatalog.gd
           test -f game/scripts/simulation/loot/LootContainerProfileCatalog.gd
           test -f game/scripts/simulation/loot/LootState.gd
-          test -f game/scripts/simulation/loot/LootInteractionReach.gd
+          test ! -f game/scripts/simulation/loot/LootInteractionReach.gd
           test -f game/scripts/simulation/loot/LootWorldContainerAccessPolicy.gd
           test -f game/scripts/simulation/loot/LootSourceInitializer.gd
           test -f game/scripts/simulation/loot/LootSearchActionService.gd
@@ -42,6 +43,8 @@ jobs:
           grep -q 'USABLE' game/scripts/simulation/loot/LootItemCatalog.gd
           grep -q 'JUNK' game/scripts/simulation/loot/LootItemCatalog.gd
           grep -q 'scavenge.search_container' game/scripts/simulation/loot/LootSearchActionService.gd
+          grep -q 'WorldInteractionReachQuery' game/scripts/simulation/loot/LootSearchActionService.gd
+          grep -q 'WorldInteractionReachQuery' game/scripts/simulation/loot/LootWorldContainerAccessPolicy.gd
           grep -q 'InterruptionPolicy.CANCELABLE' game/scripts/simulation/loot/LootSearchActionService.gd
           grep -q 'entity_id_for_role' game/scripts/generation/buildings/GeneratedBuildingPlan.gd
           grep -q 'PolicyAwareItemTransferActionService' game/scripts/simulation/items/transfer/PolicyAwareItemTransferActionService.gd
