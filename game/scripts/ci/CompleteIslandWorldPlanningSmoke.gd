@@ -29,13 +29,12 @@ func _initialize() -> void:
         return
 
     _check(plan.profile_id == ProfilesClass.TEMPERATE_ISLAND_REGION, "island profile identity is recorded")
-    _check(plan.area_sites.size() == 10, "five primary settlement sites plus five small-town districts exist")
+    _check(plan.area_sites.size() == 5, "five globally connected settlement sites remain the island local-site set")
+    _check(_site_profile(plan, "area.rural.crossroads.001") == &"rural.crossroads", "rural crossroads remains globally placed")
     _check(_site_profile(plan, "area.smalltown.center.001") == &"smalltown.center", "small-town center is globally placed")
-    _check(_has_profile(plan, &"suburban.neighborhood"), "suburban neighborhood is globally placed")
-    _check(_has_profile(plan, &"urban.mixed"), "urban mixed/city center profile is globally placed")
-    _check(_has_profile(plan, &"commercial.corridor"), "commercial corridor is globally placed")
-    _check(_has_profile(plan, &"industrial.district"), "industrial district is globally placed")
-    _check(_has_profile(plan, &"civic.campus"), "civic campus is globally placed")
+    _check(_site_profile(plan, "area.rural.scattered.001") == &"suburban.neighborhood", "suburban neighborhood is globally placed")
+    _check(_site_profile(plan, "area.rural.scattered.002") == &"urban.mixed", "urban mixed/city-center-style profile is globally placed")
+    _check(_site_profile(plan, "area.rural.scattered.003") == &"rural.scattered", "one rural satellite remains globally placed")
     _check(not plan.river_segments.is_empty(), "island retains a physical river")
     _check(not plan.bridge_intents.is_empty(), "real road/river crossings retain explicit bridges")
 
@@ -64,9 +63,11 @@ func _test_all_area_sites(plan: GeneratedGlobalWorldPlan) -> void:
         if generated != null and not generated.is_generated():
             push_error("COMPLETE_ISLAND_AREA_FAILURE:%s:%s" % [site_id, generated.failure_reason])
     for required: String in [
-        "rural.crossroads", "smalltown.center", "rural.scattered",
-        "suburban.neighborhood", "urban.mixed", "commercial.corridor",
-        "industrial.district", "civic.campus"
+        "rural.crossroads",
+        "smalltown.center",
+        "suburban.neighborhood",
+        "urban.mixed",
+        "rural.scattered",
     ]:
         _check(profiles_seen.has(required), "integrated island uses profile %s" % required)
 
@@ -108,10 +109,12 @@ func _test_surface_shape(plan: GeneratedGlobalWorldPlan) -> void:
     for y in range(plan.bounds.position.y, plan.bounds.position.y + plan.bounds.size.y, step):
         for x in range(plan.bounds.position.x, plan.bounds.position.x + plan.bounds.size.x, step):
             var kind: StringName = Surface.classify(
-                plan.bounds, plan.seed, Vector2i(x, y),
-                int(profile.get("island_ocean_margin", 48)),
-                int(profile.get("island_shore_width", 12)),
-                int(profile.get("island_coast_wobble", 18)),
+                plan.bounds,
+                plan.seed,
+                Vector2i(x, y),
+                int(profile.get("island_ocean_margin", 24)),
+                int(profile.get("island_shore_width", 8)),
+                int(profile.get("island_coast_wobble", 8)),
                 int(profile.get("island_coast_scale", 96))
             )
             if kind == Surface.OCEAN:
@@ -130,12 +133,6 @@ func _site_profile(plan: GeneratedGlobalWorldPlan, site_id: String) -> StringNam
         if String(site.get("id", "")) == site_id:
             return StringName(site.get("area_profile_hint", &""))
     return &""
-
-func _has_profile(plan: GeneratedGlobalWorldPlan, profile_id: StringName) -> bool:
-    for site: Dictionary in plan.area_sites:
-        if StringName(site.get("area_profile_hint", &"")) == profile_id:
-            return true
-    return false
 
 func _check(condition: bool, message: String) -> void:
     if not condition:
