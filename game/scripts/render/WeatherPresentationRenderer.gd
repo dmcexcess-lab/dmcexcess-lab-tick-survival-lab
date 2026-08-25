@@ -1,6 +1,8 @@
 extends Node2D
 class_name WeatherPresentationRenderer
 
+const PerformanceTelemetry = preload("res://scripts/foundation/diagnostics/PerformanceTelemetry.gd")
+
 ## Low-overhead System 28 presentation. Weather graphics are a screen-space
 ## atmosphere overlay; physical Weather remains world/simulation truth elsewhere.
 ## No rain/fog/debris object is a Node or simulation entity.
@@ -37,6 +39,8 @@ var _accumulator: float = 0.0
 var _presentation_step: int = 0
 var _presentation_updates: int = 0
 var _redraw_requests: int = 0
+var _draw_count: int = 0
+var _last_draw_usec: int = 0
 var _last_rain_streaks: int = 0
 var _last_fog_patches: int = 0
 var _last_draw_primitives: int = 0
@@ -133,6 +137,8 @@ func presentation_snapshot() -> Dictionary:
         "presentation_step": _presentation_step,
         "presentation_updates": _presentation_updates,
         "redraw_requests": _redraw_requests,
+        "draw_count": _draw_count,
+        "last_draw_usec": _last_draw_usec,
         "visible_origin": _visible_origin,
         "visible_size": _visible_size,
         "overlay_size_pixels": _overlay_size_pixels,
@@ -192,10 +198,12 @@ func _step_presentation() -> void:
         _redraw_requests += 1
 
 func _draw() -> void:
+    var started: int = Time.get_ticks_usec()
     _last_rain_streaks = 0
     _last_fog_patches = 0
     _last_draw_primitives = 0
     if not is_configured() or not _view_valid or _overlay_size_pixels.x <= 0 or _overlay_size_pixels.y <= 0:
+        _record_draw(started)
         return
     var descriptor: Dictionary = _weather.presentation_descriptor()
     _last_descriptor = descriptor
@@ -203,6 +211,7 @@ func _draw() -> void:
     _draw_rain(descriptor)
     _draw_debris(descriptor)
     _draw_lightning_visual()
+    _record_draw(started)
 
 func _draw_rain(descriptor: Dictionary) -> void:
     var precipitation: float = float(descriptor.get("precipitation", 0.0))
@@ -419,6 +428,14 @@ func _on_lightning_started(event) -> void:
     _lightning_visual_remaining = LIGHTNING_VISUAL_SECONDS
     queue_redraw()
     _redraw_requests += 1
+
+func _record_draw(started_usec: int) -> void:
+    _last_draw_usec = Time.get_ticks_usec() - started_usec
+    _draw_count += 1
+    PerformanceTelemetry.record_timing(&"weather_draw", _last_draw_usec)
+    PerformanceTelemetry.record_value(&"weather_draws", _draw_count)
+    PerformanceTelemetry.record_value(&"weather_primitives", _last_draw_primitives)
+    PerformanceTelemetry.record_value(&"weather_redraw_requests", _redraw_requests)
 
 func _random_unit() -> float:
     _rng_state = int((_rng_state * 1103515245 + 12345) & 0x7fffffff)

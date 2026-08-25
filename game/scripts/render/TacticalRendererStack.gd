@@ -9,6 +9,7 @@ const LightingRendererClass = preload("res://scripts/render/PhysicalLightingPres
 const WeatherRendererClass = preload("res://scripts/render/WeatherPresentationRenderer.gd")
 const InteractionRendererClass = preload("res://scripts/render/InteractionHighlightRenderer.gd")
 const PerceptionOverlayClass = preload("res://scripts/render/PerceptionOverlayRenderer.gd")
+const PerformanceDevPanelClass = preload("res://scripts/ui/PerformanceDevPanel.gd")
 
 ## Layer orchestration only. All drawing remains in focused renderers.
 
@@ -20,6 +21,7 @@ var _lighting: PhysicalLightingPresentationRenderer = null
 var _weather: WeatherPresentationRenderer = null
 var _interaction: InteractionHighlightRenderer = null
 var _perception: PerceptionOverlayRenderer = null
+var _performance_panel: PerformanceDevPanel = null
 var _configured: bool = false
 
 func _ready() -> void:
@@ -220,6 +222,10 @@ func _ensure_layers() -> void:
     _perception.name = "Perception"
     _perception.z_index = 100
     add_child(_perception)
+
+    _performance_panel = PerformanceDevPanelClass.new()
+    _performance_panel.name = "PerformanceDev"
+    add_child(_performance_panel)
 
 static func _count_diagnostics(commands: Array) -> int:
     var count: int = 0

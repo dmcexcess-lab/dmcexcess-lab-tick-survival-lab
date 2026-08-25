@@ -3,9 +3,14 @@ class_name PhysicalLightingPresentationRenderer
 
 const MULTIPLY_SHADER: Shader = preload("res://shaders/physical_lighting_multiply.gdshader")
 const GLOW_SHADER: Shader = preload("res://shaders/physical_lighting_glow.gdshader")
+const Layers = preload("res://scripts/foundation/spatial/SpatialLayer.gd")
+const ChangeClass = preload("res://scripts/foundation/world/WorldChange.gd")
+const PerformanceTelemetry = preload("res://scripts/foundation/diagnostics/PerformanceTelemetry.gd")
 
 ## Presentation-only visualization of System 27 physical illumination.
 ## This layer never decides gameplay visibility and never becomes light authority.
+## World notifications refresh only for visible terrain/STRUCTURE dirtiness; actor and
+## ordinary object movement do not redraw the full light maps.
 
 signal presentation_rebuilt(reason, presentation_revision)
 
@@ -130,6 +135,8 @@ func refresh(reason: StringName = &"external") -> bool:
     _last_max_luminance = max_luminance
     _last_glow_cells = glow_cells
     _last_lighting_revision = prepared_revision
+    PerformanceTelemetry.record_timing(&"lighting_draw", _last_build_usec)
+    PerformanceTelemetry.record_value(&"lighting_draws", _presentation_revision)
     presentation_rebuilt.emit(reason, _presentation_revision)
     return true
 
@@ -253,9 +260,12 @@ func _glow_strength(sample: IlluminationSample) -> float:
 func _connect_sources() -> void:
     if _world != null:
         var changed_callable := Callable(self, "_on_world_changed")
+        var batch_callable := Callable(self, "_on_world_batch_changed")
         var reset_callable := Callable(self, "_on_world_reset")
         if not _world.changed.is_connected(changed_callable):
             _world.changed.connect(changed_callable)
+        if not _world.batch_changed.is_connected(batch_callable):
+            _world.batch_changed.connect(batch_callable)
         if not _world.world_reset.is_connected(reset_callable):
             _world.world_reset.connect(reset_callable)
     if _doors != null:
@@ -275,9 +285,12 @@ func _connect_sources() -> void:
 func _disconnect_sources() -> void:
     if _world != null:
         var changed_callable := Callable(self, "_on_world_changed")
+        var batch_callable := Callable(self, "_on_world_batch_changed")
         var reset_callable := Callable(self, "_on_world_reset")
         if _world.changed.is_connected(changed_callable):
             _world.changed.disconnect(changed_callable)
+        if _world.batch_changed.is_connected(batch_callable):
+            _world.batch_changed.disconnect(batch_callable)
         if _world.world_reset.is_connected(reset_callable):
             _world.world_reset.disconnect(reset_callable)
     if _doors != null:
@@ -294,26 +307,67 @@ func _disconnect_sources() -> void:
         if _doors.door_state_reset.is_connected(reset_callable):
             _doors.door_state_reset.disconnect(reset_callable)
 
-func _on_world_changed(_change) -> void:
-    if _view_valid:
-        refresh(&"world_changed")
+func _on_world_changed(change: WorldChange) -> void:
+    if not _view_valid or change == null or _world.is_change_batch_active():
+        return
+    if change.is_terrain_change():
+        if _terrain_change_intersects_view(change):
+            refresh(&"terrain_changed")
+        return
+    if change.affects_channel(Layers.Channel.STRUCTURE) and _cells_intersect_view(change.before_cells, change.after_cells):
+        refresh(&"structure_changed")
+
+func _on_world_batch_changed(batch: WorldChangeBatch) -> void:
+    if not _view_valid or batch == null:
+        return
+    var view := Rect2i(_visible_origin, _visible_size)
+    if batch.terrain_changed:
+        var terrain_rect: Rect2i = batch.terrain_dirty_bounds()
+        if terrain_rect.size.x > 0 and terrain_rect.size.y > 0 and view.intersects(terrain_rect):
+            refresh(&"world_batch_terrain")
+            return
+    if batch.channel_changed(Layers.Channel.STRUCTURE):
+        var structure_rect: Rect2i = batch.dirty_rect_for_channel(Layers.Channel.STRUCTURE)
+        if structure_rect.size.x > 0 and structure_rect.size.y > 0 and view.intersects(structure_rect):
+            refresh(&"world_batch_structure")
 
 func _on_world_reset() -> void:
     if _view_valid:
         refresh(&"world_reset")
 
 func _on_door_enrolled(_door_id, _state, _version) -> void:
-    if _view_valid:
+    if _view_valid and not _world.is_change_batch_active():
         refresh(&"door_enrolled")
 
 func _on_door_removed(_door_id, _previous_state, _version) -> void:
-    if _view_valid:
+    if _view_valid and not _world.is_change_batch_active():
         refresh(&"door_removed")
 
 func _on_door_state_changed(_door_id, _previous_state, _new_state, _version) -> void:
-    if _view_valid:
+    if _view_valid and not _world.is_change_batch_active():
         refresh(&"door_state_changed")
 
 func _on_door_state_reset() -> void:
     if _view_valid:
         refresh(&"door_state_reset")
+
+func _terrain_change_intersects_view(change: WorldChange) -> bool:
+    var view := Rect2i(_visible_origin, _visible_size)
+    if change.kind == ChangeClass.Kind.TERRAIN_BATCH_SET:
+        if change.terrain_rect.size.x > 0 and change.terrain_rect.size.y > 0:
+            return view.intersects(change.terrain_rect)
+        for cell: Vector2i in change.terrain_cells:
+            if view.has_point(cell):
+                return true
+        return false
+    return view.has_point(change.terrain_cell)
+
+func _cells_intersect_view(before_cells: Array[Vector2i], after_cells: Array[Vector2i]) -> bool:
+    var view := Rect2i(_visible_origin, _visible_size)
+    for cell: Vector2i in before_cells:
+        if view.has_point(cell):
+            return true
+    for cell: Vector2i in after_cells:
+        if view.has_point(cell):
+            return true
+    return false

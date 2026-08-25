@@ -6,9 +6,11 @@ const FacingRules = preload("res://scripts/foundation/spatial/SpatialFacing.gd")
 const DoorValues = preload("res://scripts/simulation/doors/DoorStateValue.gd")
 const SampleClass = preload("res://scripts/simulation/lighting/IlluminationSample.gd")
 const VisionRangePolicy = preload("res://scripts/simulation/lighting/VisionLightRangePolicy.gd")
+const PerformanceTelemetry = preload("res://scripts/foundation/diagnostics/PerformanceTelemetry.gd")
 
 ## Authoritative headless physical illumination backend.
 ## Rendering may visualize these facts but never becomes gameplay/AI lighting authority.
+## Static field geometry is keyed to terrain + STRUCTURE revisions, never global WHAT churn.
 
 signal lighting_rebuilt(revision: int)
 
@@ -63,10 +65,12 @@ var _color_accum: Dictionary = {}
 var _color_weight: Dictionary = {}
 var _dominant_strength: Dictionary = {}
 
-var _geometry_world_revision: int = -1
+var _geometry_terrain_revision: int = -1
+var _geometry_structure_revision: int = -1
 var _geometry_door_revision: int = -1
 var _geometry_bounds: Rect2i = Rect2i()
-var _last_world_revision: int = -1
+var _last_terrain_revision: int = -1
+var _last_structure_revision: int = -1
 var _last_door_revision: int = -1
 var _last_ambient_level: float = -1.0
 var _last_atmosphere_revision: int = -1
@@ -77,6 +81,10 @@ var _lighting_revision: int = 0
 
 var _last_emitter_candidate_cells: int = 0
 var _last_emitter_ray_cells: int = 0
+var _field_rebuild_count: int = 0
+var _geometry_rebuild_count: int = 0
+var _last_field_rebuild_usec: int = 0
+var _last_geometry_rebuild_usec: int = 0
 
 func _init(
     world_state: WorldState = null,
@@ -214,6 +222,8 @@ func debug_snapshot() -> Dictionary:
         "ready": is_ready(),
         "lighting_revision": _lighting_revision,
         "world_revision": -1 if _world == null else _world.revision(),
+        "terrain_revision": -1 if _world == null else _world.terrain_revision(),
+        "structure_revision": -1 if _world == null else _world.placement_revision(Layers.Channel.STRUCTURE),
         "door_revision": -1 if _doors == null else _doors.revision(),
         "ambient_light_level": 0.0 if _ambient == null else _ambient.ambient_light_level(),
         "atmosphere_revision": -1 if _atmosphere == null else _atmosphere.revision,
@@ -230,17 +240,23 @@ func debug_snapshot() -> Dictionary:
         "emitter_revision": _emitter_revision,
         "last_emitter_candidate_cells": _last_emitter_candidate_cells,
         "last_emitter_ray_cells": _last_emitter_ray_cells,
+        "field_rebuilds": _field_rebuild_count,
+        "geometry_rebuilds": _geometry_rebuild_count,
+        "last_field_rebuild_usec": _last_field_rebuild_usec,
+        "last_geometry_rebuild_usec": _last_geometry_rebuild_usec,
     }
 
 func _ensure_current() -> void:
     if not is_ready():
         return
     _ensure_geometry()
-    var world_revision: int = _world.revision()
+    var terrain_revision: int = _world.terrain_revision()
+    var structure_revision: int = _world.placement_revision(Layers.Channel.STRUCTURE)
     var door_revision: int = _doors.revision()
     var ambient_level: float = _ambient.ambient_light_level()
     if (
-        world_revision == _last_world_revision
+        terrain_revision == _last_terrain_revision
+        and structure_revision == _last_structure_revision
         and door_revision == _last_door_revision
         and is_equal_approx(ambient_level, _last_ambient_level)
         and _atmosphere.revision == _last_atmosphere_revision
@@ -249,8 +265,14 @@ func _ensure_current() -> void:
     ):
         return
 
+    var started: int = Time.get_ticks_usec()
     _rebuild_samples(ambient_level)
-    _last_world_revision = world_revision
+    _last_field_rebuild_usec = Time.get_ticks_usec() - started
+    _field_rebuild_count += 1
+    PerformanceTelemetry.record_timing(&"lighting_rebuild", _last_field_rebuild_usec)
+    PerformanceTelemetry.record_value(&"lighting_field_rebuilds", _field_rebuild_count)
+    _last_terrain_revision = terrain_revision
+    _last_structure_revision = structure_revision
     _last_door_revision = door_revision
     _last_ambient_level = ambient_level
     _last_atmosphere_revision = _atmosphere.revision
@@ -262,10 +284,19 @@ func _ensure_current() -> void:
     lighting_rebuilt.emit(_lighting_revision)
 
 func _ensure_geometry() -> void:
-    var world_revision: int = _world.revision()
-    if world_revision != _geometry_world_revision or _geometry_bounds != _field_bounds:
+    var terrain_revision: int = _world.terrain_revision()
+    var structure_revision: int = _world.placement_revision(Layers.Channel.STRUCTURE)
+    if terrain_revision != _geometry_terrain_revision \
+        or structure_revision != _geometry_structure_revision \
+        or _geometry_bounds != _field_bounds:
+        var started: int = Time.get_ticks_usec()
         _rebuild_field_geometry()
-        _geometry_world_revision = world_revision
+        _last_geometry_rebuild_usec = Time.get_ticks_usec() - started
+        _geometry_rebuild_count += 1
+        PerformanceTelemetry.record_timing(&"lighting_geometry_rebuild", _last_geometry_rebuild_usec)
+        PerformanceTelemetry.record_value(&"lighting_geometry_rebuilds", _geometry_rebuild_count)
+        _geometry_terrain_revision = terrain_revision
+        _geometry_structure_revision = structure_revision
         _geometry_door_revision = -1
         _geometry_bounds = _field_bounds
 
@@ -737,7 +768,8 @@ func _stamp_sample(sample: IlluminationSample) -> void:
         sample.world_tick = int(_ambient.current_snapshot().get("world_tick", 0))
 
 func _invalidate_geometry_cache() -> void:
-    _geometry_world_revision = -1
+    _geometry_terrain_revision = -1
+    _geometry_structure_revision = -1
     _geometry_door_revision = -1
     _geometry_bounds = Rect2i()
     _field_cells.clear()
@@ -754,7 +786,8 @@ func _invalidate_geometry_cache() -> void:
 
 func _invalidate_light_cache() -> void:
     _samples.clear()
-    _last_world_revision = -1
+    _last_terrain_revision = -1
+    _last_structure_revision = -1
     _last_door_revision = -1
     _last_ambient_level = -1.0
     _last_atmosphere_revision = -1
