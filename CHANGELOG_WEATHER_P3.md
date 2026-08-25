@@ -80,11 +80,15 @@ The performance bargain remains exactly P3: one fullscreen atmosphere shader, ze
 
 P3B verification additionally locks out the old row-band expressions in Weather CI and requires the jittered-macro/cluster/staggered-fog shader structure to compile under Godot 4.7.1.
 
-### P3B downward-motion hotfix
+### P3B downward-motion correction
 
-Human playtest caught a pure presentation sign error after the de-tiling pass: the shader sampled the vertical rain field with `+ frame * fall_step`, so the visible streak pattern traveled upward. The sample offset is now `- frame * fall_step`, which makes the visible rain travel downward in screen coordinates. Weather CI explicitly requires the downward form and rejects the old upward form.
+Human playtest showed that the first sign-only correction did **not** fix the apparent northward rain motion. The real problem was architectural inside the shader: time was translating the entire hashed rain lookup lattice vertically. As macro-cell identity changed, streaks were replaced/rehashed, so changing the sampling sign did not give a reliable visible fall direction.
 
-This hotfix changes no density, streak scale, shelter logic, physical Weather state or performance architecture.
+The corrected implementation keeps the jittered macro grid fixed in screen space. Each accepted streak now owns an explicit `animated_anchor_y`, calculated as `anchor_y + frame * fall_step` with wrap inside its macro patch. Streak pixels are selected relative to that moving anchor, so the feature itself advances toward increasing screen Y instead of relying on a scrolling lookup-field convention. Horizontal wind still offsets the explicit X anchor.
+
+Weather CI now requires this explicit moving-anchor structure and rejects any temporal `shifted.y +=/-= frame * fall_step` lattice scroll.
+
+This correction changes no rain density, 2 px scale, 1–2 pixel streak length, shelter logic, physical Weather state or P3 performance architecture.
 
 ## Remaining playtest question
 
