@@ -74,7 +74,7 @@ const DoorDamageInterruptionClass = preload("res://scripts/simulation/doors/Door
 const VisionProfileClass = preload("res://scripts/simulation/perception/VisionProfile.gd")
 const PerceptionMemoryClass = preload("res://scripts/simulation/perception/PerceptionMemoryStore.gd")
 const ObserverPerceptionClass = preload("res://scripts/simulation/perception/ObserverPerceptionService.gd")
-const FixtureClass = preload("res://scripts/demo/RuralCrossroadsCritiqueFixture.gd")
+const FixtureClass = preload("res://scripts/demo/GeneratedIslandCritiqueFixture.gd")
 const ControllerClass = preload("res://scripts/player/DemoPlayerActionController.gd")
 const DoorControllerClass = preload("res://scripts/player/DoorPlayerInteractionController.gd")
 const LootControllerClass = preload("res://scripts/player/LootPlayerInteractionController.gd")
@@ -392,8 +392,8 @@ func _boot_physical_lighting() -> bool:
     return true
 
 func _boot_weather() -> bool:
-    # Rural Crossroads is a DEV critique composition, so begin in RAIN for immediate
-    # visual inspection. DEV controls can force every Candidate 001 profile.
+    # Canonical island remains a DEV critique composition, so begin in RAIN for
+    # immediate Weather inspection. DEV controls can force every implemented profile.
     _weather = WeatherServiceClass.new(_kernel, 28028, &"rain")
     _sky_exposure = SkyExposureClass.new(_world)
     if not _weather.is_ready() or not _sky_exposure.is_ready():
