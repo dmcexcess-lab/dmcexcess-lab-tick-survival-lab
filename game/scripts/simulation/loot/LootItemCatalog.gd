@@ -2,10 +2,10 @@ extends RefCounted
 class_name LootItemCatalog
 
 ## Semantic loot-definition content. Classification is type-level data, never mutable
-## per-item state. Every Candidate 001 item has exactly one top-level utility class,
-## one primary family, optional secondary tags, a readable label, and real 13D weight.
+## per-item state. Every loot item has exactly one top-level utility class, one primary
+## family, optional secondary tags, a readable label, and real 13D weight.
 
-const CATALOG_VERSION: int = 1
+const CATALOG_VERSION: int = 2
 const USABLE: StringName = &"USABLE"
 const JUNK: StringName = &"JUNK"
 
@@ -94,6 +94,11 @@ func _build_candidate_001() -> void:
     _add(&"item.food.cereal_box", "Cereal Box", USABLE, &"food", 500)
     _add(&"item.food.energy_bar", "Energy Bar", USABLE, &"food", 70)
     _add(&"item.food.apple", "Apple", USABLE, &"food", 180, [&"fresh_food"])
+    _add(&"item.food.milk_carton", "Milk Carton", USABLE, &"food", 1050, [&"fresh_food", &"dairy"])
+    _add(&"item.food.raw_meat_package", "Raw Meat Package", USABLE, &"food", 650, [&"fresh_food", &"raw"])
+    _add(&"item.food.fresh_berries", "Fresh Berries", USABLE, &"food", 250, [&"fresh_food", &"produce"])
+    _add(&"item.food.bread_loaf", "Bread Loaf", USABLE, &"food", 500, [&"fresh_food"])
+    _add(&"item.food.cheese_block", "Cheese Block", USABLE, &"food", 450, [&"fresh_food", &"dairy"])
 
     # Kitchen.
     _add(&"item.kitchen.can_opener", "Can Opener", USABLE, &"kitchen", 120, [&"hand_tool"])
