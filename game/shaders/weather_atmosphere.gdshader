@@ -67,7 +67,7 @@ float rain_layer(vec2 screen_px) {
     float fall_step = floor(mix(2.0, 4.0, precipitation) + 0.5);
     vec2 wind = wind_direction * wind_strength;
     vec2 shifted = floor(screen_px / px);
-    shifted.y += frame * fall_step;
+    shifted.y -= frame * fall_step;
     shifted.x -= floor(frame * wind.x * 0.55);
 
     float macro_w = floor(mix(16.0, 10.0, precipitation) + 0.5);
