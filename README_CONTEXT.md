@@ -52,8 +52,11 @@ The complete-island playable composition was first proven on executable head `3f
 - **27 Physical Lighting / Illumination / Shadows** — headless physical illumination, rich presentation, illumination-aware observer acquisition, bounded-query optimization, Weather optics and transient lightning input.
 - **28 Weather / Atmosphere** — **IMPLEMENTED, Slices A+B+C**: deterministic WHEN-driven Weather, analytic wetness, screen-space low-res atmosphere, real lighting/visibility/hearing consequences and deterministic physical lightning.
 - **29 World Interaction Affordance / Reach** — **IMPLEMENTED — Candidate 001**, Roadmap Phase 1A.
+- **Performance Architecture Gate** — **IMPLEMENTED + CI VERIFIED — P0/P1/P2**: domain-specific WHAT revisions, explicit bulk-change summaries, streaming notification batching, dependency-correct lighting/shelter invalidation, coalesced perception/interaction wakeups and live DEV telemetry.
 
 System-29 first fully green playable executable head: `5b88d9172df51561ea760913873f62bd2cdc422a`.
+
+Performance-gate first fully green executable head: `0398a2a49d84e6067f7610727aecacf4c05fe41f`.
 
 ---
 
@@ -79,6 +82,7 @@ System-29 first fully green playable executable head: `5b88d9172df51561ea7609138
 18. Current lightning has no strike cell, therefore there is no fake spatial thunder/damage/fire yet.
 19. **Fatigue is the stamina/endurance concept. There is no separate stamina meter.** Sleep pressure/exhaustion remains the longer-horizon sleep need.
 20. **Interaction highlights explain real available actions; they never create use/action truth.**
+21. **A world mutation may update truth many times; expensive consumers wake only for the domains and completed batches they actually depend on.**
 
 ---
 
@@ -96,7 +100,7 @@ Phase 1 is decomposed in `ROADMAP.md`:
 
 1E. **Content expansion/integration** — more perishables, mundane items and world props/fixtures/vegetation using the new foundations.
 
-**Current next step: DESCRIBE Phase 1B / item freshness-spoilage. 1B implementation is not pre-authorized merely because 1A is complete.**
+**Current gate: human iPhone/Safari acceptance of the performance build. After that acceptance, the next bounded work is DESCRIBE Phase 1B / item freshness-spoilage. 1B implementation is not pre-authorized merely because 1A and the CI performance gate are complete.**
 
 ---
 
@@ -165,6 +169,22 @@ First fully green foundation head: `9ccbb91f167c376b6ea4a4d7ff82ede3427ae122`.
 First fully green playable-island head: `5b88d9172df51561ea760913873f62bd2cdc422a`.
 
 Human iPhone/Safari visual-tuning acceptance remains useful, but the executable contract is complete.
+
+---
+
+## Current performance architecture truth
+
+> **A world mutation may update truth many times; expensive consumers wake only for the domains and completed batches they actually depend on.**
+
+The first P0/P1/P2 performance gate is implemented. WHAT retains its global authoritative revision and now also exposes terrain and per-placement-channel revisions plus explicit compact `WorldChangeBatch` summaries. System 00F brackets its existing rollback-safe multi-source materialization transaction with that notification batch.
+
+System 27 physical geometry and Weather sky exposure now key to terrain + STRUCTURE truth rather than every global WHAT mutation. ACTOR and ordinary OBJECT churn therefore cannot invalidate static lighting/shelter geometry. Systems 23 and 29 coalesce explicit streaming batches into one locally relevant refresh decision, and System 24 suppresses intermediate interaction-provider broadcasts during the same batch. Lighting presentation likewise ignores unrelated actor/object mutations.
+
+The canonical DEV renderer exposes low-overhead performance telemetry for streaming, lighting simulation/presentation, perception, interaction, Weather drawing and sky exposure. This instrumentation is observation only and never changes simulation behavior.
+
+First fully green executable head: `0398a2a49d84e6067f7610727aecacf4c05fe41f`. All **42 associated workflow runs** completed successfully and all **15 required exact-head contexts** were green on that SHA. Exact performance context: `verify/performance-architecture`.
+
+The remaining acceptance step is a human iPhone/Safari playtest. GPU Weather and predictive/amortized streaming remain measured follow-ups only if that playtest or telemetry still shows a meaningful bottleneck.
 
 ---
 
@@ -240,6 +260,7 @@ Save/load, schema handling, profiling and persistence-backed streaming eviction 
 - `verify/system27-physical-lighting`
 - `verify/system28-weather`
 - `verify/system29-interaction-affordance`
+- `verify/performance-architecture`
 - `verify/pages-deploy`
 
-All 14 were green on executable head `5b88d9172df51561ea760913873f62bd2cdc422a`.
+All **15 required contexts** were green on performance-gate executable head `0398a2a49d84e6067f7610727aecacf4c05fe41f`; all **42 workflow runs** associated with that SHA completed successfully.
