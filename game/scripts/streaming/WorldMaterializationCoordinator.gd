@@ -4,6 +4,7 @@ class_name WorldMaterializationCoordinator
 const AreaMaterializerClass = preload("res://scripts/generation/areas/AreaMaterializationCoordinator.gd")
 const AreaSourceClass = preload("res://scripts/streaming/AreaSiteMaterializationSource.gd")
 const RecordClass = preload("res://scripts/streaming/MaterializationRecord.gd")
+const PerformanceTelemetry = preload("res://scripts/foundation/diagnostics/PerformanceTelemetry.gd")
 
 var _world: WorldState = null
 var _mutations: WorldMutationService = null
@@ -141,16 +142,21 @@ func ensure_sources(global_plan: GeneratedGlobalWorldPlan, source_handles: Array
 
     ## 00F owns the only full persistent-state snapshot for this multi-source transaction.
     ## AreaMaterializationCoordinator is called through its enclosing-transaction seam to avoid
-    ## copying a progressively larger WHAT once per logical source.
+    ## copying a progressively larger WHAT once per logical source. WHAT notifications are also
+    ## explicitly batched here: truth mutates immediately, expensive readers wake after commit.
     var world_snapshot: Dictionary = _world.snapshot()
     var door_snapshot: Dictionary = _door_state.snapshot()
     var registry_snapshot: Dictionary = _registry.snapshot()
     var newly: Array[String] = []
+    var started: int = Time.get_ticks_usec()
+    _world.begin_change_batch(&"stream_materialization")
 
     for entry: Dictionary in prepared:
         var request: AreaGenerationRequest = entry.get("request") as AreaGenerationRequest
         var plan: GeneratedAreaPlan = entry.get("plan") as GeneratedAreaPlan
         if request == null or plan == null or not _area_materializer.materialize_in_transaction(request, plan):
+            _world.cancel_change_batch()
+            _record_stream_timing(started, newly.size())
             if not _rollback(world_snapshot, door_snapshot, registry_snapshot):
                 return _failure("materialization_failed_and_rollback_failed", already)
             return _failure("area_materialization_failed:%s" % String(entry.get("source_id", "")), already)
@@ -170,12 +176,20 @@ func ensure_sources(global_plan: GeneratedGlobalWorldPlan, source_handles: Array
             _door_state.revision()
         )
         if not record.is_valid() or not _registry.mark_materialized(record):
+            _world.cancel_change_batch()
+            _record_stream_timing(started, newly.size())
             if not _rollback(world_snapshot, door_snapshot, registry_snapshot):
                 return _failure("registry_commit_failed_and_rollback_failed", already)
             return _failure("materialization_registry_commit_failed:%s" % String(entry.get("source_id", "")), already)
         newly.append(record.source_key)
 
+    _world.end_change_batch()
+    _record_stream_timing(started, newly.size())
     return _success(newly, already)
+
+func _record_stream_timing(started_usec: int, materialized_source_count: int) -> void:
+    PerformanceTelemetry.record_timing(&"stream_update", Time.get_ticks_usec() - started_usec)
+    PerformanceTelemetry.record_value(&"stream_materialized_sources", materialized_source_count)
 
 func _register_provider(provider: Variant) -> void:
     if provider == null:
