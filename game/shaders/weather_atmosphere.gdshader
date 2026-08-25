@@ -54,9 +54,9 @@ float segment_distance(vec2 p, vec2 a, vec2 b) {
 }
 
 // P3B: sparse jittered macro-cells replace the old five-row rain bands.
-// Each larger patch can host one independently phased streak, while a still
-// coarser hash biases nearby patches together. The 2 px pixel-art scale stays
-// intact without exposing a repeating horizontal lattice.
+// Macro patches stay fixed in screen space. Each streak moves explicitly toward
+// increasing screen Y, so visible rainfall travels north->south/downscreen rather
+// than scrolling the hashed lookup lattice and relying on sampling-sign intuition.
 float rain_layer(vec2 screen_px) {
     if (precipitation < 0.04) {
         return 0.0;
@@ -66,15 +66,13 @@ float rain_layer(vec2 screen_px) {
     float frame = floor(TIME * rain_fps);
     float fall_step = floor(mix(2.0, 4.0, precipitation) + 0.5);
     vec2 wind = wind_direction * wind_strength;
-    vec2 shifted = floor(screen_px / px);
-    shifted.y -= frame * fall_step;
-    shifted.x -= floor(frame * wind.x * 0.55);
+    vec2 cell = floor(screen_px / px);
 
     float macro_w = floor(mix(16.0, 10.0, precipitation) + 0.5);
     float macro_h = floor(mix(24.0, 15.0, precipitation) + 0.5);
     vec2 macro_size = vec2(macro_w, macro_h);
-    vec2 macro_cell = floor(shifted / macro_size);
-    vec2 local = shifted - macro_cell * macro_size;
+    vec2 macro_cell = floor(cell / macro_size);
+    vec2 local = cell - macro_cell * macro_size;
 
     vec2 cluster_cell = floor((macro_cell + vec2(1.0, 2.0)) / vec2(4.0, 3.0));
     float cluster_bias = hash21(cluster_cell + vec2(presentation_seed * 0.0017, 61.0));
@@ -93,8 +91,12 @@ float rain_layer(vec2 screen_px) {
     float anchor_y = floor(fract(detail_hash * 13.71) * macro_h);
     float streak_seed = fract(detail_hash * 17.17);
     float streak_len = 1.0 + step(0.72, streak_seed);
-    float phase_y = mod(local.y - anchor_y + macro_h, macro_h);
-    float dx = abs(local.x - anchor_x);
+
+    float animated_anchor_y = mod(anchor_y + frame * fall_step, macro_h);
+    float wind_offset_x = floor(frame * wind.x * 0.55);
+    float animated_anchor_x = mod(anchor_x + wind_offset_x + macro_w, macro_w);
+    float phase_y = mod(local.y - animated_anchor_y + macro_h, macro_h);
+    float dx = abs(local.x - animated_anchor_x);
     dx = min(dx, macro_w - dx);
 
     float in_streak = 1.0 - step(streak_len, phase_y);
