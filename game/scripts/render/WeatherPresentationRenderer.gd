@@ -2,38 +2,35 @@ extends Node2D
 class_name WeatherPresentationRenderer
 
 const PerformanceTelemetry = preload("res://scripts/foundation/diagnostics/PerformanceTelemetry.gd")
+const AtmosphereSurfaceClass = preload("res://scripts/render/WeatherAtmosphereSurface.gd")
 
-## Low-overhead System 28 presentation. Weather graphics are a screen-space
-## atmosphere overlay; physical Weather remains world/simulation truth elsewhere.
-## No rain/fog/debris object is a Node or simulation entity.
+## System 28 presentation owner. Continuous rain/fog are one persistent GPU surface.
+## CPU work is limited to low-rate debris state, lightning lifetime, and cached shelter
+## mask maintenance. Physical Weather remains authoritative elsewhere.
 
-const PRESENTATION_STEP_SECONDS: float = 0.05
-const TARGET_HZ: int = 20
-const MIN_WEATHER_PIXEL_SIZE: int = 4
-const MAX_VIRTUAL_AXIS: int = 256
-const MAX_RAIN_STREAKS: int = 180
-const MAX_FOG_PATCHES: int = 36
+const PRESENTATION_STEP_SECONDS: float = 0.10
+const TARGET_HZ: int = 10
+const WEATHER_PIXEL_SIZE: int = 2
 const MAX_DEBRIS: int = 3
 const MAX_CATCHUP_STEPS: int = 4
+const MASK_POLL_SECONDS: float = 0.25
 const LIGHTNING_VISUAL_SECONDS: float = 0.32
-
-const RAIN_COLOR := Color(0.72, 0.82, 0.92, 0.72)
-const STORM_RAIN_COLOR := Color(0.64, 0.76, 0.90, 0.82)
-const FOG_COLOR := Color(0.76, 0.79, 0.80, 0.10)
-const LEAF_COLOR := Color(0.54, 0.42, 0.18, 0.92)
-const PAPER_COLOR := Color(0.82, 0.80, 0.72, 0.90)
-const DUST_COLOR := Color(0.62, 0.53, 0.40, 0.52)
-const LIGHTNING_COLOR := Color(0.76, 0.87, 1.0, 1.0)
 
 var _weather: WeatherService = null
 var _sky: SkyExposureQuery = null
+var _surface: WeatherAtmosphereSurface = null
 var _visible_origin: Vector2i = Vector2i.ZERO
 var _visible_size: Vector2i = Vector2i.ZERO
 var _cell_pixels: float = 0.0
 var _view_valid: bool = false
-var _overlay_size_pixels: Vector2i = Vector2i.ZERO
-var _weather_pixel_size: int = MIN_WEATHER_PIXEL_SIZE
-var _virtual_size: Vector2i = Vector2i.ZERO
+var _surface_size_pixels: Vector2 = Vector2.ZERO
+var _camera_snapshot: Dictionary = {}
+
+var _exposure_texture: ImageTexture = null
+var _exposure_mask_size: Vector2i = Vector2i.ZERO
+var _exposure_mask_rebuilds: int = 0
+var _last_sky_rebuild_count: int = -1
+var _mask_poll_accumulator: float = 0.0
 
 var _accumulator: float = 0.0
 var _presentation_step: int = 0
@@ -41,65 +38,89 @@ var _presentation_updates: int = 0
 var _redraw_requests: int = 0
 var _draw_count: int = 0
 var _last_draw_usec: int = 0
-var _last_rain_streaks: int = 0
-var _last_fog_patches: int = 0
-var _last_draw_primitives: int = 0
 var _last_descriptor: Dictionary = {}
 var _debris: Array[Dictionary] = []
 var _ambient_countdown: float = 18.0
 var _rng_state: int = 0x13579b
-var _needs_clear_redraw: bool = false
 
 var _lightning_visual_remaining: float = 0.0
 var _lightning_visual_id: String = ""
-var _lightning_visual_seed: int = 0
-var _lightning_visual_intensity: float = 0.0
 
 func _ready() -> void:
+    _ensure_surface()
     set_process(false)
 
 func configure(weather_service: WeatherService, sky_exposure: SkyExposureQuery) -> bool:
     if weather_service == null or not weather_service.is_ready() or sky_exposure == null or not sky_exposure.is_ready():
+        return false
+    _ensure_surface()
+    if _surface == null or not _surface.is_ready():
         return false
     _weather = weather_service
     _sky = sky_exposure
     _last_descriptor = weather_service.presentation_descriptor()
     _rng_state = int(_last_descriptor.get("presentation_seed", 0x13579b)) | 1
     _ambient_countdown = _next_ambient_delay(float(_last_descriptor.get("wind_strength", 0.0)))
+    _surface.set_weather_descriptor(_last_descriptor)
+    _push_debris_uniforms()
+
+    var weather_callable := Callable(self, "_on_weather_changed")
+    if not _weather.weather_changed.is_connected(weather_callable):
+        _weather.weather_changed.connect(weather_callable)
     var lightning_callable := Callable(self, "_on_lightning_started")
     if not _weather.lightning_started.is_connected(lightning_callable):
         _weather.lightning_started.connect(lightning_callable)
-    _refresh_overlay_surface()
-    _sync_screen_space_transform()
     set_process(true)
     return true
 
 func is_configured() -> bool:
-    return _weather != null and _sky != null and _weather.is_ready() and _sky.is_ready()
+    return _weather != null \
+        and _sky != null \
+        and _surface != null \
+        and _weather.is_ready() \
+        and _sky.is_ready() \
+        and _surface.is_ready()
 
 func set_visible_window(origin: Vector2i, size_cells: Vector2i, cell_pixels: float) -> bool:
     if size_cells.x <= 0 or size_cells.y <= 0 or cell_pixels <= 0.0:
         return false
-    var dimensions_changed: bool = (
-        not _view_valid
-        or size_cells != _visible_size
-        or not is_equal_approx(cell_pixels, _cell_pixels)
-    )
+    _ensure_surface()
+    if _surface == null:
+        return false
     _visible_origin = origin
     _visible_size = size_cells
     _cell_pixels = cell_pixels
     _view_valid = true
-    var surface_changed: bool = _refresh_overlay_surface()
-    if dimensions_changed or surface_changed:
-        _needs_clear_redraw = true
-        queue_redraw()
-        _redraw_requests += 1
-    # Origin-only render-window movement intentionally does not touch the overlay.
+    _surface_size_pixels = Vector2(
+        float(_visible_size.x) * _cell_pixels,
+        float(_visible_size.y) * _cell_pixels
+    )
+    if not _surface.set_surface_size(_surface_size_pixels):
+        return false
+    if not _refresh_exposure_mask(true):
+        return false
+    if _camera_snapshot.is_empty():
+        _surface.set_mask_mapping(Vector2.ZERO, Vector2.ONE)
+    else:
+        _sync_mask_mapping()
     return true
 
+func set_camera_presentation(snapshot: Dictionary) -> bool:
+    if not _view_valid:
+        return false
+    var camera_value: Variant = snapshot.get("camera_global_position", null)
+    var zoom_value: Variant = snapshot.get("camera_zoom", null)
+    if typeof(camera_value) != TYPE_VECTOR2 or typeof(zoom_value) != TYPE_VECTOR2:
+        return false
+    var zoom: Vector2 = zoom_value
+    if absf(zoom.x) <= 0.0001 or absf(zoom.y) <= 0.0001:
+        return false
+    _camera_snapshot = snapshot.duplicate(true)
+    return _sync_mask_mapping()
+
 func set_camera_local_position(_local_position: Vector2) -> bool:
-    # Compatibility seam for the renderer stack. Screen-space Weather does not
-    # redraw, phase-shift, clear, or otherwise react to camera motion.
+    # Historical compatibility seam. Current composition supplies the full camera
+    # snapshot through set_camera_presentation() so no viewport inverse is needed.
     return _view_valid
 
 func advance_presentation(delta_seconds: float) -> int:
@@ -111,27 +132,27 @@ func advance_presentation(delta_seconds: float) -> int:
         return 0
     _accumulator -= float(steps) * PRESENTATION_STEP_SECONDS
     for _i in range(steps):
-        _step_presentation()
+        _step_housekeeping()
     return steps
 
 func force_ambient_event(kind: StringName = &"leaf") -> bool:
     if not is_configured() or not _view_valid:
         return false
-    var descriptor: Dictionary = _weather.presentation_descriptor()
-    var cap: int = _debris_cap(float(descriptor.get("wind_strength", 0.0)))
+    var cap: int = _debris_cap(float(_last_descriptor.get("wind_strength", 0.0)))
     if _debris.size() >= cap:
         return false
-    _debris.append(_new_debris(kind, float(descriptor.get("wind_strength", 0.0))))
-    _needs_clear_redraw = true
-    queue_redraw()
-    _redraw_requests += 1
+    _debris.append(_new_debris(kind, float(_last_descriptor.get("wind_strength", 0.0))))
+    _push_debris_uniforms()
     return true
 
 func presentation_snapshot() -> Dictionary:
     var continuous: bool = _continuous_weather_active(_last_descriptor)
+    var surface_snapshot: Dictionary = {} if _surface == null else _surface.debug_snapshot()
     return {
         "configured": is_configured(),
         "screen_space_overlay": true,
+        "shader_atmosphere": true,
+        "atmosphere_surface_count": 0 if _surface == null else 1,
         "target_hz": TARGET_HZ,
         "presentation_step_seconds": PRESENTATION_STEP_SECONDS,
         "presentation_step": _presentation_step,
@@ -141,15 +162,18 @@ func presentation_snapshot() -> Dictionary:
         "last_draw_usec": _last_draw_usec,
         "visible_origin": _visible_origin,
         "visible_size": _visible_size,
-        "overlay_size_pixels": _overlay_size_pixels,
-        "weather_pixel_size": _weather_pixel_size,
-        "virtual_surface_size": _virtual_size,
-        "virtual_pixel_count": _virtual_size.x * _virtual_size.y,
+        "overlay_size_pixels": Vector2i(int(round(_surface_size_pixels.x)), int(round(_surface_size_pixels.y))),
+        "weather_pixel_size": WEATHER_PIXEL_SIZE,
+        "virtual_surface_size": _exposure_mask_size,
+        "virtual_pixel_count": _exposure_mask_size.x * _exposure_mask_size.y,
+        "exposure_mask_size": _exposure_mask_size,
+        "exposure_mask_rebuilds": _exposure_mask_rebuilds,
         "active_debris": _debris.size(),
         "max_debris": MAX_DEBRIS,
-        "last_rain_streaks": _last_rain_streaks,
-        "last_fog_patches": _last_fog_patches,
-        "last_draw_primitives": _last_draw_primitives,
+        "last_rain_streaks": 0,
+        "last_fog_patches": 0,
+        "last_draw_primitives": 0,
+        "cpu_continuous_redraws": 0,
         "continuous_active": continuous,
         "sleeping": not continuous and _debris.is_empty() and _lightning_visual_remaining <= 0.0,
         "weather_kind": String(_last_descriptor.get("weather_kind", "")),
@@ -157,166 +181,134 @@ func presentation_snapshot() -> Dictionary:
         "lightning_visual_active": _lightning_visual_remaining > 0.0,
         "lightning_visual_id": _lightning_visual_id,
         "lightning_visual_remaining": _lightning_visual_remaining,
+        "surface": surface_snapshot,
     }
 
 func _process(delta: float) -> void:
-    _sync_screen_space_transform()
-    if _refresh_overlay_surface():
-        queue_redraw()
-        _redraw_requests += 1
-    advance_presentation(delta)
+    if not is_configured():
+        return
+    var safe_delta: float = maxf(0.0, delta)
+    advance_presentation(safe_delta)
+    _mask_poll_accumulator += safe_delta
+    if _mask_poll_accumulator >= MASK_POLL_SECONDS:
+        _mask_poll_accumulator = fmod(_mask_poll_accumulator, MASK_POLL_SECONDS)
+        _refresh_exposure_mask(false)
     if _lightning_visual_remaining > 0.0:
-        _lightning_visual_remaining = maxf(0.0, _lightning_visual_remaining - maxf(0.0, delta))
-        queue_redraw()
-        _redraw_requests += 1
+        _lightning_visual_remaining = maxf(0.0, _lightning_visual_remaining - safe_delta)
         if _lightning_visual_remaining <= 0.0:
             _lightning_visual_id = ""
-            _lightning_visual_seed = 0
-            _lightning_visual_intensity = 0.0
+            if _surface != null:
+                _surface.clear_lightning()
 
-func _step_presentation() -> void:
+func _step_housekeeping() -> void:
+    var started: int = Time.get_ticks_usec()
     _presentation_step += 1
     _presentation_updates += 1
-    _last_descriptor = _weather.presentation_descriptor()
+    _advance_debris(PRESENTATION_STEP_SECONDS)
+
     var continuous: bool = _continuous_weather_active(_last_descriptor)
     var wind_strength: float = float(_last_descriptor.get("wind_strength", 0.0))
-
-    _advance_debris(PRESENTATION_STEP_SECONDS)
     if not continuous and _debris.is_empty() and String(_last_descriptor.get("weather_kind", "")) == "clear":
         _ambient_countdown -= PRESENTATION_STEP_SECONDS
         if _ambient_countdown <= 0.0:
             force_ambient_event(_random_ambient_kind())
             _ambient_countdown = _next_ambient_delay(wind_strength)
+    _push_debris_uniforms()
 
-    if continuous or not _debris.is_empty():
-        _needs_clear_redraw = true
-        queue_redraw()
-        _redraw_requests += 1
-    elif _needs_clear_redraw:
-        _needs_clear_redraw = false
-        queue_redraw()
-        _redraw_requests += 1
+    _last_draw_usec = Time.get_ticks_usec() - started
+    _draw_count += 1
+    PerformanceTelemetry.record_timing(&"weather_draw", _last_draw_usec)
+    PerformanceTelemetry.record_value(&"weather_draws", _draw_count)
+    PerformanceTelemetry.record_value(&"weather_primitives", 0)
+    PerformanceTelemetry.record_value(&"weather_redraw_requests", 0)
 
-func _draw() -> void:
-    var started: int = Time.get_ticks_usec()
-    _last_rain_streaks = 0
-    _last_fog_patches = 0
-    _last_draw_primitives = 0
-    if not is_configured() or not _view_valid or _overlay_size_pixels.x <= 0 or _overlay_size_pixels.y <= 0:
-        _record_draw(started)
-        return
-    var descriptor: Dictionary = _weather.presentation_descriptor()
-    _last_descriptor = descriptor
-    _draw_fog(descriptor)
-    _draw_rain(descriptor)
-    _draw_debris(descriptor)
-    _draw_lightning_visual()
-    _record_draw(started)
-
-func _draw_rain(descriptor: Dictionary) -> void:
-    var precipitation: float = float(descriptor.get("precipitation", 0.0))
-    if precipitation < 0.04:
-        return
-    var count: int = clampi(int(round(precipitation * float(MAX_RAIN_STREAKS))), 1, MAX_RAIN_STREAKS)
-    var seed: int = int(descriptor.get("presentation_seed", 1))
-    var wind: Vector2 = descriptor.get("wind_direction", Vector2.RIGHT)
-    var wind_strength: float = float(descriptor.get("wind_strength", 0.0))
-    var color: Color = STORM_RAIN_COLOR if precipitation > 0.80 else RAIN_COLOR
+func _refresh_exposure_mask(force: bool) -> bool:
+    if _sky == null or not _view_valid or _visible_size.x <= 0 or _visible_size.y <= 0:
+        return false
     var bounds := Rect2i(_visible_origin, _visible_size)
-    for i in range(count):
-        var h: int = _mix(seed, i * 97 + 13)
-        var x: int = posmod(h + int(float(_presentation_step) * wind.x * wind_strength * 3.0), maxi(1, _virtual_size.x))
-        var y: int = posmod(int(h / 257) + _presentation_step * (2 + int(round(precipitation * 3.0))), maxi(1, _virtual_size.y))
-        var sample_px := Vector2(float(x * _weather_pixel_size), float(y * _weather_pixel_size))
-        var cell: Vector2i = _world_cell_for_screen_pixel(sample_px)
-        if bounds.has_point(cell) and not _sky.is_exposed(cell, bounds):
-            continue
-        var length: int = 1 + posmod(int(h / 17), 3)
-        var slant: int = int(round(wind.x * wind_strength * 1.5))
-        for segment in range(length):
-            var px := Vector2(float((x + slant * segment) * _weather_pixel_size), float((y + segment) * _weather_pixel_size))
-            draw_rect(Rect2(px, Vector2(_weather_pixel_size, _weather_pixel_size)), color, true)
-            _last_draw_primitives += 1
-        _last_rain_streaks += 1
+    var sky_snapshot: Dictionary = _sky.debug_snapshot(bounds)
+    var source_rebuild_count: int = int(sky_snapshot.get("rebuild_count", -1))
+    if not force and source_rebuild_count == _last_sky_rebuild_count and _exposure_texture != null:
+        return true
 
-func _draw_fog(descriptor: Dictionary) -> void:
-    var fog: float = float(descriptor.get("fog_density", 0.0))
-    if fog < 0.10:
-        return
-    var count: int = clampi(int(round(fog * float(MAX_FOG_PATCHES))), 1, MAX_FOG_PATCHES)
-    var seed: int = int(descriptor.get("presentation_seed", 1)) ^ 0x55aa31
-    var wind: Vector2 = descriptor.get("wind_direction", Vector2.RIGHT)
-    var wind_strength: float = float(descriptor.get("wind_strength", 0.0))
-    for i in range(count):
-        var h: int = _mix(seed, i * 131 + 29)
-        var drift_x: int = int(float(_presentation_step) * wind.x * maxf(0.15, wind_strength) * 0.35)
-        var drift_y: int = int(float(_presentation_step) * wind.y * maxf(0.15, wind_strength) * 0.18)
-        var x: int = posmod(h + drift_x, maxi(1, _virtual_size.x))
-        var y: int = posmod(int(h / 193) + drift_y, maxi(1, _virtual_size.y))
-        var w: int = 6 + posmod(int(h / 31), 18)
-        var hgt: int = 2 + posmod(int(h / 53), 6)
-        var alpha: float = 0.025 + 0.055 * fog
-        var color := Color(FOG_COLOR.r, FOG_COLOR.g, FOG_COLOR.b, alpha)
-        draw_rect(
-            Rect2(
-                Vector2(float(x * _weather_pixel_size), float(y * _weather_pixel_size)),
-                Vector2(float(w * _weather_pixel_size), float(hgt * _weather_pixel_size))
-            ),
-            color,
-            true
-        )
-        _last_fog_patches += 1
-        _last_draw_primitives += 1
+    var started: int = Time.get_ticks_usec()
+    var exposed: Dictionary = _sky.exposure_mask(bounds)
+    var image := Image.create(_visible_size.x, _visible_size.y, false, Image.FORMAT_RGBA8)
+    image.fill(Color.BLACK)
+    for y in range(_visible_size.y):
+        for x in range(_visible_size.x):
+            if exposed.has(_visible_origin + Vector2i(x, y)):
+                image.set_pixel(x, y, Color.WHITE)
 
-func _draw_debris(descriptor: Dictionary) -> void:
-    var wind: Vector2 = descriptor.get("wind_direction", Vector2.RIGHT)
-    for event: Dictionary in _debris:
-        var progress: float = clampf(float(event.get("progress", 0.0)), 0.0, 1.0)
-        var lane: float = float(event.get("lane", 0.5))
-        var from_left: bool = wind.x >= 0.0
-        var x_norm: float = progress if from_left else 1.0 - progress
-        var wobble: float = sin(progress * TAU * 2.0 + float(event.get("phase", 0.0))) * 0.04
-        var px := Vector2(
-            x_norm * float(_overlay_size_pixels.x),
-            clampf(lane + wobble, 0.04, 0.96) * float(_overlay_size_pixels.y)
-        )
-        var kind: String = String(event.get("kind", "leaf"))
-        var color: Color = LEAF_COLOR
-        var size_pixels := Vector2(float(_weather_pixel_size * 2), float(_weather_pixel_size))
-        if kind == "paper":
-            color = PAPER_COLOR
-            size_pixels = Vector2(float(_weather_pixel_size * 2), float(_weather_pixel_size * 2))
-        elif kind == "dust":
-            color = DUST_COLOR
-            size_pixels = Vector2(float(_weather_pixel_size * 3), float(_weather_pixel_size))
-        draw_rect(Rect2(px, size_pixels), color, true)
-        _last_draw_primitives += 1
+    if _exposure_texture == null or _exposure_mask_size != _visible_size:
+        _exposure_texture = ImageTexture.create_from_image(image)
+    else:
+        _exposure_texture.update(image)
+    _exposure_mask_size = _visible_size
+    _last_sky_rebuild_count = source_rebuild_count
+    _exposure_mask_rebuilds += 1
+    if _surface == null or not _surface.set_exposure_texture(_exposure_texture):
+        return false
+    _sync_mask_mapping()
+    PerformanceTelemetry.record_timing(&"weather_mask_upload", Time.get_ticks_usec() - started)
+    PerformanceTelemetry.record_value(&"weather_mask_uploads", _exposure_mask_rebuilds)
+    return true
 
-func _draw_lightning_visual() -> void:
-    if _lightning_visual_remaining <= 0.0 or _overlay_size_pixels.x <= 0 or _overlay_size_pixels.y <= 0:
-        return
-    var envelope: float = clampf(_lightning_visual_remaining / LIGHTNING_VISUAL_SECONDS, 0.0, 1.0)
-    var flash_alpha: float = 0.16 * _lightning_visual_intensity * envelope
-    draw_rect(
-        Rect2(Vector2.ZERO, Vector2(_overlay_size_pixels)),
-        Color(LIGHTNING_COLOR.r, LIGHTNING_COLOR.g, LIGHTNING_COLOR.b, flash_alpha),
-        true
+func _sync_mask_mapping() -> bool:
+    if _surface == null or not _view_valid or _surface_size_pixels.x <= 0.0 or _surface_size_pixels.y <= 0.0:
+        return false
+    if _camera_snapshot.is_empty() or get_viewport() == null:
+        return _surface.set_mask_mapping(Vector2.ZERO, Vector2.ONE)
+    var camera_value: Variant = _camera_snapshot.get("camera_global_position", null)
+    var zoom_value: Variant = _camera_snapshot.get("camera_zoom", null)
+    if typeof(camera_value) != TYPE_VECTOR2 or typeof(zoom_value) != TYPE_VECTOR2:
+        return false
+    var camera_global: Vector2 = camera_value
+    var zoom: Vector2 = zoom_value
+    zoom = Vector2(maxf(0.001, absf(zoom.x)), maxf(0.001, absf(zoom.y)))
+    var viewport_size: Vector2 = get_viewport().get_visible_rect().size
+    if viewport_size.x <= 0.0 or viewport_size.y <= 0.0:
+        return false
+    var visible_world_span := Vector2(viewport_size.x / zoom.x, viewport_size.y / zoom.y)
+    var camera_local: Vector2 = to_local(camera_global)
+    var top_left: Vector2 = camera_local - visible_world_span * 0.5
+    var origin_uv := Vector2(
+        top_left.x / _surface_size_pixels.x,
+        top_left.y / _surface_size_pixels.y
     )
-    _last_draw_primitives += 1
+    var scale_uv := Vector2(
+        visible_world_span.x / _surface_size_pixels.x,
+        visible_world_span.y / _surface_size_pixels.y
+    )
+    return _surface.set_mask_mapping(origin_uv, scale_uv)
 
-    var width: float = float(_overlay_size_pixels.x)
-    var height: float = float(_overlay_size_pixels.y)
-    var segment_count: int = 7
-    var x: float = width * (0.20 + 0.60 * _hash_unit(_lightning_visual_seed, 11))
-    var previous := Vector2(x, -float(_weather_pixel_size * 2))
-    for i in range(1, segment_count + 1):
-        var y: float = height * 0.68 * float(i) / float(segment_count)
-        var jitter: float = (_hash_unit(_lightning_visual_seed, 31 + i * 17) * 2.0 - 1.0) * float(_weather_pixel_size * 7)
-        x = clampf(x + jitter, float(_weather_pixel_size * 2), width - float(_weather_pixel_size * 2))
-        var next := Vector2(x, y)
-        draw_line(previous, next, Color(LIGHTNING_COLOR.r, LIGHTNING_COLOR.g, LIGHTNING_COLOR.b, 0.88 * envelope), float(_weather_pixel_size * 2), false)
-        previous = next
-        _last_draw_primitives += 1
+func _on_weather_changed(_snapshot: Variant) -> void:
+    if _weather == null or _surface == null:
+        return
+    _last_descriptor = _weather.presentation_descriptor()
+    _surface.set_weather_descriptor(_last_descriptor)
+    _push_debris_uniforms()
+
+func _on_lightning_started(event: Variant) -> void:
+    if event == null or not event is LightningEvent or _surface == null:
+        return
+    var lightning: LightningEvent = event
+    if not lightning.is_valid():
+        return
+    _lightning_visual_id = lightning.event_id
+    _lightning_visual_remaining = LIGHTNING_VISUAL_SECONDS
+    _surface.start_lightning(
+        lightning.bolt_seed,
+        lightning.intensity,
+        float(Time.get_ticks_msec()) / 1000.0,
+        LIGHTNING_VISUAL_SECONDS
+    )
+
+func _push_debris_uniforms() -> void:
+    if _surface == null:
+        return
+    var wind: Vector2 = _last_descriptor.get("wind_direction", Vector2.RIGHT)
+    _surface.set_debris(_debris, wind)
 
 func _advance_debris(delta_seconds: float) -> void:
     if _debris.is_empty():
@@ -365,86 +357,16 @@ func _debris_cap(wind_strength: float) -> int:
 func _continuous_weather_active(descriptor: Dictionary) -> bool:
     if descriptor.is_empty():
         return false
-    return float(descriptor.get("precipitation", 0.0)) >= 0.04 or float(descriptor.get("fog_density", 0.0)) >= 0.10
+    return float(descriptor.get("precipitation", 0.0)) >= 0.04 \
+        or float(descriptor.get("fog_density", 0.0)) >= 0.08
 
-func _refresh_overlay_surface() -> bool:
-    var next_size := Vector2i.ZERO
-    if get_viewport() != null:
-        var viewport_size: Vector2 = get_viewport().get_visible_rect().size
-        next_size = Vector2i(maxi(1, int(round(viewport_size.x))), maxi(1, int(round(viewport_size.y))))
-    if next_size.x <= 1 or next_size.y <= 1:
-        next_size = Vector2i(
-            maxi(1, int(ceil(float(_visible_size.x) * maxf(1.0, _cell_pixels)))),
-            maxi(1, int(ceil(float(_visible_size.y) * maxf(1.0, _cell_pixels))))
-        )
-    if next_size == _overlay_size_pixels:
-        return false
-    _overlay_size_pixels = next_size
-    _weather_pixel_size = maxi(
-        MIN_WEATHER_PIXEL_SIZE,
-        maxi(
-            int(ceil(float(_overlay_size_pixels.x) / float(MAX_VIRTUAL_AXIS))),
-            int(ceil(float(_overlay_size_pixels.y) / float(MAX_VIRTUAL_AXIS)))
-        )
-    )
-    _virtual_size = Vector2i(
-        int(ceil(float(_overlay_size_pixels.x) / float(_weather_pixel_size))),
-        int(ceil(float(_overlay_size_pixels.y) / float(_weather_pixel_size)))
-    )
-    return true
-
-func _sync_screen_space_transform() -> void:
-    if get_viewport() == null:
+func _ensure_surface() -> void:
+    if _surface != null:
         return
-    global_transform = get_viewport().get_canvas_transform().affine_inverse()
-
-func _world_cell_for_screen_pixel(screen_pixel: Vector2) -> Vector2i:
-    if _cell_pixels <= 0.0:
-        return _visible_origin
-    var canvas_point: Vector2 = screen_pixel
-    if get_viewport() != null:
-        canvas_point = get_viewport().get_canvas_transform().affine_inverse() * screen_pixel
-    var parent_2d := get_parent() as Node2D
-    if parent_2d == null:
-        return _visible_origin + Vector2i(
-            int(floor(screen_pixel.x / _cell_pixels)),
-            int(floor(screen_pixel.y / _cell_pixels))
-        )
-    var parent_local: Vector2 = parent_2d.to_local(canvas_point)
-    return _visible_origin + Vector2i(
-        int(floor(parent_local.x / _cell_pixels)),
-        int(floor(parent_local.y / _cell_pixels))
-    )
-
-func _on_lightning_started(event) -> void:
-    if event == null or not event is LightningEvent:
-        return
-    var lightning: LightningEvent = event
-    if not lightning.is_valid():
-        return
-    _lightning_visual_id = lightning.event_id
-    _lightning_visual_seed = lightning.bolt_seed
-    _lightning_visual_intensity = lightning.intensity
-    _lightning_visual_remaining = LIGHTNING_VISUAL_SECONDS
-    queue_redraw()
-    _redraw_requests += 1
-
-func _record_draw(started_usec: int) -> void:
-    _last_draw_usec = Time.get_ticks_usec() - started_usec
-    _draw_count += 1
-    PerformanceTelemetry.record_timing(&"weather_draw", _last_draw_usec)
-    PerformanceTelemetry.record_value(&"weather_draws", _draw_count)
-    PerformanceTelemetry.record_value(&"weather_primitives", _last_draw_primitives)
-    PerformanceTelemetry.record_value(&"weather_redraw_requests", _redraw_requests)
+    _surface = AtmosphereSurfaceClass.new()
+    _surface.name = "AtmosphereSurface"
+    add_child(_surface)
 
 func _random_unit() -> float:
     _rng_state = int((_rng_state * 1103515245 + 12345) & 0x7fffffff)
     return float(_rng_state) / float(0x7fffffff)
-
-static func _hash_unit(seed: int, salt: int) -> float:
-    return float(_mix(seed, salt) & 0xffff) / 65535.0
-
-static func _mix(seed: int, salt: int) -> int:
-    var value: int = (seed ^ (salt * 2654435761)) & 0x7fffffff
-    value = int((value * 1103515245 + 12345) & 0x7fffffff)
-    return value
