@@ -90,8 +90,26 @@ Weather CI now requires this explicit moving-anchor structure and rejects any te
 
 This correction changes no rain density, 2 px scale, 1–2 pixel streak length, shelter logic, physical Weather state or P3 performance architecture.
 
+## P3C — deterministic per-cell motif variation — 2026-08-24
+
+Human playtest accepted P3B's scale, density and downward motion but still exposed repetition inside the accepted macro-cells: every populated patch ultimately read as the same single-streak stamp.
+
+P3C keeps the P3/P3B architecture and candidate-density decision intact while varying the local motif inside each accepted rain cell:
+
+- each accepted macro-cell deterministically hashes into one of five local motif families: solo, staggered pair, close echo, long accent, or clustered pair;
+- primary streak X/Y phase, 1–2 pixel length, brightness, fall-step variant and horizontal wind response vary per cell;
+- pair motifs add one dim companion with its own stable X/Y phase, fall-step and wind response;
+- the close-echo motif deliberately places its companion near/behind the primary instead of looking like a second copy elsewhere in the patch;
+- only the clustered-pair motif in precipitation above 0.72 may add one faint one-pixel third accent;
+- accepted macro-cell occupancy and cluster/candidate probability are unchanged; extra visual ink is bounded inside already-accepted cells and companion brightness is reduced;
+- every animated streak still advances by explicit increasing screen-Y anchor motion; the hashed macro lattice remains fixed vertically.
+
+P3C adds no CPU work, texture, Node, particle system, world/shelter query, shader pass or draw call. It remains one persistent CanvasItem atmosphere shader at the same 2 px Weather scale.
+
+Weather CI now locks the motif hashes/helper structure as well as the explicit downward-anchor contract.
+
 ## Remaining playtest question
 
-P3B needs a human visual check because automated tests can prove architecture and shader compilation but cannot judge whether rain *looks* naturally sparse. The preferred comparison is ordinary rain around **50–60% precipitation** with the DEV/performance panel visible, matching the screenshot that exposed the striping.
+P3C needs a human visual check because automated tests can prove architecture and shader compilation but cannot judge whether the five motif families sufficiently hide cell repetition. The preferred comparison remains ordinary rain around **50–60% precipitation** with the DEV/performance panel visible.
 
-If movement remains smooth and the de-tiled distribution reads correctly, Weather presentation is considered accepted. If the whole scene still pauses during movement, the next measured suspect is synchronous action/streaming execution rather than additional Weather complexity.
+If the motif repetition is no longer obvious and movement remains smooth, Weather presentation is considered accepted. If repetition remains visible, the next tuning should reweight/expand the existing shader motifs rather than add particles or CPU work.

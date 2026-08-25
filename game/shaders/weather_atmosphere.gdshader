@@ -53,10 +53,24 @@ float segment_distance(vec2 p, vec2 a, vec2 b) {
     return length(pa - ba * h);
 }
 
+float rain_streak(vec2 local, vec2 anchor, float streak_len, float macro_w, float macro_h, float brightness) {
+    float phase_y = mod(local.y - anchor.y + macro_h, macro_h);
+    float dx = abs(local.x - anchor.x);
+    dx = min(dx, macro_w - dx);
+    float in_streak = 1.0 - step(streak_len, phase_y);
+    float one_weather_pixel_wide = 1.0 - step(0.5, dx);
+    return in_streak * one_weather_pixel_wide * brightness;
+}
+
 // P3B: sparse jittered macro-cells replace the old five-row rain bands.
 // Macro patches stay fixed in screen space. Each streak moves explicitly toward
 // increasing screen Y, so visible rainfall travels north->south/downscreen rather
 // than scrolling the hashed lookup lattice and relying on sampling-sign intuition.
+//
+// P3C: deterministic per-cell motif variation keeps accepted patches from all
+// reading as the same stamp. A stable hash chooses solo, staggered-pair, close-
+// echo, long-accent or clustered-pair motifs. Companion strokes are deliberately
+// dim and bounded; heavy storms alone may add one faint third accent.
 float rain_layer(vec2 screen_px) {
     if (precipitation < 0.04) {
         return 0.0;
@@ -87,22 +101,96 @@ float rain_layer(vec2 screen_px) {
     }
 
     float detail_hash = hash21(macro_cell + vec2(47.0, presentation_seed * 0.0023 + 11.0));
+    float motif_hash = hash21(macro_cell * vec2(1.37, 2.11) + vec2(presentation_seed * 0.0011 + 17.0, 83.0));
+    float secondary_hash = hash21(macro_cell * vec2(2.31, 1.17) + vec2(29.0, presentation_seed * 0.0019 + 43.0));
+    float tertiary_hash = hash21(macro_cell * vec2(1.73, 2.57) + vec2(presentation_seed * 0.0027 + 71.0, 13.0));
+    float motif_id = floor(motif_hash * 5.0);
+
     float anchor_x = floor(fract(detail_hash * 7.13) * macro_w);
     float anchor_y = floor(fract(detail_hash * 13.71) * macro_h);
     float streak_seed = fract(detail_hash * 17.17);
-    float streak_len = 1.0 + step(0.72, streak_seed);
+    float primary_len = 1.0 + step(0.66, streak_seed);
+    if (motif_id > 2.5 && motif_id < 3.5) {
+        primary_len = 2.0;
+    }
 
-    float animated_anchor_y = mod(anchor_y + frame * fall_step, macro_h);
-    float wind_offset_x = floor(frame * wind.x * 0.55);
+    float primary_fall_step = fall_step + floor(fract(motif_hash * 11.73) * 2.0);
+    float primary_wind_scale = mix(0.40, 0.68, fract(motif_hash * 19.17));
+    float animated_anchor_y = mod(anchor_y + frame * primary_fall_step, macro_h);
+    float wind_offset_x = floor(frame * wind.x * primary_wind_scale);
     float animated_anchor_x = mod(anchor_x + wind_offset_x + macro_w, macro_w);
-    float phase_y = mod(local.y - animated_anchor_y + macro_h, macro_h);
-    float dx = abs(local.x - animated_anchor_x);
-    dx = min(dx, macro_w - dx);
+    float primary_brightness = mix(0.48, 1.0, fract(detail_hash * 31.31));
 
-    float in_streak = 1.0 - step(streak_len, phase_y);
-    float one_weather_pixel_wide = 1.0 - step(0.5, dx);
-    float brightness = mix(0.42, 1.0, fract(detail_hash * 31.31));
-    return in_streak * one_weather_pixel_wide * brightness;
+    bool has_secondary = (motif_id > 0.5 && motif_id < 2.5) || motif_id > 3.5;
+    if (has_secondary) {
+        primary_brightness *= 0.78;
+    } else if (motif_id > 2.5 && motif_id < 3.5) {
+        primary_brightness *= 0.92;
+    }
+
+    float result = rain_streak(
+        local,
+        vec2(animated_anchor_x, animated_anchor_y),
+        primary_len,
+        macro_w,
+        macro_h,
+        primary_brightness
+    );
+
+    if (has_secondary) {
+        float secondary_anchor_x = floor(fract(secondary_hash * 7.71) * macro_w);
+        float secondary_anchor_y = floor(fract(secondary_hash * 13.19) * macro_h);
+        if (motif_id > 1.5 && motif_id < 2.5) {
+            float echo_side = -1.0 + 2.0 * step(0.5, fract(secondary_hash * 5.13));
+            secondary_anchor_x = mod(anchor_x + echo_side * (1.0 + floor(fract(secondary_hash * 9.41) * 2.0)) + macro_w, macro_w);
+            secondary_anchor_y = mod(anchor_y - (2.0 + floor(fract(secondary_hash * 15.31) * 4.0)) + macro_h, macro_h);
+        }
+
+        float secondary_fall_step = fall_step + floor(fract(secondary_hash * 21.37) * 2.0);
+        float secondary_wind_scale = mix(0.34, 0.72, fract(secondary_hash * 27.11));
+        float secondary_y = mod(secondary_anchor_y + frame * secondary_fall_step, macro_h);
+        float secondary_x = mod(
+            secondary_anchor_x + floor(frame * wind.x * secondary_wind_scale) + macro_w,
+            macro_w
+        );
+        float secondary_len = 1.0 + step(0.84, fract(secondary_hash * 33.17));
+        float secondary_brightness = mix(0.28, 0.58, fract(secondary_hash * 41.29));
+        result = max(
+            result,
+            rain_streak(
+                local,
+                vec2(secondary_x, secondary_y),
+                secondary_len,
+                macro_w,
+                macro_h,
+                secondary_brightness
+            )
+        );
+    }
+
+    if (motif_id > 3.5 && precipitation > 0.72) {
+        float tertiary_anchor_x = floor(fract(tertiary_hash * 9.17) * macro_w);
+        float tertiary_anchor_y = floor(fract(tertiary_hash * 15.73) * macro_h);
+        float tertiary_y = mod(tertiary_anchor_y + frame * fall_step, macro_h);
+        float tertiary_x = mod(
+            tertiary_anchor_x + floor(frame * wind.x * mix(0.30, 0.62, fract(tertiary_hash * 23.37))) + macro_w,
+            macro_w
+        );
+        float tertiary_brightness = mix(0.22, 0.40, fract(tertiary_hash * 37.91));
+        result = max(
+            result,
+            rain_streak(
+                local,
+                vec2(tertiary_x, tertiary_y),
+                1.0,
+                macro_w,
+                macro_h,
+                tertiary_brightness
+            )
+        );
+    }
+
+    return result;
 }
 
 // P3B fog uses staggered coarse rows and small diamond-like pixel clouds.
