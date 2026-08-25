@@ -44,8 +44,10 @@ func remove_entity(entity_id: String) -> bool:
 
     var previous_placement: WorldPlacement = _state._placement_ref(entity_id)
     var before_cells: Array[Vector2i] = []
+    var before_channel: int = -1
     if previous_placement != null:
         before_cells = previous_placement.world_cells()
+        before_channel = previous_placement.channel
         _state._remove_placement_record(entity_id)
 
     var removed: WorldEntityRecord = _state._remove_entity_record(entity_id)
@@ -56,6 +58,7 @@ func remove_entity(entity_id: String) -> bool:
 
     var change := ChangeClass.new(ChangeClass.Kind.ENTITY_REMOVED, entity_id)
     change.before_cells = before_cells
+    change.before_channel = before_channel
     _state._commit_change(change)
     return true
 
@@ -79,8 +82,10 @@ func set_placement(
         return true
 
     var before_cells: Array[Vector2i] = []
+    var before_channel: int = -1
     if previous != null:
         before_cells = previous.world_cells()
+        before_channel = previous.channel
 
     if not _state._set_placement_record(candidate):
         return false
@@ -88,6 +93,8 @@ func set_placement(
     var change := ChangeClass.new(ChangeClass.Kind.PLACEMENT_SET, entity_id)
     change.before_cells = before_cells
     change.after_cells = candidate.world_cells()
+    change.before_channel = before_channel
+    change.after_channel = candidate.channel
     _state._commit_change(change)
     return true
 
@@ -101,6 +108,7 @@ func unplace_entity(entity_id: String) -> bool:
 
     var change := ChangeClass.new(ChangeClass.Kind.PLACEMENT_REMOVED, entity_id)
     change.before_cells = removed.world_cells()
+    change.before_channel = removed.channel
     _state._commit_change(change)
     return true
 
