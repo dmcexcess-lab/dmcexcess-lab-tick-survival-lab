@@ -3,6 +3,7 @@ class_name CanonicalPlayerShell
 
 ## System 16 phone-first player shell.
 ## Owns inspector/menu presentation and hard-pause acquisition/restoration only.
+## System 31 icons are optional presentation enrichment from semantic keys only.
 
 signal interaction_blocked_changed(blocked: bool)
 
@@ -15,6 +16,7 @@ const VIEW_SIZE := Vector2(640, 844)
 var _kernel: TickKernel = null
 var _stats_query: ActorStatsInspectorQuery = null
 var _inventory_query: ActorInventoryInspectorQuery = null
+var _icons: SemanticUiIconCatalog = null
 var _actor_id: String = ""
 var _active_modal: StringName = MODAL_NONE
 var _pause_restore_captured: bool = false
@@ -23,6 +25,7 @@ var _overlay: ColorRect = null
 var _title: Label = null
 var _close_button: Button = null
 var _body: VBoxContainer = null
+var _header_buttons: Dictionary = {}
 var _last_lines: Array[String] = []
 var _last_result: Dictionary = {}
 var _leave_result: String = ""
@@ -36,7 +39,8 @@ func configure(
     kernel: TickKernel,
     stats_query: ActorStatsInspectorQuery,
     inventory_query: ActorInventoryInspectorQuery,
-    actor_id: String
+    actor_id: String,
+    icon_catalog: SemanticUiIconCatalog = null
 ) -> bool:
     if kernel == null or stats_query == null or inventory_query == null:
         return false
@@ -48,7 +52,9 @@ func configure(
     _kernel = kernel
     _stats_query = stats_query
     _inventory_query = inventory_query
+    _icons = icon_catalog
     _actor_id = normalized
+    _refresh_header_icons()
     return true
 
 func is_configured() -> bool:
@@ -100,6 +106,7 @@ func close_modal() -> void:
 func presentation_snapshot() -> Dictionary:
     return {
         "configured": is_configured(),
+        "icons_ready": _icons != null and _icons.is_ready(),
         "active_modal": _active_modal,
         "hard_paused": false if _kernel == null else _kernel.is_hard_paused(),
         "pause_restore_captured": _pause_restore_captured,
@@ -118,19 +125,45 @@ func _acquire_pause_if_needed() -> void:
     interaction_blocked_changed.emit(true)
 
 func _build_header_buttons() -> void:
-    _add_header_button("STATS", Vector2(73, 16), Vector2(142, 42), Callable(self, "open_stats"))
-    _add_header_button("INVENTORY", Vector2(229, 16), Vector2(182, 42), Callable(self, "open_inventory"))
-    _add_header_button("MENU", Vector2(425, 16), Vector2(142, 42), Callable(self, "open_menu"))
+    _add_header_button("STATS", Vector2(73, 16), Vector2(142, 42), Callable(self, "open_stats"), SemanticUiIconCatalog.SHELL_STATS)
+    _add_header_button("INVENTORY", Vector2(229, 16), Vector2(182, 42), Callable(self, "open_inventory"), SemanticUiIconCatalog.SHELL_INVENTORY)
+    _add_header_button("MENU", Vector2(425, 16), Vector2(142, 42), Callable(self, "open_menu"), SemanticUiIconCatalog.SHELL_MENU)
 
-func _add_header_button(text_value: String, position_value: Vector2, size_value: Vector2, callback: Callable) -> void:
+func _add_header_button(
+    text_value: String,
+    position_value: Vector2,
+    size_value: Vector2,
+    callback: Callable,
+    icon_semantic: StringName
+) -> void:
     var button := Button.new()
     button.text = text_value
     button.position = position_value
     button.size = size_value
     button.focus_mode = Control.FOCUS_NONE
     button.add_theme_font_size_override("font_size", 15)
+    button.add_theme_constant_override("icon_separation", 6)
+    button.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
     button.pressed.connect(callback)
+    _header_buttons[String(icon_semantic)] = button
     add_child(button)
+    _apply_button_icon(button, icon_semantic)
+
+func _refresh_header_icons() -> void:
+    for semantic_text: Variant in _header_buttons.keys():
+        var button: Button = _header_buttons[semantic_text] as Button
+        if button != null:
+            _apply_button_icon(button, StringName(semantic_text))
+
+func _apply_button_icon(button: Button, semantic_key: StringName) -> void:
+    if _icons == null or not _icons.is_ready():
+        return
+    var texture: Texture2D = _icons.texture_for(semantic_key)
+    if texture == null:
+        return
+    button.icon = texture
+    button.expand_icon = true
+    button.icon_max_width = 32
 
 func _build_modal_shell() -> void:
     _overlay = ColorRect.new()
@@ -268,8 +301,8 @@ func _render_inventory() -> void:
         return
 
     _append_heading("HANDS / LOADOUT")
-    _append_line(_format_hand(result.get("primary_hand", {})), 14)
-    _append_line(_format_hand(result.get("secondary_hand", {})), 14)
+    _append_hand_row(result.get("primary_hand", {}))
+    _append_hand_row(result.get("secondary_hand", {}))
 
     _append_heading("CARRIED INVENTORY")
     var entries: Array = result.get("inventory", [])
@@ -305,6 +338,18 @@ func _render_menu() -> void:
     _body.add_child(leave_button)
     _last_lines.append("LEAVE GAME")
 
+func _append_hand_row(value: Variant) -> void:
+    if typeof(value) != TYPE_DICTIONARY:
+        _append_line("Unknown Hand: Invalid", 14)
+        return
+    var hand: Dictionary = value
+    if bool(hand.get("empty", true)):
+        _append_line(_format_hand(hand), 14)
+        return
+    var item: Dictionary = hand.get("item", {})
+    var text_value: String = "%s: %s" % [String(hand.get("hand_label", "Hand")), _item_text(item)]
+    _append_icon_text_row(StringName(item.get("semantic_type", &"")), text_value, 0, 14)
+
 func _format_hand(value: Variant) -> String:
     if typeof(value) != TYPE_DICTIONARY:
         return "Unknown Hand: Invalid"
@@ -320,9 +365,41 @@ func _append_inventory_entry(value: Variant, depth: int) -> void:
         _append_line("%sInvalid inventory entry" % _indent(depth), 13)
         return
     var entry: Dictionary = value
-    _append_line("%s%s" % [_indent(depth), _item_text(entry)], 13)
+    _append_icon_text_row(StringName(entry.get("semantic_type", &"")), _item_text(entry), depth, 13)
     for child_value: Variant in entry.get("children", []):
         _append_inventory_entry(child_value, depth + 1)
+
+func _append_icon_text_row(semantic_key: StringName, text_value: String, depth: int, font_size: int) -> void:
+    var row := HBoxContainer.new()
+    row.add_theme_constant_override("separation", 8)
+    row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    _body.add_child(row)
+
+    if depth > 0:
+        var indent_space := Control.new()
+        indent_space.custom_minimum_size = Vector2(18 * depth, 0)
+        indent_space.mouse_filter = Control.MOUSE_FILTER_IGNORE
+        row.add_child(indent_space)
+
+    if _icons != null and _icons.is_ready() and not String(semantic_key).is_empty():
+        var texture: Texture2D = _icons.texture_for(semantic_key)
+        if texture != null:
+            var icon := TextureRect.new()
+            icon.texture = texture
+            icon.custom_minimum_size = SemanticUiIconCatalog.DRAW_SIZE
+            icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+            icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+            icon.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+            icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+            row.add_child(icon)
+
+    var label := Label.new()
+    label.text = text_value
+    label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+    label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    label.add_theme_font_size_override("font_size", font_size)
+    row.add_child(label)
+    _last_lines.append("%s%s" % [_indent(depth), text_value])
 
 func _item_text(item: Dictionary) -> String:
     var label: String = String(item.get("label", "Unknown Item"))
