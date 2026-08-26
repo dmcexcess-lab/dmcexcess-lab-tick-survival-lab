@@ -1,0 +1,125 @@
+name: Semantic UI Icons contract
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  statuses: write
+
+concurrency:
+  group: semantic-ui-icons-contract
+  cancel-in-progress: true
+
+jobs:
+  semantic-ui-icons:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate System 31 boundaries
+        shell: bash
+        run: |
+          set -euxo pipefail
+          test -f SYSTEM_DESIGNS/31_SEMANTIC_UI_ICONS.md
+          test -f game/assets/ui_icon_atlas.svg
+          test -f game/scripts/ui/icons/SemanticUiIconCatalog.gd
+          test -f game/scripts/ci/SemanticUiIconsSmoke.gd
+          grep -q 'width="256" height="128"' game/assets/ui_icon_atlas.svg
+          grep -q 'CELL_PIXELS: int = 16' game/scripts/ui/icons/SemanticUiIconCatalog.gd
+          grep -q 'DRAW_SIZE := Vector2(32, 32)' game/scripts/ui/icons/SemanticUiIconCatalog.gd
+          grep -q 'ui.shell.stats' game/scripts/ui/icons/SemanticUiIconCatalog.gd
+          grep -q 'ui.shell.inventory' game/scripts/ui/icons/SemanticUiIconCatalog.gd
+          grep -q 'ui.shell.menu' game/scripts/ui/icons/SemanticUiIconCatalog.gd
+          grep -q '_append_icon_text_row' game/scripts/ui/CanonicalPlayerShell.gd
+          grep -q '_append_item_icon' game/scripts/ui/LootContainerPanel.gd
+          grep -q 'SemanticUiIconCatalogClass.new' game/scripts/app/CanonicalDemoMain.gd
+          grep -q '_ui_icons' game/scripts/app/CanonicalDemoMain.gd
+          ! grep -R -q 'func _process\|func _physics_process' game/scripts/ui/icons
+          ! grep -R -q 'scripts/simulation\|foundation/world\|foundation/time' game/scripts/ui/icons
+          ! grep -q 'family' game/scripts/ui/icons/SemanticUiIconCatalog.gd
+          ! grep -q 'freshness' game/scripts/ui/icons/SemanticUiIconCatalog.gd
+
+      - name: Install Godot 4.7.1
+        shell: bash
+        run: |
+          set -euxo pipefail
+          curl -L -o godot.zip https://github.com/godotengine/godot-builds/releases/download/4.7.1-stable/Godot_v4.7.1-stable_linux.x86_64.zip
+          unzip -q godot.zip
+          chmod +x Godot_v4.7.1-stable_linux.x86_64
+
+      - name: Import and parse project
+        shell: bash
+        run: |
+          set -euxo pipefail
+          ./Godot_v4.7.1-stable_linux.x86_64 --headless --editor --path "$GITHUB_WORKSPACE/game" --quit 2>&1 | tee "$RUNNER_TEMP/import.log"
+          if grep -Eqi 'SCRIPT ERROR|Parse Error|Failed to load script' "$RUNNER_TEMP/import.log"; then exit 1; fi
+
+      - name: System 31 semantic icon smoke
+        shell: bash
+        run: |
+          set -euxo pipefail
+          ./Godot_v4.7.1-stable_linux.x86_64 --headless --path "$GITHUB_WORKSPACE/game" --quit-after 20 --script res://scripts/ci/SemanticUiIconsSmoke.gd 2>&1 | tee "$RUNNER_TEMP/icons31.log"
+          grep -q 'SEMANTIC_UI_ICONS_SMOKE_OK' "$RUNNER_TEMP/icons31.log"
+          if grep -Eqi 'SCRIPT ERROR|Parse Error|Failed to load script' "$RUNNER_TEMP/icons31.log"; then exit 1; fi
+
+      - name: System 16 player shell regression
+        shell: bash
+        run: |
+          set -euxo pipefail
+          ./Godot_v4.7.1-stable_linux.x86_64 --headless --path "$GITHUB_WORKSPACE/game" --quit-after 30 --script res://scripts/ci/CanonicalPlayerShellSmoke.gd 2>&1 | tee "$RUNNER_TEMP/shell16.log"
+          grep -q 'CANONICAL_PLAYER_SHELL_SMOKE_OK' "$RUNNER_TEMP/shell16.log"
+          if grep -Eqi 'SCRIPT ERROR|Parse Error|Failed to load script' "$RUNNER_TEMP/shell16.log"; then exit 1; fi
+
+      - name: System 24 loot regression
+        shell: bash
+        run: |
+          set -euxo pipefail
+          ./Godot_v4.7.1-stable_linux.x86_64 --headless --path "$GITHUB_WORKSPACE/game" --quit-after 30 --script res://scripts/ci/WorldLootSmoke.gd 2>&1 | tee "$RUNNER_TEMP/loot24.log"
+          grep -q 'WORLD_LOOT_SMOKE_OK' "$RUNNER_TEMP/loot24.log"
+          if grep -Eqi 'SCRIPT ERROR|Parse Error|Failed to load script' "$RUNNER_TEMP/loot24.log"; then exit 1; fi
+
+      - name: System 30 freshness regression
+        shell: bash
+        run: |
+          set -euxo pipefail
+          ./Godot_v4.7.1-stable_linux.x86_64 --headless --path "$GITHUB_WORKSPACE/game" --quit-after 30 --script res://scripts/ci/ItemFreshnessSmoke.gd 2>&1 | tee "$RUNNER_TEMP/freshness30.log"
+          grep -q 'ITEM_FRESHNESS_SMOKE_OK' "$RUNNER_TEMP/freshness30.log"
+          if grep -Eqi 'SCRIPT ERROR|Parse Error|Failed to load script' "$RUNNER_TEMP/freshness30.log"; then exit 1; fi
+
+      - name: Canonical demo startup regression
+        shell: bash
+        run: |
+          set -euxo pipefail
+          ./Godot_v4.7.1-stable_linux.x86_64 --headless --path "$GITHUB_WORKSPACE/game" --quit-after 2 2>&1 | tee "$RUNNER_TEMP/startup.log"
+          grep -q 'CANONICAL_DEMO_BOOT_OK' "$RUNNER_TEMP/startup.log"
+          if grep -Eqi 'SCRIPT ERROR|Parse Error|Failed to load script|CANONICAL_DEMO_BOOT_FAILED' "$RUNNER_TEMP/startup.log"; then exit 1; fi
+
+      - name: Publish System 31 exact-head status
+        if: always()
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SHA: ${{ github.sha }}
+          REPOSITORY: ${{ github.repository }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          JOB_STATUS: ${{ job.status }}
+        run: |
+          set -euo pipefail
+          case "$JOB_STATUS" in
+            success) state=success ;;
+            failure) state=failure ;;
+            cancelled) state=error ;;
+            *) state=error ;;
+          esac
+          payload=$(printf '{"state":"%s","context":"verify/system31-semantic-ui-icons","description":"System 31 semantic UI icons contract","target_url":"%s"}' "$state" "$RUN_URL")
+          curl --fail --silent --show-error \
+            -X POST \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.github.com/repos/$REPOSITORY/statuses/$SHA" \
+            -d "$payload"
