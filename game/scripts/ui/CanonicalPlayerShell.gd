@@ -163,7 +163,7 @@ func _apply_button_icon(button: Button, semantic_key: StringName) -> void:
         return
     button.icon = texture
     button.expand_icon = true
-    button.icon_max_width = 32
+    button.add_theme_constant_override("icon_max_width", 32)
 
 func _build_modal_shell() -> void:
     _overlay = ColorRect.new()
