@@ -1,5 +1,21 @@
 # Changelog
 
+## System 31 Semantic UI Icons — Candidate 001 — 2026-08-25
+
+- Implemented the approved Roadmap Phase 1C presentation system under the rule **“UI icons visualize existing semantic truth. They never define item identity, utility, freshness, or action legality.”**
+- Added one dedicated `256x128` low-resolution SVG atlas with 16x16 logical cells, normally displayed at exact 2x / 32x32 nearest-neighbor scale.
+- Added one shared Node-free `SemanticUiIconCatalog` with O(1) explicit semantic lookup and cached atlas-region textures. System 31 performs zero per-frame, per-tick, per-persistent-item or world-scan work.
+- Explicitly mapped all current 71 `LootItemCatalog` item semantics plus `STATS`, `INVENTORY`, and `MENU`. Intentional glyph sharing is declared directly; there is no automatic family fallback.
+- Unknown future semantics retain their real text and receive an explicit unknown glyph plus diagnostic rather than silently pretending to be supported.
+- Integrated icon + text header controls into `CanonicalPlayerShell`; occupied hands and carried/nested inventory rows now use the same semantic icon vocabulary without changing pause, containment, stable ID, weight or freshness truth.
+- Integrated the shared catalog into scavenging `CONTENTS` and `YOUR PACK` rows. Existing TAKE/STORE controls and System-12 legality/timing remain text-only and unchanged.
+- Wired one shared catalog instance through the live composition. No icon identity was added to WHAT, loot, containment or freshness records/queries.
+- Corrected the header icon-width application to Godot's theme-constant API before final exact-head verification.
+- Added `.github/workflows/semantic-ui-icons.yml` and `SemanticUiIconsSmoke.gd`, covering all current mappings, explicit sharing, unknown fallback, atlas bounds, cache reuse, protected System-16/24/30 regressions and canonical startup.
+- Current fully green executable head: `dc83ad10b7469a629fb2ac5d86c77d386b69434d`.
+- All **17 required exact-head contexts** are green, including `verify/system31-semantic-ui-icons` and `verify/pages-deploy`.
+- Roadmap Phase 1C is complete. **Phase 1D Large / Multi-cell Object Visual Geometry is the next bounded design target; its implementation is not pre-authorized by this completion.**
+
 ## System 29 World Interaction Affordance / Reach — Candidate 001 — 2026-08-24
 
 - Implemented the approved Roadmap Phase 1A foundation under the rule **“A highlight explains an already-valid interaction. It never creates interaction truth.”**

@@ -1,6 +1,6 @@
 # Tick Survival Lab — System 31 Semantic UI Icons
 
-Status: **DRAFT — Roadmap Phase 1C DESCRIBE complete; awaiting user approval before implementation**
+Status: **IMPLEMENTED + CI VERIFIED — Candidate 001; Roadmap Phase 1C complete**
 
 Roadmap role: **Phase 1C — Semantic inventory/menu icons**.
 
@@ -549,9 +549,9 @@ Phase 9 may replace/redraw the entire atlas without migrating any save or simula
 
 ---
 
-## 20. Expected implementation modules after approval
+## 20. Implemented modules
 
-Candidate cohesive implementation set:
+Candidate 001 implementation set:
 
 - `game/assets/ui_icon_atlas.svg`;
 - `game/scripts/ui/icons/SemanticUiIconCatalog.gd`;
@@ -595,11 +595,11 @@ Protected regression targets during implementation:
 - canonical startup;
 - Pages deployment.
 
-Proposed new permanent exact-head context after implementation:
+Permanent exact-head context:
 
 `verify/system31-semantic-ui-icons`
 
-The required context count would then become 17.
+The required context count is 17.
 
 ---
 
@@ -625,7 +625,7 @@ Narrow composition injection and focused UI-row changes are allowed by this desi
 
 ## 23. Candidate 001 approval decisions
 
-If approved, the following become the implementation contract:
+The following are the implemented Candidate 001 contract:
 
 1. Phase 1C is System 31, a **presentation-only semantic UI icon system**.
 2. Core rule: **UI icons visualize existing semantic truth; they never define it.**
@@ -650,10 +650,12 @@ If approved, the following become the implementation contract:
 
 Current lifecycle state:
 
-**DESCRIBE — COMPLETE**
+**DESCRIBE — COMPLETE -> APPROVE — COMPLETE -> IMPLEMENT — COMPLETE -> VERIFY — COMPLETE**
 
-Next step:
+Current verified executable:
 
-**APPROVE — user approval required before code.**
+`dc83ad10b7469a629fb2ac5d86c77d386b69434d`
 
-Implementation is not authorized by this draft alone.
+All 17 required exact-head contexts are green, including `verify/system31-semantic-ui-icons` and `verify/pages-deploy`.
+
+No separate human visual-acceptance claim is recorded for the post-width-fix appearance.

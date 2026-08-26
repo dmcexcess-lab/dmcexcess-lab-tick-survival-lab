@@ -63,17 +63,21 @@ Implemented result:
 
 All **16 required exact-head contexts** are green on the executable, including `verify/system30-item-freshness` and `verify/pages-deploy`.
 
-### 1C — Semantic inventory/menu icons — DESCRIBE COMPLETE; AWAITING APPROVAL
+### 1C — Semantic inventory/menu icons — COMPLETE
 
-Canonical draft:
+Canonical design:
 
 `SYSTEM_DESIGNS/31_SEMANTIC_UI_ICONS.md`
+
+System 31 Candidate 001 is implemented and verified.
+
+Current verified executable: `dc83ad10b7469a629fb2ac5d86c77d386b69434d`.
 
 Core rule:
 
 > **UI icons visualize existing semantic truth. They never define item identity, utility, freshness, or action legality.**
 
-Candidate 001 direction:
+Implemented result:
 
 - System 31 is a presentation-only semantic UI icon system;
 - one dedicated low-resolution atlas with 16×16 logical icon cells normally drawn at 32×32;
@@ -85,11 +89,13 @@ Candidate 001 direction:
 - TAKE / STORE, movement, and DEV controls stay text-only in Candidate 001;
 - labels, stable IDs, weight, utility/family, freshness and later mechanic truth stay beside the icon;
 - no persistent state, simulation tick work, per-item runtime objects, or world scan;
-- selected held-item silhouettes may be visually repacked into the UI atlas, but System 31 has no runtime dependency on System 10.
+- selected held-item silhouettes may be visually repacked into the UI atlas, but System 31 has no runtime dependency on System 10;
+- `verify/system31-semantic-ui-icons` proves all current mappings, cache/failure behavior, protected System-16/24/30 regressions and canonical startup;
+- all **17 required exact-head contexts** are green, including `verify/pages-deploy`.
 
-**1C implementation is not yet authorized. The next gate is APPROVE System 31.**
+No separate human visual-acceptance claim is recorded for the post-width-fix appearance; executable/CI verification is complete.
 
-### 1D — Large/multi-cell object visual geometry
+### 1D — Large/multi-cell object visual geometry — NEXT: DESCRIBE
 
 Goal: let physical multi-cell objects actually look large instead of drawing one recovered one-cell sprite at their anchor.
 
@@ -319,4 +325,4 @@ For each bounded phase/system:
 
 Newest explicit user direction supersedes older roadmap ordering, but implemented historical systems remain current truth until deliberately migrated.
 
-**Current next step: APPROVE Phase 1C / System 31 Semantic UI Icons. Implementation is not authorized yet.**
+**Current next step: DESCRIBE the bounded Phase 1D large/multi-cell object visual-geometry system. Phase-1D implementation is not authorized yet.**

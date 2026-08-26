@@ -50,7 +50,7 @@ Canonical status/routing index. Read `PROJECT_NORTH_STAR.md`, `README_SOPS.md`, 
 | 28 | Weather / Atmosphere | **IMPLEMENTED — A+B+C + optimized presentation; human accepted** | `28_WEATHER_ATMOSPHERE.md` |
 | 29 | World Interaction Affordance / Reach | **IMPLEMENTED — Candidate 001; Roadmap Phase 1A** | `29_WORLD_INTERACTION_AFFORDANCE_REACH.md` |
 | 30 | Item Freshness / Spoilage | **IMPLEMENTED + CI VERIFIED — Candidate 001; Roadmap Phase 1B** | `30_ITEM_FRESHNESS_SPOILAGE.md` |
-| 31 | Semantic UI Icons | **DRAFT — Roadmap Phase 1C DESCRIBE complete; awaiting APPROVE** | `31_SEMANTIC_UI_ICONS.md` |
+| 31 | Semantic UI Icons | **IMPLEMENTED + CI VERIFIED — Candidate 001; Roadmap Phase 1C** | `31_SEMANTIC_UI_ICONS.md` |
 | PERF | Performance Architecture Gate | **IMPLEMENTED + CI VERIFIED — P0/P1/P2; human accepted** | `PERFORMANCE_ARCHITECTURE.md` |
 | 00E | Population / Household / Outbreak / Player Story | **NOT DESIGNED — scheduled inside Roadmap Phase 8** | future design |
 
@@ -68,9 +68,9 @@ Performance gate — COMPLETE + HUMAN ACCEPTED. First P0/P1/P2 executable `0398a
 
 1B. **Item freshness/spoilage** — COMPLETE: System 30 Candidate 001. First fully green executable `39716f27b7f91b7007645ceae02dedc47601bf87`; all 16 required exact-head contexts green.
 
-1C. **Semantic inventory/menu icons** — **DESCRIBE COMPLETE; awaiting APPROVE**: System 31 draft provides a presentation-only low-resolution semantic icon atlas/catalog with explicit coverage of current item semantics and icon+text shell controls. Implementation is not authorized yet.
+1C. **Semantic inventory/menu icons** — COMPLETE: System 31 Candidate 001. Current verified executable `dc83ad10b7469a629fb2ac5d86c77d386b69434d`; all 17 required exact-head contexts green.
 
-1D. **Large/multi-cell object visual geometry** — presentation-owned span/pivot/overhang independent from physical footprint.
+1D. **Large/multi-cell object visual geometry** — **NEXT: DESCRIBE**; presentation-owned span/pivot/overhang independent from physical footprint.
 
 1E. **Content expansion/integration** — broaden perishables and ordinary props/fixtures/vegetation using the new foundations.
 
@@ -78,11 +78,11 @@ Then: Crafting -> Power + Water -> physical survival/health -> Moodlets -> final
 
 ---
 
-## Current System 31 draft
+## Current System 31 truth
 
 > **UI icons visualize existing semantic truth. They never define item identity, utility, freshness, or action legality.**
 
-Candidate 001 is design-only and awaits user approval.
+Candidate 001 is implemented and CI verified.
 
 - one dedicated low-resolution `ui_icon_atlas.svg`;
 - 16×16 logical icon cells normally drawn at exact 2× / 32×32;
@@ -94,9 +94,12 @@ Candidate 001 is design-only and awaits user approval.
 - TAKE/STORE, movement and DEV controls remain text-only in Candidate 001;
 - existing item labels, IDs, weight, utility/family and System-30 freshness remain real data beside icons;
 - no persistent state, save schema, simulation-tick work, per-item runtime object or world scan;
-- selected System-10 silhouettes may be visually repacked with provenance, without runtime dependency on System 10.
+- selected System-10 silhouettes may be visually repacked with provenance, without runtime dependency on System 10;
+- the post-integration header-width correction uses Godot's theme constant API rather than a nonexistent direct Button property.
 
-Proposed future exact-head context after approved implementation: `verify/system31-semantic-ui-icons`. It is **not** part of the required stack while System 31 remains design-only.
+Exact-head context: `verify/system31-semantic-ui-icons`.
+
+All **17 required contexts** are green on `dc83ad10b7469a629fb2ac5d86c77d386b69434d`. No separate human visual-acceptance claim is recorded for the post-width-fix appearance.
 
 ---
 
@@ -157,9 +160,7 @@ Exact-head context: `verify/performance-architecture`.
 
 ## Current presentation
 
-The live build is the complete streamed-island critique/playable composition with scavenging, interaction highlighting, freshness labels, time/daylight, spatial sound, physical lighting, illumination/atmosphere-aware vision, optimized low-resolution Weather, and physical lightning.
-
-System 31 remains design-only, so the live build does not yet include the proposed semantic UI icon atlas/catalog.
+The live build is the complete streamed-island critique/playable composition with scavenging, interaction highlighting, freshness labels, semantic inventory/menu icons, time/daylight, spatial sound, physical lighting, illumination/atmosphere-aware vision, optimized low-resolution Weather, and physical lightning.
 
 Weather DEV controls and performance telemetry remain explicitly DEV presentation. Future real equipment/power/object state must replace any DEV-only light-source affordances through existing physical seams.
 
@@ -181,7 +182,8 @@ Weather DEV controls and performance telemetry remain explicitly DEV presentatio
 - `verify/system28-weather`
 - `verify/system29-interaction-affordance`
 - `verify/system30-item-freshness`
+- `verify/system31-semantic-ui-icons`
 - `verify/performance-architecture`
 - `verify/pages-deploy`
 
-All **16 required contexts** are green on System-30 executable head `39716f27b7f91b7007645ceae02dedc47601bf87`.
+All **17 required contexts** are green on System-31 executable head `dc83ad10b7469a629fb2ac5d86c77d386b69434d`.

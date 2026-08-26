@@ -33,7 +33,7 @@ The canonical DEV/playable composition is the **complete streamed island**.
 
 ## Current implemented stack
 
-Foundation and gameplay through **System 30** are implemented, including persistent WHAT, deterministic WHEN, complete-island generation/streaming, inventory/transfer/carry, 24 building archetypes, ten local-area profiles, perception, persistent loot/search, world time/daylight, spatial sound, physical lighting, Weather, interaction affordance/reach, and item freshness/spoilage.
+Foundation and gameplay through **System 31** are implemented, including persistent WHAT, deterministic WHEN, complete-island generation/streaming, inventory/transfer/carry, 24 building archetypes, ten local-area profiles, perception, persistent loot/search, world time/daylight, spatial sound, physical lighting, Weather, interaction affordance/reach, item freshness/spoilage, and semantic inventory/menu icons.
 
 Important current rules:
 
@@ -106,37 +106,46 @@ System-30 verification includes System-24 rollback, live canonical startup, Syst
 
 ---
 
-## Active work — Roadmap Phase 1C
+## System 31 / Roadmap Phase 1C — COMPLETE
 
-### System 31 Semantic UI Icons — DESCRIBE COMPLETE; awaiting APPROVE
-
-Canonical draft:
+Canonical design:
 
 `SYSTEM_DESIGNS/31_SEMANTIC_UI_ICONS.md`
+
+Current verified executable:
+
+`dc83ad10b7469a629fb2ac5d86c77d386b69434d`
 
 Core rule:
 
 > **UI icons visualize existing semantic truth. They never define item identity, utility, freshness, or action legality.**
 
-Candidate 001 design:
+Implemented result:
 
 - one dedicated low-resolution `ui_icon_atlas.svg`;
 - 16×16 logical icon cells displayed at an exact 2× / 32×32 size;
 - one shared Node-free `SemanticUiIconCatalog` with cached atlas-region textures;
-- explicit mapping for all current 71 `LootItemCatalog` semantic types, with intentional glyph sharing allowed but no automatic family fallback;
+- explicit mapping for all current 71 `LootItemCatalog` semantic types plus three shell controls, with intentional glyph sharing but no automatic family fallback;
 - an explicit unknown glyph + diagnostic for future unmapped semantics while text remains usable;
-- `STATS`, `INVENTORY`, and `MENU` become icon + text rather than icon-only;
+- `STATS`, `INVENTORY`, and `MENU` are icon + text rather than icon-only;
 - occupied hands, carried inventory, scavenging `CONTENTS`, and `YOUR PACK` rows use the same semantic item icons;
-- current TAKE/STORE, movement and DEV controls remain text-only in Candidate 001;
+- TAKE/STORE, movement and DEV controls remain text-only in Candidate 001;
 - existing labels, stable IDs, weight, utility/family and System-30 freshness text remain real data beside the icon;
-- no persistent state, save schema, simulation tick work, per-item Node/timer/process, or world scan;
-- selected System-10 silhouettes may be visually repacked into the UI atlas with provenance, but System 31 has no runtime dependency on hand-equipment presentation.
+- zero persistent state, save-schema change, simulation-tick work, per-item Node/timer/process, or world scan;
+- one dedicated `verify/system31-semantic-ui-icons` context covering catalog completeness, cache behavior, protected UI/loot/freshness regressions, and canonical startup;
+- all 17 required exact-head contexts, including Pages deployment, green on the verified executable.
 
-Lifecycle:
+No separate human visual-acceptance claim is recorded for the post-width-fix appearance; executable/CI verification is complete.
 
-**DESCRIBE COMPLETE -> awaiting APPROVE -> then IMPLEMENT -> VERIFY**
+---
 
-No System-31 runtime code or asset implementation is authorized by the draft alone.
+## Active work — Roadmap Phase 1D
+
+### Large / multi-cell object visual geometry — next bounded design target
+
+Phase 1D is next. Its intended owner is presentation-only visual geometry for large/multi-cell objects whose authored draw span, pivot and decorative overhang may differ from their authoritative physical footprint.
+
+The next lifecycle gate is **DESCRIBE**. No Phase-1D runtime implementation is authorized yet.
 
 ---
 
@@ -146,9 +155,9 @@ No System-31 runtime code or asset implementation is authorized by the draft alo
 
 1B. Item freshness/spoilage — **COMPLETE; System 30**.
 
-1C. Semantic inventory/menu icons — **DESCRIBE COMPLETE; System 31 draft awaiting approval**.
+1C. Semantic inventory/menu icons — **COMPLETE; System 31 implemented + CI verified**.
 
-1D. Large/multi-cell object visual geometry.
+1D. Large/multi-cell object visual geometry — **NEXT: DESCRIBE**.
 
 1E. Content expansion/integration.
 
@@ -186,9 +195,8 @@ Then: Crafting -> Power + Water -> physical survival/health -> Moodlets -> Skill
 - `verify/system28-weather`
 - `verify/system29-interaction-affordance`
 - `verify/system30-item-freshness`
+- `verify/system31-semantic-ui-icons`
 - `verify/performance-architecture`
 - `verify/pages-deploy`
 
-All **16 required contexts** are green on System-30 executable head `39716f27b7f91b7007645ceae02dedc47601bf87`.
-
-System 31 is still design-only, so `verify/system31-semantic-ui-icons` does **not** join the required executable stack until implementation is approved and verified.
+All **17 required contexts** are green on System-31 executable head `dc83ad10b7469a629fb2ac5d86c77d386b69434d`.
