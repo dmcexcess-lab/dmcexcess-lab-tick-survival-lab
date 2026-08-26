@@ -4,6 +4,7 @@ class_name LootContainerPanel
 ## Phone-first System 24 container UI. It reads current truth and emits semantic
 ## TAKE/STORE requests; it never mutates WHAT or System 11 directly and does not use
 ## hard pause because item transfers must be able to spend WHEN ticks while open.
+## System 31 icons are optional presentation enrichment from semantic keys only.
 
 signal take_requested(container_id, item_id)
 signal store_requested(container_id, item_id)
@@ -13,6 +14,7 @@ const VIEW_SIZE := Vector2(640, 844)
 
 var _inspection: LootContainerInspectionQuery = null
 var _inventory: ActorInventoryInspectorQuery = null
+var _icons: SemanticUiIconCatalog = null
 var _actor_id: String = ""
 var _container_id: String = ""
 var _overlay: ColorRect = null
@@ -27,7 +29,8 @@ func _ready() -> void:
 func configure(
     inspection_query: LootContainerInspectionQuery,
     inventory_query: ActorInventoryInspectorQuery,
-    actor_id: String
+    actor_id: String,
+    icon_catalog: SemanticUiIconCatalog = null
 ) -> bool:
     var normalized: String = actor_id.strip_edges()
     if inspection_query == null or not inspection_query.is_ready() \
@@ -36,6 +39,7 @@ func configure(
         return false
     _inspection = inspection_query
     _inventory = inventory_query
+    _icons = icon_catalog
     _actor_id = normalized
     return true
 
@@ -87,6 +91,7 @@ func present_action_result(intent: StringName, success: bool, reason: String, wo
 func presentation_snapshot() -> Dictionary:
     return {
         "configured": is_configured(),
+        "icons_ready": _icons != null and _icons.is_ready(),
         "open": is_open(),
         "container_id": _container_id,
         "status": "" if _status == null else _status.text,
@@ -195,6 +200,7 @@ func _append_item_row(item: Dictionary) -> void:
     var row := HBoxContainer.new()
     row.add_theme_constant_override("separation", 8)
     _body.add_child(row)
+    _append_item_icon(row, StringName(item.get("semantic_type", &"")))
 
     var utility: String = String(item.get("utility_class", "")).to_upper()
     var family: String = String(item.get("family", "")).capitalize()
@@ -230,6 +236,7 @@ func _append_personal_row(item: Dictionary) -> void:
     var row := HBoxContainer.new()
     row.add_theme_constant_override("separation", 8)
     _body.add_child(row)
+    _append_item_icon(row, semantic)
     var label := Label.new()
     label.text = "[%s • %s] %s — %s kg" % [utility, family, label_text, weight_text]
     label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -246,6 +253,21 @@ func _append_personal_row(item: Dictionary) -> void:
         store_requested.emit(_container_id, item_id)
     )
     row.add_child(button)
+
+func _append_item_icon(row: HBoxContainer, semantic_key: StringName) -> void:
+    if _icons == null or not _icons.is_ready() or String(semantic_key).is_empty():
+        return
+    var texture: Texture2D = _icons.texture_for(semantic_key)
+    if texture == null:
+        return
+    var icon := TextureRect.new()
+    icon.texture = texture
+    icon.custom_minimum_size = SemanticUiIconCatalog.DRAW_SIZE
+    icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+    icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+    icon.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+    icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    row.add_child(icon)
 
 func _append_heading(text_value: String) -> void:
     var label := Label.new()
