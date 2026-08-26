@@ -48,6 +48,7 @@ Important current rules:
 9. Interaction highlights explain already-valid actions; they never create action truth.
 10. Expensive consumers wake only for the domains/completed batches they actually depend on.
 11. Food freshness is derived analytically from authoritative time/exposure; no item gets a spoilage timer.
+12. UI icons may visualize semantic truth but must never define item identity, utility, freshness, or action legality.
 
 ---
 
@@ -107,21 +108,35 @@ System-30 verification includes System-24 rollback, live canonical startup, Syst
 
 ## Active work — Roadmap Phase 1C
 
-### Semantic inventory/menu icons — NEXT DESCRIBE TARGET
+### System 31 Semantic UI Icons — DESCRIBE COMPLETE; awaiting APPROVE
 
-Phase 1C is next. It has **not** been implementation-authorized by completion of 1B.
+Canonical draft:
 
-Bounded intent:
+`SYSTEM_DESIGNS/31_SEMANTIC_UI_ICONS.md`
 
-- one small low-resolution semantic UI icon catalog/atlas;
-- deterministic icon coverage for current item semantics and core shell controls;
-- phone-size/nearest-neighbor readability;
-- icons remain presentation-only and never replace item semantic truth;
-- labels, weight, freshness and later utility remain real data beside the icon.
+Core rule:
 
-Normal lifecycle remains:
+> **UI icons visualize existing semantic truth. They never define item identity, utility, freshness, or action legality.**
 
-**DESCRIBE -> APPROVE -> IMPLEMENT -> VERIFY**
+Candidate 001 design:
+
+- one dedicated low-resolution `ui_icon_atlas.svg`;
+- 16×16 logical icon cells displayed at an exact 2× / 32×32 size;
+- one shared Node-free `SemanticUiIconCatalog` with cached atlas-region textures;
+- explicit mapping for all current 71 `LootItemCatalog` semantic types, with intentional glyph sharing allowed but no automatic family fallback;
+- an explicit unknown glyph + diagnostic for future unmapped semantics while text remains usable;
+- `STATS`, `INVENTORY`, and `MENU` become icon + text rather than icon-only;
+- occupied hands, carried inventory, scavenging `CONTENTS`, and `YOUR PACK` rows use the same semantic item icons;
+- current TAKE/STORE, movement and DEV controls remain text-only in Candidate 001;
+- existing labels, stable IDs, weight, utility/family and System-30 freshness text remain real data beside the icon;
+- no persistent state, save schema, simulation tick work, per-item Node/timer/process, or world scan;
+- selected System-10 silhouettes may be visually repacked into the UI atlas with provenance, but System 31 has no runtime dependency on hand-equipment presentation.
+
+Lifecycle:
+
+**DESCRIBE COMPLETE -> awaiting APPROVE -> then IMPLEMENT -> VERIFY**
+
+No System-31 runtime code or asset implementation is authorized by the draft alone.
 
 ---
 
@@ -131,7 +146,7 @@ Normal lifecycle remains:
 
 1B. Item freshness/spoilage — **COMPLETE; System 30**.
 
-1C. Semantic inventory/menu icons — **NEXT DESCRIBE TARGET**.
+1C. Semantic inventory/menu icons — **DESCRIBE COMPLETE; System 31 draft awaiting approval**.
 
 1D. Large/multi-cell object visual geometry.
 
@@ -149,6 +164,7 @@ Then: Crafting -> Power + Water -> physical survival/health -> Moodlets -> Skill
 - System 24 owns what virgin loot exists and keeps the rule **loot exists before you search for it**.
 - System 25 interprets authoritative WHEN ticks as simulation time.
 - System 30 owns freshness records/derivation but does not replace those domains.
+- System 31 is presentation-only and resolves icons from existing semantic keys after mechanic queries; simulation owners do not store or read icon identity.
 - Phase 3 Power/Refrigeration later provides real cold-storage exposure; System 30 must not import/fake Power.
 - Phase 4 later interprets freshness for nutrition/sickness/health consequences.
 
@@ -174,3 +190,5 @@ Then: Crafting -> Power + Water -> physical survival/health -> Moodlets -> Skill
 - `verify/pages-deploy`
 
 All **16 required contexts** are green on System-30 executable head `39716f27b7f91b7007645ceae02dedc47601bf87`.
+
+System 31 is still design-only, so `verify/system31-semantic-ui-icons` does **not** join the required executable stack until implementation is approved and verified.

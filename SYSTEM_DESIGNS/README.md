@@ -50,6 +50,7 @@ Canonical status/routing index. Read `PROJECT_NORTH_STAR.md`, `README_SOPS.md`, 
 | 28 | Weather / Atmosphere | **IMPLEMENTED — A+B+C + optimized presentation; human accepted** | `28_WEATHER_ATMOSPHERE.md` |
 | 29 | World Interaction Affordance / Reach | **IMPLEMENTED — Candidate 001; Roadmap Phase 1A** | `29_WORLD_INTERACTION_AFFORDANCE_REACH.md` |
 | 30 | Item Freshness / Spoilage | **IMPLEMENTED + CI VERIFIED — Candidate 001; Roadmap Phase 1B** | `30_ITEM_FRESHNESS_SPOILAGE.md` |
+| 31 | Semantic UI Icons | **DRAFT — Roadmap Phase 1C DESCRIBE complete; awaiting APPROVE** | `31_SEMANTIC_UI_ICONS.md` |
 | PERF | Performance Architecture Gate | **IMPLEMENTED + CI VERIFIED — P0/P1/P2; human accepted** | `PERFORMANCE_ARCHITECTURE.md` |
 | 00E | Population / Household / Outbreak / Player Story | **NOT DESIGNED — scheduled inside Roadmap Phase 8** | future design |
 
@@ -67,13 +68,35 @@ Performance gate — COMPLETE + HUMAN ACCEPTED. First P0/P1/P2 executable `0398a
 
 1B. **Item freshness/spoilage** — COMPLETE: System 30 Candidate 001. First fully green executable `39716f27b7f91b7007645ceae02dedc47601bf87`; all 16 required exact-head contexts green.
 
-1C. **Semantic inventory/menu icons** — **NEXT DESCRIBE TARGET**. Presentation-only low-resolution icon vocabulary with deterministic current semantic coverage. Implementation is not pre-authorized.
+1C. **Semantic inventory/menu icons** — **DESCRIBE COMPLETE; awaiting APPROVE**: System 31 draft provides a presentation-only low-resolution semantic icon atlas/catalog with explicit coverage of current item semantics and icon+text shell controls. Implementation is not authorized yet.
 
 1D. **Large/multi-cell object visual geometry** — presentation-owned span/pivot/overhang independent from physical footprint.
 
 1E. **Content expansion/integration** — broaden perishables and ordinary props/fixtures/vegetation using the new foundations.
 
 Then: Crafting -> Power + Water -> physical survival/health -> Moodlets -> final skills/interactions -> Vehicles -> AI/combat/outbreak -> final graphics/UI -> Beta.
+
+---
+
+## Current System 31 draft
+
+> **UI icons visualize existing semantic truth. They never define item identity, utility, freshness, or action legality.**
+
+Candidate 001 is design-only and awaits user approval.
+
+- one dedicated low-resolution `ui_icon_atlas.svg`;
+- 16×16 logical icon cells normally drawn at exact 2× / 32×32;
+- one shared Node-free/cached `SemanticUiIconCatalog`;
+- explicit mapping for all current 71 `LootItemCatalog` semantic types; intentional glyph sharing is allowed, automatic family fallback is not;
+- unknown future semantics use an explicit unknown glyph + diagnostic while text remains usable;
+- `STATS`, `INVENTORY`, `MENU` use icon + text;
+- Inventory hands/carried rows and scavenging `CONTENTS` / `YOUR PACK` use the same item icon vocabulary;
+- TAKE/STORE, movement and DEV controls remain text-only in Candidate 001;
+- existing item labels, IDs, weight, utility/family and System-30 freshness remain real data beside icons;
+- no persistent state, save schema, simulation-tick work, per-item runtime object or world scan;
+- selected System-10 silhouettes may be visually repacked with provenance, without runtime dependency on System 10.
+
+Proposed future exact-head context after approved implementation: `verify/system31-semantic-ui-icons`. It is **not** part of the required stack while System 31 remains design-only.
 
 ---
 
@@ -135,6 +158,8 @@ Exact-head context: `verify/performance-architecture`.
 ## Current presentation
 
 The live build is the complete streamed-island critique/playable composition with scavenging, interaction highlighting, freshness labels, time/daylight, spatial sound, physical lighting, illumination/atmosphere-aware vision, optimized low-resolution Weather, and physical lightning.
+
+System 31 remains design-only, so the live build does not yet include the proposed semantic UI icon atlas/catalog.
 
 Weather DEV controls and performance telemetry remain explicitly DEV presentation. Future real equipment/power/object state must replace any DEV-only light-source affordances through existing physical seams.
 

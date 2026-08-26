@@ -63,22 +63,31 @@ Implemented result:
 
 All **16 required exact-head contexts** are green on the executable, including `verify/system30-item-freshness` and `verify/pages-deploy`.
 
-### 1C — Semantic inventory/menu icons — NEXT DESCRIBE TARGET
+### 1C — Semantic inventory/menu icons — DESCRIBE COMPLETE; AWAITING APPROVAL
 
-Goal: stop making phone UI rely on text-only rows/buttons while keeping icons presentation-only.
+Canonical draft:
 
-Planned direction:
+`SYSTEM_DESIGNS/31_SEMANTIC_UI_ICONS.md`
 
-- one small low-resolution semantic UI icon catalog/atlas;
-- dedicated icons for core shell controls such as Stats, Inventory and Menu;
-- every current loot semantic resolves deterministically to an inventory icon;
-- related items may intentionally share a readable family glyph where unique art adds no value;
-- current held-item art may be reused only when it fits cleanly;
-- nearest-neighbor/pixel-readable and phone-size first;
-- labels, weight, freshness, utility/family and later condition remain real data beside the icon;
-- icons never become semantic or gameplay authority.
+Core rule:
 
-**1C implementation is not pre-authorized. Begin with DESCRIBE.**
+> **UI icons visualize existing semantic truth. They never define item identity, utility, freshness, or action legality.**
+
+Candidate 001 direction:
+
+- System 31 is a presentation-only semantic UI icon system;
+- one dedicated low-resolution atlas with 16×16 logical icon cells normally drawn at 32×32;
+- one shared Node-free/cached `SemanticUiIconCatalog`;
+- all current 71 loot semantic types receive explicit icon mappings, with intentional sharing allowed but no automatic family fallback;
+- unknown future semantics receive an honest unknown glyph + diagnostic while text remains usable;
+- Stats / Inventory / Menu become icon + text rather than icon-only;
+- hands, carried inventory, scavenging contents, and `YOUR PACK` use the same semantic item vocabulary;
+- TAKE / STORE, movement, and DEV controls stay text-only in Candidate 001;
+- labels, stable IDs, weight, utility/family, freshness and later mechanic truth stay beside the icon;
+- no persistent state, simulation tick work, per-item runtime objects, or world scan;
+- selected held-item silhouettes may be visually repacked into the UI atlas, but System 31 has no runtime dependency on System 10.
+
+**1C implementation is not yet authorized. The next gate is APPROVE System 31.**
 
 ### 1D — Large/multi-cell object visual geometry
 
@@ -310,4 +319,4 @@ For each bounded phase/system:
 
 Newest explicit user direction supersedes older roadmap ordering, but implemented historical systems remain current truth until deliberately migrated.
 
-**Current next step: DESCRIBE Phase 1C Semantic inventory/menu icons.**
+**Current next step: APPROVE Phase 1C / System 31 Semantic UI Icons. Implementation is not authorized yet.**
