@@ -72,6 +72,7 @@ const StatusSummaryClass = preload("res://scripts/ui/ActorStatusSummaryQuery.gd"
 const InspectionQueryClass = preload("res://scripts/ui/FacingInspectionQuery.gd")
 const StatsInspectorClass = preload("res://scripts/ui/ActorStatsInspectorQuery.gd")
 const InventoryInspectorClass = preload("res://scripts/ui/ActorInventoryInspectorQuery.gd")
+const SemanticUiIconCatalogClass = preload("res://scripts/ui/icons/SemanticUiIconCatalog.gd")
 const ArtCatalogClass = preload("res://scripts/art/ArtCatalog.gd")
 const DoorStateClass = preload("res://scripts/simulation/doors/DoorStateStore.gd")
 const DoorMutationClass = preload("res://scripts/simulation/doors/DoorStateMutationService.gd")
@@ -169,6 +170,7 @@ var _status_summary: ActorStatusSummaryQuery = null
 var _inspection_query: FacingInspectionQuery = null
 var _stats_inspector: ActorStatsInspectorQuery = null
 var _inventory_inspector: ActorInventoryInspectorQuery = null
+var _ui_icons: SemanticUiIconCatalog = null
 var _art_catalog: ArtCatalog = null
 var _door_state: DoorStateStore = null
 var _door_mutations: DoorStateMutationService = null
@@ -355,9 +357,12 @@ func _boot_canonical_demo() -> bool:
 
     _stats_inspector = StatsInspectorClass.new(_status_summary, _health_state, _skill_state, _locomotion_state)
     _inventory_inspector = InventoryInspectorClass.new(_world, _hand_state, _inventory_state, _weight_query, _carry_query, _freshness_query)
-    if not _shell.configure(_kernel, _stats_inspector, _inventory_inspector, FixtureClass.PLAYER_ID):
+    _ui_icons = SemanticUiIconCatalogClass.new()
+    if not _ui_icons.is_ready():
         return false
-    if not _loot_panel.configure(_loot_inspection, _inventory_inspector, FixtureClass.PLAYER_ID):
+    if not _shell.configure(_kernel, _stats_inspector, _inventory_inspector, FixtureClass.PLAYER_ID, _ui_icons):
+        return false
+    if not _loot_panel.configure(_loot_inspection, _inventory_inspector, FixtureClass.PLAYER_ID, _ui_icons):
         return false
     if not _controls.configure_stance(_locomotion_state, FixtureClass.PLAYER_ID):
         return false
