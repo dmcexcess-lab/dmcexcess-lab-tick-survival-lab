@@ -115,6 +115,7 @@ func plan(
 
     var occupied_centers: Array[Vector2i] = []
     var river_clearance: int = int(profile.get("settlement_river_clearance", 16))
+    var reuse_world_seed_for_central_site: bool = bool(profile.get("reuse_world_seed_for_central_site", true))
     for index in range(desired_centers.size()):
         var settlement_center: Vector2i = desired_centers[index]
         if index > 0:
@@ -140,7 +141,7 @@ func plan(
             return {"ok": false, "failure_reason": "settlement_site_intersects_river_clearance", "settlements": settlements, "area_sites": area_sites}
 
         occupied_centers.append(settlement_center)
-        var site_seed: int = request.seed if index == 0 else Seed.derive(request.seed, "area_site:%s" % site_ids[index])
+        var site_seed: int = request.seed if index == 0 and reuse_world_seed_for_central_site else Seed.derive(request.seed, "area_site:%s" % site_ids[index])
         settlements.append({
             "id": settlement_ids[index],
             "kind": kinds[index],
