@@ -1,8 +1,8 @@
 # Tick Survival Lab — System 20 Local Area Generation
 
-Status: **IMPLEMENTED — ten area profiles / seven environment palettes + live island watercourse use**
+Status: **IMPLEMENTED — ten area profiles / seven environment palettes + live island watercourse use + island-surface continuity v2**
 
-Updated: **2026-08-24**
+Updated: **2026-08-27**
 
 ## 1. Core rule
 
@@ -159,9 +159,13 @@ These profiles are callable and tested independently. The first complete island 
 Fine coastline/ocean generation is a focused extension alongside normal System 20 profile generation:
 
 - `IslandSurfaceRequestProjection` derives bounded requests from the System 00D island plan;
-- `IslandSurfaceAreaGenerator` emits ordinary island land, shore transitions, ocean and authorized inherited roads for non-settlement/non-river source bounds;
+- `IslandSurfaceAreaGenerator` v2 emits ordinary island land, shore transitions, ocean and authorized inherited roads for non-settlement/non-river source bounds;
+- ordinary LAND is no longer an intentionally blank grass sheet: broad globally anchored land-cover variation and deterministic temperate-coastal natural dressing give the between-site countryside physical texture while preserving source-split invariance;
+- island-surface natural prop identity is anchored to global cell coordinates and maintains a clearance halo around real road corridors;
+- inherited painted regional roads retain both their road surface and centerline presentation when they leave a settlement rectangle, so a logical road does not visually disappear at the System-20/00F handoff;
 - settlement sites continue through normal System 20 area profiles;
-- river corridors continue through `rural.watercourse`.
+- river corridors continue through `rural.watercourse`;
+- the logical source partition remains non-overlapping: this revision adds local physical detail inside the existing ownership partition rather than hiding seams with overlapping sources.
 
 This keeps the coastline globally determined while allowing 00F to materialize the bounded world through ordinary deterministic local plans.
 
@@ -190,9 +194,9 @@ The complete-island presentation uses an additive `WaterCoastArtCatalog` + `wate
 
 `verify/system20-local-area` continues to cover all ten area profiles and seven environment palettes, deterministic replay, real System 19 fit/access invariants, rural-open invariance and rural-watercourse bridge authorization.
 
-`verify/system00d-global-world` additionally runs every globally placed complete-island area site through the real projector + System 20 generator.
+`verify/system00d-global-world` additionally runs every globally placed complete-island area site through the real projector + System 20 generator. Its complete-island smoke now also proves that the playable spawn is not the diner entrance, ordinary island LAND receives real deterministic natural dressing, natural dressing avoids road cells, and painted inherited road centerlines survive island-surface materialization.
 
-The complete-island generator head `41b243501acffa480ddde61b498d743a4e4e1d97` and canonical playable-island head `3f1a98c3daea879cf7ffdbea717d88461e39438f` both passed all 13 required exact-head contexts including Pages.
+Playable-island continuity executable `505535ea7fab555f7a1871afb9f2d1e2ff92331b` passed all **17 required exact-head contexts**, including `verify/system00d-global-world`, `verify/system20-local-area`, `verify/system00f-streaming-materialization`, `verify/performance-architecture`, and `verify/pages-deploy`.
 
 ## 13. Replacement boundaries
 
