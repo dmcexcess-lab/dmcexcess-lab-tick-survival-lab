@@ -1,5 +1,16 @@
 # Changelog
 
+## Playable Island Continuity Correction — 2026-08-27
+
+- Fixed the live complete-island DEV spawn so the survivor starts on inherited pavement beside the central crossroads instead of deriving spawn from the rural diner parcel/door.
+- Upgraded `IslandSurfaceAreaGenerator` to v2 so the large spaces between settlement sites are no longer an undifferentiated lush-grass sheet: ordinary LAND now receives globally anchored land-cover variation plus deterministic temperate-coastal trees, shrubs and rocks.
+- Natural island-surface dressing uses global cell identity, stays on physical LAND, and keeps a clearance halo around inherited regional roads; it adds bounded generation/materialization work and no per-frame/per-tick world loop.
+- Restored inherited painted-road centerlines in island-surface materialization so regional roads no longer visually lose their yellow line when they leave a settlement source rectangle.
+- Preserved the existing five-site System-00D settlement/road graph, hydrology, explicit bridges, non-overlapping 00F logical source partition and 128×128 technical streaming geometry.
+- Expanded `CompleteIslandWorldPlanningSmoke.gd` so CI now fails if spawn returns to the diner entrance, ordinary island LAND becomes blank again, natural props invade road/non-land cells, or painted inherited roads lose their centerline outside settlement sources.
+- Verified executable: `505535ea7fab555f7a1871afb9f2d1e2ff92331b`.
+- All **17 required exact-head contexts** passed on that executable, including `verify/system00d-global-world`, `verify/system20-local-area`, `verify/system00f-streaming-materialization`, `verify/performance-architecture`, and `verify/pages-deploy`.
+
 ## System 31 Semantic UI Icons — Candidate 001 — 2026-08-25
 
 - Implemented the approved Roadmap Phase 1C presentation system under the rule **“UI icons visualize existing semantic truth. They never define item identity, utility, freshness, or action legality.”**
