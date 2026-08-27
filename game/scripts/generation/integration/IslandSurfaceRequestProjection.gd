@@ -61,7 +61,7 @@ func project(plan: GeneratedGlobalWorldPlan, area_id: String, bounds: Rect2i) ->
         plan.seed,
         bounds,
         AREA_PROFILE,
-        EnvironmentProfiles.TEMPERATE_COASTAL,
+        EnvironmentProfiles.TEMPERATE_RURAL,
         roads,
         [],
         [context],
