@@ -26,13 +26,14 @@ func generate(request: GlobalWorldGenerationRequest) -> GeneratedGlobalWorldPlan
         failed.failure_reason = "island_profile_missing"
         return failed
 
-    # Compose the island over the proven rural regional skeleton. Coast/ocean truth
-    # is additive; the mature connected road/settlement graph stays authoritative.
+    # Compose the island through the proven rural regional planner pipeline, but
+    # use the island profile so island-specific settlement identity and spacing
+    # are authoritative before coast/ocean truth is layered over the skeleton.
     var base_request := RequestClass.new(
         request.world_id,
         request.seed,
         request.bounds,
-        ProfilesClass.TEMPERATE_RURAL_REGION
+        ProfilesClass.TEMPERATE_ISLAND_REGION
     )
     var base: GeneratedGlobalWorldPlan = _base_planner.generate(base_request)
     if base == null or not base.is_generated():
