@@ -3,6 +3,7 @@ class_name OutdoorPropertyDressingPlanner
 
 const Seed = preload("res://scripts/generation/areas/AreaSeed.gd")
 const Facing = preload("res://scripts/foundation/spatial/SpatialFacing.gd")
+const NaturalEcology = preload("res://scripts/generation/shared/NaturalEcologyField.gd")
 
 func plan(
     request: AreaGenerationRequest,
@@ -259,12 +260,29 @@ func _add_natural_noise(
     var dense_multiplier: float = maxf(sparse_multiplier, float(environment.get("natural_noise_dense_multiplier", 2.25)))
     var natural_blocked: Dictionary = blocked.duplicate()
     _reserve_natural_road_halo(roads, parcels, int(environment.get("natural_road_clearance", 1)), natural_blocked, request.bounds)
+    var use_inherited_ecology: bool = request.inherited_ecology_seed != null
+    var ecology_seed: int = int(request.inherited_ecology_seed) if use_inherited_ecology else request.seed
 
     var ordinal: int = 0
     for y in range(request.bounds.position.y, request.bounds.position.y + request.bounds.size.y):
         for x in range(request.bounds.position.x, request.bounds.position.x + request.bounds.size.x):
             var cell := Vector2i(x, y)
             if not _natural_cell_allowed(request, environment, intersections, parcels, natural_blocked, cell):
+                continue
+
+            if use_inherited_ecology:
+                var shared_semantic: StringName = NaturalEcology.semantic_at(environment, ecology_seed, cell)
+                if shared_semantic == &"":
+                    continue
+                _append_prop(
+                    props,
+                    natural_blocked,
+                    "%s.prop.natural.%04d" % [request.area_id, ordinal],
+                    shared_semantic,
+                    cell,
+                    Facing.Value.SOUTH
+                )
+                ordinal += 1
                 continue
 
             var local_cell: Vector2i = cell - request.bounds.position

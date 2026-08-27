@@ -74,6 +74,8 @@ func project_site(plan: GeneratedGlobalWorldPlan, site_id: String) -> Dictionary
         [],
         planning_constraints
     )
+    if plan.profile_id == &"temperate.island.region":
+        request.inherited_ecology_seed = plan.seed
     if not request.is_valid():
         return {"ok": false, "failure_reason": "projected_system20_request_invalid", "request": null}
     return {"ok": true, "failure_reason": "", "request": request}

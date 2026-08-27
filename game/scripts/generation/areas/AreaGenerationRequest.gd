@@ -13,6 +13,10 @@ var forbidden_regions: Array[Rect2i] = []
 var inherited_planning_constraints: Array[Dictionary] = []
 var inherited_geography: Array[Dictionary] = []
 var inherited_hydrology: Array[Dictionary] = []
+## Optional upstream world seed for natural ecology that must remain coherent
+## across neighboring logical area bounds. Null preserves the historical local
+## request-seed/local-coordinate dressing behavior for standalone fixtures.
+var inherited_ecology_seed: Variant = null
 
 func _init(
     p_area_id: String = "",
@@ -43,6 +47,8 @@ func is_valid() -> bool:
     if bounds.size.x <= 0 or bounds.size.y <= 0:
         return false
     if String(area_profile_id).strip_edges().is_empty() or String(environment_profile_id).strip_edges().is_empty():
+        return false
+    if inherited_ecology_seed != null and typeof(inherited_ecology_seed) != TYPE_INT:
         return false
     for road: Dictionary in inherited_roads:
         if not _road_constraint_valid(road):

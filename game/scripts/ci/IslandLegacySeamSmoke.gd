@@ -3,12 +3,15 @@ extends SceneTree
 const GlobalFixture = preload("res://scripts/demo/GlobalWorldPlanFixture.gd")
 const LegacyFixture = preload("res://scripts/demo/RuralCrossroadsPlanFixture.gd")
 const RequestClass = preload("res://scripts/generation/world/GlobalWorldGenerationRequest.gd")
+const AreaRequestClass = preload("res://scripts/generation/areas/AreaGenerationRequest.gd")
 const ProfilesClass = preload("res://scripts/generation/world/GlobalWorldProfileCatalog.gd")
+const AreaProfilesClass = preload("res://scripts/generation/areas/AreaProfileCatalog.gd")
 const EnvironmentProfilesClass = preload("res://scripts/generation/areas/EnvironmentProfileCatalog.gd")
 const IslandPlannerClass = preload("res://scripts/generation/world/IslandWorldPlanner.gd")
 const ProjectorClass = preload("res://scripts/generation/integration/System20AreaRequestProjector.gd")
 const SurfaceProjectionClass = preload("res://scripts/generation/integration/IslandSurfaceRequestProjection.gd")
 const LocalGeneratorClass = preload("res://scripts/generation/areas/LocalAreaGenerator.gd")
+const OutdoorDressingClass = preload("res://scripts/generation/areas/OutdoorPropertyDressingPlanner.gd")
 const SurfaceGeneratorClass = preload("res://scripts/generation/areas/IslandSurfaceAreaGenerator.gd")
 const SurfaceCatalogClass = preload("res://scripts/streaming/IslandSurfaceSourceCatalog.gd")
 
@@ -46,6 +49,11 @@ func _initialize() -> void:
     var island_request: AreaGenerationRequest = island_projected.get("request") as AreaGenerationRequest
     var island_area: GeneratedAreaPlan = null
     if island_request != null and island_request.is_valid():
+        _check(
+            island_request.inherited_ecology_seed != null \
+                and int(island_request.inherited_ecology_seed) == plan.seed,
+            "island settlement projection inherits the shared world ecology seed"
+        )
         island_area = local_generator.generate(island_request)
     var legacy_area: GeneratedAreaPlan = local_generator.generate(LegacyFixture.request())
     _check(island_area != null and island_area.is_generated(), "island central site generates")
@@ -77,7 +85,73 @@ func _initialize() -> void:
                 _check(surface_plan.area_profile_version >= 3, "island surface records unified-interior revision")
                 _check(not _has_ground_semantic(surface_plan, &"ground.forest_floor"), "island interior no longer switches base ground palette at settlement rectangles")
 
+    _check_ecology_split_invariance(plan.seed)
     _finish()
+
+func _check_ecology_split_invariance(world_seed: int) -> void:
+    var environment: Dictionary = EnvironmentProfilesClass.new().profile(EnvironmentProfilesClass.TEMPERATE_RURAL)
+    var combined_bounds := Rect2i(Vector2i(1000, 2000), Vector2i(128, 64))
+    var left_bounds := Rect2i(combined_bounds.position, Vector2i(64, 64))
+    var right_bounds := Rect2i(combined_bounds.position + Vector2i(64, 0), Vector2i(64, 64))
+    var planner := OutdoorDressingClass.new()
+
+    var combined: Dictionary = planner.plan(
+        _ecology_request("area.ecology.probe.combined", combined_bounds, world_seed),
+        environment,
+        [],
+        [],
+        []
+    )
+    var left: Dictionary = planner.plan(
+        _ecology_request("area.ecology.probe.left", left_bounds, world_seed),
+        environment,
+        [],
+        [],
+        []
+    )
+    var right: Dictionary = planner.plan(
+        _ecology_request("area.ecology.probe.right", right_bounds, world_seed),
+        environment,
+        [],
+        [],
+        []
+    )
+    var all_ok: bool = bool(combined.get("ok", false)) and bool(left.get("ok", false)) and bool(right.get("ok", false))
+    _check(all_ok, "shared world ecology probe plans")
+    if not all_ok:
+        return
+
+    var combined_props: Array = combined.get("props", [])
+    var split_props: Array = []
+    split_props.append_array(left.get("props", []))
+    split_props.append_array(right.get("props", []))
+    _check(not combined_props.is_empty(), "shared world ecology probe produces natural dressing")
+    _check(
+        _natural_signature(combined_props) == _natural_signature(split_props),
+        "shared world ecology is invariant when the same land is split across logical area bounds"
+    )
+
+func _ecology_request(area_id: String, bounds: Rect2i, world_seed: int) -> AreaGenerationRequest:
+    var request: AreaGenerationRequest = AreaRequestClass.new(
+        area_id,
+        99173,
+        bounds,
+        AreaProfilesClass.RURAL_OPEN,
+        EnvironmentProfilesClass.TEMPERATE_RURAL
+    )
+    request.inherited_ecology_seed = world_seed
+    return request
+
+func _natural_signature(values: Array) -> String:
+    var parts := PackedStringArray()
+    for value: Variant in values:
+        if typeof(value) != TYPE_DICTIONARY:
+            continue
+        var prop: Dictionary = value
+        var cell: Vector2i = prop.get("cell", Vector2i(-999999, -999999))
+        parts.append("%d,%d|%s" % [cell.x, cell.y, String(prop.get("semantic", &""))])
+    parts.sort()
+    return ";".join(parts)
 
 func _site(plan: GeneratedGlobalWorldPlan, site_id: String) -> Dictionary:
     for site: Dictionary in plan.area_sites:

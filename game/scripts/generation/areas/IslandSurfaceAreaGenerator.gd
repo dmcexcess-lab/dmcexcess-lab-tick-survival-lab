@@ -4,9 +4,9 @@ class_name IslandSurfaceAreaGenerator
 const PlanClass = preload("res://scripts/generation/areas/GeneratedAreaPlan.gd")
 const RoadPlannerClass = preload("res://scripts/generation/areas/LocalRoadPlanner.gd")
 const EnvironmentProfilesClass = preload("res://scripts/generation/areas/EnvironmentProfileCatalog.gd")
-const Seed = preload("res://scripts/generation/areas/AreaSeed.gd")
 const Facing = preload("res://scripts/foundation/spatial/SpatialFacing.gd")
 const Surface = preload("res://scripts/generation/shared/IslandSurfaceMath.gd")
+const NaturalEcology = preload("res://scripts/generation/shared/NaturalEcologyField.gd")
 
 const PROFILE_ID: StringName = &"island.surface"
 
@@ -182,12 +182,6 @@ func _natural_land_props(
     environment: Dictionary
 ) -> Array[Dictionary]:
     var props: Array[Dictionary] = []
-    var trees: Array = environment.get("tree_semantics", [])
-    var shrubs: Array = environment.get("shrub_semantics", [])
-    var rocks: Array = environment.get("rock_semantics", [])
-    if trees.is_empty() or shrubs.is_empty() or rocks.is_empty():
-        return props
-
     var blocked: Dictionary = {}
     var clearance: int = maxi(0, int(environment.get("natural_road_clearance", 1)))
     for road: Dictionary in roads:
@@ -201,31 +195,17 @@ func _natural_land_props(
                     if request.bounds.has_point(blocked_cell):
                         blocked[blocked_cell] = true
 
-    var base_density: float = clampf(float(environment.get("natural_noise_density", 0.0105)), 0.0, 0.04)
-    var patch_scale: int = maxi(8, int(environment.get("natural_noise_patch_scale", 22)))
-    var sparse_multiplier: float = maxf(0.0, float(environment.get("natural_noise_sparse_multiplier", 0.20)))
-    var dense_multiplier: float = maxf(sparse_multiplier, float(environment.get("natural_noise_dense_multiplier", 2.25)))
     for y in range(request.bounds.position.y, request.bounds.position.y + request.bounds.size.y):
         for x in range(request.bounds.position.x, request.bounds.position.x + request.bounds.size.x):
             var cell := Vector2i(x, y)
             if blocked.has(cell) or _kind(context, cell) != Surface.LAND:
                 continue
-            var patch_noise: float = _value_noise_global(request.seed, cell, patch_scale, 401)
-            var local_density: float = minf(0.04, base_density * lerpf(sparse_multiplier, dense_multiplier, patch_noise))
-            if Seed.unit_2d(request.seed, cell.x, cell.y, 503) >= local_density:
+            var semantic: StringName = NaturalEcology.semantic_at(environment, request.seed, cell)
+            if semantic == &"":
                 continue
-            var family_noise: float = _value_noise_global(request.seed, cell, patch_scale * 2, 607)
-            var family: Array = trees
-            if family_noise >= 0.78:
-                family = rocks
-            elif family_noise >= 0.43:
-                family = shrubs
-            if family.is_empty():
-                continue
-            var index: int = Seed.hash_2d(request.seed, cell.x, cell.y, 811) % family.size()
             props.append({
                 "id": "island_surface.natural.%d.%d" % [cell.x, cell.y],
-                "semantic": StringName(family[index]),
+                "semantic": semantic,
                 "cell": cell,
                 "facing": Facing.Value.SOUTH,
             })
@@ -270,22 +250,6 @@ func _semantic(context: Dictionary, cell: Vector2i) -> StringName:
     # Interior LAND deliberately matches the rural settlement base palette.
     # Shore/ocean remain island-specific physical surface truth.
     return &"ground.grass_lush"
-
-func _value_noise_global(seed: int, cell: Vector2i, scale: int, salt: int) -> float:
-    var safe_scale: int = maxi(1, scale)
-    var grid_x: int = floori(float(cell.x) / float(safe_scale))
-    var grid_y: int = floori(float(cell.y) / float(safe_scale))
-    var frac_x: float = float(cell.x - grid_x * safe_scale) / float(safe_scale)
-    var frac_y: float = float(cell.y - grid_y * safe_scale) / float(safe_scale)
-    var smooth_x: float = frac_x * frac_x * (3.0 - 2.0 * frac_x)
-    var smooth_y: float = frac_y * frac_y * (3.0 - 2.0 * frac_y)
-    var n00: float = Seed.unit_2d(seed, grid_x, grid_y, salt)
-    var n10: float = Seed.unit_2d(seed, grid_x + 1, grid_y, salt)
-    var n01: float = Seed.unit_2d(seed, grid_x, grid_y + 1, salt)
-    var n11: float = Seed.unit_2d(seed, grid_x + 1, grid_y + 1, salt)
-    var top: float = lerpf(n00, n10, smooth_x)
-    var bottom: float = lerpf(n01, n11, smooth_x)
-    return lerpf(top, bottom, smooth_y)
 
 func _kind(context: Dictionary, cell: Vector2i) -> StringName:
     return Surface.classify(
