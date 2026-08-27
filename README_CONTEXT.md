@@ -28,6 +28,28 @@ The canonical DEV/playable composition is the **complete streamed island**.
 - System 00F materializes non-overlapping settlement, river/watercourse and island-surface logical sources.
 - Technical streaming is 128×128 with active radius 1 and follows the survivor. Technical regions are performance configuration, never world identity.
 - Ocean/ordinary river water is non-traversable except explicit planned bridge deck.
+- The playable survivor now starts on inherited pavement beside the **central crossroads**, not at the diner entrance.
+
+### Playable-island continuity correction — VERIFIED 2026-08-27
+
+Verified executable: `505535ea7fab555f7a1871afb9f2d1e2ff92331b`.
+
+The former playable composition made the mature 256×256 crossroads site read like an old mini-map surrounded by an enormous blank green band. The source partition itself was valid, but ordinary island-surface LAND intentionally emitted almost nothing except lush grass, and inherited road centerline paint was dropped outside settlement sources. The DEV spawn was also explicitly derived from the diner parcel.
+
+Current corrected result:
+
+- spawn selection is centered on the actual inherited crossroads and explicitly avoids outdoor props;
+- diner existence remains ordinary generated content rather than spawn authority;
+- `IslandSurfaceAreaGenerator` v2 adds globally anchored LAND-cover variation and deterministic temperate-coastal natural dressing between settlement sites;
+- natural prop IDs derive from global cells, so technical/source partition changes do not redefine the same countryside object;
+- natural dressing stays off ocean/shore and keeps a road-clearance halo;
+- inherited regional road surface **and centerline paint** continue through island-surface materialization instead of visually stopping at settlement rectangles;
+- the five-site 00D road/settlement graph, hydrology, bridges, source ownership and 128×128 streaming geometry are unchanged;
+- no recurring per-frame/per-tick world work was added; the new dressing is bounded generation/materialization work.
+
+The complete-island contract now fails if the playable start returns to the diner entrance, if ordinary island LAND becomes blank again, if surface natural props invade road cells/non-land, or if a painted inherited road loses its centerline outside a settlement source.
+
+All **17 required exact-head contexts** passed on the verified executable, including global world, local area, streaming, performance and Pages deployment.
 
 ---
 
@@ -199,4 +221,4 @@ Then: Crafting -> Power + Water -> physical survival/health -> Moodlets -> Skill
 - `verify/performance-architecture`
 - `verify/pages-deploy`
 
-All **17 required contexts** are green on System-31 executable head `dc83ad10b7469a629fb2ac5d86c77d386b69434d`.
+All **17 required contexts** are green on playable-island continuity executable `505535ea7fab555f7a1871afb9f2d1e2ff92331b`.
