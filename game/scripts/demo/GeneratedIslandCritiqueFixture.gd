@@ -100,8 +100,7 @@ static func build(
         return false
     var player_start: Vector2i = player_start_for_plan(central_plan)
     var diner_door: String = diner_door_id(central_plan)
-    var diner_frontage: int = diner_frontage_for_plan(central_plan)
-    if player_start.x < 0 or diner_door.is_empty() or not Facing.is_valid(diner_frontage):
+    if player_start.x < 0 or diner_door.is_empty():
         return false
 
     var registry := RegistryClass.new()
@@ -140,7 +139,7 @@ static func build(
         PLAYER_ID,
         Layers.Channel.ACTOR,
         player_start,
-        Facing.opposite(diner_frontage),
+        Facing.Value.NORTH,
         Footprint.single_cell()
     ):
         return false
@@ -179,14 +178,23 @@ static func streaming_failure() -> String:
     return "" if _streaming_bridge == null else _streaming_bridge.last_failure()
 
 static func player_start_for_plan(plan: GeneratedAreaPlan) -> Vector2i:
-    var parcel: Dictionary = _diner_parcel(plan)
-    if parcel.is_empty():
+    var center: Vector2i = _central_intersection_cell(plan)
+    if center.x < 0:
         return Vector2i(-1, -1)
-    var entry: Vector2i = parcel.get("building_entry_cell", Vector2i(-1, -1))
-    var frontage: int = int(parcel.get("frontage_side", -1))
-    if entry.x < 0 or not Facing.is_valid(frontage):
-        return Vector2i(-1, -1)
-    return entry + Facing.vector(frontage)
+    var candidates: Array[Vector2i] = [
+        center + Vector2i(0, 4),
+        center + Vector2i(4, 0),
+        center + Vector2i(0, -4),
+        center + Vector2i(-4, 0),
+    ]
+    for candidate: Vector2i in candidates:
+        if plan.bounds.has_point(candidate) \
+            and _cell_in_inherited_road(plan, candidate) \
+            and not _outdoor_prop_at(plan, candidate):
+            return candidate
+    if plan.bounds.has_point(center) and _cell_in_inherited_road(plan, center) and not _outdoor_prop_at(plan, center):
+        return center
+    return Vector2i(-1, -1)
 
 static func diner_door_id(plan: GeneratedAreaPlan) -> String:
     var parcel: Dictionary = _diner_parcel(plan)
@@ -204,6 +212,37 @@ static func _central_plan(global_plan: GeneratedGlobalWorldPlan) -> GeneratedAre
     if request == null or not request.is_valid():
         return null
     return AreaGeneratorClass.new().generate(request)
+
+static func _central_intersection_cell(plan: GeneratedAreaPlan) -> Vector2i:
+    if plan == null or not plan.is_generated() or plan.intersections.is_empty():
+        return Vector2i(-1, -1)
+    var expected: Vector2i = plan.bounds.position + Vector2i(plan.bounds.size.x / 2, plan.bounds.size.y / 2)
+    var best: Vector2i = Vector2i(-1, -1)
+    var best_distance: int = 2147483647
+    for intersection: Dictionary in plan.intersections:
+        var cell: Vector2i = intersection.get("cell", Vector2i(-1, -1))
+        if not plan.bounds.has_point(cell):
+            continue
+        var distance: int = absi(cell.x - expected.x) + absi(cell.y - expected.y)
+        if distance < best_distance:
+            best = cell
+            best_distance = distance
+    return best
+
+static func _cell_in_inherited_road(plan: GeneratedAreaPlan, cell: Vector2i) -> bool:
+    for road: Dictionary in plan.roads:
+        if not bool(road.get("inherited", false)):
+            continue
+        for value: Variant in road.get("corridor_cells", []):
+            if typeof(value) == TYPE_VECTOR2I and value == cell:
+                return true
+    return false
+
+static func _outdoor_prop_at(plan: GeneratedAreaPlan, cell: Vector2i) -> bool:
+    for prop: Dictionary in plan.outdoor_props:
+        if prop.get("cell", Vector2i(-1, -1)) == cell:
+            return true
+    return false
 
 static func _diner_parcel(plan: GeneratedAreaPlan) -> Dictionary:
     if plan == null:
