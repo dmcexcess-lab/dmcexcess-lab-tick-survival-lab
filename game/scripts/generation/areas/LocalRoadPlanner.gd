@@ -281,13 +281,6 @@ func _build_rural_scattered_lanes(
         request.bounds.position.x + request.bounds.size.x / 2,
         request.bounds.position.y + request.bounds.size.y / 2
     )
-    var spine: Dictionary = _select_rural_scattered_spine(inherited_roads, center)
-    if spine.is_empty():
-        return {"ok": false, "failure_reason": "rural_scattered_spine_missing", "roads": []}
-    var axis: StringName = StringName(spine.get("axis", &""))
-    if axis != &"horizontal" and axis != &"vertical":
-        return {"ok": false, "failure_reason": "rural_scattered_spine_axis_invalid", "roads": []}
-
     var lane_count: int = int(profile.get("rural_scattered_lane_count", 2))
     var width: int = int(profile.get("rural_scattered_lane_width", 3))
     var branch_margin: int = int(profile.get("rural_scattered_branch_margin", 24))
@@ -297,99 +290,103 @@ func _build_rural_scattered_lanes(
     if lane_count != 2 or width <= 0 or width % 2 == 0 or branch_margin < 0 or branch_separation <= 0 or first_leg <= 0 or tail_leg <= 0:
         return {"ok": false, "failure_reason": "rural_scattered_lane_profile_invalid", "roads": []}
 
-    var anchors: Array[Vector2i] = _rural_scattered_branch_anchors(request, spine, inherited_roads, branch_margin, width)
-    if anchors.size() < 2:
-        return {"ok": false, "failure_reason": "rural_scattered_branch_anchors_insufficient", "roads": []}
+    var spine_candidates: Array[Dictionary] = _rural_scattered_spine_candidates(inherited_roads, center)
+    if spine_candidates.is_empty():
+        return {"ok": false, "failure_reason": "rural_scattered_spine_missing", "roads": []}
 
-    var pairs: Array[Array] = []
-    for first_index in range(anchors.size()):
-        for second_index in range(first_index + 1, anchors.size()):
-            var a: Vector2i = anchors[first_index]
-            var b: Vector2i = anchors[second_index]
-            var separation: int = absi(a.x - b.x) + absi(a.y - b.y)
-            if separation < branch_separation:
-                continue
-            pairs.append([a, b])
-    if pairs.is_empty():
-        return {"ok": false, "failure_reason": "rural_scattered_branch_pair_unresolved", "roads": []}
-
-    pairs.sort_custom(func(a: Array, b: Array) -> bool:
-        var a0: Vector2i = a[0]
-        var a1: Vector2i = a[1]
-        var b0: Vector2i = b[0]
-        var b1: Vector2i = b[1]
-        var a_distance: int = absi(a0.x - center.x) + absi(a0.y - center.y) + absi(a1.x - center.x) + absi(a1.y - center.y)
-        var b_distance: int = absi(b0.x - center.x) + absi(b0.y - center.y) + absi(b1.x - center.x) + absi(b1.y - center.y)
-        if a_distance != b_distance:
-            return a_distance < b_distance
-        if a0.y != b0.y:
-            return a0.y < b0.y
-        if a0.x != b0.x:
-            return a0.x < b0.x
-        if a1.y != b1.y:
-            return a1.y < b1.y
-        return a1.x < b1.x
-    )
-
-    var pair_start: int = Seed.choose_index(request.seed, "rural_scattered:branch_pair_start", pairs.size())
-    if pair_start < 0:
-        return {"ok": false, "failure_reason": "rural_scattered_branch_pair_unresolved", "roads": []}
+    var found_anchor_set: bool = false
+    var found_branch_pair: bool = false
     var side_flip: int = -1 if Seed.choose_index(request.seed, "rural_scattered:side_flip", 2) == 0 else 1
-
-    for pair_step in range(pairs.size()):
-        var pair: Array = pairs[(pair_start + pair_step) % pairs.size()]
-        var anchor_a: Vector2i = pair[0]
-        var anchor_b: Vector2i = pair[1]
-        if _axis_coordinate(anchor_a, axis) > _axis_coordinate(anchor_b, axis):
-            var swap: Vector2i = anchor_a
-            anchor_a = anchor_b
-            anchor_b = swap
-
-        var candidate: Array[Dictionary] = []
-        candidate.append(_build_rural_scattered_lane(request, 0, spine, anchor_a, side_flip, -1, width, first_leg, tail_leg))
-        candidate.append(_build_rural_scattered_lane(request, 1, spine, anchor_b, -side_flip, 1, width, first_leg, tail_leg))
-        if candidate[0].is_empty() or candidate[1].is_empty():
+    for spine: Dictionary in spine_candidates:
+        var axis: StringName = StringName(spine.get("axis", &""))
+        var anchors: Array[Vector2i] = _rural_scattered_branch_anchors(request, spine, inherited_roads, branch_margin, width)
+        if anchors.size() < 2:
             continue
-        if not _local_roads_legal(candidate, request, inherited_roads, reservations):
-            continue
-        if _roads_share_corridor_cells(candidate[0], candidate[1]):
-            continue
-        return {"ok": true, "failure_reason": "", "roads": candidate}
+        found_anchor_set = true
 
+        var pairs: Array[Array] = []
+        for first_index in range(anchors.size()):
+            for second_index in range(first_index + 1, anchors.size()):
+                var a: Vector2i = anchors[first_index]
+                var b: Vector2i = anchors[second_index]
+                var separation: int = absi(a.x - b.x) + absi(a.y - b.y)
+                if separation < branch_separation:
+                    continue
+                pairs.append([a, b])
+        if pairs.is_empty():
+            continue
+        found_branch_pair = true
+
+        pairs.sort_custom(func(a: Array, b: Array) -> bool:
+            var a0: Vector2i = a[0]
+            var a1: Vector2i = a[1]
+            var b0: Vector2i = b[0]
+            var b1: Vector2i = b[1]
+            var a_distance: int = absi(a0.x - center.x) + absi(a0.y - center.y) + absi(a1.x - center.x) + absi(a1.y - center.y)
+            var b_distance: int = absi(b0.x - center.x) + absi(b0.y - center.y) + absi(b1.x - center.x) + absi(b1.y - center.y)
+            if a_distance != b_distance:
+                return a_distance < b_distance
+            if a0.y != b0.y:
+                return a0.y < b0.y
+            if a0.x != b0.x:
+                return a0.x < b0.x
+            if a1.y != b1.y:
+                return a1.y < b1.y
+            return a1.x < b1.x
+        )
+
+        var pair_domain: String = "rural_scattered:branch_pair_start:%s" % String(spine.get("road_id", ""))
+        var pair_start: int = Seed.choose_index(request.seed, pair_domain, pairs.size())
+        if pair_start < 0:
+            continue
+        for pair_step in range(pairs.size()):
+            var pair: Array = pairs[(pair_start + pair_step) % pairs.size()]
+            var anchor_a: Vector2i = pair[0]
+            var anchor_b: Vector2i = pair[1]
+            if _axis_coordinate(anchor_a, axis) > _axis_coordinate(anchor_b, axis):
+                var swap: Vector2i = anchor_a
+                anchor_a = anchor_b
+                anchor_b = swap
+
+            var candidate: Array[Dictionary] = []
+            candidate.append(_build_rural_scattered_lane(request, 0, spine, anchor_a, side_flip, -1, width, first_leg, tail_leg))
+            candidate.append(_build_rural_scattered_lane(request, 1, spine, anchor_b, -side_flip, 1, width, first_leg, tail_leg))
+            if candidate[0].is_empty() or candidate[1].is_empty():
+                continue
+            if not _local_roads_legal(candidate, request, inherited_roads, reservations):
+                continue
+            if _roads_share_corridor_cells(candidate[0], candidate[1]):
+                continue
+            return {"ok": true, "failure_reason": "", "roads": candidate}
+
+    if not found_anchor_set:
+        return {"ok": false, "failure_reason": "rural_scattered_branch_anchors_insufficient", "roads": []}
+    if not found_branch_pair:
+        return {"ok": false, "failure_reason": "rural_scattered_branch_pair_unresolved", "roads": []}
     return {"ok": false, "failure_reason": "rural_scattered_lane_layout_unresolved", "roads": []}
 
-func _select_rural_scattered_spine(roads: Array[Dictionary], center: Vector2i) -> Dictionary:
-    var best: Dictionary = {}
-    var best_contains_center: bool = false
-    var best_distance: int = 2147483647
-    var best_class_rank: int = 2147483647
-    var best_id: String = ""
+func _rural_scattered_spine_candidates(roads: Array[Dictionary], center: Vector2i) -> Array[Dictionary]:
+    var candidates: Array[Dictionary] = []
     for road: Dictionary in roads:
         var axis: StringName = StringName(road.get("axis", &""))
-        if axis != &"horizontal" and axis != &"vertical":
-            continue
-        var contains_center: bool = _point_on_road_path(center, road)
-        var distance: int = _distance_to_road_path(center, road)
-        var class_rank: int = _road_class_rank(StringName(road.get("road_class", &"")))
-        var road_id: String = String(road.get("road_id", ""))
-        var better: bool = false
-        if best.is_empty():
-            better = true
-        elif contains_center != best_contains_center:
-            better = contains_center
-        elif distance != best_distance:
-            better = distance < best_distance
-        elif class_rank != best_class_rank:
-            better = class_rank < best_class_rank
-        elif road_id < best_id:
-            better = true
-        if better:
-            best = road
-            best_contains_center = contains_center
-            best_distance = distance
-            best_class_rank = class_rank
-            best_id = road_id
-    return best
+        if axis == &"horizontal" or axis == &"vertical":
+            candidates.append(road)
+    candidates.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
+        var a_contains_center: bool = _point_on_road_path(center, a)
+        var b_contains_center: bool = _point_on_road_path(center, b)
+        if a_contains_center != b_contains_center:
+            return a_contains_center
+        var a_distance: int = _distance_to_road_path(center, a)
+        var b_distance: int = _distance_to_road_path(center, b)
+        if a_distance != b_distance:
+            return a_distance < b_distance
+        var a_class_rank: int = _road_class_rank(StringName(a.get("road_class", &"")))
+        var b_class_rank: int = _road_class_rank(StringName(b.get("road_class", &"")))
+        if a_class_rank != b_class_rank:
+            return a_class_rank < b_class_rank
+        return String(a.get("road_id", "")) < String(b.get("road_id", ""))
+    )
+    return candidates
 
 func _rural_scattered_branch_anchors(
     request: AreaGenerationRequest,
