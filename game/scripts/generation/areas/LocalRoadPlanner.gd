@@ -296,9 +296,19 @@ func _build_rural_scattered_lanes(
 
     var found_anchor_set: bool = false
     var found_branch_pair: bool = false
-    var preferred_side_flip: int = -1 if Seed.choose_index(request.seed, "rural_scattered:side_flip", 2) == 0 else 1
-    var side_flips: Array[int] = [preferred_side_flip, -preferred_side_flip]
-    var tail_direction_pairs: Array[Vector2i] = [Vector2i(-1, 1), Vector2i(1, -1)]
+    var preferred_side: int = -1 if Seed.choose_index(request.seed, "rural_scattered:side_flip", 2) == 0 else 1
+    var side_pairs: Array[Vector2i] = [
+        Vector2i(preferred_side, -preferred_side),
+        Vector2i(-preferred_side, preferred_side),
+        Vector2i(preferred_side, preferred_side),
+        Vector2i(-preferred_side, -preferred_side),
+    ]
+    var tail_direction_pairs: Array[Vector2i] = [
+        Vector2i(-1, 1),
+        Vector2i(1, -1),
+        Vector2i(-1, -1),
+        Vector2i(1, 1),
+    ]
     for spine: Dictionary in spine_candidates:
         var axis: StringName = StringName(spine.get("axis", &""))
         var anchors: Array[Vector2i] = _rural_scattered_branch_anchors(request, spine, inherited_roads, branch_margin, width)
@@ -350,11 +360,11 @@ func _build_rural_scattered_lanes(
                 anchor_a = anchor_b
                 anchor_b = swap
 
-            for side_flip: int in side_flips:
+            for side_pair: Vector2i in side_pairs:
                 for tail_directions: Vector2i in tail_direction_pairs:
                     var candidate: Array[Dictionary] = []
-                    candidate.append(_build_rural_scattered_lane(request, 0, spine, anchor_a, side_flip, tail_directions.x, width, first_leg, tail_leg))
-                    candidate.append(_build_rural_scattered_lane(request, 1, spine, anchor_b, -side_flip, tail_directions.y, width, first_leg, tail_leg))
+                    candidate.append(_build_rural_scattered_lane(request, 0, spine, anchor_a, side_pair.x, tail_directions.x, width, first_leg, tail_leg))
+                    candidate.append(_build_rural_scattered_lane(request, 1, spine, anchor_b, side_pair.y, tail_directions.y, width, first_leg, tail_leg))
                     if candidate[0].is_empty() or candidate[1].is_empty():
                         continue
                     if not _local_roads_legal(candidate, request, inherited_roads, reservations):
