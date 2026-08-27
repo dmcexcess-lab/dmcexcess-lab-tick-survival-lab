@@ -1,8 +1,8 @@
 # Tick Survival Lab — System 00D Global World Planning
 
-Status: **IMPLEMENTED — rural v6 + complete island v1**
+Status: **IMPLEMENTED — rural v6 + complete island v2**
 
-Updated: **2026-08-24**
+Updated: **2026-08-27**
 
 ## 1. Goal
 
@@ -32,35 +32,40 @@ The mature regional planning profile remains protected and provides:
 
 Canonical fixture bounds remain `Rect2i(232,1232,1792,1792)`, seed `20001`.
 
-### `temperate.island.region` v1
+### `temperate.island.region` v2
 
-The complete-island profile is an additive composition over the proven rural v6 skeleton.
+The complete-island profile remains an additive composition over the proven rural-v6 world-planning skeleton, but v2 removes the accidental dependency that made the playable island's central 256×256 site regenerate the historical standalone Rural Crossroads critique map.
 
-It preserves the accepted settlement/road/hydrology identities while adding deterministic island-surface truth:
+Island-v2 rules include:
 
-- `LAND` interior;
-- `SHORE` transition band;
-- surrounding `OCEAN`;
-- deterministic coast wobble derived from world seed;
+- deterministic `LAND`, `SHORE` and surrounding `OCEAN` truth;
+- deterministic coast wobble derived from the world seed;
 - regional roads clipped where they would enter ocean;
-- bridge intents recomputed from the resulting physical road/river graph;
+- bridge intents recomputed from the final physical road/river graph;
 - power ingress/feeders adapted to the shoreline-clipped road graph;
-- one `island_surface` planning region covering the world bounds.
+- one `island_surface` planning region covering the world bounds;
+- the central settlement site **does not reuse the raw world seed**; its local System-20 seed is derived from world seed + site identity like the other island sites;
+- island-only settlement spacing is more compact than the protected rural-v6 regional profile, removing the former several-hundred-cell empty band between the mature 256×256 site rectangles;
+- the world seed may be projected as an **environmental ecology context** to bounded island settlement materialization so natural land-cover noise remains coherent across logical area ownership boundaries without reseeding roads, parcels or buildings.
 
-Candidate v1 surface parameters are:
+The regional `temperate.rural.region` v6 profile retains its historical seed/spacing behavior. Island corrections are profile-specific rather than silent global changes.
+
+Candidate coastline parameters remain:
 
 - ocean margin: 24 cells;
 - shore width: 8 cells;
 - coast wobble: 8 cells;
 - coast scale: 96 cells.
 
-The mature five-site settlement graph remains the first complete island's settlement set:
+The island keeps five connected settlement identities:
 
 - `area.rural.crossroads.001` -> `rural.crossroads`;
 - `area.smalltown.center.001` -> `smalltown.center`;
 - three `rural.scattered` hamlet sites.
 
-System 20 already contains tested `suburban.neighborhood`, `urban.mixed`, `commercial.corridor`, `industrial.district` and `civic.campus` profiles. Island v1 deliberately does **not** force those profiles into unsuitable global sites merely to demonstrate that they exist. A later global-world profile may place those district types where its own geometry authorizes them.
+The IDs and central world location remain stable, but the central area's generated local identity no longer aliases the old seed-20001 standalone critique fixture.
+
+System 20 already contains tested `suburban.neighborhood`, `urban.mixed`, `commercial.corridor`, `industrial.district` and `civic.campus` profiles. Island v2 deliberately does **not** force those profiles into unsuitable global sites merely to demonstrate that they exist. A later global-world profile may place those district types where its own geometry authorizes them.
 
 ## 3. Geography / coast truth
 
@@ -90,7 +95,11 @@ For the island profile, bridge intents are recomputed after coastal clipping so 
 
 System 00D owns **where** settlement/local-area sites exist and which System 20 profile they request. System 20 owns the local morphology.
 
-The first island keeps the five proven connected settlement sites so the complete-world milestone does not destabilize accepted town access/road/infrastructure geometry.
+Island v2 preserves the five proven connected settlement identities while changing island-only composition inputs that were visually exposing the former fixture boundary:
+
+- central local generation uses a derived site seed rather than raw world seed `20001`;
+- compact island-only spacing reduces the oversized countryside gap;
+- a shared world ecology seed is available to local environmental dressing, while local site seed remains authoritative for site-specific roads/parcels/buildings.
 
 Current System 20 profile library is broader than the first island composition. In particular, all of these already exist and are independently tested:
 
@@ -101,11 +110,11 @@ Current System 20 profile library is broader than the first island composition. 
 - `industrial.district`;
 - `civic.campus`.
 
-The absence of a profile from island-v1 placement is therefore not a missing local generator.
+The absence of a profile from island placement is therefore not a missing local generator.
 
 ## 6. Roads and connected land
 
-Island-v1 regional roads derive from the proven rural regional graph and are clipped to the longest contiguous cross-section that remains off ocean.
+Island regional roads derive from the proven rural regional graph and are clipped to the longest contiguous cross-section that remains off ocean.
 
 Validation requires:
 
@@ -114,9 +123,25 @@ Validation requires:
 - bridge intent remains present where the river crosses a retained road;
 - settlement sites remain fully on island land and clear of river corridors.
 
-This produces a bounded island whose ordinary land settlements remain reachable by the existing movement/road network while ocean and river water remain physical barriers except at bridge decks.
+The local `rural.scattered` road planner uses deterministic finite fallback candidates rather than unbounded rerolls. A legal seed may try alternate lane-side/tail orientations while preserving the same requested road dimensions, inherited-road truth and deterministic output.
 
-## 7. Infrastructure boundary
+## 7. Cross-area ecology context
+
+Natural ecology is cross-region visual/environmental coherence, not technical streaming identity.
+
+For globally projected island settlement sites, System 00D's world seed is passed through the existing 00D -> System-20 projection as an optional inherited ecology seed. This does **not** change the site's own generation seed and does not move local morphology ownership into System 00D.
+
+The downstream natural field is evaluated from:
+
+- authoritative environment vocabulary;
+- world seed;
+- absolute/global tactical cell.
+
+Therefore splitting the same land into different logical area rectangles cannot restart the ecology phase at each rectangle origin. Technical streaming-region size remains irrelevant to geography and ecology identity.
+
+Standalone System-20 fixtures that do not receive this upstream context keep their historical local request-seed behavior for compatibility.
+
+## 8. Infrastructure boundary
 
 The island retains current regional power/water planning facts so world planning remains coherent.
 
@@ -126,7 +151,7 @@ Roadmap Phase 3 still owns the requested final runtime three-tier Power + Water 
 
 Standalone wastewater gameplay remains removed from the active roadmap; existing 00D wastewater data is historical/inert planning truth until deliberate cleanup or migration.
 
-## 8. Public plan contract
+## 9. Public plan contract
 
 `GeneratedGlobalWorldPlan` continues to expose:
 
@@ -145,7 +170,7 @@ Standalone wastewater gameplay remains removed from the active roadmap; existing
 
 The island profile uses the same contract rather than creating a parallel world representation.
 
-## 9. Ownership and replacement boundaries
+## 10. Ownership and replacement boundaries
 
 System 00D does not own:
 
@@ -159,25 +184,24 @@ System 00D does not own:
 - population/AI/outbreak;
 - runtime utility behavior.
 
-Changing streaming-region size may not change island geography, coastline, roads, settlement IDs or source identity.
+Changing streaming-region size may not change island geography, coastline, roads, settlement IDs, natural ecology identity or source identity.
 
-## 10. Verification
+## 11. Verification
 
-`CompleteIslandWorldPlanningSmoke.gd` is part of `verify/system00d-global-world` and proves:
+`CompleteIslandWorldPlanningSmoke.gd` remains part of `verify/system00d-global-world` and proves the complete island generates through real global/local projection, retains legal connected settlements/roads/hydrology/bridges, and partitions into non-overlapping logical materialization sources.
 
-- `temperate.island.region` generates deterministically;
-- the mature five settlement sites remain legal/connected;
-- real `smalltown.center`, `suburban.neighborhood` and `urban.mixed` System 20 profiles exist;
-- every globally placed island site projects and generates through real System 20;
-- river and bridge intents remain present;
-- island-surface, watercourse and area-site source rectangles form a non-overlapping complete sampled partition;
-- sampled island surface contains LAND, SHORE and OCEAN;
-- the land interior remains substantially larger than ocean in Candidate v1.
+`IslandLegacySeamSmoke.gd` additionally locks the island-v2 correction:
 
-The clean generator checkpoint `41b243501acffa480ddde61b498d743a4e4e1d97` passed all 13 required exact-head contexts including Pages.
+- central island site does not reuse the legacy fixture seed;
+- the generated central-area signature differs from the standalone old 256×256 Rural Crossroads fixture;
+- central-to-small-town edge gap stays compact;
+- island interior uses the same rural environment vocabulary as settlement sites;
+- island surface v3 does not reintroduce `ground.forest_floor` as a rectangular interior palette break;
+- globally projected island settlements inherit the world ecology seed;
+- the same world-space natural dressing yields the exact same `(cell, semantic)` set whether a probe is generated as one rectangle or split into adjacent logical rectangles.
 
-The canonical playable island composition head `3f1a98c3daea879cf7ffdbea717d88461e39438f` also passed all 13 exact-head contexts including Pages.
+Verified executable `d33c69d6bd05f4c8fdbba62c6bd51bb16aad26ad` passed all **17 required exact-head contexts**, including `verify/system00d-global-world`, `verify/system00f-streaming-materialization`, `verify/system20-local-area`, `verify/performance-architecture`, and `verify/pages-deploy`.
 
-## 11. North-star fit
+## 12. North-star fit
 
-The complete island is a bounded implementation of the persistent-open-world North Star: world-spanning geography, roads, river, bridges and coast are decided globally; local places consume those facts; streaming only decides what is active/materialized nearby; and persistent WHAT becomes authoritative after virgin creation.
+The complete island is a bounded implementation of the persistent-open-world North Star: world-spanning geography, roads, river, bridges and coast are decided globally; local places consume those facts; environmental fields that must remain continuous use world identity rather than technical partition origin; streaming only decides what is active/materialized nearby; and persistent WHAT becomes authoritative after virgin creation.

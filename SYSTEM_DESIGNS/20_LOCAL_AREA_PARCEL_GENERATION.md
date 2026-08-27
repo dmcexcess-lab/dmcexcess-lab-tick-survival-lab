@@ -1,6 +1,6 @@
 # Tick Survival Lab — System 20 Local Area Generation
 
-Status: **IMPLEMENTED — ten area profiles / seven environment palettes + live island watercourse use + island-surface continuity v2**
+Status: **IMPLEMENTED — ten area profiles / seven environment palettes + live island watercourse use + island-surface continuity v3**
 
 Updated: **2026-08-27**
 
@@ -88,7 +88,9 @@ No unbounded reroll or building clipping is permitted.
 
 ### `rural.crossroads` v5
 
-The live historical reference retains the regional road crossing, two gravel local roads, gas station/diner opportunities, residential/farm frontage, real entry approaches and majority unbuilt rural land.
+The standalone historical reference retains the regional road crossing, two gravel local roads, gas station/diner opportunities, residential/farm frontage, real entry approaches and majority unbuilt rural land.
+
+The complete island may use the same profile vocabulary without reusing the standalone critique fixture's exact seed identity.
 
 ### `smalltown.center` v1
 
@@ -97,6 +99,8 @@ The island's real small-town site uses this profile. It consumes inherited roads
 ### `rural.scattered` v1
 
 The three current island hamlets use this profile: sparse residential/farm occupation, two gravel local lanes, no fake commercial center and high unbuilt-land fraction.
+
+The lane-layout planner uses a bounded deterministic candidate search. If the seed-preferred mirror/orientation conflicts with inherited geometry, it may try the other finite legal lane-side/tail combinations; it does not reroll world/site seeds or change requested road dimensions.
 
 ## 6. `rural.open` v1
 
@@ -128,7 +132,7 @@ Rules:
 - no buildings/parcels/fake decorative water are invented;
 - split-vs-combined accepted watercourse bounds are deterministic.
 
-This profile is now consumed **live** by System 00F `WatercourseMaterializationSource` in the complete island. The former “river source deferred” boundary is superseded.
+This profile is consumed **live** by System 00F `WatercourseMaterializationSource` in the complete island.
 
 ## 8. Baseline settlement/district library
 
@@ -152,24 +156,44 @@ Warehouse/workshop emphasis with the same real frontage-to-primary-entry access 
 
 School/fire/police/clinic/church emphasis with real finalized approaches.
 
-These profiles are callable and tested independently. The first complete island deliberately uses only globally authorized sites from its proven settlement graph; not every available local profile must appear in every global-world profile.
+These profiles are callable and tested independently. The complete island deliberately uses only globally authorized sites from its proven settlement graph; not every available local profile must appear in every global-world profile.
 
-## 9. Complete-island surface integration
+## 9. Shared natural ecology context
 
-Fine coastline/ocean generation is a focused extension alongside normal System 20 profile generation:
+`AreaGenerationRequest` now has one optional upstream field:
 
-- `IslandSurfaceRequestProjection` derives bounded requests from the System 00D island plan;
-- `IslandSurfaceAreaGenerator` v2 emits ordinary island land, shore transitions, ocean and authorized inherited roads for non-settlement/non-river source bounds;
-- ordinary LAND is no longer an intentionally blank grass sheet: broad globally anchored land-cover variation and deterministic temperate-coastal natural dressing give the between-site countryside physical texture while preserving source-split invariance;
-- island-surface natural prop identity is anchored to global cell coordinates and maintains a clearance halo around real road corridors;
-- inherited painted regional roads retain both their road surface and centerline presentation when they leave a settlement rectangle, so a logical road does not visually disappear at the System-20/00F handoff;
-- settlement sites continue through normal System 20 area profiles;
+`inherited_ecology_seed`
+
+Its purpose is narrow: allow environmental dressing that must be continuous across neighboring logical areas to use a shared world identity without replacing the area's own generation seed.
+
+Rules:
+
+- null/absent context preserves the historical standalone System-20 natural-dressing path;
+- globally projected island settlement requests receive the System-00D world seed;
+- roads, parcels, buildings, access and other site-specific morphology continue to use the area's normal site/request seed;
+- only natural environmental dressing switches to the inherited ecology seed when present;
+- the shared `NaturalEcologyField` evaluates density/family/semantic from **world seed + absolute global cell**, never `cell - request.bounds.position`;
+- splitting one piece of land into neighboring logical area rectangles must therefore produce the same natural `(cell, semantic)` set as generating the same land as one rectangle.
+
+This is a cross-area coherence seam, not a new source owner and not a streaming dependency.
+
+## 10. Complete-island surface integration
+
+Fine coastline/ocean generation remains a focused extension alongside normal System-20 profile generation:
+
+- `IslandSurfaceRequestProjection` derives bounded requests from the System-00D island plan;
+- `IslandSurfaceAreaGenerator` v3 emits ordinary island land, shore transitions, ocean and authorized inherited roads for non-settlement/non-river source bounds;
+- island interior LAND uses the same `temperate.rural` environmental vocabulary/base ground as settlement sites rather than switching to a visibly different forest-floor/coastal palette at source rectangles;
+- `IslandSurfaceAreaGenerator` and globally projected settlement dressing both consume the same pure `NaturalEcologyField`, so natural-density patches and tree/shrub/rock family choice do not restart at the 256×256 settlement boundary;
+- natural prop identity is anchored to global cell coordinates and maintains the normal clearance halo around real road corridors;
+- inherited painted regional roads retain both road surface and centerline presentation when they leave a settlement rectangle;
+- settlement sites continue through normal System-20 area profiles;
 - river corridors continue through `rural.watercourse`;
-- the logical source partition remains non-overlapping: this revision adds local physical detail inside the existing ownership partition rather than hiding seams with overlapping sources.
+- the logical source partition remains non-overlapping: continuity comes from common deterministic world-space inputs, not overlapping materialization sources.
 
-This keeps the coastline globally determined while allowing 00F to materialize the bounded world through ordinary deterministic local plans.
+This keeps coastline and cross-area environmental coherence globally determined while System 20 remains the bounded local physical-detail owner.
 
-## 10. Materialization boundary
+## 11. Materialization boundary
 
 `AreaMaterializationCoordinator` writes valid generated areas into WHAT + Door State through existing mutation contracts.
 
@@ -177,7 +201,9 @@ Generation relinquishes authority after successful materialization. Revisiting m
 
 Ground writes remain coalesced for materialization performance.
 
-## 11. Water/coast presentation boundary
+The ecology correction adds no recurring per-frame/per-tick work. It is deterministic generation/materialization-time work only.
+
+## 12. Water/coast presentation boundary
 
 System 20 emits semantic terrain only. It does not own art.
 
@@ -190,14 +216,22 @@ The complete-island presentation uses an additive `WaterCoastArtCatalog` + `wate
 
 `GroundLayerRenderer` resolves those dedicated water/coast semantics before falling back to the existing recovered Art Catalog. Art does not decide traversal.
 
-## 12. Verification
+## 13. Verification
 
-`verify/system20-local-area` continues to cover all ten area profiles and seven environment palettes, deterministic replay, real System 19 fit/access invariants, rural-open invariance and rural-watercourse bridge authorization.
+`verify/system20-local-area` continues to cover all ten area profiles and seven environment palettes, deterministic replay, real System-19 fit/access invariants, rural-open invariance and rural-watercourse bridge authorization.
 
-`verify/system00d-global-world` additionally runs every globally placed complete-island area site through the real projector + System 20 generator. Its complete-island smoke now also proves that the playable spawn is not the diner entrance, ordinary island LAND receives real deterministic natural dressing, natural dressing avoids road cells, and painted inherited road centerlines survive island-surface materialization.
+`verify/system00d-global-world` additionally runs every globally placed complete-island area site through the real projector + System-20 generator.
 
-Playable-island continuity executable `505535ea7fab555f7a1871afb9f2d1e2ff92331b` passed all **17 required exact-head contexts**, including `verify/system00d-global-world`, `verify/system20-local-area`, `verify/system00f-streaming-materialization`, `verify/performance-architecture`, and `verify/pages-deploy`.
+`IslandLegacySeamSmoke.gd` now protects the specific legacy-map/green-belt correction. It proves:
 
-## 13. Replacement boundaries
+- the central island request receives the shared world ecology seed;
+- the island central generated signature is no longer the standalone old 256×256 Rural Crossroads fixture signature;
+- the central-to-small-town edge gap remains compact;
+- island interior surface vocabulary remains rural/lush rather than a rectangular forest-floor palette switch;
+- a world-space ecology probe produces exactly the same natural `(cell, semantic)` set when generated as one rectangle or as two adjacent logical rectangles.
 
-A System 20 rewrite must not require changes to System 00D world identity/routing, System 19 internals, WHAT/WHEN, renderer/art, player/input/UI or technical streaming geometry. Likewise, changing technical stream-region size must not change a System 20 plan for the same logical request.
+Verified executable `d33c69d6bd05f4c8fdbba62c6bd51bb16aad26ad` passed all **17 required exact-head contexts**, including `verify/system00d-global-world`, `verify/system20-local-area`, `verify/system00f-streaming-materialization`, `verify/performance-architecture`, and `verify/pages-deploy`.
+
+## 14. Replacement boundaries
+
+A System-20 rewrite must not require changes to System-00D world identity/routing, System-19 internals, WHAT/WHEN, renderer/art, player/input/UI or technical streaming geometry. Likewise, changing technical stream-region size must not change a System-20 plan for the same logical request or the world-space ecology identity for the same global cells.

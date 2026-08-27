@@ -8,7 +8,7 @@ Canonical status/routing index. Read `PROJECT_NORTH_STAR.md`, `README_SOPS.md`, 
 | 00A | Spatial Model — WHERE | **IMPLEMENTED** | `00A_SPATIAL_MODEL.md` |
 | 00B | Persistent World State — WHAT | **IMPLEMENTED** | `00B_PERSISTENT_WORLD_STATE.md` |
 | 00C | Tick / Action / Pause — WHEN | **IMPLEMENTED** | `00C_TICK_ACTION_PAUSE.md` |
-| 00D | Global World Planning / Generation | **IMPLEMENTED — rural v6 + complete island v1** | `00D_GLOBAL_WORLD_PLANNING.md` + infrastructure children |
+| 00D | Global World Planning / Generation | **IMPLEMENTED — rural v6 + complete island v2** | `00D_GLOBAL_WORLD_PLANNING.md` + infrastructure children |
 | 00F | Streaming / Materialization | **IMPLEMENTED — settlement + countryside + island surface + river/watercourse** | `00F_STREAMING_MATERIALIZATION_ORCHESTRATION.md` |
 | 01 | Collision / Spatial Query | **IMPLEMENTED** | `01_COLLISION_SPATIAL_QUERY.md` |
 | 02 | Movement Actions | **IMPLEMENTED** | `02_MOVEMENT_ACTIONS.md` |
@@ -39,7 +39,7 @@ Canonical status/routing index. Read `PROJECT_NORTH_STAR.md`, `README_SOPS.md`, 
 | 17A.1 | Overweight Walk Fatigue / Carry Ceiling | **IMPLEMENTED** | `17A1_OVERWEIGHT_WALK_FATIGUE_HARD_CARRY_LIMIT.md` |
 | 18 | Door Interaction / Automatic Passage | **IMPLEMENTED** | `18_DOOR_INTERACTION_PASSAGE.md` |
 | 19 | Local Building Generation / Grammar | **IMPLEMENTED — FINALIZED, 24 archetypes** | `19_LOCAL_BUILDING_GENERATION_ARCHETYPE_LAB.md` |
-| 20 | Local Area Generation | **IMPLEMENTED — ten area / seven environment profiles + live river/bridge physicalization** | `20_LOCAL_AREA_PARCEL_GENERATION.md` |
+| 20 | Local Area Generation | **IMPLEMENTED — ten area / seven environment profiles + live river/bridge physicalization + shared island ecology seam** | `20_LOCAL_AREA_PARCEL_GENERATION.md` |
 | 21 | Tactical Camera / View Control | **IMPLEMENTED** | `21_TACTICAL_CAMERA_VIEW_CONTROL.md` |
 | 22 | Large-Area DEV Critique Runtime | **IMPLEMENTED** | `22_LARGE_AREA_CRITIQUE_RUNTIME.md` |
 | 23 | Perception / LOS / Fog Memory | **IMPLEMENTED — geometry + light/atmosphere-aware acquisition + memory/audio presentation** | `23_PERCEPTION_LOS_FOG_MEMORY.md` |
@@ -66,15 +66,30 @@ Canonical status/routing index. Read `PROJECT_NORTH_STAR.md`, `README_SOPS.md`, 
 
 Performance gate — COMPLETE + HUMAN ACCEPTED. First P0/P1/P2 executable `0398a2a49d84e6067f7610727aecacf4c05fe41f`; Weather P3D human-accepted executable `6016fe5098804e3e6aba6c9f5f9658282036a697`.
 
-1B. **Item freshness/spoilage** — COMPLETE: System 30 Candidate 001. First fully green executable `39716f27b7f91b7007645ceae02dedc47601bf87`; all 16 required exact-head contexts green.
+1B. **Item freshness/spoilage** — COMPLETE: System 30 Candidate 001. First fully green executable `39716f27b7f91b7007645ceae02dedc47601bf87`.
 
-1C. **Semantic inventory/menu icons** — COMPLETE: System 31 Candidate 001. Current verified executable `dc83ad10b7469a629fb2ac5d86c77d386b69434d`; all 17 required exact-head contexts green.
+1C. **Semantic inventory/menu icons** — COMPLETE: System 31 Candidate 001. First verified executable `dc83ad10b7469a629fb2ac5d86c77d386b69434d`.
 
 1D. **Large/multi-cell object visual geometry** — **NEXT: DESCRIBE**; presentation-owned span/pivot/overhang independent from physical footprint.
 
 1E. **Content expansion/integration** — broaden perishables and ordinary props/fixtures/vegetation using the new foundations.
 
 Then: Crafting -> Power + Water -> physical survival/health -> Moodlets -> final skills/interactions -> Vehicles -> AI/combat/outbreak -> final graphics/UI -> Beta.
+
+---
+
+## Current complete-island continuity truth
+
+Verified executable: `d33c69d6bd05f4c8fdbba62c6bd51bb16aad26ad`.
+
+- `temperate.island.region` is v2; the central site no longer reuses raw world seed `20001`, so the live island does not regenerate the old standalone 256×256 Rural Crossroads critique map.
+- Island-only settlement spacing is compact while protected rural-v6 regional behavior remains unchanged.
+- Island interior and settlement sites use the same rural/lush environment vocabulary.
+- Globally projected island settlement requests receive an optional shared world ecology seed without changing their site seed.
+- `NaturalEcologyField` evaluates natural density/family/semantic from world seed + absolute global cell.
+- Island surface v3 and island settlement dressing share that field, so logical 256×256 area rectangles cannot restart environmental patch noise.
+- A focused split-invariance regression proves the same land produces the same `(cell, semantic)` natural-prop set whether planned as one rectangle or neighboring rectangles.
+- 00F source ownership, 128×128 technical streaming, WHAT/WHEN, roads/hydrology/bridges and System-19 building ownership remain unchanged.
 
 ---
 
@@ -91,15 +106,10 @@ Candidate 001 is implemented and CI verified.
 - unknown future semantics use an explicit unknown glyph + diagnostic while text remains usable;
 - `STATS`, `INVENTORY`, `MENU` use icon + text;
 - Inventory hands/carried rows and scavenging `CONTENTS` / `YOUR PACK` use the same item icon vocabulary;
-- TAKE/STORE, movement and DEV controls remain text-only in Candidate 001;
 - existing item labels, IDs, weight, utility/family and System-30 freshness remain real data beside icons;
-- no persistent state, save schema, simulation-tick work, per-item runtime object or world scan;
-- selected System-10 silhouettes may be visually repacked with provenance, without runtime dependency on System 10;
-- the post-integration header-width correction uses Godot's theme constant API rather than a nonexistent direct Button property.
+- no persistent state, save schema, simulation-tick work, per-item runtime object or world scan.
 
 Exact-head context: `verify/system31-semantic-ui-icons`.
-
-All **17 required contexts** are green on `dc83ad10b7469a629fb2ac5d86c77d386b69434d`. No separate human visual-acceptance claim is recorded for the post-width-fix appearance.
 
 ---
 
@@ -147,7 +157,7 @@ Exact-head context: `verify/performance-architecture`.
 
 ## Current world / sensory truth
 
-- System 00D complete-island planning preserves the proven rural-v6 skeleton and deterministic LAND/SHORE/OCEAN.
+- System 00D complete-island planning preserves the proven rural-v6 global skeleton while island-v2 removes the legacy central-seed alias and supplies world-space ecology context.
 - System 00F follows **materialization is one-way; activation is reversible**; technical regions are not world identity.
 - System 23: **Black = I know nothing. Dark = I remember this place. Full = I can currently acquire what is actually happening.**
 - System 24: **Loot exists before you search for it.**
@@ -186,4 +196,4 @@ Weather DEV controls and performance telemetry remain explicitly DEV presentatio
 - `verify/performance-architecture`
 - `verify/pages-deploy`
 
-All **17 required contexts** are green on System-31 executable head `dc83ad10b7469a629fb2ac5d86c77d386b69434d`.
+All **17 required contexts** are green on current playable-island executable `d33c69d6bd05f4c8fdbba62c6bd51bb16aad26ad`.

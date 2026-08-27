@@ -1,5 +1,21 @@
 # Changelog
 
+## Playable Island Legacy Map + Ecology Seam Correction — 2026-08-27
+
+- Fixed the actual remaining old-mini-map/green-belt defect rather than only moving the spawn.
+- `temperate.island.region` is now v2. The central `rural.crossroads` site keeps its stable world identity/location but no longer reuses the raw world seed `20001`; its local seed is derived from world seed + site identity, so the playable island no longer regenerates the standalone historical 256×256 Rural Crossroads critique fixture.
+- Tightened **island-only** settlement spacing to reduce the oversized several-hundred-cell countryside band while leaving protected `temperate.rural.region` v6 behavior unchanged.
+- Hardened `rural.scattered` local-road planning with a bounded deterministic candidate search across legal lane-side/tail orientations. This fixed island-seed failures without rerolling seeds or changing inherited-road dimensions/topology.
+- Added optional `AreaGenerationRequest.inherited_ecology_seed`. Globally projected island settlement requests receive the System-00D world seed for natural environmental dressing while retaining their normal site seed for roads, parcels, buildings and other local morphology.
+- Added pure shared `NaturalEcologyField.gd`. Natural density patches and tree/shrub/rock family selection are evaluated from **world seed + absolute global cell**, so ecology no longer restarts at each 256×256 settlement/source origin.
+- `OutdoorPropertyDressingPlanner` consumes the shared field only when upstream ecology context is present. Standalone System-20 fixtures without that context keep their historical local request-seed/local-coordinate behavior.
+- `IslandSurfaceAreaGenerator` v3 now uses the same shared natural ecology field and the same rural/lush interior environmental vocabulary as settlement sites. Shore/ocean classification, road-clearance halos and source ownership remain unchanged.
+- Expanded `IslandLegacySeamSmoke.gd` to prove the island central generated signature differs from the old standalone fixture, the central-to-small-town edge gap remains compact, the rectangular forest-floor palette break cannot return, and the same world-space natural `(cell, semantic)` set is produced whether the same land is planned as one rectangle or split into adjacent logical rectangles.
+- Preserved System-00D roads/hydrology/bridges, System-19 building ownership, System-00F non-overlapping materialization sources, 128×128 technical streaming, WHAT/WHEN, rendering/input/UI and the no-recurring-world-scan performance boundary.
+- Verified executable: `d33c69d6bd05f4c8fdbba62c6bd51bb16aad26ad`.
+- All **17 required exact-head contexts** passed on that executable: `verify/system00d-global-world`, `verify/system00f-streaming-materialization`, Systems 19–31, `verify/performance-architecture`, and `verify/pages-deploy`.
+- Automated verification proves deterministic identity/continuity and integration. Human visual playtest of the deployed island remains separate.
+
 ## Playable Island Continuity Correction — 2026-08-27
 
 - Fixed the live complete-island DEV spawn so the survivor starts on inherited pavement beside the central crossroads instead of deriving spawn from the rural diner parcel/door.
@@ -105,7 +121,7 @@
 - Added 12-band quantized environment signatures so future Slice B Lighting/Hearing consumers can refresh on meaningful physical Weather changes rather than every tiny interpolation or presentation frame.
 - Added Weather snapshot schema v1 preserving current/target profile, transition ticks, wetness anchor, revision/serials, scheduled event serial and deterministic future transition state.
 - Added cached `SkyExposureQuery` for Slice A precipitation masking. Current structure-envelope approximation treats structure cells—including door/window semantics—as enclosure boundaries, so opening a door does not magically make the whole room unroofed.
-- Added one `WeatherPresentationRenderer` at z=50, above physical lighting and below System 23 perception. Shelter-aware rain therefore cannot reveal hidden roof geometry through true-black unexplored fog.
+- Added one `WeatherPresentationRenderer` at z=50, above physical lighting and below System 23 Perception. Shelter-aware rain therefore cannot reveal hidden roof geometry through true-black unexplored fog.
 - Weather presentation intentionally creates **zero per-raindrop/per-fog/per-debris child Nodes**. It draws one coarse procedural low-resolution field with a virtual-axis cap of 256 and nearest/blocky visual language while System 27 lighting remains smooth.
 - Continuous rain/fog presentation targets **20 Hz / 50 ms** independent of display FPS. Long-frame presentation catch-up is capped to four cosmetic steps and advances zero WHEN ticks.
 - Rain uses at most 180 coarse candidate streaks, 1–3 weather pixels long, with wind-driven slant and shelter rejection. Fog uses at most 36 chunky low-alpha drifting patches.

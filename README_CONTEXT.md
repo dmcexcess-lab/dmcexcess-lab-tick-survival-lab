@@ -23,33 +23,43 @@ Golden archaeology commit: `1763958f44eb7f855fd49944c00d1ffe608c0abe`.
 The canonical DEV/playable composition is the **complete streamed island**.
 
 - Global bounds: 1792×1792 tactical cells (`Rect2i(232,1232,1792,1792)`).
-- System 00D `temperate.island.region` v1 overlays deterministic LAND / SHORE / OCEAN on the proven rural-v6 settlement/road/hydrology skeleton.
-- Five globally connected sites remain proven: one `rural.crossroads`, one `smalltown.center`, three `rural.scattered` hamlets.
+- System 00D `temperate.island.region` v2 overlays deterministic LAND / SHORE / OCEAN on the proven rural-v6 world-planning skeleton while using island-specific compact settlement spacing and derived local site seeds.
+- Five globally connected site identities remain: one `rural.crossroads`, one `smalltown.center`, three `rural.scattered` hamlets.
 - System 00F materializes non-overlapping settlement, river/watercourse and island-surface logical sources.
 - Technical streaming is 128×128 with active radius 1 and follows the survivor. Technical regions are performance configuration, never world identity.
 - Ocean/ordinary river water is non-traversable except explicit planned bridge deck.
-- The playable survivor now starts on inherited pavement beside the **central crossroads**, not at the diner entrance.
+- The playable survivor starts on inherited pavement beside the central crossroads, not at the diner entrance.
 
-### Playable-island continuity correction — VERIFIED 2026-08-27
+### Legacy mini-map / green-belt correction — VERIFIED 2026-08-27
 
-Verified executable: `505535ea7fab555f7a1871afb9f2d1e2ff92331b`.
+Verified executable: `d33c69d6bd05f4c8fdbba62c6bd51bb16aad26ad`.
 
-The former playable composition made the mature 256×256 crossroads site read like an old mini-map surrounded by an enormous blank green band. The source partition itself was valid, but ordinary island-surface LAND intentionally emitted almost nothing except lush grass, and inherited road centerline paint was dropped outside settlement sources. The DEV spawn was also explicitly derived from the diner parcel.
+The reported visual defect had multiple real causes rather than being only a spawn problem:
+
+1. The island's central 256×256 `rural.crossroads` site occupied the exact old critique bounds and reused world seed `20001`, which made it regenerate the old standalone critique map inside the larger island.
+2. Island settlement spacing inherited much larger regional-v6 distances, leaving an oversized countryside band between 256×256 settlement rectangles.
+3. Settlement natural dressing evaluated patch/family noise from `cell - request.bounds.position`, restarting the environmental noise phase at every logical area rectangle and making the ownership boundary visible.
+4. Earlier island-surface palette/dressing behavior further emphasized the rectangle instead of making the land read as one continuous place.
 
 Current corrected result:
 
-- spawn selection is centered on the actual inherited crossroads and explicitly avoids outdoor props;
-- diner existence remains ordinary generated content rather than spawn authority;
-- `IslandSurfaceAreaGenerator` v2 adds globally anchored LAND-cover variation and deterministic temperate-coastal natural dressing between settlement sites;
-- natural prop IDs derive from global cells, so technical/source partition changes do not redefine the same countryside object;
-- natural dressing stays off ocean/shore and keeps a road-clearance halo;
-- inherited regional road surface **and centerline paint** continue through island-surface materialization instead of visually stopping at settlement rectangles;
-- the five-site 00D road/settlement graph, hydrology, bridges, source ownership and 128×128 streaming geometry are unchanged;
-- no recurring per-frame/per-tick world work was added; the new dressing is bounded generation/materialization work.
+- `temperate.island.region` is v2 and explicitly forbids raw world-seed reuse for the central site;
+- the central site keeps its stable world identity/location but receives a derived local seed, so its generated System-20 signature is no longer the old standalone Rural Crossroads fixture;
+- island-only settlement spacing is compact, while protected `temperate.rural.region` v6 behavior is unchanged;
+- island interior and settlement sites use the same rural/lush environmental vocabulary;
+- `AreaGenerationRequest` exposes an optional `inherited_ecology_seed` used only when upstream world context requires cross-area environmental continuity;
+- globally projected island settlements receive the System-00D world seed for natural ecology while retaining their own site seed for roads, parcels, buildings and other local morphology;
+- `NaturalEcologyField` evaluates natural density/family/semantic from **world seed + absolute global cell**;
+- `IslandSurfaceAreaGenerator` v3 and globally projected settlement dressing share that field, so tree/shrub/rock patch noise does not restart at the 256×256 source boundary;
+- standalone System-20 fixtures without an inherited ecology seed retain their historical local behavior;
+- inherited regional road surface and centerline remain continuous outside settlement sources;
+- no source overlap, streaming-geometry change, WHAT/WHEN change or recurring per-frame/per-tick world scan was added.
 
-The complete-island contract now fails if the playable start returns to the diner entrance, if ordinary island LAND becomes blank again, if surface natural props invade road cells/non-land, or if a painted inherited road loses its centerline outside a settlement source.
+`IslandLegacySeamSmoke.gd` now proves both identity and boundary continuity. In particular, a natural-ecology probe must produce the exact same sorted `(cell, semantic)` set whether the same land is generated as one rectangle or split into two adjacent logical rectangles.
 
-All **17 required exact-head contexts** passed on the verified executable, including global world, local area, streaming, performance and Pages deployment.
+All **17 required exact-head contexts** passed on `d33c69d6bd05f4c8fdbba62c6bd51bb16aad26ad`, including global world, local area, streaming/materialization, performance architecture and Pages deployment.
+
+This is automated deterministic verification. It does not substitute for a human visual playtest of the deployed island.
 
 ---
 
@@ -71,6 +81,7 @@ Important current rules:
 10. Expensive consumers wake only for the domains/completed batches they actually depend on.
 11. Food freshness is derived analytically from authoritative time/exposure; no item gets a spoilage timer.
 12. UI icons may visualize semantic truth but must never define item identity, utility, freshness, or action legality.
+13. Logical area/streaming boundaries must not reset world-space environmental identity.
 
 ---
 
@@ -82,7 +93,7 @@ First P0/P1/P2 fully green executable: `0398a2a49d84e6067f7610727aecacf4c05fe41f
 
 Human-accepted Weather P3D executable: `6016fe5098804e3e6aba6c9f5f9658282036a697`.
 
-Current protected result:
+Protected result:
 
 - continuous rain/fog is one persistent GPU atmosphere surface;
 - no CPU continuous-rain/fog redraw loop;
@@ -97,13 +108,9 @@ The pre-1B human performance gate is closed.
 
 ## System 30 / Roadmap Phase 1B — COMPLETE
 
-Canonical design:
+Canonical design: `SYSTEM_DESIGNS/30_ITEM_FRESHNESS_SPOILAGE.md`
 
-`SYSTEM_DESIGNS/30_ITEM_FRESHNESS_SPOILAGE.md`
-
-First fully green executable:
-
-`39716f27b7f91b7007645ceae02dedc47601bf87`
+First fully green executable: `39716f27b7f91b7007645ceae02dedc47601bf87`.
 
 Core rule:
 
@@ -116,27 +123,21 @@ Implemented result:
 - FRESH / AGING / STALE / SPOILED derived analytically;
 - zero per-item `_process`, timer or scheduled spoilage event;
 - cumulative exposure-provider seam with ambient as Candidate 001;
-- virgin world perishables use logical scenario origin tick 0, so late technical materialization never creates magically fresh food;
+- virgin world perishables use logical scenario origin tick 0;
 - bounded deterministic initial-age variation;
 - System 24 transactionally enrolls perishables and rolls freshness back with WHAT/containment/loot on failure;
 - production loot probabilities and action timings are unchanged;
 - inventory/container inspection shows coarse freshness labels;
-- refrigerators do **not** fake cooling until Phase 3 provides real power/appliance truth;
+- refrigerators do not fake cooling until Phase 3 provides real power/appliance truth;
 - Phase 4 later owns eating/drinking/health consequences.
-
-System-30 verification includes System-24 rollback, live canonical startup, System-25 time regression and read-only inspection integration. The executable completed all **16 required exact-head contexts** successfully.
 
 ---
 
 ## System 31 / Roadmap Phase 1C — COMPLETE
 
-Canonical design:
+Canonical design: `SYSTEM_DESIGNS/31_SEMANTIC_UI_ICONS.md`
 
-`SYSTEM_DESIGNS/31_SEMANTIC_UI_ICONS.md`
-
-Current verified executable:
-
-`dc83ad10b7469a629fb2ac5d86c77d386b69434d`
+First verified executable: `dc83ad10b7469a629fb2ac5d86c77d386b69434d`.
 
 Core rule:
 
@@ -145,19 +146,14 @@ Core rule:
 Implemented result:
 
 - one dedicated low-resolution `ui_icon_atlas.svg`;
-- 16×16 logical icon cells displayed at an exact 2× / 32×32 size;
+- 16×16 logical icon cells displayed at exact 2× / 32×32 size;
 - one shared Node-free `SemanticUiIconCatalog` with cached atlas-region textures;
-- explicit mapping for all current 71 `LootItemCatalog` semantic types plus three shell controls, with intentional glyph sharing but no automatic family fallback;
-- an explicit unknown glyph + diagnostic for future unmapped semantics while text remains usable;
-- `STATS`, `INVENTORY`, and `MENU` are icon + text rather than icon-only;
+- explicit mapping for all current 71 `LootItemCatalog` semantic types plus three shell controls;
+- explicit unknown glyph + diagnostic for future unmapped semantics while text remains usable;
+- `STATS`, `INVENTORY`, and `MENU` are icon + text;
 - occupied hands, carried inventory, scavenging `CONTENTS`, and `YOUR PACK` rows use the same semantic item icons;
-- TAKE/STORE, movement and DEV controls remain text-only in Candidate 001;
 - existing labels, stable IDs, weight, utility/family and System-30 freshness text remain real data beside the icon;
-- zero persistent state, save-schema change, simulation-tick work, per-item Node/timer/process, or world scan;
-- one dedicated `verify/system31-semantic-ui-icons` context covering catalog completeness, cache behavior, protected UI/loot/freshness regressions, and canonical startup;
-- all 17 required exact-head contexts, including Pages deployment, green on the verified executable.
-
-No separate human visual-acceptance claim is recorded for the post-width-fix appearance; executable/CI verification is complete.
+- zero persistent state, save-schema change, simulation-tick work, per-item Node/timer/process, or world scan.
 
 ---
 
@@ -189,6 +185,9 @@ Then: Crafting -> Power + Water -> physical survival/health -> Moodlets -> Skill
 
 ## Relevant ownership boundaries
 
+- System 00D owns global geography, settlement/road/hydrology/infrastructure truth and cross-area world context.
+- System 00F owns materialization-source orchestration and technical activation, not world identity.
+- System 20 owns bounded local physical generation and may consume optional upstream environmental context without taking global ownership.
 - System 11 owns containment.
 - System 12 owns timed physical item transitions.
 - System 13D owns semantic physical weight.
@@ -221,4 +220,4 @@ Then: Crafting -> Power + Water -> physical survival/health -> Moodlets -> Skill
 - `verify/performance-architecture`
 - `verify/pages-deploy`
 
-All **17 required contexts** are green on playable-island continuity executable `505535ea7fab555f7a1871afb9f2d1e2ff92331b`.
+All **17 required contexts** are green on the current verified playable-island executable `d33c69d6bd05f4c8fdbba62c6bd51bb16aad26ad`.
