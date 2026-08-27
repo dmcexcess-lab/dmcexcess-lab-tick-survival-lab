@@ -17,7 +17,7 @@ func generate(request: AreaGenerationRequest) -> GeneratedAreaPlan:
     var plan := PlanClass.new()
     if request == null or not request.is_valid() \
         or request.area_profile_id != PROFILE_ID \
-        or request.environment_profile_id != EnvironmentProfilesClass.TEMPERATE_COASTAL:
+        or request.environment_profile_id != EnvironmentProfilesClass.TEMPERATE_RURAL:
         plan.failure_reason = "invalid_island_surface_request"
         return plan
     var context: Dictionary = _surface_context(request)
@@ -32,7 +32,7 @@ func generate(request: AreaGenerationRequest) -> GeneratedAreaPlan:
 
     var profile: Dictionary = {
         "id": PROFILE_ID,
-        "version": 2,
+        "version": 3,
         "road_layout": &"inherit_only",
         "signalize_first_inherited_intersection": false,
         "inherited_roads_required": false,
@@ -85,7 +85,7 @@ func generate(request: AreaGenerationRequest) -> GeneratedAreaPlan:
     plan.seed = request.seed
     plan.bounds = request.bounds
     plan.area_profile_id = PROFILE_ID
-    plan.area_profile_version = 2
+    plan.area_profile_version = 3
     plan.environment_profile_id = request.environment_profile_id
     plan.environment_profile_version = int(environment.get("version", 0))
     plan.reservations = []
@@ -201,7 +201,7 @@ func _natural_land_props(
                     if request.bounds.has_point(blocked_cell):
                         blocked[blocked_cell] = true
 
-    var base_density: float = clampf(float(environment.get("natural_noise_density", 0.012)), 0.0, 0.04)
+    var base_density: float = clampf(float(environment.get("natural_noise_density", 0.0105)), 0.0, 0.04)
     var patch_scale: int = maxi(8, int(environment.get("natural_noise_patch_scale", 22)))
     var sparse_multiplier: float = maxf(0.0, float(environment.get("natural_noise_sparse_multiplier", 0.20)))
     var dense_multiplier: float = maxf(sparse_multiplier, float(environment.get("natural_noise_dense_multiplier", 2.25)))
@@ -267,9 +267,8 @@ func _semantic(context: Dictionary, cell: Vector2i) -> StringName:
             int(context.get("coast_wobble", 18)),
             int(context.get("coast_scale", 96))
         )
-    var world_seed: int = int(context.get("world_seed", 0))
-    if _value_noise_global(world_seed, cell, 96, 1709) >= 0.82:
-        return &"ground.forest_floor"
+    # Interior LAND deliberately matches the rural settlement base palette.
+    # Shore/ocean remain island-specific physical surface truth.
     return &"ground.grass_lush"
 
 func _value_noise_global(seed: int, cell: Vector2i, scale: int, salt: int) -> float:
