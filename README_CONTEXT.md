@@ -44,7 +44,7 @@ The user visually playtested the deployed correction and reported that it looks 
 
 ## Current implemented stack
 
-Foundation and gameplay through **System 31**, plus **System 07B**, are implemented.
+Foundation and gameplay through **System 31**, plus **System 07B** and **Roadmap Phase 1E Content Expansion + Integration**, are implemented.
 
 Current major capabilities include:
 
@@ -52,16 +52,17 @@ Current major capabilities include:
 - collision, movement, actor locomotion, stance, carrying and timed item transfer;
 - complete-island global/local generation and technical streaming;
 - 24 System-19 building archetypes and ten System-20 local-area profiles;
-- persistent searchable world loot;
+- deterministic Phase-1E location dressing across the 18 baseline one-story building profiles, capped at two added accents per building while the six protected reference buildings remain untouched;
+- persistent searchable world loot with a 97-semantic physical item catalog and broader location-aware residential/retail/medical/hardware/industrial/farm/office/civic stock;
 - world time/daylight;
 - spatial sound/hearing;
 - physical lighting, visibility and shadows;
 - Weather/atmosphere/lightning;
 - perception / fog memory;
 - real interaction affordance/reach highlights;
-- analytic item freshness/spoilage;
-- semantic inventory/menu icons;
-- large/multi-cell prop visual geometry with actor-overhang layering;
+- analytic item freshness/spoilage with 10 explicit perishable semantics;
+- semantic inventory/menu icons with explicit mappings for all 97 current loot semantics plus the three shell controls;
+- large/multi-cell prop visual geometry with actor-overhang layering, now bound to the real generated large-tree and traffic-light prop semantics;
 - broader emitter-derived physical-light glow presentation.
 
 Important current rules:
@@ -81,6 +82,7 @@ Important current rules:
 13. Logical area/streaming boundaries must not reset world-space environmental identity.
 14. Physical footprints answer where objects are; presentation geometry may be larger but never redefines physical truth.
 15. Bright art does not create light. System-27 emitter truth remains the only source of physical-light presentation glow.
+16. Phase-1E content extends existing owners; content integration never creates a second owner or placeholder Phase-2+ mechanics.
 
 ---
 
@@ -161,27 +163,43 @@ Human visual acceptance for the new 07B art/glow is not separately recorded yet.
 
 ---
 
-## Active work — Roadmap Phase 1E
+## Roadmap Phase 1E — COMPLETE + CI VERIFIED
 
-### Content Expansion + Integration — DESCRIBED, AWAITING APPROVAL
+Canonical design: `SYSTEM_DESIGNS/PHASE_1E_CONTENT_EXPANSION_INTEGRATION.md`.
 
-Canonical draft: `SYSTEM_DESIGNS/PHASE_1E_CONTENT_EXPANSION_INTEGRATION.md`.
+Verified executable head: `6ad923d172f5a5434f94a7fdcc15da640a60a240`.
 
 Core rule:
 
 > **Content extends the system that already owns its truth. Integration does not create a second owner.**
 
-Phase 1E is explicitly **not System 32**. It is a bounded integration phase across existing owners.
+Implemented result:
 
-Candidate implementation order:
+1. **1E-1 World clutter + location identity** — the 18 baseline one-story System-19 profiles receive deterministic program-appropriate accent dressing through one shared generation helper, capped at two added accents per building. Protected historical trailer/farmhouse/compact-laundry/gas-station/diner archetypes remain outside the new dresser. Existing System-20 outdoor generation remains authoritative; its already-generated `prop.deciduous_large` and `prop.traffic_light` semantics now consume the approved 07B large-object presentation in ordinary world content, while historical 07B fixture aliases remain compatible.
+2. **1E-2 Mundane loot + perishable breadth** — System-24 item truth expands to 97 physical semantics with positive System-13D weights, broader location-aware container profiles including school/church/police/fire stock, 10 explicit System-30 perishables, and intentional System-31 icon coverage for all 97 item semantics.
+3. **1E-3 Integration/readability/performance gate** — added permanent `verify/phase1e-content-integration`, bounded building accents to prevent clutter creep, preserved existing System-20/24/29/30/31/07B/performance contracts, and kept future Crafting/Power/nutrition/Skills/Vehicles/AI behavior absent rather than faked.
 
-1. **1E-1 World clutter + location identity** — enrich existing System-19 building-profile dressing and System-20 exterior/environment content; deploy 07B large trees/traffic furniture through ordinary generated contexts while preserving access/circulation/roads/water.
-2. **1E-2 Mundane loot + perishable breadth** — expand System-24 item/container content; every added item gets System-13D weight + explicit System-31 icon, and every added perishable gets System-30 freshness.
-3. **1E-3 Integration/readability/performance acceptance** — tune generated identity, real System-29 highlight density, icon/freshness readability, 07B layering/glow and phone/Safari performance.
+All **19 required exact-head contexts** are green on `6ad923d172f5a5434f94a7fdcc15da640a60a240`, including the new `verify/phase1e-content-integration` and `verify/pages-deploy`.
 
-No Crafting, Power/Refrigeration, nutrition/Health, Skills, Vehicles, combat or AI behavior may be faked inside 1E.
+Automated Phase-1E implementation is complete. A separate human visual/readability playtest of the richer content is still useful and is **not** being claimed by CI.
 
-The next lifecycle gate is **APPROVE**. No 1E runtime/content implementation is authorized yet.
+---
+
+## Active work — Roadmap Phase 2
+
+### Crafting — NEXT DESIGN TARGET
+
+Phase 1 code/integration work is complete through 1E. The next major lifecycle step is to **DESCRIBE** the bounded Phase-2 Crafting owner(s) before implementation.
+
+Roadmap direction remains:
+
+- recipes consume real persistent inputs and create real persistent outputs;
+- crafting spends WHEN time;
+- tools/workstations/conditions are real world/item facts rather than menu-only gates;
+- outputs enter ordinary inventory/world containment;
+- future Skills attach through narrow capability/quality/speed seams rather than being baked into Crafting ownership.
+
+No Phase-2 implementation is authorized merely by completion of Phase 1.
 
 ---
 
@@ -222,9 +240,8 @@ The next lifecycle gate is **APPROVE**. No 1E runtime/content implementation is 
 - `verify/system30-item-freshness`
 - `verify/system31-semantic-ui-icons`
 - `verify/system07b-large-visual-geometry`
+- `verify/phase1e-content-integration`
 - `verify/performance-architecture`
 - `verify/pages-deploy`
 
-All **18 required contexts** are green on current verified executable/workflow head `d5e33b43fb732835b4a996ae4bec3a562cfa75f3`.
-
-If Phase 1E is approved and implemented, its proposed dedicated `verify/phase1e-content-integration` context becomes an additional required context for that implementation.
+All **19 required contexts** are green on verified executable head `6ad923d172f5a5434f94a7fdcc15da640a60a240`.
