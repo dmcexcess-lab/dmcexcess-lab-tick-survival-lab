@@ -95,18 +95,29 @@ Implemented result:
 
 No separate human visual-acceptance claim is recorded for the post-width-fix appearance; executable/CI verification is complete.
 
-### 1D — Large/multi-cell object visual geometry — NEXT: DESCRIBE
+### 1D — Large/multi-cell object visual geometry — DESCRIBED: AWAITING APPROVAL
 
-Goal: let physical multi-cell objects actually look large instead of drawing one recovered one-cell sprite at their anchor.
+Canonical draft:
 
-Planned direction:
+`SYSTEM_DESIGNS/07B_LARGE_MULTI_CELL_VISUAL_GEOMETRY.md`
 
-- presentation-owned visual descriptor with draw span, pivot/anchor offset, native facing/rotation policy and optional visual overhang;
-- physical footprint remains collision/world truth and may differ from decorative overhang;
-- one render command per stable entity rather than repeating/stretched icons per occupied cell;
-- explicit large art resolved semantically;
-- first examples include 2×2/four-cell large trees and larger traffic/stop lights;
-- future vehicles and final prop shadows reuse this presentation seam.
+Goal: let physical multi-cell objects actually look large instead of drawing one recovered one-cell sprite at their anchor, while keeping visual geometry independent from authoritative collision/world footprint.
+
+Candidate 001 direction:
+
+- System 07B is a presentation-only child of the existing System 07 renderer, not a new gameplay/world system;
+- a Node-free visual descriptor supplies authored whole-cell draw span, anchor-attached pivot and optional foreground/overhang art;
+- physical footprint remains WHERE/WHAT truth and may differ from decorative visual overhang;
+- System 07A remains facing/orientation owner;
+- one stable entity produces one shared logical visual plan rather than repeated/stretched icons per occupied cell;
+- the ordinary base/body pass stays at z=20 while an optional foreground/overhang pass sits at z=35 above actors and below physical lighting;
+- a small catalog-derived discovery halo allows an offscreen physical anchor to contribute visible canopy/arm overhang without any whole-world scan;
+- explicit large art remains resolved through System 04;
+- first examples are a 2×2-or-larger large tree and larger traffic/stop lights;
+- future vehicles and final prop shadows may reuse this presentation seam but are not part of Candidate 001;
+- implementation requires dedicated `verify/system07b-large-visual-geometry` coverage plus all protected exact-head regressions.
+
+**Runtime implementation is not authorized until the draft is approved.**
 
 ### 1E — Phase-1 content expansion + integration
 
@@ -325,4 +336,4 @@ For each bounded phase/system:
 
 Newest explicit user direction supersedes older roadmap ordering, but implemented historical systems remain current truth until deliberately migrated.
 
-**Current next step: DESCRIBE the bounded Phase 1D large/multi-cell object visual-geometry system. Phase-1D implementation is not authorized yet.**
+**Current next step: APPROVE or revise the bounded System-07B Candidate-001 design for Phase 1D. Runtime implementation is not authorized yet.**
