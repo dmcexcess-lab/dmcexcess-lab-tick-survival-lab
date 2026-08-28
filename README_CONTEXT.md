@@ -59,7 +59,7 @@ Current corrected result:
 
 All **17 required exact-head contexts** passed on `d33c69d6bd05f4c8fdbba62c6bd51bb16aad26ad`, including global world, local area, streaming/materialization, performance architecture and Pages deployment.
 
-This is automated deterministic verification. It does not substitute for a human visual playtest of the deployed island.
+This is automated deterministic verification. The user subsequently visually playtested the deployed island and reported that it **looks good**.
 
 ---
 
@@ -82,6 +82,7 @@ Important current rules:
 11. Food freshness is derived analytically from authoritative time/exposure; no item gets a spoilage timer.
 12. UI icons may visualize semantic truth but must never define item identity, utility, freshness, or action legality.
 13. Logical area/streaming boundaries must not reset world-space environmental identity.
+14. Physical footprints answer where objects are; presentation geometry may be larger but may never silently redefine physical truth.
 
 ---
 
@@ -157,13 +158,29 @@ Implemented result:
 
 ---
 
-## Active work — Roadmap Phase 1D
+## Active work — Roadmap Phase 1D / System 07B
 
-### Large / multi-cell object visual geometry — next bounded design target
+### Large / multi-cell object visual geometry — DESCRIBED, AWAITING APPROVAL
 
-Phase 1D is next. Its intended owner is presentation-only visual geometry for large/multi-cell objects whose authored draw span, pivot and decorative overhang may differ from their authoritative physical footprint.
+Canonical draft: `SYSTEM_DESIGNS/07B_LARGE_MULTI_CELL_VISUAL_GEOMETRY.md`.
 
-The next lifecycle gate is **DESCRIBE**. No Phase-1D runtime implementation is authorized yet.
+Core rule:
+
+> **Physical footprint answers where the object is. Visual geometry answers how that object is drawn. Neither may silently redefine the other.**
+
+Candidate 001 design:
+
+- System 07B extends existing System 07 rather than creating a new top-level renderer/gameplay system;
+- Node-free descriptors define whole-cell visual span plus an anchor-attached fractional pivot;
+- System 07A continues to own orientation;
+- physical footprint/anchor remain WHAT/WHERE truth and are never inferred from artwork;
+- one shared stable-entity visual plan feeds a z=20 base/body pass and optional z=35 foreground/overhang pass above actors but below physical lighting;
+- a small catalog-derived discovery halo prevents offscreen-anchor canopy/arm pop-in without any whole-world scan;
+- existing unmapped props retain the exact historical 1×1 visual fallback;
+- first implementation proofs are a 2×2-or-larger large tree and larger traffic/stop-light art;
+- no save schema, WHEN work, collision/reach/LOS change, per-entity Node, generic Y-sort rewrite, vehicle implementation or content-expansion sweep is authorized by this design.
+
+The next lifecycle gate is **APPROVE**. No Phase-1D runtime implementation is authorized until approval.
 
 ---
 
@@ -175,7 +192,7 @@ The next lifecycle gate is **DESCRIBE**. No Phase-1D runtime implementation is a
 
 1C. Semantic inventory/menu icons — **COMPLETE; System 31 implemented + CI verified**.
 
-1D. Large/multi-cell object visual geometry — **NEXT: DESCRIBE**.
+1D. Large/multi-cell object visual geometry — **DESCRIBED; System 07B awaiting approval**.
 
 1E. Content expansion/integration.
 
@@ -188,6 +205,8 @@ Then: Crafting -> Power + Water -> physical survival/health -> Moodlets -> Skill
 - System 00D owns global geography, settlement/road/hydrology/infrastructure truth and cross-area world context.
 - System 00F owns materialization-source orchestration and technical activation, not world identity.
 - System 20 owns bounded local physical generation and may consume optional upstream environmental context without taking global ownership.
+- System 07 owns prop/fixture/vegetation presentation; System 07A owns prop-art orientation; draft System 07B owns only authored visual span/pivot/overhang after approval.
+- Systems 00A/00B remain authoritative for physical footprint, placement and stable entity identity.
 - System 11 owns containment.
 - System 12 owns timed physical item transitions.
 - System 13D owns semantic physical weight.
@@ -221,3 +240,5 @@ Then: Crafting -> Power + Water -> physical survival/health -> Moodlets -> Skill
 - `verify/pages-deploy`
 
 All **17 required contexts** are green on the current verified playable-island executable `d33c69d6bd05f4c8fdbba62c6bd51bb16aad26ad`.
+
+If System 07B is approved and implemented, its dedicated verification context becomes an additional required executable-head context for that implementation.
