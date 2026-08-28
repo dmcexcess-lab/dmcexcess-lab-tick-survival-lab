@@ -12,7 +12,7 @@ Current game identity:
 
 ---
 
-## Phase 1 — Items, spoilage, interaction readability, and world-object breadth
+## Phase 1 — Items, spoilage, interaction readability, and world-object breadth — IMPLEMENTATION COMPLETE
 
 Goal: make the physical world and the things in it more useful/readable before deeper character systems arrive.
 
@@ -118,43 +118,49 @@ Implemented result:
 
 Automated implementation/CI verification is complete. Separate human visual acceptance of the new large-object proportions/glow has not yet been recorded.
 
-### 1E — Phase-1 content expansion + integration — DESCRIBED: AWAITING APPROVAL
+### 1E — Phase-1 content expansion + integration — COMPLETE + CI VERIFIED
 
-Canonical draft:
+Canonical design:
 
 `SYSTEM_DESIGNS/PHASE_1E_CONTENT_EXPANSION_INTEGRATION.md`
 
 Phase type: cross-system content/integration work, **not a new System 32**.
 
+Verified executable head:
+
+`6ad923d172f5a5434f94a7fdcc15da640a60a240`
+
 Core rule:
 
 > **Content extends the system that already owns its truth. Integration does not create a second owner.**
 
-Candidate 001 is split into:
+Implemented result:
 
-1. **1E-1 World clutter + location identity** — enrich the existing 24 System-19 building profiles and System-20 outdoor/roadside/environment content; deploy approved 07B large trees/traffic furniture through ordinary generation while preserving circulation/access/road/water rules.
-2. **1E-2 Mundane loot + perishable breadth** — expand System-24 item/container vocabularies; every new item has System-13D weight and an explicit System-31 icon; every new perishable receives an explicit System-30 freshness profile; no generic stack system and no search-time reward rolls.
-3. **1E-3 Integration/readability/performance acceptance** — tune location differentiation, clutter density, real System-29 highlight density, icon/freshness readability, large-object layering/glow and phone/Safari performance on the complete island.
+1. **1E-1 World clutter + location identity** — added shared deterministic Phase-1E dressing for the 18 baseline one-story System-19 profiles, with program-appropriate accents capped at two per building. The six protected reference buildings remain outside the new dresser. Existing System-20 exterior generation remains the physical owner; its ordinary generated large-tree and traffic-light semantics now consume the approved 07B visual geometry, while the historical 07B fixture aliases remain compatible.
+2. **1E-2 Mundane loot + perishable breadth** — expanded System 24 to 97 physical item semantics and broader location-aware container stock, including distinct school/church/police/fire supply profiles. Every shipped item has positive System-13D weight and an explicit System-31 icon; System 30 now has 10 explicit perishables while shelf-stable items remain outside freshness state.
+3. **1E-3 Integration/readability/performance gate** — bounded the new building dressing to avoid clutter creep, added permanent `verify/phase1e-content-integration`, preserved the protected System-20/24/29/30/31/07B/performance contracts, and introduced no fake Crafting, Power/Refrigeration, nutrition/Health, Skills, Vehicles, combat or AI state.
 
-Protected non-goals remain explicit: no fake Crafting, Power/Refrigeration, nutrition/Health, Skills, Vehicles, combat or AI behavior merely to make content look functional.
+The exact executable passes all **19 required exact-head contexts**, including `verify/phase1e-content-integration`, `verify/performance-architecture`, and `verify/pages-deploy`.
 
-Implementation requires approval of the Phase-1E draft. The proposed dedicated verification owner is `verify/phase1e-content-integration`; an implementation head would need the current 18 contexts plus that new context.
+Automated implementation/CI verification is complete. The richer Phase-1E content has **not** yet received a separate human visual/readability acceptance pass; that remains honest follow-up rather than a blocker to beginning Phase-2 design.
 
-### Phase-1 completion gate
+### Phase-1 completion gate — IMPLEMENTATION COMPLETE
 
-Phase 1 is complete when:
+The implemented Phase-1 stack now provides:
 
-- nearby usable containers/objects are identifiable from real reach + perception truth;
-- perishables age deterministically with no per-item tick loop;
-- inventory/menu surfaces have a coherent low-resolution icon vocabulary;
-- multi-cell objects may have intentionally large authored visuals independent from collision footprints;
-- representative buildings/areas use the broader item/object vocabulary and read as materially different kinds of places;
-- content density remains navigable/readable/performance-safe on phone/Safari;
-- no future Crafting/Power/Skills behavior is faked to make Phase 1 look complete.
+- nearby usable containers/objects identifiable from real reach + perception truth;
+- deterministic perishable aging with no per-item tick loop;
+- a coherent low-resolution inventory/menu icon vocabulary;
+- intentionally large authored object visuals independent from collision footprints;
+- representative buildings/locations using broader program-specific object and loot vocabularies;
+- bounded content density under the existing performance architecture;
+- no future Crafting/Power/Skills behavior faked to make Phase 1 look complete.
+
+Human visual/readability feedback can still drive bounded Phase-1 content tuning without reopening architecture.
 
 ---
 
-## Phase 2 — Crafting
+## Phase 2 — Crafting — NEXT DESIGN TARGET
 
 Goal: make collected materials physically useful.
 
@@ -166,6 +172,8 @@ Direction:
 - outputs enter ordinary inventory/world containment;
 - later Phase-6 skills modify capability/quality/speed/access through narrow seams rather than being baked into crafting ownership;
 - carpentry/base building, traps, repairs and specialized utility/vehicle work may reuse the same action substrate while retaining clear ownership.
+
+Phase 2 is **not yet designed or authorized for implementation**. The next lifecycle step is DESCRIBE.
 
 ---
 
@@ -345,4 +353,4 @@ For each bounded phase/system:
 
 Newest explicit user direction supersedes older roadmap ordering, but implemented historical systems remain current truth until deliberately migrated.
 
-**Current next step: APPROVE or revise `PHASE_1E_CONTENT_EXPANSION_INTEGRATION.md`. No Phase-1E runtime/content implementation is authorized yet.**
+**Current next step: DESCRIBE the bounded Phase-2 Crafting architecture. No Phase-2 runtime implementation is authorized yet.**
