@@ -8,10 +8,13 @@ const SelectionClass = preload("res://scripts/art/ArtSelection.gd")
 ## Static System-07B presentation catalog. Semantic WHAT identity is the lookup key;
 ## the returned art keys/sources are presentation-only and are never persisted.
 
-# Phase 1E integration binds 07B to the actual System-20/ArtCatalog prop semantics.
-# The earlier fixture-only vegetation./fixture. aliases never occur in the generated island.
+# Phase 1E binds 07B canonically to the actual System-20/ArtCatalog prop semantics.
+# The historical fixture namespaces remain presentation aliases so protected renderer
+# fixtures and any existing authored WHAT snapshots retain the same visuals.
 const TREE_SEMANTIC: StringName = &"prop.deciduous_large"
 const TRAFFIC_LIGHT_SEMANTIC: StringName = &"prop.traffic_light"
+const TREE_LEGACY_ALIAS: StringName = &"vegetation.deciduous_large"
+const TRAFFIC_LIGHT_LEGACY_ALIAS: StringName = &"fixture.traffic_light"
 
 const TREE_BASE_KEY: StringName = &"visual.vegetation.deciduous_large.base"
 const TREE_FOREGROUND_KEY: StringName = &"visual.vegetation.deciduous_large.canopy"
@@ -32,7 +35,7 @@ const MAX_DISCOVERY_HALO_CELLS: int = 2
 
 static func descriptor_for(semantic_type: StringName) -> PropVisualGeometryDescriptor:
     match semantic_type:
-        TREE_SEMANTIC:
+        TREE_SEMANTIC, TREE_LEGACY_ALIAS:
             return DescriptorClass.new(
                 &"large_deciduous_tree_2x2",
                 TREE_BASE_KEY,
@@ -40,7 +43,7 @@ static func descriptor_for(semantic_type: StringName) -> PropVisualGeometryDescr
                 Vector2i(2, 2),
                 Vector2(1.0, 1.5)
             )
-        TRAFFIC_LIGHT_SEMANTIC:
+        TRAFFIC_LIGHT_SEMANTIC, TRAFFIC_LIGHT_LEGACY_ALIAS:
             return DescriptorClass.new(
                 &"large_traffic_light_2x2",
                 TRAFFIC_BASE_KEY,
