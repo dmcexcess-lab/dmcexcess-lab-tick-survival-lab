@@ -4,6 +4,7 @@ class_name TacticalRendererStack
 const GroundRendererClass = preload("res://scripts/render/GroundLayerRenderer.gd")
 const StructureRendererClass = preload("res://scripts/render/StructureLayerRenderer.gd")
 const PropRendererClass = preload("res://scripts/render/PropLayerRenderer.gd")
+const PropForegroundRendererClass = preload("res://scripts/render/PropForegroundLayerRenderer.gd")
 const ActorRendererClass = preload("res://scripts/render/ActorLayerRenderer.gd")
 const LightingRendererClass = preload("res://scripts/render/PhysicalLightingPresentationRenderer.gd")
 const WeatherRendererClass = preload("res://scripts/render/WeatherPresentationRenderer.gd")
@@ -16,6 +17,7 @@ const PerformanceDevPanelClass = preload("res://scripts/ui/PerformanceDevPanel.g
 var _ground: GroundLayerRenderer = null
 var _structures: StructureLayerRenderer = null
 var _props: PropLayerRenderer = null
+var _prop_foreground: PropForegroundLayerRenderer = null
 var _actors: ActorLayerRenderer = null
 var _lighting: PhysicalLightingPresentationRenderer = null
 var _weather: WeatherPresentationRenderer = null
@@ -41,6 +43,8 @@ func configure(
     if not _structures.configure(world, art_catalog, door_state):
         return false
     if not _props.configure(world, art_catalog):
+        return false
+    if not _prop_foreground.configure(_props):
         return false
     if not _actors.configure(world, art_catalog):
         return false
@@ -125,6 +129,17 @@ func perception_debug_snapshot() -> Dictionary:
     result["memory_luminance"] = _perception.memory_luminance()
     return result
 
+func prop_visual_geometry_debug_snapshot() -> Dictionary:
+    _ensure_layers()
+    return {
+        "base_z": _props.z_index,
+        "actor_z": _actors.z_index,
+        "foreground_z": _prop_foreground.z_index,
+        "lighting_z": _lighting.z_index,
+        "foreground_count": _prop_foreground.planned_command_count() if _configured else 0,
+        "plan_rebuild_count": _props.plan_rebuild_count(),
+    }
+
 func set_visible_window(origin: Vector2i, size_cells: Vector2i, cell_pixels: float) -> bool:
     _ensure_layers()
     if not _configured:
@@ -199,6 +214,11 @@ func _ensure_layers() -> void:
     _actors.name = "Actors"
     _actors.z_index = 30
     add_child(_actors)
+
+    _prop_foreground = PropForegroundRendererClass.new()
+    _prop_foreground.name = "PropForeground"
+    _prop_foreground.z_index = 35
+    add_child(_prop_foreground)
 
     _lighting = LightingRendererClass.new()
     _lighting.name = "PhysicalLighting"

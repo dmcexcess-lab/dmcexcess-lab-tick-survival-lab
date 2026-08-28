@@ -1,0 +1,101 @@
+name: System 07B large visual geometry
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: system07b-large-visual-geometry
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: verify/system07b-large-visual-geometry
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate System 07B source boundary
+        shell: bash
+        run: |
+          set -euxo pipefail
+          test -f SYSTEM_DESIGNS/07B_LARGE_MULTI_CELL_VISUAL_GEOMETRY.md
+          test -f game/scripts/art/PropVisualGeometryDescriptor.gd
+          test -f game/scripts/art/PropVisualGeometryCatalog.gd
+          test -f game/scripts/render/PropForegroundLayerRenderer.gd
+          test -f game/scripts/ci/PropVisualGeometrySmoke.gd
+          test -f game/assets/large_deciduous_tree_base.svg
+          test -f game/assets/large_deciduous_tree_foreground.svg
+          test -f game/assets/large_traffic_light_base.svg
+          test -f game/assets/large_traffic_light_foreground.svg
+          grep -q 'class_name PropVisualGeometryDescriptor' game/scripts/art/PropVisualGeometryDescriptor.gd
+          grep -q 'class_name PropVisualGeometryCatalog' game/scripts/art/PropVisualGeometryCatalog.gd
+          grep -q 'MAX_DISCOVERY_HALO_CELLS: int = 2' game/scripts/art/PropVisualGeometryCatalog.gd
+          grep -q 'class_name PropForegroundLayerRenderer' game/scripts/render/PropForegroundLayerRenderer.gd
+          grep -q 'PropForeground' game/scripts/render/TacticalRendererStack.gd
+          grep -q 'z_index = 35' game/scripts/render/TacticalRendererStack.gd
+          grep -q 'outer_glow_strength' game/shaders/physical_lighting_glow.gdshader
+          ! grep -q 'TIME' game/shaders/physical_lighting_glow.gdshader
+          ! grep -R -q '_process' game/scripts/art/PropVisualGeometry*.gd game/scripts/render/PropLayerRenderer.gd game/scripts/render/PropForegroundLayerRenderer.gd
+          ! grep -R -q 'scripts/generation' game/scripts/art/PropVisualGeometry*.gd game/scripts/render/PropLayerRenderer.gd game/scripts/render/PropForegroundLayerRenderer.gd
+          ! grep -R -q 'scripts/foundation/time' game/scripts/art/PropVisualGeometry*.gd game/scripts/render/PropLayerRenderer.gd game/scripts/render/PropForegroundLayerRenderer.gd
+
+      - name: Install Godot 4.7.1
+        shell: bash
+        run: |
+          set -euxo pipefail
+          curl -L -o godot.zip https://github.com/godotengine/godot-builds/releases/download/4.7.1-stable/Godot_v4.7.1-stable_linux.x86_64.zip
+          unzip -q godot.zip
+          chmod +x Godot_v4.7.1-stable_linux.x86_64
+
+      - name: Import and parse project
+        shell: bash
+        run: |
+          set -euxo pipefail
+          ./Godot_v4.7.1-stable_linux.x86_64 --headless --editor --path "$GITHUB_WORKSPACE/game" --quit 2>&1 | tee "$RUNNER_TEMP/import.log"
+          if grep -Eqi 'SCRIPT ERROR|Parse Error|Failed to load script' "$RUNNER_TEMP/import.log"; then exit 1; fi
+
+      - name: System 07B visual geometry smoke
+        shell: bash
+        run: |
+          set -euxo pipefail
+          ./Godot_v4.7.1-stable_linux.x86_64 --headless --path "$GITHUB_WORKSPACE/game" --script res://scripts/ci/PropVisualGeometrySmoke.gd 2>&1 | tee "$RUNNER_TEMP/07b.log"
+          grep -q 'PROP_VISUAL_GEOMETRY_SMOKE_OK' "$RUNNER_TEMP/07b.log"
+          if grep -Eqi 'SCRIPT ERROR|Parse Error|Failed to load script' "$RUNNER_TEMP/07b.log"; then exit 1; fi
+
+      - name: Prop renderer regression smoke
+        shell: bash
+        run: |
+          set -euxo pipefail
+          ./Godot_v4.7.1-stable_linux.x86_64 --headless --path "$GITHUB_WORKSPACE/game" --script res://scripts/ci/PropLayerRendererSmoke.gd 2>&1 | tee "$RUNNER_TEMP/prop.log"
+          grep -q 'PROP_LAYER_RENDERER_SMOKE_OK' "$RUNNER_TEMP/prop.log"
+          if grep -Eqi 'SCRIPT ERROR|Parse Error|Failed to load script' "$RUNNER_TEMP/prop.log"; then exit 1; fi
+
+      - name: Prop orientation regression smoke
+        shell: bash
+        run: |
+          set -euxo pipefail
+          ./Godot_v4.7.1-stable_linux.x86_64 --headless --path "$GITHUB_WORKSPACE/game" --script res://scripts/ci/PropArtOrientationSmoke.gd 2>&1 | tee "$RUNNER_TEMP/orientation.log"
+          grep -q 'PROP_ART_ORIENTATION_SMOKE_OK' "$RUNNER_TEMP/orientation.log"
+          if grep -Eqi 'SCRIPT ERROR|Parse Error|Failed to load script' "$RUNNER_TEMP/orientation.log"; then exit 1; fi
+
+      - name: Physical-lighting presentation regression smoke
+        shell: bash
+        run: |
+          set -euxo pipefail
+          ./Godot_v4.7.1-stable_linux.x86_64 --headless --path "$GITHUB_WORKSPACE/game" --script res://scripts/ci/PhysicalLightingPresentationSmoke.gd 2>&1 | tee "$RUNNER_TEMP/lighting.log"
+          grep -q 'PHYSICAL_LIGHTING_PRESENTATION_SMOKE_OK' "$RUNNER_TEMP/lighting.log"
+          if grep -Eqi 'SCRIPT ERROR|Parse Error|Failed to load script' "$RUNNER_TEMP/lighting.log"; then exit 1; fi
+
+      - name: Canonical startup regression smoke
+        shell: bash
+        run: |
+          set -euxo pipefail
+          ./Godot_v4.7.1-stable_linux.x86_64 --headless --path "$GITHUB_WORKSPACE/game" --script res://scripts/ci/CanonicalDemoStartupSmoke.gd 2>&1 | tee "$RUNNER_TEMP/startup.log"
+          grep -q 'CANONICAL_DEMO_STARTUP_SMOKE_OK' "$RUNNER_TEMP/startup.log"
+          if grep -Eqi 'SCRIPT ERROR|Parse Error|Failed to load script' "$RUNNER_TEMP/startup.log"; then exit 1; fi

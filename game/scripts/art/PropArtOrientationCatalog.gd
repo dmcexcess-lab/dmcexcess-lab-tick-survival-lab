@@ -3,25 +3,30 @@ class_name PropArtOrientationCatalog
 
 const Facing = preload("res://scripts/foundation/spatial/SpatialFacing.gd")
 
-## Presentation-only native-facing metadata for recovered one-cell prop art.
+## Presentation-only native-facing metadata for prop art.
 ## WHAT facing remains authoritative world orientation. This catalog only says
-## how a recovered sprite cell is authored so the renderer can rotate it.
+## how an authored visual is oriented so the renderer can rotate it.
 
 const SOURCE_FINAL_PROPS: StringName = &"final_props"
 const SOURCE_BUILDING_PROPS: StringName = &"building_props"
 const SOURCE_CLUTTER: StringName = &"clutter"
 const SOURCE_TACTICAL: StringName = &"tactical"
+const SOURCE_LARGE_TRAFFIC_BASE: StringName = &"large_traffic_light_base"
+const SOURCE_LARGE_TRAFFIC_FOREGROUND: StringName = &"large_traffic_light_foreground"
 
-## The recovered indoor/furniture families below are drawn with their usable
-## front/foot direction toward screen SOUTH. Outdoor/nondirectional art is not
-## assigned a native facing and therefore remains unrotated.
+## Recovered indoor/furniture families and the dedicated large traffic-light art
+## are authored with their usable/front direction toward screen SOUTH.
+## Outdoor/nondirectional art remains unrotated.
 static func native_facing(selection: ArtSelection) -> int:
     if selection == null or not selection.is_found() or selection.source == null:
         return -1
+
+    var source_id: StringName = selection.source.source_id
+    if source_id == SOURCE_LARGE_TRAFFIC_BASE or source_id == SOURCE_LARGE_TRAFFIC_FOREGROUND:
+        return Facing.Value.SOUTH
     if not selection.is_atlas_region():
         return -1
 
-    var source_id: StringName = selection.source.source_id
     var index: int = selection.atlas_index
     if source_id == SOURCE_FINAL_PROPS and index >= 64 and index <= 127:
         return Facing.Value.SOUTH

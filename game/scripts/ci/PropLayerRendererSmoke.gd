@@ -3,6 +3,7 @@ extends SceneTree
 const WorldStateClass = preload("res://scripts/foundation/world/WorldState.gd")
 const WorldMutationClass = preload("res://scripts/foundation/world/WorldMutationService.gd")
 const CatalogClass = preload("res://scripts/art/ArtCatalog.gd")
+const VisualGeometry = preload("res://scripts/art/PropVisualGeometryCatalog.gd")
 const RendererClass = preload("res://scripts/render/PropLayerRenderer.gd")
 const Layers = preload("res://scripts/foundation/spatial/SpatialLayer.gd")
 const Facing = preload("res://scripts/foundation/spatial/SpatialFacing.gd")
@@ -52,10 +53,12 @@ func _test_families_and_recovered_art() -> void:
 
     _check(commands[0].entity_id == "entity:veg", "commands sort by anchor row then column")
     _check(commands[0].family == PropDrawCommand.FAMILY_VEGETATION, "vegetation family retained")
-    _check(commands[0].destination == Rect2(24, 0, 24, 24), "negative global anchor maps to local destination")
+    _check(commands[0].destination == Rect2(12, -24, 48, 48), "large vegetation uses authored 2x2 destination")
+    _check(commands[0].draw_span_cells == Vector2i(2, 2), "large vegetation span retained")
+    _check(commands[0].has_foreground(), "large vegetation exposes canopy foreground")
     _check(commands[0].facing == Facing.Value.EAST, "WHAT facing retained in command")
-    _check(commands[0].footprint != null and commands[0].footprint.cell_count() == 1, "WHAT footprint retained in command")
-    _expect_selection(commands[0].selection, CatalogClass.SOURCE_FINAL_PROPS, 1, "final exact vegetation art")
+    _check(commands[0].footprint != null and commands[0].footprint.cell_count() == 1, "visual size does not change WHAT footprint")
+    _expect_selection(commands[0].selection, VisualGeometry.SOURCE_TREE_BASE, -1, "dedicated large vegetation art")
 
     _check(commands[1].family == PropDrawCommand.FAMILY_PROP, "prop family retained")
     _expect_selection(commands[1].selection, CatalogClass.SOURCE_FINAL_PROPS, 75, "final alias prop art")
@@ -96,10 +99,11 @@ func _test_multicell_dedup_order_and_geometry() -> void:
     if commands.size() == 3:
         _check(commands[0].entity_id == "entity:multi", "multicell command sorts from its anchor")
         _check(commands[0].world_cells.size() == 2, "rotated occupied cells retained without duplicate draws")
-        _check(commands[0].destination == Rect2(0, 0, 20, 20), "multicell art remains one cell at anchor")
+        _check(commands[0].destination == Rect2(0, 0, 20, 20), "unmapped multicell art preserves historical one-cell visual")
+        _check(commands[0].draw_span_cells == Vector2i.ONE, "legacy multicell object uses default visual descriptor")
         _check(commands[1].entity_id == "entity:alpha", "same-anchor overlap sorts by stable ID first")
         _check(commands[2].entity_id == "entity:zeta", "same-anchor overlap sorts by stable ID second")
-        _check(not commands[1].is_diagnostic() and not commands[2].is_diagnostic(), "overlapping OBJECTs are separate valid draws, not collision diagnostics")
+        _check(not commands[1].is_diagnostic() and not commands[2].is_diagnostic(), "overlapping OBJECTs remain separate valid draws")
 
     var outside_world := WorldStateClass.new()
     var outside_mutations := WorldMutationClass.new(outside_world)
@@ -115,11 +119,7 @@ func _test_multicell_dedup_order_and_geometry() -> void:
         Footprint.rectangle(2, 1)
     )
     var outside_commands: Array[PropDrawCommand] = outside_renderer.plan_visible_commands()
-    _check(outside_commands.size() == 1, "entity is relevant when footprint intersects view even if anchor is outside")
-    if outside_commands.size() == 1:
-        _check(Vector2i(1, 0) in outside_commands[0].world_cells, "rotated footprint intersection retained")
-        _check(outside_commands[0].destination == Rect2(48, 0, 24, 24), "outside anchor keeps true local destination instead of being clamped")
-        _check(outside_commands[0].facing == Facing.Value.SOUTH, "multicell facing retained")
+    _check(outside_commands.is_empty(), "offscreen default visual is culled even when physical footprint touches view")
 
 func _test_diagnostics_and_channel_filtering() -> void:
     var world := WorldStateClass.new()
@@ -174,7 +174,7 @@ func _test_redraw_invalidation() -> void:
     _redraw_events.clear()
 
     _check(mutations.set_placement("entity:redraw_object", Layers.Channel.OBJECT, Vector2i(30, 30), Facing.Value.NORTH, Footprint.single_cell()), "OBJECT moves out of view")
-    _check(_redraw_events.size() == 1, "moving OBJECT out of visible cells redraws old location")
+    _check(_redraw_events.size() == 1, "moving OBJECT out of discovery window redraws old location")
     _redraw_events.clear()
 
     _check(mutations.set_placement("entity:redraw_object", Layers.Channel.OBJECT, Vector2i(31, 30), Facing.Value.NORTH, Footprint.single_cell()), "distant OBJECT moves distantly")
