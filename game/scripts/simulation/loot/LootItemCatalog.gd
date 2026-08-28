@@ -5,7 +5,7 @@ class_name LootItemCatalog
 ## per-item state. Every loot item has exactly one top-level utility class, one primary
 ## family, optional secondary tags, a readable label, and real 13D weight.
 
-const CATALOG_VERSION: int = 2
+const CATALOG_VERSION: int = 3
 const USABLE: StringName = &"USABLE"
 const JUNK: StringName = &"JUNK"
 
@@ -88,6 +88,7 @@ func _build_candidate_001() -> void:
     _add(&"item.drink.water_bottle", "Water Bottle", USABLE, &"drink", 550, [&"hydration"])
     _add(&"item.drink.soda_can", "Soda Can", USABLE, &"drink", 370)
     _add(&"item.drink.juice_bottle", "Juice Bottle", USABLE, &"drink", 1100)
+    _add(&"item.drink.sports_drink", "Sports Drink", USABLE, &"drink", 600, [&"hydration"])
     _add(&"item.food.canned_beans", "Canned Beans", USABLE, &"food", 420, [&"canned"])
     _add(&"item.food.canned_soup", "Canned Soup", USABLE, &"food", 450, [&"canned"])
     _add(&"item.food.crackers", "Crackers", USABLE, &"food", 250)
@@ -99,6 +100,13 @@ func _build_candidate_001() -> void:
     _add(&"item.food.fresh_berries", "Fresh Berries", USABLE, &"food", 250, [&"fresh_food", &"produce"])
     _add(&"item.food.bread_loaf", "Bread Loaf", USABLE, &"food", 500, [&"fresh_food"])
     _add(&"item.food.cheese_block", "Cheese Block", USABLE, &"food", 450, [&"fresh_food", &"dairy"])
+    _add(&"item.food.banana", "Banana", USABLE, &"food", 120, [&"fresh_food", &"produce"])
+    _add(&"item.food.carrot_bag", "Bag of Carrots", USABLE, &"food", 450, [&"fresh_food", &"produce"])
+    _add(&"item.food.eggs_carton", "Carton of Eggs", USABLE, &"food", 680, [&"fresh_food"])
+    _add(&"item.food.yogurt_cup", "Yogurt Cup", USABLE, &"food", 170, [&"fresh_food", &"dairy"])
+    _add(&"item.food.rice_bag", "Bag of Rice", USABLE, &"food", 900, [&"dry_goods"])
+    _add(&"item.food.pasta_box", "Box of Pasta", USABLE, &"food", 450, [&"dry_goods"])
+    _add(&"item.food.peanut_butter_jar", "Peanut Butter", USABLE, &"food", 500, [&"pantry"])
 
     # Kitchen.
     _add(&"item.kitchen.can_opener", "Can Opener", USABLE, &"kitchen", 120, [&"hand_tool"])
@@ -106,6 +114,9 @@ func _build_candidate_001() -> void:
     _add(&"item.kitchen.frying_pan", "Frying Pan", USABLE, &"kitchen", 900)
     _add(&"item.kitchen.cooking_pot", "Cooking Pot", USABLE, &"kitchen", 1200)
     _add(&"item.kitchen.matches_box", "Box of Matches", USABLE, &"kitchen", 40, [&"fire_starting"])
+    _add(&"item.kitchen.coffee_grounds", "Coffee Grounds", USABLE, &"kitchen", 340, [&"drink"])
+    _add(&"item.kitchen.cutlery_set", "Cutlery Set", USABLE, &"kitchen", 300)
+    _add(&"item.kitchen.dish_towel", "Dish Towel", USABLE, &"kitchen", 100)
 
     # Medical.
     _add(&"item.medical.bandage_roll", "Bandage Roll", USABLE, &"medical", 60, [&"first_aid"])
@@ -114,6 +125,8 @@ func _build_candidate_001() -> void:
     _add(&"item.medical.painkillers", "Painkillers", USABLE, &"medical", 50)
     _add(&"item.medical.antibiotics", "Antibiotics", USABLE, &"medical", 40)
     _add(&"item.medical.first_aid_kit", "First Aid Kit", USABLE, &"medical", 700, [&"first_aid"])
+    _add(&"item.medical.medical_tape", "Medical Tape", USABLE, &"medical", 70, [&"first_aid"])
+    _add(&"item.medical.alcohol_wipes", "Alcohol Wipes", USABLE, &"medical", 90, [&"first_aid"])
 
     # Tools.
     _add(&"item.tool.hammer", "Hammer", USABLE, &"tools", 900, [&"hand_tool"])
@@ -122,6 +135,7 @@ func _build_candidate_001() -> void:
     _add(&"item.tool.crowbar", "Crowbar", USABLE, &"tools", 2200, [&"hand_tool"])
     _add(&"item.tool.flashlight", "Flashlight", USABLE, &"tools", 250, [&"electronic"])
     _add(&"item.tool.lighter", "Lighter", USABLE, &"tools", 40, [&"fire_starting"])
+    _add(&"item.tool.pliers", "Pliers", USABLE, &"tools", 240, [&"hand_tool"])
 
     # Farming / rural.
     _add(&"item.farming.hand_trowel", "Hand Trowel", USABLE, &"farming", 350, [&"garden_tool"])
@@ -129,6 +143,7 @@ func _build_candidate_001() -> void:
     _add(&"item.farming.garden_hoe", "Garden Hoe", USABLE, &"farming", 1400, [&"garden_tool"])
     _add(&"item.farming.watering_can", "Watering Can", USABLE, &"farming", 700, [&"garden_tool"])
     _add(&"item.farming.seed_packet", "Seed Packet", USABLE, &"farming", 30)
+    _add(&"item.farming.fertilizer_bag", "Fertilizer Bag", USABLE, &"farming", 2200, [&"garden_supply"])
 
     # Construction / material.
     _add(&"item.material.duct_tape", "Duct Tape", USABLE, &"construction", 250)
@@ -139,17 +154,26 @@ func _build_candidate_001() -> void:
 
     # Electrical / household / sanitation.
     _add(&"item.electrical.batteries_pack", "Battery Pack", USABLE, &"electrical", 180, [&"electronic"])
+    _add(&"item.electrical.extension_cord", "Extension Cord", USABLE, &"electrical", 900, [&"electrical_supply"])
     _add(&"item.household.trash_bags_roll", "Trash Bag Roll", USABLE, &"household", 250)
     _add(&"item.sanitation.soap_bar", "Bar of Soap", USABLE, &"sanitation", 120, [&"cleaning"])
     _add(&"item.sanitation.bleach_bottle", "Bleach Bottle", USABLE, &"sanitation", 1200, [&"cleaning"])
+    _add(&"item.sanitation.toilet_paper_roll", "Toilet Paper", USABLE, &"sanitation", 160)
+    _add(&"item.sanitation.cleaning_spray", "Cleaning Spray", USABLE, &"sanitation", 650, [&"cleaning"])
 
     # Small first-pass families whose consuming systems arrive later.
     _add(&"item.office.notebook", "Notebook", USABLE, &"office", 250, [&"paper"])
     _add(&"item.office.permanent_marker", "Permanent Marker", USABLE, &"office", 25)
+    _add(&"item.office.pencil_pack", "Pencil Pack", USABLE, &"office", 120, [&"paper"])
+    _add(&"item.office.scissors", "Scissors", USABLE, &"office", 90)
     _add(&"item.clothing.work_gloves", "Work Gloves", USABLE, &"clothing", 180)
+    _add(&"item.clothing.socks_pair", "Pair of Socks", USABLE, &"clothing", 100)
+    _add(&"item.clothing.beanie", "Knit Beanie", USABLE, &"clothing", 90)
     _add(&"item.outdoors.tarp", "Tarp", USABLE, &"outdoors", 1200)
     _add(&"item.automotive.jumper_cables", "Jumper Cables", USABLE, &"automotive", 1200)
+    _add(&"item.automotive.motor_oil_bottle", "Motor Oil", USABLE, &"automotive", 950)
     _add(&"item.industrial.work_light", "Portable Work Light", USABLE, &"industrial", 1500, [&"electronic"])
+    _add(&"item.industrial.safety_glasses", "Safety Glasses", USABLE, &"industrial", 60)
 
     # Junk remains physical, persistent loot with real weight.
     _add(&"item.junk.empty_food_can", "Empty Food Can", JUNK, &"kitchen", 35)
@@ -172,3 +196,5 @@ func _build_candidate_001() -> void:
     _add(&"item.junk.broken_toy", "Broken Toy", JUNK, &"recreational", 200)
     _add(&"item.junk.empty_cleaner_bottle", "Empty Cleaner Bottle", JUNK, &"sanitation", 80, [&"cleaning"])
     _add(&"item.junk.worn_cardboard", "Worn Cardboard", JUNK, &"misc", 100)
+    _add(&"item.junk.stale_newspaper", "Old Newspaper", JUNK, &"office", 140, [&"paper"])
+    _add(&"item.junk.crumpled_carton", "Crumpled Carton", JUNK, &"household", 80)
