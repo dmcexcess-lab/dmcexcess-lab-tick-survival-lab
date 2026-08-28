@@ -76,7 +76,7 @@ func _test_baseline_one_story_library(generator: LocalBuildingGenerator, validat
         var profile: Dictionary = catalog.profile(profile_id)
         _check(not profile.is_empty(), "%s profile resolves" % String(profile_id))
         _check(int(profile.get("story_count", 0)) == 1, "%s is explicitly one story" % String(profile_id))
-        _check(int(profile.get("version", 0)) == 1, "%s starts at profile version 1" % String(profile_id))
+        _check(int(profile.get("version", 0)) == 1, "%s structural profile remains version 1 beneath the Phase 1E content layer" % String(profile_id))
         var rooms: Array = profile.get("rooms", [])
         _check(rooms.size() >= 3, "%s has a real multi-room floor plan" % String(profile_id))
         for room_value: Variant in rooms:
@@ -88,7 +88,7 @@ func _test_baseline_one_story_library(generator: LocalBuildingGenerator, validat
         _check(descriptor != null and descriptor.is_valid(), "%s exposes a valid placement descriptor" % String(profile_id))
         if descriptor == null:
             continue
-        _check(descriptor.archetype_version() == 1, "%s descriptor reports version 1" % String(profile_id))
+        _check(descriptor.archetype_version() == 2, "%s final generated building reports Phase 1E content version 2" % String(profile_id))
         _check(descriptor.supported_orientations().size() == 4, "%s supports all four rotations" % String(profile_id))
 
         var north_size: Vector2i = descriptor.required_size(Facing.Value.NORTH)
