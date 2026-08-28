@@ -60,9 +60,12 @@ func _test_freshness_contract() -> void:
     var query := FreshQueryClass.new(world, state, catalog, kernel, providers)
 
     _check(time_profile.is_valid(), "world time profile valid")
-    _check(catalog.semantic_types().size() == 6, "six Candidate 001 perishables registered")
+    _check(catalog.semantic_types().size() == 10, "Phase 1E freshness catalog registers ten explicit perishables")
     _check(catalog.has_profile(&"item.food.apple"), "apple classified perishable")
+    _check(catalog.has_profile(&"item.food.banana"), "Phase 1E banana classified perishable")
+    _check(catalog.has_profile(&"item.food.yogurt_cup"), "Phase 1E yogurt classified perishable")
     _check(not catalog.has_profile(&"item.food.canned_beans"), "canned beans stay shelf stable")
+    _check(not catalog.has_profile(&"item.food.rice_bag"), "Phase 1E dry rice remains shelf stable")
     _check(ambient.exposure_ticks_at(12345) == 12345, "ambient cumulative exposure is authoritative tick")
     _check(mutations.is_ready() and query.is_ready(), "freshness services ready")
 
