@@ -5,6 +5,7 @@ const Facing = preload("res://scripts/foundation/spatial/SpatialFacing.gd")
 const BaselineProfilesClass = preload("res://scripts/generation/buildings/profiles/OneStoryBaselineProfileCatalog.gd")
 
 const CONTENT_VERSION: int = 2
+const MAX_ACCENTS_PER_BUILDING: int = 2
 const CARDINALS: Array[Vector2i] = [Vector2i.UP, Vector2i.RIGHT, Vector2i.DOWN, Vector2i.LEFT]
 
 var _baseline_profiles := BaselineProfilesClass.new()
@@ -26,7 +27,10 @@ func apply(plan: GeneratedBuildingPlan) -> void:
     for prop: Dictionary in plan.props:
         occupied[prop.get("cell", Vector2i.ZERO)] = true
 
+    var added: int = 0
     for room_index: int in range(plan.rooms.size()):
+        if added >= MAX_ACCENTS_PER_BUILDING:
+            break
         var room: Dictionary = plan.rooms[room_index]
         var semantic: StringName = _semantic_for_room(plan.archetype_id, String(room.get("purpose", "")))
         if semantic == &"":
@@ -44,6 +48,7 @@ func apply(plan: GeneratedBuildingPlan) -> void:
             "blocking": true,
         })
         occupied[chosen] = true
+        added += 1
 
     # Baseline one-story profile content changed deterministically in Phase 1E.
     plan.archetype_version = maxi(plan.archetype_version, CONTENT_VERSION)
