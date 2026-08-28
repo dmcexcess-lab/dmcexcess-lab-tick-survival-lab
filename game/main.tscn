@@ -1,11 +1,11 @@
-[gd_scene load_steps=14 format=3]
+[gd_scene load_steps=15 format=3]
 
-[ext_resource path="res://scripts/app/CanonicalDemoMain.gd" type="Script" id="1"]
+[ext_resource path="res://scripts/app/CraftingCanonicalDemoMain.gd" type="Script" id="1"]
 [ext_resource path="res://scripts/render/TacticalRendererStack.gd" type="Script" id="2"]
 [ext_resource path="res://scripts/input/KeyboardInputAdapter.gd" type="Script" id="3"]
 [ext_resource path="res://scripts/ui/DemoMovementControls.gd" type="Script" id="4"]
 [ext_resource path="res://scripts/ui/CanonicalStatusHud.gd" type="Script" id="5"]
-[ext_resource path="res://scripts/ui/CanonicalPlayerShell.gd" type="Script" id="6"]
+[ext_resource path="res://scripts/ui/CraftingPlayerShell.gd" type="Script" id="6"]
 [ext_resource path="res://scripts/input/DoorPointerInputAdapter.gd" type="Script" id="7"]
 [ext_resource path="res://scripts/view/LargeAreaRenderWindowController.gd" type="Script" id="8"]
 [ext_resource path="res://scripts/camera/TacticalCameraController.gd" type="Script" id="9"]
@@ -13,6 +13,7 @@
 [ext_resource path="res://scripts/ui/CameraControls.gd" type="Script" id="11"]
 [ext_resource path="res://scripts/ui/LootContainerPanel.gd" type="Script" id="12"]
 [ext_resource path="res://scripts/ui/WeatherDevControls.gd" type="Script" id="13"]
+[ext_resource path="res://scripts/ui/CraftingPanel.gd" type="Script" id="14"]
 
 [node name="CanonicalDemo" type="Node"]
 script = ExtResource("1")
@@ -51,6 +52,9 @@ script = ExtResource("6")
 
 [node name="LootPanel" type="CanvasLayer" parent="."]
 script = ExtResource("12")
+
+[node name="CraftingPanel" type="CanvasLayer" parent="."]
+script = ExtResource("14")
 
 [node name="WeatherControls" type="CanvasLayer" parent="."]
 script = ExtResource("13")
