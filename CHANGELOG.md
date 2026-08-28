@@ -1,5 +1,25 @@
 # Changelog
 
+## Roadmap Phase 1E Content Expansion + Integration — Candidate 001 — 2026-08-27
+
+- Implemented the user-approved **1E-1 through 1E-3** content/integration pass under the rule **“Content extends the system that already owns its truth. Integration does not create a second owner.”** Phase 1E remains cross-system content work rather than a new System 32.
+- Added `Phase1EOneStoryContentDresser.gd` and integrated it through the shared one-story building generator. The 18 baseline one-story System-19 profiles gain deterministic program-appropriate accents with a hard maximum of **two added accents per building**; the six protected historical reference archetypes remain outside the new dresser.
+- Phase-1E dressed baseline output now records building content version 2 while the established structural profile definitions retain their profile identity. Existing System-19 deterministic replay, rotations, circulation and validation remain protected.
+- Bound System-07B large visual geometry to the **real generated** `prop.deciduous_large` and `prop.traffic_light` semantics used by ordinary System-20 content. Historical `vegetation.deciduous_large` / `fixture.traffic_light` aliases remain supported for protected renderer fixtures.
+- Existing System-20 outdoor morphology remains authoritative; Phase 1E does not create a competing exterior-generation owner. `verify/system20-local-area` remains green on the final executable.
+- Expanded `LootItemCatalog` to **v3 / 97 physical item semantics**. New mundane stock broadens pantry/fresh food/drinks, medical/sanitation, office/school, hardware/tools/materials, electrical/utility, farm/outdoor, automotive-adjacent, industrial/workshop and contextual-junk vocabulary.
+- Expanded `LootContainerProfileCatalog` to v2 with broader location-aware stock and explicit school, church, police and fire supply profiles. The System-24 invariant remains unchanged: **loot exists before you search for it**; search never rolls rewards into existence.
+- Every shipped Phase-1E item registers positive System-13D physical weight. No generic stack/quantity system was introduced.
+- Expanded `ItemFreshnessProfileCatalog` to **v2 / 10 explicit perishables**. Shelf-stable goods remain outside freshness state; no powered refrigeration, nutrition, sickness or treatment behavior is faked.
+- Expanded System-31 icon coverage so all **97 current loot semantics** resolve intentionally. With STATS / INVENTORY / MENU, the semantic icon catalog reports **100 known semantics**.
+- Added permanent `.github/workflows/phase1e-content-integration.yml` and `Phase1EContentIntegrationSmoke.gd`, then corrected the focused smoke parse defect exposed by the first CI run.
+- Initial exact-head verification exposed two protected integration issues rather than being waived: 07B regression fixtures still used historical semantic aliases, and altered baseline building content required an explicit final content-version contract. Both were repaired while preserving the intended generated-world integration.
+- Final verified executable: `6ad923d172f5a5434f94a7fdcc15da640a60a240`.
+- All **19 required exact-head contexts** are green on that executable, including `verify/phase1e-content-integration`, `verify/system19-local-building`, `verify/system20-local-area`, `verify/system24-loot`, `verify/system30-item-freshness`, `verify/system31-semantic-ui-icons`, `verify/system07b-large-visual-geometry`, `verify/performance-architecture`, and `verify/pages-deploy`.
+- No Crafting, Power/Refrigeration, nutrition/Health, Skills, Vehicles, combat or AI behavior was introduced as placeholder content metadata.
+- Automated Phase-1E implementation is complete. A separate human visual/readability playtest of the richer content is still pending and is **not** being claimed by CI.
+- Roadmap Phase 1 implementation is complete through 1E. **Phase 2 Crafting is the next bounded design target; its runtime implementation is not pre-authorized by this completion.**
+
 ## Playable Island Legacy Map + Ecology Seam Correction — 2026-08-27
 
 - Fixed the actual remaining old-mini-map/green-belt defect rather than only moving the spawn.
