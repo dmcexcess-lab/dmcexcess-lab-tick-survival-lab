@@ -4,7 +4,7 @@ class_name ItemFreshnessProfileCatalog
 ## Sparse semantic perishable catalog. Human-facing lifetimes are converted once
 ## through System 25's scenario WorldTimeProfile; runtime aging is integer ticks.
 
-const CATALOG_VERSION: int = 1
+const CATALOG_VERSION: int = 2
 
 var _profiles: Dictionary = {}
 
@@ -48,6 +48,10 @@ func _build_candidate_001(time_profile: WorldTimeProfile) -> void:
     register_profile(ItemFreshnessProfile.new(&"item.food.milk_carton", 12 * h, 200, 1))
     register_profile(ItemFreshnessProfile.new(&"item.food.raw_meat_package", 12 * h, 200, 1))
     register_profile(ItemFreshnessProfile.new(&"item.food.fresh_berries", 24 * h, 200, 1))
+    register_profile(ItemFreshnessProfile.new(&"item.food.yogurt_cup", 48 * h, 200, 1))
     register_profile(ItemFreshnessProfile.new(&"item.food.bread_loaf", 72 * h, 200, 1))
+    register_profile(ItemFreshnessProfile.new(&"item.food.banana", 72 * h, 200, 1))
+    register_profile(ItemFreshnessProfile.new(&"item.food.eggs_carton", 96 * h, 200, 1))
     register_profile(ItemFreshnessProfile.new(&"item.food.apple", 120 * h, 200, 1))
+    register_profile(ItemFreshnessProfile.new(&"item.food.carrot_bag", 120 * h, 200, 1))
     register_profile(ItemFreshnessProfile.new(&"item.food.cheese_block", 168 * h, 200, 1))
