@@ -39,19 +39,19 @@ Canonical status/routing index. Read `PROJECT_NORTH_STAR.md`, `PERFORMANCE_NORTH
 | 17A | Movement Exertion / Encumbrance / Run Impact | **IMPLEMENTED** | `17A_MOVEMENT_EXERTION_ENCUMBRANCE_RUN_IMPACT.md` |
 | 17A.1 | Overweight Walk Fatigue / Carry Ceiling | **IMPLEMENTED** | `17A1_OVERWEIGHT_WALK_FATIGUE_HARD_CARRY_LIMIT.md` |
 | 18 | Door Interaction / Automatic Passage | **IMPLEMENTED** | `18_DOOR_INTERACTION_PASSAGE.md` |
-| 19 | Local Building Generation / Grammar | **IMPLEMENTED — FINALIZED, 24 archetypes** | `19_LOCAL_BUILDING_GENERATION_ARCHETYPE_LAB.md` |
+| 19 | Local Building Generation / Grammar | **IMPLEMENTED — FINALIZED, 24 archetypes + Phase-1E baseline dressing** | `19_LOCAL_BUILDING_GENERATION_ARCHETYPE_LAB.md` |
 | 20 | Local Area Generation | **IMPLEMENTED — ten area / seven environment profiles + live river/bridge physicalization + shared island ecology seam** | `20_LOCAL_AREA_PARCEL_GENERATION.md` |
 | 21 | Tactical Camera / View Control | **IMPLEMENTED** | `21_TACTICAL_CAMERA_VIEW_CONTROL.md` |
 | 22 | Large-Area DEV Critique Runtime | **IMPLEMENTED** | `22_LARGE_AREA_CRITIQUE_RUNTIME.md` |
 | 23 | Perception / LOS / Fog Memory | **IMPLEMENTED — geometry + light/atmosphere-aware acquisition + memory/audio presentation** | `23_PERCEPTION_LOS_FOG_MEMORY.md` |
-| 24 | World Loot / Searchable Containers / Scavenging | **IMPLEMENTED — Candidate 001; System-29 reach; System-30 freshness enrollment seam** | `24_WORLD_LOOT_SEARCHABLE_CONTAINERS.md` |
+| 24 | World Loot / Searchable Containers / Scavenging | **IMPLEMENTED — Phase-1E expanded to 97 physical item semantics + broader location-aware stock** | `24_WORLD_LOOT_SEARCHABLE_CONTAINERS.md` |
 | 25 | World Time / Ambient Daylight | **IMPLEMENTED — Candidate 001** | `25_WORLD_TIME_AMBIENT_DAYLIGHT.md` |
 | 26 | Spatial Sound / Hearing | **IMPLEMENTED — Candidate 001 + weather environment seam** | `26_SPATIAL_SOUND_HEARING.md` |
 | 27 | Physical Lighting / Illumination / Shadows | **IMPLEMENTED — A+B+C + bounded-query optimization + Weather/lightning + 07B-era soft bloom presentation** | `27_PHYSICAL_LIGHTING_ILLUMINATION_SHADOWS.md` |
 | 28 | Weather / Atmosphere | **IMPLEMENTED — A+B+C + optimized presentation; human accepted** | `28_WEATHER_ATMOSPHERE.md` |
 | 29 | World Interaction Affordance / Reach | **IMPLEMENTED — Candidate 001; Roadmap Phase 1A** | `29_WORLD_INTERACTION_AFFORDANCE_REACH.md` |
-| 30 | Item Freshness / Spoilage | **IMPLEMENTED + CI VERIFIED — Candidate 001; Roadmap Phase 1B** | `30_ITEM_FRESHNESS_SPOILAGE.md` |
-| 31 | Semantic UI Icons | **IMPLEMENTED + CI VERIFIED — Candidate 001; Roadmap Phase 1C** | `31_SEMANTIC_UI_ICONS.md` |
+| 30 | Item Freshness / Spoilage | **IMPLEMENTED + CI VERIFIED — Candidate 001; Phase-1E catalog expanded to 10 perishables** | `30_ITEM_FRESHNESS_SPOILAGE.md` |
+| 31 | Semantic UI Icons | **IMPLEMENTED + CI VERIFIED — Candidate 001; explicit Phase-1E item coverage** | `31_SEMANTIC_UI_ICONS.md` |
 | PERF | Performance Architecture Gate | **IMPLEMENTED + CI VERIFIED — P0/P1/P2; human accepted** | `PERFORMANCE_ARCHITECTURE.md` |
 | 00E | Population / Household / Outbreak / Player Story | **NOT DESIGNED — scheduled inside Roadmap Phase 8** | future design |
 
@@ -59,7 +59,8 @@ Canonical status/routing index. Read `PROJECT_NORTH_STAR.md`, `PERFORMANCE_NORTH
 
 | Phase | Status | Canonical design |
 |---|---|---|
-| 1E — Content Expansion + Integration | **DESCRIBED — awaiting approval; not a new runtime system** | `PHASE_1E_CONTENT_EXPANSION_INTEGRATION.md` |
+| 1E — Content Expansion + Integration | **IMPLEMENTED + CI VERIFIED; human visual acceptance pending; not a new runtime system** | `PHASE_1E_CONTENT_EXPANSION_INTEGRATION.md` |
+| 2 — Crafting | **NOT DESIGNED — next design target** | future bounded design(s) |
 
 ---
 
@@ -77,9 +78,9 @@ Performance gate — **COMPLETE + HUMAN ACCEPTED**.
 
 1D. Large/multi-cell object visual geometry — **COMPLETE + CI VERIFIED**: System 07B Candidate 001. Verified executable/workflow head `d5e33b43fb732835b4a996ae4bec3a562cfa75f3`.
 
-1E. Content expansion/integration — **DESCRIBED, AWAITING APPROVAL**: enrich existing owner vocabularies and integrate them across generated locations; no System 32.
+1E. Content expansion/integration — **COMPLETE + CI VERIFIED**: existing owners were expanded/integrated without introducing System 32. Verified executable head `6ad923d172f5a5434f94a7fdcc15da640a60a240` passes all 19 required exact-head contexts.
 
-Then: Crafting -> Power + Water -> physical survival/health -> Moodlets -> final skills/interactions -> Vehicles -> AI/combat/outbreak -> final graphics/UI -> Beta.
+Then: **Crafting** -> Power + Water -> physical survival/health -> Moodlets -> final skills/interactions -> Vehicles -> AI/combat/outbreak -> final graphics/UI -> Beta.
 
 ---
 
@@ -101,29 +102,33 @@ Candidate 001 is implemented and CI verified.
 
 Exact-head context: `verify/system07b-large-visual-geometry`.
 
-All **18 current required contexts** are green on `d5e33b43fb732835b4a996ae4bec3a562cfa75f3`.
+Phase-1E integration additionally binds the real generated `prop.deciduous_large` and `prop.traffic_light` semantics to those descriptors while preserving the historical `vegetation.deciduous_large` / `fixture.traffic_light` fixture aliases.
 
 Human visual acceptance of the new 07B art/glow remains separate from automated verification.
 
 ---
 
-## Current Phase 1E draft truth
+## Current Phase 1E truth
 
 > **Content extends the system that already owns its truth. Integration does not create a second owner.**
 
-Phase 1E is a cross-system integration phase, not System 32.
+Phase 1E is an implemented cross-system integration phase, not System 32.
 
-Candidate implementation order after approval:
+Verified executable head: `6ad923d172f5a5434f94a7fdcc15da640a60a240`.
 
-1. `1E-1` world clutter + location identity through existing Systems 19/20/04/07B;
-2. `1E-2` mundane loot + perishable breadth through Systems 24/13D/30/31;
-3. `1E-3` integration/readability/performance/human acceptance using existing 29/27 presentation truth.
+Implemented result:
 
-The draft forbids fake Crafting, Power/Refrigeration, nutrition/Health, Skills, Vehicles, combat or AI behavior.
+1. `1E-1` — `Phase1EOneStoryContentDresser` adds deterministic program-appropriate content to the 18 baseline one-story building profiles, capped at two accents per building; the six protected reference buildings remain outside that dresser. The altered dressed baseline output records building content version 2. Existing System-20 outdoor generation remains authoritative and ordinary generated large trees/traffic lights now consume 07B through their real `prop.*` semantics.
+2. `1E-2` — System 24 now exposes 97 physical item semantics with real System-13D weights and broader location-aware loot profiles; System 30 exposes 10 explicit perishables; System 31 intentionally maps all 97 shipped item semantics plus its three shell controls.
+3. `1E-3` — permanent `verify/phase1e-content-integration` proves the content catalogs/integration together, while protected System-19/20/24/30/31/07B/performance/startup regressions remain in the exact-head stack.
 
-Canonical draft: `PHASE_1E_CONTENT_EXPANSION_INTEGRATION.md`.
+No Crafting, Power/Refrigeration, nutrition/Health, Skills, Vehicles, combat or AI behavior was introduced as fake content metadata.
 
-The next lifecycle gate is **APPROVE or revise Phase 1E**.
+Automated Phase-1E implementation is complete; a separate human visual/readability pass remains pending and may drive bounded tuning without changing ownership.
+
+Canonical design: `PHASE_1E_CONTENT_EXPANSION_INTEGRATION.md`.
+
+The next lifecycle gate is **DESCRIBE Phase 2 Crafting**.
 
 ---
 
@@ -142,15 +147,13 @@ Verified executable: `d33c69d6bd05f4c8fdbba62c6bd51bb16aad26ad`.
 
 ## Current semantic item/readability truth
 
-System 24: **Loot exists before you search for it.** Search/transfer acts on persistent real contents.
+System 24: **Loot exists before you search for it.** Search/transfer acts on persistent real contents. Phase 1E expands this to 97 current item semantics and broader location-aware stock.
 
 System 29: **A highlight explains an already-valid interaction. It never creates interaction truth.**
 
-System 30: **Food ages because authoritative world time passes through its storage environment. No item gets a timer.**
+System 30: **Food ages because authoritative world time passes through its storage environment. No item gets a timer.** Phase 1E expands the explicit perishable set to 10 semantics.
 
-System 31: **UI icons visualize existing semantic truth. They never define item identity, utility, freshness, or action legality.**
-
-Phase 1E must extend those existing vocabularies together: added items need weight + explicit UI icon, added perishables need freshness, and new searchable furniture needs real System-24 capability rather than art-based inference.
+System 31: **UI icons visualize existing semantic truth. They never define item identity, utility, freshness, or action legality.** All 97 current item semantics have intentional mappings.
 
 ---
 
@@ -172,9 +175,8 @@ Phase 1E must extend those existing vocabularies together: added items need weig
 - `verify/system30-item-freshness`
 - `verify/system31-semantic-ui-icons`
 - `verify/system07b-large-visual-geometry`
+- `verify/phase1e-content-integration`
 - `verify/performance-architecture`
 - `verify/pages-deploy`
 
-All **18 required contexts** are green on current verified executable/workflow head `d5e33b43fb732835b4a996ae4bec3a562cfa75f3`.
-
-If Phase 1E is approved and implemented, proposed `verify/phase1e-content-integration` becomes the nineteenth required context for that implementation.
+All **19 required contexts** are green on verified executable head `6ad923d172f5a5434f94a7fdcc15da640a60a240`.
