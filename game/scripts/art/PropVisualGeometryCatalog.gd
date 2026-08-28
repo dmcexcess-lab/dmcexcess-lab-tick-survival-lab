@@ -8,8 +8,10 @@ const SelectionClass = preload("res://scripts/art/ArtSelection.gd")
 ## Static System-07B presentation catalog. Semantic WHAT identity is the lookup key;
 ## the returned art keys/sources are presentation-only and are never persisted.
 
-const TREE_SEMANTIC: StringName = &"vegetation.deciduous_large"
-const TRAFFIC_LIGHT_SEMANTIC: StringName = &"fixture.traffic_light"
+# Phase 1E integration binds 07B to the actual System-20/ArtCatalog prop semantics.
+# The earlier fixture-only vegetation./fixture. aliases never occur in the generated island.
+const TREE_SEMANTIC: StringName = &"prop.deciduous_large"
+const TRAFFIC_LIGHT_SEMANTIC: StringName = &"prop.traffic_light"
 
 const TREE_BASE_KEY: StringName = &"visual.vegetation.deciduous_large.base"
 const TREE_FOREGROUND_KEY: StringName = &"visual.vegetation.deciduous_large.canopy"
