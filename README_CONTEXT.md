@@ -185,21 +185,34 @@ Automated Phase-1E implementation is complete. A separate human visual/readabili
 
 ---
 
-## Active work — Roadmap Phase 2
+## Active work — Roadmap Phase 2 / System 32
 
-### Crafting — NEXT DESIGN TARGET
+### Crafting / Material Transformation — DESCRIBED, AWAITING APPROVAL
 
-Phase 1 code/integration work is complete through 1E. The next major lifecycle step is to **DESCRIBE** the bounded Phase-2 Crafting owner(s) before implementation.
+Canonical design: `SYSTEM_DESIGNS/32_CRAFTING_MATERIAL_TRANSFORMATION.md`.
 
-Roadmap direction remains:
+Core rule:
 
-- recipes consume real persistent inputs and create real persistent outputs;
-- crafting spends WHEN time;
-- tools/workstations/conditions are real world/item facts rather than menu-only gates;
-- outputs enter ordinary inventory/world containment;
-- future Skills attach through narrow capability/quality/speed seams rather than being baked into Crafting ownership.
+> **Crafting transforms specific real persistent item entities into specific real persistent item entities. The recipe describes the transformation; WHEN charges the time; existing item/world owners hold the result.**
 
-No Phase-2 implementation is authorized merely by completion of Phase 1.
+Candidate 001 is one System-32 owner with three bounded implementation slices:
+
+1. **2A Recipe + plan foundation** — exact-semantic recipes, explicit workstation capabilities, deterministic ingredient/tool selection from real personal possession, known weight/icon/carry validation, and a small material-reclamation/assembly vocabulary.
+2. **2B Timed physical transformation** — one positive-duration CANCELABLE `crafting.craft_recipe` WHEN action, final commit revalidation, real input entity removal, deterministic real output creation, actor-root containment, hard carry-limit enforcement and a bounded mutation/compensation journal.
+3. **2C Workstation + player integration** — explicit heavy-workbench capability, shared System-29 `CONTACT_FORWARD` CRAFT offer, phone/Safari-first CRAFT modal and complete-island integration/playtest.
+
+Important Candidate-001 restrictions:
+
+- ingredients/tools must already be personally possessed; no magic nearby floor/container auto-pull;
+- physical counts are stable entity counts, never a stack/resource wallet;
+- tools are real non-consumed requirements; no fake durability exists yet;
+- consumed ingredients cannot be enrolled item-containers and cannot be perishable in Candidate 001;
+- outputs are ordinary new persistent WHAT `item.*` entities contained by the actor root;
+- no Construction/Repair/Durability, Cooking/Nutrition, Power/Water, Skills/quality/XP, Vehicles, Combat/ammunition or AI behavior is absorbed into Crafting.
+
+If implemented, `verify/system32-crafting` becomes a twentieth permanent exact-head context.
+
+The next lifecycle gate is **APPROVE or revise System 32 Candidate 001**. No Phase-2 runtime implementation is authorized yet.
 
 ---
 
@@ -211,14 +224,15 @@ No Phase-2 implementation is authorized merely by completion of Phase 1.
 - 20 owns bounded local roads/parcels/access/outdoor/environment content.
 - 04 owns world art selection; 07/07A/07B own prop presentation/orientation/large visual geometry.
 - 00A/00B remain authoritative for physical footprint, placement and stable entity identity.
-- 11 owns containment; 12 owns timed physical item transitions; 13D owns physical weight.
+- 09 owns hand assignment; 11 owns containment; 12 owns ordinary timed physical item transitions; 13D owns physical weight; 13E owns derived carried mass/carry ceilings.
 - 24 owns what virgin loot exists and keeps **loot exists before you search for it**.
 - 25 interprets authoritative WHEN ticks as simulation time.
 - 27 owns physical illumination and emitter truth.
 - 29 owns neutral reach/offer presentation but not mechanic capability.
-- 30 owns freshness records/derivation, not refrigeration or nutrition.
+- 30 owns freshness records/derivation, not refrigeration, cooking or nutrition.
 - 31 owns icon presentation only.
-- Phase 2 owns Crafting; Phase 3 Power/Water/Refrigeration; Phase 4 nutrition/health consequences; Phase 6 final Skills; Phase 7 Vehicles; Phase 8 AI/combat/outbreak.
+- 32 is the proposed Phase-2 owner of recipe-driven physical item transformation; it does not own later construction/repair/cooking/utilities/skills/vehicles/combat.
+- Phase 3 owns Power/Water/Refrigeration; Phase 4 nutrition/health consequences; Phase 6 final Skills; Phase 7 Vehicles; Phase 8 AI/combat/outbreak.
 
 ---
 
@@ -244,4 +258,6 @@ No Phase-2 implementation is authorized merely by completion of Phase 1.
 - `verify/performance-architecture`
 - `verify/pages-deploy`
 
-All **19 required contexts** are green on verified executable head `6ad923d172f5a5434f94a7fdcc15da640a60a240`.
+All **19 current required contexts** are green on verified executable head `6ad923d172f5a5434f94a7fdcc15da640a60a240`.
+
+System-32 implementation would add proposed `verify/system32-crafting` as required context 20; the design-only Phase-2 work does not change the executable stack.
