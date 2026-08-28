@@ -52,6 +52,7 @@ Canonical status/routing index. Read `PROJECT_NORTH_STAR.md`, `PERFORMANCE_NORTH
 | 29 | World Interaction Affordance / Reach | **IMPLEMENTED — Candidate 001; Roadmap Phase 1A** | `29_WORLD_INTERACTION_AFFORDANCE_REACH.md` |
 | 30 | Item Freshness / Spoilage | **IMPLEMENTED + CI VERIFIED — Candidate 001; Phase-1E catalog expanded to 10 perishables** | `30_ITEM_FRESHNESS_SPOILAGE.md` |
 | 31 | Semantic UI Icons | **IMPLEMENTED + CI VERIFIED — Candidate 001; explicit Phase-1E item coverage** | `31_SEMANTIC_UI_ICONS.md` |
+| 32 | Crafting / Material Transformation | **DRAFT — Roadmap Phase 2, awaiting approval** | `32_CRAFTING_MATERIAL_TRANSFORMATION.md` |
 | PERF | Performance Architecture Gate | **IMPLEMENTED + CI VERIFIED — P0/P1/P2; human accepted** | `PERFORMANCE_ARCHITECTURE.md` |
 | 00E | Population / Household / Outbreak / Player Story | **NOT DESIGNED — scheduled inside Roadmap Phase 8** | future design |
 
@@ -60,7 +61,7 @@ Canonical status/routing index. Read `PROJECT_NORTH_STAR.md`, `PERFORMANCE_NORTH
 | Phase | Status | Canonical design |
 |---|---|---|
 | 1E — Content Expansion + Integration | **IMPLEMENTED + CI VERIFIED; human visual acceptance pending; not a new runtime system** | `PHASE_1E_CONTENT_EXPANSION_INTEGRATION.md` |
-| 2 — Crafting | **NOT DESIGNED — next design target** | future bounded design(s) |
+| 2 — Crafting | **DESCRIBED — System 32 Candidate 001 awaiting approval** | `32_CRAFTING_MATERIAL_TRANSFORMATION.md` |
 
 ---
 
@@ -80,7 +81,25 @@ Performance gate — **COMPLETE + HUMAN ACCEPTED**.
 
 1E. Content expansion/integration — **COMPLETE + CI VERIFIED**: existing owners were expanded/integrated without introducing System 32. Verified executable head `6ad923d172f5a5434f94a7fdcc15da640a60a240` passes all 19 required exact-head contexts.
 
-Then: **Crafting** -> Power + Water -> physical survival/health -> Moodlets -> final skills/interactions -> Vehicles -> AI/combat/outbreak -> final graphics/UI -> Beta.
+### Phase 2
+
+System 32 Crafting / Material Transformation — **DESCRIBED, AWAITING APPROVAL**.
+
+Core rule:
+
+> **Crafting transforms specific real persistent item entities into specific real persistent item entities. The recipe describes the transformation; WHEN charges the time; existing item/world owners hold the result.**
+
+Candidate 001 slices:
+
+1. `2A` recipe/workstation catalogs + deterministic physical ingredient/tool planning;
+2. `2B` positive-duration WHEN crafting + real input deletion/output creation + bounded compensation;
+3. `2C` real nearby workbench capability + System-29 CRAFT offer + phone-first crafting UI.
+
+No magic nearby-storage ingredient pull, stack/resource wallet, perishable cooking, durability/repair, construction, Power, Skills, Vehicles or Combat is folded into Candidate 001.
+
+If implemented, `verify/system32-crafting` becomes exact-head context 20.
+
+Then: Power + Water -> physical survival/health -> Moodlets -> final skills/interactions -> Vehicles -> AI/combat/outbreak -> final graphics/UI -> Beta.
 
 ---
 
@@ -128,7 +147,29 @@ Automated Phase-1E implementation is complete; a separate human visual/readabili
 
 Canonical design: `PHASE_1E_CONTENT_EXPANSION_INTEGRATION.md`.
 
-The next lifecycle gate is **DESCRIBE Phase 2 Crafting**.
+---
+
+## Current System 32 draft truth
+
+> **Crafting transforms specific real persistent item entities into specific real persistent item entities. The recipe describes the transformation; WHEN charges the time; existing item/world owners hold the result.**
+
+Candidate 001 is **DESCRIBED, not implemented**.
+
+Key boundaries:
+
+- one System-32 owner rather than multiple peer crafting systems;
+- exact stable ingredient/tool entity selection from the actor's real personal possession graph;
+- no automatic pulling from floor/world containers;
+- tools are physical requirements but remain unconsumed until a real durability owner exists;
+- explicit `prop.workbench_heavy` capability for workbench recipes using shared System-29 reach;
+- one final CANCELABLE WHEN commit for Candidate 001;
+- deterministic new output IDs and ordinary WHAT + System-11 output truth;
+- bounded compensation journal instead of full-world snapshots;
+- perishable/cooking, container-item consumption, repair/durability, construction, utilities, Skills, Vehicles, Combat and AI stay outside Candidate 001.
+
+Canonical design: `32_CRAFTING_MATERIAL_TRANSFORMATION.md`.
+
+The next lifecycle gate is **APPROVE or revise System 32 Candidate 001**.
 
 ---
 
@@ -155,6 +196,8 @@ System 30: **Food ages because authoritative world time passes through its stora
 
 System 31: **UI icons visualize existing semantic truth. They never define item identity, utility, freshness, or action legality.** All 97 current item semantics have intentional mappings.
 
+System 32 draft: **Crafting consumes and creates real stable item entities rather than abstract resource counts.**
+
 ---
 
 ## Required executable-head stack
@@ -179,4 +222,6 @@ System 31: **UI icons visualize existing semantic truth. They never define item 
 - `verify/performance-architecture`
 - `verify/pages-deploy`
 
-All **19 required contexts** are green on verified executable head `6ad923d172f5a5434f94a7fdcc15da640a60a240`.
+All **19 current required contexts** are green on verified executable head `6ad923d172f5a5434f94a7fdcc15da640a60a240`.
+
+System-32 implementation would add proposed `verify/system32-crafting` as context 20; the design-only Phase-2 commit does not change the executable stack.
