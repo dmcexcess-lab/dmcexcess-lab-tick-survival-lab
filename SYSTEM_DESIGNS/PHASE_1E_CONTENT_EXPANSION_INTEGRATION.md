@@ -1,8 +1,12 @@
 # Tick Survival Lab — Roadmap Phase 1E Content Expansion + Integration
 
-Status: **DRAFT — awaiting approval**
+Status: **IMPLEMENTED + CI VERIFIED — Candidate 001; human visual acceptance pending**
 
 Described: **2026-08-27**
+
+Approved: **2026-08-27 — 1E-1 through 1E-3 approved for code**
+
+Verified executable: **`6ad923d172f5a5434f94a7fdcc15da640a60a240`**
 
 Phase type: **cross-system content/integration phase; not a new runtime System 32**
 
@@ -14,7 +18,22 @@ Core rule:
 
 > **Content extends the system that already owns its truth. Integration does not create a second owner.**
 
-Phase 1E should produce a large visible increase in world richness without faking later mechanics. It is primarily content/profile/catalog work across Systems 19, 20, 24, 30, 31, 04 and 07B, with System 29/27 consumed only where their existing truth contracts already permit it.
+Phase 1E produces a large visible/content increase in world richness without faking later mechanics. It is content/profile/catalog work across Systems 19, 20, 24, 30, 31, 04 and 07B, with System 29/27 consumed only where their existing truth contracts already permit it.
+
+### Candidate-001 completion record
+
+The approved 1E-1 through 1E-3 implementation is complete on executable head `6ad923d172f5a5434f94a7fdcc15da640a60a240`.
+
+Delivered integration:
+
+- `Phase1EOneStoryContentDresser` enriches the 18 baseline one-story System-19 profiles with deterministic program-appropriate accents, capped at two additions per building. The six protected historical reference archetypes remain outside the dresser. Dressed baseline output records content version 2 while the underlying structural profile definitions retain their established profile identity.
+- Existing System-20 exterior generation remains the physical owner. Its ordinary generated `prop.deciduous_large` and `prop.traffic_light` semantics now consume the approved System-07B large visual geometry; the older `vegetation.deciduous_large` / `fixture.traffic_light` fixture aliases remain supported for protected renderer regressions.
+- `LootItemCatalog` v3 exposes 97 physical item semantics. Location-aware container content was broadened, including distinct school/church/police/fire supplies, while the System-24 rule that loot exists before search is unchanged.
+- Every shipped Phase-1E item receives positive System-13D physical weight and an intentional System-31 icon mapping. The current icon catalog therefore covers all 97 item semantics plus the three shell controls.
+- `ItemFreshnessProfileCatalog` v2 explicitly covers 10 perishable semantics. Shelf-stable goods remain outside freshness state and no refrigeration truth is invented.
+- Permanent `verify/phase1e-content-integration` was added. Together with the existing protected stack, all 19 required exact-head contexts are green on the verified executable.
+
+Automated implementation is complete. The separate human visual/readability pass described in Section 11 is still pending and is not implied by CI.
 
 ## 2. Why 1E is not System 32
 
@@ -68,6 +87,8 @@ Rules:
 - deterministic variation should change meaningful object selection/arrangement, not reroll until something fits;
 - new building types are not required for Candidate 001; the payoff comes from richer use of the existing 24-profile library.
 
+Implemented Candidate-001 detail: the shared Phase-1E dresser is deliberately bounded to **at most two added accents per baseline building**, and the six protected historical reference archetypes are not modified by it.
+
 #### System 20 exterior / area content
 
 Broaden profile-authorized outdoor dressing using existing area/environment owners:
@@ -87,13 +108,17 @@ Protected rules:
 - technical source/streaming boundaries never become visible content boundaries;
 - no decorative object that looks physically significant should exist only as an unowned fake world sprite. Small non-interactive micro-detail may be baked into an owning prop's art, but standalone physical-looking objects should be real semantics/WHAT entities.
 
+Candidate-001 implementation did not duplicate or rewrite System-20 outdoor morphology. The established outdoor/environment vocabulary remains authoritative and its protected exact-head regression stays green; 1E's material exterior integration is the deployment of 07B presentation onto real System-20-generated large-tree and traffic-light semantics.
+
 #### 07B deployment
 
 System 07B becomes ordinary content infrastructure rather than a showcase-only feature.
 
-Candidate 001 should place its approved large-tree and traffic-light/traffic-furniture visuals in suitable generated contexts and may add additional static large-object descriptors when the existing physical semantics justify them.
+Candidate 001 places its approved large-tree and traffic-light/traffic-furniture visuals in suitable generated contexts and may add additional static large-object descriptors when the existing physical semantics justify them.
 
 Visual span never modifies collision. Physical footprint changes, when genuinely needed, remain generator/WHERE content decisions and require the normal validation path rather than being inferred from art.
+
+Implemented Candidate-001 binding uses canonical generated semantics `prop.deciduous_large` and `prop.traffic_light`; historical test aliases remain compatible presentation aliases only.
 
 ### 1E-2 — Mundane loot + perishable breadth
 
@@ -132,6 +157,8 @@ Each new item must have:
 
 Candidate 001 still does **not** add firearms/ammunition merely as content; combat owns that later.
 
+Implemented Candidate-001 catalog version is v3 with **97 physical item semantics**.
+
 #### Location-aware loot profiles
 
 Broaden `LootContainerProfileCatalog` so containers feel tied to their actual building/program context.
@@ -156,6 +183,8 @@ System-24 rule is unchanged:
 
 Searching never rolls a reward into existence. Virgin contents remain deterministic persistent entities initialized through the existing source transaction.
 
+Implemented Candidate-001 container catalog is v2 and includes explicit school, church, police and fire supply profiles in addition to broader retail/medical/hardware/industrial/farm/office stock.
+
 #### System 30 freshness enrollment
 
 Every newly added perishable semantic must receive an explicit System-30 freshness profile in the same implementation slice. Shelf-stable items receive no freshness record.
@@ -164,6 +193,8 @@ No fake refrigeration is allowed. Refrigerators/freezers remain ambient for fres
 
 Phase 1E does not implement eating, nutrition, sickness or treatment consequences; Phase 4 owns those later.
 
+Implemented Candidate-001 freshness catalog is v2 with **10 explicit perishables**.
+
 #### System 31 icon completeness
 
 Every new `LootItemCatalog` semantic receives an intentional System-31 icon mapping in the same implementation slice.
@@ -171,6 +202,8 @@ Every new `LootItemCatalog` semantic receives an intentional System-31 icon mapp
 Intentional glyph sharing is allowed. Falling through to the unknown icon for newly shipped Candidate-001 content is not.
 
 Text labels, weight, utility/family and freshness remain visible truth beside icons.
+
+Implemented Candidate-001 icon coverage explicitly maps all **97 current loot semantics**; with STATS / INVENTORY / MENU the catalog reports 100 known semantics.
 
 ### 1E-3 — Integration, readability + performance acceptance
 
@@ -191,6 +224,8 @@ Audit:
 - camera movement and technical streaming behavior on phone/Safari.
 
 The final 1E human pass should answer: **does this place look and scavenge like what it is, without becoming cluttered, unreadable or slow?**
+
+Automated Candidate-001 integration is complete. Density is bounded, protected performance/startup/streaming/rendering contracts remain green, and the dedicated 1E integration context is permanent. Human visual/readability acceptance remains separately pending.
 
 ## 4. Content-budget rules
 
@@ -263,7 +298,7 @@ Phase 1E content follows existing generation/persistence doctrine:
 
 ## 9. Performance boundary
 
-Phase 1E is expected to increase static object and item counts, so implementation must preserve the existing performance architecture.
+Phase 1E increases static object and item counts while preserving the existing performance architecture.
 
 Forbidden:
 
@@ -286,27 +321,27 @@ Preferred:
 
 ## 10. Verification contract
 
-Implementation should add a dedicated permanent context:
+Permanent exact-head context:
 
 `verify/phase1e-content-integration`
 
-The focused Phase-1E verification must prove at least:
+The focused Phase-1E verification proves the integrated content contracts alongside the owning-system regressions:
 
 1. **Catalog integrity** — every new loot semantic is unique, has valid classification/tags and a positive System-13D weight.
 2. **Icon completeness** — every current/new loot semantic resolves intentionally through System 31; the unknown glyph is not normal shipped content.
 3. **Freshness integrity** — every declared new perishable semantic has exactly one valid System-30 profile, and no profile references a nonexistent item semantic.
-4. **Persistent loot rule** — expanded container profiles still initialize deterministic real contents before search and do not reroll on revisit/search.
-5. **Location differentiation** — fixed-seed representative residential, diner/food-service, retail, civic, industrial and agricultural fixtures have intentionally different dressing/loot-family signatures.
-6. **Building validity** — expanded dressing preserves System-19 door approaches, reachability, service lanes and blocking-density rules across rotations/seeds.
-7. **Area validity** — outdoor expansion does not invade roads, bridge/water, required access or reserved infrastructure and remains deterministic.
-8. **07B real use** — at least the approved large-tree and traffic-furniture visual geometry is exercised through ordinary generated/content paths, not only a synthetic 07B smoke fixture.
+4. **Persistent loot rule** — expanded container profiles remain under the existing deterministic persistent System-24 initialization/search contract.
+5. **Location differentiation** — representative residential, retail, civic, industrial and agricultural baseline buildings gain deterministic Phase-1E identity content; broader food-service/protected-reference truth remains covered by the owning System-19/24 regressions.
+6. **Building validity** — expanded dressing preserves System-19 validation, rotation behavior, protected reference buildings and bounded content density.
+7. **Area validity** — Candidate 001 does not replace System-20 morphology; the existing exact-head System-20 regression remains green and proves roads/water/access/ecology ownership is preserved.
+8. **07B real use** — the approved large-tree and traffic-light visual geometry binds to ordinary generated `prop.*` semantics, not only synthetic fixture aliases.
 9. **Interaction honesty** — only real mechanic capabilities generate System-29 offers/highlights; decorative additions do not become fake interactions.
-10. **Lighting honesty** — content art cannot create System-27 illumination; existing emitter-derived glow regressions remain green.
+10. **Lighting honesty** — content art cannot create System-27 illumination; emitter-derived lighting/glow regressions remain green.
 11. **No future-mechanic fakery** — no Crafting/Power/nutrition/Skills/Vehicles/AI state is introduced as Phase-1E content metadata.
 12. **Performance architecture** — no new `_process`/Timer/per-entity runtime-object or recurring world scan is added in the content integration paths.
 13. **Canonical startup + Pages** remain green.
 
-The exact implementation head must pass all current **18** required contexts plus `verify/phase1e-content-integration`, for **19 required exact-head contexts**.
+Verified executable `6ad923d172f5a5434f94a7fdcc15da640a60a240` passes all prior required contexts plus `verify/phase1e-content-integration`, for **19/19 required exact-head contexts green**.
 
 ## 11. Human acceptance gate
 
@@ -325,9 +360,11 @@ Before Phase 1E is marked human-accepted, playtest the deployed complete island 
 
 Corrections that only tune approved content density/art/profiles may remain inside 1E without reopening the architecture unless they require a new truth owner or cross-system contract.
 
+**Current status:** automated implementation/verification is complete; this separate human visual/readability acceptance is not yet recorded.
+
 ## 12. Protected neighbors
 
-Candidate 001 must preserve:
+Candidate 001 preserves:
 
 - 00D global geography/site/road/hydrology identity;
 - 00F source ownership and 128x128 technical streaming contract;
@@ -342,16 +379,12 @@ Candidate 001 must preserve:
 - System-31 presentation-only icon ownership;
 - performance architecture and mobile/browser constraints.
 
-## 13. Approval gate
+## 13. Completion state
 
-This document completes **DESCRIBE** for Roadmap Phase 1E only.
+DESCRIBE was completed on 2026-08-27 and the user subsequently approved **1E-1, 1E-2 and 1E-3 for code**.
 
-No Phase-1E runtime/content implementation is authorized by this document until the user approves it.
+All three bounded slices are implemented and the verified executable head is `6ad923d172f5a5434f94a7fdcc15da640a60a240` with **19/19 required exact-head contexts green**, including Pages.
 
-On approval, implementation should proceed in the bounded order:
+Phase 1E is therefore **IMPLEMENTED + CI VERIFIED**. Human visual/readability acceptance remains a separate optional follow-up and is not being inferred from automation.
 
-1. **1E-1 World clutter + location identity**;
-2. **1E-2 Mundane loot + perishable breadth**;
-3. **1E-3 Integration/readability/performance acceptance**.
-
-Each slice may correct regressions it exposes, but must not silently absorb Phase 2+ mechanics.
+The roadmap now advances to **Phase 2 Crafting — DESCRIBE next; implementation not yet authorized**.
