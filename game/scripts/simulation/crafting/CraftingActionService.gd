@@ -149,8 +149,9 @@ func _on_action_phase(action: TimedAction, phase: ActionPhase) -> void:
     var removed: Array[Dictionary] = []
     var created_outputs: Array = []
     for entry: Dictionary in journal:
-        if not _remove_input(entry):
-            var restored: bool = _rollback(created_outputs, removed)
+        var removal: Dictionary = _remove_input(entry)
+        if not bool(removal.get("ok", false)):
+            var restored: bool = bool(removal.get("source_restored", false)) and _rollback(created_outputs, removed)
             _fail_during_commit(action, recipe_id, "input_remove_failed" if restored else "critical_consistency_failure")
             return
         removed.append(entry.duplicate(true))
@@ -244,7 +245,7 @@ func _capture_input(actor_id: String, item_id: String) -> Dictionary:
         }
     return {}
 
-func _remove_input(entry: Dictionary) -> bool:
+func _remove_input(entry: Dictionary) -> Dictionary:
     var item_id: String = String(entry.get("item_id", ""))
     var kind: String = String(entry.get("kind", ""))
     var source_cleared: bool = false
@@ -253,10 +254,10 @@ func _remove_input(entry: Dictionary) -> bool:
     elif kind == "container":
         source_cleared = _containment_mutations.clear_container(item_id)
     if not source_cleared:
-        return false
+        return {"ok": false, "source_restored": true}
     if _world_mutations.remove_entity(item_id):
-        return true
-    return _restore_source_relation(entry)
+        return {"ok": true, "source_restored": false}
+    return {"ok": false, "source_restored": _restore_source_relation(entry)}
 
 func _rollback(created_outputs: Array, removed_inputs: Array[Dictionary]) -> bool:
     var ok: bool = true
