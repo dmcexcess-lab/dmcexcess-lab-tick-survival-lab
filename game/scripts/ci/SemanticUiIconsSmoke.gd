@@ -10,8 +10,8 @@ func _initialize() -> void:
     var loot := LootItemCatalogClass.new()
 
     _check(icons.is_ready(), "semantic icon catalog loads the atlas and validates mappings")
-    _check(loot.semantic_types().size() == 71, "current loot catalog exposes the expected 71 semantics")
-    _check(icons.known_semantics().size() == 74, "System 31 explicitly maps 71 item semantics plus three shell controls")
+    _check(loot.semantic_types().size() == 97, "Phase 1E loot catalog exposes the expected 97 semantics")
+    _check(icons.known_semantics().size() == 100, "System 31 explicitly maps 97 item semantics plus three shell controls")
 
     for shell_key: StringName in [IconCatalogClass.SHELL_STATS, IconCatalogClass.SHELL_INVENTORY, IconCatalogClass.SHELL_MENU]:
         _check(icons.has_icon(shell_key), "shell icon is explicitly mapped: %s" % String(shell_key))
@@ -45,6 +45,8 @@ func _initialize() -> void:
         icons.icon_key(&"item.drink.water_bottle") != icons.icon_key(&"item.drink.soda_can"),
         "distinct drink shapes do not collapse through a family fallback"
     )
+    _check(icons.has_icon(&"item.food.banana"), "Phase 1E banana has an explicit icon mapping")
+    _check(icons.has_icon(&"item.electrical.extension_cord"), "Phase 1E extension cord has an explicit icon mapping")
 
     var unknown: StringName = &"item.future.unmapped_test"
     _check(not icons.has_icon(unknown), "unknown future semantic is not falsely reported as covered")
