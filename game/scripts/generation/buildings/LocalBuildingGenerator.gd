@@ -12,12 +12,15 @@ const GasStationClass = preload("res://scripts/generation/buildings/archetypes/G
 const RuralDinerClass = preload("res://scripts/generation/buildings/archetypes/RuralDinerBuildingGenerator.gd")
 const BaselineProfilesClass = preload("res://scripts/generation/buildings/profiles/OneStoryBaselineProfileCatalog.gd")
 const OneStoryGeneratorClass = preload("res://scripts/generation/buildings/grammar/OneStoryProfileBuildingGenerator.gd")
+const Phase1EContentDresserClass = preload("res://scripts/generation/buildings/content/Phase1EOneStoryContentDresser.gd")
 const PlanClass = preload("res://scripts/generation/buildings/GeneratedBuildingPlan.gd")
 
 var _generators: Dictionary = {}
 var _descriptor_cache: Dictionary = {}
+var _phase1e_content_dresser: Phase1EOneStoryContentDresser
 
 func _init() -> void:
+    _phase1e_content_dresser = Phase1EContentDresserClass.new()
     _generators[TrailerClass.ARCHETYPE_ID] = TrailerClass.new()
     _generators[FarmhouseClass.ARCHETYPE_ID] = FarmhouseClass.new()
     _generators[LargeFarmhouseClass.ARCHETYPE_ID] = LargeFarmhouseClass.new()
@@ -41,7 +44,9 @@ func generate(request: BuildingGenerationRequest) -> GeneratedBuildingPlan:
         var unknown := PlanClass.new()
         unknown.failure_reason = "building_archetype_unknown"
         return unknown
-    return _generators[request.archetype_id].generate(request)
+    var plan: GeneratedBuildingPlan = _generators[request.archetype_id].generate(request)
+    _phase1e_content_dresser.apply(plan)
+    return plan
 
 func supported_archetypes() -> Array[StringName]:
     var result: Array[StringName] = []
@@ -88,6 +93,7 @@ func _build_placement_descriptor(archetype_id: StringName) -> BuildingArchetypeP
                 frontage
             )
             var plan: GeneratedBuildingPlan = target.generate(request)
+            _phase1e_content_dresser.apply(plan)
             if not plan.is_generated():
                 continue
             supported.append(orientation)
