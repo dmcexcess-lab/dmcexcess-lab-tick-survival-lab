@@ -49,7 +49,7 @@ Core rule:
 Implemented result:
 
 - explicit perishable semantic profiles;
-- sparse typed per-instance freshness records;
+- sparse typed per-instance records;
 - FRESH / AGING / STALE / SPOILED derived analytically;
 - no per-item tick loop, timer, Node or scheduled spoilage event;
 - ambient cumulative exposure provider plus neutral future storage-context seam;
@@ -160,20 +160,29 @@ Human visual/readability feedback can still drive bounded Phase-1 content tuning
 
 ---
 
-## Phase 2 — Crafting — NEXT DESIGN TARGET
+## Phase 2 — Crafting — DESCRIBED, AWAITING APPROVAL
 
-Goal: make collected materials physically useful.
+Canonical design:
 
-Direction:
+`SYSTEM_DESIGNS/32_CRAFTING_MATERIAL_TRANSFORMATION.md`
 
-- recipes consume real persistent inputs and create real persistent outputs;
-- crafting spends WHEN time;
-- tools/workstations/conditions are real world/item facts rather than menu-only gates;
-- outputs enter ordinary inventory/world containment;
-- later Phase-6 skills modify capability/quality/speed/access through narrow seams rather than being baked into crafting ownership;
-- carpentry/base building, traps, repairs and specialized utility/vehicle work may reuse the same action substrate while retaining clear ownership.
+System owner: **System 32 Crafting / Material Transformation**.
 
-Phase 2 is **not yet designed or authorized for implementation**. The next lifecycle step is DESCRIBE.
+Core rule:
+
+> **Crafting transforms specific real persistent item entities into specific real persistent item entities. The recipe describes the transformation; WHEN charges the time; existing item/world owners hold the result.**
+
+Candidate 001 is split into three bounded implementation slices:
+
+1. **2A — Recipe + plan foundation** — exact-semantic recipe/workstation catalogs, deterministic selection from the actor's real hands + nested personal inventory, explicit tool requirements, carry/weight/freshness validation, and a small honest material-reclamation/assembly vocabulary. No nearby floor/container auto-pull and no stack/resource wallet.
+2. **2B — Timed physical transformation** — `crafting.craft_recipe` as a positive-duration CANCELABLE WHEN action, final commit revalidation, real input-entity removal, deterministic new output entities, actor-root containment, hard carry-limit enforcement and a bounded compensation journal rather than a whole-world snapshot.
+3. **2C — Workstation + player integration** — explicit heavy-workbench capability, shared System-29 `CONTACT_FORWARD` reach + `CRAFT` offer, phone/Safari-first crafting modal, and complete-island integration/playtest.
+
+Candidate 001 deliberately excludes perishable/cooking transforms, container-item consumption, durability/repair, construction placement, Power/Water, nutrition/Health, Skills/quality/XP, Vehicles, combat/ammunition and AI. Those later owners may reuse the System-32 substrate without becoming Crafting-owned.
+
+If implemented, permanent exact-head context `verify/system32-crafting` becomes the twentieth required context.
+
+The next lifecycle gate is **APPROVE or revise System 32 Candidate 001**. No Phase-2 runtime implementation is authorized by this design alone.
 
 ---
 
@@ -353,4 +362,4 @@ For each bounded phase/system:
 
 Newest explicit user direction supersedes older roadmap ordering, but implemented historical systems remain current truth until deliberately migrated.
 
-**Current next step: DESCRIBE the bounded Phase-2 Crafting architecture. No Phase-2 runtime implementation is authorized yet.**
+**Current next step: APPROVE or revise `SYSTEM_DESIGNS/32_CRAFTING_MATERIAL_TRANSFORMATION.md`. No System-32 runtime implementation is authorized yet.**
