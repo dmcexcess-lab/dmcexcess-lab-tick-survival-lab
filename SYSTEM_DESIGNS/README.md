@@ -19,6 +19,7 @@ Canonical status/routing index. Read `PROJECT_NORTH_STAR.md`, `README_SOPS.md`, 
 | 06 | Structure Layer Renderer | **IMPLEMENTED** | `06_STRUCTURE_LAYER_RENDERER.md` |
 | 07 | Prop / Fixture / Vegetation Renderer | **IMPLEMENTED** | `07_PROP_FIXTURE_VEGETATION_RENDERER.md` |
 | 07A | Prop Art Orientation | **IMPLEMENTED** | `07A_PROP_ART_ORIENTATION.md` |
+| 07B | Large / Multi-cell Object Visual Geometry | **DRAFT — awaiting approval; Roadmap Phase 1D** | `07B_LARGE_MULTI_CELL_VISUAL_GEOMETRY.md` |
 | 08 | Player / Living Actor Renderer | **IMPLEMENTED** | `08_PLAYER_LIVING_ACTOR_RENDERER.md` |
 | 09 | Actor Hand Equipment State | **IMPLEMENTED** | `09_ACTOR_HAND_EQUIPMENT_STATE.md` |
 | 10 | Actor Hand Equipment Presentation | **IMPLEMENTED** | `10_ACTOR_HAND_EQUIPMENT_PRESENTATION.md` |
@@ -70,11 +71,32 @@ Performance gate — COMPLETE + HUMAN ACCEPTED. First P0/P1/P2 executable `0398a
 
 1C. **Semantic inventory/menu icons** — COMPLETE: System 31 Candidate 001. First verified executable `dc83ad10b7469a629fb2ac5d86c77d386b69434d`.
 
-1D. **Large/multi-cell object visual geometry** — **NEXT: DESCRIBE**; presentation-owned span/pivot/overhang independent from physical footprint.
+1D. **Large/multi-cell object visual geometry** — **DESCRIBED: System 07B Candidate 001 awaiting approval**; presentation-owned span/pivot/overhang independent from physical footprint.
 
 1E. **Content expansion/integration** — broaden perishables and ordinary props/fixtures/vegetation using the new foundations.
 
 Then: Crafting -> Power + Water -> physical survival/health -> Moodlets -> final skills/interactions -> Vehicles -> AI/combat/outbreak -> final graphics/UI -> Beta.
+
+---
+
+## Current System 07B draft truth
+
+> **Physical footprint answers where the object is. Visual geometry answers how that object is drawn. Neither may silently redefine the other.**
+
+Candidate 001 is described but **not implemented or authorized yet**.
+
+- 07B is a child of the existing System 07 renderer, not a new top-level gameplay system.
+- WHAT/WHERE footprint, anchor, channel and facing remain authoritative physical truth.
+- a Node-free `PropVisualGeometryDescriptor` supplies whole-cell visual span plus a fractional pivot attached to the physical anchor-cell center;
+- System 07A remains orientation owner and 07B applies that resolved orientation around the authored pivot;
+- existing/unmapped props fall back to the exact historical 1×1 visual rectangle;
+- one shared stable-entity visual plan feeds the ordinary z=20 base pass plus an optional z=35 foreground/overhang pass above actors and below physical lighting;
+- a small catalog-derived discovery halo lets offscreen physical anchors still draw canopies/arms that genuinely overlap the view without a whole-world scan;
+- visual overhang never changes collision, occupancy, LOS, reach, interaction legality, light truth, streaming identity or save state;
+- first implementation examples are a 2×2-or-larger large tree visual and a larger traffic/stop-light visual;
+- implementation requires a dedicated `verify/system07b-large-visual-geometry` context plus all currently protected exact-head regressions.
+
+Canonical draft: `07B_LARGE_MULTI_CELL_VISUAL_GEOMETRY.md`.
 
 ---
 
