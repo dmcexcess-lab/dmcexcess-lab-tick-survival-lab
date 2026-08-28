@@ -45,7 +45,7 @@ func _test_building_content() -> void:
         _check(descriptor != null and descriptor.is_valid(), "baseline descriptor remains valid: %s" % String(profile_id))
         if descriptor == null or not descriptor.is_valid():
             continue
-        _check(descriptor.archetype_version() == 2, "Phase 1E baseline version bumped to two: %s" % String(profile_id))
+        _check(descriptor.archetype_version() == 2, "Phase 1E final building content version is two: %s" % String(profile_id))
         var size: Vector2i = descriptor.required_size(Facing.Value.NORTH)
         var frontage: int = descriptor.frontage_for_orientation(Facing.Value.NORTH)
         var request := RequestClass.new(
@@ -116,9 +116,9 @@ func _test_large_visual_integration() -> void:
     _check(VisualGeometryClass.TREE_SEMANTIC == &"prop.deciduous_large", "07B tree descriptor binds the real generated prop semantic")
     _check(VisualGeometryClass.TRAFFIC_LIGHT_SEMANTIC == &"prop.traffic_light", "07B traffic-light descriptor binds the real generated prop semantic")
     var tree: PropVisualGeometryDescriptor = VisualGeometryClass.descriptor_for(&"prop.deciduous_large")
-    var signal: PropVisualGeometryDescriptor = VisualGeometryClass.descriptor_for(&"prop.traffic_light")
+    var traffic_visual: PropVisualGeometryDescriptor = VisualGeometryClass.descriptor_for(&"prop.traffic_light")
     _check(tree.draw_span_cells == Vector2i(2, 2) and tree.has_foreground(), "ordinary generated large tree consumes 2x2 07B geometry")
-    _check(signal.draw_span_cells == Vector2i(2, 2) and signal.has_foreground(), "ordinary generated traffic light consumes 2x2 07B geometry")
+    _check(traffic_visual.draw_span_cells == Vector2i(2, 2) and traffic_visual.has_foreground(), "ordinary generated traffic light consumes 2x2 07B geometry")
     _check(VisualGeometryClass.maximum_discovery_halo_cells() == 2, "large-object discovery remains bounded to two cells")
 
 func _check(condition: bool, message: String) -> void:
