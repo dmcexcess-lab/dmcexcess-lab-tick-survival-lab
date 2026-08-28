@@ -1,10 +1,10 @@
 extends RefCounted
 class_name LootContainerProfileCatalog
 
-## Candidate 001 searchable-container classification + deterministic weighted table data.
+## Searchable-container classification + deterministic weighted table data.
 ## Classification consumes only public building-plan archetype/role/semantic facts.
 
-const CATALOG_VERSION: int = 1
+const CATALOG_VERSION: int = 2
 
 var _profiles: Dictionary = {}
 
@@ -95,8 +95,16 @@ func classify(archetype_id: StringName, role_value: String, semantic_type: Strin
         return &"household.dresser"
 
     if semantic == "prop.file_cabinet_tall":
-        if archetype == "commercial.pharmacy.small" and role.contains("pharmacy"):
-            return &"medical.stock"
+        match archetype:
+            "civic.school.elementary_small":
+                return &"civic.school.supplies"
+            "civic.church.small":
+                return &"civic.church.supplies"
+            "civic.police_station.small":
+                return &"civic.police.supplies"
+            "commercial.pharmacy.small":
+                if role.contains("pharmacy"):
+                    return &"medical.stock"
         return &"office.files"
 
     if semantic == "prop.office_desk":
@@ -105,6 +113,8 @@ func classify(archetype_id: StringName, role_value: String, semantic_type: Strin
     if semantic == "prop.tool_cabinet":
         if archetype == "agricultural.barn.medium":
             return &"farming.storage"
+        if archetype == "civic.fire_station.small":
+            return &"civic.fire.supplies"
         return &"tools.service"
 
     if semantic == "prop.warehouse_rack":
@@ -144,126 +154,143 @@ func classify(archetype_id: StringName, role_value: String, semantic_type: Strin
     return &""
 
 func _build_profiles() -> void:
-    _add_profile(&"household.fridge", 1, 10, 0, 4, [
-        _e(&"item.drink.water_bottle", 12), _e(&"item.drink.soda_can", 8),
-        _e(&"item.drink.juice_bottle", 4), _e(&"item.food.apple", 7),
+    _add_profile(&"household.fridge", 2, 10, 0, 4, [
+        _e(&"item.drink.water_bottle", 12), _e(&"item.drink.soda_can", 8), _e(&"item.drink.juice_bottle", 4),
+        _e(&"item.food.apple", 7), _e(&"item.food.eggs_carton", 5), _e(&"item.food.yogurt_cup", 5),
         _e(&"item.food.canned_soup", 3), _e(&"item.food.energy_bar", 2),
         _e(&"item.junk.empty_plastic_bottle", 5), _e(&"item.junk.food_wrapper", 4),
     ])
-    _add_profile(&"kitchen.pantry", 1, 10, 0, 4, [
-        _e(&"item.food.canned_beans", 10), _e(&"item.food.canned_soup", 10),
-        _e(&"item.food.crackers", 7), _e(&"item.food.cereal_box", 6),
-        _e(&"item.kitchen.can_opener", 3), _e(&"item.kitchen.matches_box", 3),
-        _e(&"item.junk.empty_food_can", 5), _e(&"item.junk.food_wrapper", 6),
-        _e(&"item.junk.broken_mug", 2),
+    _add_profile(&"kitchen.pantry", 2, 10, 0, 4, [
+        _e(&"item.food.canned_beans", 10), _e(&"item.food.canned_soup", 10), _e(&"item.food.crackers", 7),
+        _e(&"item.food.cereal_box", 6), _e(&"item.food.rice_bag", 6), _e(&"item.food.pasta_box", 6),
+        _e(&"item.food.peanut_butter_jar", 5), _e(&"item.kitchen.coffee_grounds", 4),
+        _e(&"item.kitchen.can_opener", 3), _e(&"item.kitchen.matches_box", 3), _e(&"item.kitchen.dish_towel", 3),
+        _e(&"item.junk.empty_food_can", 5), _e(&"item.junk.food_wrapper", 6), _e(&"item.junk.broken_mug", 2),
     ])
-    _add_profile(&"household.bathroom_vanity", 1, 8, 0, 3, [
-        _e(&"item.sanitation.soap_bar", 9), _e(&"item.medical.bandage_roll", 5),
-        _e(&"item.medical.disinfectant", 3), _e(&"item.medical.painkillers", 3),
-        _e(&"item.household.trash_bags_roll", 2), _e(&"item.junk.empty_medicine_bottle", 6),
-        _e(&"item.junk.empty_cleaner_bottle", 4), _e(&"item.junk.dirty_rag", 4),
+    _add_profile(&"household.bathroom_vanity", 2, 8, 0, 3, [
+        _e(&"item.sanitation.soap_bar", 9), _e(&"item.sanitation.toilet_paper_roll", 8), _e(&"item.sanitation.cleaning_spray", 4),
+        _e(&"item.medical.bandage_roll", 5), _e(&"item.medical.disinfectant", 3), _e(&"item.medical.alcohol_wipes", 4),
+        _e(&"item.medical.painkillers", 3), _e(&"item.household.trash_bags_roll", 2),
+        _e(&"item.junk.empty_medicine_bottle", 6), _e(&"item.junk.empty_cleaner_bottle", 4), _e(&"item.junk.dirty_rag", 4),
     ])
-    _add_profile(&"household.dresser", 1, 8, 0, 3, [
-        _e(&"item.clothing.work_gloves", 5), _e(&"item.material.rag_bundle", 4),
-        _e(&"item.electrical.batteries_pack", 2), _e(&"item.office.notebook", 2),
-        _e(&"item.junk.old_receipts", 5), _e(&"item.junk.cracked_phone_charger", 3),
-        _e(&"item.junk.broken_toy", 3), _e(&"item.junk.dirty_rag", 4),
+    _add_profile(&"household.dresser", 2, 8, 0, 3, [
+        _e(&"item.clothing.work_gloves", 5), _e(&"item.clothing.socks_pair", 6), _e(&"item.clothing.beanie", 4),
+        _e(&"item.material.rag_bundle", 4), _e(&"item.electrical.batteries_pack", 2), _e(&"item.office.notebook", 2),
+        _e(&"item.junk.old_receipts", 5), _e(&"item.junk.cracked_phone_charger", 3), _e(&"item.junk.broken_toy", 3), _e(&"item.junk.dirty_rag", 4),
     ])
-    _add_profile(&"commercial.diner.cold", 1, 10, 1, 5, [
-        _e(&"item.drink.water_bottle", 12), _e(&"item.drink.soda_can", 9),
-        _e(&"item.drink.juice_bottle", 5), _e(&"item.food.apple", 6),
-        _e(&"item.food.canned_soup", 4), _e(&"item.junk.empty_plastic_bottle", 2),
+    _add_profile(&"commercial.diner.cold", 2, 10, 1, 5, [
+        _e(&"item.drink.water_bottle", 12), _e(&"item.drink.soda_can", 9), _e(&"item.drink.juice_bottle", 5),
+        _e(&"item.drink.sports_drink", 5), _e(&"item.food.apple", 6), _e(&"item.food.eggs_carton", 6),
+        _e(&"item.food.yogurt_cup", 4), _e(&"item.food.canned_soup", 4), _e(&"item.junk.empty_plastic_bottle", 2),
     ])
-    _add_profile(&"commercial.food.stock", 1, 15, 1, 5, [
-        _e(&"item.food.canned_beans", 12), _e(&"item.food.canned_soup", 12),
-        _e(&"item.food.crackers", 8), _e(&"item.food.cereal_box", 7),
-        _e(&"item.drink.water_bottle", 8), _e(&"item.material.rag_bundle", 2),
-        _e(&"item.junk.worn_cardboard", 5), _e(&"item.junk.food_wrapper", 3),
+    _add_profile(&"commercial.food.stock", 2, 15, 1, 5, [
+        _e(&"item.food.canned_beans", 12), _e(&"item.food.canned_soup", 12), _e(&"item.food.crackers", 8),
+        _e(&"item.food.cereal_box", 7), _e(&"item.food.rice_bag", 8), _e(&"item.food.pasta_box", 8),
+        _e(&"item.kitchen.coffee_grounds", 5), _e(&"item.drink.water_bottle", 8), _e(&"item.material.rag_bundle", 2),
+        _e(&"item.junk.worn_cardboard", 5), _e(&"item.junk.crumpled_carton", 4), _e(&"item.junk.food_wrapper", 3),
     ])
-    _add_profile(&"retail.convenience", 1, 12, 1, 4, [
-        _e(&"item.drink.water_bottle", 10), _e(&"item.drink.soda_can", 12),
-        _e(&"item.food.energy_bar", 10), _e(&"item.food.crackers", 5),
-        _e(&"item.electrical.batteries_pack", 3), _e(&"item.tool.lighter", 3),
+    _add_profile(&"retail.convenience", 2, 12, 1, 4, [
+        _e(&"item.drink.water_bottle", 10), _e(&"item.drink.soda_can", 12), _e(&"item.drink.sports_drink", 8),
+        _e(&"item.food.energy_bar", 10), _e(&"item.food.crackers", 5), _e(&"item.food.peanut_butter_jar", 4),
+        _e(&"item.electrical.batteries_pack", 3), _e(&"item.tool.lighter", 3), _e(&"item.sanitation.toilet_paper_roll", 3),
         _e(&"item.junk.food_wrapper", 5), _e(&"item.junk.empty_plastic_bottle", 3),
     ])
-    _add_profile(&"retail.grocery", 1, 12, 2, 6, [
-        _e(&"item.food.canned_beans", 10), _e(&"item.food.canned_soup", 10),
-        _e(&"item.food.crackers", 8), _e(&"item.food.cereal_box", 8),
-        _e(&"item.food.apple", 8), _e(&"item.drink.water_bottle", 8),
-        _e(&"item.drink.juice_bottle", 5), _e(&"item.junk.food_wrapper", 3),
-        _e(&"item.junk.worn_cardboard", 2),
+    _add_profile(&"retail.grocery", 2, 12, 2, 6, [
+        _e(&"item.food.canned_beans", 10), _e(&"item.food.canned_soup", 10), _e(&"item.food.crackers", 8),
+        _e(&"item.food.cereal_box", 8), _e(&"item.food.apple", 8), _e(&"item.food.banana", 8),
+        _e(&"item.food.carrot_bag", 7), _e(&"item.food.eggs_carton", 7), _e(&"item.food.yogurt_cup", 7),
+        _e(&"item.food.rice_bag", 7), _e(&"item.food.pasta_box", 7), _e(&"item.food.peanut_butter_jar", 6),
+        _e(&"item.kitchen.coffee_grounds", 5), _e(&"item.drink.water_bottle", 8), _e(&"item.drink.juice_bottle", 5),
+        _e(&"item.sanitation.toilet_paper_roll", 4), _e(&"item.sanitation.cleaning_spray", 3),
+        _e(&"item.junk.food_wrapper", 3), _e(&"item.junk.worn_cardboard", 2), _e(&"item.junk.crumpled_carton", 2),
     ])
-    _add_profile(&"retail.cold", 1, 10, 1, 5, [
-        _e(&"item.drink.water_bottle", 10), _e(&"item.drink.soda_can", 8),
-        _e(&"item.drink.juice_bottle", 6), _e(&"item.food.apple", 8),
+    _add_profile(&"retail.cold", 2, 10, 1, 5, [
+        _e(&"item.drink.water_bottle", 10), _e(&"item.drink.soda_can", 8), _e(&"item.drink.juice_bottle", 6),
+        _e(&"item.drink.sports_drink", 7), _e(&"item.food.apple", 8), _e(&"item.food.banana", 5),
+        _e(&"item.food.carrot_bag", 5), _e(&"item.food.eggs_carton", 6), _e(&"item.food.yogurt_cup", 6),
         _e(&"item.food.energy_bar", 3), _e(&"item.junk.empty_plastic_bottle", 2),
     ])
-    _add_profile(&"retail.pharmacy", 1, 12, 1, 5, [
-        _e(&"item.medical.bandage_roll", 10), _e(&"item.medical.gauze_pack", 8),
-        _e(&"item.medical.disinfectant", 7), _e(&"item.medical.painkillers", 7),
-        _e(&"item.sanitation.soap_bar", 4), _e(&"item.sanitation.bleach_bottle", 2),
-        _e(&"item.electrical.batteries_pack", 2), _e(&"item.junk.empty_medicine_bottle", 3),
-        _e(&"item.junk.medical_packaging", 3),
+    _add_profile(&"retail.pharmacy", 2, 12, 1, 5, [
+        _e(&"item.medical.bandage_roll", 10), _e(&"item.medical.gauze_pack", 8), _e(&"item.medical.disinfectant", 7),
+        _e(&"item.medical.medical_tape", 7), _e(&"item.medical.alcohol_wipes", 8), _e(&"item.medical.painkillers", 7),
+        _e(&"item.sanitation.soap_bar", 4), _e(&"item.sanitation.bleach_bottle", 2), _e(&"item.sanitation.toilet_paper_roll", 4),
+        _e(&"item.electrical.batteries_pack", 2), _e(&"item.junk.empty_medicine_bottle", 3), _e(&"item.junk.medical_packaging", 3),
     ])
-    _add_profile(&"medical.cabinet", 1, 8, 1, 4, [
-        _e(&"item.medical.bandage_roll", 14), _e(&"item.medical.gauze_pack", 12),
-        _e(&"item.medical.disinfectant", 10), _e(&"item.medical.painkillers", 7),
+    _add_profile(&"medical.cabinet", 2, 8, 1, 4, [
+        _e(&"item.medical.bandage_roll", 14), _e(&"item.medical.gauze_pack", 12), _e(&"item.medical.disinfectant", 10),
+        _e(&"item.medical.medical_tape", 10), _e(&"item.medical.alcohol_wipes", 10), _e(&"item.medical.painkillers", 7),
         _e(&"item.medical.antibiotics", 4), _e(&"item.medical.first_aid_kit", 2),
         _e(&"item.junk.empty_medicine_bottle", 2), _e(&"item.junk.medical_packaging", 2),
     ])
-    _add_profile(&"medical.stock", 1, 15, 2, 6, [
-        _e(&"item.medical.bandage_roll", 13), _e(&"item.medical.gauze_pack", 12),
-        _e(&"item.medical.disinfectant", 10), _e(&"item.medical.painkillers", 8),
-        _e(&"item.medical.antibiotics", 5), _e(&"item.medical.first_aid_kit", 3),
-        _e(&"item.sanitation.soap_bar", 3), _e(&"item.junk.medical_packaging", 2),
+    _add_profile(&"medical.stock", 2, 15, 2, 6, [
+        _e(&"item.medical.bandage_roll", 13), _e(&"item.medical.gauze_pack", 12), _e(&"item.medical.disinfectant", 10),
+        _e(&"item.medical.medical_tape", 10), _e(&"item.medical.alcohol_wipes", 10), _e(&"item.medical.painkillers", 8),
+        _e(&"item.medical.antibiotics", 5), _e(&"item.medical.first_aid_kit", 3), _e(&"item.sanitation.soap_bar", 3),
+        _e(&"item.junk.medical_packaging", 2),
     ])
-    _add_profile(&"retail.hardware", 1, 12, 1, 5, [
-        _e(&"item.tool.hammer", 7), _e(&"item.tool.screwdriver", 10),
-        _e(&"item.tool.adjustable_wrench", 7), _e(&"item.tool.crowbar", 3),
-        _e(&"item.material.duct_tape", 8), _e(&"item.material.nails_box", 9),
-        _e(&"item.material.screws_box", 9), _e(&"item.electrical.batteries_pack", 3),
-        _e(&"item.clothing.work_gloves", 3), _e(&"item.junk.broken_screwdriver", 2),
-        _e(&"item.junk.rusted_fasteners", 3),
+    _add_profile(&"retail.hardware", 2, 12, 1, 5, [
+        _e(&"item.tool.hammer", 7), _e(&"item.tool.screwdriver", 10), _e(&"item.tool.adjustable_wrench", 7),
+        _e(&"item.tool.pliers", 8), _e(&"item.tool.crowbar", 3), _e(&"item.material.duct_tape", 8),
+        _e(&"item.material.nails_box", 9), _e(&"item.material.screws_box", 9), _e(&"item.electrical.batteries_pack", 3),
+        _e(&"item.electrical.extension_cord", 5), _e(&"item.clothing.work_gloves", 3), _e(&"item.industrial.safety_glasses", 3),
+        _e(&"item.junk.broken_screwdriver", 2), _e(&"item.junk.rusted_fasteners", 3),
     ])
-    _add_profile(&"tools.service", 1, 12, 1, 4, [
-        _e(&"item.tool.hammer", 8), _e(&"item.tool.screwdriver", 10),
-        _e(&"item.tool.adjustable_wrench", 8), _e(&"item.material.duct_tape", 7),
-        _e(&"item.material.nails_box", 5), _e(&"item.material.screws_box", 5),
-        _e(&"item.electrical.batteries_pack", 3), _e(&"item.junk.broken_screwdriver", 3),
-        _e(&"item.junk.rusted_fasteners", 3),
+    _add_profile(&"tools.service", 2, 12, 1, 4, [
+        _e(&"item.tool.hammer", 8), _e(&"item.tool.screwdriver", 10), _e(&"item.tool.adjustable_wrench", 8),
+        _e(&"item.tool.pliers", 8), _e(&"item.material.duct_tape", 7), _e(&"item.material.nails_box", 5),
+        _e(&"item.material.screws_box", 5), _e(&"item.electrical.batteries_pack", 3), _e(&"item.electrical.extension_cord", 4),
+        _e(&"item.junk.broken_screwdriver", 3), _e(&"item.junk.rusted_fasteners", 3),
     ])
-    _add_profile(&"industrial.stock", 1, 15, 1, 5, [
-        _e(&"item.material.duct_tape", 8), _e(&"item.material.nails_box", 8),
-        _e(&"item.material.screws_box", 8), _e(&"item.material.rope_coil", 5),
-        _e(&"item.tool.hammer", 5), _e(&"item.tool.adjustable_wrench", 5),
-        _e(&"item.electrical.batteries_pack", 3), _e(&"item.industrial.work_light", 2),
-        _e(&"item.junk.rusted_fasteners", 4), _e(&"item.junk.scrap_wire", 4),
-        _e(&"item.junk.worn_cardboard", 4),
+    _add_profile(&"industrial.stock", 2, 15, 1, 5, [
+        _e(&"item.material.duct_tape", 8), _e(&"item.material.nails_box", 8), _e(&"item.material.screws_box", 8),
+        _e(&"item.material.rope_coil", 5), _e(&"item.tool.hammer", 5), _e(&"item.tool.adjustable_wrench", 5),
+        _e(&"item.tool.pliers", 5), _e(&"item.electrical.batteries_pack", 3), _e(&"item.electrical.extension_cord", 5),
+        _e(&"item.automotive.motor_oil_bottle", 4), _e(&"item.industrial.work_light", 2), _e(&"item.industrial.safety_glasses", 5),
+        _e(&"item.junk.rusted_fasteners", 4), _e(&"item.junk.scrap_wire", 4), _e(&"item.junk.worn_cardboard", 4),
     ])
-    _add_profile(&"industrial.secure", 1, 15, 2, 5, [
-        _e(&"item.tool.crowbar", 5), _e(&"item.tool.adjustable_wrench", 8),
-        _e(&"item.tool.hammer", 8), _e(&"item.material.duct_tape", 8),
-        _e(&"item.material.rope_coil", 6), _e(&"item.electrical.batteries_pack", 5),
-        _e(&"item.industrial.work_light", 4), _e(&"item.clothing.work_gloves", 4),
-        _e(&"item.junk.scrap_wire", 2),
+    _add_profile(&"industrial.secure", 2, 15, 2, 5, [
+        _e(&"item.tool.crowbar", 5), _e(&"item.tool.adjustable_wrench", 8), _e(&"item.tool.hammer", 8),
+        _e(&"item.tool.pliers", 6), _e(&"item.material.duct_tape", 8), _e(&"item.material.rope_coil", 6),
+        _e(&"item.electrical.batteries_pack", 5), _e(&"item.electrical.extension_cord", 5), _e(&"item.industrial.work_light", 4),
+        _e(&"item.industrial.safety_glasses", 5), _e(&"item.clothing.work_gloves", 4), _e(&"item.junk.scrap_wire", 2),
     ])
-    _add_profile(&"farming.storage", 1, 12, 1, 4, [
-        _e(&"item.farming.hand_trowel", 9), _e(&"item.farming.hand_pruners", 8),
-        _e(&"item.farming.garden_hoe", 5), _e(&"item.farming.watering_can", 5),
-        _e(&"item.farming.seed_packet", 12), _e(&"item.tool.hammer", 4),
-        _e(&"item.material.rope_coil", 5), _e(&"item.junk.broken_plant_pot", 3),
-        _e(&"item.junk.empty_seed_packet", 4),
+    _add_profile(&"farming.storage", 2, 12, 1, 4, [
+        _e(&"item.farming.hand_trowel", 9), _e(&"item.farming.hand_pruners", 8), _e(&"item.farming.garden_hoe", 5),
+        _e(&"item.farming.watering_can", 5), _e(&"item.farming.seed_packet", 12), _e(&"item.farming.fertilizer_bag", 7),
+        _e(&"item.tool.hammer", 4), _e(&"item.tool.pliers", 4), _e(&"item.electrical.extension_cord", 3),
+        _e(&"item.material.rope_coil", 5), _e(&"item.junk.broken_plant_pot", 3), _e(&"item.junk.empty_seed_packet", 4),
     ])
-    _add_profile(&"office.files", 1, 8, 0, 3, [
-        _e(&"item.office.notebook", 5), _e(&"item.office.permanent_marker", 4),
-        _e(&"item.electrical.batteries_pack", 2), _e(&"item.junk.old_receipts", 12),
-        _e(&"item.junk.broken_pen", 8), _e(&"item.junk.worn_cardboard", 3),
+    _add_profile(&"office.files", 2, 8, 0, 3, [
+        _e(&"item.office.notebook", 5), _e(&"item.office.permanent_marker", 4), _e(&"item.office.pencil_pack", 6),
+        _e(&"item.office.scissors", 3), _e(&"item.electrical.batteries_pack", 2), _e(&"item.junk.old_receipts", 12),
+        _e(&"item.junk.stale_newspaper", 8), _e(&"item.junk.broken_pen", 8), _e(&"item.junk.worn_cardboard", 3),
     ])
-    _add_profile(&"office.desk", 1, 8, 0, 3, [
-        _e(&"item.office.notebook", 6), _e(&"item.office.permanent_marker", 5),
-        _e(&"item.tool.flashlight", 1), _e(&"item.electrical.batteries_pack", 2),
-        _e(&"item.junk.old_receipts", 10), _e(&"item.junk.broken_pen", 7),
+    _add_profile(&"office.desk", 2, 8, 0, 3, [
+        _e(&"item.office.notebook", 6), _e(&"item.office.permanent_marker", 5), _e(&"item.office.pencil_pack", 6),
+        _e(&"item.office.scissors", 3), _e(&"item.tool.flashlight", 1), _e(&"item.electrical.batteries_pack", 2),
+        _e(&"item.junk.old_receipts", 10), _e(&"item.junk.stale_newspaper", 5), _e(&"item.junk.broken_pen", 7),
         _e(&"item.junk.cracked_phone_charger", 2),
+    ])
+
+    _add_profile(&"civic.school.supplies", 1, 8, 1, 4, [
+        _e(&"item.office.notebook", 8), _e(&"item.office.pencil_pack", 10), _e(&"item.office.permanent_marker", 6),
+        _e(&"item.office.scissors", 5), _e(&"item.sanitation.cleaning_spray", 2), _e(&"item.junk.broken_pen", 6),
+        _e(&"item.junk.stale_newspaper", 3), _e(&"item.junk.crumpled_carton", 3),
+    ])
+    _add_profile(&"civic.church.supplies", 1, 8, 0, 3, [
+        _e(&"item.office.notebook", 6), _e(&"item.office.pencil_pack", 6), _e(&"item.sanitation.soap_bar", 4),
+        _e(&"item.sanitation.toilet_paper_roll", 5), _e(&"item.household.trash_bags_roll", 3),
+        _e(&"item.junk.stale_newspaper", 5), _e(&"item.junk.worn_cardboard", 3),
+    ])
+    _add_profile(&"civic.police.supplies", 1, 10, 1, 4, [
+        _e(&"item.tool.flashlight", 6), _e(&"item.clothing.work_gloves", 5), _e(&"item.office.notebook", 5),
+        _e(&"item.office.permanent_marker", 4), _e(&"item.electrical.batteries_pack", 6),
+        _e(&"item.junk.stale_newspaper", 3), _e(&"item.junk.old_receipts", 3),
+    ])
+    _add_profile(&"civic.fire.supplies", 1, 10, 1, 4, [
+        _e(&"item.clothing.work_gloves", 7), _e(&"item.tool.flashlight", 6), _e(&"item.tool.pliers", 6),
+        _e(&"item.material.duct_tape", 5), _e(&"item.electrical.extension_cord", 5), _e(&"item.industrial.safety_glasses", 6),
+        _e(&"item.electrical.batteries_pack", 4), _e(&"item.junk.scrap_wire", 2),
     ])
 
 func _add_profile(
