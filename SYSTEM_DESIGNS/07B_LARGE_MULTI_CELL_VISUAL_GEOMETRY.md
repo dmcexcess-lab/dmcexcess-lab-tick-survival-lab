@@ -1,313 +1,170 @@
 # Tick Survival Lab — System 07B Large / Multi-cell Object Visual Geometry
 
-Status: **DRAFT — awaiting approval; Roadmap Phase 1D**
+Status: **IMPLEMENTED + CI VERIFIED — Roadmap Phase 1D complete**
 
-Updated: **2026-08-27**
+Approved: **2026-08-27**
 
-## 1. Goal
+Implemented: **2026-08-27**
 
-System 07B extends the existing System 07 prop / fixture / vegetation presentation so a stable physical entity may have an authored visual span, pivot and decorative overhang that differ from its authoritative WHAT / WHERE footprint.
+Verified executable/workflow head: `d5e33b43fb732835b4a996ae4bec3a562cfa75f3`
 
-Core rule:
+Permanent exact-head context: `verify/system07b-large-visual-geometry`
+
+## 1. Core rule
 
 > **Physical footprint answers where the object is. Visual geometry answers how that object is drawn. Neither may silently redefine the other.**
 
-Candidate 001 is deliberately a child of System 07 rather than a new top-level gameplay system. System 07 already owns one-command-per-stable-object prop rendering, and System 07A already owns presentation-only facing/orientation. System 07B removes the remaining one-cell visual assumption without creating a second object renderer or a second spatial truth.
+System 07B is the presentation-only large-object child of System 07. It removes the old one-cell visual-size assumption while keeping WHAT / WHERE physical truth authoritative.
 
-## 2. Problem being solved
+## 2. Implemented result
 
-The current `PropLayerRenderer` already does the important physical work correctly:
+Candidate 001 implements:
 
-- it queries WHAT OBJECT occupancy;
-- deduplicates multi-cell occupancy by stable entity ID;
-- retains the authoritative footprint and anchor;
-- emits one draw command per stable entity;
-- does not repeat one icon on every occupied cell.
-
-The remaining limitation is presentation: every command is currently drawn into exactly one tactical cell at the entity anchor, even when the physical footprint contains multiple cells.
-
-That makes a double bed, large tree, traffic signal, large machine, future vehicle, etc. visually collapse into a one-cell icon despite having larger physical or decorative geometry.
-
-System 07B replaces only that visual-size assumption.
+- Node-free `PropVisualGeometryDescriptor` and `PropVisualGeometryCatalog` presentation contracts;
+- authored whole-cell visual span and anchor-attached pivot;
+- one stable entity -> one shared logical visual plan, regardless of physical footprint cell count;
+- exact historical 1x1 fallback for unmapped props;
+- System-07A facing/orientation applied to the complete authored geometry around its pivot;
+- one cached visible-window-plus-halo planning pass shared by base and foreground drawing;
+- a catalog-bounded maximum discovery halo of two cells for visual overhang from just-offscreen physical anchors;
+- visual-AABB culling after bounded physical discovery;
+- a persistent z=20 base/body pass plus optional z=35 foreground/overhang pass above actors and below physical lighting;
+- dedicated 2x2 large deciduous-tree base + canopy artwork;
+- dedicated larger traffic-light pole/base + signal-head/arm artwork;
+- large traffic-light rotation derived from authoritative System-07A / WHAT facing;
+- no per-object Sprite2D/Node2D/Timer/`_process` and no whole-world object scan.
 
 ## 3. Ownership
 
-### System 07B owns
+System 07B owns only presentation geometry:
 
-- presentation-only visual geometry descriptors for OBJECT-channel semantics;
-- visual draw span in tactical-cell space;
-- the visual pivot that attaches authored art to the authoritative anchor cell;
-- optional decorative visual overhang outside the physical footprint;
-- bounded discovery of objects whose visual overhang enters the current view while their physical footprint is just outside it;
-- one shared cached visual-plan list consumed by the ordinary prop pass and optional foreground-overhang pass;
-- visual-bounds intersection/culling;
-- applying System 07A's already-resolved orientation around the authored visual pivot.
+- visual span;
+- visual pivot;
+- optional base/foreground art split;
+- rotated visual bounds;
+- bounded overhang discovery;
+- cached visual planning and culling.
 
-### System 07B does not own
+System 07B does **not** own:
 
-- entity identity or persistence;
+- stable entity identity or persistence;
 - WHAT placement;
-- WHERE footprints, occupancy or collision;
+- WHERE occupancy/footprints/collision;
 - movement legality;
-- System 29 reach / interaction legality;
-- System 23 LOS, visibility state or memory;
-- System 27 physical light / shadow truth;
-- System 26 sound;
-- generation choice of physical footprint;
-- streaming identity or technical region size;
+- System-29 reach or interaction legality;
+- System-23 LOS/perception truth;
+- System-27 physical light/shadow truth;
+- System-26 sound;
+- generation morphology;
+- streaming identity;
 - WHEN;
-- vehicles or movable-object gameplay;
-- final prop-shadow art.
+- vehicles or movable-object gameplay.
 
-A visual canopy over a neighboring cell therefore does **not** make that cell blocked, reachable, interactable, opaque, illuminated, audible, saved, or occupied.
+A canopy or signal arm drawn over a neighboring cell therefore does not make that cell physically occupied, blocked, reachable, opaque, illuminated or saved.
 
-## 4. Relationship to existing systems
+## 4. Public presentation contract
 
-### System 07 — Prop / Fixture / Vegetation Renderer
+`PropVisualGeometryDescriptor` supplies presentation-only facts including:
 
-System 07 remains the renderer owner. Candidate 001 should evolve the existing `PropLayerRenderer` rather than replace it.
+- stable visual/catalog identity;
+- base art key;
+- optional foreground art key;
+- positive whole-cell draw span;
+- fractional pivot in unrotated visual-cell space.
 
-The existing invariant remains:
+The authoritative attachment point is the center of the WHAT anchor cell. The default descriptor is exactly one cell with pivot `(0.5, 0.5)`, preserving pre-07B destination geometry.
 
-> **One stable OBJECT entity produces one logical visual plan, regardless of how many physical cells it occupies.**
+System 04 remains art-source/selection owner. System 07A remains facing owner. WHAT / WHERE remain physical owner.
 
-System 07B does not authorize one Sprite/Node per entity and does not authorize one copied icon per occupied cell.
+## 5. Fixed presentation stack
 
-### System 07A — Prop Art Orientation
+Candidate 001 retains the existing fixed renderer architecture rather than introducing generic Y-sort:
 
-System 07A remains the facing/orientation owner.
-
-System 07B consumes the resolved quarter-turn/orientation and applies it to the complete authored visual geometry around the descriptor pivot. System 07B must not invent another facing field or store presentation rotation in WHAT.
-
-### System 04 — Art Catalog
-
-System 04 remains the art-selection/source owner.
-
-System 07B may map a physical semantic type to presentation-only art keys for:
-
-- a base/body visual;
-- an optional foreground/overhang visual.
-
-Those keys are presentation identifiers only. They are never written into WHAT as semantic identity.
-
-Candidate 001 may add a dedicated large-environment-prop source/texture through System 04. `ArtSelection` already supports full-texture sources, so Candidate 001 does not require arbitrary multi-cell atlas-rectangle semantics merely to draw large assets.
-
-### Systems 00A / 00B — WHERE / WHAT
-
-Authoritative placement remains `record.footprint.anchor`, `record.footprint`, channel and facing.
-
-Visual geometry is derived after reading those facts. No save-schema or persistent-record field is added for visual span or pivot.
-
-## 5. Candidate 001 data contract
-
-Add a Node-free presentation descriptor such as `PropVisualGeometryDescriptor` and a shared `PropVisualGeometryCatalog`.
-
-A descriptor contains at minimum:
-
-- `visual_id: StringName` — stable presentation/catalog identity;
-- `base_art_key: StringName` — System-04-resolved base/body artwork;
-- `foreground_art_key: StringName` — optional System-04-resolved transparent foreground/overhang artwork; empty means no foreground pass;
-- `draw_span_cells: Vector2i` — positive authored visual width/height in tactical cells;
-- `pivot_cells: Vector2` — point inside the unrotated visual rectangle that is attached to the authoritative anchor-cell center.
-
-Candidate 001 keeps `draw_span_cells` on whole-cell dimensions. This preserves the deliberate low-resolution tile language and simple nearest-neighbor scaling. The pivot may be fractional so a wide/tall object can attach naturally to one anchor location.
-
-Validation requires:
-
-- both span components >= 1;
-- pivot is finite;
-- required base art resolves;
-- optional foreground art resolves if declared;
-- the default/fallback descriptor is exactly one cell with pivot `(0.5, 0.5)`.
-
-The catalog is static during normal Candidate-001 runtime. It is not a mutable gameplay registry.
-
-## 6. Placement math
-
-The authoritative attachment point is the **center of the WHAT anchor cell**.
-
-For an unrotated visual:
-
-`anchor_world = Vector2(anchor_cell) + Vector2(0.5, 0.5)`
-
-`visual_top_left_world = anchor_world - pivot_cells`
-
-`visual_rect_world = Rect2(visual_top_left_world, Vector2(draw_span_cells))`
-
-The renderer converts that world-space rectangle into screen/local pixels using the existing render-window origin and cell-pixel size.
-
-The default descriptor `(span=1×1, pivot=0.5,0.5)` must produce the current one-cell destination exactly. Existing unmapped props therefore remain visually unchanged.
-
-## 7. Orientation and rotated bounds
-
-System 07A supplies the resolved orientation. System 07B rotates visual geometry around `pivot_cells`, not around the rectangle center unless the authored pivot happens to be centered.
-
-For each allowed quarter-turn:
-
-- the attachment point remains the authoritative anchor-cell center;
-- base and foreground parts receive the same orientation;
-- physical footprint/facing truth is read-only;
-- the visual axis-aligned bounding box is computed from the rotated authored rectangle for culling/discovery.
-
-Four quarter-turns must return to identical visual geometry with no accumulated floating-point drift in the logical plan.
-
-## 8. Base + foreground presentation passes
-
-A single large image rendered entirely below actors makes tall objects look wrong: the survivor would always appear in front of a tree canopy or traffic-signal head. Moving every prop above actors causes the opposite problem.
-
-Candidate 001 therefore uses **two fixed presentation passes fed by one shared visual plan**:
-
-1. **Base/body pass — z=20**
-   - existing System-07 prop layer;
-   - below doors/actors as today;
-   - draws the descriptor's base art.
-
-2. **Optional foreground/overhang pass — z=35**
-   - one additional persistent renderer surface, not one Node per object;
-   - above living actors at z=30;
-   - below physical lighting at z=40, Weather at z=50 and Perception at z=100;
-   - draws only the descriptor's optional transparent foreground art.
+1. ordinary props/base bodies — z=20;
+2. living actors — z=30;
+3. optional large-object foreground/overhang — z=35;
+4. physical-lighting presentation — z=40;
+5. later Weather / perception layers retain their existing ordering.
 
 Examples:
 
-- large tree base art: trunk/lower mass; foreground art: upper canopy;
-- traffic light base art: pole/base; foreground art: signal head/cross-arm;
-- dumpster or bed: base only, with no foreground layer if no actor-overlap effect is desired.
+- tree trunk/lower mass below actors, canopy above actors;
+- traffic-light pole below actors, signal arm/head above actors.
 
-This is not a generic Y-sort rewrite. Candidate 001 deliberately retains the existing fixed renderer stack.
+Both passes consume the same stable-entity visual plan. Foreground presentation does not trigger a second WHAT discovery scan.
 
-## 9. One logical visual plan per stable entity
+## 6. Bounded discovery and performance
 
-The roadmap's one-command-per-entity rule means System 07B must never multiply drawing by physical footprint cells.
+Large art may overlap the camera even when its physical anchor is just outside visible bounds. System 07B therefore expands OBJECT discovery by the catalog's bounded maximum visual overhang, currently two cells, then culls plans whose rotated visual AABB does not actually intersect the visible rectangle.
 
-Candidate 001 may represent one stable entity's plan with a base draw plus an optional foreground subpass, but both parts belong to the **same stable visual plan and the same entity ID**. Planning/deduplication happens once.
+Protected performance rules:
 
-No second WHAT query or entity-discovery scan is permitted merely for the foreground pass.
-
-Stable ordering remains deterministic from physical anchor / semantic / stable entity ID unless a later approved design proves another ordering key is necessary.
-
-## 10. Visual-overhang discovery halo
-
-Current System 07 discovers objects by scanning physical occupancy inside the visible bounds. That is insufficient once visual art may extend beyond physical occupancy: an offscreen tree trunk could have a canopy that should still be visible onscreen.
-
-Candidate 001 adds a **catalog-bounded discovery halo**.
-
-Rules:
-
-- `PropVisualGeometryCatalog` exposes the maximum possible rotated visual overhang in cells across its registered descriptors;
-- the renderer expands the current physical query rectangle only by that small maximum halo;
-- discovery still uses direct WHAT `entities_at()` occupancy queries and stable-ID deduplication;
-- after a visual plan is built, its rotated visual AABB must intersect the actual visible rectangle or it is culled;
-- no full-world scan is allowed;
-- changing the 128×128 technical streaming region size must not change visual identity or geometry.
-
-Candidate 001's first assets should keep the maximum halo deliberately small. A 1–2-cell halo is the intended scale; unusually huge artwork requires a later explicit review rather than silently expanding query cost.
-
-## 11. Caching and invalidation
-
-System 07B follows the performance north star.
-
-Candidate 001 requirements:
-
-- no per-entity Node/Sprite/Timer/`_process`;
+- no full-world scan;
+- no per-frame world query merely for foreground composition;
+- no per-entity runtime object graph;
 - no WHEN work;
-- no per-frame world scan;
-- one cached planned-command list for the visible window + bounded halo;
-- base and foreground passes consume that same cache;
-- ordinary render-window movement and relevant OBJECT placement/reset changes invalidate the plan through the existing System-07 pathway;
-- static visual descriptors/art selections may be cached;
-- actor movement does not require a prop-world requery merely because a foreground overlay is composited above the actor.
+- static descriptors/art selections are cacheable;
+- planning cost scales with the visible render window plus the tiny fixed halo, not total persistent world population;
+- technical streaming-region dimensions do not define visual identity.
 
-Planning cost is bounded by visible-window-plus-halo OBJECT occupancy, not total persistent world population.
+## 7. Physical-light glow enhancement included with Phase 1D
 
-## 12. First implementation examples
+The approved implementation also improved the existing System-27 presentation shader with a broader soft two-ring bloom/glow.
 
-Candidate 001 implementation should prove the contract with at least:
+Critical ownership rule:
 
-### Large tree
+> **Bright artwork may look emissive, but only a real System-27 emitter may create physical-light presentation glow.**
 
-- a real stable vegetation semantic such as `vegetation.deciduous_large`;
-- authored visual geometry of at least 2×2 cells;
-- visual pivot attached to the physical anchor;
-- optional canopy foreground part above actors;
-- a focused fixture proving a 2×2 physical footprint still yields one stable visual plan.
+The traffic-light art contains readable bright signal lenses, but those pixels do not invent illumination. `physical_lighting_glow.gdshader` derives the expanded bloom from the existing physical-lighting presentation input. Streetlights, emergency lights, flashlights and future powered fixtures therefore reuse the same visual treatment only when real emitter truth exists.
 
-### Traffic / stop light
+No `TIME`-driven fake flicker, new light-source state, illumination calculation change, perception change or Power behavior was introduced.
 
-- an existing traffic-light / traffic-furniture semantic;
-- authored visual geometry visibly larger/taller than one cell;
-- pole/base below actors and optional signal head/arm above actors;
-- orientation driven by System 07A/WHAT facing, not a renderer-only second facing state.
+## 8. Verification
 
-The implementation may add focused test fixtures with the required physical footprints. Globally changing generator collision footprints for existing content is **not** part of System 07B and should be deferred to content integration unless already-authoritative footprint data supports it.
+`PropVisualGeometrySmoke.gd` plus protected regressions prove:
 
-## 13. Verification contract
+1. multi-cell physical occupancy deduplicates to one stable visual plan;
+2. a one-cell physical object may legally own larger visual geometry without changing occupancy;
+3. unmapped props retain exact one-cell fallback geometry;
+4. pivots attach to the authoritative anchor-cell center;
+5. System-07A quarter-turn orientation is presentation-only and deterministic;
+6. offscreen physical anchors whose visual overhang intersects view are discovered through the bounded halo;
+7. entities beyond the maximum halo are never found through an unbounded search;
+8. base and foreground consume one shared planning/dedup result;
+9. base/actor/foreground/lighting layer order is preserved;
+10. visual geometry changes no collision, reach, LOS/perception truth or WHEN ticks;
+11. existing prop-renderer, prop-orientation and physical-lighting presentation regressions remain green;
+12. canonical project startup succeeds.
 
-A dedicated `verify/system07b-large-visual-geometry` context should prove at minimum:
+On exact head `d5e33b43fb732835b4a996ae4bec3a562cfa75f3`, all **18 required contexts** are green:
 
-1. A 2×2/four-cell WHAT footprint produces one stable visual plan rather than four repeated sprites.
-2. A one-cell physical footprint may legally have a larger visual rectangle without changing occupancy/collision.
-3. An unmapped/default prop produces the exact historical one-cell destination rectangle.
-4. The authored pivot lands on the anchor-cell center.
-5. System-07A quarter-turns rotate around the authored pivot and preserve WHAT placement/footprint.
-6. Four quarter-turns return to the original logical geometry deterministically.
-7. An entity whose entire physical footprint is just outside view is still planned when its visual AABB overlaps the view.
-8. An entity outside the catalog maximum halo is not discovered by an unbounded search.
-9. Halo-discovered plans whose visual AABB does not intersect the real view are culled.
-10. Base and optional foreground passes use one shared stable-entity plan/dedup result.
-11. Base remains below actors; foreground remains above actors and below physical lighting/perception.
-12. Visual overhang changes no WHERE occupancy, collision, System-29 reach, System-23 acquisition truth or WHEN ticks.
-13. Existing `PropLayerRendererSmoke`, System-07A orientation smoke, canonical startup and performance-architecture regressions remain green.
-14. The exact executable head passes all existing required contexts plus the new System-07B context and Pages deployment.
+- `verify/system00d-global-world`
+- `verify/system00f-streaming-materialization`
+- `verify/system19-local-building`
+- `verify/system20-local-area`
+- `verify/system21-camera-view`
+- `verify/system22-area-critique`
+- `verify/system23-perception`
+- `verify/system24-loot`
+- `verify/system25-world-time-light`
+- `verify/system26-spatial-sound`
+- `verify/system27-physical-lighting`
+- `verify/system28-weather`
+- `verify/system29-interaction-affordance`
+- `verify/system30-item-freshness`
+- `verify/system31-semantic-ui-icons`
+- `verify/system07b-large-visual-geometry`
+- `verify/performance-architecture`
+- `verify/pages-deploy`
 
-## 14. Phone / browser presentation constraints
+The final workflow correction changed only the startup success assertion to the canonical `CANONICAL_DEMO_BOOT_OK` marker; the project was already booting successfully.
 
-Phone/Safari remains first-class.
+## 9. Human visual acceptance
 
-Candidate 001 therefore keeps:
+Automated implementation/CI verification is complete. A separate human visual-acceptance claim for the new tree/traffic-light proportions and expanded glow is **not yet recorded**. Visual playtest may tune art while preserving this contract.
 
-- integer cell draw spans;
-- nearest/low-resolution presentation conventions;
-- no per-object scene-tree proliferation;
-- bounded halo queries;
-- cached art selections/textures;
-- no continuous animation requirement.
+## 10. Future consumers
 
-Large art must improve readability without turning the screen into high-resolution decorative clutter that hides tactical cells.
+Roadmap Phase 1E may now deploy 07B geometry broadly for trees, traffic furniture and other approved static world objects. Future vehicles and final prop shadows may reuse this geometry seam, but remain independently owned later work.
 
-## 15. Explicit non-goals for Candidate 001
-
-Not authorized by this design:
-
-- changing collision or physical footprints merely to match artwork;
-- generic isometric/Y-sort/world-depth renderer replacement;
-- per-object Sprite2D/Node2D instances;
-- animated vegetation or prop simulation;
-- physical prop shadows or changes to System 27 light truth;
-- arbitrary visual hitboxes used for gameplay;
-- interaction selection by visible sprite pixels;
-- vehicle movement/rotation/damage;
-- broad world-content expansion;
-- final graphics/UI polish.
-
-Phase 1E may consume the approved 07B seam for broader trees, traffic furniture, fixtures and ordinary world-object content. Vehicles and final prop shadows may reuse the same presentation geometry later but remain independently owned work.
-
-## 16. Replacement boundary
-
-A future System-07/07B renderer rewrite is acceptable if it preserves:
-
-- authoritative WHAT / WHERE footprint and stable entity identity;
-- one logical visual plan per stable OBJECT entity;
-- semantic Art-Catalog resolution;
-- System-07A orientation ownership;
-- authored span/pivot/overhang semantics;
-- bounded visible-plus-halo discovery;
-- no persistent visual state in WHAT;
-- no WHEN cost;
-- no per-entity runtime-object requirement.
-
-## 17. Approval gate
-
-This document completes the **DESCRIBE** stage only.
-
-No System-07B runtime implementation is authorized until the user approves this design. On approval, implementation should remain bounded to the presentation/art/verification seams described above, with protected gameplay/world systems treated as regressions rather than refactor targets.
+Any future replacement must preserve authoritative WHAT / WHERE physical truth, one logical visual plan per stable object, System-07A orientation ownership, bounded visible-plus-halo discovery, no persistent presentation state in WHAT and no per-object runtime-object requirement.

@@ -61,8 +61,6 @@ Implemented result:
 - refrigeration remains inactive until Phase 3 supplies real power/appliance truth;
 - Phase 4 later owns eating/drinking/health consequences.
 
-All **16 required exact-head contexts** are green on the executable, including `verify/system30-item-freshness` and `verify/pages-deploy`.
-
 ### 1C — Semantic inventory/menu icons — COMPLETE
 
 Canonical design:
@@ -71,7 +69,7 @@ Canonical design:
 
 System 31 Candidate 001 is implemented and verified.
 
-Current verified executable: `dc83ad10b7469a629fb2ac5d86c77d386b69434d`.
+First verified executable: `dc83ad10b7469a629fb2ac5d86c77d386b69434d`.
 
 Core rule:
 
@@ -79,58 +77,68 @@ Core rule:
 
 Implemented result:
 
-- System 31 is a presentation-only semantic UI icon system;
-- one dedicated low-resolution atlas with 16×16 logical icon cells normally drawn at 32×32;
+- presentation-only semantic UI icon system;
+- dedicated low-resolution atlas with 16x16 logical icon cells normally drawn at 32x32;
 - one shared Node-free/cached `SemanticUiIconCatalog`;
-- all current 71 loot semantic types receive explicit icon mappings, with intentional sharing allowed but no automatic family fallback;
+- all current loot semantic types receive explicit icon mappings, with intentional sharing allowed but no automatic family fallback;
 - unknown future semantics receive an honest unknown glyph + diagnostic while text remains usable;
-- Stats / Inventory / Menu become icon + text rather than icon-only;
+- Stats / Inventory / Menu use icon + text;
 - hands, carried inventory, scavenging contents, and `YOUR PACK` use the same semantic item vocabulary;
-- TAKE / STORE, movement, and DEV controls stay text-only in Candidate 001;
-- labels, stable IDs, weight, utility/family, freshness and later mechanic truth stay beside the icon;
-- no persistent state, simulation tick work, per-item runtime objects, or world scan;
-- selected held-item silhouettes may be visually repacked into the UI atlas, but System 31 has no runtime dependency on System 10;
-- `verify/system31-semantic-ui-icons` proves all current mappings, cache/failure behavior, protected System-16/24/30 regressions and canonical startup;
-- all **17 required exact-head contexts** are green, including `verify/pages-deploy`.
+- labels, stable IDs, weight, utility/family and freshness remain real data beside icons;
+- no persistent state, simulation tick work, per-item runtime objects or world scan.
 
-No separate human visual-acceptance claim is recorded for the post-width-fix appearance; executable/CI verification is complete.
+### 1D — Large/multi-cell object visual geometry — COMPLETE + CI VERIFIED
 
-### 1D — Large/multi-cell object visual geometry — DESCRIBED: AWAITING APPROVAL
-
-Canonical draft:
+Canonical design:
 
 `SYSTEM_DESIGNS/07B_LARGE_MULTI_CELL_VISUAL_GEOMETRY.md`
 
-Goal: let physical multi-cell objects actually look large instead of drawing one recovered one-cell sprite at their anchor, while keeping visual geometry independent from authoritative collision/world footprint.
+Verified executable/workflow head:
 
-Candidate 001 direction:
+`d5e33b43fb732835b4a996ae4bec3a562cfa75f3`
 
-- System 07B is a presentation-only child of the existing System 07 renderer, not a new gameplay/world system;
-- a Node-free visual descriptor supplies authored whole-cell draw span, anchor-attached pivot and optional foreground/overhang art;
+Core rule:
+
+> **Physical footprint answers where the object is. Visual geometry answers how that object is drawn. Neither may silently redefine the other.**
+
+Implemented result:
+
+- System 07B remains a presentation-only child of System 07;
+- Node-free descriptors provide authored whole-cell visual span, anchor-attached pivot and optional foreground/overhang art;
 - physical footprint remains WHERE/WHAT truth and may differ from decorative visual overhang;
 - System 07A remains facing/orientation owner;
-- one stable entity produces one shared logical visual plan rather than repeated/stretched icons per occupied cell;
-- the ordinary base/body pass stays at z=20 while an optional foreground/overhang pass sits at z=35 above actors and below physical lighting;
-- a small catalog-derived discovery halo allows an offscreen physical anchor to contribute visible canopy/arm overhang without any whole-world scan;
-- explicit large art remains resolved through System 04;
-- first examples are a 2×2-or-larger large tree and larger traffic/stop lights;
-- future vehicles and final prop shadows may reuse this presentation seam but are not part of Candidate 001;
-- implementation requires dedicated `verify/system07b-large-visual-geometry` coverage plus all protected exact-head regressions.
+- one stable entity produces one cached shared logical visual plan rather than repeated icons per occupied cell;
+- base/body remains z=20; optional foreground/overhang is z=35 above actors and below physical lighting;
+- a catalog-bounded two-cell discovery halo allows just-offscreen anchors to contribute visible canopy/arm overhang without any whole-world scan;
+- unmapped props retain exact historical 1x1 visual geometry;
+- dedicated large-tree and traffic-light base/foreground art prove the seam;
+- the existing System-27 presentation glow was broadened into a soft two-ring bloom, but only real System-27 emitter truth creates the glow;
+- no collision/reach/LOS/WHEN/streaming/save-state truth was changed;
+- all **18 required exact-head contexts** are green on `d5e33b43fb732835b4a996ae4bec3a562cfa75f3`, including `verify/system07b-large-visual-geometry` and `verify/pages-deploy`.
 
-**Runtime implementation is not authorized until the draft is approved.**
+Automated implementation/CI verification is complete. Separate human visual acceptance of the new large-object proportions/glow has not yet been recorded.
 
-### 1E — Phase-1 content expansion + integration
+### 1E — Phase-1 content expansion + integration — DESCRIBED: AWAITING APPROVAL
 
-Goal: use 1A–1D foundations to make ordinary locations richer before Crafting.
+Canonical draft:
 
-Planned direction:
+`SYSTEM_DESIGNS/PHASE_1E_CONTENT_EXPANSION_INTEGRATION.md`
 
-- broaden mundane survival item/loot content and perishables;
-- broaden props/fixtures/vegetation in existing building/area profiles;
-- add large trees/traffic furniture using 1D rather than fake one-cell art;
-- add interaction capability only where a real owning action exists;
-- tune highlight density, icon readability and freshness labels together on phone/Safari;
-- retain System 24's rule: **loot exists before you search for it.**
+Phase type: cross-system content/integration work, **not a new System 32**.
+
+Core rule:
+
+> **Content extends the system that already owns its truth. Integration does not create a second owner.**
+
+Candidate 001 is split into:
+
+1. **1E-1 World clutter + location identity** — enrich the existing 24 System-19 building profiles and System-20 outdoor/roadside/environment content; deploy approved 07B large trees/traffic furniture through ordinary generation while preserving circulation/access/road/water rules.
+2. **1E-2 Mundane loot + perishable breadth** — expand System-24 item/container vocabularies; every new item has System-13D weight and an explicit System-31 icon; every new perishable receives an explicit System-30 freshness profile; no generic stack system and no search-time reward rolls.
+3. **1E-3 Integration/readability/performance acceptance** — tune location differentiation, clutter density, real System-29 highlight density, icon/freshness readability, large-object layering/glow and phone/Safari performance on the complete island.
+
+Protected non-goals remain explicit: no fake Crafting, Power/Refrigeration, nutrition/Health, Skills, Vehicles, combat or AI behavior merely to make content look functional.
+
+Implementation requires approval of the Phase-1E draft. The proposed dedicated verification owner is `verify/phase1e-content-integration`; an implementation head would need the current 18 contexts plus that new context.
 
 ### Phase-1 completion gate
 
@@ -140,7 +148,8 @@ Phase 1 is complete when:
 - perishables age deterministically with no per-item tick loop;
 - inventory/menu surfaces have a coherent low-resolution icon vocabulary;
 - multi-cell objects may have intentionally large authored visuals independent from collision footprints;
-- representative buildings/areas use the broader item/object vocabulary;
+- representative buildings/areas use the broader item/object vocabulary and read as materially different kinds of places;
+- content density remains navigable/readable/performance-safe on phone/Safari;
 - no future Crafting/Power/Skills behavior is faked to make Phase 1 look complete.
 
 ---
@@ -336,4 +345,4 @@ For each bounded phase/system:
 
 Newest explicit user direction supersedes older roadmap ordering, but implemented historical systems remain current truth until deliberately migrated.
 
-**Current next step: APPROVE or revise the bounded System-07B Candidate-001 design for Phase 1D. Runtime implementation is not authorized yet.**
+**Current next step: APPROVE or revise `PHASE_1E_CONTENT_EXPANSION_INTEGRATION.md`. No Phase-1E runtime/content implementation is authorized yet.**

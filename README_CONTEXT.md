@@ -22,50 +22,47 @@ Golden archaeology commit: `1763958f44eb7f855fd49944c00d1ffe608c0abe`.
 
 The canonical DEV/playable composition is the **complete streamed island**.
 
-- Global bounds: 1792×1792 tactical cells (`Rect2i(232,1232,1792,1792)`).
-- System 00D `temperate.island.region` v2 overlays deterministic LAND / SHORE / OCEAN on the proven rural-v6 world-planning skeleton while using island-specific compact settlement spacing and derived local site seeds.
+- Global bounds: 1792x1792 tactical cells (`Rect2i(232,1232,1792,1792)`).
+- System 00D `temperate.island.region` v2 overlays deterministic LAND / SHORE / OCEAN on the proven rural-v6 planning skeleton.
 - Five globally connected site identities remain: one `rural.crossroads`, one `smalltown.center`, three `rural.scattered` hamlets.
 - System 00F materializes non-overlapping settlement, river/watercourse and island-surface logical sources.
-- Technical streaming is 128×128 with active radius 1 and follows the survivor. Technical regions are performance configuration, never world identity.
+- Technical streaming is 128x128 with active radius 1 and follows the survivor. Technical regions are performance configuration, never world identity.
 - Ocean/ordinary river water is non-traversable except explicit planned bridge deck.
 - The playable survivor starts on inherited pavement beside the central crossroads, not at the diner entrance.
 
-### Legacy mini-map / green-belt correction — VERIFIED 2026-08-27
+### Legacy mini-map / ecology seam correction — VERIFIED + HUMAN ACCEPTED
 
 Verified executable: `d33c69d6bd05f4c8fdbba62c6bd51bb16aad26ad`.
 
-The reported visual defect had multiple real causes rather than being only a spawn problem:
+The live island no longer aliases the historical standalone 256x256 Rural Crossroads fixture. Island-only site seeds/spacing are distinct, and settlement + island-surface natural dressing share `NaturalEcologyField` from world seed + absolute global cell so logical source rectangles cannot restart vegetation identity.
 
-1. The island's central 256×256 `rural.crossroads` site occupied the exact old critique bounds and reused world seed `20001`, which made it regenerate the old standalone critique map inside the larger island.
-2. Island settlement spacing inherited much larger regional-v6 distances, leaving an oversized countryside band between 256×256 settlement rectangles.
-3. Settlement natural dressing evaluated patch/family noise from `cell - request.bounds.position`, restarting the environmental noise phase at every logical area rectangle and making the ownership boundary visible.
-4. Earlier island-surface palette/dressing behavior further emphasized the rectangle instead of making the land read as one continuous place.
+The correction preserves non-overlapping source ownership, inherited roads/hydrology/bridges, System-19 building ownership, 128x128 streaming, WHAT/WHEN and the no-recurring-world-scan performance boundary.
 
-Current corrected result:
-
-- `temperate.island.region` is v2 and explicitly forbids raw world-seed reuse for the central site;
-- the central site keeps its stable world identity/location but receives a derived local seed, so its generated System-20 signature is no longer the old standalone Rural Crossroads fixture;
-- island-only settlement spacing is compact, while protected `temperate.rural.region` v6 behavior is unchanged;
-- island interior and settlement sites use the same rural/lush environmental vocabulary;
-- `AreaGenerationRequest` exposes an optional `inherited_ecology_seed` used only when upstream world context requires cross-area environmental continuity;
-- globally projected island settlements receive the System-00D world seed for natural ecology while retaining their own site seed for roads, parcels, buildings and other local morphology;
-- `NaturalEcologyField` evaluates natural density/family/semantic from **world seed + absolute global cell**;
-- `IslandSurfaceAreaGenerator` v3 and globally projected settlement dressing share that field, so tree/shrub/rock patch noise does not restart at the 256×256 source boundary;
-- standalone System-20 fixtures without an inherited ecology seed retain their historical local behavior;
-- inherited regional road surface and centerline remain continuous outside settlement sources;
-- no source overlap, streaming-geometry change, WHAT/WHEN change or recurring per-frame/per-tick world scan was added.
-
-`IslandLegacySeamSmoke.gd` now proves both identity and boundary continuity. In particular, a natural-ecology probe must produce the exact same sorted `(cell, semantic)` set whether the same land is generated as one rectangle or split into two adjacent logical rectangles.
-
-All **17 required exact-head contexts** passed on `d33c69d6bd05f4c8fdbba62c6bd51bb16aad26ad`, including global world, local area, streaming/materialization, performance architecture and Pages deployment.
-
-This is automated deterministic verification. The user subsequently visually playtested the deployed island and reported that it **looks good**.
+The user visually playtested the deployed correction and reported that it looks good.
 
 ---
 
 ## Current implemented stack
 
-Foundation and gameplay through **System 31** are implemented, including persistent WHAT, deterministic WHEN, complete-island generation/streaming, inventory/transfer/carry, 24 building archetypes, ten local-area profiles, perception, persistent loot/search, world time/daylight, spatial sound, physical lighting, Weather, interaction affordance/reach, item freshness/spoilage, and semantic inventory/menu icons.
+Foundation and gameplay through **System 31**, plus **System 07B**, are implemented.
+
+Current major capabilities include:
+
+- authoritative WHERE / WHAT / WHEN foundations;
+- collision, movement, actor locomotion, stance, carrying and timed item transfer;
+- complete-island global/local generation and technical streaming;
+- 24 System-19 building archetypes and ten System-20 local-area profiles;
+- persistent searchable world loot;
+- world time/daylight;
+- spatial sound/hearing;
+- physical lighting, visibility and shadows;
+- Weather/atmosphere/lightning;
+- perception / fog memory;
+- real interaction affordance/reach highlights;
+- analytic item freshness/spoilage;
+- semantic inventory/menu icons;
+- large/multi-cell prop visual geometry with actor-overhang layering;
+- broader emitter-derived physical-light glow presentation.
 
 Important current rules:
 
@@ -75,147 +72,135 @@ Important current rules:
 4. Phone/Safari is first-class.
 5. Sound is physical; hearing is an estimate.
 6. Light is physical; vision is observer-specific.
-7. Weather is simulation truth; weather animation is presentation.
+7. Weather is simulation truth; Weather animation is presentation.
 8. Fatigue is the stamina/endurance concept; there is no parallel stamina meter.
 9. Interaction highlights explain already-valid actions; they never create action truth.
 10. Expensive consumers wake only for the domains/completed batches they actually depend on.
 11. Food freshness is derived analytically from authoritative time/exposure; no item gets a spoilage timer.
-12. UI icons may visualize semantic truth but must never define item identity, utility, freshness, or action legality.
+12. UI icons visualize semantic truth but never define identity, utility, freshness or action legality.
 13. Logical area/streaming boundaries must not reset world-space environmental identity.
-14. Physical footprints answer where objects are; presentation geometry may be larger but may never silently redefine physical truth.
+14. Physical footprints answer where objects are; presentation geometry may be larger but never redefines physical truth.
+15. Bright art does not create light. System-27 emitter truth remains the only source of physical-light presentation glow.
 
 ---
 
 ## Performance architecture / Weather gate — HUMAN ACCEPTED
 
-The P0/P1/P2 performance architecture plus Weather P3/P3B/P3C/P3D is accepted by human playtest.
+The P0/P1/P2 performance architecture plus Weather presentation optimization is human-accepted on phone/Safari.
 
 First P0/P1/P2 fully green executable: `0398a2a49d84e6067f7610727aecacf4c05fe41f`.
 
 Human-accepted Weather P3D executable: `6016fe5098804e3e6aba6c9f5f9658282036a697`.
 
-Protected result:
+Protected result includes event-driven/cache-oriented invalidation, no CPU continuous-rain/fog redraw loop, zero Weather redraws from camera movement, cached shelter presentation, and unchanged physical Weather/light/hearing/vision truth.
 
-- continuous rain/fog is one persistent GPU atmosphere surface;
-- no CPU continuous-rain/fog redraw loop;
-- camera movement does zero Weather redraws and does not restart animation;
-- shelter is cached low-resolution presentation data;
-- physical Weather/wetness/light/hearing/vision truth is unchanged;
-- predictive/amortized streaming remains measured follow-up only if future evidence justifies it.
-
-The pre-1B human performance gate is closed.
+Predictive/amortized streaming remains evidence-driven follow-up only.
 
 ---
 
-## System 30 / Roadmap Phase 1B — COMPLETE
+## Roadmap Phase 1A — COMPLETE
+
+System 29 owns neutral reach + interaction-offer composition under:
+
+> **A highlight explains an already-valid interaction. It never creates interaction truth.**
+
+System 24 consumes shared `CONTACT_FORWARD` reach. System 23 current visibility gates player-facing highlights. Candidate discovery remains bounded to tiny reachable OBJECT occupancy sets.
+
+---
+
+## Roadmap Phase 1B / System 30 — COMPLETE
 
 Canonical design: `SYSTEM_DESIGNS/30_ITEM_FRESHNESS_SPOILAGE.md`
-
-First fully green executable: `39716f27b7f91b7007645ceae02dedc47601bf87`.
 
 Core rule:
 
 > **Food ages because authoritative world time passes through its storage environment. No item gets a timer.**
 
-Implemented result:
-
-- explicit perishable semantic profiles only;
-- sparse typed per-instance freshness state only for perishables;
-- FRESH / AGING / STALE / SPOILED derived analytically;
-- zero per-item `_process`, timer or scheduled spoilage event;
-- cumulative exposure-provider seam with ambient as Candidate 001;
-- virgin world perishables use logical scenario origin tick 0;
-- bounded deterministic initial-age variation;
-- System 24 transactionally enrolls perishables and rolls freshness back with WHAT/containment/loot on failure;
-- production loot probabilities and action timings are unchanged;
-- inventory/container inspection shows coarse freshness labels;
-- refrigerators do not fake cooling until Phase 3 provides real power/appliance truth;
-- Phase 4 later owns eating/drinking/health consequences.
+Current implementation uses explicit perishable semantic profiles, sparse per-instance records, analytic FRESH/AGING/STALE/SPOILED derivation, logical scenario-origin aging for virgin world loot and an ambient exposure provider. Refrigeration remains inactive until real Phase-3 power/appliance truth exists. Eating/drinking/health consequences remain Phase 4.
 
 ---
 
-## System 31 / Roadmap Phase 1C — COMPLETE
+## Roadmap Phase 1C / System 31 — COMPLETE
 
 Canonical design: `SYSTEM_DESIGNS/31_SEMANTIC_UI_ICONS.md`
-
-First verified executable: `dc83ad10b7469a629fb2ac5d86c77d386b69434d`.
 
 Core rule:
 
 > **UI icons visualize existing semantic truth. They never define item identity, utility, freshness, or action legality.**
 
-Implemented result:
-
-- one dedicated low-resolution `ui_icon_atlas.svg`;
-- 16×16 logical icon cells displayed at exact 2× / 32×32 size;
-- one shared Node-free `SemanticUiIconCatalog` with cached atlas-region textures;
-- explicit mapping for all current 71 `LootItemCatalog` semantic types plus three shell controls;
-- explicit unknown glyph + diagnostic for future unmapped semantics while text remains usable;
-- `STATS`, `INVENTORY`, and `MENU` are icon + text;
-- occupied hands, carried inventory, scavenging `CONTENTS`, and `YOUR PACK` rows use the same semantic item icons;
-- existing labels, stable IDs, weight, utility/family and System-30 freshness text remain real data beside the icon;
-- zero persistent state, save-schema change, simulation-tick work, per-item Node/timer/process, or world scan.
+One shared Node-free/cached semantic icon catalog supplies the current item/shell UI vocabulary. Unknown future semantics fail visibly with an unknown glyph while text remains usable. No icon identity is stored in gameplay state.
 
 ---
 
-## Active work — Roadmap Phase 1D / System 07B
+## Roadmap Phase 1D / System 07B — COMPLETE + CI VERIFIED
 
-### Large / multi-cell object visual geometry — DESCRIBED, AWAITING APPROVAL
+Canonical design: `SYSTEM_DESIGNS/07B_LARGE_MULTI_CELL_VISUAL_GEOMETRY.md`
 
-Canonical draft: `SYSTEM_DESIGNS/07B_LARGE_MULTI_CELL_VISUAL_GEOMETRY.md`.
+Verified executable/workflow head: `d5e33b43fb732835b4a996ae4bec3a562cfa75f3`.
 
 Core rule:
 
 > **Physical footprint answers where the object is. Visual geometry answers how that object is drawn. Neither may silently redefine the other.**
 
-Candidate 001 design:
+Implemented result:
 
-- System 07B extends existing System 07 rather than creating a new top-level renderer/gameplay system;
-- Node-free descriptors define whole-cell visual span plus an anchor-attached fractional pivot;
-- System 07A continues to own orientation;
-- physical footprint/anchor remain WHAT/WHERE truth and are never inferred from artwork;
-- one shared stable-entity visual plan feeds a z=20 base/body pass and optional z=35 foreground/overhang pass above actors but below physical lighting;
-- a small catalog-derived discovery halo prevents offscreen-anchor canopy/arm pop-in without any whole-world scan;
-- existing unmapped props retain the exact historical 1×1 visual fallback;
-- first implementation proofs are a 2×2-or-larger large tree and larger traffic/stop-light art;
-- no save schema, WHEN work, collision/reach/LOS change, per-entity Node, generic Y-sort rewrite, vehicle implementation or content-expansion sweep is authorized by this design.
+- Node-free visual descriptors with authored span + pivot;
+- one cached stable-entity visual plan shared by base and foreground passes;
+- exact legacy 1x1 fallback for unmapped props;
+- System-07A orientation remains authoritative presentation facing;
+- z20 base -> z30 actors -> z35 optional canopy/overhang -> z40 physical lighting;
+- bounded two-cell visual-overhang discovery halo with visual-AABB culling;
+- dedicated large-tree and traffic-light base/foreground assets;
+- no collision/reach/LOS/WHEN/save/streaming truth changes;
+- no per-object Nodes/timers/process loops or whole-world scans;
+- broader two-ring System-27 presentation bloom derived only from real emitter truth.
 
-The next lifecycle gate is **APPROVE**. No Phase-1D runtime implementation is authorized until approval.
+All **18 required exact-head contexts** are green on the verified head, including `verify/system07b-large-visual-geometry`, `verify/performance-architecture`, and `verify/pages-deploy`.
+
+Human visual acceptance for the new 07B art/glow is not separately recorded yet.
 
 ---
 
-## Phase 1 order
+## Active work — Roadmap Phase 1E
 
-1A. Interaction affordance + reach — **COMPLETE**.
+### Content Expansion + Integration — DESCRIBED, AWAITING APPROVAL
 
-1B. Item freshness/spoilage — **COMPLETE; System 30**.
+Canonical draft: `SYSTEM_DESIGNS/PHASE_1E_CONTENT_EXPANSION_INTEGRATION.md`.
 
-1C. Semantic inventory/menu icons — **COMPLETE; System 31 implemented + CI verified**.
+Core rule:
 
-1D. Large/multi-cell object visual geometry — **DESCRIBED; System 07B awaiting approval**.
+> **Content extends the system that already owns its truth. Integration does not create a second owner.**
 
-1E. Content expansion/integration.
+Phase 1E is explicitly **not System 32**. It is a bounded integration phase across existing owners.
 
-Then: Crafting -> Power + Water -> physical survival/health -> Moodlets -> Skills/interactions -> Vehicles -> AI/combat/outbreak -> final graphics/UI -> Beta.
+Candidate implementation order:
+
+1. **1E-1 World clutter + location identity** — enrich existing System-19 building-profile dressing and System-20 exterior/environment content; deploy 07B large trees/traffic furniture through ordinary generated contexts while preserving access/circulation/roads/water.
+2. **1E-2 Mundane loot + perishable breadth** — expand System-24 item/container content; every added item gets System-13D weight + explicit System-31 icon, and every added perishable gets System-30 freshness.
+3. **1E-3 Integration/readability/performance acceptance** — tune generated identity, real System-29 highlight density, icon/freshness readability, 07B layering/glow and phone/Safari performance.
+
+No Crafting, Power/Refrigeration, nutrition/Health, Skills, Vehicles, combat or AI behavior may be faked inside 1E.
+
+The next lifecycle gate is **APPROVE**. No 1E runtime/content implementation is authorized yet.
 
 ---
 
 ## Relevant ownership boundaries
 
-- System 00D owns global geography, settlement/road/hydrology/infrastructure truth and cross-area world context.
-- System 00F owns materialization-source orchestration and technical activation, not world identity.
-- System 20 owns bounded local physical generation and may consume optional upstream environmental context without taking global ownership.
-- System 07 owns prop/fixture/vegetation presentation; System 07A owns prop-art orientation; draft System 07B owns only authored visual span/pivot/overhang after approval.
-- Systems 00A/00B remain authoritative for physical footprint, placement and stable entity identity.
-- System 11 owns containment.
-- System 12 owns timed physical item transitions.
-- System 13D owns semantic physical weight.
-- System 24 owns what virgin loot exists and keeps the rule **loot exists before you search for it**.
-- System 25 interprets authoritative WHEN ticks as simulation time.
-- System 30 owns freshness records/derivation but does not replace those domains.
-- System 31 is presentation-only and resolves icons from existing semantic keys after mechanic queries; simulation owners do not store or read icon identity.
-- Phase 3 Power/Refrigeration later provides real cold-storage exposure; System 30 must not import/fake Power.
-- Phase 4 later interprets freshness for nutrition/sickness/health consequences.
+- 00D owns global geography, settlement/road/hydrology/infrastructure truth and cross-area world context.
+- 00F owns materialization-source orchestration and technical activation, not world identity.
+- 19 owns local building grammar/profile content and physical building plans.
+- 20 owns bounded local roads/parcels/access/outdoor/environment content.
+- 04 owns world art selection; 07/07A/07B own prop presentation/orientation/large visual geometry.
+- 00A/00B remain authoritative for physical footprint, placement and stable entity identity.
+- 11 owns containment; 12 owns timed physical item transitions; 13D owns physical weight.
+- 24 owns what virgin loot exists and keeps **loot exists before you search for it**.
+- 25 interprets authoritative WHEN ticks as simulation time.
+- 27 owns physical illumination and emitter truth.
+- 29 owns neutral reach/offer presentation but not mechanic capability.
+- 30 owns freshness records/derivation, not refrigeration or nutrition.
+- 31 owns icon presentation only.
+- Phase 2 owns Crafting; Phase 3 Power/Water/Refrigeration; Phase 4 nutrition/health consequences; Phase 6 final Skills; Phase 7 Vehicles; Phase 8 AI/combat/outbreak.
 
 ---
 
@@ -236,9 +221,10 @@ Then: Crafting -> Power + Water -> physical survival/health -> Moodlets -> Skill
 - `verify/system29-interaction-affordance`
 - `verify/system30-item-freshness`
 - `verify/system31-semantic-ui-icons`
+- `verify/system07b-large-visual-geometry`
 - `verify/performance-architecture`
 - `verify/pages-deploy`
 
-All **17 required contexts** are green on the current verified playable-island executable `d33c69d6bd05f4c8fdbba62c6bd51bb16aad26ad`.
+All **18 required contexts** are green on current verified executable/workflow head `d5e33b43fb732835b4a996ae4bec3a562cfa75f3`.
 
-If System 07B is approved and implemented, its dedicated verification context becomes an additional required executable-head context for that implementation.
+If Phase 1E is approved and implemented, its proposed dedicated `verify/phase1e-content-integration` context becomes an additional required context for that implementation.
