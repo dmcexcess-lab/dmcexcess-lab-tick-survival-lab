@@ -2,6 +2,19 @@
 
 This compact ledger records the most recent work. `CHANGELOG.md` remains the historical archive.
 
+## Black-Screen Visibility Recovery — 2026-08-29
+
+Validated executable: `1f65bff312853a44858201b57d9df2e26ee64f80`
+
+- Human browser play reported a completely black game after `6e1298da36e9216139f404696275280fcb944033`, despite that executable passing automated startup and integration checks.
+- Isolated the regression to the visibility optimization stack introduced in that follow-up rather than rolling back the accepted input/lighting responsiveness work wholesale.
+- Restored the last human-good full 80x96 physical-light presentation path and prior stateless System-23 LOS query.
+- Preserved WHEN decision-pause input locking, the one-due-tick-batch-per-render-frame action pump, immediate next-pause acceptance, coalesced settled light/perception work, flashlight facing updates and the runtime naming cleanup.
+- Retracted the camera-cropped lighting presentation and revision-cached LOS optimization from canonical runtime until they can be reintroduced without risking visual correctness.
+- Strengthened `PlayerInputResponsivenessSmoke.gd` so canonical startup now requires a usable visible field plus initialized multiply/glow lighting textures with nonzero luminance, and proves those properties survive settled player actions.
+- Exact-head validation completed with 46 successful workflows, zero failing workflows, and a successful Pages build/deploy.
+- Human browser play remains the final acceptance gate for the visual recovery and the remaining first-actions startup hitch.
+
 ## Decision-Pause Input + Startup Performance Follow-Up — 2026-08-29
 
 - Replaced the fixed 120 ms input drain heuristic with WHEN's real decision-pause gate: one accepted action, all gameplay input locked through resolution, immediate acceptance at the next pause.
@@ -11,6 +24,8 @@ This compact ledger records the most recent work. `CHANGELOG.md` remains the his
 - Removed dead Weather camera-local compatibility code.
 - Renamed the now-canonical runtime roots/controllers from demo/bridge terminology while retaining focused DEV fixtures and the honestly temporary lighting-source adapter.
 - Extended permanent responsiveness coverage for decision-pause locking, immediate next-pause input, coalesced work and camera-bounded lighting.
+
+**Acceptance note:** the camera-cropped lighting and cached-LOS portion of this follow-up was later retracted by `1f65bff...` after human play reported a black screen. The decision-pause/input, coalescing, flashlight and naming improvements remain canonical.
 
 ## Player Input / Lighting Responsiveness Repair — 2026-08-29
 
@@ -43,7 +58,7 @@ Rollback commit: `f6a06add3dfd212c0c29b343d24a8f7d28a89bca` (`Revert settlement 
 
 Attempted executable: `918f1dbd7b033fa179522a112b1507d9a2c63890`
 
-- This commit replaced the planner's historical 160-cell center-distance screening with exact 256x256 site-rectangle overlap rejection.
+- This commit replaced the planner's historical 160-cell center-distance screening with exact 256x256 rectangle-overlap rejection.
 - Automated exact-head checks, including System 00D and Pages, passed on that commit.
 - Human play immediately found the deployed game severely broken.
 - Therefore this commit is **not an accepted cleanup head** and must not be cited as proof that the compact-island/world-seam cleanup is complete.
