@@ -15,6 +15,7 @@ signal emitters_changed(emitters)
 
 const FLASHLIGHT_SEMANTIC: StringName = &"item.tool.flashlight"
 const FIXED_LIGHT_TYPES: Array[StringName] = [
+    &"fixture.room_light",
     &"prop.streetlight",
     &"prop.traffic_light",
     &"prop.crosswalk_beacon",
@@ -70,7 +71,7 @@ func emitters() -> Array[LightEmitter]:
             1
         ))
 
-    for entity_id: String in _sorted_fixed_entity_ids():
+    for entity_id: String in _sorted_fixed_fixture_ids():
         if not _world.has_entity(entity_id):
             continue
         var record: WorldEntityRecord = _world.entity(entity_id)
@@ -95,7 +96,7 @@ func emitters() -> Array[LightEmitter]:
 
 func fixed_emitter_ids() -> Array[String]:
     var result: Array[String] = []
-    for entity_id: String in _sorted_fixed_entity_ids():
+    for entity_id: String in _sorted_fixed_fixture_ids():
         result.append(String(_fixed_entities.get(entity_id, "")))
     return result
 
@@ -158,6 +159,8 @@ func _player_references_item(item_id: String) -> bool:
 
 func _profile_for_semantic(semantic_type: StringName) -> LightEmitterProfile:
     match semantic_type:
+        &"fixture.room_light":
+            return EmitterProfileClass.room_ambient()
         &"prop.streetlight", &"prop.traffic_light", &"prop.crosswalk_beacon":
             return EmitterProfileClass.streetlight()
         &"prop.floor_lamp", &"prop.lamp":
@@ -173,7 +176,7 @@ func _fixed_appliance_id(entity_id: String) -> String:
 func _flashlight_emitter_id(item_id: String) -> String:
     return "equipment.flashlight:%s" % item_id
 
-func _sorted_fixed_entity_ids() -> Array[String]:
+func _sorted_fixed_fixture_ids() -> Array[String]:
     var result: Array[String] = []
     for value: Variant in _fixed_entities.keys():
         result.append(String(value))

@@ -127,7 +127,13 @@ func refresh(reason: StringName = &"external") -> bool:
         var local: Vector2i = emitter.origin_cell - _visible_origin
         if local.x < 0 or local.y < 0 or local.x >= _visible_size.x or local.y >= _visible_size.y:
             continue
-        var core_strength: float = clampf(emitter.profile.base_luminance, 0.0, 1.0)
+        var core_strength: float = clampf(
+            emitter.profile.base_luminance * emitter.profile.presentation_glow_scale,
+            0.0,
+            1.0
+        )
+        if core_strength <= 0.01:
+            continue
         var core_color: Color = emitter.profile.tint
         _glow_image.set_pixel(local.x, local.y, Color(core_color.r, core_color.g, core_color.b, core_strength))
 
@@ -254,9 +260,8 @@ func _display_tint(sample: IlluminationSample, optics: AtmosphericOptics) -> Col
 
 func _glow_strength(sample: IlluminationSample) -> float:
     return clampf(
-        sample.local_artificial * 0.95
-        + sample.portal * 0.35
-        + sample.glare * 0.55
+        sample.portal * 0.35
+        + sample.glare * 0.86
         + sample.scatter * 0.45,
         0.0,
         1.0

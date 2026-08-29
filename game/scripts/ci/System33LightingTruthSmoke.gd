@@ -13,8 +13,10 @@ const LegacyLightingClass = preload("res://scripts/demo/DemoLightingSourceAdapte
 
 const PLAYER_ID: String = "actor.player.lighting_truth"
 const FIXTURE_ID: String = "fixture.traffic_light.lighting_truth"
+const ROOM_LIGHT_ID: String = "fixture.room_light.lighting_truth"
 const FLASHLIGHT_ID: String = "item.flashlight.lighting_truth"
 const FIXTURE_CELL := Vector2i(420, 1500)
+const ROOM_LIGHT_CELL := Vector2i(421, 1500)
 const PLAYER_CELL := Vector2i(418, 1500)
 
 var _failures: Array[String] = []
@@ -37,6 +39,7 @@ func _test_truthful_source_ownership() -> void:
         return
 
     _check(world.entity_ids_of_type(&"prop.traffic_light").has(FIXTURE_ID), "WHAT semantic index finds the real traffic-light entity")
+    _check(world.entity_ids_of_type(&"fixture.room_light").has(ROOM_LIGHT_ID), "WHAT semantic index finds the persistent room-light fixture")
 
     var legacy := LegacyLightingClass.new(world, PLAYER_ID)
     _check(legacy.is_ready(), "legacy bootstrap shim remains constructible")
@@ -46,19 +49,29 @@ func _test_truthful_source_ownership() -> void:
     _check(sources.is_ready(), "truthful utility lighting source provider is ready")
 
     var fixed_emitter_id: String = "utility.light:%s" % FIXTURE_ID
+    var room_emitter_id: String = "utility.light:%s" % ROOM_LIGHT_ID
     var flashlight_emitter_id: String = "equipment.flashlight:%s" % FLASHLIGHT_ID
     var initial: Array[LightEmitter] = sources.emitters()
     var fixed: LightEmitter = _find_emitter(initial, fixed_emitter_id)
+    var room: LightEmitter = _find_emitter(initial, room_emitter_id)
     _check(fixed != null, "real traffic-light entity creates a fixed emitter")
     if fixed != null:
         _check(fixed.origin_cell == FIXTURE_CELL, "fixed emitter uses the fixture's actual WHAT placement")
         _check(fixed.facing == Facing.Value.SOUTH, "fixed emitter uses the fixture's actual facing")
+    _check(room != null, "persistent room-light fixture creates a fixed emitter")
+    if room != null:
+        _check(room.origin_cell == ROOM_LIGHT_CELL, "room emitter uses the room fixture's actual WHAT placement")
+        _check(room.profile.profile_id == &"light.room_ambient.candidate001", "room fixture uses the room ambient physical-light profile")
+        _check(is_zero_approx(room.profile.presentation_glow_scale), "room ambient profile explicitly suppresses presentation bloom")
     _check(_find_emitter(initial, flashlight_emitter_id) == null, "player has no flashlight beam while no flashlight is equipped")
 
     var appliance: Dictionary = utilities.appliance_record(fixed_emitter_id)
     _check(String(appliance.get("owner_entity_id", "")) == FIXTURE_ID, "fixed-light appliance is bound to the real fixture entity")
     var service_id: String = String(appliance.get("power_service_id", ""))
     _check(not service_id.is_empty(), "real fixture resolves a local power service")
+    var room_appliance: Dictionary = utilities.appliance_record(room_emitter_id)
+    _check(String(room_appliance.get("owner_entity_id", "")) == ROOM_LIGHT_ID, "room-light appliance is bound to the real room fixture entity")
+    _check(String(room_appliance.get("power_service_id", "")) == service_id, "nearby room fixture resolves the same local power service")
 
     _check(hands._set_item_record(PLAYER_ID, HandSlots.Value.PRIMARY_RIGHT, FLASHLIGHT_ID), "test equips the real flashlight item")
     var equipped: Array[LightEmitter] = sources.emitters()
@@ -74,9 +87,12 @@ func _test_truthful_source_ownership() -> void:
         _check(utilities.set_power_component_state(branch_id, UtilityRuntimeState.DAMAGED, &"lighting_truth_outage"), "local power outage mutates canonical utility truth")
         var dark: Array[LightEmitter] = sources.emitters()
         _check(_find_emitter(dark, fixed_emitter_id) == null, "local power loss removes the real fixed emitter")
+        _check(_find_emitter(dark, room_emitter_id) == null, "local power loss removes the room ambient emitter")
         _check(_find_emitter(dark, flashlight_emitter_id) != null, "grid outage does not fake-disable equipped portable flashlight")
         _check(utilities.set_power_component_state(branch_id, UtilityRuntimeState.OPERATIONAL, &"lighting_truth_restore"), "local power restores")
-        _check(_find_emitter(sources.emitters(), fixed_emitter_id) != null, "restored service restores the real fixed emitter")
+        var restored: Array[LightEmitter] = sources.emitters()
+        _check(_find_emitter(restored, fixed_emitter_id) != null, "restored service restores the real fixed emitter")
+        _check(_find_emitter(restored, room_emitter_id) != null, "restored service restores the room ambient emitter")
 
     _check(hands._set_item_record(PLAYER_ID, HandSlots.Value.PRIMARY_RIGHT, ""), "test unequips flashlight")
     _check(_find_emitter(sources.emitters(), flashlight_emitter_id) == null, "unequipping flashlight removes the beam")
@@ -91,6 +107,7 @@ func _lighting_world() -> WorldState:
         "entities": [
             {"id": PLAYER_ID, "semantic_type": "actor.survivor"},
             {"id": FIXTURE_ID, "semantic_type": "prop.traffic_light"},
+            {"id": ROOM_LIGHT_ID, "semantic_type": "fixture.room_light"},
             {"id": FLASHLIGHT_ID, "semantic_type": "item.tool.flashlight"},
         ],
         "placements": [
@@ -107,6 +124,14 @@ func _lighting_world() -> WorldState:
                 "channel": Layers.Channel.OBJECT,
                 "anchor": [FIXTURE_CELL.x, FIXTURE_CELL.y],
                 "facing": Facing.Value.SOUTH,
+                "footprint": [[0, 0]],
+                "structure_axis": -1,
+            },
+            {
+                "entity_id": ROOM_LIGHT_ID,
+                "channel": Layers.Channel.EFFECT,
+                "anchor": [ROOM_LIGHT_CELL.x, ROOM_LIGHT_CELL.y],
+                "facing": Facing.Value.NORTH,
                 "footprint": [[0, 0]],
                 "structure_axis": -1,
             },

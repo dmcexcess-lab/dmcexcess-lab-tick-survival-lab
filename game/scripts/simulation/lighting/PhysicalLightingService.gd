@@ -638,8 +638,9 @@ func _add_local_light(cell: Vector2i, amount: float, emitter: LightEmitter, dire
         return
     var sample: IlluminationSample = _samples[cell]
     sample.local_artificial += amount
-    sample.glare = maxf(sample.glare, clampf(amount * 1.10, 0.0, 1.0))
-    sample.scatter = maxf(sample.scatter, clampf(amount * _atmosphere.scatter_strength, 0.0, 1.0))
+    var presentation_amount: float = amount * emitter.profile.presentation_glow_scale
+    sample.glare = maxf(sample.glare, clampf(presentation_amount * 1.10, 0.0, 1.0))
+    sample.scatter = maxf(sample.scatter, clampf(presentation_amount * _atmosphere.scatter_strength, 0.0, 1.0))
     _accumulate_color(cell, amount, _atmosphere_tinted(emitter.profile.tint))
     if direct and amount > float(_dominant_strength.get(cell, 0.0)):
         _dominant_strength[cell] = amount

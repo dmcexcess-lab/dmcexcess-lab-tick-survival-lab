@@ -6,6 +6,8 @@ const Footprint = preload("res://scripts/foundation/spatial/SpatialFootprint.gd"
 const Layers = preload("res://scripts/foundation/spatial/SpatialLayer.gd")
 const DoorValue = preload("res://scripts/simulation/doors/DoorStateValue.gd")
 
+const ROOM_LIGHT_SEMANTIC: StringName = &"fixture.room_light"
+
 var _world: WorldState = null
 var _mutations: WorldMutationService = null
 var _door_state: DoorStateStore = null
@@ -84,6 +86,8 @@ func _materialize(plan: GeneratedBuildingPlan, owns_transaction: bool) -> bool:
             Footprint.single_cell()
         ):
             return _rollback_if_owned(owns_transaction, world_snapshot, door_snapshot)
+    if not _materialize_room_lights(plan):
+        return _rollback_if_owned(owns_transaction, world_snapshot, door_snapshot)
     return true
 
 ## Preserve the original ground-entry order exactly while coalescing consecutive equal semantics.
@@ -107,6 +111,29 @@ func _materialize_ground_entries(plan: GeneratedBuildingPlan) -> bool:
         return _mutations.set_terrain_cells(run_cells, run_semantic)
     return true
 
+## Rooms already exist as deterministic System-19 cell sets. Materialize one invisible
+## persistent ceiling/ambient fixture on a real room cell so utility/light truth has a
+## WHAT identity without inventing visible lamp art or collision.
+func _materialize_room_lights(plan: GeneratedBuildingPlan) -> bool:
+    for room_index in range(plan.rooms.size()):
+        var room: Dictionary = plan.rooms[room_index]
+        var cells: Array = room.get("cells", [])
+        if cells.is_empty():
+            return false
+        var entity_id: String = _room_light_entity_id(plan, room_index)
+        var cell: Vector2i = cells[cells.size() / 2]
+        if entity_id.is_empty() or _mutations.create_entity(ROOM_LIGHT_SEMANTIC, entity_id) != entity_id:
+            return false
+        if not _mutations.set_placement(
+            entity_id,
+            Layers.Channel.EFFECT,
+            cell,
+            Facing.Value.NORTH,
+            Footprint.single_cell()
+        ):
+            return false
+    return true
+
 func _preflight(plan: GeneratedBuildingPlan) -> bool:
     var planned_ids: Dictionary = {}
     for entry: Dictionary in plan.structures + plan.props:
@@ -119,7 +146,17 @@ func _preflight(plan: GeneratedBuildingPlan) -> bool:
         for channel: int in [Layers.Channel.STRUCTURE, Layers.Channel.OBJECT, Layers.Channel.ACTOR, Layers.Channel.LOOSE_ITEM]:
             if not _world.entities_at(cell, channel).is_empty():
                 return false
+    for room_index in range(plan.rooms.size()):
+        var room: Dictionary = plan.rooms[room_index]
+        var cells: Array = room.get("cells", [])
+        var room_light_id: String = _room_light_entity_id(plan, room_index)
+        if cells.is_empty() or room_light_id.is_empty() or planned_ids.has(room_light_id) or _world.has_entity(room_light_id):
+            return false
+        planned_ids[room_light_id] = true
     return true
+
+func _room_light_entity_id(plan: GeneratedBuildingPlan, room_index: int) -> String:
+    return plan.entity_id_for_role("room_light.%03d" % room_index)
 
 func _rollback_if_owned(owns_transaction: bool, world_snapshot: Dictionary, door_snapshot: Dictionary) -> bool:
     if not owns_transaction:

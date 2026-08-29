@@ -16,6 +16,9 @@ var tint: Color = Color.WHITE
 var falloff_exponent: float = 1.4
 var cone_half_angle_degrees: float = 28.0
 var diffuse_spill: float = 0.08
+## Presentation attribution only. Physical illumination always uses base_luminance.
+## A value of zero means the source raises real local light without additive bloom/glare.
+var presentation_glow_scale: float = 1.0
 
 func _init(
     id_value: StringName = &"light.generic",
@@ -25,7 +28,8 @@ func _init(
     tint_value: Color = Color.WHITE,
     falloff_value: float = 1.4,
     cone_half_angle_value: float = 28.0,
-    spill_value: float = 0.08
+    spill_value: float = 0.08,
+    presentation_glow_scale_value: float = 1.0
 ) -> void:
     profile_id = id_value
     shape = shape_value
@@ -35,6 +39,7 @@ func _init(
     falloff_exponent = falloff_value
     cone_half_angle_degrees = cone_half_angle_value
     diffuse_spill = spill_value
+    presentation_glow_scale = presentation_glow_scale_value
 
 func is_valid() -> bool:
     return (
@@ -45,6 +50,7 @@ func is_valid() -> bool:
         and falloff_exponent > 0.0
         and cone_half_angle_degrees > 0.0 and cone_half_angle_degrees <= 90.0
         and diffuse_spill >= 0.0 and diffuse_spill <= 0.5
+        and presentation_glow_scale >= 0.0 and presentation_glow_scale <= 1.0
     )
 
 func copy() -> LightEmitterProfile:
@@ -56,7 +62,8 @@ func copy() -> LightEmitterProfile:
         tint,
         falloff_exponent,
         cone_half_angle_degrees,
-        diffuse_spill
+        diffuse_spill,
+        presentation_glow_scale
     )
 
 static func flashlight() -> LightEmitterProfile:
@@ -105,4 +112,17 @@ static func neon(tint_value: Color = Color(0.30, 0.72, 1.0)) -> LightEmitterProf
         1.35,
         45.0,
         0.10
+    )
+
+static func room_ambient() -> LightEmitterProfile:
+    return LightEmitterProfile.new(
+        &"light.room_ambient.candidate001",
+        Shape.OMNI,
+        6,
+        0.62,
+        Color(1.0, 0.88, 0.70),
+        1.25,
+        45.0,
+        0.12,
+        0.0
     )
