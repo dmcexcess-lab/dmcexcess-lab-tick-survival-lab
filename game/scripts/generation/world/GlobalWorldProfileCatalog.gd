@@ -13,29 +13,30 @@ func profile(profile_id: StringName) -> Dictionary:
     if profile_id == TEMPERATE_ISLAND_REGION:
         var result: Dictionary = _rural_profile()
         result["id"] = TEMPERATE_ISLAND_REGION
-        result["version"] = 2
+        result["version"] = 3
         result["island_enabled"] = true
-        # Island v2 keeps the proven settlement kinds and road/hydrology contract,
-        # but no longer reproduces the historical 256x256 crossroads critique
-        # candidate as the center of the playable world.
+        # Island generation keeps the proven content owners but no longer carries the
+        # old regional stress-fixture geometry into the playable world.
         result["reuse_world_seed_for_central_site"] = false
-        # Keep settlements meaningfully separated without the several-hundred-cell
-        # empty belts inherited from the regional planning stress fixture.
-        result["smalltown_distance_min"] = 360
-        result["smalltown_distance_max"] = 440
-        result["north_hamlet_distance_min"] = 360
-        result["north_hamlet_distance_max"] = 440
-        result["southwest_x_distance_min"] = 320
-        result["southwest_x_distance_max"] = 400
-        result["southwest_y_distance_min"] = 320
-        result["southwest_y_distance_max"] = 400
-        result["northeast_x_distance_min"] = 320
-        result["northeast_x_distance_max"] = 400
-        result["northeast_y_distance_min"] = 320
-        result["northeast_y_distance_max"] = 400
-        # The 256x256 site envelopes can sit near the second 128-cell geography
-        # column/row. Keep enough visible ocean and coastline without clipping
-        # legal settlement sites.
+        # The central crossroads only needs a local protected cross. The old 640-cell
+        # half-span flattened/routed a 1280-cell test skeleton through every island and
+        # visually preserved the legacy-map belt even after surface dressing changed.
+        result["protected_cross_half_span"] = 160
+        result["protected_cross_half_thickness"] = 96
+        # 256x256 settlement envelopes now sit close enough to read as one continuous
+        # generated island. Geography snapping still provides seed-dependent placement.
+        result["smalltown_distance_min"] = 280
+        result["smalltown_distance_max"] = 336
+        result["north_hamlet_distance_min"] = 280
+        result["north_hamlet_distance_max"] = 336
+        result["southwest_x_distance_min"] = 280
+        result["southwest_x_distance_max"] = 336
+        result["southwest_y_distance_min"] = 280
+        result["southwest_y_distance_max"] = 336
+        result["northeast_x_distance_min"] = 280
+        result["northeast_x_distance_max"] = 336
+        result["northeast_y_distance_min"] = 280
+        result["northeast_y_distance_max"] = 336
         result["island_ocean_margin"] = 24
         result["island_shore_width"] = 8
         result["island_coast_wobble"] = 8

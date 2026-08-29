@@ -5,6 +5,7 @@ const Facing = preload("res://scripts/foundation/spatial/SpatialFacing.gd")
 const Footprint = preload("res://scripts/foundation/spatial/SpatialFootprint.gd")
 const Layers = preload("res://scripts/foundation/spatial/SpatialLayer.gd")
 const GlobalFixture = preload("res://scripts/demo/GlobalWorldPlanFixture.gd")
+const GlobalSeed = preload("res://scripts/generation/world/GlobalWorldSeed.gd")
 const GlobalRequestClass = preload("res://scripts/generation/world/GlobalWorldGenerationRequest.gd")
 const GlobalProfilesClass = preload("res://scripts/generation/world/GlobalWorldProfileCatalog.gd")
 const IslandPlannerClass = preload("res://scripts/generation/world/IslandWorldPlanner.gd")
@@ -32,6 +33,7 @@ const CENTRAL_SITE_ID: String = "area.rural.crossroads.001"
 const DINER_ARCHETYPE: StringName = &"commercial.diner.rural_small"
 const STREAM_REGION_SIZE: Vector2i = Vector2i(128, 128)
 const STREAM_ACTIVE_RADIUS: int = 1
+const WORLD_SEED_OVERRIDE_ENV: String = "TICK_LAB_WORLD_SEED"
 
 # Keep the current System-24 DEV source identity for the spawn-area loot bridge.
 const LOOT_SOURCE_KEY: String = "dev.rural_crossroads"
@@ -39,9 +41,11 @@ const LOOT_SOURCE_KIND: StringName = &"dev_area"
 const LOOT_SOURCE_ID: String = "rural_crossroads"
 
 static var _global_plan: GeneratedGlobalWorldPlan = null
+static var _central_area_plan: GeneratedAreaPlan = null
 static var _registry: MaterializationRegistry = null
 static var _streaming: WorldStreamingCoordinator = null
 static var _streaming_bridge: GeneratedIslandStreamingBridge = null
+static var _active_seed: int = -1
 
 static func generate_global_plan(seed: int = GlobalFixture.SEED) -> GeneratedGlobalWorldPlan:
     var request := GlobalRequestClass.new(
@@ -56,16 +60,13 @@ static func generate_plan(seed: int = GlobalFixture.SEED) -> GeneratedAreaPlan:
     var global_plan: GeneratedGlobalWorldPlan = generate_global_plan(seed)
     if global_plan == null or not global_plan.is_generated():
         return null
-    var projected: Dictionary = ProjectorClass.new().project_site(global_plan, CENTRAL_SITE_ID)
-    if not bool(projected.get("ok", false)):
-        return null
-    var request: AreaGenerationRequest = projected.get("request") as AreaGenerationRequest
-    if request == null or not request.is_valid():
-        return null
-    return AreaGeneratorClass.new().generate(request)
+    return _central_plan(global_plan)
 
-static func generated_building_plans(seed: int = GlobalFixture.SEED) -> Array[GeneratedBuildingPlan]:
-    var plan: GeneratedAreaPlan = generate_plan(seed)
+static func generated_building_plans(seed: int = -1) -> Array[GeneratedBuildingPlan]:
+    if seed < 0 and _central_area_plan != null and _central_area_plan.is_generated():
+        return AreaMaterializerClass.new().generated_building_plans(_central_area_plan)
+    var effective_seed: int = GlobalFixture.SEED if seed < 0 else seed
+    var plan: GeneratedAreaPlan = generate_plan(effective_seed)
     if plan == null or not plan.is_generated():
         return []
     return AreaMaterializerClass.new().generated_building_plans(plan)
@@ -76,12 +77,15 @@ static func build(
     collision_catalog: CollisionCatalog,
     traversal_policy: MovementTraversalPolicy,
     door_state: DoorStateStore,
-    door_mutations: DoorStateMutationService
+    door_mutations: DoorStateMutationService,
+    seed_override: int = -1
 ) -> bool:
     _global_plan = null
+    _central_area_plan = null
     _registry = null
     _streaming = null
     _streaming_bridge = null
+    _active_seed = -1
     if world == null or mutations == null or collision_catalog == null or traversal_policy == null or door_state == null or door_mutations == null:
         return false
 
@@ -90,17 +94,20 @@ static func build(
         push_error("GeneratedIslandCritiqueFixture: rule installation failed: %s" % String(rules.get("failure_reason", "unknown")))
         return false
 
-    var global_plan: GeneratedGlobalWorldPlan = generate_global_plan()
+    var world_seed: int = _choose_new_game_seed(seed_override)
+    if world_seed <= 0:
+        push_error("GeneratedIslandCritiqueFixture: invalid new-game seed")
+        return false
+    var global_plan: GeneratedGlobalWorldPlan = generate_global_plan(world_seed)
     if global_plan == null or not global_plan.is_generated():
-        push_error("GeneratedIslandCritiqueFixture: global island generation failed")
+        push_error("GeneratedIslandCritiqueFixture: global island generation failed for seed %d" % world_seed)
         return false
     var central_plan: GeneratedAreaPlan = _central_plan(global_plan)
     if central_plan == null or not central_plan.is_generated():
-        push_error("GeneratedIslandCritiqueFixture: central area generation failed")
+        push_error("GeneratedIslandCritiqueFixture: central area generation failed for seed %d" % world_seed)
         return false
     var player_start: Vector2i = player_start_for_plan(central_plan)
-    var diner_door: String = diner_door_id(central_plan)
-    if player_start.x < 0 or diner_door.is_empty():
+    if player_start.x < 0:
         return false
 
     var registry := RegistryClass.new()
@@ -143,19 +150,22 @@ static func build(
         Footprint.single_cell()
     ):
         return false
-    if not world.has_entity(diner_door) or not door_state.has_door(diner_door):
-        return false
 
     var bridge := StreamingBridgeClass.new(world, streaming, PLAYER_ID)
     if not bridge.is_ready() or not bridge.sync_now():
         return false
 
+    _active_seed = world_seed
     _global_plan = global_plan
+    _central_area_plan = central_plan
     _registry = registry
     _streaming = streaming
     _streaming_bridge = bridge
-    print("PLAYABLE_ISLAND_WORLD_READY sites=%d stream_region=%s" % [global_plan.area_sites.size(), STREAM_REGION_SIZE])
+    print("PLAYABLE_ISLAND_WORLD_READY seed=%d sites=%d stream_region=%s" % [world_seed, global_plan.area_sites.size(), STREAM_REGION_SIZE])
     return true
+
+static func active_seed() -> int:
+    return _active_seed
 
 static func initial_render_origin(world: WorldState) -> Vector2i:
     if world == null:
@@ -203,6 +213,23 @@ static func diner_door_id(plan: GeneratedAreaPlan) -> String:
 
 static func diner_frontage_for_plan(plan: GeneratedAreaPlan) -> int:
     return int(_diner_parcel(plan).get("frontage_side", -1))
+
+static func _choose_new_game_seed(seed_override: int) -> int:
+    if seed_override > 0:
+        return seed_override & GlobalSeed.HASH_MASK
+    var environment_override: String = OS.get_environment(WORLD_SEED_OVERRIDE_ENV).strip_edges()
+    if environment_override.is_valid_int():
+        var parsed: int = int(environment_override) & GlobalSeed.HASH_MASK
+        if parsed > 0:
+            return parsed
+    # CI/headless runs need deterministic reproducibility. Interactive browser/desktop
+    # launches intentionally choose a fresh seed once, then the whole generation stack
+    # remains deterministic from that one authoritative new-game seed.
+    if DisplayServer.get_name() == "headless":
+        return GlobalFixture.SEED
+    var rng := RandomNumberGenerator.new()
+    rng.randomize()
+    return rng.randi_range(1, GlobalSeed.HASH_MASK)
 
 static func _central_plan(global_plan: GeneratedGlobalWorldPlan) -> GeneratedAreaPlan:
     var projected: Dictionary = ProjectorClass.new().project_site(global_plan, CENTRAL_SITE_ID)

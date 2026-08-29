@@ -3,8 +3,11 @@ class_name PerceptionOverlayRenderer
 
 const RoadTopology = preload("res://scripts/art/RoadArtTopology.gd")
 const PropOrientation = preload("res://scripts/art/PropArtOrientationCatalog.gd")
+const VisualGeometry = preload("res://scripts/art/PropVisualGeometryCatalog.gd")
 
 ## Presentation-only knowledge mask. Hidden live world is blacked out before stale memory redraw.
+## Remembered props are reconstructed only from System-23 snapshots; hidden current WHAT
+## is never consulted. System-07B geometry is reused only to present that remembered truth.
 
 signal redraw_requested(reason: StringName)
 
@@ -231,12 +234,9 @@ func planned_cell_counts() -> Dictionary:
                     counts["visible"] += 1
                 ObserverPerceptionService.KnowledgeState.REMEMBERED:
                     counts["remembered"] += 1
-                    var memory: Dictionary = _memory.environment_memory(_observer_id, cell)
-                    var props_value: Variant = memory.get("props", [])
-                    if typeof(props_value) == TYPE_ARRAY:
-                        counts["remembered_props"] += props_value.size()
                 _:
                     counts["unseen"] += 1
+    counts["remembered_props"] = _remembered_prop_snapshots().size()
     for observation: Dictionary in _memory.actor_observations(_observer_id):
         var cell: Vector2i = observation.get("cell", Vector2i.ZERO)
         if _cell_in_view(cell) and _perception.knowledge_state(cell) == ObserverPerceptionService.KnowledgeState.REMEMBERED:
@@ -252,22 +252,58 @@ func planned_cell_counts() -> Dictionary:
             counts["auditory_offscreen"] += 1
     return counts
 
+func remembered_prop_visual_plans() -> Array[Dictionary]:
+    var result: Array[Dictionary] = []
+    for prop: Dictionary in _remembered_prop_snapshots():
+        var semantic := StringName(String(prop.get("semantic_type", "")))
+        var anchor_value: Variant = prop.get("anchor", null)
+        var facing: int = int(prop.get("facing", -1))
+        if String(semantic).strip_edges().is_empty() or typeof(anchor_value) != TYPE_VECTOR2I:
+            continue
+        var descriptor: PropVisualGeometryDescriptor = VisualGeometry.descriptor_for(semantic)
+        if descriptor == null or not descriptor.is_valid():
+            continue
+        var base_selection: ArtSelection = VisualGeometry.resolve_art(_catalog, descriptor.base_art_key)
+        var turns: int = PropOrientation.quarter_turns(base_selection, facing)
+        var anchor: Vector2i = anchor_value
+        if not _rect_world_intersects_visible(_rotated_visual_rect_world(anchor, descriptor, turns)):
+            continue
+        result.append({
+            "entity_id": String(prop.get("entity_id", "")),
+            "semantic_type": semantic,
+            "anchor": anchor,
+            "facing": facing,
+            "visual_id": descriptor.visual_id,
+            "draw_span_cells": descriptor.draw_span_cells,
+            "quarter_turns": turns,
+            "has_foreground": descriptor.has_foreground(),
+        })
+    return result
+
 func _draw() -> void:
     if not is_configured() or not _view_valid:
         return
 
+    # Mask hidden current truth first.
     for local_y in range(_visible_size.y):
         for local_x in range(_visible_size.x):
             var cell := _visible_origin + Vector2i(local_x, local_y)
-            var state: int = _perception.knowledge_state(cell)
-            if state == ObserverPerceptionService.KnowledgeState.VISIBLE:
-                continue
-            var destination := _cell_rect(cell)
-            draw_rect(destination, TRUE_FOG_COLOR, true)
-            if state == ObserverPerceptionService.KnowledgeState.REMEMBERED:
-                _draw_remembered_cell(cell, destination)
+            if _perception.knowledge_state(cell) != ObserverPerceptionService.KnowledgeState.VISIBLE:
+                draw_rect(_cell_rect(cell), TRUE_FOG_COLOR, true)
 
+    # Repaint remembered terrain/structure cell-by-cell over the mask.
+    for local_y in range(_visible_size.y):
+        for local_x in range(_visible_size.x):
+            var cell := _visible_origin + Vector2i(local_x, local_y)
+            if _perception.knowledge_state(cell) == ObserverPerceptionService.KnowledgeState.REMEMBERED:
+                _draw_remembered_cell(cell, _cell_rect(cell))
+
+    # Props are a separate deduplicated pass so authored multi-cell geometry is not
+    # chopped back into one-cell tiles by the fog-cell loop.
+    var remembered_props: Array[Dictionary] = _remembered_prop_snapshots()
+    _draw_remembered_props(remembered_props, false)
     _draw_last_seen_actors()
+    _draw_remembered_props(remembered_props, true)
     _draw_auditory_cues()
 
 func _draw_remembered_cell(cell: Vector2i, destination: Rect2) -> void:
@@ -288,26 +324,89 @@ func _draw_remembered_cell(cell: Vector2i, destination: Rect2) -> void:
             var structure_selection: ArtSelection = _resolve_remembered_structure(structure)
             _draw_selection(structure_selection, destination, modulation)
 
-    var props_value: Variant = memory.get("props", [])
-    if typeof(props_value) != TYPE_ARRAY:
-        return
-    for prop_value: Variant in props_value:
-        if typeof(prop_value) != TYPE_DICTIONARY:
+func _remembered_prop_snapshots() -> Array[Dictionary]:
+    var by_id: Dictionary = {}
+    if not is_configured() or not _view_valid:
+        return []
+    var halo: int = VisualGeometry.maximum_discovery_halo_cells()
+    var scan_origin := _visible_origin - Vector2i(halo, halo)
+    var scan_size := _visible_size + Vector2i(halo * 2, halo * 2)
+    for local_y in range(scan_size.y):
+        for local_x in range(scan_size.x):
+            var cell := scan_origin + Vector2i(local_x, local_y)
+            if _perception.knowledge_state(cell) != ObserverPerceptionService.KnowledgeState.REMEMBERED:
+                continue
+            var memory: Dictionary = _memory.environment_memory(_observer_id, cell)
+            if memory.is_empty():
+                continue
+            var props_value: Variant = memory.get("props", [])
+            if typeof(props_value) != TYPE_ARRAY:
+                continue
+            var observed_tick: int = int(memory.get("observed_tick", 0))
+            for prop_value: Variant in props_value:
+                if typeof(prop_value) != TYPE_DICTIONARY:
+                    continue
+                var prop: Dictionary = prop_value
+                var entity_id: String = String(prop.get("entity_id", "")).strip_edges()
+                if entity_id.is_empty():
+                    continue
+                var candidate: Dictionary = prop.duplicate(true)
+                candidate["_observed_tick"] = observed_tick
+                if not by_id.has(entity_id):
+                    by_id[entity_id] = candidate
+                    continue
+                var existing: Dictionary = by_id[entity_id]
+                if observed_tick > int(existing.get("_observed_tick", -1)):
+                    by_id[entity_id] = candidate
+    var ids: Array[String] = []
+    for key: Variant in by_id.keys():
+        ids.append(String(key))
+    ids.sort()
+    var result: Array[Dictionary] = []
+    for entity_id: String in ids:
+        var prop: Dictionary = by_id[entity_id]
+        var anchor_value: Variant = prop.get("anchor", null)
+        if typeof(anchor_value) != TYPE_VECTOR2I:
             continue
-        _draw_remembered_prop(prop_value)
+        var anchor: Vector2i = anchor_value
+        # Once the remembered physical anchor itself is visible, current presentation
+        # owns that cell; never paint a stale memory copy over visible truth.
+        if _perception.knowledge_state(anchor) == ObserverPerceptionService.KnowledgeState.VISIBLE:
+            continue
+        result.append(prop)
+    return result
 
-func _draw_remembered_prop(prop: Dictionary) -> void:
+func _draw_remembered_props(props: Array[Dictionary], foreground: bool) -> void:
+    for prop: Dictionary in props:
+        _draw_remembered_prop(prop, foreground)
+
+func _draw_remembered_prop(prop: Dictionary, foreground: bool) -> void:
     var semantic := StringName(String(prop.get("semantic_type", "")))
     var anchor_value: Variant = prop.get("anchor", null)
     var facing: int = int(prop.get("facing", -1))
     if String(semantic).strip_edges().is_empty() or typeof(anchor_value) != TYPE_VECTOR2I:
         return
-    var anchor: Vector2i = anchor_value
-    if not _cell_in_view(anchor):
+    var descriptor: PropVisualGeometryDescriptor = VisualGeometry.descriptor_for(semantic)
+    if descriptor == null or not descriptor.is_valid():
         return
-    var selection: ArtSelection = _catalog.resolve_prop(semantic)
-    var quarter_turns: int = PropOrientation.quarter_turns(selection, facing)
-    _draw_selection(selection, _cell_rect(anchor), memory_modulation(), quarter_turns)
+    if foreground and not descriptor.has_foreground():
+        return
+    var selection: ArtSelection = VisualGeometry.resolve_art(
+        _catalog,
+        descriptor.foreground_art_key if foreground else descriptor.base_art_key
+    )
+    var base_selection: ArtSelection = VisualGeometry.resolve_art(_catalog, descriptor.base_art_key)
+    var turns: int = PropOrientation.quarter_turns(base_selection, facing)
+    var anchor: Vector2i = anchor_value
+    if not _rect_world_intersects_visible(_rotated_visual_rect_world(anchor, descriptor, turns)):
+        return
+    _draw_selection_about_pivot(
+        selection,
+        _destination_for_descriptor(anchor, descriptor),
+        _pivot_screen_for_anchor(anchor),
+        memory_modulation(),
+        turns
+    )
 
 func _resolve_remembered_ground(cell: Vector2i, semantic_id: StringName) -> ArtSelection:
     var token: String = _leaf_token(semantic_id)
@@ -448,6 +547,34 @@ func _draw_selection(selection: ArtSelection, destination: Rect2, modulation: Co
         draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
     return drawn
 
+func _draw_selection_about_pivot(
+    selection: ArtSelection,
+    destination: Rect2,
+    pivot_screen: Vector2,
+    modulation: Color,
+    quarter_turns: int
+) -> bool:
+    if selection == null or not selection.is_found() or selection.source == null:
+        return false
+    var texture: Texture2D = _texture_for_selection(selection)
+    if texture == null:
+        return false
+    var turns: int = ((quarter_turns % 4) + 4) % 4
+    var target: Rect2 = destination
+    if turns != 0:
+        draw_set_transform(pivot_screen, float(turns) * PI * 0.5, Vector2.ONE)
+        target = Rect2(destination.position - pivot_screen, destination.size)
+    var drawn: bool = false
+    if selection.is_atlas_region():
+        draw_texture_rect_region(texture, target, selection.region(), modulation, false, true)
+        drawn = true
+    elif not selection.source.atlas:
+        draw_texture_rect(texture, target, false, modulation, false)
+        drawn = true
+    if turns != 0:
+        draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+    return drawn
+
 func _texture_for_selection(selection: ArtSelection) -> Texture2D:
     if selection == null or selection.source == null:
         return null
@@ -468,6 +595,57 @@ func _cell_rect(cell: Vector2i) -> Rect2:
         Vector2(float(local.x) * _cell_pixels, float(local.y) * _cell_pixels),
         Vector2(_cell_pixels, _cell_pixels)
     )
+
+func _destination_for_descriptor(anchor: Vector2i, descriptor: PropVisualGeometryDescriptor) -> Rect2:
+    var anchor_screen: Vector2 = _pivot_screen_for_anchor(anchor)
+    return Rect2(
+        anchor_screen - descriptor.pivot_cells * _cell_pixels,
+        Vector2(descriptor.draw_span_cells) * _cell_pixels
+    )
+
+func _pivot_screen_for_anchor(anchor: Vector2i) -> Vector2:
+    return (Vector2(anchor - _visible_origin) + Vector2(0.5, 0.5)) * _cell_pixels
+
+func _rotated_visual_rect_world(
+    anchor: Vector2i,
+    descriptor: PropVisualGeometryDescriptor,
+    turns: int
+) -> Rect2:
+    var pivot_world := Vector2(anchor) + Vector2(0.5, 0.5)
+    var top_left := pivot_world - descriptor.pivot_cells
+    var size := Vector2(descriptor.draw_span_cells)
+    var corners: Array[Vector2] = [
+        top_left,
+        top_left + Vector2(size.x, 0.0),
+        top_left + size,
+        top_left + Vector2(0.0, size.y),
+    ]
+    var normalized_turns: int = ((turns % 4) + 4) % 4
+    var min_point := Vector2(INF, INF)
+    var max_point := Vector2(-INF, -INF)
+    for corner: Vector2 in corners:
+        var relative: Vector2 = corner - pivot_world
+        var rotated: Vector2 = _quarter_rotate(relative, normalized_turns)
+        var point: Vector2 = pivot_world + rotated
+        min_point.x = min(min_point.x, point.x)
+        min_point.y = min(min_point.y, point.y)
+        max_point.x = max(max_point.x, point.x)
+        max_point.y = max(max_point.y, point.y)
+    return Rect2(min_point, max_point - min_point)
+
+static func _quarter_rotate(value: Vector2, turns: int) -> Vector2:
+    match ((turns % 4) + 4) % 4:
+        1:
+            return Vector2(-value.y, value.x)
+        2:
+            return Vector2(-value.x, -value.y)
+        3:
+            return Vector2(value.y, -value.x)
+        _:
+            return value
+
+func _rect_world_intersects_visible(rect: Rect2) -> bool:
+    return rect.intersects(Rect2(Vector2(_visible_origin), Vector2(_visible_size)))
 
 func _actor_rect(cell: Vector2i) -> Rect2:
     var base: Rect2 = _cell_rect(cell)

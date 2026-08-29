@@ -23,8 +23,11 @@ const ACTOR_B_ID := "perception.actor.b"
 const DOOR_ID := "perception.door"
 const REMOVED_PROP_ID := "perception.prop.removed"
 const STABLE_PROP_ID := "perception.prop.stable"
+const LARGE_PROP_ID := "perception.prop.large"
 const REMOVED_PROP_CELL := Vector2i(24, 17)
 const STABLE_PROP_CELL := Vector2i(16, 17)
+const LARGE_PROP_ANCHOR := Vector2i(24, 18)
+const LARGE_PROP_VISIBLE_CELL := Vector2i(23, 18)
 const CENTER := Vector2i(20, 20)
 
 var _failures: Array[String] = []
@@ -109,6 +112,12 @@ func _test_memory_last_seen_and_sound_layering() -> void:
         _check(String(visible_props[0].get("entity_id", "")) == REMOVED_PROP_ID, "remembered furniture keeps stable entity identity")
         _check(String(visible_props[0].get("semantic_type", "")) == "prop.sofa", "remembered furniture keeps semantic art identity")
 
+    _check(service.knowledge_state(LARGE_PROP_ANCHOR) != PerceptionClass.KnowledgeState.VISIBLE, "large prop anchor is outside the initial cone")
+    _check(service.knowledge_state(LARGE_PROP_VISIBLE_CELL) == PerceptionClass.KnowledgeState.VISIBLE, "large prop non-anchor footprint cell is visible")
+    var partial_prop_memory: Dictionary = memory.environment_memory(OBSERVER_ID, LARGE_PROP_VISIBLE_CELL)
+    var partial_props: Array = partial_prop_memory.get("props", [])
+    _check(_props_contain(partial_props, LARGE_PROP_ID), "visible non-anchor footprint cell remembers the whole stable prop identity")
+
     var closed_door_memory: Dictionary = memory.environment_memory(OBSERVER_ID, Vector2i(22, 16))
     var closed_structure: Dictionary = closed_door_memory.get("structure", {})
     _check(String(closed_structure.get("door_state", "")) == "closed", "visible closed door is remembered closed")
@@ -134,6 +143,18 @@ func _test_memory_last_seen_and_sound_layering() -> void:
     _check(mutations.remove_entity(ACTOR_B_ID), "hidden actor B is removed")
     _check(not memory.last_seen_actor(OBSERVER_ID, ACTOR_B_ID).is_empty(), "hidden actor removal does not magically erase last-seen marker")
 
+    var overlay := OverlayClass.new()
+    var catalog := ArtCatalogClass.new()
+    _check(overlay.configure(service, memory, catalog, OBSERVER_ID), "perception overlay configures")
+    _check(overlay.set_visible_window(Vector2i.ZERO, Vector2i(41, 41), 8.0), "overlay accepts world-sized test view")
+    var remembered_visuals: Array[Dictionary] = overlay.remembered_prop_visual_plans()
+    var large_visual: Dictionary = _visual_plan(remembered_visuals, LARGE_PROP_ID)
+    _check(not large_visual.is_empty(), "remembered large prop receives one deduplicated visual plan outside the cone")
+    if not large_visual.is_empty():
+        _check(String(large_visual.get("visual_id", "")) == "large_deciduous_tree_2x2", "remembered large prop reuses System-07B visual geometry")
+        _check(large_visual.get("draw_span_cells", Vector2i.ZERO) == Vector2i(2, 2), "remembered large prop retains authored 2x2 draw span")
+        _check(bool(large_visual.get("has_foreground", false)), "remembered large prop retains its foreground/overhang pass")
+
     _check(_face_actor(world, mutations, OBSERVER_ID, Facing.Value.WEST), "observer turns west")
     var updated_actor_a: Dictionary = memory.last_seen_actor(OBSERVER_ID, ACTOR_A_ID)
     _check(updated_actor_a.get("cell", Vector2i.ZERO) == Vector2i(8, 20), "seeing actor A elsewhere updates last-seen observation")
@@ -152,10 +173,6 @@ func _test_memory_last_seen_and_sound_layering() -> void:
     _check(not memory.has_seen_cell(OBSERVER_ID, unseen_cell), "materialization alone does not mark unseen cell explored")
 
     _check(_face_actor(world, mutations, OBSERVER_ID, Facing.Value.SOUTH), "observer turns away again for remembered-prop presentation")
-    var overlay := OverlayClass.new()
-    var catalog := ArtCatalogClass.new()
-    _check(overlay.configure(service, memory, catalog, OBSERVER_ID), "perception overlay configures")
-    _check(overlay.set_visible_window(Vector2i.ZERO, Vector2i(41, 41), 8.0), "overlay accepts world-sized test view")
     var unseen_sound := {
         "cue_id": "perception.sound.unseen",
         "group_id": "perception.group.unseen",
@@ -235,6 +252,8 @@ func _build_environment() -> Dictionary:
     _check(_create_actor(mutations, ACTOR_B_ID, Vector2i(17, 18), Facing.Value.EAST, &"actor.infected"), "create actor B")
     _check(_create_prop(mutations, REMOVED_PROP_ID, REMOVED_PROP_CELL, Facing.Value.EAST, &"prop.sofa"), "create removable remembered furniture")
     _check(_create_prop(mutations, STABLE_PROP_ID, STABLE_PROP_CELL, Facing.Value.SOUTH, &"prop.refrigerator_white"), "create stable remembered clutter")
+    var partial_footprint := Footprint.new([Vector2i.ZERO, Vector2i(-1, 0)])
+    _check(_create_prop(mutations, LARGE_PROP_ID, LARGE_PROP_ANCHOR, Facing.Value.NORTH, &"prop.deciduous_large", partial_footprint), "create partially visible multi-cell large prop")
 
     _check(_create_structure(mutations, "perception.wall", Vector2i(20, 16), &"wall.house"), "create opaque wall")
     _check(_create_structure(mutations, DOOR_ID, Vector2i(22, 16), &"door.house"), "create door")
@@ -268,11 +287,13 @@ func _create_prop(
     entity_id: String,
     cell: Vector2i,
     facing: int,
-    semantic: StringName
+    semantic: StringName,
+    footprint: SpatialFootprint = null
 ) -> bool:
     if mutations.create_entity(semantic, entity_id) != entity_id:
         return false
-    return mutations.set_placement(entity_id, Layers.Channel.OBJECT, cell, facing, Footprint.single_cell())
+    var physical: SpatialFootprint = footprint if footprint != null else Footprint.single_cell()
+    return mutations.set_placement(entity_id, Layers.Channel.OBJECT, cell, facing, physical)
 
 func _create_structure(
     mutations: WorldMutationService,
@@ -304,6 +325,18 @@ func _face_actor(
 
 func _move_actor(mutations: WorldMutationService, actor_id: String, cell: Vector2i, facing: int) -> bool:
     return mutations.set_placement(actor_id, Layers.Channel.ACTOR, cell, facing, Footprint.single_cell())
+
+func _props_contain(values: Array, entity_id: String) -> bool:
+    for value: Variant in values:
+        if typeof(value) == TYPE_DICTIONARY and String((value as Dictionary).get("entity_id", "")) == entity_id:
+            return true
+    return false
+
+func _visual_plan(values: Array[Dictionary], entity_id: String) -> Dictionary:
+    for value: Dictionary in values:
+        if String(value.get("entity_id", "")) == entity_id:
+            return value
+    return {}
 
 func _check(condition: bool, message: String) -> void:
     if not condition:

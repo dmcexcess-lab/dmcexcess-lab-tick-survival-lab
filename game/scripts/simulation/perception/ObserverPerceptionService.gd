@@ -160,10 +160,10 @@ func _refresh_environment_memory(cells: Array[Vector2i]) -> void:
             tick,
             _world.terrain_at(cell),
             remembered_structure,
-            _rememberable_props_anchored_at(cell)
+            _rememberable_props_at(cell)
         )
 
-func _rememberable_props_anchored_at(cell: Vector2i) -> Array[Dictionary]:
+func _rememberable_props_at(cell: Vector2i) -> Array[Dictionary]:
     var result: Array[Dictionary] = []
     var entity_ids: Array[String] = _world.entities_at(cell, Layers.Channel.OBJECT)
     entity_ids.sort()
@@ -172,7 +172,7 @@ func _rememberable_props_anchored_at(cell: Vector2i) -> Array[Dictionary]:
         var placement: WorldPlacement = _world.placement(entity_id)
         if entity == null or placement == null or placement.channel != Layers.Channel.OBJECT:
             continue
-        if placement.anchor != cell or not FacingRules.is_valid(placement.facing):
+        if cell not in placement.world_cells() or not FacingRules.is_valid(placement.facing):
             continue
         var semantic: String = String(entity.semantic_type).strip_edges()
         if not semantic.begins_with("prop.") and not semantic.begins_with("fixture."):

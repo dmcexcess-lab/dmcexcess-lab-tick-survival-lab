@@ -24,15 +24,17 @@ func _initialize() -> void:
         GlobalFixture.BOUNDS,
         ProfilesClass.TEMPERATE_ISLAND_REGION
     )
-    var plan: GeneratedGlobalWorldPlan = IslandPlannerClass.new().generate(request)
-    _check(plan != null and plan.is_generated(), "island v2 plan generates")
+    var planner := IslandPlannerClass.new()
+    var plan: GeneratedGlobalWorldPlan = planner.generate(request)
+    _check(plan != null and plan.is_generated(), "island v3 plan generates")
     if plan == null or not plan.is_generated():
         _finish()
         return
 
     var profile: Dictionary = ProfilesClass.new().profile(ProfilesClass.TEMPERATE_ISLAND_REGION)
-    _check(int(profile.get("version", 0)) >= 2, "island profile records legacy-layout removal revision")
+    _check(int(profile.get("version", 0)) >= 3, "island profile records fresh-new-game and belt-removal revision")
     _check(not bool(profile.get("reuse_world_seed_for_central_site", true)), "island profile forbids legacy central seed reuse")
+    _check(int(profile.get("protected_cross_half_span", 9999)) <= 192, "playable island no longer inherits the 640-cell regional stress-fixture cross")
 
     var central: Dictionary = _site(plan, GlobalFixture.CENTRAL_SITE_ID)
     var smalltown: Dictionary = _site(plan, "area.smalltown.center.001")
@@ -41,6 +43,19 @@ func _initialize() -> void:
     if not central.is_empty():
         _check(int(central.get("seed", GlobalFixture.SEED)) != LegacyFixture.SEED, "island central site no longer reuses legacy critique seed")
         _check(central.get("bounds", Rect2i()) == LegacyFixture.BOUNDS, "central world location may remain stable while generated identity changes")
+
+    var alternate_request := RequestClass.new(
+        GlobalFixture.WORLD_ID,
+        GlobalFixture.SEED + 1,
+        GlobalFixture.BOUNDS,
+        ProfilesClass.TEMPERATE_ISLAND_REGION
+    )
+    var alternate: GeneratedGlobalWorldPlan = planner.generate(alternate_request)
+    _check(alternate != null and alternate.is_generated(), "alternate new-game island seed generates")
+    if alternate != null and alternate.is_generated():
+        _check(alternate.signature() != plan.signature(), "different new-game seed redraws the authoritative island plan")
+        var alternate_central: Dictionary = _site(alternate, GlobalFixture.CENTRAL_SITE_ID)
+        _check(int(alternate_central.get("seed", -1)) != int(central.get("seed", -1)), "different new-game seed changes central local-area seed")
 
     var projector := ProjectorClass.new()
     var local_generator := LocalGeneratorClass.new()
@@ -66,7 +81,7 @@ func _initialize() -> void:
     if not central.is_empty() and not smalltown.is_empty():
         var gap: int = _rect_manhattan_gap(central.get("bounds", Rect2i()), smalltown.get("bounds", Rect2i()))
         print("ISLAND_CENTRAL_TO_SMALLTOWN_EDGE_GAP=%d" % gap)
-        _check(gap <= 192, "central-to-small-town countryside gap is compact rather than a giant legacy belt")
+        _check(gap <= 96, "central-to-small-town countryside seam is bounded instead of a giant green belt")
 
     var surface_catalog := SurfaceCatalogClass.new(plan)
     _check(surface_catalog.is_ready(), "island surface catalog is ready")
