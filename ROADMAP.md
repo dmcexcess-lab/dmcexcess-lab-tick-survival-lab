@@ -16,11 +16,9 @@ Current game identity:
 
 - **Phase 1 — COMPLETE.** Items, spoilage, interaction readability, semantic UI, large-object presentation, content breadth and integration are implemented.
 - **Phase 2 — COMPLETE.** System 32 Crafting / Material Transformation Candidate 001 is implemented and CI verified on `8b4db898f0e02dd84298dbc5291f3e1a88c11ce4`.
-- **Compact-island/world-seam cleanup — REOPENED.** The attempted planner repair `918f1dbd7b033fa179522a112b1507d9a2c63890` passed automated CI but caused a severe user-visible gameplay regression and was rolled back.
-- **Current restored runtime:** `f6a06add3dfd212c0c29b343d24a8f7d28a89bca`, restoring the pre-regression planner. Its Pages deploy passed.
-- **Known remaining cleanup defect:** System 00D again fails the strict `Legacy Crossroads Is Not Embedded In Island` alternate-seed seam check. Do not weaken that validator.
-- **Next engineering gate:** repair and human-accept the reopened island seam using a focused planner fixture before closing cleanup.
-- **Next gameplay phase after cleanup acceptance:** Phase 3 Power and Water — DESCRIBE. No Phase-3 runtime implementation is pre-authorized.
+- **Compact-island/world-seam cleanup — COMPLETE + HUMAN ACCEPTED.** The broad planner repair `918f1dbd7b033fa179522a112b1507d9a2c63890` remains rejected, but the later focused local-window repair `282864f242ba2a5c3df0519591e31990372c4aed` preserved the world layout while resolving the overlap seam.
+- **Responsiveness / black-screen recovery — HUMAN ACCEPTED.** Executable `1f65bff312853a44858201b57d9df2e26ee64f80` restored the human-good visibility path while preserving the accepted decision-pause/input responsiveness work. Human play subsequently confirmed the black screen fixed and performance improved.
+- **Current gameplay lifecycle gate:** Phase 3 / System 33 Power + Water is **DESCRIBED and awaiting explicit approval**. No Phase-3 runtime implementation is pre-authorized.
 
 ---
 
@@ -39,6 +37,8 @@ Implemented result includes shared `CONTACT_FORWARD` reach, real read-only inter
 ### Performance architecture gate — COMPLETE + HUMAN ACCEPTED
 
 The P0/P1/P2 performance architecture and Weather presentation optimization are complete and human-accepted on phone/Safari.
+
+The later action-responsiveness repair is also human accepted on the current playable lineage: one accepted action resolves through bounded per-frame work, gameplay input remains locked until the next real decision pause, stale buffered input is not replayed, and the black-screen visibility regression has been recovered.
 
 Protected direction remains event-driven/cache-oriented invalidation, bounded queries and shared derived plans rather than recurring world scans, per-cell/per-item Nodes/timers or frame-driven simulation.
 
@@ -92,66 +92,70 @@ System 32 does not own Construction/Repair/Durability, Cooking/Nutrition, Power/
 
 ---
 
-## World-generation cleanup gate — REOPENED
+## World-generation cleanup gate — COMPLETE + HUMAN ACCEPTED
 
 The playable island remains `temperate.island.region` v3 over the protected rural-v6 planning skeleton.
 
-Already-valid cleanup work remains in place:
+Accepted cleanup result includes:
 
 - fresh new-game seeds redraw island identity rather than aliasing the historical standalone critique fixture;
 - central local-site seed derives from world seed + site identity;
 - the playable island does not carry the old 640-cell regional stress-fixture protected-cross half-span;
 - compact island spacing removes the former giant green belt;
 - natural ecology stays coherent across logical source rectangles using world seed + absolute global cell;
-- spawn remains on inherited pavement rather than the diner entrance.
+- spawn remains on inherited pavement rather than the diner entrance;
+- the legal-seed base-site overlap is repaired by `282864f242ba2a5c3df0519591e31990372c4aed` through a bounded local-window adaptation that preserves settlement centers/world layout instead of changing the global settlement planner.
 
-### Remaining defect
+### Rejected attempt remains historical evidence
 
-The strict alternate-seed System-00D seam identifies `island_base_site_overlap:area.smalltown.center.001` under at least one legal seed.
+`918f1dbd7b033fa179522a112b1507d9a2c63890` changed global settlement candidate rejection from the historical center-distance heuristic to exact rectangle-overlap rejection. Automated CI passed, but human play found the world severely broken. It was rolled back in `f6a06add3dfd212c0c29b343d24a8f7d28a89bca` and remains **not accepted**.
 
-The first attempted repair changed global settlement candidate rejection from the historical 160-cell center-distance heuristic to exact 256x256 rectangle-overlap rejection. Automated CI passed on `918f1dbd7b033fa179522a112b1507d9a2c63890`, but human play found the deployed game severely broken. That repair was therefore rejected and rolled back in `f6a06add3dfd212c0c29b343d24a8f7d28a89bca`.
+The later focused repair `282864f...` is the accepted direction because it repairs the island-local adaptation rather than silently redesigning global settlement placement.
 
-### Required repair discipline
-
-Before another live planner change:
-
-1. reproduce the bad alternate-seed placement in a focused planner fixture;
-2. characterize the intended settlement-layout invariants beyond simple non-overlap;
-3. make the smallest deterministic planner change that satisfies those invariants;
-4. run System 00D, System 20, streaming, performance, canonical startup and Pages checks;
-5. **human-play the generated island** before marking cleanup complete.
-
-A green validator suite alone is not sufficient evidence for this cleanup after the `918f1db...` regression.
+Human play of the current recovered executable lineage confirmed the playable world is acceptable to move forward. Generated-world changes remain subject to the same human acceptance discipline in the future.
 
 ---
 
-## Phase 3 — Power and Water — NEXT GAMEPLAY PHASE AFTER CLEANUP
+## Phase 3 — Power and Water — DESCRIBED; AWAITING APPROVAL
 
-Goal: add causal, damageable **three-tier utility networks** rather than global on/off switches.
+Canonical design: `SYSTEM_DESIGNS/33_POWER_WATER_UTILITIES.md`.
+
+Goal: add causal, persistent **three-tier utility networks** rather than global on/off switches.
+
+> **Planning says where utility topology exists. System 33 owns whether that topology currently provides service. Consumers query service; they never infer it from art, brightness or UI state.**
 
 ### Power hierarchy
 
-1. **Main generation / major source** — broad regional supply, robust and slow to fail.
-2. **Substations / local distribution facilities** — several areas, semi-frequent failure.
-3. **Distribution lines / structure service** — vulnerable local branches damaged by trees, vehicles, combat or later player/NPC actions.
+1. **Main generation / major source** — broad regional supply.
+2. **Substations / settlement feeders** — local distribution facilities and service branches.
+3. **Local branch / structure service** — vulnerable final service to structures/consumer groups.
 
 ### Water hierarchy
 
-1. **Main treatment/waterworks source** — broad regional supply and slow failure.
-2. **Pump stations / local distribution** — several areas, semi-frequent failure.
-3. **Local mains/hydrants/structure service** — vulnerable local access and repair/damage seams.
+1. **Main potable source + treatment/storage** — broad municipal supply where planned.
+2. **Pump/distribution / settlement service** — local distribution with real power dependency where pumping is electrical.
+3. **Property / structure service** — local endpoint; rural properties may instead use planned private/shared wells.
 
-Required ownership rules:
+### Candidate 001 if approved
 
-- Phase 3 may consume System-00D planning facts but planning records are not runtime utility state.
-- Real utility state must be persistent world truth, not renderer/UI state or a global boolean shortcut.
-- Powered lights, neon, TVs, pumps and appliances feed real active state into existing physical systems.
-- Utility damage/failure persists through normal world-state architecture.
-- Mechanical/Electrical skills later attach to real repair actions.
-- System 30 may consume real refrigeration availability only after Phase 3 establishes real power + appliance state.
-- Standalone wastewater/sewer gameplay is removed from the active roadmap; existing wastewater planning may remain inert until deliberate cleanup.
+1. **33A — Utility state foundation + plan materialization** — typed persistent state consuming 00D4/00D5 planning truth, stable identities, service bindings, snapshot/restore, revisions and cached service queries.
+2. **33B — Power vertical slice** — causal three-tier power state, real local outages and fixed powered lights feeding System 27 through canonical emitter truth.
+3. **33C — Potable-water vertical slice** — municipal service, rural well service and electrically driven pump dependency on real power.
+4. **33D — Refrigeration consumer slice** — real powered refrigerator cold-storage availability feeding System 30 without adding item timers or moving freshness ownership.
 
-**Lifecycle rule:** Phase 3 must be DESCRIBED and approved before runtime implementation begins.
+Required ownership/performance rules:
+
+- System 00D planning facts define topology/geography but are not runtime service state.
+- No global `power_on` or `water_on` gameplay shortcut.
+- No frame-driven network simulation, per-component timers or recurring whole-world scans.
+- Runtime damage/disabled state is persistent typed truth.
+- Service is derived/cached from required upstream state and revisions.
+- System 27 remains physical-light owner; System 30 remains freshness owner.
+- Water-service inspection may be implemented now, but thirst/drinking/liquid consequences remain Phase 4 or a later dedicated liquid system.
+- Portable battery/fuel equipment is not silently faked merely to delete the current temporary flashlight adapter.
+- Standalone wastewater/sewer gameplay remains outside the active roadmap.
+
+**Lifecycle rule:** System 33 Candidate 001 requires explicit approval before runtime implementation begins.
 
 ---
 
@@ -247,4 +251,4 @@ For each bounded phase/system:
 
 Newest explicit user direction supersedes older roadmap ordering, but implemented historical systems remain current truth until deliberately migrated.
 
-**Current next step: resolve and human-accept the reopened compact-island/world-seam cleanup. After that, DESCRIBE Roadmap Phase 3 — Power and Water.**
+**Current next step: approve or revise `SYSTEM_DESIGNS/33_POWER_WATER_UTILITIES.md`. Runtime implementation begins only after explicit approval.**
