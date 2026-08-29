@@ -2,6 +2,17 @@
 
 This compact ledger records the most recent work. `CHANGELOG.md` remains the historical archive.
 
+## Human Acceptance + Phase 3 Design Start — 2026-08-29
+
+- Human browser play confirmed the black-screen recovery is fixed and performance is improved, accepting the current responsiveness/visibility slice.
+- The current playable island was also accepted to move forward, closing the stale human-acceptance gate around the focused island-local overlap repair `282864f242ba2a5c3df0519591e31990372c4aed`.
+- The rejected broad settlement-planner attempt `918f1dbd7b033fa179522a112b1507d9a2c63890` remains explicitly non-canonical; the accepted repair preserves global settlement layout and adapts only the conflicting island-local site window.
+- Roadmap Phase 3 is now the active gameplay lifecycle phase.
+- Added `SYSTEM_DESIGNS/33_POWER_WATER_UTILITIES.md` as a **DRAFT / DESCRIBE-complete** design. Runtime implementation still requires explicit approval.
+- Proposed Candidate 001 is split into 33A persistent utility state/materialization, 33B causal power + fixed-light integration, 33C potable water + pump-power dependency, and 33D real powered refrigeration feeding System 30.
+- The design deliberately excludes global on/off utility booleans, frame-driven graph work, per-component timers, random outages, detailed electrical/hydraulic simulation, Phase-4 thirst/health consequences and fake portable battery/fuel mechanics.
+- No Phase-3 runtime code was added in this design slice.
+
 ## Black-Screen Visibility Recovery — 2026-08-29
 
 Validated executable: `1f65bff312853a44858201b57d9df2e26ee64f80`
@@ -13,7 +24,7 @@ Validated executable: `1f65bff312853a44858201b57d9df2e26ee64f80`
 - Retracted the camera-cropped lighting presentation and revision-cached LOS optimization from canonical runtime until they can be reintroduced without risking visual correctness.
 - Strengthened `PlayerInputResponsivenessSmoke.gd` so canonical startup now requires a usable visible field plus initialized multiply/glow lighting textures with nonzero luminance, and proves those properties survive settled player actions.
 - Exact-head validation completed with 46 successful workflows, zero failing workflows, and a successful Pages build/deploy.
-- Human browser play remains the final acceptance gate for the visual recovery and the remaining first-actions startup hitch.
+- Human browser play later accepted this recovery: black screen fixed and performance improved.
 
 ## Decision-Pause Input + Startup Performance Follow-Up — 2026-08-29
 
@@ -25,7 +36,7 @@ Validated executable: `1f65bff312853a44858201b57d9df2e26ee64f80`
 - Renamed the now-canonical runtime roots/controllers from demo/bridge terminology while retaining focused DEV fixtures and the honestly temporary lighting-source adapter.
 - Extended permanent responsiveness coverage for decision-pause locking, immediate next-pause input, coalesced work and camera-bounded lighting.
 
-**Acceptance note:** the camera-cropped lighting and cached-LOS portion of this follow-up was later retracted by `1f65bff...` after human play reported a black screen. The decision-pause/input, coalescing, flashlight and naming improvements remain canonical.
+**Acceptance note:** the camera-cropped lighting and cached-LOS portion of this follow-up was later retracted by `1f65bff...` after human play reported a black screen. The decision-pause/input, coalescing, flashlight and naming improvements remain canonical and are now human accepted.
 
 ## Player Input / Lighting Responsiveness Repair — 2026-08-29
 
@@ -38,18 +49,14 @@ Validated executable: `1f65bff312853a44858201b57d9df2e26ee64f80`
 - Added permanent `PlayerInputResponsivenessSmoke.gd` coverage for yielding and input-backlog rejection.
 - No movement timing, collision, persistence, world identity, crafting or save schema changed.
 
-Human browser acceptance remains required for the reported spawn-step performance behavior.
-
 ## Settlement-Planner Regression Rollback — 2026-08-28
 
 Restored runtime executable: `f6a06add3dfd212c0c29b343d24a8f7d28a89bca`
 
 - Reverted the settlement-overlap planner change from `918f1dbd7b033fa179522a112b1507d9a2c63890` after the deployed game was reported completely broken in human play.
 - Restored `GlobalSettlementPlanner.gd` exactly to the pre-regression implementation from `ba706f18017d4d72b950f18d3e988ce75592f0a6`.
-- The rollback Pages build/deploy completed successfully, so the live game is again built from the pre-regression planner.
-- The rollback re-exposes the previously known System-00D seam failure in `Legacy Crossroads Is Not Embedded In Island`; that is intentional and preferable to shipping a user-visible gameplay regression.
-- The old seam remains associated with the alternate-seed `island_base_site_overlap:area.smalltown.center.001` case.
-- The failed attempt proved an important verification gap: exact-head CI can remain green while a generator change still causes unacceptable whole-world gameplay/layout behavior. Future repair must be proven in a focused planner fixture and then human-played before the cleanup is closed.
+- The rollback Pages build/deploy completed successfully, so the live game returned to the pre-regression planner.
+- The failed attempt proved an important verification gap: exact-head CI can remain green while a generator change still causes unacceptable whole-world gameplay/layout behavior.
 - No Crafting, item, UI, streaming, WHAT/WHEN, or Phase-3 runtime code was reverted.
 
 Rollback commit: `f6a06add3dfd212c0c29b343d24a8f7d28a89bca` (`Revert settlement overlap planner regression`).
@@ -67,5 +74,6 @@ Attempted executable: `918f1dbd7b033fa179522a112b1507d9a2c63890`
 
 - Roadmap Phase 1 remains complete.
 - Roadmap Phase 2 / System 32 Crafting remains **COMPLETE + CI VERIFIED** on executable `8b4db898f0e02dd84298dbc5291f3e1a88c11ce4`.
-- Compact-island/world-seam cleanup is **REOPENED**.
-- Phase 3 Power and Water remains next in roadmap order, but its DESCRIBE gate should follow resolution/acceptance of the reopened cleanup rather than silently bypassing it.
+- Compact-island/world-seam cleanup is **COMPLETE + HUMAN ACCEPTED** on the current lineage, using focused repair `282864f...` rather than rejected planner attempt `918f1db...`.
+- Responsiveness/black-screen recovery is **HUMAN ACCEPTED**; validated recovery executable is `1f65bff312853a44858201b57d9df2e26ee64f80`.
+- Phase 3 / System 33 Power and Water is **DESCRIBED — AWAITING EXPLICIT APPROVAL**.
