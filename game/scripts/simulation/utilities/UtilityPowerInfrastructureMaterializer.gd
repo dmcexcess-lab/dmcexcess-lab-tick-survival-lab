@@ -5,14 +5,15 @@ const Layers = preload("res://scripts/foundation/spatial/SpatialLayer.gd")
 const Facing = preload("res://scripts/foundation/spatial/SpatialFacing.gd")
 const FootprintClass = preload("res://scripts/foundation/spatial/SpatialFootprint.gd")
 
-## One-time tactical physicalization of canonical 00D4 electrical topology.
-## 00D remains topology authority; this class creates persistent WHAT supports/equipment
-## and a cached presentation edge list. It performs no recurring simulation work.
+## One-time tactical physicalization of canonical 00D4 electrical distribution topology.
+## 00D remains topology authority; this class creates persistent WHAT supports/local service gear
+## plus a cached presentation edge list. Major source/substation facilities are not faked here.
 
 const URBAN_SPACING: int = 9
 const SETTLEMENT_SPACING: int = 14
 const RURAL_SPACING: int = 22
 const ROAD_SHOULDER_OFFSET: int = 4
+const INVALID_CELL := Vector2i(2147483647, 2147483647)
 const EXPLICIT_CONSTRUCTED_VEHICLE_TERRAIN: Array[StringName] = [
     &"ground.gravel_dark",
     &"ground.gravel_light",
@@ -76,8 +77,7 @@ func materialize() -> bool:
         if typeof(value) != TYPE_DICTIONARY:
             success = false
             break
-        var prop: Dictionary = value
-        if not _materialize_prop(prop):
+        if not _materialize_prop(value as Dictionary):
             success = false
             break
     if not success:
@@ -89,7 +89,7 @@ func materialize() -> bool:
         _world.end_change_batch()
         return false
 
-    _wire_edges = []
+    _wire_edges.clear()
     for value: Variant in wires_value:
         if typeof(value) == TYPE_DICTIONARY:
             _wire_edges.append((value as Dictionary).duplicate(true))
@@ -129,16 +129,26 @@ func _build_projection() -> Dictionary:
         for record: Dictionary in support_records:
             props.append(record)
             reserved_cells[record.get("cell", Vector2i.ZERO)] = true
+        var downstream: Array[String] = _string_array(segment.get("service_settlement_ids", []))
+        if downstream.is_empty():
+            return {"props": [], "wires": []}
         for index: int in range(1, support_records.size()):
             wires.append({
+                "asset_id": "power.asset.span.%s.%03d" % [_stable_token(String(segment.get("id", "segment"))), index - 1],
                 "start_id": String(support_records[index - 1].get("id", "")),
                 "end_id": String(support_records[index].get("id", "")),
                 "network_id": String(segment.get("network_id", "")),
                 "power_class": StringName(segment.get("power_class", &"")),
                 "segment_id": String(segment.get("id", "")),
+                "service_settlement_ids": downstream.duplicate(),
             })
 
+    # Major source/substation geometry belongs to future streamed facility generation. Keeping
+    # fake equipment clusters here would create a second facility truth. Settlement service gear
+    # is legitimate local distribution hardware and remains physicalized.
     for node: Dictionary in _plan.power_nodes:
+        if StringName(node.get("kind", &"")) != &"settlement_service":
+            continue
         var node_records: Array[Dictionary] = _node_equipment(node, reserved_cells)
         for record: Dictionary in node_records:
             props.append(record)
@@ -161,7 +171,7 @@ func _segment_supports(segment: Dictionary, reserved_cells: Dictionary) -> Array
     while distance <= length:
         var route_cell: Vector2i = start + direction * distance
         var support_cell: Vector2i = _find_support_cell(route_cell, direction, side, reserved_cells)
-        if support_cell != Vector2i(2147483647, 2147483647):
+        if support_cell != INVALID_CELL:
             var semantic: StringName = _support_semantic(support_cell, ordinal)
             result.append({
                 "id": "power.physical.%s.support.%03d" % [_stable_token(String(segment.get("id", "segment"))), ordinal],
@@ -171,12 +181,11 @@ func _segment_supports(segment: Dictionary, reserved_cells: Dictionary) -> Array
             })
             reserved_cells[support_cell] = true
             ordinal += 1
-        var spacing: int = _spacing_for(route_cell)
-        distance += maxi(1, spacing)
+        distance += maxi(1, _spacing_for(route_cell))
 
     if result.size() == 1 and length > 0:
         var end_cell: Vector2i = _find_support_cell(finish, direction, side, reserved_cells)
-        if end_cell != Vector2i(2147483647, 2147483647):
+        if end_cell != INVALID_CELL:
             result.append({
                 "id": "power.physical.%s.support.%03d" % [_stable_token(String(segment.get("id", "segment"))), ordinal],
                 "semantic": _support_semantic(end_cell, ordinal),
@@ -195,7 +204,6 @@ func _support_semantic(cell: Vector2i, ordinal: int) -> StringName:
         transformer_stride = 7
     elif density == 1:
         light_stride = 2
-        transformer_stride = 5
     if ordinal > 0 and ordinal % transformer_stride == 0:
         return &"prop.utility_pole_transformer"
     if ordinal % light_stride == 0:
@@ -229,12 +237,7 @@ func _density_for(cell: Vector2i) -> int:
         return 1
     return 2
 
-func _find_support_cell(
-    route_cell: Vector2i,
-    direction: Vector2i,
-    preferred_side: int,
-    reserved_cells: Dictionary
-) -> Vector2i:
+func _find_support_cell(route_cell: Vector2i, direction: Vector2i, preferred_side: int, reserved_cells: Dictionary) -> Vector2i:
     var perpendicular := Vector2i(-direction.y, direction.x)
     var offsets: Array[int] = [
         preferred_side * ROAD_SHOULDER_OFFSET,
@@ -248,12 +251,10 @@ func _find_support_cell(
         var candidate: Vector2i = route_cell + perpendicular * offset
         if not _plan.bounds.has_point(candidate) or reserved_cells.has(candidate):
             continue
-        if _is_support_blocked_surface_cell(candidate):
-            continue
-        if not _world.entities_at(candidate).is_empty():
+        if _is_support_blocked_surface_cell(candidate) or not _world.entities_at(candidate).is_empty():
             continue
         return candidate
-    return Vector2i(2147483647, 2147483647)
+    return INVALID_CELL
 
 func _is_support_blocked_surface_cell(cell: Vector2i) -> bool:
     if _is_planned_global_road_surface(cell):
@@ -278,55 +279,20 @@ func _is_planned_global_road_surface(cell: Vector2i) -> bool:
             continue
         var half_width: int = width / 2
         if start.y == finish.y:
-            if cell.x >= mini(start.x, finish.x) and cell.x <= maxi(start.x, finish.x) \
-                and absi(cell.y - start.y) <= half_width:
+            if cell.x >= mini(start.x, finish.x) and cell.x <= maxi(start.x, finish.x) and absi(cell.y - start.y) <= half_width:
                 return true
         elif start.x == finish.x:
-            if cell.y >= mini(start.y, finish.y) and cell.y <= maxi(start.y, finish.y) \
-                and absi(cell.x - start.x) <= half_width:
+            if cell.y >= mini(start.y, finish.y) and cell.y <= maxi(start.y, finish.y) and absi(cell.x - start.x) <= half_width:
                 return true
     return false
 
 func _node_equipment(node: Dictionary, reserved_cells: Dictionary) -> Array[Dictionary]:
     var result: Array[Dictionary] = []
-    var node_cell: Vector2i = node.get("cell", Vector2i.ZERO)
-    var kind: StringName = StringName(node.get("kind", &""))
-    var anchor: Vector2i = _find_facility_anchor(node_cell, reserved_cells)
-    if anchor == Vector2i(2147483647, 2147483647):
+    var anchor: Vector2i = _find_facility_anchor(node.get("cell", Vector2i.ZERO), reserved_cells)
+    if anchor == INVALID_CELL:
         return result
-
-    var semantics: Array[StringName] = []
-    match kind:
-        &"regional_ingress":
-            semantics = [
-                &"prop.utility_pole_transformer",
-                &"prop.transformer",
-                &"prop.transformer",
-                &"prop.utility_box",
-            ]
-        &"substation":
-            semantics = [
-                &"prop.utility_pole_transformer",
-                &"prop.transformer",
-                &"prop.transformer",
-                &"prop.transformer",
-                &"prop.utility_box",
-                &"prop.utility_box",
-            ]
-        _:
-            semantics = [
-                &"prop.utility_pole_transformer",
-                &"prop.utility_box",
-            ]
-
-    var offsets: Array[Vector2i] = [
-        Vector2i.ZERO,
-        Vector2i(2, 0),
-        Vector2i(4, 0),
-        Vector2i(0, 2),
-        Vector2i(2, 2),
-        Vector2i(4, 2),
-    ]
+    var semantics: Array[StringName] = [&"prop.utility_pole_transformer", &"prop.utility_box"]
+    var offsets: Array[Vector2i] = [Vector2i.ZERO, Vector2i(2, 0)]
     var token: String = _stable_token(String(node.get("id", "node")))
     for index: int in range(semantics.size()):
         var cell: Vector2i = anchor + offsets[index]
@@ -343,21 +309,17 @@ func _node_equipment(node: Dictionary, reserved_cells: Dictionary) -> Array[Dict
 
 func _find_facility_anchor(node_cell: Vector2i, reserved_cells: Dictionary) -> Vector2i:
     var candidates: Array[Vector2i] = [
-        node_cell + Vector2i(6, 6),
-        node_cell + Vector2i(-6, 6),
-        node_cell + Vector2i(6, -6),
-        node_cell + Vector2i(-6, -6),
-        node_cell + Vector2i(8, 0),
-        node_cell + Vector2i(-8, 0),
-        node_cell + Vector2i(0, 8),
-        node_cell + Vector2i(0, -8),
+        node_cell + Vector2i(6, 6), node_cell + Vector2i(-6, 6),
+        node_cell + Vector2i(6, -6), node_cell + Vector2i(-6, -6),
+        node_cell + Vector2i(8, 0), node_cell + Vector2i(-8, 0),
+        node_cell + Vector2i(0, 8), node_cell + Vector2i(0, -8),
     ]
     for candidate: Vector2i in candidates:
         if not _plan.bounds.has_point(candidate) or reserved_cells.has(candidate):
             continue
         if _world.entities_at(candidate).is_empty():
             return candidate
-    return Vector2i(2147483647, 2147483647)
+    return INVALID_CELL
 
 func _materialize_prop(prop: Dictionary) -> bool:
     var entity_id: String = String(prop.get("id", "")).strip_edges()
@@ -373,13 +335,7 @@ func _materialize_prop(prop: Dictionary) -> bool:
     if _mutations.create_entity(semantic, entity_id) != entity_id:
         return false
     _created_ids.append(entity_id)
-    return _mutations.set_placement(
-        entity_id,
-        Layers.Channel.OBJECT,
-        cell,
-        facing,
-        FootprintClass.single_cell()
-    )
+    return _mutations.set_placement(entity_id, Layers.Channel.OBJECT, cell, facing, FootprintClass.single_cell())
 
 func _facing_toward_road(direction: Vector2i, side: int) -> int:
     var perpendicular := Vector2i(-direction.y, direction.x) * -side
@@ -402,3 +358,14 @@ static func _stable_parity(value: String) -> int:
     for index: int in range(value.length()):
         total = (total + value.unicode_at(index) * (index + 1)) & 0x7fffffff
     return total % 2
+
+static func _string_array(value: Variant) -> Array[String]:
+    var result: Array[String] = []
+    if typeof(value) != TYPE_ARRAY:
+        return result
+    for item: Variant in value:
+        var text: String = String(item).strip_edges()
+        if not text.is_empty() and not result.has(text):
+            result.append(text)
+    result.sort()
+    return result

@@ -29,18 +29,27 @@ jobs:
           test -f game/scripts/simulation/utilities/UtilityRuntimeState.gd
           test -f game/scripts/simulation/utilities/UtilityPoweredLightingSourceAdapter.gd
           test -f game/scripts/simulation/utilities/UtilityRefrigerationEnvironmentProvider.gd
+          test -f game/scripts/simulation/utilities/UtilityNetworkConditionStore.gd
+          test -f game/scripts/simulation/utilities/UtilityPowerNetworkRuntime.gd
+          test -f game/scripts/simulation/utilities/UtilityPowerInfrastructureMaterializer.gd
           test -f game/scripts/app/UtilityGameMain.gd
           test -f game/scripts/ui/UtilityDevControls.gd
           test -f game/scripts/ci/System33PowerWaterSmoke.gd
+          test -f game/scripts/ci/System33PowerInfrastructureSmoke.gd
+          test -f game/scripts/ci/System33PowerPhysicalNetworkSmoke.gd
           grep -q 'power_service_available' game/scripts/simulation/utilities/UtilityRuntimeState.gd
           grep -q 'water_service_available' game/scripts/simulation/utilities/UtilityRuntimeState.gd
           grep -q 'cold_storage_available' game/scripts/simulation/utilities/UtilityRuntimeState.gd
+          grep -q 'service_settlement_ids' game/scripts/generation/world/GlobalPowerInfrastructurePlanner.gd
+          grep -q '_wire_endpoint_ids' game/scripts/render/PowerLinePresentationRenderer.gd
+          grep -q 'next_failure_tick' game/scripts/simulation/utilities/UtilityPowerNetworkRuntime.gd
           grep -q 'register_provider' game/scripts/simulation/items/freshness/ItemFreshnessMutationService.gd
           grep -q 'register_provider' game/scripts/simulation/items/freshness/ItemFreshnessQuery.gd
           grep -q 'entity_ids_of_type' game/scripts/simulation/utilities/UtilityPoweredLightingSourceAdapter.gd
           ! grep -R -q '_process' game/scripts/simulation/utilities game/scripts/ui/UtilityDevControls.gd
           ! grep -R -q 'Timer.new' game/scripts/simulation/utilities game/scripts/ui/UtilityDevControls.gd
           ! grep -R -F -q '.entity_ids()' game/scripts/simulation/utilities
+          ! grep -q 'for asset_id.*advance_to_tick' game/scripts/simulation/utilities/UtilityPowerNetworkRuntime.gd
 
       - name: Install Godot 4.7.1
         shell: bash
@@ -57,13 +66,21 @@ jobs:
           ./Godot_v4.7.1-stable_linux.x86_64 --headless --editor --path "$GITHUB_WORKSPACE/game" --quit 2>&1 | tee "$RUNNER_TEMP/import.log"
           if grep -Eqi 'SCRIPT ERROR|Parse Error|Failed to load script' "$RUNNER_TEMP/import.log"; then exit 1; fi
 
-      - name: System 33 power water smoke
+      - name: System 33 utility and physical-network smokes
         shell: bash
         run: |
           set -euxo pipefail
-          ./Godot_v4.7.1-stable_linux.x86_64 --headless --path "$GITHUB_WORKSPACE/game" --script res://scripts/ci/System33PowerWaterSmoke.gd 2>&1 | tee "$RUNNER_TEMP/system33.log"
-          grep -q 'SYSTEM33_POWER_WATER_SMOKE_OK' "$RUNNER_TEMP/system33.log"
-          if grep -Eqi 'SCRIPT ERROR|Parse Error|Failed to load script' "$RUNNER_TEMP/system33.log"; then exit 1; fi
+          for spec in \
+            'System33PowerWaterSmoke.gd:SYSTEM33_POWER_WATER_SMOKE_OK' \
+            'System33PowerInfrastructureSmoke.gd:SYSTEM33_POWER_INFRASTRUCTURE_SMOKE_OK' \
+            'System33PowerPhysicalNetworkSmoke.gd:SYSTEM33_POWER_PHYSICAL_NETWORK_SMOKE_OK'; do
+            script=${spec%%:*}
+            marker=${spec#*:}
+            log="$RUNNER_TEMP/${script%.gd}.log"
+            ./Godot_v4.7.1-stable_linux.x86_64 --headless --path "$GITHUB_WORKSPACE/game" --script "res://scripts/ci/$script" 2>&1 | tee "$log"
+            grep -q "$marker" "$log"
+            if grep -Eqi 'SCRIPT ERROR|Parse Error|Failed to load script' "$log"; then exit 1; fi
+          done
 
       - name: Protected island lighting freshness and performance regressions
         shell: bash

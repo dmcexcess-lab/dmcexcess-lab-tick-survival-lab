@@ -1,8 +1,8 @@
 extends Node2D
 class_name PowerLinePresentationRenderer
 
-## Event-driven overhead-wire presentation for the real persistent utility supports.
-## Wire edges are a cached projection of canonical 00D4 topology; drawing never owns power truth.
+## Event-driven overhead-wire presentation for real persistent utility supports.
+## Wire edges are cached 00D4 topology projection. Electrical service state never owns visibility.
 
 const WIRE_COLOR := Color(0.10, 0.11, 0.12, 0.92)
 const WIRE_HIGHLIGHT := Color(0.23, 0.24, 0.25, 0.72)
@@ -10,6 +10,7 @@ const WIRE_HIGHLIGHT := Color(0.23, 0.24, 0.25, 0.72)
 var _world: WorldState = null
 var _wires: Array[Dictionary] = []
 var _visible_wires: Array[Dictionary] = []
+var _wire_endpoint_ids: Dictionary = {}
 var _visible_origin: Vector2i = Vector2i.ZERO
 var _visible_size: Vector2i = Vector2i.ZERO
 var _cell_pixels: float = 0.0
@@ -21,6 +22,7 @@ func configure(world_state: WorldState, wire_edges: Array[Dictionary]) -> bool:
     _disconnect_world_signals()
     _world = world_state
     _wires = wire_edges.duplicate(true)
+    _rebuild_endpoint_index()
     _connect_world_signals()
     _rebuild_visible_wires()
     queue_redraw()
@@ -55,10 +57,8 @@ func _draw() -> void:
     var width: float = maxf(1.0, _cell_pixels * 0.055)
     var separation: float = maxf(1.0, _cell_pixels * 0.08)
     for wire: Dictionary in _visible_wires:
-        var start_id: String = String(wire.get("start_id", ""))
-        var end_id: String = String(wire.get("end_id", ""))
-        var start_placement: WorldPlacement = _world.placement(start_id)
-        var end_placement: WorldPlacement = _world.placement(end_id)
+        var start_placement: WorldPlacement = _world.placement(String(wire.get("start_id", "")))
+        var end_placement: WorldPlacement = _world.placement(String(wire.get("end_id", "")))
         if start_placement == null or end_placement == null:
             continue
         var start: Vector2 = _screen_point(start_placement.anchor)
@@ -72,6 +72,16 @@ func _draw() -> void:
 
 func _screen_point(cell: Vector2i) -> Vector2:
     return (Vector2(cell - _visible_origin) + Vector2(0.5, 0.18)) * _cell_pixels
+
+func _rebuild_endpoint_index() -> void:
+    _wire_endpoint_ids.clear()
+    for wire: Dictionary in _wires:
+        var start_id: String = String(wire.get("start_id", "")).strip_edges()
+        var end_id: String = String(wire.get("end_id", "")).strip_edges()
+        if not start_id.is_empty():
+            _wire_endpoint_ids[start_id] = true
+        if not end_id.is_empty():
+            _wire_endpoint_ids[end_id] = true
 
 func _rebuild_visible_wires() -> void:
     _visible_wires.clear()
@@ -112,13 +122,10 @@ func _disconnect_world_signals() -> void:
         _world.world_reset.disconnect(reset_callable)
 
 func _on_world_changed(change: WorldChange) -> void:
-    if change == null or change.entity_id.is_empty():
+    if change == null or change.entity_id.is_empty() or not _wire_endpoint_ids.has(change.entity_id):
         return
-    for wire: Dictionary in _wires:
-        if String(wire.get("start_id", "")) == change.entity_id or String(wire.get("end_id", "")) == change.entity_id:
-            _rebuild_visible_wires()
-            queue_redraw()
-            return
+    _rebuild_visible_wires()
+    queue_redraw()
 
 func _on_world_reset() -> void:
     _rebuild_visible_wires()

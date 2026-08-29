@@ -48,18 +48,22 @@ func plan(
         "settlement_id": String(smalltown.get("id", "")),
     })
 
+    var all_settlement_ids: Array[String] = []
     for index in range(settlements.size()):
         var settlement: Dictionary = settlements[index]
         var center: Vector2i = settlement.get("center", INVALID_CELL)
-        if center == INVALID_CELL:
+        var settlement_id: String = String(settlement.get("id", ""))
+        if center == INVALID_CELL or settlement_id.is_empty():
             return {"ok": false, "failure_reason": "power_settlement_service_location_invalid", "power_nodes": [], "power_segments": []}
+        all_settlement_ids.append(settlement_id)
         power_nodes.append({
             "id": "power.node.service.%03d" % [index + 1],
             "network_id": NETWORK_ID,
             "kind": &"settlement_service",
             "cell": center,
-            "settlement_id": String(settlement.get("id", "")),
+            "settlement_id": settlement_id,
         })
+    all_settlement_ids.sort()
 
     var graph_result: Dictionary = _build_road_graph(road_segments, settlements, gateways)
     if not bool(graph_result.get("ok", false)):
@@ -67,16 +71,31 @@ func plan(
     var adjacency: Dictionary = graph_result.get("adjacency", {})
     var edges_by_key: Dictionary = graph_result.get("edges_by_key", {})
 
+    # Physical distribution follows the same hierarchy as System 33 service truth:
+    # regional ingress -> substation -> settlement services. Each road-graph edge records the
+    # settlements causally downstream of that physical span so runtime damage never has to
+    # rediscover topology or scan the world.
     var used_edge_keys: Dictionary = {}
-    for node: Dictionary in power_nodes:
-        if StringName(node.get("kind", &"")) == &"regional_ingress":
-            continue
-        var target: Vector2i = node.get("cell", INVALID_CELL)
-        var path_result: Dictionary = _shortest_path(ingress_cell, target, adjacency, profile)
+    var service_ids_by_edge: Dictionary = {}
+
+    var trunk_path: Dictionary = _shortest_path(ingress_cell, smalltown_center, adjacency, profile)
+    if not bool(trunk_path.get("ok", false)):
+        return {"ok": false, "failure_reason": "power_substation_unreachable", "power_nodes": [], "power_segments": []}
+    for edge_key_value: Variant in trunk_path.get("edge_keys", []):
+        var edge_key: String = String(edge_key_value)
+        used_edge_keys[edge_key] = true
+        _merge_edge_services(service_ids_by_edge, edge_key, all_settlement_ids)
+
+    for settlement: Dictionary in settlements:
+        var settlement_id: String = String(settlement.get("id", ""))
+        var target: Vector2i = settlement.get("center", INVALID_CELL)
+        var path_result: Dictionary = _shortest_path(smalltown_center, target, adjacency, profile)
         if not bool(path_result.get("ok", false)):
             return {"ok": false, "failure_reason": "power_required_node_unreachable", "power_nodes": [], "power_segments": []}
         for edge_key_value: Variant in path_result.get("edge_keys", []):
-            used_edge_keys[String(edge_key_value)] = true
+            var edge_key: String = String(edge_key_value)
+            used_edge_keys[edge_key] = true
+            _merge_edge_services(service_ids_by_edge, edge_key, [settlement_id])
 
     if used_edge_keys.is_empty():
         return {"ok": false, "failure_reason": "power_feeder_network_empty", "power_nodes": [], "power_segments": []}
@@ -89,6 +108,12 @@ func plan(
         if not edges_by_key.has(edge_key):
             return {"ok": false, "failure_reason": "power_feeder_edge_missing", "power_nodes": [], "power_segments": []}
         var edge: Dictionary = edges_by_key[edge_key]
+        var downstream: Array[String] = []
+        for value: Variant in service_ids_by_edge.get(edge_key, []):
+            downstream.append(String(value))
+        downstream.sort()
+        if downstream.is_empty():
+            return {"ok": false, "failure_reason": "power_feeder_service_mapping_missing", "power_nodes": [], "power_segments": []}
         power_segments.append({
             "id": "power.segment.%03d" % ordinal,
             "network_id": NETWORK_ID,
@@ -98,10 +123,21 @@ func plan(
             "ordinal": ordinal,
             "source_road_id": String(edge.get("road_id", "")),
             "source_route_id": String(edge.get("route_id", "")),
+            "service_settlement_ids": downstream,
         })
         ordinal += 1
 
     return {"ok": true, "failure_reason": "", "power_nodes": power_nodes, "power_segments": power_segments}
+
+func _merge_edge_services(service_ids_by_edge: Dictionary, edge_key: String, service_ids: Array[String]) -> void:
+    var existing: Array[String] = []
+    for value: Variant in service_ids_by_edge.get(edge_key, []):
+        existing.append(String(value))
+    for service_id: String in service_ids:
+        if not service_id.is_empty() and not existing.has(service_id):
+            existing.append(service_id)
+    existing.sort()
+    service_ids_by_edge[edge_key] = existing
 
 func _build_road_graph(
     road_segments: Array[Dictionary],

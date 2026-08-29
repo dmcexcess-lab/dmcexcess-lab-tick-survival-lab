@@ -4,6 +4,7 @@ class_name UtilityGameMain
 const UtilityStateClass = preload("res://scripts/simulation/utilities/UtilityRuntimeState.gd")
 const UtilityLightingClass = preload("res://scripts/simulation/utilities/UtilityPoweredLightingSourceAdapter.gd")
 const PowerInfrastructureClass = preload("res://scripts/simulation/utilities/UtilityPowerInfrastructureMaterializer.gd")
+const PowerNetworkRuntimeClass = preload("res://scripts/simulation/utilities/UtilityPowerNetworkRuntime.gd")
 const RefrigerationProviderClass = preload("res://scripts/simulation/utilities/UtilityRefrigerationEnvironmentProvider.gd")
 const UtilityControlsClass = preload("res://scripts/ui/UtilityDevControls.gd")
 
@@ -17,6 +18,7 @@ const COLD_CONTAINER_TYPES: Array[StringName] = [
 var _utilities: UtilityRuntimeState = null
 var _utility_lighting: UtilityPoweredLightingSourceAdapter = null
 var _power_infrastructure: UtilityPowerInfrastructureMaterializer = null
+var _power_network: UtilityPowerNetworkRuntime = null
 var _refrigeration_providers: Dictionary = {}
 var _utility_controls: UtilityDevControls = null
 var _central_power_service_id: String = ""
@@ -55,6 +57,9 @@ func _boot_utility_runtime() -> bool:
     var containment_callable := Callable(self, "_on_utility_item_containment_changed")
     if not _inventory_state.item_containment_changed.is_connected(containment_callable):
         _inventory_state.item_containment_changed.connect(containment_callable)
+    var tick_callable := Callable(self, "_on_power_network_tick_advanced")
+    if not _kernel.world_tick_advanced.is_connected(tick_callable):
+        _kernel.world_tick_advanced.connect(tick_callable)
 
     _utility_controls = UtilityControlsClass.new()
     add_child(_utility_controls)
@@ -73,15 +78,43 @@ func _wire_power_infrastructure(plan: GeneratedGlobalWorldPlan) -> bool:
     for semantic_type: StringName in PowerInfrastructureClass.COLLISION_SEMANTICS:
         if not _collision_catalog.register(semantic_type, true):
             return false
-    _power_infrastructure = PowerInfrastructureClass.new(
-        _world,
-        _world_mutations,
-        plan,
-        _utilities
-    )
+    _power_infrastructure = PowerInfrastructureClass.new(_world, _world_mutations, plan, _utilities)
     if not _power_infrastructure.materialize():
         return false
+    _power_network = PowerNetworkRuntimeClass.new()
+    if not _power_network.initialize(_utilities, _power_infrastructure.wire_edges(), Callable(_kernel, "world_tick")):
+        return false
+    # Presentation receives the same physical distribution projection regardless of energized or
+    # failed state. A dead cable is still a cable and must remain visible.
     return _world_view.configure_power_infrastructure(_world, _power_infrastructure.wire_edges())
+
+func damage_power_infrastructure(asset_id: String, damage: int, source_kind: StringName = &"direct") -> bool:
+    return _power_network != null and _power_network.damage_asset(asset_id, damage, source_kind)
+
+func repair_power_infrastructure(asset_id: String, electrical_skill: int, available_material_units: int) -> Dictionary:
+    if _power_network == null:
+        return {"ok": false, "material_units_consumed": 0, "reason": &"power_network_unavailable"}
+    return _power_network.repair_asset(asset_id, electrical_skill, available_material_units)
+
+func power_infrastructure_repair_requirements(asset_id: String) -> Dictionary:
+    if _power_network == null:
+        return {}
+    return _power_network.repair_requirements(asset_id)
+
+func power_infrastructure_asset_ids(kind: StringName = &"") -> Array[String]:
+    if _power_network == null:
+        return []
+    return _power_network.asset_ids(kind)
+
+func power_infrastructure_debug_snapshot() -> Dictionary:
+    return {
+        "distribution": {} if _power_infrastructure == null else _power_infrastructure.debug_snapshot(),
+        "network": {} if _power_network == null else _power_network.debug_snapshot(),
+    }
+
+func _on_power_network_tick_advanced(_previous_tick: int, new_tick: int) -> void:
+    if _power_network != null:
+        _power_network.advance_to_tick(new_tick)
 
 func _wire_utility_lighting() -> bool:
     if _physical_lighting == null or _hand_state == null:
