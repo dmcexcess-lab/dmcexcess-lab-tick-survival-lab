@@ -1,6 +1,8 @@
 # Tick Survival Lab — System 33 Power / Water Utility Runtime
 
-Status: **DRAFT — DESCRIBE complete; explicit approval required before runtime implementation**
+Status: **IMPLEMENTED + AUTOMATED VERIFIED — Candidate 001; HUMAN RETEST PENDING**
+
+Verified repaired executable: `ec7be83146d62055a5d2d4b1233eb7cc50cea630`
 
 Roadmap phase: **Phase 3 — Power and Water**
 
@@ -17,13 +19,33 @@ Primary downstream contracts:
 
 ---
 
+## 0. Lifecycle / implementation record
+
+Candidate 001 completed DESCRIBE and received explicit user approval before implementation.
+
+Initial implementation lineage:
+
+- `95a23ac49328c852b507a39a661354cbd445ed6c` — System-33 runtime power/water/refrigeration implementation.
+- `6ba3fb08520323a9ab816bbcc20b1f8a64434ab2` — verification composition alignment.
+
+Human play then **rejected the visible lighting integration**: runtime utility truth existed, but fixed lighting still came from legacy demo coordinates and the player received an unconditional fake flashlight beam.
+
+Focused truthful-lighting repair lineage:
+
+- `2267a7ea1b0fcd76fab90ddf23219c7e1ae70d43` — replaced fake lighting sources with real WHAT fixture/equipment truth.
+- `ec7be83146d62055a5d2d4b1233eb7cc50cea630` — aligned stale regression contracts with the truthful source boundary and exact-head verified the repaired executable.
+
+The repaired executable is automated-green. **Human browser retest remains the acceptance gate; Phase 3 is not HUMAN ACCEPTED yet.**
+
+---
+
 ## 1. Goal
 
 Create the first persistent runtime utility model for the playable world.
 
-System 00D already answers **where utility infrastructure is planned**. System 33 answers **whether that infrastructure is currently able to provide service** and exposes that truth to real world consumers.
+System 00D answers **where utility infrastructure is planned**. System 33 answers **whether that infrastructure currently provides service** and exposes that truth to real world consumers.
 
-The target is intentionally smaller than a full electrical or hydraulic simulator. The game needs causal outages, local consequences, persistent repair seams and future expansion points without paying for load-flow mathematics, pressure solvers or recurring whole-network simulation.
+The target is intentionally smaller than a full electrical or hydraulic simulator. The game needs causal outages, local consequences, persistent repair seams and future expansion points without load-flow mathematics, pressure solvers or recurring whole-network simulation.
 
 > **Planning says where utility topology exists. System 33 owns whether that topology currently provides service. Consumers query service; they never infer it from art, brightness or UI state.**
 
@@ -31,18 +53,18 @@ The target is intentionally smaller than a full electrical or hydraulic simulato
 
 ## 2. Non-negotiable gameplay result
 
-Phase 3 must make utility failure spatial and causal rather than one global switch.
+Utility failure is spatial and causal rather than one global switch.
 
-A failure near one structure may darken or disable that structure while another remains supplied. A settlement feeder failure may affect a broader area. A major source failure may affect everything downstream.
+A local branch failure may disable one structure while another remains supplied. A settlement feeder failure affects its downstream area. A major source failure affects all dependent service.
 
-Water follows the same principle, with one additional dependency: an electrically driven pump cannot provide water when its required power service is unavailable.
+Water follows the same principle, with an additional dependency: an electrically driven pump cannot provide water when its required power service is unavailable.
 
-The player should be able to reason from the world:
+The player should be able to reason from world truth:
 
-- this branch is down, therefore these buildings lost service;
+- this branch is down, therefore these consumers lost power;
 - this pump has no power, therefore this water service is unavailable;
 - this refrigerator lost power, therefore it is no longer cold storage;
-- this fixed light has no power, therefore System 27 receives no active emitter from it.
+- this real fixed fixture has no power, therefore System 27 receives no active emitter from it.
 
 ---
 
@@ -57,27 +79,27 @@ System 33 owns:
 - cached service results and utility revisions;
 - explicit mutation APIs for utility component/link state;
 - power dependency of electrically driven water pumps;
-- persistent on/off state for fixed utility-powered appliance/fixture consumers where that state is necessary to determine service use;
-- read-only service query APIs for downstream systems;
-- snapshot/restore of its typed durable state;
+- persistent appliance/fixture operational and switch state where needed;
+- read-only service queries for downstream systems;
+- snapshot/restore of typed durable utility state;
 - change notifications sufficient for downstream invalidation.
 
 System 33 does **not** own:
 
-- global geography or placement of utility corridors — System 00D owns planning;
-- procedural building grammar — Systems 19/20 own local generated form;
-- rendering, light sprites or glow — presentation systems own those;
-- physical illumination math — System 27 owns it;
-- item freshness math — System 30 owns it;
-- hunger, thirst, drinking consequences or nutrition — Phase 4 owns those;
-- liquid item/container simulation unless separately designed later;
-- repair skill checks — final Mechanical/Electrical skills arrive in Phase 6;
-- vehicle collisions or combat damage generation — later systems may call System 33 mutation APIs;
+- global utility geography/corridors — System 00D owns planning;
+- procedural building grammar — Systems 19/20;
+- rendering, sprites or glow;
+- physical illumination math — System 27;
+- freshness math — System 30;
+- hunger, thirst, drinking consequences or nutrition — Phase 4;
+- generic liquid item/container simulation;
+- final repair skill checks — Phase 6;
+- vehicle/combat damage generation;
 - automatic random outages;
-- electrical load balancing, amperage, voltage drop, breaker-panel simulation or individual wire circuits;
-- hydraulic pressure, flow-rate, pipe diameter or contamination simulation;
+- detailed electrical loads/voltage/breakers/circuits;
+- hydraulic pressure/flow/pipe-size/contamination simulation;
 - wastewater/sewer gameplay;
-- portable battery/fuel equipment truth unless separately approved.
+- portable battery/fuel depletion unless separately designed.
 
 ---
 
@@ -85,26 +107,19 @@ System 33 does **not** own:
 
 System 33 may read:
 
-- stable System-00D electrical/water planning identities and topology facts;
-- WHAT stable entity/structure identities where local consumers are real entities;
+- stable 00D electrical/water planning identities and topology facts;
+- WHAT stable entity/structure identities for real consumers;
 - local materialization/building facts only to establish deterministic service bindings;
-- authoritative WHEN/world-time state only when an explicit timed utility action later needs it.
+- authoritative WHEN/world-time only when an explicit timed utility action needs it.
 
 System 33 may publish read-only state to:
 
 - System 27 fixed-light source integration;
 - System 30 cold-storage exposure integration;
-- System 29 inspection/interaction offers;
+- System 29 inspection/interaction affordances;
 - future repair, construction, AI and survival systems.
 
-System 33 may not depend on:
-
-- render frames;
-- camera position;
-- art atlas selection;
-- player UI state;
-- a consumer's visual brightness;
-- streamed-node existence as proof that infrastructure exists.
+System 33 may not depend on render frames, camera position, art selection, UI state, visual brightness or streamed-node existence as proof of utility existence.
 
 Technical streaming never defines utility existence.
 
@@ -112,120 +127,43 @@ Technical streaming never defines utility existence.
 
 ## 5. Runtime topology: three causal tiers
 
-The roadmap's three-tier model remains canonical. The implementation should preserve these semantic tiers without requiring a generic arbitrary graph engine.
-
 ### 5.1 Power
 
-**Tier 1 — regional source / major supply**
+1. **Tier 1 — regional source / major supply**
+2. **Tier 2 — substation / settlement feeder**
+3. **Tier 3 — local branch / structure service**
 
-Represents broad incoming generation/supply planned by 00D4.
-
-**Tier 2 — substation / settlement feeder**
-
-Represents the planned substation and settlement-level service path.
-
-**Tier 3 — local branch / structure service**
-
-Represents the final service path from settlement distribution to a structure or local consumer group.
-
-A structure is powered only if every required upstream power component/link on its resolved service path is operational.
+An endpoint is powered only if every required upstream component/link on its resolved service path is operational and an operational source is reached.
 
 ### 5.2 Potable water
 
-**Tier 1 — source + treatment/storage**
+1. **Tier 1 — source + treatment/storage**
+2. **Tier 2 — pump/distribution / settlement service**
+3. **Tier 3 — property / structure service**
 
-Represents the planned municipal groundwater/source and treatment/storage chain where applicable.
-
-**Tier 2 — pump/distribution / settlement service**
-
-Represents settlement-level distribution and any required pumping.
-
-**Tier 3 — property / structure service**
-
-Represents the final local potable-water service endpoint.
-
-A water endpoint has service only if every required upstream water component/link is operational **and** every electrically driven pump on that service path currently has required power.
+A water endpoint has service only if the required upstream water path is operational and every electrical pump dependency has power.
 
 ### 5.3 Rural decentralized water
 
-00D5 already describes rural decentralized source intent rather than pretending every rural site is municipally piped.
+Where existing planning/local context calls for decentralized rural service, Candidate 001 materializes deterministic private/shared well service.
 
-Candidate 001 may materialize a deterministic private/shared well service for rural properties where the existing planning/local-generation facts call for one.
-
-A rural electrically pumped well is intentionally compact:
-
-- the source/well exists as a persistent utility component;
-- the pump has an operational state;
-- the pump has a power-service dependency;
-- the property water endpoint derives availability from those facts.
-
-No groundwater depletion or aquifer simulation is required in Candidate 001.
+A rural electrically pumped well consists of persistent source/well truth, persistent pump state, a power-service dependency and a derived property water endpoint. Aquifer depletion is not simulated.
 
 ---
 
 ## 6. Typed persistent state
 
-Do not add arbitrary metadata to WHAT entities. Following 00B, System 33 keeps explicit typed domain state keyed by stable IDs.
+Do not add arbitrary metadata to WHAT entities. System 33 keeps explicit typed domain state keyed by stable IDs.
 
-Candidate implementation modules should remain domain-specific unless a shared abstraction proves real value.
+Power domain includes persistent component/link/service-binding records. Water domain includes persistent source/treatment/pump/well/local-service component/link/binding records. Appliance state includes stable consumer identity, service binding, operational state and switch state where relevant.
 
-### 6.1 Power state
-
-`PowerComponentState`
-
-- stable `component_id`;
-- semantic role: source, substation, feeder, local branch, structure service;
-- operational state;
-- source planning identity/reference where applicable.
-
-`PowerLinkState`
-
-- stable `link_id`;
-- upstream component ID;
-- downstream component ID;
-- operational state;
-- source planning identity/reference where applicable.
-
-`PowerServiceBinding`
-
-- stable consumer/service ID;
-- resolved terminal power component ID;
-- optional WHAT structure/entity ID owning the endpoint.
-
-### 6.2 Water state
-
-`WaterComponentState`
-
-- stable `component_id`;
-- semantic role: source, treatment/storage, pump/distribution, well, local main, structure/property service;
-- operational state;
-- optional required power service ID for electrically driven pumps;
-- source planning identity/reference where applicable.
-
-`WaterLinkState`
-
-- stable `link_id`;
-- upstream component ID;
-- downstream component ID;
-- operational state.
-
-`WaterServiceBinding`
-
-- stable consumer/service ID;
-- resolved terminal water component ID;
-- optional WHAT structure/entity/property identity.
-
-### 6.3 Operational state
-
-Candidate 001 needs only a small explicit state set:
+Operational state set:
 
 - `OPERATIONAL`
 - `DISABLED`
 - `DAMAGED`
 
-`DISABLED` is an intact but intentionally unavailable state useful for switches/test controls/future shutoffs.
-
-`DAMAGED` is persistent physical failure awaiting a future real repair action.
+`DISABLED` is intact but intentionally unavailable. `DAMAGED` is persistent physical failure awaiting a future repair action.
 
 No automatic decay/random failure generator belongs in Candidate 001.
 
@@ -233,20 +171,11 @@ No automatic decay/random failure generator belongs in Candidate 001.
 
 ## 7. Topology materialization and stable identity
 
-System 33 must consume the existing 00D4/00D5 plan rather than generate competing utility geography.
+System 33 consumes 00D4/00D5 planning rather than generating competing utility geography.
 
-On virgin-world initialization:
+On virgin initialization it deterministically materializes runtime components/links with stable IDs, binds settlement/local service endpoints, creates rural decentralized-water components where required and initializes operational state once.
 
-1. read stable global utility planning records;
-2. deterministically materialize runtime utility components/links with stable IDs derived from planning identity + role;
-3. bind planned settlement service nodes to local/structure service endpoints through deterministic local-generation identities;
-4. create rural decentralized-water components only where planning/local context requires them;
-5. initialize operational state once;
-6. thereafter treat System-33 state as current persistent truth.
-
-Reloading/materializing a region must not recreate or heal damaged utility state.
-
-If the world already has System-33 state, generation/planning is reference topology, not authority to overwrite current runtime state.
+Afterward, System-33 state is current persistent truth. Reloading or streaming a region must not recreate/heal damaged utility state. Planning remains reference topology, not an overwrite authority.
 
 ---
 
@@ -254,23 +183,21 @@ If the world already has System-33 state, generation/planning is reference topol
 
 Service is **derived**, not stored as a second mutable truth.
 
-Power service for endpoint `E`:
+Power query:
 
-1. resolve `E` to its terminal power component;
-2. follow the bounded required upstream chain;
-3. service is available only when all required components/links are operational and a valid operational source is reached.
+1. resolve endpoint to its terminal component;
+2. follow its bounded required upstream chain;
+3. require all components/links operational and a valid source.
 
-Water service for endpoint `W`:
+Water query:
 
-1. resolve `W` to its terminal water component;
-2. follow the bounded required upstream water chain;
-3. verify all required components/links are operational;
-4. for any electrically driven pump, query its required power service;
-5. service is available only if an operational potable source is reached and all pump dependencies are satisfied.
+1. resolve endpoint to its terminal water component;
+2. follow bounded upstream water chain;
+3. require all water components/links operational;
+4. query required power service for electrical pumps;
+5. require a valid potable source.
 
-Candidate 001 should prefer deterministic parent/upstream chains appropriate to the generated three-tier topology over a generalized pathfinder. If later construction creates branching/re-routing networks, that may justify a richer graph design then.
-
-Cycles or malformed topology fail closed in validation/service queries rather than producing service accidentally.
+Candidate 001 uses deterministic bounded parent/upstream chains rather than a generalized pathfinder. Malformed/cyclic topology fails closed.
 
 ---
 
@@ -278,63 +205,61 @@ Cycles or malformed topology fail closed in validation/service queries rather th
 
 Utilities are event-driven state, not a clocked simulation.
 
-Required performance rules:
+Required rules:
 
-- no `_process()`/frame-driven utility simulation;
+- no `_process()` utility simulation;
 - no recurring whole-world service scan;
-- no timer per component, link, fixture or appliance;
-- no full topology traversal merely because world time advanced;
-- no work because the camera moved;
+- no timer per component/link/fixture/appliance;
+- no topology work merely because world time advanced;
+- no camera-driven service recomputation;
 - no dependency on streaming activation for truth.
 
-Each utility domain owns a monotonically increasing revision.
+Power and water own monotonic revisions. Relevant mutations invalidate bounded/domain caches. Water derivation also keys off power revision where pumps depend on power.
 
-A successful mutation of relevant power truth increments the power revision and invalidates only affected cached service results or, for Candidate 001 if simpler and still bounded, the small domain service cache.
-
-Water service cache invalidates on water revision and on power revision for endpoints whose pumps require power.
-
-Consumers wake from explicit utility revision/change notifications. They do not poll every frame.
-
-The cost target is proportional to the changed service chain/known consumers, not the world area or number of terrain cells.
+Consumers wake from explicit revision/change notifications instead of polling every frame.
 
 ---
 
-## 10. Fixed lighting integration
+## 10. Fixed and portable lighting integration
 
-System 27 remains the only owner of physical illumination/emitter truth.
+System 27 remains the owner of physical illumination/emitter truth. System 33 does not brighten tiles directly.
 
-System 33 does not brighten tiles directly.
+### 10.1 Fixed powered fixtures
 
-For fixed powered fixtures:
+Canonical fixed-light source behavior:
 
-1. a real persistent fixture/entity is bound to a power service;
-2. its own persistent switch/operational state is read;
-3. System 33 reports whether electrical service is available;
-4. a thin canonical source provider translates **powered + switched on + operational fixture** into System-27 emitter input;
-5. System 27 handles illumination, visibility and presentation consequences normally.
+1. a **real persistent WHAT fixture entity** is identified by semantic type;
+2. emitter origin/facing comes from that entity's actual `WorldPlacement`;
+3. the fixture binds to the System-33 power service for its real cell;
+4. its appliance operational/switch state and power service determine availability;
+5. the thin System-33/System-27 provider emits a System-27 descriptor only while that real fixture is available;
+6. System 27 handles illumination, shadow, visibility and presentation consequences.
 
-A dark sprite cannot make a fixture unpowered. A bright sprite cannot make it powered.
+A bright sprite cannot create service or emitter truth. A dark sprite cannot remove service truth.
 
-The temporary DEV lighting adapter should be retired only for the portion replaced by real canonical truth. The portable flashlight may remain on an honestly temporary equipment-source seam until portable battery/equipment state is deliberately designed; Phase 3 must not fake battery simulation simply to delete a filename.
+Supported fixed semantic fixture families in the repaired provider currently include street/traffic/crosswalk lights, lamps and neon fixtures.
+
+### 10.2 Portable flashlight truth
+
+The old DEV player flashlight source is retired.
+
+The player has **no flashlight beam by default**. A flashlight emitter exists only while a real WHAT entity with semantic type `item.tool.flashlight` is assigned to a real System-09 hand slot. Its origin/facing derives from the controlled actor's real placement.
+
+Candidate 001 does not invent battery depletion or a hidden default flashlight. Grid outages do not fake-disable a portable flashlight. Battery/toggle behavior is a future portable-equipment concern unless separately approved.
+
+`DemoLightingSourceAdapter` remains only as an inert compatibility/bootstrap shim and must emit zero gameplay lights.
+
+A facing-only turn with no equipped moving light must not wake the physical-light solver.
 
 ---
 
 ## 11. Refrigeration integration
 
-System 30 continues to own freshness derivation and spoilage math.
+System 30 owns freshness derivation.
 
-A refrigerator becomes valid cold-storage exposure only when:
+A refrigerator is valid cold storage only when it is a real persistent appliance/container, operational, switched on and supplied by its bound power service.
 
-- the refrigerator is a real persistent appliance/container;
-- its appliance state is operational;
-- its switch state is on;
-- its bound power service is available.
-
-System 33 (or a thin provider owned at the System-33/System-30 seam) exposes authoritative cold-storage availability. System 30 consumes that as storage-environment input without gaining ownership of power.
-
-When power is lost, no item timer is created. The storage exposure changes at an authoritative tick/time boundary, and System 30 analytically derives future freshness from that exposure history according to its existing contract.
-
-Candidate 001 should not add freezer thermodynamics, compressor cycling or per-fridge temperature simulation.
+System 33 exposes cold-storage availability; System 30 consumes it as storage-environment input. Power loss changes exposure truth at an authoritative boundary. No per-item timer, compressor cycle or detailed temperature simulation is introduced.
 
 ---
 
@@ -342,253 +267,149 @@ Candidate 001 should not add freezer thermodynamics, compressor cycling or per-f
 
 Phase 4 thirst/drinking is not implemented here.
 
-Candidate 001 may expose truthful water availability to existing fixture inspection/interaction UI:
-
-- sink/faucet/water fixture has service;
-- service unavailable;
-- pump unpowered;
-- component damaged/disabled where discoverable by inspection.
-
-Do not invent an abstract water inventory or fake drinking action merely to demonstrate the network.
-
-If a real liquid-container/fill system does not already exist, actual drawing/filling of water remains deferred to the later system that owns liquid item state.
+Candidate 001 exposes truthful water availability/diagnostic state for service inspection, including unavailable service and pump-power dependency. It does not invent an abstract water inventory or fake drinking/filling mechanics when no canonical liquid system exists.
 
 ---
 
 ## 13. Appliance / fixture local state
 
-A utility consumer may need a tiny persistent local state independent from service availability:
+Utility consumers may have persistent local operational/damaged and switched-on/off state independent from upstream service.
 
-- operational/damaged;
-- switched on/off.
-
-This state must be keyed to the real persistent consumer entity/service identity and survive streaming/snapshot restore.
-
-Initial generated fixed fixtures/appliances may deterministically start operational and switched on where appropriate. That is virgin initialization, not fake runtime truth.
-
-Changing a switch later must happen through an explicit action/interaction mutation, not by UI directly rewriting presentation state.
+This state is keyed to real persistent consumer/service identity and survives snapshot/restore. Virgin generated appliances may deterministically start operational/on where appropriate; later changes must occur through canonical mutation/action seams rather than UI presentation state.
 
 ---
 
 ## 14. Damage, outage and repair seams
 
-Candidate 001 needs real failure state and real mutation APIs even before final repair skills exist.
+Candidate 001 includes real failure state and canonical mutation APIs before final repair skills exist.
 
-Allowed initial causes:
+Current allowed causes include DEV test controls and focused tests that call those same canonical mutation APIs.
 
-- deterministic DEV test controls that call the same canonical mutation API future gameplay will use;
-- explicit fixture/utility state mutations from focused tests.
+Deferred causes include trees/vehicles, combat/explosions, sabotage, NPC actions, weather damage, wear and final repair skill actions.
 
-Deferred causes:
-
-- trees/vehicles striking lines;
-- combat/explosions;
-- player sabotage;
-- NPC actions;
-- weather damage if deliberately designed;
-- wear/failure over time.
-
-Future repair actions use the same damaged state. Phase 6 Electrical/Mechanical skills can gate or modify those actions without changing System-33 ownership.
-
-DEV outage controls are acceptable only as **controls over real canonical state**. They may not own a parallel demo utility model.
+DEV controls are acceptable only as controls over real System-33 state; they may not own a parallel demo utility model.
 
 ---
 
 ## 15. WHEN / pause semantics
 
-Utility truth changes only because an authoritative mutation occurs.
+Utility truth changes because an authoritative mutation occurs. Candidate 001 has no background time progression requirement.
 
-Candidate 001 has no background time progression requirement.
+Future timed toggle/damage/repair actions must use WHEN for duration/commit, mutate System 33 at the authoritative commit boundary and notify downstream consumers once from settled state.
 
-If a future action toggles, damages or repairs utility equipment:
-
-- input emits intent;
-- WHEN owns action duration/commit;
-- System 33 mutation occurs at the authoritative commit boundary;
-- revisions change once;
-- downstream lighting/freshness/inspection updates derive from the settled state.
-
-No utility work runs while the player is paused merely because render frames continue.
+No utility simulation runs simply because render frames continue while paused.
 
 ---
 
 ## 16. Snapshot / restore
 
-System 33 snapshot must contain canonical typed state only:
+System-33 snapshot contains canonical typed state only: schema version, persistent power/water component/link/binding state, appliance/switch state and required revision values.
 
-- schema version;
-- power component states;
-- power link states;
-- power service bindings that are runtime-created rather than safely reconstructible;
-- water component states;
-- water link states;
-- water service bindings that are runtime-created rather than safely reconstructible;
-- persistent local switch/operational states owned by this system;
-- revision values where needed for deterministic restore semantics.
+Derived service caches are not serialized.
 
-Do not serialize derived service caches.
-
-Restore validates all IDs/references/topology into temporary stores before replacing live state, then rebuilds caches and emits a domain reset/revision notification.
-
-Pre-Beta save incompatibility may still invalidate old saves rather than carrying vestigial migration code when the user has not requested compatibility.
+Restore validates IDs/references/topology into temporary state before replacing live state, rebuilds caches and emits reset/revision notification. Pre-Beta incompatibility may invalidate old saves rather than carry vestigial migration code unless compatibility is explicitly requested.
 
 ---
 
-## 17. Candidate 001 implementation slices
-
-After explicit approval, implement in this order.
+## 17. Candidate 001 implementation slices — IMPLEMENTED
 
 ### 33A — Utility state foundation + plan materialization
 
-- typed power/water state stores;
-- deterministic stable IDs from 00D4/00D5 planning truth;
-- local/structure service bindings;
-- snapshot/restore;
-- mutation/query services;
-- domain revisions;
-- focused topology/service tests.
-
-No visible gameplay consequence is required until this foundation is real.
+Implemented typed power/water state, deterministic plan-derived identities, local service bindings, snapshot/restore, mutation/query APIs, revisions and service tests.
 
 ### 33B — Power vertical slice
 
-- three-tier power service derivation;
-- fixed structure/fixture power bindings;
-- real outage mutations;
-- fixed powered lights feed System 27 through a canonical provider;
-- DEV outage controls mutate only real System-33 state;
-- retain portable flashlight temporary seam unless real portable equipment power is implemented separately.
+Implemented three-tier power derivation, fixed consumer bindings, real outage mutations, System-27 integration and DEV controls over canonical state.
+
+The first lighting source adapter was human-rejected because it still relied on fake/demo source ownership. The repaired 33B integration now uses actual WHAT fixture entities and actual hand equipment as specified in Section 10.
 
 ### 33C — Potable-water vertical slice
 
-- municipal three-tier water service;
-- rural private/shared well service where planned;
-- pump-to-power dependency;
-- water service query/inspection;
-- no thirst/liquid inventory shortcut.
+Implemented municipal/rural service, pump-to-power dependency and water service query/inspection without a thirst/liquid shortcut.
 
 ### 33D — Refrigeration consumer slice
 
-- persistent refrigerator appliance/switch state;
-- real power-service dependency;
-- cold-storage availability provider to System 30;
-- outage immediately changes exposure truth at the authoritative time boundary;
-- freshness remains analytic/no timers.
+Implemented persistent refrigerator appliance state, real power dependency and cold-storage availability for System 30 while preserving analytic freshness.
 
-Candidate 001 is complete only when all four slices are integrated and verified on the canonical playable build.
+Candidate 001 is implementation-complete and automatically verified. Human acceptance remains pending.
 
 ---
 
 ## 18. Verification contract
 
-System 33 requires focused tests plus existing neighbor regressions.
+### 18.1 Power
 
-### 18.1 Power tests
+Prove full-chain service, Tier-1/2/3 causal failures, unrelated-branch isolation, persistent restore semantics, fail-closed malformed topology and cached repeated queries.
 
-Prove:
+### 18.2 Water
 
-- operational full chain provides service;
-- Tier-1 failure removes all dependent service;
-- Tier-2 failure removes only that downstream settlement branch;
-- Tier-3/local failure removes only the affected endpoint/group;
-- unrelated branch remains powered;
-- restore preserves damage/disabled state;
-- malformed/cyclic references fail closed;
-- repeated query without revision change uses cached result/no repeated full work.
+Prove municipal/local failure propagation, rural well behavior, pump-power dependency, restoration behavior and no frame/time polling.
 
-### 18.2 Water tests
+### 18.3 Truthful lighting integration
 
 Prove:
 
-- operational municipal chain provides water;
-- local water failure stays local;
-- source/treatment failure propagates downstream;
-- powered rural well provides service;
-- unpowered rural well does not;
-- restoring pump power restores derived water service without rewriting water truth;
-- no per-frame/time-tick polling is required.
+- a real powered fixed fixture creates a System-27 emitter at its actual WHAT cell/facing;
+- local power loss removes that emitter and restoration returns it;
+- no player flashlight emitter exists when no real flashlight item is equipped;
+- assigning a real `item.tool.flashlight` to a hand creates the player beam at actor position/facing;
+- unequipping removes the beam;
+- grid outage does not invent portable battery behavior;
+- legacy demo source emits zero gameplay lights;
+- player turning without an equipped moving light does not trigger a physical-light rebuild;
+- black-screen/full-window visibility regression coverage stays green.
 
-### 18.3 Lighting integration tests
+Dedicated smoke/context:
 
-Prove:
+- `System33LightingTruthSmoke.gd`
+- `verify/system33-lighting-truth`
 
-- powered switched-on fixture creates canonical System-27 emitter input;
-- power loss removes that emitter input;
-- restoring service restores it;
-- flashlight behavior remains correct and independent unless separately migrated;
-- black-screen/visibility regression smoke remains green.
+### 18.4 Freshness
 
-### 18.4 Freshness integration tests
+Prove powered refrigerator cold-storage availability, outage exposure transition, analytic/no-timer freshness and history-preserving restoration.
 
-Prove:
+### 18.5 Neighbor regressions
 
-- powered operational switched-on refrigerator reports cold-storage availability;
-- outage removes cold-storage availability at the authoritative boundary;
-- System 30 freshness remains analytic with no per-item timers;
-- restoring power creates a new cold-storage exposure period rather than rewriting elapsed history.
+At minimum preserve global world planning, streaming/materialization, Systems 19/20, WHAT persistence, WHEN/action-pause where relevant, System 27, System 29 if inspection changes, System 30, performance architecture, canonical startup/player responsiveness/visibility and Pages.
 
-### 18.5 Required neighbor regression set
-
-At minimum include:
-
-- System 00D global world planning;
-- System 00F streaming/materialization;
-- System 19/20 generation;
-- WHAT foundation/persistence;
-- WHEN/action-pause regressions where action integration changes;
-- System 27 physical lighting;
-- System 29 interaction affordance if utility inspection/toggles are exposed;
-- System 30 freshness;
-- performance architecture;
-- canonical startup / player responsiveness / visibility smoke;
-- Pages build/deploy.
-
-Exact final executable SHA must be verified.
+Exact repaired executable verified: `ec7be83146d62055a5d2d4b1233eb7cc50cea630`.
 
 ---
 
 ## 19. Performance acceptance
 
-Candidate 001 fails the performance architecture gate if it introduces any of the following:
+Candidate 001 fails the performance gate if it introduces recurring full-network scans, per-component simulation Nodes/timers, frame/camera-driven recomputation, whole-world reevaluation for local changes or utility truth coupled to renderer visibility/stream activation.
 
-- recurring full-network scans;
-- per-component/per-fixture Nodes for simulation truth;
-- per-component/per-appliance timers;
-- frame-driven service recomputation;
-- camera-driven service recomputation;
-- whole-world utility reevaluation after a local endpoint change when a bounded invalidation is available;
-- utility truth coupled to renderer visibility/stream activation.
+The repaired fixed-light provider discovers existing real fixtures through WHAT's semantic-type index and then updates from events/revisions. It does not scan the whole world every frame/action.
 
-Useful telemetry should count, at minimum:
-
-- power service derivations/cache hits;
-- water service derivations/cache hits;
-- utility state mutations;
-- downstream invalidations by domain.
-
-Telemetry is evidence, not gameplay truth.
+Useful telemetry includes service derivations/cache hits, mutations and downstream invalidations. Telemetry is evidence, not gameplay truth.
 
 ---
 
-## 20. Human acceptance
+## 20. Human acceptance — PENDING RETEST
 
-After automated verification, browser play must confirm:
+Automated verification is green, but human acceptance is not yet closed.
+
+Browser play must confirm:
 
 1. normal start remains responsive and visually correct;
-2. a local power outage produces understandable local darkness without blacking unrelated areas;
-3. restoring the service restores the expected fixed lights;
-4. water status responds correctly to a municipal/local outage and to loss/restoration of pump power;
-5. a refrigerator truthfully transitions between powered cold storage and ordinary storage;
-6. no obvious new input lag, first-step hitch growth or visual regression appears on the current browser target;
-7. phone/Safari remains a first-class acceptance target.
+2. there is **no phantom player flashlight** when no flashlight is actually equipped;
+3. real visible fixed fixtures produce light at their actual world positions;
+4. local power outage removes/restores the expected real fixed lights without blacking unrelated areas;
+5. water status responds correctly to local/municipal failure and pump power loss/restoration;
+6. refrigerator truthfully transitions between powered cold storage and ordinary storage;
+7. no black-screen regression, first-step hitch growth or input backlog returns;
+8. phone/Safari remains first-class.
+
+Human rejection of the original fake/demo lighting integration remains part of the historical acceptance record even though the repaired executable is now automated-green.
 
 ---
 
 ## 21. Explicitly deferred from Candidate 001
 
 - player thirst/drinking consequences;
-- liquid inventories/container filling if no canonical liquid system exists;
-- generators, fuel consumption and portable battery depletion;
+- generic liquid inventories/container filling;
+- generators/fuel consumption and portable battery depletion;
 - solar/wind production simulation;
 - player wiring/plumbing construction;
 - detailed breakers/circuits/load balancing;
@@ -596,23 +417,21 @@ After automated verification, browser play must confirm:
 - contamination/water quality;
 - wastewater/sewers;
 - automatic random utility failures;
-- line damage from weather/trees/vehicles/combat;
-- repair actions/skill checks;
+- utility damage from weather/trees/vehicles/combat;
+- final repair actions/skill checks;
 - AI utility behavior;
 - procedural outage events.
 
-Those are future consumers/causes over the same persistent state, not reasons to make Candidate 001 generic now.
+These remain future consumers/causes over the same persistent state rather than reasons to generalize Candidate 001 now.
 
 ---
 
-## 22. Approval boundary
+## 22. Current lifecycle boundary
 
-This document completes the **DESCRIBE** step only.
+The original approval boundary has been crossed: Candidate 001 was approved, implemented and automatically verified.
 
-No Phase-3 runtime implementation is authorized by this document itself.
+The active lifecycle gate is now:
 
-Recommended approval target:
+> **HUMAN VERIFY System 33 Candidate 001 on repaired executable `ec7be83146d62055a5d2d4b1233eb7cc50cea630`.**
 
-> **Approve System 33 Candidate 001: persistent three-tier power and potable-water runtime state; real fixed-light power integration; real pump-power dependency; real refrigerator cold-storage integration; truthful water-service inspection; no Phase-4 needs, no random outages, no detailed electrical/hydraulic simulation.**
-
-On approval, implementation should start with **33A Utility state foundation + plan materialization**, preserve the current human-accepted responsiveness/visibility behavior, and proceed through 33B/33C/33D without inventing parallel demo truth.
+Do not mark Phase 3 HUMAN ACCEPTED or begin Phase 4 by default until the repaired browser build passes the human checks in Section 20. New explicit user direction may override roadmap sequencing, but must not rewrite the historical rejection/verification record.

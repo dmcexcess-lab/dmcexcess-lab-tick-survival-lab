@@ -16,9 +16,10 @@ Current game identity:
 
 - **Phase 1 — COMPLETE.** Items, spoilage, interaction readability, semantic UI, large-object presentation, content breadth and integration are implemented.
 - **Phase 2 — COMPLETE.** System 32 Crafting / Material Transformation Candidate 001 is implemented and CI verified on `8b4db898f0e02dd84298dbc5291f3e1a88c11ce4`.
-- **Compact-island/world-seam cleanup — COMPLETE + HUMAN ACCEPTED.** The broad planner repair `918f1dbd7b033fa179522a112b1507d9a2c63890` remains rejected, but the later focused local-window repair `282864f242ba2a5c3df0519591e31990372c4aed` preserved the world layout while resolving the overlap seam.
-- **Responsiveness / black-screen recovery — HUMAN ACCEPTED.** Executable `1f65bff312853a44858201b57d9df2e26ee64f80` restored the human-good visibility path while preserving the accepted decision-pause/input responsiveness work. Human play subsequently confirmed the black screen fixed and performance improved.
-- **Current gameplay lifecycle gate:** Phase 3 / System 33 Power + Water is **DESCRIBED and awaiting explicit approval**. No Phase-3 runtime implementation is pre-authorized.
+- **Compact-island/world-seam cleanup — COMPLETE + HUMAN ACCEPTED.** The broad planner repair `918f1dbd7b033fa179522a112b1507d9a2c63890` remains rejected; focused local-window repair `282864f242ba2a5c3df0519591e31990372c4aed` is accepted.
+- **Responsiveness / black-screen recovery — HUMAN ACCEPTED.** Recovery executable `1f65bff312853a44858201b57d9df2e26ee64f80` restored the human-good full-window lighting/visibility path while preserving decision-pause responsiveness.
+- **Phase 3 / System 33 Power + Water — IMPLEMENTED + AUTOMATED VERIFIED; HUMAN RETEST PENDING.** Truthful-lighting repaired executable: `ec7be83146d62055a5d2d4b1233eb7cc50cea630`.
+- **Current gameplay lifecycle gate:** human browser verification of repaired System-33 Candidate 001. Do not mark Phase 3 complete until that playtest is accepted.
 
 ---
 
@@ -32,13 +33,9 @@ System 29 owns neutral reach + interaction-offer composition.
 
 > **A highlight explains an already-valid interaction. It never creates interaction truth.**
 
-Implemented result includes shared `CONTACT_FORWARD` reach, real read-only interaction offers, System-23 visibility gating, bounded local OBJECT discovery, and presentation-only highlights.
-
 ### Performance architecture gate — COMPLETE + HUMAN ACCEPTED
 
-The P0/P1/P2 performance architecture and Weather presentation optimization are complete and human-accepted on phone/Safari.
-
-The later action-responsiveness repair is also human accepted on the current playable lineage: one accepted action resolves through bounded per-frame work, gameplay input remains locked until the next real decision pause, stale buffered input is not replayed, and the black-screen visibility regression has been recovered.
+The current playable lineage uses bounded per-frame action resolution, WHEN decision-pause input locking, stale-input rejection and event/cache-driven expensive consumers.
 
 Protected direction remains event-driven/cache-oriented invalidation, bounded queries and shared derived plans rather than recurring world scans, per-cell/per-item Nodes/timers or frame-driven simulation.
 
@@ -48,7 +45,7 @@ System 30 Candidate 001 is implemented and verified.
 
 > **Food ages because authoritative world time passes through its storage environment. No item gets a timer.**
 
-Refrigeration remains inactive until Phase 3 supplies real powered-appliance truth. Phase 4 later owns eating/drinking/health consequences.
+System 33 now supplies real powered refrigerator cold-storage availability; System 30 still owns freshness math. Phase 4 later owns eating/drinking/health consequences.
 
 ### 1C — Semantic inventory/menu icons — COMPLETE
 
@@ -78,15 +75,9 @@ Canonical design: `SYSTEM_DESIGNS/32_CRAFTING_MATERIAL_TRANSFORMATION.md`.
 
 Verified executable: `8b4db898f0e02dd84298dbc5291f3e1a88c11ce4`.
 
-Exact-head context: `verify/system32-crafting`.
-
 > **Crafting transforms specific real persistent item entities into specific real persistent item entities. The recipe describes the transformation; WHEN charges the time; existing item/world owners hold the result.**
 
-Implemented Candidate 001:
-
-1. **2A — Recipe + plan foundation** — exact-semantic recipes/workstations, deterministic ingredient/tool selection from real personal possession, physical-weight/carry/freshness validation and no abstract resource wallet.
-2. **2B — Timed physical transformation** — positive-duration CANCELABLE `crafting.craft_recipe` WHEN action, final-commit revalidation, real input removal, deterministic persistent outputs, actor-root containment, hard carry ceiling and bounded compensation.
-3. **2C — Workstation + player integration** — explicit heavy-workbench capability, System-29 `CONTACT_FORWARD` `CRAFT` offer and phone/Safari-first Crafting UI in the canonical player shell.
+Implemented Candidate 001 includes exact-semantic recipes/workstations, deterministic real-item ingredient/tool selection, positive-duration WHEN crafting, final-commit revalidation, persistent outputs, carry/weight integration and a phone/Safari-first crafting path.
 
 System 32 does not own Construction/Repair/Durability, Cooking/Nutrition, Power/Water, Skills/quality/XP, Vehicles, combat/ammunition or AI.
 
@@ -96,54 +87,50 @@ System 32 does not own Construction/Repair/Durability, Cooking/Nutrition, Power/
 
 The playable island remains `temperate.island.region` v3 over the protected rural-v6 planning skeleton.
 
-Accepted cleanup result includes:
+Accepted cleanup includes:
 
 - fresh new-game seeds redraw island identity rather than aliasing the historical standalone critique fixture;
 - central local-site seed derives from world seed + site identity;
-- the playable island does not carry the old 640-cell regional stress-fixture protected-cross half-span;
 - compact island spacing removes the former giant green belt;
 - natural ecology stays coherent across logical source rectangles using world seed + absolute global cell;
 - spawn remains on inherited pavement rather than the diner entrance;
-- the legal-seed base-site overlap is repaired by `282864f242ba2a5c3df0519591e31990372c4aed` through a bounded local-window adaptation that preserves settlement centers/world layout instead of changing the global settlement planner.
+- legal-seed base-site overlap is repaired by `282864f242ba2a5c3df0519591e31990372c4aed` through bounded local-window adaptation that preserves global settlement layout.
 
-### Rejected attempt remains historical evidence
-
-`918f1dbd7b033fa179522a112b1507d9a2c63890` changed global settlement candidate rejection from the historical center-distance heuristic to exact rectangle-overlap rejection. Automated CI passed, but human play found the world severely broken. It was rolled back in `f6a06add3dfd212c0c29b343d24a8f7d28a89bca` and remains **not accepted**.
-
-The later focused repair `282864f...` is the accepted direction because it repairs the island-local adaptation rather than silently redesigning global settlement placement.
-
-Human play of the current recovered executable lineage confirmed the playable world is acceptable to move forward. Generated-world changes remain subject to the same human acceptance discipline in the future.
+Rejected attempt `918f1db...` remains historical evidence that green CI does not replace human generated-world acceptance.
 
 ---
 
-## Phase 3 — Power and Water — DESCRIBED; AWAITING APPROVAL
+## Phase 3 — Power and Water — IMPLEMENTED + AUTOMATED VERIFIED; HUMAN RETEST PENDING
 
 Canonical design: `SYSTEM_DESIGNS/33_POWER_WATER_UTILITIES.md`.
 
-Goal: add causal, persistent **three-tier utility networks** rather than global on/off switches.
+Verified repaired executable: `ec7be83146d62055a5d2d4b1233eb7cc50cea630`.
 
 > **Planning says where utility topology exists. System 33 owns whether that topology currently provides service. Consumers query service; they never infer it from art, brightness or UI state.**
 
-### Power hierarchy
+### Implemented Candidate 001
 
-1. **Main generation / major source** — broad regional supply.
-2. **Substations / settlement feeders** — local distribution facilities and service branches.
-3. **Local branch / structure service** — vulnerable final service to structures/consumer groups.
+1. **33A — Utility state foundation + plan materialization** — persistent typed power/water state consuming 00D4/00D5 planning truth, stable identities, service bindings, snapshot/restore, revisions and cached service queries.
+2. **33B — Power vertical slice** — causal three-tier service, typed outage/damage mutation, fixed powered fixture integration into System 27 and canonical DEV controls.
+3. **33C — Potable-water vertical slice** — municipal/rural service and electrically driven pump dependency on real power.
+4. **33D — Refrigeration consumer slice** — powered operational refrigerator cold-storage availability feeding System 30 without item timers.
 
-### Water hierarchy
+### Truthful-lighting repair
 
-1. **Main potable source + treatment/storage** — broad municipal supply where planned.
-2. **Pump/distribution / settlement service** — local distribution with real power dependency where pumping is electrical.
-3. **Property / structure service** — local endpoint; rural properties may instead use planned private/shared wells.
+The initial 33B visible integration was human-rejected because the runtime utility state was real while light ownership was still effectively fake: an unconditional player flashlight was passed through and static lights came from legacy demo coordinates.
 
-### Candidate 001 if approved
+The repaired runtime now requires:
 
-1. **33A — Utility state foundation + plan materialization** — typed persistent state consuming 00D4/00D5 planning truth, stable identities, service bindings, snapshot/restore, revisions and cached service queries.
-2. **33B — Power vertical slice** — causal three-tier power state, real local outages and fixed powered lights feeding System 27 through canonical emitter truth.
-3. **33C — Potable-water vertical slice** — municipal service, rural well service and electrically driven pump dependency on real power.
-4. **33D — Refrigeration consumer slice** — real powered refrigerator cold-storage availability feeding System 30 without adding item timers or moving freshness ownership.
+- fixed emitters derive from actual persistent WHAT fixture entities and actual `WorldPlacement` position/facing;
+- real System-33 local power service gates those fixtures;
+- the player receives no flashlight beam unless a real `item.tool.flashlight` entity is assigned to a real hand-equipment slot;
+- the legacy demo lighting source is inert;
+- portable battery depletion/toggle simulation remains deferred instead of invented;
+- facing-only turns with no equipped moving light do not wake the physical-light solver.
 
-Required ownership/performance rules:
+Dedicated verification: `verify/system33-lighting-truth`.
+
+### Required ownership/performance rules
 
 - System 00D planning facts define topology/geography but are not runtime service state.
 - No global `power_on` or `water_on` gameplay shortcut.
@@ -151,11 +138,20 @@ Required ownership/performance rules:
 - Runtime damage/disabled state is persistent typed truth.
 - Service is derived/cached from required upstream state and revisions.
 - System 27 remains physical-light owner; System 30 remains freshness owner.
-- Water-service inspection may be implemented now, but thirst/drinking/liquid consequences remain Phase 4 or a later dedicated liquid system.
-- Portable battery/fuel equipment is not silently faked merely to delete the current temporary flashlight adapter.
+- Water-service inspection exists without inventing Phase-4 thirst/liquid consequences.
+- Portable battery/fuel simulation remains outside Candidate 001.
 - Standalone wastewater/sewer gameplay remains outside the active roadmap.
 
-**Lifecycle rule:** System 33 Candidate 001 requires explicit approval before runtime implementation begins.
+### Human acceptance gate
+
+Before Phase 3 is marked complete, browser play must confirm:
+
+1. no phantom flashlight at spawn when none is equipped;
+2. real visible fixed fixtures emit at their actual world positions;
+3. `LOCAL PWR` removes/restores those real fixed lights while unrelated service remains intact;
+4. water/pump and refrigerator service remain truthful;
+5. movement/turning remains responsive and the black-screen regression does not return;
+6. phone/Safari remains first-class.
 
 ---
 
@@ -172,6 +168,8 @@ Target set:
 - fatigue.
 
 **Fatigue is the stamina/endurance concept. There is no separate stamina meter.**
+
+Phase 4 may consume truthful System-33 water availability but must not move utility ownership into needs/health.
 
 ---
 
@@ -251,4 +249,4 @@ For each bounded phase/system:
 
 Newest explicit user direction supersedes older roadmap ordering, but implemented historical systems remain current truth until deliberately migrated.
 
-**Current next step: approve or revise `SYSTEM_DESIGNS/33_POWER_WATER_UTILITIES.md`. Runtime implementation begins only after explicit approval.**
+**Current next step: human-play verify repaired System 33 Candidate 001 on `ec7be83146d62055a5d2d4b1233eb7cc50cea630`. Phase 4 begins only after that gate is accepted unless the user explicitly directs otherwise.**
