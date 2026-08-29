@@ -21,6 +21,17 @@ func _init(
         if provider != null and provider.is_valid():
             _providers[String(provider.context_id())] = provider
 
+func register_provider(provider: SpoilageEnvironmentProvider) -> bool:
+    if provider == null or not provider.is_valid():
+        return false
+    var key: String = String(provider.context_id())
+    if key.is_empty():
+        return false
+    if _providers.has(key):
+        return _providers[key] == provider
+    _providers[key] = provider
+    return true
+
 func is_ready() -> bool:
     return _world != null and _state != null and _profiles != null and _providers.has("ambient")
 
