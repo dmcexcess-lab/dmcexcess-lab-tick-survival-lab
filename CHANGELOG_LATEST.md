@@ -2,6 +2,18 @@
 
 This compact ledger records the most recent work. `CHANGELOG.md` remains the historical archive.
 
+## Utility Support Surface Placement Repair — 2026-08-29
+
+Verified executable: `16fe2910ea5f6828ba0c2b6a752a8aa9879b9f29`
+
+- Expanded the streetlight/power-support placement repair from **road surface only** to **constructed vehicle surfaces**, without using vehicle traversability as the rule. Vehicles may still travel off-road; ordinary natural ground remains valid support terrain.
+- Utility supports now reject canonical 00D road corridors, including perpendicular crossroads, plus materialized `ground.road_*`, parking/forecourt, driveway, gravel-road and industrial vehicle-surface semantics.
+- Covered current generated surface vocabulary including `ground.parking_faded`, `ground.driveway_gravel`, `ground.gravel_dark`, `ground.gravel_light`, `ground.alley_stained` and `ground.concrete_oil`.
+- Deliberately did **not** blanket-ban `ground.concrete_clean`, because current urban/suburban generation also uses that semantic for ordinary surrounding/sidewalk-like ground where legitimate streetlight placement must remain possible.
+- Extended `System33PowerInfrastructureSmoke.gd` so the same stable support relocates away from each blocked constructed surface while a `ground.grass_lush` control remains legal.
+- Preserved the accepted lighting/LOS/input-performance lineage; no renderer, vehicle/traversal, road-generation or utility-service ownership changes were introduced.
+- Exact-head verification is green for System 33 power/water and lighting truth, System 27 physical lighting, world generation/materialization, perception, weather, performance architecture, and Pages deployment.
+
 ## Powered Non-Bloom Room Lighting — 2026-08-29
 
 Verified executable: `c7592c956a44c31b082db84ae597f43c643231c4`
@@ -60,5 +72,5 @@ Validated recovery executable: `1f65bff312853a44858201b57d9df2e26ee64f80`
 - Roadmap Phase 2 / System 32 Crafting remains **COMPLETE + CI VERIFIED** on executable `8b4db898f0e02dd84298dbc5291f3e1a88c11ce4`.
 - Compact-island/world-seam cleanup is **COMPLETE + HUMAN ACCEPTED**.
 - Responsiveness/black-screen recovery is **HUMAN ACCEPTED**.
-- Phase 3 / System 33 Candidate 001 plus powered non-bloom room lighting is **IMPLEMENTED + AUTOMATED VERIFIED** on executable `c7592c956a44c31b082db84ae597f43c643231c4`.
-- **Phase 3 human acceptance remains pending a browser playtest of indoor power on/off, water/pump and refrigeration behavior.**
+- Phase 3 / System 33 Candidate 001 plus powered non-bloom room lighting and the utility-support surface-placement repair is **IMPLEMENTED + AUTOMATED VERIFIED**; current verified executable is `16fe2910ea5f6828ba0c2b6a752a8aa9879b9f29`.
+- **Phase 3 human acceptance remains pending browser play of the current utility/lighting behavior, including the new support placement surfaces.**
