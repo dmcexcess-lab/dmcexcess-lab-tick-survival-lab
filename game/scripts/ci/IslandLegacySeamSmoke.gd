@@ -57,7 +57,11 @@ func _initialize() -> void:
     _check(alternate_request.seed == GlobalFixture.SEED + 1, "alternate request preserves requested world seed")
     _check(alternate_request.seed != request.seed, "alternate request seed differs from baseline request seed")
     var alternate: GeneratedGlobalWorldPlan = planner.generate(alternate_request)
-    _check(alternate != null and alternate.is_generated(), "alternate new-game island seed generates")
+    var alternate_failure_reason: String = "null" if alternate == null else alternate.failure_reason
+    _check(
+        alternate != null and alternate.is_generated(),
+        "alternate new-game island seed generates (reason=%s)" % alternate_failure_reason
+    )
     if alternate != null and alternate.is_generated():
         var baseline_seed_after: int = plan.seed
         var baseline_signature_after: String = plan.signature()
