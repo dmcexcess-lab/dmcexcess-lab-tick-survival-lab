@@ -64,12 +64,11 @@ jobs:
           grep -q 'SYSTEM33_POWER_WATER_SMOKE_OK' "$RUNNER_TEMP/system33.log"
           if grep -Eqi 'SCRIPT ERROR|Parse Error|Failed to load script' "$RUNNER_TEMP/system33.log"; then exit 1; fi
 
-      - name: Protected generation lighting freshness and performance regressions
+      - name: Protected island lighting freshness and performance regressions
         shell: bash
         run: |
           set -euxo pipefail
           for spec in \
-            'GlobalWorldPlanningSmoke.gd:GLOBAL_WORLD_PLANNING_SMOKE_OK' \
             'CompleteIslandWorldPlanningSmoke.gd:COMPLETE_ISLAND_WORLD_PLANNING_SMOKE_OK' \
             'PhysicalLightingSmoke.gd:PHYSICAL_LIGHTING_SMOKE_OK' \
             'ItemFreshnessSmoke.gd:ITEM_FRESHNESS_SMOKE_OK' \

@@ -40,6 +40,7 @@ jobs:
           test -f SYSTEM_DESIGNS/20_LOCAL_AREA_PARCEL_GENERATION.md
           test -f SYSTEM_DESIGNS/21_TACTICAL_CAMERA_VIEW_CONTROL.md
           test -f SYSTEM_DESIGNS/22_LARGE_AREA_CRITIQUE_RUNTIME.md
+          test -f SYSTEM_DESIGNS/33_POWER_WATER_UTILITIES.md
           grep -q 'Ultima-style turn-based mini Zomboid' PROJECT_NORTH_STAR.md
           grep -q 'DESCRIBE -> APPROVE -> IMPLEMENT -> VERIFY' README_SOPS.md
           grep -q 'replaceability' README_SOPS.md
@@ -47,9 +48,12 @@ jobs:
           test -f game/export_presets.cfg
           test -f game/main.tscn
           test -f game/scripts/app/GameMain.gd
+          test -f game/scripts/app/CraftingGameMain.gd
+          test -f game/scripts/app/UtilityGameMain.gd
           test -f game/scripts/render/TacticalRendererStack.gd
           test -f game/scripts/ci/CanonicalDemoSmoke.gd
-          grep -q 'CraftingGameMain.gd' game/main.tscn
+          grep -q 'UtilityGameMain.gd' game/main.tscn
+          grep -q 'extends CraftingGameMain' game/scripts/app/UtilityGameMain.gd
           grep -q 'run/main_scene="res://main.tscn"' game/project.godot
           ! test -d game/scripts/reboot
           ! find game/scripts -maxdepth 1 -type f -name '*.gd' | grep -q .
