@@ -46,6 +46,17 @@ func _test_power_infrastructure_projection() -> void:
     _check(int(counts.get("prop.transformer", 0)) >= 2, "regional/substation transformer equipment materialized")
     _check(int(counts.get("prop.utility_box", 0)) >= 2, "regional/substation switchgear materialized")
 
+    for entity_id: String in infrastructure.created_entity_ids():
+        if entity_id.find(".support.") < 0:
+            continue
+        var placement: WorldPlacement = world.placement(entity_id)
+        _check(placement != null, "segment support has a real persistent WHAT placement: %s" % entity_id)
+        if placement != null:
+            _check(
+                not _cell_in_planned_road_surface(placement.anchor, plan.road_segments),
+                "segment support remains off actual road surface, including crossroads: %s" % entity_id
+            )
+
     for wire: Dictionary in infrastructure.wire_edges():
         var start_id: String = String(wire.get("start_id", ""))
         var end_id: String = String(wire.get("end_id", ""))
@@ -71,6 +82,24 @@ func _test_colored_bloom_profiles_and_tick_phases() -> void:
     _check(red.profile_id == &"light.traffic.red.candidate001", "traffic cycle advances to red at authoritative tick boundary")
     _check(green.tint != yellow.tint and yellow.tint != red.tint and green.tint != red.tint, "traffic phases emit distinct physical colors")
     _check(UtilityLightingClass.traffic_profile_for_tick(UtilityLightingClass.TRAFFIC_CYCLE_TICKS).profile_id == green.profile_id, "traffic cycle repeats deterministically from world tick")
+
+func _cell_in_planned_road_surface(cell: Vector2i, roads: Array[Dictionary]) -> bool:
+    for road: Dictionary in roads:
+        var start: Vector2i = road.get("start", Vector2i.ZERO)
+        var finish: Vector2i = road.get("end", Vector2i.ZERO)
+        var width: int = int(road.get("width", 0))
+        if width <= 0:
+            continue
+        var half_width: int = width / 2
+        if start.y == finish.y:
+            if cell.x >= mini(start.x, finish.x) and cell.x <= maxi(start.x, finish.x) \
+                and absi(cell.y - start.y) <= half_width:
+                return true
+        elif start.x == finish.x:
+            if cell.y >= mini(start.y, finish.y) and cell.y <= maxi(start.y, finish.y) \
+                and absi(cell.x - start.x) <= half_width:
+                return true
+    return false
 
 func _check(condition: bool, message: String) -> void:
     if not condition:

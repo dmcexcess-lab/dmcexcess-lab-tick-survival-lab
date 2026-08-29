@@ -13,6 +13,11 @@ const URBAN_SPACING: int = 9
 const SETTLEMENT_SPACING: int = 14
 const RURAL_SPACING: int = 22
 const ROAD_SHOULDER_OFFSET: int = 4
+const EXPLICIT_ROAD_TERRAIN: Array[StringName] = [
+    &"ground.road_plain",
+    &"ground.road_yellow_line_h",
+    &"ground.road_yellow_line_v",
+]
 
 const COLLISION_SEMANTICS: Array[StringName] = [
     &"prop.utility_pole_wood",
@@ -237,10 +242,35 @@ func _find_support_cell(
         var candidate: Vector2i = route_cell + perpendicular * offset
         if not _plan.bounds.has_point(candidate) or reserved_cells.has(candidate):
             continue
+        if _is_road_surface_cell(candidate):
+            continue
         if not _world.entities_at(candidate).is_empty():
             continue
         return candidate
     return Vector2i(2147483647, 2147483647)
+
+func _is_road_surface_cell(cell: Vector2i) -> bool:
+    if _is_planned_global_road_surface(cell):
+        return true
+    return _world.has_terrain(cell) and EXPLICIT_ROAD_TERRAIN.has(_world.terrain_at(cell))
+
+func _is_planned_global_road_surface(cell: Vector2i) -> bool:
+    for road: Dictionary in _plan.road_segments:
+        var start: Vector2i = road.get("start", Vector2i.ZERO)
+        var finish: Vector2i = road.get("end", Vector2i.ZERO)
+        var width: int = int(road.get("width", 0))
+        if width <= 0:
+            continue
+        var half_width: int = width / 2
+        if start.y == finish.y:
+            if cell.x >= mini(start.x, finish.x) and cell.x <= maxi(start.x, finish.x) \
+                and absi(cell.y - start.y) <= half_width:
+                return true
+        elif start.x == finish.x:
+            if cell.y >= mini(start.y, finish.y) and cell.y <= maxi(start.y, finish.y) \
+                and absi(cell.x - start.x) <= half_width:
+                return true
+    return false
 
 func _node_equipment(node: Dictionary, reserved_cells: Dictionary) -> Array[Dictionary]:
     var result: Array[Dictionary] = []
