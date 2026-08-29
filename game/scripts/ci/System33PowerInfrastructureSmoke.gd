@@ -46,6 +46,8 @@ func _test_power_infrastructure_projection() -> void:
     _check(int(counts.get("prop.transformer", 0)) >= 2, "regional/substation transformer equipment materialized")
     _check(int(counts.get("prop.utility_box", 0)) >= 2, "regional/substation switchgear materialized")
 
+    var baseline_support_id: String = ""
+    var baseline_support_cell := Vector2i(2147483647, 2147483647)
     for entity_id: String in infrastructure.created_entity_ids():
         if entity_id.find(".support.") < 0:
             continue
@@ -56,12 +58,67 @@ func _test_power_infrastructure_projection() -> void:
                 not _cell_in_planned_road_surface(placement.anchor, plan.road_segments),
                 "segment support remains off actual road surface, including crossroads: %s" % entity_id
             )
+            if baseline_support_id.is_empty():
+                baseline_support_id = entity_id
+                baseline_support_cell = placement.anchor
+
+    _check(not baseline_support_id.is_empty(), "baseline support available for constructed-surface regression")
+    if not baseline_support_id.is_empty():
+        _test_constructed_vehicle_surface_rejection(plan, baseline_support_id, baseline_support_cell)
 
     for wire: Dictionary in infrastructure.wire_edges():
         var start_id: String = String(wire.get("start_id", ""))
         var end_id: String = String(wire.get("end_id", ""))
         _check(not start_id.is_empty() and not end_id.is_empty(), "wire endpoints have stable IDs")
         _check(world.placement(start_id) != null and world.placement(end_id) != null, "wire endpoints are real persistent WHAT placements")
+
+func _test_constructed_vehicle_surface_rejection(
+    plan: GeneratedGlobalWorldPlan,
+    baseline_support_id: String,
+    baseline_support_cell: Vector2i
+) -> void:
+    var blocked_surfaces: Array[StringName] = [
+        &"ground.road_plain",
+        &"ground.parking_faded",
+        &"ground.driveway_gravel",
+        &"ground.gravel_dark",
+        &"ground.gravel_light",
+        &"ground.alley_stained",
+        &"ground.concrete_oil",
+    ]
+    for semantic: StringName in blocked_surfaces:
+        var world := WorldStateClass.new()
+        var mutations := WorldMutationClass.new(world)
+        _check(mutations.set_terrain(baseline_support_cell, semantic), "test surface materialized: %s" % String(semantic))
+        var utilities := UtilityStateClass.new()
+        _check(utilities.initialize_from_plan(plan), "utility state initializes for surface rejection: %s" % String(semantic))
+        if not utilities.is_ready():
+            continue
+        var infrastructure := InfrastructureClass.new(world, mutations, plan, utilities)
+        _check(infrastructure.materialize(), "power infrastructure materializes around blocked surface: %s" % String(semantic))
+        var placement: WorldPlacement = world.placement(baseline_support_id)
+        _check(placement != null, "support identity survives blocked-surface relocation: %s" % String(semantic))
+        if placement != null:
+            _check(
+                placement.anchor != baseline_support_cell,
+                "support rejects constructed vehicle surface: %s" % String(semantic)
+            )
+
+    var natural_world := WorldStateClass.new()
+    var natural_mutations := WorldMutationClass.new(natural_world)
+    _check(natural_mutations.set_terrain(baseline_support_cell, &"ground.grass_lush"), "natural-ground control materialized")
+    var natural_utilities := UtilityStateClass.new()
+    _check(natural_utilities.initialize_from_plan(plan), "utility state initializes for natural-ground control")
+    if natural_utilities.is_ready():
+        var natural_infrastructure := InfrastructureClass.new(natural_world, natural_mutations, plan, natural_utilities)
+        _check(natural_infrastructure.materialize(), "power infrastructure materializes on natural-ground control")
+        var natural_placement: WorldPlacement = natural_world.placement(baseline_support_id)
+        _check(natural_placement != null, "support identity exists on natural-ground control")
+        if natural_placement != null:
+            _check(
+                natural_placement.anchor == baseline_support_cell,
+                "ordinary off-road ground remains valid for utility support placement"
+            )
 
 func _test_colored_bloom_profiles_and_tick_phases() -> void:
     var street: LightEmitterProfile = EmitterProfileClass.streetlight()
