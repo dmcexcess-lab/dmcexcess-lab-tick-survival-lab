@@ -94,24 +94,61 @@ static func streetlight() -> LightEmitterProfile:
     return LightEmitterProfile.new(
         &"light.streetlight.candidate001",
         Shape.OMNI,
-        10,
-        0.82,
-        Color(1.0, 0.78, 0.48),
-        1.35,
+        11,
+        0.94,
+        Color(0.94, 0.97, 1.0),
+        1.30,
         45.0,
-        0.08
+        0.09,
+        1.0
     )
 
-static func neon(tint_value: Color = Color(0.30, 0.72, 1.0)) -> LightEmitterProfile:
+static func neon(tint_value: Color = Color(0.22, 0.70, 1.0)) -> LightEmitterProfile:
     return LightEmitterProfile.new(
         &"light.neon.candidate001",
         Shape.OMNI,
-        6,
-        0.58,
+        7,
+        0.70,
         tint_value,
-        1.35,
+        1.28,
         45.0,
-        0.10
+        0.12,
+        1.0
+    )
+
+static func gas_sign() -> LightEmitterProfile:
+    return LightEmitterProfile.new(
+        &"light.gas_sign.candidate001",
+        Shape.OMNI,
+        8,
+        0.78,
+        Color(1.0, 0.16, 0.07),
+        1.24,
+        45.0,
+        0.13,
+        1.0
+    )
+
+static func traffic_red() -> LightEmitterProfile:
+    return _traffic(&"light.traffic.red.candidate001", Color(1.0, 0.06, 0.04))
+
+static func traffic_yellow() -> LightEmitterProfile:
+    return _traffic(&"light.traffic.yellow.candidate001", Color(1.0, 0.72, 0.05))
+
+static func traffic_green() -> LightEmitterProfile:
+    return _traffic(&"light.traffic.green.candidate001", Color(0.08, 1.0, 0.22))
+
+static func _traffic(id_value: StringName, tint_value: Color) -> LightEmitterProfile:
+    return LightEmitterProfile.new(
+        id_value,
+        Shape.OMNI,
+        4,
+        0.48,
+        tint_value,
+        1.18,
+        45.0,
+        0.08,
+        1.0
     )
 
 static func room_ambient() -> LightEmitterProfile:

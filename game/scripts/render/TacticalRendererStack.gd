@@ -6,6 +6,7 @@ const StructureRendererClass = preload("res://scripts/render/StructureLayerRende
 const PropRendererClass = preload("res://scripts/render/PropLayerRenderer.gd")
 const PropForegroundRendererClass = preload("res://scripts/render/PropForegroundLayerRenderer.gd")
 const ActorRendererClass = preload("res://scripts/render/ActorLayerRenderer.gd")
+const PowerLineRendererClass = preload("res://scripts/render/PowerLinePresentationRenderer.gd")
 const LightingRendererClass = preload("res://scripts/render/PhysicalLightingPresentationRenderer.gd")
 const WeatherRendererClass = preload("res://scripts/render/WeatherPresentationRenderer.gd")
 const InteractionRendererClass = preload("res://scripts/render/InteractionHighlightRenderer.gd")
@@ -19,6 +20,7 @@ var _structures: StructureLayerRenderer = null
 var _props: PropLayerRenderer = null
 var _prop_foreground: PropForegroundLayerRenderer = null
 var _actors: ActorLayerRenderer = null
+var _power_lines: PowerLinePresentationRenderer = null
 var _lighting: PhysicalLightingPresentationRenderer = null
 var _weather: WeatherPresentationRenderer = null
 var _interaction: InteractionHighlightRenderer = null
@@ -52,6 +54,18 @@ func configure(
         return false
     _configured = true
     return true
+
+func configure_power_infrastructure(world: WorldState, wire_edges: Array[Dictionary]) -> bool:
+    _ensure_layers()
+    return _power_lines.configure(world, wire_edges)
+
+func power_infrastructure_debug_snapshot() -> Dictionary:
+    _ensure_layers()
+    return {
+        "configured": _power_lines.is_configured(),
+        "visible_wires": _power_lines.visible_wire_count(),
+        "total_wires": _power_lines.total_wire_count(),
+    }
 
 func configure_physical_lighting(
     lighting_service: PhysicalLightingService,
@@ -134,6 +148,7 @@ func prop_visual_geometry_debug_snapshot() -> Dictionary:
     return {
         "base_z": _props.z_index,
         "actor_z": _actors.z_index,
+        "power_line_z": _power_lines.z_index,
         "foreground_z": _prop_foreground.z_index,
         "lighting_z": _lighting.z_index,
         "foreground_count": _prop_foreground.planned_command_count() if _configured else 0,
@@ -144,6 +159,9 @@ func set_visible_window(origin: Vector2i, size_cells: Vector2i, cell_pixels: flo
     _ensure_layers()
     if not _configured:
         return false
+    var power_ok: bool = true
+    if _power_lines.is_configured():
+        power_ok = _power_lines.set_visible_window(origin, size_cells, cell_pixels)
     var lighting_ok: bool = true
     if _lighting.is_configured():
         lighting_ok = _lighting.set_visible_window(origin, size_cells, cell_pixels)
@@ -157,6 +175,7 @@ func set_visible_window(origin: Vector2i, size_cells: Vector2i, cell_pixels: flo
         and _structures.set_visible_window(origin, size_cells, cell_pixels) \
         and _props.set_visible_window(origin, size_cells, cell_pixels) \
         and _actors.set_visible_window(origin, size_cells, cell_pixels) \
+        and power_ok \
         and lighting_ok \
         and weather_ok \
         and interaction_ok \
@@ -171,6 +190,7 @@ func layer_command_counts() -> Dictionary:
         "ground": _ground.plan_visible_commands().size(),
         "structure": _structures.plan_visible_commands().size(),
         "prop": _props.plan_visible_commands().size(),
+        "power_wire": _power_lines.visible_wire_count(),
         "actor": _actors.plan_visible_commands().size(),
     }
 
@@ -214,6 +234,11 @@ func _ensure_layers() -> void:
     _actors.name = "Actors"
     _actors.z_index = 30
     add_child(_actors)
+
+    _power_lines = PowerLineRendererClass.new()
+    _power_lines.name = "PowerLines"
+    _power_lines.z_index = 34
+    add_child(_power_lines)
 
     _prop_foreground = PropForegroundRendererClass.new()
     _prop_foreground.name = "PropForeground"

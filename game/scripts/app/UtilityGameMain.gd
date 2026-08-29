@@ -3,6 +3,7 @@ class_name UtilityGameMain
 
 const UtilityStateClass = preload("res://scripts/simulation/utilities/UtilityRuntimeState.gd")
 const UtilityLightingClass = preload("res://scripts/simulation/utilities/UtilityPoweredLightingSourceAdapter.gd")
+const PowerInfrastructureClass = preload("res://scripts/simulation/utilities/UtilityPowerInfrastructureMaterializer.gd")
 const RefrigerationProviderClass = preload("res://scripts/simulation/utilities/UtilityRefrigerationEnvironmentProvider.gd")
 const UtilityControlsClass = preload("res://scripts/ui/UtilityDevControls.gd")
 
@@ -15,6 +16,7 @@ const COLD_CONTAINER_TYPES: Array[StringName] = [
 
 var _utilities: UtilityRuntimeState = null
 var _utility_lighting: UtilityPoweredLightingSourceAdapter = null
+var _power_infrastructure: UtilityPowerInfrastructureMaterializer = null
 var _refrigeration_providers: Dictionary = {}
 var _utility_controls: UtilityDevControls = null
 var _central_power_service_id: String = ""
@@ -37,6 +39,8 @@ func _boot_utility_runtime() -> bool:
     if _central_power_service_id.is_empty() or _central_water_service_id.is_empty():
         return false
 
+    if not _wire_power_infrastructure(plan):
+        return false
     if not _wire_utility_lighting():
         return false
     if not _wire_refrigeration():
@@ -63,6 +67,22 @@ func _boot_utility_runtime() -> bool:
         return false
     return true
 
+func _wire_power_infrastructure(plan: GeneratedGlobalWorldPlan) -> bool:
+    if plan == null or _collision_catalog == null or _world_view == null or _world_mutations == null:
+        return false
+    for semantic_type: StringName in PowerInfrastructureClass.COLLISION_SEMANTICS:
+        if not _collision_catalog.register(semantic_type, true):
+            return false
+    _power_infrastructure = PowerInfrastructureClass.new(
+        _world,
+        _world_mutations,
+        plan,
+        _utilities
+    )
+    if not _power_infrastructure.materialize():
+        return false
+    return _world_view.configure_power_infrastructure(_world, _power_infrastructure.wire_edges())
+
 func _wire_utility_lighting() -> bool:
     if _physical_lighting == null or _hand_state == null:
         return false
@@ -73,7 +93,8 @@ func _wire_utility_lighting() -> bool:
         _world,
         _hand_state,
         FixtureClass.PLAYER_ID,
-        _utilities
+        _utilities,
+        _kernel
     )
     if not _utility_lighting.is_ready():
         return false

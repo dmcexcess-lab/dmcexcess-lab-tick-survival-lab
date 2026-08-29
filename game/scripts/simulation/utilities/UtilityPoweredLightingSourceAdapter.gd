@@ -7,9 +7,10 @@ const EmitterProfileClass = preload("res://scripts/simulation/lighting/LightEmit
 
 ## Truthful System-33/System-27 source provider.
 ## Fixed emitters are real WHAT fixture entities at their real placements and are
-## gated by the power service for that cell. The controlled actor emits a flashlight
-## cone only while an actual item.tool.flashlight entity is assigned to either hand.
-## Battery/toggle truth is deliberately not invented here.
+## gated by the power service for that cell. Traffic color derives only from the
+## authoritative WHEN tick; no render-time animation or per-signal timer exists.
+## The controlled actor emits a flashlight cone only while an actual
+## item.tool.flashlight entity is assigned to either hand.
 
 signal emitters_changed(emitters)
 
@@ -22,12 +23,25 @@ const FIXED_LIGHT_TYPES: Array[StringName] = [
     &"prop.floor_lamp",
     &"prop.lamp",
     &"prop.neon_sign",
+    &"prop.gas_sign",
 ]
+
+const TRAFFIC_GREEN_TICKS: int = 24
+const TRAFFIC_YELLOW_TICKS: int = 6
+const TRAFFIC_RED_TICKS: int = 24
+const TRAFFIC_CYCLE_TICKS: int = TRAFFIC_GREEN_TICKS + TRAFFIC_YELLOW_TICKS + TRAFFIC_RED_TICKS
+
+enum TrafficPhase {
+    GREEN,
+    YELLOW,
+    RED,
+}
 
 var _world: WorldState = null
 var _hand_state: ActorHandEquipmentState = null
 var _player_id: String = ""
 var _utilities: UtilityRuntimeState = null
+var _kernel: TickKernel = null
 var _fixed_entities: Dictionary = {}
 var _signature: String = ""
 
@@ -35,12 +49,14 @@ func _init(
     world_state: WorldState = null,
     hand_state: ActorHandEquipmentState = null,
     controlled_actor_id: String = "",
-    utilities: UtilityRuntimeState = null
+    utilities: UtilityRuntimeState = null,
+    tick_kernel: TickKernel = null
 ) -> void:
     _world = world_state
     _hand_state = hand_state
     _player_id = controlled_actor_id.strip_edges()
     _utilities = utilities
+    _kernel = tick_kernel
     if not is_ready():
         return
     _discover_existing_fixed_emitters()
@@ -106,8 +122,26 @@ func debug_snapshot() -> Dictionary:
         "fixed_fixture_count": _fixed_entities.size(),
         "fixed_emitter_ids": fixed_emitter_ids(),
         "equipped_flashlight_item_id": _equipped_flashlight_item_id(),
+        "traffic_phase": traffic_phase_for_tick(_current_world_tick()),
         "fake_sources_retired": true,
     }
+
+static func traffic_phase_for_tick(world_tick: int) -> int:
+    var phase_tick: int = posmod(maxi(0, world_tick), TRAFFIC_CYCLE_TICKS)
+    if phase_tick < TRAFFIC_GREEN_TICKS:
+        return TrafficPhase.GREEN
+    if phase_tick < TRAFFIC_GREEN_TICKS + TRAFFIC_YELLOW_TICKS:
+        return TrafficPhase.YELLOW
+    return TrafficPhase.RED
+
+static func traffic_profile_for_tick(world_tick: int) -> LightEmitterProfile:
+    match traffic_phase_for_tick(world_tick):
+        TrafficPhase.GREEN:
+            return EmitterProfileClass.traffic_green()
+        TrafficPhase.YELLOW:
+            return EmitterProfileClass.traffic_yellow()
+        _:
+            return EmitterProfileClass.traffic_red()
 
 func _discover_existing_fixed_emitters() -> void:
     _fixed_entities.clear()
@@ -161,12 +195,16 @@ func _profile_for_semantic(semantic_type: StringName) -> LightEmitterProfile:
     match semantic_type:
         &"fixture.room_light":
             return EmitterProfileClass.room_ambient()
-        &"prop.streetlight", &"prop.traffic_light", &"prop.crosswalk_beacon":
+        &"prop.streetlight", &"prop.crosswalk_beacon":
             return EmitterProfileClass.streetlight()
+        &"prop.traffic_light":
+            return traffic_profile_for_tick(_current_world_tick())
         &"prop.floor_lamp", &"prop.lamp":
             return EmitterProfileClass.lamp()
         &"prop.neon_sign":
             return EmitterProfileClass.neon()
+        &"prop.gas_sign":
+            return EmitterProfileClass.gas_sign()
         _:
             return null
 
@@ -182,6 +220,12 @@ func _sorted_fixed_fixture_ids() -> Array[String]:
         result.append(String(value))
     result.sort()
     return result
+
+func _current_world_tick() -> int:
+    return _kernel.world_tick() if _kernel != null else 0
+
+func _has_traffic_lights() -> bool:
+    return _world != null and not _world.entity_ids_of_type(&"prop.traffic_light").is_empty()
 
 func _connect_signals() -> void:
     var world_callable := Callable(self, "_on_world_changed")
@@ -211,6 +255,13 @@ func _connect_signals() -> void:
         _utilities.appliances_changed.connect(appliance_callable)
     if not _utilities.utility_reset.is_connected(utility_reset_callable):
         _utilities.utility_reset.connect(utility_reset_callable)
+    if _kernel != null:
+        var tick_callable := Callable(self, "_on_world_tick_advanced")
+        var reset_callable := Callable(self, "_on_timing_state_reset")
+        if not _kernel.world_tick_advanced.is_connected(tick_callable):
+            _kernel.world_tick_advanced.connect(tick_callable)
+        if not _kernel.timing_state_reset.is_connected(reset_callable):
+            _kernel.timing_state_reset.connect(reset_callable)
 
 func _on_world_changed(change: WorldChange) -> void:
     if change == null:
@@ -268,6 +319,16 @@ func _on_appliances_changed(_revision: int, _reason: StringName) -> void:
 func _on_utility_reset() -> void:
     _discover_existing_fixed_emitters()
     _emit_if_changed()
+
+func _on_world_tick_advanced(previous_tick: int, new_tick: int) -> void:
+    if not _has_traffic_lights():
+        return
+    if traffic_phase_for_tick(previous_tick) != traffic_phase_for_tick(new_tick):
+        _emit_if_changed()
+
+func _on_timing_state_reset() -> void:
+    if _has_traffic_lights():
+        _emit_if_changed()
 
 func _emit_if_changed() -> void:
     var next_signature: String = _current_signature()
