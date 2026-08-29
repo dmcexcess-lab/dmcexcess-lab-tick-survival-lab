@@ -55,7 +55,13 @@ func generate(request: GlobalWorldGenerationRequest) -> GeneratedGlobalWorldPlan
         plan.failure_reason = "island_road_clipping_failed"
         return plan
 
-    var base_sites_result: Dictionary = _copy_base_sites(base.area_sites, plan.river_segments, request, island_profile)
+    var base_sites_result: Dictionary = _copy_base_sites(
+        base.area_sites,
+        plan.settlements,
+        plan.river_segments,
+        request,
+        island_profile
+    )
     if not bool(base_sites_result.get("ok", false)):
         plan.failure_reason = String(base_sites_result.get("failure_reason", "island_base_site_adaptation_failed"))
         return plan
@@ -108,6 +114,7 @@ func _decorate_geography(
 
 func _copy_base_sites(
     source: Array[Dictionary],
+    settlements: Array[Dictionary],
     rivers: Array[Dictionary],
     request: GlobalWorldGenerationRequest,
     profile: Dictionary
@@ -117,8 +124,9 @@ func _copy_base_sites(
         var site: Dictionary = value.duplicate(true)
         site["site_role"] = &"primary"
         var rect: Rect2i = site.get("bounds", Rect2i())
+        var site_id: String = String(site.get("id", ""))
         if not _rect_inside(request.bounds, rect):
-            return _site_failure("island_base_site_out_of_bounds:%s" % String(site.get("id", "")))
+            return _site_failure("island_base_site_out_of_bounds:%s" % site_id)
         if not Surface.rect_is_land(
             request.bounds,
             request.seed,
@@ -128,14 +136,117 @@ func _copy_base_sites(
             int(profile.get("island_coast_wobble", 8)),
             int(profile.get("island_coast_scale", 96))
         ):
-            return _site_failure("island_base_site_not_land:%s" % String(site.get("id", "")))
+            return _site_failure("island_base_site_not_land:%s" % site_id)
         if not _hydrology.rect_clear_of_rivers(rect, rivers, int(profile.get("settlement_river_clearance", 16))):
-            return _site_failure("island_base_site_hits_river:%s" % String(site.get("id", "")))
-        for existing: Dictionary in sites:
-            if _rects_overlap(rect, existing.get("bounds", Rect2i())):
-                return _site_failure("island_base_site_overlap:%s" % String(site.get("id", "")))
+            return _site_failure("island_base_site_hits_river:%s" % site_id)
+        if _overlaps_any_site(rect, sites):
+            var repaired_rect: Rect2i = _repair_overlapping_site_rect(
+                site,
+                rect,
+                sites,
+                settlements,
+                rivers,
+                request,
+                profile
+            )
+            if repaired_rect.size.x <= 0 or repaired_rect.size.y <= 0:
+                return _site_failure("island_base_site_overlap:%s" % site_id)
+            rect = repaired_rect
+            site["bounds"] = rect
         sites.append(site)
     return {"ok": true, "failure_reason": "", "area_sites": sites}
+
+func _repair_overlapping_site_rect(
+    site: Dictionary,
+    original: Rect2i,
+    accepted_sites: Array[Dictionary],
+    settlements: Array[Dictionary],
+    rivers: Array[Dictionary],
+    request: GlobalWorldGenerationRequest,
+    profile: Dictionary
+) -> Rect2i:
+    var settlement_center: Vector2i = _site_settlement_center(site, settlements)
+    if settlement_center == INVALID_CELL:
+        return Rect2i()
+
+    var candidate_xs: Array[int] = [original.position.x]
+    var candidate_ys: Array[int] = [original.position.y]
+    for accepted: Dictionary in accepted_sites:
+        var accepted_rect: Rect2i = accepted.get("bounds", Rect2i())
+        _append_unique_int(candidate_xs, accepted_rect.position.x - original.size.x)
+        _append_unique_int(candidate_xs, accepted_rect.position.x + accepted_rect.size.x)
+        _append_unique_int(candidate_ys, accepted_rect.position.y - original.size.y)
+        _append_unique_int(candidate_ys, accepted_rect.position.y + accepted_rect.size.y)
+
+    var best := Rect2i()
+    var best_distance: int = 2147483647
+    var max_shift: int = maxi(original.size.x, original.size.y)
+    for candidate_y: int in candidate_ys:
+        for candidate_x: int in candidate_xs:
+            var position := Vector2i(candidate_x, candidate_y)
+            if position == original.position:
+                continue
+            var distance: int = absi(position.x - original.position.x) + absi(position.y - original.position.y)
+            if distance > max_shift:
+                continue
+            var candidate := Rect2i(position, original.size)
+            if not candidate.has_point(settlement_center):
+                continue
+            if not _site_rect_legal(candidate, accepted_sites, rivers, request, profile):
+                continue
+            if best.size.x <= 0 \
+                or distance < best_distance \
+                or (distance == best_distance and _rect_position_before(candidate, best)):
+                best = candidate
+                best_distance = distance
+    return best
+
+func _site_rect_legal(
+    rect: Rect2i,
+    accepted_sites: Array[Dictionary],
+    rivers: Array[Dictionary],
+    request: GlobalWorldGenerationRequest,
+    profile: Dictionary
+) -> bool:
+    if not _rect_inside(request.bounds, rect):
+        return false
+    if not Surface.rect_is_land(
+        request.bounds,
+        request.seed,
+        rect,
+        int(profile.get("island_ocean_margin", 24)),
+        int(profile.get("island_shore_width", 8)),
+        int(profile.get("island_coast_wobble", 8)),
+        int(profile.get("island_coast_scale", 96))
+    ):
+        return false
+    if not _hydrology.rect_clear_of_rivers(rect, rivers, int(profile.get("settlement_river_clearance", 16))):
+        return false
+    return not _overlaps_any_site(rect, accepted_sites)
+
+func _site_settlement_center(site: Dictionary, settlements: Array[Dictionary]) -> Vector2i:
+    var settlement_id: String = String(site.get("settlement_id", ""))
+    if settlement_id.is_empty():
+        return INVALID_CELL
+    for settlement: Dictionary in settlements:
+        if String(settlement.get("id", "")) == settlement_id:
+            return settlement.get("center", INVALID_CELL)
+    return INVALID_CELL
+
+func _overlaps_any_site(rect: Rect2i, sites: Array[Dictionary]) -> bool:
+    for existing: Dictionary in sites:
+        if _rects_overlap(rect, existing.get("bounds", Rect2i())):
+            return true
+    return false
+
+func _append_unique_int(values: Array[int], value: int) -> void:
+    if not values.has(value):
+        values.append(value)
+
+func _rect_position_before(a: Rect2i, b: Rect2i) -> bool:
+    if a.position.x != b.position.x:
+        return a.position.x < b.position.x
+    return a.position.y < b.position.y
 
 func _site_failure(reason: String) -> Dictionary:
     return {"ok": false, "failure_reason": reason, "area_sites": []}
