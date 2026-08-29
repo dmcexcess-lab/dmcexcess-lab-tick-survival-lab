@@ -27,9 +27,11 @@ jobs:
           test -f game/scripts/ui/ActorStatsInspectorQuery.gd
           test -f game/scripts/ui/ActorInventoryInspectorQuery.gd
           test -f game/scripts/ui/CanonicalPlayerShell.gd
+          test -f game/scripts/ui/CraftingPlayerShell.gd
           test -f game/scripts/ci/CanonicalPlayerShellSmoke.gd
           grep -q 'Status: \*\*APPROVED\|Status: \*\*IMPLEMENTED' SYSTEM_DESIGNS/16_CANONICAL_PLAYER_SHELL.md
-          grep -q 'CanonicalPlayerShell.gd' game/main.tscn
+          grep -q 'CraftingPlayerShell.gd' game/main.tscn
+          grep -q '^extends CanonicalPlayerShell$' game/scripts/ui/CraftingPlayerShell.gd
           grep -q 'STANCE_TOGGLE' game/scripts/input/PlayerActionIntent.gd
           grep -q 'KEY_C' game/scripts/input/KeyboardInputAdapter.gd
           grep -q 'set_enabled' game/scripts/input/KeyboardInputAdapter.gd
