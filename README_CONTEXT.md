@@ -18,39 +18,47 @@ Golden archaeology commit: `1763958f44eb7f855fd49944c00d1ffe608c0abe`.
 
 ---
 
-## Current canonical playable world
+## Current playable world
 
 The canonical DEV/playable composition is the **complete streamed island**.
 
 - Global bounds: 1792x1792 tactical cells (`Rect2i(232,1232,1792,1792)`).
-- System 00D `temperate.island.region` is **v3** and overlays deterministic LAND / SHORE / OCEAN on the protected rural-v6 planning skeleton.
-- Five globally connected site identities remain: one `rural.crossroads`, one `smalltown.center`, and three `rural.scattered` hamlets.
-- The central local-area seed is derived from world seed + site identity instead of reusing the historical standalone critique seed.
-- The old 640-cell regional protected-cross half-span is not carried into the playable island; island v3 uses a compact 160-cell local protected cross.
-- Island settlement spacing is compact enough to read as one continuous generated world rather than separated mini-maps.
-- System 00F materializes non-overlapping settlement, river/watercourse and island-surface logical sources.
-- Technical streaming is 128x128 with active radius 1 and follows the survivor. Technical regions are performance configuration, never world identity.
-- Ocean/ordinary river water is non-traversable except explicit planned bridge deck.
-- Natural ecology is derived from shared world seed + absolute global cell so logical source boundaries do not restart vegetation identity.
-- The playable survivor starts on inherited pavement beside the central crossroads, not at the diner entrance.
+- System 00D `temperate.island.region` is v3 over the protected rural-v6 planning skeleton.
+- Five connected site identities remain: one `rural.crossroads`, one `smalltown.center`, three `rural.scattered` hamlets.
+- Central local-area seed derives from world seed + site identity rather than reusing the historical standalone critique seed.
+- The playable island uses the compact island protected-cross/spacing configuration rather than the historical 640-cell regional stress-fixture cross.
+- System 00F materializes settlement, hydrology and island-surface logical sources; technical streaming remains 128x128 with active radius 1.
+- Natural ecology derives from shared world seed + absolute global cell so logical source boundaries do not restart environmental identity.
+- Survivor spawn remains on inherited pavement beside the central crossroads rather than the diner entrance.
 
-### Compact-island / legacy seam cleanup — COMPLETE + CI VERIFIED
+### Compact-island / legacy seam cleanup — REOPENED
 
-Verified executable: `918f1dbd7b033fa179522a112b1507d9a2c63890`.
+The attempted planner repair `918f1dbd7b033fa179522a112b1507d9a2c63890` is **not an accepted executable**.
 
-Final defect fixed during cleanup: global geography snapping previously rejected settlement centers only when they were within a 160-cell center-distance threshold. Local area sites are 256x256, so grid-snapped centers could legally pass that heuristic while their actual site rectangles still overlapped. An alternate world seed exposed this as `island_base_site_overlap:area.smalltown.center.001`.
+What happened:
 
-`GlobalSettlementPlanner` now rejects **actual positive-area 256x256 site-rectangle overlap** while preserving deterministic geography/hydrology selection. Edge-touch remains legal; true overlap advances to the next deterministic legal geography candidate. The validator was not weakened.
+1. CI isolated an alternate-seed System-00D failure: `island_base_site_overlap:area.smalltown.center.001`.
+2. `918f1db...` replaced the historical 160-cell center-distance candidate rejection with exact 256x256 site-rectangle overlap rejection.
+3. Automated exact-head CI went green, including System 00D and Pages.
+4. Human play immediately reported the deployed game as completely broken.
+5. The planner change was therefore reverted.
 
-On exact head `918f1dbd7b033fa179522a112b1507d9a2c63890`:
+Current restored runtime executable:
 
-- `global-world-planning` passed, including the formerly failing **legacy crossroads is not embedded in island** smoke;
-- canonical demo startup passed;
-- `local-area-generation`, `large-area-critique`, `streaming-materialization`, `canonical-player-shell`, System 32 Crafting and performance architecture passed;
-- Pages build/deploy passed;
-- exact-head Actions settled with **zero failed runs and zero in-progress runs**.
+`f6a06add3dfd212c0c29b343d24a8f7d28a89bca`
 
-This closes the compact-island/world-seam cleanup. Do not reopen it without new evidence.
+That commit restores `GlobalSettlementPlanner.gd` to the pre-regression implementation from `ba706f18017d4d72b950f18d3e988ce75592f0a6`. Its Pages build/deploy completed successfully.
+
+Expected current verification state:
+
+- the live game is back on the pre-regression planner;
+- System 00D's strict `Legacy Crossroads Is Not Embedded In Island` alternate-seed seam is red again;
+- that known red seam is intentionally reopened rather than hidden by a gameplay-breaking planner change;
+- Crafting and unrelated gameplay systems were not reverted.
+
+**Do not cite `918f1db...` as a completed cleanup head.**
+
+Before another live planner change, reproduce the overlap in a focused planner fixture, define the intended settlement-layout invariants beyond simple non-overlap, verify the smallest deterministic repair, then human-play the island before closure.
 
 ---
 
@@ -58,14 +66,14 @@ This closes the compact-island/world-seam cleanup. Do not reopen it without new 
 
 Roadmap **Phase 1 and Phase 2 are implementation-complete**.
 
-Implemented systems/capabilities include:
+Major implemented capabilities include:
 
 - authoritative WHERE / WHAT / WHEN foundations;
-- collision, movement, actor locomotion, stance, carrying and timed item transfer;
+- collision, movement, locomotion, stance, carrying and timed item transfer;
 - complete-island global/local generation and technical streaming;
 - System-19 building generation and System-20 local-area morphology;
-- broad deterministic location dressing and world clutter;
-- persistent searchable world loot with the current physical item catalog;
+- deterministic location dressing and world clutter;
+- persistent searchable world loot;
 - world time/daylight;
 - spatial sound/hearing;
 - physical lighting, visibility and shadows;
@@ -75,7 +83,7 @@ Implemented systems/capabilities include:
 - analytic item freshness/spoilage with no per-item timers;
 - semantic inventory/menu icons;
 - large/multi-cell prop presentation geometry;
-- **System 32 Crafting / Material Transformation**, including real persistent ingredient/tool/output entities, timed WHEN actions, workstations, compensation, interaction offers, and phone/Safari-first player UI.
+- System 32 Crafting / Material Transformation.
 
 ### Phase 1E content integration
 
@@ -93,24 +101,9 @@ Verified executable: `8b4db898f0e02dd84298dbc5291f3e1a88c11ce4`.
 
 Exact-head context: `verify/system32-crafting`.
 
-Core rule:
-
 > **Crafting transforms specific real persistent item entities into specific real persistent item entities. The recipe describes the transformation; WHEN charges the time; existing item/world owners hold the result.**
 
-Implemented scope includes:
-
-- deterministic exact-semantic recipes and workstation capabilities;
-- ingredients/tools selected from real personal possession rather than a resource wallet or nearby auto-pull;
-- real non-consumed tool requirements;
-- positive-duration CANCELABLE `crafting.craft_recipe` WHEN actions;
-- final-commit revalidation;
-- real input entity removal and deterministic real output creation;
-- actor-root containment and hard carry-limit enforcement;
-- bounded compensation journal rather than whole-world snapshots;
-- explicit heavy-workbench capability and System-29 `CRAFT` offer;
-- phone/Safari-first Crafting panel and canonical-shell integration.
-
-Crafting does **not** own Construction/Repair/Durability, Cooking/Nutrition, Power/Water, Skills/quality/XP, Vehicles, Combat/ammunition or AI.
+Crafting owns recipe-driven physical item transformation. It does not own Construction/Repair/Durability, Cooking/Nutrition, Power/Water, Skills/quality/XP, Vehicles, Combat/ammunition or AI.
 
 ---
 
@@ -125,21 +118,19 @@ Crafting does **not** own Construction/Repair/Durability, Cooking/Nutrition, Pow
 7. Weather is simulation truth; Weather animation is presentation.
 8. Fatigue is the stamina/endurance concept; there is no parallel stamina meter.
 9. Interaction highlights explain already-valid actions; they never create action truth.
-10. Expensive consumers wake only for the domains/completed batches they actually depend on.
+10. Expensive consumers wake only for domains/completed batches they actually depend on.
 11. Food freshness is derived analytically from authoritative time/exposure; no item gets a spoilage timer.
 12. UI icons visualize semantic truth but never define identity, utility, freshness or action legality.
 13. Logical area/streaming boundaries must not reset world-space environmental identity.
 14. Physical footprints answer where objects are; presentation geometry may be larger but never redefines physical truth.
 15. Bright art does not create light. System-27 emitter truth remains the only source of physical-light presentation glow.
 16. Content extends existing owners; integration never creates a second owner or placeholder future mechanics.
-17. Generated settlement/local-area rectangles may touch but must never positively overlap.
-18. Validators fail closed. A failing legal seed is a generation defect to repair, not a reason to weaken the validator.
+17. Validators fail closed. A legal-seed failure is a generation defect to repair, not a reason to weaken the validator.
+18. **Generated-world behavior/layout changes require human play acceptance in addition to green CI.** The `918f1db...` regression proved automated checks alone are insufficient here.
 
 ---
 
 ## Performance architecture
-
-The P0/P1/P2 performance architecture plus Weather presentation optimization is human-accepted on phone/Safari.
 
 Protected direction:
 
@@ -174,17 +165,12 @@ Protected direction:
 
 ## Current next lifecycle gate
 
+**Resolve and human-accept the reopened compact-island/world-seam cleanup.**
+
+Do not make another broad live planner change merely to turn System 00D green. Build the focused reproduction first and preserve the current playable layout while fixing the legal-seed defect.
+
+After cleanup is accepted, the next gameplay lifecycle gate is:
+
 **Roadmap Phase 3 — Power and Water: DESCRIBE.**
 
 Do **not** implement Phase-3 runtime code until its bounded design is approved.
-
-Phase-3 direction already established by the roadmap:
-
-- Power: major source -> substation/local distribution -> vulnerable local service.
-- Water: treatment/waterworks -> pump/local distribution -> local mains/hydrants/service.
-- Powered lights/neon/TVs/pumps/appliances must consume real utility state and feed existing physical systems.
-- Utility failures become persistent world consequences.
-- System 30 refrigeration may activate only from real Phase-3 power/appliance truth.
-- Existing wastewater planning may remain inert; standalone wastewater/sewer gameplay is not an active roadmap target.
-
-The next response that advances gameplay should therefore **DESCRIBE Phase 3**, not silently start coding it.
