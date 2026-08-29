@@ -53,6 +53,7 @@ Canonical status/routing index. Read `PROJECT_NORTH_STAR.md`, `PERFORMANCE_NORTH
 | 30 | Item Freshness / Spoilage | **IMPLEMENTED + CI VERIFIED — Phase 1B** | `30_ITEM_FRESHNESS_SPOILAGE.md` |
 | 31 | Semantic UI Icons | **IMPLEMENTED + CI VERIFIED — Phase 1C** | `31_SEMANTIC_UI_ICONS.md` |
 | 32 | Crafting / Material Transformation | **IMPLEMENTED + CI VERIFIED — Phase 2 complete** | `32_CRAFTING_MATERIAL_TRANSFORMATION.md` |
+| 33 | Power / Water Utility Runtime | **DRAFT — DESCRIBE complete; approval required** | `33_POWER_WATER_UTILITIES.md` |
 | PERF | Performance Architecture Gate | **IMPLEMENTED + CI VERIFIED; human accepted** | `PERFORMANCE_ARCHITECTURE.md` |
 | 00E | Population / Household / Outbreak / Player Story | **NOT DESIGNED — scheduled inside Phase 8** | future design |
 
@@ -62,7 +63,7 @@ Canonical status/routing index. Read `PROJECT_NORTH_STAR.md`, `PERFORMANCE_NORTH
 |---|---|---|
 | 1E — Content Expansion + Integration | **IMPLEMENTED + CI VERIFIED; human visual acceptance pending** | `PHASE_1E_CONTENT_EXPANSION_INTEGRATION.md` |
 | 2 — Crafting | **IMPLEMENTED + CI VERIFIED; human CRAFT UI/playtest pending** | `32_CRAFTING_MATERIAL_TRANSFORMATION.md` |
-| 3 — Power + Water | **NOT DESIGNED — next design target** | future bounded design(s) |
+| 3 — Power + Water | **DESCRIBED — awaiting explicit approval** | `33_POWER_WATER_UTILITIES.md` |
 
 ---
 
@@ -74,11 +75,11 @@ Phase 2 / System 32 is implementation-complete and CI-verified on executable:
 
 `8b4db898f0e02dd84298dbc5291f3e1a88c11ce4`
 
-All **20 required exact-head contexts** are green on that executable.
+The current island/performance recovery has also been human-play accepted on the current executable lineage, so the active gameplay lifecycle gate is now **System 33 / Phase 3 approval**.
 
 Then: **Power + Water -> physical survival/health -> Moodlets -> final skills/interactions -> Vehicles -> AI/combat/outbreak -> final graphics/UI -> Beta.**
 
-The next lifecycle gate is **DESCRIBE Phase 3 Power + Water**. Phase-2 completion does not authorize Phase-3 code.
+Phase-3 runtime code remains unauthorized until `33_POWER_WATER_UTILITIES.md` is explicitly approved.
 
 ---
 
@@ -105,33 +106,46 @@ Candidate 001 implements:
 
 Candidate 001 intentionally excludes cooking/perishables, consuming item-containers, durability/repair, construction, Power/Water, nutrition/Health, Skills/XP/quality, Vehicles, combat/ammo and AI.
 
-Human visual/interaction acceptance of the CRAFT UI is still separate from automated verification.
-
 Canonical design: `32_CRAFTING_MATERIAL_TRANSFORMATION.md`.
+
+---
+
+## Current System 33 proposal
+
+> **Planning says where utility topology exists. System 33 owns whether that topology currently provides service. Consumers query service; they never infer it from art, brightness or UI state.**
+
+Candidate 001, if approved, is bounded to:
+
+- persistent three-tier power service state consuming 00D4 planning truth;
+- persistent three-tier potable-water service consuming 00D5 planning truth;
+- rural decentralized well service where planned;
+- electrically driven water-pump dependency on real power service;
+- real fixed-light power integration into System 27;
+- real refrigerator cold-storage availability for System 30;
+- truthful water-service inspection without inventing Phase-4 thirst/liquid mechanics;
+- event/revision-driven cached service derivation with no frame polling, per-component timers or global on/off boolean;
+- explicit persistent damage/disabled state with canonical mutation seams for future repair/damage systems.
+
+Detailed exclusions and verification contract are in `33_POWER_WATER_UTILITIES.md`.
 
 ---
 
 ## Required executable-head stack
 
+Existing executable verification contexts remain required neighbors. System 33 implementation must add its own exact-head context and preserve, at minimum:
+
 - `verify/system00d-global-world`
 - `verify/system00f-streaming-materialization`
 - `verify/system19-local-building`
 - `verify/system20-local-area`
-- `verify/system21-camera-view`
-- `verify/system22-area-critique`
 - `verify/system23-perception`
-- `verify/system24-loot`
 - `verify/system25-world-time-light`
-- `verify/system26-spatial-sound`
 - `verify/system27-physical-lighting`
-- `verify/system28-weather`
 - `verify/system29-interaction-affordance`
 - `verify/system30-item-freshness`
-- `verify/system31-semantic-ui-icons`
-- `verify/system07b-large-visual-geometry`
-- `verify/phase1e-content-integration`
 - `verify/system32-crafting`
 - `verify/performance-architecture`
-- `verify/pages-deploy`
+- canonical startup/player responsiveness/visibility coverage;
+- `verify/pages-deploy`.
 
-All **20 required contexts** are green on verified executable head `8b4db898f0e02dd84298dbc5291f3e1a88c11ce4`.
+**Current lifecycle gate: explicit approval of System 33 Candidate 001.**
