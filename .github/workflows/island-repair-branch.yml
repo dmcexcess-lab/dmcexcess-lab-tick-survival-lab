@@ -33,17 +33,53 @@ jobs:
           ./Godot_v4.7.1-stable_linux.x86_64 --headless --editor --path "$GITHUB_WORKSPACE/game" --quit 2>&1 | tee "$RUNNER_TEMP/import.log"
           if grep -Eqi 'SCRIPT ERROR|Parse Error|Failed to load script' "$RUNNER_TEMP/import.log"; then exit 1; fi
 
-      - name: Probe island seam geometry
+      - name: Prove baseline world is unchanged and alternate window is local-only
         shell: bash
         run: |
-          set -o pipefail
-          ./Godot_v4.7.1-stable_linux.x86_64 --headless --path "$GITHUB_WORKSPACE/game" --script res://scripts/ci/IslandRepairProbe.gd 2>&1 | tee "$RUNNER_TEMP/island-repair-probe.log"
+          set -euxo pipefail
+          ./Godot_v4.7.1-stable_linux.x86_64 --headless --path "$GITHUB_WORKSPACE/game" --quit-after 45 --script res://scripts/ci/IslandRepairProbe.gd 2>&1 | tee "$RUNNER_TEMP/island-repair-probe.log"
+          grep -q 'ISLAND_REPAIR_BASELINE_GATE_OK' "$RUNNER_TEMP/island-repair-probe.log"
+          if grep -Eqi 'SCRIPT ERROR|Parse Error|Failed to load script|ISLAND_REPAIR_BASELINE_GATE_FAIL' "$RUNNER_TEMP/island-repair-probe.log"; then exit 1; fi
+
+      - name: System 00D full regional planning smoke
+        shell: bash
+        run: |
+          set -euxo pipefail
+          ./Godot_v4.7.1-stable_linux.x86_64 --headless --path "$GITHUB_WORKSPACE/game" --quit-after 30 --script res://scripts/ci/GlobalWorldPlanningV6Smoke.gd 2>&1 | tee "$RUNNER_TEMP/world00d.log"
+          grep -q 'GLOBAL_WORLD_PLANNING_V6_SMOKE_OK' "$RUNNER_TEMP/world00d.log"
+          if grep -Eqi 'SCRIPT ERROR|Parse Error|Failed to load script' "$RUNNER_TEMP/world00d.log"; then exit 1; fi
+
+      - name: Complete island and integrated local-profile smoke
+        shell: bash
+        run: |
+          set -euxo pipefail
+          ./Godot_v4.7.1-stable_linux.x86_64 --headless --path "$GITHUB_WORKSPACE/game" --quit-after 45 --script res://scripts/ci/CompleteIslandWorldPlanningSmoke.gd 2>&1 | tee "$RUNNER_TEMP/island00d.log"
+          grep -q 'COMPLETE_ISLAND_WORLD_PLANNING_SMOKE_OK' "$RUNNER_TEMP/island00d.log"
+          if grep -Eqi 'SCRIPT ERROR|Parse Error|Failed to load script' "$RUNNER_TEMP/island00d.log"; then exit 1; fi
 
       - name: Verify island legacy seam
         shell: bash
         run: |
-          set -o pipefail
-          ./Godot_v4.7.1-stable_linux.x86_64 --headless --path "$GITHUB_WORKSPACE/game" --script res://scripts/ci/IslandLegacySeamSmoke.gd 2>&1 | tee "$RUNNER_TEMP/island-legacy-seam.log"
+          set -euxo pipefail
+          ./Godot_v4.7.1-stable_linux.x86_64 --headless --path "$GITHUB_WORKSPACE/game" --quit-after 45 --script res://scripts/ci/IslandLegacySeamSmoke.gd 2>&1 | tee "$RUNNER_TEMP/island-legacy-seam.log"
+          grep -q 'ISLAND_LEGACY_SEAM_SMOKE_OK' "$RUNNER_TEMP/island-legacy-seam.log"
+          if grep -Eqi 'SCRIPT ERROR|Parse Error|Failed to load script' "$RUNNER_TEMP/island-legacy-seam.log"; then exit 1; fi
+
+      - name: Preserve System 20 local generation contract
+        shell: bash
+        run: |
+          set -euxo pipefail
+          ./Godot_v4.7.1-stable_linux.x86_64 --headless --path "$GITHUB_WORKSPACE/game" --quit-after 30 --script res://scripts/ci/LocalAreaGenerationSmoke.gd 2>&1 | tee "$RUNNER_TEMP/area20.log"
+          grep -q 'LOCAL_AREA_GENERATION_SMOKE_OK' "$RUNNER_TEMP/area20.log"
+          if grep -Eqi 'SCRIPT ERROR|Parse Error|Failed to load script' "$RUNNER_TEMP/area20.log"; then exit 1; fi
+
+      - name: Canonical demo startup regression
+        shell: bash
+        run: |
+          set -euxo pipefail
+          ./Godot_v4.7.1-stable_linux.x86_64 --headless --path "$GITHUB_WORKSPACE/game" --quit-after 2 2>&1 | tee "$RUNNER_TEMP/startup.log"
+          grep -q 'CANONICAL_DEMO_BOOT_OK' "$RUNNER_TEMP/startup.log"
+          if grep -Eqi 'SCRIPT ERROR|Parse Error|Failed to load script|CANONICAL_DEMO_BOOT_FAILED' "$RUNNER_TEMP/startup.log"; then exit 1; fi
 
       - name: Preserve branch logs
         if: always()
@@ -52,6 +88,10 @@ jobs:
           name: island-repair-${{ github.sha }}
           path: |
             ${{ runner.temp }}/island-repair-probe.log
+            ${{ runner.temp }}/world00d.log
+            ${{ runner.temp }}/island00d.log
             ${{ runner.temp }}/island-legacy-seam.log
+            ${{ runner.temp }}/area20.log
+            ${{ runner.temp }}/startup.log
           if-no-files-found: ignore
           retention-days: 7
