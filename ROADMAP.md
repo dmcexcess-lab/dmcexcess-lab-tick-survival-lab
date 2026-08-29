@@ -15,11 +15,11 @@ Current game identity:
 ## Current milestone state
 
 - **Phase 1 — COMPLETE.** Items, spoilage, interaction readability, semantic UI, large-object presentation, content breadth and integration are implemented.
-- **Phase 2 — COMPLETE.** System 32 Crafting / Material Transformation Candidate 001 is implemented and CI verified on `8b4db898f0e02dd84298dbc5291f3e1a88c11ce4`.
-- **Compact-island/world-seam cleanup — COMPLETE + HUMAN ACCEPTED.** The broad planner repair `918f1dbd7b033fa179522a112b1507d9a2c63890` remains rejected; focused local-window repair `282864f242ba2a5c3df0519591e31990372c4aed` is accepted.
+- **Phase 2 — COMPLETE.** System 32 Crafting Candidate 001 is implemented and CI verified on `8b4db898f0e02dd84298dbc5291f3e1a88c11ce4`.
+- **Compact-island/world-seam cleanup — COMPLETE + HUMAN ACCEPTED.** Broad planner repair `918f1db...` remains rejected; focused local-window repair `282864f...` is accepted.
 - **Responsiveness / black-screen recovery — HUMAN ACCEPTED.** Recovery executable `1f65bff312853a44858201b57d9df2e26ee64f80` restored the human-good full-window lighting/visibility path while preserving decision-pause responsiveness.
-- **Phase 3 / System 33 Power + Water — IMPLEMENTED + AUTOMATED VERIFIED; HUMAN RETEST PENDING.** Truthful-lighting repaired executable: `ec7be83146d62055a5d2d4b1233eb7cc50cea630`.
-- **Current gameplay lifecycle gate:** human browser verification of repaired System-33 Candidate 001. Do not mark Phase 3 complete until that playtest is accepted.
+- **Phase 3 / System 33 Power + Water — IMPLEMENTED + AUTOMATED VERIFIED; HUMAN RETEST PENDING.** Current executable including powered non-bloom room lights: `c7592c956a44c31b082db84ae597f43c643231c4`.
+- **Current gameplay lifecycle gate:** human browser verification of current System-33 Candidate 001, especially indoor power on/off, water/pump and refrigeration behavior.
 
 ---
 
@@ -45,27 +45,19 @@ System 30 Candidate 001 is implemented and verified.
 
 > **Food ages because authoritative world time passes through its storage environment. No item gets a timer.**
 
-System 33 now supplies real powered refrigerator cold-storage availability; System 30 still owns freshness math. Phase 4 later owns eating/drinking/health consequences.
+System 33 supplies real powered refrigerator cold-storage availability; System 30 still owns freshness math. Phase 4 later owns eating/drinking/health consequences.
 
 ### 1C — Semantic inventory/menu icons — COMPLETE
 
 System 31 is implemented and verified.
 
-> **UI icons visualize existing semantic truth. They never define item identity, utility, freshness, or action legality.**
-
 ### 1D — Large/multi-cell object visual geometry — COMPLETE
 
 System 07B is implemented and CI verified.
 
-> **Physical footprint answers where the object is. Visual geometry answers how that object is drawn. Neither may silently redefine the other.**
-
 ### 1E — Content expansion + integration — COMPLETE
 
 Canonical design: `SYSTEM_DESIGNS/PHASE_1E_CONTENT_EXPANSION_INTEGRATION.md`.
-
-> **Content extends the system that already owns its truth. Integration does not create a second owner.**
-
-Verified Phase-1E executable: `6ad923d172f5a5434f94a7fdcc15da640a60a240`.
 
 ---
 
@@ -77,24 +69,13 @@ Verified executable: `8b4db898f0e02dd84298dbc5291f3e1a88c11ce4`.
 
 > **Crafting transforms specific real persistent item entities into specific real persistent item entities. The recipe describes the transformation; WHEN charges the time; existing item/world owners hold the result.**
 
-Implemented Candidate 001 includes exact-semantic recipes/workstations, deterministic real-item ingredient/tool selection, positive-duration WHEN crafting, final-commit revalidation, persistent outputs, carry/weight integration and a phone/Safari-first crafting path.
-
-System 32 does not own Construction/Repair/Durability, Cooking/Nutrition, Power/Water, Skills/quality/XP, Vehicles, combat/ammunition or AI.
-
 ---
 
 ## World-generation cleanup gate — COMPLETE + HUMAN ACCEPTED
 
 The playable island remains `temperate.island.region` v3 over the protected rural-v6 planning skeleton.
 
-Accepted cleanup includes:
-
-- fresh new-game seeds redraw island identity rather than aliasing the historical standalone critique fixture;
-- central local-site seed derives from world seed + site identity;
-- compact island spacing removes the former giant green belt;
-- natural ecology stays coherent across logical source rectangles using world seed + absolute global cell;
-- spawn remains on inherited pavement rather than the diner entrance;
-- legal-seed base-site overlap is repaired by `282864f242ba2a5c3df0519591e31990372c4aed` through bounded local-window adaptation that preserves global settlement layout.
+Accepted cleanup includes fresh island identity, coherent world-space ecology, inherited pavement spawn, compact spacing and focused island-local overlap repair `282864f242ba2a5c3df0519591e31990372c4aed` without redesigning global settlement placement.
 
 Rejected attempt `918f1db...` remains historical evidence that green CI does not replace human generated-world acceptance.
 
@@ -104,31 +85,37 @@ Rejected attempt `918f1db...` remains historical evidence that green CI does not
 
 Canonical design: `SYSTEM_DESIGNS/33_POWER_WATER_UTILITIES.md`.
 
-Verified repaired executable: `ec7be83146d62055a5d2d4b1233eb7cc50cea630`.
+Current verified executable: `c7592c956a44c31b082db84ae597f43c643231c4`.
 
 > **Planning says where utility topology exists. System 33 owns whether that topology currently provides service. Consumers query service; they never infer it from art, brightness or UI state.**
 
 ### Implemented Candidate 001
 
-1. **33A — Utility state foundation + plan materialization** — persistent typed power/water state consuming 00D4/00D5 planning truth, stable identities, service bindings, snapshot/restore, revisions and cached service queries.
-2. **33B — Power vertical slice** — causal three-tier service, typed outage/damage mutation, fixed powered fixture integration into System 27 and canonical DEV controls.
-3. **33C — Potable-water vertical slice** — municipal/rural service and electrically driven pump dependency on real power.
-4. **33D — Refrigeration consumer slice** — powered operational refrigerator cold-storage availability feeding System 30 without item timers.
+1. **33A — Utility foundation** — persistent typed power/water state consuming 00D4/00D5 planning truth, stable service bindings, snapshot/restore, revisions and cached service queries.
+2. **33B — Power** — causal three-tier service, typed outage/damage mutation, real fixed powered light integration into System 27 and canonical DEV controls.
+3. **33C — Potable water** — municipal/rural service and electrically driven pump dependency on real power.
+4. **33D — Refrigeration** — powered operational refrigerator cold-storage availability feeding System 30 without item timers.
 
-### Truthful-lighting repair
+### Truthful fixed/equipped lighting
 
-The initial 33B visible integration was human-rejected because the runtime utility state was real while light ownership was still effectively fake: an unconditional player flashlight was passed through and static lights came from legacy demo coordinates.
+The initial visible 33B integration was human-rejected because the runtime utility state was real while source ownership remained fake: an unconditional flashlight was passed through and static lights came from demo coordinates.
 
-The repaired runtime now requires:
+The repaired runtime now requires real WHAT fixture placement for fixed emitters, real System-33 service for powered fixtures, and a real `item.tool.flashlight` in a real hand slot for the player beam. The legacy demo source is inert. The user later reported this repaired source behavior looked good.
 
-- fixed emitters derive from actual persistent WHAT fixture entities and actual `WorldPlacement` position/facing;
-- real System-33 local power service gates those fixtures;
-- the player receives no flashlight beam unless a real `item.tool.flashlight` entity is assigned to a real hand-equipment slot;
-- the legacy demo lighting source is inert;
-- portable battery depletion/toggle simulation remains deferred instead of invented;
-- facing-only turns with no equipped moving light do not wake the physical-light solver.
+### Powered non-bloom interior lighting
 
-Dedicated verification: `verify/system33-lighting-truth`.
+Generated interiors previously had too few real visible light objects to make household power state easy to test. The refinement on `c7592c9...` adds one invisible persistent `fixture.room_light` WHAT entity per generated System-19 room.
+
+- the fixture occupies a real room cell on the non-rendered EFFECT channel;
+- its System-33 appliance binds to the power service for that actual cell;
+- while powered it feeds a real `light.room_ambient.candidate001` emitter into System 27;
+- the profile raises physical/local luminance but has `presentation_glow_scale = 0.0`;
+- therefore a house can become visibly light/dark with power without inventing a glowing lamp graphic;
+- ordinary streetlights, lamps, neon and flashlights retain visible bloom;
+- local outage/restoration removes/restores affected room emitters through canonical System-33 state;
+- no frame polling, per-room timer, camera-driven utility truth or recurring whole-world scan was added.
+
+Dedicated verification: `verify/system33-lighting-truth`, including `RoomLightingPowerSmoke.gd`.
 
 ### Required ownership/performance rules
 
@@ -138,20 +125,21 @@ Dedicated verification: `verify/system33-lighting-truth`.
 - Runtime damage/disabled state is persistent typed truth.
 - Service is derived/cached from required upstream state and revisions.
 - System 27 remains physical-light owner; System 30 remains freshness owner.
-- Water-service inspection exists without inventing Phase-4 thirst/liquid consequences.
+- Presentation bloom is not illumination authority; a valid physical source may deliberately have zero additive glow.
+- Water inspection exists without inventing Phase-4 thirst/liquid consequences.
 - Portable battery/fuel simulation remains outside Candidate 001.
-- Standalone wastewater/sewer gameplay remains outside the active roadmap.
 
 ### Human acceptance gate
 
 Before Phase 3 is marked complete, browser play must confirm:
 
-1. no phantom flashlight at spawn when none is equipped;
-2. real visible fixed fixtures emit at their actual world positions;
-3. `LOCAL PWR` removes/restores those real fixed lights while unrelated service remains intact;
-4. water/pump and refrigerator service remain truthful;
-5. movement/turning remains responsive and the black-screen regression does not return;
-6. phone/Safari remains first-class.
+1. generated house rooms visibly brighten when powered without a fake glowing room-light sprite;
+2. `LOCAL PWR` removes/restores affected indoor illumination;
+3. walls/doors still shape physical light and visible streetlights/other sources retain normal glow;
+4. no phantom flashlight exists when none is equipped;
+5. water/pump and refrigerator service remain truthful;
+6. movement/turning stays responsive and the black-screen regression does not return;
+7. phone/Safari remains first-class.
 
 ---
 
@@ -175,27 +163,15 @@ Phase 4 may consume truthful System-33 water availability but must not move util
 
 ## Phase 5 — Moodlets and mental/comfort pressure
 
-Target families include comfort, fear, boredom, hunger, thirst and sleep/exhaustion. Underlying physical needs remain owned by physical-survival systems; Moodlets derive/read them rather than duplicating truth.
+Target families include comfort, fear, boredom, hunger, thirst and sleep/exhaustion. Underlying physical needs remain owned by physical-survival systems.
 
 ---
 
 ## Phase 6 — Final skills and broad item/world interactions
 
-Target skill catalog:
+Target skill catalog: Awareness, Sneak, First Aid, Cooking, Carpentry, Mechanical, Electrical, Fishing and Farming.
 
-- Awareness;
-- Sneak;
-- First Aid;
-- Cooking;
-- Carpentry;
-- Mechanical;
-- Electrical;
-- Fishing;
-- Farming.
-
-**Hunting is not a separate skill.** It emerges from Sneak, future shooting/combat proficiency and crafted trap placement.
-
-> **Real state first, presentation downstream.**
+**Hunting is not a separate skill.** It emerges from Sneak, future combat proficiency and crafted trap placement.
 
 ---
 
@@ -203,21 +179,17 @@ Target skill catalog:
 
 Requested classes: cars, trucks, motorcycles, bicycles and skateboards.
 
-Long-term direction includes persistent condition/damage/cargo, authoritative action-time movement, collision/world damage, utility/tree/object interaction and Mechanical skill integration.
-
 ---
 
 ## Phase 8 — Actor/NPC AI, combat, and causal outbreak
 
-Scope includes infected/zombie AI, survivor/follower/raider AI, melee/firearms, NPC use of the same physical perception and world systems as the player, conversations, population/coarse distant behavior and the causal outbreak/collapse.
-
-AI receives observer knowledge, not hidden world truth.
+Scope includes infected/zombie AI, survivors/followers/raiders, melee/firearms, conversations, population/coarse distant behavior and the causal outbreak/collapse. AI receives observer knowledge, not hidden world truth.
 
 ---
 
 ## Phase 9 — Final graphics and UI overhaul -> Beta
 
-Scope includes final control/layout audit, phone/Safari + desktop layouts, inventory/menu/icon consistency, interaction readability, world-art cleanup, shadows/lighting/weather/sound presentation, removal of obsolete DEV UI, accessibility and final performance work.
+Scope includes final control/layout audit, phone/Safari + desktop layouts, inventory/menu/icon consistency, interaction readability, world-art cleanup, shadows/lighting/weather/sound presentation, obsolete DEV UI removal, accessibility and final performance work.
 
 **Completion of Phase 9 is the planned Beta start gate.**
 
@@ -225,13 +197,7 @@ Scope includes final control/layout audit, phone/Safari + desktop layouts, inven
 
 ## Non-numbered engineering gates
 
-Insert when required without changing gameplay phase order:
-
-- save/load orchestration before new persistent state becomes unsafe to lose;
-- schema migration/invalidation policy while pre-Beta may still invalidate old saves;
-- performance profiling before population-scale AI, many simultaneous observers, moving lights, vehicles or large utility graphs;
-- persistence-backed streaming eviction only when current WHAT truth remains preserved;
-- mobile/browser hard-pause and input regressions throughout.
+Insert when required without changing gameplay phase order: save/load orchestration, pre-Beta schema invalidation/migration policy, performance profiling before population-scale systems, evidence-driven persistence-backed streaming eviction and continued mobile/browser hard-pause/input regression coverage.
 
 ---
 
@@ -249,4 +215,4 @@ For each bounded phase/system:
 
 Newest explicit user direction supersedes older roadmap ordering, but implemented historical systems remain current truth until deliberately migrated.
 
-**Current next step: human-play verify repaired System 33 Candidate 001 on `ec7be83146d62055a5d2d4b1233eb7cc50cea630`. Phase 4 begins only after that gate is accepted unless the user explicitly directs otherwise.**
+**Current next step: human-play verify System 33 Candidate 001 + powered room-light refinement on `c7592c956a44c31b082db84ae597f43c643231c4`. Phase 4 begins by default only after that gate is accepted unless the user explicitly directs otherwise.**

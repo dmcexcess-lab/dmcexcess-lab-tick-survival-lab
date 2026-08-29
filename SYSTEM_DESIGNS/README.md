@@ -47,13 +47,13 @@ Canonical status/routing index. Read `PROJECT_NORTH_STAR.md`, `PERFORMANCE_NORTH
 | 24 | World Loot / Searchable Containers / Scavenging | **IMPLEMENTED — Phase-1E expanded** | `24_WORLD_LOOT_SEARCHABLE_CONTAINERS.md` |
 | 25 | World Time / Ambient Daylight | **IMPLEMENTED** | `25_WORLD_TIME_AMBIENT_DAYLIGHT.md` |
 | 26 | Spatial Sound / Hearing | **IMPLEMENTED** | `26_SPATIAL_SOUND_HEARING.md` |
-| 27 | Physical Lighting / Illumination / Shadows | **IMPLEMENTED; truthful System-33 source seam verified** | `27_PHYSICAL_LIGHTING_ILLUMINATION_SHADOWS.md` |
+| 27 | Physical Lighting / Illumination / Shadows | **IMPLEMENTED; truthful powered fixed/equipped/room source seam verified** | `27_PHYSICAL_LIGHTING_ILLUMINATION_SHADOWS.md` |
 | 28 | Weather / Atmosphere | **IMPLEMENTED + human accepted** | `28_WEATHER_ATMOSPHERE.md` |
 | 29 | World Interaction Affordance / Reach | **IMPLEMENTED — Phase 1A** | `29_WORLD_INTERACTION_AFFORDANCE_REACH.md` |
 | 30 | Item Freshness / Spoilage | **IMPLEMENTED + CI VERIFIED — Phase 1B** | `30_ITEM_FRESHNESS_SPOILAGE.md` |
 | 31 | Semantic UI Icons | **IMPLEMENTED + CI VERIFIED — Phase 1C** | `31_SEMANTIC_UI_ICONS.md` |
 | 32 | Crafting / Material Transformation | **IMPLEMENTED + CI VERIFIED — Phase 2 complete** | `32_CRAFTING_MATERIAL_TRANSFORMATION.md` |
-| 33 | Power / Water Utility Runtime | **IMPLEMENTED + AUTOMATED VERIFIED — Candidate 001; HUMAN RETEST PENDING** | `33_POWER_WATER_UTILITIES.md` |
+| 33 | Power / Water Utility Runtime | **IMPLEMENTED + AUTOMATED VERIFIED — Candidate 001 + room-light refinement; HUMAN RETEST PENDING** | `33_POWER_WATER_UTILITIES.md` |
 | PERF | Performance Architecture Gate | **IMPLEMENTED + CI VERIFIED; human accepted** | `PERFORMANCE_ARCHITECTURE.md` |
 | 00E | Population / Household / Outbreak / Player Story | **NOT DESIGNED — scheduled inside Phase 8** | future design |
 
@@ -69,19 +69,15 @@ Canonical status/routing index. Read `PROJECT_NORTH_STAR.md`, `PERFORMANCE_NORTH
 
 ## Roadmap routing
 
-Phase 1 is implementation-complete through 1E.
-
-Phase 2 / System 32 is implementation-complete and CI-verified on executable:
-
-`8b4db898f0e02dd84298dbc5291f3e1a88c11ce4`
+Phase 1 is implementation-complete through 1E. Phase 2 / System 32 is implementation-complete and CI-verified on `8b4db898f0e02dd84298dbc5291f3e1a88c11ce4`.
 
 The current island/performance recovery is human-play accepted.
 
-System 33 Candidate 001 is implemented and exact-head verified after the truthful-lighting repair on executable:
+System 33 Candidate 001 plus powered non-bloom room-light refinement is exact-head verified on executable:
 
-`ec7be83146d62055a5d2d4b1233eb7cc50cea630`
+`c7592c956a44c31b082db84ae597f43c643231c4`
 
-The active gameplay lifecycle gate is **human browser verification of repaired System 33**, not Phase-4 implementation yet.
+The active gameplay lifecycle gate is **human browser verification of current System 33**, not Phase-4 implementation by default.
 
 Then: **physical survival/health -> Moodlets -> final skills/interactions -> Vehicles -> AI/combat/outbreak -> final graphics/UI -> Beta.**
 
@@ -93,40 +89,32 @@ Then: **physical survival/health -> Moodlets -> final skills/interactions -> Veh
 
 Candidate 001 implements exact stable ingredient/tool selection from real personal possession, real non-consumed tools, heavy-workbench capability, physical recipes, positive-duration CANCELABLE WHEN crafting, final-commit revalidation, deterministic persistent outputs, System-11 containment, System-13D/13E weight/carry integration and the canonical CRAFT interaction/UI path.
 
-Candidate 001 intentionally excludes cooking/perishables, consuming item-containers, durability/repair, construction, Power/Water, nutrition/Health, Skills/XP/quality, Vehicles, combat/ammo and AI.
-
 ---
 
 ## Current System 33 truth
 
 > **Planning says where utility topology exists. System 33 owns whether that topology currently provides service. Consumers query service; they never infer it from art, brightness or UI state.**
 
-Candidate 001 implements:
+Candidate 001 implements persistent three-tier power/potable-water service state, rural wells where planned, electrical pump-power dependency, powered refrigerator cold storage for System 30, typed appliance and utility damage state, revision-driven cached service derivation, canonical DEV controls and real System-27 powered-light integration.
 
-- persistent three-tier power service state consuming 00D4 planning truth;
-- persistent three-tier potable-water service consuming 00D5 planning truth;
-- rural decentralized well service where planned;
-- electrically driven water-pump dependency on real power service;
-- real refrigerator cold-storage availability for System 30;
-- typed appliance/switch/operational state and utility damage/disabled mutation seams;
-- event/revision-driven cached service derivation with no frame polling or per-component timers;
-- truthful DEV controls over canonical state;
-- real fixed-light integration into System 27.
+### Truthful fixed/equipped source boundary
 
-### Truthful fixed/equipped light source boundary
-
-The initial visible lighting integration was rejected in human play because it still used legacy demo fixture coordinates and an unconditional fake player flashlight.
-
-That seam is now retired:
-
-- fixed light discovery uses real WHAT semantic fixture entities;
-- fixed emitter position/facing uses each fixture's real `WorldPlacement`;
-- local System-33 service powers/unpowers the emitter;
-- player flashlight emission requires a real `item.tool.flashlight` entity assigned by System 09 hand equipment;
+- fixed light discovery uses real WHAT fixture entities and their real `WorldPlacement`;
+- local System-33 service powers/unpowers fixed emitters;
+- player flashlight emission requires real `item.tool.flashlight` equipment;
 - no flashlight is silently granted at spawn;
-- portable battery/toggle depletion remains deferred rather than simulated falsely;
-- `DemoLightingSourceAdapter` remains only an inert compatibility/bootstrap class with zero emitters;
-- a facing-only turn with no equipped moving light must not rebuild physical lighting.
+- portable battery/toggle depletion remains deferred rather than faked;
+- `DemoLightingSourceAdapter` is inert with zero emitters;
+- facing-only turns without an equipped moving source do not rebuild physical lighting.
+
+### Powered non-bloom rooms
+
+- every generated System-19 room materializes one invisible persistent `fixture.room_light` WHAT entity on the EFFECT channel;
+- each room fixture binds to the real power service for its cell;
+- `light.room_ambient.candidate001` raises physical System-27 luminance while `presentation_glow_scale = 0.0` suppresses additive source bloom/glare;
+- ordinary visible lights retain glow;
+- local utility outages remove/restore affected room emitters through canonical System-33 mutation;
+- dedicated `RoomLightingPowerSmoke.gd` proves luminance-on/no-bloom behavior.
 
 Dedicated exact-head context: `verify/system33-lighting-truth`.
 
@@ -154,6 +142,6 @@ Current System-33 executable verification preserves, at minimum:
 - canonical startup/player responsiveness/visibility coverage;
 - `verify/pages-deploy`.
 
-Verified executable: `ec7be83146d62055a5d2d4b1233eb7cc50cea630`.
+Verified executable: `c7592c956a44c31b082db84ae597f43c643231c4`.
 
-**Current lifecycle gate: human browser verification of repaired System 33 Candidate 001.**
+**Current lifecycle gate: human browser verification of current System 33 Candidate 001 + room-light refinement.**
