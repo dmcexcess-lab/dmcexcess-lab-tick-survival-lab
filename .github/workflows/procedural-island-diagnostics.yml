@@ -9,7 +9,7 @@ permissions:
   contents: read
 
 jobs:
-  classify:
+  classify-site-unrepairable:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -29,56 +29,7 @@ jobs:
           set -euxo pipefail
           ./Godot_v4.7.1-stable_linux.x86_64 --headless --editor --path "$GITHUB_WORKSPACE/game" --quit
 
-      - name: Category site-unrepairable
-        continue-on-error: true
+      - name: Confirm site-unrepairable category
         env:
           TICK_LAB_EXPECT_FAILURE_PREFIX: "island_base_site_unrepairable:"
-        run: ./Godot_v4.7.1-stable_linux.x86_64 --headless --path "$GITHUB_WORKSPACE/game" --script res://scripts/ci/ProceduralIslandFailureClassifier.gd
-
-      - name: Category site-overlap
-        continue-on-error: true
-        env:
-          TICK_LAB_EXPECT_FAILURE_PREFIX: "island_base_site_overlap:"
-        run: ./Godot_v4.7.1-stable_linux.x86_64 --headless --path "$GITHUB_WORKSPACE/game" --script res://scripts/ci/ProceduralIslandFailureClassifier.gd
-
-      - name: Category world-validation
-        continue-on-error: true
-        env:
-          TICK_LAB_EXPECT_FAILURE_PREFIX: "island_world_validation_failed:"
-        run: ./Godot_v4.7.1-stable_linux.x86_64 --headless --path "$GITHUB_WORKSPACE/game" --script res://scripts/ci/ProceduralIslandFailureClassifier.gd
-
-      - name: Category power
-        continue-on-error: true
-        env:
-          TICK_LAB_EXPECT_FAILURE_PREFIX: "island_power_"
-        run: ./Godot_v4.7.1-stable_linux.x86_64 --headless --path "$GITHUB_WORKSPACE/game" --script res://scripts/ci/ProceduralIslandFailureClassifier.gd
-
-      - name: Category road-clipping
-        continue-on-error: true
-        env:
-          TICK_LAB_EXPECT_FAILURE_PREFIX: "island_road_clipping_failed"
-        run: ./Godot_v4.7.1-stable_linux.x86_64 --headless --path "$GITHUB_WORKSPACE/game" --script res://scripts/ci/ProceduralIslandFailureClassifier.gd
-
-      - name: Category base-world
-        continue-on-error: true
-        env:
-          TICK_LAB_EXPECT_FAILURE_PREFIX: "island_base_world_generation_failed:"
-        run: ./Godot_v4.7.1-stable_linux.x86_64 --headless --path "$GITHUB_WORKSPACE/game" --script res://scripts/ci/ProceduralIslandFailureClassifier.gd
-
-      - name: Category bridge-input
-        continue-on-error: true
-        env:
-          TICK_LAB_EXPECT_FAILURE_PREFIX: "invalid_bridge_intent_input"
-        run: ./Godot_v4.7.1-stable_linux.x86_64 --headless --path "$GITHUB_WORKSPACE/game" --script res://scripts/ci/ProceduralIslandFailureClassifier.gd
-
-      - name: Category bridge-overlap
-        continue-on-error: true
-        env:
-          TICK_LAB_EXPECT_FAILURE_PREFIX: "global_road_river_collinear_overlap"
-        run: ./Godot_v4.7.1-stable_linux.x86_64 --headless --path "$GITHUB_WORKSPACE/game" --script res://scripts/ci/ProceduralIslandFailureClassifier.gd
-
-      - name: Category bridge-missing
-        continue-on-error: true
-        env:
-          TICK_LAB_EXPECT_FAILURE_PREFIX: "global_bridge_intent_missing"
         run: ./Godot_v4.7.1-stable_linux.x86_64 --headless --path "$GITHUB_WORKSPACE/game" --script res://scripts/ci/ProceduralIslandFailureClassifier.gd
