@@ -46,10 +46,10 @@ jobs:
           test -f game/project.godot
           test -f game/export_presets.cfg
           test -f game/main.tscn
-          test -f game/scripts/app/CanonicalDemoMain.gd
+          test -f game/scripts/app/GameMain.gd
           test -f game/scripts/render/TacticalRendererStack.gd
           test -f game/scripts/ci/CanonicalDemoSmoke.gd
-          grep -q 'CanonicalDemoMain.gd' game/main.tscn
+          grep -q 'CraftingGameMain.gd' game/main.tscn
           grep -q 'run/main_scene="res://main.tscn"' game/project.godot
           ! test -d game/scripts/reboot
           ! find game/scripts -maxdepth 1 -type f -name '*.gd' | grep -q .

@@ -158,7 +158,7 @@ Touch/Safari:
 - one press -> one Run intent;
 - System 16 modal blocking disables it with the rest of gameplay input.
 
-`DemoPlayerActionController` only routes semantic Run intent to `request_run_forward`; it does not calculate distance, timing, collision, fatigue, or interruption.
+`PlayerActionController` only routes semantic Run intent to `request_run_forward`; it does not calculate distance, timing, collision, fatigue, or interruption.
 
 ## 9. Owners / implementation surface
 

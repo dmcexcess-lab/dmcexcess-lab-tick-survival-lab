@@ -99,7 +99,7 @@ Implemented modules:
 - `game/scripts/ui/CraftingPanel.gd`
 - `game/scripts/ui/CraftingPlayerShell.gd`
 - `game/scripts/ui/icons/CraftingSemanticUiIconCatalog.gd`
-- `game/scripts/app/CraftingCanonicalDemoMain.gd`
+- `game/scripts/app/CraftingGameMain.gd`
 
 Explicit workstation capability:
 

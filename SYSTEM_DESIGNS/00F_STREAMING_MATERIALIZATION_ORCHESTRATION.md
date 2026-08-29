@@ -123,7 +123,7 @@ This applies equally to settlement, rural-open, island-surface and watercourse s
 
 The canonical playable island now uses the real `WorldStreamingCoordinator`.
 
-`GeneratedIslandStreamingBridge` follows the controlled survivor's real global placement and updates streaming focus after movement. Same-region movement uses the existing fast path; crossing a technical region boundary discovers/ensures the intersecting logical island sources.
+`PlayerStreamingFocusAdapter` follows the controlled survivor's real global placement and updates streaming focus after movement. Same-region movement uses the existing fast path; crossing a technical region boundary discovers/ensures the intersecting logical island sources.
 
 Current playable-island technical configuration:
 

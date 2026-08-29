@@ -24,7 +24,7 @@ The canonical modular stack includes:
 - **System 23** — deterministic facing-based LOS, true unexplored fog, stale remembered-world knowledge and last-seen living-actor observations;
 - modular collision, movement, actor state, inventory/equipment, doors, rendering, camera, HUD/player-shell and DEV critique systems.
 
-The live project boots the canonical modular `CanonicalDemoMain.gd` composition stack. The expanded baseline generators are reusable content; they do not silently replace the current Rural Crossroads live critique fixture.
+The live project boots the canonical modular `GameMain.gd` composition stack. The expanded baseline generators are reusable content; they do not silently replace the current Rural Crossroads live critique fixture.
 
 ## World model
 

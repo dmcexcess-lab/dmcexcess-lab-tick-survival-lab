@@ -22,7 +22,7 @@ const WatercourseSourceClass = preload("res://scripts/streaming/WatercourseMater
 const MaterializationClass = preload("res://scripts/streaming/WorldMaterializationCoordinator.gd")
 const StreamingGridClass = preload("res://scripts/streaming/StreamingRegionGrid.gd")
 const StreamingClass = preload("res://scripts/streaming/WorldStreamingCoordinator.gd")
-const StreamingBridgeClass = preload("res://scripts/demo/GeneratedIslandStreamingBridge.gd")
+const StreamingFocusClass = preload("res://scripts/streaming/PlayerStreamingFocusAdapter.gd")
 
 const AREA_BOUNDS: Rect2i = Rect2i(232, 1232, 1792, 1792)
 const RENDER_WINDOW_SIZE: Vector2i = Vector2i(80, 96)
@@ -44,7 +44,7 @@ static var _global_plan: GeneratedGlobalWorldPlan = null
 static var _central_area_plan: GeneratedAreaPlan = null
 static var _registry: MaterializationRegistry = null
 static var _streaming: WorldStreamingCoordinator = null
-static var _streaming_bridge: GeneratedIslandStreamingBridge = null
+static var _streaming_focus: PlayerStreamingFocusAdapter = null
 static var _active_seed: int = -1
 
 static func generate_global_plan(seed: int = GlobalFixture.SEED) -> GeneratedGlobalWorldPlan:
@@ -84,7 +84,7 @@ static func build(
     _central_area_plan = null
     _registry = null
     _streaming = null
-    _streaming_bridge = null
+    _streaming_focus = null
     _active_seed = -1
     if world == null or mutations == null or collision_catalog == null or traversal_policy == null or door_state == null or door_mutations == null:
         return false
@@ -151,8 +151,8 @@ static func build(
     ):
         return false
 
-    var bridge := StreamingBridgeClass.new(world, streaming, PLAYER_ID)
-    if not bridge.is_ready() or not bridge.sync_now():
+    var focus_adapter := StreamingFocusClass.new(world, streaming, PLAYER_ID)
+    if not focus_adapter.is_ready() or not focus_adapter.sync_now():
         return false
 
     _active_seed = world_seed
@@ -160,7 +160,7 @@ static func build(
     _central_area_plan = central_plan
     _registry = registry
     _streaming = streaming
-    _streaming_bridge = bridge
+    _streaming_focus = focus_adapter
     print("PLAYABLE_ISLAND_WORLD_READY seed=%d sites=%d stream_region=%s" % [world_seed, global_plan.area_sites.size(), STREAM_REGION_SIZE])
     return true
 
@@ -185,7 +185,7 @@ static func streaming_coordinator() -> WorldStreamingCoordinator:
     return _streaming
 
 static func streaming_failure() -> String:
-    return "" if _streaming_bridge == null else _streaming_bridge.last_failure()
+    return "" if _streaming_focus == null else _streaming_focus.last_failure()
 
 static func player_start_for_plan(plan: GeneratedAreaPlan) -> Vector2i:
     var center: Vector2i = _central_intersection_cell(plan)

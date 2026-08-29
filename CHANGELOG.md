@@ -1,5 +1,16 @@
 # Changelog
 
+## 2026-08-29 — Decision-Pause Input + Startup Performance Follow-Up
+
+- Replaced the fixed 120 ms cooldown with the authoritative WHEN decision-pause input gate.
+- Kept all gameplay controls locked until the accepted action settles at the next decision pause; input at that pause is accepted immediately.
+- Coalesced ambient, DEV flashlight and observer invalidations into one perception/light update per action.
+- Reduced moving-light work to a camera-bounded cached presentation field and added revision-backed bounded LOS opacity/structure caching.
+- Improved repeated focused FOV runs from ~11.84 ms to ~2.5-2.9 ms locally and cut the accepted-action startup profile roughly in half.
+- Removed the unused Weather camera-local compatibility method.
+- Renamed canonical runtime owners (`GameMain`, `CraftingGameMain`, `PlayerMovementControls`, `PlayerActionController`, `PlayerStreamingFocusAdapter`) and removed their obsolete demo/bridge files.
+- Retained `DemoLightingSourceAdapter` because Phase 3 equipment/battery/switch/grid truth does not exist yet.
+
 ## 2026-08-29 — Player Input / Lighting Responsiveness Repair
 
 - Moved playable player-action resolution out of synchronous input callbacks and into a bounded per-frame action pump.

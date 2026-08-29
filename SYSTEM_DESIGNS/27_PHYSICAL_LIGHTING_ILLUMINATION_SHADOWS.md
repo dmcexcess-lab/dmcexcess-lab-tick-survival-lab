@@ -321,7 +321,8 @@ Current measured CI baselines from fully green Slice C executable head `09d1c059
 
 - representative 17×17 changing-flashlight physical rebuild: `4230.32 µs` average (~4.23 ms);
 - legacy geometry-only System 23 FOV smoke on the same run: `4058.41 µs` average (~4.06 ms);
-- focused illumination-aware perception recompute: `11838.67 µs` average (~11.84 ms).
+- original focused illumination-aware perception recompute: `11838.67 µs` average (~11.84 ms);
+- after the 2026-08-29 bounded LOS opacity/structure cache follow-up: approximately `2507-2889 µs` average (~2.5-2.9 ms) across repeated local runs on the same focused fixture.
 
 User direction is to **keep the current implementation for now and monitor whether cost worsens as more systems/actors are added**, rather than pre-optimizing the lighting architecture now.
 

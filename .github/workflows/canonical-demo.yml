@@ -24,23 +24,23 @@ jobs:
         run: |
           set -euxo pipefail
           test -f SYSTEM_DESIGNS/14_CANONICAL_PLAYABLE_DEMO.md
-          test -f game/scripts/app/CanonicalDemoMain.gd
+          test -f game/scripts/app/GameMain.gd
           test -f game/scripts/demo/CanonicalDemoFixture.gd
           test -f game/scripts/render/TacticalRendererStack.gd
           test -f game/scripts/input/PlayerActionIntent.gd
           test -f game/scripts/input/KeyboardInputAdapter.gd
-          test -f game/scripts/player/DemoPlayerActionController.gd
-          test -f game/scripts/ui/DemoMovementControls.gd
+          test -f game/scripts/player/PlayerActionController.gd
+          test -f game/scripts/ui/PlayerMovementControls.gd
           test -f game/scripts/ci/CanonicalDemoSmoke.gd
-          grep -q 'CanonicalDemoMain.gd' game/main.tscn
+          grep -q 'CraftingGameMain.gd' game/main.tscn
           ! grep -q 'scripts/reboot/RebootMain.gd' game/main.tscn
           ! grep -R -q 'scripts/reboot' game/scripts/app game/scripts/demo game/scripts/input game/scripts/player game/scripts/ui game/scripts/render/TacticalRendererStack.gd
           ! grep -R -q 'simulation/movement' game/scripts/input game/scripts/ui
           ! grep -R -q 'foundation/world' game/scripts/input game/scripts/ui
           ! grep -R -q 'scripts/render' game/scripts/input game/scripts/player game/scripts/ui
-          ! grep -q '_draw' game/scripts/app/CanonicalDemoMain.gd
-          ! grep -q '_unhandled_input' game/scripts/app/CanonicalDemoMain.gd
-          ! grep -q '_unhandled_input' game/scripts/player/DemoPlayerActionController.gd
+          ! grep -q '_draw' game/scripts/app/GameMain.gd
+          ! grep -q '_unhandled_input' game/scripts/app/GameMain.gd
+          ! grep -q '_unhandled_input' game/scripts/player/PlayerActionController.gd
           grep -q 'GroundLayerRenderer.gd' game/scripts/render/TacticalRendererStack.gd
           grep -q 'StructureLayerRenderer.gd' game/scripts/render/TacticalRendererStack.gd
           grep -q 'PropLayerRenderer.gd' game/scripts/render/TacticalRendererStack.gd

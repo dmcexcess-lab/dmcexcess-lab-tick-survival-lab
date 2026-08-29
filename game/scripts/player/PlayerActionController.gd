@@ -1,5 +1,5 @@
 extends Node
-class_name DemoPlayerActionController
+class_name PlayerActionController
 
 const Intents = preload("res://scripts/input/PlayerActionIntent.gd")
 const Stance = preload("res://scripts/simulation/actors/locomotion/ActorStance.gd")
@@ -10,8 +10,6 @@ const Stance = preload("res://scripts/simulation/actors/locomotion/ActorStance.g
 signal action_resolved(intent: StringName, success: bool, reason: String, world_tick: int)
 signal action_busy_changed(busy: bool)
 
-const INPUT_COOLDOWN_MSEC: int = 120
-
 var _movement: MovementActionService = null
 var _kernel: TickKernel = null
 var _actor_id: String = ""
@@ -21,7 +19,6 @@ var _outcomes: Dictionary = {}
 var _active_intent: StringName = &""
 var _active_serial: int = 0
 var _busy: bool = false
-var _accept_input_after_msec: int = 0
 
 func _init(
     movement_service: MovementActionService = null,
@@ -66,9 +63,9 @@ func submit_intent(intent: StringName) -> void:
     if _kernel.is_hard_paused():
         action_resolved.emit(intent, false, "hard_paused", _kernel.world_tick())
         return
-    # Browser and touch events can accumulate while a heavy action frame is being
-    # resolved. Never turn that stale backlog into future movement.
-    if _busy or Time.get_ticks_msec() < _accept_input_after_msec:
+    # WHEN's decision pause is the only action-readiness boundary. Keyboard/touch
+    # events delivered during an action are discarded instead of becoming a queue.
+    if _busy or not _kernel.is_decision_paused():
         return
 
     if intent == Intents.STANCE_TOGGLE:
@@ -139,14 +136,13 @@ func _process(_delta: float) -> void:
     # One due-tick batch per rendered frame. This guarantees the browser a chance
     # to present current state and drain/drop input between simulation batches.
     _kernel.run_next_batch()
-    if _outcomes.has(_active_serial):
+    if _outcomes.has(_active_serial) and _kernel.is_decision_paused():
         var intent: StringName = _active_intent
         var serial: int = _active_serial
         _active_intent = &""
         _active_serial = 0
         set_process(false)
         _finish_resolved_action(intent, serial)
-        _accept_input_after_msec = Time.get_ticks_msec() + INPUT_COOLDOWN_MSEC
         _set_busy(false)
         return
     if _kernel.is_hard_paused() or _kernel.is_decision_paused():
@@ -157,7 +153,6 @@ func _process(_delta: float) -> void:
         set_process(false)
         _outcomes.erase(stalled_serial)
         action_resolved.emit(stalled_intent, false, "action_unresolved", _kernel.world_tick())
-        _accept_input_after_msec = Time.get_ticks_msec() + INPUT_COOLDOWN_MSEC
         _set_busy(false)
 
 func _finish_resolved_action(intent: StringName, serial: int) -> void:

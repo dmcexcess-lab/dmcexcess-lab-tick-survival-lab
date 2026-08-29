@@ -1,5 +1,5 @@
 extends Node
-class_name CanonicalDemoMain
+class_name GameMain
 
 const WorldStateClass = preload("res://scripts/foundation/world/WorldState.gd")
 const WorldMutationClass = preload("res://scripts/foundation/world/WorldMutationService.gd")
@@ -84,7 +84,7 @@ const VisionProfileClass = preload("res://scripts/simulation/perception/VisionPr
 const PerceptionMemoryClass = preload("res://scripts/simulation/perception/PerceptionMemoryStore.gd")
 const ObserverPerceptionClass = preload("res://scripts/simulation/perception/ObserverPerceptionService.gd")
 const FixtureClass = preload("res://scripts/demo/GeneratedIslandCritiqueFixture.gd")
-const ControllerClass = preload("res://scripts/player/DemoPlayerActionController.gd")
+const ControllerClass = preload("res://scripts/player/PlayerActionController.gd")
 const DoorControllerClass = preload("res://scripts/player/DoorPlayerInteractionController.gd")
 const LootControllerClass = preload("res://scripts/player/LootPlayerInteractionController.gd")
 
@@ -99,7 +99,7 @@ const LIVE_ITEM_TRANSFER_TICKS: int = 5
 @onready var _keyboard: KeyboardInputAdapter = $KeyboardInput
 @onready var _door_pointer: DoorPointerInputAdapter = $DoorPointerInput
 @onready var _camera_input: CameraInputAdapter = $CameraInput
-@onready var _controls: DemoMovementControls = $Controls
+@onready var _controls: PlayerMovementControls = $Controls
 @onready var _camera_controls: CameraControls = $CameraControls
 @onready var _hud: CanonicalStatusHud = $Hud
 @onready var _shell: CanonicalPlayerShell = $PlayerShell
@@ -180,16 +180,18 @@ var _door_actions: DoorInteractionActionService = null
 var _door_damage_interrupt: DoorDamageInterruptionService = null
 var _perception_memory: PerceptionMemoryStore = null
 var _perception: ObserverPerceptionService = null
-var _controller: DemoPlayerActionController = null
+var _controller: PlayerActionController = null
 var _door_controller: DoorPlayerInteractionController = null
 var _loot_controller: LootPlayerInteractionController = null
 var _shell_blocks_interaction: bool = false
 var _loot_blocks_interaction: bool = false
 var _action_blocks_interaction: bool = false
+var _lighting_refresh_pending: bool = false
+var _perception_refresh_pending: bool = false
 
 func _ready() -> void:
     if not _boot_canonical_demo():
-        push_error("CanonicalDemoMain: boot failed")
+        push_error("GameMain: boot failed")
         print("CANONICAL_DEMO_BOOT_FAILED")
         return
     print("CANONICAL_DEMO_BOOT_OK")
@@ -299,6 +301,7 @@ func _boot_canonical_demo() -> bool:
         return false
     if not _perception.set_acquisition_provider(LightingAcquisitionClass.new(_physical_lighting)):
         return false
+    _perception.perception_changed.connect(_on_perception_changed)
     if not _boot_interaction_affordances():
         return false
     if not _world_view.configure_interaction_affordances(_interaction_affordances):
@@ -511,7 +514,7 @@ func _initialize_fixture_loot() -> bool:
         building_plans
     )
     if not bool(result.get("ok", false)):
-        push_error("CanonicalDemoMain: loot initialization failed: %s" % String(result.get("reason", "unknown")))
+        push_error("GameMain: loot initialization failed: %s" % String(result.get("reason", "unknown")))
         return false
     return true
 
@@ -617,6 +620,10 @@ func _sync_player_sound_cues() -> bool:
 
 func _on_ambient_light_changed(level: float, _phase: StringName, _snapshot: Dictionary) -> void:
     _world_view.set_perception_ambient_light_level(level)
+    if _action_blocks_interaction:
+        _lighting_refresh_pending = true
+        _perception_refresh_pending = true
+        return
     _world_view.refresh_physical_lighting(&"ambient_light_changed")
     if _perception != null:
         _perception.recompute(&"ambient_light_changed")
@@ -624,12 +631,18 @@ func _on_ambient_light_changed(level: float, _phase: StringName, _snapshot: Dict
 func _on_demo_lighting_emitters_changed(values: Array) -> void:
     if _physical_lighting != null:
         _physical_lighting.set_emitters(values)
-        call_deferred("_flush_demo_lighting_change")
+        _lighting_refresh_pending = true
+        call_deferred("_flush_pending_visual_state")
 
-func _flush_demo_lighting_change() -> void:
-    if _physical_lighting == null:
+func _flush_pending_visual_state() -> void:
+    if _action_blocks_interaction:
         return
-    _world_view.refresh_physical_lighting(&"demo_emitters_changed")
+    if _perception_refresh_pending and _perception != null:
+        _perception_refresh_pending = false
+        _perception.recompute(&"settled_action_environment")
+    if _lighting_refresh_pending and _physical_lighting != null:
+        _lighting_refresh_pending = false
+        _world_view.refresh_physical_lighting(&"settled_light_inputs")
 
 func _on_weather_changed(snapshot: Dictionary) -> void:
     if _weather_controls != null:
@@ -638,9 +651,19 @@ func _on_weather_changed(snapshot: Dictionary) -> void:
         return
     if not _physical_lighting.set_atmosphere(WeatherOpticsClass.current_optics(_weather)):
         return
+    if _action_blocks_interaction:
+        _lighting_refresh_pending = true
+        _perception_refresh_pending = true
+        return
     _world_view.refresh_physical_lighting(&"weather_environment_changed")
     if _perception != null:
         _perception.recompute(&"weather_environment_changed")
+
+func _on_perception_changed(_reason: StringName) -> void:
+    # Observer placement/facing changes happen after the tick's ambient/emitter
+    # changes and therefore satisfy the pending perception refresh in one pass.
+    if _action_blocks_interaction:
+        _perception_refresh_pending = false
 
 func _on_dev_weather_force_requested(profile_id: StringName) -> void:
     if _weather != null:
@@ -667,6 +690,8 @@ func _on_loot_interaction_blocked_changed(blocked: bool) -> void:
 
 func _on_player_action_busy_changed(blocked: bool) -> void:
     _action_blocks_interaction = blocked
+    if not blocked:
+        _flush_pending_visual_state()
     _refresh_interaction_enabled()
 
 func _refresh_interaction_enabled() -> void:

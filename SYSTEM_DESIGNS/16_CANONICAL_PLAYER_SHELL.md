@@ -132,18 +132,18 @@ It does not mutate actor/world/inventory/stat truth.
 - `C` -> stance toggle;
 - explicit `set_enabled(enabled)` gameplay-input gate.
 
-`DemoMovementControls.gd`:
+`PlayerMovementControls.gd`:
 
 - native Crouch/Stand button below Turn Left;
 - explicit enable gate;
 - label follows canonical locomotion state;
 - idempotent button initialization keeps its public configure/read/enable methods safe before or after normal `_ready()` delivery.
 
-### Existing `DemoPlayerActionController.gd`
+### Existing `PlayerActionController.gd`
 
 Now coordinates both existing Movement actions and existing System 03 stance actions. It selects the owning service, runs WHEN to the next stop, and reports the result. It owns no destination, collision, stance mutation, or timing rule.
 
-### `CanonicalDemoMain.gd`
+### `GameMain.gd`
 
 Composition only:
 

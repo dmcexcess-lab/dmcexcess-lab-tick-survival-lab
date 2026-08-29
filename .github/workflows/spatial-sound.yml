@@ -46,7 +46,7 @@ jobs:
           grep -q 'estimated_right = mini(-1, estimated_right)' game/scripts/simulation/sound/SpatialSoundService.gd
           grep -q 'estimated_right = maxi(1, estimated_right)' game/scripts/simulation/sound/SpatialSoundService.gd
           grep -q 'ThemeDB.fallback_font' game/scripts/render/PerceptionOverlayRenderer.gd
-          grep -q 'ActionSoundEmitterClass' game/scripts/app/CanonicalDemoMain.gd
+          grep -q 'ActionSoundEmitterClass' game/scripts/app/GameMain.gd
           ! grep -q 'origin_cell\|source_entity_id' game/scripts/simulation/sound/HeardSoundObservation.gd
           ! grep -R -q 'func _process\|func _physics_process' game/scripts/simulation/sound
           ! grep -R -q 'scripts/generation\|scripts/streaming\|scripts/simulation/loot\|scripts/simulation/combat\|scripts/simulation/weather' game/scripts/simulation/sound

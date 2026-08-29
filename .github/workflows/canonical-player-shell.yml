@@ -35,9 +35,9 @@ jobs:
           grep -q 'STANCE_TOGGLE' game/scripts/input/PlayerActionIntent.gd
           grep -q 'KEY_C' game/scripts/input/KeyboardInputAdapter.gd
           grep -q 'set_enabled' game/scripts/input/KeyboardInputAdapter.gd
-          grep -q 'set_enabled' game/scripts/ui/DemoMovementControls.gd
-          ! grep -q 'WASD / arrows or touch' game/scripts/ui/DemoMovementControls.gd
-          ! grep -q 'Tick %d' game/scripts/ui/DemoMovementControls.gd
+          grep -q 'set_enabled' game/scripts/ui/PlayerMovementControls.gd
+          ! grep -q 'WASD / arrows or touch' game/scripts/ui/PlayerMovementControls.gd
+          ! grep -q 'Tick %d' game/scripts/ui/PlayerMovementControls.gd
           ! grep -R -q 'scripts/reboot' game/scripts/ui/ActorStatsInspectorQuery.gd game/scripts/ui/ActorInventoryInspectorQuery.gd game/scripts/ui/CanonicalPlayerShell.gd
           ! grep -R -q 'MutationService' game/scripts/ui/ActorStatsInspectorQuery.gd game/scripts/ui/ActorInventoryInspectorQuery.gd game/scripts/ui/CanonicalPlayerShell.gd
           ! grep -R -q 'simulation/items/transfer' game/scripts/ui/ActorStatsInspectorQuery.gd game/scripts/ui/ActorInventoryInspectorQuery.gd game/scripts/ui/CanonicalPlayerShell.gd

@@ -36,8 +36,8 @@ jobs:
           grep -q 'ui.shell.menu' game/scripts/ui/icons/SemanticUiIconCatalog.gd
           grep -q '_append_icon_text_row' game/scripts/ui/CanonicalPlayerShell.gd
           grep -q '_append_item_icon' game/scripts/ui/LootContainerPanel.gd
-          grep -q 'SemanticUiIconCatalogClass.new' game/scripts/app/CanonicalDemoMain.gd
-          grep -q '_ui_icons' game/scripts/app/CanonicalDemoMain.gd
+          grep -q 'SemanticUiIconCatalogClass.new' game/scripts/app/GameMain.gd
+          grep -q '_ui_icons' game/scripts/app/GameMain.gd
           ! grep -R -q 'func _process\|func _physics_process' game/scripts/ui/icons
           ! grep -R -q 'scripts/simulation\|foundation/world\|foundation/time' game/scripts/ui/icons
           ! grep -q 'family' game/scripts/ui/icons/SemanticUiIconCatalog.gd

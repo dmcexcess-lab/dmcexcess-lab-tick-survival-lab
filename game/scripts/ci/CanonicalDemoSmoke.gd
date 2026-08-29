@@ -17,7 +17,7 @@ const ArtCatalogClass = preload("res://scripts/art/ArtCatalog.gd")
 const DoorStateClass = preload("res://scripts/simulation/doors/DoorStateStore.gd")
 const FixtureClass = preload("res://scripts/demo/CanonicalDemoFixture.gd")
 const RendererStackClass = preload("res://scripts/render/TacticalRendererStack.gd")
-const ControllerClass = preload("res://scripts/player/DemoPlayerActionController.gd")
+const ControllerClass = preload("res://scripts/player/PlayerActionController.gd")
 const Intents = preload("res://scripts/input/PlayerActionIntent.gd")
 const Facing = preload("res://scripts/foundation/spatial/SpatialFacing.gd")
 

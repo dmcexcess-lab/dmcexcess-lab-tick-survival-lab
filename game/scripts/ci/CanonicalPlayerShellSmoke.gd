@@ -30,9 +30,9 @@ const StatusSummaryClass = preload("res://scripts/ui/ActorStatusSummaryQuery.gd"
 const StatsQueryClass = preload("res://scripts/ui/ActorStatsInspectorQuery.gd")
 const InventoryQueryClass = preload("res://scripts/ui/ActorInventoryInspectorQuery.gd")
 const ShellClass = preload("res://scripts/ui/CanonicalPlayerShell.gd")
-const ControlsClass = preload("res://scripts/ui/DemoMovementControls.gd")
+const ControlsClass = preload("res://scripts/ui/PlayerMovementControls.gd")
 const KeyboardClass = preload("res://scripts/input/KeyboardInputAdapter.gd")
-const ControllerClass = preload("res://scripts/player/DemoPlayerActionController.gd")
+const ControllerClass = preload("res://scripts/player/PlayerActionController.gd")
 const Intents = preload("res://scripts/input/PlayerActionIntent.gd")
 const FixtureClass = preload("res://scripts/demo/CanonicalDemoFixture.gd")
 
@@ -41,7 +41,7 @@ var resolved_events: Array[Dictionary] = []
 var touch_intents: Array[StringName] = []
 var blocked_events: Array[bool] = []
 var _keyboard: KeyboardInputAdapter = null
-var _controls: DemoMovementControls = null
+var _controls: PlayerMovementControls = null
 
 func _initialize() -> void:
     var world := WorldStateClass.new()

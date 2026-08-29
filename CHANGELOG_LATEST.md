@@ -2,6 +2,16 @@
 
 This compact ledger records the most recent work. `CHANGELOG.md` remains the historical archive.
 
+## Decision-Pause Input + Startup Performance Follow-Up — 2026-08-29
+
+- Replaced the fixed 120 ms input drain heuristic with WHEN's real decision-pause gate: one accepted action, all gameplay input locked through resolution, immediate acceptance at the next pause.
+- Coalesced ambient-light, moving flashlight and observer invalidations to one settled perception/light update per player action.
+- Bounded physical-light presentation to the actual camera viewport plus a stable cache margin instead of rebuilding the full 80x96 render window.
+- Cached System-23's bounded LOS opacity/structure field behind terrain, STRUCTURE and door revisions; repeated focused FOV runs improved from ~11.84 ms to ~2.5-2.9 ms locally.
+- Removed dead Weather camera-local compatibility code.
+- Renamed the now-canonical runtime roots/controllers from demo/bridge terminology while retaining focused DEV fixtures and the honestly temporary lighting-source adapter.
+- Extended permanent responsiveness coverage for decision-pause locking, immediate next-pause input, coalesced work and camera-bounded lighting.
+
 ## Player Input / Lighting Responsiveness Repair — 2026-08-29
 
 - Removed the playable runtime's blocking `run_until_stop()` call from keyboard/touch callbacks.

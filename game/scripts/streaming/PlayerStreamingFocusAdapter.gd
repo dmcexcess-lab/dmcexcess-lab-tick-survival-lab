@@ -1,5 +1,5 @@
 extends RefCounted
-class_name GeneratedIslandStreamingBridge
+class_name PlayerStreamingFocusAdapter
 
 var _world: WorldState = null
 var _streaming: WorldStreamingCoordinator = null

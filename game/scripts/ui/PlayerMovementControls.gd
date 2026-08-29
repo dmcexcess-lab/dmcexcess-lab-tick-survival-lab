@@ -1,5 +1,5 @@
 extends CanvasLayer
-class_name DemoMovementControls
+class_name PlayerMovementControls
 
 const Intents = preload("res://scripts/input/PlayerActionIntent.gd")
 const Stance = preload("res://scripts/simulation/actors/locomotion/ActorStance.gd")

@@ -43,8 +43,8 @@ jobs:
           grep -q 'origin_world_tick' game/scripts/simulation/items/freshness/ItemFreshnessRecord.gd
           grep -q '_freshness_mutations' game/scripts/simulation/loot/LootSourceInitializer.gd
           grep -q 'snapshot_state' game/scripts/simulation/loot/LootSourceInitializer.gd
-          grep -q '_freshness_query' game/scripts/app/CanonicalDemoMain.gd
-          grep -q '_freshness_mutations' game/scripts/app/CanonicalDemoMain.gd
+          grep -q '_freshness_query' game/scripts/app/GameMain.gd
+          grep -q '_freshness_mutations' game/scripts/app/GameMain.gd
           ! grep -R -q 'func _process\|func _physics_process' game/scripts/simulation/items/freshness
           ! grep -R -q 'schedule_event\|begin_action' game/scripts/simulation/items/freshness
           ! grep -R -q 'scripts/simulation/weather\|scripts/simulation/lighting\|scripts/simulation/actors/health' game/scripts/simulation/items/freshness

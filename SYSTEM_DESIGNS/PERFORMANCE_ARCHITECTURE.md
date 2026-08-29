@@ -101,3 +101,19 @@ Implemented after human play reported a growing spawn-step stall, flashlight-fac
 - identical prepared lighting revisions do not rebuild or upload the same light maps twice.
 
 The permanent `PlayerInputResponsivenessSmoke.gd` contract proves that a three-input same-window turn burst yields to the scene, commits exactly one turn and drops the two stale buffered turns.
+
+## P4 follow-up — decision-pause gate and startup action cost
+
+Human acceptance found the backlog repair much better but exposed a remaining first-actions hitch and the fixed 120 ms drain window as avoidable latency.
+
+- gameplay input is now accepted only at WHEN's real decision pause and stays disabled until that pause returns;
+- there is no wall-clock input cooldown and the next decision pause accepts immediately;
+- ambient, moving DEV-emitter and observer invalidations coalesce into one settled perception/light update per player action;
+- the physical-light presentation field covers the actual camera viewport plus a small cache margin instead of the full 80x96 renderer buffer, and shifts only when the camera leaves that cached envelope;
+- System-23 LOS caches its bounded 25x25 opacity/structure field behind terrain, STRUCTURE and door revisions instead of repeating WHAT lookups along every ray;
+- the dead Weather `set_camera_local_position` compatibility seam was removed;
+- canonical runtime owners shed obsolete demo naming: `GameMain`, `CraftingGameMain`, `PlayerMovementControls`, `PlayerActionController`, and `PlayerStreamingFocusAdapter`.
+
+Focused headless measurements reduced the documented perception FOV benchmark from approximately 11.84 ms to approximately 2.5-2.9 ms on the same fixture. The local accepted-action profile fell from roughly 0.21-0.24 seconds before this follow-up to roughly 0.09-0.10 seconds after warmup while accepting every successive pause input. Wall-clock values are diagnostic only; permanent acceptance asserts work counts, exact pause behavior and bounded field size.
+
+`DemoLightingSourceAdapter` remains deliberately temporary: real equipment/battery/switch/grid ownership is still Phase 3 work, so removing it now would either remove the critique-build flashlight or fake unfinished utility truth.

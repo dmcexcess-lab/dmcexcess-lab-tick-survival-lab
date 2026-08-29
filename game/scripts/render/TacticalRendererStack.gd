@@ -77,9 +77,13 @@ func configure_weather(weather_service: WeatherService, sky_exposure: SkyExposur
 
 func set_camera_presentation(snapshot: Dictionary) -> bool:
     _ensure_layers()
-    if not _weather.is_configured():
-        return true
-    return _weather.set_camera_presentation(snapshot)
+    var lighting_ok: bool = true
+    if _lighting.is_configured():
+        lighting_ok = _lighting.set_camera_presentation(snapshot)
+    var weather_ok: bool = true
+    if _weather.is_configured():
+        weather_ok = _weather.set_camera_presentation(snapshot)
+    return lighting_ok and weather_ok
 
 func force_weather_ambient_event(kind: StringName = &"leaf") -> bool:
     _ensure_layers()

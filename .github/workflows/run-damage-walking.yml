@@ -36,7 +36,7 @@ jobs:
           ! grep -q 'actors/health' game/scripts/simulation/movement/MovementActionService.gd
           ! grep -q 'actors/needs' game/scripts/simulation/movement/MovementActionService.gd
           ! grep -q 'actors/carry' game/scripts/simulation/movement/MovementActionService.gd
-          ! grep -R -q 'is_running\|run_mode\|MODE_RUN' game/scripts/simulation/movement game/scripts/simulation/actors/locomotion game/scripts/player/DemoPlayerActionController.gd
+          ! grep -R -q 'is_running\|run_mode\|MODE_RUN' game/scripts/simulation/movement game/scripts/simulation/actors/locomotion game/scripts/player/PlayerActionController.gd
 
       - name: Install Godot 4.7.1
         shell: bash

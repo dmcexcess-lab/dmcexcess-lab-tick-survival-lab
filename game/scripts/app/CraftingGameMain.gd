@@ -1,5 +1,5 @@
-extends CanonicalDemoMain
-class_name CraftingCanonicalDemoMain
+extends GameMain
+class_name CraftingGameMain
 
 const CraftingItemCatalogClass = preload("res://scripts/simulation/crafting/CraftingItemCatalog.gd")
 const CraftingRecipeCatalogClass = preload("res://scripts/simulation/crafting/CraftingRecipeCatalog.gd")

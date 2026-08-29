@@ -44,7 +44,7 @@ Demo collision/traversal configuration is explicit:
 
 ## 4. Owners
 
-### `game/scripts/app/CanonicalDemoMain.gd`
+### `game/scripts/app/GameMain.gd`
 Composition/bootstrap only. Constructs canonical state/services, asks the fixture to populate the world, enrolls the player in Locomotion, connects input intents to the player-action coordinator, configures the renderer stack, and prints the canonical boot token.
 
 It owns no map drawing, button geometry, key mapping, collision rule, movement rule, or world-generation logic.
@@ -67,10 +67,10 @@ Defines the narrow semantic intent vocabulary for this demo slice.
 ### `game/scripts/input/KeyboardInputAdapter.gd`
 Owns keyboard-to-intent translation only.
 
-### `game/scripts/ui/DemoMovementControls.gd`
+### `game/scripts/ui/PlayerMovementControls.gd`
 Owns touch-button/UI geometry and emits the same semantic intents. Uses native Godot Controls/Buttons so no manual Safari touch hit-testing or synthetic mouse compatibility shim is introduced.
 
-### `game/scripts/player/DemoPlayerActionController.gd`
+### `game/scripts/player/PlayerActionController.gd`
 Owns only intent-to-existing-Movement-action coordination. It asks `MovementActionService` to start an action, runs `TickKernel` until the next stop, observes the existing movement committed/failed signals, and reports the result to presentation.
 
 It does not calculate destinations, collision, facing changes, or movement duration.

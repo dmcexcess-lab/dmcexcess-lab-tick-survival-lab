@@ -35,7 +35,7 @@ A future viewer/cutscene system commands this camera only through its public pre
 - `game/scripts/ui/CameraControls.gd` — phone-friendly zoom-out / CENTER / zoom-in controls and current zoom label.
 - `game/scripts/ci/CameraViewControlSmoke.gd` — deterministic contract smoke.
 
-`CanonicalDemoMain.gd` remains composition only: it injects world/view facts and wires camera input/UI signals.
+`GameMain.gd` remains composition only: it injects world/view facts and wires camera input/UI signals.
 
 ## 4. Public camera modes
 

@@ -14,13 +14,19 @@ const PerformanceTelemetry = preload("res://scripts/foundation/diagnostics/Perfo
 
 signal presentation_rebuilt(reason, presentation_revision)
 
+const VIEW_MARGIN_CELLS: int = 2
+const CACHE_MARGIN_CELLS: int = 4
+
 var _lighting: PhysicalLightingService = null
 var _world: WorldState = null
 var _doors: DoorStateStore = null
 var _visible_origin: Vector2i = Vector2i.ZERO
 var _visible_size: Vector2i = Vector2i.ZERO
+var _render_origin: Vector2i = Vector2i.ZERO
+var _render_size: Vector2i = Vector2i.ZERO
 var _cell_pixels: float = 0.0
 var _view_valid: bool = false
+var _camera_snapshot: Dictionary = {}
 var _configured: bool = false
 
 var _multiply_sprite: Sprite2D = null
@@ -66,23 +72,24 @@ func is_configured() -> bool:
 func set_visible_window(origin: Vector2i, size_cells: Vector2i, cell_pixels: float) -> bool:
     if size_cells.x <= 0 or size_cells.y <= 0 or cell_pixels <= 0.0:
         return false
-    var changed: bool = (
-        not _view_valid
-        or origin != _visible_origin
-        or size_cells != _visible_size
-        or not is_equal_approx(cell_pixels, _cell_pixels)
-    )
-    _visible_origin = origin
-    _visible_size = size_cells
+    _render_origin = origin
+    _render_size = size_cells
     _cell_pixels = cell_pixels
-    _view_valid = true
-    if not is_configured():
-        return true
-    if not _lighting.set_field_bounds(Rect2i(_visible_origin, _visible_size)):
+    return _apply_camera_window(&"view_changed")
+
+func set_camera_presentation(snapshot: Dictionary) -> bool:
+    var camera_value: Variant = snapshot.get("camera_global_position", null)
+    var zoom_value: Variant = snapshot.get("camera_zoom", null)
+    if typeof(camera_value) != TYPE_VECTOR2 or typeof(zoom_value) != TYPE_VECTOR2:
         return false
-    if changed:
-        return refresh(&"view_changed")
-    return true
+    var zoom: Vector2 = zoom_value
+    if absf(zoom.x) <= 0.0001 or absf(zoom.y) <= 0.0001:
+        return false
+    var first_camera_snapshot: bool = _camera_snapshot.is_empty()
+    _camera_snapshot = snapshot.duplicate(true)
+    if _render_size.x <= 0 or _render_size.y <= 0 or _cell_pixels <= 0.0:
+        return true
+    return _apply_camera_window(&"camera_view_changed", first_camera_snapshot)
 
 func refresh(reason: StringName = &"external") -> bool:
     if not is_configured() or not _view_valid:
@@ -167,6 +174,8 @@ func presentation_snapshot() -> Dictionary:
         "view_valid": _view_valid,
         "visible_origin": _visible_origin,
         "visible_size": _visible_size,
+        "render_origin": _render_origin,
+        "render_size": _render_size,
         "cell_pixels": _cell_pixels,
         "presentation_revision": _presentation_revision,
         "last_reason": String(_last_reason),
@@ -230,8 +239,71 @@ func _upload_maps() -> void:
     var scale_value := Vector2(_cell_pixels, _cell_pixels)
     _multiply_sprite.scale = scale_value
     _glow_sprite.scale = scale_value
-    _multiply_sprite.position = Vector2.ZERO
-    _glow_sprite.position = Vector2.ZERO
+    var active_offset: Vector2i = _visible_origin - _render_origin
+    var active_position := Vector2(active_offset) * _cell_pixels
+    _multiply_sprite.position = active_position
+    _glow_sprite.position = active_position
+
+func _apply_camera_window(reason: StringName, force_recenter: bool = false) -> bool:
+    var next_origin: Vector2i = _render_origin
+    var next_size: Vector2i = _render_size
+    if not _camera_snapshot.is_empty() and get_viewport() != null:
+        var camera_global: Vector2 = _camera_snapshot.get("camera_global_position", Vector2.ZERO)
+        var zoom: Vector2 = _camera_snapshot.get("camera_zoom", Vector2.ONE)
+        var viewport_pixels: Vector2 = get_viewport().get_visible_rect().size
+        if viewport_pixels.x > 0.0 and viewport_pixels.y > 0.0:
+            var camera_local: Vector2 = to_local(camera_global)
+            var half_span := Vector2(
+                viewport_pixels.x / (2.0 * absf(zoom.x)),
+                viewport_pixels.y / (2.0 * absf(zoom.y))
+            )
+            var min_local: Vector2 = camera_local - half_span
+            var max_local: Vector2 = camera_local + half_span
+            var required_min := Vector2i(
+                int(floor(min_local.x / _cell_pixels)) - VIEW_MARGIN_CELLS,
+                int(floor(min_local.y / _cell_pixels)) - VIEW_MARGIN_CELLS
+            )
+            var required_max := Vector2i(
+                int(ceil(max_local.x / _cell_pixels)) + VIEW_MARGIN_CELLS,
+                int(ceil(max_local.y / _cell_pixels)) + VIEW_MARGIN_CELLS
+            )
+            required_min.x = clampi(required_min.x, 0, _render_size.x - 1)
+            required_min.y = clampi(required_min.y, 0, _render_size.y - 1)
+            required_max.x = clampi(required_max.x, required_min.x + 1, _render_size.x)
+            required_max.y = clampi(required_max.y, required_min.y + 1, _render_size.y)
+            var required := Rect2i(_render_origin + required_min, required_max - required_min)
+            var current := Rect2i(_visible_origin, _visible_size)
+            var render_bounds := Rect2i(_render_origin, _render_size)
+            if not force_recenter and _view_valid and _rect_contains_rect(current, required) and _rect_contains_rect(render_bounds, current):
+                next_origin = _visible_origin
+                next_size = _visible_size
+            else:
+                var buffered_min := required_min - Vector2i(CACHE_MARGIN_CELLS, CACHE_MARGIN_CELLS)
+                var buffered_max := required_max + Vector2i(CACHE_MARGIN_CELLS, CACHE_MARGIN_CELLS)
+                buffered_min.x = clampi(buffered_min.x, 0, _render_size.x - 1)
+                buffered_min.y = clampi(buffered_min.y, 0, _render_size.y - 1)
+                buffered_max.x = clampi(buffered_max.x, buffered_min.x + 1, _render_size.x)
+                buffered_max.y = clampi(buffered_max.y, buffered_min.y + 1, _render_size.y)
+                next_origin = _render_origin + buffered_min
+                next_size = buffered_max - buffered_min
+
+    var changed: bool = not _view_valid or next_origin != _visible_origin or next_size != _visible_size
+    _visible_origin = next_origin
+    _visible_size = next_size
+    _view_valid = true
+    if not is_configured():
+        return true
+    if not _lighting.set_field_bounds(Rect2i(_visible_origin, _visible_size)):
+        return false
+    if changed:
+        return refresh(reason)
+    return true
+
+static func _rect_contains_rect(container: Rect2i, required: Rect2i) -> bool:
+    if container.size.x <= 0 or container.size.y <= 0 or required.size.x <= 0 or required.size.y <= 0:
+        return false
+    var required_last: Vector2i = required.position + required.size - Vector2i.ONE
+    return container.has_point(required.position) and container.has_point(required_last)
 
 func _apply_atmosphere_uniforms(optics: AtmosphericOptics) -> void:
     var glow_material := _glow_sprite.material as ShaderMaterial

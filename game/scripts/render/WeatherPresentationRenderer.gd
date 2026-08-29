@@ -118,11 +118,6 @@ func set_camera_presentation(snapshot: Dictionary) -> bool:
     _camera_snapshot = snapshot.duplicate(true)
     return _sync_mask_mapping()
 
-func set_camera_local_position(_local_position: Vector2) -> bool:
-    # Historical compatibility seam. Current composition supplies the full camera
-    # snapshot through set_camera_presentation() so no viewport inverse is needed.
-    return _view_valid
-
 func advance_presentation(delta_seconds: float) -> int:
     if not is_configured() or not _view_valid or delta_seconds <= 0.0:
         return 0

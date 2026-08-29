@@ -6,11 +6,18 @@ const FacingRules = preload("res://scripts/foundation/spatial/SpatialFacing.gd")
 const StructureGeometry = preload("res://scripts/foundation/spatial/SpatialStructureGeometry.gd")
 const DoorValues = preload("res://scripts/simulation/doors/DoorStateValue.gd")
 
-## Stateless deterministic visual LOS over current WHAT + Door State.
+## Deterministic visual LOS over current WHAT + Door State. The bounded observer
+## field caches opacity/structure reads behind the exact relevant revisions.
 ## Collision/art never define opacity.
 
 var _world: WorldState = null
 var _door_state: DoorStateStore = null
+var _prepared_bounds: Rect2i = Rect2i()
+var _prepared_terrain_revision: int = -1
+var _prepared_structure_revision: int = -1
+var _prepared_door_revision: int = -1
+var _opaque_by_cell: Dictionary = {}
+var _structure_by_cell: Dictionary = {}
 
 func _init(world_state: WorldState = null, door_state: DoorStateStore = null) -> void:
     _world = world_state
@@ -23,6 +30,11 @@ func visible_cells(origin: Vector2i, facing: int, profile: VisionProfile) -> Arr
     var result: Array[Vector2i] = []
     if not is_ready() or profile == null or not profile.is_valid() or not FacingRules.is_valid(facing):
         return result
+
+    _prepare_local_field(Rect2i(
+        origin - Vector2i(profile.max_range, profile.max_range),
+        Vector2i(profile.max_range * 2 + 1, profile.max_range * 2 + 1)
+    ))
 
     result.append(origin)
     for y in range(-profile.max_range, profile.max_range + 1):
@@ -42,6 +54,10 @@ func visible_cells(origin: Vector2i, facing: int, profile: VisionProfile) -> Arr
 func can_see(origin: Vector2i, facing: int, target: Vector2i, profile: VisionProfile) -> bool:
     if not is_ready() or profile == null or not profile.is_valid() or not FacingRules.is_valid(facing):
         return false
+    _prepare_local_field(Rect2i(
+        origin - Vector2i(profile.max_range, profile.max_range),
+        Vector2i(profile.max_range * 2 + 1, profile.max_range * 2 + 1)
+    ))
     var offset := target - origin
     if not profile.contains_offset(offset, facing):
         return false
@@ -84,6 +100,15 @@ func cell_is_opaque(cell: Vector2i) -> bool:
     return true
 
 func structure_observation(cell: Vector2i) -> Dictionary:
+    if _prepared_bounds.has_point(cell) and _structure_by_cell.has(cell) \
+        and _prepared_terrain_revision == _world.terrain_revision() \
+        and _prepared_structure_revision == _world.placement_revision(Layers.Channel.STRUCTURE) \
+        and _prepared_door_revision == _door_state.revision():
+        var prepared: Dictionary = _structure_by_cell[cell]
+        return prepared.duplicate(true)
+    return _structure_observation_uncached(cell)
+
+func _structure_observation_uncached(cell: Vector2i) -> Dictionary:
     if not is_ready() or not _world.has_terrain(cell):
         return {"valid": false, "present": false}
 
@@ -145,7 +170,7 @@ func _line_clear(origin: Vector2i, target: Vector2i) -> bool:
         if decision == 0:
             var side_x := current + Vector2i(step_x, 0)
             var side_y := current + Vector2i(0, step_y)
-            if cell_is_opaque(side_x) and cell_is_opaque(side_y):
+            if _prepared_cell_is_opaque(side_x) and _prepared_cell_is_opaque(side_y):
                 return false
             current += Vector2i(step_x, step_y)
             ix += 1
@@ -159,10 +184,47 @@ func _line_clear(origin: Vector2i, target: Vector2i) -> bool:
 
         if current == target:
             return true
-        if cell_is_opaque(current):
+        if _prepared_cell_is_opaque(current):
             return false
 
     return true
+
+func _prepare_local_field(bounds: Rect2i) -> void:
+    var terrain_revision: int = _world.terrain_revision()
+    var structure_revision: int = _world.placement_revision(Layers.Channel.STRUCTURE)
+    var door_revision: int = _door_state.revision()
+    if bounds == _prepared_bounds \
+        and terrain_revision == _prepared_terrain_revision \
+        and structure_revision == _prepared_structure_revision \
+        and door_revision == _prepared_door_revision:
+        return
+
+    _prepared_bounds = bounds
+    _prepared_terrain_revision = terrain_revision
+    _prepared_structure_revision = structure_revision
+    _prepared_door_revision = door_revision
+    _opaque_by_cell.clear()
+    _structure_by_cell.clear()
+    var end: Vector2i = bounds.position + bounds.size
+    for y: int in range(bounds.position.y, end.y):
+        for x: int in range(bounds.position.x, end.x):
+            var cell := Vector2i(x, y)
+            var observation: Dictionary = _structure_observation_uncached(cell)
+            _structure_by_cell[cell] = observation
+            var opaque: bool = not bool(observation.get("valid", false))
+            if bool(observation.get("valid", false)):
+                if not bool(observation.get("present", false)):
+                    opaque = false
+                else:
+                    var family: String = String(observation.get("family", ""))
+                    opaque = family == "wall" \
+                        or (family == "door" and StringName(observation.get("door_state", &"")) != DoorValues.OPEN)
+            _opaque_by_cell[cell] = opaque
+
+func _prepared_cell_is_opaque(cell: Vector2i) -> bool:
+    if _prepared_bounds.has_point(cell) and _opaque_by_cell.has(cell):
+        return bool(_opaque_by_cell[cell])
+    return cell_is_opaque(cell)
 
 static func _cell_less(a: Vector2i, b: Vector2i) -> bool:
     if a.y == b.y:

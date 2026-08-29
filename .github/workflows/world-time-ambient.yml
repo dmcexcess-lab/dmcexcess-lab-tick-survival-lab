@@ -34,8 +34,8 @@ jobs:
           grep -q 'DEFAULT_START_SECOND_OF_DAY: int = 8' game/scripts/simulation/world_time/WorldTimeProfile.gd
           grep -q 'class_name WorldTimeService' game/scripts/simulation/world_time/WorldTimeService.gd
           grep -q 'class_name OutdoorAmbientLightService' game/scripts/simulation/world_time/OutdoorAmbientLightService.gd
-          grep -q 'set_perception_ambient_light_level' game/scripts/app/CanonicalDemoMain.gd
-          grep -q 'OutdoorAmbientLightServiceClass' game/scripts/app/CanonicalDemoMain.gd
+          grep -q 'set_perception_ambient_light_level' game/scripts/app/GameMain.gd
+          grep -q 'OutdoorAmbientLightServiceClass' game/scripts/app/GameMain.gd
           ! test -f game/scripts/demo/DemoAmbientLightCycle.gd
           ! grep -R -q 'func _process\|func _physics_process' game/scripts/simulation/world_time
           ! grep -R -q 'Time\.get_\|Time\.get_time\|Time\.get_datetime' game/scripts/simulation/world_time

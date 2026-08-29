@@ -284,7 +284,7 @@ Focused illumination-aware perception benchmark on the same System 27 run:
 
 `PERCEPTION_LIGHTING_RECOMPUTE_AVG_US=11838.67`
 
-That is approximately **4.06 ms geometry-only** versus **11.84 ms lighting-aware** on those CI fixtures.
+The original implementation measured approximately **4.06 ms geometry-only** versus **11.84 ms lighting-aware** on those CI fixtures. The 2026-08-29 responsiveness follow-up added a bounded opacity/structure cache keyed to terrain, STRUCTURE and door revisions; repeated focused FOV runs measured approximately **2.5-2.9 ms** locally afterward. Wall-clock figures remain diagnostic rather than pass/fail thresholds.
 
 The user explicitly chose to keep the current behavior and monitor scaling as more systems/actors are added rather than pre-optimize now.
 

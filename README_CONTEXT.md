@@ -141,13 +141,17 @@ Protected direction:
 - bounded local queries and shared cached plans;
 - persistence-backed streaming eviction remains evidence-driven future work only.
 
-### Player-action responsiveness repair — awaiting human acceptance
+### Player-action responsiveness repair — human accepted; startup follow-up awaiting acceptance
 
-The playable controller now resolves accepted player actions through a one-due-tick-batch-per-render-frame pump instead of blocking inside the input callback. Controls are busy-gated and stale buffered input is dropped, preventing long post-stall movement queues and overshoot.
+Human browser play confirmed the first repair was **much better** and eliminated the growing backlog/overshoot behavior, while identifying a remaining first-actions hitch.
 
-The DEV flashlight now invalidates presentation for facing-only turns, ignores unrelated streaming mutations, and skips duplicate same-revision light-map uploads.
+The canonical `PlayerActionController` resolves accepted actions through a one-due-tick-batch-per-render-frame pump. Input is now accepted only at WHEN's real decision pause and stays locked until that pause returns; the fixed 120 ms post-action cooldown is gone.
 
-Automated acceptance includes parser/import, canonical demo/player shell, lighting/performance regressions, canonical startup and the permanent same-window input-backlog smoke. Human browser play remains the final acceptance gate for the reported spawn-step stall and feel.
+Ambient/emitter/observer work now coalesces once per accepted player action. Physical-light presentation is bounded to the camera viewport plus a cached margin rather than the entire 80x96 render window. System-23 LOS caches its bounded opacity/structure field behind exact revisions. Repeated local focused FOV runs improved from the documented ~11.84 ms baseline to ~2.5-2.9 ms.
+
+Obsolete runtime naming/compatibility residue was removed: the active roots, controls, player controller and streaming focus adapter no longer claim to be demos, and Weather's unused camera-local compatibility method is gone. The still-temporary `DemoLightingSourceAdapter` remains honest and necessary until Phase 3 implements equipment/battery/switch/grid truth.
+
+Automated acceptance includes parser/import, canonical player shell, lighting/perception/performance regressions, startup and a permanent input smoke proving one action per pause, immediate next-pause acceptance, one perception/light rebuild per action and a camera-bounded lighting field. Human browser play remains the final acceptance gate for the reduced startup-step hitch.
 
 ---
 
