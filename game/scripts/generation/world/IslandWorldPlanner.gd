@@ -125,21 +125,23 @@ func _copy_base_sites(
         site["site_role"] = &"primary"
         var rect: Rect2i = site.get("bounds", Rect2i())
         var site_id: String = String(site.get("id", ""))
-        if not _rect_inside(request.bounds, rect):
-            return _site_failure("island_base_site_out_of_bounds:%s" % site_id)
-        if not Surface.rect_is_land(
-            request.bounds,
-            request.seed,
-            rect,
-            int(profile.get("island_ocean_margin", 24)),
-            int(profile.get("island_shore_width", 8)),
-            int(profile.get("island_coast_wobble", 8)),
-            int(profile.get("island_coast_scale", 96))
-        ):
-            return _site_failure("island_base_site_not_land:%s" % site_id)
-        if not _hydrology.rect_clear_of_rivers(rect, rivers, int(profile.get("settlement_river_clearance", 16))):
-            return _site_failure("island_base_site_hits_river:%s" % site_id)
-        if _overlaps_any_site(rect, sites):
+        if not _site_rect_physically_legal(rect, rivers, request, profile):
+            var repaired_invalid_rect: Rect2i = _repair_invalid_site_rect(
+                site,
+                rect,
+                sites,
+                settlements,
+                rivers,
+                request,
+                profile
+            )
+            if repaired_invalid_rect.size.x <= 0 or repaired_invalid_rect.size.y <= 0:
+                return _site_failure("island_base_site_unrepairable:%s" % site_id)
+            rect = repaired_invalid_rect
+            site["bounds"] = rect
+        elif _overlaps_any_site(rect, sites):
+            # Preserve the accepted overlap-only repair behavior for already
+            # island-legal sites so existing seeds keep their established layout.
             var repaired_rect: Rect2i = _repair_overlapping_site_rect(
                 site,
                 rect,
@@ -155,6 +157,58 @@ func _copy_base_sites(
             site["bounds"] = rect
         sites.append(site)
     return {"ok": true, "failure_reason": "", "area_sites": sites}
+
+func _repair_invalid_site_rect(
+    site: Dictionary,
+    original: Rect2i,
+    accepted_sites: Array[Dictionary],
+    settlements: Array[Dictionary],
+    rivers: Array[Dictionary],
+    request: GlobalWorldGenerationRequest,
+    profile: Dictionary
+) -> Rect2i:
+    var settlement_center: Vector2i = _site_settlement_center(site, settlements)
+    if settlement_center == INVALID_CELL or original.size.x <= 0 or original.size.y <= 0:
+        return Rect2i()
+
+    # A local site may move, but it must keep owning the same settlement center.
+    # Search the finite top-left domain in nearest-first Manhattan order. This is
+    # a generation-only fallback: already legal sites never enter this path.
+    var min_x: int = maxi(request.bounds.position.x, settlement_center.x - original.size.x + 1)
+    var max_x: int = mini(request.bounds.position.x + request.bounds.size.x - original.size.x, settlement_center.x)
+    var min_y: int = maxi(request.bounds.position.y, settlement_center.y - original.size.y + 1)
+    var max_y: int = mini(request.bounds.position.y + request.bounds.size.y - original.size.y, settlement_center.y)
+    if min_x > max_x or min_y > max_y:
+        return Rect2i()
+
+    var max_x_distance: int = maxi(
+        absi(min_x - original.position.x),
+        absi(max_x - original.position.x)
+    )
+    var max_y_distance: int = maxi(
+        absi(min_y - original.position.y),
+        absi(max_y - original.position.y)
+    )
+    var max_distance: int = max_x_distance + max_y_distance
+    for distance: int in range(max_distance + 1):
+        var min_dx: int = maxi(min_x - original.position.x, -distance)
+        var max_dx: int = mini(max_x - original.position.x, distance)
+        for dx: int in range(min_dx, max_dx + 1):
+            var dy_abs: int = distance - absi(dx)
+            var candidate_x: int = original.position.x + dx
+            var lower_y: int = original.position.y - dy_abs
+            if lower_y >= min_y and lower_y <= max_y:
+                var lower_candidate := Rect2i(Vector2i(candidate_x, lower_y), original.size)
+                if _site_rect_legal(lower_candidate, accepted_sites, rivers, request, profile):
+                    return lower_candidate
+            if dy_abs <= 0:
+                continue
+            var upper_y: int = original.position.y + dy_abs
+            if upper_y >= min_y and upper_y <= max_y:
+                var upper_candidate := Rect2i(Vector2i(candidate_x, upper_y), original.size)
+                if _site_rect_legal(upper_candidate, accepted_sites, rivers, request, profile):
+                    return upper_candidate
+    return Rect2i()
 
 func _repair_overlapping_site_rect(
     site: Dictionary,
@@ -208,6 +262,16 @@ func _site_rect_legal(
     request: GlobalWorldGenerationRequest,
     profile: Dictionary
 ) -> bool:
+    if not _site_rect_physically_legal(rect, rivers, request, profile):
+        return false
+    return not _overlaps_any_site(rect, accepted_sites)
+
+func _site_rect_physically_legal(
+    rect: Rect2i,
+    rivers: Array[Dictionary],
+    request: GlobalWorldGenerationRequest,
+    profile: Dictionary
+) -> bool:
     if not _rect_inside(request.bounds, rect):
         return false
     if not Surface.rect_is_land(
@@ -220,9 +284,11 @@ func _site_rect_legal(
         int(profile.get("island_coast_scale", 96))
     ):
         return false
-    if not _hydrology.rect_clear_of_rivers(rect, rivers, int(profile.get("settlement_river_clearance", 16))):
-        return false
-    return not _overlaps_any_site(rect, accepted_sites)
+    return _hydrology.rect_clear_of_rivers(
+        rect,
+        rivers,
+        int(profile.get("settlement_river_clearance", 16))
+    )
 
 func _site_settlement_center(site: Dictionary, settlements: Array[Dictionary]) -> Vector2i:
     var settlement_id: String = String(site.get("settlement_id", ""))
