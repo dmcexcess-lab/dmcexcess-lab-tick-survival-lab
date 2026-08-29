@@ -2,6 +2,25 @@
 
 This compact ledger records the most recent work. `CHANGELOG.md` remains the historical archive.
 
+## Stage B — Analytic Physical Power Network — 2026-08-29
+
+Verified executable: `7ddee8df0e638cbe14897d83632b62513d5fc574`
+
+- Rebuilt physical electrical distribution around the existing System-33 service authority instead of creating a second power model.
+- `GlobalPowerInfrastructurePlanner` now routes the causal hierarchy as regional ingress -> substation -> settlement distribution and records deterministic `service_settlement_ids` on every physical feeder segment.
+- Visible wire spans now have stable `power.asset.span.*` condition IDs; persistent poles/supports reuse their real WHAT identity. Physical damage can therefore target actual distribution assets rather than abstract demo switches.
+- Added shared data-only `UtilityNetworkConditionStore`. Asset condition is derived analytically from authoritative time; there is no per-pole/per-wire Node, Timer, scheduled event, per-day update or recurring whole-network condition scan.
+- Added `UtilityPowerNetworkRuntime`, which maps physical assets to real System-33 services, applies event-driven damage/repair, predicts threshold failures, and maintains one sorted next-failure schedule. Ordinary time advancement checks only the earliest due threshold instead of scanning every asset or iterating elapsed days.
+- A failed physical span/support now damages the existing System-33 settlement distribution link for only its mapped downstream services. The focused regression proves the affected service blacks out while an unrelated sibling service remains energized.
+- Repair restores only outage state owned by that physical failure. The current mechanical seam exposes low-tier Electrical 2 requirements with one material unit for a span and two for a support; final player repair actions/tool/inventory/timing balance remain deferred.
+- Failed/de-energized cables remain in presentation topology. Rendering never owns energized state, so a blackout cannot make an existing wire disappear.
+- Removed fake transformer/switchgear clusters at abstract regional-ingress/substation planning nodes. Final power-plant/regional-source and substation tactical facilities remain future streamed facility-generation work; settlement distribution hardware remains physical.
+- Hardened `PowerLinePresentationRenderer` with a cached endpoint-ID lookup so unrelated world changes no longer trigger wire endpoint searching/rebuild work.
+- Added `System33PowerPhysicalNetworkSmoke.gd` and expanded `System33PowerInfrastructureSmoke.gd` to prove physical causality, sibling isolation, repair, analytic unattended failure, stable span identity, downstream mapping, persistent visible topology and removal of fake regional/substation equipment clusters.
+- Exact-head verification is green across all 22 published contexts, including System 33 power/water, System 33 lighting truth, System 27 physical lighting, System 25 world time, 00D/00F world planning/materialization, Systems 19/20, perception, weather, freshness, crafting, performance architecture and Pages deployment.
+- Canonical Stage B design record: `SYSTEM_DESIGNS/33B_POWER_PHYSICAL_NETWORK_CONDITION.md`.
+- **Human browser playtest of Stage B is still pending; CI does not mark the new physical-network behavior HUMAN ACCEPTED.**
+
 ## Utility Support Surface Placement Repair — 2026-08-29
 
 Verified executable: `16fe2910ea5f6828ba0c2b6a752a8aa9879b9f29`
@@ -72,5 +91,5 @@ Validated recovery executable: `1f65bff312853a44858201b57d9df2e26ee64f80`
 - Roadmap Phase 2 / System 32 Crafting remains **COMPLETE + CI VERIFIED** on executable `8b4db898f0e02dd84298dbc5291f3e1a88c11ce4`.
 - Compact-island/world-seam cleanup is **COMPLETE + HUMAN ACCEPTED**.
 - Responsiveness/black-screen recovery is **HUMAN ACCEPTED**.
-- Phase 3 / System 33 Candidate 001 plus powered non-bloom room lighting and the utility-support surface-placement repair is **IMPLEMENTED + AUTOMATED VERIFIED**; current verified executable is `16fe2910ea5f6828ba0c2b6a752a8aa9879b9f29`.
-- **Phase 3 human acceptance remains pending browser play of the current utility/lighting behavior, including the new support placement surfaces.**
+- Phase 3 / System 33 Candidate 001, powered non-bloom room lighting, utility support placement repair and Stage B analytic physical power network are **IMPLEMENTED + EXACT-HEAD AUTOMATED VERIFIED**; current verified executable is `7ddee8df0e638cbe14897d83632b62513d5fc574`.
+- **Phase 3 / Stage B human acceptance remains pending browser play of the current physical-network plus utility/lighting/water/refrigeration behavior.**

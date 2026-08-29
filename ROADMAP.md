@@ -18,8 +18,8 @@ Current game identity:
 - **Phase 2 — COMPLETE.** System 32 Crafting Candidate 001 is implemented and CI verified on `8b4db898f0e02dd84298dbc5291f3e1a88c11ce4`.
 - **Compact-island/world-seam cleanup — COMPLETE + HUMAN ACCEPTED.** Broad planner repair `918f1db...` remains rejected; focused local-window repair `282864f...` is accepted.
 - **Responsiveness / black-screen recovery — HUMAN ACCEPTED.** Recovery executable `1f65bff312853a44858201b57d9df2e26ee64f80` restored the human-good full-window lighting/visibility path while preserving decision-pause responsiveness.
-- **Phase 3 / System 33 Power + Water — IMPLEMENTED + AUTOMATED VERIFIED; HUMAN RETEST PENDING.** Current executable including powered non-bloom room lights: `c7592c956a44c31b082db84ae597f43c643231c4`.
-- **Current gameplay lifecycle gate:** human browser verification of current System-33 Candidate 001, especially indoor power on/off, water/pump and refrigeration behavior.
+- **Phase 3 / System 33 Power + Water — IMPLEMENTED + EXACT-HEAD AUTOMATED VERIFIED; HUMAN PLAYTEST PENDING.** Current executable including Stage B analytic physical power distribution: `7ddee8df0e638cbe14897d83632b62513d5fc574`.
+- **Current gameplay lifecycle gate:** human browser verification of Stage B plus current System-33 lighting/water/refrigeration behavior.
 
 ---
 
@@ -81,11 +81,14 @@ Rejected attempt `918f1db...` remains historical evidence that green CI does not
 
 ---
 
-## Phase 3 — Power and Water — IMPLEMENTED + AUTOMATED VERIFIED; HUMAN RETEST PENDING
+## Phase 3 — Power and Water — IMPLEMENTED + EXACT-HEAD AUTOMATED VERIFIED; HUMAN PLAYTEST PENDING
 
-Canonical design: `SYSTEM_DESIGNS/33_POWER_WATER_UTILITIES.md`.
+Canonical designs:
 
-Current verified executable: `c7592c956a44c31b082db84ae597f43c643231c4`.
+- `SYSTEM_DESIGNS/33_POWER_WATER_UTILITIES.md`
+- `SYSTEM_DESIGNS/33B_POWER_PHYSICAL_NETWORK_CONDITION.md`
+
+Current verified executable: `7ddee8df0e638cbe14897d83632b62513d5fc574`.
 
 > **Planning says where utility topology exists. System 33 owns whether that topology currently provides service. Consumers query service; they never infer it from art, brightness or UI state.**
 
@@ -117,29 +120,51 @@ Generated interiors previously had too few real visible light objects to make ho
 
 Dedicated verification: `verify/system33-lighting-truth`, including `RoomLightingPowerSmoke.gd`.
 
+### Stage B — analytic physical power distribution
+
+Stage B on `7ddee8d...` connects the physical overhead distribution world to the existing service runtime without adding a clocked grid simulation.
+
+- 00D4 feeder edges now record deterministic `service_settlement_ids`, so the planner resolves downstream causality once.
+- Physical wire spans receive stable condition identities and real pole/support IDs remain persistent WHAT identities.
+- `UtilityNetworkConditionStore` derives utility-asset wear from authoritative time and event anchors; no asset has a timer, Node, scheduled event or daily update.
+- `UtilityPowerNetworkRuntime` maps physical assets to actual System-33 services and translates failed assets into existing System-33 link state.
+- Ordinary time advancement checks one sorted earliest predicted failure threshold and processes only assets actually due; it does not scan every line or iterate simulated days.
+- Direct damage/repair is event-driven and reevaluates only mapped services.
+- The regression proves a settlement-specific physical span can fail one downstream service while a sibling service remains energized, then repair restores the affected service.
+- Existing cables remain visible while de-energized or damaged; render topology is not power-service truth.
+- Fake regional-ingress/substation transformer clusters were removed. Final source/substation tactical facilities remain future facility-generation work rather than fake materializer props.
+- The wire renderer now ignores unrelated world changes through a cached endpoint-ID lookup.
+
+This Stage B architecture is also the intended reusable pattern for future physical water-network condition where appropriate: shared analytic condition substrate, domain-specific network owner, bounded event-driven consequences.
+
 ### Required ownership/performance rules
 
 - System 00D planning facts define topology/geography but are not runtime service state.
 - No global `power_on` or `water_on` gameplay shortcut.
 - No frame-driven network simulation, per-component timers or recurring whole-world scans.
+- No per-day catch-up loops and no per-tick all-line condition scan.
 - Runtime damage/disabled state is persistent typed truth.
 - Service is derived/cached from required upstream state and revisions.
+- Physical asset condition is analytic from authoritative time/event anchors.
 - System 27 remains physical-light owner; System 30 remains freshness owner.
 - Presentation bloom is not illumination authority; a valid physical source may deliberately have zero additive glow.
+- Failed/de-energized cable visibility is presentation of physical existence, not service state.
 - Water inspection exists without inventing Phase-4 thirst/liquid consequences.
 - Portable battery/fuel simulation remains outside Candidate 001.
 
 ### Human acceptance gate
 
-Before Phase 3 is marked complete, browser play must confirm:
+Before Phase 3 / Stage B is marked human accepted, browser play must confirm:
 
 1. generated house rooms visibly brighten when powered without a fake glowing room-light sprite;
 2. `LOCAL PWR` removes/restores affected indoor illumination;
 3. walls/doors still shape physical light and visible streetlights/other sources retain normal glow;
 4. no phantom flashlight exists when none is equipped;
-5. water/pump and refrigerator service remain truthful;
-6. movement/turning stays responsive and the black-screen regression does not return;
-7. phone/Safari remains first-class.
+5. overhead power lines/poles remain visually stable and support placement remains correct;
+6. water/pump and refrigerator service remain truthful;
+7. movement/turning stays responsive and the black-screen regression does not return;
+8. ordinary world-time advancement does not introduce a recurring utility hitch;
+9. phone/Safari remains first-class.
 
 ---
 
@@ -215,4 +240,4 @@ For each bounded phase/system:
 
 Newest explicit user direction supersedes older roadmap ordering, but implemented historical systems remain current truth until deliberately migrated.
 
-**Current next step: human-play verify System 33 Candidate 001 + powered room-light refinement on `c7592c956a44c31b082db84ae597f43c643231c4`. Phase 4 begins by default only after that gate is accepted unless the user explicitly directs otherwise.**
+**Current next step: human-play verify Stage B physical power-network behavior plus current System-33 lighting/water/refrigeration behavior on `7ddee8df0e638cbe14897d83632b62513d5fc574`. Phase 4 begins by default only after that gate is accepted unless the user explicitly directs otherwise.**

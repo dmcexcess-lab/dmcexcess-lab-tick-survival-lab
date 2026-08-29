@@ -44,7 +44,7 @@ It leaves global settlement layout intact and adapts only an overlapping inherit
 
 ## Current implemented stack
 
-Roadmap **Phase 1 and Phase 2 are complete**. Phase 3 / System 33 Candidate 001 plus the indoor-light refinement is **implemented and automatically verified; final human acceptance is pending**.
+Roadmap **Phase 1 and Phase 2 are complete**. Phase 3 / System 33 through Stage B physical power distribution is **implemented and exact-head automatically verified; final human acceptance is pending**.
 
 Major implemented capabilities include:
 
@@ -65,7 +65,8 @@ Major implemented capabilities include:
 - large/multi-cell prop presentation geometry;
 - System 32 Crafting / Material Transformation;
 - System 33 persistent power/water utility runtime, powered pump dependency, refrigeration service and truthful fixed/portable light integration;
-- persistent powered non-bloom room lighting for generated interiors.
+- persistent powered non-bloom room lighting for generated interiors;
+- Stage B physical electrical distribution with stable wire/support condition identity, analytic wear, event-driven damage/repair and downstream service consequences.
 
 ### Phase 2 / System 32 Crafting
 
@@ -79,19 +80,39 @@ Verified executable: `8b4db898f0e02dd84298dbc5291f3e1a88c11ce4`.
 
 ### Phase 3 / System 33 Power + Water
 
-Canonical design: `SYSTEM_DESIGNS/33_POWER_WATER_UTILITIES.md`.
+Canonical designs:
 
-Status: **IMPLEMENTED + AUTOMATED VERIFIED — Candidate 001 + room-light refinement; HUMAN RETEST PENDING**.
+- `SYSTEM_DESIGNS/33_POWER_WATER_UTILITIES.md`
+- `SYSTEM_DESIGNS/33B_POWER_PHYSICAL_NETWORK_CONDITION.md`
+
+Status: **IMPLEMENTED + EXACT-HEAD AUTOMATED VERIFIED — Candidate 001 + Stage B physical power network; HUMAN PLAYTEST PENDING**.
 
 Current verified executable:
 
-`c7592c956a44c31b082db84ae597f43c643231c4`
+`7ddee8df0e638cbe14897d83632b62513d5fc574`
 
-Exact-head contexts include `verify/system33-power-water`, `verify/system33-lighting-truth`, `verify/system27-physical-lighting`, `verify/system19-local-building`, `verify/system00f-streaming-materialization`, `verify/performance-architecture`, and successful Pages deployment.
+All 22 published exact-head contexts are green, including `verify/system33-power-water`, `verify/system33-lighting-truth`, `verify/system27-physical-lighting`, `verify/system25-world-time-light`, `verify/system00d-global-world`, `verify/system00f-streaming-materialization`, Systems 19/20/23/28/30/32, `verify/performance-architecture`, and successful Pages deployment.
 
 > **Planning says where utility topology exists. System 33 owns whether that topology currently provides service. Consumers query service; they never infer it from art, brightness or UI state.**
 
 Candidate 001 implements persistent three-tier power and potable-water state from 00D4/00D5 planning truth, powered pump dependency, rural wells where planned, persistent appliance state, powered refrigerator cold-storage availability for System 30, typed utility damage/disabled seams and event/revision-driven service caches.
+
+### Stage B physical power-network behavior
+
+Stage B extends the existing service runtime rather than creating parallel power truth.
+
+- 00D4 physical feeder edges record deterministic `service_settlement_ids`, resolving downstream causality once during planning.
+- physical wire spans receive stable `power.asset.span.*` condition IDs; support poles keep their real persistent WHAT IDs;
+- `UtilityNetworkConditionStore` derives condition analytically from authoritative time/event anchors and is intended as the shared substrate for future utility-asset condition where appropriate;
+- `UtilityPowerNetworkRuntime` maps physical assets to real System-33 services, exposes direct damage/repair seams and translates actual asset failure into existing System-33 link state;
+- ordinary time advancement checks only the earliest predicted threshold in one sorted failure schedule; it never loops every line or every elapsed day;
+- direct damage/repair reevaluates only services mapped to the changed asset;
+- the physical-network regression proves a settlement-specific span can black out its mapped downstream service while a sibling service remains energized, then repair restores the affected service;
+- failed/de-energized cables remain visible because rendering owns physical presentation, not energized truth;
+- fake regional-ingress/substation transformer clusters were removed; final source/substation tactical facilities remain future facility-generation work;
+- `PowerLinePresentationRenderer` now ignores unrelated world mutations via a cached endpoint-ID lookup.
+
+Current mechanical repair requirements are a low-tier foundation seam only: Electrical 2 plus one material unit for a span or two for a support. Final player-facing repair action duration, tool/inventory consumption and skill balance remain Phase-6 work and must call the existing seam.
 
 ### Current truthful lighting behavior
 
@@ -111,7 +132,7 @@ Current rules:
 - ordinary streetlights, lamps, neon and equipped flashlights retain visible glow behavior;
 - `LOCAL PWR` uses canonical utility mutation and should remove/restore affected room emitters on its targeted branch.
 
-**System 33 / Phase 3 remains human-retest pending until indoor power on/off, water/pump and refrigeration behavior are accepted in browser play.**
+**System 33 / Phase 3 remains human-playtest pending until Stage B plus indoor power on/off, water/pump and refrigeration behavior are accepted in browser play.**
 
 ---
 
@@ -140,6 +161,8 @@ Current rules:
 21. A powered fixed source must correspond to real persistent WHAT identity/placement; no demo coordinate may create canonical light.
 22. Player-facing changes wake physical lighting only when a real moving/equipped light source changes.
 23. A light may affect physical luminance without additive bloom; presentation glow is an explicit profile property and never the authority for illumination.
+24. Physical utility condition is analytic from authoritative time/event anchors. No pole/wire gets a timer, recurring update or per-day catch-up loop.
+25. A failed/de-energized cable remains physically present; presentation of infrastructure existence never becomes service authority.
 
 ---
 
@@ -152,6 +175,7 @@ Protected direction:
 - no per-cell/per-item/per-utility-component/per-room simulation Nodes or timers;
 - no frame-driven simulation;
 - bounded local queries and shared cached plans;
+- analytic utility-asset condition with one minimal next-threshold schedule per network owner instead of per-asset time events;
 - persistence-backed streaming eviction remains evidence-driven future work only.
 
 ### Player-action responsiveness + black-screen recovery — HUMAN ACCEPTED
@@ -162,14 +186,14 @@ Executable `6e1298da36e9216139f404696275280fcb944033` introduced camera-cropped 
 
 Recovery executable `1f65bff312853a44858201b57d9df2e26ee64f80` restored the human-good full 80x96 physical-light presentation path and stateless LOS query while preserving input responsiveness. Human browser play accepted this recovery.
 
-System-33 fixed/equipped/room lighting deliberately preserves that renderer/LOS lineage. No camera crop or LOS cache was reintroduced.
+System-33 fixed/equipped/room lighting and Stage B physical distribution deliberately preserve that renderer/LOS/input lineage. No camera crop or LOS cache was reintroduced.
 
 ---
 
 ## Relevant ownership boundaries
 
 - 00D owns global geography, settlement/road/hydrology/infrastructure planning truth and cross-area world context.
-- 00D4/00D5 own planned electrical/potable-water topology, not current service availability.
+- 00D4/00D5 own planned electrical/potable-water topology, not current service availability. 00D4 also records deterministic downstream settlement mapping for physical feeder edges.
 - 00F owns materialization-source orchestration and technical activation, not world identity.
 - 19 owns local building grammar/profile content and room plans; room-light materialization derives persistent fixture identity from those existing room sets.
 - 20 owns bounded local roads/parcels/access/outdoor/environment content.
@@ -183,16 +207,16 @@ System-33 fixed/equipped/room lighting deliberately preserves that renderer/LOS 
 - 30 owns freshness records/derivation; System 33 supplies cold-storage availability.
 - 31 owns icon presentation only.
 - 32 owns recipe-driven physical item transformation.
-- 33 owns persistent power/water runtime state, appliance service truth, pump-power dependency and utility-consumer service queries.
-- Phase 4 owns nutrition/thirst/health consequences; Phase 6 Skills; Phase 7 Vehicles; Phase 8 AI/combat/outbreak.
+- 33 owns persistent power/water runtime state, appliance service truth, pump-power dependency, physical electrical-distribution condition/consequence mapping and utility-consumer service queries.
+- Phase 4 owns nutrition/thirst/health consequences; Phase 6 Skills/final repair actions; Phase 7 Vehicles; Phase 8 AI/combat/outbreak.
 
 ---
 
 ## Current next lifecycle gate
 
-**System 33 / Roadmap Phase 3 — HUMAN VERIFY current Candidate 001 + room-light refinement.**
+**System 33 / Roadmap Phase 3 — HUMAN VERIFY Stage B physical power network plus current utility behavior.**
 
-Executable: `c7592c956a44c31b082db84ae597f43c643231c4`.
+Executable: `7ddee8df0e638cbe14897d83632b62513d5fc574`.
 
 Human retest should confirm:
 
@@ -200,7 +224,9 @@ Human retest should confirm:
 2. `LOCAL PWR` removes/restores the affected indoor illumination;
 3. walls/doors continue to shape physical light normally and ordinary visible light sources still glow;
 4. no phantom flashlight exists when none is equipped;
-5. turning/movement remains responsive and the black-screen regression does not return;
-6. water/pump/refrigeration DEV inspection still reflects canonical System-33 truth.
+5. overhead wires/poles remain visually stable and support placement remains correct;
+6. turning/movement remains responsive and the black-screen regression does not return;
+7. ordinary world-time advancement does not develop recurring utility hitching;
+8. water/pump/refrigeration DEV inspection still reflects canonical System-33 truth.
 
-Do not advance Phase 3 to HUMAN ACCEPTED merely because CI is green.
+Do not advance Phase 3 / Stage B to HUMAN ACCEPTED merely because CI is green.

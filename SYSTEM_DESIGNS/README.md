@@ -53,7 +53,7 @@ Canonical status/routing index. Read `PROJECT_NORTH_STAR.md`, `PERFORMANCE_NORTH
 | 30 | Item Freshness / Spoilage | **IMPLEMENTED + CI VERIFIED — Phase 1B** | `30_ITEM_FRESHNESS_SPOILAGE.md` |
 | 31 | Semantic UI Icons | **IMPLEMENTED + CI VERIFIED — Phase 1C** | `31_SEMANTIC_UI_ICONS.md` |
 | 32 | Crafting / Material Transformation | **IMPLEMENTED + CI VERIFIED — Phase 2 complete** | `32_CRAFTING_MATERIAL_TRANSFORMATION.md` |
-| 33 | Power / Water Utility Runtime | **IMPLEMENTED + AUTOMATED VERIFIED — Candidate 001 + room-light refinement; HUMAN RETEST PENDING** | `33_POWER_WATER_UTILITIES.md` |
+| 33 | Power / Water Utility Runtime | **IMPLEMENTED + EXACT-HEAD VERIFIED — Candidate 001 + Stage B physical network; HUMAN PLAYTEST PENDING** | `33_POWER_WATER_UTILITIES.md` + `33B_POWER_PHYSICAL_NETWORK_CONDITION.md` |
 | PERF | Performance Architecture Gate | **IMPLEMENTED + CI VERIFIED; human accepted** | `PERFORMANCE_ARCHITECTURE.md` |
 | 00E | Population / Household / Outbreak / Player Story | **NOT DESIGNED — scheduled inside Phase 8** | future design |
 
@@ -63,7 +63,7 @@ Canonical status/routing index. Read `PROJECT_NORTH_STAR.md`, `PERFORMANCE_NORTH
 |---|---|---|
 | 1E — Content Expansion + Integration | **IMPLEMENTED + CI VERIFIED** | `PHASE_1E_CONTENT_EXPANSION_INTEGRATION.md` |
 | 2 — Crafting | **IMPLEMENTED + CI VERIFIED** | `32_CRAFTING_MATERIAL_TRANSFORMATION.md` |
-| 3 — Power + Water | **IMPLEMENTED + AUTOMATED VERIFIED; HUMAN RETEST PENDING** | `33_POWER_WATER_UTILITIES.md` |
+| 3 — Power + Water | **IMPLEMENTED + EXACT-HEAD VERIFIED; HUMAN PLAYTEST PENDING** | `33_POWER_WATER_UTILITIES.md` + `33B_POWER_PHYSICAL_NETWORK_CONDITION.md` |
 
 ---
 
@@ -73,11 +73,11 @@ Phase 1 is implementation-complete through 1E. Phase 2 / System 32 is implementa
 
 The current island/performance recovery is human-play accepted.
 
-System 33 Candidate 001 plus powered non-bloom room-light refinement is exact-head verified on executable:
+System 33 Candidate 001, truthful powered lighting, utility support placement, and Stage B physical power-network condition/damage are exact-head verified on executable:
 
-`c7592c956a44c31b082db84ae597f43c643231c4`
+`7ddee8df0e638cbe14897d83632b62513d5fc574`
 
-The active gameplay lifecycle gate is **human browser verification of current System 33**, not Phase-4 implementation by default.
+The active gameplay lifecycle gate is **human browser verification of Stage B plus the existing System-33 utility behavior**, not Phase-4 implementation by default.
 
 Then: **physical survival/health -> Moodlets -> final skills/interactions -> Vehicles -> AI/combat/outbreak -> final graphics/UI -> Beta.**
 
@@ -96,6 +96,21 @@ Candidate 001 implements exact stable ingredient/tool selection from real person
 > **Planning says where utility topology exists. System 33 owns whether that topology currently provides service. Consumers query service; they never infer it from art, brightness or UI state.**
 
 Candidate 001 implements persistent three-tier power/potable-water service state, rural wells where planned, electrical pump-power dependency, powered refrigerator cold storage for System 30, typed appliance and utility damage state, revision-driven cached service derivation, canonical DEV controls and real System-27 powered-light integration.
+
+### Stage B physical power network
+
+Canonical extension: `33B_POWER_PHYSICAL_NETWORK_CONDITION.md`.
+
+- 00D4 feeder segments now carry deterministic `service_settlement_ids`, so physical downstream causality is planned once rather than rediscovered after damage.
+- Visible wire spans receive stable `power.asset.span.*` condition identity and supports reuse their real persistent WHAT IDs.
+- `UtilityNetworkConditionStore` provides shared data-only analytic utility-asset condition with no per-asset timer/Node/scheduled event.
+- `UtilityPowerNetworkRuntime` maps assets to System-33 services, applies direct damage/repair, predicts threshold failures analytically, and keeps one sorted next-failure schedule.
+- Ordinary time advancement checks only the earliest due threshold; it does not scan every asset or iterate simulated days.
+- A failed physical span/support damages only the existing System-33 distribution links for mapped downstream services; unrelated branches remain powered where topology allows.
+- Repair restores only outage state owned by the physical-network failure.
+- Dead cables remain visible because presentation topology is independent from energized service truth.
+- Fake regional-ingress/substation transformer clusters were removed; final source/substation tactical facilities remain a future generation responsibility.
+- `PowerLinePresentationRenderer` now ignores unrelated world changes through an endpoint-ID lookup rather than repeatedly searching all wire endpoints.
 
 ### Truthful fixed/equipped source boundary
 
@@ -116,9 +131,9 @@ Candidate 001 implements persistent three-tier power/potable-water service state
 - local utility outages remove/restore affected room emitters through canonical System-33 mutation;
 - dedicated `RoomLightingPowerSmoke.gd` proves luminance-on/no-bloom behavior.
 
-Dedicated exact-head context: `verify/system33-lighting-truth`.
+Dedicated exact-head contexts include `verify/system33-power-water` and `verify/system33-lighting-truth`; `System33PowerPhysicalNetworkSmoke.gd` runs inside the System-33 power/water gate.
 
-**Human retest remains required before Candidate 001 / Phase 3 is marked HUMAN ACCEPTED.**
+**Human playtest remains required before Phase 3 / Stage B is marked HUMAN ACCEPTED.**
 
 ---
 
@@ -142,6 +157,8 @@ Current System-33 executable verification preserves, at minimum:
 - canonical startup/player responsiveness/visibility coverage;
 - `verify/pages-deploy`.
 
-Verified executable: `c7592c956a44c31b082db84ae597f43c643231c4`.
+Verified executable: `7ddee8df0e638cbe14897d83632b62513d5fc574`.
 
-**Current lifecycle gate: human browser verification of current System 33 Candidate 001 + room-light refinement.**
+All published exact-head contexts for that executable are green.
+
+**Current lifecycle gate: human browser verification of Stage B physical power-network behavior plus the current System-33 lighting/water/refrigeration behavior.**
