@@ -2,7 +2,7 @@
 
 Status: **canonical priority roadmap**.
 
-This file answers what major gameplay work comes next and in what order. It does not replace system designs. Each independently owned phase/system still follows `README_SOPS.md` and the normal **DESCRIBE -> APPROVE -> IMPLEMENT -> VERIFY** lifecycle.
+This file answers what major gameplay work comes next and in what order. It does not replace system designs. Each independently owned phase/system follows `README_SOPS.md` and the normal **DESCRIBE -> APPROVE -> IMPLEMENT -> VERIFY** lifecycle.
 
 Current game identity:
 
@@ -12,13 +12,22 @@ Current game identity:
 
 ---
 
-## Phase 1 — Items, spoilage, interaction readability, and world-object breadth — IMPLEMENTATION COMPLETE
+## Current milestone state
 
-Goal: make the physical world and the things in it more useful/readable before deeper character systems arrive.
+- **Phase 1 — COMPLETE.** Items, spoilage, interaction readability, semantic UI, large-object presentation, content breadth and integration are implemented.
+- **Phase 2 — COMPLETE.** System 32 Crafting / Material Transformation Candidate 001 is implemented and CI verified.
+- **Compact-island/world-seam cleanup — COMPLETE.** Exact executable `918f1dbd7b033fa179522a112b1507d9a2c63890` is green with zero failed and zero in-progress exact-head Actions runs after settlement-site overlap repair.
+- **Current next lifecycle gate: Phase 3 Power and Water — DESCRIBE.** No Phase-3 runtime implementation is pre-authorized by completion of prior phases.
+
+---
+
+## Phase 1 — Items, spoilage, interaction readability, and world-object breadth — COMPLETE
+
+Goal: make the physical world and the things in it useful/readable before deeper character systems arrive.
 
 ### 1A — Interaction affordance + reach — COMPLETE
 
-System 29 Candidate 001 is implemented.
+System 29 owns neutral reach + interaction-offer composition.
 
 Core rule:
 
@@ -28,139 +37,53 @@ Implemented result includes shared `CONTACT_FORWARD` reach, real read-only inter
 
 ### Performance architecture gate — COMPLETE + HUMAN ACCEPTED
 
-The P0/P1/P2 performance architecture and subsequent Weather presentation optimization are complete and human-accepted on phone/Safari.
+The P0/P1/P2 performance architecture and Weather presentation optimization are complete and human-accepted on phone/Safari.
 
-First P0/P1/P2 fully green executable: `0398a2a49d84e6067f7610727aecacf4c05fe41f`.
-
-Human-accepted Weather P3D executable: `6016fe5098804e3e6aba6c9f5f9658282036a697`.
-
-Predictive/amortized streaming remains a measured follow-up only if evidence later justifies it.
+Protected direction remains event-driven/cache-oriented invalidation, bounded queries and shared derived plans rather than recurring world scans, per-cell/per-item Nodes/timers or frame-driven simulation.
 
 ### 1B — Item freshness / spoilage — COMPLETE
 
 System 30 Candidate 001 is implemented and verified.
 
-First fully green executable: `39716f27b7f91b7007645ceae02dedc47601bf87`.
-
 Core rule:
 
 > **Food ages because authoritative world time passes through its storage environment. No item gets a timer.**
 
-Implemented result:
-
-- explicit perishable semantic profiles;
-- sparse typed per-instance records;
-- FRESH / AGING / STALE / SPOILED derived analytically;
-- no per-item tick loop, timer, Node or scheduled spoilage event;
-- ambient cumulative exposure provider plus neutral future storage-context seam;
-- deterministic bounded virgin starting age;
-- virgin world perishables use logical scenario origin tick 0 even when streamed later;
-- System 24 enrolls perishables inside the same rollback-safe source-initialization transaction;
-- production loot probabilities/search/transfer timing are unchanged;
-- inventory/container inspection exposes coarse freshness labels;
-- refrigeration remains inactive until Phase 3 supplies real power/appliance truth;
-- Phase 4 later owns eating/drinking/health consequences.
+Refrigeration remains inactive until Phase 3 supplies real powered-appliance truth. Phase 4 later owns eating/drinking/health consequences.
 
 ### 1C — Semantic inventory/menu icons — COMPLETE
 
-Canonical design:
-
-`SYSTEM_DESIGNS/31_SEMANTIC_UI_ICONS.md`
-
-System 31 Candidate 001 is implemented and verified.
-
-First verified executable: `dc83ad10b7469a629fb2ac5d86c77d386b69434d`.
+System 31 is implemented and verified.
 
 Core rule:
 
 > **UI icons visualize existing semantic truth. They never define item identity, utility, freshness, or action legality.**
 
-Implemented result:
+### 1D — Large/multi-cell object visual geometry — COMPLETE
 
-- presentation-only semantic UI icon system;
-- dedicated low-resolution atlas with 16x16 logical icon cells normally drawn at 32x32;
-- one shared Node-free/cached `SemanticUiIconCatalog`;
-- all current loot semantic types receive explicit icon mappings, with intentional sharing allowed but no automatic family fallback;
-- unknown future semantics receive an honest unknown glyph + diagnostic while text remains usable;
-- Stats / Inventory / Menu use icon + text;
-- hands, carried inventory, scavenging contents, and `YOUR PACK` use the same semantic item vocabulary;
-- labels, stable IDs, weight, utility/family and freshness remain real data beside icons;
-- no persistent state, simulation tick work, per-item runtime objects or world scan.
-
-### 1D — Large/multi-cell object visual geometry — COMPLETE + CI VERIFIED
-
-Canonical design:
-
-`SYSTEM_DESIGNS/07B_LARGE_MULTI_CELL_VISUAL_GEOMETRY.md`
-
-Verified executable/workflow head:
-
-`d5e33b43fb732835b4a996ae4bec3a562cfa75f3`
+System 07B is implemented and CI verified.
 
 Core rule:
 
 > **Physical footprint answers where the object is. Visual geometry answers how that object is drawn. Neither may silently redefine the other.**
 
-Implemented result:
+Large-tree/traffic-light presentation, actor-overhang layering and emitter-derived glow remain presentation-only and do not redefine collision, reach, LOS, WHEN, save or streaming truth.
 
-- System 07B remains a presentation-only child of System 07;
-- Node-free descriptors provide authored whole-cell visual span, anchor-attached pivot and optional foreground/overhang art;
-- physical footprint remains WHERE/WHAT truth and may differ from decorative visual overhang;
-- System 07A remains facing/orientation owner;
-- one stable entity produces one cached shared logical visual plan rather than repeated icons per occupied cell;
-- base/body remains z=20; optional foreground/overhang is z=35 above actors and below physical lighting;
-- a catalog-bounded two-cell discovery halo allows just-offscreen anchors to contribute visible canopy/arm overhang without any whole-world scan;
-- unmapped props retain exact historical 1x1 visual geometry;
-- dedicated large-tree and traffic-light base/foreground art prove the seam;
-- the existing System-27 presentation glow was broadened into a soft two-ring bloom, but only real System-27 emitter truth creates the glow;
-- no collision/reach/LOS/WHEN/streaming/save-state truth was changed;
-- all **18 required exact-head contexts** are green on `d5e33b43fb732835b4a996ae4bec3a562cfa75f3`, including `verify/system07b-large-visual-geometry` and `verify/pages-deploy`.
+### 1E — Content expansion + integration — COMPLETE
 
-Automated implementation/CI verification is complete. Separate human visual acceptance of the new large-object proportions/glow has not yet been recorded.
-
-### 1E — Phase-1 content expansion + integration — COMPLETE + CI VERIFIED
-
-Canonical design:
-
-`SYSTEM_DESIGNS/PHASE_1E_CONTENT_EXPANSION_INTEGRATION.md`
-
-Phase type: cross-system content/integration work, **not a new System 32**.
-
-Verified executable head:
-
-`6ad923d172f5a5434f94a7fdcc15da640a60a240`
+Canonical design: `SYSTEM_DESIGNS/PHASE_1E_CONTENT_EXPANSION_INTEGRATION.md`.
 
 Core rule:
 
 > **Content extends the system that already owns its truth. Integration does not create a second owner.**
 
-Implemented result:
+Implemented result includes broader deterministic building/location dressing, expanded mundane/location-aware loot, broader perishables, complete icon coverage for shipped item semantics and permanent integration/performance verification without fake future Crafting/Power/Health/Skills/Vehicles/AI behavior.
 
-1. **1E-1 World clutter + location identity** — added shared deterministic Phase-1E dressing for the 18 baseline one-story System-19 profiles, with program-appropriate accents capped at two per building. The six protected reference buildings remain outside the new dresser. Existing System-20 exterior generation remains the physical owner; its ordinary generated large-tree and traffic-light semantics now consume the approved 07B visual geometry, while the historical 07B fixture aliases remain compatible.
-2. **1E-2 Mundane loot + perishable breadth** — expanded System 24 to 97 physical item semantics and broader location-aware container stock, including distinct school/church/police/fire supply profiles. Every shipped item has positive System-13D weight and an explicit System-31 icon; System 30 now has 10 explicit perishables while shelf-stable items remain outside freshness state.
-3. **1E-3 Integration/readability/performance gate** — bounded the new building dressing to avoid clutter creep, added permanent `verify/phase1e-content-integration`, preserved the protected System-20/24/29/30/31/07B/performance contracts, and introduced no fake Crafting, Power/Refrigeration, nutrition/Health, Skills, Vehicles, combat or AI state.
-
-The exact executable passes all **19 required exact-head contexts**, including `verify/phase1e-content-integration`, `verify/performance-architecture`, and `verify/pages-deploy`.
-
-Automated implementation/CI verification is complete. The richer Phase-1E content has **not** yet received a separate human visual/readability acceptance pass; that remains honest follow-up rather than a blocker to beginning Phase-2 design.
-
-### Phase-1 completion gate — IMPLEMENTATION COMPLETE
-
-The implemented Phase-1 stack now provides:
-
-- nearby usable containers/objects identifiable from real reach + perception truth;
-- deterministic perishable aging with no per-item tick loop;
-- a coherent low-resolution inventory/menu icon vocabulary;
-- intentionally large authored object visuals independent from collision footprints;
-- representative buildings/locations using broader program-specific object and loot vocabularies;
-- bounded content density under the existing performance architecture;
-- no future Crafting/Power/Skills behavior faked to make Phase 1 look complete.
-
-Human visual/readability feedback can still drive bounded Phase-1 content tuning without reopening architecture.
+Verified Phase-1E executable: `6ad923d172f5a5434f94a7fdcc15da640a60a240`.
 
 ---
 
-## Phase 2 — Crafting — DESCRIBED, AWAITING APPROVAL
+## Phase 2 — Crafting — COMPLETE + CI VERIFIED
 
 Canonical design:
 
@@ -168,27 +91,50 @@ Canonical design:
 
 System owner: **System 32 Crafting / Material Transformation**.
 
+Verified executable:
+
+`8b4db898f0e02dd84298dbc5291f3e1a88c11ce4`
+
+Exact-head context: `verify/system32-crafting`.
+
 Core rule:
 
 > **Crafting transforms specific real persistent item entities into specific real persistent item entities. The recipe describes the transformation; WHEN charges the time; existing item/world owners hold the result.**
 
-Candidate 001 is split into three bounded implementation slices:
+Implemented Candidate 001:
 
-1. **2A — Recipe + plan foundation** — exact-semantic recipe/workstation catalogs, deterministic selection from the actor's real hands + nested personal inventory, explicit tool requirements, carry/weight/freshness validation, and a small honest material-reclamation/assembly vocabulary. No nearby floor/container auto-pull and no stack/resource wallet.
-2. **2B — Timed physical transformation** — `crafting.craft_recipe` as a positive-duration CANCELABLE WHEN action, final commit revalidation, real input-entity removal, deterministic new output entities, actor-root containment, hard carry-limit enforcement and a bounded compensation journal rather than a whole-world snapshot.
-3. **2C — Workstation + player integration** — explicit heavy-workbench capability, shared System-29 `CONTACT_FORWARD` reach + `CRAFT` offer, phone/Safari-first crafting modal, and complete-island integration/playtest.
+1. **2A — Recipe + plan foundation** — exact-semantic recipe/workstation catalogs, deterministic ingredient/tool selection from real personal possession, positive physical-weight/carry/freshness validation and no abstract stack/resource wallet.
+2. **2B — Timed physical transformation** — positive-duration CANCELABLE `crafting.craft_recipe` WHEN action, final-commit revalidation, real input removal, deterministic new persistent outputs, actor-root containment, hard carry ceiling and bounded compensation journal rather than whole-world snapshots.
+3. **2C — Workstation + player integration** — explicit heavy-workbench capability, System-29 `CONTACT_FORWARD` `CRAFT` offer and phone/Safari-first Crafting UI integrated into the canonical player shell.
 
-Candidate 001 deliberately excludes perishable/cooking transforms, container-item consumption, durability/repair, construction placement, Power/Water, nutrition/Health, Skills/quality/XP, Vehicles, combat/ammunition and AI. Those later owners may reuse the System-32 substrate without becoming Crafting-owned.
-
-If implemented, permanent exact-head context `verify/system32-crafting` becomes the twentieth required context.
-
-The next lifecycle gate is **APPROVE or revise System 32 Candidate 001**. No Phase-2 runtime implementation is authorized by this design alone.
+System 32 deliberately does not own Construction/Repair/Durability, Cooking/Nutrition, Power/Water, Skills/quality/XP, Vehicles, combat/ammunition or AI. Later owners may reuse its physical-transformation substrate through explicit contracts.
 
 ---
 
-## Phase 3 — Power and Water
+## World-generation cleanup gate — COMPLETE + CI VERIFIED
 
-Goal: add causal, damageable three-tier utility networks rather than global on/off switches.
+The compact playable island is `temperate.island.region` v3 over the protected rural-v6 planning skeleton.
+
+Completed cleanup includes:
+
+- fresh new-game world seeds redraw authoritative island identity rather than aliasing the historical standalone critique fixture;
+- central local-site seed derives from world seed + site identity;
+- the playable island no longer carries the old 640-cell regional stress-fixture protected-cross half-span; island v3 uses a compact local protected cross;
+- central-to-small-town spacing remains bounded instead of exposing a giant green belt;
+- natural ecology remains coherent across logical source rectangles using world seed + absolute global cell;
+- global settlement placement now rejects actual positive-area 256x256 site-rectangle overlap rather than relying on an insufficient center-distance heuristic.
+
+Final verified cleanup executable:
+
+`918f1dbd7b033fa179522a112b1507d9a2c63890`
+
+On that exact head the formerly failing island legacy-seam smoke, System 00D, System 20, streaming, canonical shell, Crafting, performance architecture, canonical startup and Pages deployment are green. Exact-head Actions settled with zero failures and zero in-progress runs.
+
+---
+
+## Phase 3 — Power and Water — NEXT: DESCRIBE
+
+Goal: add causal, damageable **three-tier utility networks** rather than global on/off switches.
 
 ### Power hierarchy
 
@@ -198,19 +144,22 @@ Goal: add causal, damageable three-tier utility networks rather than global on/o
 
 ### Water hierarchy
 
-1. **Main treatment/water-works source** — broad regional supply and slow failure.
+1. **Main treatment/waterworks source** — broad regional supply and slow failure.
 2. **Pump stations / local distribution** — several areas, semi-frequent failure.
 3. **Local mains/hydrants/structure service** — vulnerable local access and repair/damage seams.
 
-Standalone wastewater/sewer gameplay is removed from the active roadmap. Existing generated wastewater planning may remain inert until deliberate cleanup/migration.
+### Required ownership rules
 
-Downstream rules:
+- Phase 3 must consume existing System-00D planning facts where appropriate without treating planning records as runtime utility state.
+- Real utility state must be persistent world truth, not renderer/UI state and not a global boolean shortcut.
+- Powered lights, neon, TVs, pumps and appliances feed real active state into existing physical systems.
+- Utility damage/failure persists through the normal world-state architecture.
+- Mechanical/Electrical skills later attach to real repair actions rather than being prebuilt here.
+- Vehicles/trees may later damage local distribution through ordinary physical damage seams.
+- System 30 may consume **real refrigeration availability** only after Phase 3 establishes real power + appliance state.
+- Standalone wastewater/sewer gameplay is removed from the active roadmap. Existing generated wastewater planning may remain inert until deliberate migration/cleanup.
 
-- powered lights/neon/TVs/pumps/appliances feed real active state into existing physical systems;
-- utility failures are persistent world consequences;
-- Mechanical/Electrical skills later attach to real repair actions;
-- vehicles/trees may damage local distribution through ordinary damage seams;
-- System 30's storage-environment seam may consume **real** refrigeration availability here; no fake refrigeration before that truth exists.
+**Lifecycle rule:** Phase 3 must be DESCRIBED and approved before runtime implementation begins.
 
 ---
 
@@ -233,7 +182,7 @@ Conceptual split:
 - fatigue = short-horizon exertion/endurance pressure from running, carrying and strenuous actions;
 - sleep pressure/exhaustion = long-horizon need for sleep and severe sleep-deprivation consequences.
 
-Food/drink/sleep/treatment become real actions here or through later specialized skill ownership. System 30 freshness is read when appropriate but does not own nutrition/sickness/Health.
+Food/drink/sleep/treatment become real actions here or through later specialized skill ownership. System 30 freshness is read when appropriate but does not own nutrition, sickness or Health.
 
 Extreme unmet needs may become lethal; death from exhaustion remains an intended possible terminal consequence.
 
@@ -362,4 +311,4 @@ For each bounded phase/system:
 
 Newest explicit user direction supersedes older roadmap ordering, but implemented historical systems remain current truth until deliberately migrated.
 
-**Current next step: APPROVE or revise `SYSTEM_DESIGNS/32_CRAFTING_MATERIAL_TRANSFORMATION.md`. No System-32 runtime implementation is authorized yet.**
+**Current next step: DESCRIBE Roadmap Phase 3 — Power and Water. No Phase-3 runtime implementation is authorized yet.**
