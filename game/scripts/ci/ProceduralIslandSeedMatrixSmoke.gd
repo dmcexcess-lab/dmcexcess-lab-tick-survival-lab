@@ -28,7 +28,7 @@ func _initialize() -> void:
         if not plan.is_generated():
             _failures.append("seed=%d reason=%s" % [seed, plan.failure_reason])
             continue
-        print("PROCEDURAL_ISLAND_SEED_OK seed=%d signature=%s" % [seed, plan.deterministic_signature()])
+        print("PROCEDURAL_ISLAND_SEED_OK seed=%d signature=%s" % [seed, plan.signature()])
 
     if _failures.is_empty():
         print("PROCEDURAL_ISLAND_SEED_MATRIX_SMOKE_OK")
