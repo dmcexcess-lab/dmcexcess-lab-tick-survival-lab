@@ -107,7 +107,7 @@ func _test_profile_contract(generator: LocalAreaGenerator) -> void:
     _check(StringName(watercourse.get("river_ground_semantic", &"")) == &"ground.water_river", "rural.watercourse uses semantic river water terrain")
     _check(generator.area_profile_ids().has(&"rural.watercourse"), "LocalAreaGenerator exposes rural.watercourse")
     _check(int(profiles.profile(&"rural.crossroads").get("version", 0)) == 5, "rural.crossroads remains v5")
-    _check(int(profiles.profile(&"smalltown.center").get("version", 0)) == 1, "smalltown.center remains v1")
+    _check(int(profiles.profile(&"smalltown.center").get("version", 0)) == 2, "smalltown.center remains v2")
     _check(int(profiles.profile(&"rural.scattered").get("version", 0)) == 1, "rural.scattered remains v1")
     _check(int(profiles.profile(&"rural.open").get("version", 0)) == 1, "rural.open remains v1")
 
