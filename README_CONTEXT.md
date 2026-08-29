@@ -43,7 +43,7 @@ What happened:
 4. Human play immediately reported the deployed game as completely broken.
 5. The planner change was therefore reverted.
 
-Current restored runtime executable:
+Planner rollback executable:
 
 `f6a06add3dfd212c0c29b343d24a8f7d28a89bca`
 
@@ -51,14 +51,13 @@ That commit restores `GlobalSettlementPlanner.gd` to the pre-regression implemen
 
 Expected current verification state:
 
-- the live game is back on the pre-regression planner;
-- System 00D's strict `Legacy Crossroads Is Not Embedded In Island` alternate-seed seam is red again;
-- that known red seam is intentionally reopened rather than hidden by a gameplay-breaking planner change;
-- Crafting and unrelated gameplay systems were not reverted.
+- the planner remains on the pre-regression layout behavior unless a later focused seam repair explicitly changes it;
+- the strict `Legacy Crossroads Is Not Embedded In Island` alternate-seed seam remains a required validator rather than something to weaken;
+- Crafting and unrelated gameplay systems were not reverted by the planner rollback.
 
 **Do not cite `918f1db...` as a completed cleanup head.**
 
-Before another live planner change, reproduce the overlap in a focused planner fixture, define the intended settlement-layout invariants beyond simple non-overlap, verify the smallest deterministic repair, then human-play the island before closure.
+Before another broad live planner change, reproduce the overlap in a focused planner fixture, define the intended settlement-layout invariants beyond simple non-overlap, verify the smallest deterministic repair, then human-play the island before closure.
 
 ---
 
@@ -127,6 +126,7 @@ Crafting owns recipe-driven physical item transformation. It does not own Constr
 16. Content extends existing owners; integration never creates a second owner or placeholder future mechanics.
 17. Validators fail closed. A legal-seed failure is a generation defect to repair, not a reason to weaken the validator.
 18. **Generated-world behavior/layout changes require human play acceptance in addition to green CI.** The `918f1db...` regression proved automated checks alone are insufficient here.
+19. A canonical startup smoke must prove a usable visible field and non-black physical-light presentation, not merely that the scene booted.
 
 ---
 
@@ -141,17 +141,21 @@ Protected direction:
 - bounded local queries and shared cached plans;
 - persistence-backed streaming eviction remains evidence-driven future work only.
 
-### Player-action responsiveness repair — human accepted; startup follow-up awaiting acceptance
+### Player-action responsiveness + black-screen recovery — executable verified; human visual acceptance required
 
-Human browser play confirmed the first repair was **much better** and eliminated the growing backlog/overshoot behavior, while identifying a remaining first-actions hitch.
+Human browser play confirmed the first responsiveness repair was **much better** and eliminated the growing backlog/overshoot behavior, while identifying a remaining first-actions hitch.
 
-The canonical `PlayerActionController` resolves accepted actions through a one-due-tick-batch-per-render-frame pump. Input is now accepted only at WHEN's real decision pause and stays locked until that pause returns; the fixed 120 ms post-action cooldown is gone.
+The canonical `PlayerActionController` resolves accepted actions through a one-due-tick-batch-per-render-frame pump. Input is accepted only at WHEN's real decision pause and stays locked until that pause returns; the old fixed 120 ms post-action cooldown is gone. Ambient/emitter/observer work remains coalesced once per accepted player action.
 
-Ambient/emitter/observer work now coalesces once per accepted player action. Physical-light presentation is bounded to the camera viewport plus a cached margin rather than the entire 80x96 render window. System-23 LOS caches its bounded opacity/structure field behind exact revisions. Repeated local focused FOV runs improved from the documented ~11.84 ms baseline to ~2.5-2.9 ms.
+The follow-up executable `6e1298da36e9216139f404696275280fcb944033` also introduced camera-cropped physical-light presentation and a revision-cached bounded System-23 LOS field. Although automated checks passed, human browser play reported a completely black game immediately afterward. That visibility optimization stack is therefore **not accepted**.
 
-Obsolete runtime naming/compatibility residue was removed: the active roots, controls, player controller and streaming focus adapter no longer claim to be demos, and Weather's unused camera-local compatibility method is gone. The still-temporary `DemoLightingSourceAdapter` remains honest and necessary until Phase 3 implements equipment/battery/switch/grid truth.
+Recovery executable `1f65bff312853a44858201b57d9df2e26ee64f80` restores the last human-good full 80x96 physical-light presentation path and the prior stateless LOS query while preserving the decision-pause input gate, one-batch-per-frame action pump, coalesced settled updates, flashlight-facing fix and runtime naming cleanup from the responsiveness work. This deliberately gives back the unaccepted camera-crop/LOS-cache speedup rather than preserving an optimization that can erase the playable frame.
 
-Automated acceptance includes parser/import, canonical player shell, lighting/perception/performance regressions, startup and a permanent input smoke proving one action per pause, immediate next-pause acceptance, one perception/light rebuild per action and a camera-bounded lighting field. Human browser play remains the final acceptance gate for the reduced startup-step hitch.
+The permanent `PlayerInputResponsivenessSmoke.gd` now proves more than scene startup: the player's cell must be visible, the visible field must contain usable cells, lighting multiply/glow textures must exist with nonzero luminance, those properties must remain valid after settled actions, buffered turns must still be rejected, input must unlock only at the next real decision pause, and perception/light rebuilds must remain coalesced once per action.
+
+Exact-head verification for `1f65bff...` completed with 46 successful workflows, zero failing workflows, and a successful Pages build/deploy. Human browser play remains the final acceptance gate for the black-screen recovery and the remaining startup-step hitch.
+
+Obsolete runtime naming/compatibility residue remains removed: the active roots, controls, player controller and streaming focus adapter no longer claim to be demos, and Weather's unused camera-local compatibility method is gone. The still-temporary `DemoLightingSourceAdapter` remains honest and necessary until Phase 3 implements equipment/battery/switch/grid truth.
 
 ---
 
