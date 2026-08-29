@@ -110,7 +110,7 @@ func _test_system20_projection(projector: System20AreaRequestProjector, plan: Ge
         var smalltown_plan: GeneratedAreaPlan = local_generator.generate(smalltown_request)
         _check(smalltown_plan.is_generated(), "small-town Candidate 001 still generates from exact v6 global facts")
         if smalltown_plan.is_generated():
-            _check(smalltown_plan.area_profile_version == 1, "small-town Candidate 001 records profile v1")
+            _check(smalltown_plan.area_profile_version == 2, "small-town Candidate 001 records profile v2")
             _check(not smalltown_plan.reservations.is_empty(), "small-town local plan contains infrastructure reservations")
             _check(not smalltown_plan.blocks.is_empty(), "small-town local plan contains semantic town blocks")
 
@@ -137,7 +137,6 @@ func _test_system20_projection(projector: System20AreaRequestProjector, plan: Ge
 func _test_projection_seams(projector: System20AreaRequestProjector, plan: GeneratedGlobalWorldPlan) -> void:
     if not plan.is_generated():
         return
-
     var center_bounds: Rect2i = LocalFixtureClass.BOUNDS
     var hydrology: Dictionary = projector.hydrology_constraints_for_bounds(plan, center_bounds)
     _check(bool(hydrology.get("ok", false)), "Candidate 006 hydrology projection still succeeds")
