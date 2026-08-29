@@ -12,10 +12,18 @@ func _initialize() -> void:
 
     var seed: int = seed_text.to_int()
     var plan: GeneratedGlobalWorldPlan = FixtureClass.generate_global_plan(seed)
-    if plan == null or plan.is_generated():
+    if plan == null:
+        print("::error title=Procedural island seed %d::failure_reason=null_plan" % seed)
         quit(1)
         return
-    if not String(plan.failure_reason).begins_with(expected_prefix):
+    if plan.is_generated():
+        print("::error title=Procedural island seed %d::failure_reason=unexpected_success" % seed)
+        quit(1)
+        return
+
+    var reason: String = String(plan.failure_reason)
+    if not reason.begins_with(expected_prefix):
+        print("::error title=Procedural island seed %d::failure_reason=%s" % [seed, reason])
         quit(1)
         return
 
