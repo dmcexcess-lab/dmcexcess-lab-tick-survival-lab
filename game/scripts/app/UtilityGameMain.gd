@@ -4,8 +4,6 @@ class_name UtilityGameMain
 const UtilityStateClass = preload("res://scripts/simulation/utilities/UtilityRuntimeState.gd")
 const UtilityLightingClass = preload("res://scripts/simulation/utilities/UtilityPoweredLightingSourceAdapter.gd")
 const PowerInfrastructureClass = preload("res://scripts/simulation/utilities/UtilityPowerInfrastructureMaterializer.gd")
-const PowerFacilityClass = preload("res://scripts/simulation/utilities/PowerFacilityMaterializer.gd")
-const PowerConditionClass = preload("res://scripts/simulation/utilities/PowerInfrastructureConditionState.gd")
 const RefrigerationProviderClass = preload("res://scripts/simulation/utilities/UtilityRefrigerationEnvironmentProvider.gd")
 const UtilityControlsClass = preload("res://scripts/ui/UtilityDevControls.gd")
 
@@ -19,8 +17,6 @@ const COLD_CONTAINER_TYPES: Array[StringName] = [
 var _utilities: UtilityRuntimeState = null
 var _utility_lighting: UtilityPoweredLightingSourceAdapter = null
 var _power_infrastructure: UtilityPowerInfrastructureMaterializer = null
-var _power_facilities: PowerFacilityMaterializer = null
-var _power_condition: PowerInfrastructureConditionState = null
 var _refrigeration_providers: Dictionary = {}
 var _utility_controls: UtilityDevControls = null
 var _central_power_service_id: String = ""
@@ -33,8 +29,6 @@ func _boot_canonical_demo() -> bool:
     return _boot_utility_runtime()
 
 func _boot_utility_runtime() -> bool:
-    # GeneratedIslandCritiqueFixture is the legacy composition name; global_plan() is the live
-    # procedurally generated 00D world for this new game, not a canned electrical fixture.
     var plan: GeneratedGlobalWorldPlan = GeneratedIslandCritiqueFixture.global_plan()
     _utilities = UtilityStateClass.new()
     if not _utilities.initialize_from_plan(plan):
@@ -61,11 +55,6 @@ func _boot_utility_runtime() -> bool:
     var containment_callable := Callable(self, "_on_utility_item_containment_changed")
     if not _inventory_state.item_containment_changed.is_connected(containment_callable):
         _inventory_state.item_containment_changed.connect(containment_callable)
-    var tick_callable := Callable(self, "_on_power_infrastructure_tick_advanced")
-    if not _kernel.world_tick_advanced.is_connected(tick_callable):
-        _kernel.world_tick_advanced.connect(tick_callable)
-    if not _power_condition.advance_to_tick(_kernel.world_tick()):
-        return false
 
     _utility_controls = UtilityControlsClass.new()
     add_child(_utility_controls)
@@ -84,9 +73,6 @@ func _wire_power_infrastructure(plan: GeneratedGlobalWorldPlan) -> bool:
     for semantic_type: StringName in PowerInfrastructureClass.COLLISION_SEMANTICS:
         if not _collision_catalog.register(semantic_type, true):
             return false
-    if not _collision_catalog.register(&"prop.chainlink_fence", true):
-        return false
-
     _power_infrastructure = PowerInfrastructureClass.new(
         _world,
         _world_mutations,
@@ -95,63 +81,7 @@ func _wire_power_infrastructure(plan: GeneratedGlobalWorldPlan) -> bool:
     )
     if not _power_infrastructure.materialize():
         return false
-
-    _power_facilities = PowerFacilityClass.new(
-        _world,
-        _world_mutations,
-        plan,
-        _power_infrastructure.created_entity_ids()
-    )
-    if not _power_facilities.materialize():
-        return false
-
-    _power_condition = PowerConditionClass.new(plan, _utilities)
-    if not _power_condition.is_ready() \
-        or not _power_condition.register_distribution_projection(_power_infrastructure.wire_edges()) \
-        or not _power_condition.register_facility_assets(
-            _power_facilities.plant_machine_ids(),
-            _power_facilities.substation_machine_ids(),
-            _power_facilities.plant_tie_entity_ids(),
-            _power_facilities.substation_tie_entity_ids()
-        ):
-        return false
-
-    var all_wires: Array[Dictionary] = _power_infrastructure.wire_edges()
-    for facility_wire: Dictionary in _power_facilities.wire_edges():
-        all_wires.append(facility_wire)
-    return _world_view.configure_power_infrastructure(_world, all_wires)
-
-## Canonical seam for future vehicle/zombie/destruction systems. Physical WHAT entity ids are
-## also condition asset ids for poles and facility machinery; distribution span ids are exposed
-## by power_infrastructure_span_asset_ids().
-func damage_power_infrastructure(asset_id: String, damage: int, source_kind: StringName = &"direct") -> bool:
-    return _power_condition != null and _power_condition.apply_damage(asset_id, damage, source_kind)
-
-func repair_power_infrastructure(asset_id: String, electrical_skill: int, available_material_units: int) -> Dictionary:
-    if _power_condition == null:
-        return {"ok": false, "material_units_consumed": 0, "reason": &"power_condition_unavailable"}
-    return _power_condition.repair_asset(asset_id, electrical_skill, available_material_units)
-
-func power_infrastructure_repair_requirements(asset_id: String) -> Dictionary:
-    if _power_condition == null:
-        return {}
-    return _power_condition.repair_requirements(asset_id)
-
-func power_infrastructure_span_asset_ids() -> Array[String]:
-    if _power_condition == null:
-        return []
-    return _power_condition.span_asset_ids()
-
-func power_infrastructure_debug_snapshot() -> Dictionary:
-    return {
-        "distribution": {} if _power_infrastructure == null else _power_infrastructure.debug_snapshot(),
-        "facilities": {} if _power_facilities == null else _power_facilities.debug_snapshot(),
-        "condition": {} if _power_condition == null else _power_condition.debug_snapshot(),
-    }
-
-func _on_power_infrastructure_tick_advanced(_previous_tick: int, new_tick: int) -> void:
-    if _power_condition != null:
-        _power_condition.advance_to_tick(new_tick)
+    return _world_view.configure_power_infrastructure(_world, _power_infrastructure.wire_edges())
 
 func _wire_utility_lighting() -> bool:
     if _physical_lighting == null or _hand_state == null:

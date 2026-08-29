@@ -28,10 +28,7 @@ jobs:
           test -f game/scripts/ci/System33LightingTruthSmoke.gd
           test -f game/scripts/ci/RoomLightingPowerSmoke.gd
           test -f game/scripts/ci/System33PowerInfrastructureSmoke.gd
-          test -f game/scripts/ci/System33PowerCausalitySmoke.gd
           test -f game/scripts/simulation/utilities/UtilityPowerInfrastructureMaterializer.gd
-          test -f game/scripts/simulation/utilities/PowerFacilityMaterializer.gd
-          test -f game/scripts/simulation/utilities/PowerInfrastructureConditionState.gd
           test -f game/scripts/render/PowerLinePresentationRenderer.gd
           grep -q 'entity_ids_of_type' game/scripts/foundation/world/WorldState.gd
           grep -q 'item.tool.flashlight' game/scripts/simulation/utilities/UtilityPoweredLightingSourceAdapter.gd
@@ -42,8 +39,6 @@ jobs:
           grep -q 'fixture.room_light' game/scripts/generation/buildings/GeneratedBuildingMaterializer.gd
           grep -q 'prop.utility_pole_wood' game/scripts/simulation/utilities/UtilityPowerInfrastructureMaterializer.gd
           grep -q 'prop.utility_pole_transformer' game/scripts/simulation/utilities/UtilityPowerInfrastructureMaterializer.gd
-          grep -q 'physical_distribution_failure' game/scripts/simulation/utilities/PowerInfrastructureConditionState.gd
-          grep -q 'power.facility.plant' game/scripts/simulation/utilities/PowerFacilityMaterializer.gd
           grep -q 'presentation_glow_scale' game/scripts/simulation/lighting/LightEmitterProfile.gd
           grep -q 'fake_sources_retired' game/scripts/demo/DemoLightingSourceAdapter.gd
           ! grep -q 'dev.light.player_flashlight' game/scripts/demo/DemoLightingSourceAdapter.gd
@@ -72,8 +67,7 @@ jobs:
           for spec in \
             'System33LightingTruthSmoke.gd:SYSTEM33_LIGHTING_TRUTH_SMOKE_OK' \
             'RoomLightingPowerSmoke.gd:ROOM_LIGHTING_POWER_SMOKE_OK' \
-            'System33PowerInfrastructureSmoke.gd:SYSTEM33_POWER_INFRASTRUCTURE_SMOKE_OK' \
-            'System33PowerCausalitySmoke.gd:SYSTEM33_POWER_CAUSALITY_SMOKE_OK'; do
+            'System33PowerInfrastructureSmoke.gd:SYSTEM33_POWER_INFRASTRUCTURE_SMOKE_OK'; do
             script=${spec%%:*}
             marker=${spec#*:}
             log="$RUNNER_TEMP/${script%.gd}.log"
@@ -122,7 +116,7 @@ jobs:
             cancelled) state=error ;;
             *) state=error ;;
           esac
-          payload=$(printf '{"state":"%s","context":"verify/system33-lighting-truth","description":"Truthful utility lighting and physical power infrastructure","target_url":"%s"}' "$state" "$RUN_URL")
+          payload=$(printf '{"state":"%s","context":"verify/system33-lighting-truth","description":"Truthful utility lighting and power infrastructure","target_url":"%s"}' "$state" "$RUN_URL")
           curl --fail --silent --show-error \
             -X POST \
             -H "Authorization: Bearer $GH_TOKEN" \

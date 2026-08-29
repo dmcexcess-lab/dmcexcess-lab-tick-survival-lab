@@ -36,15 +36,15 @@ func _test_power_infrastructure_projection() -> void:
 
     var infrastructure := InfrastructureClass.new(world, mutations, plan, utilities)
     _check(infrastructure.is_ready(), "power infrastructure materializer ready")
-    _check(infrastructure.materialize(), "canonical distribution topology physicalized")
+    _check(infrastructure.materialize(), "canonical power topology physicalized")
     var snapshot: Dictionary = infrastructure.debug_snapshot()
     var counts: Dictionary = snapshot.get("semantic_counts", {})
     _check(int(snapshot.get("wire_count", 0)) > 0, "road-following overhead wire graph exists")
     _check(int(counts.get("prop.utility_pole_wood", 0)) > 0, "wood utility poles materialized")
-    _check(int(counts.get("prop.utility_pole_transformer", 0)) > 0, "transformer/service poles materialized")
+    _check(int(counts.get("prop.utility_pole_transformer", 0)) > 0, "transformer poles materialized")
     _check(int(counts.get("prop.streetlight", 0)) > 0, "real streetlights materialized")
-    _check(int(counts.get("prop.utility_box", 0)) >= 2, "settlement service switchgear materialized")
-    _check(int(counts.get("prop.transformer", 0)) == 0, "distribution projector no longer fakes plant/substation equipment clusters")
+    _check(int(counts.get("prop.transformer", 0)) >= 2, "regional/substation transformer equipment materialized")
+    _check(int(counts.get("prop.utility_box", 0)) >= 2, "regional/substation switchgear materialized")
 
     var baseline_support_id: String = ""
     var baseline_support_cell := Vector2i(2147483647, 2147483647)

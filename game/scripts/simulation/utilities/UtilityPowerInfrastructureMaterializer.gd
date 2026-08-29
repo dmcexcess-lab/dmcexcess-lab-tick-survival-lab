@@ -5,10 +5,9 @@ const Layers = preload("res://scripts/foundation/spatial/SpatialLayer.gd")
 const Facing = preload("res://scripts/foundation/spatial/SpatialFacing.gd")
 const FootprintClass = preload("res://scripts/foundation/spatial/SpatialFootprint.gd")
 
-## One-time tactical physicalization of canonical 00D4 distribution topology.
-## 00D remains topology authority; this class creates persistent WHAT supports/local service gear
-## and a cached presentation edge list. Major source/substation facilities are owned by
-## PowerFacilityMaterializer rather than represented by equipment-cluster stand-ins.
+## One-time tactical physicalization of canonical 00D4 electrical topology.
+## 00D remains topology authority; this class creates persistent WHAT supports/equipment
+## and a cached presentation edge list. It performs no recurring simulation work.
 
 const URBAN_SPACING: int = 9
 const SETTLEMENT_SPACING: int = 14
@@ -139,11 +138,7 @@ func _build_projection() -> Dictionary:
                 "segment_id": String(segment.get("id", "")),
             })
 
-    # Source and substation are now real generated facilities. Only settlement service gear
-    # remains in this distribution projection.
     for node: Dictionary in _plan.power_nodes:
-        if StringName(node.get("kind", &"")) != &"settlement_service":
-            continue
         var node_records: Array[Dictionary] = _node_equipment(node, reserved_cells)
         for record: Dictionary in node_records:
             props.append(record)
@@ -294,25 +289,51 @@ func _is_planned_global_road_surface(cell: Vector2i) -> bool:
 
 func _node_equipment(node: Dictionary, reserved_cells: Dictionary) -> Array[Dictionary]:
     var result: Array[Dictionary] = []
-    if StringName(node.get("kind", &"")) != &"settlement_service":
-        return result
     var node_cell: Vector2i = node.get("cell", Vector2i.ZERO)
-    var anchor: Vector2i = _find_service_anchor(node_cell, reserved_cells)
+    var kind: StringName = StringName(node.get("kind", &""))
+    var anchor: Vector2i = _find_facility_anchor(node_cell, reserved_cells)
     if anchor == Vector2i(2147483647, 2147483647):
         return result
 
-    var semantics: Array[StringName] = [
-        &"prop.utility_pole_transformer",
-        &"prop.utility_box",
+    var semantics: Array[StringName] = []
+    match kind:
+        &"regional_ingress":
+            semantics = [
+                &"prop.utility_pole_transformer",
+                &"prop.transformer",
+                &"prop.transformer",
+                &"prop.utility_box",
+            ]
+        &"substation":
+            semantics = [
+                &"prop.utility_pole_transformer",
+                &"prop.transformer",
+                &"prop.transformer",
+                &"prop.transformer",
+                &"prop.utility_box",
+                &"prop.utility_box",
+            ]
+        _:
+            semantics = [
+                &"prop.utility_pole_transformer",
+                &"prop.utility_box",
+            ]
+
+    var offsets: Array[Vector2i] = [
+        Vector2i.ZERO,
+        Vector2i(2, 0),
+        Vector2i(4, 0),
+        Vector2i(0, 2),
+        Vector2i(2, 2),
+        Vector2i(4, 2),
     ]
-    var offsets: Array[Vector2i] = [Vector2i.ZERO, Vector2i(2, 0)]
     var token: String = _stable_token(String(node.get("id", "node")))
     for index: int in range(semantics.size()):
         var cell: Vector2i = anchor + offsets[index]
         if not _plan.bounds.has_point(cell) or reserved_cells.has(cell) or not _world.entities_at(cell).is_empty():
             continue
         result.append({
-            "id": "power.physical.%s.service_equipment.%02d" % [token, index],
+            "id": "power.physical.%s.equipment.%02d" % [token, index],
             "semantic": semantics[index],
             "cell": cell,
             "facing": Facing.Value.NORTH,
@@ -320,7 +341,7 @@ func _node_equipment(node: Dictionary, reserved_cells: Dictionary) -> Array[Dict
         reserved_cells[cell] = true
     return result
 
-func _find_service_anchor(node_cell: Vector2i, reserved_cells: Dictionary) -> Vector2i:
+func _find_facility_anchor(node_cell: Vector2i, reserved_cells: Dictionary) -> Vector2i:
     var candidates: Array[Vector2i] = [
         node_cell + Vector2i(6, 6),
         node_cell + Vector2i(-6, 6),
@@ -333,8 +354,6 @@ func _find_service_anchor(node_cell: Vector2i, reserved_cells: Dictionary) -> Ve
     ]
     for candidate: Vector2i in candidates:
         if not _plan.bounds.has_point(candidate) or reserved_cells.has(candidate):
-            continue
-        if _is_support_blocked_surface_cell(candidate):
             continue
         if _world.entities_at(candidate).is_empty():
             return candidate
