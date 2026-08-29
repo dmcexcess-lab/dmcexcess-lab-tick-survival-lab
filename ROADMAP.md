@@ -15,9 +15,12 @@ Current game identity:
 ## Current milestone state
 
 - **Phase 1 — COMPLETE.** Items, spoilage, interaction readability, semantic UI, large-object presentation, content breadth and integration are implemented.
-- **Phase 2 — COMPLETE.** System 32 Crafting / Material Transformation Candidate 001 is implemented and CI verified.
-- **Compact-island/world-seam cleanup — COMPLETE.** Exact executable `918f1dbd7b033fa179522a112b1507d9a2c63890` is green with zero failed and zero in-progress exact-head Actions runs after settlement-site overlap repair.
-- **Current next lifecycle gate: Phase 3 Power and Water — DESCRIBE.** No Phase-3 runtime implementation is pre-authorized by completion of prior phases.
+- **Phase 2 — COMPLETE.** System 32 Crafting / Material Transformation Candidate 001 is implemented and CI verified on `8b4db898f0e02dd84298dbc5291f3e1a88c11ce4`.
+- **Compact-island/world-seam cleanup — REOPENED.** The attempted planner repair `918f1dbd7b033fa179522a112b1507d9a2c63890` passed automated CI but caused a severe user-visible gameplay regression and was rolled back.
+- **Current restored runtime:** `f6a06add3dfd212c0c29b343d24a8f7d28a89bca`, restoring the pre-regression planner. Its Pages deploy passed.
+- **Known remaining cleanup defect:** System 00D again fails the strict `Legacy Crossroads Is Not Embedded In Island` alternate-seed seam check. Do not weaken that validator.
+- **Next engineering gate:** repair and human-accept the reopened island seam using a focused planner fixture before closing cleanup.
+- **Next gameplay phase after cleanup acceptance:** Phase 3 Power and Water — DESCRIBE. No Phase-3 runtime implementation is pre-authorized.
 
 ---
 
@@ -28,8 +31,6 @@ Goal: make the physical world and the things in it useful/readable before deeper
 ### 1A — Interaction affordance + reach — COMPLETE
 
 System 29 owns neutral reach + interaction-offer composition.
-
-Core rule:
 
 > **A highlight explains an already-valid interaction. It never creates interaction truth.**
 
@@ -45,8 +46,6 @@ Protected direction remains event-driven/cache-oriented invalidation, bounded qu
 
 System 30 Candidate 001 is implemented and verified.
 
-Core rule:
-
 > **Food ages because authoritative world time passes through its storage environment. No item gets a timer.**
 
 Refrigeration remains inactive until Phase 3 supplies real powered-appliance truth. Phase 4 later owns eating/drinking/health consequences.
@@ -55,29 +54,19 @@ Refrigeration remains inactive until Phase 3 supplies real powered-appliance tru
 
 System 31 is implemented and verified.
 
-Core rule:
-
 > **UI icons visualize existing semantic truth. They never define item identity, utility, freshness, or action legality.**
 
 ### 1D — Large/multi-cell object visual geometry — COMPLETE
 
 System 07B is implemented and CI verified.
 
-Core rule:
-
 > **Physical footprint answers where the object is. Visual geometry answers how that object is drawn. Neither may silently redefine the other.**
-
-Large-tree/traffic-light presentation, actor-overhang layering and emitter-derived glow remain presentation-only and do not redefine collision, reach, LOS, WHEN, save or streaming truth.
 
 ### 1E — Content expansion + integration — COMPLETE
 
 Canonical design: `SYSTEM_DESIGNS/PHASE_1E_CONTENT_EXPANSION_INTEGRATION.md`.
 
-Core rule:
-
 > **Content extends the system that already owns its truth. Integration does not create a second owner.**
-
-Implemented result includes broader deterministic building/location dressing, expanded mundane/location-aware loot, broader perishables, complete icon coverage for shipped item semantics and permanent integration/performance verification without fake future Crafting/Power/Health/Skills/Vehicles/AI behavior.
 
 Verified Phase-1E executable: `6ad923d172f5a5434f94a7fdcc15da640a60a240`.
 
@@ -85,54 +74,58 @@ Verified Phase-1E executable: `6ad923d172f5a5434f94a7fdcc15da640a60a240`.
 
 ## Phase 2 — Crafting — COMPLETE + CI VERIFIED
 
-Canonical design:
+Canonical design: `SYSTEM_DESIGNS/32_CRAFTING_MATERIAL_TRANSFORMATION.md`.
 
-`SYSTEM_DESIGNS/32_CRAFTING_MATERIAL_TRANSFORMATION.md`
-
-System owner: **System 32 Crafting / Material Transformation**.
-
-Verified executable:
-
-`8b4db898f0e02dd84298dbc5291f3e1a88c11ce4`
+Verified executable: `8b4db898f0e02dd84298dbc5291f3e1a88c11ce4`.
 
 Exact-head context: `verify/system32-crafting`.
-
-Core rule:
 
 > **Crafting transforms specific real persistent item entities into specific real persistent item entities. The recipe describes the transformation; WHEN charges the time; existing item/world owners hold the result.**
 
 Implemented Candidate 001:
 
-1. **2A — Recipe + plan foundation** — exact-semantic recipe/workstation catalogs, deterministic ingredient/tool selection from real personal possession, positive physical-weight/carry/freshness validation and no abstract stack/resource wallet.
-2. **2B — Timed physical transformation** — positive-duration CANCELABLE `crafting.craft_recipe` WHEN action, final-commit revalidation, real input removal, deterministic new persistent outputs, actor-root containment, hard carry ceiling and bounded compensation journal rather than whole-world snapshots.
-3. **2C — Workstation + player integration** — explicit heavy-workbench capability, System-29 `CONTACT_FORWARD` `CRAFT` offer and phone/Safari-first Crafting UI integrated into the canonical player shell.
+1. **2A — Recipe + plan foundation** — exact-semantic recipes/workstations, deterministic ingredient/tool selection from real personal possession, physical-weight/carry/freshness validation and no abstract resource wallet.
+2. **2B — Timed physical transformation** — positive-duration CANCELABLE `crafting.craft_recipe` WHEN action, final-commit revalidation, real input removal, deterministic persistent outputs, actor-root containment, hard carry ceiling and bounded compensation.
+3. **2C — Workstation + player integration** — explicit heavy-workbench capability, System-29 `CONTACT_FORWARD` `CRAFT` offer and phone/Safari-first Crafting UI in the canonical player shell.
 
-System 32 deliberately does not own Construction/Repair/Durability, Cooking/Nutrition, Power/Water, Skills/quality/XP, Vehicles, combat/ammunition or AI. Later owners may reuse its physical-transformation substrate through explicit contracts.
+System 32 does not own Construction/Repair/Durability, Cooking/Nutrition, Power/Water, Skills/quality/XP, Vehicles, combat/ammunition or AI.
 
 ---
 
-## World-generation cleanup gate — COMPLETE + CI VERIFIED
+## World-generation cleanup gate — REOPENED
 
-The compact playable island is `temperate.island.region` v3 over the protected rural-v6 planning skeleton.
+The playable island remains `temperate.island.region` v3 over the protected rural-v6 planning skeleton.
 
-Completed cleanup includes:
+Already-valid cleanup work remains in place:
 
-- fresh new-game world seeds redraw authoritative island identity rather than aliasing the historical standalone critique fixture;
+- fresh new-game seeds redraw island identity rather than aliasing the historical standalone critique fixture;
 - central local-site seed derives from world seed + site identity;
-- the playable island no longer carries the old 640-cell regional stress-fixture protected-cross half-span; island v3 uses a compact local protected cross;
-- central-to-small-town spacing remains bounded instead of exposing a giant green belt;
-- natural ecology remains coherent across logical source rectangles using world seed + absolute global cell;
-- global settlement placement now rejects actual positive-area 256x256 site-rectangle overlap rather than relying on an insufficient center-distance heuristic.
+- the playable island does not carry the old 640-cell regional stress-fixture protected-cross half-span;
+- compact island spacing removes the former giant green belt;
+- natural ecology stays coherent across logical source rectangles using world seed + absolute global cell;
+- spawn remains on inherited pavement rather than the diner entrance.
 
-Final verified cleanup executable:
+### Remaining defect
 
-`918f1dbd7b033fa179522a112b1507d9a2c63890`
+The strict alternate-seed System-00D seam identifies `island_base_site_overlap:area.smalltown.center.001` under at least one legal seed.
 
-On that exact head the formerly failing island legacy-seam smoke, System 00D, System 20, streaming, canonical shell, Crafting, performance architecture, canonical startup and Pages deployment are green. Exact-head Actions settled with zero failures and zero in-progress runs.
+The first attempted repair changed global settlement candidate rejection from the historical 160-cell center-distance heuristic to exact 256x256 rectangle-overlap rejection. Automated CI passed on `918f1dbd7b033fa179522a112b1507d9a2c63890`, but human play found the deployed game severely broken. That repair was therefore rejected and rolled back in `f6a06add3dfd212c0c29b343d24a8f7d28a89bca`.
+
+### Required repair discipline
+
+Before another live planner change:
+
+1. reproduce the bad alternate-seed placement in a focused planner fixture;
+2. characterize the intended settlement-layout invariants beyond simple non-overlap;
+3. make the smallest deterministic planner change that satisfies those invariants;
+4. run System 00D, System 20, streaming, performance, canonical startup and Pages checks;
+5. **human-play the generated island** before marking cleanup complete.
+
+A green validator suite alone is not sufficient evidence for this cleanup after the `918f1db...` regression.
 
 ---
 
-## Phase 3 — Power and Water — NEXT: DESCRIBE
+## Phase 3 — Power and Water — NEXT GAMEPLAY PHASE AFTER CLEANUP
 
 Goal: add causal, damageable **three-tier utility networks** rather than global on/off switches.
 
@@ -148,16 +141,15 @@ Goal: add causal, damageable **three-tier utility networks** rather than global 
 2. **Pump stations / local distribution** — several areas, semi-frequent failure.
 3. **Local mains/hydrants/structure service** — vulnerable local access and repair/damage seams.
 
-### Required ownership rules
+Required ownership rules:
 
-- Phase 3 must consume existing System-00D planning facts where appropriate without treating planning records as runtime utility state.
-- Real utility state must be persistent world truth, not renderer/UI state and not a global boolean shortcut.
+- Phase 3 may consume System-00D planning facts but planning records are not runtime utility state.
+- Real utility state must be persistent world truth, not renderer/UI state or a global boolean shortcut.
 - Powered lights, neon, TVs, pumps and appliances feed real active state into existing physical systems.
-- Utility damage/failure persists through the normal world-state architecture.
-- Mechanical/Electrical skills later attach to real repair actions rather than being prebuilt here.
-- Vehicles/trees may later damage local distribution through ordinary physical damage seams.
-- System 30 may consume **real refrigeration availability** only after Phase 3 establishes real power + appliance state.
-- Standalone wastewater/sewer gameplay is removed from the active roadmap. Existing generated wastewater planning may remain inert until deliberate migration/cleanup.
+- Utility damage/failure persists through normal world-state architecture.
+- Mechanical/Electrical skills later attach to real repair actions.
+- System 30 may consume real refrigeration availability only after Phase 3 establishes real power + appliance state.
+- Standalone wastewater/sewer gameplay is removed from the active roadmap; existing wastewater planning may remain inert until deliberate cleanup.
 
 **Lifecycle rule:** Phase 3 must be DESCRIBED and approved before runtime implementation begins.
 
@@ -165,9 +157,9 @@ Goal: add causal, damageable **three-tier utility networks** rather than global 
 
 ## Phase 4 — Player physical survival and health
 
-Goal: turn existing actor-status scaffolds into the complete physical survival loop.
+Goal: complete the physical survival loop.
 
-Final target set:
+Target set:
 
 - hunger;
 - thirst;
@@ -177,31 +169,11 @@ Final target set:
 
 **Fatigue is the stamina/endurance concept. There is no separate stamina meter.**
 
-Conceptual split:
-
-- fatigue = short-horizon exertion/endurance pressure from running, carrying and strenuous actions;
-- sleep pressure/exhaustion = long-horizon need for sleep and severe sleep-deprivation consequences.
-
-Food/drink/sleep/treatment become real actions here or through later specialized skill ownership. System 30 freshness is read when appropriate but does not own nutrition, sickness or Health.
-
-Extreme unmet needs may become lethal; death from exhaustion remains an intended possible terminal consequence.
-
 ---
 
 ## Phase 5 — Moodlets and mental/comfort pressure
 
-Goal: make survivor state readable and consequential without creating a giant psychology simulator.
-
-Target families include:
-
-- comfort;
-- fear;
-- boredom;
-- hunger;
-- thirst;
-- sleep/exhaustion.
-
-Underlying hunger/thirst/sleep/fatigue truth remains with physical-survival owners. Moodlets derive/read those facts rather than duplicating them. Comfort/fear/boredom may own only the minimum persistent history genuinely required.
+Target families include comfort, fear, boredom, hunger, thirst and sleep/exhaustion. Underlying physical needs remain owned by physical-survival systems; Moodlets derive/read them rather than duplicating truth.
 
 ---
 
@@ -219,68 +191,31 @@ Target skill catalog:
 - Fishing;
 - Farming.
 
-The current generic Combat / Scavenging / Survival / Medical / Technical / Social catalog is an implementation scaffold, not final identity; migrate rather than layer duplicates.
-
 **Hunting is not a separate skill.** It emerges from Sneak, future shooting/combat proficiency and crafted trap placement.
 
-General object-interaction rule:
-
 > **Real state first, presentation downstream.**
-
-Example: a TV switches on only if real state/power permits, then may feed real light and localized sound/information presentation.
 
 ---
 
 ## Phase 7 — Vehicles
 
-Goal: make transport another persistent physical system using the same world/time/collision rules.
+Requested classes: cars, trucks, motorcycles, bicycles and skateboards.
 
-Requested classes:
-
-- cars;
-- trucks;
-- motorcycles;
-- bicycles;
-- skateboards.
-
-Long-term direction includes persistent condition/damage/cargo, authoritative action-time movement, collision/world damage, utility/tree/object interaction, Mechanical skill integration, and eventually physical Mad-Max-style car/truck modifications rather than abstract levels.
+Long-term direction includes persistent condition/damage/cargo, authoritative action-time movement, collision/world damage, utility/tree/object interaction and Mechanical skill integration.
 
 ---
 
 ## Phase 8 — Actor/NPC AI, combat, and causal outbreak
 
-Scope includes:
+Scope includes infected/zombie AI, survivor/follower/raider AI, melee/firearms, NPC use of the same physical perception and world systems as the player, conversations, population/coarse distant behavior and the causal outbreak/collapse.
 
-- infected/zombie AI;
-- survivor AI;
-- follower AI;
-- raider/hostile-human AI;
-- player/NPC combat needed for the Beta loop;
-- melee and firearm/shooting behavior;
-- NPC use of the same physical vision/light/hearing/weather/movement/utilities/items/vehicles available to the player;
-- follower/player idle conversations influenced by mood/personality/context;
-- population/household/coarse distant behavior needed for the causal outbreak;
-- outbreak spread/collapse and the existing 00E player-story direction.
-
-AI receives observer knowledge, not hidden world truth. It never reads framebuffer lighting, exact hidden sound sources or omniscient object lists.
-
-This phase is intentionally grouped late but will still be split into bounded system designs internally.
+AI receives observer knowledge, not hidden world truth.
 
 ---
 
 ## Phase 9 — Final graphics and UI overhaul -> Beta
 
-Scope includes:
-
-- audit/control placement for actual play;
-- phone/Safari and desktop as first-class layouts;
-- final inventory/menu/icon consistency;
-- final interaction/highlight readability;
-- final world-art/content cleanup;
-- convincing item/prop shadows while System 27 remains authoritative;
-- polish lighting/weather/sound-word presentation without changing simulation ownership;
-- isolate/remove obsolete DEV UI from normal player flow;
-- final accessibility/readability/performance pass.
+Scope includes final control/layout audit, phone/Safari + desktop layouts, inventory/menu/icon consistency, interaction readability, world-art cleanup, shadows/lighting/weather/sound presentation, removal of obsolete DEV UI, accessibility and final performance work.
 
 **Completion of Phase 9 is the planned Beta start gate.**
 
@@ -292,7 +227,7 @@ Insert when required without changing gameplay phase order:
 
 - save/load orchestration before new persistent state becomes unsafe to lose;
 - schema migration/invalidation policy while pre-Beta may still invalidate old saves;
-- performance profiling before population-scale AI, many simultaneous observers, moving lights, vehicles or large utility damage graphs;
+- performance profiling before population-scale AI, many simultaneous observers, moving lights, vehicles or large utility graphs;
 - persistence-backed streaming eviction only when current WHAT truth remains preserved;
 - mobile/browser hard-pause and input regressions throughout.
 
@@ -307,8 +242,9 @@ For each bounded phase/system:
 3. obtain approval when required;
 4. IMPLEMENT through stable seams;
 5. VERIFY the exact executable head;
-6. update roadmap/context when completed work changes what comes next.
+6. perform human play/visual acceptance when behavior or generated-world layout materially changes;
+7. update roadmap/context when completed work changes what comes next.
 
 Newest explicit user direction supersedes older roadmap ordering, but implemented historical systems remain current truth until deliberately migrated.
 
-**Current next step: DESCRIBE Roadmap Phase 3 — Power and Water. No Phase-3 runtime implementation is authorized yet.**
+**Current next step: resolve and human-accept the reopened compact-island/world-seam cleanup. After that, DESCRIBE Roadmap Phase 3 — Power and Water.**
