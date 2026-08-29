@@ -31,39 +31,34 @@ The canonical DEV/playable composition is the **complete streamed island**.
 - Natural ecology derives from shared world seed + absolute global cell so logical source boundaries do not restart environmental identity.
 - Survivor spawn remains on inherited pavement beside the central crossroads rather than the diner entrance.
 
-### Compact-island / legacy seam cleanup — REOPENED
+### Compact-island / legacy seam cleanup — COMPLETE + HUMAN ACCEPTED
 
-The attempted planner repair `918f1dbd7b033fa179522a112b1507d9a2c63890` is **not an accepted executable**.
+The broad planner repair `918f1dbd7b033fa179522a112b1507d9a2c63890` remains explicitly rejected. It replaced global settlement candidate screening with exact rectangle-overlap rejection, passed automated CI, and then produced a severe user-visible world regression. It was rolled back by `f6a06add3dfd212c0c29b343d24a8f7d28a89bca`.
 
-What happened:
+The accepted repair is the later focused island-local adaptation:
 
-1. CI isolated an alternate-seed System-00D failure: `island_base_site_overlap:area.smalltown.center.001`.
-2. `918f1db...` replaced the historical 160-cell center-distance candidate rejection with exact 256x256 site-rectangle overlap rejection.
-3. Automated exact-head CI went green, including System 00D and Pages.
-4. Human play immediately reported the deployed game as completely broken.
-5. The planner change was therefore reverted.
+`282864f242ba2a5c3df0519591e31990372c4aed` — `Repair island local-window overlap without moving world layout`
 
-Planner rollback executable:
+That repair leaves the global settlement planner/layout intact and, when an inherited island base-site window overlaps another accepted site, searches a bounded deterministic local shift that:
 
-`f6a06add3dfd212c0c29b343d24a8f7d28a89bca`
+- retains the site's linked settlement center;
+- stays inside island bounds/on land;
+- remains clear of protected rivers;
+- does not overlap already accepted sites;
+- moves no farther than one site dimension;
+- fails closed when no legal local adaptation exists.
 
-That commit restores `GlobalSettlementPlanner.gd` to the pre-regression implementation from `ba706f18017d4d72b950f18d3e988ce75592f0a6`. Its Pages build/deploy completed successfully.
+Human play of the recovered current executable lineage has now been accepted to move forward. The black-screen regression that temporarily prevented reliable visual verification is also fixed. Therefore the world-generation cleanup gate is closed.
 
-Expected current verification state:
+**Do not cite `918f1db...` as accepted cleanup. `282864f...` is the focused repair in the accepted lineage.**
 
-- the planner remains on the pre-regression layout behavior unless a later focused seam repair explicitly changes it;
-- the strict `Legacy Crossroads Is Not Embedded In Island` alternate-seed seam remains a required validator rather than something to weaken;
-- Crafting and unrelated gameplay systems were not reverted by the planner rollback.
-
-**Do not cite `918f1db...` as a completed cleanup head.**
-
-Before another broad live planner change, reproduce the overlap in a focused planner fixture, define the intended settlement-layout invariants beyond simple non-overlap, verify the smallest deterministic repair, then human-play the island before closure.
+Future generated-world layout changes still require human play acceptance in addition to green CI.
 
 ---
 
 ## Current implemented stack
 
-Roadmap **Phase 1 and Phase 2 are implementation-complete**.
+Roadmap **Phase 1 and Phase 2 are implementation-complete**. Phase 3 is now described but not implemented.
 
 Major implemented capabilities include:
 
@@ -104,6 +99,23 @@ Exact-head context: `verify/system32-crafting`.
 
 Crafting owns recipe-driven physical item transformation. It does not own Construction/Repair/Durability, Cooking/Nutrition, Power/Water, Skills/quality/XP, Vehicles, Combat/ammunition or AI.
 
+### Phase 3 / System 33 Power + Water
+
+Canonical draft: `SYSTEM_DESIGNS/33_POWER_WATER_UTILITIES.md`.
+
+Status: **DESCRIBED — explicit approval required before implementation**.
+
+> **Planning says where utility topology exists. System 33 owns whether that topology currently provides service. Consumers query service; they never infer it from art, brightness or UI state.**
+
+Candidate 001, if approved, is split into:
+
+1. 33A utility-state foundation/materialization from existing 00D4/00D5 planning truth;
+2. 33B causal three-tier power service + real fixed-light integration into System 27;
+3. 33C causal potable-water service + rural wells + real pump-to-power dependency;
+4. 33D powered refrigerator cold-storage availability for System 30.
+
+It explicitly excludes Phase-4 thirst/health consequences, fake liquid inventory, random outages, detailed circuit/load/pressure simulation, and portable battery/fuel simulation.
+
 ---
 
 ## Important current rules
@@ -125,8 +137,9 @@ Crafting owns recipe-driven physical item transformation. It does not own Constr
 15. Bright art does not create light. System-27 emitter truth remains the only source of physical-light presentation glow.
 16. Content extends existing owners; integration never creates a second owner or placeholder future mechanics.
 17. Validators fail closed. A legal-seed failure is a generation defect to repair, not a reason to weaken the validator.
-18. **Generated-world behavior/layout changes require human play acceptance in addition to green CI.** The `918f1db...` regression proved automated checks alone are insufficient here.
+18. Generated-world behavior/layout changes require human play acceptance in addition to green CI.
 19. A canonical startup smoke must prove a usable visible field and non-black physical-light presentation, not merely that the scene booted.
+20. Utility planning truth and runtime utility service truth are separate owners: 00D says where infrastructure exists; System 33, once approved/implemented, will own current service state.
 
 ---
 
@@ -141,27 +154,26 @@ Protected direction:
 - bounded local queries and shared cached plans;
 - persistence-backed streaming eviction remains evidence-driven future work only.
 
-### Player-action responsiveness + black-screen recovery — executable verified; human visual acceptance required
-
-Human browser play confirmed the first responsiveness repair was **much better** and eliminated the growing backlog/overshoot behavior, while identifying a remaining first-actions hitch.
+### Player-action responsiveness + black-screen recovery — HUMAN ACCEPTED
 
 The canonical `PlayerActionController` resolves accepted actions through a one-due-tick-batch-per-render-frame pump. Input is accepted only at WHEN's real decision pause and stays locked until that pause returns; the old fixed 120 ms post-action cooldown is gone. Ambient/emitter/observer work remains coalesced once per accepted player action.
 
-The follow-up executable `6e1298da36e9216139f404696275280fcb944033` also introduced camera-cropped physical-light presentation and a revision-cached bounded System-23 LOS field. Although automated checks passed, human browser play reported a completely black game immediately afterward. That visibility optimization stack is therefore **not accepted**.
+The follow-up executable `6e1298da36e9216139f404696275280fcb944033` introduced camera-cropped physical-light presentation and a revision-cached bounded System-23 LOS field. Although automated checks passed, human browser play reported a completely black game. That visibility optimization stack remains **rejected**.
 
-Recovery executable `1f65bff312853a44858201b57d9df2e26ee64f80` restores the last human-good full 80x96 physical-light presentation path and the prior stateless LOS query while preserving the decision-pause input gate, one-batch-per-frame action pump, coalesced settled updates, flashlight-facing fix and runtime naming cleanup from the responsiveness work. This deliberately gives back the unaccepted camera-crop/LOS-cache speedup rather than preserving an optimization that can erase the playable frame.
+Recovery executable `1f65bff312853a44858201b57d9df2e26ee64f80` restored the last human-good full 80x96 physical-light presentation path and prior stateless LOS query while preserving decision-pause input locking, one-batch-per-frame action resolution, coalesced settled updates, flashlight-facing fixes and runtime naming cleanup.
 
-The permanent `PlayerInputResponsivenessSmoke.gd` now proves more than scene startup: the player's cell must be visible, the visible field must contain usable cells, lighting multiply/glow textures must exist with nonzero luminance, those properties must remain valid after settled actions, buffered turns must still be rejected, input must unlock only at the next real decision pause, and perception/light rebuilds must remain coalesced once per action.
+`PlayerInputResponsivenessSmoke.gd` now proves an actual usable visible field and non-black lighting rather than scene startup alone.
 
-Exact-head verification for `1f65bff...` completed with 46 successful workflows, zero failing workflows, and a successful Pages build/deploy. Human browser play remains the final acceptance gate for the black-screen recovery and the remaining startup-step hitch.
+Exact-head verification for `1f65bff...` completed with 46 successful workflows, zero failing workflows, and successful Pages build/deploy. Human browser play now confirms the black screen is fixed and performance improved. This recovery/performance slice is accepted.
 
-Obsolete runtime naming/compatibility residue remains removed: the active roots, controls, player controller and streaming focus adapter no longer claim to be demos, and Weather's unused camera-local compatibility method is gone. The still-temporary `DemoLightingSourceAdapter` remains honest and necessary until Phase 3 implements equipment/battery/switch/grid truth.
+Obsolete runtime naming/compatibility residue remains removed. The still-temporary `DemoLightingSourceAdapter` remains honest and necessary for the portable DEV flashlight seam until real portable equipment/battery truth is deliberately designed. System 33 may replace fixed grid-powered fixture truth without pretending that portable equipment work is already complete.
 
 ---
 
 ## Relevant ownership boundaries
 
 - 00D owns global geography, settlement/road/hydrology/infrastructure planning truth and cross-area world context.
+- 00D4/00D5 own planned electrical/potable-water topology, not current service availability.
 - 00F owns materialization-source orchestration and technical activation, not world identity.
 - 19 owns local building grammar/profile content and physical building plans.
 - 20 owns bounded local roads/parcels/access/outdoor/environment content.
@@ -175,18 +187,17 @@ Obsolete runtime naming/compatibility residue remains removed: the active roots,
 - 30 owns freshness records/derivation, not refrigeration, cooking or nutrition.
 - 31 owns icon presentation only.
 - 32 owns recipe-driven physical item transformation, not later construction/repair/cooking/utilities/skills/vehicles/combat.
-- Phase 3 owns Power/Water/Refrigeration; Phase 4 nutrition/health consequences; Phase 6 final Skills; Phase 7 Vehicles; Phase 8 AI/combat/outbreak.
+- 33, once approved/implemented, owns persistent power/water runtime service state and real utility-consumer service queries; it does not take ownership from 27 or 30.
+- Phase 4 owns nutrition/thirst/health consequences; Phase 6 final Skills; Phase 7 Vehicles; Phase 8 AI/combat/outbreak.
 
 ---
 
 ## Current next lifecycle gate
 
-**Resolve and human-accept the reopened compact-island/world-seam cleanup.**
+**System 33 / Roadmap Phase 3 — Power and Water: APPROVE.**
 
-Do not make another broad live planner change merely to turn System 00D green. Build the focused reproduction first and preserve the current playable layout while fixing the legal-seed defect.
+Design: `SYSTEM_DESIGNS/33_POWER_WATER_UTILITIES.md`.
 
-After cleanup is accepted, the next gameplay lifecycle gate is:
+No runtime Phase-3 code has been implemented by the DESCRIBE step.
 
-**Roadmap Phase 3 — Power and Water: DESCRIBE.**
-
-Do **not** implement Phase-3 runtime code until its bounded design is approved.
+On explicit approval, implementation begins with **33A Utility state foundation + plan materialization**, then proceeds through the bounded power, water and refrigeration vertical slices while preserving current human-accepted responsiveness/visibility behavior.
