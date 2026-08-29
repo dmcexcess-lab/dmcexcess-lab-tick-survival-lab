@@ -74,8 +74,11 @@ func _run() -> void:
         push_error("PLAYER_INPUT_RESPONSIVENESS_SMOKE: action did not coalesce perception refresh")
         quit(1)
         return
-    if int(lighting.debug_snapshot().get("field_rebuilds", 0)) != lighting_before + 1:
-        push_error("PLAYER_INPUT_RESPONSIVENESS_SMOKE: action did not coalesce lighting rebuild")
+
+    # With no real flashlight equipped, a facing-only turn does not change any
+    # physical-light source. The lighting solver must therefore stay asleep.
+    if int(lighting.debug_snapshot().get("field_rebuilds", 0)) != lighting_before:
+        push_error("PLAYER_INPUT_RESPONSIVENESS_SMOKE: turn without equipped light woke physical lighting")
         quit(1)
         return
 

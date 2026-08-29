@@ -23,7 +23,7 @@ var _failures: Array[String] = []
 
 func _initialize() -> void:
     _test_backend_driven_presentation_maps()
-    _test_dev_source_adapter_tracks_player_facing()
+    _test_retired_demo_source_is_inert()
 
     if _failures.is_empty():
         print("PHYSICAL_LIGHTING_PRESENTATION_SMOKE_OK")
@@ -109,40 +109,24 @@ func _test_backend_driven_presentation_maps() -> void:
     _check(kernel.world_tick() == before_tick, "atmosphere presentation refresh remains zero tick")
     renderer.queue_free()
 
-func _test_dev_source_adapter_tracks_player_facing() -> void:
+func _test_retired_demo_source_is_inert() -> void:
     var world := WorldStateClass.new()
     var mutations := WorldMutationClass.new(world)
-    _check(mutations.set_terrain_rect(Rect2i(-5, -5, 11, 11), &"ground.concrete"), "DEV source fixture terrain created")
+    _check(mutations.set_terrain_rect(Rect2i(-5, -5, 11, 11), &"ground.concrete"), "legacy source fixture terrain created")
     var footprint := FootprintClass.single_cell()
     var player_id: String = "actor.presentation.test"
-    _check(mutations.create_entity(&"actor.survivor", player_id) == player_id, "DEV source player created")
-    _check(mutations.set_placement(player_id, Layers.Channel.ACTOR, Vector2i.ZERO, Facing.Value.EAST, footprint), "DEV source player placed")
-    var door_id: String = "door.presentation.test"
-    _check(mutations.create_entity(&"door.test", door_id) == door_id, "DEV source door created")
-    _check(
-        mutations.set_placement(door_id, Layers.Channel.STRUCTURE, Vector2i(1, 0), Facing.Value.NORTH, footprint, StructureGeometry.Axis.VERTICAL),
-        "DEV source door placed"
-    )
+    _check(mutations.create_entity(&"actor.survivor", player_id) == player_id, "legacy source player created")
+    _check(mutations.set_placement(player_id, Layers.Channel.ACTOR, Vector2i.ZERO, Facing.Value.EAST, footprint), "legacy source player placed")
 
     var sources := DemoSourcesClass.new(world, player_id)
-    _check(sources.is_ready(), "DEV lighting source adapter is ready")
-    var initial: Array[LightEmitter] = sources.emitters()
-    _check(initial.size() >= 2, "DEV lighting source adapter exposes flashlight plus critique-world static source")
-    var initial_flashlight: LightEmitter = _emitter_by_id(initial, "dev.light.player_flashlight")
-    _check(initial_flashlight != null and initial_flashlight.origin_cell == Vector2i.ZERO, "DEV flashlight follows controlled actor cell")
-    _check(initial_flashlight != null and initial_flashlight.facing == Facing.Value.EAST, "DEV flashlight follows controlled actor facing")
+    _check(sources.is_ready(), "legacy lighting source shim remains constructible")
+    _check(sources.emitters().is_empty(), "legacy lighting source shim remains inert")
+    var snapshot: Dictionary = sources.debug_snapshot()
+    _check(bool(snapshot.get("fake_sources_retired", false)), "legacy source reports fake sources retired")
+    _check(int(snapshot.get("emitter_count", -1)) == 0, "legacy source reports zero emitters")
 
-    _check(mutations.set_placement(player_id, Layers.Channel.ACTOR, Vector2i.ZERO, Facing.Value.SOUTH, footprint), "DEV source player turns")
-    var turned: Array[LightEmitter] = sources.emitters()
-    var turned_flashlight: LightEmitter = _emitter_by_id(turned, "dev.light.player_flashlight")
-    _check(turned_flashlight != null and turned_flashlight.facing == Facing.Value.SOUTH, "DEV flashlight descriptor updates after turn")
-    _check(turned_flashlight != null and initial_flashlight != null and turned_flashlight.revision > initial_flashlight.revision, "DEV source revision advances when physical descriptor changes")
-
-func _emitter_by_id(values: Array[LightEmitter], emitter_id: String) -> LightEmitter:
-    for emitter: LightEmitter in values:
-        if emitter.emitter_id == emitter_id:
-            return emitter
-    return null
+    _check(mutations.set_placement(player_id, Layers.Channel.ACTOR, Vector2i.ZERO, Facing.Value.SOUTH, footprint), "legacy source player turns")
+    _check(sources.emitters().is_empty(), "player facing changes cannot resurrect the fake flashlight")
 
 func _check(condition: bool, description: String) -> void:
     if not condition:

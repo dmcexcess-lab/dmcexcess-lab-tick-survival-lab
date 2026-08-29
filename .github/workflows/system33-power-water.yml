@@ -37,9 +37,10 @@ jobs:
           grep -q 'cold_storage_available' game/scripts/simulation/utilities/UtilityRuntimeState.gd
           grep -q 'register_provider' game/scripts/simulation/items/freshness/ItemFreshnessMutationService.gd
           grep -q 'register_provider' game/scripts/simulation/items/freshness/ItemFreshnessQuery.gd
+          grep -q 'entity_ids_of_type' game/scripts/simulation/utilities/UtilityPoweredLightingSourceAdapter.gd
           ! grep -R -q '_process' game/scripts/simulation/utilities game/scripts/ui/UtilityDevControls.gd
           ! grep -R -q 'Timer.new' game/scripts/simulation/utilities game/scripts/ui/UtilityDevControls.gd
-          ! grep -R -q 'entity_ids()' game/scripts/simulation/utilities
+          ! grep -R -F -q '.entity_ids()' game/scripts/simulation/utilities
 
       - name: Install Godot 4.7.1
         shell: bash
