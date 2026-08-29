@@ -57,7 +57,18 @@ func configure(
 
 func configure_power_infrastructure(world: WorldState, wire_edges: Array[Dictionary]) -> bool:
     _ensure_layers()
-    return _power_lines.configure(world, wire_edges)
+    if not _power_lines.configure(world, wire_edges):
+        return false
+    # Power infrastructure is wired after the base renderer/camera during UtilityGameMain boot.
+    # A late optional renderer must inherit the already-valid tactical window immediately rather
+    # than waiting for the player to move far enough to trigger another camera update.
+    if _ground.has_valid_view():
+        return _power_lines.set_visible_window(
+            _ground.visible_origin(),
+            _ground.visible_size(),
+            _ground.cell_pixels()
+        )
+    return true
 
 func power_infrastructure_debug_snapshot() -> Dictionary:
     _ensure_layers()
