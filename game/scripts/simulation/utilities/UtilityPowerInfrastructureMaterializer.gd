@@ -13,10 +13,16 @@ const URBAN_SPACING: int = 9
 const SETTLEMENT_SPACING: int = 14
 const RURAL_SPACING: int = 22
 const ROAD_SHOULDER_OFFSET: int = 4
-const EXPLICIT_ROAD_TERRAIN: Array[StringName] = [
-    &"ground.road_plain",
-    &"ground.road_yellow_line_h",
-    &"ground.road_yellow_line_v",
+const EXPLICIT_CONSTRUCTED_VEHICLE_TERRAIN: Array[StringName] = [
+    &"ground.gravel_dark",
+    &"ground.gravel_light",
+    &"ground.alley_stained",
+    &"ground.concrete_oil",
+]
+const CONSTRUCTED_VEHICLE_TERRAIN_PREFIXES: Array[String] = [
+    "ground.road_",
+    "ground.parking",
+    "ground.driveway_",
 ]
 
 const COLLISION_SEMANTICS: Array[StringName] = [
@@ -242,17 +248,26 @@ func _find_support_cell(
         var candidate: Vector2i = route_cell + perpendicular * offset
         if not _plan.bounds.has_point(candidate) or reserved_cells.has(candidate):
             continue
-        if _is_road_surface_cell(candidate):
+        if _is_support_blocked_surface_cell(candidate):
             continue
         if not _world.entities_at(candidate).is_empty():
             continue
         return candidate
     return Vector2i(2147483647, 2147483647)
 
-func _is_road_surface_cell(cell: Vector2i) -> bool:
+func _is_support_blocked_surface_cell(cell: Vector2i) -> bool:
     if _is_planned_global_road_surface(cell):
         return true
-    return _world.has_terrain(cell) and EXPLICIT_ROAD_TERRAIN.has(_world.terrain_at(cell))
+    if not _world.has_terrain(cell):
+        return false
+    return _is_constructed_vehicle_surface_terrain(_world.terrain_at(cell))
+
+static func _is_constructed_vehicle_surface_terrain(semantic_type: StringName) -> bool:
+    var semantic: String = String(semantic_type)
+    for prefix: String in CONSTRUCTED_VEHICLE_TERRAIN_PREFIXES:
+        if semantic.begins_with(prefix):
+            return true
+    return EXPLICIT_CONSTRUCTED_VEHICLE_TERRAIN.has(semantic_type)
 
 func _is_planned_global_road_surface(cell: Vector2i) -> bool:
     for road: Dictionary in _plan.road_segments:
