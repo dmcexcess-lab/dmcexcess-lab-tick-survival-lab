@@ -22,7 +22,7 @@ func _initialize() -> void:
     quit(1)
 
 func _test_power_infrastructure_projection() -> void:
-    var plan: GeneratedGlobalWorldPlan = IslandFixtureClass.global_plan()
+    var plan: GeneratedGlobalWorldPlan = IslandFixtureClass.generate_global_plan()
     _check(plan != null and plan.is_generated(), "canonical island global plan generated")
     if plan == null or not plan.is_generated():
         return

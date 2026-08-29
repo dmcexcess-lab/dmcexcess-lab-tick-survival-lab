@@ -94,7 +94,7 @@ static func streetlight() -> LightEmitterProfile:
     return LightEmitterProfile.new(
         &"light.streetlight.candidate001",
         Shape.OMNI,
-        11,
+        10,
         0.94,
         Color(0.94, 0.97, 1.0),
         1.30,
@@ -107,7 +107,7 @@ static func neon(tint_value: Color = Color(0.22, 0.70, 1.0)) -> LightEmitterProf
     return LightEmitterProfile.new(
         &"light.neon.candidate001",
         Shape.OMNI,
-        7,
+        6,
         0.70,
         tint_value,
         1.28,
