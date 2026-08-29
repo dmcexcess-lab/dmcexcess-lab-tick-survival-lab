@@ -74,7 +74,7 @@ func profile(profile_id: StringName) -> Dictionary:
     if profile_id == SMALLTOWN_CENTER:
         return {
             "id": SMALLTOWN_CENTER,
-            "version": 1,
+            "version": 2,
             "road_layout": &"smalltown_grid",
             "signalize_first_inherited_intersection": false,
             "land_use_mode": &"smalltown_center",
@@ -92,7 +92,11 @@ func profile(profile_id: StringName) -> Dictionary:
             "local_frontage_min": 23,
             "local_frontage_max": 28,
             "local_frontage_end_margin": 5,
-            "commercial_count": 4,
+            # Compact island topology can legitimately leave three primary-frontage
+            # commercial parcels once the old 1280-cell forced cross is removed.
+            # This is content density, not validator relaxation: all three must still
+            # be real legal parcels and the full residential target remains intact.
+            "commercial_count": 3,
             "residential_count": 10,
             "farmstead_count": 0,
             "local_residential_target": 6,
