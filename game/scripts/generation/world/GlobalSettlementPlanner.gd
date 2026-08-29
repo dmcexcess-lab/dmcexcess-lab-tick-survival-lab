@@ -193,7 +193,7 @@ func _snap_to_legal_geography(
             continue
         if not _hydrology.rect_clear_of_rivers(site_rect, river_segments, river_clearance):
             continue
-        if _overlaps_existing_site(candidate, site_size, occupied_centers):
+        if _too_close_to_existing(candidate, occupied_centers):
             continue
         var distance: int = absi(candidate.x - desired.x) + absi(candidate.y - desired.y)
         if distance < best_distance or (distance == best_distance and _grid_before(grid, best_grid)):
@@ -202,20 +202,13 @@ func _snap_to_legal_geography(
             best_center = candidate
     return best_center
 
-func _overlaps_existing_site(candidate: Vector2i, site_size: Vector2i, existing: Array[Vector2i]) -> bool:
-    var candidate_rect: Rect2i = _centered_rect(candidate, site_size)
+func _too_close_to_existing(candidate: Vector2i, existing: Array[Vector2i]) -> bool:
     for center: Vector2i in existing:
-        if _rects_overlap(candidate_rect, _centered_rect(center, site_size)):
+        var dx: int = candidate.x - center.x
+        var dy: int = candidate.y - center.y
+        if dx * dx + dy * dy < 160 * 160:
             return true
     return false
-
-func _rects_overlap(a: Rect2i, b: Rect2i) -> bool:
-    return (
-        a.position.x < b.position.x + b.size.x
-        and a.position.x + a.size.x > b.position.x
-        and a.position.y < b.position.y + b.size.y
-        and a.position.y + a.size.y > b.position.y
-    )
 
 func _grid_before(a: Vector2i, b: Vector2i) -> bool:
     return a.y < b.y or (a.y == b.y and a.x < b.x)
