@@ -57,7 +57,7 @@ func _test_candidate(
     validator: GeneratedAreaValidator
 ) -> void:
     _check(bool(validator.validate(request, plan).get("ok", false)), "Candidate 001 passes generic System 20 validation")
-    _check(plan.area_profile_version == 1, "smalltown.center v1 is recorded")
+    _check(plan.area_profile_version == 2, "smalltown.center v2 is recorded")
     _check(plan.environment_profile_version == 3, "temperate.rural v3 remains the environment profile")
     _check(plan.bounds.size == Vector2i(256, 256), "small-town site remains 256x256")
 
@@ -71,13 +71,13 @@ func _test_candidate(
     _check(plan.blocks.size() >= 2, "Candidate 001 records semantic town blocks")
     _check(_blocks_are_legal(plan), "town blocks stay off roads and infrastructure reservations")
 
-    _check(_count_land_use(plan, &"commercial_small") == 4, "Candidate 001 has four small-commercial opportunities")
+    _check(_count_land_use(plan, &"commercial_small") == 3, "Candidate 001 has three small-commercial opportunities on compact island topology")
     _check(_count_land_use(plan, &"residential") == 10, "Candidate 001 has ten residential opportunities")
     _check(_count_land_use(plan, &"farmstead") == 0, "town center has no farmstead target")
     _check(plan.building_requests.size() == 12, "existing library occupies two commercial and ten residential parcels")
     _check(_count_building_archetype(plan, &"commercial.gas_station.small") == 1, "existing gas station is used once")
     _check(_count_building_archetype(plan, &"commercial.diner.rural_small") == 1, "existing diner is used once")
-    _check(_commercial_without_building(plan) == 2, "two commercial opportunities remain honestly vacant")
+    _check(_commercial_without_building(plan) == 1, "one commercial opportunity remains honestly vacant")
     _check(_count_land_use_on_road_class(plan, &"residential", &"local_town") >= 6, "a majority target of homes uses local-town frontage")
     _check(_all_occupied_approaches_align_to_primary_doors(plan), "occupied town parcels reach their real System 19 primary doors directly")
 
