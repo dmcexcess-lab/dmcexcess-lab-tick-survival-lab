@@ -32,6 +32,8 @@ func _initialize() -> void:
         _finish()
         return
     _check(plan.seed == request.seed, "baseline generated plan preserves request seed")
+    var baseline_seed_before: int = plan.seed
+    var baseline_signature_before: String = plan.signature()
 
     var profile: Dictionary = ProfilesClass.new().profile(ProfilesClass.TEMPERATE_ISLAND_REGION)
     _check(int(profile.get("version", 0)) >= 3, "island profile records fresh-new-game and belt-removal revision")
@@ -57,19 +59,40 @@ func _initialize() -> void:
     var alternate: GeneratedGlobalWorldPlan = planner.generate(alternate_request)
     _check(alternate != null and alternate.is_generated(), "alternate new-game island seed generates")
     if alternate != null and alternate.is_generated():
-        var baseline_signature: String = plan.signature()
+        var baseline_seed_after: int = plan.seed
+        var baseline_signature_after: String = plan.signature()
         var alternate_signature: String = alternate.signature()
-        print("ISLAND_SEED_DIAGNOSTIC baseline_request=%d baseline_plan=%d alternate_request=%d alternate_plan=%d baseline_signature_hash=%d alternate_signature_hash=%d" % [
+        print("ISLAND_SEED_DIAGNOSTIC baseline_request=%d baseline_plan_before=%d baseline_plan_after=%d alternate_request=%d alternate_plan=%d baseline_signature_before_hash=%d baseline_signature_after_hash=%d alternate_signature_hash=%d" % [
             request.seed,
-            plan.seed,
+            baseline_seed_before,
+            baseline_seed_after,
             alternate_request.seed,
             alternate.seed,
-            baseline_signature.hash(),
+            baseline_signature_before.hash(),
+            baseline_signature_after.hash(),
             alternate_signature.hash(),
         ])
-        _check(alternate.seed == alternate_request.seed, "alternate generated plan preserves request seed")
-        _check(alternate.seed != plan.seed, "different new-game seed changes authoritative plan seed")
-        _check(alternate_signature != baseline_signature, "different new-game seed redraws the authoritative island plan")
+        _check(alternate.seed == alternate_request.seed, "alternate generated plan preserves request seed (request=%d plan=%d)" % [alternate_request.seed, alternate.seed])
+        _check(
+            baseline_seed_after == baseline_seed_before,
+            "second generation does not mutate prior plan seed (before=%d after=%d alternate=%d)" % [baseline_seed_before, baseline_seed_after, alternate.seed]
+        )
+        _check(
+            baseline_signature_after == baseline_signature_before,
+            "second generation does not mutate prior plan signature (before_hash=%d after_hash=%d)" % [baseline_signature_before.hash(), baseline_signature_after.hash()]
+        )
+        _check(alternate.seed != baseline_seed_before, "different new-game seed changes authoritative plan seed")
+        _check(
+            alternate_signature != baseline_signature_before,
+            "different new-game seed redraws the authoritative island plan (baseline_seed=%d alternate_seed=%d baseline_hash=%d alternate_hash=%d baseline_len=%d alternate_len=%d)" % [
+                baseline_seed_before,
+                alternate.seed,
+                baseline_signature_before.hash(),
+                alternate_signature.hash(),
+                baseline_signature_before.length(),
+                alternate_signature.length(),
+            ]
+        )
         var alternate_central: Dictionary = _site(alternate, GlobalFixture.CENTRAL_SITE_ID)
         _check(int(alternate_central.get("seed", -1)) != int(central.get("seed", -1)), "different new-game seed changes central local-area seed")
 
