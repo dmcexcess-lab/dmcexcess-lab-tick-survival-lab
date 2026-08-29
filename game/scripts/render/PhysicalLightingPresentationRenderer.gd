@@ -90,12 +90,17 @@ func refresh(reason: StringName = &"external") -> bool:
     if not _lighting.set_field_bounds(Rect2i(_visible_origin, _visible_size)):
         return false
 
+    var prepared_revision: int = _lighting.prepare_query()
+    # Several synchronous world/presentation signals can request the same final
+    # light state during one step. Do not rebuild and upload identical maps.
+    if prepared_revision == _last_lighting_revision:
+        return true
+
     var started: int = Time.get_ticks_usec()
     _ensure_images()
     if _multiply_image == null or _glow_image == null:
         return false
 
-    var prepared_revision: int = _lighting.prepare_query()
     var optics: AtmosphericOptics = _lighting.atmosphere()
     var min_luminance: float = 1.0
     var max_luminance: float = 0.0

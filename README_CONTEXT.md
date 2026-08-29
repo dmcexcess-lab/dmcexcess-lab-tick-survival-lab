@@ -141,6 +141,14 @@ Protected direction:
 - bounded local queries and shared cached plans;
 - persistence-backed streaming eviction remains evidence-driven future work only.
 
+### Player-action responsiveness repair — awaiting human acceptance
+
+The playable controller now resolves accepted player actions through a one-due-tick-batch-per-render-frame pump instead of blocking inside the input callback. Controls are busy-gated and stale buffered input is dropped, preventing long post-stall movement queues and overshoot.
+
+The DEV flashlight now invalidates presentation for facing-only turns, ignores unrelated streaming mutations, and skips duplicate same-revision light-map uploads.
+
+Automated acceptance includes parser/import, canonical demo/player shell, lighting/performance regressions, canonical startup and the permanent same-window input-backlog smoke. Human browser play remains the final acceptance gate for the reported spawn-step stall and feel.
+
 ---
 
 ## Relevant ownership boundaries

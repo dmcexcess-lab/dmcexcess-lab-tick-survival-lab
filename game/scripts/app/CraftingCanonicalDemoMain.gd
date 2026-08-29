@@ -108,7 +108,8 @@ func _on_craft_interaction_blocked_changed(blocked: bool) -> void:
 func _refresh_interaction_enabled() -> void:
     var enabled: bool = not _shell_blocks_interaction \
         and not _loot_blocks_interaction \
-        and not _craft_blocks_interaction
+        and not _craft_blocks_interaction \
+        and not _action_blocks_interaction
     _keyboard.set_enabled(enabled)
     _controls.set_enabled(enabled)
     _door_pointer.set_enabled(enabled)

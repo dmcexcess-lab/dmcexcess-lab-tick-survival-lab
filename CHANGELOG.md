@@ -1,5 +1,14 @@
 # Changelog
 
+## 2026-08-29 — Player Input / Lighting Responsiveness Repair
+
+- Moved playable player-action resolution out of synchronous input callbacks and into a bounded per-frame action pump.
+- Dropped stale busy/cooldown input to prevent browser event backlogs from becoming unintended future movement.
+- Busy-gated canonical and crafting controls while movement/turn/stance actions resolve.
+- Made DEV flashlight turns invalidate physical-light presentation immediately, filtered unrelated world mutations, and suppressed duplicate same-revision light-map uploads.
+- Added permanent input-responsiveness regression coverage.
+- Preserved authoritative action timing, movement legality, WHAT persistence, collision, crafting and save schemas.
+
 ## Roadmap Phase 1E Content Expansion + Integration — Candidate 001 — 2026-08-27
 
 - Implemented the user-approved **1E-1 through 1E-3** content/integration pass under the rule **“Content extends the system that already owns its truth. Integration does not create a second owner.”** Phase 1E remains cross-system content work rather than a new System 32.

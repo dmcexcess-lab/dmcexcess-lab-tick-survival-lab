@@ -3,6 +3,7 @@ class_name DemoLightingSourceAdapter
 
 const Facing = preload("res://scripts/foundation/spatial/SpatialFacing.gd")
 const Layers = preload("res://scripts/foundation/spatial/SpatialLayer.gd")
+const ChangeClass = preload("res://scripts/foundation/world/WorldChange.gd")
 const EmitterClass = preload("res://scripts/simulation/lighting/LightEmitter.gd")
 const EmitterProfileClass = preload("res://scripts/simulation/lighting/LightEmitterProfile.gd")
 
@@ -175,7 +176,16 @@ func _connect_world() -> void:
     if not _world.world_reset.is_connected(reset_callable):
         _world.world_reset.connect(reset_callable)
 
-func _on_world_changed(_change) -> void:
+func _on_world_changed(change: WorldChange) -> void:
+    # The DEV flashlight follows only the controlled actor. Streaming can emit
+    # thousands of unrelated terrain/entity changes; inspecting the source
+    # signature for every one made materialization cost leak into lighting.
+    if change == null or change.entity_id != _player_id:
+        return
+    if change.kind != ChangeClass.Kind.PLACEMENT_SET \
+        and change.kind != ChangeClass.Kind.PLACEMENT_REMOVED \
+        and change.kind != ChangeClass.Kind.ENTITY_REMOVED:
+        return
     _rebuild_if_needed(true)
 
 func _on_world_reset() -> void:

@@ -85,3 +85,19 @@ P3 presentation proof lives primarily in `verify/system28-weather`, with `verify
 **P5 predictive/amortized streaming remains deferred and is not automatically authorized.** Implement it only if post-P3 phone/Safari measurements still identify streaming/action execution as a meaningful stall source.
 
 Phase 1B Item Freshness / Spoilage remains frozen until the human phone/Safari pass confirms this P3 build no longer has unacceptable movement/weather stalls. If Weather stays visually continuous but movement still starves render frames, the next measured target is the synchronous action/streaming path rather than further Weather complexity.
+
+## P4 — bounded player-action/input pump
+
+Implemented after human play reported a growing spawn-step stall, flashlight-facing lag and buffered-input overshoot.
+
+- the playable player controller is now a scene-owned processing node;
+- an accepted player action no longer calls `run_until_stop()` inside the keyboard/touch callback;
+- runtime execution advances at most one due-tick batch per rendered frame;
+- movement/pointer controls are disabled while that action is active;
+- stale browser/touch events received while busy or during the short post-action drain window are discarded rather than queued as future movement;
+- focused headless contracts instantiated outside a `SceneTree` retain synchronous resolution as test-harness behavior only;
+- the DEV flashlight adapter ignores unrelated streaming/world mutations;
+- facing-only emitter changes schedule a physical-light presentation refresh;
+- identical prepared lighting revisions do not rebuild or upload the same light maps twice.
+
+The permanent `PlayerInputResponsivenessSmoke.gd` contract proves that a three-input same-window turn burst yields to the scene, commits exactly one turn and drops the two stale buffered turns.

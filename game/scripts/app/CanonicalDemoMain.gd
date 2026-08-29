@@ -185,6 +185,7 @@ var _door_controller: DoorPlayerInteractionController = null
 var _loot_controller: LootPlayerInteractionController = null
 var _shell_blocks_interaction: bool = false
 var _loot_blocks_interaction: bool = false
+var _action_blocks_interaction: bool = false
 
 func _ready() -> void:
     if not _boot_canonical_demo():
@@ -381,12 +382,14 @@ func _boot_canonical_demo() -> bool:
     if not _controller.is_ready() or not _controller.stance_ready() \
         or not _door_controller.is_ready() or not _loot_controller.is_ready():
         return false
+    add_child(_controller)
 
     _keyboard.action_intent.connect(Callable(_controller, "submit_intent"))
     _controls.action_intent.connect(Callable(_controller, "submit_intent"))
     _door_pointer.world_cell_primary.connect(Callable(_door_controller, "submit_world_cell"))
     _door_pointer.world_cell_primary.connect(Callable(_loot_controller, "submit_world_cell"))
     _controller.action_resolved.connect(Callable(_hud, "present_action_result"))
+    _controller.action_busy_changed.connect(_on_player_action_busy_changed)
     _door_controller.action_resolved.connect(Callable(_hud, "present_action_result"))
     _loot_controller.action_resolved.connect(Callable(_hud, "present_action_result"))
     _loot_controller.action_resolved.connect(Callable(_loot_panel, "present_action_result"))
@@ -621,6 +624,12 @@ func _on_ambient_light_changed(level: float, _phase: StringName, _snapshot: Dict
 func _on_demo_lighting_emitters_changed(values: Array) -> void:
     if _physical_lighting != null:
         _physical_lighting.set_emitters(values)
+        call_deferred("_flush_demo_lighting_change")
+
+func _flush_demo_lighting_change() -> void:
+    if _physical_lighting == null:
+        return
+    _world_view.refresh_physical_lighting(&"demo_emitters_changed")
 
 func _on_weather_changed(snapshot: Dictionary) -> void:
     if _weather_controls != null:
@@ -656,8 +665,14 @@ func _on_loot_interaction_blocked_changed(blocked: bool) -> void:
     _loot_blocks_interaction = blocked
     _refresh_interaction_enabled()
 
+func _on_player_action_busy_changed(blocked: bool) -> void:
+    _action_blocks_interaction = blocked
+    _refresh_interaction_enabled()
+
 func _refresh_interaction_enabled() -> void:
-    var enabled: bool = not _shell_blocks_interaction and not _loot_blocks_interaction
+    var enabled: bool = not _shell_blocks_interaction \
+        and not _loot_blocks_interaction \
+        and not _action_blocks_interaction
     _keyboard.set_enabled(enabled)
     _controls.set_enabled(enabled)
     _door_pointer.set_enabled(enabled)

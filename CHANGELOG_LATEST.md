@@ -2,6 +2,19 @@
 
 This compact ledger records the most recent work. `CHANGELOG.md` remains the historical archive.
 
+## Player Input / Lighting Responsiveness Repair — 2026-08-29
+
+- Removed the playable runtime's blocking `run_until_stop()` call from keyboard/touch callbacks.
+- Player actions now advance through at most one authoritative due-tick batch per rendered frame.
+- Busy controls and a short drain window discard stale buffered input instead of replaying it past the intended target.
+- Fixed the DEV flashlight presentation so facing-only turns update the beam without requiring a later forward move.
+- Removed unrelated streaming/world mutation fan-out from the DEV flashlight source adapter.
+- Added same-revision lighting-map upload suppression.
+- Added permanent `PlayerInputResponsivenessSmoke.gd` coverage for yielding and input-backlog rejection.
+- No movement timing, collision, persistence, world identity, crafting or save schema changed.
+
+Human browser acceptance remains required for the reported spawn-step performance behavior.
+
 ## Settlement-Planner Regression Rollback — 2026-08-28
 
 Restored runtime executable: `f6a06add3dfd212c0c29b343d24a8f7d28a89bca`
