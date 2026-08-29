@@ -20,7 +20,12 @@ const SEEDS: Array[int] = [
 var _failures: Array[String] = []
 
 func _initialize() -> void:
-    for seed: int in SEEDS:
+    var seeds: Array[int] = SEEDS
+    var requested_seed: String = OS.get_environment("TICK_LAB_PROCEDURAL_SEED")
+    if not requested_seed.is_empty():
+        seeds = [int(requested_seed)]
+
+    for seed: int in seeds:
         var plan: GeneratedGlobalWorldPlan = FixtureClass.generate_global_plan(seed)
         if plan == null:
             _failures.append("seed=%d reason=null_plan" % seed)
