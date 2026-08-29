@@ -24,12 +24,14 @@ func _initialize() -> void:
         GlobalFixture.BOUNDS,
         ProfilesClass.TEMPERATE_ISLAND_REGION
     )
+    _check(request.seed == GlobalFixture.SEED, "baseline request preserves requested world seed")
     var planner := IslandPlannerClass.new()
     var plan: GeneratedGlobalWorldPlan = planner.generate(request)
     _check(plan != null and plan.is_generated(), "island v3 plan generates")
     if plan == null or not plan.is_generated():
         _finish()
         return
+    _check(plan.seed == request.seed, "baseline generated plan preserves request seed")
 
     var profile: Dictionary = ProfilesClass.new().profile(ProfilesClass.TEMPERATE_ISLAND_REGION)
     _check(int(profile.get("version", 0)) >= 3, "island profile records fresh-new-game and belt-removal revision")
@@ -50,10 +52,24 @@ func _initialize() -> void:
         GlobalFixture.BOUNDS,
         ProfilesClass.TEMPERATE_ISLAND_REGION
     )
+    _check(alternate_request.seed == GlobalFixture.SEED + 1, "alternate request preserves requested world seed")
+    _check(alternate_request.seed != request.seed, "alternate request seed differs from baseline request seed")
     var alternate: GeneratedGlobalWorldPlan = planner.generate(alternate_request)
     _check(alternate != null and alternate.is_generated(), "alternate new-game island seed generates")
     if alternate != null and alternate.is_generated():
-        _check(alternate.signature() != plan.signature(), "different new-game seed redraws the authoritative island plan")
+        var baseline_signature: String = plan.signature()
+        var alternate_signature: String = alternate.signature()
+        print("ISLAND_SEED_DIAGNOSTIC baseline_request=%d baseline_plan=%d alternate_request=%d alternate_plan=%d baseline_signature_hash=%d alternate_signature_hash=%d" % [
+            request.seed,
+            plan.seed,
+            alternate_request.seed,
+            alternate.seed,
+            baseline_signature.hash(),
+            alternate_signature.hash(),
+        ])
+        _check(alternate.seed == alternate_request.seed, "alternate generated plan preserves request seed")
+        _check(alternate.seed != plan.seed, "different new-game seed changes authoritative plan seed")
+        _check(alternate_signature != baseline_signature, "different new-game seed redraws the authoritative island plan")
         var alternate_central: Dictionary = _site(alternate, GlobalFixture.CENTRAL_SITE_ID)
         _check(int(alternate_central.get("seed", -1)) != int(central.get("seed", -1)), "different new-game seed changes central local-area seed")
 
