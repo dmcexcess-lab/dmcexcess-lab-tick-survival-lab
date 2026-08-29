@@ -64,15 +64,16 @@ func _boot_utility_runtime() -> bool:
     return true
 
 func _wire_utility_lighting() -> bool:
-    if _demo_lighting_sources == null or _physical_lighting == null:
+    if _physical_lighting == null or _hand_state == null:
         return false
     var inherited_callable := Callable(self, "_on_demo_lighting_emitters_changed")
-    if _demo_lighting_sources.emitters_changed.is_connected(inherited_callable):
+    if _demo_lighting_sources != null and _demo_lighting_sources.emitters_changed.is_connected(inherited_callable):
         _demo_lighting_sources.emitters_changed.disconnect(inherited_callable)
     _utility_lighting = UtilityLightingClass.new(
-        _demo_lighting_sources,
-        _utilities,
-        _central_power_service_id
+        _world,
+        _hand_state,
+        FixtureClass.PLAYER_ID,
+        _utilities
     )
     if not _utility_lighting.is_ready():
         return false

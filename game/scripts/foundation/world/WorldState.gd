@@ -80,6 +80,9 @@ func entity(entity_id: String) -> WorldEntityRecord:
 func entity_ids() -> Array[String]:
     return _entities.ids()
 
+func entity_ids_of_type(semantic_type: StringName) -> Array[String]:
+    return _entities.ids_of_type(semantic_type)
+
 func has_terrain(cell: Vector2i) -> bool:
     return _terrain.has(cell)
 
