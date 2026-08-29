@@ -100,6 +100,15 @@ jobs:
           grep -q 'ISLAND_LEGACY_SEAM_SMOKE_OK' "$RUNNER_TEMP/island-legacy-seam.log"
           if grep -Eqi 'SCRIPT ERROR|Parse Error|Failed to load script' "$RUNNER_TEMP/island-legacy-seam.log"; then exit 1; fi
 
+      - name: Preserve island seam failure log
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: island-legacy-seam-failure-${{ github.sha }}
+          path: ${{ runner.temp }}/island-legacy-seam.log
+          if-no-files-found: ignore
+          retention-days: 7
+
       - name: Preserve System 20 dependency contract
         shell: bash
         run: |
