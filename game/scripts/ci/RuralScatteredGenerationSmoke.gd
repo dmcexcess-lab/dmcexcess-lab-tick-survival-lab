@@ -64,9 +64,9 @@ func _test_canonical_site(
     _check(_constraint_count(request, &"power", &"corridor") >= 1, "%s receives regional power feeder corridor facts" % site_id)
     _check(_constraint_count(request, &"power", &"service") == 1, "%s receives exactly one electrical settlement-service fact" % site_id)
     _check(_constraint_count(request, &"power", &"facility") == 0, "%s invents no rural electrical facility" % site_id)
-    _check(_water_service_constraint_valid(request), "%s carries decentralized groundwater service intent only" % site_id)
+    _check(_water_service_constraint_valid(request), "%s carries regional treatment-plant water service and real plant-local infrastructure" % site_id)
     _check(_wastewater_service_constraint_valid(request), "%s carries decentralized septic intent plus potable-source clearance" % site_id)
-    _check(_constraint_count(request, &"potable_water", &"facility") == 0, "%s invents no private well facility" % site_id)
+    _check(_constraint_count(request, &"potable_water", &"facility") == 2, "%s reserves the real regional source and treatment facilities" % site_id)
     _check(_constraint_count(request, &"wastewater", &"facility") == 0, "%s invents no septic facility" % site_id)
 
     var plan: GeneratedAreaPlan = generator.generate(request)
@@ -98,8 +98,8 @@ func _test_canonical_site(
     _check(_only_approved_residential_buildings(plan), "%s uses no commercial or unapproved building archetype" % site_id)
     _check(_all_occupied_approaches_align_to_primary_doors(plan), "%s approaches terminate directly at real System 19 primary doors" % site_id)
 
-    _check(_facility_reservation_count(plan) == 0, "%s produces no fake utility facility reservation" % site_id)
-    _check(_ordinary_properties_avoid_reservations(plan), "%s ordinary parcels/buildings avoid blocking upstream corridors" % site_id)
+    _check(_facility_reservation_count(plan) == 2, "%s preserves exactly the two real regional water-plant facility reservations" % site_id)
+    _check(_ordinary_properties_avoid_reservations(plan), "%s ordinary parcels/buildings avoid blocking upstream corridors and plant facilities" % site_id)
     _check(_unbuilt_nonroad_ratio(plan) >= 0.72, "%s keeps at least 72 percent of non-road area physically unbuilt" % site_id)
     _check(_natural_prop_count(plan) >= 60, "%s preserves substantial open-land natural dressing" % site_id)
     _check(_natural_coarse_bin_coverage(plan) >= 7, "%s natural dressing reaches broad portions of the site" % site_id)
@@ -205,20 +205,51 @@ func _constraint_count(request: AreaGenerationRequest, domain: StringName, role:
     return count
 
 func _water_service_constraint_valid(request: AreaGenerationRequest) -> bool:
-    var found: int = 0
+    var regional_service_count: int = 0
+    var source_count: int = 0
+    var treatment_count: int = 0
+    var header_count: int = 0
+    var corridor_count: int = 0
+    var plant_id: String = ""
     for constraint: Dictionary in request.inherited_planning_constraints:
         if StringName(constraint.get("domain", &"")) != &"potable_water":
             continue
-        if StringName(constraint.get("reservation_role", &"")) != &"service":
-            continue
-        if StringName(constraint.get("kind", &"")) != &"decentralized_source":
+        var role: StringName = StringName(constraint.get("reservation_role", &""))
+        var kind: StringName = StringName(constraint.get("kind", &""))
+        if kind == &"regional_radius_service":
+            if role != &"service" \
+                or StringName(constraint.get("service_mode", &"")) != &"regional_radius" \
+                or StringName(constraint.get("source_type", &"")) != &"groundwater" \
+                or String(constraint.get("plant_id", "")).is_empty() \
+                or constraint.get("coverage_center", Vector2i(-999999, -999999)) == Vector2i(-999999, -999999) \
+                or int(constraint.get("service_radius", 0)) <= 0:
+                return false
+            plant_id = String(constraint.get("plant_id", ""))
+            regional_service_count += 1
+        elif kind == &"groundwater_source":
+            if role != &"facility":
+                return false
+            source_count += 1
+        elif kind == &"treatment_storage":
+            if role != &"facility":
+                return false
+            treatment_count += 1
+        elif kind == &"regional_service_anchor":
+            if role != &"service":
+                return false
+            header_count += 1
+        elif kind == &"plant_internal":
+            if role != &"corridor":
+                return false
+            corridor_count += 1
+        else:
             return false
-        if StringName(constraint.get("service_mode", &"")) != &"decentralized_source":
-            return false
-        if StringName(constraint.get("source_type", &"")) != &"groundwater":
-            return false
-        found += 1
-    return found == 1
+    return not plant_id.is_empty() \
+        and regional_service_count == 1 \
+        and source_count == 1 \
+        and treatment_count == 1 \
+        and header_count == 1 \
+        and corridor_count == 2
 
 func _wastewater_service_constraint_valid(request: AreaGenerationRequest) -> bool:
     var found: int = 0
