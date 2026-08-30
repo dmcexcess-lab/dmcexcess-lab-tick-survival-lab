@@ -13,21 +13,23 @@ func profile(profile_id: StringName) -> Dictionary:
     if profile_id == TEMPERATE_ISLAND_REGION:
         var result: Dictionary = _rural_profile()
         result["id"] = TEMPERATE_ISLAND_REGION
-        result["version"] = 5
+        result["version"] = 6
         result["island_enabled"] = true
         result["settlement_layout"] = &"rural_island_hierarchy"
         result["reuse_world_seed_for_central_site"] = false
 
-        # The playable island is countryside first: a few real small towns,
-        # several crossroads, and sparse hamlets separated by substantial land.
-        # Settlement sites are selected from legal inland geography rather than
-        # fixed compass offsets, so utilities and roads adapt to the generated world.
+        # The playable island is a lived-in rural landscape, not mostly wilderness:
+        # compact towns/hamlets sit inside a broad mosaic of managed fields, pasture,
+        # roads and scattered development. Only about ten percent of the non-site
+        # interior surface is reserved as undisturbed natural land.
         result["island_smalltown_count"] = 2
         result["island_crossroads_count"] = 3
         result["island_hamlet_count"] = 4
         result["island_smalltown_min_spacing"] = 384
         result["island_crossroads_min_spacing"] = 288
         result["island_hamlet_min_spacing"] = 256
+        result["island_wilderness_fraction"] = 0.10
+        result["island_land_use_block_size"] = 64
 
         result["protected_cross_half_span"] = 160
         result["protected_cross_half_thickness"] = 96
