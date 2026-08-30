@@ -235,3 +235,30 @@ Prefer bounded work whose cost follows the smallest relevant active set. A turn-
 Do not accept an avoidably expensive design on the basis that current desktop hardware handles it. Preserve computational headroom for later population, outbreak, AI, utilities, vehicles, persistence and world-scale simulation.
 
 Performance work must remain honest: optimization may change representation, scheduling, caching, resolution or presentation technique, but it must not silently remove causal world truth or meaningful consequences.
+
+## 18. Anti-thrashing execution guardrail
+
+Once the mandatory refresh for a coherent prompt is complete, **execute the task**. Preparation is not progress and must not become a loop.
+
+For repository repair/debug prompts, use this default sequence unless new evidence makes a step irrelevant:
+
+1. fetch current `main` once;
+2. inspect the current failing evidence once;
+3. inspect only the source/test/workflow directly implicated by that evidence;
+4. make the smallest principled edit;
+5. commit/push it;
+6. verify the exact resulting head and required checks;
+7. report the result and required links.
+
+Operational rules:
+
+- Do **not** reread the same SOPs, design docs, source files, workflow logs, or tool schemas repeatedly within the same coherent task unless a new commit, conflicting result, or tool error makes the previous read stale.
+- Do **not** rediscover a tool schema after that function is already available and understood in the current task.
+- Do **not** substitute repeated status updates, plans, summaries, or diagnostic restatements for an available write/fix operation.
+- When the user has authorized a repair and the evidence identifies the failing contract, prefer an actual bounded patch over another round of broad archaeology.
+- If a tool call fails, report the concrete error and take the shortest available alternate route. Never describe a generic “tool lockout,” “session ending,” or similar blocker without direct evidence that the required operation is actually unavailable.
+- Protect the user's usage budget: avoid duplicate reads, redundant searches, speculative branches, and unnecessary polling. Verification should target the exact pushed head and required workflows, not repeatedly re-prove already-settled context.
+- Never terminate a repair prompt with preparation-only work when the necessary read/write tools remain available. If full closure is impossible, leave behind the maximum tangible completed work and identify the exact blocker from tool evidence.
+- New explicit user direction interrupts and supersedes the current execution plan immediately where it does not conflict with repository integrity or safety.
+
+This section exists specifically to prevent analysis/tool-discovery loops from consuming time or usage without advancing the repository.
