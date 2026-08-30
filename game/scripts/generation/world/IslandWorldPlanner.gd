@@ -253,7 +253,21 @@ func _repair_overlapping_site_rect(
                 or (distance == best_distance and _rect_position_before(candidate, best)):
                 best = candidate
                 best_distance = distance
-    return best
+    if best.size.x > 0 and best.size.y > 0:
+        return best
+
+    # Preserve the accepted edge-aligned overlap repair above. Only when that
+    # bounded legacy path has no answer, reuse the exhaustive same-size search
+    # that still requires this site's original settlement center.
+    return _repair_invalid_site_rect(
+        site,
+        original,
+        accepted_sites,
+        settlements,
+        rivers,
+        request,
+        profile
+    )
 
 func _site_rect_legal(
     rect: Rect2i,
