@@ -6,7 +6,9 @@ const ProfilesClass = preload("res://scripts/generation/world/GlobalWorldProfile
 const GeographyPlannerClass = preload("res://scripts/generation/world/GlobalGeographyPlanner.gd")
 const HydrologyPlannerClass = preload("res://scripts/generation/world/GlobalHydrologyPlanner.gd")
 const SettlementPlannerClass = preload("res://scripts/generation/world/GlobalSettlementPlanner.gd")
+const IslandSettlementPlannerClass = preload("res://scripts/generation/world/IslandSettlementHierarchyPlanner.gd")
 const RoadPlannerClass = preload("res://scripts/generation/world/GlobalMajorRoadPlanner.gd")
+const IslandRoadPlannerClass = preload("res://scripts/generation/world/IslandMajorRoadNetworkPlanner.gd")
 const BridgePlannerClass = preload("res://scripts/generation/world/GlobalBridgeIntentPlanner.gd")
 const PowerPlannerClass = preload("res://scripts/generation/world/GlobalPowerInfrastructurePlanner.gd")
 const WaterPlannerClass = preload("res://scripts/generation/world/GlobalWaterInfrastructurePlanner.gd")
@@ -19,7 +21,9 @@ var _profiles: GlobalWorldProfileCatalog
 var _geography_planner: GlobalGeographyPlanner
 var _hydrology_planner: GlobalHydrologyPlanner
 var _settlement_planner: GlobalSettlementPlanner
+var _island_settlement_planner: IslandSettlementHierarchyPlanner
 var _road_planner: GlobalMajorRoadPlanner
+var _island_road_planner: IslandMajorRoadNetworkPlanner
 var _bridge_planner: GlobalBridgeIntentPlanner
 var _power_planner: GlobalPowerInfrastructurePlanner
 var _water_planner: GlobalWaterInfrastructurePlanner
@@ -33,7 +37,9 @@ func _init() -> void:
     _geography_planner = GeographyPlannerClass.new()
     _hydrology_planner = HydrologyPlannerClass.new()
     _settlement_planner = SettlementPlannerClass.new()
+    _island_settlement_planner = IslandSettlementPlannerClass.new()
     _road_planner = RoadPlannerClass.new()
+    _island_road_planner = IslandRoadPlannerClass.new()
     _bridge_planner = BridgePlannerClass.new()
     _power_planner = PowerPlannerClass.new()
     _water_planner = WaterPlannerClass.new()
@@ -75,7 +81,12 @@ func generate(request: GlobalWorldGenerationRequest) -> GeneratedGlobalWorldPlan
             return plan
         river_segments.append(river_value)
 
-    var settlement_result: Dictionary = _settlement_planner.plan(request, profile, geography_cells, river_segments)
+    var island_mode: bool = request.profile_id == ProfilesClass.TEMPERATE_ISLAND_REGION
+    var settlement_result: Dictionary
+    if island_mode:
+        settlement_result = _island_settlement_planner.plan(request, profile, geography_cells, river_segments)
+    else:
+        settlement_result = _settlement_planner.plan(request, profile, geography_cells, river_segments)
     if not bool(settlement_result.get("ok", false)):
         plan.failure_reason = String(settlement_result.get("failure_reason", "global_settlement_planning_failed"))
         return plan
@@ -92,7 +103,11 @@ func generate(request: GlobalWorldGenerationRequest) -> GeneratedGlobalWorldPlan
             return plan
         area_sites.append(site_value)
 
-    var road_result: Dictionary = _road_planner.plan(request, profile, settlements, geography_cells, river_segments)
+    var road_result: Dictionary
+    if island_mode:
+        road_result = _island_road_planner.plan(request, profile, settlements, geography_cells, river_segments)
+    else:
+        road_result = _road_planner.plan(request, profile, settlements, geography_cells, river_segments)
     if not bool(road_result.get("ok", false)):
         plan.failure_reason = String(road_result.get("failure_reason", "global_major_road_planning_failed"))
         return plan
@@ -208,4 +223,4 @@ func generate(request: GlobalWorldGenerationRequest) -> GeneratedGlobalWorldPlan
     return plan
 
 func profile_ids() -> Array[StringName]:
-    return [GlobalWorldProfileCatalog.TEMPERATE_RURAL_REGION]
+    return [ProfilesClass.TEMPERATE_RURAL_REGION, ProfilesClass.TEMPERATE_ISLAND_REGION]
