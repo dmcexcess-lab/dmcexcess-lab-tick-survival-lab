@@ -6,7 +6,7 @@ This file answers what major gameplay work comes next and in what order. It does
 
 Current game identity:
 
-> **Ultima-style turn-based mini Zomboid.**
+> **Sprite-based zombie survival game.**
 >
 > **Mini means reduced complexity, not reduced consequence or mood.**
 
