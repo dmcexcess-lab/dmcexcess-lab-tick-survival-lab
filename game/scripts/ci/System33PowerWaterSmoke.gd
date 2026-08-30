@@ -2,7 +2,8 @@ extends SceneTree
 
 const Fixture = preload("res://scripts/demo/GeneratedIslandCritiqueFixture.gd")
 const GlobalFixture = preload("res://scripts/demo/GlobalWorldPlanFixture.gd")
-const UtilityStateClass = preload("res://scripts/simulation/utilities/UtilityRuntimeState.gd")
+const PowerTopologyPlannerClass = preload("res://scripts/simulation/utilities/UtilityLocalPowerTopologyPlanner.gd")
+const UtilityStateClass = preload("res://scripts/simulation/utilities/NeighborhoodUtilityRuntimeState.gd")
 const RefrigerationProviderClass = preload("res://scripts/simulation/utilities/UtilityRefrigerationEnvironmentProvider.gd")
 
 const CENTRAL_SETTLEMENT: String = "settlement.rural.crossroads.001"
@@ -10,6 +11,7 @@ const CENTRAL_SETTLEMENT: String = "settlement.rural.crossroads.001"
 var _failures: Array[String] = []
 
 func _initialize() -> void:
+    _test_dynamic_power_topology()
     _test_power_water_and_cache()
     _test_refrigeration_clock()
     _test_snapshot_restore()
@@ -26,20 +28,82 @@ func _canonical_plan() -> GeneratedGlobalWorldPlan:
     _check(plan != null and plan.is_generated(), "canonical island plan must generate")
     return plan
 
+func _canonical_topology(plan: GeneratedGlobalWorldPlan) -> Dictionary:
+    if plan == null or not plan.is_generated():
+        return {}
+    var topology: Dictionary = PowerTopologyPlannerClass.new().plan(plan)
+    _check(bool(topology.get("ok", false)), "generated local power topology must plan")
+    return topology
+
 func _new_state() -> UtilityRuntimeState:
     var plan: GeneratedGlobalWorldPlan = _canonical_plan()
     if plan == null or not plan.is_generated():
         return null
-    var utilities := UtilityStateClass.new()
-    _check(utilities.initialize_from_plan(plan), "utility state must initialize from 00D plan")
+    var topology: Dictionary = _canonical_topology(plan)
+    if not bool(topology.get("ok", false)):
+        return null
+    var utilities := UtilityStateClass.new(topology)
+    _check(utilities.initialize_from_plan(plan), "utility state must initialize from generated local power topology")
     return utilities
+
+func _test_dynamic_power_topology() -> void:
+    var plan: GeneratedGlobalWorldPlan = _canonical_plan()
+    if plan == null or not plan.is_generated():
+        return
+    var topology: Dictionary = _canonical_topology(plan)
+    if not bool(topology.get("ok", false)):
+        return
+
+    var building_count: int = int(topology.get("building_count", 0))
+    var target: int = int(topology.get("target_buildings_per_substation", 0))
+    var substations: Array = topology.get("substations", [])
+    var site_counts: Dictionary = topology.get("site_building_counts", {})
+    _check(building_count > 0, "local power topology must derive from actual generated buildings")
+    _check(target == 10, "local substation target must remain ten buildings")
+
+    var expected_substations: int = 0
+    for site_value: Variant in site_counts.values():
+        var count: int = int(site_value)
+        if count > 0:
+            expected_substations += int((count + target - 1) / target)
+    _check(substations.size() == expected_substations, "substation count must be derived from per-site generated building population")
+
+    var covered: Dictionary = {}
+    for value: Variant in substations:
+        _check(typeof(value) == TYPE_DICTIONARY, "every planned substation record must be valid")
+        if typeof(value) != TYPE_DICTIONARY:
+            continue
+        var substation: Dictionary = value
+        var building_ids: Array = substation.get("building_ids", [])
+        _check(not building_ids.is_empty() and building_ids.size() <= target, "each substation must serve one to ten generated buildings")
+        _check(not String(substation.get("service_key", "")).is_empty(), "each substation exposes a stable local service key")
+        for building_value: Variant in building_ids:
+            var building_id: String = String(building_value)
+            _check(not covered.has(building_id), "a generated building cannot belong to two substations")
+            covered[building_id] = true
+    _check(covered.size() == building_count, "every generated building must belong to exactly one local substation")
+
+    var utilities := UtilityStateClass.new(topology)
+    _check(utilities.initialize_from_plan(plan), "dynamic substation runtime must initialize")
+    if not utilities.is_ready():
+        return
+    _check(utilities.power_substation_component_ids().size() == substations.size(), "runtime substation count must match generated topology")
+    var building_service: Dictionary = topology.get("building_service", {})
+    for building_value: Variant in building_service.keys():
+        var building_id: String = String(building_value)
+        var service_id: String = utilities.power_service_for_building(building_id)
+        _check(not service_id.is_empty(), "every generated building must resolve its local power service")
+        _check(utilities.power_service_ids().has(service_id), "building service must be an authoritative runtime service")
 
 func _test_power_water_and_cache() -> void:
     var plan: GeneratedGlobalWorldPlan = _canonical_plan()
     if plan == null or not plan.is_generated():
         return
-    var utilities := UtilityStateClass.new()
-    _check(utilities.initialize_from_plan(plan), "utility state must initialize from canonical 00D plan")
+    var topology: Dictionary = _canonical_topology(plan)
+    if not bool(topology.get("ok", false)):
+        return
+    var utilities := UtilityStateClass.new(topology)
+    _check(utilities.initialize_from_plan(plan), "utility state must initialize from canonical generated topology")
     if not utilities.is_ready():
         return
 
@@ -61,12 +125,12 @@ func _test_power_water_and_cache() -> void:
         if service_id != central_power:
             other_power = service_id
             break
-    _check(not other_power.is_empty(), "island must expose another power service")
+    _check(not other_power.is_empty(), "island must expose another local-substation power service")
     var branch: String = utilities.power_branch_component_id(central_power)
     _check(not branch.is_empty(), "central power must expose local branch")
     _check(utilities.set_power_component_state(branch, UtilityRuntimeState.DAMAGED, &"smoke_local_outage"), "local branch damage mutates")
     _check(not utilities.power_service_available(central_power), "local branch damage removes central power")
-    _check(utilities.power_service_available(other_power), "local branch damage preserves unrelated service")
+    _check(utilities.power_service_available(other_power), "local branch damage preserves unrelated substation service")
     _check(utilities.set_power_component_state(branch, UtilityRuntimeState.OPERATIONAL, &"smoke_local_restore"), "local branch restores")
     _check(utilities.power_service_available(central_power), "central power restores")
 
