@@ -21,7 +21,7 @@ var failures: Array[String] = []
 func _initialize() -> void:
     var planner: GlobalWorldPlanner = GlobalPlannerClass.new()
     var global_plan: GeneratedGlobalWorldPlan = planner.generate(GlobalFixtureClass.request())
-    _check(global_plan != null and global_plan.is_generated(), "current System 00D v6 world generates before streaming")
+    _check(global_plan != null and global_plan.is_generated(), "current System 00D v7 world generates before streaming")
     if global_plan == null or not global_plan.is_generated():
         _finish()
         return
@@ -33,7 +33,7 @@ func _initialize() -> void:
     _finish()
 
 func _test_upstream_regressions(planner: GlobalWorldPlanner, global_plan: GeneratedGlobalWorldPlan) -> void:
-    _check(global_plan.profile_version == 6, "00F consumes temperate.rural.region v6 without changing it")
+    _check(global_plan.profile_version == 7, "00F consumes temperate.rural.region v7 without changing it")
     var replay: GeneratedGlobalWorldPlan = planner.generate(GlobalFixtureClass.request(GlobalFixtureClass.SEED))
     _check(replay.is_generated() and replay.signature() == global_plan.signature(), "00F leaves the deterministic System 00D signature unchanged")
 
