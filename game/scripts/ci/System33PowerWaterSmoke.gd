@@ -19,7 +19,10 @@ func _initialize() -> void:
     _check(_plan != null and _plan.is_generated(), "canonical island plan must generate")
     if _plan != null and _plan.is_generated():
         _topology = PowerTopologyPlannerClass.new().plan(_plan)
-        _check(bool(_topology.get("ok", false)), "local utility topology must plan")
+        _check(
+            bool(_topology.get("ok", false)),
+            "local utility topology must plan: %s" % String(_topology.get("failure_reason", "unknown"))
+        )
     if bool(_topology.get("ok", false)):
         _utilities = UtilityStateClass.new(_topology)
         _check(_utilities.initialize_from_plan(_plan), "neighborhood utility state initializes")
