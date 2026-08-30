@@ -210,7 +210,7 @@ Those systems consume WHERE; they do not get implemented inside it.
 
 ## 15. North-star fit
 
-The invisible integer tactical grid keeps the Ultima-like world readable and deterministic while whole-cell footprints and four-way facing keep graphics/simulation manageable. Structure cells deliberately choose the simpler causal model because edge-wall complexity does not currently buy enough gameplay consequence or mood.
+The invisible integer tactical grid keeps the top-down sprite-based world readable and deterministic while whole-cell footprints and four-way facing keep graphics/simulation manageable. Structure cells deliberately choose the simpler causal model because edge-wall complexity does not currently buy enough gameplay consequence or mood.
 
 ## 16. Approved decisions
 
