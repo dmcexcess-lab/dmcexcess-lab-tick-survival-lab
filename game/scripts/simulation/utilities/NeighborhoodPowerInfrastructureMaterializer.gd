@@ -18,6 +18,8 @@ const FACILITY_RADIUS: int = 2
 const FACILITY_SEARCH_RADIUS: int = 32
 const CUSTOMER_CLEARANCE: int = 2
 const CUSTOMER_SEARCH_RADIUS: int = 6
+const ROAD_POLE_SEARCH_RADIUS: int = 8
+const ROAD_POLE_SPACING: int = 10
 const WELL_CLEARANCE: int = 1
 
 var _topology: Dictionary = {}
@@ -55,6 +57,10 @@ func _build_projection() -> Dictionary:
         props.append(record)
         reserved_cells[plant_cell] = true
 
+    var road_graph: Dictionary = _build_local_road_graph()
+    if road_graph.is_empty():
+        return {"props": [], "wires": []}
+
     var substations: Array = _topology.get("substations", [])
     for substation_value: Variant in substations:
         if typeof(substation_value) != TYPE_DICTIONARY:
@@ -81,33 +87,39 @@ func _build_projection() -> Dictionary:
             props.append(record)
             reserved_cells[facility_cell] = true
 
+        var customers: Array[Dictionary] = []
         for index: int in range(building_ids.size()):
             var building_id: String = String(building_ids[index]).strip_edges()
             var building_rect: Rect2i = building_rects[index]
             if building_id.is_empty() or building_rect.size.x <= 0 or building_rect.size.y <= 0:
                 return {"props": [], "wires": []}
-            var pole_cell: Vector2i = _find_customer_pole(building_rect, anchor, reserved_cells)
-            if pole_cell == INVALID_CELL:
+            customers.append({
+                "building_id": building_id,
+                "rect": building_rect,
+                "ordinal": index,
+            })
+
+        var distribution: Dictionary = _shared_distribution_tree(
+            token,
+            service_key,
+            transformer_id,
+            anchor,
+            customers,
+            road_graph,
+            reserved_cells
+        )
+        if not bool(distribution.get("ok", false)):
+            return {"props": [], "wires": []}
+        for record_value: Variant in distribution.get("props", []):
+            if typeof(record_value) != TYPE_DICTIONARY:
                 return {"props": [], "wires": []}
-            var pole_id: String = "power.physical.%s.customer.%03d" % [token, index]
-            props.append({
-                "id": pole_id,
-                "semantic": &"prop.utility_pole_wood",
-                "cell": pole_cell,
-                "facing": _facing_toward_cell(pole_cell, _rect_center(building_rect)),
-            })
-            reserved_cells[pole_cell] = true
-            wires.append({
-                "asset_id": "power.asset.span.%s.customer.%03d" % [token, index],
-                "start_id": transformer_id,
-                "end_id": pole_id,
-                "network_id": "power.network.local_distribution",
-                "power_class": &"local_distribution",
-                "segment_id": "power.local.%s.customer.%03d" % [token, index],
-                "service_settlement_ids": [service_key],
-                "served_building_id": building_id,
-                "snap_cell": pole_cell,
-            })
+            var record: Dictionary = record_value
+            props.append(record)
+            reserved_cells[record.get("cell", INVALID_CELL)] = true
+        for wire_value: Variant in distribution.get("wires", []):
+            if typeof(wire_value) != TYPE_DICTIONARY:
+                return {"props": [], "wires": []}
+            wires.append((wire_value as Dictionary).duplicate(true))
 
     for well_value: Variant in _topology.get("wells", []):
         if typeof(well_value) != TYPE_DICTIONARY:
@@ -131,6 +143,270 @@ func _build_projection() -> Dictionary:
         reserved_cells[well_cell] = true
 
     return {"props": props, "wires": wires}
+
+func _shared_distribution_tree(
+    token: String,
+    service_key: String,
+    transformer_id: String,
+    transformer_cell: Vector2i,
+    customers: Array[Dictionary],
+    road_graph: Dictionary,
+    reserved_cells: Dictionary
+) -> Dictionary:
+    var root_road_cell: Vector2i = _nearest_graph_cell(transformer_cell, road_graph.keys())
+    if root_road_cell == INVALID_CELL:
+        return {"ok": false, "props": [], "wires": []}
+    var parents: Dictionary = _road_parents_from_root(road_graph, root_road_cell)
+    if parents.is_empty():
+        return {"ok": false, "props": [], "wires": []}
+
+    var customer_paths: Array[Dictionary] = []
+    var union_graph: Dictionary = {}
+    var key_cells: Dictionary = {root_road_cell: true}
+    for customer: Dictionary in customers:
+        var building_rect: Rect2i = customer.get("rect", Rect2i())
+        var building_center: Vector2i = _rect_center(building_rect)
+        var tap_cell: Vector2i = _nearest_graph_cell(building_center, parents.keys())
+        if tap_cell == INVALID_CELL:
+            return {"ok": false, "props": [], "wires": []}
+        var path: Array[Vector2i] = _path_from_root(parents, root_road_cell, tap_cell)
+        if path.is_empty():
+            return {"ok": false, "props": [], "wires": []}
+        key_cells[tap_cell] = true
+        for path_index: int in range(1, path.size()):
+            _graph_connect(union_graph, path[path_index - 1], path[path_index])
+        for path_index: int in range(ROAD_POLE_SPACING, path.size() - 1, ROAD_POLE_SPACING):
+            key_cells[path[path_index]] = true
+        customer_paths.append({
+            "building_id": customer.get("building_id", ""),
+            "rect": building_rect,
+            "ordinal": int(customer.get("ordinal", 0)),
+            "tap_cell": tap_cell,
+            "path": path,
+        })
+
+    for cell_value: Variant in union_graph.keys():
+        var cell: Vector2i = cell_value
+        var neighbors: Array = union_graph.get(cell, [])
+        if neighbors.size() != 2:
+            key_cells[cell] = true
+            continue
+        var a: Vector2i = neighbors[0]
+        var b: Vector2i = neighbors[1]
+        var da: Vector2i = a - cell
+        var db: Vector2i = b - cell
+        if da + db != Vector2i.ZERO:
+            key_cells[cell] = true
+
+    var ordered_key_cells: Array[Vector2i] = []
+    for value: Variant in key_cells.keys():
+        ordered_key_cells.append(value)
+    ordered_key_cells.sort_custom(_cell_before)
+
+    var props: Array[Dictionary] = []
+    var wires: Array[Dictionary] = []
+    var pole_id_by_route_cell: Dictionary = {}
+    var pole_cell_by_route_cell: Dictionary = {}
+    var local_reserved: Dictionary = reserved_cells.duplicate()
+    for index: int in range(ordered_key_cells.size()):
+        var route_cell: Vector2i = ordered_key_cells[index]
+        var pole_cell: Vector2i = _find_nearby_available(route_cell, local_reserved, ROAD_POLE_SEARCH_RADIUS)
+        if pole_cell == INVALID_CELL:
+            return {"ok": false, "props": [], "wires": []}
+        var pole_id: String = "power.physical.%s.road.%03d" % [token, index]
+        props.append({
+            "id": pole_id,
+            "semantic": &"prop.utility_pole_wood",
+            "cell": pole_cell,
+            "facing": _facing_toward_cell(pole_cell, route_cell),
+        })
+        local_reserved[pole_cell] = true
+        pole_id_by_route_cell[route_cell] = pole_id
+        pole_cell_by_route_cell[route_cell] = pole_cell
+
+    var root_pole_id: String = String(pole_id_by_route_cell.get(root_road_cell, ""))
+    var root_pole_cell: Vector2i = pole_cell_by_route_cell.get(root_road_cell, INVALID_CELL)
+    if root_pole_id.is_empty() or root_pole_cell == INVALID_CELL:
+        return {"ok": false, "props": [], "wires": []}
+    wires.append({
+        "asset_id": "power.asset.span.%s.substation_lead" % token,
+        "start_id": transformer_id,
+        "end_id": root_pole_id,
+        "network_id": "power.network.local_distribution",
+        "power_class": &"local_distribution",
+        "wire_role": &"substation_lead",
+        "segment_id": "power.local.%s.substation_lead" % token,
+        "service_settlement_ids": [service_key],
+        "route_start_cell": root_road_cell,
+        "route_end_cell": root_road_cell,
+        "snap_cell": root_pole_cell,
+    })
+
+    var seen_trunk_edges: Dictionary = {}
+    var trunk_ordinal: int = 0
+    for customer_path: Dictionary in customer_paths:
+        var path: Array[Vector2i] = customer_path.get("path", [])
+        var ordered_path_keys: Array[Vector2i] = []
+        for route_cell: Vector2i in path:
+            if key_cells.has(route_cell):
+                ordered_path_keys.append(route_cell)
+        for index: int in range(1, ordered_path_keys.size()):
+            var route_start: Vector2i = ordered_path_keys[index - 1]
+            var route_end: Vector2i = ordered_path_keys[index]
+            if route_start == route_end:
+                continue
+            var edge_key: String = _undirected_edge_key(route_start, route_end)
+            if seen_trunk_edges.has(edge_key):
+                continue
+            var start_id: String = String(pole_id_by_route_cell.get(route_start, ""))
+            var end_id: String = String(pole_id_by_route_cell.get(route_end, ""))
+            var end_cell: Vector2i = pole_cell_by_route_cell.get(route_end, INVALID_CELL)
+            if start_id.is_empty() or end_id.is_empty() or end_cell == INVALID_CELL:
+                return {"ok": false, "props": [], "wires": []}
+            wires.append({
+                "asset_id": "power.asset.span.%s.trunk.%03d" % [token, trunk_ordinal],
+                "start_id": start_id,
+                "end_id": end_id,
+                "network_id": "power.network.local_distribution",
+                "power_class": &"local_distribution",
+                "wire_role": &"shared_trunk",
+                "segment_id": "power.local.%s.trunk.%03d" % [token, trunk_ordinal],
+                "service_settlement_ids": [service_key],
+                "route_start_cell": route_start,
+                "route_end_cell": route_end,
+                "snap_cell": end_cell,
+            })
+            seen_trunk_edges[edge_key] = true
+            trunk_ordinal += 1
+
+    for customer_path: Dictionary in customer_paths:
+        var building_id: String = String(customer_path.get("building_id", "")).strip_edges()
+        var building_rect: Rect2i = customer_path.get("rect", Rect2i())
+        var customer_ordinal: int = int(customer_path.get("ordinal", 0))
+        var tap_cell: Vector2i = customer_path.get("tap_cell", INVALID_CELL)
+        var tap_pole_id: String = String(pole_id_by_route_cell.get(tap_cell, ""))
+        var tap_pole_cell: Vector2i = pole_cell_by_route_cell.get(tap_cell, INVALID_CELL)
+        if building_id.is_empty() or tap_pole_id.is_empty() or tap_pole_cell == INVALID_CELL:
+            return {"ok": false, "props": [], "wires": []}
+        var customer_pole_cell: Vector2i = _find_customer_pole(building_rect, tap_pole_cell, local_reserved)
+        if customer_pole_cell == INVALID_CELL:
+            return {"ok": false, "props": [], "wires": []}
+        var customer_pole_id: String = "power.physical.%s.customer.%03d" % [token, customer_ordinal]
+        props.append({
+            "id": customer_pole_id,
+            "semantic": &"prop.utility_pole_wood",
+            "cell": customer_pole_cell,
+            "facing": _facing_toward_cell(customer_pole_cell, _rect_center(building_rect)),
+        })
+        local_reserved[customer_pole_cell] = true
+        wires.append({
+            "asset_id": "power.asset.span.%s.customer.%03d" % [token, customer_ordinal],
+            "start_id": tap_pole_id,
+            "end_id": customer_pole_id,
+            "network_id": "power.network.local_distribution",
+            "power_class": &"local_distribution",
+            "wire_role": &"service_drop",
+            "segment_id": "power.local.%s.customer.%03d" % [token, customer_ordinal],
+            "service_settlement_ids": [service_key],
+            "served_building_id": building_id,
+            "route_start_cell": tap_cell,
+            "route_end_cell": tap_cell,
+            "snap_cell": customer_pole_cell,
+        })
+
+    return {"ok": true, "props": props, "wires": wires}
+
+func _build_local_road_graph() -> Dictionary:
+    var graph: Dictionary = {}
+    for road_value: Variant in _topology.get("local_roads", []):
+        if typeof(road_value) != TYPE_DICTIONARY:
+            continue
+        var road: Dictionary = road_value
+        var start: Vector2i = road.get("start", INVALID_CELL)
+        var finish: Vector2i = road.get("end", INVALID_CELL)
+        if start == INVALID_CELL or finish == INVALID_CELL:
+            continue
+        var delta: Vector2i = finish - start
+        if delta == Vector2i.ZERO or (delta.x != 0 and delta.y != 0):
+            continue
+        var direction := Vector2i(signi(delta.x), signi(delta.y))
+        var length: int = absi(delta.x) + absi(delta.y)
+        var previous: Vector2i = start
+        if not graph.has(previous):
+            graph[previous] = []
+        for distance: int in range(1, length + 1):
+            var cell: Vector2i = start + direction * distance
+            _graph_connect(graph, previous, cell)
+            previous = cell
+    for cell_value: Variant in graph.keys():
+        var cell: Vector2i = cell_value
+        var neighbors: Array = graph.get(cell, [])
+        neighbors.sort_custom(_cell_before)
+        graph[cell] = neighbors
+    return graph
+
+func _road_parents_from_root(graph: Dictionary, root: Vector2i) -> Dictionary:
+    if not graph.has(root):
+        return {}
+    var parents: Dictionary = {root: root}
+    var queue: Array[Vector2i] = [root]
+    var cursor: int = 0
+    while cursor < queue.size():
+        var current: Vector2i = queue[cursor]
+        cursor += 1
+        var neighbors: Array = graph.get(current, [])
+        for neighbor_value: Variant in neighbors:
+            var neighbor: Vector2i = neighbor_value
+            if parents.has(neighbor):
+                continue
+            parents[neighbor] = current
+            queue.append(neighbor)
+    return parents
+
+func _path_from_root(parents: Dictionary, root: Vector2i, target: Vector2i) -> Array[Vector2i]:
+    if not parents.has(root) or not parents.has(target):
+        return []
+    var reversed: Array[Vector2i] = [target]
+    var current: Vector2i = target
+    var guard: int = 0
+    while current != root:
+        current = parents.get(current, INVALID_CELL)
+        if current == INVALID_CELL:
+            return []
+        reversed.append(current)
+        guard += 1
+        if guard > parents.size():
+            return []
+    reversed.reverse()
+    return reversed
+
+func _nearest_graph_cell(target: Vector2i, candidates: Array) -> Vector2i:
+    var best: Vector2i = INVALID_CELL
+    var best_distance: int = 2147483647
+    for value: Variant in candidates:
+        var cell: Vector2i = value
+        var distance: int = absi(cell.x - target.x) + absi(cell.y - target.y)
+        if distance < best_distance or (distance == best_distance and (best == INVALID_CELL or _cell_before(cell, best))):
+            best = cell
+            best_distance = distance
+    return best
+
+func _graph_connect(graph: Dictionary, a: Vector2i, b: Vector2i) -> void:
+    var a_neighbors: Array = graph.get(a, [])
+    if not a_neighbors.has(b):
+        a_neighbors.append(b)
+        graph[a] = a_neighbors
+    var b_neighbors: Array = graph.get(b, [])
+    if not b_neighbors.has(a):
+        b_neighbors.append(a)
+        graph[b] = b_neighbors
+
+func _undirected_edge_key(a: Vector2i, b: Vector2i) -> String:
+    if _cell_before(b, a):
+        var swap: Vector2i = a
+        a = b
+        b = swap
+    return "%d,%d>%d,%d" % [a.x, a.y, b.x, b.y]
 
 func _water_plant_records(reserved_cells: Dictionary) -> Array[Dictionary]:
     var treatment_node: Dictionary = {}
@@ -211,7 +487,7 @@ func _facility_fits(anchor: Vector2i, reserved_cells: Dictionary) -> bool:
                 return false
     return true
 
-func _find_customer_pole(building_rect: Rect2i, substation_cell: Vector2i, reserved_cells: Dictionary) -> Vector2i:
+func _find_customer_pole(building_rect: Rect2i, trunk_cell: Vector2i, reserved_cells: Dictionary) -> Vector2i:
     var center: Vector2i = _rect_center(building_rect)
     var candidates: Array[Vector2i] = [
         Vector2i(building_rect.position.x - CUSTOMER_CLEARANCE, center.y),
@@ -220,8 +496,8 @@ func _find_customer_pole(building_rect: Rect2i, substation_cell: Vector2i, reser
         Vector2i(center.x, building_rect.end.y - 1 + CUSTOMER_CLEARANCE),
     ]
     candidates.sort_custom(func(a: Vector2i, b: Vector2i) -> bool:
-        var a_distance: int = absi(a.x - substation_cell.x) + absi(a.y - substation_cell.y)
-        var b_distance: int = absi(b.x - substation_cell.x) + absi(b.y - substation_cell.y)
+        var a_distance: int = absi(a.x - trunk_cell.x) + absi(a.y - trunk_cell.y)
+        var b_distance: int = absi(b.x - trunk_cell.x) + absi(b.y - trunk_cell.y)
         if a_distance != b_distance:
             return a_distance < b_distance
         if a.y != b.y:
@@ -229,7 +505,7 @@ func _find_customer_pole(building_rect: Rect2i, substation_cell: Vector2i, reser
         return a.x < b.x
     )
     for candidate: Vector2i in candidates:
-        var resolved: Vector2i = _find_nearby_available(candidate, reserved_cells)
+        var resolved: Vector2i = _find_nearby_available(candidate, reserved_cells, CUSTOMER_SEARCH_RADIUS)
         if resolved != INVALID_CELL:
             return resolved
     return INVALID_CELL
@@ -243,13 +519,13 @@ func _find_well_cell(building_rect: Rect2i, reserved_cells: Dictionary) -> Vecto
         Vector2i(center.x, building_rect.end.y - 1 + WELL_CLEARANCE),
     ]
     for candidate: Vector2i in candidates:
-        var resolved: Vector2i = _find_nearby_available(candidate, reserved_cells)
+        var resolved: Vector2i = _find_nearby_available(candidate, reserved_cells, CUSTOMER_SEARCH_RADIUS)
         if resolved != INVALID_CELL:
             return resolved
     return INVALID_CELL
 
-func _find_nearby_available(target: Vector2i, reserved_cells: Dictionary) -> Vector2i:
-    for radius: int in range(CUSTOMER_SEARCH_RADIUS + 1):
+func _find_nearby_available(target: Vector2i, reserved_cells: Dictionary, max_radius: int) -> Vector2i:
+    for radius: int in range(max_radius + 1):
         for y: int in range(-radius, radius + 1):
             for x: int in range(-radius, radius + 1):
                 if radius > 0 and absi(x) != radius and absi(y) != radius:
