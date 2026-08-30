@@ -33,7 +33,8 @@ func place(request: AreaGenerationRequest, profile: Dictionary, parcels: Array[D
     var farmstead_offset: int = Seed.choose_index(request.seed, "building_selection:farmstead", farmstead_pool.size())
     var civic_offset: int = Seed.choose_index(request.seed, "building_selection:civic", civic_pool.size())
     var industrial_offset: int = Seed.choose_index(request.seed, "building_selection:industrial", industrial_pool.size())
-    var use_fit_filtered_baseline: bool = StringName(profile.get("land_use_mode", &"")) == &"baseline_grid"
+    var land_use_mode: StringName = StringName(profile.get("land_use_mode", &""))
+    var use_fit_filtered_baseline: bool = land_use_mode == &"baseline_grid"
     var baseline_cursors: Dictionary = {
         &"commercial_small": 0,
         &"residential": maxi(0, residential_offset),
@@ -41,11 +42,22 @@ func place(request: AreaGenerationRequest, profile: Dictionary, parcels: Array[D
         &"civic": maxi(0, civic_offset),
         &"industrial": maxi(0, industrial_offset),
     }
+    var unique_commercial_assignments: Dictionary = {}
+    if land_use_mode == &"smalltown_center":
+        var matching: Dictionary = _match_unique_fitting_archetypes(profile, parcels, &"commercial_small", commercial_pool)
+        if not bool(matching.get("ok", false)):
+            return {"ok": false, "failure_reason": "building_does_not_fit_parcel", "building_requests": building_requests}
+        unique_commercial_assignments = matching.get("assignments", {})
 
     for parcel: Dictionary in parcels:
         var land_use: StringName = StringName(parcel.get("land_use", &""))
+        var parcel_id: String = String(parcel.get("id", ""))
         var archetype_id: StringName = &""
-        if use_fit_filtered_baseline:
+        if land_use == &"commercial_small" and land_use_mode == &"smalltown_center":
+            if not unique_commercial_assignments.has(parcel_id):
+                return {"ok": false, "failure_reason": "building_does_not_fit_parcel", "building_requests": building_requests}
+            archetype_id = StringName(unique_commercial_assignments[parcel_id])
+        elif use_fit_filtered_baseline:
             var baseline_pool: Array = _pool_for_land_use(
                 land_use,
                 commercial_pool,
@@ -130,6 +142,74 @@ func _pool_for_land_use(
         &"industrial":
             return industrial_pool
     return []
+
+func _match_unique_fitting_archetypes(
+    profile: Dictionary,
+    parcels: Array[Dictionary],
+    land_use: StringName,
+    pool: Array
+) -> Dictionary:
+    var candidates: Array[Dictionary] = []
+    for parcel: Dictionary in parcels:
+        if StringName(parcel.get("land_use", &"")) == land_use:
+            candidates.append(parcel)
+    if candidates.size() != pool.size():
+        return {"ok": false, "assignments": {}}
+
+    var matched_archetype_by_parcel: Array[int] = []
+    matched_archetype_by_parcel.resize(candidates.size())
+    matched_archetype_by_parcel.fill(-1)
+    for archetype_index in range(pool.size()):
+        var visited_parcels: Dictionary = {}
+        if not _try_match_archetype(
+            profile,
+            candidates,
+            pool,
+            archetype_index,
+            visited_parcels,
+            matched_archetype_by_parcel
+        ):
+            return {"ok": false, "assignments": {}}
+
+    var assignments: Dictionary = {}
+    for parcel_index in range(candidates.size()):
+        var archetype_index: int = matched_archetype_by_parcel[parcel_index]
+        if archetype_index < 0:
+            return {"ok": false, "assignments": {}}
+        var parcel_id: String = String(candidates[parcel_index].get("id", ""))
+        if parcel_id.is_empty():
+            return {"ok": false, "assignments": {}}
+        assignments[parcel_id] = StringName(pool[archetype_index])
+    return {"ok": true, "assignments": assignments}
+
+func _try_match_archetype(
+    profile: Dictionary,
+    candidates: Array[Dictionary],
+    pool: Array,
+    archetype_index: int,
+    visited_parcels: Dictionary,
+    matched_archetype_by_parcel: Array[int]
+) -> bool:
+    var archetype_id: StringName = StringName(pool[archetype_index])
+    for parcel_index in range(candidates.size()):
+        if visited_parcels.has(parcel_index):
+            continue
+        var parcel: Dictionary = candidates[parcel_index]
+        if not _archetype_fits_parcel(profile, parcel, archetype_id):
+            continue
+        visited_parcels[parcel_index] = true
+        var occupying_archetype: int = matched_archetype_by_parcel[parcel_index]
+        if occupying_archetype < 0 or _try_match_archetype(
+            profile,
+            candidates,
+            pool,
+            occupying_archetype,
+            visited_parcels,
+            matched_archetype_by_parcel
+        ):
+            matched_archetype_by_parcel[parcel_index] = archetype_index
+            return true
+    return false
 
 func _select_fitting_archetype(
     profile: Dictionary,
