@@ -34,24 +34,15 @@ func plan(
     if not reservations.is_empty():
         _remove_blocked_parcels(parcels, reservations)
 
-    var required_total: int = int(profile.get("commercial_count", 0)) + int(profile.get("residential_count", 0)) + int(profile.get("farmstead_count", 0))
-    if parcels.size() < required_total:
-        return {"ok": false, "failure_reason": "insufficient_parcel_candidates", "parcels": parcels}
-    var required_local: int = int(profile.get("local_residential_target", 0)) + int(profile.get("local_farmstead_target", 0))
-    var local_frontage_class: StringName = StringName(profile.get("local_frontage_road_class", &"local_rural"))
-    if _count_road_class_candidates(parcels, local_frontage_class) < required_local:
-        return {"ok": false, "failure_reason": "insufficient_local_road_parcel_candidates", "parcels": parcels}
-
+    # Structure counts are density goals, not generation preconditions. Classify as
+    # many legal parcels as the generated road/lot geometry can support and leave
+    # the rest as open land rather than failing the entire area.
     if land_use_mode == &"smalltown_center":
         _classify_smalltown_land_use(request.seed, profile, center, parcels)
     elif land_use_mode == &"rural_scattered":
         _classify_rural_scattered_land_use(request.seed, profile, center, parcels)
     else:
         _classify_rural_land_use(request.seed, profile, center, parcels)
-    if _count_land_use(parcels, &"commercial_small") != int(profile.get("commercial_count", 0)) \
-        or _count_land_use(parcels, &"residential") != int(profile.get("residential_count", 0)) \
-        or _count_land_use(parcels, &"farmstead") != int(profile.get("farmstead_count", 0)):
-        return {"ok": false, "failure_reason": "land_use_targets_unmet", "parcels": parcels}
     return {"ok": true, "failure_reason": "", "parcels": parcels}
 
 func _rural_scattered_frontage_order(roads: Array[Dictionary]) -> Array[Dictionary]:
@@ -492,9 +483,9 @@ func _classify_smalltown_land_use(seed: int, profile: Dictionary, center: Vector
     var local_target: int = mini(residential_target, int(profile.get("local_residential_target", 6)))
     var commercial_used: int = 0
 
-    # Main-street frontage is preferred, not mandatory. This is a quota/reserve
-    # assignment: consume primary frontage first, then ordinary non-local frontage,
-    # and touch local-town frontage only when there is surplus beyond the home reserve.
+    # Main-street frontage is preferred, not mandatory. Consume primary frontage
+    # first, then ordinary non-local frontage. Local-town frontage is only used for
+    # commercial spillover when doing so still leaves room for the desired home mix.
     for parcel: Dictionary in parcels:
         if commercial_used >= commercial_target:
             break
