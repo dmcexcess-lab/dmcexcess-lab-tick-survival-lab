@@ -68,20 +68,28 @@ func plan(
         return {"ok": false, "failure_reason": "global_road_gateway_unresolved", "road_segments": []}
 
     if not _append_routed_path(road_segments, "road.region.primary.west", &"primary", "route.region.primary.001", west_gateway, primary_start, primary_width, geography_cells, river_segments, profile):
-        return {"ok": false, "failure_reason": "global_primary_west_route_failed", "road_segments": []}
+        west_gateway = _reachable_boundary_gateway(request.bounds, &"west", primary_start, west_gateway, geography_cells, river_segments, profile)
+        if west_gateway.x < -900000 or not _append_routed_path(road_segments, "road.region.primary.west", &"primary", "route.region.primary.001", west_gateway, primary_start, primary_width, geography_cells, river_segments, profile):
+            return {"ok": false, "failure_reason": "global_primary_west_route_failed", "road_segments": []}
     var smalltown_center: Vector2i = smalltown.get("center", Vector2i.ZERO)
     if not _append_routed_path(road_segments, "road.region.primary.east.inner", &"primary", "route.region.primary.001", primary_end, smalltown_center, primary_width, geography_cells, river_segments, profile):
         return {"ok": false, "failure_reason": "global_primary_smalltown_route_failed", "road_segments": []}
     if not _append_routed_path(road_segments, "road.region.primary.east.outer", &"primary", "route.region.primary.001", smalltown_center, east_gateway, primary_width, geography_cells, river_segments, profile):
-        return {"ok": false, "failure_reason": "global_primary_east_route_failed", "road_segments": []}
+        east_gateway = _reachable_boundary_gateway(request.bounds, &"east", smalltown_center, east_gateway, geography_cells, river_segments, profile)
+        if east_gateway.x < -900000 or not _append_routed_path(road_segments, "road.region.primary.east.outer", &"primary", "route.region.primary.001", smalltown_center, east_gateway, primary_width, geography_cells, river_segments, profile):
+            return {"ok": false, "failure_reason": "global_primary_east_route_failed", "road_segments": []}
 
     var north_center: Vector2i = north_hamlet.get("center", Vector2i.ZERO)
     if not _append_routed_path(road_segments, "road.region.secondary.north.inner", &"secondary", "route.region.secondary.001", secondary_start, north_center, secondary_width, geography_cells, river_segments, profile):
         return {"ok": false, "failure_reason": "global_secondary_north_settlement_route_failed", "road_segments": []}
     if not _append_routed_path(road_segments, "road.region.secondary.north.outer", &"secondary", "route.region.secondary.001", north_center, north_gateway, secondary_width, geography_cells, river_segments, profile):
-        return {"ok": false, "failure_reason": "global_secondary_north_gateway_route_failed", "road_segments": []}
+        north_gateway = _reachable_boundary_gateway(request.bounds, &"north", north_center, north_gateway, geography_cells, river_segments, profile)
+        if north_gateway.x < -900000 or not _append_routed_path(road_segments, "road.region.secondary.north.outer", &"secondary", "route.region.secondary.001", north_center, north_gateway, secondary_width, geography_cells, river_segments, profile):
+            return {"ok": false, "failure_reason": "global_secondary_north_gateway_route_failed", "road_segments": []}
     if not _append_routed_path(road_segments, "road.region.secondary.south", &"secondary", "route.region.secondary.001", secondary_end, south_gateway, secondary_width, geography_cells, river_segments, profile):
-        return {"ok": false, "failure_reason": "global_secondary_south_route_failed", "road_segments": []}
+        south_gateway = _reachable_boundary_gateway(request.bounds, &"south", secondary_end, south_gateway, geography_cells, river_segments, profile)
+        if south_gateway.x < -900000 or not _append_routed_path(road_segments, "road.region.secondary.south", &"secondary", "route.region.secondary.001", secondary_end, south_gateway, secondary_width, geography_cells, river_segments, profile):
+            return {"ok": false, "failure_reason": "global_secondary_south_route_failed", "road_segments": []}
 
     var southwest_center: Vector2i = southwest.get("center", Vector2i.ZERO)
     if not _append_routed_path(road_segments, "road.region.secondary.southwest", &"secondary", "route.region.secondary.002", primary_start, southwest_center, secondary_width, geography_cells, river_segments, profile):
@@ -307,6 +315,59 @@ func _boundary_gateway(
             &"south":
                 candidate.y = max_y
         var distance: int = absi(candidate.x - desired.x) + absi(candidate.y - desired.y)
+        var score: int = distance + cost * 2
+        if score < best_score or (score == best_score and _point_before(candidate, best)):
+            best = candidate
+            best_score = score
+    return best
+
+func _reachable_boundary_gateway(
+    bounds: Rect2i,
+    side: StringName,
+    route_start: Vector2i,
+    excluded: Vector2i,
+    geography_cells: Array[Dictionary],
+    river_segments: Array[Dictionary],
+    profile: Dictionary
+) -> Vector2i:
+    var best := Vector2i(-999999, -999999)
+    var best_score: int = 2147483647
+    var max_x: int = bounds.position.x + bounds.size.x - 1
+    var max_y: int = bounds.position.y + bounds.size.y - 1
+    for geography_cell: Dictionary in geography_cells:
+        var rect: Rect2i = geography_cell.get("rect", Rect2i())
+        var touches: bool = false
+        match side:
+            &"west":
+                touches = rect.position.x == bounds.position.x
+            &"east":
+                touches = rect.position.x + rect.size.x - 1 == max_x
+            &"north":
+                touches = rect.position.y == bounds.position.y
+            &"south":
+                touches = rect.position.y + rect.size.y - 1 == max_y
+        if not touches:
+            continue
+        var grid: Vector2i = geography_cell.get("grid", Vector2i(-999999, -999999))
+        var cost: int = _geography.road_cost_grid(grid, geography_cells, profile)
+        if cost >= 2147483647:
+            continue
+        var center: Vector2i = _geography.cell_center(geography_cell)
+        var candidate: Vector2i = center
+        match side:
+            &"west":
+                candidate.x = bounds.position.x
+            &"east":
+                candidate.x = max_x
+            &"north":
+                candidate.y = bounds.position.y
+            &"south":
+                candidate.y = max_y
+        if candidate == excluded:
+            continue
+        if _route_points(route_start, candidate, geography_cells, river_segments, profile).size() < 2:
+            continue
+        var distance: int = absi(candidate.x - route_start.x) + absi(candidate.y - route_start.y)
         var score: int = distance + cost * 2
         if score < best_score or (score == best_score and _point_before(candidate, best)):
             best = candidate
