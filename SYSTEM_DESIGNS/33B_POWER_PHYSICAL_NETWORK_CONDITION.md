@@ -2,7 +2,7 @@
 
 Status: **IMPLEMENTED + EXACT-HEAD AUTOMATED VERIFIED; HUMAN PLAYTEST PENDING**
 
-Verified executable: `a0299a14d21fb907bdd363ddadb00cc3403b48f1`
+Verified executable: `b632fc709d4fcd387eccb41fdc0e0f736bd69643`
 
 Parent: `33_POWER_WATER_UTILITIES.md`
 
@@ -18,10 +18,15 @@ The current playable topology is generated from actual local-area building manif
 
 - buildings are grouped with a target of 10 buildings per local substation;
 - each local substation is a fenced transformer/utility-box compound;
-- the regional source/ingress -> local-substation relationship is logical/wireless for gameplay presentation;
+- the regional source/ingress -> local-substation relationship is logical/non-physical for gameplay presentation;
 - no long-distance transmission wire is materialized between the source and local substations;
-- each substation feeds real customer poles placed near its generated buildings;
-- visible spans carry the building/service mapping needed for causal local outages.
+- each substation leaves through one short lead into a **shared roadside feeder tree** built from the actual generated local-road centerlines;
+- customer root-to-tap paths are unioned so common road sections become one deduplicated physical trunk;
+- roadside poles are placed at the root, taps, turns, junctions and deterministic spacing points;
+- the shared trunk forks only where road/customer topology requires it;
+- each generated served building receives one short final service drop from its shared roadside tap to a nearby customer pole;
+- there are no direct transformer-to-every-house starburst spans;
+- visible shared-trunk and service-drop spans carry the service/building provenance needed for causal local outages.
 
 Global 00D4 power facts remain upstream planning/provenance. The playable local topology does not invent a second service authority; `NeighborhoodUtilityRuntimeState` translates the generated local topology into canonical System-33 power components/links/bindings.
 
@@ -29,7 +34,7 @@ Global 00D4 power facts remain upstream planning/provenance. The playable local 
 
 Physical spans use stable `power.asset.span.*` IDs. Persistent supports/substation equipment use stable WHAT entity IDs.
 
-Each wire record carries enough immutable provenance to map failure to the correct local service, including its start/end IDs, segment/service identity and the served building where applicable.
+Each wire record carries enough immutable provenance to map failure to the correct local service, including its start/end IDs, segment/service identity, route cells where applicable, and the served building on final drops.
 
 Presentation topology is cached separately from energized state, so a dead wire does not disappear simply because its service failed.
 
@@ -57,7 +62,7 @@ Current rule:
 - a successful snap resets quiet-day accumulation to zero;
 - a quiet eligible day increments quiet-day accumulation by one.
 
-This creates rare real infrastructure failure without frame polling, per-span scheduled events or a continuously evolving wear equation.
+This applies to the real physical shared-trunk and service-drop span set. It creates rare infrastructure failure without frame polling, per-span scheduled events or a continuously evolving wear equation.
 
 ## 6. Authoritative-time processing
 
@@ -69,13 +74,15 @@ Snapshot state includes the condition store, last processed day and quiet-day co
 
 ## 7. Failure consequence
 
-When a span snaps or an asset is explicitly damaged past failure threshold:
+When a shared-trunk or service-drop span snaps, or an asset is explicitly damaged past failure threshold:
 
 1. the real physical asset condition becomes failed;
 2. System 33B looks up only the mapped power services for that asset;
 3. it damages the existing canonical distribution link for those services;
 4. System-33 power derivation propagates the outage to real consumers;
 5. unrelated services remain available when their mapped assets are healthy.
+
+The shared physical topology does not change service authority: a common trunk can causally affect the downstream service mappings carried by that physical asset, while a final drop is bounded to its mapped customer/service path.
 
 Lighting, refrigeration and other consumers are never toggled directly by the span runtime.
 
@@ -115,6 +122,10 @@ Topology/mappings are built once. Daily work happens only at day boundaries; dir
 `System33PowerPhysicalNetworkSmoke.gd` and `System33PowerInfrastructureSmoke.gd`, run by `verify/system33-power-water`, prove:
 
 - stable physical identities;
+- one shared road-following feeder topology rather than direct substation-to-customer rays;
+- exact one-per-building final service-drop ownership;
+- shared-trunk route cells on generated roads;
+- deduplication of overlapping customer routes and reuse of roadside poles by multiple wire edges;
 - real local-service causality and sibling isolation;
 - direct damage/repair;
 - daily deterministic snap behavior;
@@ -122,4 +133,4 @@ Topology/mappings are built once. Daily work happens only at day boundaries; dir
 - continued visible topology while de-energized;
 - no forbidden recurring utility simulation.
 
-Verified executable: `a0299a14d21fb907bdd363ddadb00cc3403b48f1`.
+Verified executable: `b632fc709d4fcd387eccb41fdc0e0f736bd69643`.
