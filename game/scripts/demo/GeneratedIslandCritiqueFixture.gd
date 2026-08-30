@@ -34,6 +34,7 @@ const DINER_ARCHETYPE: StringName = &"commercial.diner.rural_small"
 const STREAM_REGION_SIZE: Vector2i = Vector2i(128, 128)
 const STREAM_ACTIVE_RADIUS: int = 1
 const WORLD_SEED_OVERRIDE_ENV: String = "TICK_LAB_WORLD_SEED"
+const MAX_WORLD_SEED_ATTEMPTS: int = 128
 
 # Keep the current System-24 DEV source identity for the spawn-area loot bridge.
 const LOOT_SOURCE_KEY: String = "dev.rural_crossroads"
@@ -48,13 +49,35 @@ static var _streaming_focus: PlayerStreamingFocusAdapter = null
 static var _active_seed: int = -1
 
 static func generate_global_plan(seed: int = GlobalFixture.SEED) -> GeneratedGlobalWorldPlan:
-    var request := GlobalRequestClass.new(
-        GlobalFixture.WORLD_ID,
-        seed,
-        AREA_BOUNDS,
-        GlobalProfilesClass.TEMPERATE_ISLAND_REGION
+    var requested_seed: int = seed & GlobalSeed.HASH_MASK
+    if requested_seed <= 0:
+        requested_seed = 1
+    var candidate_seed: int = requested_seed
+    var last_failure: String = "unknown"
+    for attempt: int in range(MAX_WORLD_SEED_ATTEMPTS):
+        var request := GlobalRequestClass.new(
+            GlobalFixture.WORLD_ID,
+            candidate_seed,
+            AREA_BOUNDS,
+            GlobalProfilesClass.TEMPERATE_ISLAND_REGION
+        )
+        var plan: GeneratedGlobalWorldPlan = IslandPlannerClass.new().generate(request)
+        if plan != null and plan.is_generated():
+            if candidate_seed != requested_seed:
+                print("PLAYABLE_ISLAND_SEED_REROLL requested=%d resolved=%d attempts=%d" % [requested_seed, candidate_seed, attempt + 1])
+            return plan
+        if plan == null:
+            last_failure = "null_plan"
+        else:
+            last_failure = String(plan.failure_reason)
+            if last_failure.is_empty():
+                last_failure = "invalid_plan"
+        candidate_seed = _next_world_seed(candidate_seed)
+    push_error(
+        "GeneratedIslandCritiqueFixture: exhausted %d world-seed attempts from %d; last_failure=%s"
+        % [MAX_WORLD_SEED_ATTEMPTS, requested_seed, last_failure]
     )
-    return IslandPlannerClass.new().generate(request)
+    return null
 
 static func generate_plan(seed: int = GlobalFixture.SEED) -> GeneratedAreaPlan:
     var global_plan: GeneratedGlobalWorldPlan = generate_global_plan(seed)
@@ -100,7 +123,11 @@ static func build(
         return false
     var global_plan: GeneratedGlobalWorldPlan = generate_global_plan(world_seed)
     if global_plan == null or not global_plan.is_generated():
-        push_error("GeneratedIslandCritiqueFixture: global island generation failed for seed %d" % world_seed)
+        push_error("GeneratedIslandCritiqueFixture: global island generation failed after seed rerolls from %d" % world_seed)
+        return false
+    world_seed = global_plan.seed
+    if world_seed <= 0:
+        push_error("GeneratedIslandCritiqueFixture: resolved global island plan has invalid seed")
         return false
     var central_plan: GeneratedAreaPlan = _central_plan(global_plan)
     if central_plan == null or not central_plan.is_generated():
@@ -230,6 +257,11 @@ static func _choose_new_game_seed(seed_override: int) -> int:
     var rng := RandomNumberGenerator.new()
     rng.randomize()
     return rng.randi_range(1, GlobalSeed.HASH_MASK)
+
+static func _next_world_seed(seed: int) -> int:
+    if seed >= GlobalSeed.HASH_MASK:
+        return 1
+    return seed + 1
 
 static func _central_plan(global_plan: GeneratedGlobalWorldPlan) -> GeneratedAreaPlan:
     var projected: Dictionary = ProjectorClass.new().project_site(global_plan, CENTRAL_SITE_ID)
