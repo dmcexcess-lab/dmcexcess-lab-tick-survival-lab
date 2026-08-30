@@ -4,6 +4,10 @@ class_name GeneratedIslandCritiqueFixture
 const Facing = preload("res://scripts/foundation/spatial/SpatialFacing.gd")
 const Footprint = preload("res://scripts/foundation/spatial/SpatialFootprint.gd")
 const Layers = preload("res://scripts/foundation/spatial/SpatialLayer.gd")
+const WorldStateClass = preload("res://scripts/foundation/world/WorldState.gd")
+const WorldMutationClass = preload("res://scripts/foundation/world/WorldMutationService.gd")
+const DoorStateClass = preload("res://scripts/simulation/doors/DoorStateStore.gd")
+const DoorMutationClass = preload("res://scripts/simulation/doors/DoorStateMutationService.gd")
 const GlobalFixture = preload("res://scripts/demo/GlobalWorldPlanFixture.gd")
 const GlobalSeed = preload("res://scripts/generation/world/GlobalWorldSeed.gd")
 const GlobalRequestClass = preload("res://scripts/generation/world/GlobalWorldGenerationRequest.gd")
@@ -117,24 +121,20 @@ static func build(
         push_error("GeneratedIslandCritiqueFixture: rule installation failed: %s" % String(rules.get("failure_reason", "unknown")))
         return false
 
-    var world_seed: int = _choose_new_game_seed(seed_override)
-    if world_seed <= 0:
+    var requested_seed: int = _choose_new_game_seed(seed_override)
+    if requested_seed <= 0:
         push_error("GeneratedIslandCritiqueFixture: invalid new-game seed")
         return false
-    var global_plan: GeneratedGlobalWorldPlan = generate_global_plan(world_seed)
-    if global_plan == null or not global_plan.is_generated():
-        push_error("GeneratedIslandCritiqueFixture: global island generation failed after seed rerolls from %d" % world_seed)
+    var resolved: Dictionary = _resolve_playable_boot(requested_seed)
+    if not bool(resolved.get("ok", false)):
         return false
-    world_seed = global_plan.seed
-    if world_seed <= 0:
-        push_error("GeneratedIslandCritiqueFixture: resolved global island plan has invalid seed")
-        return false
-    var central_plan: GeneratedAreaPlan = _central_plan(global_plan)
-    if central_plan == null or not central_plan.is_generated():
-        push_error("GeneratedIslandCritiqueFixture: central area generation failed for seed %d" % world_seed)
-        return false
-    var player_start: Vector2i = player_start_for_plan(central_plan)
-    if player_start.x < 0:
+    var world_seed: int = int(resolved.get("seed", -1))
+    var global_plan: GeneratedGlobalWorldPlan = resolved.get("global_plan") as GeneratedGlobalWorldPlan
+    var central_plan: GeneratedAreaPlan = resolved.get("central_plan") as GeneratedAreaPlan
+    var player_start: Vector2i = resolved.get("player_start", Vector2i(-1, -1))
+    if world_seed <= 0 or global_plan == null or not global_plan.is_generated() \
+        or central_plan == null or not central_plan.is_generated() or player_start.x < 0:
+        push_error("GeneratedIslandCritiqueFixture: resolved playable-world candidate was invalid")
         return false
 
     var registry := RegistryClass.new()
@@ -164,7 +164,10 @@ static func build(
         return false
     var initial: Dictionary = streaming.update_focus(player_start)
     if not bool(initial.get("ok", false)):
-        push_error("GeneratedIslandCritiqueFixture: initial streaming failed: %s" % String(initial.get("failure_reason", "unknown")))
+        push_error(
+            "GeneratedIslandCritiqueFixture: resolved seed %d passed playable preflight but initial streaming failed: %s"
+            % [world_seed, String(initial.get("failure_reason", "unknown"))]
+        )
         return false
 
     if mutations.create_entity(SURVIVOR, PLAYER_ID) != PLAYER_ID:
@@ -257,6 +260,99 @@ static func _choose_new_game_seed(seed_override: int) -> int:
     var rng := RandomNumberGenerator.new()
     rng.randomize()
     return rng.randi_range(1, GlobalSeed.HASH_MASK)
+
+static func _resolve_playable_boot(seed: int) -> Dictionary:
+    var requested_seed: int = seed & GlobalSeed.HASH_MASK
+    if requested_seed <= 0:
+        requested_seed = 1
+    var candidate_seed: int = requested_seed
+    var last_failure: String = "unknown"
+    for attempt: int in range(MAX_WORLD_SEED_ATTEMPTS):
+        var request := GlobalRequestClass.new(
+            GlobalFixture.WORLD_ID,
+            candidate_seed,
+            AREA_BOUNDS,
+            GlobalProfilesClass.TEMPERATE_ISLAND_REGION
+        )
+        var global_plan: GeneratedGlobalWorldPlan = IslandPlannerClass.new().generate(request)
+        if global_plan == null or not global_plan.is_generated():
+            last_failure = "null_plan" if global_plan == null else String(global_plan.failure_reason)
+            if last_failure.is_empty():
+                last_failure = "invalid_plan"
+            candidate_seed = _next_world_seed(candidate_seed)
+            continue
+
+        var central_plan: GeneratedAreaPlan = _central_plan(global_plan)
+        if central_plan == null or not central_plan.is_generated():
+            last_failure = "central_area_generation_failed"
+            candidate_seed = _next_world_seed(candidate_seed)
+            continue
+        var player_start: Vector2i = player_start_for_plan(central_plan)
+        if player_start.x < 0:
+            last_failure = "player_start_unavailable"
+            candidate_seed = _next_world_seed(candidate_seed)
+            continue
+
+        var probe: Dictionary = _probe_initial_streaming(global_plan, player_start)
+        if bool(probe.get("ok", false)):
+            if candidate_seed != requested_seed:
+                print(
+                    "PLAYABLE_ISLAND_SEED_REROLL requested=%d resolved=%d attempts=%d"
+                    % [requested_seed, candidate_seed, attempt + 1]
+                )
+            return {
+                "ok": true,
+                "seed": candidate_seed,
+                "global_plan": global_plan,
+                "central_plan": central_plan,
+                "player_start": player_start,
+                "failure_reason": "",
+            }
+        last_failure = String(probe.get("failure_reason", "initial_streaming_failed"))
+        candidate_seed = _next_world_seed(candidate_seed)
+
+    push_error(
+        "GeneratedIslandCritiqueFixture: exhausted %d playable world-seed attempts from %d; last_failure=%s"
+        % [MAX_WORLD_SEED_ATTEMPTS, requested_seed, last_failure]
+    )
+    return {"ok": false, "failure_reason": last_failure}
+
+static func _probe_initial_streaming(global_plan: GeneratedGlobalWorldPlan, player_start: Vector2i) -> Dictionary:
+    var probe_world: WorldState = WorldStateClass.new()
+    var probe_mutations: WorldMutationService = WorldMutationClass.new(probe_world)
+    var probe_door_state: DoorStateStore = DoorStateClass.new()
+    var probe_door_mutations: DoorStateMutationService = DoorMutationClass.new(probe_door_state, probe_world)
+    var registry := RegistryClass.new()
+    var area_source := AreaSourceClass.new(registry)
+    var surface_catalog := IslandSurfaceCatalogClass.new(global_plan)
+    var water_catalog := WatercourseCatalogClass.new(global_plan)
+    if not surface_catalog.is_ready() or not water_catalog.is_ready():
+        return {"ok": false, "failure_reason": "island_source_catalogs_failed"}
+    var surface_source := IslandSurfaceSourceClass.new(registry, surface_catalog)
+    var water_source := WatercourseSourceClass.new(registry, water_catalog)
+    var materialization := MaterializationClass.new(
+        probe_world,
+        probe_mutations,
+        probe_door_state,
+        probe_door_mutations,
+        registry,
+        area_source,
+        null,
+        [surface_source, water_source]
+    )
+    if not materialization.is_ready():
+        return {"ok": false, "failure_reason": "materialization_not_ready"}
+    var grid := StreamingGridClass.new(global_plan.bounds, STREAM_REGION_SIZE)
+    var streaming := StreamingClass.new(global_plan, grid, materialization, null, STREAM_ACTIVE_RADIUS)
+    if not streaming.is_ready():
+        return {"ok": false, "failure_reason": "streaming_not_ready"}
+    var initial: Dictionary = streaming.update_focus(player_start)
+    if not bool(initial.get("ok", false)):
+        return {
+            "ok": false,
+            "failure_reason": "initial_streaming_failed:%s" % String(initial.get("failure_reason", "unknown")),
+        }
+    return {"ok": true, "failure_reason": ""}
 
 static func _next_world_seed(seed: int) -> int:
     if seed >= GlobalSeed.HASH_MASK:
