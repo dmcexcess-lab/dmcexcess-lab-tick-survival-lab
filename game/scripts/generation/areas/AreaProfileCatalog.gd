@@ -74,7 +74,7 @@ func profile(profile_id: StringName) -> Dictionary:
     if profile_id == SMALLTOWN_CENTER:
         return {
             "id": SMALLTOWN_CENTER,
-            "version": 2,
+            "version": 3,
             "road_layout": &"smalltown_grid",
             "signalize_first_inherited_intersection": false,
             "land_use_mode": &"smalltown_center",
@@ -84,22 +84,18 @@ func profile(profile_id: StringName) -> Dictionary:
             "parcel_gap": 2,
             "parcel_road_gap": 1,
             "parcel_buildable_margin": 1,
-            "primary_parcel_depth": 24,
+            "primary_parcel_depth": 26,
             "secondary_parcel_depth": 22,
             "local_parcel_depth": 22,
-            "frontage_min": 26,
-            "frontage_max": 32,
+            "frontage_min": 30,
+            "frontage_max": 36,
             "local_frontage_min": 23,
             "local_frontage_max": 28,
             "local_frontage_end_margin": 5,
-            # Compact island topology can legitimately leave three primary-frontage
-            # commercial parcels once the old 1280-cell forced cross is removed.
-            # This is content density, not validator relaxation: all three must still
-            # be real legal parcels and the full residential target remains intact.
-            "commercial_count": 3,
-            "residential_count": 10,
+            "commercial_count": 7,
+            "residential_count": 14,
             "farmstead_count": 0,
-            "local_residential_target": 6,
+            "local_residential_target": 8,
             "local_farmstead_target": 0,
             "local_town_width": 3,
             "town_cross_offset_candidates": [48, 60, 72, 84],
@@ -119,17 +115,21 @@ func profile(profile_id: StringName) -> Dictionary:
             "commercial_archetypes": [
                 &"commercial.gas_station.small",
                 &"commercial.diner.rural_small",
+                &"commercial.convenience_store.small",
+                &"commercial.grocery.neighborhood",
+                &"commercial.hardware_store.small",
+                &"civic.post_office.small",
+                &"civic.police_station.small",
             ],
             "residential_archetypes": [
+                &"residential.house.suburban_small",
+                &"residential.house.suburban_family",
+                &"residential.house.compact_laundry",
                 &"residential.trailer.singlewide",
                 &"residential.house.farm_small",
                 &"residential.house.farm_large",
-                &"residential.house.compact_laundry",
             ],
-            "farmstead_archetypes": [
-                &"residential.house.farm_small",
-                &"residential.house.farm_large",
-            ],
+            "farmstead_archetypes": [],
         }
     if profile_id == RURAL_SCATTERED:
         return {
