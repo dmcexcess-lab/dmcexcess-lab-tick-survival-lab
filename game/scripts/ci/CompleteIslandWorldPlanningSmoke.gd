@@ -7,6 +7,7 @@ const ProfilesClass = preload("res://scripts/generation/world/GlobalWorldProfile
 const IslandPlannerClass = preload("res://scripts/generation/world/IslandWorldPlanner.gd")
 const ProjectorClass = preload("res://scripts/generation/integration/System20AreaRequestProjector.gd")
 const LocalGeneratorClass = preload("res://scripts/generation/areas/LocalAreaGenerator.gd")
+const IslandSurfaceGeneratorClass = preload("res://scripts/generation/areas/IslandSurfaceAreaGenerator.gd")
 const IslandSurfaceCatalogClass = preload("res://scripts/streaming/IslandSurfaceSourceCatalog.gd")
 const WatercourseCatalogClass = preload("res://scripts/streaming/WatercourseSourceCatalog.gd")
 
@@ -29,13 +30,13 @@ func _initialize() -> void:
         return
 
     _check(plan.profile_id == ProfilesClass.TEMPERATE_ISLAND_REGION, "island profile identity is recorded")
-    _check(plan.profile_version == 5, "rural island hierarchy v5 is recorded")
-    _check(plan.area_sites.size() == 9, "island has nine sparse settlement sites")
+    _check(plan.profile_version == 6, "lived-in rural island profile v6 is recorded")
+    _check(plan.area_sites.size() == 9, "island has nine procedural settlement cores")
     _check(_site_profile_count(plan, &"smalltown.center") == 2, "island has two larger small-town anchors")
     _check(_site_profile_count(plan, &"rural.crossroads") == 3, "island has three rural crossroads")
-    _check(_site_profile_count(plan, &"rural.scattered") == 4, "island has four sparse rural hamlets")
+    _check(_site_profile_count(plan, &"rural.scattered") == 4, "island has four rural hamlets")
     _check(_sites_do_not_overlap(plan), "settlement envelopes do not overlap")
-    _check(_settlement_coverage_ratio(plan) <= 0.30, "most island area remains outside settlement envelopes")
+    _check(_settlement_coverage_ratio(plan) <= 0.30, "compact settlement cores leave room for managed countryside")
     _check(_has_outer_rural_settlement(plan), "rural development reaches outward without filling the coast")
     _check(not plan.river_segments.is_empty(), "island retains physical hydrology")
     _check(not plan.bridge_intents.is_empty(), "real road/river crossings retain explicit bridges")
@@ -45,10 +46,45 @@ func _initialize() -> void:
     var replay: GeneratedGlobalWorldPlan = planner.generate(request)
     _check(replay != null and replay.is_generated() and replay.signature() == plan.signature(), "same island seed replays exactly")
 
+    _test_rural_land_use_target()
     _test_all_area_sites(plan)
     _test_playable_spawn(plan)
     _test_surface_partition(plan)
     _finish()
+
+func _test_rural_land_use_target() -> void:
+    var profile: Dictionary = ProfilesClass.new().profile(ProfilesClass.TEMPERATE_ISLAND_REGION)
+    var wilderness_target: float = float(profile.get("island_wilderness_fraction", -1.0))
+    var block_size: int = int(profile.get("island_land_use_block_size", 0))
+    _check(is_equal_approx(wilderness_target, 0.10), "island targets ten percent true wilderness")
+    _check(block_size == 64, "rural land use uses coarse generation-time blocks")
+    if wilderness_target < 0.0 or block_size <= 0:
+        return
+
+    var wilderness: int = 0
+    var fields: int = 0
+    var pasture: int = 0
+    var samples: int = 0
+    for block_y: int in range(100):
+        for block_x: int in range(100):
+            var cell := Vector2i(block_x * block_size, block_y * block_size)
+            var use: StringName = IslandSurfaceGeneratorClass.land_use_kind(
+                FixtureClass.SEED,
+                cell,
+                block_size,
+                wilderness_target
+            )
+            samples += 1
+            if use == IslandSurfaceGeneratorClass.LAND_USE_WILDERNESS:
+                wilderness += 1
+            elif use == IslandSurfaceGeneratorClass.LAND_USE_FIELD:
+                fields += 1
+            elif use == IslandSurfaceGeneratorClass.LAND_USE_PASTURE:
+                pasture += 1
+    var wilderness_ratio: float = float(wilderness) / float(samples)
+    _check(wilderness_ratio >= 0.08 and wilderness_ratio <= 0.12, "deterministic countryside field stays near ten percent wilderness")
+    _check(fields > wilderness and pasture > wilderness, "managed fields and pasture dominate wilderness")
+    _check(wilderness + fields + pasture == samples, "every countryside block receives one real land-use class")
 
 func _test_all_area_sites(plan: GeneratedGlobalWorldPlan) -> void:
     var projector := ProjectorClass.new()
@@ -92,11 +128,11 @@ func _test_playable_spawn(plan: GeneratedGlobalWorldPlan) -> void:
 func _test_surface_partition(plan: GeneratedGlobalWorldPlan) -> void:
     var surface_catalog := IslandSurfaceCatalogClass.new(plan)
     var water_catalog := WatercourseCatalogClass.new(plan)
-    _check(surface_catalog.is_ready(), "island wilderness surface catalog is ready")
+    _check(surface_catalog.is_ready(), "island countryside surface catalog is ready")
     _check(water_catalog.is_ready(), "watercourse source catalog is ready")
     if not surface_catalog.is_ready() or not water_catalog.is_ready():
         return
-    _check(bool(surface_catalog.validate_source_bounds(plan).get("ok", false)), "wilderness surface sources validate around settlement sites")
+    _check(bool(surface_catalog.validate_source_bounds(plan).get("ok", false)), "countryside surface sources validate around settlement sites")
     _check(bool(water_catalog.validate_source_bounds(plan).get("ok", false)), "watercourse sources validate around settlement sites")
 
 func _smalltown_has_required_buildings(plan: GeneratedAreaPlan) -> bool:
