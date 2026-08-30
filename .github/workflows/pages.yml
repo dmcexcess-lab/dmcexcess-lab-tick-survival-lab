@@ -41,7 +41,7 @@ jobs:
           test -f SYSTEM_DESIGNS/21_TACTICAL_CAMERA_VIEW_CONTROL.md
           test -f SYSTEM_DESIGNS/22_LARGE_AREA_CRITIQUE_RUNTIME.md
           test -f SYSTEM_DESIGNS/33_POWER_WATER_UTILITIES.md
-          grep -q 'Ultima-style turn-based mini Zomboid' PROJECT_NORTH_STAR.md
+          grep -q 'Sprite-based zombie survival game' PROJECT_NORTH_STAR.md
           grep -q 'DESCRIBE -> APPROVE -> IMPLEMENT -> VERIFY' README_SOPS.md
           grep -q 'replaceability' README_SOPS.md
           test -f game/project.godot
@@ -57,6 +57,17 @@ jobs:
           grep -q 'run/main_scene="res://main.tscn"' game/project.godot
           ! test -d game/scripts/reboot
           ! find game/scripts -maxdepth 1 -type f -name '*.gd' | grep -q .
+
+          # Keep the active tree free of third-party game-title identity/comparison shorthand.
+          # Terms are reconstructed from hex so the forbidden literal strings do not exist in this repository.
+          for encoded in 5a6f6d626f6964 556c74696d61; do
+            escaped="$(printf '%s' "$encoded" | sed 's/../\\x&/g')"
+            term="$(printf '%b' "$escaped")"
+            if grep -RniF --exclude-dir=.git -- "$term" .; then
+              echo "Forbidden third-party game-title reference found in active repository tree."
+              exit 1
+            fi
+          done
 
       - name: Install Godot 4.7.1 and export templates
         shell: bash
