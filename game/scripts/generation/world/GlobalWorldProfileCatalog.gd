@@ -81,7 +81,6 @@ func _rural_profile() -> Dictionary:
         # intentionally absent. Rural private wells are selected later from real homes.
         "water_plant_shore_offset_cells": 48,
         "water_plant_internal_spacing_cells": 3,
-        "wastewater_treatment_anchor_offset": 64,
 
         "smalltown_distance_min": 520,
         "smalltown_distance_max": 620,
