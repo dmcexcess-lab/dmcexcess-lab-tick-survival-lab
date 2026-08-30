@@ -9,6 +9,7 @@ const LargeFarmhouseClass = preload("res://scripts/generation/buildings/archetyp
 const CompactLaundryHouseClass = preload("res://scripts/generation/buildings/archetypes/CompactLaundryHouseBuildingGenerator.gd")
 const GasStationClass = preload("res://scripts/generation/buildings/archetypes/GasStationBuildingGenerator.gd")
 const DinerClass = preload("res://scripts/generation/buildings/archetypes/RuralDinerBuildingGenerator.gd")
+const PostOfficeClass = preload("res://scripts/generation/buildings/archetypes/PostOfficeBuildingGenerator.gd")
 const Facing = preload("res://scripts/foundation/spatial/SpatialFacing.gd")
 
 var failures: Array[String] = []
@@ -35,9 +36,10 @@ func _test_protected_descriptors(generator: LocalBuildingGenerator) -> void:
         [CompactLaundryHouseClass.ARCHETYPE_ID, Vector2i(17, 13), Facing.Value.SOUTH, 1],
         [GasStationClass.ARCHETYPE_ID, Vector2i(19, 15), Facing.Value.SOUTH, 1],
         [DinerClass.ARCHETYPE_ID, Vector2i(17, 11), Facing.Value.SOUTH, 2],
+        [PostOfficeClass.ARCHETYPE_ID, Vector2i(21, 13), Facing.Value.SOUTH, 1],
     ]
-    _check(generator.supported_archetypes().size() == 24, "expanded registry exposes six protected references plus eighteen baseline profiles")
-    _check(generator.placement_descriptors().size() == 24, "expanded registry has a descriptor for every profile")
+    _check(generator.supported_archetypes().size() == 25, "expanded registry exposes seven protected references plus eighteen baseline profiles")
+    _check(generator.placement_descriptors().size() == 25, "expanded registry has a descriptor for every profile")
     for row: Array in expected:
         var archetype_id: StringName = row[0]
         var descriptor: BuildingArchetypePlacementDescriptor = generator.placement_descriptor(archetype_id)
