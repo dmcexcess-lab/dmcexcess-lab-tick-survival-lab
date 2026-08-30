@@ -565,6 +565,11 @@ func _is_local_road_surface(cell: Vector2i) -> bool:
                 return true
     return false
 
+static func _cell_before(a: Vector2i, b: Vector2i) -> bool:
+    if a.y != b.y:
+        return a.y < b.y
+    return a.x < b.x
+
 static func _rect_center(rect: Rect2i) -> Vector2i:
     return Vector2i(rect.position.x + int(rect.size.x / 2), rect.position.y + int(rect.size.y / 2))
 
