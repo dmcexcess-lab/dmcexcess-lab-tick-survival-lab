@@ -60,10 +60,11 @@ jobs:
 
           # Keep the active tree free of third-party game-title identity/comparison shorthand.
           # Terms are reconstructed from hex so the forbidden literal strings do not exist in this repository.
+          # Match whole words so ordinary words that merely contain the same letters do not fail the build.
           for encoded in 5a6f6d626f6964 556c74696d61; do
             escaped="$(printf '%s' "$encoded" | sed 's/../\\x&/g')"
             term="$(printf '%b' "$escaped")"
-            if grep -RniF --exclude-dir=.git -- "$term" .; then
+            if grep -RniwF --exclude-dir=.git -- "$term" .; then
               echo "Forbidden third-party game-title reference found in active repository tree."
               exit 1
             fi
