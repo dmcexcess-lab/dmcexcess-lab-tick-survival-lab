@@ -21,14 +21,14 @@ var failures: Array[String] = []
 func _initialize() -> void:
     var global_planner: GlobalWorldPlanner = GlobalPlannerClass.new()
     var global_plan: GeneratedGlobalWorldPlan = global_planner.generate(GlobalFixtureClass.request())
-    _check(global_plan != null and global_plan.is_generated(), "canonical System 00D v6 world generates before watercourse projection")
+    _check(global_plan != null and global_plan.is_generated(), "canonical System 00D v7 world generates before watercourse projection")
     if global_plan == null or not global_plan.is_generated():
         _finish()
         return
 
     var replay: GeneratedGlobalWorldPlan = global_planner.generate(GlobalFixtureClass.request())
-    _check(replay.is_generated() and replay.signature() == global_plan.signature(), "System 00D v6 signature remains exact under System 20D consumption")
-    _check(global_plan.profile_version == 6, "System 20D consumes System 00D profile v6 without changing it")
+    _check(replay.is_generated() and replay.signature() == global_plan.signature(), "System 00D v7 signature remains exact under System 20D consumption")
+    _check(global_plan.profile_version == 7, "System 20D consumes System 00D profile v7 without changing it")
 
     var projector: System20AreaRequestProjector = ProjectorClass.new()
     var generator: LocalAreaGenerator = GeneratorClass.new()
