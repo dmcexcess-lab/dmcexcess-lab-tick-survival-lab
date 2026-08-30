@@ -4,7 +4,7 @@ Status: **canonical cross-cutting performance doctrine**.
 
 > **The low-resolution 2D presentation and turn-based simulation are deliberate performance advantages. Spend that budget on simulation depth, persistence, world scale and responsiveness — not avoidable work.**
 
-Tick Survival Lab would not use Ultima-style 2D graphics and discrete player-driven time if those constraints were not also buying substantial computational headroom. Performance is therefore an architectural requirement, not a cleanup phase reserved for visible slowdowns.
+Tick Survival Lab uses low-resolution sprite-based 2D graphics and discrete player-driven time in part because those constraints buy substantial computational headroom. Performance is therefore an architectural requirement, not a cleanup phase reserved for visible slowdowns.
 
 The intended bargain is asymmetric: presentation stays deliberately cheap so the world can become richer without ordinary play becoming expensive.
 
