@@ -46,7 +46,7 @@ func profile(profile_id: StringName) -> Dictionary:
             "farmstead_count": 4,
             "local_residential_target": 3,
             "local_farmstead_target": 3,
-            "local_road_spurs": 2,
+            "local_road_spurs": 1,
             "local_spur_width": 3,
             "local_spur_branch_offset": 64,
             "local_spur_first_leg": 44,
