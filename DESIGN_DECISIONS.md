@@ -10,13 +10,13 @@ If a later discussion changes a decision, do not erase history. Add a newer entr
 
 ## 2026-08-16 — Game identity
 
-**Decision:** Use **“Ultima-style turn-based mini Zomboid”** as the primary design shorthand.
+**Decision:** Use **“Sprite-based zombie survival game”** as the primary design shorthand.
 
 **Meaning:**
 
-- Ultima-style: readable top-down tile-based world/exploration presentation;
+- sprite-based: readable top-down sprite world/exploration presentation;
 - turn-based: authoritative variable-duration tick/actions with automatic pause at player decision points;
-- mini Zomboid: interconnected persistent survival systems using deliberately simpler internal models.
+- survival simulation: interconnected persistent systems using deliberately simpler internal models where complexity does not improve consequences or mood.
 
 **Design principle:** **Mini means reduced complexity, not reduced consequence or mood.**
 
@@ -122,7 +122,7 @@ Higher-level base/community UI may summarize physical facts later, but should no
 
 ---
 
-## 2026-08-16 — Health follows the mini-Zomboid simplification rule
+## 2026-08-16 — Health follows the compact simulation rule
 
 **Decision:** Health should preserve meaningful injury/treatment consequences without simulating unnecessary physiological detail. Current conceptual model centers on injury type/body region/severity and treatment/stabilization/healing rather than literal blood-flow simulation.
 
@@ -164,7 +164,7 @@ Generation is a producer of initial WHAT using WHERE. Construction/destruction/g
 - explicit HORIZONTAL/VERTICAL structure axis for walls/openings;
 - layered spatial channel vocabulary without storing occupants in WHERE.
 
-**Why:** This is the simplest model that preserves the intended Ultima-like readability, deterministic turn-based movement, rotated clutter/vehicle footprints, recovered-art compatibility, doorway geometry, construction, LOS and future persistent-world use. Edge-wall/sub-cell models add complexity without a currently identified gameplay or mood benefit.
+**Why:** This is the simplest model that preserves the intended top-down sprite readability, deterministic turn-based movement, rotated clutter/vehicle footprints, recovered-art compatibility, doorway geometry, construction, LOS and future persistent-world use. Edge-wall/sub-cell models add complexity without a currently identified gameplay or mood benefit.
 
 **Supersedes/resolves:** the earlier unresolved wall-cell-vs-edge-wall and exact cell-scale questions.
 
@@ -248,7 +248,7 @@ Corpse state should preserve a durable relationship to the deceased identity and
 
 This is **not** a detailed microbiology simulation and should not become a flat “corpse nearby = random disease roll.” The design target is meaningful cleanup/disposal decisions: moving bodies, cleaning, burial/burning/disposal and avoiding sleeping/living beside accumulating decay.
 
-**Why:** Persistent corpses make death physically consequential, create emergent base-cleanup problems, and fit the mini-Zomboid rule by preserving the survival decision without unnecessary biological complexity.
+**Why:** Persistent corpses make death physically consequential, create emergent base-cleanup problems, and fit the compact simulation rule by preserving the survival decision without unnecessary biological complexity.
 
 **Affected systems:** death/combat, persistent world state, corpse state, WHEN, health/sickness, collision, inventory/search, rendering, base safety, streaming/coarse simulation, cleaning/disposal interactions.
 
@@ -498,7 +498,7 @@ Phase 6 also closes broad ordinary-object interactions. A powered TV, for exampl
 8. Actor/NPC AI + all combat + causal outbreak;
 9. Final graphics/UI overhaul.
 
-Roadmap Phase 7 includes cars, trucks, motorcycles, bicycles and skateboards; cars/trucks may eventually receive physical Mad-Max-style modifications.
+Roadmap Phase 7 includes cars, trucks, motorcycles, bicycles and skateboards; cars/trucks may eventually receive physical improvised armor and utility modifications.
 
 Roadmap Phase 8 includes infected, survivor, follower and raider AI; player/NPC combat; mood/context idle follower conversations; and the population/coarse behavior needed for the causal outbreak/00E direction. This is one roadmap phase, **not one monolithic code system**.
 
@@ -526,6 +526,6 @@ Save/load, schema policy, performance profiling and persistence-backed streaming
 
 **Supersedes:** the vocabulary/state-shape portion of the earlier same-day “Physical-survival target includes stamina” entry. That earlier entry remains historical context; its decisions that extreme unmet needs may become lethal and that Moodlets become consequential remain in force.
 
-**Why:** The intended gameplay does not require two state variables describing short-horizon endurance. Reusing and expanding the existing fatigue domain preserves the compact mini-Zomboid model while keeping sleep/exhaustion meaningfully distinct.
+**Why:** The intended gameplay does not require two state variables describing short-horizon endurance. Reusing and expanding the existing fatigue domain preserves the compact survival model while keeping sleep/exhaustion meaningfully distinct.
 
 **Affected systems:** 13B Needs/Rest, 17A movement exertion, Roadmap Phase 4, action/movement capability providers, HUD/inspectors and future save orchestration.
