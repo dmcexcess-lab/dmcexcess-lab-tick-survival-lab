@@ -41,6 +41,7 @@ func _profile() -> Dictionary:
             {"role": "door.interior.sorting", "cell": Vector2i(6, 6), "semantic": &"door.office", "kind": &"door", "facing": Facing.Value.NORTH},
             {"role": "door.interior.office", "cell": Vector2i(14, 6), "semantic": &"door.office", "kind": &"door", "facing": Facing.Value.NORTH},
             {"role": "door.interior.storage", "cell": Vector2i(17, 4), "semantic": &"door.office", "kind": &"door", "facing": Facing.Value.SOUTH},
+            {"role": "door.interior.bathroom", "cell": Vector2i(18, 6), "semantic": &"door.office", "kind": &"door", "facing": Facing.Value.NORTH},
             {"role": "door.exterior.service", "cell": Vector2i(6, 0), "semantic": &"door.office", "kind": &"door", "facing": Facing.Value.NORTH},
         ],
         "props": [
