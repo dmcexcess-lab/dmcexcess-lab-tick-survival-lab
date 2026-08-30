@@ -94,7 +94,9 @@ Never terminate a repair prompt with preparation-only work while required read/w
 
 Primary shorthand:
 
-> **Ultima-style turn-based mini Zomboid.**
+> **Sprite-based zombie survival game.**
+
+Do not use third-party game titles or franchise comparisons as canonical project identity, architecture shorthand, or design-rule names. Describe Tick Survival Lab in its own terms.
 
 Core rule:
 
