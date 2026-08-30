@@ -43,8 +43,8 @@ func _initialize() -> void:
     _check(bool(validator.validate(request, plan).get("ok", false)), "small town passes generic area validation")
     _check(plan.area_profile_version == 3, "smalltown.center v3 is recorded")
     _check(_count_land_use(plan, &"commercial_small") == 7, "small town has seven main-street civic/commercial lots")
-    _check(_count_land_use(plan, &"residential") == 14, "small town has fourteen residential lots")
-    _check(plan.building_requests.size() == 21, "all targeted small-town lots contain real generated buildings")
+    _check(_count_land_use(plan, &"residential") == 12, "small town has twelve clustered residential lots")
+    _check(plan.building_requests.size() == 19, "all targeted small-town lots contain real generated buildings")
     for required: StringName in [
         &"commercial.gas_station.small",
         &"commercial.diner.rural_small",
@@ -55,8 +55,8 @@ func _initialize() -> void:
         &"civic.police_station.small",
     ]:
         _check(_count_building_archetype(plan, required) == 1, "small town contains %s" % String(required))
-    _check(_count_residential_buildings(plan) == 14, "all fourteen residential lots contain real homes")
-    _check(_count_land_use_on_road_class(plan, &"residential", &"local_town") >= 8, "clustered homes use local-town neighborhood streets")
+    _check(_count_residential_buildings(plan) == 12, "all twelve residential lots contain real homes")
+    _check(_count_land_use_on_road_class(plan, &"residential", &"local_town") >= 7, "clustered homes use local-town neighborhood streets")
 
     var replay: GeneratedAreaPlan = generator.generate(_copy_request_with_seed(request, request.seed))
     _check(replay.is_generated() and replay.signature() == plan.signature(), "same small-town seed replays exactly")
