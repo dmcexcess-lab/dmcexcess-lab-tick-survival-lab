@@ -55,6 +55,8 @@ func project(plan: GeneratedGlobalWorldPlan, area_id: String, bounds: Rect2i) ->
         "shore_width": int(profile.get("island_shore_width", 12)),
         "coast_wobble": int(profile.get("island_coast_wobble", 18)),
         "coast_scale": int(profile.get("island_coast_scale", 96)),
+        "wilderness_fraction": float(profile.get("island_wilderness_fraction", 0.10)),
+        "land_use_block_size": int(profile.get("island_land_use_block_size", 64)),
     }
     var request := AreaRequestClass.new(
         clean_id,
