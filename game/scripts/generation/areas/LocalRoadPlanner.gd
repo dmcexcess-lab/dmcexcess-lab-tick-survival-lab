@@ -589,11 +589,15 @@ func _build_local_rural_spur(
 ) -> Dictionary:
     var primary: Dictionary = {}
     for road: Dictionary in roads:
-        if StringName(road.get("road_class", &"")) == &"primary" and StringName(road.get("axis", &"")) == &"horizontal":
+        if StringName(road.get("road_class", &"")) != &"primary":
+            continue
+        var candidate_axis: StringName = StringName(road.get("axis", &""))
+        if candidate_axis == &"horizontal" or candidate_axis == &"vertical":
             primary = road
             break
     if primary.is_empty():
         return {}
+    var primary_axis: StringName = StringName(primary.get("axis", &""))
 
     var width: int = int(profile.get("local_spur_width", 3))
     if width <= 0 or width % 2 == 0:
@@ -605,7 +609,7 @@ func _build_local_rural_spur(
     )
     var layout_flip: int = -1 if Seed.choose_index(request.seed, "local_roads:layout_flip", 2) == 0 else 1
     var branch_side: int = (-1 if ordinal % 2 == 0 else 1) * layout_flip
-    var vertical_side: int = -1 if ordinal % 2 == 0 else 1
+    var perpendicular_side: int = -1 if ordinal % 2 == 0 else 1
     var branch_offset: int = int(profile.get("local_spur_branch_offset", 64))
     branch_offset += Seed.choose_index(request.seed, "local_spur:branch_jitter:%d" % ordinal, 7) - 3
 
@@ -620,29 +624,37 @@ func _build_local_rural_spur(
 
     var primary_start: Vector2i = primary.get("start", Vector2i.ZERO)
     var primary_end: Vector2i = primary.get("end", Vector2i.ZERO)
-    var min_primary_x: int = mini(primary_start.x, primary_end.x) + width + 2
-    var max_primary_x: int = maxi(primary_start.x, primary_end.x) - width - 2
-    var branch_x: int = clampi(center.x + branch_side * branch_offset, min_primary_x, max_primary_x)
-    var branch_y: int = primary_start.y
+    var primary_min: int = mini(_axis_coordinate(primary_start, primary_axis), _axis_coordinate(primary_end, primary_axis)) + width + 2
+    var primary_max: int = maxi(_axis_coordinate(primary_start, primary_axis), _axis_coordinate(primary_end, primary_axis)) - width - 2
+    if primary_max < primary_min:
+        return {}
+    var branch_axis: int = clampi(_axis_coordinate(center, primary_axis) + branch_side * branch_offset, primary_min, primary_max)
+    var start := Vector2i(branch_axis, primary_start.y) if primary_axis == &"horizontal" else Vector2i(primary_start.x, branch_axis)
 
-    var vertical_needed: int = first_leg + second_leg
     var margin: int = width + 3
-    var north_space: int = branch_y - (request.bounds.position.y + margin)
-    var south_limit: int = request.bounds.position.y + request.bounds.size.y - 1 - margin
-    var south_space: int = south_limit - branch_y
-    if vertical_side < 0 and north_space < vertical_needed:
-        vertical_side = 1
-    elif vertical_side > 0 and south_space < vertical_needed:
-        vertical_side = -1
-    if (vertical_side < 0 and north_space < vertical_needed) or (vertical_side > 0 and south_space < vertical_needed):
+    var perpendicular_needed: int = first_leg + second_leg
+    var negative_space: int = 0
+    var positive_space: int = 0
+    if primary_axis == &"horizontal":
+        negative_space = start.y - (request.bounds.position.y + margin)
+        positive_space = request.bounds.position.y + request.bounds.size.y - 1 - margin - start.y
+    else:
+        negative_space = start.x - (request.bounds.position.x + margin)
+        positive_space = request.bounds.position.x + request.bounds.size.x - 1 - margin - start.x
+    if perpendicular_side < 0 and negative_space < perpendicular_needed:
+        perpendicular_side = 1
+    elif perpendicular_side > 0 and positive_space < perpendicular_needed:
+        perpendicular_side = -1
+    if (perpendicular_side < 0 and negative_space < perpendicular_needed) or (perpendicular_side > 0 and positive_space < perpendicular_needed):
         return {}
 
-    var start := Vector2i(branch_x, branch_y)
-    var first := start + Vector2i(0, vertical_side * first_leg)
+    var primary_vector := Vector2i(1, 0) if primary_axis == &"horizontal" else Vector2i(0, 1)
+    var perpendicular_vector := Vector2i(0, 1) if primary_axis == &"horizontal" else Vector2i(1, 0)
+    var first := start + perpendicular_vector * (perpendicular_side * first_leg)
     var lateral_direction: int = -branch_side
-    var second := first + Vector2i(lateral_direction * lateral_leg, 0)
-    var third := second + Vector2i(0, vertical_side * second_leg)
-    var finish := third + Vector2i(branch_side * tail_leg, 0)
+    var second := first + primary_vector * (lateral_direction * lateral_leg)
+    var third := second + perpendicular_vector * (perpendicular_side * second_leg)
+    var finish := third + primary_vector * (branch_side * tail_leg)
     var waypoints: Array[Vector2i] = [start, first, second, third, finish]
     for point: Vector2i in waypoints:
         if not request.bounds.has_point(point):
