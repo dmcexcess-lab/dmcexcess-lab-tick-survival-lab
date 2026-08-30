@@ -10,6 +10,7 @@ const LargeFarmhouseClass = preload("res://scripts/generation/buildings/archetyp
 const CompactLaundryHouseClass = preload("res://scripts/generation/buildings/archetypes/CompactLaundryHouseBuildingGenerator.gd")
 const GasStationClass = preload("res://scripts/generation/buildings/archetypes/GasStationBuildingGenerator.gd")
 const RuralDinerClass = preload("res://scripts/generation/buildings/archetypes/RuralDinerBuildingGenerator.gd")
+const PostOfficeClass = preload("res://scripts/generation/buildings/archetypes/PostOfficeBuildingGenerator.gd")
 const BaselineProfilesClass = preload("res://scripts/generation/buildings/profiles/OneStoryBaselineProfileCatalog.gd")
 const OneStoryGeneratorClass = preload("res://scripts/generation/buildings/grammar/OneStoryProfileBuildingGenerator.gd")
 const Phase1EContentDresserClass = preload("res://scripts/generation/buildings/content/Phase1EOneStoryContentDresser.gd")
@@ -27,6 +28,7 @@ func _init() -> void:
     _generators[CompactLaundryHouseClass.ARCHETYPE_ID] = CompactLaundryHouseClass.new()
     _generators[GasStationClass.ARCHETYPE_ID] = GasStationClass.new()
     _generators[RuralDinerClass.ARCHETYPE_ID] = RuralDinerClass.new()
+    _generators[PostOfficeClass.ARCHETYPE_ID] = PostOfficeClass.new()
 
     var baseline_catalog := BaselineProfilesClass.new()
     for profile_id: StringName in baseline_catalog.profile_ids():
