@@ -2,25 +2,77 @@
 
 Status: **canonical development process**.
 
-## 1. Mandatory refresh
+## 1. Continuation-first context rule
 
-At the start of every new prompt that requests repository/code changes, read current:
+`README_CONTEXT.md` is the authoritative handoff file for ongoing repository work.
+
+### Continuation prompts
+
+If the user is continuing an active/recent coding task, **do not perform a broad repository refresh**. Read `README_CONTEXT.md` once, fetch current `main` once, and continue from the recorded checkpoint.
+
+If `README_CONTEXT.md` records unfinished work, the next operation listed there is the starting point. Do not rediscover architecture, reread the North Stars, retrace source ownership, repeat searches, or reconstruct already-established history just to regain confidence.
+
+Only perform a targeted additional read when one of these is true:
+
+- a concrete compiler/import error names the file or symbol;
+- a concrete failing test names the implicated behavior;
+- current `main` differs unexpectedly from the context checkpoint;
+- the recorded context is internally contradictory in a way that blocks the edit;
+- an exact symbol/API needed for the next edit was never established.
+
+When one of those exceptions applies, inspect only the smallest implicated source/test/workflow and return immediately to execution.
+
+### New work that is not a continuation
+
+A broader canonical refresh is allowed only when starting genuinely new work with no usable current handoff, or when the requested change explicitly crosses into a system whose current contract is not represented in `README_CONTEXT.md`.
+
+When such a refresh is actually required, read only the relevant subset of:
 
 1. `PROJECT_NORTH_STAR.md`;
 2. `PERFORMANCE_NORTH_STAR.md`;
-3. `DESIGN_DECISIONS.md` when the change touches cross-system direction;
+3. `DESIGN_DECISIONS.md` if cross-system direction is touched;
 4. `README_CONTEXT.md`;
-5. `ROADMAP.md` when priority/order/scope may matter;
+5. `ROADMAP.md` if order/scope matters;
 6. this SOP;
 7. `SYSTEM_DESIGNS/README.md`;
-8. the active APPROVED/IMPLEMENTED system design(s);
-9. current `main` SHA and relevant source/history.
+8. the active owning system design(s);
+9. current `main` and directly relevant source/history.
 
-Refresh once per coherent prompt, not before every edit.
+Never repeat that refresh within the same coherent task.
 
-Current repository beats memory. Newest explicit user direction beats older repository design, but material direction changes must be written back into the canonical docs in the same coherent task.
+Newest explicit user direction beats older repository design. Material direction changes must be written back into canonical docs in the same coherent task.
 
-## 2. Game identity / anti-drift check
+## 2. Mandatory prompt-close context update
+
+**Every coding/repository-change prompt must update `README_CONTEXT.md` before the final user-facing response. This is mandatory even when the requested implementation is incomplete.**
+
+The prompt-close update must record, at minimum:
+
+- current repository/head checkpoint;
+- executable head if different from a documentation-only head;
+- what was completed in this prompt;
+- what remains unfinished;
+- exact next operation for the next continuation;
+- focused test/CI/Pages status known at close;
+- new user decisions or superseded behavior;
+- protected neighboring behavior that must not regress;
+- any concrete blocker, if one truly exists.
+
+If the prompt is interrupted, tooling fails, usage ends, or full closure is otherwise impossible, **update `README_CONTEXT.md` first with the exact partial checkpoint before ending the response whenever write tools remain available**.
+
+Do not leave the next session dependent on chat reconstruction, memory, or archaeology when the repository can carry the handoff itself.
+
+## 3. Do not close before the requested coding task is complete
+
+Progress updates are not completion.
+
+Do not voluntarily end an active code-change prompt because several minutes, several tool calls, or a convenient intermediate milestone have elapsed. Continue through the requested implementation, focused validation, commit/push, exact-head verification, CI/Pages verification when applicable, documentation/context close, and requested links/reporting.
+
+If a genuine hard tool/session limitation prevents completion, leave the maximum tangible work completed and write the exact remaining operations into `README_CONTEXT.md` before closing.
+
+Never terminate a repair prompt with preparation-only work while required read/write tools remain available.
+
+## 4. Game identity / anti-drift check
 
 Primary shorthand:
 
@@ -34,13 +86,11 @@ Performance rule:
 
 > **The low-resolution 2D presentation and turn-based simulation are deliberate performance advantages. Spend that budget on simulation depth, persistence, world scale and responsiveness — not avoidable work.**
 
-Before solving a local problem, ask whether the proposed change still serves the persistent open-world, discrete-time survival game described by `PROJECT_NORTH_STAR.md` and the performance doctrine in `PERFORMANCE_NORTH_STAR.md`.
+Do not optimize around superseded raid/extraction assumptions.
 
-Do not optimize a local implementation around superseded raid/extraction assumptions.
+`ROADMAP.md` controls major-phase order but does not override the North Star, performance doctrine, or subsystem ownership rules.
 
-`ROADMAP.md` controls current major-phase order, but does not override the North Star, performance doctrine or subsystem ownership rules.
-
-## 3. Design lifecycle
+## 5. Design lifecycle
 
 Major new systems and meaningful rewrites use:
 
@@ -50,42 +100,29 @@ Statuses:
 
 - `DRAFT` — discussion only;
 - `APPROVED` — implementation authorized;
-- `IMPLEMENTED` — approved behavior exists in canonical source and its required tests pass;
+- `IMPLEMENTED` — approved behavior exists in canonical source and required tests pass;
 - `SUPERSEDED` — historical only;
 - `RECOVERY SOURCE` — historical behavior/art worth mining, not current architecture.
 
-A new major system requires an approved design before code. A profile/content addition inside an already-established system does **not** automatically require a new peer system document; use the owning system design unless the addition changes a stable system contract or genuinely introduces an independently changeable domain.
+A content/profile addition inside an established system does not automatically require a new peer system document.
 
-A roadmap phase is not blanket authorization to implement everything named in that phase at once.
+## 6. Scope gate
 
-## 4. Scope gate
+One implementation prompt should normally target one major subsystem or one tightly coupled refactor.
 
-One implementation prompt should normally target one major subsystem or one tightly coupled refactor of an existing subsystem.
-
-If a request requires several unrelated domains, identify the dependency order and implement only the first bounded piece unless the user explicitly approves a coherent cross-cutting refactor.
+If several unrelated domains are requested, establish dependency order. If the user explicitly requests a coherent cross-cutting refactor, implement the coherent task rather than arbitrarily stopping after the first piece.
 
 Small wiring edits across public seams are allowed. Neighbor rewrites are not.
 
-If implementation unexpectedly crosses a protected boundary, stop and reassess rather than patching outward.
-
-## 5. Modularity without fragmentation
+## 7. Modularity without fragmentation
 
 The goal is replaceability, **not file count**.
 
-A separate owner/file is justified when a responsibility has at least one of these properties:
+A separate owner/file is justified by independent state/lifecycle, a stable reusable public contract, a materially independent reason to change, or enough cohesive complexity to improve clarity/testing.
 
-- independent state or lifecycle;
-- a stable reusable public contract;
-- a materially independent reason to change;
-- enough cohesive implementation complexity that keeping it private inside its owner would make that owner harder to understand or test.
+Do not create wrappers/files merely to satisfy ceremony. Do not merge genuinely independent domains merely to reduce file count.
 
-A candidate, profile, revision, helper function, implementation slice, or test fixture is **not automatically a system**.
-
-Do not create a file merely because a rule says everything needs a file. Conversely, do not merge real domains merely to make the repository look smaller.
-
-Prefer a cohesive module with private helpers over chains of one-method wrappers. Prefer a small provider/adapter seam over adding another special-case field/branch every time a new source type appears.
-
-## 6. Core ownership rules
+## 8. Core ownership rules
 
 - Main/root is composition and wiring only.
 - WHERE owns spatial language/geometry.
@@ -98,27 +135,25 @@ Prefer a cohesive module with private helpers over chains of one-method wrappers
 - Rendering owns presentation, never physics.
 - Input emits intent; simulation owns consequences.
 
-Technical streaming/chunk boundaries never become logical world geography or persistent object identity.
+Technical streaming/chunk boundaries never become logical geography or persistent identity.
 
-Generation creates virgin truth once. After successful materialization, WHAT and typed mechanic stores own current reality.
+Generation creates virgin truth once. After materialization, WHAT and typed mechanic stores own current reality.
 
-## 7. Stable contract rule
+## 9. Stable contract rule
 
-Prefer composition, narrow public methods, immutable/validated records where identity matters, and dependency injection over deep inheritance or reach-through into another subsystem's internal dictionaries.
+Prefer composition, narrow public methods, validated records where identity matters, and dependency injection over reach-through into another subsystem's internal state.
 
-Do not introduce a typed record/class for every temporary planning dictionary. Strong typing should buy persistent identity, a cross-system boundary, meaningful validation, or reuse—not ceremony.
+When a public contract changes, state the change before editing dependents and migrate/prove consumers in the same approved change.
 
-When a public contract changes, state the change before editing dependent modules and prove existing consumers still behave correctly or intentionally migrate them in the same approved change.
-
-## 8. No fake completion
+## 10. No fake completion
 
 Do not add placeholders and present them as finished systems.
 
 Do not add fake AI, fake persistence, fake outbreak results, fake utility hardware, fake terrain, fake physics, fake power, fake sound sources, or presentation tricks that conceal missing world truth.
 
-A deliberate DEV fixture/tool is allowed when it is clearly labeled, independently owned where necessary, and not used as a silent substitute for canonical gameplay.
+Clearly labeled DEV fixtures/tools are allowed only when they are not silent substitutes for canonical gameplay.
 
-## 9. Pre-implementation declaration
+## 11. Pre-implementation declaration
 
 Before implementing an approved code change, state:
 
@@ -127,59 +162,51 @@ Before implementing an approved code change, state:
 - public contract impact;
 - future seam being preserved.
 
-Then inspect current source and current blob SHAs for files being replaced.
+For a continuation, use the already-recorded declaration/checkpoint in `README_CONTEXT.md` unless the scope materially changed. Do not repeat source archaeology solely to restate it.
 
-## 10. Testing / verification
+## 12. Testing / verification
 
 Simulation/generation systems should be testable without presentation whenever practical.
 
-Keep focused subsystem smoke/contract tests. Adding a new profile to an existing system should normally extend the owning domain workflow/test suite rather than create a new permanent CI workflow solely because the profile had a candidate number.
-
-### Executable changes
-
-For changes to code, assets used at runtime, Godot configuration, or CI/workflow behavior:
+For executable changes:
 
 - run the owning subsystem contract;
 - run required protected integration regressions;
-- do not claim success until the exact final code SHA is validated.
+- do not claim success until the exact final executable SHA is validated.
 
-### Documentation-only closure
-
-A later documentation-only status/changelog/roadmap correction does **not** require rerunning every expensive Godot contract merely because the commit SHA changed. Instead:
+For later documentation-only corrections:
 
 - verify the diff is documentation-only;
-- cite the already-green implementation SHA as executable evidence;
-- run lightweight link/status/consistency checks as appropriate.
+- cite the already-green executable SHA;
+- use lightweight consistency/status checks rather than rerunning every expensive Godot contract.
 
-If a documentation commit changes executable/config/workflow files, it is not documentation-only and full exact-head validation applies.
+Generated-world layout/behavior still requires human play acceptance even when CI is green.
 
-## 11. Repository workflow
+## 13. Repository workflow
 
-Direct `main` is normal unless the user requests PR/branch workflow or a destructive recovery operation genuinely benefits from isolation.
+Direct `main` is normal unless the user requests a PR/branch workflow or destructive recovery warrants isolation.
 
-Do not accumulate temporary compatibility adapters, patch workflows, or permanent work branches merely to satisfy tooling convenience.
+Do not accumulate temporary compatibility adapters, diagnostic scaffolds, work branches, or duplicate process documents merely for tooling convenience.
 
-Current canonical history is Git itself. Historical implementations do not need to remain in the active source tree solely for archaeology when their recovery commit/blob is documented.
+Git is canonical history. Historical source may be removed from the active tree when its recovery commit/blob remains documented.
 
-## 12. Documentation discipline
+## 14. Documentation discipline
 
 Active canonical docs answer different questions:
 
 - `PROJECT_NORTH_STAR.md` — what game/experience are we building?
 - `PERFORMANCE_NORTH_STAR.md` — what computational bargain must every system preserve?
-- `DESIGN_DECISIONS.md` — what cross-system choices were settled and why?
-- `ROADMAP.md` — what major gameplay phase comes next and in what order?
-- `README_CONTEXT.md` — where are we now and what is active/next?
+- `DESIGN_DECISIONS.md` — settled cross-system choices;
+- `ROADMAP.md` — major gameplay phase order;
+- `README_CONTEXT.md` — **current exact handoff, active work, unfinished work, next operation**;
 - `SYSTEM_DESIGNS/README.md` — status/routing ledger;
-- `SYSTEM_DESIGNS/<system>.md` — canonical current contract for that system;
+- `SYSTEM_DESIGNS/<system>.md` — canonical current system contract;
 - `README_SOPS.md` — how repository work is performed;
 - `CHANGELOG.md` + archives — implementation history.
 
-Completed candidate/slice discussion files should be folded into their owning canonical system document when they no longer represent independently useful active contracts. Git history preserves the detailed drafting path.
+Do not keep two active documents that both claim authority over the same process. Continuation-process rules belong here in `README_SOPS.md`; current continuation state belongs in `README_CONTEXT.md`.
 
-Do not keep two active documents that both claim authority over the same process, roadmap, or system state.
-
-## 13. Recovery / historical code
+## 15. Recovery / historical code
 
 Golden mature visual/system archaeology commit:
 
@@ -189,76 +216,66 @@ Golden `TacticalTiles.gd` blob:
 
 `3d8a0a70ac983408bb48f58fc659dfb07e216ed3`
 
-Recover historical behavior by inspecting the real commit/assets. Do not approximate it from memory.
+Recover historical behavior only when the task actually requires archaeology. A normal continuation must not reopen historical code simply to regain confidence.
 
-Frozen/deprecated source may be removed from the active tree once:
-
-1. canonical runtime no longer imports it;
-2. unique still-needed behavior has been recovered or explicitly deferred;
-3. the recovery commit/blob remains documented.
-
-## 14. Main/root rule
+## 16. Main/root rule
 
 Composition roots may construct services, inject dependencies, connect high-level signals, select initial controllers/modes, and perform minimal lifecycle bookkeeping.
 
 They must not own rendering rules, gameplay input interpretation, world generation, collision, movement, doors, inventory, simulation timing, persistence, camera math, UI geometry, art mapping, weather/perception/sound, utilities, AI, or subsystem validation.
 
-A composition root can be long because the application has many services. Do not split it into fake bootstrap managers merely to reduce line count.
+## 17. Clarification rule
 
-## 15. Clarification rule
+Inspect first only when inspection is genuinely needed. Ask a targeted question only when unresolved ambiguity could materially change architecture, destructive scope, stable contracts, persistence, timing, historical target, mobile interaction, or player-visible semantics.
 
-Inspect first. Ask a targeted question only when unresolved ambiguity could materially change architecture, destructive scope, stable contracts, persistence, timing, historical target, mobile interaction, or player-visible semantics.
+Do not ask about ordinary typos when intent is clear.
 
-Do not ask about ordinary typos when intent is clear. When explicit numbering and surrounding content resolve an omitted label cleanly, preserve the user's intended order and record the normalization rather than creating unnecessary friction.
+## 18. Mobile/browser requirement
 
-## 16. Mobile/browser requirement
+Phone/Safari is first-class. Input/lifecycle systems must consider touch/mouse de-duplication, keyboard availability, focus loss, and the hard real-life pause requirement where relevant.
 
-Phone/Safari is first-class. Input/lifecycle systems must consider touch/mouse de-duplication, keyboard availability, focus loss, and the North Star's hard real-life pause requirement where relevant.
+## 19. Performance-first architecture gate
 
-## 17. Performance-first architecture gate
+For every new system or meaningful rewrite, explicitly consider recurring/asymptotic cost:
 
-Performance is evaluated **before** an implementation becomes expensive, not only after a playtest exposes a stall.
+- per render frame;
+- per simulation tick/action;
+- per active entity;
+- per streamed-region materialization/activation;
+- whole-world scans;
+- revision caching/batching/coalescing opportunities;
+- analytic/coarse derivation opportunities;
+- GPU presentation opportunities;
+- accidental per-entity Node/timer/process/scheduled-event creation.
 
-For every new system or meaningful rewrite, inspect its asymptotic and recurring cost explicitly:
+Prefer bounded work whose cost follows the smallest relevant active set. A turn-based system must not wake merely because a render frame occurred.
 
-- What work happens per render frame?
-- What work happens per simulation tick/action?
-- What work happens per active entity?
-- What work happens when a streamed region materializes or activates?
-- Does any local query scan the whole world or a much larger set than necessary?
-- Can the same truth be derived analytically, cached behind a revision, batched, coalesced, computed at a coarser distant resolution, or updated only on relevant events?
-- Is presentation doing CPU work that belongs naturally on the GPU?
-- Is one runtime Node/timer/process/scheduled event being created per persistent entity without a gameplay reason?
+Performance work must remain honest: representation/scheduling may change, but causal world truth and meaningful consequences may not be silently removed.
 
-Prefer bounded work whose cost follows the smallest relevant active set. A turn-based system must not wake merely because a render frame occurred. A low-resolution presentation must not become expensive through unnecessary draw-call, transform, allocation, polling or signal overhead.
+## 20. Anti-thrashing execution guardrail
 
-Do not accept an avoidably expensive design on the basis that current desktop hardware handles it. Preserve computational headroom for later population, outbreak, AI, utilities, vehicles, persistence and world-scale simulation.
+Once the necessary context for a coherent prompt is known, **execute the task**. Preparation is not progress and must not become a loop.
 
-Performance work must remain honest: optimization may change representation, scheduling, caching, resolution or presentation technique, but it must not silently remove causal world truth or meaningful consequences.
+Default repair/continuation sequence:
 
-## 18. Anti-thrashing execution guardrail
-
-Once the mandatory refresh for a coherent prompt is complete, **execute the task**. Preparation is not progress and must not become a loop.
-
-For repository repair/debug prompts, use this default sequence unless new evidence makes a step irrelevant:
-
-1. fetch current `main` once;
-2. inspect the current failing evidence once;
-3. inspect only the source/test/workflow directly implicated by that evidence;
-4. make the smallest principled edit;
-5. commit/push it;
-6. verify the exact resulting head and required checks;
-7. report the result and required links.
+1. read `README_CONTEXT.md` once;
+2. fetch current `main` once;
+3. if the head/checkpoint is consistent, continue directly from the recorded next operation;
+4. inspect only concrete failing evidence or one truly unknown exact API needed for the edit;
+5. make the principled edit;
+6. commit/push;
+7. verify the exact executable head and required checks;
+8. update canonical docs as needed;
+9. **update `README_CONTEXT.md` as the final repository write for the prompt whenever practical**;
+10. report results and required links.
 
 Operational rules:
 
-- Do **not** reread the same SOPs, design docs, source files, workflow logs, or tool schemas repeatedly within the same coherent task unless a new commit, conflicting result, or tool error makes the previous read stale.
-- Do **not** rediscover a tool schema after that function is already available and understood in the current task.
-- Do **not** substitute repeated status updates, plans, summaries, or diagnostic restatements for an available write/fix operation.
-- When the user has authorized a repair and the evidence identifies the failing contract, prefer an actual bounded patch over another round of broad archaeology.
-- If a tool call fails, report the concrete error and take the shortest available alternate route. Never describe a generic “tool lockout,” “session ending,” or similar blocker without direct evidence that the required operation is actually unavailable.
-- Protect the user's usage budget: avoid duplicate reads, redundant searches, speculative branches, and unnecessary polling. Verification should target the exact pushed head and required workflows, not repeatedly re-prove already-settled context.
-- Never terminate a repair prompt with preparation-only work when the necessary read/write tools remain available. If full closure is impossible, leave behind the maximum tangible completed work and identify the exact blocker from tool evidence.
-- New explicit user direction interrupts and supersedes the current execution plan immediately where it does not conflict with repository integrity or safety.
-
-This section exists specifically to prevent analysis/tool-discovery loops from consuming time or usage without advancing the repository.
+- Do **not** reread the same SOPs, designs, source files, workflows, logs, or tool schemas repeatedly within one coherent task.
+- Do **not** perform broad searches for facts already recorded in `README_CONTEXT.md` or the current conversation handoff.
+- Do **not** rediscover tool schemas once the required function is already available and understood.
+- Do **not** substitute status updates, plans, summaries, or diagnostic restatements for an available write/fix operation.
+- A failing test/compile error permits a targeted implicated read; it does not reopen general archaeology.
+- Protect the user's usage/time budget: no speculative branches, duplicate reads, redundant searches, or unnecessary polling.
+- New explicit user direction supersedes the current execution plan immediately where repository integrity/safety permits.
+- Before final response on every coding prompt, confirm that `README_CONTEXT.md` was updated. If it was not, update it before replying.
