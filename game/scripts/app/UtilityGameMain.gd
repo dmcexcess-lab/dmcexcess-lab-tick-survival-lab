@@ -1,9 +1,10 @@
 extends CraftingGameMain
 class_name UtilityGameMain
 
-const UtilityStateClass = preload("res://scripts/simulation/utilities/UtilityRuntimeState.gd")
+const PowerTopologyPlannerClass = preload("res://scripts/simulation/utilities/UtilityLocalPowerTopologyPlanner.gd")
+const UtilityStateClass = preload("res://scripts/simulation/utilities/NeighborhoodUtilityRuntimeState.gd")
 const UtilityLightingClass = preload("res://scripts/simulation/utilities/UtilityPoweredLightingSourceAdapter.gd")
-const PowerInfrastructureClass = preload("res://scripts/simulation/utilities/UtilityPowerInfrastructureMaterializer.gd")
+const PowerInfrastructureClass = preload("res://scripts/simulation/utilities/NeighborhoodPowerInfrastructureMaterializer.gd")
 const PowerNetworkRuntimeClass = preload("res://scripts/simulation/utilities/UtilityPowerNetworkRuntime.gd")
 const RefrigerationProviderClass = preload("res://scripts/simulation/utilities/UtilityRefrigerationEnvironmentProvider.gd")
 const UtilityControlsClass = preload("res://scripts/ui/UtilityDevControls.gd")
@@ -19,6 +20,7 @@ var _utilities: UtilityRuntimeState = null
 var _utility_lighting: UtilityPoweredLightingSourceAdapter = null
 var _power_infrastructure: UtilityPowerInfrastructureMaterializer = null
 var _power_network: UtilityPowerNetworkRuntime = null
+var _local_power_topology: Dictionary = {}
 var _refrigeration_providers: Dictionary = {}
 var _utility_controls: UtilityDevControls = null
 var _central_power_service_id: String = ""
@@ -32,7 +34,11 @@ func _boot_canonical_demo() -> bool:
 
 func _boot_utility_runtime() -> bool:
     var plan: GeneratedGlobalWorldPlan = GeneratedIslandCritiqueFixture.global_plan()
-    _utilities = UtilityStateClass.new()
+    _local_power_topology = PowerTopologyPlannerClass.new().plan(plan)
+    if not bool(_local_power_topology.get("ok", false)):
+        push_error("UtilityGameMain: local power topology failed: %s" % String(_local_power_topology.get("failure_reason", "unknown")))
+        return false
+    _utilities = UtilityStateClass.new(_local_power_topology)
     if not _utilities.initialize_from_plan(plan):
         return false
 
@@ -75,17 +81,23 @@ func _boot_utility_runtime() -> bool:
 func _wire_power_infrastructure(plan: GeneratedGlobalWorldPlan) -> bool:
     if plan == null or _collision_catalog == null or _world_view == null or _world_mutations == null:
         return false
-    for semantic_type: StringName in PowerInfrastructureClass.COLLISION_SEMANTICS:
+    for semantic_type: StringName in PowerInfrastructureClass.LOCAL_COLLISION_SEMANTICS:
         if not _collision_catalog.register(semantic_type, true):
             return false
-    _power_infrastructure = PowerInfrastructureClass.new(_world, _world_mutations, plan, _utilities)
+    _power_infrastructure = PowerInfrastructureClass.new(
+        _world,
+        _world_mutations,
+        plan,
+        _utilities,
+        _local_power_topology
+    )
     if not _power_infrastructure.materialize():
         return false
     _power_network = PowerNetworkRuntimeClass.new()
     if not _power_network.initialize(_utilities, _power_infrastructure.wire_edges(), Callable(_kernel, "world_tick")):
         return false
-    # Presentation receives the same physical distribution projection regardless of energized or
-    # failed state. A dead cable is still a cable and must remain visible.
+    # Presentation receives the same physical local-distribution projection regardless of energized
+    # or failed state. The regional source-to-substation relationship is intentionally logical only.
     return _world_view.configure_power_infrastructure(_world, _power_infrastructure.wire_edges())
 
 func damage_power_infrastructure(asset_id: String, damage: int, source_kind: StringName = &"direct") -> bool:
@@ -108,6 +120,11 @@ func power_infrastructure_asset_ids(kind: StringName = &"") -> Array[String]:
 
 func power_infrastructure_debug_snapshot() -> Dictionary:
     return {
+        "topology": {
+            "building_count": int(_local_power_topology.get("building_count", 0)),
+            "substation_count": (_local_power_topology.get("substations", []) as Array).size(),
+            "target_buildings_per_substation": int(_local_power_topology.get("target_buildings_per_substation", 0)),
+        },
         "distribution": {} if _power_infrastructure == null else _power_infrastructure.debug_snapshot(),
         "network": {} if _power_network == null else _power_network.debug_snapshot(),
     }
