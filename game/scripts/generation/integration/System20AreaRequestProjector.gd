@@ -213,7 +213,7 @@ func _rural_open_planning_constraints(plan: GeneratedGlobalWorldPlan, bounds: Re
             "constraint.water.%s" % String(segment.get("id", "segment")),
             String(segment.get("id", "")),
             &"potable_water",
-            StringName(segment.get("water_class", &"municipal_trunk")),
+            StringName(segment.get("water_class", &"plant_internal")),
             segment.get("start", Vector2i.ZERO),
             segment.get("end", Vector2i.ZERO),
             1,
@@ -344,7 +344,7 @@ func _smalltown_planning_constraints(plan: GeneratedGlobalWorldPlan, bounds: Rec
             "constraint.water.%s" % String(water_segment.get("id", "segment")),
             String(water_segment.get("id", "")),
             &"potable_water",
-            StringName(water_segment.get("water_class", &"municipal_trunk")),
+            StringName(water_segment.get("water_class", &"plant_internal")),
             water_segment.get("start", Vector2i.ZERO),
             water_segment.get("end", Vector2i.ZERO),
             1,
@@ -499,14 +499,16 @@ func _rural_scattered_planning_constraints(plan: GeneratedGlobalWorldPlan, site:
         return {"ok": false, "failure_reason": "rural_scattered_water_projection_failed", "constraints": constraints}
     var water_service: Dictionary = _service_by_settlement(water_result.get("services", []), settlement_id)
     if water_service.is_empty() \
-        or StringName(water_service.get("service_mode", &"")) != &"decentralized_source" \
-        or StringName(water_service.get("source_type", &"")) != &"groundwater":
-        return {"ok": false, "failure_reason": "rural_scattered_decentralized_water_service_missing", "constraints": constraints}
+        or StringName(water_service.get("service_mode", &"")) != &"regional_radius" \
+        or StringName(water_service.get("source_type", &"")) != &"groundwater" \
+        or String(water_service.get("plant_id", "")).is_empty() \
+        or int(water_service.get("service_radius", 0)) <= 0:
+        return {"ok": false, "failure_reason": "rural_scattered_regional_water_service_missing", "constraints": constraints}
     var water_constraint: Dictionary = _point_constraint(
         "constraint.water.%s" % String(water_service.get("id", "service")),
         String(water_service.get("id", "")),
         &"potable_water",
-        &"decentralized_source",
+        &"regional_radius_service",
         &"service",
         center,
         false,
@@ -516,7 +518,46 @@ func _rural_scattered_planning_constraints(plan: GeneratedGlobalWorldPlan, site:
     )
     water_constraint["service_mode"] = StringName(water_service.get("service_mode", &""))
     water_constraint["source_type"] = StringName(water_service.get("source_type", &""))
+    water_constraint["plant_id"] = String(water_service.get("plant_id", ""))
+    water_constraint["coverage_center"] = water_service.get("coverage_center", Vector2i(-999999, -999999))
+    water_constraint["service_radius"] = int(water_service.get("service_radius", 0))
     constraints.append(water_constraint)
+
+    # A rural site may host one of the sparse regional plants. Project its real plant-local
+    # source/treatment/header facts so System 20 reserves the facility instead of inventing a well.
+    for water_segment_value: Variant in water_result.get("segments", []):
+        if typeof(water_segment_value) != TYPE_DICTIONARY:
+            continue
+        var water_segment: Dictionary = water_segment_value
+        constraints.append(_corridor_constraint(
+            "constraint.water.%s" % String(water_segment.get("id", "segment")),
+            String(water_segment.get("id", "")),
+            &"potable_water",
+            StringName(water_segment.get("water_class", &"plant_internal")),
+            water_segment.get("start", Vector2i.ZERO),
+            water_segment.get("end", Vector2i.ZERO),
+            1,
+            false,
+            String(water_segment.get("network_id", ""))
+        ))
+    for water_node_value: Variant in water_result.get("nodes", []):
+        if typeof(water_node_value) != TYPE_DICTIONARY:
+            continue
+        var water_node: Dictionary = water_node_value
+        var water_kind: StringName = StringName(water_node.get("kind", &""))
+        var water_facility: bool = water_kind == &"groundwater_source" or water_kind == &"treatment_storage"
+        constraints.append(_point_constraint(
+            "constraint.water.%s" % String(water_node.get("id", "node")),
+            String(water_node.get("id", "")),
+            &"potable_water",
+            water_kind,
+            &"facility" if water_facility else &"service",
+            water_node.get("cell", center),
+            water_facility,
+            water_facility,
+            String(water_node.get("settlement_id", "")),
+            String(water_node.get("network_id", ""))
+        ))
 
     var wastewater_result: Dictionary = wastewater_constraints_for_bounds(plan, bounds)
     if not bool(wastewater_result.get("ok", false)):
@@ -711,6 +752,7 @@ func water_constraints_for_bounds(plan: GeneratedGlobalWorldPlan, bounds: Rect2i
         segments.append({
             "id": String(segment.get("id", "")),
             "network_id": String(segment.get("network_id", "")),
+            "plant_id": String(segment.get("plant_id", "")),
             "water_class": StringName(segment.get("water_class", &"")),
             "start": clipped.get("start", Vector2i.ZERO),
             "end": clipped.get("end", Vector2i.ZERO),

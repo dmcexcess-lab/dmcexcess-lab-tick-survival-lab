@@ -21,9 +21,13 @@ func _initialize() -> void:
         push_error("SYSTEM33_POWER_WATER_SMOKE_FAIL: %s" % failure)
     quit(1)
 
-func _new_state() -> UtilityRuntimeState:
+func _canonical_plan() -> GeneratedGlobalWorldPlan:
     var plan: GeneratedGlobalWorldPlan = Fixture.generate_global_plan(GlobalFixture.SEED)
     _check(plan != null and plan.is_generated(), "canonical island plan must generate")
+    return plan
+
+func _new_state() -> UtilityRuntimeState:
+    var plan: GeneratedGlobalWorldPlan = _canonical_plan()
     if plan == null or not plan.is_generated():
         return null
     var utilities := UtilityStateClass.new()
@@ -31,9 +35,14 @@ func _new_state() -> UtilityRuntimeState:
     return utilities
 
 func _test_power_water_and_cache() -> void:
-    var utilities: UtilityRuntimeState = _new_state()
-    if utilities == null or not utilities.is_ready():
+    var plan: GeneratedGlobalWorldPlan = _canonical_plan()
+    if plan == null or not plan.is_generated():
         return
+    var utilities := UtilityStateClass.new()
+    _check(utilities.initialize_from_plan(plan), "utility state must initialize from canonical 00D plan")
+    if not utilities.is_ready():
+        return
+
     var central_power: String = utilities.power_service_for_settlement(CENTRAL_SETTLEMENT)
     var central_water: String = utilities.water_service_for_settlement(CENTRAL_SETTLEMENT)
     _check(not central_power.is_empty(), "central settlement must have power binding")
@@ -68,24 +77,53 @@ func _test_power_water_and_cache() -> void:
     _check(not utilities.power_service_available(other_power), "source outage removes unrelated power")
     _check(utilities.set_power_component_state(source, UtilityRuntimeState.OPERATIONAL, &"smoke_source_restore"), "source restores")
 
-    _check(utilities.water_service_available(central_water), "rural well water starts operational")
-    var water_rev: int = utilities.water_revision()
-    _check(utilities.set_power_component_state(branch, UtilityRuntimeState.DAMAGED, &"smoke_pump_power_loss"), "pump power loss mutates power")
-    _check(not utilities.water_service_available(central_water), "powered rural pump fails when local power fails")
-    _check(utilities.water_revision() == water_rev, "power-driven water outage does not fake a water mutation")
-    _check(utilities.set_power_component_state(branch, UtilityRuntimeState.OPERATIONAL, &"smoke_pump_power_restore"), "pump power restores")
-    _check(utilities.water_service_available(central_water), "water returns when pump power returns")
+    var plant_ids: Dictionary = {}
+    for service: Dictionary in plan.water_services:
+        _check(StringName(service.get("service_mode", &"")) != &"decentralized_source", "regional water plan contains no private-source service")
+        plant_ids[String(service.get("plant_id", ""))] = true
+    _check(plant_ids.size() == 4, "canonical island exposes four regional water treatment plants")
+    _check(utilities.water_service_available(central_water), "regional water starts operational")
 
-    var other_water: String = ""
+    var central_plant: String = utilities.water_plant_id(central_water)
+    var water_power: String = utilities.water_required_power_service_id(central_water)
+    var treatment: String = utilities.water_treatment_component_id(central_water)
+    _check(not central_plant.is_empty(), "central water resolves to a real plant")
+    _check(not water_power.is_empty(), "central water plant has a real power dependency")
+    _check(not treatment.is_empty(), "central water exposes a treatment component")
+
+    var other_plant_water: String = ""
     for service_id: String in utilities.water_service_ids():
-        if service_id != central_water:
-            other_water = service_id
+        if utilities.water_plant_id(service_id) != central_plant:
+            other_plant_water = service_id
             break
-    var local_water_component: String = utilities.water_local_component_id(central_water)
-    _check(utilities.set_water_component_state(local_water_component, UtilityRuntimeState.DAMAGED, &"smoke_local_water"), "local water damage mutates")
-    _check(not utilities.water_service_available(central_water), "local water damage removes central water")
-    _check(other_water.is_empty() or utilities.water_service_available(other_water), "local water damage preserves unrelated water")
-    _check(utilities.set_water_component_state(local_water_component, UtilityRuntimeState.OPERATIONAL, &"smoke_water_restore"), "local water restores")
+    _check(not other_plant_water.is_empty(), "island exposes an independently served water plant")
+
+    var water_power_branch: String = utilities.power_branch_component_id(water_power)
+    _check(not water_power_branch.is_empty(), "water plant power service exposes a branch")
+    var water_rev: int = utilities.water_revision()
+    _check(utilities.set_power_component_state(water_power_branch, UtilityRuntimeState.DAMAGED, &"smoke_plant_power_loss"), "plant power loss mutates power")
+    _check(not utilities.water_service_available(central_water), "regional treatment fails when its host power fails")
+    _check(other_plant_water.is_empty() or utilities.water_service_available(other_plant_water), "plant power loss preserves a different treatment plant")
+    _check(utilities.water_revision() == water_rev, "power-driven water outage does not fake a water mutation")
+    _check(utilities.set_power_component_state(water_power_branch, UtilityRuntimeState.OPERATIONAL, &"smoke_plant_power_restore"), "plant power restores")
+    _check(utilities.water_service_available(central_water), "regional water returns when plant power returns")
+
+    var same_plant_water: String = ""
+    for service_id: String in utilities.water_service_ids():
+        if service_id != central_water and utilities.water_plant_id(service_id) == central_plant:
+            same_plant_water = service_id
+            break
+    _check(utilities.set_water_component_state(treatment, UtilityRuntimeState.DAMAGED, &"smoke_treatment_damage"), "treatment plant damage mutates water")
+    _check(not utilities.water_service_available(central_water), "treatment plant damage removes central water")
+    _check(same_plant_water.is_empty() or not utilities.water_service_available(same_plant_water), "same plant outage removes every dependent service")
+    _check(other_plant_water.is_empty() or utilities.water_service_available(other_plant_water), "treatment plant damage preserves other plants")
+    _check(utilities.set_water_component_state(treatment, UtilityRuntimeState.OPERATIONAL, &"smoke_treatment_restore"), "treatment plant restores")
+    _check(utilities.water_service_available(central_water), "regional water restores with treatment")
+
+    var central_center: Vector2i = _settlement_center(plan, CENTRAL_SETTLEMENT)
+    var spatial_service: String = utilities.water_service_for_cell(central_center)
+    _check(not spatial_service.is_empty(), "structure-scale cell lookup resolves water inside a plant radius")
+    _check(utilities.water_plant_id(spatial_service) == central_plant, "cell lookup resolves the same nearest regional plant")
 
 func _test_refrigeration_clock() -> void:
     var utilities: UtilityRuntimeState = _new_state()
@@ -125,6 +163,12 @@ func _test_snapshot_restore() -> void:
     malformed["schema_version"] = 999
     _check(not utilities.restore_snapshot(malformed), "wrong snapshot schema fails closed")
     _check(utilities.power_service_available(central_power), "failed restore leaves current utility truth intact")
+
+func _settlement_center(plan: GeneratedGlobalWorldPlan, settlement_id: String) -> Vector2i:
+    for settlement: Dictionary in plan.settlements:
+        if String(settlement.get("id", "")) == settlement_id:
+            return settlement.get("center", Vector2i(-999999, -999999))
+    return Vector2i(-999999, -999999)
 
 func _check(condition: bool, message: String) -> void:
     if not condition:

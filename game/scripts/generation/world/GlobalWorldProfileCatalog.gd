@@ -76,6 +76,10 @@ func _rural_profile() -> Dictionary:
         "power_cost_primary": 10,
         "power_cost_secondary": 12,
 
+        # Potable water is deliberately sparse regional infrastructure. Four large
+        # treatment plants serve structures by radius; routine private wells do not exist.
+        "water_regional_plant_count": 4,
+        "water_service_radius_cells": 704,
         "water_treatment_anchor_offset": 24,
         "water_source_anchor_offset": 48,
         "wastewater_treatment_anchor_offset": 64,

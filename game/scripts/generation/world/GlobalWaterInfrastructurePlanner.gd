@@ -4,9 +4,14 @@ class_name GlobalWaterInfrastructurePlanner
 const Seed = preload("res://scripts/generation/world/GlobalWorldSeed.gd")
 
 const INVALID_CELL := Vector2i(-999999, -999999)
-const NETWORK_ID: String = "water.network.municipal.smalltown.001"
 const SMALLTOWN_ID: String = "settlement.smalltown.001"
-const SMALLTOWN_SITE_ID: String = "area.smalltown.center.001"
+const CENTRAL_SETTLEMENT_ID: String = "settlement.rural.crossroads.001"
+const PLANT_HOST_SETTLEMENT_IDS: Array[String] = [
+    SMALLTOWN_ID,
+    "settlement.rural.hamlet.001",
+    "settlement.rural.hamlet.002",
+    "settlement.rural.hamlet.003",
+]
 
 func plan(
     request: GlobalWorldGenerationRequest,
@@ -21,114 +26,131 @@ func plan(
     if request == null or not request.is_valid() or profile.is_empty() or settlements.is_empty() or area_sites.is_empty() or road_segments.is_empty():
         return _failure("invalid_water_infrastructure_planner_input")
 
-    var smalltown: Dictionary = _settlement_by_id(settlements, SMALLTOWN_ID)
-    var smalltown_site: Dictionary = _site_by_id(area_sites, SMALLTOWN_SITE_ID)
-    if smalltown.is_empty():
-        return _failure("water_smalltown_settlement_missing")
-    if smalltown_site.is_empty() or String(smalltown_site.get("settlement_id", "")) != SMALLTOWN_ID:
-        return _failure("water_smalltown_site_missing")
+    var plant_count: int = int(profile.get("water_regional_plant_count", 4))
+    var service_radius: int = int(profile.get("water_service_radius_cells", 704))
+    var treatment_offset: int = int(profile.get("water_treatment_anchor_offset", 24))
+    var source_offset: int = int(profile.get("water_source_anchor_offset", 48))
+    if plant_count != PLANT_HOST_SETTLEMENT_IDS.size() or service_radius <= 0 \
+        or treatment_offset <= 0 or source_offset <= treatment_offset:
+        return _failure("water_regional_profile_invalid")
 
-    var known_current_ids: Dictionary = {
-        "settlement.rural.crossroads.001": true,
-        SMALLTOWN_ID: true,
-        "settlement.rural.hamlet.001": true,
-        "settlement.rural.hamlet.002": true,
-        "settlement.rural.hamlet.003": true,
-    }
-    if settlements.size() != known_current_ids.size():
-        return _failure("water_current_settlement_set_unsupported")
+    var plants: Array[Dictionary] = []
+    for ordinal in range(plant_count):
+        var host_settlement_id: String = PLANT_HOST_SETTLEMENT_IDS[ordinal]
+        var host: Dictionary = _settlement_by_id(settlements, host_settlement_id)
+        var host_site: Dictionary = _site_for_settlement(area_sites, host_settlement_id)
+        if host.is_empty() or host_site.is_empty():
+            return _failure("water_regional_plant_host_missing")
+        var center: Vector2i = host.get("center", INVALID_CELL)
+        var site_bounds: Rect2i = host_site.get("bounds", Rect2i())
+        if center == INVALID_CELL or not site_bounds.has_point(center):
+            return _failure("water_regional_plant_host_invalid")
+
+        var options: Array[Dictionary] = _legal_anchor_options(center, site_bounds, road_segments, source_offset)
+        if options.is_empty():
+            return _failure("water_regional_plant_corridor_unresolved")
+        var preferred: Array[Dictionary] = []
+        for option: Dictionary in options:
+            if StringName(option.get("road_class", &"")) == &"primary":
+                preferred.append(option)
+        var choices: Array[Dictionary] = preferred if not preferred.is_empty() else options
+        var choice_index: int = Seed.choose_index(
+            request.seed,
+            "water:regional_plant:%s:source_corridor" % host_settlement_id,
+            choices.size()
+        )
+        if choice_index < 0:
+            return _failure("water_regional_plant_corridor_unresolved")
+        var choice: Dictionary = choices[choice_index]
+        var direction: Vector2i = choice.get("direction", Vector2i.ZERO)
+        if direction == Vector2i.ZERO:
+            return _failure("water_regional_plant_direction_invalid")
+
+        var source_cell: Vector2i = center + direction * source_offset
+        var treatment_cell: Vector2i = center + direction * treatment_offset
+        if not site_bounds.has_point(source_cell) or not site_bounds.has_point(treatment_cell):
+            return _failure("water_regional_plant_anchor_out_of_site")
+
+        var plant_number: int = ordinal + 1
+        var plant_id: String = "water.plant.%03d" % plant_number
+        var network_id: String = "water.network.regional.%03d" % plant_number
+        var source_node_id: String = "water.node.source.%03d" % plant_number
+        var treatment_node_id: String = "water.node.treatment_storage.%03d" % plant_number
+        var service_node_id: String = "water.node.regional_service.%03d" % plant_number
+        var source_road_id: String = String(choice.get("road_id", ""))
+        var source_route_id: String = String(choice.get("route_id", ""))
+
+        water_nodes.append(_node(
+            source_node_id, network_id, plant_id, &"groundwater_source",
+            source_cell, host_settlement_id, treatment_cell, service_radius
+        ))
+        water_nodes.append(_node(
+            treatment_node_id, network_id, plant_id, &"treatment_storage",
+            treatment_cell, host_settlement_id, treatment_cell, service_radius
+        ))
+        water_nodes.append(_node(
+            service_node_id, network_id, plant_id, &"regional_service_anchor",
+            center, host_settlement_id, treatment_cell, service_radius
+        ))
+
+        var source_segment: Dictionary = _segment(
+            "water.segment.plant.%03d.01" % plant_number,
+            network_id,
+            plant_id,
+            1,
+            source_cell,
+            treatment_cell,
+            source_road_id,
+            source_route_id
+        )
+        var service_segment: Dictionary = _segment(
+            "water.segment.plant.%03d.02" % plant_number,
+            network_id,
+            plant_id,
+            2,
+            treatment_cell,
+            center,
+            source_road_id,
+            source_route_id
+        )
+        if source_segment.is_empty() or service_segment.is_empty():
+            return _failure("water_regional_plant_internal_link_invalid")
+        water_segments.append(source_segment)
+        water_segments.append(service_segment)
+        plants.append({
+            "plant_id": plant_id,
+            "network_id": network_id,
+            "host_settlement_id": host_settlement_id,
+            "source_node_id": source_node_id,
+            "treatment_node_id": treatment_node_id,
+            "service_anchor_node_id": service_node_id,
+            "coverage_center": treatment_cell,
+            "service_radius": service_radius,
+        })
 
     for index in range(settlements.size()):
         var settlement: Dictionary = settlements[index]
         var settlement_id: String = String(settlement.get("id", ""))
-        if not known_current_ids.has(settlement_id):
-            return _failure("water_current_settlement_set_unsupported")
-        var municipal: bool = settlement_id == SMALLTOWN_ID
+        var center: Vector2i = settlement.get("center", INVALID_CELL)
+        if settlement_id.is_empty() or center == INVALID_CELL:
+            return _failure("water_service_settlement_invalid")
+        var plant: Dictionary = _nearest_covering_plant(center, plants)
+        if plant.is_empty():
+            return _failure("water_settlement_outside_regional_service")
         water_services.append({
             "id": "water.service.%03d" % [index + 1],
             "settlement_id": settlement_id,
-            "service_mode": &"municipal" if municipal else &"decentralized_source",
+            "service_mode": &"municipal" if settlement_id == SMALLTOWN_ID else &"regional_radius",
             "source_type": &"groundwater",
-            "network_id": NETWORK_ID if municipal else "",
+            "network_id": String(plant.get("network_id", "")),
+            "plant_id": String(plant.get("plant_id", "")),
+            "plant_host_settlement_id": String(plant.get("host_settlement_id", "")),
+            "source_node_id": String(plant.get("source_node_id", "")),
+            "treatment_node_id": String(plant.get("treatment_node_id", "")),
+            "service_anchor_node_id": String(plant.get("service_anchor_node_id", "")),
+            "coverage_center": plant.get("coverage_center", INVALID_CELL),
+            "service_radius": int(plant.get("service_radius", 0)),
         })
-
-    var center: Vector2i = smalltown.get("center", INVALID_CELL)
-    var site_bounds: Rect2i = smalltown_site.get("bounds", Rect2i())
-    if center == INVALID_CELL or not site_bounds.has_point(center):
-        return _failure("water_smalltown_center_invalid")
-
-    var treatment_offset: int = int(profile.get("water_treatment_anchor_offset", 24))
-    var source_offset: int = int(profile.get("water_source_anchor_offset", 48))
-    if treatment_offset <= 0 or source_offset <= treatment_offset:
-        return _failure("water_anchor_offsets_invalid")
-
-    var options: Array[Dictionary] = _legal_anchor_options(center, site_bounds, road_segments, source_offset)
-    if options.is_empty():
-        return _failure("water_smalltown_source_corridor_unresolved")
-
-    var preferred: Array[Dictionary] = []
-    for option: Dictionary in options:
-        if StringName(option.get("road_class", &"")) == &"primary":
-            preferred.append(option)
-    var choices: Array[Dictionary] = preferred if not preferred.is_empty() else options
-    var choice_index: int = Seed.choose_index(request.seed, "water:smalltown:source_corridor", choices.size())
-    if choice_index < 0:
-        return _failure("water_smalltown_source_corridor_unresolved")
-    var choice: Dictionary = choices[choice_index]
-    var direction: Vector2i = choice.get("direction", Vector2i.ZERO)
-    if direction == Vector2i.ZERO:
-        return _failure("water_smalltown_source_direction_invalid")
-
-    var treatment_cell: Vector2i = center + direction * treatment_offset
-    var source_cell: Vector2i = center + direction * source_offset
-    if not site_bounds.has_point(treatment_cell) or not site_bounds.has_point(source_cell):
-        return _failure("water_smalltown_anchor_out_of_site")
-
-    var source_road_id: String = String(choice.get("road_id", ""))
-    var source_route_id: String = String(choice.get("route_id", ""))
-
-    water_nodes.append({
-        "id": "water.node.source.001",
-        "network_id": NETWORK_ID,
-        "kind": &"groundwater_source",
-        "cell": source_cell,
-        "settlement_id": SMALLTOWN_ID,
-    })
-    water_nodes.append({
-        "id": "water.node.treatment_storage.001",
-        "network_id": NETWORK_ID,
-        "kind": &"treatment_storage",
-        "cell": treatment_cell,
-        "settlement_id": SMALLTOWN_ID,
-    })
-    water_nodes.append({
-        "id": "water.node.service.001",
-        "network_id": NETWORK_ID,
-        "kind": &"settlement_service",
-        "cell": center,
-        "settlement_id": SMALLTOWN_ID,
-    })
-
-    water_segments.append(_segment(
-        "water.segment.001",
-        1,
-        source_cell,
-        treatment_cell,
-        source_road_id,
-        source_route_id
-    ))
-    water_segments.append(_segment(
-        "water.segment.002",
-        2,
-        treatment_cell,
-        center,
-        source_road_id,
-        source_route_id
-    ))
-
-    for segment: Dictionary in water_segments:
-        if segment.is_empty():
-            return _failure("water_municipal_trunk_invalid")
 
     return {
         "ok": true,
@@ -136,6 +158,48 @@ func plan(
         "water_services": water_services,
         "water_nodes": water_nodes,
         "water_segments": water_segments,
+    }
+
+func _nearest_covering_plant(cell: Vector2i, plants: Array[Dictionary]) -> Dictionary:
+    var best: Dictionary = {}
+    var best_distance_sq: int = 2147483647
+    for plant: Dictionary in plants:
+        var center: Vector2i = plant.get("coverage_center", INVALID_CELL)
+        var radius: int = int(plant.get("service_radius", 0))
+        if center == INVALID_CELL or radius <= 0:
+            continue
+        var delta: Vector2i = cell - center
+        var distance_sq: int = delta.x * delta.x + delta.y * delta.y
+        if distance_sq > radius * radius:
+            continue
+        var plant_id: String = String(plant.get("plant_id", ""))
+        var best_id: String = String(best.get("plant_id", ""))
+        if distance_sq < best_distance_sq \
+            or (distance_sq == best_distance_sq and (best_id.is_empty() or plant_id < best_id)):
+            best = plant
+            best_distance_sq = distance_sq
+    return best
+
+func _node(
+    id: String,
+    network_id: String,
+    plant_id: String,
+    kind: StringName,
+    cell: Vector2i,
+    host_settlement_id: String,
+    coverage_center: Vector2i,
+    service_radius: int
+) -> Dictionary:
+    return {
+        "id": id,
+        "network_id": network_id,
+        "plant_id": plant_id,
+        "kind": kind,
+        "cell": cell,
+        "settlement_id": host_settlement_id,
+        "host_settlement_id": host_settlement_id,
+        "coverage_center": coverage_center,
+        "service_radius": service_radius,
     }
 
 func _legal_anchor_options(
@@ -180,20 +244,24 @@ func _legal_anchor_options(
 
 func _segment(
     id: String,
+    network_id: String,
+    plant_id: String,
     ordinal: int,
     start: Vector2i,
     finish: Vector2i,
     source_road_id: String,
     source_route_id: String
 ) -> Dictionary:
-    if id.is_empty() or start == finish or (start.x != finish.x and start.y != finish.y):
+    if id.is_empty() or network_id.is_empty() or plant_id.is_empty() or start == finish \
+        or (start.x != finish.x and start.y != finish.y):
         return {}
     if source_road_id.is_empty() or source_route_id.is_empty():
         return {}
     return {
         "id": id,
-        "network_id": NETWORK_ID,
-        "water_class": &"municipal_trunk",
+        "network_id": network_id,
+        "plant_id": plant_id,
+        "water_class": &"plant_internal",
         "start": start,
         "end": finish,
         "ordinal": ordinal,
@@ -207,9 +275,9 @@ func _settlement_by_id(settlements: Array[Dictionary], settlement_id: String) ->
             return settlement
     return {}
 
-func _site_by_id(sites: Array[Dictionary], site_id: String) -> Dictionary:
+func _site_for_settlement(sites: Array[Dictionary], settlement_id: String) -> Dictionary:
     for site: Dictionary in sites:
-        if String(site.get("id", "")) == site_id:
+        if String(site.get("settlement_id", "")) == settlement_id:
             return site
     return {}
 

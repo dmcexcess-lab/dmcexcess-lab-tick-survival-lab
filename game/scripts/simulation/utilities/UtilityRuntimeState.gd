@@ -9,7 +9,7 @@ signal water_changed(revision, reason)
 signal appliances_changed(revision, reason)
 signal utility_reset
 
-const SNAPSHOT_SCHEMA_VERSION: int = 1
+const SNAPSHOT_SCHEMA_VERSION: int = 2
 const OPERATIONAL: StringName = &"OPERATIONAL"
 const DISABLED: StringName = &"DISABLED"
 const DAMAGED: StringName = &"DAMAGED"
@@ -87,6 +87,29 @@ func power_service_for_settlement(settlement_id: String) -> String:
 func water_service_for_settlement(settlement_id: String) -> String:
     return String(_water_service_by_settlement.get(settlement_id.strip_edges(), ""))
 
+func water_service_for_cell(cell: Vector2i) -> String:
+    var best_service: String = ""
+    var best_plant: String = ""
+    var best_distance_sq: int = 2147483647
+    for service_id: String in water_service_ids():
+        var binding: Dictionary = _water_bindings[service_id]
+        var center: Vector2i = binding.get("coverage_center", INVALID_CELL)
+        var radius: int = int(binding.get("service_radius", 0))
+        if center == INVALID_CELL or radius <= 0:
+            continue
+        var delta: Vector2i = cell - center
+        var distance_sq: int = delta.x * delta.x + delta.y * delta.y
+        if distance_sq > radius * radius:
+            continue
+        var plant_id: String = String(binding.get("plant_id", ""))
+        if distance_sq < best_distance_sq \
+            or (distance_sq == best_distance_sq and (best_plant.is_empty() or plant_id < best_plant)) \
+            or (distance_sq == best_distance_sq and plant_id == best_plant and (best_service.is_empty() or service_id < best_service)):
+            best_service = service_id
+            best_plant = plant_id
+            best_distance_sq = distance_sq
+    return best_service
+
 func power_service_for_cell(cell: Vector2i) -> String:
     var best_service: String = ""
     var best_distance: int = 2147483647
@@ -120,6 +143,18 @@ func power_branch_component_id(service_id: String) -> String:
 func water_local_component_id(service_id: String) -> String:
     return String(_water_local_by_service.get(service_id.strip_edges(), ""))
 
+func water_required_power_service_id(service_id: String) -> String:
+    var binding: Dictionary = _water_bindings.get(service_id.strip_edges(), {})
+    return String(binding.get("required_power_service_id", ""))
+
+func water_plant_id(service_id: String) -> String:
+    var binding: Dictionary = _water_bindings.get(service_id.strip_edges(), {})
+    return String(binding.get("plant_id", ""))
+
+func water_treatment_component_id(service_id: String) -> String:
+    var binding: Dictionary = _water_bindings.get(service_id.strip_edges(), {})
+    return String(binding.get("treatment_component_id", ""))
+
 func water_source_component_id(service_id: String) -> String:
     var binding: Dictionary = _water_bindings.get(service_id.strip_edges(), {})
     var current: String = String(binding.get("terminal_component_id", ""))
@@ -128,7 +163,7 @@ func water_source_component_id(service_id: String) -> String:
         visited[current] = true
         var component: Dictionary = _water_components.get(current, {})
         var role: StringName = StringName(component.get("role", &""))
-        if role == &"source" or role == &"well":
+        if role == &"source":
             return current
         if not _water_parent_link.has(current):
             break
@@ -419,83 +454,130 @@ func _materialize_power(plan: GeneratedGlobalWorldPlan) -> bool:
     return true
 
 func _materialize_water(plan: GeneratedGlobalWorldPlan) -> bool:
-    var municipal_source: String = ""
-    var municipal_treatment: String = ""
-    var municipal_terminal: String = ""
+    var planned_components: Dictionary = {}
     for node: Dictionary in plan.water_nodes:
         var planned_id: String = String(node.get("id", ""))
         var kind: StringName = StringName(node.get("kind", &""))
-        if planned_id.is_empty():
+        if planned_id.is_empty() or planned_components.has(planned_id):
             return false
-        var component_id: String = "water.component.%s" % planned_id
-        var role: StringName = &"local_service"
+        var role: StringName = &""
         if kind == &"groundwater_source":
             role = &"source"
-            municipal_source = component_id
         elif kind == &"treatment_storage":
             role = &"treatment_storage"
-            municipal_treatment = component_id
-        elif kind == &"settlement_service":
-            municipal_terminal = component_id
+        elif kind == &"regional_service_anchor":
+            role = &"distribution_header"
+        else:
+            return false
+        var component_id: String = "water.component.%s" % planned_id
         _water_components[component_id] = {
             "component_id": component_id,
             "role": role,
             "operational_state": OPERATIONAL,
             "required_power_service_id": "",
             "planning_id": planned_id,
-            "settlement_id": String(node.get("settlement_id", "")),
+            "plant_id": String(node.get("plant_id", "")),
+            "settlement_id": String(node.get("host_settlement_id", node.get("settlement_id", ""))),
             "cell": node.get("cell", INVALID_CELL),
         }
+        planned_components[planned_id] = component_id
+
+    var configured_plants: Dictionary = {}
     for service: Dictionary in plan.water_services:
         var service_id: String = String(service.get("id", ""))
         var settlement_id: String = String(service.get("settlement_id", ""))
         var mode: StringName = StringName(service.get("service_mode", &""))
-        if service_id.is_empty() or settlement_id.is_empty():
+        var plant_id: String = String(service.get("plant_id", ""))
+        var network_id: String = String(service.get("network_id", ""))
+        var host_settlement_id: String = String(service.get("plant_host_settlement_id", ""))
+        var source_node_id: String = String(service.get("source_node_id", ""))
+        var treatment_node_id: String = String(service.get("treatment_node_id", ""))
+        var anchor_node_id: String = String(service.get("service_anchor_node_id", ""))
+        var coverage_center: Vector2i = service.get("coverage_center", INVALID_CELL)
+        var service_radius: int = int(service.get("service_radius", 0))
+        if service_id.is_empty() or settlement_id.is_empty() \
+            or (mode != &"municipal" and mode != &"regional_radius") \
+            or plant_id.is_empty() or network_id.is_empty() or host_settlement_id.is_empty() \
+            or coverage_center == INVALID_CELL or service_radius <= 0 \
+            or not planned_components.has(source_node_id) \
+            or not planned_components.has(treatment_node_id) \
+            or not planned_components.has(anchor_node_id):
             return false
-        var power_service: String = power_service_for_settlement(settlement_id)
+
+        var source: String = String(planned_components[source_node_id])
+        var treatment: String = String(planned_components[treatment_node_id])
+        var anchor: String = String(planned_components[anchor_node_id])
+        var power_service: String = power_service_for_settlement(host_settlement_id)
         if power_service.is_empty():
             return false
-        var terminal: String = ""
-        if mode == &"municipal":
-            if municipal_source.is_empty() or municipal_treatment.is_empty() or municipal_terminal.is_empty():
-                return false
-            var pump: String = "water.component.pump.%s" % settlement_id
+
+        if not configured_plants.has(plant_id):
+            var treatment_record: Dictionary = _water_components[treatment]
+            treatment_record["required_power_service_id"] = power_service
+            _water_components[treatment] = treatment_record
+            var pump: String = "water.component.pump.%s" % plant_id
             _water_components[pump] = _water_component(
-                pump, &"pump_distribution", settlement_id,
-                (_water_components[municipal_terminal] as Dictionary).get("cell", INVALID_CELL), power_service
+                pump,
+                &"pump_distribution",
+                host_settlement_id,
+                coverage_center,
+                power_service,
+                plant_id
             )
-            _insert_water_link("water.link.source_to_treatment", municipal_source, municipal_treatment, settlement_id)
-            _insert_water_link("water.link.treatment_to_pump", municipal_treatment, pump, settlement_id)
-            _insert_water_link("water.link.pump_to_service.%s" % settlement_id, pump, municipal_terminal, settlement_id)
-            terminal = municipal_terminal
+            _insert_water_link("water.link.%s.source_to_treatment" % plant_id, source, treatment, host_settlement_id)
+            _insert_water_link("water.link.%s.treatment_to_pump" % plant_id, treatment, pump, host_settlement_id)
+            _insert_water_link("water.link.%s.pump_to_header" % plant_id, pump, anchor, host_settlement_id)
+            configured_plants[plant_id] = {
+                "network_id": network_id,
+                "host_settlement_id": host_settlement_id,
+                "source": source,
+                "treatment": treatment,
+                "anchor": anchor,
+                "power_service": power_service,
+            }
         else:
-            var well: String = "water.component.well.%s" % settlement_id
-            var pump: String = "water.component.well_pump.%s" % settlement_id
-            terminal = "water.component.property_service.%s" % settlement_id
-            var service_cell: Vector2i = _power_service_cell(power_service)
-            _water_components[well] = _water_component(well, &"well", settlement_id, service_cell, "")
-            _water_components[pump] = _water_component(pump, &"pump_distribution", settlement_id, service_cell, power_service)
-            _water_components[terminal] = _water_component(terminal, &"local_service", settlement_id, service_cell, "")
-            _insert_water_link("water.link.well_to_pump.%s" % settlement_id, well, pump, settlement_id)
-            _insert_water_link("water.link.pump_to_property.%s" % settlement_id, pump, terminal, settlement_id)
+            var configured: Dictionary = configured_plants[plant_id]
+            if String(configured.get("network_id", "")) != network_id \
+                or String(configured.get("host_settlement_id", "")) != host_settlement_id \
+                or String(configured.get("source", "")) != source \
+                or String(configured.get("treatment", "")) != treatment \
+                or String(configured.get("anchor", "")) != anchor \
+                or String(configured.get("power_service", "")) != power_service:
+                return false
+
         _water_bindings[service_id] = {
             "service_id": service_id,
-            "terminal_component_id": terminal,
+            "terminal_component_id": anchor,
+            "treatment_component_id": treatment,
             "owner_entity_id": "",
             "settlement_id": settlement_id,
+            "plant_id": plant_id,
+            "network_id": network_id,
+            "coverage_center": coverage_center,
+            "service_radius": service_radius,
+            "required_power_service_id": power_service,
         }
         _water_service_by_settlement[settlement_id] = service_id
-        _water_local_by_service[service_id] = terminal
-    _rebuild_water_parent_index()
-    return not _water_bindings.is_empty()
+        _water_local_by_service[service_id] = anchor
 
-func _water_component(id: String, role: StringName, settlement_id: String, cell: Vector2i, required_power: String) -> Dictionary:
+    _rebuild_water_parent_index()
+    return configured_plants.size() == 4 and not _water_bindings.is_empty()
+
+func _water_component(
+    id: String,
+    role: StringName,
+    settlement_id: String,
+    cell: Vector2i,
+    required_power: String,
+    plant_id: String = ""
+) -> Dictionary:
     return {
         "component_id": id,
         "role": role,
         "operational_state": OPERATIONAL,
         "required_power_service_id": required_power,
         "planning_id": "derived:%s" % settlement_id,
+        "plant_id": plant_id,
         "settlement_id": settlement_id,
         "cell": cell,
     }
@@ -547,7 +629,7 @@ func _derive_water_component(component_id: String, visited: Dictionary) -> bool:
     if not required_power.is_empty() and not power_service_available(required_power):
         return false
     var role: StringName = StringName(component.get("role", &""))
-    if role == &"source" or role == &"well":
+    if role == &"source":
         return true
     if not _water_parent_link.has(component_id):
         return false
@@ -669,9 +751,12 @@ func _validate_water_topology(
             return false
         parents[down] = String(link.get("link_id", ""))
     for value: Variant in bindings.values():
-        var terminal: String = String((value as Dictionary).get("terminal_component_id", ""))
-        if terminal.is_empty() or not components.has(terminal) \
-            or not _chain_reaches_role(terminal, components, links, parents, [&"source", &"well"]):
+        var binding: Dictionary = value
+        var terminal: String = String(binding.get("terminal_component_id", ""))
+        var coverage_center: Vector2i = binding.get("coverage_center", INVALID_CELL)
+        var radius: int = int(binding.get("service_radius", 0))
+        if terminal.is_empty() or not components.has(terminal) or coverage_center == INVALID_CELL or radius <= 0 \
+            or not _chain_reaches_role(terminal, components, links, parents, [&"source"]):
             return false
     return true
 
