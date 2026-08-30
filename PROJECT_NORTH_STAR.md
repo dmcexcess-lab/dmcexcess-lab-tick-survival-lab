@@ -6,7 +6,7 @@ Read this before detailed system designs. This file exists to preserve the game 
 
 ## One-line identity
 
-> **Ultima-style turn-based mini Zomboid.**
+> **Sprite-based zombie survival game.**
 
 Tick Survival Lab is a top-down, tile-based, persistent open-world zombie survival simulation with discrete-time actions, systemic consequences, player-built bases, a causally simulated outbreak, and deliberately simplified-but-interconnected survival mechanics.
 
@@ -28,7 +28,7 @@ Simplify internal calculation where possible. Do **not** simplify away consequen
 
 > **The low-resolution 2D presentation and turn-based simulation are deliberate performance advantages. Spend that budget on simulation depth, persistence, world scale and responsiveness — not avoidable work.**
 
-Tick Survival Lab would not use Ultima-style 2D graphics and discrete player-driven time if those constraints were not also buying substantial computational headroom. Performance is therefore a **North Star architectural requirement**, not a cleanup phase reserved for visible slowdowns.
+Tick Survival Lab uses low-resolution sprite-based 2D graphics and discrete player-driven time in part because those constraints buy substantial computational headroom. Performance is therefore a **North Star architectural requirement**, not a cleanup phase reserved for visible slowdowns.
 
 The intended bargain is asymmetric: presentation stays deliberately cheap so the world can become richer without ordinary play becoming expensive.
 
@@ -51,7 +51,7 @@ The extended implementation doctrine lives in `PERFORMANCE_NORTH_STAR.md`.
 
 ## Player experience target
 
-The world should feel like a readable Ultima-like top-down world with the systemic survival pressure of a much deeper zombie simulation.
+The world should feel like a readable top-down sprite-based world with the systemic survival pressure of a deeper zombie simulation.
 
 The player should be able to:
 
@@ -179,7 +179,7 @@ A hard application pause should freeze simulation without penalizing the player,
 
 **Real life interrupting the player must never be equivalent to the survivor making a bad tactical decision.**
 
-## Mini-Zomboid simulation rule
+## Compact simulation rule
 
 For each survival system ask:
 
