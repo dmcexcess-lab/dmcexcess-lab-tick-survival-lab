@@ -1,6 +1,6 @@
 # Tick Survival Lab
 
-> **Ultima-style turn-based mini Zomboid.**
+> **Sprite-based zombie survival game.**
 >
 > **Mini means reduced complexity, not reduced consequence or mood.**
 
