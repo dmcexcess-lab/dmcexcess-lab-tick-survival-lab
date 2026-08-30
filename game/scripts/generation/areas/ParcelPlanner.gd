@@ -487,7 +487,14 @@ func _classify_smalltown_land_use(seed: int, profile: Dictionary, center: Vector
     )
 
     var commercial_target: int = int(profile.get("commercial_count", 4))
+    var residential_target: int = int(profile.get("residential_count", 10))
+    var local_class: StringName = StringName(profile.get("local_frontage_road_class", &"local_town"))
+    var local_target: int = mini(residential_target, int(profile.get("local_residential_target", 6)))
     var commercial_used: int = 0
+
+    # Main-street frontage is preferred, not mandatory. This is a quota/reserve
+    # assignment: consume primary frontage first, then ordinary non-local frontage,
+    # and touch local-town frontage only when there is surplus beyond the home reserve.
     for parcel: Dictionary in parcels:
         if commercial_used >= commercial_target:
             break
@@ -496,9 +503,29 @@ func _classify_smalltown_land_use(seed: int, profile: Dictionary, center: Vector
         parcel["land_use"] = &"commercial_small"
         commercial_used += 1
 
-    var residential_target: int = int(profile.get("residential_count", 10))
-    var local_class: StringName = StringName(profile.get("local_frontage_road_class", &"local_town"))
-    var local_target: int = mini(residential_target, int(profile.get("local_residential_target", 6)))
+    for parcel: Dictionary in parcels:
+        if commercial_used >= commercial_target:
+            break
+        if StringName(parcel.get("land_use", &"")) != &"unclassified":
+            continue
+        var road_class: StringName = StringName(parcel.get("frontage_road_class", &""))
+        if road_class == &"primary" or road_class == local_class:
+            continue
+        parcel["land_use"] = &"commercial_small"
+        commercial_used += 1
+
+    for parcel: Dictionary in parcels:
+        if commercial_used >= commercial_target:
+            break
+        if StringName(parcel.get("land_use", &"")) != &"unclassified":
+            continue
+        if StringName(parcel.get("frontage_road_class", &"")) != local_class:
+            continue
+        if _count_unclassified_road_class(parcels, local_class) <= local_target:
+            break
+        parcel["land_use"] = &"commercial_small"
+        commercial_used += 1
+
     var residential_used: int = _assign_local_land_use(parcels, &"residential", local_target, false, local_class)
 
     for parcel: Dictionary in parcels:
@@ -569,6 +596,15 @@ func _count_land_use(parcels: Array[Dictionary], land_use: StringName) -> int:
 func _count_road_class_candidates(parcels: Array[Dictionary], road_class: StringName) -> int:
     var count: int = 0
     for parcel: Dictionary in parcels:
+        if StringName(parcel.get("frontage_road_class", &"")) == road_class:
+            count += 1
+    return count
+
+func _count_unclassified_road_class(parcels: Array[Dictionary], road_class: StringName) -> int:
+    var count: int = 0
+    for parcel: Dictionary in parcels:
+        if StringName(parcel.get("land_use", &"")) != &"unclassified":
+            continue
         if StringName(parcel.get("frontage_road_class", &"")) == road_class:
             count += 1
     return count
