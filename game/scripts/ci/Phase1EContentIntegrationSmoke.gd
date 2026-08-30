@@ -30,7 +30,7 @@ func _test_building_content() -> void:
     var generator := GeneratorClass.new()
     var baseline := BaselineProfilesClass.new()
     _check(baseline.profile_ids().size() == 18, "eighteen baseline one-story profiles remain registered")
-    _check(generator.supported_archetypes().size() == 24, "all twenty-four System 19 archetypes remain callable")
+    _check(generator.supported_archetypes().size() == 25, "all twenty-five System 19 archetypes remain callable")
 
     var representative: Dictionary = {
         &"residential.house.suburban_family": false,
@@ -79,8 +79,10 @@ func _test_building_content() -> void:
         &"residential.house.compact_laundry",
         &"commercial.gas_station.small",
         &"commercial.diner.rural_small",
+        &"civic.post_office.small",
     ]:
-        _check(not baseline.has_profile(protected_id), "protected legacy archetype stays outside Phase 1E baseline dresser: %s" % String(protected_id))
+        _check(not baseline.has_profile(protected_id), "protected dedicated archetype stays outside Phase 1E baseline dresser: %s" % String(protected_id))
+        _check(generator.placement_descriptor(protected_id) != null, "protected dedicated archetype remains callable: %s" % String(protected_id))
 
 func _test_loot_freshness_icons() -> void:
     var items := LootItemsClass.new()
