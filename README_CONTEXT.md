@@ -13,15 +13,13 @@ Live build: `https://dmcexcess-lab.github.io/dmcexcess-lab-tick-survival-lab/`
 ## Current repository checkpoint
 
 - Last fully verified executable utility/substation head remains `a8ccbd8d717c1c61ef2ba3e53cda363ed73824c0`.
-- No gameplay/runtime code was changed by the terminology cleanup that followed; `a8ccbd8` remains the executable checkpoint for the pending utility implementation.
-- Canonical terminology cleanup reached functional cleanup head `f06a6174771e66b95759b16d05580a6161e51c42`.
-- The one-shot cleanup workflow that produced that head completed successfully and was designed to fail if either forbidden third-party comparison title remained anywhere in readable repository text.
-- The temporary one-shot cleanup workflow was then removed at `c899b2d616ef0abd89cb7bba30ec5c60ad9bb9ca`; it must not be recreated unless a future explicit cleanup task genuinely needs it.
-- This `README_CONTEXT.md` update is the final repository write for the terminology-cleanup close. It repairs the stale handoff that previously pointed directly to utility implementation even though additional terminology-cleanup commits had occurred afterward.
+- Terminology cleanup closed at context-repair head `925787988d0ff14706244e5a9aafc815559184ca` before the interrupted utility implementation attempt described below.
+- **No utility gameplay/runtime implementation from the interrupted attempt was committed to `main`.** Do not falsely treat the draft blobs below as landed code.
+- This context-only handoff update exists specifically so a new chat does not repeat the utility investigation/drafting work.
 
 ## Terminology cleanup — COMPLETE
 
-The active repository tree now uses project-native terminology.
+The active repository tree uses project-native terminology.
 
 Canonical identity:
 
@@ -37,6 +35,17 @@ Rules going forward:
 - There is exactly one root continuation handoff file: `README_CONTEXT.md`. `README_SOPS.md` is process authority, not a second context/handoff file.
 - The stale-context incident was caused by later automated cleanup commits occurring after the previous context close, not by duplicate context files.
 
+## Seed state — COMPLETE / PROTECTED
+
+The playable-seed problem is already fixed. Do not revisit seed selection unless a concrete failing regression names it.
+
+Protected seed behavior includes:
+
+- invalid-seed reroll/fallback;
+- playable-materialization preflight/resolution;
+- deterministic playable-seed fallback/resolution;
+- regression coverage for the playable seed path.
+
 ## Protected direction
 
 Do not regress these behaviors while finishing utilities:
@@ -50,9 +59,9 @@ Do not regress these behaviors while finishing utilities:
 - world-domain revision batching/caching;
 - rendering/presentation never becoming utility truth.
 
-## Power — current implemented state
+## Power — current implemented state on `main`
 
-The fixed/single-substation architecture has already been replaced on `main` by generated neighborhood substations.
+The fixed/single-substation architecture has already been replaced by generated neighborhood substations.
 
 Implemented at executable head `a8ccbd8`:
 
@@ -68,7 +77,7 @@ Implemented at executable head `a8ccbd8`:
 
 **Do not re-investigate or reconstruct this architecture during continuation unless a concrete test/compile failure names it.**
 
-## Active approved utility revamp — NOT YET IMPLEMENTED
+## Active approved utility revamp — IMPLEMENTATION DRAFTED, NOT COMMITTED
 
 The user explicitly superseded the previous regional-radius water model and the old analytic automatic line-wear failure scheduler.
 
@@ -98,24 +107,61 @@ The user explicitly superseded the previous regional-radius water model and the 
 9. Use the existing physical/spatial sound system, not a UI-only notification.
 10. No per-line recurring timers/processes; the daily pass is event-driven from authoritative time.
 
-The exact numeric base snap chance and daily increment were not specified. Choose conservative low tuning constants and do not block implementation to ask.
+The exact numeric base snap chance and daily increment were not specified. The interrupted draft chose conservative low constants: `100 / 1,000,000` base per eligible span per day, `+100 / 1,000,000` per quiet day, capped at `10,000 / 1,000,000`.
 
-## Already-established implementation seams
+## Work completed during the interrupted utility attempt
 
-**Do not broad-search these again.**
+The prior chat did substantial targeted investigation and drafted replacement source into GitHub blob objects, but **did not create a tree/commit or move `main` to them**. These blobs are useful continuation material and should prevent repeating the investigation.
 
-- `game/scripts/generation/world/GlobalWaterInfrastructurePlanner.gd` — replace four regional radius plants with one shore-near island-wide plant plan.
-- `game/scripts/generation/world/GlobalWaterInfrastructureValidator.gd` — replace four-plant/radius invariants with the one-plant island-wide contract.
-- `game/scripts/simulation/utilities/UtilityRuntimeState.gd` — replace host-grid-powered water pumps/radius bindings with one grid-independent municipal chain and island-wide failure semantics.
-- `game/scripts/simulation/utilities/NeighborhoodUtilityRuntimeState.gd` — dynamic local power topology is correct; preserve it while adding any building-specific well seam.
-- `game/scripts/simulation/utilities/UtilityLocalPowerTopologyPlanner.gd` — already exposes deterministic generated building records (`building_id`, `archetype_id`, `rect`, `cell`, `site_id`, `settlement_id`) for rural-well selection without runtime whole-world scans.
-- `game/scripts/simulation/utilities/NeighborhoodPowerInfrastructureMaterializer.gd` — current real local substation/pole infrastructure is protected.
-- `game/scripts/simulation/utilities/UtilityPowerNetworkRuntime.gd` — replace old predicted-threshold automatic failure progression with the once-per-day escalating snap test while retaining direct damage/repair and causal service refresh.
-- `game/scripts/simulation/utilities/UtilityNetworkConditionStore.gd` — preserve real condition/repair identity but remove/disable spontaneous failure caused solely by the superseded continuous analytic wear scheduler where required.
-- `game/scripts/app/UtilityGameMain.gd` — already wires `world_tick_advanced` into power-network logic; use this event-driven seam for day crossings, not frame polling.
-- Existing System-23/System-26 spatial-sound infrastructure must own the yellow `*SNAP*` event. If the exact callable was never established, one targeted symbol lookup/read is allowed; do not reopen sound architecture generally.
+Established findings:
 
-Focused tests should extend the existing owning System-33/global-water/physical-network regressions. Do not create a permanent new CI workflow solely for this change.
+- `GlobalWaterInfrastructurePlanner.gd` old code created four regional radius plants.
+- `GlobalWaterInfrastructureValidator.gd` enforced four plants/radius coverage.
+- `GlobalWorldProfileCatalog.gd` still carried old `water_regional_plant_count`, `water_service_radius_cells`, and regional source/treatment offsets.
+- Base `UtilityRuntimeState.gd` itself still contained the obsolete four-plant, host-grid-powered, radius-based runtime; it must be migrated, not merely hidden by the neighborhood subclass.
+- `GlobalWaterInfrastructureQuery.gd` also still used radius lookup and must migrate to island-wide semantics.
+- `NeighborhoodUtilityRuntimeState.gd` is the right place for building-specific private-well bindings while preserving existing local power topology.
+- `UtilityLocalPowerTopologyPlanner.gd` already exposes stable generated building records sufficient to choose rural wells once, without runtime whole-world scans.
+- `NeighborhoodPowerInfrastructureMaterializer.gd` is the correct physicalization seam for the single water facility and private wells alongside existing local power infrastructure.
+- `UtilityNetworkConditionStore.gd` can preserve real damage/repair condition identity while removing spontaneous analytic wear progression.
+- `UtilityPowerNetworkRuntime.gd` receives authoritative tick advancement already; it can process day crossings without frame polling or per-line timers.
+- Exact spatial-sound callable was established: `SpatialSoundService.emit_sound(profile_id, origin_cell, emitter_entity_id, emitter_token)`.
+- `SoundEmissionProfileCatalog.gd` is the correct profile owner; a `utility.power_line_snap` profile can use `*SNAP*` at all recognition tiers so existing yellow spatial-caption presentation owns the cue.
+- `UtilityGameMain.gd` is the correct place to connect the physical network's `line_snapped` signal to the existing spatial sound service.
+- Existing art can physically represent the facility/wells without a fake UI marker: facility shell/equipment can use existing `prop.shed`, `prop.water_heater_tall`, `prop.industrial_machine`, `prop.utility_box`, `prop.chainlink_fence`; a stable well entity can use an existing visible ground-cap prop while its stable entity/asset ID + System-33 condition state carry actual well identity.
+- Focused owning tests are `System33PowerWaterSmoke.gd`, `System33PowerInfrastructureSmoke.gd`, and `System33PowerPhysicalNetworkSmoke.gd`; existing `.github/workflows/system33-power-water.yml` already runs them plus protected integration regressions. Do not create a new permanent workflow.
+
+### Uncommitted draft blobs from that attempt
+
+These are **reference drafts only**. Fetch by blob SHA if useful, review/repair, then commit through a normal tree/commit. Do not assume they parse or pass tests until CI proves it.
+
+- `game/scripts/generation/world/GlobalWaterInfrastructurePlanner.gd` -> blob `9d1e1d2ff452b7c7daa7c79ed10ffbdc5a603233`
+- `game/scripts/generation/world/GlobalWaterInfrastructureValidator.gd` -> final draft blob `dbb52909391e7044e8915701febd248bba4f6965`
+- `game/scripts/generation/world/GlobalWorldProfileCatalog.gd` -> blob `5b44d4cb4aceccab5c133e24e40984e7680f8ce4`
+- `game/scripts/generation/world/GlobalWaterInfrastructureQuery.gd` -> blob `6170715b00aa4c87f45bb63d7270ce0663286895`
+- `game/scripts/simulation/utilities/UtilityRuntimeState.gd` -> blob `61d527feec3a0f56d16eb4427f0c165935996779`
+- `game/scripts/simulation/utilities/NeighborhoodUtilityRuntimeState.gd` -> blob `1ae62c52559cebbd345eb502d1dcdd4d283ee1bc`
+- `game/scripts/simulation/utilities/UtilityLocalPowerTopologyPlanner.gd` -> blob `98dd33cdc02e9868a1411c1a1fd5f922e7b59e8a`
+- `game/scripts/simulation/utilities/NeighborhoodPowerInfrastructureMaterializer.gd` -> blob `5b2d0cdfe0f754f3b5059bcd0d5f6db829064bf4`
+- `game/scripts/simulation/utilities/UtilityNetworkConditionStore.gd` -> blob `320a61f27c17b7dd8a6ff0268c79ac8be75d7e1f`
+- `game/scripts/simulation/utilities/UtilityPowerNetworkRuntime.gd` -> blob `a83fa5af3053a04dfc8cd4d84b5ce7a2a38921d7`
+- `game/scripts/simulation/sound/SoundEmissionProfileCatalog.gd` -> blob `383f6434bac50356741078d5e4998baf0426434d`
+- `game/scripts/app/UtilityGameMain.gd` -> blob `4d3c3bb4d3cbf300a2634a2054a11a36ad2f6d57`
+- `game/scripts/ci/System33PowerWaterSmoke.gd` -> final draft blob `f348f59bae3eb8b359f78e4421ca49174c07fe41`
+- `game/scripts/ci/System33PowerInfrastructureSmoke.gd` -> blob `a22eebf1f4c5c6e91d35d222bba207a45d801703`
+- `game/scripts/ci/System33PowerPhysicalNetworkSmoke.gd` -> blob `d50fba224426e01eda71157cecc1bae9475669c4`
+
+Earlier superseded draft blobs from the same attempt should be ignored when a final-draft SHA is listed above.
+
+## Important caveats before committing the drafts
+
+- The draft set was **not parsed or executed in Godot** before interruption.
+- Treat compile/test failures as expected cleanup, not a reason to redo architecture.
+- Review the draft set as a coherent migration because base water runtime/query and neighborhood private-well runtime must agree.
+- Preserve current local-substation behavior exactly unless a failing test identifies a concrete incompatibility.
+- The existing `System33PowerWaterSmoke.gd` draft was rewritten once during the attempt; use the listed final blob SHA, not earlier draft content.
+- The physical water representation intentionally reuses existing art semantics; if a concrete art/collision regression rejects one semantic, replace only that semantic without converting water truth into presentation-only state.
+- Do not revisit seeds, terminology cleanup, black-screen recovery, or broad world architecture during this continuation.
 
 ## Canonical execution/process rule
 
@@ -135,19 +181,18 @@ For continuation work:
 
 ## NEXT OPERATION
 
-The terminology cleanup is finished. **Do not perform more cleanup or archaeology unless explicitly requested.**
+**Do not redo the utility investigation. Do not redo seed work. Do not do more terminology cleanup.**
 
-On the next ordinary Tick Lab coding continuation, implement the already-approved utility revamp:
+Resume the interrupted utility implementation from the uncommitted draft blobs above:
 
-1. replace `GlobalWaterInfrastructurePlanner.gd` four-radius-plant output with one shore-near island-wide treatment plant;
-2. replace matching water validator invariants;
-3. migrate `UtilityRuntimeState.gd` to one grid-independent municipal water chain whose plant failure removes water island-wide;
-4. deterministically select 10–20% of rural generated homes from the already-available generated-building manifest and materialize/bind real powered-maintained well entities;
-5. replace `UtilityPowerNetworkRuntime.gd` automatic predicted-threshold failure progression with the once-per-day stable-order escalating snap test, first-snap-stops-day, reset-on-snap behavior;
-6. route a real snapped span through existing physical failure/outage truth and emit spatial yellow `*SNAP*` when in hearing range;
-7. update focused tests only;
-8. run the owning focused regressions and protected required integration checks;
-9. fix only failures that actually appear, using targeted reads;
-10. push/verify exact executable head and Pages as applicable;
-11. update utility canonical docs/changelog;
-12. **update this `README_CONTEXT.md` again as the final repo write before the final response.**
+1. fetch current `main` once and confirm only expected context/head drift;
+2. fetch the listed draft blobs and assemble them as one coherent candidate tree over current `main`;
+3. perform only a focused static sanity review for obvious draft mistakes/contradictions; do not broad-reread the repo;
+4. commit the candidate utility migration to a normal reachable commit on `main`;
+5. run/observe the owning `system33-power-water` CI to terminal status, including Godot parse/import and focused utility smokes;
+6. fix only concrete failures with targeted reads and recommit/reverify until green;
+7. run/confirm protected required integration checks and exact-head status; verify Pages/live build if the repository process requires it for this executable change;
+8. update canonical utility docs/changelog to describe the landed one-plant municipal water, real powered-maintained rural wells, and daily physical line snap model;
+9. **make `README_CONTEXT.md` the final repository write again**, recording the exact executable head, CI/Pages terminal state, any tuning constants actually landed, and the next real gameplay operation.
+
+Completion means the utility code is actually committed and verified, not merely drafted.
