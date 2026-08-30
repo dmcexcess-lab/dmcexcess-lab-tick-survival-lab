@@ -1,10 +1,9 @@
 extends RefCounted
 class_name UtilityNetworkConditionStore
 
-## Shared, data-only condition substrate for physical utility assets.
-## Condition is derived analytically from authoritative time; no asset owns a timer, Node,
-## scheduled event, or recurring update. Network owners decide when a predicted threshold crossing
-## needs to be observed and translated into service consequences.
+## Shared data-only condition substrate for physical utility assets.
+## Condition changes only through real damage, repair, or another explicit owner event.
+## This store owns no timers, scheduled wear, recurring updates, or spontaneous failures.
 
 const TICKS_PER_DAY: int = 86400
 const FAILURE_THRESHOLD: int = 250
@@ -36,20 +35,16 @@ func register_asset(
             and String(existing.get("section_id", "")) == section_id.strip_edges() \
             and String(existing.get("entity_id", "")) == entity_id.strip_edges()
     var seed: int = _stable_hash("condition:%s" % key)
-    var initial_condition: int = 280 + (seed % 721)
-    var wear_per_day: int = 6 + (seed % 13)
+    var initial_condition: int = 850 + (seed % 151)
     if kind == DISTRIBUTION_SPAN:
-        initial_condition = 270 + (seed % 731)
-        wear_per_day = 10 + (seed % 23)
+        initial_condition = 825 + (seed % 176)
     _assets[key] = {
         "asset_id": key,
         "kind": kind,
         "section_id": section_id.strip_edges(),
         "entity_id": entity_id.strip_edges(),
         "condition_at_event": initial_condition,
-        "wear_anchor_tick": generated_at_tick,
-        "wear_start_tick": generated_at_tick + TICKS_PER_DAY,
-        "wear_per_day": wear_per_day,
+        "last_event_tick": generated_at_tick,
         "failure_threshold": FAILURE_THRESHOLD,
         "last_damage_source": &"generated_initial_condition",
     }
@@ -84,21 +79,15 @@ func condition_at(asset_id: String, world_tick: int) -> int:
     var record: Dictionary = _assets.get(asset_id.strip_edges(), {})
     if record.is_empty() or world_tick < 0:
         return 0
-    var base_condition: int = int(record.get("condition_at_event", 0))
-    var wear_start_tick: int = int(record.get("wear_start_tick", 0))
-    if world_tick <= wear_start_tick:
-        return clampi(base_condition, 0, 1000)
-    var elapsed: int = world_tick - wear_start_tick
-    var wear_per_day: int = maxi(0, int(record.get("wear_per_day", 0)))
-    var wear: int = int((elapsed * wear_per_day) / TICKS_PER_DAY)
-    return clampi(base_condition - wear, 0, 1000)
+    return clampi(int(record.get("condition_at_event", 0)), 0, 1000)
 
 func is_failed_at(asset_id: String, world_tick: int) -> bool:
     var record: Dictionary = _assets.get(asset_id.strip_edges(), {})
-    if record.is_empty():
+    if record.is_empty() or world_tick < 0:
         return false
     return condition_at(asset_id, world_tick) <= int(record.get("failure_threshold", FAILURE_THRESHOLD))
 
+## Kept as a compatibility/query seam. Healthy assets have no predicted automatic failure.
 func failure_tick(asset_id: String) -> int:
     var record: Dictionary = _assets.get(asset_id.strip_edges(), {})
     if record.is_empty():
@@ -106,13 +95,8 @@ func failure_tick(asset_id: String) -> int:
     var condition: int = int(record.get("condition_at_event", 0))
     var threshold: int = int(record.get("failure_threshold", FAILURE_THRESHOLD))
     if condition <= threshold:
-        return int(record.get("wear_anchor_tick", 0))
-    var wear_per_day: int = int(record.get("wear_per_day", 0))
-    if wear_per_day <= 0:
-        return MAX_TICK
-    var remaining: int = condition - threshold
-    var ticks_to_threshold: int = int((remaining * TICKS_PER_DAY + wear_per_day - 1) / wear_per_day)
-    return int(record.get("wear_start_tick", 0)) + ticks_to_threshold
+        return int(record.get("last_event_tick", 0))
+    return MAX_TICK
 
 func apply_damage(
     asset_id: String,
@@ -127,8 +111,7 @@ func apply_damage(
     var record: Dictionary = _assets[key]
     var current: int = condition_at(key, world_tick)
     record["condition_at_event"] = clampi(current - base_damage, 0, 1000)
-    record["wear_anchor_tick"] = world_tick
-    record["wear_start_tick"] = world_tick
+    record["last_event_tick"] = world_tick
     record["last_damage_source"] = source_kind
     _assets[key] = record
     _revision += 1
@@ -171,8 +154,7 @@ func repair_asset(
     var was_failed: bool = is_failed_at(key, world_tick)
     var record: Dictionary = _assets[key]
     record["condition_at_event"] = int(requirements.get("restored_condition", 900))
-    record["wear_anchor_tick"] = world_tick
-    record["wear_start_tick"] = world_tick
+    record["last_event_tick"] = world_tick
     record["last_damage_source"] = &"repair"
     _assets[key] = record
     _revision += 1
@@ -190,10 +172,10 @@ func snapshot() -> Dictionary:
     var records: Array = []
     for asset_id: String in asset_ids():
         records.append((_assets[asset_id] as Dictionary).duplicate(true))
-    return {"schema_version": 1, "revision": _revision, "assets": records}
+    return {"schema_version": 2, "revision": _revision, "assets": records}
 
 func restore_snapshot(data: Dictionary) -> bool:
-    if int(data.get("schema_version", -1)) != 1:
+    if int(data.get("schema_version", -1)) != 2:
         return false
     var values: Variant = data.get("assets", [])
     if typeof(values) != TYPE_ARRAY:
@@ -205,7 +187,10 @@ func restore_snapshot(data: Dictionary) -> bool:
         var record: Dictionary = (value as Dictionary).duplicate(true)
         var asset_id: String = String(record.get("asset_id", "")).strip_edges()
         var kind: StringName = StringName(record.get("kind", &""))
-        if asset_id.is_empty() or not VALID_KINDS.has(kind) or restored.has(asset_id):
+        var condition: int = int(record.get("condition_at_event", -1))
+        var last_event_tick: int = int(record.get("last_event_tick", -1))
+        if asset_id.is_empty() or not VALID_KINDS.has(kind) or restored.has(asset_id) \
+            or condition < 0 or condition > 1000 or last_event_tick < 0:
             return false
         restored[asset_id] = record
     _assets = restored

@@ -10,6 +10,7 @@ const RefrigerationProviderClass = preload("res://scripts/simulation/utilities/U
 const UtilityControlsClass = preload("res://scripts/ui/UtilityDevControls.gd")
 
 const CENTRAL_SETTLEMENT_ID: String = "settlement.rural.crossroads.001"
+const INVALID_UTILITY_CELL := Vector2i(2147483647, 2147483647)
 const COLD_CONTAINER_TYPES: Array[StringName] = [
     &"prop.refrigerator_white",
     &"prop.walkin_cooler",
@@ -96,6 +97,9 @@ func _wire_power_infrastructure(plan: GeneratedGlobalWorldPlan) -> bool:
     _power_network = PowerNetworkRuntimeClass.new()
     if not _power_network.initialize(_utilities, _power_infrastructure.wire_edges(), Callable(_kernel, "world_tick")):
         return false
+    var snapped_callable := Callable(self, "_on_power_line_snapped")
+    if not _power_network.line_snapped.is_connected(snapped_callable):
+        _power_network.line_snapped.connect(snapped_callable)
     # Presentation receives the same physical local-distribution projection regardless of energized
     # or failed state. The regional source-to-substation relationship is intentionally logical only.
     return _world_view.configure_power_infrastructure(_world, _power_infrastructure.wire_edges())
@@ -118,12 +122,28 @@ func power_infrastructure_asset_ids(kind: StringName = &"") -> Array[String]:
         return []
     return _power_network.asset_ids(kind)
 
+func damage_water_infrastructure(asset_id: String, damage: int, reason: StringName = &"physical_water_asset_damage") -> bool:
+    return _utilities is NeighborhoodUtilityRuntimeState \
+        and (_utilities as NeighborhoodUtilityRuntimeState).damage_water_asset(asset_id, damage, reason)
+
+func repair_water_infrastructure(asset_id: String, available_material_units: int) -> Dictionary:
+    if not (_utilities is NeighborhoodUtilityRuntimeState):
+        return {"ok": false, "material_units_consumed": 0, "reason": &"water_network_unavailable"}
+    return (_utilities as NeighborhoodUtilityRuntimeState).repair_water_asset(asset_id, available_material_units)
+
+func water_infrastructure_asset_ids(kind: StringName = &"") -> Array[String]:
+    if not (_utilities is NeighborhoodUtilityRuntimeState):
+        return []
+    return (_utilities as NeighborhoodUtilityRuntimeState).water_asset_ids(kind)
+
 func power_infrastructure_debug_snapshot() -> Dictionary:
     return {
         "topology": {
             "building_count": int(_local_power_topology.get("building_count", 0)),
             "substation_count": (_local_power_topology.get("substations", []) as Array).size(),
             "target_buildings_per_substation": int(_local_power_topology.get("target_buildings_per_substation", 0)),
+            "rural_home_count": int(_local_power_topology.get("rural_home_count", 0)),
+            "well_count": (_local_power_topology.get("wells", []) as Array).size(),
         },
         "distribution": {} if _power_infrastructure == null else _power_infrastructure.debug_snapshot(),
         "network": {} if _power_network == null else _power_network.debug_snapshot(),
@@ -132,6 +152,16 @@ func power_infrastructure_debug_snapshot() -> Dictionary:
 func _on_power_network_tick_advanced(_previous_tick: int, new_tick: int) -> void:
     if _power_network != null:
         _power_network.advance_to_tick(new_tick)
+
+func _on_power_line_snapped(_asset_id: String, cell: Vector2i) -> void:
+    if _spatial_sound == null or cell == INVALID_UTILITY_CELL or not _world.has_terrain(cell):
+        return
+    _spatial_sound.emit_sound(
+        SoundProfilesClass.POWER_LINE_SNAP,
+        cell,
+        "",
+        "utility.power_line_snap"
+    )
 
 func _wire_utility_lighting() -> bool:
     if _physical_lighting == null or _hand_state == null:

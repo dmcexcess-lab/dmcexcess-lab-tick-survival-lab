@@ -11,6 +11,7 @@ const RUN_STRIDE: StringName = &"movement.run_stride"
 const DOOR_NORMAL: StringName = &"door.normal"
 const DOOR_LOUD: StringName = &"door.loud"
 const TEST_IMPACT: StringName = &"test.impact"
+const POWER_LINE_SNAP: StringName = &"utility.power_line_snap"
 
 const DOMAIN_SURVIVAL: StringName = &"survival"
 const DOMAIN_TECHNICAL: StringName = &"technical"
@@ -66,6 +67,16 @@ const _PROFILES := {
         "recognition_difficulty": 40,
         "domain_skill": "survival",
         "cue_lifetime_ticks": 35,
+    },
+    "utility.power_line_snap": {
+        "power": 300,
+        "category": "utility",
+        "unknown_word": "*SNAP*",
+        "broad_word": "*SNAP*",
+        "specific_word": "*SNAP*",
+        "recognition_difficulty": 25,
+        "domain_skill": "technical",
+        "cue_lifetime_ticks": 40,
     },
 }
 

@@ -13,7 +13,7 @@ func profile(profile_id: StringName) -> Dictionary:
     if profile_id == TEMPERATE_ISLAND_REGION:
         var result: Dictionary = _rural_profile()
         result["id"] = TEMPERATE_ISLAND_REGION
-        result["version"] = 3
+        result["version"] = 4
         result["island_enabled"] = true
         # Island generation keeps the proven content owners but no longer carries the
         # old regional stress-fixture geometry into the playable world.
@@ -47,7 +47,7 @@ func profile(profile_id: StringName) -> Dictionary:
 func _rural_profile() -> Dictionary:
     return {
         "id": TEMPERATE_RURAL_REGION,
-        "version": 6,
+        "version": 7,
         "minimum_world_size": Vector2i(1536, 1536),
         "local_site_size": Vector2i(256, 256),
         "primary_width": 5,
@@ -76,12 +76,11 @@ func _rural_profile() -> Dictionary:
         "power_cost_primary": 10,
         "power_cost_secondary": 12,
 
-        # Potable water is deliberately sparse regional infrastructure. Four large
-        # treatment plants serve structures by radius; routine private wells do not exist.
-        "water_regional_plant_count": 4,
-        "water_service_radius_cells": 704,
-        "water_treatment_anchor_offset": 24,
-        "water_source_anchor_offset": 48,
+        # Potable water is one island-wide municipal treatment facility. Its small
+        # physical plant is kept near the shore; long-distance pipe/flow simulation is
+        # intentionally absent. Rural private wells are selected later from real homes.
+        "water_plant_shore_offset_cells": 48,
+        "water_plant_internal_spacing_cells": 3,
         "wastewater_treatment_anchor_offset": 64,
 
         "smalltown_distance_min": 520,

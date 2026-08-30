@@ -3,9 +3,17 @@ class_name UtilityPowerNetworkRuntime
 
 const ConditionStoreClass = preload("res://scripts/simulation/utilities/UtilityNetworkConditionStore.gd")
 
-## Causal physical distribution state for System 33 without a clocked network simulation.
-## Each asset's wear is analytic. A single sorted threshold schedule lets authoritative time
-## observe only actual failure crossings; ordinary tick advancement is an O(1) next-due check.
+## Causal physical distribution state for System 33. Physical condition changes only from
+## explicit damage/repair events or the once-per-authoritative-day deterministic span snap pass.
+## There are no per-asset Nodes/timers and no continuous analytic wear scheduler.
+
+signal line_snapped(asset_id, cell)
+
+const CHANCE_DENOMINATOR: int = 1000000
+const BASE_DAILY_SNAP_CHANCE: int = 100 # 0.01% per eligible span.
+const QUIET_DAY_SNAP_INCREMENT: int = 100 # +0.01% per no-snap day.
+const MAX_DAILY_SNAP_CHANCE: int = 10000 # 1.00% per eligible span cap.
+const INVALID_CELL := Vector2i(2147483647, 2147483647)
 
 var _utilities: UtilityRuntimeState = null
 var _tick_provider: Callable = Callable()
@@ -13,7 +21,9 @@ var _condition: UtilityNetworkConditionStore = null
 var _assets_by_service: Dictionary = {}
 var _services_by_asset: Dictionary = {}
 var _owned_blocked_services: Dictionary = {}
-var _failure_schedule: Array[Dictionary] = []
+var _span_cells: Dictionary = {}
+var _last_processed_day: int = 0
+var _quiet_days: int = 0
 var _ready: bool = false
 
 func initialize(
@@ -29,6 +39,8 @@ func initialize(
     var generated_tick: int = _world_tick()
     if generated_tick < 0:
         return false
+    _last_processed_day = int(generated_tick / ConditionStoreClass.TICKS_PER_DAY)
+    _quiet_days = 0
 
     for wire: Dictionary in wire_edges:
         var settlement_ids: Array[String] = _string_array(wire.get("service_settlement_ids", []))
@@ -47,6 +59,10 @@ func initialize(
             return false
         if not _register_asset(span_id, ConditionStoreClass.DISTRIBUTION_SPAN, segment_id, "", service_ids, generated_tick):
             return false
+        var snap_cell: Vector2i = wire.get("snap_cell", INVALID_CELL)
+        if snap_cell == INVALID_CELL:
+            snap_cell = _wire_endpoint_cell(wire)
+        _span_cells[span_id] = snap_cell
 
         for endpoint_key: String in ["start_id", "end_id"]:
             var support_id: String = String(wire.get(endpoint_key, "")).strip_edges()
@@ -62,9 +78,8 @@ func initialize(
             ):
                 return false
 
-    if _services_by_asset.is_empty():
+    if _services_by_asset.is_empty() or _condition.asset_ids(ConditionStoreClass.DISTRIBUTION_SPAN).is_empty():
         return false
-    _rebuild_failure_schedule()
     _ready = true
     return true
 
@@ -83,6 +98,8 @@ func asset_record(asset_id: String) -> Dictionary:
     if result.is_empty():
         return result
     result["affected_services"] = _service_ids_for_asset(asset_id)
+    if StringName(result.get("kind", &"")) == ConditionStoreClass.DISTRIBUTION_SPAN:
+        result["snap_cell"] = _span_cells.get(asset_id.strip_edges(), INVALID_CELL)
     return result
 
 func repair_requirements(asset_id: String) -> Dictionary:
@@ -100,7 +117,6 @@ func damage_asset(asset_id: String, damage: int, source_kind: StringName = &"dir
     var result: Dictionary = _condition.apply_damage(key, damage, _world_tick(), source_kind)
     if not bool(result.get("ok", false)):
         return false
-    _reschedule_asset(key)
     return _refresh_services(services, &"physical_distribution_damage")
 
 func repair_asset(asset_id: String, electrical_skill: int, available_material_units: int) -> Dictionary:
@@ -118,7 +134,6 @@ func repair_asset(asset_id: String, electrical_skill: int, available_material_un
     )
     if not bool(result.get("ok", false)):
         return result
-    _reschedule_asset(key)
     if not _refresh_services(services, &"physical_distribution_repair"):
         return {"ok": false, "material_units_consumed": int(result.get("material_units_consumed", 0)), "reason": &"service_sync_failed"}
     return result
@@ -126,39 +141,44 @@ func repair_asset(asset_id: String, electrical_skill: int, available_material_un
 func advance_to_tick(world_tick: int) -> bool:
     if not is_ready() or world_tick < 0:
         return false
-    while not _failure_schedule.is_empty() and int(_failure_schedule[0].get("tick", ConditionStoreClass.MAX_TICK)) <= world_tick:
-        var due: Dictionary = _failure_schedule.pop_front()
-        var asset_id: String = String(due.get("asset_id", ""))
-        if asset_id.is_empty() or not _condition.has_asset(asset_id):
-            continue
-        var current_failure_tick: int = _condition.failure_tick(asset_id)
-        if current_failure_tick != int(due.get("tick", -1)):
-            continue
-        if not _condition.is_failed_at(asset_id, world_tick):
-            _insert_schedule(asset_id, current_failure_tick)
-            continue
-        if not _refresh_services(_service_ids_for_asset(asset_id), &"physical_distribution_wear_failure"):
+    var target_day: int = int(world_tick / ConditionStoreClass.TICKS_PER_DAY)
+    while _last_processed_day < target_day:
+        _last_processed_day += 1
+        if not _process_daily_snap(_last_processed_day):
             return false
     return true
 
+## Compatibility/query seam: now returns the next daily test boundary, not a predicted wear failure.
 func next_failure_tick() -> int:
-    if _failure_schedule.is_empty():
+    if not is_ready():
         return ConditionStoreClass.MAX_TICK
-    return int(_failure_schedule[0].get("tick", ConditionStoreClass.MAX_TICK))
+    return (_last_processed_day + 1) * ConditionStoreClass.TICKS_PER_DAY
+
+func current_daily_snap_chance() -> int:
+    return mini(BASE_DAILY_SNAP_CHANCE + _quiet_days * QUIET_DAY_SNAP_INCREMENT, MAX_DAILY_SNAP_CHANCE)
 
 func snapshot() -> Dictionary:
     if not is_ready():
         return {}
-    return {"schema_version": 1, "condition": _condition.snapshot()}
+    return {
+        "schema_version": 2,
+        "condition": _condition.snapshot(),
+        "last_processed_day": _last_processed_day,
+        "quiet_days": _quiet_days,
+    }
 
 func restore_snapshot(data: Dictionary) -> bool:
-    if not is_ready() or int(data.get("schema_version", -1)) != 1:
+    if not is_ready() or int(data.get("schema_version", -1)) != 2:
         return false
     var value: Variant = data.get("condition", {})
-    if typeof(value) != TYPE_DICTIONARY or not _condition.restore_snapshot(value):
+    var restored_day: int = int(data.get("last_processed_day", -1))
+    var restored_quiet_days: int = int(data.get("quiet_days", -1))
+    if typeof(value) != TYPE_DICTIONARY or restored_day < 0 or restored_quiet_days < 0 \
+        or not _condition.restore_snapshot(value):
         return false
+    _last_processed_day = restored_day
+    _quiet_days = restored_quiet_days
     _owned_blocked_services.clear()
-    _rebuild_failure_schedule()
     return _refresh_services(_all_mapped_services(), &"physical_distribution_restore")
 
 func debug_snapshot() -> Dictionary:
@@ -168,8 +188,37 @@ func debug_snapshot() -> Dictionary:
         "mapped_service_count": _assets_by_service.size(),
         "owned_blocked_service_count": _owned_blocked_services.size(),
         "next_failure_tick": next_failure_tick(),
+        "last_processed_day": _last_processed_day,
+        "quiet_days": _quiet_days,
+        "daily_snap_chance_numerator": current_daily_snap_chance(),
+        "daily_snap_chance_denominator": CHANCE_DENOMINATOR,
         "condition": {} if _condition == null else _condition.debug_snapshot(_world_tick()),
     }
+
+func _process_daily_snap(day_index: int) -> bool:
+    var chance: int = current_daily_snap_chance()
+    var eligible_count: int = 0
+    for span_id: String in _condition.asset_ids(ConditionStoreClass.DISTRIBUTION_SPAN):
+        if _condition.is_failed_at(span_id, _world_tick()):
+            continue
+        eligible_count += 1
+        var roll: int = _stable_hash("daily_snap|%d|%s" % [day_index, span_id]) % CHANCE_DENOMINATOR
+        if roll >= chance:
+            continue
+        var current_condition: int = _condition.condition_at(span_id, _world_tick())
+        var damage: int = maxi(1, current_condition - ConditionStoreClass.FAILURE_THRESHOLD + 1)
+        var result: Dictionary = _condition.apply_damage(span_id, damage, _world_tick(), &"daily_line_snap")
+        if not bool(result.get("ok", false)) or not bool(result.get("failed", false)):
+            return false
+        if not _refresh_services(_service_ids_for_asset(span_id), &"physical_distribution_daily_snap"):
+            return false
+        _quiet_days = 0
+        var cell: Vector2i = _span_cells.get(span_id, INVALID_CELL)
+        line_snapped.emit(span_id, cell)
+        return true
+    if eligible_count > 0:
+        _quiet_days += 1
+    return true
 
 func _register_asset(
     asset_id: String,
@@ -226,32 +275,6 @@ func _distribution_link_id(service_id: String) -> String:
         return ""
     return "power.link.substation_to.%s" % settlement_id
 
-func _rebuild_failure_schedule() -> void:
-    _failure_schedule.clear()
-    if _condition == null:
-        return
-    for asset_id: String in _condition.asset_ids():
-        _insert_schedule(asset_id, _condition.failure_tick(asset_id))
-
-func _reschedule_asset(asset_id: String) -> void:
-    for index: int in range(_failure_schedule.size() - 1, -1, -1):
-        if String(_failure_schedule[index].get("asset_id", "")) == asset_id:
-            _failure_schedule.remove_at(index)
-    _insert_schedule(asset_id, _condition.failure_tick(asset_id))
-
-func _insert_schedule(asset_id: String, failure_tick: int) -> void:
-    if failure_tick >= ConditionStoreClass.MAX_TICK:
-        return
-    var record: Dictionary = {"asset_id": asset_id, "tick": failure_tick}
-    var insert_at: int = _failure_schedule.size()
-    for index: int in range(_failure_schedule.size()):
-        var existing: Dictionary = _failure_schedule[index]
-        var existing_tick: int = int(existing.get("tick", ConditionStoreClass.MAX_TICK))
-        if failure_tick < existing_tick or (failure_tick == existing_tick and asset_id < String(existing.get("asset_id", ""))):
-            insert_at = index
-            break
-    _failure_schedule.insert(insert_at, record)
-
 func _service_ids_for_asset(asset_id: String) -> Array[String]:
     var result: Array[String] = []
     for value: Variant in _services_by_asset.get(asset_id.strip_edges(), []):
@@ -275,6 +298,17 @@ func _world_tick() -> int:
     if not _tick_provider.is_valid():
         return -1
     return int(_tick_provider.call())
+
+func _wire_endpoint_cell(wire: Dictionary) -> Vector2i:
+    # Legacy/base physical projections may not carry a snap-cell hint. Returning INVALID here
+    # preserves the physical failure even when no presentation origin was supplied.
+    return INVALID_CELL
+
+static func _stable_hash(value: String) -> int:
+    var result: int = 2166136261
+    for index: int in range(value.length()):
+        result = int((result ^ value.unicode_at(index)) * 16777619) & 0x7fffffff
+    return result
 
 static func _string_array(value: Variant) -> Array[String]:
     var result: Array[String] = []

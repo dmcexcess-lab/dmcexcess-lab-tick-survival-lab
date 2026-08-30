@@ -9,28 +9,16 @@ func service_for_settlement(water_services: Array[Dictionary], settlement_id: St
             return service.duplicate(true)
     return {}
 
-func service_for_cell(water_services: Array[Dictionary], cell: Vector2i) -> Dictionary:
-    var best: Dictionary = {}
-    var best_distance_sq: int = 2147483647
+func service_for_cell(water_services: Array[Dictionary], _cell: Vector2i) -> Dictionary:
+    var candidates: Array[Dictionary] = []
     for service: Dictionary in water_services:
-        var center: Vector2i = service.get("coverage_center", INVALID_CELL)
-        var radius: int = int(service.get("service_radius", 0))
-        if center == INVALID_CELL or radius <= 0:
-            continue
-        var delta: Vector2i = cell - center
-        var distance_sq: int = delta.x * delta.x + delta.y * delta.y
-        if distance_sq > radius * radius:
-            continue
-        var network_id: String = String(service.get("network_id", ""))
-        var best_network_id: String = String(best.get("network_id", ""))
-        var service_id: String = String(service.get("id", ""))
-        var best_service_id: String = String(best.get("id", ""))
-        if distance_sq < best_distance_sq \
-            or (distance_sq == best_distance_sq and (best_network_id.is_empty() or network_id < best_network_id)) \
-            or (distance_sq == best_distance_sq and network_id == best_network_id and (best_service_id.is_empty() or service_id < best_service_id)):
-            best = service
-            best_distance_sq = distance_sq
-    return best.duplicate(true) if not best.is_empty() else {}
+        if StringName(service.get("service_mode", &"")) == &"island_wide_municipal" \
+            and bool(service.get("island_wide", false)):
+            candidates.append(service)
+    candidates.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
+        return String(a.get("id", "")) < String(b.get("id", ""))
+    )
+    return {} if candidates.is_empty() else candidates[0].duplicate(true)
 
 func node_by_kind(water_nodes: Array[Dictionary], kind: StringName) -> Dictionary:
     for node: Dictionary in water_nodes:

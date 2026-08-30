@@ -8,12 +8,17 @@ const LOCAL_COLLISION_SEMANTICS: Array[StringName] = [
     &"prop.transformer",
     &"prop.utility_box",
     &"prop.chainlink_fence",
+    &"prop.shed",
+    &"prop.water_heater_tall",
+    &"prop.industrial_machine",
+    &"prop.manhole",
 ]
 
 const FACILITY_RADIUS: int = 2
 const FACILITY_SEARCH_RADIUS: int = 32
 const CUSTOMER_CLEARANCE: int = 2
 const CUSTOMER_SEARCH_RADIUS: int = 6
+const WELL_CLEARANCE: int = 1
 
 var _topology: Dictionary = {}
 var _blocked_prop_lookup: Dictionary = {}
@@ -39,8 +44,18 @@ func _build_projection() -> Dictionary:
     var props: Array[Dictionary] = []
     var wires: Array[Dictionary] = []
     var reserved_cells: Dictionary = {}
-    var substations: Array = _topology.get("substations", [])
 
+    var plant_records: Array[Dictionary] = _water_plant_records(reserved_cells)
+    if plant_records.is_empty():
+        return {"props": [], "wires": []}
+    for record: Dictionary in plant_records:
+        var plant_cell: Vector2i = record.get("cell", INVALID_CELL)
+        if plant_cell == INVALID_CELL or reserved_cells.has(plant_cell):
+            return {"props": [], "wires": []}
+        props.append(record)
+        reserved_cells[plant_cell] = true
+
+    var substations: Array = _topology.get("substations", [])
     for substation_value: Variant in substations:
         if typeof(substation_value) != TYPE_DICTIONARY:
             return {"props": [], "wires": []}
@@ -89,13 +104,71 @@ func _build_projection() -> Dictionary:
                 "network_id": "power.network.local_distribution",
                 "power_class": &"local_distribution",
                 "segment_id": "power.local.%s.customer.%03d" % [token, index],
-                # Base UtilityPowerNetworkRuntime resolves these stable synthetic service keys
-                # through UtilityRuntimeState; they are not claims about real settlements.
                 "service_settlement_ids": [service_key],
                 "served_building_id": building_id,
+                "snap_cell": pole_cell,
             })
 
+    for well_value: Variant in _topology.get("wells", []):
+        if typeof(well_value) != TYPE_DICTIONARY:
+            return {"props": [], "wires": []}
+        var well: Dictionary = well_value
+        var well_id: String = String(well.get("asset_id", "")).strip_edges()
+        var building_rect: Rect2i = well.get("rect", Rect2i())
+        if well_id.is_empty() or building_rect.size.x <= 0 or building_rect.size.y <= 0:
+            return {"props": [], "wires": []}
+        var well_cell: Vector2i = _find_well_cell(building_rect, reserved_cells)
+        if well_cell == INVALID_CELL:
+            return {"props": [], "wires": []}
+        props.append({
+            "id": well_id,
+            # Existing final-prop art gives the well a visible ground cap while the stable
+            # entity/asset ID and System-33 condition record carry the actual well identity.
+            "semantic": &"prop.manhole",
+            "cell": well_cell,
+            "facing": Facing.Value.NORTH,
+        })
+        reserved_cells[well_cell] = true
+
     return {"props": props, "wires": wires}
+
+func _water_plant_records(reserved_cells: Dictionary) -> Array[Dictionary]:
+    var treatment_node: Dictionary = {}
+    for node: Dictionary in _plan.water_nodes:
+        if StringName(node.get("kind", &"")) == &"treatment_plant":
+            if not treatment_node.is_empty():
+                return []
+            treatment_node = node
+    if treatment_node.is_empty():
+        return []
+    var target: Vector2i = treatment_node.get("cell", INVALID_CELL)
+    var plant_id: String = String(treatment_node.get("critical_asset_id", "")).strip_edges()
+    if target == INVALID_CELL or plant_id.is_empty():
+        return []
+    var anchor: Vector2i = _find_local_facility_anchor(target, reserved_cells)
+    if anchor == INVALID_CELL:
+        return []
+    var records: Array[Dictionary] = [
+        {"id": plant_id, "semantic": &"prop.shed", "cell": anchor, "facing": Facing.Value.SOUTH},
+        {"id": "water.physical.plant.001.tank", "semantic": &"prop.water_heater_tall", "cell": anchor + Vector2i(-1, 0), "facing": Facing.Value.SOUTH},
+        {"id": "water.physical.plant.001.machine", "semantic": &"prop.industrial_machine", "cell": anchor + Vector2i(1, 0), "facing": Facing.Value.SOUTH},
+        {"id": "water.physical.plant.001.box", "semantic": &"prop.utility_box", "cell": anchor + Vector2i(0, -1), "facing": Facing.Value.SOUTH},
+    ]
+    var fence_ordinal: int = 0
+    for y: int in range(-FACILITY_RADIUS, FACILITY_RADIUS + 1):
+        for x: int in range(-FACILITY_RADIUS, FACILITY_RADIUS + 1):
+            if absi(x) != FACILITY_RADIUS and absi(y) != FACILITY_RADIUS:
+                continue
+            if x == 0 and y == FACILITY_RADIUS:
+                continue
+            records.append({
+                "id": "water.physical.plant.001.fence.%02d" % fence_ordinal,
+                "semantic": &"prop.chainlink_fence",
+                "cell": anchor + Vector2i(x, y),
+                "facing": Facing.Value.NORTH,
+            })
+            fence_ordinal += 1
+    return records
 
 func _substation_records(token: String, transformer_id: String, anchor: Vector2i) -> Array[Dictionary]:
     var records: Array[Dictionary] = [
@@ -108,7 +181,6 @@ func _substation_records(token: String, transformer_id: String, anchor: Vector2i
         for x: int in range(-FACILITY_RADIUS, FACILITY_RADIUS + 1):
             if absi(x) != FACILITY_RADIUS and absi(y) != FACILITY_RADIUS:
                 continue
-            # One-cell south gate keeps the actual equipment accessible.
             if x == 0 and y == FACILITY_RADIUS:
                 continue
             records.append({
@@ -156,6 +228,20 @@ func _find_customer_pole(building_rect: Rect2i, substation_cell: Vector2i, reser
             return a.y < b.y
         return a.x < b.x
     )
+    for candidate: Vector2i in candidates:
+        var resolved: Vector2i = _find_nearby_available(candidate, reserved_cells)
+        if resolved != INVALID_CELL:
+            return resolved
+    return INVALID_CELL
+
+func _find_well_cell(building_rect: Rect2i, reserved_cells: Dictionary) -> Vector2i:
+    var center: Vector2i = _rect_center(building_rect)
+    var candidates: Array[Vector2i] = [
+        Vector2i(building_rect.position.x - WELL_CLEARANCE, center.y),
+        Vector2i(building_rect.end.x - 1 + WELL_CLEARANCE, center.y),
+        Vector2i(center.x, building_rect.position.y - WELL_CLEARANCE),
+        Vector2i(center.x, building_rect.end.y - 1 + WELL_CLEARANCE),
+    ]
     for candidate: Vector2i in candidates:
         var resolved: Vector2i = _find_nearby_available(candidate, reserved_cells)
         if resolved != INVALID_CELL:

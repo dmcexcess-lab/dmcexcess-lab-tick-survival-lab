@@ -4,14 +4,21 @@ const WorldStateClass = preload("res://scripts/foundation/world/WorldState.gd")
 const WorldMutationClass = preload("res://scripts/foundation/world/WorldMutationService.gd")
 const UtilityStateClass = preload("res://scripts/simulation/utilities/UtilityRuntimeState.gd")
 const InfrastructureClass = preload("res://scripts/simulation/utilities/UtilityPowerInfrastructureMaterializer.gd")
+const LocalTopologyPlannerClass = preload("res://scripts/simulation/utilities/UtilityLocalPowerTopologyPlanner.gd")
+const NeighborhoodUtilityStateClass = preload("res://scripts/simulation/utilities/NeighborhoodUtilityRuntimeState.gd")
+const NeighborhoodInfrastructureClass = preload("res://scripts/simulation/utilities/NeighborhoodPowerInfrastructureMaterializer.gd")
 const UtilityLightingClass = preload("res://scripts/simulation/utilities/UtilityPoweredLightingSourceAdapter.gd")
 const EmitterProfileClass = preload("res://scripts/simulation/lighting/LightEmitterProfile.gd")
 const IslandFixtureClass = preload("res://scripts/demo/GeneratedIslandCritiqueFixture.gd")
+
+const INVALID_CELL := Vector2i(2147483647, 2147483647)
+const MUNICIPAL_PLANT_ASSET: String = "water.physical.plant.001"
 
 var _failures: Array[String] = []
 
 func _initialize() -> void:
     _test_power_infrastructure_projection()
+    _test_neighborhood_utility_physicalization()
     _test_colored_bloom_profiles_and_tick_phases()
     if _failures.is_empty():
         print("SYSTEM33_POWER_INFRASTRUCTURE_SMOKE_OK")
@@ -75,6 +82,63 @@ func _test_power_infrastructure_projection() -> void:
         _check(not asset_id.is_empty() and not seen_assets.has(asset_id), "wire span has unique stable physical asset ID")
         seen_assets[asset_id] = true
         _check(not (wire.get("service_settlement_ids", []) as Array).is_empty(), "wire span carries downstream service mapping")
+
+func _test_neighborhood_utility_physicalization() -> void:
+    var plan: GeneratedGlobalWorldPlan = IslandFixtureClass.generate_global_plan()
+    _check(plan != null and plan.is_generated(), "neighborhood utility physicalization plan generated")
+    if plan == null or not plan.is_generated():
+        return
+    var topology: Dictionary = LocalTopologyPlannerClass.new().plan(plan)
+    _check(bool(topology.get("ok", false)), "neighborhood utility topology plans")
+    if not bool(topology.get("ok", false)):
+        return
+    var world := WorldStateClass.new()
+    var mutations := WorldMutationClass.new(world)
+    var utilities := NeighborhoodUtilityStateClass.new(topology)
+    _check(utilities.initialize_from_plan(plan), "neighborhood utility runtime initializes")
+    if not utilities.is_ready():
+        return
+    var infrastructure := NeighborhoodInfrastructureClass.new(world, mutations, plan, utilities, topology)
+    _check(infrastructure.is_ready(), "neighborhood utility infrastructure materializer ready")
+    _check(infrastructure.materialize(), "neighborhood power, municipal water plant, and wells physicalize")
+
+    var plant: WorldEntityRecord = world.entity(MUNICIPAL_PLANT_ASSET)
+    var plant_placement: WorldPlacement = world.placement(MUNICIPAL_PLANT_ASSET)
+    _check(plant != null and plant_placement != null, "municipal treatment plant is a real persistent WHAT entity")
+    if plant_placement != null:
+        var horizontal_shore_distance: int = mini(
+            plant_placement.anchor.x - plan.bounds.position.x,
+            plan.bounds.end.x - 1 - plant_placement.anchor.x
+        )
+        var vertical_shore_distance: int = mini(
+            plant_placement.anchor.y - plan.bounds.position.y,
+            plan.bounds.end.y - 1 - plant_placement.anchor.y
+        )
+        var shore_distance: int = mini(horizontal_shore_distance, vertical_shore_distance)
+        _check(shore_distance >= 0 and shore_distance <= 128, "physical municipal treatment plant remains near shore")
+
+    var wells: Array = topology.get("wells", [])
+    _check(not wells.is_empty(), "physicalization test has selected rural wells")
+    for value: Variant in wells:
+        if typeof(value) != TYPE_DICTIONARY:
+            _check(false, "well projection record must be a dictionary")
+            continue
+        var well: Dictionary = value
+        var asset_id: String = String(well.get("asset_id", ""))
+        var building_rect: Rect2i = well.get("rect", Rect2i())
+        var entity: WorldEntityRecord = world.entity(asset_id)
+        var placement: WorldPlacement = world.placement(asset_id)
+        _check(entity != null and placement != null, "selected well is a real persistent WHAT entity: %s" % asset_id)
+        if placement != null:
+            _check(not building_rect.has_point(placement.anchor), "well is physically outside its owning home footprint: %s" % asset_id)
+        _check(not utilities.water_asset_record(asset_id).is_empty(), "selected well shares identity with real condition/maintenance state: %s" % asset_id)
+
+    var snapshot: Dictionary = infrastructure.debug_snapshot()
+    var counts: Dictionary = snapshot.get("semantic_counts", {})
+    _check(int(counts.get("prop.shed", 0)) == 1, "one visible treatment-building shell is materialized")
+    _check(int(counts.get("prop.manhole", 0)) == wells.size(), "every selected well has a visible physical ground-cap entity")
+    for wire: Dictionary in infrastructure.wire_edges():
+        _check(wire.get("snap_cell", INVALID_CELL) != INVALID_CELL, "each physical local span carries a real snap sound origin")
 
 func _test_constructed_vehicle_surface_rejection(plan: GeneratedGlobalWorldPlan, baseline_support_id: String, baseline_support_cell: Vector2i) -> void:
     var blocked_surfaces: Array[StringName] = [

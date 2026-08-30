@@ -5,11 +5,14 @@ const ProjectorClass = preload("res://scripts/generation/integration/System20Are
 const AreaGeneratorClass = preload("res://scripts/generation/areas/LocalAreaGenerator.gd")
 
 const TARGET_BUILDINGS_PER_SUBSTATION: int = 10
+const RURAL_WELL_TARGET_PERCENT: int = 15
+const SMALLTOWN_ID: String = "settlement.smalltown.001"
 const INVALID_CELL := Vector2i(2147483647, 2147483647)
 
-## One-shot bridge from deterministic local-area generation to System 33 power truth.
+## One-shot bridge from deterministic local-area generation to System 33 utility truth.
 ## Substation count is derived from the buildings that the generated sites actually contain;
-## there is no fixed island substation count and no recurring world scan.
+## there is no fixed island substation count and no recurring world scan. The same stable
+## building manifest selects the small rural-home well population once per world seed.
 func plan(global_plan: GeneratedGlobalWorldPlan) -> Dictionary:
     if global_plan == null or not global_plan.is_generated():
         return _failure("invalid_global_power_topology_input")
@@ -143,6 +146,16 @@ func plan(global_plan: GeneratedGlobalWorldPlan) -> Dictionary:
             })
             ordinal += 1
 
+    var wells: Array[Dictionary] = _plan_rural_wells(global_plan.seed, buildings, building_service)
+    var rural_home_count: int = 0
+    for building: Dictionary in buildings:
+        if _is_rural_home(building):
+            rural_home_count += 1
+    if rural_home_count >= 5:
+        var well_percent: float = 100.0 * float(wells.size()) / float(rural_home_count)
+        if well_percent < 10.0 or well_percent > 20.0:
+            return _failure("rural_well_fraction_out_of_range")
+
     var blocked_cells: Array[Vector2i] = []
     for value: Variant in blocked_prop_cells.keys():
         var cell: Vector2i = value
@@ -161,7 +174,70 @@ func plan(global_plan: GeneratedGlobalWorldPlan) -> Dictionary:
         "site_building_counts": site_building_counts,
         "blocked_prop_cells": blocked_cells,
         "local_roads": local_roads,
+        "rural_home_count": rural_home_count,
+        "rural_well_target_percent": RURAL_WELL_TARGET_PERCENT,
+        "wells": wells,
     }
+
+func _plan_rural_wells(seed: int, buildings: Array[Dictionary], building_service: Dictionary) -> Array[Dictionary]:
+    var candidates: Array[Dictionary] = []
+    for building: Dictionary in buildings:
+        if not _is_rural_home(building):
+            continue
+        var building_id: String = String(building.get("building_id", "")).strip_edges()
+        if building_id.is_empty() or not building_service.has(building_id):
+            continue
+        var candidate: Dictionary = building.duplicate(true)
+        candidate["well_score"] = _stable_hash("%d|rural_well|%s" % [seed, building_id])
+        candidates.append(candidate)
+    candidates.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
+        var a_score: int = int(a.get("well_score", 0))
+        var b_score: int = int(b.get("well_score", 0))
+        if a_score != b_score:
+            return a_score < b_score
+        return String(a.get("building_id", "")) < String(b.get("building_id", ""))
+    )
+    if candidates.is_empty():
+        return []
+
+    var minimum_count: int = int(ceil(float(candidates.size()) * 0.10))
+    var maximum_count: int = int(floor(float(candidates.size()) * 0.20))
+    if maximum_count < minimum_count:
+        maximum_count = minimum_count
+    var target_count: int = clampi(
+        int(round(float(candidates.size()) * float(RURAL_WELL_TARGET_PERCENT) / 100.0)),
+        minimum_count,
+        maximum_count
+    )
+
+    var result: Array[Dictionary] = []
+    for index: int in range(target_count):
+        var building: Dictionary = candidates[index]
+        var building_id: String = String(building.get("building_id", ""))
+        var power_service_id: String = String(building_service.get(building_id, ""))
+        var well_number: int = index + 1
+        result.append({
+            "id": "water.physical.well.%03d" % well_number,
+            "asset_id": "water.physical.well.%03d" % well_number,
+            "component_id": "water.component.well.%03d" % well_number,
+            "service_id": "water.service.well.%03d" % well_number,
+            "building_id": building_id,
+            "archetype_id": building.get("archetype_id", &""),
+            "settlement_id": String(building.get("settlement_id", "")),
+            "site_id": String(building.get("site_id", "")),
+            "rect": building.get("rect", Rect2i()),
+            "cell": building.get("cell", INVALID_CELL),
+            "power_service_id": power_service_id,
+        })
+    result.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
+        return String(a.get("id", "")) < String(b.get("id", ""))
+    )
+    return result
+
+static func _is_rural_home(building: Dictionary) -> bool:
+    var settlement_id: String = String(building.get("settlement_id", ""))
+    var archetype_id: String = String(building.get("archetype_id", &""))
+    return settlement_id != SMALLTOWN_ID and archetype_id.begins_with("residential.")
 
 static func _building_before(a: Dictionary, b: Dictionary) -> bool:
     var a_cell: Vector2i = a.get("cell", INVALID_CELL)
@@ -177,6 +253,12 @@ static func _cell_before(a: Vector2i, b: Vector2i) -> bool:
         return a.y < b.y
     return a.x < b.x
 
+static func _stable_hash(value: String) -> int:
+    var result: int = 2166136261
+    for index: int in range(value.length()):
+        result = int((result ^ value.unicode_at(index)) * 16777619) & 0x7fffffff
+    return result
+
 static func _failure(reason: String) -> Dictionary:
     return {
         "ok": false,
@@ -189,4 +271,7 @@ static func _failure(reason: String) -> Dictionary:
         "site_building_counts": {},
         "blocked_prop_cells": [],
         "local_roads": [],
+        "rural_home_count": 0,
+        "rural_well_target_percent": RURAL_WELL_TARGET_PERCENT,
+        "wells": [],
     }
