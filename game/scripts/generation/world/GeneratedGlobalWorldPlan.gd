@@ -35,10 +35,7 @@ func is_generated() -> bool:
         and not power_segments.is_empty() \
         and not water_services.is_empty() \
         and not water_nodes.is_empty() \
-        and not water_segments.is_empty() \
-        and not wastewater_services.is_empty() \
-        and not wastewater_nodes.is_empty() \
-        and not wastewater_segments.is_empty()
+        and not water_segments.is_empty()
 
 func signature() -> String:
     if not is_generated():
