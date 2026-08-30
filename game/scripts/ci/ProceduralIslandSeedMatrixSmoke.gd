@@ -28,12 +28,17 @@ func _initialize() -> void:
     for seed: int in seeds:
         var plan: GeneratedGlobalWorldPlan = FixtureClass.generate_global_plan(seed)
         if plan == null:
-            _failures.append("seed=%d reason=null_plan" % seed)
+            _failures.append("requested_seed=%d reason=no_valid_plan_within_retry_budget" % seed)
             continue
         if not plan.is_generated():
-            _failures.append("seed=%d reason=%s" % [seed, plan.failure_reason])
+            _failures.append("requested_seed=%d resolved_seed=%d reason=%s" % [seed, plan.seed, plan.failure_reason])
             continue
-        print("PROCEDURAL_ISLAND_SEED_OK seed=%d signature=%s" % [seed, plan.signature()])
+        if plan.seed <= 0:
+            _failures.append("requested_seed=%d reason=invalid_resolved_seed" % seed)
+            continue
+        if plan.seed != seed:
+            print("PROCEDURAL_ISLAND_SEED_REROLLED requested=%d resolved=%d" % [seed, plan.seed])
+        print("PROCEDURAL_ISLAND_SEED_OK requested=%d resolved=%d signature=%s" % [seed, plan.seed, plan.signature()])
 
     if _failures.is_empty():
         print("PROCEDURAL_ISLAND_SEED_MATRIX_SMOKE_OK")
