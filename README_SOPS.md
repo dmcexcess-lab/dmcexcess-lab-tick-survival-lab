@@ -58,7 +58,7 @@ The prompt-close update must record, at minimum:
 - protected neighboring behavior that must not regress;
 - any concrete blocker, if one truly exists.
 
-If the prompt is interrupted, tooling fails, usage ends, or full closure is otherwise impossible, **update `README_CONTEXT.md` first with the exact partial checkpoint before ending the response whenever write tools remain available**.
+If the prompt is interrupted, tooling fails, or full closure is otherwise impossible, **update `README_CONTEXT.md` first with the exact partial checkpoint before ending the response whenever write tools remain available**.
 
 Do not leave the next session dependent on chat reconstruction, memory, or archaeology when the repository can carry the handoff itself.
 
@@ -66,9 +66,27 @@ Do not leave the next session dependent on chat reconstruction, memory, or archa
 
 Progress updates are not completion.
 
-Do not voluntarily end an active code-change prompt because several minutes, several tool calls, or a convenient intermediate milestone have elapsed. Continue through the requested implementation, focused validation, commit/push, exact-head verification, CI/Pages verification when applicable, documentation/context close, and requested links/reporting.
+Do not voluntarily end an active code-change prompt because several minutes, several tool calls, a convenient intermediate milestone, or pending CI have elapsed. Continue through the requested implementation, focused validation, commit/push, exact-head verification, required CI/Pages completion when applicable, documentation/context close, and requested links/reporting.
 
-If a genuine hard tool/session limitation prevents completion, leave the maximum tangible work completed and write the exact remaining operations into `README_CONTEXT.md` before closing.
+### Evidence-only blocker rule
+
+Never claim or imply that work must stop because of a supposed context window, token/context limit, usage/tool allowance, model budget, session timeout, elapsed-time limit, platform cutoff, or similar internal constraint **unless a concrete tool/system response in the current task explicitly demonstrates that the required operation cannot continue**.
+
+Do not speculate that OpenAI, the model, the harness, or another unseen system is forcing an early close. If there is no direct evidence of a blocker, continue executing the task.
+
+A pending check is not a blocker and is not completion. When required CI/Pages checks are still running:
+
+- continue checking until the required checks reach terminal status;
+- if a required check fails, inspect the concrete failing evidence, make the smallest principled repair, push, and verify again;
+- do not close merely because checks have not finished yet;
+- do not call a partially green suite complete.
+
+A coding prompt may end before requested closure only when:
+
+- the user explicitly cancels, pauses, or redirects the task; or
+- a concrete current tool/platform error makes the remaining required operation impossible.
+
+When a genuine blocker exists, report the exact observed error/evidence, leave the maximum tangible work completed, and write the precise remaining operations into `README_CONTEXT.md` before closing whenever repository write tools still work.
 
 Never terminate a repair prompt with preparation-only work while required read/write tools remain available.
 
@@ -172,7 +190,9 @@ For executable changes:
 
 - run the owning subsystem contract;
 - run required protected integration regressions;
-- do not claim success until the exact final executable SHA is validated.
+- do not claim success until the exact final executable SHA is validated;
+- if required checks are pending, continue monitoring them rather than ending the prompt;
+- if required checks fail, repair and re-run until required checks are green or a concrete blocker is observed.
 
 For later documentation-only corrections:
 
@@ -264,10 +284,11 @@ Default repair/continuation sequence:
 4. inspect only concrete failing evidence or one truly unknown exact API needed for the edit;
 5. make the principled edit;
 6. commit/push;
-7. verify the exact executable head and required checks;
-8. update canonical docs as needed;
-9. **update `README_CONTEXT.md` as the final repository write for the prompt whenever practical**;
-10. report results and required links.
+7. verify the exact executable head and required checks, continuing to monitor pending required checks until terminal status;
+8. if a required check fails, make the smallest evidence-driven repair and repeat steps 6–7;
+9. update canonical docs as needed;
+10. **update `README_CONTEXT.md` as the final repository write for the prompt whenever practical**;
+11. report results and required links.
 
 Operational rules:
 
@@ -276,6 +297,8 @@ Operational rules:
 - Do **not** rediscover tool schemas once the required function is already available and understood.
 - Do **not** substitute status updates, plans, summaries, or diagnostic restatements for an available write/fix operation.
 - A failing test/compile error permits a targeted implicated read; it does not reopen general archaeology.
-- Protect the user's usage/time budget: no speculative branches, duplicate reads, redundant searches, or unnecessary polling.
+- Protect the user's usage/time budget: no speculative branches, duplicate reads, redundant searches, or unnecessary polling. Polling required CI to terminal state is necessary verification, not unnecessary polling.
+- Never invent or speculate about context windows, token limits, tool allowances, session endings, model budgets, platform cutoffs, or OpenAI-imposed early termination. Only report a blocker when concrete current evidence demonstrates it.
+- Pending CI/Pages is not permission to close. Continue until required checks are terminal; repair failures and reverify.
 - New explicit user direction supersedes the current execution plan immediately where repository integrity/safety permits.
 - Before final response on every coding prompt, confirm that `README_CONTEXT.md` was updated. If it was not, update it before replying.
