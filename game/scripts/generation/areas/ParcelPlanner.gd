@@ -12,11 +12,13 @@ func plan(
     reservations: Array[Dictionary] = []
 ) -> Dictionary:
     var parcels: Array[Dictionary] = []
-    if request == null or not request.is_valid() or profile.is_empty() or roads.is_empty() or intersections.is_empty():
+    if request == null or not request.is_valid() or profile.is_empty() or roads.is_empty():
         return {"ok": false, "failure_reason": "invalid_parcel_planner_input", "parcels": parcels}
 
     var land_use_mode: StringName = StringName(profile.get("land_use_mode", &"rural_crossroads"))
-    var center: Vector2i = intersections[0].get("cell", request.bounds.get_center())
+    var center: Vector2i = request.bounds.get_center()
+    if not intersections.is_empty():
+        center = intersections[0].get("cell", center)
     if land_use_mode == &"smalltown_center" or land_use_mode == &"rural_scattered":
         center = Vector2i(
             request.bounds.position.x + request.bounds.size.x / 2,
