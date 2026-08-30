@@ -319,6 +319,6 @@ No production repair commit was required after the complete 10 candidate was pub
 
 ## 18. North-star fit
 
-Visible equipment makes real survival state readable directly in the Ultima-style world. The implementation stays small—two hands, cardinal rotation, simple occlusion—while preserving persistent physical identity and clean system boundaries underneath.
+Visible equipment makes real survival state readable directly in the persistent-world world. The implementation stays small—two hands, cardinal rotation, simple occlusion—while preserving persistent physical identity and clean system boundaries underneath.
 
 The two-pass contract gives physical-looking body occlusion without turning art into physics or turning 08 into an equipment renderer.

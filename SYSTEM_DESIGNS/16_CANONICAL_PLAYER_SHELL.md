@@ -370,7 +370,7 @@ After System 16:
 
 ## 15. North-star fit
 
-System 16 turns the walking/HUD demo into a usable survival-game shell without fake mechanics. It exposes real stance cost, real actor condition, real physical inventory truth and real-life-safe hard pause through replaceable owners, fitting **Ultima-style turn-based mini Zomboid** and the rule that mini means reduced complexity rather than reduced consequence.
+System 16 turns the walking/HUD demo into a usable survival-game shell without fake mechanics. It exposes real stance cost, real actor condition, real physical inventory truth and real-life-safe hard pause through replaceable owners, fitting **turn-based persistent zombie survival** and the rule that mini means reduced complexity rather than reduced consequence.
 
 ## 16. Approved decisions
 

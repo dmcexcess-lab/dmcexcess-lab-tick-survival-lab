@@ -405,7 +405,7 @@ Other future consumers:
 
 ## 22. North-star fit
 
-Physical persistent inventories are central to the intended Ultima-style mini-Zomboid world. A flashlight in a backpack, food in a cabinet, or supplies carried by a survivor remain real stable world facts even when tactically unplaced or distant.
+Physical persistent inventories are central to the intended persistent reduced-complexity survival world. A flashlight in a backpack, food in a cabinet, or supplies carried by a survivor remain real stable world facts even when tactically unplaced or distant.
 
 The model stays intentionally small—stable IDs, explicit container capability, one direct parent, nested acyclic containment—while preserving the consequences future looting/storage/death/equipment/encumbrance systems need.
 

@@ -220,7 +220,7 @@ Without changing System 21 ownership, later systems may add:
 
 ## 16. North-star fit
 
-A player-centered tactical camera preserves readable Ultima-like play while discrete zoom and inspection make a continuous open world practical on phone and desktop. Cutscene flexibility is gained without turning camera state into simulation truth.
+A player-centered tactical camera preserves readable persistent-world-like play while discrete zoom and inspection make a continuous open world practical on phone and desktop. Cutscene flexibility is gained without turning camera state into simulation truth.
 
 ## 17. Approved decisions — 2026-08-20
 

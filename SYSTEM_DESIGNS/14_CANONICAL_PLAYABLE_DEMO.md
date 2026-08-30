@@ -166,4 +166,4 @@ This integration intentionally leaves room to add, independently:
 
 ## 11. North-star fit
 
-The demo proves the actual architectural spine of **Ultima-style turn-based mini Zomboid** instead of preserving a visually playable deprecated runtime. The scope is intentionally tiny, but every visible movement and map fact is owned by the real canonical systems.
+The demo proves the actual architectural spine of **turn-based persistent zombie survival** instead of preserving a visually playable deprecated runtime. The scope is intentionally tiny, but every visible movement and map fact is owned by the real canonical systems.

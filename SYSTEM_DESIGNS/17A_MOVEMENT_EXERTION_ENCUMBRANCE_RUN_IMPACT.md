@@ -201,4 +201,4 @@ Exact promoted-head Web/Pages validation is required before completion is claime
 
 ## 14. North-star fit
 
-17A preserves the mini-Zomboid rule: hard terrain, heavy loads and careless sprinting produce meaningful consequences, while the implementation remains coarse, deterministic and modular rather than adding a second stamina/physics simulation.
+17A preserves the reduced-complexity survival rule: hard terrain, heavy loads and careless sprinting produce meaningful consequences, while the implementation remains coarse, deterministic and modular rather than adding a second stamina/physics simulation.

@@ -300,7 +300,7 @@ Forbidden:
 
 ## 20. North-star fit
 
-Walls, doors, and windows make houses/stores/farms physically readable and are essential to the Ultima-style world presentation. Requiring real dynamic door state preserves the mini-Zomboid consequence rule: the picture reflects persistent physical truth rather than a plausible placeholder.
+Walls, doors, and windows make houses/stores/farms physically readable and are essential to the persistent-world world presentation. Requiring real dynamic door state preserves the reduced-complexity survival consequence rule: the picture reflects persistent physical truth rather than a plausible placeholder.
 
 ## 21. Approved decisions
 

@@ -163,4 +163,4 @@ System 17 supersedes older statements in this design that all Movement actions w
 
 ## 15. North-star fit
 
-Movement remains readable deterministic grid movement for **Ultima-style turn-based mini Zomboid**: Walk is cautious and interruptible; Run crosses ground faster per square but commits two physical strides and costs endurance, while timing, actor condition, damage, and presentation remain independently owned.
+Movement remains readable deterministic grid movement for **turn-based persistent zombie survival**: Walk is cautious and interruptible; Run crosses ground faster per square but commits two physical strides and costs endurance, while timing, actor condition, damage, and presentation remain independently owned.

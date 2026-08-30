@@ -454,7 +454,7 @@ Dedicated `TickKernelSmoke.gd` proves:
 
 ## 27. North-star fit
 
-WHEN is the foundation that makes **turn-based mini Zomboid** mechanically true rather than a UI illusion.
+WHEN is the foundation that makes **turn-based persistent zombie survival** mechanically true rather than a UI illusion.
 
 Slow actions create exposure because other scheduled work may resolve before completion. Health/fatigue/equipment can later change action duration without modifying the kernel. Distant people/outbreak systems can schedule coarse causal events on the same world clock. The player can think indefinitely at decision points, while hard pause guarantees real-life interruptions never consume simulation time.
 

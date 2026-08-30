@@ -24,7 +24,7 @@ Candidate 001 adds a small low-resolution semantic icon vocabulary for:
 
 Icons supplement labels. They do not replace labels.
 
-The result should feel like the same low-resolution Ultima-style game rather than a modern high-resolution icon pack pasted over it.
+The result should feel like the same low-resolution persistent-world game rather than a modern high-resolution icon pack pasted over it.
 
 ---
 

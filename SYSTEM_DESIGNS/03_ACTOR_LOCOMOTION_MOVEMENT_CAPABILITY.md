@@ -176,4 +176,4 @@ System 17 supersedes older wording in this design that Run was only a deferred f
 
 ## 14. North-star fit
 
-03 still supplies the smallest modular locomotion model for **Ultima-style turn-based mini Zomboid**: persistent stance plus composable real capability, with Run now using the seam that was deliberately reserved for it rather than forcing a locomotion-state redesign.
+03 still supplies the smallest modular locomotion model for **turn-based persistent zombie survival**: persistent stance plus composable real capability, with Run now using the seam that was deliberately reserved for it rather than forcing a locomotion-state redesign.

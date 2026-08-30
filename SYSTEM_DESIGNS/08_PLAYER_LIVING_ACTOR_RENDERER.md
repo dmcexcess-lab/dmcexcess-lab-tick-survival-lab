@@ -21,7 +21,7 @@ Render every visible **living** canonical WHAT actor through one focused present
 1. Corpses are not ordinary living ACTORs.
 2. Death leaves a persistent physical corpse/world consequence rather than deleting the event.
 3. Corpse age/decay can later create accumulated local contamination/filth pressure and sickness risk when bodies are ignored for too long or accumulate in enclosed living spaces.
-4. The corpse model follows the mini-Zomboid rule: preserve meaningful cleanup/disposal/health consequences without detailed microbiology.
+4. The corpse model follows the reduced-complexity survival rule: preserve meaningful cleanup/disposal/health consequences without detailed microbiology.
 5. The corpse remains tied to the identity of the person/infected that died; exact same-ID versus linked corpse-ID representation is deferred to the dedicated corpse design because current WHAT entity semantic type is intentionally not a generic mutable metadata bag.
 6. 08 is therefore living-actor-only.
 

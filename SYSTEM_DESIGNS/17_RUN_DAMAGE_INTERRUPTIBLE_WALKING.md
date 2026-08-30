@@ -250,4 +250,4 @@ Later systems may add without changing System 17 ownership:
 
 ## 14. North-star fit
 
-System 17 adds a simple but consequential movement choice for **Ultima-style turn-based mini Zomboid**: Walk is cautious and interruptible; Run is faster per square, physically committed over two cells, and consumes real endurance, while Health, Needs, Movement, capability, time, and presentation remain modular owners.
+System 17 adds a simple but consequential movement choice for **turn-based persistent zombie survival**: Walk is cautious and interruptible; Run is faster per square, physically committed over two cells, and consumes real endurance, while Health, Needs, Movement, capability, time, and presentation remain modular owners.

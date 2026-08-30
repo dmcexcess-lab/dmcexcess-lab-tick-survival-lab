@@ -182,7 +182,7 @@ The dedicated contract proves:
 
 ## 16. North-star fit
 
-This is the smallest real visible layer turning persistent open-world WHAT truth into the recovered readable Ultima-style art. It keeps rendering replaceable and refuses to make generator state, art indices, or physics into presentation truth.
+This is the smallest real visible layer turning persistent open-world WHAT truth into the recovered readable persistent-world art. It keeps rendering replaceable and refuses to make generator state, art indices, or physics into presentation truth.
 
 ## 17. Approved decisions
 

@@ -8,7 +8,7 @@ It is intentionally below map generation, rendering, player controls, zombies, h
 
 The game shorthand remains:
 
-> **Ultima-style turn-based mini Zomboid.**
+> **turn-based persistent zombie survival.**
 
 And the simplification rule remains:
 
@@ -137,7 +137,7 @@ Baseline rules:
 - sub-cell/free movement is not part of the baseline;
 - world data stores semantic facing/orientation, never atlas-specific rotation rules.
 
-This preserves the Ultima-like readability and makes collision, generation, AI, persistence and rendering substantially easier than continuous free movement.
+This preserves the persistent-world-like readability and makes collision, generation, AI, persistence and rendering substantially easier than continuous free movement.
 
 ---
 
@@ -818,7 +818,7 @@ Baseline:
 
 The player can therefore safely consider the next move indefinitely.
 
-This is the central "turn-based mini Zomboid" behavior.
+This is the central "turn-based persistent zombie survival" behavior.
 
 ---
 
@@ -1847,7 +1847,7 @@ Choose the concrete save/storage strategy only after streaming/materialization d
 
 # PART XII — NORTH-STAR FIT
 
-## 80. Ultima-style
+## 80. persistent-world
 
 The authoritative grid, four-way facing and tile-scale physical objects preserve a readable top-down world without demanding continuous 3D/free-movement complexity.
 
@@ -1855,7 +1855,7 @@ The authoritative grid, four-way facing and tile-scale physical objects preserve
 
 The universal integer tick/action scheduler makes every committed action carry time/risk while allowing unlimited decision pause and immediate real-life hard pause.
 
-## 82. Mini Zomboid
+## 82. Mini survival-game
 
 Persistent world state plus shared spatial/time consequences lets simplified systems interact deeply.
 

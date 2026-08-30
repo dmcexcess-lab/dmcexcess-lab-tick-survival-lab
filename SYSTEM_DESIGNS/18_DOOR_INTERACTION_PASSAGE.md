@@ -374,7 +374,7 @@ Without rewriting this V1 contract, later systems can add:
 
 Doors matter physically without slowing ordinary exploration into UI ceremony.
 
-Automatic passage keeps Ultima-like movement readable and fast; Run's loud forced opening preserves committed momentum and later stealth/noise consequences. Requiring facing for manual closure makes actor orientation/tick cost matter tactically. Persistent door state remains causal and revisitable while locks, sound, AI and perception stay independently owned.
+Automatic passage keeps persistent-world-like movement readable and fast; Run's loud forced opening preserves committed momentum and later stealth/noise consequences. Requiring facing for manual closure makes actor orientation/tick cost matter tactically. Persistent door state remains causal and revisitable while locks, sound, AI and perception stay independently owned.
 
 ## 17. Approved decisions
 

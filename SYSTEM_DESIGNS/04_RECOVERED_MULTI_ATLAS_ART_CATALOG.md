@@ -144,7 +144,7 @@ Ground, Structure, Prop/Fixture/Vegetation, and Player/Living Actor renderers co
 
 ## 13. North-star fit
 
-This recovers prior visual work and the Ultima-like readable art vocabulary while making art replaceable and keeping art strictly separate from physics and persistent world truth. The actor extension recovers real survivors/infected rather than fake markers while keeping actor identity/behavior outside the art system.
+This recovers prior visual work and the persistent-world-like readable art vocabulary while making art replaceable and keeping art strictly separate from physics and persistent world truth. The actor extension recovers real survivors/infected rather than fake markers while keeping actor identity/behavior outside the art system.
 
 ## 14. Approved decisions
 

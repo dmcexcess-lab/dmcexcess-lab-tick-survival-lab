@@ -386,7 +386,7 @@ System 27 remains ready for:
 
 ## 10. North-star fit
 
-The implementation follows the mini-Zomboid rule:
+The implementation follows the reduced-complexity survival rule:
 
 - no photon/path-traced global simulation;
 - no hidden full 3D physics world;
