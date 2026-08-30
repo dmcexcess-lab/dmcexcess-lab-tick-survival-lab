@@ -2,7 +2,7 @@
 
 **This file is the first and primary continuation source for active repository work.**
 
-If the user says continue/resume/finish the current coding task, read this file once, fetch current `main` once, and continue from **NEXT OPERATION** below. Do **not** broad-refresh the repo, reread all canonical docs, retrace architecture, or rediscover already-established seams unless a concrete compiler/test failure or unexpected head change requires one targeted read.
+If the user says continue/resume/finish the current coding task, read this file once, fetch current `main` once, and continue from **NEXT OPERATION** below. Do not broad-refresh the repo, reread all canonical docs, retrace architecture, or rediscover already-established seams unless a concrete compiler/test failure or unexpected head change requires one targeted read.
 
 Per `README_SOPS.md`, **this file must be updated at the close of every coding/repository-change prompt before the final user-facing response, including interrupted or incomplete prompts whenever write tools remain available.**
 
@@ -12,30 +12,30 @@ Live build: `https://dmcexcess-lab.github.io/dmcexcess-lab-tick-survival-lab/`
 
 ## Current repository checkpoint
 
-- Last fully verified executable utility/substation head: `a8ccbd8d717c1c61ef2ba3e53cda363ed73824c0`.
-- No gameplay/runtime code was changed by the process/terminology cleanup that followed; `a8ccbd8` remains the executable checkpoint for the pending utility implementation.
-- Process/documentation lineage after that executable head includes:
-  - `4539378f0cc7813048db78c8707d902a6fd12f64` — removed duplicate continuation sidecar so SOP is the single process authority;
-  - `bdb6dc21b775b5517b876459f3b25c7eb222a951` — continuation-first SOP + mandatory context close;
-  - `48d1f609c24c966415b82e3edeed88c1396036f2` — explicit no-early-close/evidence-only-blocker/CI-to-terminal rule;
-  - `538bad8967ad4f96bcd26d9cb0f80b0ebff096d4` — README project identity cleanup;
-  - `de204bd6382856a692dfa7f38aba021aedf78851` — Project North Star identity cleanup;
-  - `e063aa6c06b92b8dfaf1e85898a7246f98550399` — SOP neutral project-identity rule;
-  - `4ec75d9bca157a70548531afdee0865edab8a60c` — Roadmap identity cleanup;
-  - `f5c9eb85060bf350dc32565af1bef3df61021a04` — Performance North Star terminology cleanup;
-  - `73827b3d6bfebf301dececef44fe6285be57b7df` — Spatial Model terminology cleanup;
-  - `e99cb5af73a57c18f43756c82595ed1daa672dd8` — Design Decisions terminology cleanup.
-- This context update is the final repository write for the current terminology-cleanup prompt. On the next coding continuation, fetch `main` once and immediately execute the utility work below.
+- Last fully verified executable utility/substation head remains `a8ccbd8d717c1c61ef2ba3e53cda363ed73824c0`.
+- No gameplay/runtime code was changed by the terminology cleanup that followed; `a8ccbd8` remains the executable checkpoint for the pending utility implementation.
+- Canonical terminology cleanup reached functional cleanup head `f06a6174771e66b95759b16d05580a6161e51c42`.
+- The one-shot cleanup workflow that produced that head completed successfully and was designed to fail if either forbidden third-party comparison title remained anywhere in readable repository text.
+- The temporary one-shot cleanup workflow was then removed at `c899b2d616ef0abd89cb7bba30ec5c60ad9bb9ca`; it must not be recreated unless a future explicit cleanup task genuinely needs it.
+- This `README_CONTEXT.md` update is the final repository write for the terminology-cleanup close. It repairs the stale handoff that previously pointed directly to utility implementation even though additional terminology-cleanup commits had occurred afterward.
 
-## Canonical game identity
+## Terminology cleanup — COMPLETE
+
+The active repository tree now uses project-native terminology.
+
+Canonical identity:
 
 > **Sprite-based zombie survival game.**
 >
 > **Mini means reduced complexity, not reduced consequence or mood.**
 
-Canonical documentation must describe Tick Survival Lab in its own terms. Do not use third-party game or franchise names as project identity, architecture shorthand, or named design rules.
+Rules going forward:
 
-The current active canonical docs have been migrated to this terminology. Git history remains historical evidence and is not destructively rewritten by ordinary documentation cleanup.
+- Do not use third-party game/franchise names as project identity, architecture shorthand, design-rule names, or explanatory comparisons in active canonical repository text.
+- Do not reopen terminology archaeology during normal continuation work.
+- Historical Git commits may still contain superseded language. Ordinary cleanup does not rewrite Git history.
+- There is exactly one root continuation handoff file: `README_CONTEXT.md`. `README_SOPS.md` is process authority, not a second context/handoff file.
+- The stale-context incident was caused by later automated cleanup commits occurring after the previous context close, not by duplicate context files.
 
 ## Protected direction
 
@@ -124,7 +124,7 @@ Focused tests should extend the existing owning System-33/global-water/physical-
 For continuation work:
 
 - read this context once;
-- fetch `main` once;
+- fetch current `main` once;
 - execute the recorded next operation;
 - do not broad-refresh or rediscover established state;
 - targeted reads are allowed only for a concrete compile/test failure, unexpected head drift, internal contradiction, or an exact API genuinely never established;
@@ -135,7 +135,9 @@ For continuation work:
 
 ## NEXT OPERATION
 
-**Do not investigate further. Implement the active utility revamp.**
+The terminology cleanup is finished. **Do not perform more cleanup or archaeology unless explicitly requested.**
+
+On the next ordinary Tick Lab coding continuation, implement the already-approved utility revamp:
 
 1. replace `GlobalWaterInfrastructurePlanner.gd` four-radius-plant output with one shore-near island-wide treatment plant;
 2. replace matching water validator invariants;
@@ -149,5 +151,3 @@ For continuation work:
 10. push/verify exact executable head and Pages as applicable;
 11. update utility canonical docs/changelog;
 12. **update this `README_CONTEXT.md` again as the final repo write before the final response.**
-
-Do not spend another continuation rediscovering these seams.
