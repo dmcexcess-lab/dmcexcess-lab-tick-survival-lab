@@ -13,30 +13,24 @@ func profile(profile_id: StringName) -> Dictionary:
     if profile_id == TEMPERATE_ISLAND_REGION:
         var result: Dictionary = _rural_profile()
         result["id"] = TEMPERATE_ISLAND_REGION
-        result["version"] = 4
+        result["version"] = 5
         result["island_enabled"] = true
-        # Island generation keeps the proven content owners but no longer carries the
-        # old regional stress-fixture geometry into the playable world.
+        result["settlement_layout"] = &"rural_island_hierarchy"
         result["reuse_world_seed_for_central_site"] = false
-        # The central crossroads only needs a local protected cross. The old 640-cell
-        # half-span flattened/routed a 1280-cell test skeleton through every island and
-        # visually preserved the legacy-map belt even after surface dressing changed.
+
+        # The playable island is countryside first: a few real small towns,
+        # several crossroads, and sparse hamlets separated by substantial land.
+        # Settlement sites are selected from legal inland geography rather than
+        # fixed compass offsets, so utilities and roads adapt to the generated world.
+        result["island_smalltown_count"] = 2
+        result["island_crossroads_count"] = 3
+        result["island_hamlet_count"] = 4
+        result["island_smalltown_min_spacing"] = 384
+        result["island_crossroads_min_spacing"] = 288
+        result["island_hamlet_min_spacing"] = 256
+
         result["protected_cross_half_span"] = 160
         result["protected_cross_half_thickness"] = 96
-        # 256x256 settlement envelopes now sit close enough to read as one continuous
-        # generated island. Geography snapping still provides seed-dependent placement.
-        result["smalltown_distance_min"] = 280
-        result["smalltown_distance_max"] = 336
-        result["north_hamlet_distance_min"] = 280
-        result["north_hamlet_distance_max"] = 336
-        result["southwest_x_distance_min"] = 280
-        result["southwest_x_distance_max"] = 336
-        result["southwest_y_distance_min"] = 280
-        result["southwest_y_distance_max"] = 336
-        result["northeast_x_distance_min"] = 280
-        result["northeast_x_distance_max"] = 336
-        result["northeast_y_distance_min"] = 280
-        result["northeast_y_distance_max"] = 336
         result["island_ocean_margin"] = 24
         result["island_shore_width"] = 8
         result["island_coast_wobble"] = 8
