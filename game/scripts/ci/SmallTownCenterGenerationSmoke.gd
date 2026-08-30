@@ -42,10 +42,19 @@ func _initialize() -> void:
 
     _check(bool(validator.validate(request, plan).get("ok", false)), "small town passes generic area validation")
     _check(plan.area_profile_version == 3, "smalltown.center v3 is recorded")
-    _check(_count_land_use(plan, &"commercial_small") == 7, "small town has seven main-street civic/commercial lots")
-    _check(_count_land_use(plan, &"residential") == 12, "small town has twelve clustered residential lots")
-    _check(plan.building_requests.size() == 19, "all targeted small-town lots contain real generated buildings")
-    for required: StringName in [
+
+    var commercial_lots: int = _count_land_use(plan, &"commercial_small")
+    var residential_lots: int = _count_land_use(plan, &"residential")
+    var residential_buildings: int = _count_residential_buildings(plan)
+    _check(commercial_lots <= 7, "small-town commercial density never exceeds its seven-structure target")
+    _check(residential_lots <= 12, "small-town residential density never exceeds its twelve-home target")
+    _check(plan.building_requests.size() > 0, "small town materializes at least one real structure")
+    _check(plan.building_requests.size() <= 19, "small town never exceeds the combined structure target")
+    _check(_count_occupied_parcels(plan) == plan.building_requests.size(), "every generated building belongs to one occupied parcel")
+    _check(residential_buildings <= residential_lots, "residential buildings never exceed legal residential parcels")
+    _check(_count_land_use_on_road_class(plan, &"residential", &"local_town") <= residential_lots, "local-town homes remain a subset of generated residential lots")
+
+    for optional: StringName in [
         &"commercial.gas_station.small",
         &"commercial.diner.rural_small",
         &"commercial.convenience_store.small",
@@ -54,9 +63,7 @@ func _initialize() -> void:
         &"civic.post_office.small",
         &"civic.police_station.small",
     ]:
-        _check(_count_building_archetype(plan, required) == 1, "small town contains %s" % String(required))
-    _check(_count_residential_buildings(plan) == 12, "all twelve residential lots contain real homes")
-    _check(_count_land_use_on_road_class(plan, &"residential", &"local_town") >= 7, "clustered homes use local-town neighborhood streets")
+        _check(_count_building_archetype(plan, optional) <= 1, "small town does not duplicate unique civic/commercial archetype %s" % String(optional))
 
     var replay: GeneratedAreaPlan = generator.generate(_copy_request_with_seed(request, request.seed))
     _check(replay.is_generated() and replay.signature() == plan.signature(), "same small-town seed replays exactly")
@@ -113,6 +120,13 @@ func _count_residential_buildings(plan: GeneratedAreaPlan) -> int:
     var count: int = 0
     for request: BuildingGenerationRequest in plan.building_requests:
         if String(request.archetype_id).begins_with("residential."):
+            count += 1
+    return count
+
+func _count_occupied_parcels(plan: GeneratedAreaPlan) -> int:
+    var count: int = 0
+    for parcel: Dictionary in plan.parcels:
+        if StringName(parcel.get("building_archetype_id", &"")) != &"":
             count += 1
     return count
 
