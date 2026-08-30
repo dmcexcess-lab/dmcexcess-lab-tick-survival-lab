@@ -19,7 +19,7 @@ func _initialize() -> void:
     var validator: GeneratedAreaValidator = ValidatorClass.new()
 
     var global_plan: GeneratedGlobalWorldPlan = global_planner.generate(GlobalFixtureClass.request())
-    _check(global_plan.is_generated(), "canonical v6 global plan generates before small-town projection")
+    _check(global_plan.is_generated(), "canonical v7 global plan generates before small-town projection")
     if not global_plan.is_generated():
         push_error("SMALLTOWN_GLOBAL_FAILURE: %s" % global_plan.failure_reason)
         _finish()
@@ -38,8 +38,8 @@ func _initialize() -> void:
     _check(request.environment_profile_id == &"temperate.rural", "small town reuses temperate.rural environment")
     _check(not request.inherited_planning_constraints.is_empty(), "small town receives normalized global infrastructure constraints")
     _check(_constraint_count(request, &"power", &"facility") >= 1, "small-town request carries a power facility constraint")
-    _check(_constraint_count(request, &"potable_water", &"facility") >= 2, "small-town request carries potable-water facility constraints")
-    _check(_constraint_count(request, &"wastewater", &"facility") >= 1, "small-town request carries wastewater facility constraint")
+    _check(_constraint_count(request, &"potable_water", &"facility") == 0, "small-town request does not invent local municipal-water facilities")
+    _check(_constraint_count(request, &"wastewater", &"facility") == 0, "small-town request carries no retired wastewater facility")
 
     var plan: GeneratedAreaPlan = generator.generate(request)
     _check(plan.is_generated(), "Small-Town Center Candidate 001 generates")
@@ -82,10 +82,9 @@ func _test_candidate(
     _check(_all_occupied_approaches_align_to_primary_doors(plan), "occupied town parcels reach their real System 19 primary doors directly")
 
     _check(_count_reservation(plan, &"power", &"substation", &"facility") == 1, "one substation land reservation exists")
-    _check(_count_reservation(plan, &"potable_water", &"groundwater_source", &"facility") == 1, "one groundwater-source land reservation exists")
-    _check(_count_reservation(plan, &"potable_water", &"treatment_storage", &"facility") == 1, "one water treatment/storage land reservation exists")
-    _check(_count_reservation(plan, &"wastewater", &"treatment_disposal", &"facility") == 1, "one wastewater treatment/disposal land reservation exists")
-    _check(_facility_reservations_are_distinct(plan), "utility facility reservations are physically distinct")
+    _check(_count_reservation(plan, &"potable_water", &"groundwater_source", &"facility") == 0, "small-town plan carries no retired groundwater-source reservation")
+    _check(_count_reservation(plan, &"potable_water", &"treatment_storage", &"facility") == 0, "small-town plan carries no retired local treatment/storage reservation")
+    _check(_count_reservation(plan, &"wastewater", &"treatment_disposal", &"facility") == 0, "small-town plan carries no retired wastewater reservation")
     _check(_ordinary_properties_avoid_reservations(plan), "ordinary parcels and buildings never occupy blocking infrastructure land")
     _check(_local_roads_avoid_blocking_reservations(plan), "local streets honor facility/hydrology road exclusions")
     _check(_outdoor_props_avoid_reservations(plan), "random outdoor props stay out of reserved infrastructure land")
@@ -285,17 +284,6 @@ func _count_reservation(plan: GeneratedAreaPlan, domain: StringName, kind: Strin
             and StringName(reservation.get("reservation_role", &"")) == role:
             count += 1
     return count
-
-func _facility_reservations_are_distinct(plan: GeneratedAreaPlan) -> bool:
-    var facilities: Array[Rect2i] = []
-    for reservation: Dictionary in plan.reservations:
-        if StringName(reservation.get("reservation_role", &"")) == &"facility":
-            facilities.append(reservation.get("rect", Rect2i()))
-    for first in range(facilities.size()):
-        for second in range(first + 1, facilities.size()):
-            if _rects_intersect(facilities[first], facilities[second]):
-                return false
-    return facilities.size() >= 4
 
 func _ordinary_properties_avoid_reservations(plan: GeneratedAreaPlan) -> bool:
     for parcel: Dictionary in plan.parcels:
