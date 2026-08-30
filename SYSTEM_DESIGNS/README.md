@@ -8,7 +8,7 @@ Canonical status/routing index. Read `PROJECT_NORTH_STAR.md`, `PERFORMANCE_NORTH
 | 00A | Spatial Model — WHERE | **IMPLEMENTED** | `00A_SPATIAL_MODEL.md` |
 | 00B | Persistent World State — WHAT | **IMPLEMENTED** | `00B_PERSISTENT_WORLD_STATE.md` |
 | 00C | Tick / Action / Pause — WHEN | **IMPLEMENTED** | `00C_TICK_ACTION_PAUSE.md` |
-| 00D | Global World Planning / Generation | **IMPLEMENTED — rural v6 + complete island v3 lineage** | `00D_GLOBAL_WORLD_PLANNING.md` + infrastructure children |
+| 00D | Global World Planning / Generation | **IMPLEMENTED — rural v7 + complete island v4** | `00D_GLOBAL_WORLD_PLANNING.md` + infrastructure children |
 | 00F | Streaming / Materialization | **IMPLEMENTED — settlement + countryside + island surface + river/watercourse** | `00F_STREAMING_MATERIALIZATION_ORCHESTRATION.md` |
 | 01 | Collision / Spatial Query | **IMPLEMENTED** | `01_COLLISION_SPATIAL_QUERY.md` |
 | 02 | Movement Actions | **IMPLEMENTED** | `02_MOVEMENT_ACTIONS.md` |
@@ -53,9 +53,13 @@ Canonical status/routing index. Read `PROJECT_NORTH_STAR.md`, `PERFORMANCE_NORTH
 | 30 | Item Freshness / Spoilage | **IMPLEMENTED + CI VERIFIED — Phase 1B** | `30_ITEM_FRESHNESS_SPOILAGE.md` |
 | 31 | Semantic UI Icons | **IMPLEMENTED + CI VERIFIED — Phase 1C** | `31_SEMANTIC_UI_ICONS.md` |
 | 32 | Crafting / Material Transformation | **IMPLEMENTED + CI VERIFIED — Phase 2 complete** | `32_CRAFTING_MATERIAL_TRANSFORMATION.md` |
-| 33 | Power / Water Utility Runtime | **IMPLEMENTED + EXACT-HEAD VERIFIED — Candidate 001 + Stage B physical network; HUMAN PLAYTEST PENDING** | `33_POWER_WATER_UTILITIES.md` + `33B_POWER_PHYSICAL_NETWORK_CONDITION.md` |
+| 33 | Power / Water Utility Runtime | **IMPLEMENTED + EXACT-HEAD VERIFIED — local substations, physical distribution, island-wide water, real wells, daily span snaps; HUMAN PLAYTEST PENDING** | `33_POWER_WATER_UTILITIES.md` + `33B_POWER_PHYSICAL_NETWORK_CONDITION.md` |
 | PERF | Performance Architecture Gate | **IMPLEMENTED + CI VERIFIED; human accepted** | `PERFORMANCE_ARCHITECTURE.md` |
 | 00E | Population / Household / Outbreak / Player Story | **NOT DESIGNED — scheduled inside Phase 8** | future design |
+
+## Retired infrastructure design
+
+`00D6_GLOBAL_WASTEWATER_SEPTIC_INFRASTRUCTURE.md` is **RETIRED / historical only**. Wastewater/sewer/septic is not an active global-planning, local-generation or System-33 dependency.
 
 ## Cross-system roadmap designs
 
@@ -65,100 +69,60 @@ Canonical status/routing index. Read `PROJECT_NORTH_STAR.md`, `PERFORMANCE_NORTH
 | 2 — Crafting | **IMPLEMENTED + CI VERIFIED** | `32_CRAFTING_MATERIAL_TRANSFORMATION.md` |
 | 3 — Power + Water | **IMPLEMENTED + EXACT-HEAD VERIFIED; HUMAN PLAYTEST PENDING** | `33_POWER_WATER_UTILITIES.md` + `33B_POWER_PHYSICAL_NETWORK_CONDITION.md` |
 
----
+## Current routing
 
-## Roadmap routing
-
-Phase 1 is implementation-complete through 1E. Phase 2 / System 32 is implementation-complete and CI-verified on `8b4db898f0e02dd84298dbc5291f3e1a88c11ce4`.
+Phase 1 is implementation-complete through 1E. Phase 2 / System 32 is implementation-complete and CI verified.
 
 The current island/performance recovery is human-play accepted.
 
-System 33 Candidate 001, truthful powered lighting, utility support placement, and Stage B physical power-network condition/damage are exact-head verified on executable:
+System 33's current implementation is exact-head automated-green on executable:
 
-`7ddee8df0e638cbe14897d83632b62513d5fc574`
+`a0299a14d21fb907bdd363ddadb00cc3403b48f1`
 
-The active gameplay lifecycle gate is **human browser verification of Stage B plus the existing System-33 utility behavior**, not Phase-4 implementation by default.
+The active gameplay lifecycle gate is **human browser verification of the current local power topology, physical line-failure behavior, municipal water plant/private wells, lighting and refrigeration consequences**. Do not begin Phase 4 by default solely because CI is green.
 
 Then: **physical survival/health -> Moodlets -> final skills/interactions -> Vehicles -> AI/combat/outbreak -> final graphics/UI -> Beta.**
 
----
-
-## Current System 32 truth
-
-> **Crafting transforms specific real persistent item entities into specific real persistent item entities. The recipe describes the transformation; WHEN charges the time; existing item/world owners hold the result.**
-
-Candidate 001 implements exact stable ingredient/tool selection from real personal possession, real non-consumed tools, heavy-workbench capability, physical recipes, positive-duration CANCELABLE WHEN crafting, final-commit revalidation, deterministic persistent outputs, System-11 containment, System-13D/13E weight/carry integration and the canonical CRAFT interaction/UI path.
-
----
-
 ## Current System 33 truth
 
-> **Planning says where utility topology exists. System 33 owns whether that topology currently provides service. Consumers query service; they never infer it from art, brightness or UI state.**
+> **Real generated buildings determine local utility topology; System 33 owns whether real infrastructure currently provides service. Consumers never infer utility truth from art, distance or UI.**
 
-Candidate 001 implements persistent three-tier power/potable-water service state, rural wells where planned, electrical pump-power dependency, powered refrigerator cold storage for System 30, typed appliance and utility damage state, revision-driven cached service derivation, canonical DEV controls and real System-27 powered-light integration.
+Current power truth:
 
-### Stage B physical power network
+- generated buildings are grouped at a target of ~10 buildings per local substation;
+- substations are small fenced transformer/utility-box compounds;
+- regional source -> local substation is logical/non-physical for presentation;
+- local visible spans run from substations to customer poles near the served buildings;
+- physical spans/supports carry stable condition IDs and causal service mappings;
+- once per authoritative game day, eligible spans receive the deterministic snap pass defined in `33B_POWER_PHYSICAL_NETWORK_CONDITION.md`;
+- direct damage/repair and daily snaps mutate the same canonical System-33 service truth;
+- snapped lines emit a spatial `*SNAP*` event through System 26.
 
-Canonical extension: `33B_POWER_PHYSICAL_NETWORK_CONDITION.md`.
+Current water truth:
 
-- 00D4 feeder segments now carry deterministic `service_settlement_ids`, so physical downstream causality is planned once rather than rediscovered after damage.
-- Visible wire spans receive stable `power.asset.span.*` condition identity and supports reuse their real persistent WHAT IDs.
-- `UtilityNetworkConditionStore` provides shared data-only analytic utility-asset condition with no per-asset timer/Node/scheduled event.
-- `UtilityPowerNetworkRuntime` maps assets to System-33 services, applies direct damage/repair, predicts threshold failures analytically, and keeps one sorted next-failure schedule.
-- Ordinary time advancement checks only the earliest due threshold; it does not scan every asset or iterate simulated days.
-- A failed physical span/support damages only the existing System-33 distribution links for mapped downstream services; unrelated branches remain powered where topology allows.
-- Repair restores only outage state owned by the physical-network failure.
-- Dead cables remain visible because presentation topology is independent from energized service truth.
-- Fake regional-ingress/substation transformer clusters were removed; final source/substation tactical facilities remain a future generation responsibility.
-- `PowerLinePresentationRenderer` now ignores unrelated world changes through an endpoint-ID lookup rather than repeatedly searching all wire endpoints.
+- one compact real municipal treatment facility near the shore serves all settlements;
+- municipal water has no service radius and no simulated long-distance pipe network;
+- municipal plant operation does not depend on external grid power;
+- failure of the plant critical asset removes island-wide municipal service;
+- a deterministic 10–20% of real generated rural homes receive persistent private wells (15% target);
+- private wells depend on their real local electrical service and have persistent condition/repair state;
+- there is no active wastewater/sewer/septic system.
 
-### Truthful fixed/equipped source boundary
+Existing truthful lighting, room-light and refrigeration integrations remain part of System 33 and continue to consume canonical service state.
 
-- fixed light discovery uses real WHAT fixture entities and their real `WorldPlacement`;
-- local System-33 service powers/unpowers fixed emitters;
-- player flashlight emission requires real `item.tool.flashlight` equipment;
-- no flashlight is silently granted at spawn;
-- portable battery/toggle depletion remains deferred rather than faked;
-- `DemoLightingSourceAdapter` is inert with zero emitters;
-- facing-only turns without an equipped moving source do not rebuild physical lighting.
+## Required executable verification
 
-### Powered non-bloom rooms
+At minimum the current executable must preserve:
 
-- every generated System-19 room materializes one invisible persistent `fixture.room_light` WHAT entity on the EFFECT channel;
-- each room fixture binds to the real power service for its cell;
-- `light.room_ambient.candidate001` raises physical System-27 luminance while `presentation_glow_scale = 0.0` suppresses additive source bloom/glare;
-- ordinary visible lights retain glow;
-- local utility outages remove/restore affected room emitters through canonical System-33 mutation;
-- dedicated `RoomLightingPowerSmoke.gd` proves luminance-on/no-bloom behavior.
+- `verify/system33-power-water`;
+- global-world-planning v7 / complete-island / System-20 projection coverage;
+- System 27 physical lighting;
+- System 30 item freshness;
+- performance architecture;
+- player input responsiveness;
+- canonical startup;
+- Pages build/export/deploy.
 
-Dedicated exact-head contexts include `verify/system33-power-water` and `verify/system33-lighting-truth`; `System33PowerPhysicalNetworkSmoke.gd` runs inside the System-33 power/water gate.
+Verified executable: `a0299a14d21fb907bdd363ddadb00cc3403b48f1`.
 
-**Human playtest remains required before Phase 3 / Stage B is marked HUMAN ACCEPTED.**
-
----
-
-## Required executable-head stack
-
-Current System-33 executable verification preserves, at minimum:
-
-- `verify/system00d-global-world`
-- `verify/system00f-streaming-materialization`
-- `verify/system19-local-building`
-- `verify/system20-local-area`
-- `verify/system23-perception`
-- `verify/system25-world-time-light`
-- `verify/system27-physical-lighting`
-- `verify/system29-interaction-affordance`
-- `verify/system30-item-freshness`
-- `verify/system32-crafting`
-- `verify/system33-power-water`
-- `verify/system33-lighting-truth`
-- `verify/performance-architecture`
-- canonical startup/player responsiveness/visibility coverage;
-- `verify/pages-deploy`.
-
-Verified executable: `7ddee8df0e638cbe14897d83632b62513d5fc574`.
-
-All published exact-head contexts for that executable are green.
-
-**Current lifecycle gate: human browser verification of Stage B physical power-network behavior plus the current System-33 lighting/water/refrigeration behavior.**
+**Human browser verification remains required before Phase 3 is marked HUMAN ACCEPTED.**
