@@ -2,7 +2,7 @@
 
 Status: **IMPLEMENTED + EXACT-HEAD AUTOMATED VERIFIED; HUMAN RETEST PENDING**
 
-Current verified executable: `a0299a14d21fb907bdd363ddadb00cc3403b48f1`
+Current verified executable: `b632fc709d4fcd387eccb41fdc0e0f736bd69643`
 
 Roadmap phase: **Phase 3 — Power and Water**
 
@@ -37,7 +37,20 @@ Each group receives stable local identities for:
 
 The regional source/ingress to each local substation is a **logical non-physical link**. The game does not draw or materialize long-distance source-to-substation transmission lines.
 
-From each substation, real local distribution is physicalized to customer poles placed near the served building envelopes. Visible wire spans run from the substation transformer to those near-building poles. A service drop therefore terminates close to each real generated building rather than at an abstract settlement center.
+### Shared roadside distribution topology
+
+Each substation feeds its served buildings through **one shared road-following feeder tree**, not a transformer-to-house starburst.
+
+`NeighborhoodPowerInfrastructureMaterializer` builds a graph from the centerlines of the actual generated `local_roads`, chooses the reachable road cell nearest the substation as the distribution root, and computes deterministic root-to-customer-tap paths. Those customer paths are unioned before physicalization, so any road section used by multiple buildings becomes one shared physical trunk rather than duplicated overlapping wires.
+
+Physical roadside poles are placed off the road surface at the feeder root, customer taps, turns, junctions and deterministic spacing points. The materialized electrical path is therefore:
+
+1. one short `substation_lead` from the transformer to the shared road-root pole;
+2. deduplicated `shared_trunk` spans following the generated road network pole-to-pole;
+3. forks only where the road/customer topology actually requires them;
+4. one short final `service_drop` from a shared roadside tap to a customer pole near each real generated building.
+
+There are **no direct substation-to-every-house rays**. Common route sections genuinely reuse the same poles and wire spans, and each final service drop retains the identity of the actual building it serves.
 
 ## 3. Physical substations
 
@@ -51,7 +64,7 @@ Substation placement searches for a legal nearby facility footprint that does no
 
 ## 4. Physical power-line condition and daily snap rule
 
-Visible distribution spans/supports have stable physical identities and persistent condition. Direct damage and repair use the same authoritative condition/service path.
+Visible shared-trunk and service-drop spans/supports have stable physical identities and persistent condition. Direct damage and repair use the same authoritative condition/service path.
 
 Automatic line failure is intentionally simple and day-boundary driven:
 
@@ -157,6 +170,10 @@ There is **no wastewater/sewer/septic gameplay or live planning dependency**. `0
 - project import/parse;
 - System-33 power/water smoke;
 - generated local substation/customer topology;
+- zero direct substation-to-customer starburst spans;
+- exactly one final service drop per generated served building;
+- roadside shared-trunk spans tied to real generated-road centerline cells;
+- shared path deduplication and actual pole reuse across multiple wire edges;
 - physical network damage/repair and daily snap behavior;
 - plant/well service truth;
 - complete island planning;
@@ -168,7 +185,7 @@ There is **no wastewater/sewer/septic gameplay or live planning dependency**. `0
 
 The broader global-world-planning contract independently proves profile v7, island-wide municipal water projection, complete-island planning, island seam integrity and System-20 projection/local generation.
 
-Verified executable: `a0299a14d21fb907bdd363ddadb00cc3403b48f1`.
+Verified executable: `b632fc709d4fcd387eccb41fdc0e0f736bd69643`.
 
 ## 13. Human acceptance
 
@@ -176,13 +193,13 @@ Automated verification is green. Browser play should still verify the visible/ga
 
 1. substations appear as small fenced electrical compounds and scale roughly one per ten generated buildings;
 2. no fake long-distance line is drawn from the regional source/power plant to substations;
-3. local wires originate at substations and terminate near the buildings they serve;
-4. line failure causes the expected local blackout and repair restores it;
-5. the municipal water plant exists physically and a plant failure removes island-wide municipal water;
-6. ordinary grid loss does not disable the municipal plant;
-7. a deterministic minority of rural homes have real private wells and powered-well failure behaves correctly;
-8. lighting/refrigeration consequences remain truthful;
-9. no black-screen, first-step hitch growth or input-backlog regression returns;
-10. phone/Safari remains first-class.
+3. each substation's local distribution leaves as a shared roadside feeder tree rather than separate rays to every house;
+4. common route sections visibly reuse one set of poles/wires and forks occur only where needed;
+5. final service drops terminate near the real buildings they serve;
+6. line failure causes the expected local blackout and repair restores it;
+7. the municipal water plant exists physically and a plant failure removes island-wide municipal water;
+8. ordinary grid loss does not disable the municipal plant;
+9. a deterministic minority of rural homes have real private wells and powered-well failure behaves correctly;
+10. no black-screen, first-step hitch growth or input-backlog regression returns, with phone/Safari remaining first-class.
 
 Do not mark Phase 3 HUMAN ACCEPTED solely from CI.
