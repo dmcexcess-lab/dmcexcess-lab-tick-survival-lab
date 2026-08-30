@@ -17,8 +17,10 @@ Live build: `https://dmcexcess-lab.github.io/dmcexcess-lab-tick-survival-lab/`
 - Process-only commits after that executable head:
   - `77ad1c4a60e3ff40f00b53e65b0c94c13602b5f7` — temporary continuation guardrail file;
   - `4539378f0cc7813048db78c8707d902a6fd12f64` — removed that duplicate sidecar so process authority lives in SOP;
-  - `bdb6dc21b775b5517b876459f3b25c7eb222a951` — rewrote `README_SOPS.md` so continuation is context-first and prompt-close context updates are mandatory.
-- This `README_CONTEXT.md` update is the closing repository write for the current process-repair prompt. On the next continuation, fetch `main` once to obtain the exact current documentation head, then proceed directly from this file.
+  - `bdb6dc21b775b5517b876459f3b25c7eb222a951` — rewrote `README_SOPS.md` so continuation is context-first and prompt-close context updates are mandatory;
+  - `261e569f390d5e7b1be0a0476d833b38ae4573c4` — refreshed this authoritative continuation handoff;
+  - `48d1f609c24c966415b82e3edeed88c1396036f2` — made the no-early-close/evidence-only-blocker/CI-to-terminal rule explicit in the canonical SOP.
+- This `README_CONTEXT.md` update is the closing repository write for the current process-rule prompt. On the next continuation, fetch `main` once to obtain the exact current documentation head, then proceed directly from this file.
 
 ## Game identity / protected direction
 
@@ -131,14 +133,18 @@ Use existing owning workflows rather than creating a new permanent workflow sole
 
 The prior repo process contained a contradiction: the top of `README_SOPS.md` required a broad canonical refresh at the start of every new code prompt, while the anti-thrashing section said not to rediscover established state. That contradiction contributed to repeated re-investigation loops.
 
-It has now been removed.
+It has now been removed and the early-close rule is explicit in the canonical SOP.
 
 Canonical process now says:
 
 - continuation = read this context once + fetch `main` once + execute the recorded next operation;
 - no broad refresh for continuation prompts;
 - targeted reads only for concrete failures, unexpected head drift, internal contradiction, or one exact API that was genuinely never established;
-- no voluntary early close while requested work remains and tools are available;
+- **no voluntary early close while requested work remains**;
+- do not blame or invoke a supposed context window, token/context limit, usage/tool allowance, model budget, session timeout, elapsed-time limit, platform cutoff, or OpenAI-imposed stop unless a concrete current tool/system response explicitly proves the remaining required operation cannot continue;
+- pending CI/Pages is not completion and is not a blocker: continue monitoring required checks to terminal state;
+- if a required check fails, inspect only the concrete failing evidence, repair it, push, and verify again;
+- a coding prompt may end early only if the user explicitly cancels/pauses/redirects it or a concrete current tool/platform error makes the remaining operation impossible;
 - **update this file at every coding prompt close before replying to the user**;
 - no duplicate sidecar process document; `README_SOPS.md` is the single process authority.
 
