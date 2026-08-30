@@ -1,232 +1,164 @@
-# Tick Survival Lab — Current Context
+# Tick Survival Lab — Current Context / Authoritative Handoff
 
-> Read `PROJECT_NORTH_STAR.md`, `PERFORMANCE_NORTH_STAR.md`, `ROADMAP.md`, `README_SOPS.md`, `SYSTEM_DESIGNS/README.md`, current `main`, and the relevant system design before repository changes.
+**This file is the first and primary continuation source for active repository work.**
 
-## Game
+If the user says continue/resume/finish the current coding task, read this file once, fetch current `main` once, and continue from **NEXT OPERATION** below. Do **not** broad-refresh the repo, reread all canonical docs, retrace architecture, or rediscover already-established seams unless a concrete compiler/test failure or unexpected head change requires one targeted read.
 
-> **Ultima-style turn-based mini Zomboid.**
->
-> **Mini means reduced complexity, not reduced consequence or mood.**
->
-> **The low-resolution 2D presentation and turn-based simulation are deliberate performance advantages. Spend that budget on simulation depth, persistence, world scale and responsiveness — not avoidable work.**
+Per `README_SOPS.md`, **this file must be updated at the close of every coding/repository-change prompt before the final user-facing response, including interrupted or incomplete prompts whenever write tools remain available.**
 
 Repository: `dmcexcess-lab/dmcexcess-lab-tick-survival-lab`
 
 Live build: `https://dmcexcess-lab.github.io/dmcexcess-lab-tick-survival-lab/`
 
-Golden archaeology commit: `1763958f44eb7f855fd49944c00d1ffe608c0abe`.
+## Current repository checkpoint
 
----
+- Last fully verified executable utility/substation head before process-only documentation changes: `a8ccbd8d717c1c61ef2ba3e53cda363ed73824c0`.
+- `a8ccbd8` contains the accepted dynamic neighborhood-substation implementation described below.
+- Process-only commits after that executable head:
+  - `77ad1c4a60e3ff40f00b53e65b0c94c13602b5f7` — temporary continuation guardrail file;
+  - `4539378f0cc7813048db78c8707d902a6fd12f64` — removed that duplicate sidecar so process authority lives in SOP;
+  - `bdb6dc21b775b5517b876459f3b25c7eb222a951` — rewrote `README_SOPS.md` so continuation is context-first and prompt-close context updates are mandatory.
+- This `README_CONTEXT.md` update is the closing repository write for the current process-repair prompt. On the next continuation, fetch `main` once to obtain the exact current documentation head, then proceed directly from this file.
 
-## Current playable world
+## Game identity / protected direction
 
-The canonical DEV/playable composition is the **complete streamed island**.
+> **Ultima-style turn-based mini Zomboid.**
+>
+> **Mini means reduced complexity, not reduced consequence or mood.**
 
-- Global bounds: 1792x1792 tactical cells (`Rect2i(232,1232,1792,1792)`).
-- System 00D `temperate.island.region` is v3 over the protected rural-v6 planning skeleton.
-- Five connected site identities remain: one `rural.crossroads`, one `smalltown.center`, three `rural.scattered` hamlets.
-- Central local-area seed derives from world seed + site identity rather than the historical standalone critique seed.
-- System 00F materializes settlement, hydrology and island-surface logical sources; technical streaming remains 128x128 with active radius 1.
-- Natural ecology derives from shared world seed + absolute global cell so logical source boundaries do not restart environmental identity.
-- Survivor spawn remains on inherited pavement beside the central crossroads rather than the diner entrance.
+Protected behavior that must not regress while finishing utilities:
 
-### Compact-island / legacy seam cleanup — COMPLETE + HUMAN ACCEPTED
+- accepted black-screen recovery (`1f65bff312853a44858201b57d9df2e26ee64f80` lineage): full physical-light presentation and stateless LOS; do not reintroduce rejected camera-cropping/LOS-cache behavior;
+- one-due-tick-batch-per-render-frame action progression;
+- input locked until WHEN returns to a real decision pause; stale input discarded;
+- weather/perception performance gains;
+- 00F one-way materialization and stable persistent identity;
+- deterministic playable-seed fallback/resolution;
+- world-domain revision batching/caching;
+- rendering/presentation never becoming utility truth.
 
-The broad planner repair `918f1dbd7b033fa179522a112b1507d9a2c63890` remains rejected. It passed automated CI but produced a severe user-visible world regression and was rolled back by `f6a06add3dfd212c0c29b343d24a8f7d28a89bca`.
+## Power — current implemented state
 
-Accepted focused repair:
+The fixed/single-substation architecture has already been replaced on `main` by generated neighborhood substations.
 
-`282864f242ba2a5c3df0519591e31990372c4aed` — `Repair island local-window overlap without moving world layout`
+Implemented at executable head `a8ccbd8`:
 
-It leaves global settlement layout intact and adapts only an overlapping inherited island-local window while preserving settlement-center, island/land/river and accepted-site constraints. Human play accepted this recovered island lineage.
+- substation count derives from the actual deterministic generated-building population;
+- generated buildings are grouped locally per site, targeting/capping about 10 buildings per substation;
+- every generated building is assigned exactly one local power service;
+- each substation is physically materialized as real persistent infrastructure with transformer/utility boxes and a small chain-link enclosure;
+- each served building receives a real nearby utility pole/service endpoint;
+- physical local wires run from the substation transformer to those service poles;
+- the regional power source -> substation relationship is causal/logical only and does not create cross-island overhead feeder art;
+- local physical line/support damage feeds the existing System-33 outage/repair truth;
+- no per-pole/per-line Nodes or timers were introduced.
 
----
+Do **not** re-investigate or reconstruct this architecture during continuation unless a concrete test/compile failure names it.
 
-## Current implemented stack
+## Active approved utility revamp — NOT YET IMPLEMENTED
 
-Roadmap **Phase 1 and Phase 2 are complete**. Phase 3 / System 33 through Stage B physical power distribution is **implemented and exact-head automatically verified; final human acceptance is pending**.
+The user has explicitly superseded the previous regional-radius water model and the old analytic automatic line-wear failure scheduler.
 
-Major implemented capabilities include:
+### Water target
 
-- authoritative WHERE / WHAT / WHEN foundations;
-- collision, movement, locomotion, stance, carrying and timed item transfer;
-- complete-island global/local generation and technical streaming;
-- System-19 building generation and System-20 local-area morphology;
-- deterministic location dressing and world clutter;
-- persistent searchable world loot;
-- world time/daylight;
-- spatial sound/hearing;
-- physical lighting, visibility and shadows;
-- Weather/atmosphere/lightning;
-- perception / fog memory;
-- real interaction affordance/reach highlights;
-- analytic item freshness/spoilage with no per-item timers;
-- semantic inventory/menu icons;
-- large/multi-cell prop presentation geometry;
-- System 32 Crafting / Material Transformation;
-- System 33 persistent power/water utility runtime, powered pump dependency, refrigeration service and truthful fixed/portable light integration;
-- persistent powered non-bloom room lighting for generated interiors;
-- Stage B physical electrical distribution with stable wire/support condition identity, analytic wear, event-driven damage/repair and downstream service consequences.
+Implement exactly this model:
 
-### Phase 2 / System 32 Crafting
+1. There is **one real water treatment building/facility** on the island, placed somewhere near the shore.
+2. It does **not require outside/grid power**.
+3. It supplies municipal/potable water **island-wide without simulating long-distance pipes or water flow**.
+4. If a critical component at this plant fails, **island-wide municipal water fails**.
+5. Rural homes: deterministically choose **10–20%** to have a real persistent well.
+6. A well is a **real item/entity in the generated world**, not a boolean/service flag or presentation-only prop.
+7. A well requires local electrical power to operate.
+8. While powered and maintained, a well provides effectively unlimited water to that home.
+9. Wells require maintenance; keep this as real condition/maintenance state, not a fake timer/UI flag.
+10. The old four-plant radius-coverage model is **SUPERSEDED**. Do not preserve it underneath the new model.
 
-Canonical design: `SYSTEM_DESIGNS/32_CRAFTING_MATERIAL_TRANSFORMATION.md`.
+### Power-line daily snap target
 
-Status: **IMPLEMENTED + CI VERIFIED — Candidate 001 / Roadmap Phase 2 complete**.
+Replace the old automatic analytic threshold-failure schedule for power lines with this daily hazard rule:
 
-Verified executable: `8b4db898f0e02dd84298dbc5291f3e1a88c11ce4`.
+1. Once per authoritative game day, every eligible physical power line/span gets one deterministic failure test in stable order.
+2. Start with a low daily snap chance.
+3. If the entire day passes without a line snapping, increase the chance for the next day's tests.
+4. As soon as one line snaps on a given day, **stop all remaining line tests for that day**.
+5. When a snap occurs, reset the escalating chance back to its base value for the next day.
+6. The snapped line must become a real failed physical asset and use the existing System-33 causal outage mapping; do not create a separate fake outage path.
+7. Repair continues through the existing real physical-network repair seam.
+8. If the player is within the existing hearing/sound range of the snapped span, emit a yellow spatial sound caption:
+   `*SNAP*`
+9. The sound must use the existing physical/spatial sound system, not a UI-only notification.
+10. No per-line recurring timers/processes. The daily pass is owned by authoritative time/network logic and runs once per day.
 
-> **Crafting transforms specific real persistent item entities into specific real persistent item entities. The recipe describes the transformation; WHEN charges the time; existing item/world owners hold the result.**
+The exact numeric base snap chance and daily increment were not specified by the user. Choose conservative low defaults as tuning constants in the owning runtime so they are easy to rebalance; do not block implementation to ask.
 
-### Phase 3 / System 33 Power + Water
+## Already-established implementation seams
 
-Canonical designs:
+These were already identified. **Do not broad-search them again.**
 
-- `SYSTEM_DESIGNS/33_POWER_WATER_UTILITIES.md`
-- `SYSTEM_DESIGNS/33B_POWER_PHYSICAL_NETWORK_CONDITION.md`
+Primary files/seams:
 
-Status: **IMPLEMENTED + EXACT-HEAD AUTOMATED VERIFIED — Candidate 001 + Stage B physical power network; HUMAN PLAYTEST PENDING**.
+- `game/scripts/generation/world/GlobalWaterInfrastructurePlanner.gd`
+  - currently implements four regional radius plants; replace with one shore-near islandwide plant plan.
+- `game/scripts/generation/world/GlobalWaterInfrastructureValidator.gd`
+  - currently enforces four plants/radius service; replace those invariants with the one-plant islandwide contract.
+- `game/scripts/simulation/utilities/UtilityRuntimeState.gd`
+  - current water materialization still builds host-grid-powered pumps and radius bindings; replace with one grid-independent islandwide municipal chain and failure semantics.
+- `game/scripts/simulation/utilities/NeighborhoodUtilityRuntimeState.gd`
+  - dynamic local power topology extension is already correct; preserve it while adding any building-specific well service seam.
+- `game/scripts/simulation/utilities/UtilityLocalPowerTopologyPlanner.gd`
+  - already has deterministic full generated building records (`building_id`, `archetype_id`, `rect`, `cell`, `site_id`, `settlement_id`) and is the available one-shot generated-building manifest for selecting rural well homes without runtime whole-world scanning.
+- `game/scripts/simulation/utilities/NeighborhoodPowerInfrastructureMaterializer.gd`
+  - already materializes real local substation/pole infrastructure; preserve current behavior.
+- `game/scripts/simulation/utilities/UtilityPowerNetworkRuntime.gd`
+  - currently owns physical asset -> service consequences and an old predicted threshold schedule; replace the automatic wear-driven schedule with the once-per-day escalating snap test while retaining direct damage/repair and causal service refresh.
+- `game/scripts/simulation/utilities/UtilityNetworkConditionStore.gd`
+  - currently stores physical utility asset condition and analytic wear/predicted threshold. Preserve real condition/repair identity as useful, but remove/disable automatic line failure caused solely by the superseded continuous analytic wear scheduler where necessary for the new daily snap rule.
+- `game/scripts/app/UtilityGameMain.gd`
+  - already wires `world_tick_advanced` into the power-network owner; use this existing event-driven seam to detect day crossings. Do not add frame polling.
+- Existing System-23/spatial-sound infrastructure must own the yellow `*SNAP*` hearing event. The exact callable symbol was not yet established; if required during implementation, one **single targeted symbol lookup/read** for the existing sound emission API is permitted. Do not reopen general sound architecture.
 
-Current verified executable:
+Likely focused tests to update/extend:
 
-`7ddee8df0e638cbe14897d83632b62513d5fc574`
+- System-33 power/water smoke/contract;
+- global water planning/validation tests;
+- physical power-network condition regression;
+- local-area/generated-building regression if needed to prove deterministic 10–20% rural well assignment and real world materialization.
 
-All 22 published exact-head contexts are green, including `verify/system33-power-water`, `verify/system33-lighting-truth`, `verify/system27-physical-lighting`, `verify/system25-world-time-light`, `verify/system00d-global-world`, `verify/system00f-streaming-materialization`, Systems 19/20/23/28/30/32, `verify/performance-architecture`, and successful Pages deployment.
+Use existing owning workflows rather than creating a new permanent workflow solely for this change.
 
-> **Planning says where utility topology exists. System 33 owns whether that topology currently provides service. Consumers query service; they never infer it from art, brightness or UI state.**
+## Current process correction — IMPORTANT
 
-Candidate 001 implements persistent three-tier power and potable-water state from 00D4/00D5 planning truth, powered pump dependency, rural wells where planned, persistent appliance state, powered refrigerator cold-storage availability for System 30, typed utility damage/disabled seams and event/revision-driven service caches.
+The prior repo process contained a contradiction: the top of `README_SOPS.md` required a broad canonical refresh at the start of every new code prompt, while the anti-thrashing section said not to rediscover established state. That contradiction contributed to repeated re-investigation loops.
 
-### Stage B physical power-network behavior
+It has now been removed.
 
-Stage B extends the existing service runtime rather than creating parallel power truth.
+Canonical process now says:
 
-- 00D4 physical feeder edges record deterministic `service_settlement_ids`, resolving downstream causality once during planning.
-- physical wire spans receive stable `power.asset.span.*` condition IDs; support poles keep their real persistent WHAT IDs;
-- `UtilityNetworkConditionStore` derives condition analytically from authoritative time/event anchors and is intended as the shared substrate for future utility-asset condition where appropriate;
-- `UtilityPowerNetworkRuntime` maps physical assets to real System-33 services, exposes direct damage/repair seams and translates actual asset failure into existing System-33 link state;
-- ordinary time advancement checks only the earliest predicted threshold in one sorted failure schedule; it never loops every line or every elapsed day;
-- direct damage/repair reevaluates only services mapped to the changed asset;
-- the physical-network regression proves a settlement-specific span can black out its mapped downstream service while a sibling service remains energized, then repair restores the affected service;
-- failed/de-energized cables remain visible because rendering owns physical presentation, not energized truth;
-- fake regional-ingress/substation transformer clusters were removed; final source/substation tactical facilities remain future facility-generation work;
-- `PowerLinePresentationRenderer` now ignores unrelated world mutations via a cached endpoint-ID lookup.
+- continuation = read this context once + fetch `main` once + execute the recorded next operation;
+- no broad refresh for continuation prompts;
+- targeted reads only for concrete failures, unexpected head drift, internal contradiction, or one exact API that was genuinely never established;
+- no voluntary early close while requested work remains and tools are available;
+- **update this file at every coding prompt close before replying to the user**;
+- no duplicate sidecar process document; `README_SOPS.md` is the single process authority.
 
-Current mechanical repair requirements are a low-tier foundation seam only: Electrical 2 plus one material unit for a span or two for a support. Final player-facing repair action duration, tool/inventory consumption and skill balance remain Phase-6 work and must call the existing seam.
+## NEXT OPERATION
 
-### Current truthful lighting behavior
+**Do not investigate further. Implement the active utility revamp.**
 
-The first visible System-33 lighting integration was human-rejected because it power-gated legacy demo coordinates and passed through an always-on fake player flashlight. That source boundary was replaced and the user subsequently reported the repaired source behavior looked good.
+Start directly with edits on top of current `main`:
 
-Current rules:
+1. replace `GlobalWaterInfrastructurePlanner.gd` four-radius-plant output with one shore-near islandwide treatment plant;
+2. replace matching water validator invariants;
+3. migrate `UtilityRuntimeState.gd` to one grid-independent municipal water chain whose plant failure removes water island-wide;
+4. deterministically select 10–20% of rural generated homes from the already-available generated-building manifest and materialize/bind real powered-maintained well entities;
+5. replace `UtilityPowerNetworkRuntime.gd` automatic predicted threshold failure progression with the once-per-day stable-order escalating snap test, first-snap-stops-day, reset-on-snap behavior;
+6. route a real snapped span through existing physical failure/outage truth and emit spatial yellow `*SNAP*` when in hearing range;
+7. update focused tests only;
+8. run/import the owning focused regressions and protected required integration checks;
+9. fix only failures that actually appear, using targeted reads;
+10. push/verify exact executable head and Pages as applicable;
+11. update utility canonical docs/changelog;
+12. **update this `README_CONTEXT.md` again as the final repo write before the final response.**
 
-- fixed emitters originate from real persistent WHAT fixture entities at their real `WorldPlacement`;
-- fixed emitters exist only while their System-33 appliance/service truth is powered and operational;
-- the player has **no flashlight beam by default**;
-- a player flashlight beam exists only when a real WHAT `item.tool.flashlight` is assigned to a real System-09 hand slot;
-- portable battery depletion/toggle simulation remains deferred rather than faked;
-- `DemoLightingSourceAdapter` is inert and emits zero gameplay lights;
-- every generated System-19 room now materializes one invisible persistent `fixture.room_light` entity on a real room cell;
-- room fixtures bind to the real power service for their cell and feed System 27 while powered;
-- `light.room_ambient.candidate001` raises real physical/local luminance but has `presentation_glow_scale = 0.0`, so rooms brighten without a glowing lamp/bloom graphic;
-- ordinary streetlights, lamps, neon and equipped flashlights retain visible glow behavior;
-- `LOCAL PWR` uses canonical utility mutation and should remove/restore affected room emitters on its targeted branch.
-
-**System 33 / Phase 3 remains human-playtest pending until Stage B plus indoor power on/off, water/pump and refrigeration behavior are accepted in browser play.**
-
----
-
-## Important current rules
-
-1. Generation creates virgin truth once; WHAT + typed mechanic stores own current reality afterward.
-2. Technical streaming activation is not world existence.
-3. Art/rendering is presentation, never physics/simulation authority.
-4. Phone/Safari is first-class.
-5. Sound is physical; hearing is an estimate.
-6. Light is physical; vision is observer-specific.
-7. Weather is simulation truth; Weather animation is presentation.
-8. Fatigue is the stamina/endurance concept; there is no parallel stamina meter.
-9. Interaction highlights explain already-valid actions; they never create action truth.
-10. Expensive consumers wake only for domains/completed batches they actually depend on.
-11. Food freshness is derived analytically from authoritative time/exposure; no item gets a spoilage timer.
-12. UI icons visualize semantic truth but never define identity, utility, freshness or action legality.
-13. Logical area/streaming boundaries must not reset world-space environmental identity.
-14. Physical footprints answer where objects are; presentation geometry may be larger but never redefines physical truth.
-15. Art never creates light. System-27 emitter/illumination truth drives light presentation.
-16. Content extends existing owners; integration never creates a second owner or placeholder future mechanics.
-17. Validators fail closed. A legal-seed failure is a generation defect to repair, not a reason to weaken the validator.
-18. Generated-world layout/behavior changes require human play acceptance in addition to green CI.
-19. Canonical startup smoke must prove a usable visible field and non-black physical-light presentation, not merely scene boot.
-20. Utility planning truth and runtime service truth are separate owners: 00D says where infrastructure exists; System 33 owns current service state.
-21. A powered fixed source must correspond to real persistent WHAT identity/placement; no demo coordinate may create canonical light.
-22. Player-facing changes wake physical lighting only when a real moving/equipped light source changes.
-23. A light may affect physical luminance without additive bloom; presentation glow is an explicit profile property and never the authority for illumination.
-24. Physical utility condition is analytic from authoritative time/event anchors. No pole/wire gets a timer, recurring update or per-day catch-up loop.
-25. A failed/de-energized cable remains physically present; presentation of infrastructure existence never becomes service authority.
-
----
-
-## Performance architecture
-
-Protected direction:
-
-- event-driven/cache-oriented invalidation;
-- no recurring whole-world scans;
-- no per-cell/per-item/per-utility-component/per-room simulation Nodes or timers;
-- no frame-driven simulation;
-- bounded local queries and shared cached plans;
-- analytic utility-asset condition with one minimal next-threshold schedule per network owner instead of per-asset time events;
-- persistence-backed streaming eviction remains evidence-driven future work only.
-
-### Player-action responsiveness + black-screen recovery — HUMAN ACCEPTED
-
-The canonical `PlayerActionController` resolves accepted actions through a one-due-tick-batch-per-render-frame pump. Input is accepted only at WHEN's real decision pause and stays locked until that pause returns.
-
-Executable `6e1298da36e9216139f404696275280fcb944033` introduced camera-cropped physical-light presentation and a revision-cached System-23 LOS field. Automated checks passed, but human browser play reported a completely black game. That optimization stack remains **rejected**.
-
-Recovery executable `1f65bff312853a44858201b57d9df2e26ee64f80` restored the human-good full 80x96 physical-light presentation path and stateless LOS query while preserving input responsiveness. Human browser play accepted this recovery.
-
-System-33 fixed/equipped/room lighting and Stage B physical distribution deliberately preserve that renderer/LOS/input lineage. No camera crop or LOS cache was reintroduced.
-
----
-
-## Relevant ownership boundaries
-
-- 00D owns global geography, settlement/road/hydrology/infrastructure planning truth and cross-area world context.
-- 00D4/00D5 own planned electrical/potable-water topology, not current service availability. 00D4 also records deterministic downstream settlement mapping for physical feeder edges.
-- 00F owns materialization-source orchestration and technical activation, not world identity.
-- 19 owns local building grammar/profile content and room plans; room-light materialization derives persistent fixture identity from those existing room sets.
-- 20 owns bounded local roads/parcels/access/outdoor/environment content.
-- 04 owns world art selection; 07/07A/07B own prop presentation/orientation/large visual geometry.
-- 00A/00B own physical placement/stable persistent entity truth.
-- 09 owns hand assignment; 11 containment; 12 timed physical item transitions; 13D weight; 13E carry.
-- 24 owns virgin loot existence.
-- 25 interprets authoritative WHEN ticks as simulation time.
-- 27 owns physical illumination/emitter math and presentation-light outputs; System 33 supplies truthful powered source availability.
-- 29 owns neutral reach/offer composition but not mechanic capability.
-- 30 owns freshness records/derivation; System 33 supplies cold-storage availability.
-- 31 owns icon presentation only.
-- 32 owns recipe-driven physical item transformation.
-- 33 owns persistent power/water runtime state, appliance service truth, pump-power dependency, physical electrical-distribution condition/consequence mapping and utility-consumer service queries.
-- Phase 4 owns nutrition/thirst/health consequences; Phase 6 Skills/final repair actions; Phase 7 Vehicles; Phase 8 AI/combat/outbreak.
-
----
-
-## Current next lifecycle gate
-
-**System 33 / Roadmap Phase 3 — HUMAN VERIFY Stage B physical power network plus current utility behavior.**
-
-Executable: `7ddee8df0e638cbe14897d83632b62513d5fc574`.
-
-Human retest should confirm:
-
-1. generated house rooms are visibly brighter when their service is powered, without a glowing room-light graphic;
-2. `LOCAL PWR` removes/restores the affected indoor illumination;
-3. walls/doors continue to shape physical light normally and ordinary visible light sources still glow;
-4. no phantom flashlight exists when none is equipped;
-5. overhead wires/poles remain visually stable and support placement remains correct;
-6. turning/movement remains responsive and the black-screen regression does not return;
-7. ordinary world-time advancement does not develop recurring utility hitching;
-8. water/pump/refrigeration DEV inspection still reflects canonical System-33 truth.
-
-Do not advance Phase 3 / Stage B to HUMAN ACCEPTED merely because CI is green.
+Do not spend another continuation rediscovering these seams.
