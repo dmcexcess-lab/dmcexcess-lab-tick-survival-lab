@@ -137,8 +137,49 @@ func _test_neighborhood_utility_physicalization() -> void:
     var counts: Dictionary = snapshot.get("semantic_counts", {})
     _check(int(counts.get("prop.shed", 0)) == 1, "one visible treatment-building shell is materialized")
     _check(int(counts.get("prop.manhole", 0)) == wells.size(), "every selected well has a visible physical ground-cap entity")
+
+    var service_drop_count: int = 0
+    var shared_trunk_count: int = 0
+    var direct_substation_customer_count: int = 0
+    var road_endpoint_use: Dictionary = {}
+    var seen_trunk_routes: Dictionary = {}
     for wire: Dictionary in infrastructure.wire_edges():
         _check(wire.get("snap_cell", INVALID_CELL) != INVALID_CELL, "each physical local span carries a real snap sound origin")
+        var role: StringName = StringName(wire.get("wire_role", &""))
+        var start_id: String = String(wire.get("start_id", ""))
+        var end_id: String = String(wire.get("end_id", ""))
+        if start_id.find(".substation.") >= 0 and end_id.find(".customer.") >= 0:
+            direct_substation_customer_count += 1
+        if role == &"service_drop":
+            service_drop_count += 1
+            _check(start_id.find(".road.") >= 0, "house service drop begins at a shared roadside pole")
+            _check(end_id.find(".customer.") >= 0, "house service drop ends at its customer pole")
+            _check(not String(wire.get("served_building_id", "")).is_empty(), "house service drop names the served building")
+        elif role == &"shared_trunk":
+            shared_trunk_count += 1
+            var route_start: Vector2i = wire.get("route_start_cell", INVALID_CELL)
+            var route_end: Vector2i = wire.get("route_end_cell", INVALID_CELL)
+            _check(route_start != INVALID_CELL and route_end != INVALID_CELL, "shared trunk records its underlying road cells")
+            _check(route_start.x == route_end.x or route_start.y == route_end.y, "shared trunk span is cardinal between road turns")
+            _check(_cell_on_local_road_centerline(route_start, topology.get("local_roads", [])), "shared trunk starts on generated road centerline")
+            _check(_cell_on_local_road_centerline(route_end, topology.get("local_roads", [])), "shared trunk ends on generated road centerline")
+            var route_key: String = _route_key(route_start, route_end)
+            _check(not seen_trunk_routes.has(route_key), "overlapping customer routes collapse to one physical trunk segment")
+            seen_trunk_routes[route_key] = true
+        if start_id.find(".road.") >= 0:
+            road_endpoint_use[start_id] = int(road_endpoint_use.get(start_id, 0)) + 1
+        if end_id.find(".road.") >= 0:
+            road_endpoint_use[end_id] = int(road_endpoint_use.get(end_id, 0)) + 1
+
+    var shared_road_pole_exists: bool = false
+    for use_count: Variant in road_endpoint_use.values():
+        if int(use_count) >= 2:
+            shared_road_pole_exists = true
+            break
+    _check(direct_substation_customer_count == 0, "substation does not radiate one direct wire to every house")
+    _check(service_drop_count == int(topology.get("building_count", 0)), "every generated building receives exactly one final service drop")
+    _check(shared_trunk_count > 0, "local distribution includes a shared roadside trunk")
+    _check(shared_road_pole_exists, "multiple customer routes reuse the same roadside chain")
 
 func _test_constructed_vehicle_surface_rejection(plan: GeneratedGlobalWorldPlan, baseline_support_id: String, baseline_support_cell: Vector2i) -> void:
     var blocked_surfaces: Array[StringName] = [
@@ -196,6 +237,30 @@ func _cell_in_planned_road_surface(cell: Vector2i, roads: Array[Dictionary]) -> 
         if start.x == finish.x and cell.y >= mini(start.y, finish.y) and cell.y <= maxi(start.y, finish.y) and absi(cell.x - start.x) <= half_width:
             return true
     return false
+
+func _cell_on_local_road_centerline(cell: Vector2i, roads_value: Variant) -> bool:
+    if typeof(roads_value) != TYPE_ARRAY:
+        return false
+    for road_value: Variant in roads_value:
+        if typeof(road_value) != TYPE_DICTIONARY:
+            continue
+        var road: Dictionary = road_value
+        var start: Vector2i = road.get("start", INVALID_CELL)
+        var finish: Vector2i = road.get("end", INVALID_CELL)
+        if start == INVALID_CELL or finish == INVALID_CELL:
+            continue
+        if start.y == finish.y and cell.y == start.y and cell.x >= mini(start.x, finish.x) and cell.x <= maxi(start.x, finish.x):
+            return true
+        if start.x == finish.x and cell.x == start.x and cell.y >= mini(start.y, finish.y) and cell.y <= maxi(start.y, finish.y):
+            return true
+    return false
+
+func _route_key(a: Vector2i, b: Vector2i) -> String:
+    if b.y < a.y or (b.y == a.y and b.x < a.x):
+        var swap: Vector2i = a
+        a = b
+        b = swap
+    return "%d,%d>%d,%d" % [a.x, a.y, b.x, b.y]
 
 func _check(condition: bool, message: String) -> void:
     if not condition:
