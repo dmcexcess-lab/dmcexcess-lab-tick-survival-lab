@@ -503,9 +503,26 @@ func _cell_on_other_inherited_road(cell: Vector2i, spine: Dictionary, roads: Arr
     for road: Dictionary in roads:
         if String(road.get("road_id", "")) == spine_id:
             continue
+        # The global road graph may project both directed edges of one physical
+        # segment into an area. Reversed twins are the same road surface, not an
+        # intersection that should invalidate every possible branch anchor.
+        if _same_straight_road_geometry(spine, road):
+            continue
         if _point_on_road_path(cell, road):
             return true
     return false
+
+func _same_straight_road_geometry(a: Dictionary, b: Dictionary) -> bool:
+    var a_axis: StringName = StringName(a.get("axis", &""))
+    var b_axis: StringName = StringName(b.get("axis", &""))
+    if a_axis != b_axis or (a_axis != &"horizontal" and a_axis != &"vertical"):
+        return false
+    var a_start: Vector2i = a.get("start", Vector2i.ZERO)
+    var a_end: Vector2i = a.get("end", Vector2i.ZERO)
+    var b_start: Vector2i = b.get("start", Vector2i.ZERO)
+    var b_end: Vector2i = b.get("end", Vector2i.ZERO)
+    return (a_start == b_start and a_end == b_end) \
+        or (a_start == b_end and a_end == b_start)
 
 func _roads_share_corridor_cells(a: Dictionary, b: Dictionary) -> bool:
     var cells: Dictionary = {}

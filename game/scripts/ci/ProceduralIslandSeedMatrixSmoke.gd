@@ -1,6 +1,7 @@
 extends SceneTree
 
 const FixtureClass = preload("res://scripts/demo/GeneratedIslandCritiqueFixture.gd")
+const PowerTopologyPlannerClass = preload("res://scripts/simulation/utilities/UtilityLocalPowerTopologyPlanner.gd")
 
 const SEEDS: Array[int] = [
     1,
@@ -70,6 +71,21 @@ func _check_playable_seed(requested_seed: int) -> void:
         return
     if player_start.x < 0 or not global_plan.bounds.has_point(player_start):
         _failures.append("requested_seed=%d effective_seed=%d reason=invalid_player_start" % [requested_seed, effective_seed])
+        return
+
+    # New-game readiness includes the full deterministic building manifest used
+    # by streaming and physical utilities, not only the spawn neighborhood. This
+    # catches remote local-area failures before they become a black first frame
+    # in UtilityGameMain or a streaming failure later in play.
+    var topology: Dictionary = PowerTopologyPlannerClass.new().plan(global_plan)
+    if not bool(topology.get("ok", false)):
+        _failures.append(
+            "requested_seed=%d effective_seed=%d reason=utility_topology_failed:%s"
+            % [requested_seed, effective_seed, String(topology.get("failure_reason", "unknown"))]
+        )
+        return
+    if int(topology.get("building_count", 0)) <= 0 or (topology.get("substations", []) as Array).is_empty():
+        _failures.append("requested_seed=%d effective_seed=%d reason=utility_topology_empty" % [requested_seed, effective_seed])
         return
 
     if effective_seed != requested_seed:

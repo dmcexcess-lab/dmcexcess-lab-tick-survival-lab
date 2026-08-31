@@ -112,8 +112,12 @@ func plan(
         })
         ordinal += 1
 
-    if blocks.size() < 2:
-        return {"ok": false, "failure_reason": "smalltown_blocks_insufficient", "blocks": blocks}
+    # Blocks describe whatever intact town-core rectangles the inherited road and
+    # infrastructure geometry leaves behind. They are morphology output, not a
+    # validity quota: roadside parcel/building planning below consumes the real
+    # roads directly and already treats structure counts as soft density targets.
+    # A legal island edge or reserved corridor may therefore leave one or no
+    # whole semantic blocks without making the procedural area unmaterializable.
     return {"ok": true, "failure_reason": "", "blocks": blocks}
 
 func _subtract_rect_from_pieces(pieces: Array[Rect2i], cutter: Rect2i) -> Array[Rect2i]:
