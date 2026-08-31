@@ -99,7 +99,7 @@ func _test_system20_projection(projector: System20AreaRequestProjector, plan: Ge
         var smalltown_plan: GeneratedAreaPlan = local_generator.generate(smalltown_request)
         _check(smalltown_plan.is_generated(), "small-town Candidate 001 still generates from exact v7 global facts")
         if smalltown_plan.is_generated():
-            _check(smalltown_plan.area_profile_version == 2, "small-town Candidate 001 records profile v2")
+            _check(smalltown_plan.area_profile_version == 3, "small-town Candidate 001 records profile v3")
             _check(not smalltown_plan.reservations.is_empty(), "small-town local plan contains infrastructure reservations")
             _check(not smalltown_plan.blocks.is_empty(), "small-town local plan contains semantic town blocks")
 
