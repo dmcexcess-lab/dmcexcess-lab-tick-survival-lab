@@ -30,6 +30,7 @@ func plan(global_plan: GeneratedGlobalWorldPlan) -> Dictionary:
     var buildings: Array[Dictionary] = []
     var building_ids: Dictionary = {}
     var blocked_prop_cells: Dictionary = {}
+    var pole_exclusion_cells: Dictionary = {}
     var local_roads: Array[Dictionary] = []
     var site_building_counts: Dictionary = {}
 
@@ -67,6 +68,13 @@ func plan(global_plan: GeneratedGlobalWorldPlan) -> Dictionary:
             site_count += 1
         site_building_counts[site_id] = site_count
 
+        for parcel: Dictionary in area_plan.parcels:
+            for value: Variant in parcel.get("driveway_cells", []):
+                if typeof(value) == TYPE_VECTOR2I:
+                    pole_exclusion_cells[value] = true
+            for value: Variant in parcel.get("parking_cells", []):
+                if typeof(value) == TYPE_VECTOR2I:
+                    pole_exclusion_cells[value] = true
         for prop: Dictionary in area_plan.outdoor_props:
             blocked_prop_cells[prop.get("cell", INVALID_CELL)] = true
         for road: Dictionary in area_plan.roads:
@@ -163,6 +171,13 @@ func plan(global_plan: GeneratedGlobalWorldPlan) -> Dictionary:
             blocked_cells.append(cell)
     blocked_cells.sort_custom(_cell_before)
 
+    var excluded_pole_cells: Array[Vector2i] = []
+    for value: Variant in pole_exclusion_cells.keys():
+        var cell: Vector2i = value
+        if cell != INVALID_CELL:
+            excluded_pole_cells.append(cell)
+    excluded_pole_cells.sort_custom(_cell_before)
+
     return {
         "ok": true,
         "failure_reason": "",
@@ -173,6 +188,7 @@ func plan(global_plan: GeneratedGlobalWorldPlan) -> Dictionary:
         "building_service": building_service,
         "site_building_counts": site_building_counts,
         "blocked_prop_cells": blocked_cells,
+        "pole_exclusion_cells": excluded_pole_cells,
         "local_roads": local_roads,
         "rural_home_count": rural_home_count,
         "rural_well_target_percent": RURAL_WELL_TARGET_PERCENT,
@@ -270,6 +286,7 @@ static func _failure(reason: String) -> Dictionary:
         "building_service": {},
         "site_building_counts": {},
         "blocked_prop_cells": [],
+        "pole_exclusion_cells": [],
         "local_roads": [],
         "rural_home_count": 0,
         "rural_well_target_percent": RURAL_WELL_TARGET_PERCENT,
