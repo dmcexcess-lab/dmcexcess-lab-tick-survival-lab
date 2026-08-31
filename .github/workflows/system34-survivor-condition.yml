@@ -1,0 +1,133 @@
+name: System 34 Survivor Condition contract
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'game/main.tscn'
+      - 'game/scripts/app/System34GameMain.gd'
+      - 'game/scripts/simulation/actors/condition/**'
+      - 'game/scripts/simulation/actors/carry/ActorCarryQuery.gd'
+      - 'game/scripts/ui/ActorStatusSummaryQuery.gd'
+      - 'game/scripts/ui/CanonicalStatusHud.gd'
+      - 'game/scripts/ui/CraftingPlayerShell.gd'
+      - 'game/scripts/ui/ConditionPlayerControls.gd'
+      - 'game/scripts/ci/System34SurvivorConditionSmoke.gd'
+      - 'SYSTEM_DESIGNS/34_SURVIVOR_CONDITION_HEALTH_STAMINA_MOODLETS.md'
+      - '.github/workflows/system34-survivor-condition.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  statuses: write
+
+concurrency:
+  group: system34-survivor-condition
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: verify/system34-survivor-condition
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate System 34 ownership boundary
+        shell: bash
+        run: |
+          set -euxo pipefail
+          test -f SYSTEM_DESIGNS/34_SURVIVOR_CONDITION_HEALTH_STAMINA_MOODLETS.md
+          test -f game/scripts/simulation/actors/condition/ActorConditionState.gd
+          test -f game/scripts/simulation/actors/condition/ActorConditionModifierQuery.gd
+          test -f game/scripts/simulation/actors/condition/ActorConditionService.gd
+          test -f game/scripts/simulation/actors/condition/ActorConditionMoodletQuery.gd
+          test -f game/scripts/simulation/actors/condition/SurvivorSustainmentActionService.gd
+          test -f game/scripts/ci/System34SurvivorConditionSmoke.gd
+          grep -q 'System34GameMain.gd' game/main.tscn
+          grep -q 'configure_capacity_modifier' game/scripts/simulation/actors/carry/ActorCarryQuery.gd
+          grep -q 'configure_condition' game/scripts/ui/ActorStatusSummaryQuery.gd
+          grep -q 'TIER_GREEN' game/scripts/simulation/actors/condition/ActorConditionModifierQuery.gd
+          grep -q 'TIER_NORMAL' game/scripts/simulation/actors/condition/ActorConditionModifierQuery.gd
+          grep -q 'TIER_YELLOW' game/scripts/simulation/actors/condition/ActorConditionModifierQuery.gd
+          grep -q 'TIER_ORANGE' game/scripts/simulation/actors/condition/ActorConditionModifierQuery.gd
+          grep -q 'TIER_RED' game/scripts/simulation/actors/condition/ActorConditionModifierQuery.gd
+          ! grep -R -q 'func _process\|func _physics_process' game/scripts/simulation/actors/condition
+
+      - name: Install Godot 4.7.1
+        shell: bash
+        run: |
+          set -euxo pipefail
+          curl -L -o godot.zip https://github.com/godotengine/godot-builds/releases/download/4.7.1-stable/Godot_v4.7.1-stable_linux.x86_64.zip
+          unzip -q godot.zip
+          chmod +x Godot_v4.7.1-stable_linux.x86_64
+
+      - name: Import and parse project
+        shell: bash
+        run: |
+          set -euxo pipefail
+          ./Godot_v4.7.1-stable_linux.x86_64 --headless --editor --path "$GITHUB_WORKSPACE/game" --quit 2>&1 | tee "$RUNNER_TEMP/import.log"
+          if grep -Eqi 'SCRIPT ERROR|Parse Error|Failed to load script' "$RUNNER_TEMP/import.log"; then exit 1; fi
+
+      - name: System 34 focused condition regression
+        shell: bash
+        run: |
+          set -euxo pipefail
+          ./Godot_v4.7.1-stable_linux.x86_64 --headless --path "$GITHUB_WORKSPACE/game" --quit-after 30 --script res://scripts/ci/System34SurvivorConditionSmoke.gd 2>&1 | tee "$RUNNER_TEMP/system34.log"
+          grep -q 'SYSTEM34_SURVIVOR_CONDITION_SMOKE_OK' "$RUNNER_TEMP/system34.log"
+          if grep -Eqi 'SCRIPT ERROR|Parse Error|Failed to load script|Invalid call|Invalid access|Assertion failed' "$RUNNER_TEMP/system34.log"; then exit 1; fi
+
+      - name: Protected health carry freshness UI and input regressions
+        shell: bash
+        run: |
+          set -euxo pipefail
+          for spec in \
+            'ActorHealthSmoke.gd:ACTOR_HEALTH_SMOKE_OK' \
+            'ActorNeedsSmoke.gd:ACTOR_NEEDS_SMOKE_OK' \
+            'ActorCarrySmoke.gd:ACTOR_CARRY_SMOKE_OK' \
+            'ItemFreshnessSmoke.gd:ITEM_FRESHNESS_SMOKE_OK' \
+            'PlayerInputResponsivenessSmoke.gd:PLAYER_INPUT_RESPONSIVENESS_SMOKE_OK'; do
+            script=${spec%%:*}
+            marker=${spec#*:}
+            log="$RUNNER_TEMP/${script%.gd}.log"
+            ./Godot_v4.7.1-stable_linux.x86_64 --headless --path "$GITHUB_WORKSPACE/game" --quit-after 30 --script "res://scripts/ci/$script" 2>&1 | tee "$log"
+            grep -q "$marker" "$log"
+            if grep -Eqi 'SCRIPT ERROR|Parse Error|Failed to load script|Invalid call|Invalid access|Assertion failed' "$log"; then exit 1; fi
+          done
+
+      - name: Protected System 33 water and canonical startup
+        shell: bash
+        run: |
+          set -euxo pipefail
+          ./Godot_v4.7.1-stable_linux.x86_64 --headless --path "$GITHUB_WORKSPACE/game" --quit-after 30 --script res://scripts/ci/System33PowerWaterSmoke.gd 2>&1 | tee "$RUNNER_TEMP/system33.log"
+          grep -q 'SYSTEM33_POWER_WATER_SMOKE_OK' "$RUNNER_TEMP/system33.log"
+          if grep -Eqi 'SCRIPT ERROR|Parse Error|Failed to load script|Invalid call|Invalid access|Assertion failed' "$RUNNER_TEMP/system33.log"; then exit 1; fi
+          ./Godot_v4.7.1-stable_linux.x86_64 --headless --path "$GITHUB_WORKSPACE/game" --quit-after 8 2>&1 | tee "$RUNNER_TEMP/startup.log"
+          grep -q 'CANONICAL_DEMO_BOOT_OK' "$RUNNER_TEMP/startup.log"
+          if grep -Eqi 'SCRIPT ERROR|Parse Error|Failed to load script|Invalid call|Invalid access|Assertion failed|CANONICAL_DEMO_BOOT_FAILED' "$RUNNER_TEMP/startup.log"; then exit 1; fi
+
+      - name: Publish exact-head status
+        if: always()
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SHA: ${{ github.sha }}
+          REPOSITORY: ${{ github.repository }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          JOB_STATUS: ${{ job.status }}
+        run: |
+          set -euo pipefail
+          case "$JOB_STATUS" in
+            success) state=success ;;
+            failure) state=failure ;;
+            cancelled) state=error ;;
+            *) state=error ;;
+          esac
+          payload=$(printf '{"state":"%s","context":"verify/system34-survivor-condition","description":"System 34 survivor condition contract","target_url":"%s"}' "$state" "$RUN_URL")
+          curl --fail --silent --show-error \
+            -X POST \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.github.com/repos/$REPOSITORY/statuses/$SHA" \
+            -d "$payload"
