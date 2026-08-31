@@ -2,6 +2,19 @@
 
 This compact ledger records the most recent work. `CHANGELOG.md` remains the historical archive.
 
+## Procedural-Island Completion Verification — 2026-08-30
+
+Verified executable: `ed0596b5a06461083c5cda2d72ccfe820b713b3e`
+
+- Closed the interrupted procedural-island continuation against the current repository rather than the stale handoff commit.
+- Preserved the current rural-island hierarchy: real generated small towns, sparse rural settlements, road-linked developed/managed land, real civic/commercial structures, and the intended roughly **90% lived-in/managed vs. 10% true-wilderness** world balance.
+- Confirmed local power topology is derived **after actual building generation**, targeting roughly **10 generated buildings per substation** rather than requiring one fake/global substation per settlement.
+- Removed the stale System-20 assumption that every small-town site must already contain a legacy global substation node; secondary generated towns now correctly consume regional power service/corridor facts and receive their real local substations from the generated building manifest.
+- Corrected island-wide municipal-water cell lookup so settlement cells resolve their explicit municipal service records instead of relying on the retired plant-radius model.
+- Migrated the remaining protected `smalltown.center v2` smoke assertions to the implemented **v3** profile without weakening morphology, determinism, hydrology, or seam checks.
+- Verified executable `ed0596b5a06461083c5cda2d72ccfe820b713b3e` with **51 completed exact-head checks, zero failures, zero pending checks**, including successful GitHub Pages deployment.
+- Phase 3 remains automated-verified but still requires human browser acceptance for visible/game-feel behavior.
+
 ## Shared Roadside Power Feeder Closeout — 2026-08-30
 
 Verified executable: `b632fc709d4fcd387eccb41fdc0e0f736bd69643`
@@ -64,6 +77,6 @@ Verified executable: `c7592c956a44c31b082db84ae597f43c643231c4`
 - Roadmap Phase 1 remains complete.
 - Roadmap Phase 2 / System 32 Crafting remains **COMPLETE + CI VERIFIED**.
 - Compact-island/world-seam cleanup and the responsiveness/black-screen recovery are **HUMAN ACCEPTED**.
-- Phase 3 / System 33 is **IMPLEMENTED + EXACT-HEAD AUTOMATED VERIFIED** on executable `b632fc709d4fcd387eccb41fdc0e0f736bd69643` with shared roadside feeder trees, local substations, physical service drops, day-boundary line snaps, island-wide municipal water, real rural wells, truthful lighting and refrigeration integration.
+- Phase 3 / System 33 is **IMPLEMENTED + EXACT-HEAD AUTOMATED VERIFIED** on executable `ed0596b5a06461083c5cda2d72ccfe820b713b3e`, including generated local substations, shared roadside feeder trees, physical service drops, day-boundary line snaps, island-wide municipal water, real rural wells, truthful lighting/refrigeration integration, and the current procedural-island settlement hierarchy.
 - Wastewater/sewer/septic is **RETIRED / NOT ACTIVE**.
-- **Phase 3 human acceptance remains pending browser play of the current utility behavior.**
+- **Phase 3 human acceptance remains pending browser play of the current utility behavior and procedural-island presentation.**
