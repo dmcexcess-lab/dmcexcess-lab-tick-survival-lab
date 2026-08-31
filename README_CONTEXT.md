@@ -6,24 +6,57 @@ This file is the authoritative continuation checkpoint. Read `README_SOPS.md`, f
 
 ## Current heads
 
-- **Exact verified executable:** `9f6e0b8e9010d73181143481a84532fbfffb93e1` — `Verify roadside pole routing contract`
+- **Exact verified gameplay executable:** `9f6e0b8e9010d73181143481a84532fbfffb93e1` — `Verify roadside pole routing contract`
 - **Roadside pole implementation commits:** `37abaa803516094a2e92922a15557a844205dc8e` — `Carry generated access surfaces into utility topology`; `e4c1ee334d28473a9a9e1d8e5c7b1d7b5eb3ff00` — `Keep roadside power poles on stable legal sides`
-- **Documentation parent immediately before this handoff write:** `1adad0f79c0ce90bba4790745ad78d924ac8659f` — `Record roadside pole routing correction [skip ci]`
-- The commit containing this file is intentionally the **final repository write** of this operation. Commits after the executable are documentation-only.
+- **System 00F CI consolidation:** `32ef0c7647356b773e829081795b60563fc50d2b` — `Consolidate procedural boot CI`
+- **Changelog parent immediately before this handoff write:** `31c65abd2b26636befa2c2358a78f0a63b4ab8fa` — `Document System 00F CI consolidation`
+- The commit containing this file is intentionally the **final repository write** of this operation. Commits after the gameplay executable are CI/documentation-only and do not change runtime behavior.
 
-## Completed operation — roadside power pole crossing artifact
+## Completed operation — System 00F CI consolidation verified
+
+The procedural-island CI consolidation is complete and required **no repair**.
+
+Exact owning verification for consolidation commit `32ef0c7647356b773e829081795b60563fc50d2b`:
+
+- Workflow: `Streaming and Materialization Orchestration contract`
+- Workflow path: `.github/workflows/streaming-materialization.yml`
+- Run: `33360162311`
+- Job: `99389828052` — `streaming-materialization`
+- Result: **completed / success**
+- Run began `2026-08-31T05:19:56Z` and completed `2026-08-31T05:26:30Z`.
+
+Every intended consolidated step passed on that exact head:
+
+1. System 00F boundary validation;
+2. Godot import/parse;
+3. one **12-seed procedural island planner/preflight matrix**;
+4. one **12-seed canonical playable boot matrix**;
+5. settlement materialization regression;
+6. countryside source/materialization contract.
+
+The consolidation removed redundant verification without weakening the island contract:
+
+- the standalone duplicate procedural boot-diagnostics workflow is gone;
+- the duplicate System-00F `PerformanceRazorSmoke` invocation is gone because the dedicated performance workflow owns that check;
+- System 00F still owns one full planner/preflight 12-seed matrix and one full real-game boot 12-seed matrix;
+- settlement and countryside materialization smokes remain;
+- System 00F push triggering is path-aware, so unrelated/docs-only pushes do not launch the procedural island gauntlet, while edits to the owning workflow itself still trigger it.
+
+`CHANGELOG.md` now records the consolidation and exact successful owning run. No gameplay/runtime source was changed by this CI operation.
+
+## Completed gameplay operation — roadside power pole crossing artifact
 
 The browser screenshots exposed a real System-33 materialization defect, not a renderer defect. Roadside pole cells were chosen independently as the nearest legal off-road cell. An obstacle could therefore force one support to the opposite side of the road and the next support could independently snap straight back, producing an unnecessary diagonal zig-zag. Generated parcel driveway/parking access cells were also absent from the utility placement exclusions, so a crossing support could land directly on the narrow gray access strip.
 
 The repair is architectural and uses generated world truth:
 
-- `UtilityLocalPowerTopologyPlanner` now carries actual generated parcel `driveway_cells` and `parking_cells` into deterministic `pole_exclusion_cells`.
+- `UtilityLocalPowerTopologyPlanner` carries actual generated parcel `driveway_cells` and `parking_cells` into deterministic `pole_exclusion_cells`.
 - Physical utility supports reject those generated access cells; they are not identified by sprite color or renderer inference.
 - Shared-feeder pole placement is resolved **root-outward** so straight-route child supports inherit the parent span's physical side of the road.
 - If the current side has no legal placement and a crossing is genuinely required, the feeder changes side and holds that new side for the next **two sequential pole placements** before an elective cross-back is allowed.
 - Turns and actual feeder junctions may establish a new routing direction; the side-hold rule does not invent additional forks.
 - Stable pole identities remain tied to the existing deterministic route-cell ordering, so the visual-routing correction does not churn physical asset IDs.
-- `System33RoadsidePoleRoutingSmoke.gd` and permanent `verify/system33-roadside-pole-routing` now protect generated access exclusions, same-side displacement, forced crossings, the two-pole hold, and real shared-trunk materialization.
+- `System33RoadsidePoleRoutingSmoke.gd` and permanent `verify/system33-roadside-pole-routing` protect generated access exclusions, same-side displacement, forced crossings, the two-pole hold, and real shared-trunk materialization.
 
 No accepted renderer, physical-lighting, LOS, camera, input, municipal-water, well, substation-count, regional-ingress, shared-trunk-deduplication or one-service-drop-per-building contract was replaced.
 
@@ -48,7 +81,7 @@ No accepted renderer, physical-lighting, LOS, camera, input, municipal-water, we
 
 Do not replace these structures, poles, spans, wells or service relationships with presentation-only markers. They are generated and materialized from procedural island truth.
 
-## Exact executable verification
+## Exact gameplay executable verification
 
 Executable `9f6e0b8e9010d73181143481a84532fbfffb93e1` completed **43/43 push-triggered exact-head workflows successfully**, with zero failures and zero pending runs.
 
@@ -72,11 +105,11 @@ The dedicated roadside regression proves:
 - the next two straight-route support placements remain on the new side;
 - the real shared trunk obeys the same post-crossing hold behavior.
 
-The protected exact-head suite also retained procedural island boot coverage, System-33 physical infrastructure/service truth, physical lighting, performance architecture, input responsiveness, streaming/materialization and Pages deployment.
+The protected executable suite also retained procedural island boot coverage, System-33 physical infrastructure/service truth, physical lighting, performance architecture, input responsiveness, streaming/materialization and Pages deployment.
 
 ## Browser acceptance status
 
-The exact executable Pages deployment is available at `https://dmcexcess-lab.github.io/dmcexcess-lab-tick-survival-lab/`.
+The verified gameplay executable Pages deployment is available at `https://dmcexcess-lab.github.io/dmcexcess-lab-tick-survival-lab/`.
 
 Automated verification proves topology/materialization behavior but does **not** claim visual acceptance of the reported screenshot artifact. **Human acceptance on a WebGL2-capable desktop browser and phone/Safari remains pending.**
 
@@ -92,7 +125,8 @@ Automated verification proves topology/materialization behavior but does **not**
 - Do not add a municipal service radius or simulated long-distance pipe network.
 - Do not reintroduce wastewater as a hidden prerequisite.
 - Do not fake generated buildings, utility compounds, poles, wire spans or wells in UI/render-only code.
-- Do not weaken the procedural seed matrix, System-33 physical-topology assertions or roadside-pole regression.
+- Do not weaken the consolidated System-00F planner 12-seed matrix, canonical playable 12-seed boot matrix, System-33 physical-topology assertions or roadside-pole regression.
+- Do not reintroduce a second duplicate System-00F boot matrix or move the dedicated performance smoke back into System 00F without an evidence-backed reason.
 
 ## NEXT OPERATION — WebGL2 browser/phone acceptance
 
