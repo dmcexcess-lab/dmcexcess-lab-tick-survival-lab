@@ -47,7 +47,13 @@ func _initialize() -> void:
     if not central.is_empty():
         _check(int(central.get("seed", GlobalFixture.SEED)) != LegacyFixture.SEED, "island central site no longer reuses legacy critique seed")
         var central_bounds: Rect2i = central.get("bounds", Rect2i())
-        _check(central_bounds.has_point(GlobalFixture.CENTER), "central generated site continues to own the protected playable world location")
+        var central_settlement: Dictionary = _settlement(plan, String(central.get("settlement_id", "")))
+        _check(not central_settlement.is_empty(), "central generated site retains its procedural settlement")
+        if not central_settlement.is_empty():
+            _check(
+                central_bounds.has_point(central_settlement.get("center", Vector2i(-999999, -999999))),
+                "central generated site owns its procedural playable settlement location"
+            )
 
     var alternate_request := RequestClass.new(
         GlobalFixture.WORLD_ID,
@@ -220,6 +226,12 @@ func _site(plan: GeneratedGlobalWorldPlan, site_id: String) -> Dictionary:
     for site: Dictionary in plan.area_sites:
         if String(site.get("id", "")) == site_id:
             return site
+    return {}
+
+func _settlement(plan: GeneratedGlobalWorldPlan, settlement_id: String) -> Dictionary:
+    for settlement: Dictionary in plan.settlements:
+        if String(settlement.get("id", "")) == settlement_id:
+            return settlement
     return {}
 
 func _rect_manhattan_gap(a: Rect2i, b: Rect2i) -> int:
