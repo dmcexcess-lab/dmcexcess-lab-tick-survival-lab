@@ -289,15 +289,12 @@ func _smalltown_planning_constraints(plan: GeneratedGlobalWorldPlan, bounds: Rec
             false,
             String(power_segment.get("network_id", ""))
         ))
-    var found_substation: bool = false
     for power_node_value: Variant in power_result.get("nodes", []):
         if typeof(power_node_value) != TYPE_DICTIONARY:
             continue
         var power_node: Dictionary = power_node_value
         var power_kind: StringName = StringName(power_node.get("kind", &""))
         var power_role: StringName = &"facility" if power_kind == &"substation" else &"service"
-        if power_kind == &"substation":
-            found_substation = true
         constraints.append(_point_constraint(
             "constraint.power.%s" % String(power_node.get("id", "node")),
             String(power_node.get("id", "")),
@@ -310,8 +307,9 @@ func _smalltown_planning_constraints(plan: GeneratedGlobalWorldPlan, bounds: Rec
             String(power_node.get("settlement_id", "")),
             String(power_node.get("network_id", ""))
         ))
-    if not found_substation:
-        return {"ok": false, "failure_reason": "smalltown_substation_missing", "constraints": constraints}
+    # System 33 creates real neighborhood substations later from the generated building
+    # manifest (~10 buildings each). A small town therefore needs regional power service
+    # facts here, but it must not require a legacy global substation node inside its bounds.
 
     for water_segment_value: Variant in water_result.get("segments", []):
         if typeof(water_segment_value) != TYPE_DICTIONARY:
