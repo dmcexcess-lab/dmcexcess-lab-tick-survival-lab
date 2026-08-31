@@ -1,6 +1,6 @@
 [gd_scene load_steps=15 format=3]
 
-[ext_resource path="res://scripts/app/UtilityGameMain.gd" type="Script" id="1"]
+[ext_resource path="res://scripts/app/System34GameMain.gd" type="Script" id="1"]
 [ext_resource path="res://scripts/render/TacticalRendererStack.gd" type="Script" id="2"]
 [ext_resource path="res://scripts/input/KeyboardInputAdapter.gd" type="Script" id="3"]
 [ext_resource path="res://scripts/ui/PlayerMovementControls.gd" type="Script" id="4"]
