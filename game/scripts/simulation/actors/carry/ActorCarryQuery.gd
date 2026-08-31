@@ -4,6 +4,8 @@ class_name ActorCarryQuery
 ## 13E read-only derived carry query over 09 Hands + 11 Containment + 13D weight.
 ## Also exposes item-subtree weight so acquisition policies can project carried mass
 ## without duplicating recursive containment/weight logic.
+## System 34 may inject one read-only carry-multiplier provider; base 13E capacity truth
+## remains unchanged and legacy callers with no provider keep exact historical behavior.
 
 enum Status {
     KNOWN,
@@ -18,6 +20,7 @@ var _hands: ActorHandEquipmentState = null
 var _inventory: InventoryContainmentState = null
 var _weight_query: ItemWeightQuery = null
 var _carry_state: ActorCarryState = null
+var _capacity_modifier_provider: Variant = null
 
 func _init(
     world_state: WorldState = null,
@@ -32,6 +35,15 @@ func _init(
     _weight_query = weight_query
     _carry_state = carry_state
 
+func configure_capacity_modifier(provider: Variant) -> bool:
+    if provider == null:
+        _capacity_modifier_provider = null
+        return true
+    if not (provider is Object) or not (provider as Object).has_method("carry_multiplier_bp"):
+        return false
+    _capacity_modifier_provider = provider
+    return true
+
 func query(actor_id: String) -> Dictionary:
     if _world == null or _hands == null or _inventory == null or _weight_query == null or _carry_state == null:
         return result(Status.UNKNOWN, 0, 0, 0, 0, [], "carry_query_unconfigured")
@@ -45,6 +57,12 @@ func query(actor_id: String) -> Dictionary:
 
     var capacity: int = _carry_state.capacity_grams(actor_id)
     var hard_limit: int = _carry_state.hard_limit_grams(actor_id)
+    if _capacity_modifier_provider != null:
+        var multiplier_bp: int = int((_capacity_modifier_provider as Object).call("carry_multiplier_bp", actor_id))
+        if multiplier_bp <= 0:
+            return result(Status.UNKNOWN, 0, capacity, hard_limit, 0, [], "carry_modifier_unknown")
+        capacity = maxi(1, int((capacity * multiplier_bp) / 10000))
+        hard_limit = maxi(capacity, int((hard_limit * multiplier_bp) / 10000))
     if not _hands.has_actor(actor_id):
         return result(Status.UNKNOWN, 0, capacity, hard_limit, 0, [], "hands_unclassified")
     if not _inventory.has_container(actor_id):
