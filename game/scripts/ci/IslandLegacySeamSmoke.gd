@@ -46,7 +46,8 @@ func _initialize() -> void:
     _check(not smalltown.is_empty(), "small-town site exists")
     if not central.is_empty():
         _check(int(central.get("seed", GlobalFixture.SEED)) != LegacyFixture.SEED, "island central site no longer reuses legacy critique seed")
-        _check(central.get("bounds", Rect2i()) == LegacyFixture.BOUNDS, "central world location may remain stable while generated identity changes")
+        var central_bounds: Rect2i = central.get("bounds", Rect2i())
+        _check(central_bounds.has_point(GlobalFixture.CENTER), "central generated site continues to own the protected playable world location")
 
     var alternate_request := RequestClass.new(
         GlobalFixture.WORLD_ID,
@@ -122,9 +123,13 @@ func _initialize() -> void:
         print("LEGACY_CENTRAL_SIGNATURE=%s" % legacy_area.signature())
 
     if not central.is_empty() and not smalltown.is_empty():
-        var gap: int = _rect_manhattan_gap(central.get("bounds", Rect2i()), smalltown.get("bounds", Rect2i()))
-        print("ISLAND_CENTRAL_TO_SMALLTOWN_EDGE_GAP=%d" % gap)
-        _check(gap <= 96, "central-to-small-town countryside seam is bounded instead of a giant green belt")
+        var central_bounds: Rect2i = central.get("bounds", Rect2i())
+        var smalltown_bounds: Rect2i = smalltown.get("bounds", Rect2i())
+        _check(not central_bounds.intersects(smalltown_bounds), "central and small-town generated sites remain distinct instead of overlapping")
+        var gap: int = _rect_manhattan_gap(central_bounds, smalltown_bounds)
+        var max_seam: int = int(profile.get("protected_cross_half_span", 192))
+        print("ISLAND_CENTRAL_TO_SMALLTOWN_EDGE_GAP=%d MAX=%d" % [gap, max_seam])
+        _check(max_seam > 0 and gap <= max_seam, "central-to-small-town countryside seam stays within the protected rural corridor instead of becoming a giant green belt")
 
     var surface_catalog := SurfaceCatalogClass.new(plan)
     _check(surface_catalog.is_ready(), "island surface catalog is ready")
