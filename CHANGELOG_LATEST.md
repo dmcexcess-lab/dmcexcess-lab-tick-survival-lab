@@ -2,6 +2,20 @@
 
 This compact ledger records the most recent work. `CHANGELOG.md` remains the historical archive.
 
+## Procedural Boot / Black-Screen Recovery — 2026-08-31
+
+Verified executable: `b94bc16e90c7699c0e1a95bb1556bf4bb0bdcd18`
+
+- Traced the reported black screen to `UtilityGameMain` aborting during whole-island procedural utility preflight **before the first rendered frame**. The accepted renderer, physical-lighting presentation, LOS and input paths were not the cause and were not changed.
+- Made semantic town-block count a morphology result rather than a fatal minimum. Actual generated road, parcel and building geometry remains authoritative, and current settlement density targets remain soft.
+- Corrected rural lane-anchor rejection so two directed records describing the same physical straight road are not mistaken for intersecting "other" roads. This restores valid rural branch anchors without weakening real intersection clearance.
+- Extended `ProceduralIslandSeedMatrixSmoke.gd` through resolved whole-island local-power topology, so remote settlement failures that can abort playable boot are caught before first-frame presentation.
+- Updated the legacy-island seam regression to prove that the playable crossroads owns its real procedural settlement center instead of requiring a retired fixed world-center coordinate.
+- Preserved the existing System-33 contract: roughly ten actual generated buildings per fenced local substation, shared roadside feeder trunks and short service drops, no physical regional source-to-substation wire, one grid-independent island municipal water plant, and persistent real private wells.
+- Locally verified Godot 4.7.1 import/parse, twelve diagnostic seeds, canonical runtime boot, global/local generation, System-33 utilities, physical-lighting presentation, camera, input responsiveness and performance architecture.
+- Verified executable `b94bc16e90c7699c0e1a95bb1556bf4bb0bdcd18` with **50 completed exact-head workflows, 50 successes, zero failures and zero pending**, including successful Pages deployment.
+- The live deployment responds, but the available cloud browser lacks WebGL2 and therefore cannot provide valid visual gameplay acceptance. Final browser/phone human acceptance remains pending.
+
 ## Procedural-Island Completion Verification — 2026-08-30
 
 Verified executable: `ed0596b5a06461083c5cda2d72ccfe820b713b3e`
@@ -77,6 +91,6 @@ Verified executable: `c7592c956a44c31b082db84ae597f43c643231c4`
 - Roadmap Phase 1 remains complete.
 - Roadmap Phase 2 / System 32 Crafting remains **COMPLETE + CI VERIFIED**.
 - Compact-island/world-seam cleanup and the responsiveness/black-screen recovery are **HUMAN ACCEPTED**.
-- Phase 3 / System 33 is **IMPLEMENTED + EXACT-HEAD AUTOMATED VERIFIED** on executable `ed0596b5a06461083c5cda2d72ccfe820b713b3e`, including generated local substations, shared roadside feeder trees, physical service drops, day-boundary line snaps, island-wide municipal water, real rural wells, truthful lighting/refrigeration integration, and the current procedural-island settlement hierarchy.
+- Phase 3 / System 33 is **IMPLEMENTED + EXACT-HEAD AUTOMATED VERIFIED** on executable `b94bc16e90c7699c0e1a95bb1556bf4bb0bdcd18`, including generated local substations, shared roadside feeder trees, physical service drops, day-boundary line snaps, island-wide municipal water, real rural wells, truthful lighting/refrigeration integration, the current procedural-island settlement hierarchy, and full playable-boot preflight across the protected seed matrix.
 - Wastewater/sewer/septic is **RETIRED / NOT ACTIVE**.
 - **Phase 3 human acceptance remains pending browser play of the current utility behavior and procedural-island presentation.**
