@@ -2,7 +2,7 @@
 
 Status: **IMPLEMENTED + EXACT-HEAD AUTOMATED VERIFIED; HUMAN RETEST PENDING**
 
-Current verified executable: `b632fc709d4fcd387eccb41fdc0e0f736bd69643`
+Current verified executable: `ed0596b5a06461083c5cda2d72ccfe820b713b3e`
 
 Roadmap phase: **Phase 3 — Power and Water**
 
@@ -25,7 +25,9 @@ Wastewater/sewer/septic is not an active System-33 domain.
 
 The playable island uses generated local distribution rather than one fake island substation.
 
-`UtilityLocalPowerTopologyPlanner` consumes the actual deterministic local-area/building manifests and groups generated buildings into service groups targeting **10 buildings per substation**. The count scales with generated content; there is no fixed island substation count.
+`UtilityLocalPowerTopologyPlanner` consumes the actual deterministic local-area/building manifests and groups generated buildings into service groups targeting **10 buildings per substation**. The count scales with generated content; there is no fixed island substation count and there is no requirement that every global small-town site already contain a legacy substation node.
+
+System 20 may project regional power corridors/service facts through a small town even when no global substation node lies inside that site's bounds. The real neighborhood substations are derived afterward from the generated building manifest; local generation therefore never invents or requires a one-substation-per-town placeholder.
 
 Each group receives stable local identities for:
 
@@ -88,6 +90,8 @@ There is no continuous analytic wear scheduler, per-span Node, per-span Timer, r
 The current global water contract is one **island-wide municipal treatment facility** near the shore.
 
 The municipal runtime has one source -> treatment -> distribution-header chain shared by every settlement service. Municipal service records are explicitly `island_wide_municipal`; there is no service radius and no simulated long-distance municipal pipe network.
+
+`NeighborhoodUtilityRuntimeState.water_service_for_cell()` resolves municipal service from the island-wide settlement-service records rather than using the retired plant-radius model. A generated small-town or rural settlement cell can therefore resolve its real municipal service even when the plant and its internal nodes are elsewhere on the island.
 
 The plant's stable critical asset is real persistent world truth. Current physical materialization is a small fenced utility facility containing a shed/plant body, tank-like storage, industrial machinery and a utility box.
 
@@ -170,11 +174,13 @@ There is **no wastewater/sewer/septic gameplay or live planning dependency**. `0
 - project import/parse;
 - System-33 power/water smoke;
 - generated local substation/customer topology;
+- small-town generation when regional service exists but no legacy global substation node is inside the site;
 - zero direct substation-to-customer starburst spans;
 - exactly one final service drop per generated served building;
 - roadside shared-trunk spans tied to real generated-road centerline cells;
 - shared path deduplication and actual pole reuse across multiple wire edges;
 - physical network damage/repair and daily snap behavior;
+- island-wide municipal water cell/service lookup without radius inference;
 - plant/well service truth;
 - complete island planning;
 - System-27 physical lighting;
@@ -185,7 +191,7 @@ There is **no wastewater/sewer/septic gameplay or live planning dependency**. `0
 
 The broader global-world-planning contract independently proves profile v7, island-wide municipal water projection, complete-island planning, island seam integrity and System-20 projection/local generation.
 
-Verified executable: `b632fc709d4fcd387eccb41fdc0e0f736bd69643`.
+Verified executable: `ed0596b5a06461083c5cda2d72ccfe820b713b3e`. All 51 exact-head checks completed successfully, including GitHub Pages deployment.
 
 ## 13. Human acceptance
 
