@@ -8,6 +8,8 @@ const ConditionMoodletClass = preload("res://scripts/simulation/actors/condition
 const ConditionMobilityClass = preload("res://scripts/simulation/actors/condition/ActorConditionMobilityModifierProvider.gd")
 const ConditionExertionClass = preload("res://scripts/simulation/actors/condition/MovementConditionExertionService.gd")
 const ConditionFearClass = preload("res://scripts/simulation/actors/condition/ConditionPerceptionFearAdapter.gd")
+const ConditionHeardFearClass = preload("res://scripts/simulation/actors/condition/ConditionHeardFearAdapter.gd")
+const ConditionEnvironmentClass = preload("res://scripts/simulation/actors/condition/ConditionEnvironmentPressureAdapter.gd")
 const SustainmentProfilesClass = preload("res://scripts/simulation/actors/condition/SurvivorSustainmentProfileCatalog.gd")
 const SustainmentActionsClass = preload("res://scripts/simulation/actors/condition/SurvivorSustainmentActionService.gd")
 const ConditionControlsClass = preload("res://scripts/ui/ConditionPlayerControls.gd")
@@ -22,6 +24,8 @@ var _condition_moodlets: ActorConditionMoodletQuery = null
 var _condition_mobility: ActorConditionMobilityModifierProvider = null
 var _condition_exertion: MovementConditionExertionService = null
 var _condition_fear: ConditionPerceptionFearAdapter = null
+var _condition_heard_fear: ConditionHeardFearAdapter = null
+var _condition_environment: ConditionEnvironmentPressureAdapter = null
 var _sustainment_profiles: SurvivorSustainmentProfileCatalog = null
 var _sustainment_actions: SurvivorSustainmentActionService = null
 var _condition_controls: ConditionPlayerControls = null
@@ -69,8 +73,22 @@ func _boot_system34() -> bool:
     _condition_exertion = ConditionExertionClass.new(_movement, _condition_service, _carry_query)
     if not _condition_exertion.is_ready():
         return false
+
     _condition_fear = ConditionFearClass.new(_world, _perception, _condition_service, FixtureClass.PLAYER_ID)
     if _perception != null and _perception.is_ready() and not _condition_fear.is_ready():
+        return false
+    _condition_heard_fear = ConditionHeardFearClass.new(_spatial_sound, _condition_service, FixtureClass.PLAYER_ID)
+    if _spatial_sound != null and _spatial_sound.is_ready() and not _condition_heard_fear.is_ready():
+        return false
+    _condition_environment = ConditionEnvironmentClass.new(
+        _world,
+        _weather,
+        _carry_query,
+        _condition_service,
+        _kernel,
+        FixtureClass.PLAYER_ID
+    )
+    if _weather != null and _weather.is_ready() and not _condition_environment.is_ready():
         return false
 
     _sustainment_profiles = SustainmentProfilesClass.new()
