@@ -2,7 +2,7 @@
 
 Status: **IMPLEMENTED + EXACT-HEAD AUTOMATED VERIFIED; HUMAN RETEST PENDING**
 
-Current verified executable: `ed0596b5a06461083c5cda2d72ccfe820b713b3e`
+Current verified executable: `9f6e0b8e9010d73181143481a84532fbfffb93e1`
 
 Roadmap phase: **Phase 3 — Power and Water**
 
@@ -45,7 +45,11 @@ Each substation feeds its served buildings through **one shared road-following f
 
 `NeighborhoodPowerInfrastructureMaterializer` builds a graph from the centerlines of the actual generated `local_roads`, chooses the reachable road cell nearest the substation as the distribution root, and computes deterministic root-to-customer-tap paths. Those customer paths are unioned before physicalization, so any road section used by multiple buildings becomes one shared physical trunk rather than duplicated overlapping wires.
 
-Physical roadside poles are placed off the road surface at the feeder root, customer taps, turns, junctions and deterministic spacing points. The materialized electrical path is therefore:
+Physical roadside poles are placed off the road surface at the feeder root, customer taps, turns, junctions and deterministic spacing points. Pole placement also consumes the real generated parcel-access surfaces: driveway and parking/access cells are hard exclusions and cannot receive a support pole. This keeps supports off the narrow paved/gray access strips that connect parcels to the road rather than trying to infer those surfaces from rendered pixels.
+
+Pole side is resolved root-outward along each straight feeder progression instead of independently at every support. A child support first inherits its parent span's physical side of the road. If that side has no legal support location and the line must cross, the new side is held for the next **two sequential pole placements** before an elective cross-back is allowed. Turns and real topology junctions may establish a new routing direction; the side-hold rule does not invent extra forks or change the logical feeder tree. Existing stable pole IDs remain tied to the deterministic route-cell ordering even though physical placement is resolved root-outward.
+
+The materialized electrical path is therefore:
 
 1. one short `substation_lead` from the transformer to the shared road-root pole;
 2. deduplicated `shared_trunk` spans following the generated road network pole-to-pole;
@@ -189,9 +193,11 @@ There is **no wastewater/sewer/septic gameplay or live planning dependency**. `0
 - player input responsiveness;
 - canonical startup.
 
+The dedicated `verify/system33-roadside-pole-routing` contract additionally proves that generated driveway/parking access cells are carried into utility pole exclusions, real materialized local power poles do not occupy those cells, an obstructed support can remain on its current legal side, a genuinely forced crossing moves to the opposite side, and the next two straight-route supports cannot immediately cross back. It also scans the real shared-trunk materialization for the same side-hold behavior.
+
 The broader global-world-planning contract independently proves profile v7, island-wide municipal water projection, complete-island planning, island seam integrity and System-20 projection/local generation.
 
-Verified executable: `ed0596b5a06461083c5cda2d72ccfe820b713b3e`. All 51 exact-head checks completed successfully, including GitHub Pages deployment.
+Verified executable: `9f6e0b8e9010d73181143481a84532fbfffb93e1`. All **43/43 push-triggered exact-head workflows** completed successfully with zero failures or pending runs, including GitHub Pages deployment.
 
 ## 13. Human acceptance
 
@@ -201,11 +207,12 @@ Automated verification is green. Browser play should still verify the visible/ga
 2. no fake long-distance line is drawn from the regional source/power plant to substations;
 3. each substation's local distribution leaves as a shared roadside feeder tree rather than separate rays to every house;
 4. common route sections visibly reuse one set of poles/wires and forks occur only where needed;
-5. final service drops terminate near the real buildings they serve;
-6. line failure causes the expected local blackout and repair restores it;
-7. the municipal water plant exists physically and a plant failure removes island-wide municipal water;
-8. ordinary grid loss does not disable the municipal plant;
-9. a deterministic minority of rural homes have real private wells and powered-well failure behaves correctly;
-10. no black-screen, first-step hitch growth or input-backlog regression returns, with phone/Safari remaining first-class.
+5. roadside support poles do not land on generated driveway/parking/access strips, and a feeder that crosses the road stays on the new side for two subsequent support placements before an elective cross-back;
+6. final service drops terminate near the real buildings they serve;
+7. line failure causes the expected local blackout and repair restores it;
+8. the municipal water plant exists physically and a plant failure removes island-wide municipal water;
+9. ordinary grid loss does not disable the municipal plant;
+10. a deterministic minority of rural homes have real private wells and powered-well failure behaves correctly;
+11. no black-screen, first-step hitch growth or input-backlog regression returns, with phone/Safari remaining first-class.
 
 Do not mark Phase 3 HUMAN ACCEPTED solely from CI.
