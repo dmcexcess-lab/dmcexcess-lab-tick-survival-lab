@@ -17,8 +17,10 @@ jobs:
         with:
           fetch-depth: 0
       - name: Prepend changelog and remove one-shot workflow
-        shell: python
+        shell: bash
         run: |
+          set -euo pipefail
+          python3 <<'PY'
           from pathlib import Path
           path = Path("CHANGELOG.md")
           text = path.read_text()
@@ -26,19 +28,21 @@ jobs:
           assert text.startswith(marker)
           entry = """## 2026-08-31 — Roadside Power Pole Routing Correction
 
-- Fixed the browser-reported shared-feeder artifact where independently chosen roadside supports could cross a road to dodge an obstacle and then immediately zig-zag back, including a crossing support landing on a generated gray driveway/access strip.
-- Root cause was in real System-33 materialization rather than the renderer: utility topology carried generated roads/buildings/blocked props but omitted generated parcel driveway/parking access surfaces, while each pole independently chose its nearest legal off-road cell with no inherited road-side state.
-- `UtilityLocalPowerTopologyPlanner` now carries actual generated parcel `driveway_cells` and `parking_cells` into deterministic `pole_exclusion_cells`; physical power supports cannot occupy those generated access surfaces.
-- `NeighborhoodPowerInfrastructureMaterializer` now resolves support placement root-outward along the shared feeder. Straight-route children inherit their parent side; a genuinely forced crossing changes side and holds that new side for the next **two sequential pole placements** before an elective cross-back is allowed.
-- Existing deterministic route-cell ordering still owns stable pole IDs. Shared-trunk deduplication, topology-driven forks, one final service drop per real building, fenced substations, nonphysical regional ingress, water behavior, renderer/lighting/LOS and input contracts were not replaced.
-- Added permanent `System33RoadsidePoleRoutingSmoke.gd` plus `verify/system33-roadside-pole-routing`, covering generated access exclusions, same-side displacement, forced crossing, two-pole post-crossing hold and the real materialized shared trunk.
-- Verified executable: `9f6e0b8e9010d73181143481a84532fbfffb93e1`.
-- All **43/43 push-triggered exact-head workflows** passed with zero failures or pending runs, including `verify/system33-roadside-pole-routing`, `verify/system33-power-water`, `verify/system00f-streaming-materialization`, `verify/performance-architecture`, `verify/system00d-global-world` and `verify/pages-deploy`.
-- Human WebGL2 desktop/phone/Safari visual acceptance remains pending; CI does not claim that the screenshot artifact is visually approved.
+          - Fixed the browser-reported shared-feeder artifact where independently chosen roadside supports could cross a road to dodge an obstacle and then immediately zig-zag back, including a crossing support landing on a generated gray driveway/access strip.
+          - Root cause was in real System-33 materialization rather than the renderer: utility topology carried generated roads/buildings/blocked props but omitted generated parcel driveway/parking access surfaces, while each pole independently chose its nearest legal off-road cell with no inherited road-side state.
+          - `UtilityLocalPowerTopologyPlanner` now carries actual generated parcel `driveway_cells` and `parking_cells` into deterministic `pole_exclusion_cells`; physical power supports cannot occupy those generated access surfaces.
+          - `NeighborhoodPowerInfrastructureMaterializer` now resolves support placement root-outward along the shared feeder. Straight-route children inherit their parent side; a genuinely forced crossing changes side and holds that new side for the next **two sequential pole placements** before an elective cross-back is allowed.
+          - Existing deterministic route-cell ordering still owns stable pole IDs. Shared-trunk deduplication, topology-driven forks, one final service drop per real building, fenced substations, nonphysical regional ingress, water behavior, renderer/lighting/LOS and input contracts were not replaced.
+          - Added permanent `System33RoadsidePoleRoutingSmoke.gd` plus `verify/system33-roadside-pole-routing`, covering generated access exclusions, same-side displacement, forced crossing, two-pole post-crossing hold and the real materialized shared trunk.
+          - Verified executable: `9f6e0b8e9010d73181143481a84532fbfffb93e1`.
+          - All **43/43 push-triggered exact-head workflows** passed with zero failures or pending runs, including `verify/system33-roadside-pole-routing`, `verify/system33-power-water`, `verify/system00f-streaming-materialization`, `verify/performance-architecture`, `verify/system00d-global-world` and `verify/pages-deploy`.
+          - Human WebGL2 desktop/phone/Safari visual acceptance remains pending; CI does not claim that the screenshot artifact is visually approved.
 
-"""
+          """
+          entry = "\n".join(line[10:] if line.startswith("          ") else line for line in entry.splitlines()) + "\n"
           path.write_text(marker + entry + text[len(marker):])
           Path(".github/workflows/changelog-prepend-once.yml").unlink()
+          PY
       - name: Commit documentation closeout
         shell: bash
         run: |
