@@ -1,5 +1,16 @@
 # Changelog
 
+## 2026-08-31 — System 00F CI Consolidation
+
+- Consolidated System 00F procedural-island verification so the planner/preflight 12-seed matrix runs once and the canonical playable 12-seed boot matrix runs once.
+- Removed the standalone duplicate procedural boot-diagnostics workflow and removed the duplicate System-00F `PerformanceRazorSmoke`; the dedicated performance workflow remains the owner of that check.
+- Retained System-00F boundary/import validation plus the settlement and countryside materialization regressions.
+- Added path-aware System-00F push triggering so unrelated/docs-only pushes no longer launch the island gauntlet; edits to the owning workflow itself still trigger it.
+- Consolidation commit: `32ef0c7647356b773e829081795b60563fc50d2b`.
+- Verified owning run `33360162311` / job `99389828052` completed successfully on that exact head, including both 12-seed matrices and both materialization regressions; no repair was required.
+- No runtime/gameplay code changed; the verified playable executable remains `9f6e0b8e9010d73181143481a84532fbfffb93e1`.
+- Next step remains human browser visual acceptance; automated CI does not claim visual approval.
+
 ## 2026-08-31 — Roadside Power Pole Routing Correction
 
 - Fixed the browser-reported shared-feeder artifact where independently chosen roadside supports could cross a road to dodge an obstacle and then immediately zig-zag back, including a crossing support landing on a generated gray driveway/access strip.
@@ -111,7 +122,7 @@
 - First fully green System-29 foundation head: `9ccbb91f167c376b6ea4a4d7ff82ede3427ae122`.
 - First fully green **playable-island integration** head: `5b88d9172df51561ea760913873f62bd2cdc422a`.
 - All **14 required exact-head contexts** are green on the playable integration head, including `verify/system29-interaction-affordance` and `verify/pages-deploy`.
-- Roadmap Phase 1A is complete. **Phase 1B Item Freshness / Spoilage is the next bounded design target; its implementation is not pre-authorized by this completion.**
+- Roadmap Phase 1A is complete. **Phase 1B Item Freshness / Spoilage is the next bounded design target; its runtime implementation is not pre-authorized by this completion.**
 
 ## System 28 Weather / Atmosphere — Slice C + screen-space presentation correction — 2026-08-24
 
