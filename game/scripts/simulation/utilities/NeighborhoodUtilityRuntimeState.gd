@@ -67,12 +67,21 @@ func power_service_for_cell(cell: Vector2i) -> String:
             best_distance = distance
     return best_service
 
-func water_service_for_cell(_cell: Vector2i) -> String:
+func water_service_for_cell(cell: Vector2i) -> String:
+    var best_service: String = ""
+    var best_distance: int = 2147483647
     for service_id: String in _sorted_keys(_water_bindings):
         var binding: Dictionary = _water_bindings[service_id]
-        if StringName(binding.get("service_kind", &"")) == &"municipal":
-            return service_id
-    return ""
+        if StringName(binding.get("service_kind", &"")) != &"municipal" or not bool(binding.get("island_wide", false)):
+            continue
+        var service_cell: Vector2i = binding.get("service_cell", INVALID_CELL)
+        if service_cell == INVALID_CELL:
+            continue
+        var distance: int = absi(cell.x - service_cell.x) + absi(cell.y - service_cell.y)
+        if distance < best_distance or (distance == best_distance and (best_service.is_empty() or service_id < best_service)):
+            best_service = service_id
+            best_distance = distance
+    return best_service
 
 func well_service_for_building(building_id: String) -> String:
     return String(_well_service_by_building.get(building_id.strip_edges(), ""))
@@ -346,7 +355,8 @@ func _materialize_water(plan: GeneratedGlobalWorldPlan) -> bool:
     for service: Dictionary in plan.water_services:
         var service_id: String = String(service.get("id", "")).strip_edges()
         var settlement_id: String = String(service.get("settlement_id", "")).strip_edges()
-        if service_id.is_empty() or settlement_id.is_empty() or _water_bindings.has(service_id):
+        var service_cell: Vector2i = _settlement_center(plan.settlements, settlement_id)
+        if service_id.is_empty() or settlement_id.is_empty() or service_cell == INVALID_CELL or _water_bindings.has(service_id):
             return false
         if StringName(service.get("service_mode", &"")) != &"island_wide_municipal" \
             or String(service.get("plant_id", "")) != plant_id \
@@ -359,6 +369,7 @@ func _materialize_water(plan: GeneratedGlobalWorldPlan) -> bool:
             "treatment_component_id": treatment_component,
             "owner_entity_id": critical_asset_id,
             "settlement_id": settlement_id,
+            "service_cell": service_cell,
             "plant_id": plant_id,
             "network_id": String(service.get("network_id", "")),
             "critical_asset_id": critical_asset_id,
@@ -448,12 +459,20 @@ func _validate_water_topology(
             or not _chain_reaches_role(terminal, components, links, parents, [&"source"]):
             return false
         if service_kind == &"municipal":
-            if not bool(binding.get("island_wide", false)) or not String(binding.get("required_power_service_id", "")).is_empty():
+            if not bool(binding.get("island_wide", false)) \
+                or binding.get("service_cell", INVALID_CELL) == INVALID_CELL \
+                or not String(binding.get("required_power_service_id", "")).is_empty():
                 return false
         else:
             if String(binding.get("building_id", "")).is_empty() or String(binding.get("required_power_service_id", "")).is_empty():
                 return false
     return true
+
+func _settlement_center(settlements: Array[Dictionary], settlement_id: String) -> Vector2i:
+    for settlement: Dictionary in settlements:
+        if String(settlement.get("id", "")) == settlement_id:
+            return settlement.get("center", INVALID_CELL)
+    return INVALID_CELL
 
 func _register_water_asset(asset_id: String, kind: StringName, component_id: String, power_service_id: String) -> bool:
     var key: String = asset_id.strip_edges()
