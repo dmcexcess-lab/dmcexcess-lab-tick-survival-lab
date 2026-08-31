@@ -20,10 +20,12 @@ const CUSTOMER_CLEARANCE: int = 2
 const CUSTOMER_SEARCH_RADIUS: int = 6
 const ROAD_POLE_SEARCH_RADIUS: int = 8
 const ROAD_POLE_SPACING: int = 10
+const ROAD_SIDE_HOLD_POLES: int = 2
 const WELL_CLEARANCE: int = 1
 
 var _topology: Dictionary = {}
 var _blocked_prop_lookup: Dictionary = {}
+var _pole_exclusion_lookup: Dictionary = {}
 
 func _init(
     world_state: WorldState = null,
@@ -37,6 +39,9 @@ func _init(
     for value: Variant in _topology.get("blocked_prop_cells", []):
         var cell: Vector2i = value
         _blocked_prop_lookup[cell] = true
+    for value: Variant in _topology.get("pole_exclusion_cells", []):
+        var cell: Vector2i = value
+        _pole_exclusion_lookup[cell] = true
 
 func is_ready() -> bool:
     return super.is_ready() and bool(_topology.get("ok", false)) \
@@ -198,22 +203,78 @@ func _shared_distribution_tree(
         if da + db != Vector2i.ZERO:
             key_cells[cell] = true
 
+    # Keep existing route-cell ordering for stable pole IDs, but place root-outward so each
+    # child pole can inherit the physical side of the road used by its parent span.
     var ordered_key_cells: Array[Vector2i] = []
     for value: Variant in key_cells.keys():
         ordered_key_cells.append(value)
     ordered_key_cells.sort_custom(_cell_before)
+    var pole_ordinal_by_route_cell: Dictionary = {}
+    for index: int in range(ordered_key_cells.size()):
+        pole_ordinal_by_route_cell[ordered_key_cells[index]] = index
+
+    var placement_key_cells: Array[Vector2i] = ordered_key_cells.duplicate()
+    placement_key_cells.sort_custom(func(a: Vector2i, b: Vector2i) -> bool:
+        var a_depth: int = _route_depth(parents, root_road_cell, a)
+        var b_depth: int = _route_depth(parents, root_road_cell, b)
+        if a_depth != b_depth:
+            return a_depth < b_depth
+        return _cell_before(a, b)
+    )
 
     var props: Array[Dictionary] = []
     var wires: Array[Dictionary] = []
     var pole_id_by_route_cell: Dictionary = {}
     var pole_cell_by_route_cell: Dictionary = {}
+    var pole_state_by_route_cell: Dictionary = {}
     var local_reserved: Dictionary = reserved_cells.duplicate()
-    for index: int in range(ordered_key_cells.size()):
-        var route_cell: Vector2i = ordered_key_cells[index]
-        var pole_cell: Vector2i = _find_nearby_available(route_cell, local_reserved, ROAD_POLE_SEARCH_RADIUS)
+    for route_cell: Vector2i in placement_key_cells:
+        var pole_ordinal: int = int(pole_ordinal_by_route_cell.get(route_cell, -1))
+        if pole_ordinal < 0:
+            return {"ok": false, "props": [], "wires": []}
+
+        var direction: Vector2i = Vector2i.ZERO
+        var preferred_side: int = -1
+        var side_hold_remaining: int = 0
+        if route_cell == root_road_cell:
+            direction = _root_route_direction(root_road_cell, union_graph, road_graph)
+        else:
+            var parent_key: Vector2i = _nearest_key_parent(route_cell, key_cells, parents, root_road_cell)
+            if parent_key == INVALID_CELL or not pole_cell_by_route_cell.has(parent_key):
+                return {"ok": false, "props": [], "wires": []}
+            direction = _cardinal_direction(parent_key, route_cell)
+            if direction == Vector2i.ZERO:
+                return {"ok": false, "props": [], "wires": []}
+            var parent_pole_cell: Vector2i = pole_cell_by_route_cell.get(parent_key, INVALID_CELL)
+            preferred_side = _road_side(parent_key, parent_pole_cell, direction)
+            if preferred_side == 0:
+                preferred_side = int((pole_state_by_route_cell.get(parent_key, {}) as Dictionary).get("side", -1))
+            var parent_state: Dictionary = pole_state_by_route_cell.get(parent_key, {})
+            var parent_direction: Vector2i = parent_state.get("direction", Vector2i.ZERO)
+            if _same_axis(direction, parent_direction):
+                side_hold_remaining = int(parent_state.get("hold", 0))
+        if direction == Vector2i.ZERO:
+            direction = Vector2i(1, 0)
+
+        var pole_cell: Vector2i = _find_roadside_available(
+            route_cell,
+            direction,
+            preferred_side,
+            local_reserved,
+            ROAD_POLE_SEARCH_RADIUS,
+            side_hold_remaining <= 0
+        )
         if pole_cell == INVALID_CELL:
             return {"ok": false, "props": [], "wires": []}
-        var pole_id: String = "power.physical.%s.road.%03d" % [token, index]
+        var actual_side: int = _road_side(route_cell, pole_cell, direction)
+        if actual_side == 0:
+            return {"ok": false, "props": [], "wires": []}
+
+        var next_hold: int = maxi(0, side_hold_remaining - 1)
+        if route_cell != root_road_cell and preferred_side != 0 and actual_side != preferred_side:
+            next_hold = ROAD_SIDE_HOLD_POLES
+
+        var pole_id: String = "power.physical.%s.road.%03d" % [token, pole_ordinal]
         props.append({
             "id": pole_id,
             "semantic": &"prop.utility_pole_wood",
@@ -223,6 +284,11 @@ func _shared_distribution_tree(
         local_reserved[pole_cell] = true
         pole_id_by_route_cell[route_cell] = pole_id
         pole_cell_by_route_cell[route_cell] = pole_cell
+        pole_state_by_route_cell[route_cell] = {
+            "side": actual_side,
+            "direction": direction,
+            "hold": next_hold,
+        }
 
     var root_pole_id: String = String(pole_id_by_route_cell.get(root_road_cell, ""))
     var root_pole_cell: Vector2i = pole_cell_by_route_cell.get(root_road_cell, INVALID_CELL)
@@ -408,6 +474,98 @@ func _undirected_edge_key(a: Vector2i, b: Vector2i) -> String:
         b = swap
     return "%d,%d>%d,%d" % [a.x, a.y, b.x, b.y]
 
+func _route_depth(parents: Dictionary, root: Vector2i, target: Vector2i) -> int:
+    if not parents.has(target):
+        return 2147483647
+    var depth: int = 0
+    var current: Vector2i = target
+    while current != root:
+        current = parents.get(current, INVALID_CELL)
+        if current == INVALID_CELL:
+            return 2147483647
+        depth += 1
+        if depth > parents.size():
+            return 2147483647
+    return depth
+
+func _nearest_key_parent(
+    route_cell: Vector2i,
+    key_cells: Dictionary,
+    parents: Dictionary,
+    root: Vector2i
+) -> Vector2i:
+    var current: Vector2i = route_cell
+    var guard: int = 0
+    while current != root:
+        current = parents.get(current, INVALID_CELL)
+        if current == INVALID_CELL:
+            return INVALID_CELL
+        if key_cells.has(current):
+            return current
+        guard += 1
+        if guard > parents.size():
+            return INVALID_CELL
+    return root
+
+func _root_route_direction(root: Vector2i, union_graph: Dictionary, road_graph: Dictionary) -> Vector2i:
+    var neighbors: Array = union_graph.get(root, [])
+    if neighbors.is_empty():
+        neighbors = road_graph.get(root, [])
+    if neighbors.is_empty():
+        return Vector2i.ZERO
+    var typed: Array[Vector2i] = []
+    for value: Variant in neighbors:
+        if typeof(value) == TYPE_VECTOR2I:
+            typed.append(value)
+    typed.sort_custom(_cell_before)
+    if typed.is_empty():
+        return Vector2i.ZERO
+    return _cardinal_direction(root, typed[0])
+
+static func _cardinal_direction(start: Vector2i, finish: Vector2i) -> Vector2i:
+    var delta: Vector2i = finish - start
+    if delta.x != 0 and delta.y == 0:
+        return Vector2i(signi(delta.x), 0)
+    if delta.y != 0 and delta.x == 0:
+        return Vector2i(0, signi(delta.y))
+    return Vector2i.ZERO
+
+static func _same_axis(a: Vector2i, b: Vector2i) -> bool:
+    if a == Vector2i.ZERO or b == Vector2i.ZERO:
+        return false
+    return (a.x != 0 and b.x != 0) or (a.y != 0 and b.y != 0)
+
+static func _road_side(route_cell: Vector2i, support_cell: Vector2i, direction: Vector2i) -> int:
+    if support_cell == INVALID_CELL or direction == Vector2i.ZERO:
+        return 0
+    var offset: Vector2i = support_cell - route_cell
+    return signi(direction.x * offset.y - direction.y * offset.x)
+
+func _find_roadside_available(
+    route_cell: Vector2i,
+    direction: Vector2i,
+    preferred_side: int,
+    reserved_cells: Dictionary,
+    max_radius: int,
+    allow_opposite: bool
+) -> Vector2i:
+    var side: int = -1 if preferred_side < 0 else 1
+    var sides: Array[int] = [side]
+    if allow_opposite:
+        sides.append(-side)
+    for candidate_side: int in sides:
+        for radius: int in range(1, max_radius + 1):
+            for y: int in range(-radius, radius + 1):
+                for x: int in range(-radius, radius + 1):
+                    if absi(x) != radius and absi(y) != radius:
+                        continue
+                    var candidate: Vector2i = route_cell + Vector2i(x, y)
+                    if _road_side(route_cell, candidate, direction) != candidate_side:
+                        continue
+                    if _cell_available(candidate, reserved_cells):
+                        return candidate
+    return INVALID_CELL
+
 func _water_plant_records(reserved_cells: Dictionary) -> Array[Dictionary]:
     var treatment_node: Dictionary = {}
     for node: Dictionary in _plan.water_nodes:
@@ -536,9 +694,12 @@ func _find_nearby_available(target: Vector2i, reserved_cells: Dictionary, max_ra
     return INVALID_CELL
 
 func _cell_available(cell: Vector2i, reserved_cells: Dictionary) -> bool:
-    if not _plan.bounds.has_point(cell) or reserved_cells.has(cell) or _blocked_prop_lookup.has(cell):
+    if not _plan.bounds.has_point(cell) or reserved_cells.has(cell) or _blocked_prop_lookup.has(cell) \
+        or _pole_exclusion_lookup.has(cell):
         return false
     if not _world.entities_at(cell).is_empty() or _is_planned_global_road_surface(cell) or _is_local_road_surface(cell):
+        return false
+    if _world.has_terrain(cell) and _is_constructed_vehicle_surface_terrain(_world.terrain_at(cell)):
         return false
     for building_value: Variant in _topology.get("buildings", []):
         if typeof(building_value) != TYPE_DICTIONARY:
