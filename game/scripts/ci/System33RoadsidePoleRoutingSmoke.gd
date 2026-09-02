@@ -17,6 +17,7 @@ var _failures: Array[String] = []
 func _initialize() -> void:
     _test_generated_access_surface_rejection()
     _test_side_aware_candidate_selection()
+    _test_turn_continuity_policy()
     _test_materialized_trunk_does_not_immediately_cross_back()
     if _failures.is_empty():
         print("SYSTEM33_ROADSIDE_POLE_ROUTING_SMOKE_OK")
@@ -163,6 +164,39 @@ func _test_side_aware_candidate_selection() -> void:
         if held_cell != INVALID_CELL:
             _check(_side_of(next_route, held_cell, direction) == crossed_side, "post-crossing pole %d stays on the new side" % pole_offset)
 
+func _test_turn_continuity_policy() -> void:
+    var parent_state := {
+        "side": -1,
+        "direction": Vector2i(1, 0),
+        "hold": SIDE_HOLD_POLES,
+    }
+    var child_route := Vector2i(20, 20)
+    var child_direction := Vector2i(0, 1)
+    # Simulate a real same-bank displacement near an incoming corner. The child's
+    # direction-local sign differs from the parent's sign; copying the old sign is
+    # exactly the behavior that produced visible road zig-zags at bends.
+    var displaced_parent_pole := Vector2i(17, 10)
+    var child_side: int = NeighborhoodInfrastructureClass._continuous_road_side(
+        child_route,
+        child_direction,
+        displaced_parent_pole,
+        parent_state
+    )
+    _check(child_side == 1, "road turn chooses the geometrically continuous physical bank instead of copying a direction-local sign")
+
+    var straight_parent_state := {
+        "side": -1,
+        "direction": Vector2i(1, 0),
+        "hold": SIDE_HOLD_POLES,
+    }
+    var straight_side: int = NeighborhoodInfrastructureClass._continuous_road_side(
+        Vector2i(20, 10),
+        Vector2i(1, 0),
+        Vector2i(10, 8),
+        straight_parent_state
+    )
+    _check(straight_side == -1, "straight feeder preserves the existing physical roadside bank")
+
 func _test_materialized_trunk_does_not_immediately_cross_back() -> void:
     var plan: GeneratedGlobalWorldPlan = IslandFixtureClass.generate_global_plan()
     if plan == null or not plan.is_generated():
@@ -210,14 +244,12 @@ func _test_materialized_trunk_does_not_immediately_cross_back() -> void:
         if start_side == 0 or end_side == 0 or start_side == end_side:
             continue
         crossing_count += 1
-        _assert_hold_from(String(edge.get("end_id", "")), direction, end_side, SIDE_HOLD_POLES, outgoing, world)
+        _assert_hold_from(String(edge.get("end_id", "")), SIDE_HOLD_POLES, outgoing, world)
     print("SYSTEM33_ROADSIDE_CROSSINGS=%d" % crossing_count)
     _check(not trunk_edges.is_empty(), "full trunk side regression inspects real shared feeder spans")
 
 func _assert_hold_from(
     start_id: String,
-    direction: Vector2i,
-    expected_side: int,
     remaining: int,
     outgoing: Dictionary,
     world: WorldState
@@ -231,16 +263,18 @@ func _assert_hold_from(
         var route_start: Vector2i = edge.get("route_start_cell", INVALID_CELL)
         var route_end: Vector2i = edge.get("route_end_cell", INVALID_CELL)
         var edge_direction: Vector2i = _cardinal_direction(route_start, route_end)
-        if not _same_axis(direction, edge_direction):
+        if edge_direction == Vector2i.ZERO:
             continue
+        var start_placement: WorldPlacement = world.placement(String(edge.get("start_id", "")))
         var end_id: String = String(edge.get("end_id", ""))
-        var placement: WorldPlacement = world.placement(end_id)
-        if placement == null:
+        var end_placement: WorldPlacement = world.placement(end_id)
+        if start_placement == null or end_placement == null:
             continue
-        var actual_side: int = _side_of(route_end, placement.anchor, edge_direction)
-        _check(actual_side == expected_side, "shared trunk does not cross back during %d-pole side hold" % SIDE_HOLD_POLES)
-        if actual_side == expected_side:
-            _assert_hold_from(end_id, edge_direction, expected_side, remaining - 1, outgoing, world)
+        var start_side: int = _side_of(route_start, start_placement.anchor, edge_direction)
+        var end_side: int = _side_of(route_end, end_placement.anchor, edge_direction)
+        if start_side != 0 and end_side != 0:
+            _check(start_side == end_side, "shared trunk does not cross back during %d-pole side hold, including through road turns" % SIDE_HOLD_POLES)
+        _assert_hold_from(end_id, remaining - 1, outgoing, world)
 
 func _find_two_sided_route_fixture(plan: GeneratedGlobalWorldPlan, topology: Dictionary) -> Dictionary:
     var world := WorldStateClass.new()
