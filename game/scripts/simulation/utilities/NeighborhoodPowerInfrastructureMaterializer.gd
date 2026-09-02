@@ -204,7 +204,7 @@ func _shared_distribution_tree(
             key_cells[cell] = true
 
     # Keep existing route-cell ordering for stable pole IDs, but place root-outward so each
-    # child pole can inherit the physical side of the road used by its parent span.
+    # child pole can inherit the physical roadside bank used by its parent span.
     var ordered_key_cells: Array[Vector2i] = []
     for value: Variant in key_cells.keys():
         ordered_key_cells.append(value)
@@ -246,13 +246,9 @@ func _shared_distribution_tree(
             if direction == Vector2i.ZERO:
                 return {"ok": false, "props": [], "wires": []}
             var parent_pole_cell: Vector2i = pole_cell_by_route_cell.get(parent_key, INVALID_CELL)
-            preferred_side = _road_side(parent_key, parent_pole_cell, direction)
-            if preferred_side == 0:
-                preferred_side = int((pole_state_by_route_cell.get(parent_key, {}) as Dictionary).get("side", -1))
             var parent_state: Dictionary = pole_state_by_route_cell.get(parent_key, {})
-            var parent_direction: Vector2i = parent_state.get("direction", Vector2i.ZERO)
-            if _same_axis(direction, parent_direction):
-                side_hold_remaining = int(parent_state.get("hold", 0))
+            preferred_side = _continuous_road_side(route_cell, direction, parent_pole_cell, parent_state)
+            side_hold_remaining = int(parent_state.get("hold", 0))
         if direction == Vector2i.ZERO:
             direction = Vector2i(1, 0)
 
@@ -534,6 +530,42 @@ static func _same_axis(a: Vector2i, b: Vector2i) -> bool:
     if a == Vector2i.ZERO or b == Vector2i.ZERO:
         return false
     return (a.x != 0 and b.x != 0) or (a.y != 0 and b.y != 0)
+
+static func _continuous_road_side(
+    route_cell: Vector2i,
+    direction: Vector2i,
+    parent_pole_cell: Vector2i,
+    parent_state: Dictionary
+) -> int:
+    if direction == Vector2i.ZERO or parent_pole_cell == INVALID_CELL:
+        return int(parent_state.get("side", -1))
+
+    # Road-side signs are local to segment direction. At a bend, simply reusing the
+    # previous sign can flip the physical bank. Choose the child segment bank whose
+    # ideal one-cell offset is geometrically closest to the actual parent support.
+    # This preserves a continuous roadside polyline even when an earlier pole was
+    # displaced by a driveway/access exclusion.
+    var positive_normal := Vector2i(-direction.y, direction.x)
+    var positive_probe: Vector2i = route_cell + positive_normal
+    var negative_probe: Vector2i = route_cell - positive_normal
+    var positive_distance: int = absi(parent_pole_cell.x - positive_probe.x) + absi(parent_pole_cell.y - positive_probe.y)
+    var negative_distance: int = absi(parent_pole_cell.x - negative_probe.x) + absi(parent_pole_cell.y - negative_probe.y)
+    if positive_distance < negative_distance:
+        return 1
+    if negative_distance < positive_distance:
+        return -1
+
+    var projected_side: int = _road_side(route_cell, parent_pole_cell, direction)
+    if projected_side != 0:
+        return projected_side
+
+    var parent_side: int = int(parent_state.get("side", -1))
+    var parent_direction: Vector2i = parent_state.get("direction", Vector2i.ZERO)
+    if parent_side == 0:
+        parent_side = -1
+    if _same_axis(direction, parent_direction) and direction.dot(parent_direction) < 0:
+        return -parent_side
+    return parent_side
 
 static func _road_side(route_cell: Vector2i, support_cell: Vector2i, direction: Vector2i) -> int:
     if support_cell == INVALID_CELL or direction == Vector2i.ZERO:
