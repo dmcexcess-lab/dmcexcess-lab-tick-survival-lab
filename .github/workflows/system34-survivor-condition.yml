@@ -17,6 +17,7 @@ on:
       - '.github/workflows/system34-survivor-condition.yml'
   workflow_dispatch:
 
+# Keep explicit manual revalidation available for exact-head closure.
 permissions:
   contents: read
   statuses: write
