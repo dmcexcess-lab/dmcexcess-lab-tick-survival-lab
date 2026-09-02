@@ -563,7 +563,7 @@ static func _continuous_road_side(
     var parent_direction: Vector2i = parent_state.get("direction", Vector2i.ZERO)
     if parent_side == 0:
         parent_side = -1
-    if _same_axis(direction, parent_direction) and direction.dot(parent_direction) < 0:
+    if _same_axis(direction, parent_direction) and (direction.x * parent_direction.x + direction.y * parent_direction.y) < 0:
         return -parent_side
     return parent_side
 
