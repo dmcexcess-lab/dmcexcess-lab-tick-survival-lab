@@ -9,6 +9,7 @@ const StateClass = preload("res://scripts/simulation/actors/condition/ActorCondi
 const ModifierClass = preload("res://scripts/simulation/actors/condition/ActorConditionModifierQuery.gd")
 const ServiceClass = preload("res://scripts/simulation/actors/condition/ActorConditionService.gd")
 const MoodletClass = preload("res://scripts/simulation/actors/condition/ActorConditionMoodletQuery.gd")
+const HeardFearClass = preload("res://scripts/simulation/actors/condition/ConditionHeardFearAdapter.gd")
 const ProfilesClass = preload("res://scripts/simulation/actors/condition/SurvivorSustainmentProfileCatalog.gd")
 
 const ACTOR_ID: String = "actor.system34.test"
@@ -18,6 +19,7 @@ var failures: Array[String] = []
 func _initialize() -> void:
     _test_tiers_and_modifiers()
     _test_time_and_stamina()
+    _test_fear_policy()
     _test_health_pressure_and_nonhealing_cap()
     _test_snapshot_and_profiles()
     if failures.is_empty():
@@ -95,6 +97,7 @@ func _test_time_and_stamina() -> void:
     _check(int(after.get("satiety", 100)) < int(before.get("satiety", 0)), "satiety decays from WHEN time")
     _check(int(after.get("hydration", 100)) < int(before.get("hydration", 0)), "hydration decays from WHEN time")
     _check(int(after.get("rest", 100)) < int(before.get("rest", 0)), "rest decays from WHEN time")
+    _check(int(after.get("calm", -1)) == int(before.get("calm", -2)), "no-threat time does not accumulate fear")
 
     _check(service.spend_stamina(ACTOR_ID, 50), "stamina spent")
     var spent: int = service.current_stamina(ACTOR_ID)
@@ -102,6 +105,24 @@ func _test_time_and_stamina() -> void:
     _check(spent == same_tick, "decision pause wall-clock does not recover stamina")
     _advance(kernel, time_profile.ticks_per_minute(), &"test.wait.minute")
     _check(service.current_stamina(ACTOR_ID) > spent, "WHEN minute recovers stamina")
+
+func _test_fear_policy() -> void:
+    _check(HeardFearClass.fear_pressure(&"movement", 1.0) == 0, "ordinary movement sound is not fear")
+    _check(HeardFearClass.fear_pressure(&"impact", 1.0) == 0, "ordinary impact sound is not fear")
+    _check(HeardFearClass.fear_pressure(&"utility", 1.0) == 0, "ordinary utility sound is not fear")
+    _check(HeardFearClass.fear_pressure(&"threat", 0.64) == 0, "weak threat sound stays below fear threshold")
+    _check(HeardFearClass.fear_pressure(&"threat", 0.65) == HeardFearClass.THREAT_NOTICE_PRESSURE, "recognized threat sound produces bounded fear")
+    _check(HeardFearClass.fear_pressure(&"threat", 0.85) == HeardFearClass.THREAT_SEVERE_PRESSURE, "severe recognized threat sound produces bounded fear")
+
+    var fixture: Dictionary = _fixture()
+    var service: ActorConditionService = fixture["service"]
+    var kernel: TickKernel = fixture["kernel"]
+    var time_profile: WorldTimeProfile = fixture["time"]
+    _check(service.set_condition(ACTOR_ID, StateClass.CALM, 30), "fear recovery fixture sets low Calm")
+    var before: int = service.value(ACTOR_ID, StateClass.CALM)
+    _advance(kernel, time_profile.ticks_per_hour(), &"test.wait.calm_recovery")
+    var after: int = service.value(ACTOR_ID, StateClass.CALM)
+    _check(after > before and after <= 60, "Calm recovers toward neutral when no threat is present")
 
 func _test_health_pressure_and_nonhealing_cap() -> void:
     var fixture: Dictionary = _fixture()
