@@ -8,9 +8,53 @@ This file is the authoritative continuation checkpoint. Read `README_SOPS.md`, f
 
 - **Exact verified System 34 gameplay executable:** `e07c559ad2f3eeafbf9b342c97ea2fd61f730e5a` — `Add System 34 survivor condition verification`
 - **System 34 owning verification:** workflow `System 34 Survivor Condition contract`, run `33363266598`, job `99398683690` — **completed / success** on exact head `e07c559ad2f3eeafbf9b342c97ea2fd61f730e5a`.
+- **Pages repair commit:** `49dcbe433c8bd3899592276aba534b0824e8b635` — `Repair Pages canonical composition validation`
+- **Pages repair verification:** workflow `Build and deploy Tick Survival Lab`, run `33580686480`; build job `100094126996` and deploy job `100094432962` — **completed / success** on exact repair head.
 - **Prior exact verified roadside-power executable:** `9f6e0b8e9010d73181143481a84532fbfffb93e1` — `Verify roadside pole routing contract`
 - **System 00F CI consolidation:** `32ef0c7647356b773e829081795b60563fc50d2b` — `Consolidate procedural boot CI`
 - The commit containing this file is intentionally the **final repository write** of this operation. This handoff write is documentation-only and does not change runtime behavior.
+
+## Completed operation — Pages deployment repair
+
+The Pages failure introduced alongside the System 34 composition change is repaired and the live Web export/deployment contract is green again.
+
+Root cause:
+
+- System 34 correctly made `System34GameMain.gd` the canonical root composition in `game/main.tscn`.
+- `System34GameMain.gd` extends `UtilityGameMain`, which in turn extends `CraftingGameMain`; runtime composition remained valid.
+- `.github/workflows/pages.yml` still contained a stale validation assertion requiring the old direct `UtilityGameMain.gd` reference in `game/main.tscn`.
+- The failed Pages run therefore stopped in `Validate canonical project surface`; this was a CI validator defect rather than a gameplay, Godot parse, Web export or Pages-hosting defect.
+
+Repair commit `49dcbe433c8bd3899592276aba534b0824e8b635` updates only `.github/workflows/pages.yml`:
+
+- the canonical main-scene assertion now requires `System34GameMain.gd`;
+- the workflow explicitly validates `System34GameMain.gd -> UtilityGameMain -> CraftingGameMain` inheritance;
+- the System 34 design document and script are included in the canonical project-surface checks;
+- existing Godot import/parse, canonical demo smoke, startup smoke, Web export, Pages configuration, artifact upload and deployment steps remain intact.
+
+Exact owning verification on the repair head:
+
+- Workflow: `Build and deploy Tick Survival Lab`
+- Run: `33580686480`
+- Context: `verify/pages-deploy` — **success**
+- Build job: `100094126996` — **completed / success**
+- Deploy job: `100094432962` — **completed / success**
+
+Every build-stage step passed:
+
+1. Checkout;
+2. Validate canonical project surface;
+3. Install Godot 4.7.1 and export templates;
+4. Import and parse project;
+5. Canonical demo integration smoke;
+6. Startup smoke;
+7. Export Web build;
+8. Configure / enable GitHub Pages;
+9. Upload Pages artifact.
+
+The deploy job then passed `Deploy to GitHub Pages` successfully.
+
+No runtime/gameplay source changed in this repair. The exact gameplay executable remains `e07c559ad2f3eeafbf9b342c97ea2fd61f730e5a`.
 
 ## Completed operation — System 34 Survivor Condition verification
 
@@ -39,7 +83,7 @@ Every intended owning step passed on that exact head:
 10. canonical startup requiring `CANONICAL_DEMO_BOOT_OK`;
 11. exact-head status publication.
 
-The combined exact-head status reports `verify/system34-survivor-condition` as **success**. The unrelated Pages deployment status on this head is not part of the System 34 owning test set requested for this operation and was not used to delay or broaden the System 34 closeout.
+The combined exact-head status reports `verify/system34-survivor-condition` as **success**. The Pages failure that was deliberately kept outside that bounded System 34 verification has now been repaired separately and verified green as recorded above.
 
 ## Completed operation — System 00F CI consolidation verified
 
@@ -125,12 +169,13 @@ Key successful runs:
 
 ## Browser acceptance status
 
-The live Pages build remains at `https://dmcexcess-lab.github.io/dmcexcess-lab-tick-survival-lab/`.
+The repaired Pages deployment is available at `https://dmcexcess-lab.github.io/dmcexcess-lab-tick-survival-lab/`.
 
-Automated verification proves System 34's owning condition/regression contract and the previously protected topology/materialization behavior, but does **not** claim human visual/gameplay acceptance. Browser/phone/Safari acceptance remains a separate manual step.
+Automated verification proves System 34's owning condition/regression contract, the repaired Web build/deploy pipeline, and the previously protected topology/materialization behavior, but does **not** claim human visual/gameplay acceptance. Browser/phone/Safari acceptance remains a separate manual step.
 
 ## Do not regress
 
+- Do not let Pages canonical-composition validation hard-code an obsolete direct root script when the authoritative composition layer changes; validate the current root and its intended inheritance chain.
 - Do not solve power-line placement artifacts in the renderer; support placement belongs to generated/materialized utility truth.
 - Do not place roadside utility supports on generated driveway/parking/access cells.
 - Do not return to independent nearest-cell pole placement that can immediately zig-zag across the road and back.
