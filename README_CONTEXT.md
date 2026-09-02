@@ -1,16 +1,45 @@
 # Tick Survival Lab — Current Handoff
 
-Last updated: **2026-08-31**
+Last updated: **2026-09-01**
 
 This file is the authoritative continuation checkpoint. Read `README_SOPS.md`, fetch current `main` once, and continue from **NEXT OPERATION** without rediscovering completed architecture.
 
 ## Current heads
 
-- **Exact verified gameplay executable:** `9f6e0b8e9010d73181143481a84532fbfffb93e1` — `Verify roadside pole routing contract`
-- **Roadside pole implementation commits:** `37abaa803516094a2e92922a15557a844205dc8e` — `Carry generated access surfaces into utility topology`; `e4c1ee334d28473a9a9e1d8e5c7b1d7b5eb3ff00` — `Keep roadside power poles on stable legal sides`
+- **Exact verified System 34 gameplay executable:** `e07c559ad2f3eeafbf9b342c97ea2fd61f730e5a` — `Add System 34 survivor condition verification`
+- **System 34 owning verification:** workflow `System 34 Survivor Condition contract`, run `33363266598`, job `99398683690` — **completed / success** on exact head `e07c559ad2f3eeafbf9b342c97ea2fd61f730e5a`.
+- **Prior exact verified roadside-power executable:** `9f6e0b8e9010d73181143481a84532fbfffb93e1` — `Verify roadside pole routing contract`
 - **System 00F CI consolidation:** `32ef0c7647356b773e829081795b60563fc50d2b` — `Consolidate procedural boot CI`
-- **Changelog parent immediately before this handoff write:** `31c65abd2b26636befa2c2358a78f0a63b4ab8fa` — `Document System 00F CI consolidation`
-- The commit containing this file is intentionally the **final repository write** of this operation. Commits after the gameplay executable are CI/documentation-only and do not change runtime behavior.
+- The commit containing this file is intentionally the **final repository write** of this operation. This handoff write is documentation-only and does not change runtime behavior.
+
+## Completed operation — System 34 Survivor Condition verification
+
+System 34 implementation and its exact owning regression suite are complete. No repair was required after verification.
+
+Exact owning verification for gameplay head `e07c559ad2f3eeafbf9b342c97ea2fd61f730e5a`:
+
+- Workflow: `System 34 Survivor Condition contract`
+- Workflow path: `.github/workflows/system34-survivor-condition.yml`
+- Run: `33363266598`
+- Job: `99398683690` — `verify/system34-survivor-condition`
+- Result: **completed / success**
+- Job started `2026-08-31T06:13:04Z` and completed `2026-08-31T06:13:58Z`.
+
+Every intended owning step passed on that exact head:
+
+1. System 34 ownership-boundary validation;
+2. Godot 4.7.1 import and parse;
+3. focused `System34SurvivorConditionSmoke.gd` regression with `SYSTEM34_SURVIVOR_CONDITION_SMOKE_OK` required;
+4. protected actor-health regression;
+5. protected actor-needs regression;
+6. protected actor-carry regression;
+7. protected item-freshness regression;
+8. protected player-input-responsiveness regression;
+9. protected System 33 power/water regression;
+10. canonical startup requiring `CANONICAL_DEMO_BOOT_OK`;
+11. exact-head status publication.
+
+The combined exact-head status reports `verify/system34-survivor-condition` as **success**. The unrelated Pages deployment status on this head is not part of the System 34 owning test set requested for this operation and was not used to delay or broaden the System 34 closeout.
 
 ## Completed operation — System 00F CI consolidation verified
 
@@ -41,8 +70,6 @@ The consolidation removed redundant verification without weakening the island co
 - System 00F still owns one full planner/preflight 12-seed matrix and one full real-game boot 12-seed matrix;
 - settlement and countryside materialization smokes remain;
 - System 00F push triggering is path-aware, so unrelated/docs-only pushes do not launch the procedural island gauntlet, while edits to the owning workflow itself still trigger it.
-
-`CHANGELOG.md` now records the consolidation and exact successful owning run. No gameplay/runtime source was changed by this CI operation.
 
 ## Completed gameplay operation — roadside power pole crossing artifact
 
@@ -81,7 +108,7 @@ No accepted renderer, physical-lighting, LOS, camera, input, municipal-water, we
 
 Do not replace these structures, poles, spans, wells or service relationships with presentation-only markers. They are generated and materialized from procedural island truth.
 
-## Exact gameplay executable verification
+## Exact prior roadside gameplay executable verification
 
 Executable `9f6e0b8e9010d73181143481a84532fbfffb93e1` completed **43/43 push-triggered exact-head workflows successfully**, with zero failures and zero pending runs.
 
@@ -96,22 +123,11 @@ Key successful runs:
 - Performance architecture: run `33358588696`
 - GitHub Pages build/deploy: run `33358588720`
 
-The dedicated roadside regression proves:
-
-- real generated driveway/parking access cells are present in utility pole exclusions;
-- real materialized local power poles do not occupy those cells;
-- an obstructed preferred support can move while remaining on the same road side;
-- a fully blocked side can force a real crossing;
-- the next two straight-route support placements remain on the new side;
-- the real shared trunk obeys the same post-crossing hold behavior.
-
-The protected executable suite also retained procedural island boot coverage, System-33 physical infrastructure/service truth, physical lighting, performance architecture, input responsiveness, streaming/materialization and Pages deployment.
-
 ## Browser acceptance status
 
-The verified gameplay executable Pages deployment is available at `https://dmcexcess-lab.github.io/dmcexcess-lab-tick-survival-lab/`.
+The live Pages build remains at `https://dmcexcess-lab.github.io/dmcexcess-lab-tick-survival-lab/`.
 
-Automated verification proves topology/materialization behavior but does **not** claim visual acceptance of the reported screenshot artifact. **Human acceptance on a WebGL2-capable desktop browser and phone/Safari remains pending.**
+Automated verification proves System 34's owning condition/regression contract and the previously protected topology/materialization behavior, but does **not** claim human visual/gameplay acceptance. Browser/phone/Safari acceptance remains a separate manual step.
 
 ## Do not regress
 
@@ -125,23 +141,21 @@ Automated verification proves topology/materialization behavior but does **not**
 - Do not add a municipal service radius or simulated long-distance pipe network.
 - Do not reintroduce wastewater as a hidden prerequisite.
 - Do not fake generated buildings, utility compounds, poles, wire spans or wells in UI/render-only code.
-- Do not weaken the consolidated System-00F planner 12-seed matrix, canonical playable 12-seed boot matrix, System-33 physical-topology assertions or roadside-pole regression.
-- Do not reintroduce a second duplicate System-00F boot matrix or move the dedicated performance smoke back into System 00F without an evidence-backed reason.
+- Do not weaken the consolidated System-00F planner 12-seed matrix, canonical playable 12-seed boot matrix, System-33 physical-topology assertions, roadside-pole regression, or System-34 condition regression.
+- Do not duplicate System-34 condition truth in UI/presentation code; keep the owning condition services/queries authoritative.
 
-## NEXT OPERATION — WebGL2 browser/phone acceptance
+## NEXT OPERATION — human browser/gameplay acceptance
 
-Open the live Pages build in a WebGL2-capable desktop browser and on phone/Safari, then verify:
+Open the live build in a WebGL2-capable desktop browser and on phone/Safari, then verify the current gameplay state manually. In particular:
 
-1. reproduce/inspect roadside feeder routing across multiple fresh seeds;
-2. no pole/support lands on a gray generated driveway, parking connection or pedestrian/access strip;
-3. when a straight feeder must cross the road, it stays on the new side for the next **two support placements** before an elective cross-back;
-4. the immediate across-and-back zig-zag visible in the reported screenshots is gone;
-5. shared roadside poles/wires still reuse common trunks and fork only where generated road/customer topology requires them;
-6. short final service drops still terminate near the actual served buildings;
-7. each fenced local substation still serves roughly ten actual generated buildings and no regional source/plant -> substation transmission is visible;
-8. fresh islands reach a visible first frame and multiple seeds boot successfully;
-9. movement remains immediate without delayed input buildup, and full-window lighting/stateless LOS/real-equipped-flashlight behavior match the accepted baseline;
-10. the real municipal plant and private wells remain physically present and behaviorally correct;
-11. Safari/phone remains first-class.
+1. exercise System 34 survivor condition behavior and confirm health/stamina/moodlet presentation and controls behave correctly during actual play;
+2. confirm protected health, needs, carry, freshness and input behavior still feels correct rather than only passing headless regression;
+3. inspect roadside feeder routing across multiple fresh seeds;
+4. confirm no pole/support lands on a gray generated driveway, parking connection or pedestrian/access strip;
+5. confirm a forced straight feeder crossing stays on the new side for the next two support placements before an elective cross-back;
+6. confirm shared trunks/forks, short final service drops, substations, municipal plant and private wells remain physically correct;
+7. confirm fresh islands reach a visible first frame and multiple seeds boot successfully;
+8. confirm movement remains immediate without delayed input buildup and full-window lighting/stateless LOS/real-equipped-flashlight behavior match the accepted baseline;
+9. keep Safari/phone first-class.
 
-If that playtest passes, record Phase 3 human acceptance. If it exposes a defect, fix the owning implementation while preserving all exact-head contracts above.
+If that playtest passes, record human acceptance. If it exposes a defect, fix the owning implementation while preserving all exact-head contracts above.
