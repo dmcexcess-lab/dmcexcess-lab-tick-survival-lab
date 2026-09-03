@@ -3,6 +3,14 @@ class_name ForagePlayerControls
 
 ## Compact live surface for the real outdoor forage action. The button only requests
 ## the action; WHEN, Survival, depletion, environment and WHAT remain authoritative.
+##
+## Canonical compact control grid:
+##   row 1: SURVIVAL (left) | DEV WEATHER (right)
+##   row 2: FORAGE   (left) | DEV UTILITIES (right)
+## Keeping forage in the left column prevents a higher-layer DEV panel from obscuring it.
+
+const PANEL_POSITION := Vector2(8, 148)
+const PANEL_SIZE := Vector2(326, 78)
 
 var _actions: ForageNearbyActionService = null
 var _kernel: TickKernel = null
@@ -34,8 +42,8 @@ func _build_ui() -> void:
     if _status != null:
         return
     var panel := PanelContainer.new()
-    panel.position = Vector2(340, 66)
-    panel.size = Vector2(292, 78)
+    panel.position = PANEL_POSITION
+    panel.size = PANEL_SIZE
     add_child(panel)
     var box := VBoxContainer.new()
     box.add_theme_constant_override("separation", 3)
@@ -47,7 +55,7 @@ func _build_ui() -> void:
     _button = Button.new()
     _button.text = "FORAGE NEARBY"
     _button.focus_mode = Control.FOCUS_NONE
-    _button.custom_minimum_size = Vector2(272, 30)
+    _button.custom_minimum_size = Vector2(306, 30)
     _button.add_theme_font_size_override("font_size", 10)
     _button.pressed.connect(_forage)
     box.add_child(_button)

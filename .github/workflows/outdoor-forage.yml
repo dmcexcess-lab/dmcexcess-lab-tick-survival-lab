@@ -29,6 +29,7 @@ jobs:
           test -f game/scripts/simulation/forage/ForageNearbyActionService.gd
           test -f game/scripts/ui/ForagePlayerControls.gd
           test -f game/scripts/ci/OutdoorForageSmoke.gd
+          test -f game/scripts/ci/ForageUiLayoutSmoke.gd
           grep -q 'survival.forage_nearby' game/scripts/simulation/forage/ForageNearbyActionService.gd
           grep -q 'LOOSE_ITEM' game/scripts/simulation/forage/ForageNearbyActionService.gd
           ! grep -R -q '_process' game/scripts/simulation/forage game/scripts/ui/ForagePlayerControls.gd
@@ -58,6 +59,14 @@ jobs:
           ./Godot_v4.7.1-stable_linux.x86_64 --headless --path "$GITHUB_WORKSPACE/game" --script res://scripts/ci/OutdoorForageSmoke.gd 2>&1 | tee "$RUNNER_TEMP/forage.log"
           grep -q 'OUTDOOR_FORAGE_SMOKE_OK' "$RUNNER_TEMP/forage.log"
           if grep -Eqi 'SCRIPT ERROR|Parse Error|Failed to load script' "$RUNNER_TEMP/forage.log"; then exit 1; fi
+
+      - name: Forage UI layout smoke
+        shell: bash
+        run: |
+          set -euxo pipefail
+          ./Godot_v4.7.1-stable_linux.x86_64 --headless --path "$GITHUB_WORKSPACE/game" --script res://scripts/ci/ForageUiLayoutSmoke.gd 2>&1 | tee "$RUNNER_TEMP/forage-ui.log"
+          grep -q 'FORAGE_UI_LAYOUT_SMOKE_OK' "$RUNNER_TEMP/forage-ui.log"
+          if grep -Eqi 'SCRIPT ERROR|Parse Error|Failed to load script|FORAGE_UI_LAYOUT_SMOKE_FAIL' "$RUNNER_TEMP/forage-ui.log"; then exit 1; fi
 
       - name: Protected skill crafting loot regressions
         shell: bash
