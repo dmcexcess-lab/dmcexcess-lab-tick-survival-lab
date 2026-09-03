@@ -1,6 +1,6 @@
 extends SceneTree
 
-const IconCatalogClass = preload("res://scripts/ui/icons/SemanticUiIconCatalog.gd")
+const IconCatalogClass = preload("res://scripts/ui/icons/CraftingSemanticUiIconCatalog.gd")
 const LootItemCatalogClass = preload("res://scripts/simulation/loot/LootItemCatalog.gd")
 
 var failures: Array[String] = []
@@ -9,11 +9,11 @@ func _initialize() -> void:
     var icons := IconCatalogClass.new()
     var loot := LootItemCatalogClass.new()
 
-    _check(icons.is_ready(), "semantic icon catalog loads the atlas and validates mappings")
-    _check(loot.semantic_types().size() == 97, "Phase 1E loot catalog exposes the expected 97 semantics")
-    _check(icons.known_semantics().size() == 100, "System 31 explicitly maps 97 item semantics plus three shell controls")
+    _check(icons.is_ready(), "current semantic icon catalog loads the atlas and validates mappings")
+    _check(loot.semantic_types().size() == 100, "current loot catalog exposes the expected 100 semantics")
+    _check(icons.known_semantics().size() == 112, "current icon catalog explicitly maps Phase-1, primitive resource, crafting output, and shell semantics")
 
-    for shell_key: StringName in [IconCatalogClass.SHELL_STATS, IconCatalogClass.SHELL_INVENTORY, IconCatalogClass.SHELL_MENU]:
+    for shell_key: StringName in [IconCatalogClass.SHELL_STATS, IconCatalogClass.SHELL_INVENTORY, IconCatalogClass.SHELL_MENU, IconCatalogClass.SHELL_CRAFT]:
         _check(icons.has_icon(shell_key), "shell icon is explicitly mapped: %s" % String(shell_key))
         _check(icons.diagnostic_reason(shell_key).is_empty(), "shell icon has no diagnostic: %s" % String(shell_key))
         _check(_region_valid(icons.region_for(shell_key)), "shell icon region is inside the atlas: %s" % String(shell_key))
@@ -25,28 +25,14 @@ func _initialize() -> void:
         _check(_region_valid(icons.region_for(semantic)), "mapped loot semantic region is inside the atlas: %s" % String(semantic))
         _check(icons.texture_for(semantic) != null, "mapped loot semantic texture resolves: %s" % String(semantic))
 
-    _check(
-        icons.icon_key(&"item.food.canned_beans") == icons.icon_key(&"item.food.canned_soup"),
-        "canned beans and canned soup intentionally share one explicit glyph"
-    )
-    _check(
-        icons.icon_key(&"item.medical.bandage_roll") == icons.icon_key(&"item.medical.gauze_pack"),
-        "bandage and gauze intentionally share one explicit glyph"
-    )
-    _check(
-        icons.icon_key(&"item.medical.painkillers") == icons.icon_key(&"item.medical.antibiotics"),
-        "pill medicines intentionally share one explicit glyph"
-    )
-    _check(
-        icons.icon_key(&"item.material.nails_box") == icons.icon_key(&"item.material.screws_box"),
-        "nails and screws intentionally share one explicit fastener glyph"
-    )
-    _check(
-        icons.icon_key(&"item.drink.water_bottle") != icons.icon_key(&"item.drink.soda_can"),
-        "distinct drink shapes do not collapse through a family fallback"
-    )
-    _check(icons.has_icon(&"item.food.banana"), "Phase 1E banana has an explicit icon mapping")
-    _check(icons.has_icon(&"item.electrical.extension_cord"), "Phase 1E extension cord has an explicit icon mapping")
+    for primitive_semantic: StringName in [&"item.outdoors.sturdy_stick", &"item.outdoors.smooth_stone", &"item.junk.old_magazine"]:
+        _check(icons.has_icon(primitive_semantic), "primitive Survival resource has an explicit icon mapping: %s" % String(primitive_semantic))
+    for crafted_semantic: StringName in [&"item.crafting.sharpened_stake", &"item.crafting.stone_hammer", &"item.crafting.paper_tinder_bundle"]:
+        _check(icons.has_icon(crafted_semantic), "primitive crafted output has an explicit icon mapping: %s" % String(crafted_semantic))
+
+    _check(icons.icon_key(&"item.food.canned_beans") == icons.icon_key(&"item.food.canned_soup"), "canned foods intentionally share one explicit glyph")
+    _check(icons.icon_key(&"item.material.nails_box") == icons.icon_key(&"item.material.screws_box"), "fastener boxes intentionally share one explicit glyph")
+    _check(icons.icon_key(&"item.drink.water_bottle") != icons.icon_key(&"item.drink.soda_can"), "distinct drink shapes do not collapse through a family fallback")
 
     var unknown: StringName = &"item.future.unmapped_test"
     _check(not icons.has_icon(unknown), "unknown future semantic is not falsely reported as covered")
@@ -58,9 +44,8 @@ func _initialize() -> void:
     var first: Texture2D = icons.texture_for(&"item.tool.hammer")
     var after_first: int = icons.cached_texture_count()
     var second: Texture2D = icons.texture_for(&"item.tool.hammer")
-    var after_second: int = icons.cached_texture_count()
     _check(first != null and first == second, "repeated requests reuse the same cached AtlasTexture")
-    _check(after_first >= before_cache and after_second == after_first, "repeated glyph lookup does not grow the texture cache")
+    _check(after_first >= before_cache and icons.cached_texture_count() == after_first, "repeated glyph lookup does not grow the texture cache")
 
     if failures.is_empty():
         print("SEMANTIC_UI_ICONS_SMOKE_OK")

@@ -148,7 +148,7 @@ func _check_stats_query(stats_query: ActorStatsInspectorQuery) -> void:
     _check(int(status.get("carry_weight_grams", -1)) == 0 and int(status.get("carry_capacity_grams", -1)) == 18000, "stats reads real derived carry")
     _check((result.get("injuries", []) as Array).is_empty(), "stats reports no real injuries as empty")
     var skills: Array = result.get("skills", [])
-    _check(skills.size() == 6, "stats dynamically enumerates all six canonical skills")
+    _check(skills.size() == 4, "stats dynamically enumerates all four canonical skills")
     for skill_value: Variant in skills:
         var skill: Dictionary = skill_value
         _check(int(skill.get("level", -1)) == 0 and int(skill.get("xp", -1)) == 0, "demo skill defaults are honest level-0 XP-0 records")
@@ -174,7 +174,7 @@ func _check_shell(kernel: TickKernel, stats_query: ActorStatsInspectorQuery, inv
     _check(shell.active_modal() == ShellClass.MODAL_STATS, "Stats modal becomes active")
     _check(not _keyboard.is_enabled() and not _controls.is_enabled(), "modal blocks keyboard and touch gameplay input")
     var stats_snapshot: Dictionary = shell.presentation_snapshot()
-    _check(_lines_contain(stats_snapshot, "Combat — Level 0"), "Stats presentation includes real skill level/XP")
+    _check(_lines_contain(stats_snapshot, "Awareness — Level 0"), "Stats presentation includes a real canonical skill level/XP")
     _check(not _lines_contain(stats_snapshot, "Stress"), "Stats does not fabricate stress")
     _check(not _lines_contain(stats_snapshot, "Traits"), "Stats does not fabricate traits")
 

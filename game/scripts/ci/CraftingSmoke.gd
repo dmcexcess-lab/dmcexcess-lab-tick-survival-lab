@@ -38,8 +38,8 @@ func _initialize() -> void:
     _setup()
     _test_catalog_contract()
     _test_personal_possession_and_determinism()
-    _test_primitive_survival_chain()
     _test_timed_transform_and_tool_preservation()
+    _test_primitive_survival_chain()
     _test_cancellation_and_compensation()
     _test_workstation_and_multistage_chain()
     if failures.is_empty():

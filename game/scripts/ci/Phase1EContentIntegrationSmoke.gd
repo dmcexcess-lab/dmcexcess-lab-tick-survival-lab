@@ -9,7 +9,7 @@ const LootProfilesClass = preload("res://scripts/simulation/loot/LootContainerPr
 const PhysicalCatalogClass = preload("res://scripts/simulation/items/properties/ItemPhysicalPropertyCatalog.gd")
 const TimeProfileClass = preload("res://scripts/simulation/world_time/WorldTimeProfile.gd")
 const FreshCatalogClass = preload("res://scripts/simulation/items/freshness/ItemFreshnessProfileCatalog.gd")
-const IconCatalogClass = preload("res://scripts/ui/icons/SemanticUiIconCatalog.gd")
+const IconCatalogClass = preload("res://scripts/ui/icons/CraftingSemanticUiIconCatalog.gd")
 const VisualGeometryClass = preload("res://scripts/art/PropVisualGeometryCatalog.gd")
 
 var failures: Array[String] = []
@@ -92,12 +92,12 @@ func _test_loot_freshness_icons() -> void:
     var freshness := FreshCatalogClass.new(time_profile)
     var icons := IconCatalogClass.new()
 
-    _check(items.catalog_version() == 3, "Phase 1E loot catalog version is three")
-    _check(items.semantic_types().size() == 97, "Phase 1E exposes ninety-seven physical loot semantics")
-    _check(items.register_physical_profiles(physical), "every Phase 1E loot semantic registers real physical weight")
-    _check(profiles.catalog_version() == 2 and profiles.validate_items(items), "Phase 1E location-aware loot tables validate against item truth")
+    _check(items.catalog_version() == 4, "current loot catalog version is four")
+    _check(items.semantic_types().size() == 100, "current world loot exposes one hundred physical semantics")
+    _check(items.register_physical_profiles(physical), "every current loot semantic registers real physical weight")
+    _check(profiles.catalog_version() == 3 and profiles.validate_items(items), "current location-aware loot tables validate against item truth")
     for profile_id: StringName in [&"civic.school.supplies", &"civic.church.supplies", &"civic.police.supplies", &"civic.fire.supplies"]:
-        _check(not profiles.profile(profile_id).is_empty(), "new civic loot profile exists: %s" % String(profile_id))
+        _check(not profiles.profile(profile_id).is_empty(), "Phase 1E civic loot profile still exists: %s" % String(profile_id))
 
     _check(profiles.classify(&"civic.school.elementary_small", "prop.phase1e.01", &"prop.file_cabinet_tall") == &"civic.school.supplies", "school file storage gets school supplies")
     _check(profiles.classify(&"civic.fire_station.small", "prop.phase1e.01", &"prop.tool_cabinet") == &"civic.fire.supplies", "fire-station tool storage gets station supplies")
@@ -109,10 +109,10 @@ func _test_loot_freshness_icons() -> void:
         _check(items.has_item(semantic), "every perishable is a real loot semantic: %s" % String(semantic))
     _check(not freshness.has_profile(&"item.food.rice_bag"), "dry rice remains shelf stable")
 
-    _check(icons.is_ready(), "System 31 icon catalog remains ready")
-    _check(icons.known_semantics().size() == 100, "ninety-seven loot semantics plus three shell controls are explicitly mapped")
+    _check(icons.is_ready(), "current System 31 icon catalog remains ready")
+    _check(icons.known_semantics().size() == 112, "current icon vocabulary includes Phase 1E plus later primitive/crafting semantics")
     for semantic: StringName in items.semantic_types():
-        _check(icons.has_icon(semantic), "every Phase 1E loot semantic has an explicit UI icon: %s" % String(semantic))
+        _check(icons.has_icon(semantic), "every current loot semantic has an explicit UI icon: %s" % String(semantic))
 
 func _test_large_visual_integration() -> void:
     _check(VisualGeometryClass.TREE_SEMANTIC == &"prop.deciduous_large", "07B tree descriptor binds the real generated prop semantic")
