@@ -42,6 +42,7 @@ func _build_ui() -> void:
     if _status != null:
         return
     var panel := PanelContainer.new()
+    panel.name = "ForagePanel"
     panel.position = PANEL_POSITION
     panel.size = PANEL_SIZE
     add_child(panel)
