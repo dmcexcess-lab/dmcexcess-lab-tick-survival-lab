@@ -6,104 +6,144 @@ This is the authoritative continuation checkpoint. Read `README_SOPS.md`, fetch 
 
 ## Current verified head
 
-- **Exact gameplay executable:** `156ee4b0a1727a5d5d26b479cf7a0dea9e9b462a` — `Align health fatigue needs and moodlets`
-- **Exact-head result:** **51 completed workflows, 51 successes, zero failures, zero pending**.
-- **Owning System 34 run:** `33807332330` — completed / success.
-- **Pages build/deploy run:** `33807332596` — completed / success.
-- **Streaming/materialization and 12-seed playable-boot run:** `33807332569` — completed / success.
+- **Exact gameplay executable:** `8a2a9b7c1f3cf5281d4f579820cbd5c2cb445206` — `Repair primitive Survival integration contracts`
+- **Primary push verification:** **41/41 workflows completed successfully**.
+- **Exact-head/status publisher verification:** **7/7 additional runs completed successfully**.
+- **Total run records tied to the executable:** **48 successes, zero failures, zero queued, zero running, zero cancelled**.
 - **Live build:** `https://dmcexcess-lab.github.io/dmcexcess-lab-tick-survival-lab/`
 - The later commit containing this handoff is documentation-only and does not change the executable above.
 
-## Completed operation — Health, Fatigue, Needs and Moodlets alignment
+## Completed operation — Four-skill contract and primitive Survival crafting
 
-The playable survivor now has one canonical short-horizon exertion value:
-
-- **Fatigue:** `0` rested -> `100` physically exhausted.
-- **Rest:** separate high-is-good long-horizon sleep/recovery condition.
-- There is no parallel live Stamina pool or Stamina HUD meter.
-- Schema-v1 System-34 saves migrate remaining Stamina reserve by inversion into Fatigue pressure and remove the duplicate legacy fields.
-
-Physical action and recovery are consequential:
-
-- walking adds a small amount of Fatigue;
-- running adds materially more and scales with terrain and real carried load;
-- severe Fatigue blocks starting another run but never removes ordinary walking;
-- physical action time does not secretly recover Fatigue;
-- explicit rest/sleep actions relieve Fatigue;
-- continued exertion beyond maximum Fatigue causes real damage through canonical Health and can reduce HP to zero;
-- System 34 does not own the later death/corpse transition.
-
-Physical needs now use the existing Health owner rather than presentation flags:
-
-- starvation, dehydration and sleep deprivation apply bounded real HP damage;
-- condition-derived effective Health ceilings never heal lost HP when conditions recover;
-- mental/comfort channels do not directly invent HP damage.
-
-Moodlets are derived warnings rather than stored or duplicated truth:
-
-- normal and positive meters produce no moodlet-chip clutter;
-- Satiety, Hydration, Rest, Engagement, Comfort and Calm produce only meaningful warning tiers;
-- Fatigue produces `Winded`, `Physically Exhausted` or `Spent` at its own pressure thresholds;
-- Health directly produces `Injured`, `Badly Injured` or `No Vitality`;
-- real Carry truth directly produces `Heavy Load` or `Overburdened`;
-- HUD and Stats show canonical Health/Fatigue and condition effects.
-
-The old System-13 Needs/Moodlet fixtures remain for isolated compatibility regressions. `System34GameMain` disconnects their old movement/exertion path, so they are not a second live condition owner.
-
-## Verification completed
-
-Local Godot 4.7.1 verification passed:
-
-- import / parse;
-- `System34SurvivorConditionSmoke.gd`, including legacy-save migration and zero-Health overexertion;
-- Health, legacy Needs, Carry, Moodlets and Freshness regressions;
-- canonical HUD and player shell;
-- Movement exertion/encumbrance and input responsiveness;
-- protected Actor Skills, Crafting, World Loot and Spatial Sound regressions;
-- protected System-33 power/water regression;
-- canonical playable startup with `CANONICAL_DEMO_BOOT_OK`.
-
-GitHub exact-head verification then completed 51/51 successfully, including Pages, the full 12-seed procedural playable-boot matrix, and the aggregate exact-head status publisher.
-
-## New skill direction — recorded, not implemented in this operation
-
-The future player catalog is exactly four broad skills:
+The player skill catalog is now exactly four broad skills:
 
 - **Awareness**;
 - **Stealth**;
 - **Mechanical** — repair, deconstruction/reclamation, vehicle hot-wiring and related practical machinery work;
 - **Survival** — first aid, scavenging, fire-starting and primitive survival crafting.
 
-Field actions and crafting share one composable model: **concrete tool + concrete resource/material + relevant skill check**. Recorded examples are hammer + nails, wrench + bolts, screwdriver + wires, and rag + alcohol. Sticks, rocks, rags and newspapers/magazines should support primitive Survival tools, weapons and armor.
+The old six-skill live catalog is gone. Stats and current protected shell regressions enumerate the four canonical skills dynamically.
 
-Skill should affect real-world outcomes such as treatment quality, time, failure risk and reclaimed material yield as well as recipe/crafting outcomes. Missing physical tools/materials are the natural hard blocker; low skill should normally produce risk or inefficiency instead of an invisible substitute item.
+Crafting now uses the intended composable contract already owned by System 32:
 
-The current executable six-skill level/XP scaffold remains unchanged until this four-skill migration is implemented deliberately. Current crafting, scavenging, world loot and sound code were not modified by the completed condition operation.
+**concrete physical material/resource + concrete physical tool + relevant broad skill check**
+
+- Missing required tools/materials are hard physical blockers.
+- Skill never invents or substitutes a missing item.
+- The skill action profile changes real action duration and success chance.
+- Outputs are real persistent WHAT entities with physical weight and ordinary containment/carry behavior.
+- The crafting UI displays the relevant skill, level, difficulty, success chance and skill-adjusted duration.
+
+### Primitive Survival resources now in real loot truth
+
+System 24 now owns three additional weighted virgin-loot semantics:
+
+- `item.outdoors.sturdy_stick` — Sturdy Stick;
+- `item.outdoors.smooth_stone` — Smooth Stone;
+- `item.junk.old_magazine` — Old Magazine.
+
+Existing real `Rag Bundle`, `Dirty Rag` and `Old Newspaper` semantics are reused rather than duplicated.
+
+The new resources enter existing deterministic searchable-container profiles. They do **not** currently appear through an invented ground-foraging shortcut or invisible inventory grant.
+
+### Primitive Survival recipes now implemented
+
+Three bounded Survival recipes now transform real possessed materials through the existing action service:
+
+1. **Sharpened Wooden Stake**
+   - material: Sturdy Stick
+   - tool: Kitchen Knife
+   - skill: Survival
+
+2. **Improvised Stone Hammer**
+   - materials: Sturdy Stick + Smooth Stone + Dirty Rag
+   - tool: Scissors
+   - skill: Survival
+
+3. **Paper Tinder Bundle**
+   - materials: Old Newspaper + Old Magazine
+   - tool: Scissors
+   - skill: Survival
+
+The exact consumed item identities are destroyed only on successful commit; required tools remain physical and unconsumed. Cancellation and commit-failure compensation remain protected.
+
+System 31/current crafting icon presentation explicitly covers the three primitive source resources and the three new crafted outputs using existing authored low-resolution glyphs. No family fallback is used to pretend unknown item semantics are covered.
+
+## Deliberately not implemented yet
+
+Do not treat the new item names as evidence of systems that do not yet exist:
+
+- there is **no outdoor ground-forage/scavenge action yet** for sticks/stones;
+- Sharpened Wooden Stake has **no invented weapon/combat damage behavior yet**;
+- Improvised Stone Hammer is **not yet a generalized substitute for the normal Hammer tool requirement**;
+- Paper Tinder Bundle has **no invented ignition/fire-use behavior yet**;
+- primitive armor is not implemented by this slice.
+
+Connect those outputs to real consumers only when the owning combat/tool/fire/equipment systems exist.
+
+## Verification completed
+
+Exact executable `8a2a9b7c1f3cf5281d4f579820cbd5c2cb445206` completed the complete current GitHub verification set successfully:
+
+- System 32 Crafting, including physical-input/tool blocking, skill-adjusted timing/success contract, deterministic item selection, cancellation/compensation and the full primitive Survival chain;
+- System 31 semantic icon coverage, including the new resources and crafted outputs;
+- canonical Player Shell using the four canonical skills;
+- Phase 1E content integration using the current Loot v4 / Loot Profile v3 vocabulary;
+- Actor Skills and protected Health/Needs/Carry/Moodlet/Freshness contracts;
+- protected movement, run/exertion/encumbrance, input responsiveness and damage-interruptible walking contracts;
+- World Interaction/reach, World Loot and Spatial Sound contracts;
+- protected System-33 power/water contracts;
+- physical lighting, LOS, large visual geometry and renderer contracts;
+- procedural generation, streaming/materialization and playable-boot matrices;
+- Pages build/deployment and current live Web build;
+- aggregate exact-head status publishing.
+
+Final automated state: **41/41 primary push workflows green plus 7/7 exact-head/status runs green; no failed or pending run remains**.
+
+## Existing survivor-condition contract remains protected
+
+- **Fatigue:** `0` rested -> `100` physically exhausted.
+- **Rest:** separate high-is-good long-horizon sleep/recovery condition.
+- There is no parallel live Stamina pool or Stamina HUD meter.
+- Walking adds small Fatigue; running adds materially more and scales with terrain and real carried load.
+- Severe Fatigue blocks starting another run but never removes ordinary walking.
+- Physical action time does not secretly recover Fatigue; explicit rest/sleep actions relieve it.
+- Continued exertion beyond maximum Fatigue causes real Health damage and can reduce HP to zero.
+- Starvation, dehydration and sleep deprivation apply bounded real HP damage through the existing Health owner.
+- Moodlets remain derived warnings, not duplicated stored truth.
 
 ## Protected neighboring behavior
 
 - Preserve the accepted full 80×96 physical-light renderer, stateless LOS and input-lock/responsiveness recovery.
 - Do not solve generated utility topology defects in presentation code.
 - Preserve real procedural fenced substations, roughly ten generated buildings per substation, shared roadside feeder trees, short service drops, logical/non-physical regional source-to-substation links, and the two-pole road-crossing side hold.
-- Preserve the one real persistent island-wide municipal water plant with no external-power dependency and the real persistent rural private wells.
+- Preserve the one real persistent island-wide municipal water plant with no external-power dependency and real persistent rural private wells.
 - Do not reintroduce wastewater/sewer/septic.
-- Do not fake items, facilities, action resources, skill outcomes or moodlet/condition truth in UI.
-- Do not add frame-driven condition processing, per-actor timers or recurring whole-world scans. Condition/Fatigue remain analytic from WHEN anchors and action boundaries.
-- Do not weaken the owning System-34 regression, protected Health/Carry/input/utility tests, or the consolidated 12-seed planner/playable-boot matrices.
+- Do not fake items, facilities, action resources, skill outcomes or condition/moodlet truth in UI.
+- Do not add frame-driven condition processing, per-actor timers or recurring whole-world scans.
+- Do not weaken the owning System-34, Skills, Crafting, Loot, Health/Carry/input/utility tests or consolidated procedural/playable-boot matrices.
 
 ## Human acceptance status
 
-Automated verification is complete. Human browser/phone/Safari acceptance is still pending for the current condition feel and the earlier System-33 utility/renderer behavior.
+Automated verification for the current executable is complete. Human browser/phone/Safari acceptance is still pending for:
+
+- condition/Fatigue feel;
+- movement responsiveness, lighting/LOS and startup baseline;
+- generated System-33 power-line/substation/water/well behavior across fresh seeds;
+- current crafting/skill presentation on WebGL2 desktop and phone/Safari.
 
 ## NEXT OPERATION
 
-Human-play the live build in a WebGL2-capable desktop browser and on phone/Safari:
+Implement a bounded **outdoor Survival scavenging/foraging action for primitive materials** so sticks and stones can be acquired from the physical outdoor world rather than only searchable containers.
 
-1. verify walking/running raises Fatigue at a believable rate and ordinary walking remains possible when exhausted;
-2. verify Rest remains visibly distinct from short-term Fatigue and rest/sleep recovery feels correct;
-3. verify hunger, thirst, sleep, comfort, fear and boredom moodlets appear only when meaningful and do not duplicate meter truth;
-4. verify injury/zero-Health and real carry burden produce the correct moodlets;
-5. confirm movement responsiveness, lighting, LOS and startup remain on the accepted baseline;
-6. inspect multiple fresh seeds for the protected power-line crossing/substation/water/well behavior.
+Required shape:
 
-If that playtest exposes a defect, fix the owning implementation without weakening the verified contracts above. Otherwise record human acceptance. The next bounded implementation after that—or sooner on explicit user direction—is to replace the six-skill scaffold with Awareness, Stealth, Mechanical and Survival, then connect scavenging, first aid, deconstruction/reclamation, repair/hot-wiring and primitive crafting through one real tool + material + skill-check contract.
+1. derive explicit local candidate truth from real terrain/vegetation/world context rather than a recurring whole-world scan;
+2. expose the action through the existing interaction/reach architecture where appropriate;
+3. spend real WHEN time;
+4. apply the canonical **Survival** action profile to duration/outcome;
+5. create only real persistent resource entities on successful resolution;
+6. never invisibly grant inventory, repopulate an exhausted source, or create a frame-driven/per-actor recurring scanner;
+7. keep resource abundance bounded and deterministic enough for persistent-world reasoning.
+
+After that seam exists, connect the primitive crafted outputs to real combat/tool/fire consumers only through those owners rather than adding special-case UI behavior. Later bounded skill integrations remain first aid, scavenging quality/yield, Mechanical deconstruction/reclamation, repair and hot-wiring through the same physical tool + material + broad-skill philosophy.
