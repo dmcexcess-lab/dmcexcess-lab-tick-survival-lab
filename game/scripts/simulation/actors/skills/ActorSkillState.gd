@@ -4,7 +4,8 @@ class_name ActorSkillState
 const EntityIdRules = preload("res://scripts/foundation/world/WorldEntityId.gd")
 const Catalog = preload("res://scripts/simulation/actors/skills/ActorSkillCatalog.gd")
 
-## 13C authoritative base survivor skill level + XP progression.
+## 13C authoritative survivor skill level + XP progression.
+## Schema v2 replaces the recovered six-skill scaffold with the four canonical broad skills.
 
 signal actor_enrolled(actor_id, version)
 signal actor_removed(actor_id, version)
@@ -12,7 +13,14 @@ signal skill_changed(actor_id, skill_id, level, xp, version)
 signal skill_level_gained(actor_id, skill_id, previous_level, new_level, version)
 signal skills_reset
 
-const SNAPSHOT_SCHEMA_VERSION: int = 1
+const SNAPSHOT_SCHEMA_VERSION: int = 2
+const LEGACY_SCHEMA_VERSION: int = 1
+const LEGACY_COMBAT: StringName = &"combat"
+const LEGACY_SCAVENGING: StringName = &"scavenging"
+const LEGACY_SURVIVAL: StringName = &"survival"
+const LEGACY_MEDICAL: StringName = &"medical"
+const LEGACY_TECHNICAL: StringName = &"technical"
+const LEGACY_SOCIAL: StringName = &"social"
 
 var _world: WorldState = null
 var _records: Dictionary = {}
@@ -109,16 +117,16 @@ func set_skill(actor_id: String, skill_id: StringName, new_level: int, new_xp: i
     var previous_xp: int = xp(actor_id, skill_id)
     if previous_level == new_level and previous_xp == new_xp:
         return true
-    var record: Dictionary = _records[actor_id]
-    var levels: Dictionary = (record.get("levels", {}) as Dictionary).duplicate()
-    var xp_values: Dictionary = (record.get("xp", {}) as Dictionary).duplicate()
+    var record_value: Dictionary = _records[actor_id]
+    var levels: Dictionary = (record_value.get("levels", {}) as Dictionary).duplicate()
+    var xp_values: Dictionary = (record_value.get("xp", {}) as Dictionary).duplicate()
     levels[String(skill_id)] = new_level
     xp_values[String(skill_id)] = new_xp
-    var next_version: int = int(record.get("version", 0)) + 1
-    record["levels"] = levels
-    record["xp"] = xp_values
-    record["version"] = next_version
-    _records[actor_id] = record
+    var next_version: int = int(record_value.get("version", 0)) + 1
+    record_value["levels"] = levels
+    record_value["xp"] = xp_values
+    record_value["version"] = next_version
+    _records[actor_id] = record_value
     _revision += 1
     skill_changed.emit(actor_id, skill_id, new_level, new_xp, next_version)
     if new_level > previous_level:
@@ -168,7 +176,8 @@ func snapshot() -> Dictionary:
     }
 
 func load_snapshot(data: Dictionary) -> bool:
-    if int(data.get("schema_version", -1)) != SNAPSHOT_SCHEMA_VERSION:
+    var schema_version: int = int(data.get("schema_version", -1))
+    if schema_version != SNAPSHOT_SCHEMA_VERSION and schema_version != LEGACY_SCHEMA_VERSION:
         return false
     var restored_revision: int = int(data.get("revision", -1))
     var records_value: Variant = data.get("records", [])
@@ -186,35 +195,104 @@ func load_snapshot(data: Dictionary) -> bool:
             return false
         if actor_version < 1 or actor_version > restored_revision or typeof(skills_value) != TYPE_ARRAY:
             return false
-        var levels: Dictionary = {}
-        var xp_values: Dictionary = {}
-        for skill_value: Variant in skills_value:
-            if typeof(skill_value) != TYPE_DICTIONARY:
-                return false
-            var skill_entry: Dictionary = skill_value
-            var skill_id := StringName(String(skill_entry.get("skill_id", "")))
-            var candidate_level: int = int(skill_entry.get("level", -1))
-            var candidate_xp: int = int(skill_entry.get("xp", -1))
-            var key: String = String(skill_id)
-            if not Catalog.is_valid(skill_id) or levels.has(key):
-                return false
-            if not Catalog.is_valid_level(candidate_level) or not _is_normalized_xp(candidate_level, candidate_xp):
-                return false
-            levels[key] = candidate_level
-            xp_values[key] = candidate_xp
-        if levels.size() != Catalog.skill_ids().size():
+        var restored_record: Dictionary = _load_v2_skill_record(skills_value) if schema_version == SNAPSHOT_SCHEMA_VERSION else _migrate_v1_skill_record(skills_value)
+        if restored_record.is_empty():
             return false
-        restored[actor_id] = {
-            "levels": levels,
-            "xp": xp_values,
-            "version": actor_version,
-        }
+        restored_record["version"] = actor_version
+        restored[actor_id] = restored_record
     if not restored.is_empty() and restored_revision < 1:
         return false
     _records = restored
     _revision = restored_revision
     skills_reset.emit()
     return true
+
+func _load_v2_skill_record(skills_value: Array) -> Dictionary:
+    var levels: Dictionary = {}
+    var xp_values: Dictionary = {}
+    for skill_value: Variant in skills_value:
+        if typeof(skill_value) != TYPE_DICTIONARY:
+            return {}
+        var skill_entry: Dictionary = skill_value
+        var skill_id := StringName(String(skill_entry.get("skill_id", "")))
+        var candidate_level: int = int(skill_entry.get("level", -1))
+        var candidate_xp: int = int(skill_entry.get("xp", -1))
+        var key: String = String(skill_id)
+        if not Catalog.is_valid(skill_id) or levels.has(key):
+            return {}
+        if not Catalog.is_valid_level(candidate_level) or not _is_normalized_xp(candidate_level, candidate_xp):
+            return {}
+        levels[key] = candidate_level
+        xp_values[key] = candidate_xp
+    if levels.size() != Catalog.skill_ids().size():
+        return {}
+    return {"levels": levels, "xp": xp_values}
+
+func _migrate_v1_skill_record(skills_value: Array) -> Dictionary:
+    var legacy: Dictionary = {}
+    for skill_value: Variant in skills_value:
+        if typeof(skill_value) != TYPE_DICTIONARY:
+            return {}
+        var skill_entry: Dictionary = skill_value
+        var skill_id := StringName(String(skill_entry.get("skill_id", "")))
+        var key: String = String(skill_id)
+        var candidate_level: int = int(skill_entry.get("level", -1))
+        var candidate_xp: int = int(skill_entry.get("xp", -1))
+        if not _is_legacy_skill(skill_id) or legacy.has(key):
+            return {}
+        if not Catalog.is_valid_level(candidate_level) or not _is_normalized_xp(candidate_level, candidate_xp):
+            return {}
+        legacy[key] = {"level": candidate_level, "xp": candidate_xp}
+    if legacy.size() != 6:
+        return {}
+
+    var technical_progress: int = _legacy_progress(legacy, LEGACY_TECHNICAL)
+    var survival_progress: int = maxi(
+        _legacy_progress(legacy, LEGACY_SCAVENGING),
+        maxi(_legacy_progress(legacy, LEGACY_SURVIVAL), _legacy_progress(legacy, LEGACY_MEDICAL))
+    )
+    var mechanical: Dictionary = _normalized_from_progress(technical_progress)
+    var survival: Dictionary = _normalized_from_progress(survival_progress)
+    return {
+        "levels": {
+            String(Catalog.AWARENESS): 0,
+            String(Catalog.STEALTH): 0,
+            String(Catalog.MECHANICAL): int(mechanical.get("level", 0)),
+            String(Catalog.SURVIVAL): int(survival.get("level", 0)),
+        },
+        "xp": {
+            String(Catalog.AWARENESS): 0,
+            String(Catalog.STEALTH): 0,
+            String(Catalog.MECHANICAL): int(mechanical.get("xp", 0)),
+            String(Catalog.SURVIVAL): int(survival.get("xp", 0)),
+        },
+    }
+
+static func _is_legacy_skill(skill_id: StringName) -> bool:
+    return skill_id in [LEGACY_COMBAT, LEGACY_SCAVENGING, LEGACY_SURVIVAL, LEGACY_MEDICAL, LEGACY_TECHNICAL, LEGACY_SOCIAL]
+
+static func _legacy_progress(legacy: Dictionary, skill_id: StringName) -> int:
+    var entry: Dictionary = legacy.get(String(skill_id), {})
+    return _progress_from_normalized(int(entry.get("level", 0)), int(entry.get("xp", 0)))
+
+static func _progress_from_normalized(skill_level: int, skill_xp: int) -> int:
+    var total: int = skill_xp
+    for level_index in range(skill_level):
+        total += Catalog.next_level_xp(level_index)
+    return total
+
+static func _normalized_from_progress(total_progress: int) -> Dictionary:
+    var remaining: int = maxi(0, total_progress)
+    var skill_level: int = 0
+    while skill_level < Catalog.LEVEL_MAX:
+        var threshold: int = Catalog.next_level_xp(skill_level)
+        if remaining < threshold:
+            break
+        remaining -= threshold
+        skill_level += 1
+    if skill_level >= Catalog.LEVEL_MAX:
+        return {"level": Catalog.LEVEL_MAX, "xp": 0}
+    return {"level": skill_level, "xp": remaining}
 
 static func _is_normalized_xp(skill_level: int, skill_xp: int) -> bool:
     if skill_xp < 0 or not Catalog.is_valid_level(skill_level):

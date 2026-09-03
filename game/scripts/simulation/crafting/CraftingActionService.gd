@@ -9,6 +9,7 @@ const DispositionResultClass = preload("res://scripts/simulation/items/transfer/
 ## System 32 timed transformation coordinator. It owns no alternate inventory store:
 ## exact input entities are removed from their existing disposition at the final WHEN
 ## phase, output WHAT entities are created, then ordinary System 11 containment owns them.
+## Skill affects elapsed time and commit risk only after real tool/material requirements pass.
 
 signal craft_committed(actor_id, action_serial, recipe_id, output_item_ids)
 signal craft_failed(actor_id, action_serial, recipe_id, reason)
@@ -27,6 +28,7 @@ var _containment_mutations: InventoryContainmentMutationService = null
 var _kernel: TickKernel = null
 var _recipes: CraftingRecipeCatalog = null
 var _plans: CraftingPlanQuery = null
+var _skill_checks: ActorSkillCheckService = null
 var _disposition: ItemDispositionQuery = null
 var _commit_outcomes: Dictionary = {}
 var _diagnostics: Array[Dictionary] = []
@@ -41,7 +43,8 @@ func _init(
     containment_mutation_service: InventoryContainmentMutationService = null,
     tick_kernel: TickKernel = null,
     recipe_catalog: CraftingRecipeCatalog = null,
-    plan_query: CraftingPlanQuery = null
+    plan_query: CraftingPlanQuery = null,
+    skill_check_service: ActorSkillCheckService = null
 ) -> void:
     _world = world_state
     _world_mutations = world_mutation_service
@@ -52,6 +55,7 @@ func _init(
     _kernel = tick_kernel
     _recipes = recipe_catalog
     _plans = plan_query
+    _skill_checks = skill_check_service
     if _world != null and _hands != null and _containment != null:
         _disposition = DispositionQueryClass.new(_world, _hands, _containment)
     if _kernel != null:
@@ -70,6 +74,7 @@ func is_ready() -> bool:
         and _kernel != null \
         and _recipes != null \
         and _plans != null and _plans.is_ready() \
+        and _skill_checks != null and _skill_checks.is_ready() \
         and _disposition != null and _disposition.is_ready()
 
 func recent_diagnostics() -> Array[Dictionary]:
@@ -93,6 +98,17 @@ func request_craft(actor_id: String, recipe_id: StringName, workstation_id: Stri
     var recipe_value: CraftingRecipe = _recipes.recipe(recipe_id)
     if recipe_value == null or recipe_value.duration_ticks < 1:
         return _request_result(false, 0, actor, recipe_id, "recipe_unknown")
+    var skill_profile: Dictionary = _skill_checks.action_profile(
+        actor,
+        recipe_value.skill_id,
+        recipe_value.duration_ticks,
+        recipe_value.skill_difficulty
+    )
+    if not bool(skill_profile.get("ok", false)):
+        return _request_result(false, 0, actor, recipe_id, String(skill_profile.get("reason", "skill_profile_unavailable")))
+    var duration: int = int(skill_profile.get("duration_ticks", 0))
+    if duration < 1:
+        return _request_result(false, 0, actor, recipe_id, "skill_duration_invalid")
 
     var payload: Dictionary = {
         "recipe_id": String(recipe_id),
@@ -100,19 +116,28 @@ func request_craft(actor_id: String, recipe_id: StringName, workstation_id: Stri
         "consumed_item_ids": plan.get("consumed_item_ids", []).duplicate(),
         "tool_item_ids": plan.get("tool_item_ids", []).duplicate(),
         "workstation_id": String(plan.get("workstation_id", "")),
+        "skill_id": String(recipe_value.skill_id),
+        "skill_level": int(skill_profile.get("skill_level", -1)),
+        "skill_difficulty": recipe_value.skill_difficulty,
     }
-    var phases: Array = [PhaseClass.new(COMMIT_PHASE, recipe_value.duration_ticks)]
+    var phases: Array = [PhaseClass.new(COMMIT_PHASE, duration)]
     var serial: int = _kernel.begin_action(
         actor,
         ACTION_TYPE,
-        recipe_value.duration_ticks,
+        duration,
         TickRulesClass.InterruptionPolicy.CANCELABLE,
         phases,
         payload
     )
     if serial <= 0:
         return _request_result(false, 0, actor, recipe_id, "when_rejected_craft")
-    return _request_result(true, serial, actor, recipe_id, "")
+    var accepted: Dictionary = _request_result(true, serial, actor, recipe_id, "")
+    accepted["duration_ticks"] = duration
+    accepted["skill_id"] = recipe_value.skill_id
+    accepted["skill_level"] = int(skill_profile.get("skill_level", -1))
+    accepted["skill_difficulty"] = recipe_value.skill_difficulty
+    accepted["success_chance_percent"] = int(skill_profile.get("success_chance_percent", 0))
+    return accepted
 
 func _on_action_phase(action: TimedAction, phase: ActionPhase) -> void:
     if action == null or action.action_type != ACTION_TYPE or phase == null or phase.phase_id != COMMIT_PHASE:
@@ -129,6 +154,32 @@ func _on_action_phase(action: TimedAction, phase: ActionPhase) -> void:
     if not bool(exact.get("ready", false)):
         _fail_during_commit(action, recipe_id, String(exact.get("reason", "crafting_plan_stale")))
         return
+    var recipe_value: CraftingRecipe = _recipes.recipe(recipe_id)
+    if recipe_value == null:
+        _fail_during_commit(action, recipe_id, "recipe_unknown")
+        return
+    if String(action.payload.get("skill_id", "")) != String(recipe_value.skill_id) \
+        or int(action.payload.get("skill_difficulty", -1)) != recipe_value.skill_difficulty:
+        _fail_during_commit(action, recipe_id, "crafting_skill_contract_stale")
+        return
+    var skill_result: Dictionary = _skill_checks.resolve_attempt(
+        action.actor_id,
+        recipe_value.skill_id,
+        recipe_value.skill_difficulty,
+        action.serial,
+        recipe_id,
+        int(action.payload.get("skill_level", -1))
+    )
+    if not bool(skill_result.get("ok", false)):
+        _fail_during_commit(action, recipe_id, String(skill_result.get("reason", "skill_check_unavailable")))
+        return
+    if not bool(skill_result.get("success", false)):
+        if not _skill_checks.award_attempt_xp(action.actor_id, recipe_value.skill_id, recipe_value.skill_difficulty, false):
+            _fail_during_commit(action, recipe_id, "skill_xp_commit_failed")
+            return
+        _fail_during_commit(action, recipe_id, "skill_check_failed:%s" % String(recipe_value.skill_id))
+        return
+
     var output_ids: Array = _output_ids(action.serial, exact.get("output_semantics", []))
     if output_ids.is_empty() or output_ids.size() != exact.get("output_semantics", []).size():
         _fail_during_commit(action, recipe_id, "output_identity_invalid")
@@ -174,6 +225,11 @@ func _on_action_phase(action: TimedAction, phase: ActionPhase) -> void:
             var restored: bool = _rollback(created_outputs, removed)
             _fail_during_commit(action, recipe_id, "output_containment_failed" if restored else "critical_consistency_failure")
             return
+
+    if not _skill_checks.award_attempt_xp(action.actor_id, recipe_value.skill_id, recipe_value.skill_difficulty, true):
+        var restored: bool = _rollback(created_outputs, removed)
+        _fail_during_commit(action, recipe_id, "skill_xp_commit_failed" if restored else "critical_consistency_failure")
+        return
 
     _commit_outcomes[action.serial] = {
         "success": true,
@@ -316,4 +372,9 @@ static func _request_result(accepted: bool, serial: int, actor_id: String, recip
         "actor_id": actor_id,
         "recipe_id": recipe_id,
         "reason": reason,
+        "duration_ticks": 0,
+        "skill_id": &"",
+        "skill_level": -1,
+        "skill_difficulty": 0,
+        "success_chance_percent": 0,
     }

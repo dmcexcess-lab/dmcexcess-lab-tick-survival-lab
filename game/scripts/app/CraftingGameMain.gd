@@ -1,6 +1,7 @@
 extends GameMain
 class_name CraftingGameMain
 
+const SkillCheckServiceClass = preload("res://scripts/simulation/actors/skills/ActorSkillCheckService.gd")
 const CraftingItemCatalogClass = preload("res://scripts/simulation/crafting/CraftingItemCatalog.gd")
 const CraftingRecipeCatalogClass = preload("res://scripts/simulation/crafting/CraftingRecipeCatalog.gd")
 const CraftingWorkstationCatalogClass = preload("res://scripts/simulation/crafting/CraftingWorkstationCatalog.gd")
@@ -15,6 +16,7 @@ const CraftingIconsClass = preload("res://scripts/ui/icons/CraftingSemanticUiIco
 
 @onready var _crafting_panel: CraftingPanel = $CraftingPanel
 
+var _skill_checks: ActorSkillCheckService = null
 var _crafting_items: CraftingItemCatalog = null
 var _crafting_recipes: CraftingRecipeCatalog = null
 var _crafting_workstations: CraftingWorkstationCatalog = null
@@ -30,6 +32,12 @@ func _boot_canonical_demo() -> bool:
     return _boot_crafting_runtime()
 
 func _boot_crafting_runtime() -> bool:
+    _skill_checks = SkillCheckServiceClass.new(_skill_state)
+    if not _skill_checks.is_ready():
+        return false
+    if _loot_search == null or not _loot_search.configure_skill_checks(_skill_checks):
+        return false
+
     _crafting_items = CraftingItemCatalogClass.new()
     if not _crafting_items.register_physical_profiles(_physical_catalog):
         return false
@@ -57,7 +65,8 @@ func _boot_crafting_runtime() -> bool:
         _inventory_mutations,
         _kernel,
         _crafting_recipes,
-        _crafting_plans
+        _crafting_plans,
+        _skill_checks
     )
     _crafting_interaction_offers = CraftingInteractionOfferProviderClass.new(
         _world,

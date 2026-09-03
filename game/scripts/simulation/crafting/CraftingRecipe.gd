@@ -1,8 +1,11 @@
 extends RefCounted
 class_name CraftingRecipe
 
+const SkillCatalog = preload("res://scripts/simulation/actors/skills/ActorSkillCatalog.gd")
+
 ## Immutable-style System 32 recipe configuration. Requirements count real physical
-## item entities; there is no stack/quantity abstraction hidden here.
+## item entities; there is no stack/quantity abstraction hidden here. Every recipe also
+## names the broad competence applied to those concrete physical requirements.
 
 var recipe_id: StringName = &""
 var label: String = ""
@@ -11,6 +14,8 @@ var consumed_inputs: Array[Dictionary] = []
 var required_tools: Array[Dictionary] = []
 var workstation_capability: StringName = &""
 var outputs: Array[Dictionary] = []
+var skill_id: StringName = &""
+var skill_difficulty: int = 0
 
 func _init(
     id: StringName = &"",
@@ -19,12 +24,16 @@ func _init(
     inputs: Array = [],
     tools: Array = [],
     workstation: StringName = &"",
-    output_values: Array = []
+    output_values: Array = [],
+    skill: StringName = &"",
+    difficulty: int = 0
 ) -> void:
     recipe_id = id
     label = label_value.strip_edges()
     duration_ticks = duration
     workstation_capability = workstation
+    skill_id = skill
+    skill_difficulty = difficulty
     for value: Variant in inputs:
         if typeof(value) == TYPE_DICTIONARY:
             consumed_inputs.append((value as Dictionary).duplicate(true))
@@ -39,6 +48,8 @@ func is_valid() -> bool:
     if String(recipe_id).strip_edges().is_empty() or label.is_empty() or duration_ticks < 1:
         return false
     if consumed_inputs.is_empty() or outputs.is_empty():
+        return false
+    if not SkillCatalog.is_valid(skill_id) or not SkillCatalog.is_valid_difficulty(skill_difficulty):
         return false
     if not _requirements_valid(consumed_inputs) or not _requirements_valid(required_tools) or not _requirements_valid(outputs):
         return false
@@ -62,7 +73,9 @@ func copy() -> CraftingRecipe:
         consumed_inputs,
         required_tools,
         workstation_capability,
-        outputs
+        outputs,
+        skill_id,
+        skill_difficulty
     )
 
 func consumed_entity_count() -> int:

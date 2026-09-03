@@ -2,11 +2,13 @@ extends RefCounted
 class_name CraftingRecipeCatalog
 
 const RecipeClass = preload("res://scripts/simulation/crafting/CraftingRecipe.gd")
+const SkillCatalog = preload("res://scripts/simulation/actors/skills/ActorSkillCatalog.gd")
 
-## Static Candidate-001 transformation vocabulary. Recipes describe item semantics and
-## requirements only; current item identity and legality are resolved by CraftingPlanQuery.
+## Static Candidate-001 transformation vocabulary. Recipes describe real item semantics,
+## concrete tools/materials, and the broad skill applied to them; current item identity
+## and legality remain resolved by CraftingPlanQuery.
 
-const CATALOG_VERSION: int = 1
+const CATALOG_VERSION: int = 2
 
 var _recipes: Dictionary = {}
 
@@ -19,9 +21,11 @@ func _init() -> void:
             RecipeClass.requirement(&"item.junk.stale_newspaper"),
             RecipeClass.requirement(&"item.junk.worn_cardboard"),
         ],
-        [],
+        [RecipeClass.requirement(&"item.office.scissors")],
         &"",
-        [RecipeClass.requirement(&"item.crafting.paper_bundle")]
+        [RecipeClass.requirement(&"item.crafting.paper_bundle")],
+        SkillCatalog.SURVIVAL,
+        1
     ))
     _add(RecipeClass.new(
         &"crafting.metal_scrap_bundle",
@@ -33,7 +37,9 @@ func _init() -> void:
         ],
         [RecipeClass.requirement(&"item.tool.hammer")],
         &"",
-        [RecipeClass.requirement(&"item.crafting.metal_scrap_bundle")]
+        [RecipeClass.requirement(&"item.crafting.metal_scrap_bundle")],
+        SkillCatalog.MECHANICAL,
+        2
     ))
     _add(RecipeClass.new(
         &"crafting.wire_salvage_bundle",
@@ -45,7 +51,9 @@ func _init() -> void:
         ],
         [RecipeClass.requirement(&"item.tool.pliers")],
         &"",
-        [RecipeClass.requirement(&"item.crafting.wire_salvage_bundle")]
+        [RecipeClass.requirement(&"item.crafting.wire_salvage_bundle")],
+        SkillCatalog.MECHANICAL,
+        3
     ))
     _add(RecipeClass.new(
         &"crafting.patch_component_kit",
@@ -57,7 +65,9 @@ func _init() -> void:
         ],
         [RecipeClass.requirement(&"item.office.scissors")],
         &"",
-        [RecipeClass.requirement(&"item.crafting.patch_component_kit")]
+        [RecipeClass.requirement(&"item.crafting.patch_component_kit")],
+        SkillCatalog.SURVIVAL,
+        2
     ))
     _add(RecipeClass.new(
         &"crafting.improvised_toolkit",
@@ -74,7 +84,9 @@ func _init() -> void:
             RecipeClass.requirement(&"item.tool.screwdriver"),
         ],
         &"crafting.workbench.general",
-        [RecipeClass.requirement(&"item.crafting.improvised_toolkit")]
+        [RecipeClass.requirement(&"item.crafting.improvised_toolkit")],
+        SkillCatalog.MECHANICAL,
+        5
     ))
 
 func catalog_version() -> int:

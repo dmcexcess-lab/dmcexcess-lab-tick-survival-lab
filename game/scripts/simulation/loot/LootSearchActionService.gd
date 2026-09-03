@@ -6,6 +6,7 @@ const PlacementClass = preload("res://scripts/foundation/world/WorldPlacement.gd
 const PhaseClass = preload("res://scripts/foundation/time/ActionPhase.gd")
 const TickRulesClass = preload("res://scripts/foundation/time/TickRules.gd")
 const ReachClass = preload("res://scripts/simulation/interaction/WorldInteractionReachQuery.gd")
+const SkillCatalog = preload("res://scripts/simulation/actors/skills/ActorSkillCatalog.gd")
 
 signal search_completed(actor_id, action_serial, container_id, contents, container_version)
 signal search_failed(actor_id, action_serial, container_id, reason)
@@ -13,6 +14,7 @@ signal search_canceled(actor_id, action_serial, container_id, reason)
 
 const ACTION_TYPE: StringName = &"scavenge.search_container"
 const COMMIT_PHASE: StringName = &"scavenge.search.commit"
+const SEARCH_DIFFICULTY: int = 2
 
 var _world: WorldState = null
 var _containment: InventoryContainmentState = null
@@ -20,6 +22,7 @@ var _loot_state: LootState = null
 var _profiles: LootContainerProfileCatalog = null
 var _kernel: TickKernel = null
 var _reach: WorldInteractionReachQuery = null
+var _skill_checks: ActorSkillCheckService = null
 
 func _init(
     world_state: WorldState = null,
@@ -40,6 +43,12 @@ func _init(
             _kernel.action_phase.connect(_on_action_phase)
         if not _kernel.action_finished.is_connected(_on_action_finished):
             _kernel.action_finished.connect(_on_action_finished)
+
+func configure_skill_checks(skill_check_service: ActorSkillCheckService) -> bool:
+    if skill_check_service == null or not skill_check_service.is_ready():
+        return false
+    _skill_checks = skill_check_service
+    return true
 
 func is_ready() -> bool:
     return _world != null and _containment != null and _loot_state != null and _profiles != null \
@@ -76,9 +85,19 @@ func request_search(actor_id: String, container_id: String) -> Dictionary:
     var profile: Dictionary = _profiles.profile(profile_id)
     if profile.is_empty() or int(profile.get("version", 0)) != int(record.get("loot_profile_version", -1)):
         return _rejected("loot_profile_unavailable")
-    var duration: int = int(profile.get("search_ticks", 0))
-    if duration < 1:
+    var base_duration: int = int(profile.get("search_ticks", 0))
+    if base_duration < 1:
         return _rejected("search_duration_invalid")
+    var duration: int = base_duration
+    var skill_level: int = -1
+    if _skill_checks != null:
+        var skill_profile: Dictionary = _skill_checks.action_profile(actor, SkillCatalog.SURVIVAL, base_duration, SEARCH_DIFFICULTY)
+        if not bool(skill_profile.get("ok", false)):
+            return _rejected(String(skill_profile.get("reason", "search_skill_unavailable")))
+        duration = int(skill_profile.get("duration_ticks", 0))
+        skill_level = int(skill_profile.get("skill_level", -1))
+        if duration < 1:
+            return _rejected("search_skill_duration_invalid")
 
     var payload: Dictionary = {
         "container_id": container,
@@ -86,6 +105,9 @@ func request_search(actor_id: String, container_id: String) -> Dictionary:
         "loot_profile_version": int(profile.get("version", 0)),
         "actor_placement": actor_placement.to_snapshot(),
         "container_placement": container_placement.to_snapshot(),
+        "skill_id": String(SkillCatalog.SURVIVAL) if _skill_checks != null else "",
+        "skill_level": skill_level,
+        "skill_difficulty": SEARCH_DIFFICULTY if _skill_checks != null else 0,
     }
     var phases: Array[ActionPhase] = [PhaseClass.new(COMMIT_PHASE, duration)]
     var serial: int = _kernel.begin_action(
@@ -104,6 +126,8 @@ func request_search(actor_id: String, container_id: String) -> Dictionary:
         "action_serial": serial,
         "duration_ticks": duration,
         "container_id": container,
+        "skill_id": SkillCatalog.SURVIVAL if _skill_checks != null else &"",
+        "skill_level": skill_level,
     }
 
 func _on_action_phase(action: TimedAction, phase: ActionPhase) -> void:
@@ -159,6 +183,29 @@ func _commit_search(action: TimedAction) -> void:
         _fail(action, "out_of_reach")
         return
 
+    # Contents remain persistent container truth. Survival changes search efficiency and
+    # progression; it never rerolls, deletes, or hides already-materialized loot truth.
+    if _skill_checks != null:
+        var skill_result: Dictionary = _skill_checks.resolve_attempt(
+            action.actor_id,
+            SkillCatalog.SURVIVAL,
+            SEARCH_DIFFICULTY,
+            action.serial,
+            ACTION_TYPE,
+            int(payload.get("skill_level", -1))
+        )
+        if not bool(skill_result.get("ok", false)):
+            _fail(action, String(skill_result.get("reason", "search_skill_unavailable")))
+            return
+        if not _skill_checks.award_attempt_xp(
+            action.actor_id,
+            SkillCatalog.SURVIVAL,
+            SEARCH_DIFFICULTY,
+            bool(skill_result.get("success", false))
+        ):
+            _fail(action, "search_skill_xp_commit_failed")
+            return
+
     # Contents are intentionally read NOW, after elapsed search time. No request-time
     # container-version equality is required because another actor may have changed
     # the real contents while the search was underway.
@@ -181,4 +228,6 @@ static func _rejected(reason: String) -> Dictionary:
         "action_serial": 0,
         "duration_ticks": 0,
         "container_id": "",
+        "skill_id": &"",
+        "skill_level": -1,
     }
