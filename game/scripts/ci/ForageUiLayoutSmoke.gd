@@ -26,6 +26,7 @@ func _initialize() -> void:
     _check(weather_rect == Rect2(Vector2(344, 66), Vector2(288, 78)), "weather panel keeps canonical upper-right slot")
     _check(forage_rect == Rect2(ForageControlsClass.PANEL_POSITION, ForageControlsClass.PANEL_SIZE), "forage panel uses its canonical lower-left slot")
     _check(utility_rect == Rect2(Vector2(344, 148), Vector2(288, 100)), "utility panel keeps canonical lower-right slot")
+    _check(_has_named_panel(forage, "ForagePanel"), "forage exposes the stable ForagePanel node")
 
     _check(not forage_rect.intersects(weather_rect), "forage is not obscured by Weather DEV controls")
     _check(not forage_rect.intersects(survival_rect), "forage is clear of Survival controls")
@@ -51,6 +52,12 @@ func _panel_rect(layer: CanvasLayer) -> Rect2:
             var panel := child as PanelContainer
             return Rect2(panel.position, panel.size)
     return Rect2()
+
+func _has_named_panel(layer: CanvasLayer, panel_name: String) -> bool:
+    for child: Node in layer.get_children():
+        if child is PanelContainer and child.name == panel_name:
+            return true
+    return false
 
 func _check(condition: bool, message: String) -> void:
     if not condition:
