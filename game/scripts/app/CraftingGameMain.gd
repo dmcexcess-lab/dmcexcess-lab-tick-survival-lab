@@ -10,9 +10,13 @@ const CraftingActionServiceClass = preload("res://scripts/simulation/crafting/Cr
 const CraftingInteractionOfferProviderClass = preload("res://scripts/simulation/crafting/CraftingInteractionOfferProvider.gd")
 const CraftingControllerClass = preload("res://scripts/player/CraftingPlayerInteractionController.gd")
 const CraftingIconsClass = preload("res://scripts/ui/icons/CraftingSemanticUiIconCatalog.gd")
+const OutdoorForageStateClass = preload("res://scripts/simulation/forage/OutdoorForageState.gd")
+const ForageNearbyActionClass = preload("res://scripts/simulation/forage/ForageNearbyActionService.gd")
+const ForageControlsClass = preload("res://scripts/ui/ForagePlayerControls.gd")
 
 ## Canonical Phase-2 composition extension only. The inherited canonical root still owns
-## every preexisting service; this layer composes System 32 through their public seams.
+## every preexisting service; this layer composes System 32 and the bounded Survival
+## forage seam through their public owners.
 
 @onready var _crafting_panel: CraftingPanel = $CraftingPanel
 
@@ -24,6 +28,9 @@ var _crafting_plans: CraftingPlanQuery = null
 var _crafting_actions: CraftingActionService = null
 var _crafting_interaction_offers: CraftingInteractionOfferProvider = null
 var _crafting_controller: CraftingPlayerInteractionController = null
+var _forage_state: OutdoorForageState = null
+var _forage_actions: ForageNearbyActionService = null
+var _forage_controls: ForagePlayerControls = null
 var _craft_blocks_interaction: bool = false
 
 func _boot_canonical_demo() -> bool:
@@ -36,6 +43,23 @@ func _boot_crafting_runtime() -> bool:
     if not _skill_checks.is_ready():
         return false
     if _loot_search == null or not _loot_search.configure_skill_checks(_skill_checks):
+        return false
+
+    _forage_state = OutdoorForageStateClass.new()
+    _forage_actions = ForageNearbyActionClass.new(
+        _world,
+        _world_mutations,
+        _kernel,
+        _skill_checks,
+        _loot_items,
+        FixtureClass.active_seed(),
+        _forage_state
+    )
+    if not _forage_actions.is_ready():
+        return false
+    _forage_controls = ForageControlsClass.new()
+    add_child(_forage_controls)
+    if not _forage_controls.configure(_forage_actions, _kernel, FixtureClass.PLAYER_ID):
         return false
 
     _crafting_items = CraftingItemCatalogClass.new()

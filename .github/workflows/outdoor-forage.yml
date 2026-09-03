@@ -1,0 +1,110 @@
+name: Outdoor forage
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  statuses: write
+
+concurrency:
+  group: outdoor-forage
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: verify/outdoor-forage
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate bounded forage boundary
+        shell: bash
+        run: |
+          set -euxo pipefail
+          test -f game/scripts/simulation/forage/OutdoorForageState.gd
+          test -f game/scripts/simulation/forage/ForageNearbyActionService.gd
+          test -f game/scripts/ui/ForagePlayerControls.gd
+          test -f game/scripts/ci/OutdoorForageSmoke.gd
+          grep -q 'survival.forage_nearby' game/scripts/simulation/forage/ForageNearbyActionService.gd
+          grep -q 'LOOSE_ITEM' game/scripts/simulation/forage/ForageNearbyActionService.gd
+          ! grep -R -q '_process' game/scripts/simulation/forage game/scripts/ui/ForagePlayerControls.gd
+          ! grep -R -q '_physics_process' game/scripts/simulation/forage game/scripts/ui/ForagePlayerControls.gd
+          ! grep -R -q 'Timer.new' game/scripts/simulation/forage game/scripts/ui/ForagePlayerControls.gd
+          ! grep -R -q 'entity_ids()' game/scripts/simulation/forage
+
+      - name: Install Godot 4.7.1
+        shell: bash
+        run: |
+          set -euxo pipefail
+          curl -L -o godot.zip https://github.com/godotengine/godot-builds/releases/download/4.7.1-stable/Godot_v4.7.1-stable_linux.x86_64.zip
+          unzip -q godot.zip
+          chmod +x Godot_v4.7.1-stable_linux.x86_64
+
+      - name: Import and parse project
+        shell: bash
+        run: |
+          set -euxo pipefail
+          ./Godot_v4.7.1-stable_linux.x86_64 --headless --editor --path "$GITHUB_WORKSPACE/game" --quit 2>&1 | tee "$RUNNER_TEMP/import.log"
+          if grep -Eqi 'SCRIPT ERROR|Parse Error|Failed to load script' "$RUNNER_TEMP/import.log"; then exit 1; fi
+
+      - name: Outdoor forage smoke
+        shell: bash
+        run: |
+          set -euxo pipefail
+          ./Godot_v4.7.1-stable_linux.x86_64 --headless --path "$GITHUB_WORKSPACE/game" --script res://scripts/ci/OutdoorForageSmoke.gd 2>&1 | tee "$RUNNER_TEMP/forage.log"
+          grep -q 'OUTDOOR_FORAGE_SMOKE_OK' "$RUNNER_TEMP/forage.log"
+          if grep -Eqi 'SCRIPT ERROR|Parse Error|Failed to load script' "$RUNNER_TEMP/forage.log"; then exit 1; fi
+
+      - name: Protected skill crafting loot regressions
+        shell: bash
+        run: |
+          set -euxo pipefail
+          for spec in \
+            'ActorSkillsSmoke.gd:ACTOR_SKILLS_SMOKE_OK' \
+            'CraftingSmoke.gd:CRAFTING_SMOKE_OK' \
+            'WorldLootSmoke.gd:WORLD_LOOT_SMOKE_OK'; do
+            script=${spec%%:*}
+            marker=${spec#*:}
+            log="$RUNNER_TEMP/${script%.gd}.log"
+            ./Godot_v4.7.1-stable_linux.x86_64 --headless --path "$GITHUB_WORKSPACE/game" --script "res://scripts/ci/$script" 2>&1 | tee "$log"
+            grep -q "$marker" "$log"
+            if grep -Eqi 'SCRIPT ERROR|Parse Error|Failed to load script' "$log"; then exit 1; fi
+          done
+
+      - name: Canonical startup regression smoke
+        shell: bash
+        run: |
+          set -euxo pipefail
+          ./Godot_v4.7.1-stable_linux.x86_64 --headless --path "$GITHUB_WORKSPACE/game" --quit-after 6 2>&1 | tee "$RUNNER_TEMP/startup.log"
+          if grep -Eqi 'SCRIPT ERROR|Parse Error|Failed to load script|Invalid call|Invalid access|Assertion failed|ObjectDB instances leaked at exit|resources still in use at exit' "$RUNNER_TEMP/startup.log"; then exit 1; fi
+          grep -q 'CANONICAL_DEMO_BOOT_OK' "$RUNNER_TEMP/startup.log"
+
+      - name: Publish forage exact-head status
+        if: always()
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SHA: ${{ github.sha }}
+          REPOSITORY: ${{ github.repository }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          JOB_STATUS: ${{ job.status }}
+        run: |
+          set -euo pipefail
+          case "$JOB_STATUS" in
+            success) state=success ;;
+            failure) state=failure ;;
+            cancelled) state=error ;;
+            *) state=error ;;
+          esac
+          payload=$(printf '{"state":"%s","context":"verify/outdoor-forage","description":"Bounded outdoor forage contract","target_url":"%s"}' "$state" "$RUN_URL")
+          curl --fail --silent --show-error \
+            -X POST \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.github.com/repos/$REPOSITORY/statuses/$SHA" \
+            -d "$payload"
