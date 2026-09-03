@@ -17,6 +17,10 @@ func _initialize() -> void:
     root.add_child(forage)
     root.add_child(utilities)
 
+    # CanvasLayer child controls build themselves in _ready(). Let Godot deliver the
+    # normal lifecycle once before measuring the actual live panels.
+    await process_frame
+
     var survival_rect: Rect2 = _panel_rect(survival)
     var weather_rect: Rect2 = _panel_rect(weather)
     var forage_rect: Rect2 = _panel_rect(forage)
