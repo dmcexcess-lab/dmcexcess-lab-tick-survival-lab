@@ -2,6 +2,19 @@
 
 This compact ledger records the newest executable work. `CHANGELOG.md` remains the historical archive.
 
+## Forage UI Overlap Repair — 2026-09-03
+
+Latest source head for the repair: `c0b1464cbe478cea174d78f33d5510b5e62a24f1`
+
+- Fixed the reported live-control overlap where `FORAGE NEARBY` was almost exactly underneath the higher-layer Weather DEV panel.
+- Root cause was literal hard-coded geometry: Weather occupied `(344, 66)` at `288x78`, while forage occupied `(340, 66)` at `292x78`.
+- Moved forage into the unused lower-left compact-control slot at `(8, 148)` with size `326x78`; Utilities remains lower-right at `(344, 148)`.
+- Added stable forage panel geometry constants and a `ForagePanel` node name.
+- Added `ForageUiLayoutSmoke.gd`, which instantiates the real Survival / Weather / Forage / Utilities panels and fails if forage intersects any neighboring control.
+- Wired that regression into `verify/outdoor-forage` alongside the existing behavior, skills, crafting, loot and canonical-startup checks.
+- No forage simulation, resource, timing, skill, item, renderer or weather behavior changed.
+- GitHub created zero Actions runs for the connector-authored repair commits, and the available connector exposes no workflow-dispatch action. Therefore this UI repair is **source-complete but not exact-head Actions/Pages verified yet**. The deployed Pages build may still be the pre-fix build until an external/user-originated Actions event runs successfully.
+
 ## Outdoor Survival Foraging — 2026-09-03
 
 Verified executable: `11035c7d0b1dd7eb01b076aec244b818d7f6fe56`
@@ -12,9 +25,9 @@ Verified executable: `11035c7d0b1dd7eb01b076aec244b818d7f6fe56`
 - WHEN owns elapsed time/cancellation and the canonical Survival skill service owns duration, deterministic success/effectiveness and bounded XP.
 - Valid failed searches consume one finite local opportunity; cancellation and impossible environments do not. Depleted patches cannot be rerolled and do not passively respawn.
 - Successful recovery creates existing `Sturdy Stick` / `Smooth Stone` semantics as ordinary persistent `LOOSE_ITEM` WHAT entities at the survivor's location; pickup, hands, inventory and carry limits remain existing owners.
-- Added a compact live forage control adjacent to the survival controls and a dedicated owning workflow/smoke.
+- Added a compact live forage control and a dedicated owning workflow/smoke.
 - No `_process`, `_physics_process`, per-resource timer, global entity scan or recurring resource replenishment was added.
-- Exact-head verification includes the new `verify/outdoor-forage` gate plus the protected full repository suite and Pages deployment.
+- Executable `11035c7d0b1dd7eb01b076aec244b818d7f6fe56` completed 51 exact-head Actions runs successfully, including the protected full repository suite and Pages deployment.
 
 ## Four-Skill + Primitive Survival Foundation — 2026-09-03
 
