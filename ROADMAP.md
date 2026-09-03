@@ -19,6 +19,8 @@ Current game identity:
 - **Compact-island/world-seam cleanup — COMPLETE + HUMAN ACCEPTED.** Broad planner repair `918f1db...` remains rejected; focused local-window repair `282864f...` is accepted.
 - **Responsiveness / black-screen recovery — HUMAN ACCEPTED.** Recovery executable `1f65bff312853a44858201b57d9df2e26ee64f80` restored the human-good full-window lighting/visibility path while preserving decision-pause responsiveness.
 - **Phase 3 / System 33 Power + Water — IMPLEMENTED + EXACT-HEAD AUTOMATED VERIFIED; HUMAN PLAYTEST PENDING.** Current executable including Stage B analytic physical power distribution: `7ddee8df0e638cbe14897d83632b62513d5fc574`.
+- **Phase 4 / System 34 Physical Survival — IMPLEMENTED; exact-head CI and human playtest pending.** One canonical Fatigue pressure replaces the duplicate Stamina reserve; Rest remains the separate sleep condition.
+- **Phase 5 / System 34 Moodlets — IMPLEMENTED; exact-head CI and human playtest pending.** Live moodlets cover physical needs, boredom, comfort, fear, Fatigue, injury and carried load without positive/normal chip clutter.
 - **Current gameplay lifecycle gate:** human browser verification of Stage B plus current System-33 lighting/water/refrigeration behavior.
 
 ---
@@ -168,7 +170,7 @@ Before Phase 3 / Stage B is marked human accepted, browser play must confirm:
 
 ---
 
-## Phase 4 — Player physical survival and health
+## Phase 4 — Player physical survival and health — IMPLEMENTED; VERIFICATION PENDING
 
 Goal: complete the physical survival loop.
 
@@ -186,17 +188,29 @@ Phase 4 may consume truthful System-33 water availability but must not move util
 
 ---
 
-## Phase 5 — Moodlets and mental/comfort pressure
+## Phase 5 — Moodlets and mental/comfort pressure — IMPLEMENTED; VERIFICATION PENDING
 
 Target families include comfort, fear, boredom, hunger, thirst and sleep/exhaustion. Underlying physical needs remain owned by physical-survival systems.
 
+System 34 now composes those families with short-term Fatigue, real injury and actual carried load. Normal/positive meters remain inspectable but do not create moodlet-chip clutter. Consequences come from the owning condition/capability queries, not the labels.
+
 ---
 
-## Phase 6 — Final skills and broad item/world interactions
+## Phase 6 — Four skills and broad item/world interactions — NOT YET IMPLEMENTED
 
-Target skill catalog: Awareness, Sneak, First Aid, Cooking, Carpentry, Mechanical, Electrical, Fishing and Farming.
+Latest target catalog: **Awareness, Stealth, Mechanical and Survival**.
 
-**Hunting is not a separate skill.** It emerges from Sneak, future combat proficiency and crafted trap placement.
+- Survival subsumes first aid, scavenging, fire-starting and primitive survival crafting.
+- Mechanical subsumes repair, deconstruction, reclamation and vehicle hot-wiring.
+- Awareness and Stealth remain their own perceptual/tactical competencies.
+- World use and crafting should share a simple composable check: concrete tool + concrete resource/material + relevant skill.
+- Examples include hammer + nails, wrench + bolts, screwdriver + wires, and rag + alcohol.
+- Skill affects both real-world outcome quality/resource reclamation and what can be crafted.
+- Basic scavenged sticks/rocks plus rags/newspapers/magazines should support primitive Survival tools, weapons and armor.
+
+The current six-skill level/XP code remains an implemented scaffold until this four-skill model receives its own bounded implementation. No skill rewrite is part of the current Health/Fatigue/Moodlet operation.
+
+**Hunting is not a separate skill.** It emerges from Awareness, Stealth, Survival knowledge and the concrete weapon/trap/tool being used.
 
 ---
 
@@ -240,4 +254,4 @@ For each bounded phase/system:
 
 Newest explicit user direction supersedes older roadmap ordering, but implemented historical systems remain current truth until deliberately migrated.
 
-**Current next step: human-play verify Stage B physical power-network behavior plus current System-33 lighting/water/refrigeration behavior on `7ddee8df0e638cbe14897d83632b62513d5fc574`. Phase 4 begins by default only after that gate is accepted unless the user explicitly directs otherwise.**
+**Current next step: exact-head verify the directed Phase-4/5 Health, Fatigue, Needs and Moodlet correction, then human-play it alongside the still-pending System-33 utility/renderer acceptance. The four-skill redesign remains a separate follow-up.**

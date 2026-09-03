@@ -2,6 +2,18 @@
 
 This compact ledger records the most recent work. `CHANGELOG.md` remains the historical archive.
 
+## Health / Fatigue / Needs / Moodlet Alignment — 2026-09-03
+
+Exact-head CI verification pending publication.
+
+- Replaced the playable survivor's inverted stamina reserve with one canonical **Fatigue** pressure value: `0` is rested and `100` is physically exhausted. Legacy schema-v1 condition saves migrate by inversion.
+- Kept **Rest** separate as the long-horizon sleep/recovery need. Walking and running add physical Fatigue; explicit rest/sleep actions relieve it; elapsed physical actions do not secretly recover it.
+- Routed starvation, dehydration, sleep deprivation, and repeated overexertion into the existing canonical Health owner. Exhaustion can block starting a run, while ordinary walking remains available; continued overexertion can cause real HP loss down to zero.
+- Removed positive/normal meter chips from the moodlet feed. Moodlets now surface only meaningful condition warnings, physical Fatigue, real injury/HP state, and real carry burden.
+- Restored live `Injured` / `Badly Injured` / `No Vitality` and `Heavy Load` / `Overburdened` moodlets by deriving them directly from Health and Carry rather than storing duplicate flags.
+- Updated the canonical HUD and player status shell to show Health and Fatigue directly, including Fatigue's current action-cost modifier.
+- Left the existing skill, scavenging, crafting, and sound runtime unchanged. The next skill direction is recorded as four broad skills—Awareness, Stealth, Mechanical, Survival—with field actions and crafting sharing concrete tool + material + skill checks.
+
 ## Procedural Boot / Black-Screen Recovery — 2026-08-31
 
 Verified executable: `b94bc16e90c7699c0e1a95bb1556bf4bb0bdcd18`

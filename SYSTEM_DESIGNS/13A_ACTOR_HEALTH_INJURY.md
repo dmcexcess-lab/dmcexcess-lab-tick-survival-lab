@@ -19,6 +19,11 @@ Injuries carry stable local injury ID, semantic injury type, broad body region, 
 
 HP and injury facts are independent. `current_hp == 0` is Health truth only; 13A does not create corpses or own death-transition timing.
 
+## Live System 34 composition
+System 34 keeps this state as the only owner of HP and injury truth. Its condition service may call the public Health API when starvation, dehydration, sleep deprivation, or physical overexertion causes real harm; it does not mirror HP into condition state. System 34 moodlet/status queries also read this Health state directly, so `Injured`, `Badly Injured`, and `No Vitality` are derived warnings rather than stored flags.
+
+Zero HP remains the physical-health outcome. A later death/corpse system may consume it; System 34 does not invent a second death meter.
+
 ## Mutation / time
 Normal writes remain explicit: enroll/remove, set/max HP, damage/heal, add/update/remove injury. Same-value writes are successful no-ops. There is no frame-time healing or hidden clock.
 

@@ -2,7 +2,7 @@ extends ActorMobilityModifierProvider
 class_name ActorConditionMobilityModifierProvider
 
 ## System 34 -> locomotion adapter. Input remains immediate; condition changes the
-## authoritative action duration scale. Walking is never blocked by zero stamina.
+## authoritative action duration scale. Walking remains possible at maximum Fatigue.
 
 var _condition: ActorConditionService = null
 var _modifiers: ActorConditionModifierQuery = null
@@ -25,7 +25,7 @@ func evaluate(actor_id: String, action_type: StringName) -> Dictionary:
     if not action_text.begins_with("movement.") and not action_text.begins_with("stance."):
         return decision(Status.ALLOWED, SCALE_ONE)
     if action_text.contains("run") and not _condition.can_start_run(actor_id):
-        return decision(Status.BLOCKED, SCALE_ONE, "stamina_exhausted")
+        return decision(Status.BLOCKED, SCALE_ONE, "too_fatigued_to_run")
     var speed_bp: int = _modifiers.speed_multiplier_bp(actor_id)
     if speed_bp <= 0:
         return decision(Status.UNKNOWN, SCALE_ONE, "condition_speed_invalid")

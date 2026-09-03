@@ -529,3 +529,29 @@ Save/load, schema policy, performance profiling and persistence-backed streaming
 **Why:** The intended gameplay does not require two state variables describing short-horizon endurance. Reusing and expanding the existing fatigue domain preserves the compact survival model while keeping sleep/exhaustion meaningfully distinct.
 
 **Affected systems:** 13B Needs/Rest, 17A movement exertion, Roadmap Phase 4, action/movement capability providers, HUD/inspectors and future save orchestration.
+
+---
+
+## 2026-09-03 — Canonical condition and moodlet model
+
+**Decision:** The live survivor uses one short-horizon Fatigue pressure (0 rested -> 100 exhausted) and a separate long-horizon Rest/sleep condition. The duplicate Stamina reserve is removed. Continued exertion at maximum Fatigue causes real Health harm and can be terminal.
+
+Moodlets present only actionable negative pressure and consequences. Normal/positive meter values remain inspectable but do not create status-chip clutter. Live moodlets compose six condition channels with Fatigue, Health/injury and actual carried-mass truth; the underlying condition/capability owners apply consequences.
+
+**Supersedes:** the executable shape described by the 2026-08-16 legacy positive-moodlet decision, and completes the 2026-08-24 Fatigue-is-endurance direction.
+
+**Affected systems:** 13F Moodlets, System 34, Health, Needs/Rest, movement capability, HUD/inspectors and save migration.
+
+---
+
+## 2026-09-03 — Future skill model is four broad practical skills
+
+**Decision:** The future player skill catalog is **Awareness, Stealth, Mechanical and Survival**. This is product direction, not part of the current executable Health/Fatigue/Moodlet patch.
+
+Survival contains practical survival competencies including first aid, scavenging, fire-starting and primitive crafting. Mechanical contains repair, deconstruction/resource reclamation and vehicle hot-wiring. Skills apply both to world-use outcome quality and crafting access/results.
+
+The shared interaction shape is concrete and composable: **tool + resource/material + skill check**. Examples include hammer + nails, wrench + bolts, screwdriver + wires and rag + alcohol. Scavenged sticks/rocks plus rags/newspapers/magazines feed basic Survival tools, weapons and armor.
+
+**Supersedes for future implementation:** the nine-skill Phase-6 target and the generic six-skill scaffold as final product identity. The existing six-skill code remains untouched until the four-skill redesign is implemented deliberately.
+
+**Affected systems:** future 13C replacement, crafting, scavenging, item use, repair/deconstruction, vehicles, primitive weapons/armor and world interaction checks.

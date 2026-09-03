@@ -4,7 +4,7 @@ class_name CanonicalStatusHud
 const Intents = preload("res://scripts/input/PlayerActionIntent.gd")
 
 ## Compact canonical HUD. Presentation only: reads query results and WHEN tick.
-## System 34 adds permanent Health/Stamina bars plus derived colored moodlet chips.
+## System 34 adds permanent Health/Fatigue bars plus derived colored moodlet chips.
 
 const PANEL_POSITION := Vector2(70, 536)
 const PANEL_SIZE := Vector2(500, 100)
@@ -19,7 +19,7 @@ var _action_text: String = "Ready"
 var _panel: Panel = null
 var _labels: Array[Label] = []
 var _health_bar: ProgressBar = null
-var _stamina_bar: ProgressBar = null
+var _fatigue_bar: ProgressBar = null
 var _moodlet_row: HBoxContainer = null
 var _last_presentation: Dictionary = {}
 
@@ -81,9 +81,9 @@ func refresh() -> void:
     var line_five: String = ""
 
     if bool(status.get("ok", false)) and bool(status.get("system34", false)):
-        line_three = "HEALTH %d/%d     STAMINA %d/%d" % [
+        line_three = "HEALTH %d/%d     FATIGUE %d/100" % [
             int(status.get("current_hp", -1)), int(status.get("max_hp", -1)),
-            int(status.get("stamina", -1)), int(status.get("stamina_max", -1)),
+            int(status.get("fatigue", -1)),
         ]
         line_four = "FED %d  HYD %d  REST %d  FUN %d  COMF %d  CALM %d" % [
             int(status.get("satiety", -1)), int(status.get("hydration", -1)),
@@ -111,7 +111,7 @@ func refresh() -> void:
             _kg_text(int(status.get("carry_capacity_grams", 0))), moodlet_text,
         ]
         _health_bar.visible = false
-        _stamina_bar.visible = false
+        _fatigue_bar.visible = false
         _clear_moodlets()
 
     _set_lines([line_one, line_two, line_three, line_four, line_five])
@@ -158,13 +158,13 @@ func _ensure_ui() -> void:
     _health_bar.visible = false
     add_child(_health_bar)
 
-    _stamina_bar = ProgressBar.new()
-    _stamina_bar.position = PANEL_POSITION + Vector2(270, 45)
-    _stamina_bar.size = Vector2(190, 9)
-    _stamina_bar.show_percentage = false
-    _stamina_bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
-    _stamina_bar.visible = false
-    add_child(_stamina_bar)
+    _fatigue_bar = ProgressBar.new()
+    _fatigue_bar.position = PANEL_POSITION + Vector2(270, 45)
+    _fatigue_bar.size = Vector2(190, 9)
+    _fatigue_bar.show_percentage = false
+    _fatigue_bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    _fatigue_bar.visible = false
+    add_child(_fatigue_bar)
 
     _moodlet_row = HBoxContainer.new()
     _moodlet_row.position = PANEL_POSITION + Vector2(0, 100)
@@ -178,9 +178,9 @@ func _present_bars(status: Dictionary) -> void:
     _health_bar.max_value = maxi(1, int(status.get("max_hp", 1)))
     _health_bar.value = clampi(int(status.get("current_hp", 0)), 0, int(_health_bar.max_value))
     _health_bar.visible = true
-    _stamina_bar.max_value = maxi(1, int(status.get("stamina_max", 1)))
-    _stamina_bar.value = clampi(int(status.get("stamina", 0)), 0, int(_stamina_bar.max_value))
-    _stamina_bar.visible = true
+    _fatigue_bar.max_value = 100
+    _fatigue_bar.value = clampi(int(status.get("fatigue", 0)), 0, 100)
+    _fatigue_bar.visible = true
 
 func _present_moodlets(values: Array) -> void:
     _clear_moodlets()

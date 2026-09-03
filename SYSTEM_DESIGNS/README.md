@@ -26,12 +26,12 @@ Canonical status/routing index. Read `PROJECT_NORTH_STAR.md`, `PERFORMANCE_NORTH
 | 11 | Inventory / Containment | **IMPLEMENTED** | `11_INVENTORY_CONTAINMENT.md` |
 | 12 | Item Transfer / Pickup / Drop / Equip | **IMPLEMENTED — personal + policy-aware external access** | `12_ITEM_TRANSFER_ACTIONS.md` |
 | 13 | Actor Stats / Status Architecture | **IMPLEMENTED via children; roadmap expansion ahead** | `13_ACTOR_STATS_STATUS_ARCHITECTURE.md` |
-| 13A | Actor Health / Injury | **IMPLEMENTED scaffold; Phase 4 expansion ahead** | `13A_ACTOR_HEALTH_INJURY.md` |
-| 13B | Actor Needs / Rest | **IMPLEMENTED scaffold; Phase 4 expansion ahead** | `13B_ACTOR_NEEDS_REST.md` |
-| 13C | Actor Skills | **IMPLEMENTED scaffold; final catalog Phase 6** | `13C_ACTOR_SKILLS.md` |
+| 13A | Actor Health / Injury | **IMPLEMENTED; System 34 consequences integrated** | `13A_ACTOR_HEALTH_INJURY.md` |
+| 13B | Actor Needs / Rest | **LEGACY scaffold retained; System 34 owns live condition/Fatigue** | `13B_ACTOR_NEEDS_REST.md` |
+| 13C | Actor Skills | **IMPLEMENTED six-skill scaffold; four-skill redesign ahead** | `13C_ACTOR_SKILLS.md` |
 | 13D | Item Physical Properties | **IMPLEMENTED** | `13D_ITEM_PHYSICAL_PROPERTIES.md` |
 | 13E | Actor Carry / Encumbrance | **IMPLEMENTED** | `13E_ACTOR_CARRY_ENCUMBRANCE.md` |
-| 13F | Actor Moodlets / Status Derivation | **IMPLEMENTED scaffold; Phase 5 expansion ahead** | `13F_ACTOR_MOODLETS.md` |
+| 13F | Actor Moodlets / Status Derivation | **IMPLEMENTED; live System 34 composition** | `13F_ACTOR_MOODLETS.md` |
 | 14 | Canonical Playable Demo Integration | **IMPLEMENTED** | `14_CANONICAL_PLAYABLE_DEMO.md` |
 | 15 | Canonical HUD / Facing Inspection | **IMPLEMENTED** | `15_CANONICAL_HUD_FACING_INSPECTION.md` |
 | 16 | Canonical Player Shell / Inspectors / Stance | **IMPLEMENTED** | `16_CANONICAL_PLAYER_SHELL.md` |
@@ -54,6 +54,7 @@ Canonical status/routing index. Read `PROJECT_NORTH_STAR.md`, `PERFORMANCE_NORTH
 | 31 | Semantic UI Icons | **IMPLEMENTED + CI VERIFIED — Phase 1C** | `31_SEMANTIC_UI_ICONS.md` |
 | 32 | Crafting / Material Transformation | **IMPLEMENTED + CI VERIFIED — Phase 2 complete** | `32_CRAFTING_MATERIAL_TRANSFORMATION.md` |
 | 33 | Power / Water Utility Runtime | **IMPLEMENTED + EXACT-HEAD VERIFIED — local substations, physical distribution, island-wide water, real wells, daily span snaps; HUMAN PLAYTEST PENDING** | `33_POWER_WATER_UTILITIES.md` + `33B_POWER_PHYSICAL_NETWORK_CONDITION.md` |
+| 34 | Survivor Condition / Health / Fatigue / Moodlets | **IMPLEMENTED; exact-head verification + human playtest pending** | `34_SURVIVOR_CONDITION_HEALTH_STAMINA_MOODLETS.md` |
 | PERF | Performance Architecture Gate | **IMPLEMENTED + CI VERIFIED; human accepted** | `PERFORMANCE_ARCHITECTURE.md` |
 | 00E | Population / Household / Outbreak / Player Story | **NOT DESIGNED — scheduled inside Phase 8** | future design |
 

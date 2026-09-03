@@ -2,14 +2,14 @@ extends RefCounted
 class_name MovementConditionExertionService
 
 ## Event-driven Movement -> System 34 exertion adapter.
-## Walking costs little stamina; running costs materially more and scales with terrain/load.
+## Walking adds little Fatigue; running adds materially more and scales with terrain/load.
 
 const STEP_FORWARD: StringName = &"movement.step_forward"
 const STEP_BACKWARD: StringName = &"movement.step_backward"
 const RUN_FORWARD: StringName = &"movement.run_forward"
 const NORMAL_TERRAIN_WALK_TICKS: int = 10
 const SCALE_ONE: int = 10000
-const RUN_BASE_STAMINA_COST: int = 8
+const RUN_BASE_FATIGUE_COST: int = 8
 
 var _movement: MovementActionService = null
 var _condition: ActorConditionService = null
@@ -56,6 +56,6 @@ func _run_cost(actor_id: String, terrain_walk_ticks: int) -> int:
         load_ratio_bp = maxi(0, int(carry.get("load_ratio_bp", 0)))
     var terrain_scale_bp: int = maxi(SCALE_ONE, int((terrain_walk_ticks * SCALE_ONE) / NORMAL_TERRAIN_WALK_TICKS))
     var encumbrance_scale_bp: int = SCALE_ONE + int((load_ratio_bp * 50) / 100)
-    var numerator: int = RUN_BASE_STAMINA_COST * terrain_scale_bp * encumbrance_scale_bp
+    var numerator: int = RUN_BASE_FATIGUE_COST * terrain_scale_bp * encumbrance_scale_bp
     var denominator: int = SCALE_ONE * SCALE_ONE
     return maxi(1, int(ceili(float(numerator) / float(denominator))))

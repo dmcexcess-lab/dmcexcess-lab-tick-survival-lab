@@ -3,24 +3,22 @@ class_name ActorConditionState
 
 const EntityIdRules = preload("res://scripts/foundation/world/WorldEntityId.gd")
 
-## System 34 sparse persistent survivor condition anchors.
-## Values are fixed-point where 1000 raw units = one displayed condition/stamina point.
-## Time passage is resolved analytically by ActorConditionModifierQuery/ActorConditionService;
-## this state owns no timers, Nodes, frame updates, or gameplay presentation.
+## Sparse persistent condition anchors. Fatigue is the one short-term exertion
+## pressure (0 rested -> 100 exhausted); Rest is longer-term sleep condition.
 
 signal actor_enrolled(actor_id, version)
 signal actor_removed(actor_id, version)
 signal condition_record_changed(actor_id, version, reason)
 signal condition_reset
 
-const SNAPSHOT_SCHEMA_VERSION: int = 1
+const SNAPSHOT_SCHEMA_VERSION: int = 2
+const LEGACY_SCHEMA_VERSION: int = 1
 const VALUE_SCALE: int = 1000
 const VALUE_MAX: int = 100
 const RAW_MAX: int = VALUE_MAX * VALUE_SCALE
 const START_VALUE: int = 60
 const START_RAW: int = START_VALUE * VALUE_SCALE
-const BASE_STAMINA_VALUE: int = 100
-const BASE_STAMINA_RAW: int = BASE_STAMINA_VALUE * VALUE_SCALE
+const START_FATIGUE_RAW: int = 0
 
 const SATIETY: StringName = &"satiety"
 const HYDRATION: StringName = &"hydration"
@@ -54,20 +52,16 @@ func actor_ids() -> Array[String]:
     return result
 
 func version(actor_id: String) -> int:
-    var record_value: Dictionary = _records.get(actor_id.strip_edges(), {})
-    return int(record_value.get("version", 0))
+    return int((_records.get(actor_id.strip_edges(), {}) as Dictionary).get("version", 0))
 
 func record(actor_id: String) -> Dictionary:
     var key: String = actor_id.strip_edges()
-    if not _records.has(key):
-        return {}
-    return (_records[key] as Dictionary).duplicate(true)
+    return {} if not _records.has(key) else (_records[key] as Dictionary).duplicate(true)
 
 func enroll_actor(actor_id: String, world_tick: int = 0) -> bool:
     var key: String = actor_id.strip_edges()
-    if not is_ready() or not EntityIdRules.is_valid(key) or world_tick < 0:
-        return false
-    if _records.has(key) or not _is_valid_world_survivor(key):
+    if not is_ready() or not EntityIdRules.is_valid(key) or world_tick < 0 \
+        or _records.has(key) or not _is_valid_world_survivor(key):
         return false
     var values: Dictionary = {}
     for channel: StringName in CHANNELS:
@@ -77,11 +71,12 @@ func enroll_actor(actor_id: String, world_tick: int = 0) -> bool:
         "actor_id": key,
         "anchor_tick": world_tick,
         "values_raw": values,
-        "stamina_raw": BASE_STAMINA_RAW,
-        "stamina_anchor_tick": world_tick,
+        "fatigue_raw": START_FATIGUE_RAW,
+        "fatigue_anchor_tick": world_tick,
         "need_damage_remainder": 0,
-        "metabolic_stamina_remainder": 0,
-        "hydration_stamina_remainder": 0,
+        "metabolic_exertion_remainder": 0,
+        "hydration_exertion_remainder": 0,
+        "overexertion_remainder": 0,
         "version": next_version,
     }
     _revision += 1
@@ -98,7 +93,6 @@ func remove_actor(actor_id: String) -> bool:
     actor_removed.emit(key, int(previous.get("version", 0)))
     return true
 
-## System-34 internal mutation seam. Callers outside System 34 should use ActorConditionService.
 func _set_record(actor_id: String, value: Dictionary, reason: StringName = &"condition_changed") -> bool:
     var key: String = actor_id.strip_edges()
     if not _records.has(key) or not _record_valid(key, value):
@@ -119,14 +113,11 @@ func snapshot() -> Dictionary:
     var entries: Array = []
     for actor_id: String in actor_ids():
         entries.append((_records[actor_id] as Dictionary).duplicate(true))
-    return {
-        "schema_version": SNAPSHOT_SCHEMA_VERSION,
-        "revision": _revision,
-        "records": entries,
-    }
+    return {"schema_version": SNAPSHOT_SCHEMA_VERSION, "revision": _revision, "records": entries}
 
 func load_snapshot(data: Dictionary) -> bool:
-    if int(data.get("schema_version", -1)) != SNAPSHOT_SCHEMA_VERSION:
+    var schema: int = int(data.get("schema_version", -1))
+    if schema != SNAPSHOT_SCHEMA_VERSION and schema != LEGACY_SCHEMA_VERSION:
         return false
     var restored_revision: int = int(data.get("revision", -1))
     var records_value: Variant = data.get("records", [])
@@ -137,6 +128,8 @@ func load_snapshot(data: Dictionary) -> bool:
         if typeof(value) != TYPE_DICTIONARY:
             return false
         var record_value: Dictionary = (value as Dictionary).duplicate(true)
+        if schema == LEGACY_SCHEMA_VERSION:
+            record_value = _migrate_legacy_record(record_value)
         var actor_id: String = String(record_value.get("actor_id", "")).strip_edges()
         if restored.has(actor_id) or not _record_valid(actor_id, record_value):
             return false
@@ -152,31 +145,41 @@ func load_snapshot(data: Dictionary) -> bool:
     return true
 
 func _record_valid(actor_id: String, value: Dictionary) -> bool:
-    if actor_id.is_empty() or not EntityIdRules.is_valid(actor_id):
+    if actor_id.is_empty() or not EntityIdRules.is_valid(actor_id) \
+        or String(value.get("actor_id", actor_id)).strip_edges() != actor_id:
         return false
-    if String(value.get("actor_id", actor_id)).strip_edges() != actor_id:
-        return false
-    if int(value.get("anchor_tick", -1)) < 0 or int(value.get("stamina_anchor_tick", -1)) < 0:
+    if int(value.get("anchor_tick", -1)) < 0 or int(value.get("fatigue_anchor_tick", -1)) < 0:
         return false
     var values_value: Variant = value.get("values_raw", {})
     if typeof(values_value) != TYPE_DICTIONARY:
         return false
     var values: Dictionary = values_value
     for channel: StringName in CHANNELS:
-        var key: String = String(channel)
-        if not values.has(key):
-            return false
-        var raw: int = int(values[key])
+        var raw: int = int(values.get(String(channel), -1))
         if raw < 0 or raw > RAW_MAX:
             return false
-    var stamina_raw: int = int(value.get("stamina_raw", -1))
-    if stamina_raw < 0 or stamina_raw > BASE_STAMINA_RAW:
+    var fatigue_raw: int = int(value.get("fatigue_raw", -1))
+    if fatigue_raw < 0 or fatigue_raw > RAW_MAX:
         return false
-    if int(value.get("need_damage_remainder", -1)) < 0 \
-        or int(value.get("metabolic_stamina_remainder", -1)) < 0 \
-        or int(value.get("hydration_stamina_remainder", -1)) < 0:
-        return false
+    for remainder: String in [
+        "need_damage_remainder", "metabolic_exertion_remainder",
+        "hydration_exertion_remainder", "overexertion_remainder",
+    ]:
+        if int(value.get(remainder, -1)) < 0:
+            return false
     return int(value.get("version", 1)) >= 1
+
+static func _migrate_legacy_record(record_value: Dictionary) -> Dictionary:
+    var migrated: Dictionary = record_value.duplicate(true)
+    var remaining_stamina: int = clampi(int(migrated.get("stamina_raw", RAW_MAX)), 0, RAW_MAX)
+    migrated["fatigue_raw"] = RAW_MAX - remaining_stamina
+    migrated["fatigue_anchor_tick"] = int(migrated.get("stamina_anchor_tick", migrated.get("anchor_tick", 0)))
+    migrated["metabolic_exertion_remainder"] = int(migrated.get("metabolic_stamina_remainder", 0))
+    migrated["hydration_exertion_remainder"] = int(migrated.get("hydration_stamina_remainder", 0))
+    migrated["overexertion_remainder"] = 0
+    for old_key: String in ["stamina_raw", "stamina_anchor_tick", "metabolic_stamina_remainder", "hydration_stamina_remainder"]:
+        migrated.erase(old_key)
+    return migrated
 
 static func _record_equivalent(a: Dictionary, b: Dictionary) -> bool:
     var left: Dictionary = a.duplicate(true)

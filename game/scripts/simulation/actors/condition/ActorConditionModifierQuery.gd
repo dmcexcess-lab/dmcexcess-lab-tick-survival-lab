@@ -27,6 +27,7 @@ const DECAY_RAW_PER_DAY: Dictionary = {
 const NEUTRAL_RAW: int = 60000
 const COMFORT_RECOVERY_RAW_PER_DAY: int = 18000
 const CALM_RECOVERY_RAW_PER_DAY: int = 50000
+const FATIGUE_RECOVERY_POINTS_PER_MINUTE: int = 12
 
 # Potency in tenths: hunger 1.0, thirst 1.1, sleep 1.0, boredom .5, comfort .6, fear .8.
 const POTENCY_TENTHS: Dictionary = {
@@ -119,20 +120,27 @@ func modifier_snapshot(actor_id: String) -> Dictionary:
         tiers[key] = tier_value
         weighted_tenths += _tier_contribution(tier_value) * int(POTENCY_TENTHS.get(key, 0))
 
+    var fatigue: int = fatigue_value(actor_id)
+    if fatigue < 0:
+        return {"ok": false, "reason": "fatigue_unclassified"}
+    weighted_tenths += _fatigue_contribution(fatigue) * 10
     var health_bp: int = _derived_multiplier(weighted_tenths, 75, 6000, 10500)
-    var stamina_bp: int = _derived_multiplier(weighted_tenths, 150, 4000, 10500)
     var speed_bp: int = _derived_multiplier(weighted_tenths, 80, 6500, 10500)
     var carry_bp: int = _derived_multiplier(weighted_tenths, 100, 6000, 10500)
     var damage_bp: int = _derived_multiplier(weighted_tenths, 100, 6500, 10500)
+    var base_condition_tenths: int = _condition_weighted_tenths(values)
+    var fatigue_recovery_bp: int = _derived_multiplier(base_condition_tenths, 150, 4000, 10500)
+    var fatigue_gain_bp: int = clampi(20000 - fatigue_recovery_bp, 9500, 16000)
     return {
         "ok": true,
         "reason": "",
         "values": values,
         "tiers": tiers,
+        "fatigue": fatigue,
         "weighted_condition_tenths": weighted_tenths,
         "health_multiplier_bp": health_bp,
-        "stamina_multiplier_bp": stamina_bp,
-        "stamina_recovery_multiplier_bp": stamina_bp,
+        "fatigue_gain_multiplier_bp": fatigue_gain_bp,
+        "fatigue_recovery_multiplier_bp": fatigue_recovery_bp,
         "speed_multiplier_bp": speed_bp,
         "carry_multiplier_bp": carry_bp,
         "melee_damage_multiplier_bp": damage_bp,
@@ -141,11 +149,13 @@ func modifier_snapshot(actor_id: String) -> Dictionary:
 func health_multiplier_bp(actor_id: String) -> int:
     return int(modifier_snapshot(actor_id).get("health_multiplier_bp", 10000))
 
-func stamina_multiplier_bp(actor_id: String) -> int:
-    return int(modifier_snapshot(actor_id).get("stamina_multiplier_bp", 10000))
+func fatigue_gain_multiplier_bp(actor_id: String) -> int:
+    var values: Dictionary = current_values(actor_id)
+    return 10000 if values.is_empty() else clampi(20000 - _derived_multiplier(_condition_weighted_tenths(values), 150, 4000, 10500), 9500, 16000)
 
-func stamina_recovery_multiplier_bp(actor_id: String) -> int:
-    return int(modifier_snapshot(actor_id).get("stamina_recovery_multiplier_bp", 10000))
+func fatigue_recovery_multiplier_bp(actor_id: String) -> int:
+    var values: Dictionary = current_values(actor_id)
+    return 10000 if values.is_empty() else _derived_multiplier(_condition_weighted_tenths(values), 150, 4000, 10500)
 
 func speed_multiplier_bp(actor_id: String) -> int:
     return int(modifier_snapshot(actor_id).get("speed_multiplier_bp", 10000))
@@ -161,10 +171,23 @@ func effective_max_health(actor_id: String, base_max_hp: int) -> int:
         return 0
     return maxi(1, int((base_max_hp * health_multiplier_bp(actor_id)) / 10000))
 
-func effective_max_stamina(actor_id: String, base_max: int = StateClass.BASE_STAMINA_VALUE) -> int:
-    if base_max < 1:
-        return 0
-    return maxi(1, int((base_max * stamina_multiplier_bp(actor_id)) / 10000))
+func fatigue_value(actor_id: String) -> int:
+    var raw: int = fatigue_raw_at(actor_id, _kernel.world_tick()) if is_ready() else -1
+    return -1 if raw < 0 else clampi(raw / StateClass.VALUE_SCALE, 0, 100)
+
+func fatigue_raw_at(actor_id: String, world_tick: int) -> int:
+    if not is_ready() or world_tick < 0 or not _state.has_actor(actor_id):
+        return -1
+    var record_value: Dictionary = _state.record(actor_id)
+    var anchor_tick: int = int(record_value.get("fatigue_anchor_tick", -1))
+    var start_raw: int = int(record_value.get("fatigue_raw", -1))
+    if anchor_tick < 0 or start_raw < 0 or world_tick < anchor_tick:
+        return -1
+    var elapsed: int = world_tick - anchor_tick
+    var numerator: int = elapsed * FATIGUE_RECOVERY_POINTS_PER_MINUTE * StateClass.VALUE_SCALE * fatigue_recovery_multiplier_bp(actor_id)
+    var denominator: int = _time_profile.ticks_per_minute() * 10000
+    var recovered_raw: int = 0 if denominator <= 0 else numerator / denominator
+    return clampi(start_raw - recovered_raw, 0, StateClass.RAW_MAX)
 
 ## Used by System 34 lethal physical-need pressure. Mutations settle before re-anchoring,
 ## so this exactly counts time spent at zero inside the current anchor interval.
@@ -216,6 +239,36 @@ static func _tier_contribution(tier_value: StringName) -> int:
             return -10
         _:
             return 0
+
+static func _fatigue_contribution(fatigue: int) -> int:
+    if fatigue >= 90:
+        return -10
+    if fatigue >= 75:
+        return -6
+    if fatigue >= 50:
+        return -3
+    if fatigue >= 25:
+        return -1
+    return 0
+
+static func _condition_weighted_tenths(values: Dictionary) -> int:
+    var result: int = 0
+    for channel: StringName in StateClass.CHANNELS:
+        var key: String = String(channel)
+        var value: int = int(values.get(key, -1))
+        if value < 0:
+            continue
+        var contribution: int = 0
+        if value >= GREEN_MIN:
+            contribution = 1
+        elif value < ORANGE_MIN:
+            contribution = -10
+        elif value < YELLOW_MIN:
+            contribution = -5
+        elif value < NORMAL_MIN:
+            contribution = -2
+        result += contribution * int(POTENCY_TENTHS.get(key, 0))
+    return result
 
 static func _derived_multiplier(weighted_tenths: int, sensitivity_percent_x100: int, min_bp: int, max_bp: int) -> int:
     # weighted_tenths * sensitivity / 10 produces basis-point adjustment.

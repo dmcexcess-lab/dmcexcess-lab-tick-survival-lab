@@ -3,7 +3,7 @@ class_name ActorStatusSummaryQuery
 
 ## Read-only compact HUD/inspection composer.
 ## Historical System-13 inputs remain available for legacy fixtures. Live System 34 may be
-## injected additively; presentation then reads real Health/Stamina and six condition channels.
+## injected additively; presentation then reads real Health/Fatigue and six condition channels.
 
 var _health: ActorHealthState = null
 var _needs: ActorNeedsState = null
@@ -78,11 +78,7 @@ func _query_system34(actor_id: String) -> Dictionary:
         moodlet_tiers.append(StringName(moodlet.get("tier", &"")))
         moodlet_descriptors.append(moodlet.duplicate(true))
 
-    var stamina: int = _condition.current_stamina(actor_id)
-    var stamina_max: int = _condition.effective_max_stamina(actor_id)
-    var stamina_pressure: int = 0
-    if stamina_max > 0:
-        stamina_pressure = clampi(100 - int((stamina * 100) / stamina_max), 0, 100)
+    var fatigue: int = _condition.current_fatigue(actor_id)
     return {
         "ok": true,
         "reason": "",
@@ -90,16 +86,13 @@ func _query_system34(actor_id: String) -> Dictionary:
         "current_hp": _health.current_hp(actor_id),
         "max_hp": _condition.effective_max_health(actor_id),
         "base_max_hp": _health.max_hp(actor_id),
-        "stamina": stamina,
-        "stamina_max": stamina_max,
+        "fatigue": fatigue,
         "satiety": int(values.get("satiety", -1)),
         "hydration": int(values.get("hydration", -1)),
         "rest": int(values.get("rest", -1)),
         "engagement": int(values.get("engagement", -1)),
         "comfort": int(values.get("comfort", -1)),
         "calm": int(values.get("calm", -1)),
-        # Compatibility reads for old inspector text; System 34 truth is the positive channels above.
-        "fatigue": stamina_pressure,
         "hunger": 100 - int(values.get("satiety", 0)),
         "thirst": 100 - int(values.get("hydration", 0)),
         "sleep_pressure": 100 - int(values.get("rest", 0)),
@@ -160,8 +153,6 @@ static func _failure(reason: String) -> Dictionary:
         "system34": false,
         "current_hp": -1,
         "max_hp": -1,
-        "stamina": -1,
-        "stamina_max": -1,
         "satiety": -1,
         "hydration": -1,
         "rest": -1,

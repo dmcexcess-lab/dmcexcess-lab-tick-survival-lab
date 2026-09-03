@@ -48,6 +48,10 @@ Forbidden: WHEN, Health, Needs, Inventory/Hands/Carry, Combat/AI, character-crea
 
 Initial complete System 13 candidate `78ed167678257749b093acd54e53e9f065cd8ce5` passed **Actor Stats Domains contract** run `31992365565` with no production repair.
 
+## Superseding future direction — not implemented
+
+The six-skill level/XP catalog above remains current executable truth only. The latest product direction replaces it with four skills: **Awareness, Stealth, Mechanical and Survival**. Survival subsumes first aid, scavenging, fire-starting and primitive survival crafting; Mechanical subsumes repair, deconstruction/reclamation and vehicle hot-wiring. World interactions and recipes should share concrete tool + resource/material + skill checks. This redesign is intentionally outside the current Health/Fatigue/Needs/Moodlet operation.
+
 ## Approved decisions — 2026-08-16
 1. Initial skills are Combat, Scavenging, Survival, Medical, Technical, Social.
 2. Skills are catalog entries, not fixed actor fields.

@@ -35,11 +35,10 @@ func _render_stats() -> void:
     _append_heading("CONDITION")
     _append_line("Stance: %s" % String(result.get("stance_label", "Unknown")), 15)
     _append_line(
-        "Health %d / %d   •   Stamina %d / %d" % [
+        "Health %d / %d   •   Fatigue %d / 100" % [
             int(status.get("current_hp", -1)),
             int(status.get("max_hp", -1)),
-            int(status.get("stamina", -1)),
-            int(status.get("stamina_max", -1)),
+            int(status.get("fatigue", -1)),
         ],
         15
     )
@@ -72,9 +71,9 @@ func _render_stats() -> void:
     var modifiers: Dictionary = status.get("condition_modifiers", {})
     _append_heading("CONDITION EFFECTS")
     _append_line(
-        "Max Health %s   •   Stamina %s   •   Speed %s" % [
+        "Max Health %s   •   Fatigue Gain %s   •   Speed %s" % [
             _multiplier_text(int(modifiers.get("health_multiplier_bp", 10000))),
-            _multiplier_text(int(modifiers.get("stamina_multiplier_bp", 10000))),
+            _multiplier_text(int(modifiers.get("fatigue_gain_multiplier_bp", 10000))),
             _multiplier_text(int(modifiers.get("speed_multiplier_bp", 10000))),
         ],
         14

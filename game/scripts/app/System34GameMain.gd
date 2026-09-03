@@ -53,7 +53,7 @@ func _boot_system34() -> bool:
     )
     if not _condition_service.is_ready():
         return false
-    _condition_moodlets = ConditionMoodletClass.new(_condition_modifiers)
+    _condition_moodlets = ConditionMoodletClass.new(_condition_modifiers, _health_state, _carry_query)
     if not _condition_moodlets.is_ready():
         return false
 
@@ -129,8 +129,8 @@ func _boot_system34() -> bool:
     var refresh_callable := Callable(self, "_on_system34_changed")
     if not _condition_service.condition_changed.is_connected(refresh_callable):
         _condition_service.condition_changed.connect(refresh_callable)
-    if not _condition_service.stamina_changed.is_connected(refresh_callable):
-        _condition_service.stamina_changed.connect(refresh_callable)
+    if not _condition_service.fatigue_changed.is_connected(refresh_callable):
+        _condition_service.fatigue_changed.connect(refresh_callable)
     _hud.refresh()
     return true
 

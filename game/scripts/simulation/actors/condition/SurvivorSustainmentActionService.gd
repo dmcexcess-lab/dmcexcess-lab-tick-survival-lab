@@ -188,11 +188,11 @@ func _on_action_finished(action: TimedAction) -> void:
                 _condition.change_condition(action.actor_id, StateClass.HYDRATION, int(action.payload.get("hydration_gain", 0)), &"potable_water_drunk")
         ACTION_REST:
             _condition.change_condition(action.actor_id, StateClass.REST, 16, &"rested")
-            _condition.restore_stamina(action.actor_id, 35, &"rested")
+            _condition.relieve_fatigue(action.actor_id, 35, &"rested")
             _apply_surface_comfort(action.actor_id, StringName(action.payload.get("surface", &"ground")), false)
         ACTION_SLEEP:
             _condition.change_condition(action.actor_id, StateClass.REST, 72, &"slept")
-            _condition.restore_stamina(action.actor_id, 100, &"slept")
+            _condition.relieve_fatigue(action.actor_id, 100, &"slept")
             _apply_surface_comfort(action.actor_id, StringName(action.payload.get("surface", &"ground")), true)
 
 func _complete_consume(action: TimedAction) -> void:

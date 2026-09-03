@@ -17,6 +17,11 @@ All four values remain independent integer **0..100 pressure scales**: fatigue, 
 
 Fatigue is short-horizon exertion/tiredness. Sleep pressure is longer-horizon time-awake debt. They remain intentionally separate.
 
+## Live System 34 composition
+This v1 owner remains as a protected compatibility scaffold for its isolated regressions, but it is not the playable survivor's current status truth. System 34 owns the live Satiety, Hydration, Rest, Engagement, Comfort, Calm, and Fatigue channels. Its Fatigue is the canonical short-horizon exertion value (`0` rested -> `100` exhausted), while Rest remains the distinct long-horizon sleep/recovery reserve (`100` rested -> `0` depleted).
+
+`System34GameMain` removes this legacy provider from the live movement-capability composition and disconnects its legacy movement-exertion adapter. The playable HUD, status summary, sustainment actions, moodlets, and movement costs all consume the System 34 condition state. Keeping this state available does not authorize a second live stamina/fatigue meter.
+
 ## Time rule
 13B has no `_process()` and no guessed tick/calendar conversion. Eating, drinking, rest, sleep, exertion, and broader needs progression explicitly mutate these values through owning actions/coordinators.
 

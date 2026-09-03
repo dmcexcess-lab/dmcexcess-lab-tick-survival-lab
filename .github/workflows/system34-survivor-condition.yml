@@ -53,6 +53,10 @@ jobs:
           grep -q 'TIER_YELLOW' game/scripts/simulation/actors/condition/ActorConditionModifierQuery.gd
           grep -q 'TIER_ORANGE' game/scripts/simulation/actors/condition/ActorConditionModifierQuery.gd
           grep -q 'TIER_RED' game/scripts/simulation/actors/condition/ActorConditionModifierQuery.gd
+          grep -q 'fatigue_raw' game/scripts/simulation/actors/condition/ActorConditionState.gd
+          grep -q 'func current_fatigue' game/scripts/simulation/actors/condition/ActorConditionService.gd
+          grep -q 'health.injured' game/scripts/simulation/actors/condition/ActorConditionMoodletQuery.gd
+          ! grep -qE 'func current_stamina|func spend_stamina' game/scripts/simulation/actors/condition/ActorConditionService.gd
           ! grep -R -q 'func _process\|func _physics_process' game/scripts/simulation/actors/condition
 
       - name: Install Godot 4.7.1
