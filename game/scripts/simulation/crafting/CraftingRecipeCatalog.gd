@@ -8,7 +8,7 @@ const SkillCatalog = preload("res://scripts/simulation/actors/skills/ActorSkillC
 ## concrete tools/materials, and the broad skill applied to them; current item identity
 ## and legality remain resolved by CraftingPlanQuery.
 
-const CATALOG_VERSION: int = 2
+const CATALOG_VERSION: int = 3
 
 var _recipes: Dictionary = {}
 
@@ -68,6 +68,46 @@ func _init() -> void:
         [RecipeClass.requirement(&"item.crafting.patch_component_kit")],
         SkillCatalog.SURVIVAL,
         2
+    ))
+    _add(RecipeClass.new(
+        &"crafting.sharpened_stake",
+        "Sharpen Wooden Stake",
+        8,
+        [RecipeClass.requirement(&"item.outdoors.sturdy_stick")],
+        [RecipeClass.requirement(&"item.kitchen.kitchen_knife")],
+        &"",
+        [RecipeClass.requirement(&"item.crafting.sharpened_stake")],
+        SkillCatalog.SURVIVAL,
+        1
+    ))
+    _add(RecipeClass.new(
+        &"crafting.stone_hammer",
+        "Bind Improvised Stone Hammer",
+        16,
+        [
+            RecipeClass.requirement(&"item.outdoors.sturdy_stick"),
+            RecipeClass.requirement(&"item.outdoors.smooth_stone"),
+            RecipeClass.requirement(&"item.junk.dirty_rag"),
+        ],
+        [RecipeClass.requirement(&"item.office.scissors")],
+        &"",
+        [RecipeClass.requirement(&"item.crafting.stone_hammer")],
+        SkillCatalog.SURVIVAL,
+        3
+    ))
+    _add(RecipeClass.new(
+        &"crafting.paper_tinder_bundle",
+        "Make Paper Tinder Bundle",
+        6,
+        [
+            RecipeClass.requirement(&"item.junk.stale_newspaper"),
+            RecipeClass.requirement(&"item.junk.old_magazine"),
+        ],
+        [RecipeClass.requirement(&"item.office.scissors")],
+        &"",
+        [RecipeClass.requirement(&"item.crafting.paper_tinder_bundle")],
+        SkillCatalog.SURVIVAL,
+        1
     ))
     _add(RecipeClass.new(
         &"crafting.improvised_toolkit",

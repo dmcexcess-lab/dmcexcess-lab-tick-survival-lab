@@ -4,7 +4,7 @@ class_name LootContainerProfileCatalog
 ## Searchable-container classification + deterministic weighted table data.
 ## Classification consumes only public building-plan archetype/role/semantic facts.
 
-const CATALOG_VERSION: int = 2
+const CATALOG_VERSION: int = 3
 
 var _profiles: Dictionary = {}
 
@@ -254,38 +254,39 @@ func _build_profiles() -> void:
         _e(&"item.electrical.batteries_pack", 5), _e(&"item.electrical.extension_cord", 5), _e(&"item.industrial.work_light", 4),
         _e(&"item.industrial.safety_glasses", 5), _e(&"item.clothing.work_gloves", 4), _e(&"item.junk.scrap_wire", 2),
     ])
-    _add_profile(&"farming.storage", 2, 12, 1, 4, [
+    _add_profile(&"farming.storage", 3, 12, 1, 4, [
         _e(&"item.farming.hand_trowel", 9), _e(&"item.farming.hand_pruners", 8), _e(&"item.farming.garden_hoe", 5),
         _e(&"item.farming.watering_can", 5), _e(&"item.farming.seed_packet", 12), _e(&"item.farming.fertilizer_bag", 7),
         _e(&"item.tool.hammer", 4), _e(&"item.tool.pliers", 4), _e(&"item.electrical.extension_cord", 3),
-        _e(&"item.material.rope_coil", 5), _e(&"item.junk.broken_plant_pot", 3), _e(&"item.junk.empty_seed_packet", 4),
+        _e(&"item.material.rope_coil", 5), _e(&"item.outdoors.sturdy_stick", 4), _e(&"item.outdoors.smooth_stone", 3),
+        _e(&"item.junk.broken_plant_pot", 3), _e(&"item.junk.empty_seed_packet", 4),
     ])
-    _add_profile(&"office.files", 2, 8, 0, 3, [
+    _add_profile(&"office.files", 3, 8, 0, 3, [
         _e(&"item.office.notebook", 5), _e(&"item.office.permanent_marker", 4), _e(&"item.office.pencil_pack", 6),
         _e(&"item.office.scissors", 3), _e(&"item.electrical.batteries_pack", 2), _e(&"item.junk.old_receipts", 12),
-        _e(&"item.junk.stale_newspaper", 8), _e(&"item.junk.broken_pen", 8), _e(&"item.junk.worn_cardboard", 3),
+        _e(&"item.junk.stale_newspaper", 8), _e(&"item.junk.old_magazine", 6), _e(&"item.junk.broken_pen", 8), _e(&"item.junk.worn_cardboard", 3),
     ])
-    _add_profile(&"office.desk", 2, 8, 0, 3, [
+    _add_profile(&"office.desk", 3, 8, 0, 3, [
         _e(&"item.office.notebook", 6), _e(&"item.office.permanent_marker", 5), _e(&"item.office.pencil_pack", 6),
         _e(&"item.office.scissors", 3), _e(&"item.tool.flashlight", 1), _e(&"item.electrical.batteries_pack", 2),
-        _e(&"item.junk.old_receipts", 10), _e(&"item.junk.stale_newspaper", 5), _e(&"item.junk.broken_pen", 7),
+        _e(&"item.junk.old_receipts", 10), _e(&"item.junk.stale_newspaper", 5), _e(&"item.junk.old_magazine", 4), _e(&"item.junk.broken_pen", 7),
         _e(&"item.junk.cracked_phone_charger", 2),
     ])
 
-    _add_profile(&"civic.school.supplies", 1, 8, 1, 4, [
+    _add_profile(&"civic.school.supplies", 2, 8, 1, 4, [
         _e(&"item.office.notebook", 8), _e(&"item.office.pencil_pack", 10), _e(&"item.office.permanent_marker", 6),
         _e(&"item.office.scissors", 5), _e(&"item.sanitation.cleaning_spray", 2), _e(&"item.junk.broken_pen", 6),
-        _e(&"item.junk.stale_newspaper", 3), _e(&"item.junk.crumpled_carton", 3),
+        _e(&"item.junk.stale_newspaper", 3), _e(&"item.junk.old_magazine", 3), _e(&"item.junk.crumpled_carton", 3),
     ])
-    _add_profile(&"civic.church.supplies", 1, 8, 0, 3, [
+    _add_profile(&"civic.church.supplies", 2, 8, 0, 3, [
         _e(&"item.office.notebook", 6), _e(&"item.office.pencil_pack", 6), _e(&"item.sanitation.soap_bar", 4),
         _e(&"item.sanitation.toilet_paper_roll", 5), _e(&"item.household.trash_bags_roll", 3),
-        _e(&"item.junk.stale_newspaper", 5), _e(&"item.junk.worn_cardboard", 3),
+        _e(&"item.junk.stale_newspaper", 5), _e(&"item.junk.old_magazine", 2), _e(&"item.junk.worn_cardboard", 3),
     ])
-    _add_profile(&"civic.police.supplies", 1, 10, 1, 4, [
+    _add_profile(&"civic.police.supplies", 2, 10, 1, 4, [
         _e(&"item.tool.flashlight", 6), _e(&"item.clothing.work_gloves", 5), _e(&"item.office.notebook", 5),
         _e(&"item.office.permanent_marker", 4), _e(&"item.electrical.batteries_pack", 6),
-        _e(&"item.junk.stale_newspaper", 3), _e(&"item.junk.old_receipts", 3),
+        _e(&"item.junk.stale_newspaper", 3), _e(&"item.junk.old_magazine", 2), _e(&"item.junk.old_receipts", 3),
     ])
     _add_profile(&"civic.fire.supplies", 1, 10, 1, 4, [
         _e(&"item.clothing.work_gloves", 7), _e(&"item.tool.flashlight", 6), _e(&"item.tool.pliers", 6),

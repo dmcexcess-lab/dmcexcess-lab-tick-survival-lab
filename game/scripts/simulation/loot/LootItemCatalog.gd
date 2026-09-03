@@ -5,7 +5,7 @@ class_name LootItemCatalog
 ## per-item state. Every loot item has exactly one top-level utility class, one primary
 ## family, optional secondary tags, a readable label, and real 13D weight.
 
-const CATALOG_VERSION: int = 3
+const CATALOG_VERSION: int = 4
 const USABLE: StringName = &"USABLE"
 const JUNK: StringName = &"JUNK"
 
@@ -170,6 +170,8 @@ func _build_candidate_001() -> void:
     _add(&"item.clothing.socks_pair", "Pair of Socks", USABLE, &"clothing", 100)
     _add(&"item.clothing.beanie", "Knit Beanie", USABLE, &"clothing", 90)
     _add(&"item.outdoors.tarp", "Tarp", USABLE, &"outdoors", 1200)
+    _add(&"item.outdoors.sturdy_stick", "Sturdy Stick", USABLE, &"outdoors", 650, [&"primitive_material"])
+    _add(&"item.outdoors.smooth_stone", "Smooth Stone", USABLE, &"outdoors", 450, [&"primitive_material"])
     _add(&"item.automotive.jumper_cables", "Jumper Cables", USABLE, &"automotive", 1200)
     _add(&"item.automotive.motor_oil_bottle", "Motor Oil", USABLE, &"automotive", 950)
     _add(&"item.industrial.work_light", "Portable Work Light", USABLE, &"industrial", 1500, [&"electronic"])
@@ -189,6 +191,7 @@ func _build_candidate_001() -> void:
     _add(&"item.junk.empty_seed_packet", "Empty Seed Packet", JUNK, &"farming", 10, [&"paper"])
     _add(&"item.junk.dead_batteries_pack", "Dead Battery Pack", JUNK, &"electrical", 160, [&"electronic"])
     _add(&"item.junk.old_receipts", "Old Receipts", JUNK, &"office", 20, [&"paper"])
+    _add(&"item.junk.old_magazine", "Old Magazine", JUNK, &"office", 180, [&"paper"])
     _add(&"item.junk.broken_pen", "Broken Pen", JUNK, &"office", 10)
     _add(&"item.junk.scrap_wire", "Scrap Wire", JUNK, &"electrical", 150)
     _add(&"item.junk.dirty_rag", "Dirty Rag", JUNK, &"sanitation", 100, [&"cleaning"])

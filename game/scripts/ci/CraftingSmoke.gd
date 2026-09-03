@@ -14,6 +14,7 @@ var inventory := InventoryContainmentState.new()
 var inventory_mut := InventoryContainmentMutationService.new(inventory, world)
 var physical := ItemPhysicalPropertyCatalog.new()
 var loot_items := LootItemCatalog.new()
+var loot_profiles := LootContainerProfileCatalog.new()
 var crafted_items := CraftingItemCatalog.new()
 var carry_state := ActorCarryState.new(world)
 var weight_query := ItemWeightQuery.new(world, physical)
@@ -37,6 +38,7 @@ func _initialize() -> void:
     _setup()
     _test_catalog_contract()
     _test_personal_possession_and_determinism()
+    _test_primitive_survival_chain()
     _test_timed_transform_and_tool_preservation()
     _test_cancellation_and_compensation()
     _test_workstation_and_multistage_chain()
@@ -66,8 +68,15 @@ func _setup() -> void:
     _check(skill_checks.is_ready() and plans.is_ready() and crafting.is_ready(), "skill-aware crafting planner and action service are ready")
 
 func _test_catalog_contract() -> void:
-    _check(recipes.catalog_version() == 2 and recipes.recipe_ids().size() == 5, "Candidate 001 v2 exposes five bounded skill-aware recipes")
-    _check(crafted_items.semantic_types().size() == 5, "five crafting-owned output semantics exist")
+    _check(recipes.catalog_version() == 3 and recipes.recipe_ids().size() == 8, "Candidate 001 v3 exposes eight bounded skill-aware recipes")
+    _check(crafted_items.catalog_version() == 2 and crafted_items.semantic_types().size() == 8, "eight crafting-owned output semantics exist")
+    _check(loot_items.catalog_version() == 4 and loot_profiles.catalog_version() == 3, "primitive source resources version canonical loot data")
+    _check(loot_profiles.validate_items(loot_items), "primitive resource profiles resolve only canonical loot semantics")
+    for semantic: StringName in [&"item.outdoors.sturdy_stick", &"item.outdoors.smooth_stone", &"item.junk.old_magazine"]:
+        _check(loot_items.has_item(semantic) and physical.has_profile(semantic), "primitive source resource is a real weighted loot item: %s" % String(semantic))
+    _check(_profile_has_semantic(loot_profiles.profile(&"farming.storage"), &"item.outdoors.sturdy_stick"), "sturdy sticks enter virgin rural loot through System 24")
+    _check(_profile_has_semantic(loot_profiles.profile(&"farming.storage"), &"item.outdoors.smooth_stone"), "smooth stones enter virgin rural loot through System 24")
+    _check(_profile_has_semantic(loot_profiles.profile(&"office.files"), &"item.junk.old_magazine"), "old magazines enter virgin office loot through System 24")
     for semantic: StringName in crafted_items.semantic_types():
         _check(physical.has_profile(semantic) and physical.weight_grams(semantic) > 0, "crafted item has real positive weight: %s" % String(semantic))
         _check(not freshness.has_profile(semantic), "crafted Candidate-001 output is not silently perishable: %s" % String(semantic))
@@ -94,6 +103,34 @@ func _test_personal_possession_and_determinism() -> void:
     var consumed: Array = ready.get("consumed_item_ids", [])
     _check(consumed.has("item.paper.news.a") and not consumed.has("item.paper.news.b"), "exact ingredient selection is stable-ID deterministic")
     _check(ready.get("tool_item_ids", []).has(SCISSORS), "exact scissors identity is carried into the physical plan")
+
+func _test_primitive_survival_chain() -> void:
+    _add_carried(&"item.outdoors.sturdy_stick", "item.primitive.stake.stick")
+    var missing_knife: Dictionary = plans.query(ACTOR, &"crafting.sharpened_stake")
+    _check(not bool(missing_knife.get("ready", false)) and String(missing_knife.get("reason", "")).begins_with("missing_tool"), "expert Survival cannot sharpen a stake without a real knife")
+    _add_carried(&"item.kitchen.kitchen_knife", "item.primitive.knife")
+    var stake_request: Dictionary = crafting.request_craft(ACTOR, &"crafting.sharpened_stake")
+    _check(bool(stake_request.get("accepted", false)) and stake_request.get("skill_id", &"") == SkillCatalog.SURVIVAL, "stick plus knife invokes canonical Survival crafting")
+    kernel.run_until_stop()
+    _check(_find_carried_semantic(&"item.crafting.sharpened_stake") != "", "primitive stake becomes a real persistent carried item")
+    _check(world.has_entity("item.primitive.knife") and inventory.container_of("item.primitive.knife") == ACTOR, "stake knife remains a real unconsumed tool")
+
+    _add_carried(&"item.outdoors.sturdy_stick", "item.primitive.hammer.stick")
+    _add_carried(&"item.outdoors.smooth_stone", "item.primitive.hammer.stone")
+    _add_carried(&"item.junk.dirty_rag", "item.primitive.hammer.binding")
+    var hammer_request: Dictionary = crafting.request_craft(ACTOR, &"crafting.stone_hammer")
+    _check(bool(hammer_request.get("accepted", false)) and hammer_request.get("skill_id", &"") == SkillCatalog.SURVIVAL, "stick stone rag and scissors invoke canonical Survival crafting")
+    kernel.run_until_stop()
+    _check(_find_carried_semantic(&"item.crafting.stone_hammer") != "", "improvised stone hammer becomes a real persistent carried item")
+    _check(not world.has_entity("item.primitive.hammer.stick") and not world.has_entity("item.primitive.hammer.stone") and not world.has_entity("item.primitive.hammer.binding"), "stone hammer consumes the exact physical resource entities")
+
+    _add_carried(&"item.junk.stale_newspaper", "item.primitive.tinder.news")
+    _add_carried(&"item.junk.old_magazine", "item.primitive.tinder.magazine")
+    var tinder_request: Dictionary = crafting.request_craft(ACTOR, &"crafting.paper_tinder_bundle")
+    _check(bool(tinder_request.get("accepted", false)) and tinder_request.get("skill_id", &"") == SkillCatalog.SURVIVAL, "newspaper magazine and scissors invoke canonical Survival tinder crafting")
+    kernel.run_until_stop()
+    _check(_find_carried_semantic(&"item.crafting.paper_tinder_bundle") != "", "paper tinder becomes a real persistent carried item")
+    _check(world.has_entity(SCISSORS) and inventory.container_of(SCISSORS) == ACTOR, "primitive recipes preserve their concrete scissors tool")
 
 func _test_timed_transform_and_tool_preservation() -> void:
     var expected_profile: Dictionary = skill_checks.action_profile(ACTOR, SkillCatalog.SURVIVAL, recipes.recipe(&"crafting.paper_bundle").duration_ticks, 1)
@@ -189,6 +226,12 @@ func _count_carried_semantic(semantic_type: StringName) -> int:
         if entity != null and entity.semantic_type == semantic_type:
             count += 1
     return count
+
+static func _profile_has_semantic(profile_value: Dictionary, semantic_type: StringName) -> bool:
+    for entry_value: Variant in profile_value.get("entries", []):
+        if typeof(entry_value) == TYPE_DICTIONARY and StringName((entry_value as Dictionary).get("semantic", &"")) == semantic_type:
+            return true
+    return false
 
 func _check(condition: bool, message: String) -> void:
     if not condition:

@@ -5,7 +5,7 @@ class_name CraftingItemCatalog
 ## These are not virgin-loot definitions; System 24 remains the owner of what untouched
 ## world containers can initially contain.
 
-const CATALOG_VERSION: int = 1
+const CATALOG_VERSION: int = 2
 
 var _definitions: Dictionary = {}
 
@@ -15,6 +15,9 @@ func _init() -> void:
     _add(&"item.crafting.wire_salvage_bundle", "Wire / Electrical Salvage", 200)
     _add(&"item.crafting.patch_component_kit", "Patch Component Kit", 500)
     _add(&"item.crafting.improvised_toolkit", "Improvised Crafting Toolkit", 1000)
+    _add(&"item.crafting.sharpened_stake", "Sharpened Wooden Stake", 520)
+    _add(&"item.crafting.stone_hammer", "Improvised Stone Hammer", 1100)
+    _add(&"item.crafting.paper_tinder_bundle", "Paper Tinder Bundle", 220)
 
 func catalog_version() -> int:
     return CATALOG_VERSION
