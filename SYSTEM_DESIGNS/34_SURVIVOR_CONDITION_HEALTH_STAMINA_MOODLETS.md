@@ -1,6 +1,6 @@
 # System 34 — Survivor Condition, Health, Fatigue & Moodlets
 
-Status: **IMPLEMENTED — exact-head verification required**
+Status: **IMPLEMENTED + EXACT-HEAD AUTOMATED VERIFIED — human playtest pending**
 
 The filename retains its approved-candidate history; the canonical model has no separate Stamina resource.
 

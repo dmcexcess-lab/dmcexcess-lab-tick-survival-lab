@@ -54,7 +54,7 @@ Canonical status/routing index. Read `PROJECT_NORTH_STAR.md`, `PERFORMANCE_NORTH
 | 31 | Semantic UI Icons | **IMPLEMENTED + CI VERIFIED — Phase 1C** | `31_SEMANTIC_UI_ICONS.md` |
 | 32 | Crafting / Material Transformation | **IMPLEMENTED + CI VERIFIED — Phase 2 complete** | `32_CRAFTING_MATERIAL_TRANSFORMATION.md` |
 | 33 | Power / Water Utility Runtime | **IMPLEMENTED + EXACT-HEAD VERIFIED — local substations, physical distribution, island-wide water, real wells, daily span snaps; HUMAN PLAYTEST PENDING** | `33_POWER_WATER_UTILITIES.md` + `33B_POWER_PHYSICAL_NETWORK_CONDITION.md` |
-| 34 | Survivor Condition / Health / Fatigue / Moodlets | **IMPLEMENTED; exact-head verification + human playtest pending** | `34_SURVIVOR_CONDITION_HEALTH_STAMINA_MOODLETS.md` |
+| 34 | Survivor Condition / Health / Fatigue / Moodlets | **IMPLEMENTED + EXACT-HEAD VERIFIED; human playtest pending** | `34_SURVIVOR_CONDITION_HEALTH_STAMINA_MOODLETS.md` |
 | PERF | Performance Architecture Gate | **IMPLEMENTED + CI VERIFIED; human accepted** | `PERFORMANCE_ARCHITECTURE.md` |
 | 00E | Population / Household / Outbreak / Player Story | **NOT DESIGNED — scheduled inside Phase 8** | future design |
 

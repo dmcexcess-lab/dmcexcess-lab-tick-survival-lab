@@ -1,206 +1,109 @@
 # Tick Survival Lab — Current Handoff
 
-Last updated: **2026-09-01**
+Last updated: **2026-09-03**
 
-This file is the authoritative continuation checkpoint. Read `README_SOPS.md`, fetch current `main` once, and continue from **NEXT OPERATION** without rediscovering completed architecture.
+This is the authoritative continuation checkpoint. Read `README_SOPS.md`, fetch current `main` once, and continue from **NEXT OPERATION**.
 
-## Current heads
+## Current verified head
 
-- **Exact verified System 34 gameplay executable:** `e07c559ad2f3eeafbf9b342c97ea2fd61f730e5a` — `Add System 34 survivor condition verification`
-- **System 34 owning verification:** workflow `System 34 Survivor Condition contract`, run `33363266598`, job `99398683690` — **completed / success** on exact head `e07c559ad2f3eeafbf9b342c97ea2fd61f730e5a`.
-- **Pages repair commit:** `49dcbe433c8bd3899592276aba534b0824e8b635` — `Repair Pages canonical composition validation`
-- **Pages repair verification:** workflow `Build and deploy Tick Survival Lab`, run `33580686480`; build job `100094126996` and deploy job `100094432962` — **completed / success** on exact repair head.
-- **Prior exact verified roadside-power executable:** `9f6e0b8e9010d73181143481a84532fbfffb93e1` — `Verify roadside pole routing contract`
-- **System 00F CI consolidation:** `32ef0c7647356b773e829081795b60563fc50d2b` — `Consolidate procedural boot CI`
-- The commit containing this file is intentionally the **final repository write** of this operation. This handoff write is documentation-only and does not change runtime behavior.
+- **Exact gameplay executable:** `156ee4b0a1727a5d5d26b479cf7a0dea9e9b462a` — `Align health fatigue needs and moodlets`
+- **Exact-head result:** **50 completed workflows, 50 successes, zero failures, zero pending**.
+- **Owning System 34 run:** `33807332330` — completed / success.
+- **Pages build/deploy run:** `33807332596` — completed / success.
+- **Streaming/materialization and 12-seed playable-boot run:** `33807332569` — completed / success.
+- **Live build:** `https://dmcexcess-lab.github.io/dmcexcess-lab-tick-survival-lab/`
+- The later commit containing this handoff is documentation-only and does not change the executable above.
 
-## Completed operation — Pages deployment repair
+## Completed operation — Health, Fatigue, Needs and Moodlets alignment
 
-The Pages failure introduced alongside the System 34 composition change is repaired and the live Web export/deployment contract is green again.
+The playable survivor now has one canonical short-horizon exertion value:
 
-Root cause:
+- **Fatigue:** `0` rested -> `100` physically exhausted.
+- **Rest:** separate high-is-good long-horizon sleep/recovery condition.
+- There is no parallel live Stamina pool or Stamina HUD meter.
+- Schema-v1 System-34 saves migrate remaining Stamina reserve by inversion into Fatigue pressure and remove the duplicate legacy fields.
 
-- System 34 correctly made `System34GameMain.gd` the canonical root composition in `game/main.tscn`.
-- `System34GameMain.gd` extends `UtilityGameMain`, which in turn extends `CraftingGameMain`; runtime composition remained valid.
-- `.github/workflows/pages.yml` still contained a stale validation assertion requiring the old direct `UtilityGameMain.gd` reference in `game/main.tscn`.
-- The failed Pages run therefore stopped in `Validate canonical project surface`; this was a CI validator defect rather than a gameplay, Godot parse, Web export or Pages-hosting defect.
+Physical action and recovery are consequential:
 
-Repair commit `49dcbe433c8bd3899592276aba534b0824e8b635` updates only `.github/workflows/pages.yml`:
+- walking adds a small amount of Fatigue;
+- running adds materially more and scales with terrain and real carried load;
+- severe Fatigue blocks starting another run but never removes ordinary walking;
+- physical action time does not secretly recover Fatigue;
+- explicit rest/sleep actions relieve Fatigue;
+- continued exertion beyond maximum Fatigue causes real damage through canonical Health and can reduce HP to zero;
+- System 34 does not own the later death/corpse transition.
 
-- the canonical main-scene assertion now requires `System34GameMain.gd`;
-- the workflow explicitly validates `System34GameMain.gd -> UtilityGameMain -> CraftingGameMain` inheritance;
-- the System 34 design document and script are included in the canonical project-surface checks;
-- existing Godot import/parse, canonical demo smoke, startup smoke, Web export, Pages configuration, artifact upload and deployment steps remain intact.
+Physical needs now use the existing Health owner rather than presentation flags:
 
-Exact owning verification on the repair head:
+- starvation, dehydration and sleep deprivation apply bounded real HP damage;
+- condition-derived effective Health ceilings never heal lost HP when conditions recover;
+- mental/comfort channels do not directly invent HP damage.
 
-- Workflow: `Build and deploy Tick Survival Lab`
-- Run: `33580686480`
-- Context: `verify/pages-deploy` — **success**
-- Build job: `100094126996` — **completed / success**
-- Deploy job: `100094432962` — **completed / success**
+Moodlets are derived warnings rather than stored or duplicated truth:
 
-Every build-stage step passed:
+- normal and positive meters produce no moodlet-chip clutter;
+- Satiety, Hydration, Rest, Engagement, Comfort and Calm produce only meaningful warning tiers;
+- Fatigue produces `Winded`, `Physically Exhausted` or `Spent` at its own pressure thresholds;
+- Health directly produces `Injured`, `Badly Injured` or `No Vitality`;
+- real Carry truth directly produces `Heavy Load` or `Overburdened`;
+- HUD and Stats show canonical Health/Fatigue and condition effects.
 
-1. Checkout;
-2. Validate canonical project surface;
-3. Install Godot 4.7.1 and export templates;
-4. Import and parse project;
-5. Canonical demo integration smoke;
-6. Startup smoke;
-7. Export Web build;
-8. Configure / enable GitHub Pages;
-9. Upload Pages artifact.
+The old System-13 Needs/Moodlet fixtures remain for isolated compatibility regressions. `System34GameMain` disconnects their old movement/exertion path, so they are not a second live condition owner.
 
-The deploy job then passed `Deploy to GitHub Pages` successfully.
+## Verification completed
 
-No runtime/gameplay source changed in this repair. The exact gameplay executable remains `e07c559ad2f3eeafbf9b342c97ea2fd61f730e5a`.
+Local Godot 4.7.1 verification passed:
 
-## Completed operation — System 34 Survivor Condition verification
+- import / parse;
+- `System34SurvivorConditionSmoke.gd`, including legacy-save migration and zero-Health overexertion;
+- Health, legacy Needs, Carry, Moodlets and Freshness regressions;
+- canonical HUD and player shell;
+- Movement exertion/encumbrance and input responsiveness;
+- protected Actor Skills, Crafting, World Loot and Spatial Sound regressions;
+- protected System-33 power/water regression;
+- canonical playable startup with `CANONICAL_DEMO_BOOT_OK`.
 
-System 34 implementation and its exact owning regression suite are complete. No repair was required after verification.
+GitHub exact-head verification then completed 50/50 successfully, including Pages and the full 12-seed procedural playable-boot matrix.
 
-Exact owning verification for gameplay head `e07c559ad2f3eeafbf9b342c97ea2fd61f730e5a`:
+## New skill direction — recorded, not implemented in this operation
 
-- Workflow: `System 34 Survivor Condition contract`
-- Workflow path: `.github/workflows/system34-survivor-condition.yml`
-- Run: `33363266598`
-- Job: `99398683690` — `verify/system34-survivor-condition`
-- Result: **completed / success**
-- Job started `2026-08-31T06:13:04Z` and completed `2026-08-31T06:13:58Z`.
+The future player catalog is exactly four broad skills:
 
-Every intended owning step passed on that exact head:
+- **Awareness**;
+- **Stealth**;
+- **Mechanical** — repair, deconstruction/reclamation, vehicle hot-wiring and related practical machinery work;
+- **Survival** — first aid, scavenging, fire-starting and primitive survival crafting.
 
-1. System 34 ownership-boundary validation;
-2. Godot 4.7.1 import and parse;
-3. focused `System34SurvivorConditionSmoke.gd` regression with `SYSTEM34_SURVIVOR_CONDITION_SMOKE_OK` required;
-4. protected actor-health regression;
-5. protected actor-needs regression;
-6. protected actor-carry regression;
-7. protected item-freshness regression;
-8. protected player-input-responsiveness regression;
-9. protected System 33 power/water regression;
-10. canonical startup requiring `CANONICAL_DEMO_BOOT_OK`;
-11. exact-head status publication.
+Field actions and crafting share one composable model: **concrete tool + concrete resource/material + relevant skill check**. Recorded examples are hammer + nails, wrench + bolts, screwdriver + wires, and rag + alcohol. Sticks, rocks, rags and newspapers/magazines should support primitive Survival tools, weapons and armor.
 
-The combined exact-head status reports `verify/system34-survivor-condition` as **success**. The Pages failure that was deliberately kept outside that bounded System 34 verification has now been repaired separately and verified green as recorded above.
+Skill should affect real-world outcomes such as treatment quality, time, failure risk and reclaimed material yield as well as recipe/crafting outcomes. Missing physical tools/materials are the natural hard blocker; low skill should normally produce risk or inefficiency instead of an invisible substitute item.
 
-## Completed operation — System 00F CI consolidation verified
+The current executable six-skill level/XP scaffold remains unchanged until this four-skill migration is implemented deliberately. Current crafting, scavenging, world loot and sound code were not modified by the completed condition operation.
 
-The procedural-island CI consolidation is complete and required **no repair**.
+## Protected neighboring behavior
 
-Exact owning verification for consolidation commit `32ef0c7647356b773e829081795b60563fc50d2b`:
+- Preserve the accepted full 80×96 physical-light renderer, stateless LOS and input-lock/responsiveness recovery.
+- Do not solve generated utility topology defects in presentation code.
+- Preserve real procedural fenced substations, roughly ten generated buildings per substation, shared roadside feeder trees, short service drops, logical/non-physical regional source-to-substation links, and the two-pole road-crossing side hold.
+- Preserve the one real persistent island-wide municipal water plant with no external-power dependency and the real persistent rural private wells.
+- Do not reintroduce wastewater/sewer/septic.
+- Do not fake items, facilities, action resources, skill outcomes or moodlet/condition truth in UI.
+- Do not add frame-driven condition processing, per-actor timers or recurring whole-world scans. Condition/Fatigue remain analytic from WHEN anchors and action boundaries.
+- Do not weaken the owning System-34 regression, protected Health/Carry/input/utility tests, or the consolidated 12-seed planner/playable-boot matrices.
 
-- Workflow: `Streaming and Materialization Orchestration contract`
-- Workflow path: `.github/workflows/streaming-materialization.yml`
-- Run: `33360162311`
-- Job: `99389828052` — `streaming-materialization`
-- Result: **completed / success**
-- Run began `2026-08-31T05:19:56Z` and completed `2026-08-31T05:26:30Z`.
+## Human acceptance status
 
-Every intended consolidated step passed on that exact head:
+Automated verification is complete. Human browser/phone/Safari acceptance is still pending for the current condition feel and the earlier System-33 utility/renderer behavior.
 
-1. System 00F boundary validation;
-2. Godot import/parse;
-3. one **12-seed procedural island planner/preflight matrix**;
-4. one **12-seed canonical playable boot matrix**;
-5. settlement materialization regression;
-6. countryside source/materialization contract.
+## NEXT OPERATION
 
-The consolidation removed redundant verification without weakening the island contract:
+Human-play the live build in a WebGL2-capable desktop browser and on phone/Safari:
 
-- the standalone duplicate procedural boot-diagnostics workflow is gone;
-- the duplicate System-00F `PerformanceRazorSmoke` invocation is gone because the dedicated performance workflow owns that check;
-- System 00F still owns one full planner/preflight 12-seed matrix and one full real-game boot 12-seed matrix;
-- settlement and countryside materialization smokes remain;
-- System 00F push triggering is path-aware, so unrelated/docs-only pushes do not launch the procedural island gauntlet, while edits to the owning workflow itself still trigger it.
+1. verify walking/running raises Fatigue at a believable rate and ordinary walking remains possible when exhausted;
+2. verify Rest remains visibly distinct from short-term Fatigue and rest/sleep recovery feels correct;
+3. verify hunger, thirst, sleep, comfort, fear and boredom moodlets appear only when meaningful and do not duplicate meter truth;
+4. verify injury/zero-Health and real carry burden produce the correct moodlets;
+5. confirm movement responsiveness, lighting, LOS and startup remain on the accepted baseline;
+6. inspect multiple fresh seeds for the protected power-line crossing/substation/water/well behavior.
 
-## Completed gameplay operation — roadside power pole crossing artifact
-
-The browser screenshots exposed a real System-33 materialization defect, not a renderer defect. Roadside pole cells were chosen independently as the nearest legal off-road cell. An obstacle could therefore force one support to the opposite side of the road and the next support could independently snap straight back, producing an unnecessary diagonal zig-zag. Generated parcel driveway/parking access cells were also absent from the utility placement exclusions, so a crossing support could land directly on the narrow gray access strip.
-
-The repair is architectural and uses generated world truth:
-
-- `UtilityLocalPowerTopologyPlanner` carries actual generated parcel `driveway_cells` and `parking_cells` into deterministic `pole_exclusion_cells`.
-- Physical utility supports reject those generated access cells; they are not identified by sprite color or renderer inference.
-- Shared-feeder pole placement is resolved **root-outward** so straight-route child supports inherit the parent span's physical side of the road.
-- If the current side has no legal placement and a crossing is genuinely required, the feeder changes side and holds that new side for the next **two sequential pole placements** before an elective cross-back is allowed.
-- Turns and actual feeder junctions may establish a new routing direction; the side-hold rule does not invent additional forks.
-- Stable pole identities remain tied to the existing deterministic route-cell ordering, so the visual-routing correction does not churn physical asset IDs.
-- `System33RoadsidePoleRoutingSmoke.gd` and permanent `verify/system33-roadside-pole-routing` protect generated access exclusions, same-side displacement, forced crossings, the two-pole hold, and real shared-trunk materialization.
-
-No accepted renderer, physical-lighting, LOS, camera, input, municipal-water, well, substation-count, regional-ingress, shared-trunk-deduplication or one-service-drop-per-building contract was replaced.
-
-## Renderer and input baseline remains protected
-
-- Full **80×96** physical-light presentation remains the accepted path.
-- LOS remains stateless; the rejected camera-cropped lighting/LOS cache approach must not return.
-- The fake default flashlight remains removed. Flashlight presentation requires a real equipped flashlight.
-- Input dispatch remains responsive without queued-step buildup.
-- Camera controls and performance architecture remain unchanged and protected by their existing smoke contracts.
-
-## Power and water contract remains current
-
-- Local substations are planned from actual deterministic generated building manifests with a target of roughly **10 generated buildings per substation**.
-- Every local substation physically materializes as a small fenced transformer/utility-box compound.
-- Regional source/ingress -> local substation service is intentionally logical/non-physical: no long-distance plant-to-substation wire is drawn.
-- Distribution leaves each substation through one real shared roadside feeder tree built from generated local roads, with reusable poles/trunks and one short final service drop near each served building.
-- Roadside supports must avoid real generated driveway/parking/access surfaces. A forced road crossing must remain on the new side for the next two sequential support placements before an elective cross-back.
-- One real persistent municipal treatment plant provides island-wide radiusless municipal water and intentionally does **not** require outside grid power.
-- Because municipal service is island-wide and radiusless, no generated home can fall outside a municipal plant radius. Real private wells remain separately assigned to a deterministic minority of actual rural homes and materialize with persistent entity/asset identity and damageable condition.
-- Wastewater/sewer/septic remains **retired / not active**.
-
-Do not replace these structures, poles, spans, wells or service relationships with presentation-only markers. They are generated and materialized from procedural island truth.
-
-## Exact prior roadside gameplay executable verification
-
-Executable `9f6e0b8e9010d73181143481a84532fbfffb93e1` completed **43/43 push-triggered exact-head workflows successfully**, with zero failures and zero pending runs.
-
-Key successful runs:
-
-- Roadside pole routing: run `33358588818`
-- System 33 power and water: run `33358588830`
-- Streaming/materialization: run `33358588831`
-- Global world planning: run `33358588703`
-- System 20 local-area generation: run `33358588870`
-- Physical lighting: run `33358588841`
-- Performance architecture: run `33358588696`
-- GitHub Pages build/deploy: run `33358588720`
-
-## Browser acceptance status
-
-The repaired Pages deployment is available at `https://dmcexcess-lab.github.io/dmcexcess-lab-tick-survival-lab/`.
-
-Automated verification proves System 34's owning condition/regression contract, the repaired Web build/deploy pipeline, and the previously protected topology/materialization behavior, but does **not** claim human visual/gameplay acceptance. Browser/phone/Safari acceptance remains a separate manual step.
-
-## Do not regress
-
-- Do not let Pages canonical-composition validation hard-code an obsolete direct root script when the authoritative composition layer changes; validate the current root and its intended inheritance chain.
-- Do not solve power-line placement artifacts in the renderer; support placement belongs to generated/materialized utility truth.
-- Do not place roadside utility supports on generated driveway/parking/access cells.
-- Do not return to independent nearest-cell pole placement that can immediately zig-zag across the road and back.
-- After a forced straight-route road crossing, preserve the two-subsequent-support side hold before elective cross-back.
-- Do not draw independent transformer-to-house starbursts or regional source-to-substation transmission.
-- Do not change the accepted renderer/lighting/LOS/input path for utility topology defects.
-- Do not make the municipal water plant depend on external grid power.
-- Do not add a municipal service radius or simulated long-distance pipe network.
-- Do not reintroduce wastewater as a hidden prerequisite.
-- Do not fake generated buildings, utility compounds, poles, wire spans or wells in UI/render-only code.
-- Do not weaken the consolidated System-00F planner 12-seed matrix, canonical playable 12-seed boot matrix, System-33 physical-topology assertions, roadside-pole regression, or System-34 condition regression.
-- Do not duplicate System-34 condition truth in UI/presentation code; keep the owning condition services/queries authoritative.
-
-## NEXT OPERATION — human browser/gameplay acceptance
-
-Open the live build in a WebGL2-capable desktop browser and on phone/Safari, then verify the current gameplay state manually. In particular:
-
-1. exercise System 34 survivor condition behavior and confirm health/stamina/moodlet presentation and controls behave correctly during actual play;
-2. confirm protected health, needs, carry, freshness and input behavior still feels correct rather than only passing headless regression;
-3. inspect roadside feeder routing across multiple fresh seeds;
-4. confirm no pole/support lands on a gray generated driveway, parking connection or pedestrian/access strip;
-5. confirm a forced straight feeder crossing stays on the new side for the next two support placements before an elective cross-back;
-6. confirm shared trunks/forks, short final service drops, substations, municipal plant and private wells remain physically correct;
-7. confirm fresh islands reach a visible first frame and multiple seeds boot successfully;
-8. confirm movement remains immediate without delayed input buildup and full-window lighting/stateless LOS/real-equipped-flashlight behavior match the accepted baseline;
-9. keep Safari/phone first-class.
-
-If that playtest passes, record human acceptance. If it exposes a defect, fix the owning implementation while preserving all exact-head contracts above.
+If that playtest exposes a defect, fix the owning implementation without weakening the verified contracts above. Otherwise record human acceptance. The next bounded implementation after that—or sooner on explicit user direction—is to replace the six-skill scaffold with Awareness, Stealth, Mechanical and Survival, then connect scavenging, first aid, deconstruction/reclamation, repair/hot-wiring and primitive crafting through one real tool + material + skill-check contract.

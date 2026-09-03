@@ -19,7 +19,7 @@ Current game identity:
 - **Compact-island/world-seam cleanup — COMPLETE + HUMAN ACCEPTED.** Broad planner repair `918f1db...` remains rejected; focused local-window repair `282864f...` is accepted.
 - **Responsiveness / black-screen recovery — HUMAN ACCEPTED.** Recovery executable `1f65bff312853a44858201b57d9df2e26ee64f80` restored the human-good full-window lighting/visibility path while preserving decision-pause responsiveness.
 - **Phase 3 / System 33 Power + Water — IMPLEMENTED + EXACT-HEAD AUTOMATED VERIFIED; HUMAN PLAYTEST PENDING.** Current executable including Stage B analytic physical power distribution: `7ddee8df0e638cbe14897d83632b62513d5fc574`.
-- **Phase 4 / System 34 Physical Survival — IMPLEMENTED; exact-head CI and human playtest pending.** One canonical Fatigue pressure replaces the duplicate Stamina reserve; Rest remains the separate sleep condition.
+- **Phase 4 / System 34 Physical Survival — IMPLEMENTED + EXACT-HEAD VERIFIED; human playtest pending.** One canonical Fatigue pressure replaces the duplicate Stamina reserve; Rest remains the separate sleep condition.
 - **Phase 5 / System 34 Moodlets — IMPLEMENTED; exact-head CI and human playtest pending.** Live moodlets cover physical needs, boredom, comfort, fear, Fatigue, injury and carried load without positive/normal chip clutter.
 - **Current gameplay lifecycle gate:** human browser verification of Stage B plus current System-33 lighting/water/refrigeration behavior.
 
@@ -170,7 +170,7 @@ Before Phase 3 / Stage B is marked human accepted, browser play must confirm:
 
 ---
 
-## Phase 4 — Player physical survival and health — IMPLEMENTED; VERIFICATION PENDING
+## Phase 4 — Player physical survival and health — IMPLEMENTED + EXACT-HEAD VERIFIED; HUMAN PLAYTEST PENDING
 
 Goal: complete the physical survival loop.
 
@@ -188,7 +188,7 @@ Phase 4 may consume truthful System-33 water availability but must not move util
 
 ---
 
-## Phase 5 — Moodlets and mental/comfort pressure — IMPLEMENTED; VERIFICATION PENDING
+## Phase 5 — Moodlets and mental/comfort pressure — IMPLEMENTED + EXACT-HEAD VERIFIED; HUMAN PLAYTEST PENDING
 
 Target families include comfort, fear, boredom, hunger, thirst and sleep/exhaustion. Underlying physical needs remain owned by physical-survival systems.
 
@@ -254,4 +254,4 @@ For each bounded phase/system:
 
 Newest explicit user direction supersedes older roadmap ordering, but implemented historical systems remain current truth until deliberately migrated.
 
-**Current next step: exact-head verify the directed Phase-4/5 Health, Fatigue, Needs and Moodlet correction, then human-play it alongside the still-pending System-33 utility/renderer acceptance. The four-skill redesign remains a separate follow-up.**
+**Current next step: human-play the verified Phase-4/5 Health, Fatigue, Needs and Moodlet correction alongside the still-pending System-33 utility/renderer acceptance. After that acceptance—or on newer explicit user direction—the next implementation is the four-skill redesign and its shared tool + material + skill action/crafting contract.**
