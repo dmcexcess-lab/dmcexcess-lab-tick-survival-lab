@@ -8,11 +8,14 @@ const PlacementClass = preload("res://scripts/foundation/world/WorldPlacement.gd
 const PhaseClass = preload("res://scripts/foundation/time/ActionPhase.gd")
 const TickRulesClass = preload("res://scripts/foundation/time/TickRules.gd")
 const SkillCatalog = preload("res://scripts/simulation/actors/skills/ActorSkillCatalog.gd")
+const CapacityPolicyClass = preload("res://scripts/simulation/items/ItemAcquisitionCapacityPolicy.gd")
 const SkyExposureClass = preload("res://scripts/simulation/weather/SkyExposureQuery.gd")
 const EnvironmentProfilesClass = preload("res://scripts/generation/areas/EnvironmentProfileCatalog.gd")
 
 ## Outdoor primitive-resource recovery. The environment is queried only at request/
 ## commit boundaries. State stores only finite opportunity depletion, never hidden items.
+## Successful recovery first uses the canonical personal-inventory admission path; only
+## capacity-blocked or otherwise non-admittable outputs remain as real loose world items.
 
 signal forage_completed(actor_id, action_serial, patch_key, found_item_ids, found_semantics)
 signal forage_failed(actor_id, action_serial, patch_key, reason, opportunity_consumed)
@@ -34,6 +37,8 @@ var _kernel: TickKernel = null
 var _skill_checks: ActorSkillCheckService = null
 var _loot_items: LootItemCatalog = null
 var _state: OutdoorForageState = null
+var _inventory_mutations: InventoryContainmentMutationService = null
+var _capacity_policy: ItemAcquisitionCapacityPolicy = null
 var _sky: SkyExposureQuery = null
 var _world_seed: int = 0
 var _natural_stick_props: Dictionary = {}
@@ -47,7 +52,9 @@ func _init(
     skill_checks: ActorSkillCheckService = null,
     loot_items: LootItemCatalog = null,
     world_seed: int = 0,
-    forage_state: OutdoorForageState = null
+    forage_state: OutdoorForageState = null,
+    inventory_mutations: InventoryContainmentMutationService = null,
+    capacity_policy: ItemAcquisitionCapacityPolicy = null
 ) -> void:
     _world = world_state
     _world_mutations = world_mutations
@@ -56,6 +63,8 @@ func _init(
     _loot_items = loot_items
     _world_seed = world_seed
     _state = forage_state if forage_state != null else OutdoorForageState.new()
+    _inventory_mutations = inventory_mutations
+    _capacity_policy = capacity_policy
     _sky = SkyExposureClass.new(_world)
     _build_natural_prop_sets()
     if _kernel != null:
@@ -68,6 +77,8 @@ func is_ready() -> bool:
     return _world != null and _world_mutations != null and _world_mutations.is_ready() \
         and _kernel != null and _skill_checks != null and _skill_checks.is_ready() \
         and _loot_items != null and _loot_items.has_item(STICK) and _loot_items.has_item(STONE) \
+        and _inventory_mutations != null and _inventory_mutations.is_ready() \
+        and _capacity_policy != null and _capacity_policy.is_ready() \
         and _state != null and _sky != null and _sky.is_ready() and _world_seed > 0
 
 func state() -> OutdoorForageState:
@@ -223,6 +234,8 @@ func _commit_forage(action: TimedAction) -> void:
     var yield_count: int = 2 if int(skill_result.get("effectiveness_percent", 0)) >= 100 else 1
     var found_ids: Array[String] = []
     var found_semantics: Array[StringName] = []
+    var stored_ids: Array[String] = []
+    var loose_ids: Array[String] = []
     for ordinal in range(yield_count):
         var item_id: String = "forage.%d.%s.%03d.%02d" % [_world_seed, patch_key.replace(":", "."), opportunity_index, ordinal]
         if _world.has_entity(item_id) or _world_mutations.create_entity(semantic, item_id) != item_id:
@@ -230,20 +243,19 @@ func _commit_forage(action: TimedAction) -> void:
             _state.restore_expected(patch_key, opportunity_index)
             _fail(action, "forage_output_create_failed", false)
             return
-        if not _world_mutations.set_placement(
-            item_id,
-            Layers.Channel.LOOSE_ITEM,
-            current.anchor,
-            Facing.Value.SOUTH,
-            Footprint.single_cell()
-        ):
+        var disposition: StringName = _commit_recovered_item(action.actor_id, item_id, current)
+        if disposition.is_empty():
             _world_mutations.remove_entity(item_id)
             _rollback_outputs(found_ids)
             _state.restore_expected(patch_key, opportunity_index)
-            _fail(action, "forage_output_placement_failed", false)
+            _fail(action, "forage_output_commit_failed", false)
             return
         found_ids.append(item_id)
         found_semantics.append(semantic)
+        if disposition == &"inventory":
+            stored_ids.append(item_id)
+        else:
+            loose_ids.append(item_id)
 
     if not _skill_checks.award_attempt_xp(action.actor_id, SkillCatalog.SURVIVAL, SURVIVAL_DIFFICULTY, true):
         _rollback_outputs(found_ids)
@@ -256,7 +268,24 @@ func _commit_forage(action: TimedAction) -> void:
         "opportunity_consumed": true,
         "found_item_ids": found_ids.duplicate(),
         "found_semantics": found_semantics.duplicate(),
+        "stored_item_ids": stored_ids.duplicate(),
+        "loose_item_ids": loose_ids.duplicate(),
     }
+
+func _commit_recovered_item(actor_id: String, item_id: String, actor_placement: WorldPlacement) -> StringName:
+    var capacity: Dictionary = _capacity_policy.evaluate(actor_id, item_id)
+    if int(capacity.get("status", CapacityPolicyClass.Status.UNKNOWN)) == CapacityPolicyClass.Status.ALLOWED:
+        if _inventory_mutations.set_container(item_id, actor_id):
+            return &"inventory"
+    if _world_mutations.set_placement(
+        item_id,
+        Layers.Channel.LOOSE_ITEM,
+        actor_placement.anchor,
+        Facing.Value.SOUTH,
+        Footprint.single_cell()
+    ):
+        return &"loose"
+    return &""
 
 func _environment_profile(anchor: Vector2i) -> Dictionary:
     if not _world.has_terrain(anchor):
@@ -358,8 +387,10 @@ static func _stable_hash(text: String) -> int:
 func _rollback_outputs(item_ids: Array[String]) -> void:
     for index in range(item_ids.size() - 1, -1, -1):
         var item_id: String = item_ids[index]
-        if _world.has_entity(item_id):
-            _world_mutations.remove_entity(item_id)
+        if not _world.has_entity(item_id):
+            continue
+        _inventory_mutations.clear_container(item_id)
+        _world_mutations.remove_entity(item_id)
 
 func _fail(action: TimedAction, reason: String, opportunity_consumed: bool) -> void:
     _outcomes[action.serial] = {
@@ -368,6 +399,8 @@ func _fail(action: TimedAction, reason: String, opportunity_consumed: bool) -> v
         "opportunity_consumed": opportunity_consumed,
         "found_item_ids": [],
         "found_semantics": [],
+        "stored_item_ids": [],
+        "loose_item_ids": [],
     }
     if not _kernel.fail_action(action.serial, reason):
         push_error("ForageNearbyActionService: failed to mark action failed: %s" % reason)
