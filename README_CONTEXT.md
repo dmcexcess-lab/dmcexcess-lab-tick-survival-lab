@@ -4,76 +4,56 @@ Last updated: **2026-09-03**
 
 This is the authoritative continuation checkpoint. Read `README_SOPS.md`, fetch current `main` once, and continue from **NEXT OPERATION**.
 
-## Current repository / executable state
+## Current verified executable
 
-- **Latest gameplay source candidate:** `c0b1464cbe478cea174d78f33d5510b5e62a24f1` — forage UI overlap repair.
-- **Last exact-head automated-green executable:** `11035c7d0b1dd7eb01b076aec244b818d7f6fe56` — bounded outdoor Survival forage before the UI-only repair.
-- `11035c7d0b1dd7eb01b076aec244b818d7f6fe56` completed **51/51 exact-head GitHub Actions runs successfully**, with zero failures, queued, running or cancelled, including `verify/outdoor-forage`, full protected repository verification, 12-seed planner/playable boot matrices, Pages deployment and exact-head status publishing.
-- The commits after `c0b1464cbe478cea174d78f33d5510b5e62a24f1` are documentation-only; they do not change gameplay code.
-- **Live build URL:** `https://dmcexcess-lab.github.io/dmcexcess-lab-tick-survival-lab/`
-- **Important:** do not assume the live Pages build contains the UI repair yet. GitHub created zero Actions runs for the connector-authored repair commits, so Pages did not redeploy from this tool session.
+- **Exact gameplay executable:** `fd8913df39113356bfd908377c357bbb91d54e60` — `Fix forage UI layout smoke lifecycle`.
+- **Exact-head GitHub Actions:** **50 completed runs, 50 successes, zero failures, zero queued, zero running**.
+- The dedicated final-head `Outdoor forage` gate passed forage behavior, the real UI-layout smoke, protected Skills/Crafting/Loot regressions and canonical startup.
+- **Pages deployment:** run `33818678774` completed successfully for exact executable `fd8913df39113356bfd908377c357bbb91d54e60`.
+- **Live build:** `https://dmcexcess-lab.github.io/dmcexcess-lab-tick-survival-lab/`
+- Commits after the executable are documentation/context-only and do not alter gameplay.
 
-## Completed source repair — forage hidden by Weather DEV controls
+## Completed operation — forage / Weather DEV overlap repair
 
-User reported that the new forage button was blocked by the Weather DEV options.
-
-The root cause was exact and local:
-
-- `WeatherDevControls` occupied `(344, 66)` with size `288x78` on CanvasLayer 35.
-- `ForagePlayerControls` occupied `(340, 66)` with size `292x78` on CanvasLayer 34.
-- The two panels were therefore almost perfectly stacked, and the higher-layer Weather DEV panel visually/input-wise covered forage.
-
-### Repair now in source
-
-`ForagePlayerControls.gd` now uses the unused lower-left compact-control slot:
+The user reported `FORAGE NEARBY` was blocked by the Weather DEV controls. The defect was literal layout overlap:
 
 - Survival: upper-left `(8, 66)`, `326x78`;
 - Weather DEV: upper-right `(344, 66)`, `288x78`;
-- **Forage: lower-left `(8, 148)`, `326x78`;**
+- old forage: `(340, 66)`, `292x78`, almost directly underneath Weather;
 - Utilities DEV: lower-right `(344, 148)`, `288x100`.
 
-Additional repair details:
+The repaired canonical compact-control grid is now:
 
-- forage panel geometry is exposed as stable constants;
-- the live panel has stable node name `ForagePanel`;
-- button width was adjusted to the wider left-column panel;
-- no forage simulation, depletion, timing, skill, item, weather or utility behavior changed.
+- Survival — upper-left `(8, 66)`, `326x78`;
+- Weather DEV — upper-right `(344, 66)`, `288x78`;
+- **Forage — lower-left `(8, 148)`, `326x78`;**
+- Utilities DEV — lower-right `(344, 148)`, `288x100`.
 
-### New regression
+`ForagePlayerControls.gd` now exposes stable panel geometry constants and uses stable node name `ForagePanel`. No forage simulation, depletion, timing, skill, item, weather or utility behavior changed.
 
-Added `game/scripts/ci/ForageUiLayoutSmoke.gd`.
+## Verification repair and permanent gate
 
-It instantiates the **actual**:
+`game/scripts/ci/ForageUiLayoutSmoke.gd` instantiates the actual:
 
 - `ConditionPlayerControls`;
 - `WeatherDevControls`;
 - `ForagePlayerControls`;
 - `UtilityDevControls`.
 
-It asserts their canonical rectangles and fails if forage intersects Weather, Survival or Utilities. `.github/workflows/outdoor-forage.yml` now runs this layout smoke in addition to the existing forage behavior, skill, crafting, loot and canonical-startup regressions.
+The first genuine main-branch Actions run exposed a test-harness lifecycle bug: the smoke measured the CanvasLayers in `_initialize()` before Godot delivered their `_ready()` callbacks, so the panels had not been built. The existing forage behavior smoke itself passed.
 
-## Verification limitation for the UI repair
+The harness was repaired to `await process_frame` before measuring the real controls. PR #2 then passed the complete owning `verify/outdoor-forage` gate before merge. The final main executable `fd8913df39113356bfd908377c357bbb91d54e60` subsequently passed all 50 exact-head runs and Pages deployment.
 
-The source repair is committed on `main`, but exact-head Actions verification could not be triggered from the available GitHub connector.
+The dedicated `.github/workflows/outdoor-forage.yml` now runs on both:
 
-Observed facts:
+- `push` to `main`;
+- `pull_request` targeting `main`.
 
-- source commit `4c18feef6cf4356ce7b32b03301ebaa5e32121c4` moved `main` successfully but produced **0 GitHub Actions runs**;
-- a second normal Contents-API source commit, `c0b1464cbe478cea174d78f33d5510b5e62a24f1`, also produced **0 GitHub Actions runs**;
-- repeated exact-head Actions queries returned zero runs/statuses for those SHAs;
-- the installed GitHub connector exposes workflow/run reads and reruns, but **no workflow-dispatch/start-new-run action**;
-- local fallback is unavailable in this session: no local Godot executable and the container cannot reach GitHub normally for a clone/download.
-
-Therefore:
-
-- **do not call `c0b1464...` exact-head CI green yet;**
-- **do not call the live Pages build repaired yet;**
-- the last fully automated-green executable remains `11035c7d...`;
-- the UI source change itself is narrow and statically clear, but its new Godot layout smoke still needs an actual Actions execution.
+That gives future forage/layout work a genuine pre-merge owning gate instead of relying only on connector-authored main writes.
 
 ## Outdoor forage behavior remains canonical
 
-The already-verified forage system remains unchanged by the UI repair:
+The UI repair did not change the already-established forage model:
 
 - one sparse persistent depletion record per deterministic 8x8 world patch;
 - real materialized terrain + sky exposure + bounded local natural context determine plausibility;
@@ -86,7 +66,7 @@ The already-verified forage system remains unchanged by the UI repair:
 
 ## Four-skill contract remains canonical
 
-The live skill catalog is exactly:
+The live player skill catalog is exactly:
 
 - **Awareness**;
 - **Stealth**;
@@ -144,22 +124,19 @@ Do not infer unimplemented effects from item names: the stake has no invented co
 
 ## Human acceptance status
 
-Human acceptance remains pending. Once the repaired source is actually built/deployed, explicitly verify:
+Automated verification and deployment are complete. Human browser acceptance is still required for visible/game-feel behavior:
 
-- `FORAGE NEARBY` is visible and clickable while Weather DEV controls are present;
-- Survival / Weather / Forage / Utilities occupy four distinct compact slots without overlap;
-- forage result messaging and finite depletion still feel correct;
-- recovered sticks/stones use ordinary pickup behavior;
-- Fatigue/rest/needs/health/moodlet feel;
-- movement responsiveness, lighting/LOS/startup baseline;
-- generated System-33 power/substation/water/well behavior on representative fresh seeds;
-- desktop WebGL2 and phone/Safari layouts.
+- confirm `FORAGE NEARBY` is visible and clickable while Weather DEV controls are present;
+- confirm Survival / Weather / Forage / Utilities occupy four distinct compact slots without overlap;
+- confirm forage result messaging and finite depletion still feel correct;
+- confirm recovered sticks/stones use ordinary pickup behavior;
+- continue prior acceptance checks for Fatigue/rest/needs/health/moodlets, movement responsiveness, lighting/LOS/startup and generated System-33 utilities;
+- check desktop WebGL2 and phone/Safari presentation.
 
 ## NEXT OPERATION
 
-1. **First close the verification/deployment gap for source `c0b1464cbe478cea174d78f33d5510b5e62a24f1`.** Trigger or observe a genuine GitHub Actions event (user-originated push, workflow dispatch, or future tool path that emits the event). Require at minimum `verify/outdoor-forage` with `FORAGE_UI_LAYOUT_SMOKE_OK`, canonical startup, and Pages deployment to complete successfully. If any gate fails, repair it and repeat.
-2. Human-play the deployed build and confirm the forage control is no longer covered by Weather DEV or any neighboring panel.
-3. Only after that gate—or newer explicit user direction—resume feature expansion. The next bounded implementation should be a **real** primitive Survival consumer or a real Mechanical repair/deconstruction owner integration. Do not invent combat/tool/fire effects merely from item names.
-4. Later integrations remain first aid through Health/Injury; Mechanical repair/deconstruction/reclamation; hot-wiring after vehicles exist; fire-starting through a real ignition/fire owner; real Awareness and Stealth gameplay consumers.
+1. **Human-play the deployed build** at `https://dmcexcess-lab.github.io/dmcexcess-lab-tick-survival-lab/` and confirm the forage control is no longer covered by Weather DEV or any neighboring panel. Any visible/game-feel defect supersedes feature expansion and should be repaired first.
+2. If accepted and no newer user direction supersedes it, implement the next bounded **real primitive Survival consumer** or a real **Mechanical repair/deconstruction owner integration**. Do not invent combat/tool/fire effects merely from item names.
+3. Later integrations remain first aid through Health/Injury; Mechanical repair/deconstruction/reclamation; hot-wiring after vehicles exist; fire-starting through a real ignition/fire owner; real Awareness and Stealth gameplay consumers.
 
 Newest explicit user direction supersedes this NEXT OPERATION.
