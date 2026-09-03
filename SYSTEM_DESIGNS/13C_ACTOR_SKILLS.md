@@ -1,64 +1,67 @@
 # Tick Survival Lab — 13C Actor Skills
 
-Status: **IMPLEMENTED + CI**
+Status: **IMPLEMENTED — FOUR-SKILL CONTRACT + ACTION-BOUNDARY CONSUMERS**
 
 Parent: `13_ACTOR_STATS_STATUS_ARCHITECTURE.md`.
 
-## Goal
-Own persistent survivor skill identity, level/rank, and XP progression as a standalone typed domain keyed by stable WHAT actor ID.
+## Canonical catalog
 
-## Owner
-- `game/scripts/simulation/actors/skills/ActorSkillCatalog.gd`
-- `game/scripts/simulation/actors/skills/ActorSkillState.gd`
-- smoke: `game/scripts/ci/ActorSkillsSmoke.gd`
+The live survivor catalog is exactly four broad skills:
 
-## Canonical v1 catalog
-1. `combat` — Combat
-2. `scavenging` — Scavenging
-3. `survival` — Survival
-4. `medical` — Medical
-5. `technical` — Technical
-6. `social` — Social
+1. `awareness` — Awareness
+2. `stealth` — Stealth
+3. `mechanical` — Mechanical
+4. `survival` — Survival
 
-The catalog is semantic and enumerable rather than six hardcoded actor fields.
+There are no live Combat, Scavenging, Medical, Technical or Social skill entries.
 
-## Progression
-Recovered same-owner First Fire progression is canonical v1:
+Mechanical owns practical machinery competence such as repair, deconstruction/reclamation and vehicle hot-wiring when those owning systems exist. Survival owns first aid, scavenging/foraging, fire-starting and primitive survival crafting. Awareness and Stealth remain separate perceptual/tactical competencies.
+
+## Progression and persistence
+
 - levels 0..10;
 - persistent XP per skill;
 - threshold `20 + current_level * 15`;
 - one award may cross multiple levels deterministically;
-- threshold subtraction leaves remainder XP;
-- level 10 stores zero XP.
+- level 10 stores zero XP;
+- schema-v2 snapshot is canonical.
 
-13C owns base persistent skill only. Fatigue, injury, tools, equipment, traits, panic/mood, and environmental modifiers remain outside the skill state.
+Legacy schema-v1 migration is deterministic and atomic:
 
-## Enrollment / mutation
-Normal enrollment accepts existing `actor.survivor` WHAT entities and starts all six at level 0 / XP 0. Public setup may set normalized level+XP for generated backgrounds. Positive XP awards use the catalog progression policy. Unknown skills and invalid levels/XP are rejected. Same-value setup and XP awards at cap are no-ops.
+- legacy Technical becomes Mechanical;
+- Survival takes the strongest accumulated progression among legacy Scavenging, Survival and Medical rather than summing three histories;
+- Awareness and Stealth begin at 0/0;
+- Combat and Social retire without dishonest remapping.
 
-## Persistence
-Deterministic schema-v1 snapshot/restore with actor and catalog order, atomic malformed/unknown-skill rejection, global revision and per-actor version.
+## Shared action check
 
-## Boundaries
-Allowed: read-only WHAT validation + 13C catalog.
-Forbidden: WHEN, Health, Needs, Inventory/Hands/Carry, Combat/AI, character-creator UI, renderer/art, reboot.
+`ActorSkillCheckService` is the canonical action-boundary competence service. Given actor, skill, authored difficulty and real WHEN action serial/context, it supplies:
+
+- skill-adjusted duration;
+- deterministic success chance/result;
+- bounded effectiveness;
+- bounded success/failure practice XP.
+
+It owns no item, health, target, environment or action scheduling truth. Consumers must still validate their real physical prerequisites and owning domain state.
+
+## Physical-action rule
+
+> **A skill changes how well a valid physical action is performed. It never substitutes for a missing physical prerequisite.**
+
+Where an action requires a tool/material, the real item must exist through canonical WHAT/containment truth. Examples include hammer+nails, wrench+bolts, screwdriver+wires and rag+alcohol.
+
+## Current real consumers
+
+- **System 32 Crafting** — Mechanical/Survival recipes use concrete physical materials, concrete tools, WHEN time and this shared skill check. The UI quotes the same service rather than duplicating skill math.
+- **System 24 searchable-container scavenging** — Survival affects search duration/outcome XP while persistent container contents remain the existing physical loot truth; skill never rerolls or manufactures contents.
+- **System 35 outdoor foraging** — Survival changes duration, success and bounded recovery yield for finite deterministic local stick/stone opportunities derived from real outdoor context.
+
+First aid, generalized repair, deconstruction/reclamation, vehicle hot-wiring, fire-starting, and real Awareness/Stealth action consumers remain future bounded integrations. Do not fake them in the skill owner.
+
+## Performance boundary
+
+Skills are evaluated at explicit action/query boundaries. No frame-driven skill processing, per-actor skill timers or recurring whole-world skill scans are permitted.
 
 ## Verification
-`ActorSkillsSmoke.gd` covers all six IDs/order, zero enrollment, exact 20/35/50 progression, multi-level awards, level-10 cap, setup validation, unknown-skill rejection, no-op version behavior, copy-safe reads, deterministic snapshot restore, and atomic malformed rejection.
 
-Initial complete System 13 candidate `78ed167678257749b093acd54e53e9f065cd8ce5` passed **Actor Stats Domains contract** run `31992365565` with no production repair.
-
-## Superseding future direction — not implemented
-
-The six-skill level/XP catalog above remains current executable truth only. The latest product direction replaces it with four skills: **Awareness, Stealth, Mechanical and Survival**. Survival subsumes first aid, scavenging, fire-starting and primitive survival crafting; Mechanical subsumes repair, deconstruction/reclamation and vehicle hot-wiring. World interactions and recipes should share concrete tool + resource/material + skill checks. This redesign is intentionally outside the current Health/Fatigue/Needs/Moodlet operation.
-
-## Approved decisions — 2026-08-16
-1. Initial skills are Combat, Scavenging, Survival, Medical, Technical, Social.
-2. Skills are catalog entries, not fixed actor fields.
-3. Levels are 0..10 with persistent XP.
-4. Threshold is exactly `20 + current_level * 15`.
-5. Large awards may cross multiple levels.
-6. Level 10 stores zero progression XP.
-7. 13C owns base progression only; effective-skill modifiers remain outside.
-8. Background/player-story setup uses public mutations.
-9. UI later enumerates the catalog dynamically.
+Owning coverage includes `ActorSkillsSmoke.gd`, System-32 crafting tests, System-24 loot/search tests, System-35 outdoor-forage smoke and canonical startup/playable-boot regressions.
