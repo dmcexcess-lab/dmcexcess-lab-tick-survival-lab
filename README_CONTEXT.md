@@ -4,72 +4,89 @@ Last updated: **2026-09-03**
 
 This is the authoritative continuation checkpoint. Read `README_SOPS.md`, fetch current `main` once, and continue from **NEXT OPERATION**.
 
-## Current verified executable
+## Current repository / executable state
 
-- **Exact gameplay executable:** `11035c7d0b1dd7eb01b076aec244b818d7f6fe56` — `Add bounded outdoor Survival forage`
-- **Exact-head GitHub Actions:** **51 completed runs, 51 successes, zero failures, zero queued, zero running, zero cancelled**.
-- Includes successful `verify/outdoor-forage`, full protected repository verification, the streaming/materialization 12-seed planner + playable boot matrices, exact-head status publishing and Pages deployment.
-- **Live build:** `https://dmcexcess-lab.github.io/dmcexcess-lab-tick-survival-lab/`
-- Commits after the executable are documentation-only and do not change gameplay code.
+- **Latest gameplay source candidate:** `c0b1464cbe478cea174d78f33d5510b5e62a24f1` — forage UI overlap repair.
+- **Last exact-head automated-green executable:** `11035c7d0b1dd7eb01b076aec244b818d7f6fe56` — bounded outdoor Survival forage before the UI-only repair.
+- `11035c7d0b1dd7eb01b076aec244b818d7f6fe56` completed **51/51 exact-head GitHub Actions runs successfully**, with zero failures, queued, running or cancelled, including `verify/outdoor-forage`, full protected repository verification, 12-seed planner/playable boot matrices, Pages deployment and exact-head status publishing.
+- The commits after `c0b1464cbe478cea174d78f33d5510b5e62a24f1` are documentation-only; they do not change gameplay code.
+- **Live build URL:** `https://dmcexcess-lab.github.io/dmcexcess-lab-tick-survival-lab/`
+- **Important:** do not assume the live Pages build contains the UI repair yet. GitHub created zero Actions runs for the connector-authored repair commits, so Pages did not redeploy from this tool session.
 
-## Completed operation — bounded outdoor Survival foraging
+## Completed source repair — forage hidden by Weather DEV controls
 
-The primitive Survival chain now has a real outdoor acquisition seam rather than relying only on searchable containers.
+User reported that the new forage button was blocked by the Weather DEV options.
 
-### Real local opportunity truth
+The root cause was exact and local:
 
-- `OutdoorForageState` stores sparse persistent depletion only for deterministic **8x8 world patches** that are actually touched by a valid forage request.
-- Patch identity is stable from world seed + patch coordinates.
-- A patch stores finite opportunity count plus deterministic stick/stone weighting; it does **not** pre-spawn or simulate hidden ground items.
-- There is **no passive replenishment / respawn loop** in this implementation.
+- `WeatherDevControls` occupied `(344, 66)` with size `288x78` on CanvasLayer 35.
+- `ForagePlayerControls` occupied `(340, 66)` with size `292x78` on CanvasLayer 34.
+- The two panels were therefore almost perfectly stacked, and the higher-layer Weather DEV panel visually/input-wise covered forage.
 
-### Real environment validation
+### Repair now in source
 
-`ForageNearbyActionService` evaluates plausibility only when a forage action is requested/committed, using existing owners:
+`ForagePlayerControls.gd` now uses the unused lower-left compact-control slot:
 
-- real materialized terrain;
-- canonical `SkyExposureQuery` for outdoors/enclosure truth;
-- a bounded scan of the current 8x8 patch;
-- actual generated tree/shrub/rock object semantics from the environment-profile catalog.
+- Survival: upper-left `(8, 66)`, `326x78`;
+- Weather DEV: upper-right `(344, 66)`, `288x78`;
+- **Forage: lower-left `(8, 148)`, `326x78`;**
+- Utilities DEV: lower-right `(344, 148)`, `288x100`.
 
-Water, unmaterialized ground, indoors, or otherwise implausible contexts hard-block without spending an opportunity. No recurring whole-world scan was added.
+Additional repair details:
 
-### WHEN + Survival
+- forage panel geometry is exposed as stable constants;
+- the live panel has stable node name `ForagePanel`;
+- button width was adjusted to the wider left-column panel;
+- no forage simulation, depletion, timing, skill, item, weather or utility behavior changed.
 
-- action: `survival.forage_nearby`;
-- base duration: 10 ticks;
-- Survival difficulty: 2;
-- canonical WHEN owns elapsed time and cancellation;
-- canonical `ActorSkillCheckService` owns skill-adjusted duration, deterministic success/effectiveness and bounded XP;
-- resolution uses the real WHEN action serial/context, so the service does not add a parallel RNG or free reroll seam.
+### New regression
 
-Behavior:
+Added `game/scripts/ci/ForageUiLayoutSmoke.gd`.
 
-- starting a valid action does not consume the opportunity yet;
-- canceling before commit consumes nothing and creates nothing;
-- a valid completed search consumes one local opportunity even if no material is recovered;
-- depleted patches hard-block further attempts and do not auto-refill;
-- high effectiveness may recover two physical units from one opportunity, otherwise one;
-- internal commit failures use bounded compensation before mutations escape the service.
+It instantiates the **actual**:
 
-### Physical output truth
+- `ConditionPlayerControls`;
+- `WeatherDevControls`;
+- `ForagePlayerControls`;
+- `UtilityDevControls`.
 
-Successful recovery uses existing real semantics:
+It asserts their canonical rectangles and fails if forage intersects Weather, Survival or Utilities. `.github/workflows/outdoor-forage.yml` now runs this layout smoke in addition to the existing forage behavior, skill, crafting, loot and canonical-startup regressions.
 
-- `item.outdoors.sturdy_stick` — Sturdy Stick;
-- `item.outdoors.smooth_stone` — Smooth Stone.
+## Verification limitation for the UI repair
 
-Outputs are created through canonical `WorldMutationService` as real persistent WHAT entities and placed on the survivor cell in the normal `LOOSE_ITEM` spatial layer.
+The source repair is committed on `main`, but exact-head Actions verification could not be triggered from the available GitHub connector.
 
-**Forage does not directly grant inventory.** Existing pickup, hands, inventory, containment and carry-weight owners remain authoritative.
+Observed facts:
 
-### Live surface
+- source commit `4c18feef6cf4356ce7b32b03301ebaa5e32121c4` moved `main` successfully but produced **0 GitHub Actions runs**;
+- a second normal Contents-API source commit, `c0b1464cbe478cea174d78f33d5510b5e62a24f1`, also produced **0 GitHub Actions runs**;
+- repeated exact-head Actions queries returned zero runs/statuses for those SHAs;
+- the installed GitHub connector exposes workflow/run reads and reruns, but **no workflow-dispatch/start-new-run action**;
+- local fallback is unavailable in this session: no local Godot executable and the container cannot reach GitHub normally for a clone/download.
 
-A compact `FORAGE NEARBY` control is composed **adjacent to** the existing survival controls. It is only a request/result surface; resource, skill, time and item truth remain in their owning systems.
+Therefore:
+
+- **do not call `c0b1464...` exact-head CI green yet;**
+- **do not call the live Pages build repaired yet;**
+- the last fully automated-green executable remains `11035c7d...`;
+- the UI source change itself is narrow and statically clear, but its new Godot layout smoke still needs an actual Actions execution.
+
+## Outdoor forage behavior remains canonical
+
+The already-verified forage system remains unchanged by the UI repair:
+
+- one sparse persistent depletion record per deterministic 8x8 world patch;
+- real materialized terrain + sky exposure + bounded local natural context determine plausibility;
+- no recurring whole-world scan or resource respawn loop;
+- WHEN owns time/cancellation;
+- canonical Survival skill checks own duration/success/effectiveness/XP;
+- valid failed searches consume finite opportunity; cancellation/impossible contexts do not;
+- success creates real `Sturdy Stick` / `Smooth Stone` WHAT entities as ordinary `LOOSE_ITEM` objects at the survivor location;
+- pickup, hands, inventory, containment and carry weight remain existing owners.
 
 ## Four-skill contract remains canonical
 
-The live player skill catalog is exactly:
+The live skill catalog is exactly:
 
 - **Awareness**;
 - **Stealth**;
@@ -78,7 +95,7 @@ The live player skill catalog is exactly:
 
 Mechanical covers practical machinery work such as repair, deconstruction/reclamation and hot-wiring when those owning systems exist. Survival covers first aid, scavenging/foraging, fire-starting and primitive survival crafting.
 
-The shared rule is:
+Shared rule:
 
 > **Concrete physical prerequisite + owning world state + relevant broad skill + real WHEN time.**
 
@@ -90,16 +107,9 @@ Current real skill consumers:
 - System 24 searchable-container scavenging — Survival timing/practice without rerolling physical contents;
 - System 35 outdoor foraging — Survival duration/success/effectiveness over finite local opportunities.
 
-Legacy six-skill schema-v1 saves migrate atomically into schema v2: Technical -> Mechanical; Survival takes the strongest accumulated progression among legacy Scavenging/Survival/Medical; Awareness and Stealth begin at 0/0; Combat/Social retire.
-
 ## Primitive Survival resources/crafting already live
 
-Real primitive resources include:
-
-- Sturdy Stick;
-- Smooth Stone;
-- Old Magazine;
-- existing Rag Bundle / Dirty Rag / Old Newspaper semantics.
+Real primitive resources include Sturdy Stick, Smooth Stone, Old Magazine and existing Rag Bundle / Dirty Rag / Old Newspaper semantics.
 
 Existing bounded Survival recipes include:
 
@@ -107,56 +117,19 @@ Existing bounded Survival recipes include:
 2. **Improvised Stone Hammer** — Sturdy Stick + Smooth Stone + Dirty Rag + Scissors;
 3. **Paper Tinder Bundle** — Old Newspaper + Old Magazine + Scissors.
 
-These are real physical transformations through System 32. Do **not** infer unimplemented effects from item names:
-
-- the stake has no invented combat damage behavior yet;
-- the stone hammer is not yet a generalized replacement for normal Hammer requirements;
-- tinder has no invented ignition behavior yet;
-- primitive armor is not implemented by this slice.
-
-Connect those outputs only through real combat/tool/fire/equipment owners when those consumers exist.
-
-## Verification completed
-
-Executable `11035c7d0b1dd7eb01b076aec244b818d7f6fe56` is exact-head automated-green.
-
-Owning forage verification proves:
-
-- valid outdoor request and finite depletion;
-- physical loose-item outputs;
-- bounded high-skill two-unit recovery;
-- cancellation consumes no opportunity and creates no output;
-- failed valid search consumes the opportunity, awards bounded Survival practice XP and manufactures no item;
-- impossible water context hard-blocks and creates no depletion record;
-- sparse depletion snapshot round-trip;
-- deterministic same-seed/patch/opportunity results.
-
-Protected exact-head verification also passed:
-
-- Actor Skills, System 32 Crafting and System 24 World Loot;
-- Health / Needs / Carry / Moodlet / Freshness domains;
-- movement, running, exertion, input responsiveness and damage interruption;
-- interaction/reach and spatial sound;
-- System 33 power/water;
-- physical lighting, perception/LOS and large visual geometry;
-- procedural generation and streaming/materialization;
-- full 12-seed procedural planner matrix and canonical playable boot matrix;
-- canonical startup;
-- Pages build/deployment and exact-head status publishing.
-
-Final automated state: **51/51 exact-head run records successful; no failed, pending, queued or cancelled run remains.**
+Do not infer unimplemented effects from item names: the stake has no invented combat damage yet; the stone hammer is not a generalized hammer substitute; tinder has no invented ignition behavior; primitive armor is not implemented by this slice.
 
 ## Existing survivor-condition contract remains protected
 
-- **Fatigue:** `0` rested -> `100` physically exhausted.
+- **Fatigue:** `0` rested -> `100` exhausted.
 - **Rest:** separate high-is-good long-horizon sleep/recovery condition.
-- There is no parallel live Stamina pool or Stamina HUD meter.
-- Walking adds small Fatigue; running adds materially more and scales with terrain and real carried load.
+- No parallel live Stamina pool/HUD meter.
+- Walking adds small Fatigue; running adds materially more and scales with terrain/load.
 - Severe Fatigue blocks starting another run but never removes ordinary walking.
-- Physical action time does not secretly recover Fatigue; explicit rest/sleep actions relieve it.
-- Continued exertion beyond maximum Fatigue can cause real Health damage down to zero.
+- Explicit rest/sleep relieves Fatigue; physical action time does not secretly recover it.
+- Continued overexertion can cause real Health damage down to zero.
 - Starvation, dehydration and sleep deprivation apply bounded real HP damage through Health.
-- Moodlets remain derived warnings, not duplicated stored truth.
+- Moodlets remain derived warnings, not duplicate stored truth.
 
 ## Protected neighboring behavior
 
@@ -167,27 +140,26 @@ Final automated state: **51/51 exact-head run records successful; no failed, pen
 - Do not reintroduce wastewater/sewer/septic.
 - Do not fake items, facilities, action resources, skill outcomes or condition/moodlet truth in UI.
 - Do not add frame-driven condition/skill/resource processing, per-actor timers or recurring whole-world scans.
-- Do not weaken owning Skills, Forage, Crafting, Loot, Health/Carry/input/utility tests or the consolidated procedural/playable-boot matrices.
+- Do not weaken owning Skills, Forage, Crafting, Loot, Health/Carry/input/utility tests or consolidated procedural/playable-boot matrices.
 
 ## Human acceptance status
 
-Automated verification is complete, but human browser acceptance is still required for current visible/game-feel behavior on WebGL2 desktop and phone/Safari:
+Human acceptance remains pending. Once the repaired source is actually built/deployed, explicitly verify:
 
+- `FORAGE NEARBY` is visible and clickable while Weather DEV controls are present;
+- Survival / Weather / Forage / Utilities occupy four distinct compact slots without overlap;
+- forage result messaging and finite depletion still feel correct;
+- recovered sticks/stones use ordinary pickup behavior;
 - Fatigue/rest/needs/health/moodlet feel;
-- four-skill crafting and searchable-container scavenging presentation;
-- `FORAGE NEARBY` usability, result messaging, finite depletion and ordinary pickup of recovered sticks/stones;
-- movement responsiveness, lighting/LOS and startup baseline;
-- generated System-33 power-line/substation/water/well behavior across representative fresh seeds.
+- movement responsiveness, lighting/LOS/startup baseline;
+- generated System-33 power/substation/water/well behavior on representative fresh seeds;
+- desktop WebGL2 and phone/Safari layouts.
 
 ## NEXT OPERATION
 
-1. **Human-play the current Web build** on desktop WebGL2 and phone/Safari across the acceptance items above. Treat any visible/game-feel defect as the next repair before expanding scope.
-2. If accepted and no newer user direction supersedes it, implement the next bounded **real primitive Survival consumer** using the now-real resources/crafted outputs. Do not invent weapon/tool/fire effects merely because an item name suggests them.
-3. Remaining Phase-6 integrations, only through their real owners:
-   - first aid through Health/Injury;
-   - Mechanical repair and deconstruction/reclamation through actual target owners;
-   - hot-wiring once vehicle ownership exists;
-   - fire-starting through a real ignition/fire owner;
-   - real Awareness and Stealth gameplay consumers.
+1. **First close the verification/deployment gap for source `c0b1464cbe478cea174d78f33d5510b5e62a24f1`.** Trigger or observe a genuine GitHub Actions event (user-originated push, workflow dispatch, or future tool path that emits the event). Require at minimum `verify/outdoor-forage` with `FORAGE_UI_LAYOUT_SMOKE_OK`, canonical startup, and Pages deployment to complete successfully. If any gate fails, repair it and repeat.
+2. Human-play the deployed build and confirm the forage control is no longer covered by Weather DEV or any neighboring panel.
+3. Only after that gate—or newer explicit user direction—resume feature expansion. The next bounded implementation should be a **real** primitive Survival consumer or a real Mechanical repair/deconstruction owner integration. Do not invent combat/tool/fire effects merely from item names.
+4. Later integrations remain first aid through Health/Injury; Mechanical repair/deconstruction/reclamation; hot-wiring after vehicles exist; fire-starting through a real ignition/fire owner; real Awareness and Stealth gameplay consumers.
 
 Newest explicit user direction supersedes this NEXT OPERATION.
