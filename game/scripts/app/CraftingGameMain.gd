@@ -53,7 +53,9 @@ func _boot_crafting_runtime() -> bool:
         _skill_checks,
         _loot_items,
         FixtureClass.active_seed(),
-        _forage_state
+        _forage_state,
+        _inventory_mutations,
+        _carry_acquisition
     )
     if not _forage_actions.is_ready():
         return false
