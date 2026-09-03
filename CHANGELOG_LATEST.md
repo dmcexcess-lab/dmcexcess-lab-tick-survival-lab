@@ -13,7 +13,7 @@ Verified executable: `156ee4b0a1727a5d5d26b479cf7a0dea9e9b462a`
 - Restored live `Injured` / `Badly Injured` / `No Vitality` and `Heavy Load` / `Overburdened` moodlets by deriving them directly from Health and Carry rather than storing duplicate flags.
 - Updated the canonical HUD and player status shell to show Health and Fatigue directly, including Fatigue's current action-cost modifier.
 - Left the existing skill, scavenging, crafting, and sound runtime unchanged. The next skill direction is recorded as four broad skills—Awareness, Stealth, Mechanical, Survival—with field actions and crafting sharing concrete tool + material + skill checks.
-- Verified the executable with **50 completed exact-head workflows, 50 successes, zero failures and zero pending**, including the owning System 34 regression, protected canonical/UI/input/utility contracts, the 12-seed playable boot matrix, and successful Pages deployment.
+- Verified the executable with **51 completed exact-head workflows, 51 successes, zero failures and zero pending**, including the owning System 34 regression, protected canonical/UI/input/utility contracts, the 12-seed playable boot matrix, successful Pages deployment, and the aggregate exact-head status publisher.
 
 ## Procedural Boot / Black-Screen Recovery — 2026-08-31
 

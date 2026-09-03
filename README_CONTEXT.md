@@ -7,7 +7,7 @@ This is the authoritative continuation checkpoint. Read `README_SOPS.md`, fetch 
 ## Current verified head
 
 - **Exact gameplay executable:** `156ee4b0a1727a5d5d26b479cf7a0dea9e9b462a` — `Align health fatigue needs and moodlets`
-- **Exact-head result:** **50 completed workflows, 50 successes, zero failures, zero pending**.
+- **Exact-head result:** **51 completed workflows, 51 successes, zero failures, zero pending**.
 - **Owning System 34 run:** `33807332330` — completed / success.
 - **Pages build/deploy run:** `33807332596` — completed / success.
 - **Streaming/materialization and 12-seed playable-boot run:** `33807332569` — completed / success.
@@ -63,7 +63,7 @@ Local Godot 4.7.1 verification passed:
 - protected System-33 power/water regression;
 - canonical playable startup with `CANONICAL_DEMO_BOOT_OK`.
 
-GitHub exact-head verification then completed 50/50 successfully, including Pages and the full 12-seed procedural playable-boot matrix.
+GitHub exact-head verification then completed 51/51 successfully, including Pages, the full 12-seed procedural playable-boot matrix, and the aggregate exact-head status publisher.
 
 ## New skill direction — recorded, not implemented in this operation
 
