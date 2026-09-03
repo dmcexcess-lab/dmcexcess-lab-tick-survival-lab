@@ -87,7 +87,7 @@ func _boot_crafting_runtime() -> bool:
         return false
     if not _loot_panel.configure(_loot_inspection, _inventory_inspector, FixtureClass.PLAYER_ID, _ui_icons):
         return false
-    if not _crafting_panel.configure(_crafting_plans, _kernel, FixtureClass.PLAYER_ID, _ui_icons):
+    if not _crafting_panel.configure(_crafting_plans, _kernel, FixtureClass.PLAYER_ID, _ui_icons, _skill_checks):
         return false
 
     _crafting_controller = CraftingControllerClass.new(

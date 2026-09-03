@@ -12,6 +12,7 @@ const VIEW_SIZE := Vector2(640, 844)
 var _plans: CraftingPlanQuery = null
 var _kernel: TickKernel = null
 var _icons: SemanticUiIconCatalog = null
+var _skill_checks: ActorSkillCheckService = null
 var _actor_id: String = ""
 var _workstation_id: String = ""
 var _pause_restore_captured: bool = false
@@ -30,7 +31,8 @@ func configure(
     plan_query: CraftingPlanQuery,
     kernel: TickKernel,
     actor_id: String,
-    icon_catalog: SemanticUiIconCatalog = null
+    icon_catalog: SemanticUiIconCatalog = null,
+    skill_check_service: ActorSkillCheckService = null
 ) -> bool:
     if plan_query == null or not plan_query.is_ready() or kernel == null or actor_id.strip_edges().is_empty():
         return false
@@ -38,6 +40,7 @@ func configure(
     _kernel = kernel
     _actor_id = actor_id.strip_edges()
     _icons = icon_catalog
+    _skill_checks = skill_check_service
     return true
 
 func is_configured() -> bool:
@@ -162,8 +165,15 @@ func _render() -> void:
         if recipe_value == null:
             continue
         var plan: Dictionary = _plans.query(_actor_id, recipe_id, _workstation_id)
-        snapshots.append(plan.duplicate(true))
-        _append_recipe(recipe_value, plan)
+        var quote: Dictionary = _skill_quote(recipe_value)
+        var snapshot: Dictionary = plan.duplicate(true)
+        snapshot["quoted_duration_ticks"] = int(quote.get("duration_ticks", recipe_value.duration_ticks))
+        snapshot["skill_id"] = recipe_value.skill_id
+        snapshot["skill_level"] = int(quote.get("skill_level", -1))
+        snapshot["skill_difficulty"] = recipe_value.skill_difficulty
+        snapshot["success_chance_percent"] = int(quote.get("success_chance_percent", 0))
+        snapshots.append(snapshot)
+        _append_recipe(recipe_value, plan, quote)
     _last_snapshot = {
         "open": is_open(),
         "actor_id": _actor_id,
@@ -173,7 +183,7 @@ func _render() -> void:
         "recipes": snapshots,
     }
 
-func _append_recipe(recipe_value: CraftingRecipe, plan: Dictionary) -> void:
+func _append_recipe(recipe_value: CraftingRecipe, plan: Dictionary, quote: Dictionary) -> void:
     var card := PanelContainer.new()
     card.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     _body.add_child(card)
@@ -197,7 +207,8 @@ func _append_recipe(recipe_value: CraftingRecipe, plan: Dictionary) -> void:
             icon.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
             heading.add_child(icon)
     var title_label := Label.new()
-    title_label.text = "%s — %d ticks" % [recipe_value.label, recipe_value.duration_ticks]
+    var duration_ticks: int = int(quote.get("duration_ticks", recipe_value.duration_ticks))
+    title_label.text = "%s — %d ticks" % [recipe_value.label, duration_ticks]
     title_label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
     title_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
     title_label.add_theme_font_size_override("font_size", 16)
@@ -208,6 +219,17 @@ func _append_recipe(recipe_value: CraftingRecipe, plan: Dictionary) -> void:
     if not String(recipe_value.workstation_capability).is_empty():
         _append_to(root, "Workstation: General Workbench", 12)
     _append_to(root, "Produces: %s" % _requirements_text(recipe_value.outputs), 12)
+    if bool(quote.get("ok", false)):
+        _append_to(
+            root,
+            "%s %d/10 • difficulty %d • %d%% success" % [
+                _skill_label(recipe_value.skill_id),
+                int(quote.get("skill_level", 0)),
+                recipe_value.skill_difficulty,
+                int(quote.get("success_chance_percent", 0)),
+            ],
+            12
+        )
 
     var ready: bool = bool(plan.get("ready", false))
     var reason: String = String(plan.get("reason", ""))
@@ -222,11 +244,30 @@ func _append_recipe(recipe_value: CraftingRecipe, plan: Dictionary) -> void:
 
     var button := Button.new()
     button.text = "CRAFT"
-    button.disabled = not ready
+    button.disabled = not ready or not bool(quote.get("ok", true))
     button.custom_minimum_size = Vector2(0, 46)
     button.focus_mode = Control.FOCUS_NONE
     button.pressed.connect(_on_craft_pressed.bind(recipe_value.recipe_id))
     root.add_child(button)
+
+func _skill_quote(recipe_value: CraftingRecipe) -> Dictionary:
+    if _skill_checks == null or not _skill_checks.is_ready():
+        return {
+            "ok": true,
+            "duration_ticks": recipe_value.duration_ticks,
+            "skill_level": -1,
+            "success_chance_percent": 0,
+        }
+    return _skill_checks.action_profile(
+        _actor_id,
+        recipe_value.skill_id,
+        recipe_value.duration_ticks,
+        recipe_value.skill_difficulty
+    )
+
+static func _skill_label(skill_id: StringName) -> String:
+    var label: String = String(skill_id).replace("_", " ").capitalize()
+    return label if not label.is_empty() else "Skill"
 
 func _on_craft_pressed(recipe_id: StringName) -> void:
     var workstation: String = _workstation_id
