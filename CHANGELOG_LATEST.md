@@ -4,16 +4,18 @@ This compact ledger records the newest executable work. `CHANGELOG.md` remains t
 
 ## Forage UI Overlap Repair — 2026-09-03
 
-Latest source head for the repair: `c0b1464cbe478cea174d78f33d5510b5e62a24f1`
+Verified executable: `fd8913df39113356bfd908377c357bbb91d54e60`
 
 - Fixed the reported live-control overlap where `FORAGE NEARBY` was almost exactly underneath the higher-layer Weather DEV panel.
 - Root cause was literal hard-coded geometry: Weather occupied `(344, 66)` at `288x78`, while forage occupied `(340, 66)` at `292x78`.
-- Moved forage into the unused lower-left compact-control slot at `(8, 148)` with size `326x78`; Utilities remains lower-right at `(344, 148)`.
+- Moved forage into the lower-left compact-control slot at `(8, 148)` with size `326x78`; Utilities remains lower-right at `(344, 148)`.
 - Added stable forage panel geometry constants and a `ForagePanel` node name.
-- Added `ForageUiLayoutSmoke.gd`, which instantiates the real Survival / Weather / Forage / Utilities panels and fails if forage intersects any neighboring control.
-- Wired that regression into `verify/outdoor-forage` alongside the existing behavior, skills, crafting, loot and canonical-startup checks.
+- Added `ForageUiLayoutSmoke.gd`, which instantiates the real Survival / Weather / Forage / Utilities controls, waits for their real `_ready()` lifecycle, asserts their canonical rectangles and fails on overlap.
+- Added `pull_request` verification to the dedicated Outdoor forage workflow so future forage/layout changes have a genuine pre-merge owning gate.
+- The first real main gate correctly exposed a lifecycle bug in the new smoke harness; the forage behavior smoke itself passed. The harness was repaired on PR #2 and its full owning gate passed before merge.
+- Final executable `fd8913df39113356bfd908377c357bbb91d54e60` completed **50/50 exact-head Actions runs successfully**, with zero failures, queued or running runs.
+- Exact-head Pages deployment run `33818678774` completed successfully; the repaired forage layout is deployed.
 - No forage simulation, resource, timing, skill, item, renderer or weather behavior changed.
-- GitHub created zero Actions runs for the connector-authored repair commits, and the available connector exposes no workflow-dispatch action. Therefore this UI repair is **source-complete but not exact-head Actions/Pages verified yet**. The deployed Pages build may still be the pre-fix build until an external/user-originated Actions event runs successfully.
 
 ## Outdoor Survival Foraging — 2026-09-03
 
