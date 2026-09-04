@@ -192,7 +192,9 @@ func request_action(actor_id: String, target_id: String, action_id: StringName) 
         var destination: Variant = _window_climb_destination(actor, target)
         if typeof(destination) != TYPE_VECTOR2I:
             return _rejected("window_climb_destination_blocked")
-        payload["destination"] = destination
+        var destination_cell: Vector2i = destination
+        # WHEN payloads intentionally remain primitive/array/dictionary only.
+        payload["destination"] = [destination_cell.x, destination_cell.y]
 
     var phases: Array[ActionPhase] = [PhaseClass.new(COMMIT_PHASE, duration)]
     var serial: int = _kernel.begin_action(
@@ -462,17 +464,24 @@ func _restore_target_state(target: String, before: Dictionary) -> void:
     _state.set_destroyed(target, bool(before.get("destroyed", false)), &"interaction_rollback")
 
 func _commit_window_climb(action: TimedAction, target: String) -> bool:
-    var expected: Variant = action.payload.get("destination", null)
-    var current: Variant = _window_climb_destination(action.actor_id, target)
-    if typeof(expected) != TYPE_VECTOR2I or typeof(current) != TYPE_VECTOR2I or expected != current:
+    var expected_value: Variant = action.payload.get("destination", [])
+    if typeof(expected_value) != TYPE_ARRAY:
         return false
+    var expected_array: Array = expected_value
+    if expected_array.size() != 2:
+        return false
+    var expected := Vector2i(int(expected_array[0]), int(expected_array[1]))
+    var current: Variant = _window_climb_destination(action.actor_id, target)
+    if typeof(current) != TYPE_VECTOR2I or expected != current:
+        return false
+    var current_cell: Vector2i = current
     var actor_placement: WorldPlacement = _world.placement(action.actor_id)
     if actor_placement == null:
         return false
     return _mutations.set_placement(
         action.actor_id,
         actor_placement.channel,
-        current,
+        current_cell,
         actor_placement.facing,
         actor_placement.footprint
     )

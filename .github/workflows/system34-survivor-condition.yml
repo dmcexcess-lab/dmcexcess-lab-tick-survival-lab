@@ -6,6 +6,7 @@ on:
     paths:
       - 'game/main.tscn'
       - 'game/scripts/app/System34GameMain.gd'
+      - 'game/scripts/app/VehicleGameMain.gd'
       - 'game/scripts/simulation/actors/condition/**'
       - 'game/scripts/simulation/actors/carry/ActorCarryQuery.gd'
       - 'game/scripts/ui/ActorStatusSummaryQuery.gd'
@@ -45,7 +46,8 @@ jobs:
           test -f game/scripts/simulation/actors/condition/ActorConditionMoodletQuery.gd
           test -f game/scripts/simulation/actors/condition/SurvivorSustainmentActionService.gd
           test -f game/scripts/ci/System34SurvivorConditionSmoke.gd
-          grep -q 'System34GameMain.gd' game/main.tscn
+          grep -q 'VehicleGameMain.gd' game/main.tscn
+          grep -q 'extends System34GameMain' game/scripts/app/VehicleGameMain.gd
           grep -q 'configure_capacity_modifier' game/scripts/simulation/actors/carry/ActorCarryQuery.gd
           grep -q 'configure_condition' game/scripts/ui/ActorStatusSummaryQuery.gd
           grep -q 'TIER_GREEN' game/scripts/simulation/actors/condition/ActorConditionModifierQuery.gd

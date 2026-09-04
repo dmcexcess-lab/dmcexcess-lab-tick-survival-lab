@@ -209,9 +209,15 @@ func _on_world_changed(change: WorldChange) -> void:
         return
     if change.kind not in [Change.Kind.PLACEMENT_SET, Change.Kind.PLACEMENT_REMOVED, Change.Kind.ENTITY_REMOVED]:
         return
-    if (change.affects_channel(Layers.Channel.OBJECT) or change.affects_channel(Layers.Channel.STRUCTURE)) \
-        and _change_intersects_cached_reach(change):
-        affordances_changed.emit(&"reachable_interactable_changed")
+    if not _change_intersects_cached_reach(change):
+        return
+    # Preserve System-29's established OBJECT invalidation vocabulary for old consumers.
+    # STRUCTURE interactions are additive and get a distinct reason only when no OBJECT
+    # channel participates in the same placement change.
+    if change.affects_channel(Layers.Channel.OBJECT):
+        affordances_changed.emit(&"reachable_object_changed")
+    elif change.affects_channel(Layers.Channel.STRUCTURE):
+        affordances_changed.emit(&"reachable_structure_changed")
 
 func _on_world_batch_changed(batch: WorldChangeBatch) -> void:
     if batch == null: return
