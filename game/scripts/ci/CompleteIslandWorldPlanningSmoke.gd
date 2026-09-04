@@ -31,10 +31,10 @@ func _initialize() -> void:
 
     _check(plan.profile_id == ProfilesClass.TEMPERATE_ISLAND_REGION, "island profile identity is recorded")
     _check(plan.profile_version == 7, "town-first island profile v7 is recorded")
-    _check(plan.bounds.size == Vector2i(3328, 3328), "settlement-first envelope determines island size")
+    _check(plan.bounds.size == Vector2i(3072, 3072), "settlement-first envelope determines island size")
     _check(plan.area_sites.size() == 11, "island has eleven procedural settlement cores")
     _check(_site_profile_count(plan, &"smalltown.center") == 2, "island has two larger small-town anchors")
-    _check(_site_bounds_size_count(plan, &"smalltown.center", Vector2i(640, 640)) == 2, "both town anchors receive full 640-cell town envelopes")
+    _check(_site_bounds_size_count(plan, &"smalltown.center", Vector2i(384, 384)) == 2, "both town anchors receive full 384-cell town envelopes")
     _check(_site_profile_count(plan, &"rural.crossroads") == 3, "island has three rural crossroads")
     _check(_site_profile_count(plan, &"rural.scattered") == 6, "island has six rural home-and-farm clusters")
     _check(_sites_do_not_overlap(plan), "settlement envelopes do not overlap")
