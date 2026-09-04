@@ -131,7 +131,7 @@ func _route_player_intent(intent: StringName) -> void:
 func _wire_vehicle_lighting() -> bool:
     if _vehicle_lighting == null or _utility_lighting == null or _physical_lighting == null:
         return false
-    var inherited_callable := Callable(self, "_on_demo_lighting_emitters_changed")
+    var inherited_callable := Callable(self, "_on_lighting_emitters_changed")
     if _utility_lighting.emitters_changed.is_connected(inherited_callable):
         _utility_lighting.emitters_changed.disconnect(inherited_callable)
     var combined_callable := Callable(self, "_on_vehicle_lighting_inputs_changed")
