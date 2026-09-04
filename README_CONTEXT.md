@@ -6,12 +6,20 @@ This is the authoritative continuation checkpoint. Read `README_SOPS.md`, fetch 
 
 ## Current repository / executable truth
 
-- **Current verified + deployed gameplay executable:** `da29b972d40ca5c00373a0d8f8e3650a24967cb1` — three-cell 90-degree vehicle turn arcs plus smaller truck presentation.
-- `da29b972...` completed **50 Actions runs successfully**, with **0 failed, 0 queued, 0 running** at terminal verification.
-- System 36 run **`33832201227`** and canonical demo run **`33832201314`** completed successfully.
-- Pages run **`33832201280`** completed both Web build and deploy successfully.
+- **Current verified + deployed gameplay executable:** `45571e50630bc5f61e1db2c36d0e2fda26ad8c89` — authoritative 1×3 car and 2×4 truck footprints with aligned rendering.
+- `45571e50...` completed **50 Actions runs successfully**, with **0 failed, 0 queued, 0 running** at terminal verification.
+- System 36 run **`33833089551`** and canonical demo run **`33833089581`** completed successfully.
+- Pages run **`33833089545`** completed both Web build and deploy successfully.
 - **Live build:** `https://dmcexcess-lab.github.io/dmcexcess-lab-tick-survival-lab/`
-- The commit containing this handoff is a later `[skip ci]` documentation-only head; no gameplay/source differs from `da29b972...`.
+- The commit containing this handoff is a later `[skip ci]` documentation-only head; no gameplay/source differs from `45571e50...`.
+
+## Completed repair — authoritative car and truck footprints
+
+- Cars now have one authoritative **1×3-cell** footprint; trucks have one authoritative **2×4-cell** footprint.
+- `VehicleProfileCatalog` supplies those dimensions to procedural vehicle seeding and real WHAT placement. The resulting stored `SpatialFootprint` is used by occupancy and every movement collision query.
+- The truck-only 78% presentation multiplier is removed. Vehicle rendering derives size from the same profile dimensions and centers each sprite over the placement's actual rotated occupied-cell bounds rather than the anchor cell.
+- Owning smoke coverage asserts the exact three-cell car mask and eight-cell truck mask, including rejected out-of-bounds offsets. There is no separate fake visual hitbox.
+- Local Godot 4.7.1 import, the owning/protected suites, spatial sound and canonical startup passed; exact-head CI and Pages are fully green.
 
 ## Completed repair — three-cell 90-degree turns and smaller truck
 
@@ -386,9 +394,9 @@ After vehicle human acceptance—or newer explicit user direction—perform one 
 
 ## NEXT OPERATION
 
-1. **Human-play executable `da29b972...`** at `https://dmcexcess-lab.github.io/dmcexcess-lab-tick-survival-lab/`.
-2. Confirm each left/right input moves a true vehicle through a plausible three-square arc and completes exactly 90 degrees; report any direction/shape that cuts the wrong cells or feels too abrupt.
-3. Confirm the truck is now proportionate to the map and other cars. Also retain the prior check that **REVERSE** moves one cell backward while **BRAKE** remains the separate two-cell stop.
+1. **Human-play executable `45571e50...`** at `https://dmcexcess-lab.github.io/dmcexcess-lab-tick-survival-lab/`.
+2. Confirm car art visually occupies its real 1×3 cells and truck art its real 2×4 cells at cardinal and intermediate headings; report any visible overlap, offset or excess clearance as a concrete footprint/render issue.
+3. Retain the prior turn check: each left/right input follows a plausible three-square arc and completes 90 degrees. **REVERSE** remains one cell and **BRAKE** remains the separate two-cell stop.
 4. If any concrete issue is reported, inspect only the owning seam, repair it, run `verify/system36-vehicles` plus relevant protected regressions, and require exact-head Pages deployment before calling it live.
 5. Continue the broader vehicle acceptance checklist. Once accepted—or on newer explicit direction—begin the comprehensive skills/crafting/items/usable-object closure phase above.
 6. Later phases remain Actor/NPC AI + combat/causal outbreak, then final graphics/UI overhaul -> Beta.

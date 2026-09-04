@@ -4,7 +4,10 @@ This compact ledger records the newest executable work. `CHANGELOG.md` remains t
 
 ## True Car + Truck Footprints — 2026-09-04
 
-Exact-head verification pending publication.
+Verified executable: `45571e50630bc5f61e1db2c36d0e2fda26ad8c89`.
+
+- Exact-head verification completed with **50 successful Actions runs**, zero failures, queued or running runs.
+- System 36 run `33833089551`, canonical demo run `33833089581` and Pages build/deploy run `33833089545` completed successfully.
 
 - Made cars authoritative 1×3-cell objects and trucks authoritative 2×4-cell objects.
 - Removed the truck-only 78% presentation multiplier; generated placement, persistent occupancy, movement collision and sprite sizing now all consume the same profile dimensions.

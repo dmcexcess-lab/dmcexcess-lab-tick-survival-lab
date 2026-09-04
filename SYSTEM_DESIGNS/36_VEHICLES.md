@@ -301,6 +301,14 @@ Latest steering/scale repair:
 - canonical demo run `33832201314`: success;
 - Pages run `33832201280`: build success + deploy success.
 
+Latest authoritative-footprint repair:
+
+- executable `45571e50630bc5f61e1db2c36d0e2fda26ad8c89` makes cars real 1×3 objects and trucks real 2×4 objects, removes the truck presentation multiplier and centers art over actual occupied cells;
+- exact-head result: **50 successful Actions runs**, zero failures, queued or running runs;
+- System 36 run `33833089551`: success;
+- canonical demo run `33833089581`: success;
+- Pages run `33833089545`: build success + deploy success.
+
 The live browser build is deployed, but **human vehicle feel/UX acceptance remains pending**.
 
 ## Known implementation limitations / next closure
