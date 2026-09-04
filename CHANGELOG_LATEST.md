@@ -2,6 +2,18 @@
 
 This compact ledger records the newest executable work. `CHANGELOG.md` remains the historical archive.
 
+## Exact-Item Inventory First Aid — 2026-09-04
+
+Verified executable: `7d3341dc41e2cf7d32c0f83837e92955b807d9b4`.
+
+- Added real player-facing first aid from the normal inventory. Selecting bandages, gauze, medical tape or a first-aid kit exposes buttons for each exact untreated canonical injury.
+- Added the approved improvised recipe-in-use: one real rag bundle plus real disinfectant or alcohol wipes. Either selected component discovers the deterministic carried partner; both exact persistent entities are consumed only when treatment commits.
+- Survival now changes first-aid duration and outcome quality. A limited attempt stabilizes the wound; a successful attempt also marks it treated, and a successful first-aid-kit attempt can reduce severity by one tier.
+- The action uses authoritative WHEN, Health/Injury, hands, containment, WHAT and bounded Survival XP. Resources and injury truth are revalidated at completion, with item-state rollback on a later commit failure.
+- Painkillers and antibiotics intentionally expose no fake action until real pain/infection state owners exist.
+- Extended the normal inventory UI and live-scene smoke to prove exact-injury selection, real rag+disinfectant consumption, canonical treatment state and return to decision pause.
+- Exact executable head completed **53 successful Actions runs** with zero failures or pending runs. Pages run `33904661533` deployed successfully.
+
 ## Direct Inventory Item Actions — 2026-09-04
 
 Verified executable: `f54e35938d6ab6c3803d219374f3eea2e166d9cb`.

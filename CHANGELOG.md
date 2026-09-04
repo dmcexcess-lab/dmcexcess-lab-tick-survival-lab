@@ -1,5 +1,12 @@
 # Changelog
 
+## 2026-09-04 — Exact-Item Inventory First Aid
+
+- Added normal-inventory treatment of exact persistent injuries using real bandage/gauze/tape/kit supplies or the approved rag + disinfectant/alcohol-wipe combination.
+- Routed treatment through authoritative WHEN, Health/Injury, containment/hands, WHAT, Survival duration/outcome checks and bounded XP; limited attempts stabilize while successful attempts also treat.
+- Added commit-time revalidation/rollback and live-scene UI proof. Unsupported painkillers/antibiotics remain honestly inactive until pain/infection owners exist.
+- Exact executable `7d3341dc41e2cf7d32c0f83837e92955b807d9b4` passed 53/53 Actions runs; Pages run `33904661533` deployed successfully.
+
 ## 2026-09-04 — Direct Inventory Item Actions
 
 - Made normal inventory rows clickable and bound actions to the exact selected persistent item.
