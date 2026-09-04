@@ -2,6 +2,22 @@
 
 This compact ledger records the newest executable work. `CHANGELOG.md` remains the historical archive.
 
+## Canonical Ownership / Legacy Scaffold Cleanup — 2026-09-04
+
+Verified executable: `57e05556bb106ae9ce80a98b5878038cc3f9f171`.
+
+- Exact-head verification completed with **49 successful Actions runs**, zero failures, cancelled, queued or running runs.
+- Pages run `33836430303` completed successfully for the exact executable head.
+- Removed live construction of the superseded `ActorNeedsState`, legacy needs mobility modifier, old movement exertion service and old moodlet owner from `GameMain`; System 34 is now the only live survivor condition/Fatigue owner.
+- Kept the old Needs classes and focused historical fixtures in the tree as recovery/test substrate only; they are no longer part of normal gameplay composition.
+- Wired survivor hearing competence to the canonical **Awareness** skill while retaining real System-34 Fatigue/rest penalties. Historical legacy-needs sound fixtures keep their old isolated comparison path only until those tests are retired.
+- Replaced the nonexistent legacy `electrical_skill` utility-repair vocabulary with canonical **Mechanical** at the utility condition/network owner seam. This remains a low-level owner mutation; a player-facing utility repair action still needs real tools/materials and WHEN before final interaction closure can be called complete.
+- Removed automatic Utility DEV controls from production composition and removed Weather DEV controls from `game/main.tscn`; the DEV tool classes may still be injected deliberately for development but no longer boot in normal gameplay.
+- Deleted the empty `DemoLightingSourceAdapter` compatibility shim and retired stale workflow/smoke assertions whose only purpose was preserving it. Real flashlight, room-light, powered-fixture, outage, physical-shadow, glow and perception coverage remains.
+- Renamed the normal scene root from `CanonicalDemo` to `TickSurvivalGame`; fresh gameplay weather now starts from normal generated clear-state ownership rather than a forced rainy critique setup.
+- Preserved vehicle, lighting, utility, forage, inventory, persistence, System-34 condition/Fatigue and decision-pause input behavior.
+- Remaining bootstrap debt is explicit: `GeneratedIslandCritiqueFixture.gd` is still a live production dependency, `_boot_canonical_demo` / `CANONICAL_DEMO_BOOT_OK` remain compatibility names used by existing startup gates, and the `VehicleGameMain -> System34GameMain -> UtilityGameMain -> CraftingGameMain -> GameMain` inheritance stack still needs later composition flattening rather than another adapter layer.
+
 ## Compact Trucks + Full-Length Car Art — 2026-09-04
 
 Verified executable: `7d25720b8c3cb027659584f2f69f50ac38131f78`.
