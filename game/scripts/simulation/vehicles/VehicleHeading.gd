@@ -16,6 +16,21 @@ static func turn_left(value: int) -> int:
 static func turn_right(value: int) -> int:
     return normalize(value + 1)
 
+static func completed_turn_heading(value: int, direction: int) -> int:
+    return normalize(value + clampi(direction, -1, 1) * 3)
+
+static func turn_path(value: int, direction: int) -> Array[Vector2i]:
+    var turn_direction := clampi(direction, -1, 1)
+    if turn_direction == 0:
+        return []
+    var result: Array[Vector2i] = []
+    var current := Vector2i.ZERO
+    for step: int in range(1, 4):
+        var step_heading := normalize(value + turn_direction * step)
+        current += _heading_cardinal_step(step_heading)
+        result.append(current)
+    return result
+
 static func degrees(value: int) -> float:
     return float(normalize(value)) * STEP_DEGREES
 
@@ -46,3 +61,7 @@ static func _dominant_cardinal(dx: float, dy: float) -> Vector2i:
     if absf(dx) >= absf(dy):
         return Vector2i(1 if dx >= 0.0 else -1, 0)
     return Vector2i(0, 1 if dy >= 0.0 else -1)
+
+static func _heading_cardinal_step(value: int) -> Vector2i:
+    var angle := deg_to_rad(-90.0 + degrees(value))
+    return _dominant_cardinal(cos(angle), sin(angle))

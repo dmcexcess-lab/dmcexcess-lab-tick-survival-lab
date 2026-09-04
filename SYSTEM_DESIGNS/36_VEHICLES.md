@@ -103,9 +103,8 @@ For bicycle/motorcycle/car/truck:
 ### Turning
 
 - each committed turn movement advances through **3 cells**;
-- heading changes by **30 degrees per turning movement**;
-- the 12-state heading sequence therefore reaches each cardinal after three 30-degree turns;
-- collision legality is checked at every deterministic integer raster step;
+- heading changes by **30 degrees on each traversed cell**, completing a **90-degree turn** over the three-cell arc;
+- collision legality uses the matching 30-, 60- and 90-degree intermediate headings at their respective deterministic integer steps;
 - the exact typed heading is rendered independently of the cardinal WHAT facing.
 
 The raster is deterministic and integer-only. Exact arbitrary-angle swept polygon physics remains intentionally out of scope.
@@ -311,7 +310,8 @@ The live browser build is deployed, but **human vehicle feel/UX acceptance remai
 - skateboard behaves like running with no Fatigue cost and moves 2 cells;
 - skateboard is not treated as a full powered-vehicle steering model;
 - bicycles and all true vehicle classes use the 3-cell movement baseline;
-- moving true vehicles use **30-degree heading changes** during 3-cell turning moves;
+- moving true vehicles complete **90-degree turns across 3 cells**, changing heading by 30 degrees per cell;
+- truck presentation is deliberately scaled below its physical footprint so it remains readable without visually dominating the tactical map;
 - true vehicles require 2 cells of stopping/braking distance;
 - bicycles do incur Fatigue;
 - motorcycles are easier to steal, use less fuel and have less storage than cars;

@@ -2,6 +2,15 @@
 
 This compact ledger records the newest executable work. `CHANGELOG.md` remains the historical archive.
 
+## Three-Cell Vehicle Turn Arcs + Smaller Truck — 2026-09-04
+
+Exact-head verification pending publication.
+
+- Changed bicycle/motorcycle/car/truck steering so one left/right action completes a 90-degree turn across three adjacent tactical cells, applying and collision-checking 30 degrees of heading change per cell.
+- Kept skateboard steering actor-like and preserved reverse, braking, fuel/Fatigue, collision and integer-placement ownership.
+- Reduced the truck sprite to 78% of its prior presentation size without falsifying its physical collision footprint or cargo capacity.
+- Updated the mounted-control hint and System-36 smoke coverage for both mirrored turn arcs, completed headings and the smaller truck presentation.
+
 ## Dedicated Vehicle Sprites + Reverse — 2026-09-04
 
 Verified executable: `cec13dc39643d13b01a8da474e5a7cd0a3120d2e`.

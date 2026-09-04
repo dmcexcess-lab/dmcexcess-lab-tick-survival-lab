@@ -100,7 +100,7 @@ func _build_ui() -> void:
     box.add_child(_cargo_status)
 
     var hint := Label.new()
-    hint.text = "Mounted: forward drives; back reverses 1 cell; left/right steer 30°; BRAKE stops over 2 cells."
+    hint.text = "Mounted: forward drives; back reverses 1 cell; left/right turn 90° across 3 squares; BRAKE stops over 2 cells."
     hint.add_theme_font_size_override("font_size", 9)
     box.add_child(hint)
 

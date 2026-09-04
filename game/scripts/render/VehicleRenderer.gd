@@ -10,6 +10,7 @@ const VEHICLE_SPRITES: Dictionary = {
     VehicleProfileCatalog.CAR: preload("res://assets/vehicle_car.svg"),
     VehicleProfileCatalog.TRUCK: preload("res://assets/vehicle_truck.svg"),
 }
+const TRUCK_PRESENTATION_SCALE: float = 0.78
 
 var _world: WorldState
 var _state: VehicleState
@@ -38,6 +39,9 @@ func is_configured() -> bool:
 
 static func has_dedicated_sprite(kind: StringName) -> bool:
     return VEHICLE_SPRITES.has(kind) and VEHICLE_SPRITES.get(kind) is Texture2D
+
+static func presentation_scale(kind: StringName) -> float:
+    return TRUCK_PRESENTATION_SCALE if kind == VehicleProfileCatalog.TRUCK else 1.0
 
 func set_visible_window(origin: Vector2i, size_cells: Vector2i, cell_pixels: float) -> bool:
     if size_cells.x <= 0 or size_cells.y <= 0 or cell_pixels <= 0.0:
@@ -79,7 +83,7 @@ func _draw_vehicle(vehicle_id: String) -> void:
     var texture: Texture2D = VEHICLE_SPRITES[kind]
     var texture_size := texture.get_size()
     var fit_scale := minf(width / texture_size.x, height / texture_size.y)
-    var draw_size := texture_size * fit_scale
+    var draw_size := texture_size * fit_scale * presentation_scale(kind)
     draw_set_transform(center, angle)
     draw_texture_rect(texture, Rect2(-draw_size * 0.5, draw_size), false)
     draw_set_transform(Vector2.ZERO, 0.0)

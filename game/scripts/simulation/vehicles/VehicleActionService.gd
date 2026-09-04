@@ -206,11 +206,15 @@ func _begin_motion(actor_id: String, action_type: StringName, heading_delta: int
         return _reject("vehicle_not_started")
     if _profiles.is_motorized(kind) and int(rec.get("fuel", 0)) < _profiles.fuel_per_move(kind):
         return _reject("vehicle_out_of_fuel")
-    var target_heading := VehicleHeading.normalize(int(rec.get("heading", 0)) + heading_delta)
+    var start_heading := int(rec.get("heading", 0))
+    var target_heading := VehicleHeading.normalize(start_heading + heading_delta)
     var distance := distance_override if distance_override > 0 else _profiles.movement_cells(kind)
     if kind == VehicleProfileCatalog.SKATEBOARD and heading_delta != 0:
-        target_heading = VehicleHeading.normalize(int(rec.get("heading", 0)) + heading_delta * 3)
-    return _begin(actor_id, vehicle_id, action_type, 3, {"heading": target_heading, "distance": distance})
+        target_heading = VehicleHeading.completed_turn_heading(start_heading, heading_delta)
+    elif heading_delta != 0:
+        target_heading = VehicleHeading.completed_turn_heading(start_heading, heading_delta)
+        distance = 3
+    return _begin(actor_id, vehicle_id, action_type, 3, {"start_heading": start_heading, "heading": target_heading, "turn_direction": heading_delta, "distance": distance})
 
 func _begin(actor_id: String, vehicle_id: String, action_type: StringName, duration: int, payload: Dictionary) -> Dictionary:
     if not _can_request(actor_id) or not _state.has_vehicle(vehicle_id):
@@ -311,15 +315,20 @@ func _commit_motion(actor_id: String, vehicle_id: String, action: TimedAction) -
     var placement := _world.placement(vehicle_id)
     if placement == null:
         return {"ok": false, "reason": "vehicle_unplaced"}
-    var path := VehicleHeading.reverse_path(heading, distance) if action.action_type == REVERSE else VehicleHeading.forward_path(heading, distance)
+    var is_true_vehicle_turn := action.action_type in [TURN_LEFT, TURN_RIGHT] and kind != VehicleProfileCatalog.SKATEBOARD
+    var turn_direction := int(action.payload.get("turn_direction", 0))
+    var start_heading := int(action.payload.get("start_heading", rec.get("heading", 0)))
+    var path := VehicleHeading.turn_path(start_heading, turn_direction) if is_true_vehicle_turn else (VehicleHeading.reverse_path(heading, distance) if action.action_type == REVERSE else VehicleHeading.forward_path(heading, distance))
     var current_anchor := placement.anchor
     var facing := VehicleHeading.cardinal_facing(heading)
-    for relative: Vector2i in path:
+    for step_index: int in range(path.size()):
+        var relative: Vector2i = path[step_index]
+        var step_facing := VehicleHeading.cardinal_facing(VehicleHeading.normalize(start_heading + turn_direction * (step_index + 1))) if is_true_vehicle_turn else facing
         var target := placement.anchor + relative
-        if kind == VehicleProfileCatalog.SKATEBOARD and not _skateboard_surface_ok(target, placement.footprint, facing):
+        if kind == VehicleProfileCatalog.SKATEBOARD and not _skateboard_surface_ok(target, placement.footprint, step_facing):
             _state.mutate(vehicle_id, {"moving": false})
             return {"ok": false, "reason": "skateboard_requires_smooth_surface"}
-        var check := _query.query_footprint(target, facing, placement.footprint, vehicle_id, true)
+        var check := _query.query_footprint(target, step_facing, placement.footprint, vehicle_id, true)
         if check == null or not check.is_clear():
             _state.mutate(vehicle_id, {"moving": false, "body": int(rec.get("body", 100)) - 8})
             return {"ok": false, "reason": "vehicle_collision"}

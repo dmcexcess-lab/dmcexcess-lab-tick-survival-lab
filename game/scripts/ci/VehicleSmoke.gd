@@ -19,6 +19,10 @@ func _initialize() -> void:
 
     _check(Heading.turn_right(0) == 1 and Heading.degrees(1) == 30.0, "turning changes heading 30 degrees", errors)
     _check(Heading.turn_left(0) == 11 and Heading.degrees(11) == 330.0, "left wrap is deterministic", errors)
+    _check(Heading.completed_turn_heading(0, 1) == 3, "right turn completes at 90 degrees", errors)
+    _check(Heading.completed_turn_heading(0, -1) == 9, "left turn completes at 270 degrees", errors)
+    _check(Heading.turn_path(0, 1) == [Vector2i(0, -1), Vector2i(1, -1), Vector2i(2, -1)], "right turn crosses three adjacent squares at 30-degree heading steps", errors)
+    _check(Heading.turn_path(0, -1) == [Vector2i(0, -1), Vector2i(-1, -1), Vector2i(-2, -1)], "left turn mirrors the three-square arc", errors)
     var north := Heading.forward_path(0, 3)
     _check(north == [Vector2i(0, -1), Vector2i(0, -2), Vector2i(0, -3)], "north path is three checked cells", errors)
     _check(Heading.forward_path(1, 3).size() == 3, "30-degree path remains three integer steps", errors)
@@ -36,6 +40,7 @@ func _initialize() -> void:
         _check(ResourceLoader.exists(asset_path), "dedicated vehicle sprite exists: %s" % asset_path, errors)
     for kind: StringName in profiles.kinds():
         _check(Renderer.has_dedicated_sprite(kind), "approved class resolves dedicated texture: %s" % String(kind), errors)
+    _check(Renderer.presentation_scale(Profiles.TRUCK) < Renderer.presentation_scale(Profiles.CAR), "truck sprite presents smaller than car footprint scale", errors)
 
     var controls := Controls.new()
     get_root().add_child(controls)
