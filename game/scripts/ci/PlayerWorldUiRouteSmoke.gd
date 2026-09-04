@@ -179,7 +179,7 @@ func _test_window_route(world: WorldState, mutations: WorldMutationService, spat
     _check(world.placement(actor_id).anchor != before_climb, "CLIMB THROUGH moves actor across open window")
     await process_frame
 
-    _check(_place_actor_facing(world, mutations, spatial, actor_id, window, false), "actor returns to window")
+    _check(_place_actor_facing(world, mutations, spatial, actor_id, window, true), "actor returns to window with clear far-side climb destination")
     pointer.world_cell_primary.emit(world.placement(window).anchor)
     await process_frame
     var close_button: Button = _world_button(panel, window, Actions.WINDOW_CLOSE)
