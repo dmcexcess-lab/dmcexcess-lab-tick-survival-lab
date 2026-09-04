@@ -31,6 +31,7 @@ Canonical status/routing index. Read `PROJECT_NORTH_STAR.md`, `PERFORMANCE_NORTH
 | 33 | Power / Water Utility Runtime | **IMPLEMENTED + automated verified; HUMAN PLAYTEST PENDING** | `33_POWER_WATER_UTILITIES.md` + `33B_POWER_PHYSICAL_NETWORK_CONDITION.md` |
 | 34 | Survivor Condition / Health / Fatigue / Moodlets | **IMPLEMENTED + automated verified; HUMAN PLAYTEST PENDING** | `34_SURVIVOR_CONDITION_HEALTH_STAMINA_MOODLETS.md` |
 | 35 | Outdoor Foraging | **IMPLEMENTED + EXACT-HEAD VERIFIED; HUMAN PLAYTEST PENDING** | `35_OUTDOOR_FORAGING.md` |
+| 36 | Vehicles | **APPROVED — implementation next** | `36_VEHICLES.md` |
 | PERF | Performance Architecture Gate | **IMPLEMENTED + CI VERIFIED; human accepted** | `PERFORMANCE_ARCHITECTURE.md` |
 | 00E | Population / Household / Outbreak / Player Story | **NOT DESIGNED — Phase 8** | future design |
 
@@ -42,15 +43,9 @@ Canonical status/routing index. Read `PROJECT_NORTH_STAR.md`, `PERFORMANCE_NORTH
 
 Phase 1 content foundations, Phase 2 crafting, Phase 3 utilities, Phase 4/5 survivor condition/moodlets, the four-skill foundation, primitive Survival crafting and System 35 outdoor foraging are implemented in the current executable lineage.
 
-Current gameplay lifecycle gate is human browser/phone/Safari verification of:
+**System 36 Vehicles is approved and is the next implementation operation.** Its canonical movement contract is: skateboard = actor-like 2-cell movement with no added Fatigue; bicycle = 3-cell vehicle movement with Fatigue; motorcycle/car/truck = powered 3-cell vehicle movement; true vehicle classes turn through 45-degree heading changes and require a 2-cell braking/stopping path. Motorcycles are easier to steal, use less fuel and have less storage than cars.
 
-- Fatigue/rest/needs/health/moodlet feel;
-- four-skill crafting and searchable-container scavenging presentation;
-- `FORAGE NEARBY` behavior/depletion/readability;
-- protected movement/input, full physical lighting/LOS and startup behavior;
-- generated System-33 local power/water/well behavior on representative fresh seeds.
-
-After that, continue only through real owning systems: primitive crafted-output consumers, first aid, Mechanical repair/deconstruction/reclamation, vehicle hot-wiring when vehicles exist, fire-starting, and real Awareness/Stealth consumers.
+After vehicles are implemented and accepted, perform one final comprehensive skills/crafting/items/usable-object closure pass. That pass must include cooking, first aid, fire/ignition, Mechanical repair/modification/deconstruction/reclamation, vehicle maintenance/modification, real usable-object consumers, Awareness/Stealth consumers and the user-approved construction restriction: **no freeform base building; construction is limited to reinforcing existing doors/windows and repairing broken objects.**
 
 ## Protected utility truth
 
