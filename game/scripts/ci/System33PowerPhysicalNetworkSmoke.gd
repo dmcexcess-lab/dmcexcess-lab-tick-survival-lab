@@ -78,7 +78,7 @@ func _test_physical_distribution_causality() -> void:
     _check(wires.has(targeted_wire), "failed cable remains in presentation topology")
 
     var requirements: Dictionary = network.repair_requirements(span_id)
-    _check(int(requirements.get("electrical_skill", -1)) == 2, "distribution span repair uses low electrical tier")
+    _check(int(requirements.get("mechanical_skill", -1)) == 2, "distribution span repair uses low Mechanical tier")
     _check(int(requirements.get("material_units", -1)) == 1, "distribution span repair uses small material cost")
     var repaired: Dictionary = network.repair_asset(span_id, 2, 1)
     _check(bool(repaired.get("ok", false)), "physical span can be repaired")
@@ -125,7 +125,7 @@ func _test_physical_distribution_causality() -> void:
     var snap_requirements: Dictionary = network.repair_requirements(snapped_span)
     var snap_repair: Dictionary = network.repair_asset(
         snapped_span,
-        int(snap_requirements.get("electrical_skill", 0)),
+        int(snap_requirements.get("mechanical_skill", 0)),
         int(snap_requirements.get("material_units", 0))
     )
     _check(bool(snap_repair.get("ok", false)), "daily-snapped physical line repairs through the existing repair seam")
