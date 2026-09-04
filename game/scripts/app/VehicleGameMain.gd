@@ -24,6 +24,8 @@ const InteractionControllerClass = preload("res://scripts/player/WorldInteractio
 const LootOffersClass = preload("res://scripts/simulation/loot/LootSearchInteractionOfferProvider.gd")
 const CraftingOffersClass = preload("res://scripts/simulation/crafting/CraftingInteractionOfferProvider.gd")
 const Workstations = preload("res://scripts/simulation/crafting/CraftingWorkstationCatalog.gd")
+const UtilityRepairActionsClass = preload("res://scripts/simulation/utilities/UtilityPowerRepairActionService.gd")
+const UtilityRepairOffersClass = preload("res://scripts/simulation/utilities/UtilityPowerRepairInteractionOfferProvider.gd")
 
 var _vehicle_profiles: VehicleProfileCatalog = null
 var _vehicle_state: VehicleState = null
@@ -39,8 +41,10 @@ var _world_interaction_state: WorldInteractableState = null
 var _world_interaction_catalog: WorldInteractionCatalog = null
 var _world_interaction_actions: WorldInteractionActionService = null
 var _world_repair_actions: WorldObjectRepairActionService = null
+var _utility_power_repair_actions: UtilityPowerRepairActionService = null
 var _world_interaction_offers: WorldInteractionOfferProvider = null
 var _sustainment_interaction_offers: SustainmentInteractionOfferProvider = null
+var _utility_power_repair_offers: UtilityPowerRepairInteractionOfferProvider = null
 var _world_interaction_panel: WorldInteractionPanel = null
 var _world_interaction_controller: WorldInteractionPlayerController = null
 var _world_blocks_interaction: bool = false
@@ -151,7 +155,7 @@ func _boot_world_interactions() -> bool:
     if _interaction_reach == null or _interaction_affordances == null or _door_state == null \
         or _door_transition == null or _door_passage == null or _spatial_query == null \
         or _skill_checks == null or _carry_query == null or _hand_state == null or _hand_mutations == null \
-        or _carry_acquisition == null or _sustainment_actions == null or _utilities == null \
+        or _carry_acquisition == null or _sustainment_actions == null or _utilities == null or _power_network == null \
         or _crafting_plans == null or _crafting_interaction_offers == null \
         or _crafting_controller == null or _loot_controller == null:
         return false
@@ -199,6 +203,21 @@ func _boot_world_interactions() -> bool:
     )
     if not _world_repair_actions.is_ready():
         return false
+    _utility_power_repair_actions = UtilityRepairActionsClass.new(
+        _world,
+        _world_mutations,
+        _interaction_reach,
+        _kernel,
+        _skill_checks,
+        _carry_query,
+        _hand_state,
+        _hand_mutations,
+        _inventory_state,
+        _inventory_mutations,
+        _power_network
+    )
+    if not _utility_power_repair_actions.is_ready():
+        return false
     if not _door_passage.set_access_provider(Callable(self, "_door_passage_allowed")):
         return false
 
@@ -210,6 +229,13 @@ func _boot_world_interactions() -> bool:
         _world_interaction_catalog
     )
     if not _interaction_affordances.register_provider(_world_interaction_offers):
+        return false
+    _utility_power_repair_offers = UtilityRepairOffersClass.new(
+        _world,
+        _interaction_reach,
+        _power_network
+    )
+    if not _interaction_affordances.register_provider(_utility_power_repair_offers):
         return false
 
     if not _sustainment_actions.set_potable_target_provider(Callable(self, "_potable_target_available")) \
@@ -254,6 +280,11 @@ func _boot_world_interactions() -> bool:
     if not _world_interaction_controller.register_handler(
         RepairActionsClass.ACTION_ID,
         Callable(_world_repair_actions, "request_action")
+    ):
+        return false
+    if not _world_interaction_controller.register_handler(
+        UtilityRepairActionsClass.ACTION_ID,
+        Callable(_utility_power_repair_actions, "request_action")
     ):
         return false
     for action_id: StringName in [
@@ -410,6 +441,8 @@ func _on_interaction_utility_changed(_revision: int, _reason: StringName) -> voi
         _sustainment_interaction_offers.availability_changed.emit(&"utility_changed")
     if _crafting_interaction_offers != null:
         _crafting_interaction_offers.availability_changed.emit(&"utility_changed")
+    if _utility_power_repair_offers != null:
+        _utility_power_repair_offers.availability_changed.emit(&"utility_changed")
 
 func _on_world_interaction_blocked_changed(blocked: bool) -> void:
     _world_blocks_interaction = blocked
