@@ -22,7 +22,7 @@ func vehicle_ids() -> Array[String]:
 func record(vehicle_id: String) -> Dictionary:
     return Dictionary(_records.get(vehicle_id, {})).duplicate(true)
 
-func create_vehicle(vehicle_id: String, kind: StringName, fuel: int, locked: bool, heading: int = 0) -> bool:
+func create_vehicle(vehicle_id: String, kind: StringName, fuel: int, locked: bool, heading: int = 0, key_item_id: String = "") -> bool:
     var key := vehicle_id.strip_edges()
     if key.is_empty() or _records.has(key) or String(kind).is_empty():
         return false
@@ -35,11 +35,12 @@ func create_vehicle(vehicle_id: String, kind: StringName, fuel: int, locked: boo
         "locked": locked,
         "powered": false,
         "hotwired": false,
+        "key_item_id": key_item_id.strip_edges(),
         "body": 100,
         "propulsion": 100,
         "wheels": 100,
         "electrical": 100,
-        "cargo_container_id": "%s:cargo" % key,
+        "cargo_container_id": key,
         "mods": [],
         "version": 1,
     }
