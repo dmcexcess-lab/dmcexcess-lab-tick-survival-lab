@@ -1,8 +1,9 @@
 # Tick Survival Lab — 36 Vehicles
 
-Status: **APPROVED — design complete, implementation not started**
+Status: **IMPLEMENTED + AUTOMATED VERIFIED; HUMAN PLAYTEST PENDING**
 
-Approved: **2026-09-03**
+Approved: **2026-09-03**  
+Implemented: **2026-09-03**
 
 ## Goal
 
@@ -74,14 +75,15 @@ Vehicles reuse canonical WHERE global integer cells and whole-cell occupancy tru
 
 Cars/trucks/motorcycles/bicycles use a **12-heading vehicle vocabulary at 30-degree increments** while preserving integer-cell authoritative placement.
 
-Because a square tactical grid cannot represent every 30-degree direction as an exact continuous vector, System 36 must not introduce floating authoritative positions to fake it. Instead:
+Because a square tactical grid cannot represent every 30-degree direction as an exact continuous vector, System 36 does not introduce floating authoritative positions. Instead:
 
 - each heading has a deterministic integer-grid movement raster;
-- each profile supplies or derives a conservative integer occupied-cell mask for that heading;
-- turning/movement validates the complete swept integer-cell path/mask;
-- the sprite may rotate to the exact 30-degree visual heading, but presentation never becomes collision or placement authority.
+- the typed System-36 state owns the exact 12-state heading;
+- canonical WHAT placement keeps the nearest compatible cardinal facing required by the existing spatial foundation;
+- movement validates each integer path step through canonical collision queries;
+- the dedicated vehicle renderer uses the exact typed 30-degree heading for presentation.
 
-The underlying tactical world therefore remains grid-based and deterministic while the vehicle can visibly steer more naturally than 90-degree snapping.
+Current implementation deliberately keeps vehicle collision footprints in the existing cardinal WHAT vocabulary rather than inventing arbitrary-angle polygon authority. This is conservative and deterministic but is **not** an exact rotated 30-degree collision polygon.
 
 Skateboards are the exception: they intentionally reuse actor-like cardinal movement because they are mechanically “running without Fatigue” rather than a full driving model.
 
@@ -92,255 +94,194 @@ Skateboards are the exception: they intentionally reuse actor-like cardinal move
 For bicycle/motorcycle/car/truck:
 
 - one normal committed move advances through **3 tactical cells** along the deterministic raster for the current heading;
-- every traversed cell and swept vehicle footprint state is collision-validated;
+- every traversed integer step is collision-validated with the vehicle footprint;
 - the action cannot teleport through an occupied or illegal intermediate cell;
 - WHEN owns elapsed action time;
 - movement consequences belong to the vehicle movement owner, never UI.
 
 ### Turning
 
-A moving vehicle turn is not an instant 90-degree pivot.
+- each committed turn movement advances through **3 cells**;
+- heading changes by **30 degrees per turning movement**;
+- the 12-state heading sequence therefore reaches each cardinal after three 30-degree turns;
+- collision legality is checked at every deterministic integer raster step;
+- the exact typed heading is rendered independently of the cardinal WHAT facing.
 
-- each committed turn movement advances through **3 cells** along the deterministic turning raster;
-- heading/sprite orientation changes by **30 degrees per turning movement**;
-- the 12-state heading sequence therefore reaches each cardinal after three 30-degree turns, e.g. N -> 30° right -> 60° right -> E;
-- collision legality is checked across the complete swept integer path/footprint;
-- presentation interpolates/animates the 30-degree visual turn but does not own physics.
-
-The exact 3-cell raster for each 30-degree heading is an implementation detail, but it must be deterministic, symmetric left/right, integer-only and covered by movement/collision regressions.
+The raster is deterministic and integer-only. Exact arbitrary-angle swept polygon physics remains intentionally out of scope.
 
 ### Stopping / braking
 
-A moving vehicle does not stop instantaneously.
-
-- a committed stop/brake action requires **2 tactical cells of forward stopping distance**;
-- the vehicle comes to rest only after traversing that bounded two-cell braking raster;
-- each braking cell and swept footprint is collision checked;
-- an obstruction inside required stopping distance produces the appropriate collision consequence rather than silently snapping the vehicle to a stop before the obstacle.
-
-This two-cell stop rule applies to moving bicycles, motorcycles, cars and trucks. Skateboard stopping remains actor-like and does not create a separate powered-vehicle brake simulation.
+A moving bicycle/motorcycle/car/truck requires a committed **2-cell forward braking path**. Each braking step is collision checked. A blocked stopping path produces the collision consequence instead of silently stopping before the obstruction. Skateboard stopping remains actor-like and immediate.
 
 ## Persistent vehicle state
 
-Each vehicle uses typed persistent state keyed by the stable WHAT entity ID. The compact condition model includes:
+Typed persistent state is keyed by stable WHAT vehicle entity ID and currently stores:
 
-- vehicle class/profile;
-- body/frame condition;
-- propulsion/drivetrain condition;
-- wheel/rolling condition;
-- electrical/battery condition where applicable;
-- fuel quantity where applicable;
-- engine/powered state where applicable;
-- locked/unlocked state where applicable;
-- ignition/key state and persistent hot-wire bypass state where applicable;
-- installed modifications;
-- cargo container identity/capacity where applicable;
-- occupants/driver relationship;
-- current 12-state vehicle heading where applicable.
+- class/profile;
+- 12-state heading;
+- moving/stopped state;
+- driver ID;
+- fuel;
+- lock state;
+- powered state;
+- persistent hot-wire bypass;
+- matching key item ID;
+- body condition;
+- propulsion condition;
+- wheel condition;
+- electrical condition;
+- vehicle cargo container identity;
+- installed modification names;
+- installed real component item IDs.
 
-The system deliberately avoids unnecessary fine-grained automotive simulation such as individual tire pressures, spark plugs, suspension arms, oil chemistry or frame-by-frame engine state.
-
-Damage remains consequential: destroyed/failed critical condition can prevent starting or movement.
+The system deliberately avoids per-part automotive simulation for complexity's sake.
 
 ## Entering, driving and exiting
 
-When an actor enters a vehicle, occupancy is represented through the vehicle/containment relationship rather than leaving a second independent tactical ACTOR collision body underneath the moving vehicle.
+The mounted survivor shares the vehicle anchor and receives a temporary nonblocking collision override so a second independent actor collision body does not obstruct the vehicle. Existing keyboard/touch movement intents are routed to the vehicle controller only while mounted; ordinary survivor movement remains unchanged while on foot.
 
-The driver commits vehicle movement intents. The vehicle owner validates state, collision and terrain, then WHEN charges the action.
-
-Exiting requires a legal adjacent location and a stopped vehicle.
+Exit requires a stopped vehicle and a legal adjacent cardinal cell.
 
 ## Keys, theft and hot-wiring
 
-Powered motor vehicles normally require their real matching key/authorized ignition state.
+Motorized generated vehicles receive a real matching `item.automotive.vehicle_key` entity. Locked entry/start requires that exact item unless the vehicle has a persistent successful hot-wire bypass.
 
-Without the key, Mechanical may attempt a real hot-wire interaction when the necessary physical prerequisites exist.
-
-Typical hot-wire prerequisites include a concrete access/tool path such as screwdriver/pliers and wire/electrical material where required by the specific vehicle profile.
-
-Hot-wiring:
-
-- costs real WHEN time;
-- uses Mechanical difficulty;
-- failure can waste time and may damage electrical condition or expend/damage a relevant material where appropriate;
-- success creates a persistent ignition-bypass state rather than a one-time UI permission;
-- skill never substitutes for a missing required tool/material.
-
-Motorcycles are intentionally **easier to steal/hot-wire** than cars/trucks.
-
-Bicycles/skateboards do not use powered ignition. A bicycle may later have a real physical lock state, but no fake ignition abstraction is added.
+Hot-wiring is a real WHEN + Mechanical action. Current prerequisites are a screwdriver plus real scrap wire. Motorcycles have the lowest hot-wire difficulty. Failure costs the action and Mechanical attempt and can damage electrical condition; success consumes the wire and creates the persistent bypass state.
 
 ## Fuel
 
-Cars, trucks and motorcycles have finite persistent fuel.
+Cars, trucks and motorcycles use persistent compact integer fuel units. Current profile totals / movement consumption are:
 
-- motorcycles use less fuel than cars/trucks;
-- trucks consume more than ordinary cars;
-- fuel is consumed only when powered movement/actions actually occur;
-- parked vehicles do not run per-frame/per-tick fuel simulation merely because they exist;
-- refueling requires a real fuel source/container and physical transfer;
-- later siphoning may use a real hose/container + target fuel + Mechanical + WHEN interaction.
+- motorcycle: `18`, consumes `1` per normal powered movement;
+- car: `40`, consumes `2`;
+- truck: `55`, consumes `3`.
 
-Fuel may use compact integer units rather than fluid simulation, but it remains owned persistent state with physical acquisition/transfer prerequisites.
+Braking does not consume a normal movement fuel unit. Parked vehicles do not run background fuel processing.
+
+Current refueling consumes one real `item.automotive.gas_can` entity and fills the compact tank to profile maximum. **Partial liquid quantity inside a can is not modeled yet**; this is whole-container fuel semantics, not a hidden fluid simulation.
 
 ## Bicycle Fatigue
 
-Bicycle propulsion is human-powered and therefore contributes to canonical Fatigue.
-
-It should be materially more efficient per traveled cell than running, preserving the reason to use a bicycle while retaining a real exertion consequence.
-
-Exact tuning belongs to implementation/playtest but there is no separate Stamina reserve.
+Bicycle movement applies canonical Fatigue through `ActorConditionService`. Skateboard movement adds no Fatigue. There is no parallel Stamina pool.
 
 ## Cargo
 
-Vehicle cargo reuses existing real inventory/containment/item-weight owners.
+Vehicle cargo reuses `InventoryContainmentState`, `InventoryContainmentMutationService` and `ItemWeightQuery`.
 
-- truck: large cargo;
-- car: medium cargo;
-- motorcycle: small cargo;
-- bicycle: small/optional cargo depending on rack/basket profile;
-- skateboard: none by default.
+Current base capacities:
 
-Cargo is not a fake list attached only to UI. Items remain persistent WHAT entities contained by the vehicle cargo container and counted through the canonical physical item model.
+- skateboard: none;
+- bicycle: 6 kg;
+- motorcycle: 12 kg;
+- car: 70 kg;
+- truck: 140 kg.
+
+The live vehicle panel exposes real survivor -> vehicle STORE and vehicle -> survivor TAKE operations and shows actual used/capacity kilograms. A cargo-rack modification adds 12 kg.
+
+Installed component entities are excluded from ordinary cargo load and cannot be removed through the generic TAKE control.
 
 ## Repair
 
-Vehicle repair is a target interaction, not merely a generic crafting recipe.
+Current bounded Mechanical repair requires an adjustable wrench plus one real repair material from the existing catalog (`metal_scrap`, rusted fasteners or screws). A real Mechanical action/XP attempt resolves the repair and consumes the material on success, restoring bounded body/propulsion/wheels/electrical condition according to effectiveness.
 
-Mechanical repairs require concrete tools/materials appropriate to the damaged subsystem.
-
-Examples:
-
-- drivetrain/engine: wrench + suitable fasteners/metal/component;
-- electrical: screwdriver/pliers + wire/electrical component;
-- wheel/rolling system: wrench + real replacement wheel/tire/part;
-- body/frame: hammer/wrench + real metal/fastening material;
-- battery: appropriate tools + real replacement battery.
-
-Mechanical affects duration, success and material/effectiveness outcome. It cannot repair an absent required part with skill alone.
+This first implementation intentionally does **not** claim dedicated battery, wheel or subsystem replacement consumers merely because physical battery/spare-wheel item profiles exist. Those richer component-specific consumers belong to later interaction closure.
 
 ## Modifications
 
-Vehicle modifications use the same physical-prerequisite + Mechanical + WHEN architecture but install persistent components instead of restoring condition.
+The implemented first modification is a real cargo rack:
 
-Initial bounded modification candidates:
+- requires adjustable wrench + actual `item.automotive.cargo_rack` + Mechanical difficulty 4 + WHEN;
+- success transfers the rack entity from survivor containment into vehicle containment;
+- the rack entity remains persistent and is recorded in `installed_component_ids`;
+- the modification expands real cargo capacity by 12 kg.
 
-- reinforced bumper/body protection;
-- cargo rack/storage expansion;
-- improved lights;
-- repaired/quieter exhaust where applicable;
-- bicycle/motorcycle rack or basket.
-
-Installed modification components should remain real persistent items/components attached to or contained by the vehicle so removal can return a real object instead of toggling a presentation-only boolean.
+Other approved candidate modifications remain future work and are not represented by name-only booleans.
 
 ## Lighting and sound
 
-Powered headlights integrate with the existing physical-light system and depend on the relevant electrical/power condition.
+Powered motorized vehicles with functioning electrical condition contribute real headlight emitters through `VehicleLightingSourceAdapter`. `VehicleGameMain` composes those emitters with the existing utility/flashlight emitter set rather than replacing existing lighting truth.
 
-Vehicle movement/operation emits real spatial sound through the existing sound owner.
-
-Relative intent:
-
-- skateboard: nearly silent;
-- bicycle: very quiet;
-- motorcycle: powered moderate/loud profile;
-- car: powered moderate profile;
-- truck: heavier/louder profile.
-
-Later infected/NPC AI consumes this sound truth; System 36 does not fake AI reactions before those consumers exist.
+Vehicle operation emits real spatial sound through `SpatialSoundService` using class profiles. The consequence adapter is live in canonical composition.
 
 ## Collision consequences
 
-A blocked movement path does not permit the vehicle to pass through persistent world objects.
+Blocked vehicle movement cannot pass through persistent obstacles. The failed movement stops the vehicle and applies body damage. `VehicleConsequenceAdapter` emits a real impact sound and applies bounded occupant HP damage through `ActorHealthState` by class.
 
-At minimum, an impact:
-
-- stops/interrupts the attempted movement according to the owning movement/action rules;
-- can damage vehicle condition based on movement/mass/profile;
-- can injure occupants through the existing Health owner where appropriate.
-
-Running over living actors/infected belongs with the later combat/actor interaction owner and must not be faked merely to make vehicles appear complete.
+Roadkill/actor-impact combat semantics remain out of scope until the later combat/actor interaction owner exists.
 
 ## World generation / persistence
 
-Vehicles are ordinary persistent generated world content, not DEV-only fixtures.
+`VehicleWorldSeeder` currently performs a **bounded canonical materialization pass near the playable survivor** over already materialized plausible road/driveway/parking/pavement cells. It deterministically attempts one persistent vehicle of each approved class where a legal footprint exists, assigns deterministic initial heading/fuel/lock state, enrolls the vehicle as a real inventory container, and creates real matching keys for motorized vehicles.
 
-Appropriate generated locations may create parked cars, trucks, motorcycles, bicycles and occasional skateboards using contextual placement such as:
-
-- driveways;
-- parking lots;
-- road shoulders;
-- homes;
-- businesses;
-- other believable parking/storage contexts.
-
-Generation creates virgin initial state once. After materialization, WHAT + typed vehicle state own the current vehicle permanently.
-
-A generated vehicle may start with varying but deterministic/persistent combinations of:
-
-- fuel;
-- condition/damage;
-- battery/electrical state;
-- locked state;
-- key availability/location;
-- missing or degraded components.
-
-Returning later must reveal the same vehicle state unless gameplay or simulation actually changed it.
+This is real generated WHAT content, not a DEV marker, but it is **not yet a full island-wide streaming vehicle population source**. Later population/content expansion should integrate the same persistent vehicle owner with broader area materialization rather than adding a second vehicle system.
 
 ## Performance contract
 
-Forbidden:
+Implemented runtime vehicle truth remains action/event/materialization bounded:
 
-- `_process`/`_physics_process` as vehicle simulation authority;
-- one timer or recurring event per parked vehicle;
-- whole-world scans for fuel, damage or parked-vehicle updates;
-- floating-point continuous vehicle physics as authoritative movement;
-- pre-simulating invisible travel merely because render frames pass.
+- no `_process` or `_physics_process` vehicle simulation authority;
+- no recurring timer per vehicle;
+- no recurring whole-world fuel/damage/update scan;
+- no rigid-body/continuous authoritative vehicle physics;
+- parked records remain dormant.
 
-Allowed work is action/event/materialization bounded and proportional to the active vehicle/path/footprint being resolved.
-
-Parked vehicles should be effectively dormant persistent records.
+The player vehicle controller uses the same bounded render-frame action-drain pattern as the protected survivor input controller; it advances an already-started WHEN action and does not simulate parked vehicles or world state from frame time.
 
 ## Construction boundary
 
-System 36 must not create or depend on a freeform base-building system.
-
-The user has superseded the old open-land base-construction direction. The later final interaction closure pass will make the project-wide rule canonical:
+System 36 does not create or depend on a freeform base-building system.
 
 > **No freeform base building. Construction is limited to reinforcing existing doors/windows and repairing broken objects.**
 
 Vehicle repair/modification remains Mechanical target interaction and does not imply structural base construction.
 
-## Implementation boundary approved for the next operation
+## Implemented files / composition
 
-The approved first implementation should be a coherent real vehicle foundation rather than five disconnected demos. It should cover:
+Primary implementation includes:
 
-1. shared persistent vehicle state/profile owner;
-2. generated persistent parked vehicle entities for the five approved classes;
-3. enter/exit/driver containment;
-4. skateboard 2-cell actor-like no-Fatigue movement;
-5. bicycle/motorcycle/car/truck 3-cell vehicle movement;
-6. **12-state, 30-degree vehicle heading/turning presentation with deterministic integer-grid raster/swept-footprint resolution**;
-7. two-cell braking/stopping distance for true vehicle classes;
-8. bicycle Fatigue cost;
-9. fuel for motorcycle/car/truck with class-scaled consumption;
-10. cargo containment/capacity;
-11. keys/locks/hot-wiring with motorcycles easier to steal;
-12. typed condition and Mechanical repair;
-13. bounded persistent modifications;
-14. physical light/spatial sound integration where existing owners already provide the required public seam;
-15. owning smoke/workflow and protected movement/collision/inventory/skills/health regressions;
-16. live player controls sufficient to exercise the real system without making UI own truth.
+- `game/scripts/app/VehicleGameMain.gd`
+- `game/scripts/simulation/vehicles/VehicleProfileCatalog.gd`
+- `VehicleState.gd`
+- `VehicleHeading.gd`
+- `VehicleWorldSeeder.gd`
+- `VehicleActionService.gd`
+- `VehicleCargoService.gd`
+- `VehicleConsequenceAdapter.gd`
+- `VehicleLightingSourceAdapter.gd`
+- `VehicleItemCatalog.gd`
+- `game/scripts/player/VehiclePlayerController.gd`
+- `game/scripts/render/VehicleRenderer.gd`
+- `game/scripts/ui/VehiclePlayerControls.gd`
+- `game/scripts/ci/VehicleSmoke.gd`
+- `.github/workflows/system36-vehicles.yml`
 
-## Explicit non-goals for the first implementation
+Canonical scene composition is now:
 
-- no separate Driving skill;
-- no real-time rigid-body vehicle physics;
-- no zombie/actor roadkill semantics before combat/actor impact ownership exists;
-- no freeform base construction;
-- no fake vehicle AI;
-- no frame-driven parked-vehicle simulation;
-- no detailed engine-part simulation for complexity's sake.
+`VehicleGameMain -> System34GameMain -> UtilityGameMain -> CraftingGameMain -> GameMain`.
+
+## Verification record
+
+Implementation PR: **#4 — Implement System 36 vehicles**.
+
+- final PR head: `319209b2bd5ec3f7c77aefa4b16a8636bb5111b9`;
+- dedicated `System 36 Vehicles contract` run `33827312477`: success;
+- protected `Outdoor forage` / canonical run `33827312468`: success;
+- gameplay merge executable: `f8a80a9a8765d973abdb9c4820a87a5e3baeb204`;
+- workflow-only canonical-root repair: `af67766af1944c85eb8ba4332dcddd7a2089a3af`;
+- workflow-only Pages-root repair / fully verified deployment head: `dd489537e14615290aa51f08d1e66937682166e4`;
+- exact-head result on `dd489537...`: **49 successful Actions runs, zero failures, zero queued, zero running**;
+- Pages run `33827702359`: build success + deploy success.
+
+The live browser build is deployed, but **human vehicle feel/UX acceptance remains pending**.
+
+## Known implementation limitations / next closure
+
+- 30° heading/presentation and integer raster movement are real, but collision footprint rotation remains the existing cardinal WHAT footprint rather than exact arbitrary-angle polygons.
+- refueling currently uses whole gas-can item semantics rather than partial fluid quantities.
+- generated vehicle placement is a bounded canonical playable-area seeding pass, not yet an island-wide streaming population source.
+- dedicated battery/wheel replacement and the other candidate modifications are not yet real consumers.
+- an unexpectedly failed actor placement after a successful vehicle placement mutation is not backed by a full cross-owner transaction rollback; protected composition has not triggered this path, but future hardening should make the two-placement commit atomic/compensated.
+- human playtesting is still required for steering feel, brake readability, panel layout, cargo UX, generated placement plausibility, headlight presentation and phone/Safari behavior.
 
 ## Approval record
 
