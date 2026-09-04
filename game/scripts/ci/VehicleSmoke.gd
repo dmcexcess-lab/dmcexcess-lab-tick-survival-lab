@@ -3,6 +3,7 @@ extends SceneTree
 const Profiles = preload("res://scripts/simulation/vehicles/VehicleProfileCatalog.gd")
 const State = preload("res://scripts/simulation/vehicles/VehicleState.gd")
 const Heading = preload("res://scripts/simulation/vehicles/VehicleHeading.gd")
+const Items = preload("res://scripts/simulation/vehicles/VehicleItemCatalog.gd")
 const Renderer = preload("res://scripts/render/VehicleRenderer.gd")
 const Controls = preload("res://scripts/ui/VehiclePlayerControls.gd")
 
@@ -16,6 +17,7 @@ func _initialize() -> void:
     _check(profiles.fuel_per_move(Profiles.MOTORCYCLE) < profiles.fuel_per_move(Profiles.CAR), "motorcycle uses less fuel than car", errors)
     _check(profiles.cargo_grams(Profiles.MOTORCYCLE) < profiles.cargo_grams(Profiles.CAR), "motorcycle has less storage than car", errors)
     _check(profiles.hotwire_difficulty(Profiles.MOTORCYCLE) < profiles.hotwire_difficulty(Profiles.CAR), "motorcycle easier to hotwire", errors)
+    _check(not (&"item.automotive.vehicle_key" in Items.semantic_types()), "vehicle item catalog has no collectible key", errors)
     var car_footprint := profiles.footprint(Profiles.CAR)
     _check(car_footprint.cell_count() == 3 and car_footprint.contains_relative(Vector2i(0, 2)) and not car_footprint.contains_relative(Vector2i(1, 0)), "car owns an exact real 1x3 footprint", errors)
     var truck_footprint := profiles.footprint(Profiles.TRUCK)
@@ -54,15 +56,18 @@ func _initialize() -> void:
     controls.queue_free()
 
     var state := State.new()
-    _check(state.create_vehicle("vehicle.test.car", Profiles.CAR, 20, true, 1, "item.key.test"), "vehicle state created", errors)
+    _check(state.create_vehicle("vehicle.test.car", Profiles.CAR, 20, false, 1, true), "vehicle state created", errors)
     var rec := state.record("vehicle.test.car")
-    _check(int(rec.get("heading", -1)) == 1 and String(rec.get("key_item_id", "")) == "item.key.test", "typed heading and key persist", errors)
+    _check(int(rec.get("heading", -1)) == 1 and bool(rec.get("key_in_ignition", false)), "typed heading and key-in-ignition persist", errors)
+    _check(not rec.has("key_item_id") and not bool(rec.get("locked", true)), "vehicle has no collectible-key or door-lock gate", errors)
     _check(state.set_driver("vehicle.test.car", "actor.test"), "driver attached", errors)
     _check(state.vehicle_for_driver("actor.test") == "vehicle.test.car", "driver lookup", errors)
     var snap := state.snapshot()
     var restored := State.new()
     _check(restored.load_snapshot(snap), "vehicle snapshot roundtrip", errors)
-    _check(restored.record("vehicle.test.car").get("kind", &"") == Profiles.CAR, "vehicle kind restored", errors)
+    var restored_rec := restored.record("vehicle.test.car")
+    _check(restored_rec.get("kind", &"") == Profiles.CAR, "vehicle kind restored", errors)
+    _check(bool(restored_rec.get("key_in_ignition", false)) and not restored_rec.has("key_item_id"), "ignition state restores without a key entity", errors)
 
     if errors.is_empty():
         print("VEHICLE_SMOKE_OK")
