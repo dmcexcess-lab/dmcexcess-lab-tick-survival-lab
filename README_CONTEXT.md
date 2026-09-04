@@ -6,24 +6,36 @@ This is the authoritative continuation checkpoint. Read `README_SOPS.md`, fetch 
 
 ## Current repository / executable truth
 
-- **Verified + deployed gameplay executable:** `57e05556bb106ae9ce80a98b5878038cc3f9f171`.
-- The documentation-prep parent immediately before this final handoff is `98b6dabcd4ef20df14113fe8a437f2e26ed3a8ce`; the current `main` after this write is the commit containing this file.
-- Exact executable head `57e05556...` completed **49 successful Actions runs** with **0 failed, 0 cancelled, 0 queued and 0 running**.
-- Pages run **`33836430303`** completed successfully for exact executable head `57e05556...`.
+- **Verified + deployed gameplay executable:** `0f12cfcd1e5efb85bf5261fcbd92a497a44387e2`.
+- The current `main` after this handoff is the documentation-only commit containing this file; it does not change the executable relative to `0f12cfcd...`.
+- Exact executable head `0f12cfcd...` completed **51 successful Actions runs** with **0 failed, 0 cancelled, 0 queued and 0 running**.
+- Pages run **`33892432702`** completed successfully for exact executable head `0f12cfcd...`.
 - **Live build:** `https://dmcexcess-lab.github.io/dmcexcess-lab-tick-survival-lab/`
-- `CHANGELOG_LATEST.md` records this cleanup. Later documentation-only heads do not change the executable relative to `57e05556...`.
+- `CHANGELOG_LATEST.md` records the town-first island and crash repair. Later documentation-only heads do not change the executable relative to `0f12cfcd...`.
 - Actual Godot project root is **`game/`**.
 
-## Unpublished checkpoint — settlement-first island and population truth
+## Completed operation — settlement-first island and browser startup repair
 
-Local branch `codex/town-first-island` is two commits ahead of fetched `main` `3c57dc0b674a122937e8b870fde2bdbd338a8975`:
+The settlement-first island and population work is published. Current generation creates:
 
-- `a8f744e721916560cb798b70a43eee41abacbae2` — derives the island envelope from the settlement hierarchy instead of treating the incoming fixed rectangle as a coast constraint; creates two 640×640 town sites, three village/crossroads sites and six rural home/farm sites.
-- `56a931871f8f96564c300164dc42b2a3a53d20fd` — derives every settlement's resident, infected and survivor counts from the actual deterministic local building manifest. Household records retain real building IDs/archetypes/capacity, and infected + survivor must exactly equal resident population. No zombie actor population has been added yet; this is the authoritative aggregate source it must consume.
+- two 640×640 town-scale sites intended to resemble settlements in the 1,000–5,000-person range;
+- three village/crossroads sites intended to resemble 50–100-person settlements;
+- six rural home/farm sites;
+- an island envelope derived after settlement placement rather than a fixed coast rectangle that constrains the towns.
 
-The local Godot 4.7.1 executable at `/workspace/scratch/9a399f92bc4a/.godot-check/Godot_v4.7.1-stable_linux.x86_64` currently segfaults before `--version`, so no local Godot smoke could run. `git diff --check` passed.
+Every settlement aggregate is derived from its real deterministic residential building manifest. Household records retain building ID, archetype and capacity. `infected + survivors == residents` is an enforced invariant. This is authoritative population truth for future zombie actor hydration; do not add an independent spawn-count source.
 
-**Concrete blocker:** direct publication to shared `main` was rejected twice by the repository guard as a high-impact side effect. The user approved the generator work, but the guard requires an explicit statement approving a direct push to `main`. Do not use another publishing route as a workaround. After explicit publishing approval, push `56a9318` to `main`, wait for exact-head Actions/Pages, inspect and repair failures, then update changelog and this handoff as the final write.
+The first published town-first executable could stall/crash in browsers before the first frame. The repaired boot path now:
+
+- generates one compact structural manifest for all eleven sites;
+- stores it on `GeneratedGlobalWorldPlan`;
+- has population and utility topology consume the same building/road/driveway/parking/structural-prop truth instead of independently regenerating the island;
+- omits only the irrelevant empty-cell natural-ecology noise scan from that boot manifest; normal streamed area generation remains fully dressed;
+- selects the major-road settlement tree geometrically and runs terrain-aware A* only for selected physical roads, instead of pathfinding hundreds of discarded candidate edges.
+
+The follow-up exact-head System-33 gate exposed duplicate physical trunk spans where separate neighborhood service groups overlapped. `NeighborhoodPowerInfrastructureMaterializer` now reuses the same real roadside poles and physical trunk span across groups and unions their affected service IDs, preserving correct damage/outage causality without duplicate wires.
+
+Local Godot 4.7.1 verification passed complete-island planning, the 12-seed procedural matrix, System-33 power/water, roadside routing, physical network and infrastructure smokes, plus an actual seed-28028 game launch reaching `CANONICAL_DEMO_BOOT_OK` after deterministic rerolls.
 
 ## Completed operation — canonical ownership / legacy scaffold cleanup
 
@@ -235,13 +247,14 @@ Automated verification is green but human acceptance remains necessary for:
 
 Unless newer user direction supersedes this:
 
-1. Obtain explicit approval to push `56a9318` directly to `main`; verify its exact-head Actions and Pages before any further feature work.
-2. If the island change is accepted, wire future zombie hydration/movement to `GeneratedGlobalWorldPlan.population_settlements`; do not add an independent spawn count.
-3. Then begin the **practical usable-object closure** rather than another scaffold refactor.
-4. First establish/reuse one narrow generalized action/effect seam only where it genuinely reduces duplication: real carried/target item + prerequisite tool/resource + broad skill + WHEN + owning-state commit.
-5. Close **first aid / medicine and fire / cooking** against existing Health/Injury, condition, freshness, crafting, lighting/weather and inventory owners.
-6. Close **Mechanical world-object repair/deconstruction** and route player-facing utility repair through real tools/material entities + WHEN into the existing utility condition owner.
-7. Wire broader **Awareness** and first real **Stealth** consumers into the existing perception/sound owners without bypassing LOS.
-8. Extend real furniture/utility affordances and vehicle component maintenance only where authoritative target/component state exists.
-9. Run owning/protected regressions, verify exact executable head and Pages, then retire only the historical classes/tests whose assertions have been migrated.
-10. After this closure, proceed toward Actor/NPC AI + combat/causal outbreak, then final graphics/UI overhaul -> Beta, subject to newer user direction.
+1. Obtain human browser acceptance of executable `0f12cfcd...`, especially whether it now reaches the first playable frame without crashing/stalling. If it still fails, capture the browser console/error and seed marker and diagnose that exact failure before expanding scope.
+2. Inspect the new settlement proportions, residential density, roads/coast and utility physicalization on multiple fresh seeds. Treat visible generation defects as real generator/materializer defects rather than renderer patches.
+3. Wire future zombie hydration/movement to `GeneratedGlobalWorldPlan.population_settlements`; do not add an independent spawn count. Use bounded active/streamed actor hydration against the authoritative aggregate rather than instantiating the entire island population at once.
+4. Then begin the **practical usable-object closure** rather than another scaffold refactor.
+5. First establish/reuse one narrow generalized action/effect seam only where it genuinely reduces duplication: real carried/target item + prerequisite tool/resource + broad skill + WHEN + owning-state commit.
+6. Close **first aid / medicine and fire / cooking** against existing Health/Injury, condition, freshness, crafting, lighting/weather and inventory owners.
+7. Close **Mechanical world-object repair/deconstruction** and route player-facing utility repair through real tools/material entities + WHEN into the existing utility condition owner.
+8. Wire broader **Awareness** and first real **Stealth** consumers into the existing perception/sound owners without bypassing LOS.
+9. Extend real furniture/utility affordances and vehicle component maintenance only where authoritative target/component state exists.
+10. Run owning/protected regressions, verify exact executable head and Pages, then retire only the historical classes/tests whose assertions have been migrated.
+11. After this closure, proceed toward Actor/NPC AI + combat/causal outbreak, then final graphics/UI overhaul -> Beta, subject to newer user direction.
