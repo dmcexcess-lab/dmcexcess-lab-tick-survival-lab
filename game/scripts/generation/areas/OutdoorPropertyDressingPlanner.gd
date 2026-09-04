@@ -11,7 +11,8 @@ func plan(
     roads: Array[Dictionary],
     intersections: Array[Dictionary],
     parcels: Array[Dictionary],
-    reservations: Array[Dictionary] = []
+    reservations: Array[Dictionary] = [],
+    include_natural_noise: bool = true
 ) -> Dictionary:
     var ground_regions: Array[Dictionary] = []
     var props: Array[Dictionary] = []
@@ -53,7 +54,8 @@ func plan(
     _block_reservations(blocked, reservations)
     _add_signal_prop(request, environment, intersections, props, blocked)
     _add_parcel_props(request, environment, parcels, props, blocked)
-    _add_natural_noise(request, environment, roads, intersections, parcels, props, blocked)
+    if include_natural_noise:
+        _add_natural_noise(request, environment, roads, intersections, parcels, props, blocked)
     return {"ok": true, "failure_reason": "", "ground_regions": ground_regions, "props": props}
 
 func _add_road_ground_regions(

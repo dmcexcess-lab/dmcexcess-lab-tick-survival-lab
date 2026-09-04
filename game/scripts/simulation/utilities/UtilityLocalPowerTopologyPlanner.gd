@@ -33,52 +33,66 @@ func plan(global_plan: GeneratedGlobalWorldPlan) -> Dictionary:
     var pole_exclusion_cells: Dictionary = {}
     var local_roads: Array[Dictionary] = []
     var site_building_counts: Dictionary = {}
+    var used_cached_manifest: bool = false
 
-    for site: Dictionary in sites:
-        var site_id: String = String(site.get("id", "")).strip_edges()
-        if site_id.is_empty():
-            return _failure("local_power_site_id_missing")
-        var projected: Dictionary = projector.project_site(global_plan, site_id)
-        if not bool(projected.get("ok", false)):
-            return _failure("local_power_site_projection_failed:%s:%s" % [site_id, String(projected.get("failure_reason", "unknown"))])
-        var request: AreaGenerationRequest = projected.get("request") as AreaGenerationRequest
-        var area_plan: GeneratedAreaPlan = generator.generate(request)
-        if area_plan == null or not area_plan.is_generated():
-            return _failure("local_power_site_generation_failed:%s:%s" % [site_id, "null" if area_plan == null else area_plan.failure_reason])
+    var cached_manifest: Dictionary = global_plan.local_area_manifest
+    if _cached_manifest_is_valid(cached_manifest, global_plan, sites):
+        used_cached_manifest = true
+        for value: Variant in cached_manifest.get("buildings", []):
+            buildings.append((value as Dictionary).duplicate(true))
+        site_building_counts = (cached_manifest.get("site_building_counts", {}) as Dictionary).duplicate(true)
+        for value: Variant in cached_manifest.get("blocked_prop_cells", []):
+            blocked_prop_cells[value] = true
+        for value: Variant in cached_manifest.get("pole_exclusion_cells", []):
+            pole_exclusion_cells[value] = true
+        for value: Variant in cached_manifest.get("local_roads", []):
+            local_roads.append((value as Dictionary).duplicate(true))
+    else:
+        for site: Dictionary in sites:
+            var site_id: String = String(site.get("id", "")).strip_edges()
+            if site_id.is_empty():
+                return _failure("local_power_site_id_missing")
+            var projected: Dictionary = projector.project_site(global_plan, site_id)
+            if not bool(projected.get("ok", false)):
+                return _failure("local_power_site_projection_failed:%s:%s" % [site_id, String(projected.get("failure_reason", "unknown"))])
+            var request: AreaGenerationRequest = projected.get("request") as AreaGenerationRequest
+            var area_plan: GeneratedAreaPlan = generator.generate(request)
+            if area_plan == null or not area_plan.is_generated():
+                return _failure("local_power_site_generation_failed:%s:%s" % [site_id, "null" if area_plan == null else area_plan.failure_reason])
 
-        var settlement_id: String = String(site.get("settlement_id", "")).strip_edges()
-        var site_count: int = 0
-        for building_request: BuildingGenerationRequest in area_plan.building_requests:
-            if building_request == null or not building_request.is_valid() or building_ids.has(building_request.instance_id):
-                return _failure("local_power_building_request_invalid:%s" % site_id)
-            var rect: Rect2i = building_request.envelope
-            var center := Vector2i(
-                rect.position.x + int(rect.size.x / 2),
-                rect.position.y + int(rect.size.y / 2)
-            )
-            buildings.append({
-                "building_id": building_request.instance_id,
-                "archetype_id": building_request.archetype_id,
-                "rect": rect,
-                "cell": center,
-                "site_id": site_id,
-                "settlement_id": settlement_id,
-            })
-            building_ids[building_request.instance_id] = true
-            site_count += 1
-        site_building_counts[site_id] = site_count
+            var settlement_id: String = String(site.get("settlement_id", "")).strip_edges()
+            var site_count: int = 0
+            for building_request: BuildingGenerationRequest in area_plan.building_requests:
+                if building_request == null or not building_request.is_valid() or building_ids.has(building_request.instance_id):
+                    return _failure("local_power_building_request_invalid:%s" % site_id)
+                var rect: Rect2i = building_request.envelope
+                var center := Vector2i(
+                    rect.position.x + int(rect.size.x / 2),
+                    rect.position.y + int(rect.size.y / 2)
+                )
+                buildings.append({
+                    "building_id": building_request.instance_id,
+                    "archetype_id": building_request.archetype_id,
+                    "rect": rect,
+                    "cell": center,
+                    "site_id": site_id,
+                    "settlement_id": settlement_id,
+                })
+                building_ids[building_request.instance_id] = true
+                site_count += 1
+            site_building_counts[site_id] = site_count
 
-        for parcel: Dictionary in area_plan.parcels:
-            for value: Variant in parcel.get("driveway_cells", []):
-                if typeof(value) == TYPE_VECTOR2I:
-                    pole_exclusion_cells[value] = true
-            for value: Variant in parcel.get("parking_cells", []):
-                if typeof(value) == TYPE_VECTOR2I:
-                    pole_exclusion_cells[value] = true
-        for prop: Dictionary in area_plan.outdoor_props:
-            blocked_prop_cells[prop.get("cell", INVALID_CELL)] = true
-        for road: Dictionary in area_plan.roads:
-            local_roads.append(road.duplicate(true))
+            for parcel: Dictionary in area_plan.parcels:
+                for value: Variant in parcel.get("driveway_cells", []):
+                    if typeof(value) == TYPE_VECTOR2I:
+                        pole_exclusion_cells[value] = true
+                for value: Variant in parcel.get("parking_cells", []):
+                    if typeof(value) == TYPE_VECTOR2I:
+                        pole_exclusion_cells[value] = true
+            for prop: Dictionary in area_plan.outdoor_props:
+                blocked_prop_cells[prop.get("cell", INVALID_CELL)] = true
+            for road: Dictionary in area_plan.roads:
+                local_roads.append(road.duplicate(true))
 
     if buildings.is_empty():
         return _failure("local_power_has_no_generated_buildings")
@@ -181,6 +195,7 @@ func plan(global_plan: GeneratedGlobalWorldPlan) -> Dictionary:
     return {
         "ok": true,
         "failure_reason": "",
+        "manifest_source": &"global_plan_cache" if used_cached_manifest else &"generated_fallback",
         "target_buildings_per_substation": TARGET_BUILDINGS_PER_SUBSTATION,
         "building_count": buildings.size(),
         "buildings": buildings,
@@ -194,6 +209,32 @@ func plan(global_plan: GeneratedGlobalWorldPlan) -> Dictionary:
         "rural_well_target_percent": RURAL_WELL_TARGET_PERCENT,
         "wells": wells,
     }
+
+func _cached_manifest_is_valid(
+    manifest: Dictionary,
+    global_plan: GeneratedGlobalWorldPlan,
+    sites: Array[Dictionary]
+) -> bool:
+    if not bool(manifest.get("ok", false)) \
+        or int(manifest.get("world_seed", -1)) != global_plan.seed \
+        or int(manifest.get("site_count", -1)) != sites.size():
+        return false
+    var cached_buildings: Array = manifest.get("buildings", [])
+    var cached_counts: Dictionary = manifest.get("site_building_counts", {})
+    if cached_buildings.is_empty() or cached_counts.size() != sites.size():
+        return false
+    var seen: Dictionary = {}
+    for value: Variant in cached_buildings:
+        if typeof(value) != TYPE_DICTIONARY:
+            return false
+        var building: Dictionary = value
+        var building_id: String = String(building.get("building_id", "")).strip_edges()
+        var site_id: String = String(building.get("site_id", "")).strip_edges()
+        if building_id.is_empty() or site_id.is_empty() or seen.has(building_id) \
+            or not cached_counts.has(site_id):
+            return false
+        seen[building_id] = true
+    return true
 
 func _plan_rural_wells(seed: int, buildings: Array[Dictionary], building_service: Dictionary) -> Array[Dictionary]:
     var candidates: Array[Dictionary] = []
@@ -279,6 +320,7 @@ static func _failure(reason: String) -> Dictionary:
     return {
         "ok": false,
         "failure_reason": reason,
+        "manifest_source": &"none",
         "target_buildings_per_substation": TARGET_BUILDINGS_PER_SUBSTATION,
         "building_count": 0,
         "buildings": [],

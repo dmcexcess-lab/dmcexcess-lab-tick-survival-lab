@@ -106,6 +106,7 @@ func generate(request: GlobalWorldGenerationRequest) -> GeneratedGlobalWorldPlan
     plan.resident_population = int(population_result.get("resident_population", 0))
     plan.infected_population = int(population_result.get("infected_population", 0))
     plan.survivor_population = int(population_result.get("survivor_population", 0))
+    plan.local_area_manifest = population_result.get("local_area_manifest", {})
 
     var validation: Dictionary = _validate(base_request, plan, island_profile)
     if not bool(validation.get("ok", false)):

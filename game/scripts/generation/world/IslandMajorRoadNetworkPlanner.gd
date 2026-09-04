@@ -20,8 +20,8 @@ func plan(
     var edge_ordinal: int = 1
 
     # Standard Prim-style minimum spanning tree over the generated settlements.
-    # The expensive terrain pathfinder is only used during world generation to
-    # realize a selected edge on legal geography; gameplay never rebuilds this.
+    # Candidate selection uses deterministic geometric distance; the expensive
+    # terrain pathfinder runs only for the ten edges we actually materialize.
     while connected.size() < settlements.size():
         var best: Dictionary = _best_routable_edge(connected, settlements, geography_cells, river_segments, profile)
         if best.is_empty():
@@ -123,20 +123,11 @@ func _best_routable_edge(
             var to_center: Vector2i = settlements[to_index].get("center", INVALID_CELL)
             if to_center == INVALID_CELL:
                 continue
-            var points: Array[Vector2i] = _route_points(from_center, to_center, geography_cells, river_segments, profile)
-            if points.size() < 2:
-                continue
-            var score: int = _path_length(points)
+            var score: int = absi(from_center.x - to_center.x) + absi(from_center.y - to_center.y)
             if score < best_score or (score == best_score and _edge_before(from_index, to_index, best)):
                 best = {"from": from_index, "to": to_index}
                 best_score = score
     return best
-
-func _path_length(points: Array[Vector2i]) -> int:
-    var total: int = 0
-    for index: int in range(points.size() - 1):
-        total += absi(points[index].x - points[index + 1].x) + absi(points[index].y - points[index + 1].y)
-    return total
 
 func _road_class_for_edge(a: Dictionary, b: Dictionary) -> StringName:
     var a_kind: StringName = StringName(a.get("kind", &""))

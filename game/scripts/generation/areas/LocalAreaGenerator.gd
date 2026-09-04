@@ -50,6 +50,16 @@ func _init() -> void:
     _validator = ValidatorClass.new()
 
 func generate(request: AreaGenerationRequest) -> GeneratedAreaPlan:
+    return _generate(request, true)
+
+## Generates the exact reservations, roads, parcels, buildings, driveways, and
+## structural outdoor props without scanning every empty cell for natural
+## dressing. Population and island-wide utility topology need this shared WHAT
+## truth, while streamed materialization still calls generate() for full art.
+func generate_manifest(request: AreaGenerationRequest) -> GeneratedAreaPlan:
+    return _generate(request, false)
+
+func _generate(request: AreaGenerationRequest, include_natural_dressing: bool) -> GeneratedAreaPlan:
     var plan := PlanClass.new()
     if request == null or not request.is_valid():
         plan.failure_reason = "invalid_area_request"
@@ -160,7 +170,15 @@ func generate(request: AreaGenerationRequest) -> GeneratedAreaPlan:
             return plan
         ground_regions.append(paved_value)
 
-    var outdoor_result: Dictionary = _outdoor_planner.plan(request, environment_profile, roads, intersections, parcels, reservations)
+    var outdoor_result: Dictionary = _outdoor_planner.plan(
+        request,
+        environment_profile,
+        roads,
+        intersections,
+        parcels,
+        reservations,
+        include_natural_dressing
+    )
     if not bool(outdoor_result.get("ok", false)):
         plan.failure_reason = String(outdoor_result.get("failure_reason", "outdoor_dressing_failed"))
         return plan
@@ -193,7 +211,8 @@ func generate(request: AreaGenerationRequest) -> GeneratedAreaPlan:
     plan.ground_regions = ground_regions
     plan.outdoor_props = outdoor_props
 
-    _validate_final_plan(request, plan)
+    if include_natural_dressing:
+        _validate_final_plan(request, plan)
     return plan
 
 func _effective_area_profile(request: AreaGenerationRequest, profile: Dictionary) -> Dictionary:

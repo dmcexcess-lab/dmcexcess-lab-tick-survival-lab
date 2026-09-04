@@ -21,6 +21,10 @@ var wastewater_services: Array[Dictionary] = []
 var wastewater_nodes: Array[Dictionary] = []
 var wastewater_segments: Array[Dictionary] = []
 var area_sites: Array[Dictionary] = []
+## Compact, deterministic projection of the real local-area plans. This lets
+## population and utility boot share one whole-island generation pass instead
+## of regenerating every settlement twice before the first frame.
+var local_area_manifest: Dictionary = {}
 var population_settlements: Array[Dictionary] = []
 var resident_population: int = 0
 var infected_population: int = 0

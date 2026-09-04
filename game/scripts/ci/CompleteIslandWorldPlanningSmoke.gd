@@ -46,6 +46,9 @@ func _initialize() -> void:
     _check(plan.water_services.size() == plan.settlements.size(), "island-wide municipal water serves every generated settlement")
     _check(plan.population_settlements.size() == plan.area_sites.size(), "each real settlement manifest owns a population record")
     _check(plan.resident_population > 0 and plan.infected_population + plan.survivor_population == plan.resident_population, "infected population is constrained by actual island residents")
+    _check(bool(plan.local_area_manifest.get("ok", false)), "real local-area manifest is retained for startup consumers")
+    _check(int(plan.local_area_manifest.get("world_seed", -1)) == plan.seed, "retained local-area manifest owns the island seed")
+    _check((plan.local_area_manifest.get("site_building_counts", {}) as Dictionary).size() == plan.area_sites.size(), "retained manifest covers every settlement exactly once")
 
     var replay: GeneratedGlobalWorldPlan = planner.generate(request)
     _check(replay != null and replay.is_generated() and replay.signature() == plan.signature(), "same island seed replays exactly")

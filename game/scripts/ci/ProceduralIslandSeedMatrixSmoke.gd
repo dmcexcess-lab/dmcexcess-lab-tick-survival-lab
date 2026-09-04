@@ -87,6 +87,9 @@ func _check_playable_seed(requested_seed: int) -> void:
     if int(topology.get("building_count", 0)) <= 0 or (topology.get("substations", []) as Array).is_empty():
         _failures.append("requested_seed=%d effective_seed=%d reason=utility_topology_empty" % [requested_seed, effective_seed])
         return
+    if StringName(topology.get("manifest_source", &"")) != &"global_plan_cache":
+        _failures.append("requested_seed=%d effective_seed=%d reason=utility_topology_regenerated_island" % [requested_seed, effective_seed])
+        return
 
     if effective_seed != requested_seed:
         print("PROCEDURAL_ISLAND_SEED_REROLLED requested=%d effective=%d" % [requested_seed, effective_seed])
