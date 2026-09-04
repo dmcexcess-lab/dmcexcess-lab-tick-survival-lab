@@ -116,13 +116,13 @@ func _test_door_route(world: WorldState, mutations: WorldMutationService, door_s
     if door.is_empty(): return
     if door_state.state(door) == DoorValue.OPEN:
         door_transitions.close_manually(actor_id, door)
-    if interaction_state.is_locked(door):
-        interaction_state.set_locked(door, false, &"ci_route_unlock")
+    interaction_state.set_locked(door, false, &"ci_quiet_entry_unlocked")
 
     pointer.world_cell_primary.emit(world.placement(door).anchor)
     await process_frame
     var open_button: Button = _world_button(panel, door, Actions.DOOR_OPEN)
-    _check(panel.is_open() and open_button != null, "clicking closed door exposes OPEN")
+    _check(panel.is_open() and open_button != null, "unlocked closed door exposes OPEN")
+    _check(_world_button(panel, door, Actions.DOOR_LOCK) == null and _world_button(panel, door, Actions.DOOR_UNLOCK) == null, "door chooser never exposes player LOCK/UNLOCK")
     if open_button != null: open_button.pressed.emit()
     _check(door_state.state(door) == DoorValue.OPEN, "door OPEN button mutates real door state")
     await process_frame
@@ -135,20 +135,14 @@ func _test_door_route(world: WorldState, mutations: WorldMutationService, door_s
     _check(door_state.state(door) == DoorValue.CLOSED, "door CLOSE button mutates real door state")
     await process_frame
 
+    interaction_state.set_locked(door, true, &"ci_quiet_entry_locked")
     pointer.world_cell_primary.emit(world.placement(door).anchor)
     await process_frame
-    var lock_button: Button = _world_button(panel, door, Actions.DOOR_LOCK)
-    _check(lock_button != null, "closed door exposes LOCK")
-    if lock_button != null: lock_button.pressed.emit()
-    _check(interaction_state.is_locked(door), "door LOCK button persists lock state")
-    await process_frame
-
-    pointer.world_cell_primary.emit(world.placement(door).anchor)
-    await process_frame
-    var unlock_button: Button = _world_button(panel, door, Actions.DOOR_UNLOCK)
-    _check(unlock_button != null, "locked door exposes UNLOCK")
-    if unlock_button != null: unlock_button.pressed.emit()
-    _check(not interaction_state.is_locked(door), "door UNLOCK button restores access")
+    _check(_world_button(panel, door, Actions.DOOR_OPEN) == null, "locked door does not expose quiet OPEN")
+    _check(_world_button(panel, door, Actions.DOOR_LOCK) == null and _world_button(panel, door, Actions.DOOR_UNLOCK) == null, "locked door still exposes no key/lock management")
+    _check(_world_button(panel, door, Actions.OPENING_BREAK) != null, "locked door still exposes noisy BREAK entry")
+    interaction_state.set_locked(door, false, &"ci_quiet_entry_cleanup")
+    panel.close_panel()
     await process_frame
 
 func _test_window_route(world: WorldState, mutations: WorldMutationService, spatial: SpatialQueryService, inventory_mutations: InventoryContainmentMutationService, interaction_state: WorldInteractableState, pointer: DoorPointerInputAdapter, panel: WorldInteractionPanel, actor_id: String) -> void:
@@ -159,13 +153,14 @@ func _test_window_route(world: WorldState, mutations: WorldMutationService, spat
             break
     _check(not window.is_empty(), "generated climbable window reachable")
     if window.is_empty(): return
-    if interaction_state.is_locked(window): interaction_state.set_locked(window, false, &"ci_route_unlock")
+    interaction_state.set_locked(window, false, &"ci_quiet_entry_unlocked")
     if interaction_state.window_open(window): interaction_state.set_window_open(window, false, &"ci_route_close")
 
     pointer.world_cell_primary.emit(world.placement(window).anchor)
     await process_frame
     var open_button: Button = _world_button(panel, window, Actions.WINDOW_OPEN)
-    _check(open_button != null, "closed window exposes OPEN before destructive options")
+    _check(open_button != null, "unlocked closed window exposes quiet OPEN")
+    _check(_world_button(panel, window, Actions.WINDOW_LOCK) == null and _world_button(panel, window, Actions.WINDOW_UNLOCK) == null, "window chooser never exposes player LOCK/UNLOCK")
     if open_button != null: open_button.pressed.emit()
     _check(interaction_state.window_open(window), "window OPEN button persists open state")
     await process_frame
@@ -185,6 +180,16 @@ func _test_window_route(world: WorldState, mutations: WorldMutationService, spat
     var close_button: Button = _world_button(panel, window, Actions.WINDOW_CLOSE)
     if close_button != null: close_button.pressed.emit()
     _check(not interaction_state.window_open(window), "window closes through normal UI")
+    await process_frame
+
+    interaction_state.set_locked(window, true, &"ci_quiet_entry_locked")
+    pointer.world_cell_primary.emit(world.placement(window).anchor)
+    await process_frame
+    _check(_world_button(panel, window, Actions.WINDOW_OPEN) == null, "locked window does not expose quiet OPEN")
+    _check(_world_button(panel, window, Actions.WINDOW_LOCK) == null and _world_button(panel, window, Actions.WINDOW_UNLOCK) == null, "locked window exposes no key/lock management")
+    _check(_world_button(panel, window, Actions.OPENING_BREAK) != null, "locked window still exposes noisy BREAK entry")
+    interaction_state.set_locked(window, false, &"ci_quiet_entry_cleanup")
+    panel.close_panel()
     await process_frame
 
     _check(_give_item(world, mutations, inventory_mutations, actor_id, &"item.tool.hammer", "ci.ui.window.hammer"), "hammer carried for boarding")
