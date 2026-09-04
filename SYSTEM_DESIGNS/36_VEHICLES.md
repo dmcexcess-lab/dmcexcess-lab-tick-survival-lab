@@ -291,6 +291,14 @@ Latest vehicle presentation/control repair:
 - System 36 run `33831199220`: success;
 - Pages run `33831199361`: build success + deploy success.
 
+Latest steering/scale repair:
+
+- executable `da29b972d40ca5c00373a0d8f8e3650a24967cb1` makes every true-vehicle turn a three-cell 90-degree arc with a 30-degree heading step per cell and reduces truck presentation to 78%;
+- exact-head result: **50 successful Actions runs**, zero failures, queued or running runs;
+- System 36 run `33832201227`: success;
+- canonical demo run `33832201314`: success;
+- Pages run `33832201280`: build success + deploy success.
+
 The live browser build is deployed, but **human vehicle feel/UX acceptance remains pending**.
 
 ## Known implementation limitations / next closure

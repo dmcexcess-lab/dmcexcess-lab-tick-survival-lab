@@ -6,12 +6,20 @@ This is the authoritative continuation checkpoint. Read `README_SOPS.md`, fetch 
 
 ## Current repository / executable truth
 
-- **Current verified + deployed gameplay executable:** `cec13dc39643d13b01a8da474e5a7cd0a3120d2e` — dedicated vehicle sprites plus true reverse on top of System 36.
-- `cec13dc...` completed **50 Actions runs successfully**, with **0 failed, 0 queued, 0 running** at terminal verification.
-- System 36 run **`33831199220`** completed successfully.
-- Pages run **`33831199361`** completed both Web build and deploy successfully.
+- **Current verified + deployed gameplay executable:** `da29b972d40ca5c00373a0d8f8e3650a24967cb1` — three-cell 90-degree vehicle turn arcs plus smaller truck presentation.
+- `da29b972...` completed **50 Actions runs successfully**, with **0 failed, 0 queued, 0 running** at terminal verification.
+- System 36 run **`33832201227`** and canonical demo run **`33832201314`** completed successfully.
+- Pages run **`33832201280`** completed both Web build and deploy successfully.
 - **Live build:** `https://dmcexcess-lab.github.io/dmcexcess-lab-tick-survival-lab/`
-- The commit containing this handoff is a later `[skip ci]` documentation-only head; no gameplay/source differs from `cec13dc...`.
+- The commit containing this handoff is a later `[skip ci]` documentation-only head; no gameplay/source differs from `da29b972...`.
+
+## Completed repair — three-cell 90-degree turns and smaller truck
+
+- Bicycle, motorcycle, car and truck left/right actions now trace three adjacent tactical cells and complete a 90-degree turn.
+- Each successive cell uses the matching 30-, 60- and 90-degree heading for deterministic path construction and collision validation; the persistent heading commits at the completed 90 degrees.
+- Skateboard steering remains deliberately actor-like. Straight driving, one-cell reverse, two-cell braking, fuel/Fatigue, collision consequences and integer placement remain unchanged.
+- Truck art now renders at 78% of its previous presentation size. Its real physical footprint, collision behavior and 140 kg cargo capacity were not reduced.
+- Local Godot 4.7.1 import, owning/protected smokes and canonical startup passed. The isolated local spatial-sound benchmark measured 16.35 ms and 16.12 ms against its strict 16 ms threshold on the shared host; the unchanged exact-head CI benchmark passed.
 
 ## Completed repair — dedicated vehicle sprites and reverse
 
@@ -378,10 +386,11 @@ After vehicle human acceptance—or newer explicit user direction—perform one 
 
 ## NEXT OPERATION
 
-1. **Human-play executable `cec13dc...`** at `https://dmcexcess-lab.github.io/dmcexcess-lab-tick-survival-lab/` and check that all five vehicle sprites are distinct/readable at multiple headings.
-2. Confirm the **REVERSE** button and mounted BACKWARD input move one checked cell backward, preserve heading and end stopped, while **BRAKE** remains the separate two-cell stop.
-3. If any concrete issue is reported, inspect only the owning seam, repair it, run `verify/system36-vehicles` plus relevant protected regressions, and require exact-head Pages deployment before calling it live.
-4. Continue the broader vehicle acceptance checklist. Once accepted—or on newer explicit direction—begin the comprehensive skills/crafting/items/usable-object closure phase above.
-5. Later phases remain Actor/NPC AI + combat/causal outbreak, then final graphics/UI overhaul -> Beta.
+1. **Human-play executable `da29b972...`** at `https://dmcexcess-lab.github.io/dmcexcess-lab-tick-survival-lab/`.
+2. Confirm each left/right input moves a true vehicle through a plausible three-square arc and completes exactly 90 degrees; report any direction/shape that cuts the wrong cells or feels too abrupt.
+3. Confirm the truck is now proportionate to the map and other cars. Also retain the prior check that **REVERSE** moves one cell backward while **BRAKE** remains the separate two-cell stop.
+4. If any concrete issue is reported, inspect only the owning seam, repair it, run `verify/system36-vehicles` plus relevant protected regressions, and require exact-head Pages deployment before calling it live.
+5. Continue the broader vehicle acceptance checklist. Once accepted—or on newer explicit direction—begin the comprehensive skills/crafting/items/usable-object closure phase above.
+6. Later phases remain Actor/NPC AI + combat/causal outbreak, then final graphics/UI overhaul -> Beta.
 
 Newest explicit user direction supersedes this NEXT OPERATION.

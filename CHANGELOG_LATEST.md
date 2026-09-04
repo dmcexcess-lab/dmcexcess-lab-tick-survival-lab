@@ -4,7 +4,10 @@ This compact ledger records the newest executable work. `CHANGELOG.md` remains t
 
 ## Three-Cell Vehicle Turn Arcs + Smaller Truck — 2026-09-04
 
-Exact-head verification pending publication.
+Verified executable: `da29b972d40ca5c00373a0d8f8e3650a24967cb1`.
+
+- Exact-head verification completed with **50 successful Actions runs**, zero failures, queued or running runs.
+- System 36 run `33832201227`, canonical demo run `33832201314` and Pages build/deploy run `33832201280` completed successfully.
 
 - Changed bicycle/motorcycle/car/truck steering so one left/right action completes a 90-degree turn across three adjacent tactical cells, applying and collision-checking 30 degrees of heading change per cell.
 - Kept skateboard steering actor-like and preserved reverse, braking, fuel/Fatigue, collision and integer-placement ownership.
