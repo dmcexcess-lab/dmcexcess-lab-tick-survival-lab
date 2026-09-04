@@ -171,6 +171,9 @@ func request_modify(actor_id: String, vehicle_id: String = "") -> Dictionary:
     var target := vehicle_id if not vehicle_id.is_empty() else _nearby_vehicle(actor_id)
     if target.is_empty():
         return _reject("no_vehicle_in_reach")
+    var existing_mods: Array = _state.record(target).get("mods", [])
+    if &"cargo_rack" in existing_mods:
+        return _reject("cargo_rack_already_installed")
     if not _has_semantic(actor_id, &"item.tool.adjustable_wrench") or not _has_semantic(actor_id, &"item.automotive.cargo_rack"):
         return _reject("modify_requires_wrench_and_cargo_rack")
     var skill := _skills.action_profile(actor_id, SkillCatalog.MECHANICAL, 20, 4)
@@ -223,22 +226,34 @@ func _on_action_phase(action: TimedAction, phase: ActionPhase) -> void:
     var ok: bool = false
     var reason: String = "vehicle_action_failed"
     match action.action_type:
-        ENTER: ok = _commit_enter(action.actor_id, vehicle_id); reason = "enter_failed"
-        EXIT: ok = _commit_exit(action.actor_id, vehicle_id); reason = "exit_failed"
+        ENTER:
+            ok = _commit_enter(action.actor_id, vehicle_id)
+            reason = "enter_failed"
+        EXIT:
+            ok = _commit_exit(action.actor_id, vehicle_id)
+            reason = "exit_failed"
         MOVE, TURN_LEFT, TURN_RIGHT, BRAKE:
             var result := _commit_motion(action.actor_id, vehicle_id, action)
-            ok = bool(result.get("ok", false)); reason = String(result.get("reason", "movement_blocked"))
-        START: ok = _state.mutate(vehicle_id, {"powered": true, "locked": false}); reason = "start_failed"
+            ok = bool(result.get("ok", false))
+            reason = String(result.get("reason", "movement_blocked"))
+        START:
+            ok = _state.mutate(vehicle_id, {"powered": true, "locked": false})
+            reason = "start_failed"
         HOTWIRE:
             var result := _commit_skill_action(action, vehicle_id, HOTWIRE)
-            ok = bool(result.get("ok", false)); reason = String(result.get("reason", "hotwire_failed"))
+            ok = bool(result.get("ok", false))
+            reason = String(result.get("reason", "hotwire_failed"))
         REPAIR:
             var result := _commit_skill_action(action, vehicle_id, REPAIR)
-            ok = bool(result.get("ok", false)); reason = String(result.get("reason", "repair_failed"))
+            ok = bool(result.get("ok", false))
+            reason = String(result.get("reason", "repair_failed"))
         MODIFY:
             var result := _commit_skill_action(action, vehicle_id, MODIFY)
-            ok = bool(result.get("ok", false)); reason = String(result.get("reason", "modify_failed"))
-        REFUEL: ok = _commit_refuel(action.actor_id, vehicle_id); reason = "refuel_failed"
+            ok = bool(result.get("ok", false))
+            reason = String(result.get("reason", "modify_failed"))
+        REFUEL:
+            ok = _commit_refuel(action.actor_id, vehicle_id)
+            reason = "refuel_failed"
     _outcomes[action.serial] = {"success": ok, "reason": "" if ok else reason, "vehicle_id": vehicle_id}
 
 func _on_action_finished(action: TimedAction) -> void:
@@ -297,6 +312,9 @@ func _commit_motion(actor_id: String, vehicle_id: String, action: TimedAction) -
     var facing := VehicleHeading.cardinal_facing(heading)
     for relative: Vector2i in path:
         var target := placement.anchor + relative
+        if kind == VehicleProfileCatalog.SKATEBOARD and not _skateboard_surface_ok(target, placement.footprint, facing):
+            _state.mutate(vehicle_id, {"moving": false})
+            return {"ok": false, "reason": "skateboard_requires_smooth_surface"}
         var check := _query.query_footprint(target, facing, placement.footprint, vehicle_id, true)
         if check == null or not check.is_clear():
             _state.mutate(vehicle_id, {"moving": false, "body": int(rec.get("body", 100)) - 8})
@@ -304,14 +322,16 @@ func _commit_motion(actor_id: String, vehicle_id: String, action: TimedAction) -
         current_anchor = target
     if not _mutations.set_placement(vehicle_id, Layers.Channel.OBJECT, current_anchor, facing, placement.footprint):
         return {"ok": false, "reason": "vehicle_move_commit_failed"}
-    _mutations.set_placement(actor_id, Layers.Channel.ACTOR, current_anchor, facing, Footprint.single_cell())
+    if not _mutations.set_placement(actor_id, Layers.Channel.ACTOR, current_anchor, facing, Footprint.single_cell()):
+        return {"ok": false, "reason": "vehicle_driver_move_commit_failed"}
     var patch := {"heading": heading, "moving": action.action_type != BRAKE}
-    if _profiles.is_motorized(kind):
+    if _profiles.is_motorized(kind) and action.action_type != BRAKE:
         patch["fuel"] = maxi(0, int(rec.get("fuel", 0)) - _profiles.fuel_per_move(kind))
     if not _state.mutate(vehicle_id, patch):
         return {"ok": false, "reason": "vehicle_state_commit_failed"}
     if kind == VehicleProfileCatalog.BICYCLE:
-        _conditions.add_fatigue(actor_id, int(_profiles.profile(kind).get("fatigue_per_move", 1)), &"bicycle_propulsion")
+        if not _conditions.add_fatigue(actor_id, int(_profiles.profile(kind).get("fatigue_per_move", 1)), &"bicycle_propulsion"):
+            return {"ok": false, "reason": "bicycle_fatigue_commit_failed"}
     return {"ok": true, "reason": ""}
 
 func _commit_skill_action(action: TimedAction, vehicle_id: String, kind: StringName) -> Dictionary:
@@ -328,21 +348,40 @@ func _commit_skill_action(action: TimedAction, vehicle_id: String, kind: StringN
             _state.mutate(vehicle_id, {"electrical": int(rec.get("electrical", 100)) - 5})
         return {"ok": false, "reason": "mechanical_check_failed"}
     if kind == HOTWIRE:
-        _consume_one_semantic(action.actor_id, &"item.junk.scrap_wire")
+        if not _consume_one_semantic(action.actor_id, &"item.junk.scrap_wire"):
+            return {"ok": false, "reason": "hotwire_wire_commit_failed"}
         return {"ok": _state.mutate(vehicle_id, {"hotwired": true, "locked": false}), "reason": "hotwire_commit_failed"}
     if kind == REPAIR:
         var rec := _state.record(vehicle_id)
         var gain := maxi(8, int(result.get("effectiveness_percent", 65)) / 4)
-        _consume_one_of(action.actor_id, [&"item.crafting.metal_scrap", &"item.junk.rusted_fasteners", &"item.material.screws_box"])
+        if not _consume_one_of(action.actor_id, [&"item.crafting.metal_scrap", &"item.junk.rusted_fasteners", &"item.material.screws_box"]):
+            return {"ok": false, "reason": "repair_parts_commit_failed"}
         return {"ok": _state.mutate(vehicle_id, {"body": int(rec.get("body", 0)) + gain, "propulsion": int(rec.get("propulsion", 0)) + gain, "wheels": int(rec.get("wheels", 0)) + gain, "electrical": int(rec.get("electrical", 0)) + gain}), "reason": "repair_commit_failed"}
     if kind == MODIFY:
-        var rec := _state.record(vehicle_id)
-        var mods: Array = rec.get("mods", []).duplicate()
-        if &"cargo_rack" not in mods:
-            mods.append(&"cargo_rack")
-        _consume_one_semantic(action.actor_id, &"item.automotive.cargo_rack")
-        return {"ok": _state.mutate(vehicle_id, {"mods": mods}), "reason": "modify_commit_failed"}
+        return _install_cargo_rack(action.actor_id, vehicle_id)
     return {"ok": false, "reason": "skill_action_unknown"}
+
+func _install_cargo_rack(actor_id: String, vehicle_id: String) -> Dictionary:
+    var rack_id := _find_semantic_item(actor_id, &"item.automotive.cargo_rack")
+    if rack_id.is_empty():
+        return {"ok": false, "reason": "cargo_rack_missing_at_commit"}
+    if not _inventory_mutations.clear_container(rack_id):
+        return {"ok": false, "reason": "cargo_rack_detach_failed"}
+    if not _inventory_mutations.set_container(rack_id, vehicle_id):
+        _inventory_mutations.set_container(rack_id, actor_id)
+        return {"ok": false, "reason": "cargo_rack_install_containment_failed"}
+    var rec := _state.record(vehicle_id)
+    var mods: Array = rec.get("mods", []).duplicate()
+    var installed: Array = rec.get("installed_component_ids", []).duplicate()
+    if &"cargo_rack" not in mods:
+        mods.append(&"cargo_rack")
+    if rack_id not in installed:
+        installed.append(rack_id)
+    if _state.mutate(vehicle_id, {"mods": mods, "installed_component_ids": installed}):
+        return {"ok": true, "reason": ""}
+    _inventory_mutations.clear_container(rack_id)
+    _inventory_mutations.set_container(rack_id, actor_id)
+    return {"ok": false, "reason": "modify_commit_failed"}
 
 func _commit_refuel(actor_id: String, vehicle_id: String) -> bool:
     var rec := _state.record(vehicle_id)
@@ -369,11 +408,14 @@ func _actor_has_matching_key(actor_id: String, vehicle_id: String) -> bool:
     return not key_id.is_empty() and _inventory.contains_directly(actor_id, key_id)
 
 func _has_semantic(actor_id: String, semantic: StringName) -> bool:
+    return not _find_semantic_item(actor_id, semantic).is_empty()
+
+func _find_semantic_item(actor_id: String, semantic: StringName) -> String:
     for item_id: String in _inventory.direct_contents(actor_id):
         var entity := _world.entity(item_id)
         if entity != null and entity.semantic_type == semantic:
-            return true
-    return false
+            return item_id
+    return ""
 
 func _has_any_semantic(actor_id: String, semantics: Array) -> bool:
     for semantic: Variant in semantics:
@@ -388,13 +430,27 @@ func _consume_one_of(actor_id: String, semantics: Array) -> bool:
     return false
 
 func _consume_one_semantic(actor_id: String, semantic: StringName) -> bool:
-    for item_id: String in _inventory.direct_contents(actor_id):
-        var entity := _world.entity(item_id)
-        if entity != null and entity.semantic_type == semantic:
-            if not _inventory_mutations.clear_container(item_id):
-                return false
-            return _mutations.remove_entity(item_id)
+    var item_id := _find_semantic_item(actor_id, semantic)
+    if item_id.is_empty():
+        return false
+    if not _inventory_mutations.clear_container(item_id):
+        return false
+    if _mutations.remove_entity(item_id):
+        return true
+    _inventory_mutations.set_container(item_id, actor_id)
     return false
+
+func _skateboard_surface_ok(anchor: Vector2i, footprint: SpatialFootprint, facing: int) -> bool:
+    for cell: Vector2i in footprint.world_cells(anchor, facing):
+        if not _world.has_terrain(cell):
+            return false
+        var terrain := String(_world.terrain_at(cell)).to_lower()
+        var smooth := terrain.contains("road") or terrain.contains("pavement") or terrain.contains("parking") \
+            or terrain.contains("driveway") or terrain.contains("sidewalk") or terrain.contains("asphalt") \
+            or terrain.contains("concrete")
+        if not smooth:
+            return false
+    return true
 
 static func _reject(reason: String) -> Dictionary:
     return {"accepted": false, "reason": reason, "action_serial": 0}
