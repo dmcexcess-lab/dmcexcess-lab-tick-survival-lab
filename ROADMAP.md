@@ -18,8 +18,8 @@ Each independently owned phase follows `README_SOPS.md` and **DESCRIBE -> APPROV
 - **Phase 3 / System 33 Power + Water — IMPLEMENTED + AUTOMATED VERIFIED; HUMAN PLAYTEST PENDING.** Preserve real local substations, roadside feeder trees/service drops, island-wide municipal plant and persistent rural wells. Wastewater/sewer/septic is retired.
 - **Phase 4 / System 34 Physical Survival — IMPLEMENTED + AUTOMATED VERIFIED; HUMAN PLAYTEST PENDING.** Health, hunger, thirst, Rest and canonical Fatigue are live. Fatigue is 0 rested -> 100 exhausted; there is no parallel live Stamina pool.
 - **Phase 5 Moodlets — IMPLEMENTED + AUTOMATED VERIFIED; HUMAN PLAYTEST PENDING.** Moodlets are derived warnings, not duplicate state.
-- **Phase 6 Four Skills / Survival Interaction Foundation — IN PROGRESS.** Four-skill migration, skill-aware crafting/search, primitive resources/recipes and bounded outdoor foraging are implemented. Remaining consumers will be closed after vehicles.
-- **Phase 7 / System 36 Vehicles — APPROVED; IMPLEMENTATION NEXT.** Canonical vehicle design is complete in `SYSTEM_DESIGNS/36_VEHICLES.md`.
+- **Phase 6 Four Skills / Survival Interaction Foundation — IN PROGRESS.** Four-skill migration, skill-aware crafting/search, primitive resources/recipes and bounded outdoor foraging are implemented. The final consumer-closure pass is next after vehicle human acceptance or newer explicit direction.
+- **Phase 7 / System 36 Vehicles — IMPLEMENTED + AUTOMATED VERIFIED; HUMAN PLAYTEST PENDING.** Persistent playable vehicles are deployed from `SYSTEM_DESIGNS/36_VEHICLES.md`.
 
 ## Phase 6 — Four broad skills and real interactions
 
@@ -43,15 +43,16 @@ Skill changes competence; it never conjures a missing tool/material or replaces 
 - Mechanical/Survival-aware System-32 crafting;
 - Survival-aware persistent-container scavenging without rerolling physical contents;
 - real primitive loot semantics and bounded primitive Survival recipes;
-- **System 35 Outdoor Foraging:** finite deterministic local outdoor stick/stone opportunities using real sky exposure, terrain and generated natural props; WHEN + Survival resolution; successful outputs become real persistent items and enter personal inventory when carry admission allows, with a physical loose-item fallback at hard capacity.
+- **System 35 Outdoor Foraging:** finite deterministic local outdoor stick/stone opportunities using real sky exposure, terrain and generated natural props; WHEN + Survival resolution; successful outputs become real persistent items and enter personal inventory when carry admission allows, with a physical loose-item fallback at hard capacity;
+- **System 36 Mechanical vehicle consumers:** real matching keys, Mechanical hot-wiring, bounded repair, real installed cargo-rack modification, weighted cargo, finite fuel and real vehicle target interactions.
 
-### Final Phase-6 closure after vehicles
+### Final Phase-6 closure after vehicle human acceptance
 
-After System 36 is implemented and accepted, perform one comprehensive skills/crafting/items/usable-object run-through covering:
+Perform one comprehensive skills/crafting/items/usable-object run-through covering:
 
 1. cooking through real ingredients/tools/heat sources and Survival;
 2. first aid through Health/Injury ownership and Survival;
-3. Mechanical vehicle repair/modification/hot-wiring plus real parts/fuel interactions;
+3. richer Mechanical vehicle component maintenance where real parts have real owners/consumers;
 4. Mechanical repair of broken world objects and deconstruction/reclamation through actual target owners;
 5. real fire/ignition through tinder/fuel/ignition prerequisites and Survival;
 6. primitive crafted outputs connected to actual combat/tool/fire consumers rather than item-name special cases;
@@ -64,7 +65,9 @@ Hunting is not a separate skill; it emerges from Awareness, Stealth, Survival kn
 
 ## Phase 7 — System 36 Vehicles
 
-Approved vehicle classes:
+Status: **IMPLEMENTED + AUTOMATED VERIFIED; HUMAN PLAYTEST PENDING.**
+
+Implemented vehicle classes:
 
 - cars;
 - trucks;
@@ -72,18 +75,38 @@ Approved vehicle classes:
 - bicycles;
 - skateboards.
 
-Canonical movement/handling:
+Canonical movement/handling now live:
 
-- **skateboard:** actor-like 2-cell movement, no added Fatigue, no fuel, nearly silent;
-- **bicycle:** 3-cell vehicle movement, no fuel, quiet, real but efficient Fatigue cost;
-- **motorcycle:** powered 3-cell movement, lower fuel use, low storage, easier to steal/hot-wire than cars;
+- **skateboard:** actor-like 2-cell smooth-surface movement, no added Fatigue, no fuel, nearly silent;
+- **bicycle:** 3-cell vehicle movement, no fuel, quiet, real Fatigue cost;
+- **motorcycle:** powered 3-cell movement, lower fuel use, low storage, easier Mechanical hot-wire than cars;
 - **car/truck:** powered 3-cell movement with larger storage and higher fuel use by class;
-- bicycle/motorcycle/car/truck use **12 vehicle headings at 30-degree increments**;
-- 30-degree steering is resolved through deterministic integer-grid 3-cell rasters and conservative swept footprint masks, never continuous authoritative physics;
+- bicycle/motorcycle/car/truck use **12 typed vehicle headings at 30-degree increments** over deterministic integer-grid rasters;
 - true vehicle classes require **2 cells of stopping/braking distance**;
 - no separate Driving skill; hot-wiring/repair/modification belong to Mechanical.
 
-System 36 implementation should include persistent vehicle state, generated parked vehicles, enter/exit/driver containment, movement/turn/brake, fuel, cargo, keys/locks/hot-wiring, condition/repair, bounded modifications and existing light/sound integration where real public seams already exist.
+Also implemented:
+
+- sparse persistent vehicle state keyed by WHAT entity ID;
+- bounded generated parked vehicles on plausible materialized road/driveway/parking/pavement cells near the canonical playable start;
+- enter/exit and mounted input routing without replacing ordinary on-foot movement;
+- real matching key entities, locks and persistent hot-wire bypass;
+- compact finite fuel by class;
+- real vehicle inventory containers with weight/capacity and live STORE/TAKE controls;
+- real cargo-rack installation that keeps the component item persistent;
+- bounded Mechanical repair using real tools/materials;
+- crash body damage, real occupant HP damage and spatial impact/movement sound;
+- powered headlights merged into the existing physical-light owner;
+- dedicated vehicle renderer and System-36 owning CI gate.
+
+Explicit remaining closure instead of fake completion:
+
+- exact arbitrary-angle rotated collision polygons are not authoritative; typed 30° headings use deterministic raster movement with the existing cardinal WHAT footprint vocabulary;
+- fuel cans are whole-item transfer units, not partial-liquid simulation;
+- vehicle population is currently a bounded canonical playable-area seeding pass, not an island-wide streaming population source;
+- battery/wheel items exist physically but dedicated replacement consumers are not yet implemented;
+- broader modifications remain future real-component consumers;
+- human browser/game-feel acceptance is pending.
 
 ## Phase 8 — Actor/NPC AI, combat and causal outbreak
 
@@ -99,4 +122,4 @@ Do not add frame-driven condition/skill/resource processing, per-item/per-actor 
 
 ## Current next operation
 
-Implement approved **System 36 Vehicles** from `SYSTEM_DESIGNS/36_VEHICLES.md`, verify/deploy it, then perform the comprehensive skills/crafting/items/usable-object closure pass described above. New explicit user direction supersedes this ordering.
+Human-play the deployed **System 36 Vehicles** build and repair any concrete vehicle/game-feel/browser issues found. After that acceptance gate—or a newer explicit user direction—perform the comprehensive skills/crafting/items/usable-object closure pass described above. New explicit user direction supersedes this ordering.
