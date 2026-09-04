@@ -28,6 +28,7 @@ jobs:
           test -f game/scripts/app/CraftingGameMain.gd
           test -f game/scripts/app/UtilityGameMain.gd
           test -f game/scripts/app/System34GameMain.gd
+          test -f game/scripts/app/VehicleGameMain.gd
           test -f game/scripts/demo/CanonicalDemoFixture.gd
           test -f game/scripts/render/TacticalRendererStack.gd
           test -f game/scripts/input/PlayerActionIntent.gd
@@ -35,7 +36,8 @@ jobs:
           test -f game/scripts/player/PlayerActionController.gd
           test -f game/scripts/ui/PlayerMovementControls.gd
           test -f game/scripts/ci/CanonicalDemoSmoke.gd
-          grep -q 'System34GameMain.gd' game/main.tscn
+          grep -q 'VehicleGameMain.gd' game/main.tscn
+          grep -q 'extends System34GameMain' game/scripts/app/VehicleGameMain.gd
           grep -q 'extends UtilityGameMain' game/scripts/app/System34GameMain.gd
           grep -q 'extends CraftingGameMain' game/scripts/app/UtilityGameMain.gd
           ! grep -q 'scripts/reboot/RebootMain.gd' game/main.tscn
