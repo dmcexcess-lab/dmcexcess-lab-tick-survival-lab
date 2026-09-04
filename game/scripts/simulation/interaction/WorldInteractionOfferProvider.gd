@@ -77,11 +77,8 @@ func _append_door(result: Array[InteractionOffer], actor_id: String, target_id: 
         _append(result, actor_id, target_id, placement, Actions.DOOR_CLOSE, "CLOSE", PRIORITY + 10)
         _append(result, actor_id, target_id, placement, Actions.OPENING_BREAK, "BREAK", PRIORITY - 5)
         return
-    if locked:
-        _append(result, actor_id, target_id, placement, Actions.DOOR_UNLOCK, "UNLOCK", PRIORITY + 10)
-    else:
+    if not locked:
         _append(result, actor_id, target_id, placement, Actions.DOOR_OPEN, "OPEN", PRIORITY + 10)
-        _append(result, actor_id, target_id, placement, Actions.DOOR_LOCK, "LOCK", PRIORITY)
     _append(result, actor_id, target_id, placement, Actions.OPENING_BOARD, "BOARD", PRIORITY - 2)
     _append(result, actor_id, target_id, placement, Actions.OPENING_BREAK, "BREAK", PRIORITY - 5)
 
@@ -102,11 +99,8 @@ func _append_window(result: Array[InteractionOffer], actor_id: String, target_id
         _append(result, actor_id, target_id, placement, Actions.WINDOW_CLOSE, "CLOSE", PRIORITY + 6)
         _append(result, actor_id, target_id, placement, Actions.OPENING_BREAK, "BREAK", PRIORITY - 5)
         return
-    if locked:
-        _append(result, actor_id, target_id, placement, Actions.WINDOW_UNLOCK, "UNLOCK", PRIORITY + 10)
-    else:
+    if not locked:
         _append(result, actor_id, target_id, placement, Actions.WINDOW_OPEN, "OPEN", PRIORITY + 10)
-        _append(result, actor_id, target_id, placement, Actions.WINDOW_LOCK, "LOCK", PRIORITY)
     _append(result, actor_id, target_id, placement, Actions.OPENING_BOARD, "BOARD", PRIORITY - 2)
     _append(result, actor_id, target_id, placement, Actions.OPENING_BREAK, "BREAK", PRIORITY - 5)
 
