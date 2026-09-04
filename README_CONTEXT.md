@@ -1,20 +1,25 @@
 # Tick Survival Lab — Current Handoff
 
-Last updated: **2026-09-03**
+Last updated: **2026-09-04**
 
 This is the authoritative continuation checkpoint. Read `README_SOPS.md`, fetch current `main` once, and continue from **NEXT OPERATION**.
 
 ## Current repository / executable truth
 
-- **Gameplay merge executable:** `f8a80a9a8765d973abdb9c4820a87a5e3baeb204` — merged PR #4 System 36 vehicle gameplay/source.
-- **Canonical-root workflow repair:** `af67766af1944c85eb8ba4332dcddd7a2089a3af` — workflow-only; taught canonical-demo gate about the new `VehicleGameMain` root.
-- **Fully verified + deployed executable/workflow head:** `dd489537e14615290aa51f08d1e66937682166e4` — workflow-only Pages-root repair on top of the same gameplay source.
-- `dd489537...` completed **49 Actions runs successfully**, with **0 failed, 0 queued, 0 running** at terminal verification.
-- Pages run **`33827702359`** completed both Web build and deploy successfully.
+- **Current verified + deployed gameplay executable:** `cec13dc39643d13b01a8da474e5a7cd0a3120d2e` — dedicated vehicle sprites plus true reverse on top of System 36.
+- `cec13dc...` completed **50 Actions runs successfully**, with **0 failed, 0 queued, 0 running** at terminal verification.
+- System 36 run **`33831199220`** completed successfully.
+- Pages run **`33831199361`** completed both Web build and deploy successfully.
 - **Live build:** `https://dmcexcess-lab.github.io/dmcexcess-lab-tick-survival-lab/`
-- Support-documentation commits after `dd489537...` are `[skip ci]` docs only; no gameplay/source changed after the verified/deployed head.
-- **Main immediately before this mandatory final context write:** `f9e51d0653f7e7ce2083bcfff89f3c9fff58519c`.
-- This `README_CONTEXT.md` update is intentionally the **only repository write after `f9e51d...` and the final repository write for this operation**. The commit containing this file is therefore the final `main` head for the handoff; no source/gameplay differs from `dd489537...`.
+- The commit containing this handoff is a later `[skip ci]` documentation-only head; no gameplay/source differs from `cec13dc...`.
+
+## Completed repair — dedicated vehicle sprites and reverse
+
+- Skateboard, bicycle, motorcycle, car and truck now each use their own committed top-down SVG sprite rather than a recolored geometric placeholder.
+- The renderer rotates those real class sprites through the established typed 30-degree headings and preserves their aspect ratios.
+- `vehicle.reverse` moves one collision-checked cell opposite the current heading, preserves heading and ends stopped. It uses the same terrain, placement, fuel/Fatigue and consequence owners as forward movement.
+- Mounted BACKWARD input and the visible **REVERSE** button invoke reverse. **BRAKE** remains the distinct two-cell stopping action.
+- Automated and deployment verification is complete. Human visual/feel acceptance is still required because this environment could not capture the live Web renderer faithfully.
 
 ## Completed operation — System 36 Vehicles implemented, verified and deployed
 
@@ -210,6 +215,7 @@ Controls:
 - EXIT
 - START
 - HOTWIRE
+- REVERSE
 - BRAKE
 - REPAIR
 - ADD RACK
@@ -328,8 +334,10 @@ Automated System-36 verification and deployment are complete. Human acceptance i
 Vehicle acceptance checklist:
 
 - generated skateboard/bicycle/motorcycle/car/truck appear in plausible reachable locations;
-- vehicle artwork is visible/readable and survivor can approach/ENTER/EXIT;
+- all five dedicated vehicle sprites are distinct, readable at practical zoom and remain convincing across headings;
+- survivor can approach/ENTER/EXIT;
 - true vehicle left/right input visibly turns by 30° steps and travels plausibly over the integer raster;
+- REVERSE button and mounted BACKWARD input move exactly one checked cell backward, preserve heading and end stopped;
 - 2-cell brake distance feels understandable and collision behavior is consequential rather than surprising;
 - skateboard moves 2 cells, stays on plausible smooth surfaces and does not add Fatigue;
 - bicycle moves 3 cells and visibly increases canonical Fatigue;
@@ -370,9 +378,10 @@ After vehicle human acceptance—or newer explicit user direction—perform one 
 
 ## NEXT OPERATION
 
-1. **Human-play the deployed System 36 build** at `https://dmcexcess-lab.github.io/dmcexcess-lab-tick-survival-lab/` using the vehicle acceptance checklist above.
-2. If any concrete issue is reported, inspect only the owning seam, repair it, run `verify/system36-vehicles` plus the relevant protected regression(s), then require exact-head Pages deployment before calling the repair live.
-3. If System 36 is human-accepted—or the user explicitly directs moving on—begin the comprehensive skills/crafting/items/usable-object closure phase above. Do not invent missing combat/fire/component/base-building owners just to make names appear usable.
-4. Later phases remain Actor/NPC AI + combat/causal outbreak, then final graphics/UI overhaul -> Beta.
+1. **Human-play executable `cec13dc...`** at `https://dmcexcess-lab.github.io/dmcexcess-lab-tick-survival-lab/` and check that all five vehicle sprites are distinct/readable at multiple headings.
+2. Confirm the **REVERSE** button and mounted BACKWARD input move one checked cell backward, preserve heading and end stopped, while **BRAKE** remains the separate two-cell stop.
+3. If any concrete issue is reported, inspect only the owning seam, repair it, run `verify/system36-vehicles` plus relevant protected regressions, and require exact-head Pages deployment before calling it live.
+4. Continue the broader vehicle acceptance checklist. Once accepted—or on newer explicit direction—begin the comprehensive skills/crafting/items/usable-object closure phase above.
+5. Later phases remain Actor/NPC AI + combat/causal outbreak, then final graphics/UI overhaul -> Beta.
 
 Newest explicit user direction supersedes this NEXT OPERATION.

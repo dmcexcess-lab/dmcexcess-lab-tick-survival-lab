@@ -285,6 +285,13 @@ Implementation PR: **#4 — Implement System 36 vehicles**.
 - exact-head result on `dd489537...`: **49 successful Actions runs, zero failures, zero queued, zero running**;
 - Pages run `33827702359`: build success + deploy success.
 
+Latest vehicle presentation/control repair:
+
+- executable `cec13dc39643d13b01a8da474e5a7cd0a3120d2e` adds a dedicated sprite for every approved vehicle class and a real one-cell reverse action;
+- exact-head result: **50 successful Actions runs**, zero failures, queued or running runs;
+- System 36 run `33831199220`: success;
+- Pages run `33831199361`: build success + deploy success.
+
 The live browser build is deployed, but **human vehicle feel/UX acceptance remains pending**.
 
 ## Known implementation limitations / next closure

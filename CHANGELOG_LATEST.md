@@ -4,7 +4,10 @@ This compact ledger records the newest executable work. `CHANGELOG.md` remains t
 
 ## Dedicated Vehicle Sprites + Reverse — 2026-09-04
 
-Exact-head verification pending publication.
+Verified executable: `cec13dc39643d13b01a8da474e5a7cd0a3120d2e`.
+
+- Exact-head verification completed with **50 successful Actions runs**, zero failures, queued or running runs.
+- System 36 run `33831199220` and Pages build/deploy run `33831199361` completed successfully.
 
 - Replaced the temporary rotated colored-box vehicle presentation with five dedicated top-down class sprites for skateboard, bicycle, motorcycle, car and truck.
 - Preserved typed 30-degree heading presentation by rotating each class's actual sprite; rendering still owns presentation only.
