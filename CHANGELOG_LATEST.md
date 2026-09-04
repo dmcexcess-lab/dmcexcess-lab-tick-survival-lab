@@ -2,6 +2,29 @@
 
 This compact ledger records the newest executable work. `CHANGELOG.md` remains the historical archive.
 
+## System 36 Vehicles — 2026-09-03
+
+Gameplay merge executable: `f8a80a9a8765d973abdb9c4820a87a5e3baeb204`  
+Fully verified/deployed workflow head: `dd489537e14615290aa51f08d1e66937682166e4`
+
+- Implemented persistent skateboards, bicycles, motorcycles, cars and trucks as real WHAT entities with sparse typed vehicle state.
+- Added deterministic generated parked vehicles over plausible already-materialized road/driveway/parking/pavement cells near the canonical playable start; motorized vehicles receive real matching key entities and real cargo containers.
+- Skateboard movement is actor-like, 2 cells, smooth-surface restricted and adds no Fatigue. Bicycle movement is 3 cells and applies canonical Fatigue. Motorcycle/car/truck movement is powered, 3 cells and consumes class-scaled finite fuel.
+- Bicycle/motorcycle/car/truck use 12 typed headings at 30-degree increments over deterministic integer-grid movement rasters. WHAT keeps the existing cardinal facing/footprint vocabulary; exact arbitrary-angle collision polygons were not invented.
+- Added real 2-cell braking for moving true vehicle classes, enter/exit, mounted input routing, fuel/start state, locks and matching-key ignition.
+- Added Mechanical hot-wiring with screwdriver + real scrap wire, persistent bypass state and lower motorcycle difficulty.
+- Added weighted real cargo using canonical inventory containment, live STORE/TAKE controls and per-class capacities.
+- Added bounded Mechanical repair using an adjustable wrench + real repair material.
+- Added a real cargo-rack modification: successful Mechanical installation moves the actual rack item into vehicle containment, records it as an installed component and expands capacity by 12 kg.
+- Wired vehicle movement/impact sound into the existing spatial sound owner and real crash HP damage into `ActorHealthState`.
+- Wired powered headlights into the existing physical-light owner without replacing utility/flashlight emitters.
+- Added a dedicated vehicle renderer, compact vehicle/cargo UI, `VehicleSmoke.gd` and `verify/system36-vehicles` workflow with protected movement, locomotion, inventory, carry, skills, health, condition, forage, lighting, sound, world-planning, startup and input-responsiveness coverage.
+- PR #4 final head `319209b2bd5ec3f7c77aefa4b16a8636bb5111b9` passed System-36 run `33827312477` and protected forage/canonical run `33827312468` before merge.
+- The first merge correctly exposed stale canonical/Pages workflow assertions that still required `System34GameMain` directly. Those workflow contracts were repaired for the new `VehicleGameMain -> System34GameMain -> UtilityGameMain -> CraftingGameMain -> GameMain` composition.
+- Final verified/deployed head `dd489537e14615290aa51f08d1e66937682166e4` completed **49 Actions runs successfully**, with zero failures, queued or running runs.
+- Pages run `33827702359` completed both Web build and deploy successfully.
+- Honest remaining limits: collision footprints remain cardinal WHAT footprints at 30-degree typed headings; refuel currently consumes a whole gas-can item rather than partial fluid quantities; generated vehicle population is bounded near the canonical playable start rather than a full island streaming source; richer battery/wheel/component replacement and modifications remain future real consumers; human browser/game-feel acceptance is pending.
+
 ## Forage Inventory Acquisition Repair — 2026-09-03
 
 Verified executable: `ad975a08c5a62d178d6bf8e79c2dc21b08c4905c`
@@ -68,4 +91,4 @@ Verified executable lineage: `156ee4b0a1727a5d5d26b479cf7a0dea9e9b462a`
 - The accepted responsive full physical-light renderer, stateless LOS and decision-pause input behavior remain protected.
 - Real procedural local substations target roughly ten generated buildings, use shared roadside feeder trees and short service drops; regional source-to-substation is logical/non-physical.
 - One real grid-independent island municipal water plant supplies municipal service and real rural private wells persist; wastewater/sewer/septic remains retired.
-- Automated green never replaces pending human browser acceptance for generated utility behavior, current survivor-condition feel, skill/crafting/scavenging or outdoor forage UX.
+- Automated green never replaces pending human browser acceptance for generated utility behavior, current survivor-condition feel, skill/crafting/scavenging, outdoor forage UX or System 36 vehicle feel/UX.
