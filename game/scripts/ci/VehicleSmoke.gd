@@ -16,6 +16,10 @@ func _initialize() -> void:
     _check(profiles.fuel_per_move(Profiles.MOTORCYCLE) < profiles.fuel_per_move(Profiles.CAR), "motorcycle uses less fuel than car", errors)
     _check(profiles.cargo_grams(Profiles.MOTORCYCLE) < profiles.cargo_grams(Profiles.CAR), "motorcycle has less storage than car", errors)
     _check(profiles.hotwire_difficulty(Profiles.MOTORCYCLE) < profiles.hotwire_difficulty(Profiles.CAR), "motorcycle easier to hotwire", errors)
+    var car_footprint := profiles.footprint(Profiles.CAR)
+    _check(car_footprint.cell_count() == 3 and car_footprint.contains_relative(Vector2i(0, 2)) and not car_footprint.contains_relative(Vector2i(1, 0)), "car owns an exact real 1x3 footprint", errors)
+    var truck_footprint := profiles.footprint(Profiles.TRUCK)
+    _check(truck_footprint.cell_count() == 8 and truck_footprint.contains_relative(Vector2i(1, 3)) and not truck_footprint.contains_relative(Vector2i(2, 0)) and not truck_footprint.contains_relative(Vector2i(0, 4)), "truck owns an exact real 2x4 footprint", errors)
 
     _check(Heading.turn_right(0) == 1 and Heading.degrees(1) == 30.0, "turning changes heading 30 degrees", errors)
     _check(Heading.turn_left(0) == 11 and Heading.degrees(11) == 330.0, "left wrap is deterministic", errors)
@@ -40,7 +44,6 @@ func _initialize() -> void:
         _check(ResourceLoader.exists(asset_path), "dedicated vehicle sprite exists: %s" % asset_path, errors)
     for kind: StringName in profiles.kinds():
         _check(Renderer.has_dedicated_sprite(kind), "approved class resolves dedicated texture: %s" % String(kind), errors)
-    _check(Renderer.presentation_scale(Profiles.TRUCK) < Renderer.presentation_scale(Profiles.CAR), "truck sprite presents smaller than car footprint scale", errors)
 
     var controls := Controls.new()
     get_root().add_child(controls)

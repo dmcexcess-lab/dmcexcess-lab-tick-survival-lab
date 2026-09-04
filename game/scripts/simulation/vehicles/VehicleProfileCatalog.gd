@@ -16,8 +16,8 @@ func _init() -> void:
         SKATEBOARD: _profile(SKATEBOARD, 2, false, 0, 0, 0, 0, 1, 1, 0, 0),
         BICYCLE: _profile(BICYCLE, 3, false, 0, 0, 6000, 1, 1, 2, 0, 1),
         MOTORCYCLE: _profile(MOTORCYCLE, 3, true, 18, 1, 12000, 0, 1, 2, 2, 2),
-        CAR: _profile(CAR, 3, true, 40, 2, 70000, 0, 2, 4, 4, 4),
-        TRUCK: _profile(TRUCK, 3, true, 55, 3, 140000, 0, 2, 5, 5, 5),
+        CAR: _profile(CAR, 3, true, 40, 2, 70000, 0, 1, 3, 4, 4),
+        TRUCK: _profile(TRUCK, 3, true, 55, 3, 140000, 0, 2, 4, 5, 5),
     }
 
 func has_profile(kind: StringName) -> bool:

@@ -75,6 +75,8 @@ Vehicles reuse canonical WHERE global integer cells and whole-cell occupancy tru
 
 Cars/trucks/motorcycles/bicycles use a **12-heading vehicle vocabulary at 30-degree increments** while preserving integer-cell authoritative placement.
 
+Authoritative NORTH footprints are **1×3 cells for cars** and **2×4 cells for trucks**. The same real footprint records drive generated placement, occupancy and movement collision. Rendering centers each sprite over those occupied world cells and applies no class-specific size override.
+
 Because a square tactical grid cannot represent every 30-degree direction as an exact continuous vector, System 36 does not introduce floating authoritative positions. Instead:
 
 - each heading has a deterministic integer-grid movement raster;
@@ -319,7 +321,7 @@ The live browser build is deployed, but **human vehicle feel/UX acceptance remai
 - skateboard is not treated as a full powered-vehicle steering model;
 - bicycles and all true vehicle classes use the 3-cell movement baseline;
 - moving true vehicles complete **90-degree turns across 3 cells**, changing heading by 30 degrees per cell;
-- truck presentation is deliberately scaled below its physical footprint so it remains readable without visually dominating the tactical map;
+- cars use a real **1×3** footprint and trucks use a real **2×4** footprint across generation, occupancy, collision and presentation; no mismatched visual scale/hitbox is allowed;
 - true vehicles require 2 cells of stopping/braking distance;
 - bicycles do incur Fatigue;
 - motorcycles are easier to steal, use less fuel and have less storage than cars;

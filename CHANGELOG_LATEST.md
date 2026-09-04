@@ -2,6 +2,15 @@
 
 This compact ledger records the newest executable work. `CHANGELOG.md` remains the historical archive.
 
+## True Car + Truck Footprints — 2026-09-04
+
+Exact-head verification pending publication.
+
+- Made cars authoritative 1×3-cell objects and trucks authoritative 2×4-cell objects.
+- Removed the truck-only 78% presentation multiplier; generated placement, persistent occupancy, movement collision and sprite sizing now all consume the same profile dimensions.
+- Centered vehicle sprites over their real rotated occupied-cell bounds instead of the anchor cell, eliminating the visible sprite/hitbox offset.
+- Added owning smoke assertions for the exact car and truck footprint masks.
+
 ## Three-Cell Vehicle Turn Arcs + Smaller Truck — 2026-09-04
 
 Verified executable: `da29b972d40ca5c00373a0d8f8e3650a24967cb1`.

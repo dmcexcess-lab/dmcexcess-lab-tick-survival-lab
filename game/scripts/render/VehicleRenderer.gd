@@ -10,8 +10,6 @@ const VEHICLE_SPRITES: Dictionary = {
     VehicleProfileCatalog.CAR: preload("res://assets/vehicle_car.svg"),
     VehicleProfileCatalog.TRUCK: preload("res://assets/vehicle_truck.svg"),
 }
-const TRUCK_PRESENTATION_SCALE: float = 0.78
-
 var _world: WorldState
 var _state: VehicleState
 var _profiles: VehicleProfileCatalog
@@ -39,9 +37,6 @@ func is_configured() -> bool:
 
 static func has_dedicated_sprite(kind: StringName) -> bool:
     return VEHICLE_SPRITES.has(kind) and VEHICLE_SPRITES.get(kind) is Texture2D
-
-static func presentation_scale(kind: StringName) -> float:
-    return TRUCK_PRESENTATION_SCALE if kind == VehicleProfileCatalog.TRUCK else 1.0
 
 func set_visible_window(origin: Vector2i, size_cells: Vector2i, cell_pixels: float) -> bool:
     if size_cells.x <= 0 or size_cells.y <= 0 or cell_pixels <= 0.0:
@@ -73,9 +68,17 @@ func _draw_vehicle(vehicle_id: String) -> void:
     var p := _profiles.profile(kind)
     var width := float(p.get("width", 1)) * _cell_pixels
     var height := float(p.get("height", 1)) * _cell_pixels
+    var occupied_cells: Array[Vector2i] = placement.footprint.world_cells(placement.anchor, placement.facing)
+    if occupied_cells.is_empty():
+        return
+    var min_cell := occupied_cells[0]
+    var max_cell := occupied_cells[0]
+    for cell: Vector2i in occupied_cells:
+        min_cell = Vector2i(mini(min_cell.x, cell.x), mini(min_cell.y, cell.y))
+        max_cell = Vector2i(maxi(max_cell.x, cell.x), maxi(max_cell.y, cell.y))
     var center := Vector2(
-        (float(placement.anchor.x - _origin.x) + 0.5) * _cell_pixels,
-        (float(placement.anchor.y - _origin.y) + 0.5) * _cell_pixels
+        (float(min_cell.x + max_cell.x + 1) * 0.5 - float(_origin.x)) * _cell_pixels,
+        (float(min_cell.y + max_cell.y + 1) * 0.5 - float(_origin.y)) * _cell_pixels
     )
     var angle := deg_to_rad(float(int(rec.get("heading", 0)) * 30))
     if not has_dedicated_sprite(kind):
@@ -83,7 +86,7 @@ func _draw_vehicle(vehicle_id: String) -> void:
     var texture: Texture2D = VEHICLE_SPRITES[kind]
     var texture_size := texture.get_size()
     var fit_scale := minf(width / texture_size.x, height / texture_size.y)
-    var draw_size := texture_size * fit_scale * presentation_scale(kind)
+    var draw_size := texture_size * fit_scale
     draw_set_transform(center, angle)
     draw_texture_rect(texture, Rect2(-draw_size * 0.5, draw_size), false)
     draw_set_transform(Vector2.ZERO, 0.0)
