@@ -4,153 +4,192 @@ Last updated: **2026-09-03**
 
 This is the authoritative continuation checkpoint. Read `README_SOPS.md`, fetch current `main` once, and continue from **NEXT OPERATION**.
 
-## Current verified executable
+## Current repository / executable truth
 
-- **Exact gameplay executable:** `ad975a08c5a62d178d6bf8e79c2dc21b08c4905c` — `Store recovered forage in survivor inventory`.
-- **Exact-head GitHub Actions:** **51 completed runs, 51 successes, zero failures, zero queued, zero running**.
-- **Pages deployment:** run `33819643054` completed successfully for exact executable `ad975a08c5a62d178d6bf8e79c2dc21b08c4905c`.
+- **Current main before this final context write:** `43edff75a6312dee02ab40a5b2a7132e0b9cfbf2` — vehicle design/routing documentation only.
+- **Current verified gameplay executable remains:** `ad975a08c5a62d178d6bf8e79c2dc21b08c4905c` — forage results enter real personal inventory when carry admission allows.
+- That executable completed **51 exact-head Actions runs successfully**, with zero failed, queued or running runs.
+- Pages deployment run `33819643054` completed successfully for `ad975a08c5a62d178d6bf8e79c2dc21b08c4905c`.
 - **Live build:** `https://dmcexcess-lab.github.io/dmcexcess-lab-tick-survival-lab/`
-- The owning PR #3 forage gate passed before merge: Godot import/parse, forage behavior, real forage UI layout, protected Skills/Crafting/Loot regressions and canonical startup all succeeded.
-- The full main-branch protected suite then passed, including the 12-seed planner/playable boot matrices and streaming/materialization regressions.
-- Commits after `ad975a08...` are documentation/context-only and do not alter gameplay.
+- All commits after `ad975a08...` in this design prompt are documentation-only; no vehicle gameplay code exists yet and no executable CI rerun was required.
 
-## Completed operation — forage finds enter personal inventory
+## Completed operation — System 36 vehicle design approved
 
-User acceptance established that the repaired `FORAGE NEARBY` control is visible/clickable, but exposed a behavior mismatch: a successful forage result was created only as a loose item at the survivor's feet instead of appearing in personal inventory.
+User explicitly approved the vehicle design stage. Canonical design now lives at:
 
-The root cause was in `ForageNearbyActionService`: successful recovery always committed each new Sturdy Stick / Smooth Stone through `WorldMutationService.set_placement(... LOOSE_ITEM ...)` and never used the already-existing personal-inventory admission owners.
+- `SYSTEM_DESIGNS/36_VEHICLES.md` — **APPROVED, implementation not started**.
 
-The canonical behavior is now:
+`SYSTEM_DESIGNS/README.md` and `ROADMAP.md` now route System 36 as the next implementation operation.
 
-1. forage still resolves one finite local physical opportunity through WHEN + Survival;
-2. success still creates a **real persistent item entity** (`Sturdy Stick` or `Smooth Stone`);
-3. `ActorCarryAcquisitionPolicy` evaluates whether that new item's real mass can be admitted;
-4. when allowed, `InventoryContainmentMutationService` places the real entity directly in the survivor's personal inventory container;
-5. the existing inventory inspector sees it normally and `ActorCarryQuery` counts its real mass;
-6. if the hard carry ceiling blocks admission, the item is not deleted or invisibly granted — it remains a normal real `LOOSE_ITEM` at the survivor's feet.
+### Approved vehicle classes
 
-High-effectiveness two-item forage results admit each recovered entity through the same capacity policy independently.
+- cars;
+- trucks;
+- motorcycles;
+- bicycles;
+- skateboards.
 
-Rollback was also repaired so a later commit/XP failure clears containment before removing a recovered entity, avoiding ghost inventory membership.
+There is **no Driving skill**. The canonical skill catalog remains exactly Awareness, Stealth, Mechanical and Survival.
 
-## Owning regression
+## Approved movement / handling contract
 
-`game/scripts/ci/OutdoorForageSmoke.gd` now proves all of the following together:
+### Skateboard
 
-- capacity-allowed recovered items become direct contents of the survivor personal inventory;
-- contained forage items have no simultaneous loose-world placement;
-- recovered mass appears in canonical carry weight / carry item IDs;
-- an artificially over-hard-cap survivor receives no invisible inventory bypass and the recovered items remain physically at their feet;
-- valid forage still consumes finite depletion;
-- cancellation consumes no opportunity and creates no item;
-- failed valid searches consume the opportunity, grant bounded Survival practice XP and manufacture no item;
-- impossible water context hard-blocks without creating depletion state;
-- sparse depletion snapshot round-trip remains deterministic;
-- same seed/patch/opportunity resolves the same resource.
+- mechanically behaves like running rather than a full vehicle-driving model;
+- **2 tactical cells per committed movement**;
+- propulsion adds **no Fatigue**;
+- no fuel;
+- nearly silent;
+- actor-like cardinal movement/facing;
+- stricter smooth-surface suitability than ordinary walking/running.
 
-No forage skill roll, duration, depletion, resource selection, renderer, weather, generation, loot-container or crafting semantics were weakened.
+There is no live Stamina system; “no stamina cost” means no added canonical Fatigue.
 
-## Outdoor forage behavior remains canonical
+### Bicycle
 
-- one sparse persistent depletion record per deterministic 8x8 world patch;
-- real materialized terrain + sky exposure + bounded local natural context determine plausibility;
-- no recurring whole-world scan, hidden resource population or passive resource respawn loop;
-- WHEN owns time/cancellation;
-- canonical Survival skill checks own duration/success/effectiveness/XP;
-- valid failed searches consume finite opportunity; cancellation/impossible contexts do not;
-- successful recovery creates only real Sturdy Stick / Smooth Stone WHAT entities;
-- normal result destination is the survivor's real personal inventory when carry admission allows it;
-- hard-capacity rejection leaves real loose items at the survivor location;
-- hands, inventory, containment, physical weight and carry limits remain existing owners.
+- **3 tactical cells per committed movement**;
+- no fuel;
+- very quiet;
+- does add Fatigue, but is materially more efficient per distance than running;
+- small/optional cargo depending on profile;
+- uses the true vehicle heading/turn/brake model.
 
-## Forage UI layout remains accepted/protected
+### Motorcycle
 
-The prior visible Weather DEV overlap repair remains in place:
+- **3 tactical cells per normal committed movement**;
+- fueled/powered;
+- lower fuel use than cars/trucks;
+- smaller storage than cars;
+- intentionally easier to steal/hot-wire than cars/trucks;
+- lower mass/protection.
 
-- Survival — upper-left `(8, 66)`, `326x78`;
-- Weather DEV — upper-right `(344, 66)`, `288x78`;
-- Forage — lower-left `(8, 148)`, `326x78`;
-- Utilities DEV — lower-right `(344, 148)`, `288x100`.
+### Car / truck
 
-`ForageUiLayoutSmoke.gd` waits for the real Godot `_ready()` lifecycle, measures the actual four control layers and fails on overlap. User reported this UI repair worked in the live build before identifying the inventory-destination defect.
+- **3 tactical cells per normal committed movement**;
+- fueled/powered;
+- car = medium storage/fuel profile;
+- truck = larger storage, heavier mass and higher fuel use.
+
+### 30-degree steering correction
+
+The user corrected the earlier 45-degree concept: **true vehicle classes turn by 30 degrees per committed turning move**.
+
+Canonical implementation requirement:
+
+- bicycle/motorcycle/car/truck use **12 vehicle headings at 30-degree increments**;
+- each turning movement advances through a bounded **3-cell deterministic integer-grid raster**;
+- sprite/visual orientation may rotate to the exact 30-degree heading;
+- collision and placement remain authoritative integer-grid truth using deterministic raster paths and conservative swept/heading footprint masks;
+- no floating-point continuous authoritative vehicle physics is introduced;
+- exact raster patterns must be deterministic, symmetric left/right and regression-tested.
+
+A moving true vehicle requires **2 tactical cells of stopping/braking distance**. A stop action traverses the bounded two-cell braking raster; obstacles inside that path produce collision consequences rather than an early magical snap-stop.
+
+Skateboards do not use this 12-heading vehicle model.
+
+## Approved vehicle ownership / interaction contract
+
+System 36 implementation should provide one shared real owner for all vehicle classes, including:
+
+- typed persistent vehicle profile/state keyed by real WHAT entity IDs;
+- body/frame, propulsion, rolling/wheel, electrical/battery and fuel condition where applicable;
+- persistent heading, lock/ignition/hot-wire state, cargo and occupants;
+- generated parked vehicles in believable driveways/parking lots/road shoulders/homes/businesses;
+- enter/exit/driver containment rather than leaving a second actor collision body underneath a moving vehicle;
+- fuel consumed only by real powered movement/actions, not frame-driven parked simulation;
+- cargo through existing real inventory/containment/item-weight owners;
+- real matching keys/lock state where applicable;
+- Mechanical hot-wiring with real tools/material prerequisites; motorcycles are easier;
+- Mechanical repair with real parts/tools/materials;
+- bounded persistent modifications such as protection, cargo racks, lights/exhaust/racks where the existing owning systems support them;
+- existing physical lighting/spatial sound integration through real public seams;
+- collision consequences that can damage vehicle/occupants, without inventing zombie roadkill before combat/actor-impact ownership exists.
+
+Performance rules remain strict: no `_process`/`_physics_process` simulation authority, no parked-vehicle timers, no recurring whole-world vehicle scans and no real-time rigid-body authority.
+
+## Final interaction closure pass — queued immediately after vehicles
+
+After System 36 is implemented and human-accepted, perform one comprehensive **skills / crafting / items / usable objects** run-through so no major practical consumer remains disconnected.
+
+Required closure scope includes:
+
+1. cooking through real ingredients/tools/heat sources and Survival;
+2. first aid through real Health/Injury ownership and Survival;
+3. vehicle repair/modification/hot-wiring/refueling/siphoning through Mechanical and real physical prerequisites;
+4. repairing broken world objects plus deconstruction/reclamation through actual target owners and Mechanical;
+5. fire-starting through real tinder/fuel/ignition resources and Survival;
+6. primitive crafted outputs connected to actual combat/tool/fire consumers rather than item-name special cases;
+7. food/drink/medicine usable-item consumers through owning needs/health systems;
+8. real usable world-object consumers including beds, sinks/water, refrigeration, stoves/ovens, lights/switches, workbenches, generators/utilities, doors/windows and vehicles;
+9. real Awareness gameplay consumers;
+10. real Stealth gameplay consumers;
+11. audit item/tool/resource coverage so concrete actions use the established **tool + resource + skill + WHEN** philosophy rather than adding needless subskills.
+
+## Construction direction — newest user rule
+
+The user explicitly superseded the older freeform/player-built-base direction:
+
+> **No freeform base building. Construction is limited to reinforcing existing doors/windows and repairing broken objects.**
+
+Do **not** implement open-land walls/floors/roofs/base structures. Existing places may be occupied, repaired and fortified through real object/door/window owners.
+
+Older North-Star wording that still suggests freeform/open-land base construction is superseded by this newer explicit user direction and must be reconciled during the comprehensive closure/documentation pass. Until then, the newer rule above is authoritative for implementation.
 
 ## Four-skill contract remains canonical
 
-The live player skill catalog is exactly:
+Exactly:
 
 - **Awareness**;
 - **Stealth**;
 - **Mechanical**;
 - **Survival**.
 
-Mechanical covers practical machinery work such as repair, deconstruction/reclamation and hot-wiring when those owning systems exist. Survival covers first aid, scavenging/foraging, fire-starting and primitive survival crafting.
-
 Shared rule:
 
 > **Concrete physical prerequisite + owning world state + relevant broad skill + real WHEN time.**
 
-A skill changes competence. It never substitutes for a missing physical tool/material or invents another domain's truth.
+Skill changes competence. It never substitutes for missing tools/materials or invents another system's truth.
 
-Current real skill consumers:
+Existing real consumers remain:
 
-- System 32 crafting — concrete tools/materials + Mechanical/Survival checks;
-- System 24 searchable-container scavenging — Survival timing/practice without rerolling physical contents;
-- System 35 outdoor foraging — Survival duration/success/effectiveness over finite local opportunities.
+- System 32 crafting — Mechanical/Survival;
+- System 24 searchable-container scavenging — Survival;
+- System 35 outdoor foraging — Survival.
 
-## Primitive Survival resources/crafting already live
-
-Real primitive resources include Sturdy Stick, Smooth Stone, Old Magazine and existing Rag Bundle / Dirty Rag / Old Newspaper semantics.
-
-Existing bounded Survival recipes include:
-
-1. **Sharpened Wooden Stake** — Sturdy Stick + Kitchen Knife;
-2. **Improvised Stone Hammer** — Sturdy Stick + Smooth Stone + Dirty Rag + Scissors;
-3. **Paper Tinder Bundle** — Old Newspaper + Old Magazine + Scissors.
-
-Do not infer unimplemented effects from item names: the stake has no invented combat damage yet; the stone hammer is not a generalized hammer substitute; tinder has no invented ignition behavior; primitive armor is not implemented by this slice.
-
-## Existing survivor-condition contract remains protected
-
-- **Fatigue:** `0` rested -> `100` exhausted.
-- **Rest:** separate high-is-good long-horizon sleep/recovery condition.
-- No parallel live Stamina pool/HUD meter.
-- Walking adds small Fatigue; running adds materially more and scales with terrain/load.
-- Severe Fatigue blocks starting another run but never removes ordinary walking.
-- Explicit rest/sleep relieves Fatigue; physical action time does not secretly recover it.
-- Continued overexertion can cause real Health damage down to zero.
-- Starvation, dehydration and sleep deprivation apply bounded real HP damage through Health.
-- Moodlets remain derived warnings, not duplicate stored truth.
+System 36 will add real Mechanical vehicle consumers.
 
 ## Protected neighboring behavior
 
-- Preserve the accepted full 80x96 physical-light renderer, stateless LOS and input-lock/responsiveness recovery.
-- Do not solve generated utility topology defects in presentation code.
-- Preserve real procedural fenced substations, roughly ten generated buildings per substation, shared roadside feeder trees, short service drops and logical/non-physical regional source-to-substation links.
-- Preserve the one real persistent island-wide municipal water plant with no external-power dependency and real persistent rural private wells.
-- Do not reintroduce wastewater/sewer/septic.
-- Do not fake items, facilities, action resources, skill outcomes or condition/moodlet truth in UI.
-- Do not add frame-driven condition/skill/resource processing, per-actor timers or recurring whole-world scans.
-- Do not weaken owning Skills, Forage, Crafting, Loot, Health/Carry/input/utility tests or consolidated procedural/playable-boot matrices.
+- Preserve accepted responsive decision-pause input and input locking.
+- Preserve full 80x96 physical-light renderer and stateless LOS.
+- Preserve current forage direct-inventory behavior and hard-cap loose-item fallback.
+- Preserve real item/containment/carry ownership; vehicle cargo must reuse it rather than duplicate it.
+- Preserve canonical Health/Injury and Fatigue ownership; bicycle Fatigue must use the real condition owner and skateboard must not resurrect Stamina.
+- Preserve real generated utility topology and one municipal water plant / rural wells; no wastewater/sewer/septic.
+- Do not fake vehicle, crafting, repair, fire, first-aid or usable-object truth in UI.
+- Do not add frame-driven condition/skill/resource/vehicle processing, per-entity timers or recurring whole-world scans.
 
 ## Human acceptance status
 
-Automated verification and deployment are complete.
-
 Already accepted by user:
 
-- `FORAGE NEARBY` is accessible after the Weather DEV overlap repair.
+- forage control is visible/clickable after Weather DEV overlap repair;
+- forage inventory destination behavior was then requested and implemented/verified.
 
-Still pending after this latest executable:
+Still pending generally:
 
-- perform a successful forage in the live build and confirm the recovered Sturdy Stick / Smooth Stone appears immediately in **Inventory** under normal carry capacity;
-- confirm its weight contributes normally to carried load;
-- optional hard-cap check: if the survivor exceeds the hard carry admission ceiling, the found resource should remain physically at the survivor's feet rather than vanish;
-- continue prior acceptance checks for Fatigue/rest/needs/health/moodlets, movement responsiveness, lighting/LOS/startup, generated System-33 utilities and desktop/phone/Safari presentation.
+- live confirmation of forage items appearing in personal Inventory/carry load after latest executable;
+- Fatigue/rest/needs/health/moodlet feel;
+- movement responsiveness, lighting/LOS/startup;
+- generated System-33 utilities on representative fresh seeds;
+- desktop WebGL2 and phone/Safari presentation.
+
+Vehicle human acceptance will be required after implementation even if automated CI is green.
 
 ## NEXT OPERATION
 
-1. **Human-play the deployed build** at `https://dmcexcess-lab.github.io/dmcexcess-lab-tick-survival-lab/` and confirm a successful `FORAGE NEARBY` result now appears directly in personal Inventory and counts toward carried weight. Any visible/game-feel defect supersedes feature expansion and should be repaired first.
-2. If accepted and no newer user direction supersedes it, implement the next bounded **real primitive Survival consumer** or a real **Mechanical repair/deconstruction owner integration**. Do not invent combat/tool/fire effects merely from item names.
-3. Later integrations remain first aid through Health/Injury; Mechanical repair/deconstruction/reclamation; hot-wiring after vehicles exist; fire-starting through a real ignition/fire owner; real Awareness and Stealth gameplay consumers.
+1. **IMPLEMENT approved System 36 Vehicles** from `SYSTEM_DESIGNS/36_VEHICLES.md` as one coherent real vehicle foundation: persistent state/profiles, generated parked vehicles, enter/exit, skateboard 2-cell no-Fatigue movement, bicycle/true-vehicle 3-cell movement, 12-state 30-degree steering with integer raster/swept collision, 2-cell braking distance, bicycle Fatigue, fuel, cargo, keys/locks/hot-wiring, condition/repair/modifications and existing light/sound integration where real seams exist.
+2. Add an owning vehicle smoke/workflow and run protected movement/collision/inventory/carry/skills/health/generation/startup regressions. Push/verify/deploy exact executable head and monitor required CI/Pages to terminal status.
+3. After vehicle human acceptance, perform the comprehensive skills/crafting/items/usable-object closure pass above, including the authoritative no-freeform-base-building restriction.
 
 Newest explicit user direction supersedes this NEXT OPERATION.
