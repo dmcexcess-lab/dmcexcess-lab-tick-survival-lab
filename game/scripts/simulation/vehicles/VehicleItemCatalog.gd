@@ -1,14 +1,12 @@
 extends RefCounted
 class_name VehicleItemCatalog
 
-const VEHICLE_KEY := &"item.automotive.vehicle_key"
 const GAS_CAN := &"item.automotive.gas_can"
 const CARGO_RACK := &"item.automotive.cargo_rack"
 const BATTERY := &"item.automotive.car_battery"
 const SPARE_WHEEL := &"item.automotive.spare_wheel"
 
 const _WEIGHTS := {
-    "item.automotive.vehicle_key": 45,
     "item.automotive.gas_can": 4200,
     "item.automotive.cargo_rack": 6500,
     "item.automotive.car_battery": 16000,
@@ -16,7 +14,7 @@ const _WEIGHTS := {
 }
 
 static func semantic_types() -> Array[StringName]:
-    return [VEHICLE_KEY, GAS_CAN, CARGO_RACK, BATTERY, SPARE_WHEEL]
+    return [GAS_CAN, CARGO_RACK, BATTERY, SPARE_WHEEL]
 
 static func weight_grams(semantic: StringName) -> int:
     return int(_WEIGHTS.get(String(semantic), -1))
