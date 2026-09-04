@@ -1,0 +1,183 @@
+name: System 36 Vehicles contract
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'game/main.tscn'
+      - 'game/scripts/app/VehicleGameMain.gd'
+      - 'game/scripts/player/VehiclePlayerController.gd'
+      - 'game/scripts/render/TacticalRendererStack.gd'
+      - 'game/scripts/render/VehicleRenderer.gd'
+      - 'game/scripts/simulation/vehicles/**'
+      - 'game/scripts/simulation/sound/SoundEmissionProfileCatalog.gd'
+      - 'game/scripts/ci/VehicleSmoke.gd'
+      - 'game/scripts/ui/VehiclePlayerControls.gd'
+      - 'SYSTEM_DESIGNS/36_VEHICLES.md'
+      - '.github/workflows/system36-vehicles.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'game/main.tscn'
+      - 'game/scripts/app/VehicleGameMain.gd'
+      - 'game/scripts/player/VehiclePlayerController.gd'
+      - 'game/scripts/render/TacticalRendererStack.gd'
+      - 'game/scripts/render/VehicleRenderer.gd'
+      - 'game/scripts/simulation/vehicles/**'
+      - 'game/scripts/simulation/sound/SoundEmissionProfileCatalog.gd'
+      - 'game/scripts/ci/VehicleSmoke.gd'
+      - 'game/scripts/ui/VehiclePlayerControls.gd'
+      - 'SYSTEM_DESIGNS/36_VEHICLES.md'
+      - '.github/workflows/system36-vehicles.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  statuses: write
+
+concurrency:
+  group: system36-vehicles-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: verify/system36-vehicles
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate System 36 ownership and performance boundary
+        shell: bash
+        run: |
+          set -euxo pipefail
+          for f in \
+            SYSTEM_DESIGNS/36_VEHICLES.md \
+            game/scripts/app/VehicleGameMain.gd \
+            game/scripts/simulation/vehicles/VehicleProfileCatalog.gd \
+            game/scripts/simulation/vehicles/VehicleState.gd \
+            game/scripts/simulation/vehicles/VehicleHeading.gd \
+            game/scripts/simulation/vehicles/VehicleWorldSeeder.gd \
+            game/scripts/simulation/vehicles/VehicleActionService.gd \
+            game/scripts/simulation/vehicles/VehicleCargoService.gd \
+            game/scripts/simulation/vehicles/VehicleConsequenceAdapter.gd \
+            game/scripts/simulation/vehicles/VehicleLightingSourceAdapter.gd \
+            game/scripts/simulation/vehicles/VehicleItemCatalog.gd \
+            game/scripts/player/VehiclePlayerController.gd \
+            game/scripts/render/VehicleRenderer.gd \
+            game/scripts/ui/VehiclePlayerControls.gd \
+            game/scripts/ci/VehicleSmoke.gd; do
+            test -f "$f"
+          done
+          grep -q 'VehicleGameMain.gd' game/main.tscn
+          grep -q 'class_name VehicleState' game/scripts/simulation/vehicles/VehicleState.gd
+          grep -q 'class_name VehicleActionService' game/scripts/simulation/vehicles/VehicleActionService.gd
+          grep -q 'class_name VehicleHeading' game/scripts/simulation/vehicles/VehicleHeading.gd
+          grep -q 'class_name VehicleCargoService' game/scripts/simulation/vehicles/VehicleCargoService.gd
+          grep -q 'Mechanical' SYSTEM_DESIGNS/36_VEHICLES.md
+          ! grep -R -q 'func _process\|func _physics_process' game/scripts/simulation/vehicles
+          ! grep -R -q 'Timer.new' game/scripts/simulation/vehicles game/scripts/player/VehiclePlayerController.gd
+          ! grep -R -q 'RigidBody2D\|CharacterBody2D' game/scripts/simulation/vehicles game/scripts/player/VehiclePlayerController.gd
+
+      - name: Install Godot 4.7.1
+        shell: bash
+        run: |
+          set -euxo pipefail
+          curl -L -o godot.zip https://github.com/godotengine/godot-builds/releases/download/4.7.1-stable/Godot_v4.7.1-stable_linux.x86_64.zip
+          unzip -q godot.zip
+          chmod +x Godot_v4.7.1-stable_linux.x86_64
+
+      - name: Import and parse project
+        shell: bash
+        run: |
+          set -euxo pipefail
+          ./Godot_v4.7.1-stable_linux.x86_64 --headless --editor --path "$GITHUB_WORKSPACE/game" --quit 2>&1 | tee "$RUNNER_TEMP/import.log"
+          if grep -Eqi 'SCRIPT ERROR|Parse Error|Failed to load script' "$RUNNER_TEMP/import.log"; then exit 1; fi
+
+      - name: System 36 focused vehicle smoke
+        shell: bash
+        run: |
+          set -euxo pipefail
+          ./Godot_v4.7.1-stable_linux.x86_64 --headless --path "$GITHUB_WORKSPACE/game" --quit-after 30 --script res://scripts/ci/VehicleSmoke.gd 2>&1 | tee "$RUNNER_TEMP/vehicle.log"
+          grep -q 'VEHICLE_SMOKE_OK' "$RUNNER_TEMP/vehicle.log"
+          if grep -Eqi 'SCRIPT ERROR|Parse Error|Failed to load script|Invalid call|Invalid access|Assertion failed|VEHICLE_SMOKE_FAIL' "$RUNNER_TEMP/vehicle.log"; then exit 1; fi
+
+      - name: Protected movement inventory skills and health regressions
+        shell: bash
+        run: |
+          set -euxo pipefail
+          for spec in \
+            'MovementActionsSmoke.gd:MOVEMENT_ACTIONS_SMOKE_OK' \
+            'ActorLocomotionSmoke.gd:ACTOR_LOCOMOTION_SMOKE_OK' \
+            'InventoryContainmentSmoke.gd:INVENTORY_CONTAINMENT_SMOKE_OK' \
+            'ActorCarrySmoke.gd:ACTOR_CARRY_SMOKE_OK' \
+            'ActorSkillsSmoke.gd:ACTOR_SKILLS_SMOKE_OK' \
+            'ActorHealthSmoke.gd:ACTOR_HEALTH_SMOKE_OK' \
+            'System34SurvivorConditionSmoke.gd:SYSTEM34_SURVIVOR_CONDITION_SMOKE_OK' \
+            'OutdoorForageSmoke.gd:OUTDOOR_FORAGE_SMOKE_OK'; do
+            script=${spec%%:*}
+            marker=${spec#*:}
+            log="$RUNNER_TEMP/${script%.gd}.log"
+            ./Godot_v4.7.1-stable_linux.x86_64 --headless --path "$GITHUB_WORKSPACE/game" --quit-after 45 --script "res://scripts/ci/$script" 2>&1 | tee "$log"
+            grep -q "$marker" "$log"
+            if grep -Eqi 'SCRIPT ERROR|Parse Error|Failed to load script|Invalid call|Invalid access|Assertion failed' "$log"; then exit 1; fi
+          done
+
+      - name: Protected lighting and sound regressions
+        shell: bash
+        run: |
+          set -euxo pipefail
+          for spec in \
+            'System33LightingTruthSmoke.gd:SYSTEM33_LIGHTING_TRUTH_SMOKE_OK' \
+            'PhysicalLightingSmoke.gd:PHYSICAL_LIGHTING_SMOKE_OK' \
+            'SpatialSoundSmoke.gd:SPATIAL_SOUND_SMOKE_OK' \
+            'PlayerInputResponsivenessSmoke.gd:PLAYER_INPUT_RESPONSIVENESS_SMOKE_OK'; do
+            script=${spec%%:*}
+            marker=${spec#*:}
+            log="$RUNNER_TEMP/${script%.gd}.log"
+            ./Godot_v4.7.1-stable_linux.x86_64 --headless --path "$GITHUB_WORKSPACE/game" --quit-after 45 --script "res://scripts/ci/$script" 2>&1 | tee "$log"
+            grep -q "$marker" "$log"
+            if grep -Eqi 'SCRIPT ERROR|Parse Error|Failed to load script|Invalid call|Invalid access|Assertion failed' "$log"; then exit 1; fi
+          done
+
+      - name: Protected world planning regression
+        shell: bash
+        run: |
+          set -euxo pipefail
+          ./Godot_v4.7.1-stable_linux.x86_64 --headless --path "$GITHUB_WORKSPACE/game" --quit-after 45 --script res://scripts/ci/GlobalWorldPlanningV6Smoke.gd 2>&1 | tee "$RUNNER_TEMP/world-planning.log"
+          grep -q 'GLOBAL_WORLD_PLANNING_V7_SMOKE_OK' "$RUNNER_TEMP/world-planning.log"
+          if grep -Eqi 'SCRIPT ERROR|Parse Error|Failed to load script|Invalid call|Invalid access|Assertion failed' "$RUNNER_TEMP/world-planning.log"; then exit 1; fi
+
+      - name: Canonical startup regression
+        shell: bash
+        run: |
+          set -euxo pipefail
+          ./Godot_v4.7.1-stable_linux.x86_64 --headless --path "$GITHUB_WORKSPACE/game" --quit-after 8 2>&1 | tee "$RUNNER_TEMP/startup.log"
+          grep -q 'CANONICAL_DEMO_BOOT_OK' "$RUNNER_TEMP/startup.log"
+          if grep -Eqi 'SCRIPT ERROR|Parse Error|Failed to load script|Invalid call|Invalid access|Assertion failed|CANONICAL_DEMO_BOOT_FAILED|ObjectDB instances leaked at exit|resources still in use at exit' "$RUNNER_TEMP/startup.log"; then exit 1; fi
+
+      - name: Publish System 36 exact-head status
+        if: always()
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SHA: ${{ github.sha }}
+          REPOSITORY: ${{ github.repository }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          JOB_STATUS: ${{ job.status }}
+        run: |
+          set -euo pipefail
+          case "$JOB_STATUS" in
+            success) state=success ;;
+            failure) state=failure ;;
+            cancelled) state=error ;;
+            *) state=error ;;
+          esac
+          payload=$(printf '{"state":"%s","context":"verify/system36-vehicles","description":"System 36 vehicle contract","target_url":"%s"}' "$state" "$RUN_URL")
+          curl --fail --silent --show-error \
+            -X POST \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.github.com/repos/$REPOSITORY/statuses/$SHA" \
+            -d "$payload"

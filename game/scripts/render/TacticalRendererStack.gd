@@ -4,6 +4,7 @@ class_name TacticalRendererStack
 const GroundRendererClass = preload("res://scripts/render/GroundLayerRenderer.gd")
 const StructureRendererClass = preload("res://scripts/render/StructureLayerRenderer.gd")
 const PropRendererClass = preload("res://scripts/render/PropLayerRenderer.gd")
+const VehicleRendererClass = preload("res://scripts/render/VehicleRenderer.gd")
 const PropForegroundRendererClass = preload("res://scripts/render/PropForegroundLayerRenderer.gd")
 const ActorRendererClass = preload("res://scripts/render/ActorLayerRenderer.gd")
 const PowerLineRendererClass = preload("res://scripts/render/PowerLinePresentationRenderer.gd")
@@ -18,6 +19,7 @@ const PerformanceDevPanelClass = preload("res://scripts/ui/PerformanceDevPanel.g
 var _ground: GroundLayerRenderer = null
 var _structures: StructureLayerRenderer = null
 var _props: PropLayerRenderer = null
+var _vehicles: VehicleRenderer = null
 var _prop_foreground: PropForegroundLayerRenderer = null
 var _actors: ActorLayerRenderer = null
 var _power_lines: PowerLinePresentationRenderer = null
@@ -31,65 +33,45 @@ var _configured: bool = false
 func _ready() -> void:
     _ensure_layers()
 
-func configure(
-    world: WorldState,
-    art_catalog: ArtCatalog,
-    door_state: DoorStateStore,
-    controlled_actor_id: String
-) -> bool:
+func configure(world: WorldState, art_catalog: ArtCatalog, door_state: DoorStateStore, controlled_actor_id: String) -> bool:
     _ensure_layers()
     if world == null or art_catalog == null or door_state == null:
         return false
-    if not _ground.configure(world, art_catalog):
-        return false
-    if not _structures.configure(world, art_catalog, door_state):
-        return false
-    if not _props.configure(world, art_catalog):
-        return false
-    if not _prop_foreground.configure(_props):
-        return false
-    if not _actors.configure(world, art_catalog):
-        return false
-    if not _actors.set_controlled_actor_id(controlled_actor_id):
-        return false
+    if not _ground.configure(world, art_catalog): return false
+    if not _structures.configure(world, art_catalog, door_state): return false
+    if not _props.configure(world, art_catalog): return false
+    if not _prop_foreground.configure(_props): return false
+    if not _actors.configure(world, art_catalog): return false
+    if not _actors.set_controlled_actor_id(controlled_actor_id): return false
     _configured = true
+    return true
+
+func configure_vehicles(world: WorldState, state: VehicleState, profiles: VehicleProfileCatalog) -> bool:
+    _ensure_layers()
+    if not _vehicles.configure(world, state, profiles):
+        return false
+    if _ground.has_valid_view():
+        return _vehicles.set_visible_window(_ground.visible_origin(), _ground.visible_size(), _ground.cell_pixels())
     return true
 
 func configure_power_infrastructure(world: WorldState, wire_edges: Array[Dictionary]) -> bool:
     _ensure_layers()
-    if not _power_lines.configure(world, wire_edges):
-        return false
-    # Power infrastructure is wired after the base renderer/camera during UtilityGameMain boot.
-    # A late optional renderer must inherit the already-valid tactical window immediately rather
-    # than waiting for the player to move far enough to trigger another camera update.
+    if not _power_lines.configure(world, wire_edges): return false
     if _ground.has_valid_view():
-        return _power_lines.set_visible_window(
-            _ground.visible_origin(),
-            _ground.visible_size(),
-            _ground.cell_pixels()
-        )
+        return _power_lines.set_visible_window(_ground.visible_origin(), _ground.visible_size(), _ground.cell_pixels())
     return true
 
 func power_infrastructure_debug_snapshot() -> Dictionary:
     _ensure_layers()
-    return {
-        "configured": _power_lines.is_configured(),
-        "visible_wires": _power_lines.visible_wire_count(),
-        "total_wires": _power_lines.total_wire_count(),
-    }
+    return {"configured": _power_lines.is_configured(), "visible_wires": _power_lines.visible_wire_count(), "total_wires": _power_lines.total_wire_count()}
 
-func configure_physical_lighting(
-    lighting_service: PhysicalLightingService,
-    world: WorldState,
-    door_state: DoorStateStore
-) -> bool:
+func configure_physical_lighting(lighting_service: PhysicalLightingService, world: WorldState, door_state: DoorStateStore) -> bool:
     _ensure_layers()
     return _lighting.configure(lighting_service, world, door_state)
 
 func refresh_physical_lighting(reason: StringName = &"external") -> bool:
     _ensure_layers()
-    if not _lighting.is_configured():
-        return false
+    if not _lighting.is_configured(): return false
     return _lighting.refresh(reason)
 
 func physical_lighting_debug_snapshot() -> Dictionary:
@@ -102,8 +84,7 @@ func configure_weather(weather_service: WeatherService, sky_exposure: SkyExposur
 
 func set_camera_presentation(snapshot: Dictionary) -> bool:
     _ensure_layers()
-    if not _weather.is_configured():
-        return true
+    if not _weather.is_configured(): return true
     return _weather.set_camera_presentation(snapshot)
 
 func force_weather_ambient_event(kind: StringName = &"leaf") -> bool:
@@ -120,18 +101,9 @@ func configure_interaction_affordances(query: InteractionAffordanceQuery) -> boo
 
 func interaction_highlight_debug_snapshot() -> Dictionary:
     _ensure_layers()
-    return {
-        "configured": _interaction.is_configured(),
-        "highlight_count": _interaction.highlight_count(),
-        "target_ids": _interaction.highlighted_target_ids(),
-    }
+    return {"configured": _interaction.is_configured(), "highlight_count": _interaction.highlight_count(), "target_ids": _interaction.highlighted_target_ids()}
 
-func configure_perception(
-    perception_service: ObserverPerceptionService,
-    memory_store: PerceptionMemoryStore,
-    art_catalog: ArtCatalog,
-    observer_id: String
-) -> bool:
+func configure_perception(perception_service: ObserverPerceptionService, memory_store: PerceptionMemoryStore, art_catalog: ArtCatalog, observer_id: String) -> bool:
     _ensure_layers()
     return _perception.configure(perception_service, memory_store, art_catalog, observer_id)
 
@@ -156,133 +128,55 @@ func perception_debug_snapshot() -> Dictionary:
 
 func prop_visual_geometry_debug_snapshot() -> Dictionary:
     _ensure_layers()
-    return {
-        "base_z": _props.z_index,
-        "actor_z": _actors.z_index,
-        "power_line_z": _power_lines.z_index,
-        "foreground_z": _prop_foreground.z_index,
-        "lighting_z": _lighting.z_index,
-        "foreground_count": _prop_foreground.planned_command_count() if _configured else 0,
-        "plan_rebuild_count": _props.plan_rebuild_count(),
-    }
+    return {"base_z": _props.z_index, "actor_z": _actors.z_index, "power_line_z": _power_lines.z_index, "foreground_z": _prop_foreground.z_index, "lighting_z": _lighting.z_index, "foreground_count": _prop_foreground.planned_command_count() if _configured else 0, "plan_rebuild_count": _props.plan_rebuild_count()}
 
 func set_visible_window(origin: Vector2i, size_cells: Vector2i, cell_pixels: float) -> bool:
     _ensure_layers()
-    if not _configured:
-        return false
-    var power_ok: bool = true
-    if _power_lines.is_configured():
-        power_ok = _power_lines.set_visible_window(origin, size_cells, cell_pixels)
-    var lighting_ok: bool = true
-    if _lighting.is_configured():
-        lighting_ok = _lighting.set_visible_window(origin, size_cells, cell_pixels)
-    var weather_ok: bool = true
-    if _weather.is_configured():
-        weather_ok = _weather.set_visible_window(origin, size_cells, cell_pixels)
-    var interaction_ok: bool = true
-    if _interaction.is_configured():
-        interaction_ok = _interaction.set_visible_window(origin, size_cells, cell_pixels)
-    return _ground.set_visible_window(origin, size_cells, cell_pixels) \
-        and _structures.set_visible_window(origin, size_cells, cell_pixels) \
-        and _props.set_visible_window(origin, size_cells, cell_pixels) \
-        and _actors.set_visible_window(origin, size_cells, cell_pixels) \
-        and power_ok \
-        and lighting_ok \
-        and weather_ok \
-        and interaction_ok \
-        and _perception.set_visible_window(origin, size_cells, cell_pixels)
+    if not _configured: return false
+    var power_ok := true
+    if _power_lines.is_configured(): power_ok = _power_lines.set_visible_window(origin, size_cells, cell_pixels)
+    var vehicle_ok := true
+    if _vehicles.is_configured(): vehicle_ok = _vehicles.set_visible_window(origin, size_cells, cell_pixels)
+    var lighting_ok := true
+    if _lighting.is_configured(): lighting_ok = _lighting.set_visible_window(origin, size_cells, cell_pixels)
+    var weather_ok := true
+    if _weather.is_configured(): weather_ok = _weather.set_visible_window(origin, size_cells, cell_pixels)
+    var interaction_ok := true
+    if _interaction.is_configured(): interaction_ok = _interaction.set_visible_window(origin, size_cells, cell_pixels)
+    return _ground.set_visible_window(origin, size_cells, cell_pixels) and _structures.set_visible_window(origin, size_cells, cell_pixels) and _props.set_visible_window(origin, size_cells, cell_pixels) and _actors.set_visible_window(origin, size_cells, cell_pixels) and power_ok and vehicle_ok and lighting_ok and weather_ok and interaction_ok and _perception.set_visible_window(origin, size_cells, cell_pixels)
 
 func is_configured() -> bool:
     return _configured
 
 func layer_command_counts() -> Dictionary:
     _ensure_layers()
-    return {
-        "ground": _ground.plan_visible_commands().size(),
-        "structure": _structures.plan_visible_commands().size(),
-        "prop": _props.plan_visible_commands().size(),
-        "power_wire": _power_lines.visible_wire_count(),
-        "actor": _actors.plan_visible_commands().size(),
-    }
+    return {"ground": _ground.plan_visible_commands().size(), "structure": _structures.plan_visible_commands().size(), "prop": _props.plan_visible_commands().size(), "power_wire": _power_lines.visible_wire_count(), "actor": _actors.plan_visible_commands().size()}
 
 func planned_diagnostic_counts() -> Dictionary:
     _ensure_layers()
-    return {
-        "ground": _count_diagnostics(_ground.plan_visible_commands()),
-        "structure": _count_diagnostics(_structures.plan_visible_commands()),
-        "prop": _count_diagnostics(_props.plan_visible_commands()),
-        "actor": _count_diagnostics(_actors.plan_visible_commands()),
-    }
+    return {"ground": _count_diagnostics(_ground.plan_visible_commands()), "structure": _count_diagnostics(_structures.plan_visible_commands()), "prop": _count_diagnostics(_props.plan_visible_commands()), "actor": _count_diagnostics(_actors.plan_visible_commands())}
 
 func diagnostic_summary() -> Dictionary:
     _ensure_layers()
-    return {
-        "ground": _ground.diagnostic_reasons(),
-        "structure": _structures.diagnostic_reasons(),
-        "prop": _props.diagnostic_reasons(),
-        "actor": _actors.diagnostic_reasons(),
-    }
+    return {"ground": _ground.diagnostic_reasons(), "structure": _structures.diagnostic_reasons(), "prop": _props.diagnostic_reasons(), "actor": _actors.diagnostic_reasons()}
 
 func _ensure_layers() -> void:
-    if _ground != null:
-        return
-    _ground = GroundRendererClass.new()
-    _ground.name = "Ground"
-    _ground.z_index = 0
-    add_child(_ground)
-
-    _structures = StructureRendererClass.new()
-    _structures.name = "Structures"
-    _structures.z_index = 10
-    add_child(_structures)
-
-    _props = PropRendererClass.new()
-    _props.name = "Props"
-    _props.z_index = 20
-    add_child(_props)
-
-    _actors = ActorRendererClass.new()
-    _actors.name = "Actors"
-    _actors.z_index = 30
-    add_child(_actors)
-
-    _power_lines = PowerLineRendererClass.new()
-    _power_lines.name = "PowerLines"
-    _power_lines.z_index = 34
-    add_child(_power_lines)
-
-    _prop_foreground = PropForegroundRendererClass.new()
-    _prop_foreground.name = "PropForeground"
-    _prop_foreground.z_index = 35
-    add_child(_prop_foreground)
-
-    _lighting = LightingRendererClass.new()
-    _lighting.name = "PhysicalLighting"
-    _lighting.z_index = 40
-    add_child(_lighting)
-
-    _weather = WeatherRendererClass.new()
-    _weather.name = "Weather"
-    _weather.z_index = 50
-    add_child(_weather)
-
-    _interaction = InteractionRendererClass.new()
-    _interaction.name = "InteractionHighlights"
-    _interaction.z_index = 90
-    add_child(_interaction)
-
-    _perception = PerceptionOverlayClass.new()
-    _perception.name = "Perception"
-    _perception.z_index = 100
-    add_child(_perception)
-
-    _performance_panel = PerformanceDevPanelClass.new()
-    _performance_panel.name = "PerformanceDev"
-    add_child(_performance_panel)
+    if _ground != null: return
+    _ground = GroundRendererClass.new(); _ground.name = "Ground"; _ground.z_index = 0; add_child(_ground)
+    _structures = StructureRendererClass.new(); _structures.name = "Structures"; _structures.z_index = 10; add_child(_structures)
+    _props = PropRendererClass.new(); _props.name = "Props"; _props.z_index = 20; add_child(_props)
+    _vehicles = VehicleRendererClass.new(); _vehicles.name = "Vehicles"; _vehicles.z_index = 25; add_child(_vehicles)
+    _actors = ActorRendererClass.new(); _actors.name = "Actors"; _actors.z_index = 30; add_child(_actors)
+    _power_lines = PowerLineRendererClass.new(); _power_lines.name = "PowerLines"; _power_lines.z_index = 34; add_child(_power_lines)
+    _prop_foreground = PropForegroundRendererClass.new(); _prop_foreground.name = "PropForeground"; _prop_foreground.z_index = 35; add_child(_prop_foreground)
+    _lighting = LightingRendererClass.new(); _lighting.name = "PhysicalLighting"; _lighting.z_index = 40; add_child(_lighting)
+    _weather = WeatherRendererClass.new(); _weather.name = "Weather"; _weather.z_index = 50; add_child(_weather)
+    _interaction = InteractionRendererClass.new(); _interaction.name = "InteractionHighlights"; _interaction.z_index = 90; add_child(_interaction)
+    _perception = PerceptionOverlayClass.new(); _perception.name = "Perception"; _perception.z_index = 100; add_child(_perception)
+    _performance_panel = PerformanceDevPanelClass.new(); _performance_panel.name = "PerformanceDev"; add_child(_performance_panel)
 
 static func _count_diagnostics(commands: Array) -> int:
     var count: int = 0
     for command: Variant in commands:
-        if command != null and command.has_method("is_diagnostic") and bool(command.call("is_diagnostic")):
-            count += 1
+        if command != null and command.has_method("is_diagnostic") and bool(command.call("is_diagnostic")): count += 1
     return count

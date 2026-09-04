@@ -12,9 +12,15 @@ const DOOR_NORMAL: StringName = &"door.normal"
 const DOOR_LOUD: StringName = &"door.loud"
 const TEST_IMPACT: StringName = &"test.impact"
 const POWER_LINE_SNAP: StringName = &"utility.power_line_snap"
+const VEHICLE_SKATEBOARD: StringName = &"vehicle.skateboard"
+const VEHICLE_BICYCLE: StringName = &"vehicle.bicycle"
+const VEHICLE_MOTORCYCLE: StringName = &"vehicle.motorcycle"
+const VEHICLE_CAR: StringName = &"vehicle.car"
+const VEHICLE_TRUCK: StringName = &"vehicle.truck"
+const VEHICLE_IMPACT: StringName = &"vehicle.impact"
 
 const DOMAIN_SURVIVAL: StringName = &"survival"
-const DOMAIN_TECHNICAL: StringName = &"technical"
+const DOMAIN_MECHANICAL: StringName = &"mechanical"
 const DOMAIN_COMBAT: StringName = &"combat"
 
 const _PROFILES := {
@@ -75,8 +81,68 @@ const _PROFILES := {
         "broad_word": "*SNAP*",
         "specific_word": "*SNAP*",
         "recognition_difficulty": 25,
-        "domain_skill": "technical",
+        "domain_skill": "mechanical",
         "cue_lifetime_ticks": 40,
+    },
+    "vehicle.skateboard": {
+        "power": 55,
+        "category": "vehicle",
+        "unknown_word": "NOISE",
+        "broad_word": "*rrrr*",
+        "specific_word": "*roll*",
+        "recognition_difficulty": 58,
+        "domain_skill": "mechanical",
+        "cue_lifetime_ticks": 24,
+    },
+    "vehicle.bicycle": {
+        "power": 80,
+        "category": "vehicle",
+        "unknown_word": "NOISE",
+        "broad_word": "*whirr*",
+        "specific_word": "*bike chain*",
+        "recognition_difficulty": 54,
+        "domain_skill": "mechanical",
+        "cue_lifetime_ticks": 26,
+    },
+    "vehicle.motorcycle": {
+        "power": 330,
+        "category": "vehicle",
+        "unknown_word": "ENGINE",
+        "broad_word": "*BRRRAAP*",
+        "specific_word": "*motorcycle*",
+        "recognition_difficulty": 30,
+        "domain_skill": "mechanical",
+        "cue_lifetime_ticks": 45,
+    },
+    "vehicle.car": {
+        "power": 250,
+        "category": "vehicle",
+        "unknown_word": "ENGINE",
+        "broad_word": "*vrrrrm*",
+        "specific_word": "*car engine*",
+        "recognition_difficulty": 34,
+        "domain_skill": "mechanical",
+        "cue_lifetime_ticks": 42,
+    },
+    "vehicle.truck": {
+        "power": 310,
+        "category": "vehicle",
+        "unknown_word": "ENGINE",
+        "broad_word": "*VRRROOM*",
+        "specific_word": "*truck engine*",
+        "recognition_difficulty": 30,
+        "domain_skill": "mechanical",
+        "cue_lifetime_ticks": 45,
+    },
+    "vehicle.impact": {
+        "power": 440,
+        "category": "impact",
+        "unknown_word": "CRASH",
+        "broad_word": "*CRUNCH*",
+        "specific_word": "*vehicle crash*",
+        "recognition_difficulty": 18,
+        "domain_skill": "mechanical",
+        "cue_lifetime_ticks": 50,
     },
 }
 
