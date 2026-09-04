@@ -15,9 +15,9 @@ func _init() -> void:
     _profiles = {
         SKATEBOARD: _profile(SKATEBOARD, 2, false, 0, 0, 0, 0, 1, 1, 0, 0),
         BICYCLE: _profile(BICYCLE, 3, false, 0, 0, 6000, 1, 1, 2, 0, 1),
-        MOTORCYCLE: _profile(MOTORCYCLE, 3, true, 18, 1, 12000, 2, 1, 2, 2, 2),
-        CAR: _profile(CAR, 3, true, 40, 2, 70000, 4, 2, 4, 4, 4),
-        TRUCK: _profile(TRUCK, 3, true, 55, 3, 140000, 6, 2, 5, 5, 5),
+        MOTORCYCLE: _profile(MOTORCYCLE, 3, true, 18, 1, 12000, 0, 1, 2, 2, 2),
+        CAR: _profile(CAR, 3, true, 40, 2, 70000, 0, 2, 4, 4, 4),
+        TRUCK: _profile(TRUCK, 3, true, 55, 3, 140000, 0, 2, 5, 5, 5),
     }
 
 func has_profile(kind: StringName) -> bool:
@@ -60,6 +60,19 @@ func hotwire_difficulty(kind: StringName) -> int:
 func footprint(kind: StringName) -> SpatialFootprint:
     var p := profile(kind)
     return SpatialFootprint.rectangle(int(p.get("width", 1)), int(p.get("height", 1)))
+
+func collision_footprint(kind: StringName, heading: int) -> SpatialFootprint:
+    var p := profile(kind)
+    var width: int = int(p.get("width", 1))
+    var height: int = int(p.get("height", 1))
+    if posmod(heading, 3) == 0:
+        return SpatialFootprint.rectangle(width, height)
+    var angle := deg_to_rad(float(posmod(heading, 6)) * 30.0)
+    var c := absf(cos(angle))
+    var s := absf(sin(angle))
+    var bound_width := maxi(1, ceili(c * float(width) + s * float(height)))
+    var bound_height := maxi(1, ceili(s * float(width) + c * float(height)))
+    return SpatialFootprint.rectangle(bound_width, bound_height)
 
 func _profile(
     kind: StringName,
