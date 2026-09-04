@@ -34,7 +34,7 @@ jobs:
           test -f game/scripts/simulation/lighting/IlluminationVisualAcquisitionProvider.gd
           test -f game/scripts/simulation/perception/VisualAcquisitionProvider.gd
           test -f game/scripts/render/PhysicalLightingPresentationRenderer.gd
-          test -f game/scripts/demo/DemoLightingSourceAdapter.gd
+          test ! -f game/scripts/demo/DemoLightingSourceAdapter.gd
           test -f game/shaders/physical_lighting_multiply.gdshader
           test -f game/shaders/physical_lighting_glow.gdshader
           test -f game/scripts/ci/PhysicalLightingSmoke.gd
@@ -43,7 +43,7 @@ jobs:
           grep -q 'class_name PhysicalLightingService' game/scripts/simulation/lighting/PhysicalLightingService.gd
           grep -q 'class_name PhysicalLightingPresentationRenderer' game/scripts/render/PhysicalLightingPresentationRenderer.gd
           grep -q 'class_name IlluminationVisualAcquisitionProvider' game/scripts/simulation/lighting/IlluminationVisualAcquisitionProvider.gd
-          grep -q 'class_name DemoLightingSourceAdapter' game/scripts/demo/DemoLightingSourceAdapter.gd
+          ! grep -R -q 'DemoLightingSourceAdapter\|_demo_lighting_sources' game/scripts/app game/scripts/ci game/main.tscn
           grep -q 'effective_range_for_luminance' game/scripts/simulation/lighting/VisionLightRangePolicy.gd
           grep -q 'wall produces physical flashlight shadow' game/scripts/ci/PhysicalLightingSmoke.gd
           grep -q 'presentation uses backend flashlight shadow' game/scripts/ci/PhysicalLightingPresentationSmoke.gd
