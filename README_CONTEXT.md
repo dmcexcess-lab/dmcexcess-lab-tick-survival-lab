@@ -6,13 +6,27 @@ This is the authoritative continuation checkpoint. Read `README_SOPS.md`, fetch 
 
 ## Current repository / executable truth
 
-- **Verified + deployed gameplay executable:** `f54e35938d6ab6c3803d219374f3eea2e166d9cb`.
-- The current `main` after this handoff is the documentation-only commit containing this file; it does not change the executable relative to `f54e359...`.
-- Exact executable head `f54e359...` completed **49 successful Actions runs** with **0 failed, 0 cancelled, 0 queued and 0 running**.
-- Pages run **`33903061600`** completed successfully for exact executable head `f54e359...`.
+- **Verified + deployed gameplay executable:** `7d3341dc41e2cf7d32c0f83837e92955b807d9b4`.
+- The current `main` after this handoff is the documentation-only commit containing this file; it does not change the executable relative to `7d3341d...`.
+- Exact executable head `7d3341d...` completed **53 successful Actions runs** with **0 failed, 0 cancelled, 0 queued and 0 running**.
+- Pages run **`33904661533`** completed successfully for exact executable head `7d3341d...`.
 - **Live build:** `https://dmcexcess-lab.github.io/dmcexcess-lab-tick-survival-lab/`
-- `CHANGELOG_LATEST.md` records the direct inventory actions plus the town-first island/startup repair. Later documentation-only heads do not change the executable relative to `f54e359...`.
+- `CHANGELOG_LATEST.md` records exact-item first aid, direct inventory actions and the town-first island/startup repair. Later documentation-only heads do not change the executable relative to `7d3341d...`.
 - Actual Godot project root is **`game/`**.
+
+## Completed operation — exact-item inventory first aid
+
+Normal inventory now exposes real treatment buttons when the selected item can affect an exact existing injury:
+
+- bandage roll, gauze pack or medical tape: dress the selected injury;
+- first-aid kit: treat the selected injury and, on a successful Survival result, reduce severity by one tier;
+- rag bundle + disinfectant/alcohol wipes: approved improvised bandage route requiring and consuming both exact carried entities.
+
+`SurvivorFirstAidActionService` composes authoritative WHAT, hands/containment, Health/Injury, broad Survival and WHEN. It captures the exact resources and injury state, revalidates them at completion, consumes the physical supplies, commits through `ActorHealthState.set_injury_state()` and awards bounded Survival XP. A limited skill result stabilizes the wound; success also marks it treated. Removed resources are restored to their prior hand/container disposition if a later commit fails.
+
+The player shell lists each eligible injury by severity, type and body region. It closes decision pause for the real action, then reopens inventory with the result. `WorldInteractionSmoke.gd` proves the real UI path using a Serious left-arm laceration plus rag bundle + disinfectant.
+
+Painkillers and antibiotics remain honestly inactive. There is no pain or infection state owner yet, so adding buttons for them would be fake completion.
 
 ## Completed operation — direct inventory item actions
 
@@ -220,9 +234,9 @@ The structural cleanup above is complete. The practical gameplay consumers found
 
 Pending closure targets:
 
-1. extend exact-item inventory/target actions only as real owners come online; the food/drink and equip/stow/drop UI routes are complete, but medicine, ignition, cooking and repair are not;
+1. extend exact-item inventory/target actions only as real owners come online; food/drink, equip/stow/drop and injury first aid are complete, but pain/infection medicine, ignition and repair are not;
 2. cooking through real ingredients, tools/work surface, real heat source and Survival;
-3. first aid / medicine through real treatment items, Health/Injury, Survival where appropriate and WHEN;
+3. pain/infection medicine only after real pain/infection owners exist; do not add inert painkiller/antibiotic buttons;
 4. real fire lifecycle through tinder/fuel/ignition prerequisites, weather interaction, heat/light ownership and Survival;
 5. Mechanical repair of broken world objects through actual target state + real tool/material + WHEN;
 6. deconstruction/reclamation only for actual existing targets, with real tools/material outputs and Mechanical; no freeform construction loophole;
@@ -258,6 +272,7 @@ Automated verification is green but human acceptance remains necessary for:
 - current condition/Fatigue/rest/needs/moodlet feel;
 - forage personal-inventory/carry presentation;
 - direct inventory selection, eat/drink, equip/stow/drop behavior and phone-sized layout;
+- exact-injury first-aid button readability, rag+disinfectant consumption and treatment feedback;
 - representative generated utility behavior on fresh seeds;
 - desktop browser and phone/Safari presentation.
 
@@ -265,11 +280,11 @@ Automated verification is green but human acceptance remains necessary for:
 
 Unless newer user direction supersedes this:
 
-1. Obtain human browser acceptance of executable `f54e359...`: verify exact-item **EAT/DRINK**, right/left-hand equip, **STOW** and **DROP**, including phone-sized layout. Capture the browser console/error and seed marker for any startup failure.
+1. Obtain human browser acceptance of executable `7d3341d...`: verify exact-item **EAT/DRINK**, equip/stow/drop and the exact-injury first-aid buttons, especially phone-sized readability.
 2. Continue the **player/world practical closure before NPCs or zombies**. Audit every implemented interaction from normal gameplay UI; a smoke-only owner or DEV button is not completion.
-3. Close **first aid / medicine and fire / cooking** against existing Health/Injury, condition, freshness, crafting, lighting/weather and inventory owners, using exact real items and targets.
-4. Close **Mechanical world-object repair/deconstruction**, boarding/smashing/climbing/opening window flows and player-facing vehicle/utility repair through concrete tools/material entities + relevant skill + WHEN into existing owners.
-5. Complete usable bed/sleep, food/water source, refrigerator, stove/oven, light/switch, workbench and generator affordances wherever authoritative target state already exists.
+3. Close the real **fire/ignition lifecycle and cooking UI** against carried tinder/fuel/ignition, heat/light/weather, powered stove/work surface, food freshness and Survival. Existing powered-stove cooking simulation is real but its normal UI route needs explicit acceptance/audit.
+4. Close **Mechanical world-object repair/deconstruction** and player-facing vehicle/utility repair through concrete tools/material entities + Mechanical + WHEN into existing owners.
+5. Verify normal UI routes for opening/locking/smashing/climbing/boarding windows, doors, beds/sleep, sinks/water, refrigerators, lights/switches, workbenches and generators; repair only concrete missing routes.
 6. Wire broader **Awareness** and the first real **Stealth** consumers into existing perception/sound owners without bypassing LOS.
 7. Inspect settlement proportions, residential density, roads/coast, utilities and vehicles on fresh seeds; treat visible defects as generator/materializer defects.
 8. Run owning/protected regressions and verify exact executable head + Pages after each coherent closure slice.
