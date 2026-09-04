@@ -23,7 +23,7 @@ func open_for_target(target_id: String, title: String, offers: Array[Interaction
     if key.is_empty() or offers.is_empty(): return false
     _target_id = key
     _title.text = title
-    for child: Node in _buttons.get_children(): child.queue_free()
+    _clear_buttons()
     for offer: InteractionOffer in offers:
         if offer == null or offer.target_entity_id != key: continue
         var button := Button.new()
@@ -48,6 +48,7 @@ func open_for_target(target_id: String, title: String, offers: Array[Interaction
 
 func close_panel() -> void:
     if _panel != null: _panel.visible = false
+    _clear_buttons()
     _target_id = ""
     if _open:
         _open = false
@@ -57,6 +58,11 @@ func _choose(action_id: StringName) -> void:
     var target: String = _target_id
     close_panel()
     if not target.is_empty(): action_requested.emit(target, action_id)
+
+func _clear_buttons() -> void:
+    if _buttons == null: return
+    for child: Node in _buttons.get_children():
+        child.queue_free()
 
 func _build_ui() -> void:
     if _panel != null: return
