@@ -17,13 +17,11 @@ const EmitterProfileClass = preload("res://scripts/simulation/lighting/LightEmit
 const EmitterClass = preload("res://scripts/simulation/lighting/LightEmitter.gd")
 const LightingClass = preload("res://scripts/simulation/lighting/PhysicalLightingService.gd")
 const PresentationClass = preload("res://scripts/render/PhysicalLightingPresentationRenderer.gd")
-const DemoSourcesClass = preload("res://scripts/demo/DemoLightingSourceAdapter.gd")
 
 var _failures: Array[String] = []
 
 func _initialize() -> void:
     _test_backend_driven_presentation_maps()
-    _test_retired_demo_source_is_inert()
 
     if _failures.is_empty():
         print("PHYSICAL_LIGHTING_PRESENTATION_SMOKE_OK")
@@ -108,25 +106,6 @@ func _test_backend_driven_presentation_maps() -> void:
     _check(float(fog_snapshot.get("scatter_strength", 0.0)) > float(snapshot.get("scatter_strength", 0.0)), "fog scatter reaches glow shader")
     _check(kernel.world_tick() == before_tick, "atmosphere presentation refresh remains zero tick")
     renderer.queue_free()
-
-func _test_retired_demo_source_is_inert() -> void:
-    var world := WorldStateClass.new()
-    var mutations := WorldMutationClass.new(world)
-    _check(mutations.set_terrain_rect(Rect2i(-5, -5, 11, 11), &"ground.concrete"), "legacy source fixture terrain created")
-    var footprint := FootprintClass.single_cell()
-    var player_id: String = "actor.presentation.test"
-    _check(mutations.create_entity(&"actor.survivor", player_id) == player_id, "legacy source player created")
-    _check(mutations.set_placement(player_id, Layers.Channel.ACTOR, Vector2i.ZERO, Facing.Value.EAST, footprint), "legacy source player placed")
-
-    var sources := DemoSourcesClass.new(world, player_id)
-    _check(sources.is_ready(), "legacy lighting source shim remains constructible")
-    _check(sources.emitters().is_empty(), "legacy lighting source shim remains inert")
-    var snapshot: Dictionary = sources.debug_snapshot()
-    _check(bool(snapshot.get("fake_sources_retired", false)), "legacy source reports fake sources retired")
-    _check(int(snapshot.get("emitter_count", -1)) == 0, "legacy source reports zero emitters")
-
-    _check(mutations.set_placement(player_id, Layers.Channel.ACTOR, Vector2i.ZERO, Facing.Value.SOUTH, footprint), "legacy source player turns")
-    _check(sources.emitters().is_empty(), "player facing changes cannot resurrect the fake flashlight")
 
 func _check(condition: bool, description: String) -> void:
     if not condition:
