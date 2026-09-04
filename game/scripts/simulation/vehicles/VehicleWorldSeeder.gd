@@ -71,21 +71,10 @@ func seed_near(actor_id: String, radius: int = 42) -> int:
             if not _inventory_mutations.enroll_container(vehicle_id):
                 _mutations.remove_entity(vehicle_id)
                 continue
-            var key_item_id: String = ""
-            if _profiles.is_motorized(kind):
-                key_item_id = "%s:key" % vehicle_id
-                if _mutations.create_entity(VehicleItemCatalog.VEHICLE_KEY, key_item_id) != key_item_id:
-                    _inventory_mutations.remove_container(vehicle_id)
-                    _mutations.remove_entity(vehicle_id)
-                    continue
-                var key_cell := anchor + Vector2i(2, 0)
-                _mutations.set_placement(key_item_id, Layers.Channel.LOOSE_ITEM, key_cell, Facing.Value.NORTH, SpatialFootprint.single_cell())
             var max_fuel := _profiles.max_fuel(kind)
             var fuel := 0 if max_fuel <= 0 else maxi(1, max_fuel / 2 + posmod(_stable_hash(anchor + Vector2i(3, 7)), maxi(1, max_fuel / 2)))
-            var locked := _profiles.is_motorized(kind) and posmod(_stable_hash(anchor), 100) < 70
-            if not _state.create_vehicle(vehicle_id, kind, fuel, locked, heading, key_item_id):
-                if not key_item_id.is_empty():
-                    _mutations.remove_entity(key_item_id)
+            var key_in_ignition := _initial_key_in_ignition(kind, vehicle_id)
+            if not _state.create_vehicle(vehicle_id, kind, fuel, false, heading, key_in_ignition):
                 _inventory_mutations.remove_container(vehicle_id)
                 _mutations.remove_entity(vehicle_id)
                 continue
@@ -93,6 +82,17 @@ func seed_near(actor_id: String, radius: int = 42) -> int:
             made += 1
             break
     return made
+
+func _initial_key_in_ignition(kind: StringName, vehicle_id: String) -> bool:
+    if not _profiles.is_motorized(kind):
+        return false
+    return _stable_string_percent("%s:ignition" % vehicle_id) < 35
+
+func _stable_string_percent(value: String) -> int:
+    var hash_value: int = 17 + _seed
+    for index: int in range(value.length()):
+        hash_value = (hash_value * 31 + value.unicode_at(index)) % 1000003
+    return posmod(hash_value, 100)
 
 func _seed_vehicle_supplies(vehicle_id: String, kind: StringName, anchor: Vector2i) -> void:
     var supplies: Array[StringName] = []
