@@ -4,12 +4,16 @@ class_name WorldInteractableState
 ## Sparse persistent state for player-modified world interactables.
 ## Door OPEN/CLOSED remains owned by DoorStateStore; this store owns only orthogonal
 ## security, fortification, window aperture, breakage and destruction truth.
+## Unmodified exterior openings derive independent deterministic lock defaults from
+## stable target identity; no house-level lock flag or key inventory exists.
 
 signal state_changed(target_id, version, reason)
 signal state_reset
 
 const SNAPSHOT_SCHEMA_VERSION: int = 1
 const MAX_BOARDS: int = 3
+const DOOR_LOCK_PERCENT: int = 55
+const WINDOW_LOCK_PERCENT: int = 35
 
 var _records: Dictionary = {}
 var _revision: int = 0
@@ -93,7 +97,7 @@ func load_snapshot(data: Dictionary) -> bool:
             return false
         restored[target_id] = {
             "target_id": target_id,
-            "locked": bool(entry.get("locked", false)),
+            "locked": bool(entry.get("locked", _default_locked(target_id))),
             "broken": bool(entry.get("broken", false)),
             "board_count": board_count_value,
             "window_open": bool(entry.get("window_open", false)),
@@ -110,7 +114,7 @@ func _record(target_id: String) -> Dictionary:
     if key.is_empty() or not _records.has(key):
         return {
             "target_id": key,
-            "locked": false,
+            "locked": _default_locked(key),
             "broken": false,
             "board_count": 0,
             "window_open": false,
@@ -118,6 +122,23 @@ func _record(target_id: String) -> Dictionary:
             "version": 0,
         }
     return _records[key]
+
+func _default_locked(target_id: String) -> bool:
+    var lowered := target_id.to_lower()
+    var threshold := 0
+    if lowered.begins_with("door"):
+        threshold = DOOR_LOCK_PERCENT
+    elif lowered.begins_with("window"):
+        threshold = WINDOW_LOCK_PERCENT
+    else:
+        return false
+    return _stable_percent(target_id) < threshold
+
+func _stable_percent(value: String) -> int:
+    var hash_value: int = 17
+    for index: int in range(value.length()):
+        hash_value = (hash_value * 31 + value.unicode_at(index)) % 1000003
+    return posmod(hash_value, 100)
 
 func _set_field(target_id: String, field: String, value: Variant, reason: StringName) -> bool:
     var key: String = target_id.strip_edges()
