@@ -40,8 +40,8 @@ jobs:
           grep -q 'prop.utility_pole_wood' game/scripts/simulation/utilities/UtilityPowerInfrastructureMaterializer.gd
           grep -q 'prop.utility_pole_transformer' game/scripts/simulation/utilities/UtilityPowerInfrastructureMaterializer.gd
           grep -q 'presentation_glow_scale' game/scripts/simulation/lighting/LightEmitterProfile.gd
-          grep -q 'fake_sources_retired' game/scripts/demo/DemoLightingSourceAdapter.gd
-          ! grep -q 'dev.light.player_flashlight' game/scripts/demo/DemoLightingSourceAdapter.gd
+          test ! -f game/scripts/demo/DemoLightingSourceAdapter.gd
+          ! grep -R -q 'DemoLightingSourceAdapter\|_demo_lighting_sources' game/scripts/app game/main.tscn
           ! grep -R -q '_process' game/scripts/simulation/utilities
           ! grep -R -q 'Timer.new' game/scripts/simulation/utilities
 
