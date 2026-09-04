@@ -22,10 +22,14 @@ func is_ready() -> bool:
 func cargo_item_ids(vehicle_id: String) -> Array[String]:
     return _inventory.direct_contents(vehicle_id) if is_ready() and _state.has_vehicle(vehicle_id) else []
 
+func item_weight_grams(item_id: String) -> int:
+    var result := _weights.query(item_id)
+    return int(result.get("weight_grams", -1)) if int(result.get("status", -1)) == ItemWeightQuery.Status.KNOWN else -1
+
 func used_grams(vehicle_id: String) -> int:
     var total: int = 0
     for item_id: String in cargo_item_ids(vehicle_id):
-        var grams := _weights.item_weight_grams(item_id)
+        var grams := item_weight_grams(item_id)
         if grams > 0:
             total += grams
     return total
@@ -42,7 +46,7 @@ func capacity_grams(vehicle_id: String) -> int:
 func can_store(vehicle_id: String, item_id: String) -> bool:
     if not is_ready() or not _state.has_vehicle(vehicle_id) or not _world.has_entity(item_id):
         return false
-    var grams := _weights.item_weight_grams(item_id)
+    var grams := item_weight_grams(item_id)
     return grams > 0 and used_grams(vehicle_id) + grams <= capacity_grams(vehicle_id)
 
 func store_from_actor(actor_id: String, vehicle_id: String, item_id: String) -> bool:
