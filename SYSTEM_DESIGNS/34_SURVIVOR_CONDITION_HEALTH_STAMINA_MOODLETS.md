@@ -58,6 +58,8 @@ Satiety, Hydration, Rest and Engagement decline with authoritative time. Comfort
 
 Eating/drinking consumes a real carried persistent item after a committed action. Spoiled/raw foods are not silently converted into safe meals. Tap drinking requires a real reachable fixture with currently available System-33 service and revalidates on completion. Rest and sleep are real WHEN actions; bed/ground truth affects Comfort while all elapsed-time pressures continue to advance.
 
+First aid is also live through the normal inventory. An exact selected bandage/gauze/tape/kit targets an exact real injury; the approved improvised path requires both a rag bundle and disinfectant/alcohol wipes. Survival changes duration and outcome quality. The action consumes real supplies only at completion and writes stabilization/treatment/severity only through canonical Health.
+
 Engagement improves from meaningful completed activity. Comfort reads real rest surface, weather/sky exposure and severe carried load. Calm/fear reads real injury, current visible threats and sufficiently alarming heard observations—never hidden source truth.
 
 ## UI and compatibility
@@ -66,6 +68,6 @@ The live HUD permanently shows Health and Fatigue plus the six condition meters.
 
 ## Verification
 
-`System34SurvivorConditionSmoke.gd` proves tier boundaries, quiet normal/positive presentation, all pressure moodlets, real injury/load moodlets, WHEN-only Fatigue recovery, run blocking, overexertion harm down to zero Health, modifier caps, Health ceiling behavior, lethal physical needs, deterministic snapshot/restore and real sustainment semantics. The later death/corpse transition remains outside System 34.
+`System34SurvivorConditionSmoke.gd` proves tier boundaries, quiet normal/positive presentation, all pressure moodlets, real injury/load moodlets, WHEN-only Fatigue recovery, run blocking, overexertion harm down to zero Health, modifier caps, Health ceiling behavior, lethal physical needs, deterministic snapshot/restore and real sustainment semantics. `WorldInteractionSmoke.gd` additionally proves exact-item inventory eating/equipment and rag+disinfectant treatment of an exact injury. The later death/corpse transition remains outside System 34.
 
 Protected actor Health/Needs/Carry/Freshness, movement/input, System-33 utility, spatial-sound and canonical startup regressions must remain green. Human browser acceptance remains separate from automated verification.

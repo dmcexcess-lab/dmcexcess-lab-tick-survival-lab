@@ -41,7 +41,7 @@ Canonical status/routing index. Read `PROJECT_NORTH_STAR.md`, `PERFORMANCE_NORTH
 
 ## Current routing
 
-Phase 1 content foundations, Phase 2 crafting, Phase 3 utilities, Phase 4/5 survivor condition/moodlets, the four-skill foundation, primitive Survival crafting, System 35 outdoor foraging and **System 36 Vehicles** are implemented in the current executable lineage.
+Phase 1 content foundations, Phase 2 crafting, Phase 3 utilities, Phase 4/5 survivor condition/moodlets, exact-item inventory consumption/equipment/first aid, the four-skill foundation, primitive Survival crafting, System 35 outdoor foraging and **System 36 Vehicles** are implemented in the current executable lineage.
 
 System 36 provides persistent skateboard/bicycle/motorcycle/car/truck state; bounded generated parked vehicles; enter/exit; skateboard 2-cell smooth-surface movement with no added Fatigue; bicycle 3-cell movement with real Fatigue; powered motorcycle/car/truck movement with finite fuel; 12 typed headings at 30-degree increments over deterministic integer rasters; 2-cell braking; real keys/locks/hot-wiring; real weighted cargo; bounded Mechanical repair and real installed cargo-rack modification; crash HP/sound consequences; and powered headlights. Exact arbitrary-angle collision polygons, partial fuel-fluid quantities, island-wide streaming vehicle population and richer component replacement remain explicit future closure rather than fake completion.
 

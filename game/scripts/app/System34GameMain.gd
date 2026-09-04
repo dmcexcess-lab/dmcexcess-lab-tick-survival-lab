@@ -12,6 +12,7 @@ const ConditionHeardFearClass = preload("res://scripts/simulation/actors/conditi
 const ConditionEnvironmentClass = preload("res://scripts/simulation/actors/condition/ConditionEnvironmentPressureAdapter.gd")
 const SustainmentProfilesClass = preload("res://scripts/simulation/actors/condition/SurvivorSustainmentProfileCatalog.gd")
 const SustainmentActionsClass = preload("res://scripts/simulation/actors/condition/SurvivorSustainmentActionService.gd")
+const FirstAidActionsClass = preload("res://scripts/simulation/actors/health/SurvivorFirstAidActionService.gd")
 const ConditionControlsClass = preload("res://scripts/ui/ConditionPlayerControls.gd")
 
 const WATER_FIXTURE_SEMANTICS: Array[StringName] = [&"prop.kitchen_sink", &"prop.bathroom_vanity"]
@@ -28,6 +29,7 @@ var _condition_heard_fear: ConditionHeardFearAdapter = null
 var _condition_environment: ConditionEnvironmentPressureAdapter = null
 var _sustainment_profiles: SurvivorSustainmentProfileCatalog = null
 var _sustainment_actions: SurvivorSustainmentActionService = null
+var _first_aid_actions: SurvivorFirstAidActionService = null
 var _condition_controls: ConditionPlayerControls = null
 
 func _boot_canonical_demo() -> bool:
@@ -104,6 +106,20 @@ func _boot_system34() -> bool:
     if not _sustainment_actions.is_ready():
         return false
     if _shell == null or not _shell.configure_inventory_actions(_sustainment_actions):
+        return false
+    _first_aid_actions = FirstAidActionsClass.new(
+        _world,
+        _world_mutations,
+        _hand_state,
+        _hand_mutations,
+        _inventory_state,
+        _inventory_mutations,
+        _carry_query,
+        _kernel,
+        _health_state,
+        _skill_checks
+    )
+    if not _first_aid_actions.is_ready() or not _shell.configure_first_aid_actions(_first_aid_actions):
         return false
     if not _sustainment_actions.set_potable_source_provider(Callable(self, "_potable_water_fixture_in_reach")):
         return false

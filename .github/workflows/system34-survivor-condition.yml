@@ -8,6 +8,7 @@ on:
       - 'game/scripts/app/System34GameMain.gd'
       - 'game/scripts/app/VehicleGameMain.gd'
       - 'game/scripts/simulation/actors/condition/**'
+      - 'game/scripts/simulation/actors/health/**'
       - 'game/scripts/simulation/actors/carry/ActorCarryQuery.gd'
       - 'game/scripts/ui/ActorStatusSummaryQuery.gd'
       - 'game/scripts/ui/CanonicalStatusHud.gd'
@@ -15,6 +16,7 @@ on:
       - 'game/scripts/ui/CanonicalPlayerShell.gd'
       - 'game/scripts/ui/ConditionPlayerControls.gd'
       - 'game/scripts/ci/System34SurvivorConditionSmoke.gd'
+      - 'game/scripts/ci/WorldInteractionSmoke.gd'
       - 'SYSTEM_DESIGNS/34_SURVIVOR_CONDITION_HEALTH_STAMINA_MOODLETS.md'
       - '.github/workflows/system34-survivor-condition.yml'
   workflow_dispatch:
@@ -46,6 +48,7 @@ jobs:
           test -f game/scripts/simulation/actors/condition/ActorConditionService.gd
           test -f game/scripts/simulation/actors/condition/ActorConditionMoodletQuery.gd
           test -f game/scripts/simulation/actors/condition/SurvivorSustainmentActionService.gd
+          test -f game/scripts/simulation/actors/health/SurvivorFirstAidActionService.gd
           test -f game/scripts/ci/System34SurvivorConditionSmoke.gd
           grep -q 'VehicleGameMain.gd' game/main.tscn
           grep -q 'extends System34GameMain' game/scripts/app/VehicleGameMain.gd
@@ -61,6 +64,7 @@ jobs:
           grep -q 'health.injured' game/scripts/simulation/actors/condition/ActorConditionMoodletQuery.gd
           ! grep -qE 'func current_stamina|func spend_stamina' game/scripts/simulation/actors/condition/ActorConditionService.gd
           ! grep -R -q 'func _process\|func _physics_process' game/scripts/simulation/actors/condition
+          ! grep -R -q 'func _process\|func _physics_process' game/scripts/simulation/actors/health/SurvivorFirstAidActionService.gd
 
       - name: Install Godot 4.7.1
         shell: bash
@@ -94,6 +98,7 @@ jobs:
             'ActorNeedsSmoke.gd:ACTOR_NEEDS_SMOKE_OK' \
             'ActorCarrySmoke.gd:ACTOR_CARRY_SMOKE_OK' \
             'ItemFreshnessSmoke.gd:ITEM_FRESHNESS_SMOKE_OK' \
+            'WorldInteractionSmoke.gd:WORLD_INTERACTION_SMOKE_OK' \
             'PlayerInputResponsivenessSmoke.gd:PLAYER_INPUT_RESPONSIVENESS_SMOKE_OK'; do
             script=${spec%%:*}
             marker=${spec#*:}

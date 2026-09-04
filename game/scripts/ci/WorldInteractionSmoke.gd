@@ -9,6 +9,7 @@ const Actions = preload("res://scripts/simulation/interaction/WorldInteractionAc
 const SustainmentOffers = preload("res://scripts/simulation/interaction/SustainmentInteractionOfferProvider.gd")
 const SkillCatalog = preload("res://scripts/simulation/actors/skills/ActorSkillCatalog.gd")
 const ConditionState = preload("res://scripts/simulation/actors/condition/ActorConditionState.gd")
+const Injury = preload("res://scripts/simulation/actors/health/ActorInjuryRecord.gd")
 const SoundProfiles = preload("res://scripts/simulation/sound/SoundEmissionProfileCatalog.gd")
 const TickRules = preload("res://scripts/foundation/time/TickRules.gd")
 
@@ -35,6 +36,8 @@ func _run() -> void:
     var skills: ActorSkillState = game.get("_skill_state")
     var condition: ActorConditionService = game.get("_condition_service")
     var sustainment: SurvivorSustainmentActionService = game.get("_sustainment_actions")
+    var first_aid: SurvivorFirstAidActionService = game.get("_first_aid_actions")
+    var health: ActorHealthState = game.get("_health_state")
     var crafting: CraftingActionService = game.get("_crafting_actions")
     var inventory: InventoryContainmentState = game.get("_inventory_state")
     var inventory_mutations: InventoryContainmentMutationService = game.get("_inventory_mutations")
@@ -46,7 +49,7 @@ func _run() -> void:
     var shell: CanonicalPlayerShell = game.get("_shell")
 
     _check(world != null and mutations != null and spatial != null and kernel != null, "core live owners available")
-    _check(skills != null and condition != null and sustainment != null and crafting != null, "condition/crafting owners available")
+    _check(skills != null and condition != null and sustainment != null and first_aid != null and health != null and crafting != null, "condition/health/crafting owners available")
     _check(interaction_state != null and interactions != null and interactions.is_ready(), "world interaction runtime ready")
     _check(affordances != null and affordances.is_ready(), "System 29 affordances remain ready")
     _check(shell != null and shell.is_configured(), "live player shell is ready")
@@ -60,6 +63,7 @@ func _run() -> void:
 
     _test_sink(world, mutations, sustainment, condition, kernel, actor_id)
     _test_inventory_item_actions(world, mutations, inventory_mutations, condition, kernel, shell, actor_id)
+    _test_inventory_first_aid(world, mutations, inventory_mutations, health, kernel, shell, actor_id)
     _test_rest_and_sleep(world, mutations, sustainment, condition, kernel, actor_id)
     _test_cooking(world, mutations, inventory_mutations, crafting, inventory, kernel, actor_id)
     _test_doors(world, mutations, door_state, door_transitions, interactions, interaction_state, kernel, actor_id)
@@ -118,6 +122,38 @@ func _test_inventory_item_actions(
     if stow_button != null:
         stow_button.pressed.emit()
     _check(hands != null and hands.primary_item(actor_id).is_empty(), "inventory stow clears the real hand assignment")
+    shell.close_modal()
+
+func _test_inventory_first_aid(
+    world: WorldState,
+    mutations: WorldMutationService,
+    inventory_mutations: InventoryContainmentMutationService,
+    health: ActorHealthState,
+    kernel: TickKernel,
+    shell: CanonicalPlayerShell,
+    actor_id: String
+) -> void:
+    var rag_id: String = "ci.inventory.first_aid.rags"
+    var alcohol_id: String = "ci.inventory.first_aid.alcohol"
+    _check(_give_item(world, mutations, inventory_mutations, actor_id, &"item.material.rag_bundle", rag_id), "rag bundle enters inventory for improvised first aid")
+    _check(_give_item(world, mutations, inventory_mutations, actor_id, &"item.medical.disinfectant", alcohol_id), "disinfectant enters inventory for improvised first aid")
+    var injury_id: String = health.add_injury(actor_id, &"laceration", Injury.LEFT_ARM, Injury.Severity.SERIOUS)
+    _check(not injury_id.is_empty(), "real untreated injury added for player first aid")
+
+    shell.open_inventory()
+    var rag_button: Button = _button_with_meta(shell, "inventory_item_id", rag_id)
+    _check(rag_button != null, "specific rag bundle is selectable for first aid")
+    if rag_button != null:
+        rag_button.pressed.emit()
+    var treatment_button: Button = _button_with_treatment(shell, rag_id, injury_id)
+    _check(treatment_button != null and treatment_button.text.begins_with("IMPROVISE BANDAGE"), "rag plus alcohol exposes exact-injury first aid UI")
+    if treatment_button != null:
+        treatment_button.pressed.emit()
+
+    var treated: ActorInjuryRecord = health.injury(actor_id, injury_id)
+    _check(treated != null and treated.stabilized and treated.treated, "expert Survival first aid stabilizes and treats the real injury")
+    _check(not world.has_entity(rag_id) and not world.has_entity(alcohol_id), "first aid consumes the exact rag and disinfectant entities")
+    _check(shell.active_modal() == CanonicalPlayerShell.MODAL_INVENTORY and kernel.is_hard_paused(), "inventory reopens after first aid WHEN completion")
     shell.close_modal()
 
 func _test_sink(world: WorldState, mutations: WorldMutationService, sustainment: SurvivorSustainmentActionService, condition: ActorConditionService, kernel: TickKernel, actor_id: String) -> void:
@@ -342,6 +378,18 @@ func _button_with_action(root: Node, item_id: String, action: String, label: Str
         return button
     for child: Node in root.get_children():
         var found: Button = _button_with_action(child, item_id, action, label)
+        if found != null:
+            return found
+    return null
+
+func _button_with_treatment(root: Node, item_id: String, injury_id: String) -> Button:
+    var button := root as Button
+    if button != null \
+        and String(button.get_meta("inventory_treatment_item_id", "")) == item_id \
+        and String(button.get_meta("inventory_treatment_injury_id", "")) == injury_id:
+        return button
+    for child: Node in root.get_children():
+        var found: Button = _button_with_treatment(child, item_id, injury_id)
         if found != null:
             return found
     return null

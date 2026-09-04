@@ -200,12 +200,10 @@ Each real injury shows type, body region, Minor/Serious/Critical severity, stabi
 
 Enumerates the canonical 13C catalog dynamically:
 
-- Combat;
-- Scavenging;
+- Awareness;
+- Stealth;
+- Mechanical;
 - Survival;
-- Medical;
-- Technical;
-- Social;
 - level;
 - current XP / next threshold below max;
 - MAX at level 10.
@@ -216,7 +214,7 @@ No traits, stress, temperature, infection or other unimplemented domains are sho
 
 ## 7. Inventory modal
 
-Inventory is read-only in System 16.
+Inventory presentation reads canonical containment/hands and now exposes exact-item actions only through injected owning services.
 
 ### Hands / Loadout
 
@@ -228,6 +226,12 @@ Inventory is read-only in System 16.
 - actor-root direct contents;
 - nested item-container contents recursively;
 - deterministic stable-ID order inherited from 11;
+- clickable exact-item rows;
+- fresh food/drink through the sustainment owner;
+- right/left-hand equip, stow and drop through the timed transfer owner;
+- bandage/kit or rag+disinfectant first aid against an exact canonical injury through the Survival-backed first-aid owner.
+
+The shell creates no item or Health consequences itself. It closes decision pause for the real WHEN action, reopens inventory afterward and reports success only after authoritative state verifies the result.
 - stable item IDs remain visible in query/presentation truth;
 - no grouping that invents stacks or erases physical identity.
 
@@ -328,7 +332,7 @@ The System 16 smoke proves:
 - touch label becomes `STAND` from real state;
 - crouched forward step spends existing 14 ticks;
 - crouched -> standing spends 4 ticks;
-- Stats exposes real status/injuries/six Skills and no fake traits/stress;
+- Stats exposes real status/injuries/four canonical Skills and no fake traits/stress;
 - Inventory exposes real empty state and 0/18 kg carry;
 - synthetic nested containment preserves stable IDs and explicit unknown weights;
 - Stats/Inventory/Menu acquire hard pause and restore prior pause correctly;
@@ -376,8 +380,8 @@ System 16 turns the walking/HUD demo into a usable survival-game shell without f
 
 1. Crouch/Stand + Stats + Inventory + Menu form one bounded integration slice because their simulation owners already exist.
 2. One semantic `STANCE_TOGGLE` maps canonical stance to existing System 03 crouch/stand actions.
-3. Stats is read-only and shows stance, HP, needs, carry, moodlets, injuries and six Skills only.
-4. Inventory is read-only and shows Hands + actor-root/nested Containment + Carry; no pickup/drop/equip/use yet.
+3. Stats is read-only and shows stance, HP, needs, carry, moodlets, injuries and four canonical Skills only.
+4. Inventory shows Hands + actor-root/nested Containment + Carry and delegates exact-item eat/drink, equip/stow/drop and first-aid actions to their owning services; it never implements a generic fake USE effect.
 5. Any modal acquires WHEN hard pause and final close restores exact prior hard-pause state.
 6. Modal UI blocks gameplay keyboard/touch input.
 7. Web Leave Game tries browser history first and otherwise falls back to Google; no Safari-homepage claim.

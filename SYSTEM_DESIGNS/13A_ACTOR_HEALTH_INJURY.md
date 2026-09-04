@@ -24,6 +24,12 @@ System 34 keeps this state as the only owner of HP and injury truth. Its conditi
 
 Zero HP remains the physical-health outcome. A later death/corpse system may consume it; System 34 does not invent a second death meter.
 
+## Live first-aid consumer
+
+`SurvivorFirstAidActionService` is the normal player-facing consumer of injury stabilization/treatment. It does not own alternate Health state. It requires an exact carried treatment item, an exact existing injury, broad Survival competence and real WHEN duration, then revalidates all of them before committing through `set_injury_state()`.
+
+Bandages, gauze and medical tape dress wounds. A first-aid kit can reduce severity on a successful Survival attempt. A rag bundle plus real disinfectant/alcohol wipes provides the approved improvised route. Successful treatment consumes the exact persistent supplies; a limited attempt still stabilizes the injury but does not falsely mark it fully treated. Painkillers and antibiotics expose no fake action because pain/infection owners do not exist yet.
+
 ## Mutation / time
 Normal writes remain explicit: enroll/remove, set/max HP, damage/heal, add/update/remove injury. Same-value writes are successful no-ops. There is no frame-time healing or hidden clock.
 
@@ -60,7 +66,7 @@ Health/System17 CI covers survivor enrollment, 100 HP baseline, damage/heal/clam
 - the additive signal does not alter Health persistence/state ownership.
 
 ## Future seams
-Combat/environmental damage can call `apply_damage`; first aid can stabilize/treat; capability providers may read health facts later; Death/Corpse consumes zero-HP outcomes without Health owning corpse state.
+Combat/environmental damage can call `apply_damage`; capability providers may read health facts later; Death/Corpse consumes zero-HP outcomes without Health owning corpse state.
 
 ## Approved decisions — 2026-08-16
 1. HP is canonical integer current/max health with v1 max/start 100.

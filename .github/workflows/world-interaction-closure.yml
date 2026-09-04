@@ -16,6 +16,7 @@ on:
       - 'game/scripts/player/WorldInteractionPlayerController.gd'
       - 'game/scripts/ui/WorldInteractionPanel.gd'
       - 'game/scripts/ui/CanonicalPlayerShell.gd'
+      - 'game/scripts/simulation/actors/health/**'
       - 'game/scripts/render/WorldInteractionStateRenderer.gd'
       - 'game/scripts/render/TacticalRendererStack.gd'
       - 'game/scripts/ci/WorldInteractionSmoke.gd'

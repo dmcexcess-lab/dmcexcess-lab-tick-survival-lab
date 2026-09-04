@@ -19,6 +19,7 @@ var _kernel: TickKernel = null
 var _stats_query: ActorStatsInspectorQuery = null
 var _inventory_query: ActorInventoryInspectorQuery = null
 var _inventory_actions: SurvivorSustainmentActionService = null
+var _first_aid_actions: SurvivorFirstAidActionService = null
 var _inventory_transfers: ItemTransferActionService = null
 var _icons: SemanticUiIconCatalog = null
 var _actor_id: String = ""
@@ -73,6 +74,12 @@ func configure_inventory_actions(actions: SurvivorSustainmentActionService) -> b
     if actions == null or not actions.is_ready():
         return false
     _inventory_actions = actions
+    return true
+
+func configure_first_aid_actions(actions: SurvivorFirstAidActionService) -> bool:
+    if actions == null or not actions.is_ready():
+        return false
+    _first_aid_actions = actions
     return true
 
 func configure_inventory_transfers(transfers: ItemTransferActionService) -> bool:
@@ -338,6 +345,7 @@ func _render_inventory() -> void:
             _last_lines.append(action_button.text)
         elif String(offer.get("reason", "")) == "item_spoiled":
             _append_line("Spoiled — cannot consume.", 13)
+        _append_inventory_treatment_actions(_selected_inventory_item_id)
         _append_inventory_transfer_actions(result, _selected_inventory_item_id)
 
     _append_heading("HANDS / LOADOUT")
@@ -486,6 +494,43 @@ func _inventory_consumption_offer(item_id: String) -> Dictionary:
     if _inventory_actions == null or not _inventory_actions.is_ready():
         return {"available": false, "reason": "inventory_actions_unavailable"}
     return _inventory_actions.consumption_offer(_actor_id, item_id)
+
+func _append_inventory_treatment_actions(item_id: String) -> void:
+    if _first_aid_actions == null or not _first_aid_actions.is_ready():
+        return
+    for offer: Dictionary in _first_aid_actions.treatment_offers(_actor_id, item_id):
+        var button := Button.new()
+        button.text = String(offer.get("label", "TREAT INJURY"))
+        button.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+        button.custom_minimum_size = Vector2(0, 48)
+        button.focus_mode = Control.FOCUS_NONE
+        button.set_meta("inventory_treatment_item_id", item_id)
+        button.set_meta("inventory_treatment_injury_id", String(offer.get("injury_id", "")))
+        button.pressed.connect(_treat_selected_inventory_item.bind(String(offer.get("injury_id", ""))))
+        _body.add_child(button)
+        _last_lines.append(button.text)
+
+func _treat_selected_inventory_item(injury_id: String) -> void:
+    var item_id: String = _selected_inventory_item_id
+    if _first_aid_actions == null or _pause_was_active:
+        _inventory_status = "Resume before using inventory actions."
+        _render_inventory()
+        return
+    close_modal()
+    var serial: int = _first_aid_actions.begin_treatment(_actor_id, item_id, injury_id)
+    if serial <= 0:
+        _inventory_status = "First aid could not start."
+    else:
+        _kernel.run_until_stop()
+        var outcome: Dictionary = _first_aid_actions.treatment_outcome(serial)
+        if bool(outcome.get("committed", false)):
+            _inventory_status = "Treatment complete — %s." % (
+                "wound treated" if bool(outcome.get("treated", false)) else "wound stabilized; treatment was limited"
+            )
+            _selected_inventory_item_id = ""
+        else:
+            _inventory_status = "First aid failed: %s" % String(outcome.get("reason", "unknown")).replace("_", " ")
+    open_inventory()
 
 func _append_inventory_transfer_actions(result: Dictionary, item_id: String) -> void:
     if _inventory_transfers == null or not _inventory_transfers.is_ready():
