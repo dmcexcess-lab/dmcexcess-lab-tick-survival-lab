@@ -8,21 +8,23 @@ var _world: WorldState
 var _mutations: WorldMutationService
 var _query: SpatialQueryService
 var _collisions: CollisionCatalog
+var _inventory_mutations: InventoryContainmentMutationService
 var _profiles: VehicleProfileCatalog
 var _state: VehicleState
 var _seed: int
 
-func _init(world: WorldState, mutations: WorldMutationService, query: SpatialQueryService, collisions: CollisionCatalog, profiles: VehicleProfileCatalog, state: VehicleState, world_seed: int) -> void:
+func _init(world: WorldState, mutations: WorldMutationService, query: SpatialQueryService, collisions: CollisionCatalog, inventory_mutations: InventoryContainmentMutationService, profiles: VehicleProfileCatalog, state: VehicleState, world_seed: int) -> void:
     _world = world
     _mutations = mutations
     _query = query
     _collisions = collisions
+    _inventory_mutations = inventory_mutations
     _profiles = profiles
     _state = state
     _seed = world_seed
 
 func seed_near(actor_id: String, radius: int = 42) -> int:
-    if _world == null or _mutations == null or _query == null or _collisions == null or _profiles == null or _state == null:
+    if _world == null or _mutations == null or _query == null or _collisions == null or _inventory_mutations == null or _profiles == null or _state == null:
         return 0
     var actor_placement := _world.placement(actor_id)
     if actor_placement == null:
@@ -59,16 +61,29 @@ func seed_near(actor_id: String, radius: int = 42) -> int:
             var vehicle_id := "vehicle:%d:%s:%d:%d" % [_seed, String(kind), anchor.x, anchor.y]
             if _world.has_entity(vehicle_id):
                 break
-            var semantic := _profiles.semantic_type(kind)
-            if _mutations.create_entity(semantic, vehicle_id).is_empty():
+            if _mutations.create_entity(_profiles.semantic_type(kind), vehicle_id).is_empty():
                 continue
             if not _mutations.set_placement(vehicle_id, Layers.Channel.OBJECT, anchor, Facing.NORTH, footprint):
                 _mutations.remove_entity(vehicle_id)
                 continue
+            if not _inventory_mutations.enroll_container(vehicle_id):
+                _mutations.remove_entity(vehicle_id)
+                continue
+            var key_item_id: String = ""
+            if _profiles.is_motorized(kind):
+                key_item_id = "%s:key" % vehicle_id
+                if _mutations.create_entity(&"item.automotive.vehicle_key", key_item_id) != key_item_id:
+                    _inventory_mutations.remove_container(vehicle_id)
+                    _mutations.remove_entity(vehicle_id)
+                    continue
+                var key_cell := anchor + Vector2i(2, 0)
+                _mutations.set_placement(key_item_id, Layers.Channel.LOOSE_ITEM, key_cell, Facing.NORTH, SpatialFootprint.single_cell())
             var max_fuel := _profiles.max_fuel(kind)
             var fuel := 0 if max_fuel <= 0 else maxi(1, max_fuel / 2 + posmod(_stable_hash(anchor + Vector2i(3, 7)), maxi(1, max_fuel / 2)))
             var locked := _profiles.is_motorized(kind) and posmod(_stable_hash(anchor), 100) < 70
-            if not _state.create_vehicle(vehicle_id, kind, fuel, locked, posmod(_stable_hash(anchor), 12)):
+            if not _state.create_vehicle(vehicle_id, kind, fuel, locked, posmod(_stable_hash(anchor), 12), key_item_id):
+                if not key_item_id.is_empty(): _mutations.remove_entity(key_item_id)
+                _inventory_mutations.remove_container(vehicle_id)
                 _mutations.remove_entity(vehicle_id)
                 continue
             made += 1
