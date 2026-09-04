@@ -61,7 +61,7 @@ func generate(request: AreaGenerationRequest) -> GeneratedAreaPlan:
         plan.failure_reason = "environment_profile_unknown"
         return plan
 
-    var area_profile: Dictionary = _area_profiles.profile(request.area_profile_id)
+    var area_profile: Dictionary = _effective_area_profile(request, _area_profiles.profile(request.area_profile_id))
     var environment_profile: Dictionary = _environment_profiles.profile(request.environment_profile_id)
     if bool(area_profile.get("inherited_roads_required", true)) and request.inherited_roads.is_empty():
         plan.failure_reason = "area_profile_requires_inherited_road"
@@ -195,6 +195,18 @@ func generate(request: AreaGenerationRequest) -> GeneratedAreaPlan:
 
     _validate_final_plan(request, plan)
     return plan
+
+func _effective_area_profile(request: AreaGenerationRequest, profile: Dictionary) -> Dictionary:
+    if request.area_profile_id != AreaProfileCatalog.SMALLTOWN_CENTER \
+        or mini(request.bounds.size.x, request.bounds.size.y) < int(profile.get("island_large_minimum_size", 2147483647)):
+        return profile
+    var effective: Dictionary = profile.duplicate(true)
+    effective["residential_count"] = int(profile.get("island_large_residential_count", profile.get("residential_count", 12)))
+    effective["local_residential_target"] = int(profile.get("island_large_local_residential_target", profile.get("local_residential_target", 7)))
+    effective["town_cross_offset_candidates"] = profile.get("island_large_town_cross_offset_candidates", profile.get("town_cross_offset_candidates", []))
+    effective["town_back_offset_candidates"] = profile.get("island_large_town_back_offset_candidates", profile.get("town_back_offset_candidates", []))
+    effective["town_core_half_extent"] = int(profile.get("island_large_town_core_half_extent", profile.get("town_core_half_extent", 92)))
+    return effective
 
 func _generate_rural_open(
     request: AreaGenerationRequest,

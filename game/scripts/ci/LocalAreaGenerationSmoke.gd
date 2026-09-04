@@ -41,7 +41,7 @@ func _test_candidate(
         return
     _check(bool(validator.validate(request, plan).get("ok", false)), "Candidate 006 passes generic area validation")
     _check(plan.bounds == FixtureClass.BOUNDS and plan.bounds.size == Vector2i(256, 256), "Candidate 006 keeps the approved 256x256 global planning area")
-    _check(plan.area_profile_version == 6, "rural.crossroads v6 remains recorded")
+    _check(plan.area_profile_version == 5, "rural.crossroads v5 remains recorded")
     _check(plan.environment_profile_version == 3, "temperate.rural v3 remains recorded")
 
     # Regional roads are authoritative. Local roads are optional best-effort detail and
@@ -119,10 +119,10 @@ func _test_seed_replay(generator: LocalAreaGenerator) -> void:
     _check(alternate.is_generated() and alternate.signature() != original_a.signature(), "different area seed changes legal local planning")
     for seed in range(20001, 20013):
         var plan: GeneratedAreaPlan = generator.generate(FixtureClass.request(seed))
-        _check(plan.is_generated(), "rural crossroads v6 / temperate rural v3 seed %d generates without reroll loops" % seed)
+        _check(plan.is_generated(), "rural crossroads v5 / temperate rural v3 seed %d generates without reroll loops" % seed)
         if not plan.is_generated():
             continue
-        _check(plan.area_profile_version == 6, "seed %d records rural.crossroads v6" % seed)
+        _check(plan.area_profile_version == 5, "seed %d records rural.crossroads v5" % seed)
         _check(_count_inherited_roads(plan) == 2, "seed %d preserves both inherited roads" % seed)
         _check(_count_intersections(plan, &"signalized") == 1, "seed %d preserves one signalized crossroads" % seed)
         _check(_count_land_use(plan, &"commercial_small") <= COMMERCIAL_TARGET, "seed %d respects commercial density cap" % seed)

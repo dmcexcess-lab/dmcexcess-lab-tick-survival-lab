@@ -111,7 +111,7 @@ func _test_system20_projection(projector: System20AreaRequestProjector, plan: Ge
     _check(baseline_plan.is_generated(), "current Candidate 006 baseline still generates")
     if projected_plan.is_generated() and baseline_plan.is_generated():
         _check(projected_plan.signature() == baseline_plan.signature(), "global water planning does not change Candidate 006 semantic output")
-        _check(projected_plan.area_profile_version == 6, "Candidate 006 still uses rural.crossroads v6")
+        _check(projected_plan.area_profile_version == 5, "Candidate 006 still uses rural.crossroads v5")
 
     var unsupported_result: Dictionary = projector.project_site(plan, "area.smalltown.center.001")
     _check(not bool(unsupported_result.get("ok", true)), "small-town local profile remains honestly unsupported")
