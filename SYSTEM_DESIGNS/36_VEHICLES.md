@@ -309,6 +309,14 @@ Latest authoritative-footprint repair:
 - canonical demo run `33833089581`: success;
 - Pages run `33833089545`: build success + deploy success.
 
+Latest compact-footprint/art-fit repair:
+
+- executable `7d25720b8c3cb027659584f2f69f50ac38131f78` keeps cars real 1×3 objects, changes trucks to real 2×3 objects and gives car art a matching 1:3 canvas so it fills the authoritative footprint;
+- exact-head result: **50 successful Actions runs**, zero failures, queued or running runs;
+- System 36 run `33833921149`: success;
+- canonical demo run `33833921182`: success;
+- Pages run `33833921100`: build success + deploy success.
+
 The live browser build is deployed, but **human vehicle feel/UX acceptance remains pending**.
 
 ## Known implementation limitations / next closure

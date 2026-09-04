@@ -6,12 +6,19 @@ This is the authoritative continuation checkpoint. Read `README_SOPS.md`, fetch 
 
 ## Current repository / executable truth
 
-- **Current verified + deployed gameplay executable:** `45571e50630bc5f61e1db2c36d0e2fda26ad8c89` — authoritative 1×3 car and 2×4 truck footprints with aligned rendering.
-- `45571e50...` completed **50 Actions runs successfully**, with **0 failed, 0 queued, 0 running** at terminal verification.
-- System 36 run **`33833089551`** and canonical demo run **`33833089581`** completed successfully.
-- Pages run **`33833089545`** completed both Web build and deploy successfully.
+- **Current verified + deployed gameplay executable:** `7d25720b8c3cb027659584f2f69f50ac38131f78` — real 2×3 trucks and footprint-filling 1×3 car art.
+- `7d25720b...` completed **50 Actions runs successfully**, with **0 failed, 0 queued, 0 running** at terminal verification.
+- System 36 run **`33833921149`** and canonical demo run **`33833921182`** completed successfully.
+- Pages run **`33833921100`** completed both Web build and deploy successfully.
 - **Live build:** `https://dmcexcess-lab.github.io/dmcexcess-lab-tick-survival-lab/`
-- The commit containing this handoff is a later `[skip ci]` documentation-only head; no gameplay/source differs from `45571e50...`.
+- The commit containing this handoff is a later `[skip ci]` documentation-only head; no gameplay/source differs from `7d25720b...`.
+
+## Completed repair — compact truck and full-length car art
+
+- Trucks now have one authoritative **2×3-cell** footprint across profile, procedural seeding, persistent placement, occupancy, movement collision and rendering.
+- Cars remain authoritative **1×3-cell** objects.
+- The car SVG canvas changed from 64×128 (1:2) to 64×192 (1:3), with its actual body artwork expanded through that canvas. The normal aspect-fit renderer therefore fills the real three-cell car length without a hidden scale multiplier or hitbox mismatch.
+- Owning smoke coverage asserts the exact six-cell truck footprint and imported 1:3 car texture. Local Godot 4.7.1 import, owning/protected suites and canonical startup passed. The unchanged local sound benchmark hit shared-host jitter at 16.78 ms, while exact-head CI passed it and all other checks.
 
 ## Completed repair — authoritative car and truck footprints
 
@@ -394,8 +401,8 @@ After vehicle human acceptance—or newer explicit user direction—perform one 
 
 ## NEXT OPERATION
 
-1. **Human-play executable `45571e50...`** at `https://dmcexcess-lab.github.io/dmcexcess-lab-tick-survival-lab/`.
-2. Confirm car art visually occupies its real 1×3 cells and truck art its real 2×4 cells at cardinal and intermediate headings; report any visible overlap, offset or excess clearance as a concrete footprint/render issue.
+1. **Human-play executable `7d25720b...`** at `https://dmcexcess-lab.github.io/dmcexcess-lab-tick-survival-lab/`.
+2. Confirm the truck's real 2×3 footprint now feels proportionate and the car body visibly fills its real 1×3 length at cardinal and intermediate headings; report any overlap, offset or excessive empty cell space.
 3. Retain the prior turn check: each left/right input follows a plausible three-square arc and completes 90 degrees. **REVERSE** remains one cell and **BRAKE** remains the separate two-cell stop.
 4. If any concrete issue is reported, inspect only the owning seam, repair it, run `verify/system36-vehicles` plus relevant protected regressions, and require exact-head Pages deployment before calling it live.
 5. Continue the broader vehicle acceptance checklist. Once accepted—or on newer explicit direction—begin the comprehensive skills/crafting/items/usable-object closure phase above.
