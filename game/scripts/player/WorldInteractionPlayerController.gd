@@ -12,6 +12,7 @@ var _kernel: TickKernel = null
 var _panel: WorldInteractionPanel = null
 var _actor_id: String = ""
 var _handlers: Dictionary = {}
+var _delegated_handlers: Dictionary = {}
 
 func _init(
     world: WorldState = null,
@@ -36,9 +37,19 @@ func is_ready() -> bool:
 
 func register_handler(action_id: StringName, handler: Callable) -> bool:
     var key: String = String(action_id)
-    if key.is_empty() or not handler.is_valid(): return false
+    if key.is_empty() or not handler.is_valid() or _delegated_handlers.has(key): return false
     if _handlers.has(key): return _handlers[key] == handler
     _handlers[key] = handler
+    return true
+
+## Delegated handlers own their own timing/UI lifecycle. They are used only when the
+## unified target chooser needs to hand an offered action back to another canonical
+## owner such as Crafting or Loot. No fake action serial is created here.
+func register_delegated_handler(action_id: StringName, handler: Callable) -> bool:
+    var key: String = String(action_id)
+    if key.is_empty() or not handler.is_valid() or _handlers.has(key): return false
+    if _delegated_handlers.has(key): return _delegated_handlers[key] == handler
+    _delegated_handlers[key] = handler
     return true
 
 func submit_world_cell(cell: Vector2i) -> void:
@@ -52,16 +63,11 @@ func submit_world_cell(cell: Vector2i) -> void:
     var all_offers: Array[InteractionOffer] = _affordances.offers()
     for target_id: String in _ordered_targets(target_ids, all_offers):
         var target_offers: Array[InteractionOffer] = []
-        var delegated_elsewhere: bool = false
         for offer: InteractionOffer in all_offers:
             if offer.target_entity_id != target_id or not offer.target_cells.has(cell): continue
-            if offer.category == &"loot" or offer.category == &"crafting":
-                delegated_elsewhere = true
-                continue
-            if _handlers.has(String(offer.action_id)):
+            var key: String = String(offer.action_id)
+            if _handlers.has(key) or _delegated_handlers.has(key):
                 target_offers.append(offer.copy())
-        if delegated_elsewhere:
-            continue
         if not target_offers.is_empty():
             target_offers.sort_custom(func(a: InteractionOffer, b: InteractionOffer) -> bool:
                 if a.presentation_priority != b.presentation_priority: return a.presentation_priority > b.presentation_priority
@@ -72,8 +78,13 @@ func submit_world_cell(cell: Vector2i) -> void:
     _panel.close_panel()
 
 func _on_action_requested(target_id: String, action_id: StringName) -> void:
-    if not is_ready() or not _handlers.has(String(action_id)): return
-    var handler: Callable = _handlers[String(action_id)]
+    if not is_ready(): return
+    var key: String = String(action_id)
+    if _delegated_handlers.has(key):
+        _run_delegated(target_id, action_id, _delegated_handlers[key])
+        return
+    if not _handlers.has(key): return
+    var handler: Callable = _handlers[key]
     var value: Variant = handler.call(_actor_id, target_id, action_id)
     var accepted: bool = false
     var serial: int = 0
@@ -94,6 +105,19 @@ func _on_action_requested(target_id: String, action_id: StringName) -> void:
     _kernel.run_until_stop()
     var success: bool = not _kernel.has_active_action(_actor_id)
     action_finished.emit(target_id, action_id, success, "completed" if success else "action_incomplete")
+
+func _run_delegated(target_id: String, action_id: StringName, handler: Callable) -> void:
+    var value: Variant = handler.call(_actor_id, target_id, action_id)
+    var success: bool = false
+    var reason: String = "delegated_interaction_failed"
+    if typeof(value) == TYPE_DICTIONARY:
+        var result: Dictionary = value
+        success = bool(result.get("success", result.get("accepted", false)))
+        reason = String(result.get("reason", "" if success else reason))
+    elif typeof(value) == TYPE_BOOL:
+        success = bool(value)
+        reason = "" if success else reason
+    action_finished.emit(target_id, action_id, success, reason)
 
 func _ordered_targets(target_ids: Dictionary, offers: Array[InteractionOffer]) -> Array[String]:
     var priority: Dictionary = {}

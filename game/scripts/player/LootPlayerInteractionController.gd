@@ -44,8 +44,44 @@ func is_ready() -> bool:
         and _inspection != null and _inspection.is_ready() \
         and _kernel != null and not _actor_id.is_empty()
 
-## Shares the generic world-cell pointer with door interaction. No searchable container
-## at a clicked cell is a silent no-op so other world interaction controllers may own it.
+## Exact-target search seam for the unified world interaction chooser. The real search
+## service still owns reach/access, WHEN timing and loot state; this controller only
+## runs that owner to completion and opens the existing container panel on success.
+func request_search_container(container_id: String) -> Dictionary:
+    if not is_ready():
+        return _search_failure("loot_input_not_ready")
+    var target: String = container_id.strip_edges()
+    if target.is_empty():
+        return _search_failure("loot_container_unknown")
+    var inspection: Dictionary = _inspection.query(_actor_id, target)
+    if not bool(inspection.get("ok", false)):
+        return _search_failure(String(inspection.get("reason", "loot_container_unknown")))
+    var result: Dictionary = _search.request_search(_actor_id, target)
+    if not bool(result.get("accepted", false)):
+        var reason: String = String(result.get("reason", "search_rejected"))
+        action_resolved.emit(SEARCH_INTENT, false, reason, _tick())
+        return _search_failure(reason)
+    var serial: int = int(result.get("action_serial", 0))
+    _search_outcomes.erase(serial)
+    _kernel.run_until_stop()
+    var outcome: Dictionary = _search_outcomes.get(serial, {})
+    var success: bool = bool(outcome.get("success", false))
+    var reason: String = String(outcome.get("reason", "" if success else "action_unresolved"))
+    if success:
+        container_opened.emit(target)
+        action_resolved.emit(SEARCH_INTENT, true, "", _tick())
+    else:
+        action_resolved.emit(SEARCH_INTENT, false, reason, _tick())
+    _search_outcomes.erase(serial)
+    return {
+        "success": success,
+        "reason": reason,
+        "container_id": target,
+        "action_serial": serial,
+    }
+
+## Historical/shared pointer seam retained for focused fixtures. Production composition
+## routes world clicks through WorldInteractionPlayerController before delegating here.
 func submit_world_cell(cell: Vector2i) -> void:
     if not is_ready():
         return
@@ -55,21 +91,7 @@ func submit_world_cell(cell: Vector2i) -> void:
     if container_ids.size() != 1:
         action_resolved.emit(SEARCH_INTENT, false, "ambiguous_loot_container", _tick())
         return
-    var container_id: String = container_ids[0]
-    var result: Dictionary = _search.request_search(_actor_id, container_id)
-    if not bool(result.get("accepted", false)):
-        action_resolved.emit(SEARCH_INTENT, false, String(result.get("reason", "search_rejected")), _tick())
-        return
-    var serial: int = int(result.get("action_serial", 0))
-    _search_outcomes.erase(serial)
-    _kernel.run_until_stop()
-    var outcome: Dictionary = _search_outcomes.get(serial, {})
-    if bool(outcome.get("success", false)):
-        container_opened.emit(container_id)
-        action_resolved.emit(SEARCH_INTENT, true, "", _tick())
-    else:
-        action_resolved.emit(SEARCH_INTENT, false, String(outcome.get("reason", "action_unresolved")), _tick())
-    _search_outcomes.erase(serial)
+    request_search_container(container_ids[0])
 
 func request_take(container_id: String, item_id: String) -> void:
     if not is_ready():
@@ -134,3 +156,11 @@ func _on_transfer_canceled(actor_id: String, serial: int, _action_type: StringNa
 
 func _tick() -> int:
     return 0 if _kernel == null else _kernel.world_tick()
+
+static func _search_failure(reason: String) -> Dictionary:
+    return {
+        "success": false,
+        "reason": reason,
+        "container_id": "",
+        "action_serial": 0,
+    }

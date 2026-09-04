@@ -20,6 +20,8 @@ const InteractionOffersClass = preload("res://scripts/simulation/interaction/Wor
 const SustainmentOffersClass = preload("res://scripts/simulation/interaction/SustainmentInteractionOfferProvider.gd")
 const InteractionPanelClass = preload("res://scripts/ui/WorldInteractionPanel.gd")
 const InteractionControllerClass = preload("res://scripts/player/WorldInteractionPlayerController.gd")
+const LootOffersClass = preload("res://scripts/simulation/loot/LootSearchInteractionOfferProvider.gd")
+const CraftingOffersClass = preload("res://scripts/simulation/crafting/CraftingInteractionOfferProvider.gd")
 const Workstations = preload("res://scripts/simulation/crafting/CraftingWorkstationCatalog.gd")
 
 var _vehicle_profiles: VehicleProfileCatalog = null
@@ -148,7 +150,8 @@ func _boot_world_interactions() -> bool:
         or _door_transition == null or _door_passage == null or _spatial_query == null \
         or _skill_checks == null or _carry_query == null or _hand_state == null or _hand_mutations == null \
         or _carry_acquisition == null or _sustainment_actions == null or _utilities == null \
-        or _crafting_plans == null or _crafting_interaction_offers == null:
+        or _crafting_plans == null or _crafting_interaction_offers == null \
+        or _crafting_controller == null or _loot_controller == null:
         return false
 
     _world_interaction_catalog = InteractionCatalogClass.new()
@@ -235,10 +238,27 @@ func _boot_world_interactions() -> bool:
     ]:
         if not _world_interaction_controller.register_handler(action_id, Callable(self, "_request_target_sustainment")):
             return false
+    if not _world_interaction_controller.register_delegated_handler(
+        CraftingOffersClass.ACTION_ID,
+        Callable(self, "_request_target_crafting")
+    ):
+        return false
+    if not _world_interaction_controller.register_delegated_handler(
+        LootOffersClass.SEARCH_ACTION_ID,
+        Callable(self, "_request_target_loot")
+    ):
+        return false
+    _world_interaction_controller.action_finished.connect(_on_world_interaction_action_finished)
 
     var old_door_callable := Callable(_door_controller, "submit_world_cell")
     if _door_controller != null and _door_pointer.world_cell_primary.is_connected(old_door_callable):
         _door_pointer.world_cell_primary.disconnect(old_door_callable)
+    var old_loot_callable := Callable(_loot_controller, "submit_world_cell")
+    if _door_pointer.world_cell_primary.is_connected(old_loot_callable):
+        _door_pointer.world_cell_primary.disconnect(old_loot_callable)
+    var old_crafting_callable := Callable(_crafting_controller, "submit_world_cell")
+    if _door_pointer.world_cell_primary.is_connected(old_crafting_callable):
+        _door_pointer.world_cell_primary.disconnect(old_crafting_callable)
     var interaction_callable := Callable(_world_interaction_controller, "submit_world_cell")
     if not _door_pointer.world_cell_primary.is_connected(interaction_callable):
         _door_pointer.world_cell_primary.connect(interaction_callable)
@@ -323,6 +343,25 @@ func _request_target_sustainment(actor_id: String, target_id: String, action_id:
         "target_id": target_id,
     }
 
+func _request_target_crafting(_actor_id: String, target_id: String, _action_id: StringName) -> Dictionary:
+    if _crafting_controller == null or _crafting_panel == null:
+        return {"success": false, "reason": "crafting_input_not_ready"}
+    var success: bool = _crafting_controller.request_open_workstation(target_id)
+    if success:
+        var snapshot: Dictionary = _crafting_panel.presentation_snapshot()
+        success = _crafting_panel.is_open() and String(snapshot.get("workstation_id", "")) == target_id
+    return {"success": success, "reason": "" if success else "workstation_unavailable"}
+
+func _request_target_loot(_actor_id: String, target_id: String, _action_id: StringName) -> Dictionary:
+    if _loot_controller == null or _loot_panel == null:
+        return {"success": false, "reason": "loot_input_not_ready"}
+    var result: Dictionary = _loot_controller.request_search_container(target_id)
+    var success: bool = bool(result.get("success", false))
+    if success:
+        var snapshot: Dictionary = _loot_panel.presentation_snapshot()
+        success = _loot_panel.is_open() and String(snapshot.get("container_id", "")) == target_id
+    return {"success": success, "reason": String(result.get("reason", "" if success else "search_rejected"))}
+
 func _crafting_workstation_available(_actor_id: String, workstation_id: String, capability: StringName) -> bool:
     if capability != Workstations.COOKING_STOVE:
         return true
@@ -334,6 +373,12 @@ func _crafting_workstation_available(_actor_id: String, workstation_id: String, 
         return false
     var service_id: String = _utilities.power_service_for_cell(placement.anchor)
     return not service_id.is_empty() and _utilities.power_service_available(service_id)
+
+func _on_world_interaction_action_finished(_target_id: String, action_id: StringName, success: bool, reason: String) -> void:
+    if action_id in [CraftingOffersClass.ACTION_ID, LootOffersClass.SEARCH_ACTION_ID]:
+        return
+    if _hud != null and _kernel != null:
+        _hud.present_action_result(action_id, success, reason, _kernel.world_tick())
 
 func _on_interaction_utility_changed(_revision: int, _reason: StringName) -> void:
     if _sustainment_interaction_offers != null:

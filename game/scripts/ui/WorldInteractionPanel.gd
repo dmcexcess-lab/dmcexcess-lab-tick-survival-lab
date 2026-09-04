@@ -30,6 +30,8 @@ func open_for_target(target_id: String, title: String, offers: Array[Interaction
         button.text = offer.label
         button.focus_mode = Control.FOCUS_NONE
         button.custom_minimum_size = Vector2(170, 28)
+        button.set_meta("world_target_id", key)
+        button.set_meta("world_action_id", String(offer.action_id))
         button.pressed.connect(_choose.bind(offer.action_id))
         _buttons.add_child(button)
     var cancel := Button.new()
