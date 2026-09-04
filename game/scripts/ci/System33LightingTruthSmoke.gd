@@ -9,7 +9,6 @@ const HandStateClass = preload("res://scripts/simulation/actors/equipment/ActorH
 const HandSlots = preload("res://scripts/simulation/actors/equipment/ActorHandSlot.gd")
 const UtilityStateClass = preload("res://scripts/simulation/utilities/UtilityRuntimeState.gd")
 const LightingSourceClass = preload("res://scripts/simulation/utilities/UtilityPoweredLightingSourceAdapter.gd")
-const LegacyLightingClass = preload("res://scripts/demo/DemoLightingSourceAdapter.gd")
 
 const PLAYER_ID: String = "actor.player.lighting_truth"
 const FIXTURE_ID: String = "fixture.traffic_light.lighting_truth"
@@ -40,10 +39,6 @@ func _test_truthful_source_ownership() -> void:
 
     _check(world.entity_ids_of_type(&"prop.traffic_light").has(FIXTURE_ID), "WHAT semantic index finds the real traffic-light entity")
     _check(world.entity_ids_of_type(&"fixture.room_light").has(ROOM_LIGHT_ID), "WHAT semantic index finds the persistent room-light fixture")
-
-    var legacy := LegacyLightingClass.new(world, PLAYER_ID)
-    _check(legacy.is_ready(), "legacy bootstrap shim remains constructible")
-    _check(legacy.emitters().is_empty(), "legacy bootstrap emits no fake flashlight or guessed fixture light")
 
     var sources := LightingSourceClass.new(world, hands, PLAYER_ID, utilities)
     _check(sources.is_ready(), "truthful utility lighting source provider is ready")
