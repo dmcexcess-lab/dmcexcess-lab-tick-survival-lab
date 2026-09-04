@@ -30,7 +30,7 @@ func is_ready() -> bool:
 func _on_action_completed(actor_id: String, vehicle_id: String, _serial: int, action_type: StringName, _reason: String) -> void:
     if not _state.has_vehicle(vehicle_id):
         return
-    if action_type not in [VehicleActionService.MOVE, VehicleActionService.TURN_LEFT, VehicleActionService.TURN_RIGHT, VehicleActionService.BRAKE, VehicleActionService.START]:
+    if action_type not in [VehicleActionService.MOVE, VehicleActionService.TURN_LEFT, VehicleActionService.TURN_RIGHT, VehicleActionService.REVERSE, VehicleActionService.BRAKE, VehicleActionService.START]:
         return
     var placement := _world.placement(vehicle_id)
     if placement == null:

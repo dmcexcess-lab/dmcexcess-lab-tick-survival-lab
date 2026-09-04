@@ -40,7 +40,7 @@ func submit_intent(intent: StringName) -> void:
         Intents.FORWARD, Intents.RUN_FORWARD:
             result = _service.request_forward(_actor_id)
         Intents.BACKWARD:
-            result = _service.request_brake(_actor_id)
+            result = _service.request_reverse(_actor_id)
         Intents.TURN_LEFT:
             result = _service.request_turn_left(_actor_id)
         Intents.TURN_RIGHT:
@@ -72,6 +72,9 @@ func request_refuel() -> void:
 
 func request_brake() -> void:
     _resolve_requested(&"vehicle.brake", _service.request_brake(_actor_id))
+
+func request_reverse() -> void:
+    _resolve_requested(&"vehicle.reverse", _service.request_reverse(_actor_id))
 
 func _resolve_requested(intent: StringName, result: Dictionary) -> void:
     if not is_ready() or _busy:

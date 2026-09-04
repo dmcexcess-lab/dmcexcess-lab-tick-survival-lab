@@ -35,6 +35,9 @@ static func forward_path(value: int, distance: int = 3) -> Array[Vector2i]:
         previous = point
     return result
 
+static func reverse_path(value: int, distance: int = 1) -> Array[Vector2i]:
+    return forward_path(normalize(value + int(COUNT / 2)), distance)
+
 static func cardinal_facing(value: int) -> int:
     # SpatialFacing: NORTH=0, EAST=1, SOUTH=2, WEST=3.
     return int(round(float(normalize(value)) / 3.0)) % 4

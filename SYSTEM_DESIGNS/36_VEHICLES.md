@@ -82,6 +82,7 @@ Because a square tactical grid cannot represent every 30-degree direction as an 
 - canonical WHAT placement keeps the nearest compatible cardinal facing required by the existing spatial foundation;
 - movement validates each integer path step through canonical collision queries;
 - the dedicated vehicle renderer uses the exact typed 30-degree heading for presentation.
+- each approved vehicle class has its own dedicated top-down sprite asset; the renderer no longer fabricates vehicles from colored rectangles and a direction line.
 
 Current implementation deliberately keeps vehicle collision footprints in the existing cardinal WHAT vocabulary rather than inventing arbitrary-angle polygon authority. This is conservative and deterministic but is **not** an exact rotated 30-degree collision polygon.
 
@@ -108,6 +109,17 @@ For bicycle/motorcycle/car/truck:
 - the exact typed heading is rendered independently of the cardinal WHAT facing.
 
 The raster is deterministic and integer-only. Exact arbitrary-angle swept polygon physics remains intentionally out of scope.
+
+### Reverse
+
+Reverse is a distinct real action rather than a second label for braking:
+
+- it moves one collision-checked tactical cell opposite the current heading;
+- it preserves the current heading;
+- it uses the same terrain, collision, placement, mounted-actor, sound and damage/consequence paths as other movement;
+- motorized classes pay their normal movement fuel cost and bicycles apply their normal Fatigue cost;
+- it ends stopped for precise repeated maneuvering;
+- mounted BACKWARD input and the dedicated **REVERSE** button invoke it, while **BRAKE** remains the separate two-cell stopping action.
 
 ### Stopping / braking
 
@@ -251,6 +263,7 @@ Primary implementation includes:
 - `VehicleItemCatalog.gd`
 - `game/scripts/player/VehiclePlayerController.gd`
 - `game/scripts/render/VehicleRenderer.gd`
+- dedicated `game/assets/vehicle_{skateboard,bicycle,motorcycle,car,truck}.svg` class sprites
 - `game/scripts/ui/VehiclePlayerControls.gd`
 - `game/scripts/ci/VehicleSmoke.gd`
 - `.github/workflows/system36-vehicles.yml`

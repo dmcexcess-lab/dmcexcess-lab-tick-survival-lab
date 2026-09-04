@@ -2,6 +2,17 @@
 
 This compact ledger records the newest executable work. `CHANGELOG.md` remains the historical archive.
 
+## Dedicated Vehicle Sprites + Reverse — 2026-09-04
+
+Exact-head verification pending publication.
+
+- Replaced the temporary rotated colored-box vehicle presentation with five dedicated top-down class sprites for skateboard, bicycle, motorcycle, car and truck.
+- Preserved typed 30-degree heading presentation by rotating each class's actual sprite; rendering still owns presentation only.
+- Added a real `vehicle.reverse` action: one checked cell opposite current heading, heading preserved, real collision/terrain/placement/consequence handling, normal motor fuel or bicycle Fatigue, and a controlled stopped result.
+- Routed mounted BACKWARD input to reverse and retained BRAKE as its own two-cell stopping action.
+- Added a visible **REVERSE** vehicle-panel button and updated the mounted-control hint.
+- Extended the System-36 owning workflow and smoke coverage for all five sprite assets and deterministic reverse paths.
+
 ## System 36 Vehicles — 2026-09-03
 
 Gameplay merge executable: `f8a80a9a8765d973abdb9c4820a87a5e3baeb204`  

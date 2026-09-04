@@ -16,6 +16,7 @@ const COMMIT_PHASE := &"vehicle.commit"
 const MOVE := &"vehicle.move"
 const TURN_LEFT := &"vehicle.turn_left"
 const TURN_RIGHT := &"vehicle.turn_right"
+const REVERSE := &"vehicle.reverse"
 const BRAKE := &"vehicle.brake"
 const ENTER := &"vehicle.enter"
 const EXIT := &"vehicle.exit"
@@ -102,6 +103,9 @@ func request_turn_left(actor_id: String) -> Dictionary:
 
 func request_turn_right(actor_id: String) -> Dictionary:
     return _begin_motion(actor_id, TURN_RIGHT, 1)
+
+func request_reverse(actor_id: String) -> Dictionary:
+    return _begin_motion(actor_id, REVERSE, 0, 1)
 
 func request_brake(actor_id: String) -> Dictionary:
     var vehicle_id := vehicle_for_driver(actor_id)
@@ -192,7 +196,7 @@ func request_refuel(actor_id: String, vehicle_id: String = "") -> Dictionary:
         return _reject("refuel_requires_gas_can")
     return _begin(actor_id, target, REFUEL, 8, {})
 
-func _begin_motion(actor_id: String, action_type: StringName, heading_delta: int) -> Dictionary:
+func _begin_motion(actor_id: String, action_type: StringName, heading_delta: int, distance_override: int = 0) -> Dictionary:
     var vehicle_id := vehicle_for_driver(actor_id)
     if vehicle_id.is_empty():
         return _reject("not_mounted")
@@ -203,7 +207,7 @@ func _begin_motion(actor_id: String, action_type: StringName, heading_delta: int
     if _profiles.is_motorized(kind) and int(rec.get("fuel", 0)) < _profiles.fuel_per_move(kind):
         return _reject("vehicle_out_of_fuel")
     var target_heading := VehicleHeading.normalize(int(rec.get("heading", 0)) + heading_delta)
-    var distance := _profiles.movement_cells(kind)
+    var distance := distance_override if distance_override > 0 else _profiles.movement_cells(kind)
     if kind == VehicleProfileCatalog.SKATEBOARD and heading_delta != 0:
         target_heading = VehicleHeading.normalize(int(rec.get("heading", 0)) + heading_delta * 3)
     return _begin(actor_id, vehicle_id, action_type, 3, {"heading": target_heading, "distance": distance})
@@ -232,7 +236,7 @@ func _on_action_phase(action: TimedAction, phase: ActionPhase) -> void:
         EXIT:
             ok = _commit_exit(action.actor_id, vehicle_id)
             reason = "exit_failed"
-        MOVE, TURN_LEFT, TURN_RIGHT, BRAKE:
+        MOVE, TURN_LEFT, TURN_RIGHT, REVERSE, BRAKE:
             var result := _commit_motion(action.actor_id, vehicle_id, action)
             ok = bool(result.get("ok", false))
             reason = String(result.get("reason", "movement_blocked"))
@@ -307,7 +311,7 @@ func _commit_motion(actor_id: String, vehicle_id: String, action: TimedAction) -
     var placement := _world.placement(vehicle_id)
     if placement == null:
         return {"ok": false, "reason": "vehicle_unplaced"}
-    var path := VehicleHeading.forward_path(heading, distance)
+    var path := VehicleHeading.reverse_path(heading, distance) if action.action_type == REVERSE else VehicleHeading.forward_path(heading, distance)
     var current_anchor := placement.anchor
     var facing := VehicleHeading.cardinal_facing(heading)
     for relative: Vector2i in path:
@@ -324,7 +328,7 @@ func _commit_motion(actor_id: String, vehicle_id: String, action: TimedAction) -
         return {"ok": false, "reason": "vehicle_move_commit_failed"}
     if not _mutations.set_placement(actor_id, Layers.Channel.ACTOR, current_anchor, facing, Footprint.single_cell()):
         return {"ok": false, "reason": "vehicle_driver_move_commit_failed"}
-    var patch := {"heading": heading, "moving": action.action_type != BRAKE}
+    var patch := {"heading": heading, "moving": action.action_type not in [BRAKE, REVERSE]}
     if _profiles.is_motorized(kind) and action.action_type != BRAKE:
         patch["fuel"] = maxi(0, int(rec.get("fuel", 0)) - _profiles.fuel_per_move(kind))
     if not _state.mutate(vehicle_id, patch):

@@ -3,6 +3,8 @@ extends SceneTree
 const Profiles = preload("res://scripts/simulation/vehicles/VehicleProfileCatalog.gd")
 const State = preload("res://scripts/simulation/vehicles/VehicleState.gd")
 const Heading = preload("res://scripts/simulation/vehicles/VehicleHeading.gd")
+const Renderer = preload("res://scripts/render/VehicleRenderer.gd")
+const Controls = preload("res://scripts/ui/VehiclePlayerControls.gd")
 
 func _initialize() -> void:
     var errors: Array[String] = []
@@ -21,6 +23,25 @@ func _initialize() -> void:
     _check(north == [Vector2i(0, -1), Vector2i(0, -2), Vector2i(0, -3)], "north path is three checked cells", errors)
     _check(Heading.forward_path(1, 3).size() == 3, "30-degree path remains three integer steps", errors)
     _check(Heading.forward_path(0, 2).size() == 2, "brake path is two cells", errors)
+    _check(Heading.reverse_path(0, 1) == [Vector2i(0, 1)], "north reverse moves one checked cell south without changing heading", errors)
+    _check(Heading.reverse_path(3, 1) == [Vector2i(-1, 0)], "east reverse moves one checked cell west", errors)
+
+    for asset_path: String in [
+        "res://assets/vehicle_skateboard.svg",
+        "res://assets/vehicle_bicycle.svg",
+        "res://assets/vehicle_motorcycle.svg",
+        "res://assets/vehicle_car.svg",
+        "res://assets/vehicle_truck.svg",
+    ]:
+        _check(ResourceLoader.exists(asset_path), "dedicated vehicle sprite exists: %s" % asset_path, errors)
+    for kind: StringName in profiles.kinds():
+        _check(Renderer.has_dedicated_sprite(kind), "approved class resolves dedicated texture: %s" % String(kind), errors)
+
+    var controls := Controls.new()
+    get_root().add_child(controls)
+    controls.call("_build_ui")
+    _check(controls.find_child("ReverseButton", true, false) is Button, "real vehicle panel exposes ReverseButton", errors)
+    controls.queue_free()
 
     var state := State.new()
     _check(state.create_vehicle("vehicle.test.car", Profiles.CAR, 20, true, 1, "item.key.test"), "vehicle state created", errors)

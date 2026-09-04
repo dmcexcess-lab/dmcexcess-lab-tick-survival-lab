@@ -3,6 +3,14 @@ class_name VehicleRenderer
 
 const Layers = preload("res://scripts/foundation/spatial/SpatialLayer.gd")
 
+const VEHICLE_SPRITES: Dictionary = {
+    VehicleProfileCatalog.SKATEBOARD: preload("res://assets/vehicle_skateboard.svg"),
+    VehicleProfileCatalog.BICYCLE: preload("res://assets/vehicle_bicycle.svg"),
+    VehicleProfileCatalog.MOTORCYCLE: preload("res://assets/vehicle_motorcycle.svg"),
+    VehicleProfileCatalog.CAR: preload("res://assets/vehicle_car.svg"),
+    VehicleProfileCatalog.TRUCK: preload("res://assets/vehicle_truck.svg"),
+}
+
 var _world: WorldState
 var _state: VehicleState
 var _profiles: VehicleProfileCatalog
@@ -27,6 +35,9 @@ func configure(world: WorldState, state: VehicleState, profiles: VehicleProfileC
 
 func is_configured() -> bool:
     return _configured
+
+static func has_dedicated_sprite(kind: StringName) -> bool:
+    return VEHICLE_SPRITES.has(kind) and VEHICLE_SPRITES.get(kind) is Texture2D
 
 func set_visible_window(origin: Vector2i, size_cells: Vector2i, cell_pixels: float) -> bool:
     if size_cells.x <= 0 or size_cells.y <= 0 or cell_pixels <= 0.0:
@@ -62,28 +73,16 @@ func _draw_vehicle(vehicle_id: String) -> void:
         (float(placement.anchor.x - _origin.x) + 0.5) * _cell_pixels,
         (float(placement.anchor.y - _origin.y) + 0.5) * _cell_pixels
     )
-    var half := Vector2(width * 0.5, height * 0.5)
     var angle := deg_to_rad(float(int(rec.get("heading", 0)) * 30))
-    var points := PackedVector2Array([
-        _rotate(Vector2(-half.x, -half.y), angle) + center,
-        _rotate(Vector2(half.x, -half.y), angle) + center,
-        _rotate(Vector2(half.x, half.y), angle) + center,
-        _rotate(Vector2(-half.x, half.y), angle) + center,
-    ])
-    var body_color := Color(0.24, 0.30, 0.34, 1.0)
-    if kind == VehicleProfileCatalog.SKATEBOARD: body_color = Color(0.34, 0.24, 0.18, 1.0)
-    elif kind == VehicleProfileCatalog.BICYCLE: body_color = Color(0.20, 0.35, 0.24, 1.0)
-    elif kind == VehicleProfileCatalog.MOTORCYCLE: body_color = Color(0.32, 0.20, 0.20, 1.0)
-    elif kind == VehicleProfileCatalog.TRUCK: body_color = Color(0.28, 0.28, 0.22, 1.0)
-    draw_colored_polygon(points, body_color)
-    draw_polyline(PackedVector2Array([points[0], points[1], points[2], points[3], points[0]]), Color(0.05, 0.05, 0.05, 1.0), maxf(1.0, _cell_pixels * 0.08))
-    var nose := _rotate(Vector2(0, -half.y), angle) + center
-    draw_line(center, nose, Color(0.92, 0.92, 0.75, 1.0), maxf(1.0, _cell_pixels * 0.1))
-
-static func _rotate(point: Vector2, angle: float) -> Vector2:
-    var c := cos(angle)
-    var s := sin(angle)
-    return Vector2(point.x * c - point.y * s, point.x * s + point.y * c)
+    if not has_dedicated_sprite(kind):
+        return
+    var texture: Texture2D = VEHICLE_SPRITES[kind]
+    var texture_size := texture.get_size()
+    var fit_scale := minf(width / texture_size.x, height / texture_size.y)
+    var draw_size := texture_size * fit_scale
+    draw_set_transform(center, angle)
+    draw_texture_rect(texture, Rect2(-draw_size * 0.5, draw_size), false)
+    draw_set_transform(Vector2.ZERO, 0.0)
 
 func _on_world_changed(_change: Variant) -> void:
     queue_redraw()

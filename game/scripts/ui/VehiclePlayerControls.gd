@@ -70,6 +70,7 @@ func _build_ui() -> void:
     _button(row1, "START", Callable(self, "_start"))
     _button(row1, "HOTWIRE", Callable(self, "_hotwire"))
     _button(row1, "BRAKE", Callable(self, "_brake"))
+    _button(row1, "REVERSE", Callable(self, "_reverse"))
 
     var row2 := HBoxContainer.new()
     box.add_child(row2)
@@ -99,12 +100,13 @@ func _build_ui() -> void:
     box.add_child(_cargo_status)
 
     var hint := Label.new()
-    hint.text = "Mounted: movement keys drive; left/right steer 30°; back/brake needs 2 cells."
+    hint.text = "Mounted: forward drives; back reverses 1 cell; left/right steer 30°; BRAKE stops over 2 cells."
     hint.add_theme_font_size_override("font_size", 9)
     box.add_child(hint)
 
 func _button(parent: Control, text: String, callback: Callable) -> void:
     var button := Button.new()
+    button.name = "%sButton" % text.to_pascal_case().replace(" ", "")
     button.text = text
     button.focus_mode = Control.FOCUS_NONE
     button.custom_minimum_size = Vector2(78, 24)
@@ -143,6 +145,10 @@ func _refuel() -> void:
 func _brake() -> void:
     if _controller != null:
         _controller.request_brake()
+
+func _reverse() -> void:
+    if _controller != null:
+        _controller.request_reverse()
 
 func _store_selected() -> void:
     if _cargo == null or _actor_items == null or _actor_items.item_count < 1:
