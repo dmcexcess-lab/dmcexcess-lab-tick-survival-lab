@@ -119,6 +119,26 @@ The canonical player shell now includes a CRAFT entry. The Crafting panel is pho
 
 Browsing and inspection spend zero simulation ticks. The panel uses WHEN hard application pause while open. Pressing CRAFT releases the panel's pause before requesting the real timed action, then the result may reopen the panel.
 
+### Current workstation presentation and powered cooking closure
+
+The later live composition also classifies the generated `prop.stove_range` as
+`crafting.cooking.stove`. Stove availability is supplied by System 33's real fixture
+power truth; Crafting does not infer power from the sprite or create an appliance flag.
+
+The normal world-cell interaction route opens the exact selected workstation. The
+panel asks `CraftingPlanQuery` for that physical object's catalogued capabilities and
+filters recipes accordingly:
+
+- global CRAFT shows only recipes requiring no workstation;
+- a general workbench shows only general-workbench recipes;
+- a powered stove opens `COOKING — STOVE` and shows only stove recipes.
+
+Cooking uses the same action pipeline as every other recipe. `Heat Canned Soup` and
+`Heat Canned Beans` require the real carried food plus the appropriate retained pot or
+pan, charge WHEN time, apply Survival, consume the exact food entity and create a real
+heated-food entity in ordinary personal inventory. The UI button has stable recipe and
+workstation metadata for exact player-route verification; it owns no cooking result.
+
 Gameplay keyboard/touch/world-pointer/camera controls use the same modal blocking contract as the existing shell/loot UI.
 
 ## Candidate-001 recipe content
@@ -178,16 +198,15 @@ System 32 consumes but does not replace:
 
 ## Explicit non-goals / future seams
 
-Candidate 001 deliberately does not implement:
+The current system deliberately does not implement:
 
-- perishable/cooking transformations or freshness inheritance;
+- raw/perishable cooking transformations or freshness inheritance;
 - consuming item-containers;
 - durability, condition or repair;
 - construction/build placement;
-- powered workstations;
-- Power/Water/Refrigeration;
+- fire, fuel, ignition or non-electrical heat sources;
 - nutrition/Health effects;
-- Skills, XP, quality rolls or recipe discovery;
+- recipe discovery;
 - Vehicles;
 - firearms/ammunition or combat;
 - AI crafting decisions.

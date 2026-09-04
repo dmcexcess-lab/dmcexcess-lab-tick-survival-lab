@@ -39,6 +39,8 @@ func _run() -> void:
     var first_aid: SurvivorFirstAidActionService = game.get("_first_aid_actions")
     var health: ActorHealthState = game.get("_health_state")
     var crafting: CraftingActionService = game.get("_crafting_actions")
+    var crafting_controller: CraftingPlayerInteractionController = game.get("_crafting_controller")
+    var crafting_panel: CraftingPanel = game.get("_crafting_panel")
     var inventory: InventoryContainmentState = game.get("_inventory_state")
     var inventory_mutations: InventoryContainmentMutationService = game.get("_inventory_mutations")
     var door_state: DoorStateStore = game.get("_door_state")
@@ -50,6 +52,7 @@ func _run() -> void:
 
     _check(world != null and mutations != null and spatial != null and kernel != null, "core live owners available")
     _check(skills != null and condition != null and sustainment != null and first_aid != null and health != null and crafting != null, "condition/health/crafting owners available")
+    _check(crafting_controller != null and crafting_controller.is_ready() and crafting_panel != null and crafting_panel.is_configured(), "normal crafting UI route is ready")
     _check(interaction_state != null and interactions != null and interactions.is_ready(), "world interaction runtime ready")
     _check(affordances != null and affordances.is_ready(), "System 29 affordances remain ready")
     _check(shell != null and shell.is_configured(), "live player shell is ready")
@@ -65,7 +68,7 @@ func _run() -> void:
     _test_inventory_item_actions(world, mutations, inventory_mutations, condition, kernel, shell, actor_id)
     _test_inventory_first_aid(world, mutations, inventory_mutations, health, kernel, shell, actor_id)
     _test_rest_and_sleep(world, mutations, sustainment, condition, kernel, actor_id)
-    _test_cooking(world, mutations, inventory_mutations, crafting, inventory, kernel, actor_id)
+    _test_cooking(world, mutations, inventory_mutations, crafting_controller, crafting_panel, inventory, kernel, actor_id)
     _test_doors(world, mutations, door_state, door_transitions, interactions, interaction_state, kernel, actor_id)
     _test_window_and_reclamation(world, mutations, spatial, inventory, inventory_mutations, interactions, interaction_state, kernel, actor_id)
 
@@ -189,7 +192,7 @@ func _test_rest_and_sleep(world: WorldState, mutations: WorldMutationService, su
         if sleep_serial > 0: kernel.run_until_stop()
         _check(condition.value(actor_id, ConditionState.REST) > 10, "sleeping in exact bed changes canonical Rest")
 
-func _test_cooking(world: WorldState, mutations: WorldMutationService, inventory_mutations: InventoryContainmentMutationService, crafting: CraftingActionService, inventory: InventoryContainmentState, kernel: TickKernel, actor_id: String) -> void:
+func _test_cooking(world: WorldState, mutations: WorldMutationService, inventory_mutations: InventoryContainmentMutationService, crafting_controller: CraftingPlayerInteractionController, crafting_panel: CraftingPanel, inventory: InventoryContainmentState, kernel: TickKernel, actor_id: String) -> void:
     var stove: String = ""
     for candidate: String in _ids_of_any(world, [&"prop.stove_range"]):
         if not _place_actor_facing(world, mutations, actor_id, candidate, false): continue
@@ -200,9 +203,22 @@ func _test_cooking(world: WorldState, mutations: WorldMutationService, inventory
     if stove.is_empty(): return
     _check(_give_item(world, mutations, inventory_mutations, actor_id, &"item.food.canned_soup", "ci.cook.soup"), "canned soup carried")
     _check(_give_item(world, mutations, inventory_mutations, actor_id, &"item.kitchen.cooking_pot", "ci.cook.pot"), "cooking pot carried")
-    var request: Dictionary = crafting.request_craft(actor_id, &"cooking.heated_soup", stove)
-    _check(bool(request.get("accepted", false)), "powered-stove Survival cooking starts")
-    if bool(request.get("accepted", false)): kernel.run_until_stop()
+    var stove_placement: WorldPlacement = world.placement(stove)
+    _check(stove_placement != null, "powered stove keeps a real world placement")
+    if stove_placement == null: return
+    crafting_controller.submit_world_cell(stove_placement.anchor)
+    var snapshot: Dictionary = crafting_panel.presentation_snapshot()
+    _check(crafting_panel.is_open() and kernel.is_hard_paused(), "clicking the exact stove opens the paused cooking panel")
+    _check(String(snapshot.get("workstation_id", "")) == stove and String(snapshot.get("title", "")) == "COOKING — STOVE", "cooking panel identifies the exact stove instead of a generic workbench")
+    var visible_recipe_ids: Array[String] = []
+    for recipe_snapshot: Dictionary in snapshot.get("recipes", []):
+        visible_recipe_ids.append(String(recipe_snapshot.get("recipe_id", "")))
+    _check(visible_recipe_ids.has("cooking.heated_soup") and visible_recipe_ids.has("cooking.heated_beans"), "stove panel exposes real cooking recipes")
+    _check(not visible_recipe_ids.has("crafting.paper_bundle") and not visible_recipe_ids.has("crafting.improvised_toolkit"), "stove panel excludes hand-crafting and workbench recipes")
+    var cook_button: Button = _button_with_meta(crafting_panel, "crafting_recipe_id", "cooking.heated_soup")
+    _check(cook_button != null and cook_button.text == "COOK" and not cook_button.disabled, "ready heated soup has a clickable COOK action")
+    if cook_button != null:
+        cook_button.pressed.emit()
     var cooked: Array[String] = world.entity_ids_of_type(&"item.crafting.heated_soup")
     var carried_cooked: bool = false
     for item_id: String in cooked:
@@ -210,6 +226,9 @@ func _test_cooking(world: WorldState, mutations: WorldMutationService, inventory
             carried_cooked = true
             break
     _check(carried_cooked, "cooking commits a real heated-food WHAT entity to personal inventory")
+    _check(not world.has_entity("ci.cook.soup") and world.has_entity("ci.cook.pot"), "cooking consumes the exact food while preserving the required pot tool")
+    _check(crafting_panel.is_open() and kernel.is_hard_paused(), "cooking result returns to the normal stove panel")
+    crafting_panel.close_panel()
 
 func _test_doors(world: WorldState, mutations: WorldMutationService, door_state: DoorStateStore, door_transitions: DoorPhysicalTransitionService, interactions: WorldInteractionActionService, interaction_state: WorldInteractableState, kernel: TickKernel, actor_id: String) -> void:
     var door: String = _first_prefix_target(world, mutations, actor_id, "door.")

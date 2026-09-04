@@ -26,6 +26,15 @@ func supports(semantic_type: StringName, capability: StringName) -> bool:
     if String(capability).strip_edges().is_empty(): return false
     return capabilities_for_semantic(semantic_type).has(capability)
 
+static func display_label(capability: StringName) -> String:
+    match capability:
+        GENERAL_WORKBENCH:
+            return "General Workbench"
+        COOKING_STOVE:
+            return "Cooking Stove"
+        _:
+            return "Workstation"
+
 func known_semantics() -> Array[StringName]:
     var keys: Array[String] = []
     for key: Variant in SEMANTIC_CAPABILITIES.keys(): keys.append(String(key))

@@ -61,6 +61,26 @@ func recipe_ids() -> Array[StringName]:
 func recipe(recipe_id: StringName) -> CraftingRecipe:
     return null if _recipes == null else _recipes.recipe(recipe_id)
 
+## Bounded presentation query for one explicitly selected physical workstation.
+## It exposes only catalogued capability truth; the UI never infers station type
+## from an entity name, sprite, recipe, or proximity.
+func workstation_context(workstation_id: String) -> Dictionary:
+    var target: String = workstation_id.strip_edges()
+    if target.is_empty():
+        return {"known": true, "workstation_id": "", "semantic_type": &"", "capabilities": []}
+    if _world == null or _workstations == null or not _world.has_entity(target):
+        return {"known": false, "workstation_id": target, "semantic_type": &"", "capabilities": []}
+    var entity: WorldEntityRecord = _world.entity(target)
+    var placement: WorldPlacement = _world.placement(target)
+    if entity == null or placement == null or placement.channel != Layers.Channel.OBJECT:
+        return {"known": false, "workstation_id": target, "semantic_type": &"", "capabilities": []}
+    return {
+        "known": true,
+        "workstation_id": target,
+        "semantic_type": entity.semantic_type,
+        "capabilities": _workstations.capabilities_for_semantic(entity.semantic_type),
+    }
+
 func query(actor_id: String, recipe_id: StringName, workstation_id: String = "") -> Dictionary:
     if not is_ready(): return _result(Status.UNKNOWN, actor_id, recipe_id, "crafting_plan_not_ready")
     var actor: String = actor_id.strip_edges()

@@ -152,7 +152,9 @@ func _build_ui() -> void:
 func _render() -> void:
     _clear_body()
     var snapshots: Array = []
-    _title.text = "CRAFTING" if _workstation_id.is_empty() else "CRAFTING — WORKBENCH"
+    var station: Dictionary = _plans.workstation_context(_workstation_id)
+    var capabilities: Array = station.get("capabilities", [])
+    _title.text = _panel_title(capabilities)
     if not _last_message.is_empty():
         _append_label(_last_message, 14)
     _append_label(
@@ -163,6 +165,8 @@ func _render() -> void:
     for recipe_id: StringName in _plans.recipe_ids():
         var recipe_value: CraftingRecipe = _plans.recipe(recipe_id)
         if recipe_value == null:
+            continue
+        if not _recipe_belongs_in_context(recipe_value, capabilities):
             continue
         var plan: Dictionary = _plans.query(_actor_id, recipe_id, _workstation_id)
         var quote: Dictionary = _skill_quote(recipe_value)
@@ -178,6 +182,9 @@ func _render() -> void:
         "open": is_open(),
         "actor_id": _actor_id,
         "workstation_id": _workstation_id,
+        "title": _title.text,
+        "workstation_known": bool(station.get("known", false)),
+        "workstation_capabilities": capabilities.duplicate(),
         "hard_paused": _kernel.is_hard_paused(),
         "message": _last_message,
         "recipes": snapshots,
@@ -217,7 +224,7 @@ func _append_recipe(recipe_value: CraftingRecipe, plan: Dictionary, quote: Dicti
     _append_to(root, "Consumes: %s" % _requirements_text(recipe_value.consumed_inputs), 12)
     _append_to(root, "Tools: %s" % ("None" if recipe_value.required_tools.is_empty() else _requirements_text(recipe_value.required_tools)), 12)
     if not String(recipe_value.workstation_capability).is_empty():
-        _append_to(root, "Workstation: General Workbench", 12)
+        _append_to(root, "Workstation: %s" % CraftingWorkstationCatalog.display_label(recipe_value.workstation_capability), 12)
     _append_to(root, "Produces: %s" % _requirements_text(recipe_value.outputs), 12)
     if bool(quote.get("ok", false)):
         _append_to(
@@ -243,12 +250,28 @@ func _append_recipe(recipe_value: CraftingRecipe, plan: Dictionary, quote: Dicti
         _append_to(root, "Unavailable: %s" % reason.replace("_", " ").replace(":", " — ").capitalize(), 12)
 
     var button := Button.new()
-    button.text = "CRAFT"
+    button.text = "COOK" if recipe_value.workstation_capability == CraftingWorkstationCatalog.COOKING_STOVE else "CRAFT"
+    button.set_meta("crafting_recipe_id", String(recipe_value.recipe_id))
+    button.set_meta("crafting_workstation_id", _workstation_id)
     button.disabled = not ready or not bool(quote.get("ok", true))
     button.custom_minimum_size = Vector2(0, 46)
     button.focus_mode = Control.FOCUS_NONE
     button.pressed.connect(_on_craft_pressed.bind(recipe_value.recipe_id))
     root.add_child(button)
+
+func _recipe_belongs_in_context(recipe_value: CraftingRecipe, capabilities: Array) -> bool:
+    if recipe_value == null:
+        return false
+    if _workstation_id.is_empty():
+        return String(recipe_value.workstation_capability).is_empty()
+    return capabilities.has(recipe_value.workstation_capability)
+
+static func _panel_title(capabilities: Array) -> String:
+    if capabilities.has(CraftingWorkstationCatalog.COOKING_STOVE):
+        return "COOKING — STOVE"
+    if capabilities.has(CraftingWorkstationCatalog.GENERAL_WORKBENCH):
+        return "CRAFTING — WORKBENCH"
+    return "CRAFTING"
 
 func _skill_quote(recipe_value: CraftingRecipe) -> Dictionary:
     if _skill_checks == null or not _skill_checks.is_ready():
