@@ -1,6 +1,9 @@
 extends RefCounted
 class_name VehicleState
 
+signal changed(vehicle_id, revision)
+signal state_reset(revision)
+
 const SNAPSHOT_SCHEMA_VERSION: int = 1
 
 var _records: Dictionary = {}
@@ -42,9 +45,11 @@ func create_vehicle(vehicle_id: String, kind: StringName, fuel: int, locked: boo
         "electrical": 100,
         "cargo_container_id": key,
         "mods": [],
+        "installed_component_ids": [],
         "version": 1,
     }
     _revision += 1
+    changed.emit(key, _revision)
     return true
 
 func mutate(vehicle_id: String, patch: Dictionary) -> bool:
@@ -60,6 +65,7 @@ func mutate(vehicle_id: String, patch: Dictionary) -> bool:
     current["version"] = int(current.get("version", 0)) + 1
     _records[vehicle_id] = current
     _revision += 1
+    changed.emit(vehicle_id, _revision)
     return true
 
 func set_driver(vehicle_id: String, actor_id: String) -> bool:
@@ -103,7 +109,10 @@ func load_snapshot(data: Dictionary) -> bool:
             return false
         row.erase("vehicle_id")
         row["kind"] = kind
+        if not row.has("installed_component_ids"):
+            row["installed_component_ids"] = []
         next[vehicle_id] = row
     _records = next
     _revision += 1
+    state_reset.emit(_revision)
     return true
