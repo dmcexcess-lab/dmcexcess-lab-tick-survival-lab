@@ -1,5 +1,15 @@
 # Changelog
 
+## 2026-09-04 — Town-First Island Browser Startup Repair
+
+- Published the settlement-first island and building-derived population truth, then repaired the browser startup regression caused by synchronously regenerating the full island for both population and utility planning.
+- The global generated plan now owns one compact structural local-area manifest. Population and utility systems consume the same real generated buildings, roads, driveways, parking and structural props; normal streamed areas retain full environmental dressing.
+- Major-road tree selection no longer executes full A* for every discarded Prim candidate. It deterministically chooses the settlement tree geometrically, then terrain-routes only the selected physical edges.
+- Overlapping neighborhood utility groups now share persistent roadside poles and one physical trunk span rather than materializing duplicate parallel infrastructure. Shared spans carry every affected settlement service into physical damage and outage behavior.
+- No renderer, lighting, LOS, input, vehicle, health/condition or population accounting contract was replaced.
+- Verified executable: `0f12cfcd1e5efb85bf5261fcbd92a497a44387e2`.
+- All **51 exact-head Actions workflows** passed; Pages run `33892432702` deployed successfully.
+
 ## 2026-08-31 — System 00F CI Consolidation
 
 - Consolidated System 00F procedural-island verification so the planner/preflight 12-seed matrix runs once and the canonical playable 12-seed boot matrix runs once.

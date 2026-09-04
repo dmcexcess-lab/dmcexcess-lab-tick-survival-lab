@@ -2,6 +2,20 @@
 
 This compact ledger records the newest executable work. `CHANGELOG.md` remains the historical archive.
 
+## Town-First Island Browser Startup Repair — 2026-09-04
+
+Verified executable: `0f12cfcd1e5efb85bf5261fcbd92a497a44387e2`.
+
+- Published the settlement-first 3,072×3,072 island: two town-scale settlements, three village/crossroads settlements and six rural home/farm sites. The island envelope is derived after placing this hierarchy instead of compressing it into the former fixed map rectangle.
+- Population truth is derived from every real deterministic residential building manifest. Resident, infected and survivor aggregates retain building/archetype/capacity identity, and infected plus survivors exactly equals generated resident population; no independent fake zombie-population count was added.
+- Removed the browser-startup double generation of all eleven local sites. Population planning builds one compact structural manifest, the global plan owns it, and utility planning consumes that same generated building/road/driveway/parking truth.
+- Kept ordinary streamed areas fully dressed while omitting the irrelevant whole-area natural-noise scan from the boot manifest. Structural blockers and access surfaces remain present for real utility placement.
+- Replaced hundreds of discarded terrain path searches with deterministic geometric minimum-spanning-tree selection followed by terrain-aware A* only for the selected physical roads.
+- Made overlapping neighborhood distribution groups reuse real roadside poles and one physical trunk span. Shared spans retain the union of affected settlement services for real damage/outage causality.
+- Godot 4.7.1 import, complete-island planning, the 12-seed procedural matrix, all focused System-33 power/water/infrastructure/routing regressions, and a real seed-28028 game boot passed locally.
+- Exact executable head completed **51 successful Actions runs** with zero failures or pending runs. Pages run `33892432702` deployed successfully.
+- Renderer, physical lighting, stateless LOS and decision-pause input behavior were not changed.
+
 ## Canonical Ownership / Legacy Scaffold Cleanup — 2026-09-04
 
 Verified executable: `57e05556bb106ae9ce80a98b5878038cc3f9f171`.
