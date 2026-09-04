@@ -51,6 +51,10 @@ func _build_projection() -> Dictionary:
     var props: Array[Dictionary] = []
     var wires: Array[Dictionary] = []
     var reserved_cells: Dictionary = {}
+    var shared_pole_ids: Dictionary = {}
+    var shared_pole_cells: Dictionary = {}
+    var shared_pole_states: Dictionary = {}
+    var trunk_wire_index_by_route: Dictionary = {}
 
     var plant_records: Array[Dictionary] = _water_plant_records(reserved_cells)
     if plant_records.is_empty():
@@ -111,7 +115,10 @@ func _build_projection() -> Dictionary:
             anchor,
             customers,
             road_graph,
-            reserved_cells
+            reserved_cells,
+            shared_pole_ids,
+            shared_pole_cells,
+            shared_pole_states
         )
         if not bool(distribution.get("ok", false)):
             return {"props": [], "wires": []}
@@ -124,7 +131,28 @@ func _build_projection() -> Dictionary:
         for wire_value: Variant in distribution.get("wires", []):
             if typeof(wire_value) != TYPE_DICTIONARY:
                 return {"props": [], "wires": []}
-            wires.append((wire_value as Dictionary).duplicate(true))
+            var wire: Dictionary = (wire_value as Dictionary).duplicate(true)
+            if StringName(wire.get("wire_role", &"")) != &"shared_trunk":
+                wires.append(wire)
+                continue
+            var route_key: String = _undirected_edge_key(
+                wire.get("route_start_cell", INVALID_CELL),
+                wire.get("route_end_cell", INVALID_CELL)
+            )
+            if not trunk_wire_index_by_route.has(route_key):
+                trunk_wire_index_by_route[route_key] = wires.size()
+                wires.append(wire)
+                continue
+            var existing_index: int = int(trunk_wire_index_by_route[route_key])
+            var existing: Dictionary = wires[existing_index]
+            var services: Array = existing.get("service_settlement_ids", [])
+            for service_value: Variant in wire.get("service_settlement_ids", []):
+                var service_id: String = String(service_value).strip_edges()
+                if not service_id.is_empty() and not services.has(service_id):
+                    services.append(service_id)
+            services.sort()
+            existing["service_settlement_ids"] = services
+            wires[existing_index] = existing
 
     for well_value: Variant in _topology.get("wells", []):
         if typeof(well_value) != TYPE_DICTIONARY:
@@ -156,7 +184,10 @@ func _shared_distribution_tree(
     transformer_cell: Vector2i,
     customers: Array[Dictionary],
     road_graph: Dictionary,
-    reserved_cells: Dictionary
+    reserved_cells: Dictionary,
+    shared_pole_ids: Dictionary,
+    shared_pole_cells: Dictionary,
+    shared_pole_states: Dictionary
 ) -> Dictionary:
     var root_road_cell: Vector2i = _nearest_graph_cell(transformer_cell, road_graph.keys())
     if root_road_cell == INVALID_CELL:
@@ -229,6 +260,11 @@ func _shared_distribution_tree(
     var pole_state_by_route_cell: Dictionary = {}
     var local_reserved: Dictionary = reserved_cells.duplicate()
     for route_cell: Vector2i in placement_key_cells:
+        if shared_pole_ids.has(route_cell):
+            pole_id_by_route_cell[route_cell] = shared_pole_ids[route_cell]
+            pole_cell_by_route_cell[route_cell] = shared_pole_cells[route_cell]
+            pole_state_by_route_cell[route_cell] = shared_pole_states.get(route_cell, {}).duplicate(true)
+            continue
         var pole_ordinal: int = int(pole_ordinal_by_route_cell.get(route_cell, -1))
         if pole_ordinal < 0:
             return {"ok": false, "props": [], "wires": []}
@@ -285,6 +321,9 @@ func _shared_distribution_tree(
             "direction": direction,
             "hold": next_hold,
         }
+        shared_pole_ids[route_cell] = pole_id
+        shared_pole_cells[route_cell] = pole_cell
+        shared_pole_states[route_cell] = pole_state_by_route_cell[route_cell].duplicate(true)
 
     var root_pole_id: String = String(pole_id_by_route_cell.get(root_road_cell, ""))
     var root_pole_cell: Vector2i = pole_cell_by_route_cell.get(root_road_cell, INVALID_CELL)
