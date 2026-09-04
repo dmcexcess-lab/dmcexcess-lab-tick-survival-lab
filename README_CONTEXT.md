@@ -6,63 +6,73 @@ This is the authoritative continuation checkpoint. Read `README_SOPS.md`, fetch 
 
 ## Current verified executable
 
-- **Exact gameplay executable:** `fd8913df39113356bfd908377c357bbb91d54e60` — `Fix forage UI layout smoke lifecycle`.
-- **Exact-head GitHub Actions:** **50 completed runs, 50 successes, zero failures, zero queued, zero running**.
-- The dedicated final-head `Outdoor forage` gate passed forage behavior, the real UI-layout smoke, protected Skills/Crafting/Loot regressions and canonical startup.
-- **Pages deployment:** run `33818678774` completed successfully for exact executable `fd8913df39113356bfd908377c357bbb91d54e60`.
+- **Exact gameplay executable:** `ad975a08c5a62d178d6bf8e79c2dc21b08c4905c` — `Store recovered forage in survivor inventory`.
+- **Exact-head GitHub Actions:** **51 completed runs, 51 successes, zero failures, zero queued, zero running**.
+- **Pages deployment:** run `33819643054` completed successfully for exact executable `ad975a08c5a62d178d6bf8e79c2dc21b08c4905c`.
 - **Live build:** `https://dmcexcess-lab.github.io/dmcexcess-lab-tick-survival-lab/`
-- Commits after the executable are documentation/context-only and do not alter gameplay.
+- The owning PR #3 forage gate passed before merge: Godot import/parse, forage behavior, real forage UI layout, protected Skills/Crafting/Loot regressions and canonical startup all succeeded.
+- The full main-branch protected suite then passed, including the 12-seed planner/playable boot matrices and streaming/materialization regressions.
+- Commits after `ad975a08...` are documentation/context-only and do not alter gameplay.
 
-## Completed operation — forage / Weather DEV overlap repair
+## Completed operation — forage finds enter personal inventory
 
-The user reported `FORAGE NEARBY` was blocked by the Weather DEV controls. The defect was literal layout overlap:
+User acceptance established that the repaired `FORAGE NEARBY` control is visible/clickable, but exposed a behavior mismatch: a successful forage result was created only as a loose item at the survivor's feet instead of appearing in personal inventory.
 
-- Survival: upper-left `(8, 66)`, `326x78`;
-- Weather DEV: upper-right `(344, 66)`, `288x78`;
-- old forage: `(340, 66)`, `292x78`, almost directly underneath Weather;
-- Utilities DEV: lower-right `(344, 148)`, `288x100`.
+The root cause was in `ForageNearbyActionService`: successful recovery always committed each new Sturdy Stick / Smooth Stone through `WorldMutationService.set_placement(... LOOSE_ITEM ...)` and never used the already-existing personal-inventory admission owners.
 
-The repaired canonical compact-control grid is now:
+The canonical behavior is now:
 
-- Survival — upper-left `(8, 66)`, `326x78`;
-- Weather DEV — upper-right `(344, 66)`, `288x78`;
-- **Forage — lower-left `(8, 148)`, `326x78`;**
-- Utilities DEV — lower-right `(344, 148)`, `288x100`.
+1. forage still resolves one finite local physical opportunity through WHEN + Survival;
+2. success still creates a **real persistent item entity** (`Sturdy Stick` or `Smooth Stone`);
+3. `ActorCarryAcquisitionPolicy` evaluates whether that new item's real mass can be admitted;
+4. when allowed, `InventoryContainmentMutationService` places the real entity directly in the survivor's personal inventory container;
+5. the existing inventory inspector sees it normally and `ActorCarryQuery` counts its real mass;
+6. if the hard carry ceiling blocks admission, the item is not deleted or invisibly granted — it remains a normal real `LOOSE_ITEM` at the survivor's feet.
 
-`ForagePlayerControls.gd` now exposes stable panel geometry constants and uses stable node name `ForagePanel`. No forage simulation, depletion, timing, skill, item, weather or utility behavior changed.
+High-effectiveness two-item forage results admit each recovered entity through the same capacity policy independently.
 
-## Verification repair and permanent gate
+Rollback was also repaired so a later commit/XP failure clears containment before removing a recovered entity, avoiding ghost inventory membership.
 
-`game/scripts/ci/ForageUiLayoutSmoke.gd` instantiates the actual:
+## Owning regression
 
-- `ConditionPlayerControls`;
-- `WeatherDevControls`;
-- `ForagePlayerControls`;
-- `UtilityDevControls`.
+`game/scripts/ci/OutdoorForageSmoke.gd` now proves all of the following together:
 
-The first genuine main-branch Actions run exposed a test-harness lifecycle bug: the smoke measured the CanvasLayers in `_initialize()` before Godot delivered their `_ready()` callbacks, so the panels had not been built. The existing forage behavior smoke itself passed.
+- capacity-allowed recovered items become direct contents of the survivor personal inventory;
+- contained forage items have no simultaneous loose-world placement;
+- recovered mass appears in canonical carry weight / carry item IDs;
+- an artificially over-hard-cap survivor receives no invisible inventory bypass and the recovered items remain physically at their feet;
+- valid forage still consumes finite depletion;
+- cancellation consumes no opportunity and creates no item;
+- failed valid searches consume the opportunity, grant bounded Survival practice XP and manufacture no item;
+- impossible water context hard-blocks without creating depletion state;
+- sparse depletion snapshot round-trip remains deterministic;
+- same seed/patch/opportunity resolves the same resource.
 
-The harness was repaired to `await process_frame` before measuring the real controls. PR #2 then passed the complete owning `verify/outdoor-forage` gate before merge. The final main executable `fd8913df39113356bfd908377c357bbb91d54e60` subsequently passed all 50 exact-head runs and Pages deployment.
-
-The dedicated `.github/workflows/outdoor-forage.yml` now runs on both:
-
-- `push` to `main`;
-- `pull_request` targeting `main`.
-
-That gives future forage/layout work a genuine pre-merge owning gate instead of relying only on connector-authored main writes.
+No forage skill roll, duration, depletion, resource selection, renderer, weather, generation, loot-container or crafting semantics were weakened.
 
 ## Outdoor forage behavior remains canonical
 
-The UI repair did not change the already-established forage model:
-
 - one sparse persistent depletion record per deterministic 8x8 world patch;
 - real materialized terrain + sky exposure + bounded local natural context determine plausibility;
-- no recurring whole-world scan or resource respawn loop;
+- no recurring whole-world scan, hidden resource population or passive resource respawn loop;
 - WHEN owns time/cancellation;
 - canonical Survival skill checks own duration/success/effectiveness/XP;
 - valid failed searches consume finite opportunity; cancellation/impossible contexts do not;
-- success creates real `Sturdy Stick` / `Smooth Stone` WHAT entities as ordinary `LOOSE_ITEM` objects at the survivor location;
-- pickup, hands, inventory, containment and carry weight remain existing owners.
+- successful recovery creates only real Sturdy Stick / Smooth Stone WHAT entities;
+- normal result destination is the survivor's real personal inventory when carry admission allows it;
+- hard-capacity rejection leaves real loose items at the survivor location;
+- hands, inventory, containment, physical weight and carry limits remain existing owners.
+
+## Forage UI layout remains accepted/protected
+
+The prior visible Weather DEV overlap repair remains in place:
+
+- Survival — upper-left `(8, 66)`, `326x78`;
+- Weather DEV — upper-right `(344, 66)`, `288x78`;
+- Forage — lower-left `(8, 148)`, `326x78`;
+- Utilities DEV — lower-right `(344, 148)`, `288x100`.
+
+`ForageUiLayoutSmoke.gd` waits for the real Godot `_ready()` lifecycle, measures the actual four control layers and fails on overlap. User reported this UI repair worked in the live build before identifying the inventory-destination defect.
 
 ## Four-skill contract remains canonical
 
@@ -124,18 +134,22 @@ Do not infer unimplemented effects from item names: the stake has no invented co
 
 ## Human acceptance status
 
-Automated verification and deployment are complete. Human browser acceptance is still required for visible/game-feel behavior:
+Automated verification and deployment are complete.
 
-- confirm `FORAGE NEARBY` is visible and clickable while Weather DEV controls are present;
-- confirm Survival / Weather / Forage / Utilities occupy four distinct compact slots without overlap;
-- confirm forage result messaging and finite depletion still feel correct;
-- confirm recovered sticks/stones use ordinary pickup behavior;
-- continue prior acceptance checks for Fatigue/rest/needs/health/moodlets, movement responsiveness, lighting/LOS/startup and generated System-33 utilities;
-- check desktop WebGL2 and phone/Safari presentation.
+Already accepted by user:
+
+- `FORAGE NEARBY` is accessible after the Weather DEV overlap repair.
+
+Still pending after this latest executable:
+
+- perform a successful forage in the live build and confirm the recovered Sturdy Stick / Smooth Stone appears immediately in **Inventory** under normal carry capacity;
+- confirm its weight contributes normally to carried load;
+- optional hard-cap check: if the survivor exceeds the hard carry admission ceiling, the found resource should remain physically at the survivor's feet rather than vanish;
+- continue prior acceptance checks for Fatigue/rest/needs/health/moodlets, movement responsiveness, lighting/LOS/startup, generated System-33 utilities and desktop/phone/Safari presentation.
 
 ## NEXT OPERATION
 
-1. **Human-play the deployed build** at `https://dmcexcess-lab.github.io/dmcexcess-lab-tick-survival-lab/` and confirm the forage control is no longer covered by Weather DEV or any neighboring panel. Any visible/game-feel defect supersedes feature expansion and should be repaired first.
+1. **Human-play the deployed build** at `https://dmcexcess-lab.github.io/dmcexcess-lab-tick-survival-lab/` and confirm a successful `FORAGE NEARBY` result now appears directly in personal Inventory and counts toward carried weight. Any visible/game-feel defect supersedes feature expansion and should be repaired first.
 2. If accepted and no newer user direction supersedes it, implement the next bounded **real primitive Survival consumer** or a real **Mechanical repair/deconstruction owner integration**. Do not invent combat/tool/fire effects merely from item names.
 3. Later integrations remain first aid through Health/Injury; Mechanical repair/deconstruction/reclamation; hot-wiring after vehicles exist; fire-starting through a real ignition/fire owner; real Awareness and Stealth gameplay consumers.
 
