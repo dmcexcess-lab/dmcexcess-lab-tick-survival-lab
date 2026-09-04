@@ -130,14 +130,14 @@ func repair_requirements(asset_id: String) -> Dictionary:
         return {}
     match StringName(record.get("kind", &"")):
         DISTRIBUTION_SUPPORT:
-            return {"electrical_skill": 2, "material_units": 2, "restored_condition": 850}
+            return {"mechanical_skill": 2, "material_units": 2, "restored_condition": 850}
         DISTRIBUTION_SPAN:
-            return {"electrical_skill": 2, "material_units": 1, "restored_condition": 900}
+            return {"mechanical_skill": 2, "material_units": 1, "restored_condition": 900}
     return {}
 
 func repair_asset(
     asset_id: String,
-    electrical_skill: int,
+    mechanical_skill: int,
     available_material_units: int,
     world_tick: int
 ) -> Dictionary:
@@ -145,10 +145,10 @@ func repair_asset(
     var requirements: Dictionary = repair_requirements(key)
     if requirements.is_empty() or not _assets.has(key) or world_tick < 0:
         return {"ok": false, "material_units_consumed": 0, "reason": &"unknown_asset"}
-    var required_skill: int = int(requirements.get("electrical_skill", 0))
+    var required_skill: int = int(requirements.get("mechanical_skill", 0))
     var required_materials: int = int(requirements.get("material_units", 0))
-    if electrical_skill < required_skill:
-        return {"ok": false, "material_units_consumed": 0, "reason": &"insufficient_electrical_skill"}
+    if mechanical_skill < required_skill:
+        return {"ok": false, "material_units_consumed": 0, "reason": &"insufficient_mechanical_skill"}
     if available_material_units < required_materials:
         return {"ok": false, "material_units_consumed": 0, "reason": &"insufficient_materials"}
     var was_failed: bool = is_failed_at(key, world_tick)
