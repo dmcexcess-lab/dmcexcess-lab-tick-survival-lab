@@ -6,6 +6,8 @@ const VehicleStateClass = preload("res://scripts/simulation/vehicles/VehicleStat
 const VehicleSeederClass = preload("res://scripts/simulation/vehicles/VehicleWorldSeeder.gd")
 const VehicleActionsClass = preload("res://scripts/simulation/vehicles/VehicleActionService.gd")
 const VehicleCargoClass = preload("res://scripts/simulation/vehicles/VehicleCargoService.gd")
+const VehicleConsequencesClass = preload("res://scripts/simulation/vehicles/VehicleConsequenceAdapter.gd")
+const VehicleLightingClass = preload("res://scripts/simulation/vehicles/VehicleLightingSourceAdapter.gd")
 const VehicleItems = preload("res://scripts/simulation/vehicles/VehicleItemCatalog.gd")
 const VehicleControllerClass = preload("res://scripts/player/VehiclePlayerController.gd")
 const VehicleControlsClass = preload("res://scripts/ui/VehiclePlayerControls.gd")
@@ -15,6 +17,8 @@ var _vehicle_state: VehicleState = null
 var _vehicle_seeder: VehicleWorldSeeder = null
 var _vehicle_actions: VehicleActionService = null
 var _vehicle_cargo: VehicleCargoService = null
+var _vehicle_consequences: VehicleConsequenceAdapter = null
+var _vehicle_lighting: VehicleLightingSourceAdapter = null
 var _vehicle_controller: VehiclePlayerController = null
 var _vehicle_controls: VehiclePlayerControls = null
 
@@ -26,7 +30,8 @@ func _boot_canonical_demo() -> bool:
 func _boot_system36() -> bool:
     if _world == null or _world_mutations == null or _spatial_query == null or _collision_catalog == null \
         or _collision_overrides == null or _kernel == null or _skill_checks == null or _condition_service == null \
-        or _inventory_state == null or _inventory_mutations == null or _weight_query == null or _physical_catalog == null:
+        or _inventory_state == null or _inventory_mutations == null or _weight_query == null or _physical_catalog == null \
+        or _spatial_sound == null or _health_state == null or _utility_lighting == null or _physical_lighting == null:
         return false
     _vehicle_profiles = VehicleProfilesClass.new()
     _vehicle_state = VehicleStateClass.new()
@@ -71,6 +76,22 @@ func _boot_system36() -> bool:
     )
     if not _vehicle_cargo.is_ready():
         return false
+
+    _vehicle_consequences = VehicleConsequencesClass.new(
+        _world,
+        _vehicle_state,
+        _vehicle_profiles,
+        _vehicle_actions,
+        _spatial_sound,
+        _health_state
+    )
+    if not _vehicle_consequences.is_ready():
+        return false
+
+    _vehicle_lighting = VehicleLightingClass.new(_world, _vehicle_state, _vehicle_profiles)
+    if not _vehicle_lighting.is_ready() or not _wire_vehicle_lighting():
+        return false
+
     _vehicle_controller = VehicleControllerClass.new(_vehicle_actions, _kernel, FixtureClass.PLAYER_ID)
     add_child(_vehicle_controller)
     if not _vehicle_controller.is_ready():
@@ -90,7 +111,14 @@ func _boot_system36() -> bool:
         return false
     _vehicle_controls = VehicleControlsClass.new()
     add_child(_vehicle_controls)
-    if not _vehicle_controls.configure(_vehicle_controller, _vehicle_actions, _vehicle_state, FixtureClass.PLAYER_ID):
+    if not _vehicle_controls.configure(
+        _vehicle_controller,
+        _vehicle_actions,
+        _vehicle_state,
+        _vehicle_cargo,
+        _inventory_state,
+        FixtureClass.PLAYER_ID
+    ):
         return false
     return true
 
@@ -99,3 +127,32 @@ func _route_player_intent(intent: StringName) -> void:
         _vehicle_controller.submit_intent(intent)
     elif _controller != null:
         _controller.submit_intent(intent)
+
+func _wire_vehicle_lighting() -> bool:
+    if _vehicle_lighting == null or _utility_lighting == null or _physical_lighting == null:
+        return false
+    var inherited_callable := Callable(self, "_on_demo_lighting_emitters_changed")
+    if _utility_lighting.emitters_changed.is_connected(inherited_callable):
+        _utility_lighting.emitters_changed.disconnect(inherited_callable)
+    var combined_callable := Callable(self, "_on_vehicle_lighting_inputs_changed")
+    if not _utility_lighting.emitters_changed.is_connected(combined_callable):
+        _utility_lighting.emitters_changed.connect(combined_callable)
+    if not _vehicle_lighting.emitters_changed.is_connected(combined_callable):
+        _vehicle_lighting.emitters_changed.connect(combined_callable)
+    return _sync_vehicle_lighting_emitters()
+
+func _sync_vehicle_lighting_emitters() -> bool:
+    if _utility_lighting == null or _vehicle_lighting == null or _physical_lighting == null:
+        return false
+    var combined: Array[LightEmitter] = []
+    for emitter: LightEmitter in _utility_lighting.emitters():
+        combined.append(emitter)
+    for emitter: LightEmitter in _vehicle_lighting.emitters():
+        combined.append(emitter)
+    return _physical_lighting.set_emitters(combined)
+
+func _on_vehicle_lighting_inputs_changed(_emitters: Array) -> void:
+    if not _sync_vehicle_lighting_emitters():
+        return
+    _lighting_refresh_pending = true
+    call_deferred("_flush_pending_visual_state")
