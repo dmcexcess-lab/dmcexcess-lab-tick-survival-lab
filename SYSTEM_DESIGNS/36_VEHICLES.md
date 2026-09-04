@@ -27,7 +27,7 @@ A skateboard is deliberately **not** a full vehicle-driving model. It is a mobil
 - no fuel;
 - nearly silent;
 - no meaningful cargo storage;
-- actor-like cardinal movement/facing rather than vehicle 45-degree steering;
+- actor-like cardinal movement/facing rather than vehicle 12-heading steering;
 - terrain restrictions are stricter than ordinary walking/running: smooth pavement/sidewalk is the intended surface, while stairs, deep rubble, water and similarly unsuitable terrain block use.
 
 There is no live Stamina system. “No stamina cost” means skateboard propulsion adds no canonical Fatigue.
@@ -70,11 +70,18 @@ There is no live Stamina system. “No stamina cost” means skateboard propulsi
 
 ## Spatial representation
 
-Vehicles reuse canonical WHERE global integer cells and whole-cell footprints.
+Vehicles reuse canonical WHERE global integer cells and whole-cell occupancy truth.
 
-Cars/trucks/motorcycles/bicycles use an eight-heading vehicle presentation/movement vocabulary at 45-degree increments while preserving integer-cell authoritative placement.
+Cars/trucks/motorcycles/bicycles use a **12-heading vehicle vocabulary at 30-degree increments** while preserving integer-cell authoritative placement.
 
-The underlying tactical world remains grid-based. Vehicle movement never introduces floating-point authoritative positions.
+Because a square tactical grid cannot represent every 30-degree direction as an exact continuous vector, System 36 must not introduce floating authoritative positions to fake it. Instead:
+
+- each heading has a deterministic integer-grid movement raster;
+- each profile supplies or derives a conservative integer occupied-cell mask for that heading;
+- turning/movement validates the complete swept integer-cell path/mask;
+- the sprite may rotate to the exact 30-degree visual heading, but presentation never becomes collision or placement authority.
+
+The underlying tactical world therefore remains grid-based and deterministic while the vehicle can visibly steer more naturally than 90-degree snapping.
 
 Skateboards are the exception: they intentionally reuse actor-like cardinal movement because they are mechanically “running without Fatigue” rather than a full driving model.
 
@@ -84,8 +91,8 @@ Skateboards are the exception: they intentionally reuse actor-like cardinal move
 
 For bicycle/motorcycle/car/truck:
 
-- one normal committed move advances **3 tactical cells** along the current vehicle heading/path;
-- every traversed cell/footprint state is collision-validated;
+- one normal committed move advances through **3 tactical cells** along the deterministic raster for the current heading;
+- every traversed cell and swept vehicle footprint state is collision-validated;
 - the action cannot teleport through an occupied or illegal intermediate cell;
 - WHEN owns elapsed action time;
 - movement consequences belong to the vehicle movement owner, never UI.
@@ -94,19 +101,21 @@ For bicycle/motorcycle/car/truck:
 
 A moving vehicle turn is not an instant 90-degree pivot.
 
-- each committed turn movement advances **3 cells** along the turning/diagonal path;
-- heading/sprite orientation changes by **45 degrees per turning movement**;
-- repeated turn actions can therefore move N -> NE -> E -> SE -> S, etc.;
-- collision legality is checked across the complete moved footprint/path;
-- presentation interpolates/animates the 45-degree visual turn but does not own physics.
+- each committed turn movement advances through **3 cells** along the deterministic turning raster;
+- heading/sprite orientation changes by **30 degrees per turning movement**;
+- the 12-state heading sequence therefore reaches each cardinal after three 30-degree turns, e.g. N -> 30° right -> 60° right -> E;
+- collision legality is checked across the complete swept integer path/footprint;
+- presentation interpolates/animates the 30-degree visual turn but does not own physics.
+
+The exact 3-cell raster for each 30-degree heading is an implementation detail, but it must be deterministic, symmetric left/right, integer-only and covered by movement/collision regressions.
 
 ### Stopping / braking
 
 A moving vehicle does not stop instantaneously.
 
 - a committed stop/brake action requires **2 tactical cells of forward stopping distance**;
-- the vehicle comes to rest only after traversing that bounded two-cell braking path;
-- each braking cell is collision checked;
+- the vehicle comes to rest only after traversing that bounded two-cell braking raster;
+- each braking cell and swept footprint is collision checked;
 - an obstruction inside required stopping distance produces the appropriate collision consequence rather than silently snapping the vehicle to a stop before the obstacle.
 
 This two-cell stop rule applies to moving bicycles, motorcycles, cars and trucks. Skateboard stopping remains actor-like and does not create a separate powered-vehicle brake simulation.
@@ -127,7 +136,7 @@ Each vehicle uses typed persistent state keyed by the stable WHAT entity ID. The
 - installed modifications;
 - cargo container identity/capacity where applicable;
 - occupants/driver relationship;
-- current vehicle heading/state needed for movement.
+- current 12-state vehicle heading where applicable.
 
 The system deliberately avoids unnecessary fine-grained automotive simulation such as individual tire pressures, spark plugs, suspension arms, oil chemistry or frame-by-frame engine state.
 
@@ -311,7 +320,7 @@ The approved first implementation should be a coherent real vehicle foundation r
 3. enter/exit/driver containment;
 4. skateboard 2-cell actor-like no-Fatigue movement;
 5. bicycle/motorcycle/car/truck 3-cell vehicle movement;
-6. 45-degree vehicle heading/turning presentation and bounded integer-grid path resolution;
+6. **12-state, 30-degree vehicle heading/turning presentation with deterministic integer-grid raster/swept-footprint resolution**;
 7. two-cell braking/stopping distance for true vehicle classes;
 8. bicycle Fatigue cost;
 9. fuel for motorcycle/car/truck with class-scaled consumption;
@@ -341,7 +350,7 @@ The approved first implementation should be a coherent real vehicle foundation r
 - skateboard behaves like running with no Fatigue cost and moves 2 cells;
 - skateboard is not treated as a full powered-vehicle steering model;
 - bicycles and all true vehicle classes use the 3-cell movement baseline;
-- moving true vehicles use 45-degree heading changes during 3-cell turning moves;
+- moving true vehicles use **30-degree heading changes** during 3-cell turning moves;
 - true vehicles require 2 cells of stopping/braking distance;
 - bicycles do incur Fatigue;
 - motorcycles are easier to steal, use less fuel and have less storage than cars;
