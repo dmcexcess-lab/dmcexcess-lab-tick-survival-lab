@@ -6,13 +6,30 @@ This is the authoritative continuation checkpoint. Read `README_SOPS.md`, fetch 
 
 ## Current repository / executable truth
 
-- **Verified + deployed gameplay executable:** `0f12cfcd1e5efb85bf5261fcbd92a497a44387e2`.
-- The current `main` after this handoff is the documentation-only commit containing this file; it does not change the executable relative to `0f12cfcd...`.
-- Exact executable head `0f12cfcd...` completed **51 successful Actions runs** with **0 failed, 0 cancelled, 0 queued and 0 running**.
-- Pages run **`33892432702`** completed successfully for exact executable head `0f12cfcd...`.
+- **Verified + deployed gameplay executable:** `f54e35938d6ab6c3803d219374f3eea2e166d9cb`.
+- The current `main` after this handoff is the documentation-only commit containing this file; it does not change the executable relative to `f54e359...`.
+- Exact executable head `f54e359...` completed **49 successful Actions runs** with **0 failed, 0 cancelled, 0 queued and 0 running**.
+- Pages run **`33903061600`** completed successfully for exact executable head `f54e359...`.
 - **Live build:** `https://dmcexcess-lab.github.io/dmcexcess-lab-tick-survival-lab/`
-- `CHANGELOG_LATEST.md` records the town-first island and crash repair. Later documentation-only heads do not change the executable relative to `0f12cfcd...`.
+- `CHANGELOG_LATEST.md` records the direct inventory actions plus the town-first island/startup repair. Later documentation-only heads do not change the executable relative to `f54e359...`.
 - Actual Godot project root is **`game/`**.
+
+## Completed operation — direct inventory item actions
+
+The normal inventory is no longer a read-only list. Clicking a pack, nested-container or hand row selects that exact persistent item and exposes only actions backed by current owners:
+
+- fresh carried food/drink: **EAT** / **DRINK** through `SurvivorSustainmentActionService` and real WHEN completion;
+- pack/nested item: **RIGHT HAND**, **LEFT HAND** or **DROP** through `ItemTransferActionService`;
+- hand item: **STOW** or **DROP** through the same transfer owner;
+- spoiled consumable: visibly unavailable rather than silently consumed.
+
+The inventory releases hard decision pause while the action executes, reopens afterward and verifies real item containment/hand state before reporting success. Live-scene coverage proves clicking the exact apple consumes the apple, preserves the water item and raises satiety; it also proves exact hammer equip and stow mutate real hand state.
+
+Authoritative practical completion rule:
+
+> **A simulation feature is not player-complete until ordinary gameplay UI provides a truthful route to its owning action and state.**
+
+Do not add a generic fake **USE** button. Add an item/target action only when its real prerequisites, WHEN duration and owning commit exist.
 
 ## Completed operation — settlement-first island and browser startup repair
 
@@ -203,7 +220,7 @@ The structural cleanup above is complete. The practical gameplay consumers found
 
 Pending closure targets:
 
-1. generalized usable-item/action effects where useful, reusing real WHAT inventory items + WHEN + owning condition/health state rather than one-off fake buttons;
+1. extend exact-item inventory/target actions only as real owners come online; the food/drink and equip/stow/drop UI routes are complete, but medicine, ignition, cooking and repair are not;
 2. cooking through real ingredients, tools/work surface, real heat source and Survival;
 3. first aid / medicine through real treatment items, Health/Injury, Survival where appropriate and WHEN;
 4. real fire lifecycle through tinder/fuel/ignition prerequisites, weather interaction, heat/light ownership and Survival;
@@ -240,6 +257,7 @@ Automated verification is green but human acceptance remains necessary for:
 - headlights/crash presentation;
 - current condition/Fatigue/rest/needs/moodlet feel;
 - forage personal-inventory/carry presentation;
+- direct inventory selection, eat/drink, equip/stow/drop behavior and phone-sized layout;
 - representative generated utility behavior on fresh seeds;
 - desktop browser and phone/Safari presentation.
 
@@ -247,14 +265,12 @@ Automated verification is green but human acceptance remains necessary for:
 
 Unless newer user direction supersedes this:
 
-1. Obtain human browser acceptance of executable `0f12cfcd...`, especially whether it now reaches the first playable frame without crashing/stalling. If it still fails, capture the browser console/error and seed marker and diagnose that exact failure before expanding scope.
-2. Inspect the new settlement proportions, residential density, roads/coast and utility physicalization on multiple fresh seeds. Treat visible generation defects as real generator/materializer defects rather than renderer patches.
-3. Wire future zombie hydration/movement to `GeneratedGlobalWorldPlan.population_settlements`; do not add an independent spawn count. Use bounded active/streamed actor hydration against the authoritative aggregate rather than instantiating the entire island population at once.
-4. Then begin the **practical usable-object closure** rather than another scaffold refactor.
-5. First establish/reuse one narrow generalized action/effect seam only where it genuinely reduces duplication: real carried/target item + prerequisite tool/resource + broad skill + WHEN + owning-state commit.
-6. Close **first aid / medicine and fire / cooking** against existing Health/Injury, condition, freshness, crafting, lighting/weather and inventory owners.
-7. Close **Mechanical world-object repair/deconstruction** and route player-facing utility repair through real tools/material entities + WHEN into the existing utility condition owner.
-8. Wire broader **Awareness** and first real **Stealth** consumers into the existing perception/sound owners without bypassing LOS.
-9. Extend real furniture/utility affordances and vehicle component maintenance only where authoritative target/component state exists.
-10. Run owning/protected regressions, verify exact executable head and Pages, then retire only the historical classes/tests whose assertions have been migrated.
-11. After this closure, proceed toward Actor/NPC AI + combat/causal outbreak, then final graphics/UI overhaul -> Beta, subject to newer user direction.
+1. Obtain human browser acceptance of executable `f54e359...`: verify exact-item **EAT/DRINK**, right/left-hand equip, **STOW** and **DROP**, including phone-sized layout. Capture the browser console/error and seed marker for any startup failure.
+2. Continue the **player/world practical closure before NPCs or zombies**. Audit every implemented interaction from normal gameplay UI; a smoke-only owner or DEV button is not completion.
+3. Close **first aid / medicine and fire / cooking** against existing Health/Injury, condition, freshness, crafting, lighting/weather and inventory owners, using exact real items and targets.
+4. Close **Mechanical world-object repair/deconstruction**, boarding/smashing/climbing/opening window flows and player-facing vehicle/utility repair through concrete tools/material entities + relevant skill + WHEN into existing owners.
+5. Complete usable bed/sleep, food/water source, refrigerator, stove/oven, light/switch, workbench and generator affordances wherever authoritative target state already exists.
+6. Wire broader **Awareness** and the first real **Stealth** consumers into existing perception/sound owners without bypassing LOS.
+7. Inspect settlement proportions, residential density, roads/coast, utilities and vehicles on fresh seeds; treat visible defects as generator/materializer defects.
+8. Run owning/protected regressions and verify exact executable head + Pages after each coherent closure slice.
+9. Only after rendering, player condition, inventory and practical object interactions are human-accepted should work proceed to combat and the first zombie. Future zombie hydration must consume `GeneratedGlobalWorldPlan.population_settlements`, with bounded streamed actor hydration rather than an independent fake count.
