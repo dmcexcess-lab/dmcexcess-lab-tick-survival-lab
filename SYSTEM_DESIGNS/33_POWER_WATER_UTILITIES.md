@@ -2,7 +2,7 @@
 
 Status: **IMPLEMENTED + EXACT-HEAD AUTOMATED VERIFIED; HUMAN RETEST PENDING**
 
-Current verified executable: `9f6e0b8e9010d73181143481a84532fbfffb93e1`
+Current verified executable: `6aab0596cb46d70d4739cbc045d149a25597193d`
 
 Roadmap phase: **Phase 3 — Power and Water**
 
@@ -89,6 +89,24 @@ The runtime emits `line_snapped(asset_id, cell)` for the real failed span. Live 
 
 There is no continuous analytic wear scheduler, per-span Node, per-span Timer, render-frame utility simulation or recurring whole-world scan.
 
+### Player-facing physical support repair
+
+The low-level condition seam is now connected to ordinary player interaction for failed persistent **distribution supports**.
+
+A clicked power pole is the same persistent WHAT entity registered with the power network as a `distribution_support`; the interaction layer does not create another condition record. `UtilityPowerRepairInteractionOfferProvider` only offers REPAIR when that exact canonical asset is currently failed, and `UtilityPowerRepairActionService` commits through `UtilityPowerNetworkRuntime`.
+
+The current wooden-pole player profile requires:
+
+- a real carried hammer, retained;
+- two real carried wood-plank entities, consumed;
+- one real carried nails-box entity, consumed;
+- the player-facing Mechanical requirement;
+- real WHEN duration/completion.
+
+The action snapshots the canonical utility runtime before commit and restores it on failure, so utility condition, service outage and carried-resource mutation cannot diverge as a partially committed repair. A successful repair restores the physical asset and only the outage state causally owned by that fault. A healthy pole immediately ceases to expose REPAIR.
+
+Distribution **spans** remain real condition assets and retain their low-level repair seam, but they do not yet have an independent player-clickable WHAT identity. Therefore current ordinary player-facing utility repair is deliberately support-only rather than inventing a click target for a wire.
+
 ## 5. Municipal water
 
 The current global water contract is one **island-wide municipal treatment facility** near the shore.
@@ -131,12 +149,12 @@ The current visible ground-cap semantic reuses existing final prop art while sta
 
 Municipal plant and private wells carry persistent physical condition. Current failure threshold is 250 from an initial condition of 1000; successful repair restores condition to 900.
 
-Current mechanical material requirements:
+Current low-level mechanical material requirements:
 
 - municipal plant: 3 material units;
 - private well: 1 material unit.
 
-These are low-level repair seams, not final Phase-6 player action/tool/skill balance.
+These remain low-level owner seams. They are not yet ordinary player-facing exact carried-resource actions and must not be presented as such until their physical target/tool/material routes are connected through the same truthful interaction pipeline.
 
 ## 8. Lighting and refrigeration consumers
 
@@ -154,6 +172,8 @@ A power outage changes these consumers through service queries/events. Rendering
 Utility state uses typed power/water components, links, bindings, appliance records and revisions. Service is derived from bounded upstream chains and cached by revision.
 
 Snapshot/restore preserves durable utility state and physical asset condition; derived caches are rebuilt. Streaming does not heal failed infrastructure.
+
+The player-facing support repair reuses this same snapshot/restore contract transactionally; it does not add a UI-layer rollback or duplicate utility state.
 
 ## 10. Performance contract
 
@@ -195,9 +215,9 @@ There is **no wastewater/sewer/septic gameplay or live planning dependency**. `0
 
 The dedicated `verify/system33-roadside-pole-routing` contract additionally proves that generated driveway/parking access cells are carried into utility pole exclusions, real materialized local power poles do not occupy those cells, an obstructed support can remain on its current legal side, a genuinely forced crossing moves to the opposite side, and the next two straight-route supports cannot immediately cross back. It also scans the real shared-trunk materialization for the same side-hold behavior.
 
-The broader global-world-planning contract independently proves profile v7, island-wide municipal water projection, complete-island planning, island seam integrity and System-20 projection/local generation.
+Player-facing repair is additionally protected by `game/scripts/ci/UtilityPowerRepairUiSmoke.gd` inside `verify/world-interaction-closure`: it damages a real physical support, proves the corresponding outage, drives the real pointer/chooser REPAIR route, proves exact carried-resource consumption and WHEN completion, proves canonical condition/service restoration, and proves that the repaired healthy support no longer offers REPAIR.
 
-Verified executable: `9f6e0b8e9010d73181143481a84532fbfffb93e1`. All **43/43 push-triggered exact-head workflows** completed successfully with zero failures or pending runs, including GitHub Pages deployment.
+Verified executable: `6aab0596cb46d70d4739cbc045d149a25597193d`. On that exact head `verify/system33-power-water`, `verify/world-interaction-closure` (run `33915077349`), protected neighboring statuses and `verify/pages-deploy` (run `33915077391`) are green.
 
 ## 13. Human acceptance
 
@@ -209,7 +229,7 @@ Automated verification is green. Browser play should still verify the visible/ga
 4. common route sections visibly reuse one set of poles/wires and forks occur only where needed;
 5. roadside support poles do not land on generated driveway/parking/access strips, and a feeder that crosses the road stays on the new side for two subsequent support placements before an elective cross-back;
 6. final service drops terminate near the real buildings they serve;
-7. line failure causes the expected local blackout and repair restores it;
+7. line failure causes the expected local blackout and a failed wooden pole can be repaired through the ordinary chooser using the exact carried resources, restoring the causally affected service;
 8. the municipal water plant exists physically and a plant failure removes island-wide municipal water;
 9. ordinary grid loss does not disable the municipal plant;
 10. a deterministic minority of rural homes have real private wells and powered-well failure behaves correctly;
