@@ -31,7 +31,7 @@ Canonical status/routing index. Read `PROJECT_NORTH_STAR.md`, `PERFORMANCE_NORTH
 | 33 | Power / Water Utility Runtime | **IMPLEMENTED + automated verified; HUMAN PLAYTEST PENDING** | `33_POWER_WATER_UTILITIES.md` + `33B_POWER_PHYSICAL_NETWORK_CONDITION.md` |
 | 34 | Survivor Condition / Health / Fatigue / Moodlets | **IMPLEMENTED + automated verified; HUMAN PLAYTEST PENDING** | `34_SURVIVOR_CONDITION_HEALTH_STAMINA_MOODLETS.md` |
 | 35 | Outdoor Foraging | **IMPLEMENTED + EXACT-HEAD VERIFIED; HUMAN PLAYTEST PENDING** | `35_OUTDOOR_FORAGING.md` |
-| 36 | Vehicles | **APPROVED — implementation next** | `36_VEHICLES.md` |
+| 36 | Vehicles | **IMPLEMENTED + AUTOMATED VERIFIED; HUMAN PLAYTEST PENDING** | `36_VEHICLES.md` |
 | PERF | Performance Architecture Gate | **IMPLEMENTED + CI VERIFIED; human accepted** | `PERFORMANCE_ARCHITECTURE.md` |
 | 00E | Population / Household / Outbreak / Player Story | **NOT DESIGNED — Phase 8** | future design |
 
@@ -41,11 +41,11 @@ Canonical status/routing index. Read `PROJECT_NORTH_STAR.md`, `PERFORMANCE_NORTH
 
 ## Current routing
 
-Phase 1 content foundations, Phase 2 crafting, Phase 3 utilities, Phase 4/5 survivor condition/moodlets, the four-skill foundation, primitive Survival crafting and System 35 outdoor foraging are implemented in the current executable lineage.
+Phase 1 content foundations, Phase 2 crafting, Phase 3 utilities, Phase 4/5 survivor condition/moodlets, the four-skill foundation, primitive Survival crafting, System 35 outdoor foraging and **System 36 Vehicles** are implemented in the current executable lineage.
 
-**System 36 Vehicles is approved and is the next implementation operation.** Canonical movement: skateboard = actor-like 2-cell movement with no added Fatigue; bicycle = 3-cell vehicle movement with Fatigue; motorcycle/car/truck = powered 3-cell vehicle movement; true vehicle classes use **12 headings at 30-degree increments**, resolved through deterministic integer-grid rasters/swept masks, and require a 2-cell braking/stopping path. Motorcycles are easier to steal, use less fuel and have less storage than cars.
+System 36 provides persistent skateboard/bicycle/motorcycle/car/truck state; bounded generated parked vehicles; enter/exit; skateboard 2-cell smooth-surface movement with no added Fatigue; bicycle 3-cell movement with real Fatigue; powered motorcycle/car/truck movement with finite fuel; 12 typed headings at 30-degree increments over deterministic integer rasters; 2-cell braking; real keys/locks/hot-wiring; real weighted cargo; bounded Mechanical repair and real installed cargo-rack modification; crash HP/sound consequences; and powered headlights. Exact arbitrary-angle collision polygons, partial fuel-fluid quantities, island-wide streaming vehicle population and richer component replacement remain explicit future closure rather than fake completion.
 
-After vehicles are implemented and accepted, perform one final comprehensive skills/crafting/items/usable-object closure pass. That pass must include cooking, first aid, fire/ignition, Mechanical repair/modification/deconstruction/reclamation, vehicle maintenance/modification, real usable-object consumers, Awareness/Stealth consumers and the user-approved construction restriction: **no freeform base building; construction is limited to reinforcing existing doors/windows and repairing broken objects.**
+**Next project operation after human vehicle acceptance or newer explicit direction:** one comprehensive skills/crafting/items/usable-object closure pass. That pass must include cooking, first aid, fire/ignition, Mechanical repair/modification/deconstruction/reclamation, richer vehicle maintenance where real components exist, real usable-object consumers, Awareness/Stealth consumers and the user-approved construction restriction: **no freeform base building; construction is limited to reinforcing existing doors/windows and repairing broken objects.**
 
 ## Protected utility truth
 
