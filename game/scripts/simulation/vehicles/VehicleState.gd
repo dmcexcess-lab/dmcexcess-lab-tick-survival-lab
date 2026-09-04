@@ -25,20 +25,21 @@ func vehicle_ids() -> Array[String]:
 func record(vehicle_id: String) -> Dictionary:
     return Dictionary(_records.get(vehicle_id, {})).duplicate(true)
 
-func create_vehicle(vehicle_id: String, kind: StringName, fuel: int, locked: bool, heading: int = 0, key_item_id: String = "") -> bool:
+func create_vehicle(vehicle_id: String, kind: StringName, fuel: int, _legacy_locked: bool, heading: int = 0, ignition_key_present: Variant = false) -> bool:
     var key := vehicle_id.strip_edges()
     if key.is_empty() or _records.has(key) or String(kind).is_empty():
         return false
+    var key_in_ignition: bool = bool(ignition_key_present) if typeof(ignition_key_present) == TYPE_BOOL else false
     _records[key] = {
         "kind": kind,
         "heading": posmod(heading, 12),
         "moving": false,
         "driver_id": "",
         "fuel": maxi(0, fuel),
-        "locked": locked,
+        "locked": false,
         "powered": false,
         "hotwired": false,
-        "key_item_id": key_item_id.strip_edges(),
+        "key_in_ignition": key_in_ignition,
         "body": 100,
         "propulsion": 100,
         "wheels": 100,
@@ -62,6 +63,8 @@ func mutate(vehicle_id: String, patch: Dictionary) -> bool:
     for field_name: String in ["body", "propulsion", "wheels", "electrical"]:
         current[field_name] = clampi(int(current.get(field_name, 100)), 0, 100)
     current["fuel"] = maxi(0, int(current.get("fuel", 0)))
+    current["locked"] = false
+    current.erase("key_item_id")
     current["version"] = int(current.get("version", 0)) + 1
     _records[vehicle_id] = current
     _revision += 1
@@ -108,7 +111,11 @@ func load_snapshot(data: Dictionary) -> bool:
         if vehicle_id.is_empty() or String(kind).is_empty() or next.has(vehicle_id):
             return false
         row.erase("vehicle_id")
+        row.erase("key_item_id")
         row["kind"] = kind
+        row["locked"] = false
+        if not row.has("key_in_ignition"):
+            row["key_in_ignition"] = false
         if not row.has("installed_component_ids"):
             row["installed_component_ids"] = []
         next[vehicle_id] = row
