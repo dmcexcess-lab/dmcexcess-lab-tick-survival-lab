@@ -4,8 +4,12 @@ class_name CraftingPlayerShell
 ## Phase-2 additive shell surface. Existing Stats/Inventory/Menu ownership remains in
 ## System 16; this child adds the System-32 route and, when the live summary exposes
 ## System 34, presents the approved positive-condition model and derived modifiers.
+## Exact flashlight switch actions are also surfaced here because production main.tscn
+## already uses this shell specialization; no generic USE action is introduced.
 
 signal crafting_open_requested
+
+var _flashlight_actions: FlashlightToggleActionService = null
 
 func _ready() -> void:
     super._ready()
@@ -17,6 +21,12 @@ func _ready() -> void:
         Callable(self, "_request_crafting"),
         CraftingSemanticUiIconCatalog.SHELL_CRAFT
     )
+
+func configure_flashlight_actions(actions: FlashlightToggleActionService) -> bool:
+    if actions == null or not actions.is_ready():
+        return false
+    _flashlight_actions = actions
+    return true
 
 func _request_crafting() -> void:
     if not is_configured() or active_modal() != MODAL_NONE:
@@ -123,6 +133,56 @@ func _render_stats() -> void:
                 int(skill.get("next_level_xp", -1)),
             ]
         _append_line(skill_text, 14)
+
+func _append_inventory_transfer_actions(result: Dictionary, item_id: String) -> void:
+    _append_flashlight_toggle_action(item_id)
+    super._append_inventory_transfer_actions(result, item_id)
+
+func _append_flashlight_toggle_action(item_id: String) -> void:
+    if _flashlight_actions == null or not _flashlight_actions.is_ready():
+        return
+    var offer: Dictionary = _flashlight_actions.toggle_offer(_actor_id, item_id)
+    if not bool(offer.get("applicable", false)):
+        return
+    if not bool(offer.get("available", false)):
+        if String(offer.get("reason", "")) == "item_not_equipped":
+            _append_line("Equip flashlight to use its switch.", 13)
+        return
+    var button := Button.new()
+    button.text = String(offer.get("label", "TURN ON"))
+    button.custom_minimum_size = Vector2(0, 48)
+    button.focus_mode = Control.FOCUS_NONE
+    button.set_meta("flashlight_toggle_item_id", item_id)
+    button.pressed.connect(_toggle_selected_flashlight)
+    _body.add_child(button)
+    _last_lines.append(button.text)
+
+func _toggle_selected_flashlight() -> void:
+    var item_id: String = _selected_inventory_item_id
+    if _flashlight_actions == null:
+        return
+    var offer: Dictionary = _flashlight_actions.toggle_offer(_actor_id, item_id)
+    if not bool(offer.get("available", false)):
+        _inventory_status = "Flashlight switch is no longer available."
+        _render_inventory()
+        return
+    if _pause_was_active:
+        _inventory_status = "Resume before using inventory actions."
+        _render_inventory()
+        return
+    var desired_on: bool = not bool(offer.get("switched_on", false))
+    close_modal()
+    var serial: int = _flashlight_actions.begin_toggle(_actor_id, item_id)
+    if serial <= 0:
+        _inventory_status = "Flashlight switch could not start."
+    else:
+        _kernel.run_until_stop()
+        var outcome: Dictionary = _flashlight_actions.toggle_outcome(serial)
+        if bool(outcome.get("committed", false)) and bool(outcome.get("switched_on", false)) == desired_on:
+            _inventory_status = "Flashlight turned %s." % ("on" if desired_on else "off")
+        else:
+            _inventory_status = "Flashlight switch failed: %s" % String(outcome.get("reason", "unknown")).replace("_", " ")
+    open_inventory()
 
 func _reflow_header_for_crafting() -> void:
     var stats: Button = _header_buttons.get(String(SemanticUiIconCatalog.SHELL_STATS)) as Button

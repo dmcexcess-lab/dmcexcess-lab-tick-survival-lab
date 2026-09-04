@@ -9,6 +9,7 @@ const HandStateClass = preload("res://scripts/simulation/actors/equipment/ActorH
 const HandSlots = preload("res://scripts/simulation/actors/equipment/ActorHandSlot.gd")
 const UtilityStateClass = preload("res://scripts/simulation/utilities/UtilityRuntimeState.gd")
 const LightingSourceClass = preload("res://scripts/simulation/utilities/UtilityPoweredLightingSourceAdapter.gd")
+const FlashlightStateClass = preload("res://scripts/simulation/items/lighting/FlashlightItemState.gd")
 
 const PLAYER_ID: String = "actor.player.lighting_truth"
 const FIXTURE_ID: String = "fixture.traffic_light.lighting_truth"
@@ -34,13 +35,14 @@ func _test_truthful_source_ownership() -> void:
     var world: WorldState = _lighting_world()
     var hands: ActorHandEquipmentState = _hand_state()
     var utilities: UtilityRuntimeState = _utility_state()
+    var flashlight_state := FlashlightStateClass.new()
     if world == null or hands == null or utilities == null:
         return
 
     _check(world.entity_ids_of_type(&"prop.traffic_light").has(FIXTURE_ID), "WHAT semantic index finds the real traffic-light entity")
     _check(world.entity_ids_of_type(&"fixture.room_light").has(ROOM_LIGHT_ID), "WHAT semantic index finds the persistent room-light fixture")
 
-    var sources := LightingSourceClass.new(world, hands, PLAYER_ID, utilities)
+    var sources := LightingSourceClass.new(world, hands, PLAYER_ID, utilities, null, flashlight_state)
     _check(sources.is_ready(), "truthful utility lighting source provider is ready")
 
     var fixed_emitter_id: String = "utility.light:%s" % FIXTURE_ID
@@ -69,9 +71,11 @@ func _test_truthful_source_ownership() -> void:
     _check(String(room_appliance.get("power_service_id", "")) == service_id, "nearby room fixture resolves the same local power service")
 
     _check(hands._set_item_record(PLAYER_ID, HandSlots.Value.PRIMARY_RIGHT, FLASHLIGHT_ID), "test equips the real flashlight item")
+    _check(_find_emitter(sources.emitters(), flashlight_emitter_id) == null, "equipped flashlight remains dark while exact switch state is OFF")
+    _check(flashlight_state.set_switched_on(FLASHLIGHT_ID, true), "exact flashlight switch state turns on")
     var equipped: Array[LightEmitter] = sources.emitters()
     var flashlight: LightEmitter = _find_emitter(equipped, flashlight_emitter_id)
-    _check(flashlight != null, "equipping item.tool.flashlight creates the player beam")
+    _check(flashlight != null, "equipped AND switched-on item.tool.flashlight creates the player beam")
     if flashlight != null:
         _check(flashlight.origin_cell == PLAYER_CELL, "flashlight beam originates at the controlled actor")
         _check(flashlight.facing == Facing.Value.EAST, "flashlight beam follows actor facing")
@@ -83,14 +87,19 @@ func _test_truthful_source_ownership() -> void:
         var dark: Array[LightEmitter] = sources.emitters()
         _check(_find_emitter(dark, fixed_emitter_id) == null, "local power loss removes the real fixed emitter")
         _check(_find_emitter(dark, room_emitter_id) == null, "local power loss removes the room ambient emitter")
-        _check(_find_emitter(dark, flashlight_emitter_id) != null, "grid outage does not fake-disable equipped portable flashlight")
+        _check(_find_emitter(dark, flashlight_emitter_id) != null, "grid outage does not fake-disable equipped switched-on portable flashlight")
         _check(utilities.set_power_component_state(branch_id, UtilityRuntimeState.OPERATIONAL, &"lighting_truth_restore"), "local power restores")
         var restored: Array[LightEmitter] = sources.emitters()
         _check(_find_emitter(restored, fixed_emitter_id) != null, "restored service restores the real fixed emitter")
         _check(_find_emitter(restored, room_emitter_id) != null, "restored service restores the room ambient emitter")
 
-    _check(hands._set_item_record(PLAYER_ID, HandSlots.Value.PRIMARY_RIGHT, ""), "test unequips flashlight")
-    _check(_find_emitter(sources.emitters(), flashlight_emitter_id) == null, "unequipping flashlight removes the beam")
+    _check(hands._set_item_record(PLAYER_ID, HandSlots.Value.PRIMARY_RIGHT, ""), "test stows flashlight")
+    _check(_find_emitter(sources.emitters(), flashlight_emitter_id) == null, "stowing switched-on flashlight removes the beam")
+    _check(flashlight_state.is_switched_on(FLASHLIGHT_ID), "stowing does not erase exact flashlight ON state")
+    _check(hands._set_item_record(PLAYER_ID, HandSlots.Value.PRIMARY_RIGHT, FLASHLIGHT_ID), "test re-equips flashlight")
+    _check(_find_emitter(sources.emitters(), flashlight_emitter_id) != null, "re-equipping same still-ON flashlight restores beam")
+    _check(flashlight_state.set_switched_on(FLASHLIGHT_ID, false), "exact flashlight switch state turns off")
+    _check(_find_emitter(sources.emitters(), flashlight_emitter_id) == null, "equipped flashlight emits no beam after exact switch turns OFF")
 
 func _lighting_world() -> WorldState:
     var world := WorldStateClass.new()

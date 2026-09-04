@@ -10,7 +10,8 @@ const EmitterProfileClass = preload("res://scripts/simulation/lighting/LightEmit
 ## gated by the power service for that cell. Traffic color derives only from the
 ## authoritative WHEN tick; no render-time animation or per-signal timer exists.
 ## The controlled actor emits a flashlight cone only while an actual
-## item.tool.flashlight entity is assigned to either hand.
+## item.tool.flashlight entity is assigned to either hand AND that exact item's
+## persistent FlashlightItemState says the switch is on.
 
 signal emitters_changed(emitters)
 
@@ -42,6 +43,7 @@ var _hand_state: ActorHandEquipmentState = null
 var _player_id: String = ""
 var _utilities: UtilityRuntimeState = null
 var _kernel: TickKernel = null
+var _flashlight_state: FlashlightItemState = null
 var _fixed_entities: Dictionary = {}
 var _signature: String = ""
 
@@ -50,13 +52,15 @@ func _init(
     hand_state: ActorHandEquipmentState = null,
     controlled_actor_id: String = "",
     utilities: UtilityRuntimeState = null,
-    tick_kernel: TickKernel = null
+    tick_kernel: TickKernel = null,
+    flashlight_state: FlashlightItemState = null
 ) -> void:
     _world = world_state
     _hand_state = hand_state
     _player_id = controlled_actor_id.strip_edges()
     _utilities = utilities
     _kernel = tick_kernel
+    _flashlight_state = flashlight_state
     if not is_ready():
         return
     _discover_existing_fixed_emitters()
@@ -77,7 +81,10 @@ func emitters() -> Array[LightEmitter]:
 
     var flashlight_item_id: String = _equipped_flashlight_item_id()
     var player: WorldPlacement = _world.placement(_player_id)
-    if not flashlight_item_id.is_empty() and player != null:
+    if not flashlight_item_id.is_empty() \
+        and _flashlight_state != null \
+        and _flashlight_state.is_switched_on(flashlight_item_id) \
+        and player != null:
         result.append(EmitterClass.new(
             _flashlight_emitter_id(flashlight_item_id),
             player.anchor,
@@ -117,11 +124,13 @@ func fixed_emitter_ids() -> Array[String]:
     return result
 
 func debug_snapshot() -> Dictionary:
+    var flashlight_item_id: String = _equipped_flashlight_item_id()
     return {
         "ready": is_ready(),
         "fixed_fixture_count": _fixed_entities.size(),
         "fixed_emitter_ids": fixed_emitter_ids(),
-        "equipped_flashlight_item_id": _equipped_flashlight_item_id(),
+        "equipped_flashlight_item_id": flashlight_item_id,
+        "equipped_flashlight_switched_on": not flashlight_item_id.is_empty() and _flashlight_state != null and _flashlight_state.is_switched_on(flashlight_item_id),
         "traffic_phase": traffic_phase_for_tick(_current_world_tick()),
         "fake_sources_retired": true,
     }
@@ -255,6 +264,16 @@ func _connect_signals() -> void:
         _utilities.appliances_changed.connect(appliance_callable)
     if not _utilities.utility_reset.is_connected(utility_reset_callable):
         _utilities.utility_reset.connect(utility_reset_callable)
+    if _flashlight_state != null:
+        var flashlight_callable := Callable(self, "_on_flashlight_switch_changed")
+        var flashlight_removed_callable := Callable(self, "_on_flashlight_item_removed")
+        var flashlight_reset_callable := Callable(self, "_on_flashlight_state_reset")
+        if not _flashlight_state.switched_changed.is_connected(flashlight_callable):
+            _flashlight_state.switched_changed.connect(flashlight_callable)
+        if not _flashlight_state.item_removed.is_connected(flashlight_removed_callable):
+            _flashlight_state.item_removed.connect(flashlight_removed_callable)
+        if not _flashlight_state.state_reset.is_connected(flashlight_reset_callable):
+            _flashlight_state.state_reset.connect(flashlight_reset_callable)
     if _kernel != null:
         var tick_callable := Callable(self, "_on_world_tick_advanced")
         var reset_callable := Callable(self, "_on_timing_state_reset")
@@ -318,6 +337,17 @@ func _on_appliances_changed(_revision: int, _reason: StringName) -> void:
 
 func _on_utility_reset() -> void:
     _discover_existing_fixed_emitters()
+    _emit_if_changed()
+
+func _on_flashlight_switch_changed(item_id: String, _switched_on: bool, _version: int) -> void:
+    if _player_references_item(item_id):
+        _emit_if_changed()
+
+func _on_flashlight_item_removed(item_id: String, _version: int) -> void:
+    if _player_references_item(item_id):
+        _emit_if_changed()
+
+func _on_flashlight_state_reset() -> void:
     _emit_if_changed()
 
 func _on_world_tick_advanced(previous_tick: int, new_tick: int) -> void:

@@ -7,6 +7,8 @@ const UtilityLightingClass = preload("res://scripts/simulation/utilities/Utility
 const PowerInfrastructureClass = preload("res://scripts/simulation/utilities/NeighborhoodPowerInfrastructureMaterializer.gd")
 const PowerNetworkRuntimeClass = preload("res://scripts/simulation/utilities/UtilityPowerNetworkRuntime.gd")
 const RefrigerationProviderClass = preload("res://scripts/simulation/utilities/UtilityRefrigerationEnvironmentProvider.gd")
+const FlashlightStateClass = preload("res://scripts/simulation/items/lighting/FlashlightItemState.gd")
+const FlashlightActionClass = preload("res://scripts/simulation/items/lighting/FlashlightToggleActionService.gd")
 
 const CENTRAL_SETTLEMENT_ID: String = "settlement.rural.crossroads.001"
 const INVALID_UTILITY_CELL := Vector2i(2147483647, 2147483647)
@@ -20,6 +22,8 @@ var _utilities: UtilityRuntimeState = null
 var _utility_lighting: UtilityPoweredLightingSourceAdapter = null
 var _power_infrastructure: UtilityPowerInfrastructureMaterializer = null
 var _power_network: UtilityPowerNetworkRuntime = null
+var _flashlight_state: FlashlightItemState = null
+var _flashlight_actions: FlashlightToggleActionService = null
 var _local_power_topology: Dictionary = {}
 var _refrigeration_providers: Dictionary = {}
 var _central_power_service_id: String = ""
@@ -47,6 +51,8 @@ func _boot_utility_runtime() -> bool:
         return false
 
     if not _wire_power_infrastructure(plan):
+        return false
+    if not _wire_flashlight_items():
         return false
     if not _wire_utility_lighting():
         return false
@@ -153,15 +159,27 @@ func _on_power_line_snapped(_asset_id: String, cell: Vector2i) -> void:
         "utility.power_line_snap"
     )
 
+func _wire_flashlight_items() -> bool:
+    if _world == null or _hand_state == null or _kernel == null or _shell == null:
+        return false
+    _flashlight_state = FlashlightStateClass.new()
+    _flashlight_actions = FlashlightActionClass.new(_world, _hand_state, _flashlight_state, _kernel)
+    if not _flashlight_actions.is_ready():
+        return false
+    if not _shell.has_method("configure_flashlight_actions"):
+        return false
+    return bool(_shell.call("configure_flashlight_actions", _flashlight_actions))
+
 func _wire_utility_lighting() -> bool:
-    if _physical_lighting == null or _hand_state == null:
+    if _physical_lighting == null or _hand_state == null or _flashlight_state == null:
         return false
     _utility_lighting = UtilityLightingClass.new(
         _world,
         _hand_state,
         FixtureClass.PLAYER_ID,
         _utilities,
-        _kernel
+        _kernel,
+        _flashlight_state
     )
     if not _utility_lighting.is_ready():
         return false

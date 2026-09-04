@@ -1,0 +1,117 @@
+name: Flashlight item closure
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  statuses: write
+
+concurrency:
+  group: flashlight-item-closure
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: verify/flashlight-item
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate ownership and UI boundary
+        shell: bash
+        run: |
+          set -euxo pipefail
+          test -f game/scripts/simulation/items/lighting/FlashlightItemState.gd
+          test -f game/scripts/simulation/items/lighting/FlashlightToggleActionService.gd
+          test -f game/scripts/ci/FlashlightItemSmoke.gd
+          grep -q 'item.tool.flashlight' game/scripts/simulation/loot/LootItemCatalog.gd
+          grep -q 'TURN ON' game/scripts/ui/CraftingPlayerShell.gd
+          grep -q 'TURN OFF' game/scripts/ui/CraftingPlayerShell.gd
+          grep -q 'configure_flashlight_actions' game/scripts/app/UtilityGameMain.gd
+          grep -q 'is_switched_on' game/scripts/simulation/utilities/UtilityPoweredLightingSourceAdapter.gd
+          ! grep -R -q '_process' game/scripts/simulation/items/lighting
+          ! grep -R -q 'Timer.new' game/scripts/simulation/items/lighting
+
+      - name: Install Godot 4.7.1
+        shell: bash
+        run: |
+          set -euxo pipefail
+          curl -L -o godot.zip https://github.com/godotengine/godot-builds/releases/download/4.7.1-stable/Godot_v4.7.1-stable_linux.x86_64.zip
+          unzip -q godot.zip
+          chmod +x Godot_v4.7.1-stable_linux.x86_64
+
+      - name: Import and parse project
+        shell: bash
+        run: |
+          set -euxo pipefail
+          ./Godot_v4.7.1-stable_linux.x86_64 --headless --editor --path "$GITHUB_WORKSPACE/game" --quit 2>&1 | tee "$RUNNER_TEMP/import.log"
+          if grep -Eqi 'SCRIPT ERROR|Parse Error|Failed to load script' "$RUNNER_TEMP/import.log"; then exit 1; fi
+
+      - name: Flashlight item and lighting smokes
+        shell: bash
+        run: |
+          set -euxo pipefail
+          for spec in \
+            'FlashlightItemSmoke.gd:FLASHLIGHT_ITEM_SMOKE_OK' \
+            'System33LightingTruthSmoke.gd:SYSTEM33_LIGHTING_TRUTH_SMOKE_OK' \
+            'PhysicalLightingSmoke.gd:PHYSICAL_LIGHTING_SMOKE_OK'; do
+            script=${spec%%:*}
+            marker=${spec#*:}
+            log="$RUNNER_TEMP/${script%.gd}.log"
+            ./Godot_v4.7.1-stable_linux.x86_64 --headless --path "$GITHUB_WORKSPACE/game" --script "res://scripts/ci/$script" 2>&1 | tee "$log"
+            grep -q "$marker" "$log"
+            if grep -Eqi 'SCRIPT ERROR|Parse Error|Failed to load script' "$log"; then exit 1; fi
+          done
+
+      - name: Protected inventory and shell regressions
+        shell: bash
+        run: |
+          set -euxo pipefail
+          for spec in \
+            'CanonicalPlayerShellSmoke.gd:CANONICAL_PLAYER_SHELL_SMOKE_OK' \
+            'ItemTransferActionsSmoke.gd:ITEM_TRANSFER_ACTIONS_SMOKE_OK'; do
+            script=${spec%%:*}
+            marker=${spec#*:}
+            log="$RUNNER_TEMP/${script%.gd}.log"
+            ./Godot_v4.7.1-stable_linux.x86_64 --headless --path "$GITHUB_WORKSPACE/game" --script "res://scripts/ci/$script" 2>&1 | tee "$log"
+            grep -q "$marker" "$log"
+            if grep -Eqi 'SCRIPT ERROR|Parse Error|Failed to load script' "$log"; then exit 1; fi
+          done
+
+      - name: Canonical startup regression smoke
+        shell: bash
+        run: |
+          set -euxo pipefail
+          ./Godot_v4.7.1-stable_linux.x86_64 --headless --path "$GITHUB_WORKSPACE/game" --quit-after 6 2>&1 | tee "$RUNNER_TEMP/startup.log"
+          if grep -Eqi 'SCRIPT ERROR|Parse Error|Failed to load script|Invalid call|Invalid access|Assertion failed|ObjectDB instances leaked at exit|resources still in use at exit' "$RUNNER_TEMP/startup.log"; then exit 1; fi
+          grep -q 'CANONICAL_DEMO_BOOT_OK' "$RUNNER_TEMP/startup.log"
+
+      - name: Publish exact-head status
+        if: always()
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SHA: ${{ github.sha }}
+          REPOSITORY: ${{ github.repository }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          JOB_STATUS: ${{ job.status }}
+        run: |
+          set -euo pipefail
+          case "$JOB_STATUS" in
+            success) state=success ;;
+            failure) state=failure ;;
+            cancelled) state=error ;;
+            *) state=error ;;
+          esac
+          payload=$(printf '{"state":"%s","context":"verify/flashlight-item","description":"Real flashlight item switch, UI and physical lighting","target_url":"%s"}' "$state" "$RUN_URL")
+          curl --fail --silent --show-error \
+            -X POST \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.github.com/repos/$REPOSITORY/statuses/$SHA" \
+            -d "$payload"
