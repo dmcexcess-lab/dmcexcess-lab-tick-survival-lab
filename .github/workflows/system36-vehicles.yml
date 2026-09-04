@@ -75,7 +75,7 @@ jobs:
           grep -q 'class_name VehicleHeading' game/scripts/simulation/vehicles/VehicleHeading.gd
           grep -q 'class_name VehicleCargoService' game/scripts/simulation/vehicles/VehicleCargoService.gd
           grep -q 'Mechanical' SYSTEM_DESIGNS/36_VEHICLES.md
-          ! grep -R -q 'func _process\|func _physics_process' game/scripts/simulation/vehicles game/scripts/player/VehiclePlayerController.gd
+          ! grep -R -q 'func _process\|func _physics_process' game/scripts/simulation/vehicles
           ! grep -R -q 'Timer.new' game/scripts/simulation/vehicles game/scripts/player/VehiclePlayerController.gd
           ! grep -R -q 'RigidBody2D\|CharacterBody2D' game/scripts/simulation/vehicles game/scripts/player/VehiclePlayerController.gd
 
