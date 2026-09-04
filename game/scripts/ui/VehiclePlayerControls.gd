@@ -178,7 +178,7 @@ func _on_mounted_changed(actor_id: String, _vehicle_id: String, _mounted: bool) 
     if actor_id == _actor_id:
         _refresh_all()
 
-func _on_item_containment_changed(item_id: String, previous_container_id: String, new_container_id: String) -> void:
+func _on_item_containment_changed(_item_id: String, previous_container_id: String, new_container_id: String) -> void:
     if _service == null:
         return
     var vehicle_id := _service.vehicle_for_driver(_actor_id)
