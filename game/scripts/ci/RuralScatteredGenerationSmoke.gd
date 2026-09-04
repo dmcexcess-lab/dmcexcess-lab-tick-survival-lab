@@ -76,7 +76,7 @@ func _test_canonical_site(
         return
 
     _check(bool(validator.validate(request, plan).get("ok", false)), "%s passes generic System 20 validation" % site_id)
-    _check(plan.area_profile_version == 1, "%s records rural.scattered v1" % site_id)
+    _check(plan.area_profile_version == 2, "%s records rural.scattered v2" % site_id)
     _check(plan.environment_profile_version == 3, "%s records temperate.rural v3" % site_id)
     _check(plan.bounds.size == Vector2i(256, 256), "%s remains a 256x256 logical local planning area" % site_id)
     _check(_inherited_road_contract_is_exact(request, plan), "%s generated plan keeps inherited IDs/classes/geometry exact" % site_id)

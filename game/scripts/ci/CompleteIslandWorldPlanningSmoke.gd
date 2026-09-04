@@ -30,11 +30,13 @@ func _initialize() -> void:
         return
 
     _check(plan.profile_id == ProfilesClass.TEMPERATE_ISLAND_REGION, "island profile identity is recorded")
-    _check(plan.profile_version == 6, "lived-in rural island profile v6 is recorded")
-    _check(plan.area_sites.size() == 9, "island has nine procedural settlement cores")
+    _check(plan.profile_version == 7, "town-first island profile v7 is recorded")
+    _check(plan.bounds.size == Vector2i(3328, 3328), "settlement-first envelope determines island size")
+    _check(plan.area_sites.size() == 11, "island has eleven procedural settlement cores")
     _check(_site_profile_count(plan, &"smalltown.center") == 2, "island has two larger small-town anchors")
+    _check(_site_bounds_size_count(plan, &"smalltown.center", Vector2i(640, 640)) == 2, "both town anchors receive full 640-cell town envelopes")
     _check(_site_profile_count(plan, &"rural.crossroads") == 3, "island has three rural crossroads")
-    _check(_site_profile_count(plan, &"rural.scattered") == 4, "island has four rural hamlets")
+    _check(_site_profile_count(plan, &"rural.scattered") == 6, "island has six rural home-and-farm clusters")
     _check(_sites_do_not_overlap(plan), "settlement envelopes do not overlap")
     _check(_settlement_coverage_ratio(plan) <= 0.30, "compact settlement cores leave room for managed countryside")
     _check(_has_outer_rural_settlement(plan), "rural development reaches outward without filling the coast")
@@ -42,6 +44,8 @@ func _initialize() -> void:
     _check(not plan.bridge_intents.is_empty(), "real road/river crossings retain explicit bridges")
     _check(not plan.power_nodes.is_empty() and not plan.power_segments.is_empty(), "utilities consume the generated settlement road network")
     _check(plan.water_services.size() == plan.settlements.size(), "island-wide municipal water serves every generated settlement")
+    _check(plan.population_settlements.size() == plan.area_sites.size(), "each real settlement manifest owns a population record")
+    _check(plan.resident_population > 0 and plan.infected_population + plan.survivor_population == plan.resident_population, "infected population is constrained by actual island residents")
 
     var replay: GeneratedGlobalWorldPlan = planner.generate(request)
     _check(replay != null and replay.is_generated() and replay.signature() == plan.signature(), "same island seed replays exactly")
@@ -85,6 +89,14 @@ func _test_rural_land_use_target() -> void:
     _check(wilderness_ratio >= 0.08 and wilderness_ratio <= 0.12, "deterministic countryside field stays near ten percent wilderness")
     _check(fields > wilderness and pasture > wilderness, "managed fields and pasture dominate wilderness")
     _check(wilderness + fields + pasture == samples, "every countryside block receives one real land-use class")
+
+func _site_bounds_size_count(plan: GeneratedGlobalWorldPlan, profile_id: StringName, size: Vector2i) -> int:
+    var count: int = 0
+    for site: Dictionary in plan.area_sites:
+        var bounds: Rect2i = site.get("bounds", Rect2i())
+        if StringName(site.get("area_profile_hint", &"")) == profile_id and bounds.size == size:
+            count += 1
+    return count
 
 func _test_all_area_sites(plan: GeneratedGlobalWorldPlan) -> void:
     var projector := ProjectorClass.new()

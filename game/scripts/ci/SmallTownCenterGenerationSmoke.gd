@@ -41,7 +41,7 @@ func _initialize() -> void:
         return
 
     _check(bool(validator.validate(request, plan).get("ok", false)), "small town passes generic area validation")
-    _check(plan.area_profile_version == 3, "smalltown.center v3 is recorded")
+    _check(plan.area_profile_version == 5, "smalltown.center v5 is recorded")
 
     var commercial_lots: int = _count_land_use(plan, &"commercial_small")
     var residential_lots: int = _count_land_use(plan, &"residential")

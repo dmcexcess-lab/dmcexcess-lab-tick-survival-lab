@@ -86,7 +86,7 @@ func _test_system20_projection(projector: System20AreaRequestProjector, plan: Ge
     _check(baseline_plan.is_generated(), "Candidate 006 baseline still generates")
     if projected_plan.is_generated() and baseline_plan.is_generated():
         _check(projected_plan.signature() == baseline_plan.signature(), "additional System 20 profiles leave Candidate 006 semantic output exact")
-        _check(projected_plan.area_profile_version == 5, "Candidate 006 remains rural.crossroads v5")
+        _check(projected_plan.area_profile_version == 6, "Candidate 006 remains rural.crossroads v6")
         _check(projected_plan.reservations.is_empty() and projected_plan.blocks.is_empty(), "Candidate 006 gains no infrastructure reservation/block facts")
 
     var smalltown_result: Dictionary = projector.project_site(plan, "area.smalltown.center.001")
@@ -99,7 +99,7 @@ func _test_system20_projection(projector: System20AreaRequestProjector, plan: Ge
         var smalltown_plan: GeneratedAreaPlan = local_generator.generate(smalltown_request)
         _check(smalltown_plan.is_generated(), "small-town Candidate 001 still generates from exact v7 global facts")
         if smalltown_plan.is_generated():
-            _check(smalltown_plan.area_profile_version == 3, "small-town Candidate 001 records profile v3")
+            _check(smalltown_plan.area_profile_version == 5, "small-town Candidate 001 records profile v5")
             _check(not smalltown_plan.reservations.is_empty(), "small-town local plan contains infrastructure reservations")
             _check(not smalltown_plan.blocks.is_empty(), "small-town local plan contains semantic town blocks")
 
@@ -119,7 +119,7 @@ func _test_system20_projection(projector: System20AreaRequestProjector, plan: Ge
         var hamlet_plan: GeneratedAreaPlan = local_generator.generate(hamlet_request)
         _check(hamlet_plan.is_generated(), "%s Candidate 001 generates from exact v7 global facts" % hamlet_site_id)
         if hamlet_plan.is_generated():
-            _check(hamlet_plan.area_profile_version == 1, "%s records rural.scattered v1" % hamlet_site_id)
+            _check(hamlet_plan.area_profile_version == 2, "%s records rural.scattered v2" % hamlet_site_id)
             _check(hamlet_plan.blocks.is_empty(), "%s remains block-free sparse rural morphology" % hamlet_site_id)
             _check(hamlet_plan.building_requests.size() == 6, "%s produces six occupied rural properties" % hamlet_site_id)
 

@@ -106,9 +106,9 @@ func _test_profile_contract(generator: LocalAreaGenerator) -> void:
     _check(not watercourse.is_empty() and int(watercourse.get("version", 0)) == 1, "rural.watercourse v1 is registered")
     _check(StringName(watercourse.get("river_ground_semantic", &"")) == &"ground.water_river", "rural.watercourse uses semantic river water terrain")
     _check(generator.area_profile_ids().has(&"rural.watercourse"), "LocalAreaGenerator exposes rural.watercourse")
-    _check(int(profiles.profile(&"rural.crossroads").get("version", 0)) == 5, "rural.crossroads remains v5")
-    _check(int(profiles.profile(&"smalltown.center").get("version", 0)) == 3, "smalltown.center remains v3")
-    _check(int(profiles.profile(&"rural.scattered").get("version", 0)) == 1, "rural.scattered remains v1")
+    _check(int(profiles.profile(&"rural.crossroads").get("version", 0)) == 6, "rural.crossroads remains v6")
+    _check(int(profiles.profile(&"smalltown.center").get("version", 0)) == 5, "smalltown.center remains v5")
+    _check(int(profiles.profile(&"rural.scattered").get("version", 0)) == 2, "rural.scattered remains v2")
     _check(int(profiles.profile(&"rural.open").get("version", 0)) == 1, "rural.open remains v1")
 
 func _bridge_deck_geometry_is_exact(bridge: Dictionary, deck: Rect2i) -> bool:

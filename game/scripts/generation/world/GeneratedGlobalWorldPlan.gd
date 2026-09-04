@@ -21,6 +21,10 @@ var wastewater_services: Array[Dictionary] = []
 var wastewater_nodes: Array[Dictionary] = []
 var wastewater_segments: Array[Dictionary] = []
 var area_sites: Array[Dictionary] = []
+var population_settlements: Array[Dictionary] = []
+var resident_population: int = 0
+var infected_population: int = 0
+var survivor_population: int = 0
 var failure_reason: String = ""
 
 func is_generated() -> bool:
@@ -197,4 +201,19 @@ func signature() -> String:
             String(site.get("area_profile_hint", &"")),
             String(site.get("environment_profile_hint", &"")),
         ])
+    parts.append("population=%d|%d|%d" % [resident_population, infected_population, survivor_population])
+    for population: Dictionary in population_settlements:
+        parts.append("population_settlement=%s|%s|r%d|i%d|s%d" % [
+            String(population.get("settlement_id", "")),
+            String(population.get("area_site_id", "")),
+            int(population.get("resident_population", 0)),
+            int(population.get("infected_population", 0)),
+            int(population.get("survivor_population", 0)),
+        ])
+        for household: Dictionary in population.get("households", []):
+            parts.append("household=%s|%s|c%d" % [
+                String(household.get("building_id", "")),
+                String(household.get("archetype_id", "")),
+                int(household.get("capacity", 0)),
+            ])
     return "\n".join(parts)

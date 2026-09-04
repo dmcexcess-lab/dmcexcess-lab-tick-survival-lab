@@ -7,6 +7,8 @@ const PlanClass = preload("res://scripts/generation/world/GeneratedGlobalWorldPl
 const ProfilesClass = preload("res://scripts/generation/world/GlobalWorldProfileCatalog.gd")
 const BridgePlannerClass = preload("res://scripts/generation/world/GlobalBridgeIntentPlanner.gd")
 const HydrologyQueryClass = preload("res://scripts/generation/world/GlobalHydrologyQuery.gd")
+const SettlementHierarchyClass = preload("res://scripts/generation/world/IslandSettlementHierarchyPlanner.gd")
+const PopulationPlannerClass = preload("res://scripts/generation/world/IslandPopulationPlanner.gd")
 const Surface = preload("res://scripts/generation/shared/IslandSurfaceMath.gd")
 
 const INVALID_CELL := Vector2i(-999999, -999999)
@@ -15,6 +17,8 @@ var _base_planner: GlobalWorldPlanner = BasePlannerClass.new()
 var _bridges: GlobalBridgeIntentPlanner = BridgePlannerClass.new()
 var _hydrology: GlobalHydrologyQuery = HydrologyQueryClass.new()
 var _profiles: GlobalWorldProfileCatalog = ProfilesClass.new()
+var _settlement_hierarchy: IslandSettlementHierarchyPlanner = SettlementHierarchyClass.new()
+var _population_planner: IslandPopulationPlanner = PopulationPlannerClass.new()
 
 func generate(request: GlobalWorldGenerationRequest) -> GeneratedGlobalWorldPlan:
     var failed := PlanClass.new()
@@ -29,10 +33,14 @@ func generate(request: GlobalWorldGenerationRequest) -> GeneratedGlobalWorldPlan
     # Compose the island through the proven rural regional planner pipeline, but
     # use the island profile so island-specific settlement identity and spacing
     # are authoritative before coast/ocean truth is layered over the skeleton.
+    var planning_bounds: Rect2i = _settlement_hierarchy.planning_bounds(request, island_profile)
+    if planning_bounds.size.x <= 0 or planning_bounds.size.y <= 0:
+        failed.failure_reason = "island_settlement_envelope_invalid"
+        return failed
     var base_request := RequestClass.new(
         request.world_id,
         request.seed,
-        request.bounds,
+        planning_bounds,
         ProfilesClass.TEMPERATE_ISLAND_REGION
     )
     var base: GeneratedGlobalWorldPlan = _base_planner.generate(base_request)
@@ -43,14 +51,14 @@ func generate(request: GlobalWorldGenerationRequest) -> GeneratedGlobalWorldPlan
     var plan := PlanClass.new()
     plan.world_id = request.world_id
     plan.seed = request.seed
-    plan.bounds = request.bounds
+    plan.bounds = planning_bounds
     plan.profile_id = ProfilesClass.TEMPERATE_ISLAND_REGION
     plan.profile_version = int(island_profile.get("version", 1))
-    plan.geography_cells = _decorate_geography(base.geography_cells, request, island_profile)
+    plan.geography_cells = _decorate_geography(base.geography_cells, base_request, island_profile)
     plan.river_segments = base.river_segments.duplicate(true)
     plan.settlements = base.settlements.duplicate(true)
 
-    plan.road_segments = _clip_base_roads(base.road_segments, request, island_profile)
+    plan.road_segments = _clip_base_roads(base.road_segments, base_request, island_profile)
     if plan.road_segments.is_empty():
         plan.failure_reason = "island_road_clipping_failed"
         return plan
@@ -59,7 +67,7 @@ func generate(request: GlobalWorldGenerationRequest) -> GeneratedGlobalWorldPlan
         base.area_sites,
         plan.settlements,
         plan.river_segments,
-        request,
+        base_request,
         island_profile
     )
     if not bool(base_sites_result.get("ok", false)):
@@ -88,9 +96,18 @@ func generate(request: GlobalWorldGenerationRequest) -> GeneratedGlobalWorldPlan
     plan.wastewater_services = base.wastewater_services.duplicate(true)
     plan.wastewater_nodes = base.wastewater_nodes.duplicate(true)
     plan.wastewater_segments = base.wastewater_segments.duplicate(true)
-    plan.regions = _build_regions(base.regions, request.bounds)
+    plan.regions = _build_regions(base.regions, planning_bounds)
 
-    var validation: Dictionary = _validate(request, plan, island_profile)
+    var population_result: Dictionary = _population_planner.plan(plan)
+    if not bool(population_result.get("ok", false)):
+        plan.failure_reason = String(population_result.get("failure_reason", "island_population_planning_failed"))
+        return plan
+    plan.population_settlements = population_result.get("settlements", [])
+    plan.resident_population = int(population_result.get("resident_population", 0))
+    plan.infected_population = int(population_result.get("infected_population", 0))
+    plan.survivor_population = int(population_result.get("survivor_population", 0))
+
+    var validation: Dictionary = _validate(base_request, plan, island_profile)
     if not bool(validation.get("ok", false)):
         plan.failure_reason = "island_world_validation_failed:%s" % ",".join(PackedStringArray(validation.get("failures", [])))
     return plan
@@ -536,6 +553,16 @@ func _validate(
         failures.append("island_bridge_intent_missing")
     if plan.power_nodes.is_empty() or plan.power_segments.is_empty():
         failures.append("island_power_missing")
+    if plan.population_settlements.size() != plan.area_sites.size() or plan.resident_population <= 0:
+        failures.append("island_population_missing")
+    if plan.infected_population < 0 or plan.survivor_population < 0 or plan.infected_population + plan.survivor_population != plan.resident_population:
+        failures.append("island_population_accounting_invalid")
+    for population: Dictionary in plan.population_settlements:
+        var residents: int = int(population.get("resident_population", 0))
+        var infected: int = int(population.get("infected_population", -1))
+        var survivors: int = int(population.get("survivor_population", -1))
+        if residents <= 0 or infected < 0 or survivors < 0 or infected + survivors != residents:
+            failures.append("island_settlement_population_invalid:%s" % String(population.get("settlement_id", "")))
     return {"ok": failures.is_empty(), "failures": failures}
 
 func _surface_kind(request: GlobalWorldGenerationRequest, profile: Dictionary, cell: Vector2i) -> StringName:

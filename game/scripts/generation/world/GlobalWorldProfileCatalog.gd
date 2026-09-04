@@ -13,7 +13,7 @@ func profile(profile_id: StringName) -> Dictionary:
     if profile_id == TEMPERATE_ISLAND_REGION:
         var result: Dictionary = _rural_profile()
         result["id"] = TEMPERATE_ISLAND_REGION
-        result["version"] = 6
+        result["version"] = 7
         result["island_enabled"] = true
         result["settlement_layout"] = &"rural_island_hierarchy"
         result["reuse_world_seed_for_central_site"] = false
@@ -24,12 +24,15 @@ func profile(profile_id: StringName) -> Dictionary:
         # interior surface is reserved as undisturbed natural land.
         result["island_smalltown_count"] = 2
         result["island_crossroads_count"] = 3
-        result["island_hamlet_count"] = 4
-        result["island_smalltown_min_spacing"] = 384
+        result["island_hamlet_count"] = 6
+        result["island_smalltown_min_spacing"] = 640
         result["island_crossroads_min_spacing"] = 288
         result["island_hamlet_min_spacing"] = 256
         result["island_wilderness_fraction"] = 0.10
         result["island_land_use_block_size"] = 64
+        # Settlement geometry determines the playable envelope before geography
+        # and coastline generation. The request bounds are only a stable anchor.
+        result["island_edge_padding"] = 320
 
         result["protected_cross_half_span"] = 160
         result["protected_cross_half_thickness"] = 96

@@ -14,6 +14,17 @@ This is the authoritative continuation checkpoint. Read `README_SOPS.md`, fetch 
 - `CHANGELOG_LATEST.md` records this cleanup. Later documentation-only heads do not change the executable relative to `57e05556...`.
 - Actual Godot project root is **`game/`**.
 
+## Unpublished checkpoint — settlement-first island and population truth
+
+Local branch `codex/town-first-island` is two commits ahead of fetched `main` `3c57dc0b674a122937e8b870fde2bdbd338a8975`:
+
+- `a8f744e721916560cb798b70a43eee41abacbae2` — derives the island envelope from the settlement hierarchy instead of treating the incoming fixed rectangle as a coast constraint; creates two 640×640 town sites, three village/crossroads sites and six rural home/farm sites.
+- `56a931871f8f96564c300164dc42b2a3a53d20fd` — derives every settlement's resident, infected and survivor counts from the actual deterministic local building manifest. Household records retain real building IDs/archetypes/capacity, and infected + survivor must exactly equal resident population. No zombie actor population has been added yet; this is the authoritative aggregate source it must consume.
+
+The local Godot 4.7.1 executable at `/workspace/scratch/9a399f92bc4a/.godot-check/Godot_v4.7.1-stable_linux.x86_64` currently segfaults before `--version`, so no local Godot smoke could run. `git diff --check` passed.
+
+**Concrete blocker:** direct publication to shared `main` was rejected twice by the repository guard as a high-impact side effect. The user approved the generator work, but the guard requires an explicit statement approving a direct push to `main`. Do not use another publishing route as a workaround. After explicit publishing approval, push `56a9318` to `main`, wait for exact-head Actions/Pages, inspect and repair failures, then update changelog and this handoff as the final write.
+
 ## Completed operation — canonical ownership / legacy scaffold cleanup
 
 User approved the prior repository audit and explicitly directed implementation. This operation removed obsolete live ownership and stale demo scaffolding without pretending the remaining gameplay-closure features are complete.
@@ -224,11 +235,13 @@ Automated verification is green but human acceptance remains necessary for:
 
 Unless newer user direction supersedes this:
 
-1. Begin the **practical usable-object closure** rather than another scaffold refactor.
-2. First establish/reuse one narrow generalized action/effect seam only where it genuinely reduces duplication: real carried/target item + prerequisite tool/resource + broad skill + WHEN + owning-state commit.
-3. Close **first aid / medicine and fire / cooking** against existing Health/Injury, condition, freshness, crafting, lighting/weather and inventory owners.
-4. Close **Mechanical world-object repair/deconstruction** and route player-facing utility repair through real tools/material entities + WHEN into the existing utility condition owner.
-5. Wire broader **Awareness** and first real **Stealth** consumers into the existing perception/sound owners without bypassing LOS.
-6. Extend real furniture/utility affordances and vehicle component maintenance only where authoritative target/component state exists.
-7. Run owning/protected regressions, verify exact executable head and Pages, then retire only the historical classes/tests whose assertions have been migrated.
-8. After this closure, proceed toward Actor/NPC AI + combat/causal outbreak, then final graphics/UI overhaul -> Beta, subject to newer user direction.
+1. Obtain explicit approval to push `56a9318` directly to `main`; verify its exact-head Actions and Pages before any further feature work.
+2. If the island change is accepted, wire future zombie hydration/movement to `GeneratedGlobalWorldPlan.population_settlements`; do not add an independent spawn count.
+3. Then begin the **practical usable-object closure** rather than another scaffold refactor.
+4. First establish/reuse one narrow generalized action/effect seam only where it genuinely reduces duplication: real carried/target item + prerequisite tool/resource + broad skill + WHEN + owning-state commit.
+5. Close **first aid / medicine and fire / cooking** against existing Health/Injury, condition, freshness, crafting, lighting/weather and inventory owners.
+6. Close **Mechanical world-object repair/deconstruction** and route player-facing utility repair through real tools/material entities + WHEN into the existing utility condition owner.
+7. Wire broader **Awareness** and first real **Stealth** consumers into the existing perception/sound owners without bypassing LOS.
+8. Extend real furniture/utility affordances and vehicle component maintenance only where authoritative target/component state exists.
+9. Run owning/protected regressions, verify exact executable head and Pages, then retire only the historical classes/tests whose assertions have been migrated.
+10. After this closure, proceed toward Actor/NPC AI + combat/causal outbreak, then final graphics/UI overhaul -> Beta, subject to newer user direction.
