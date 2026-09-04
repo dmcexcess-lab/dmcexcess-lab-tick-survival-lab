@@ -2,6 +2,7 @@ extends RefCounted
 class_name WorldInteractionPlayerController
 
 const Layers = preload("res://scripts/foundation/spatial/SpatialLayer.gd")
+const TickRulesClass = preload("res://scripts/foundation/time/TickRules.gd")
 
 signal action_started(target_id, action_id, action_serial)
 signal action_finished(target_id, action_id, success, reason)
@@ -102,9 +103,27 @@ func _on_action_requested(target_id: String, action_id: StringName) -> void:
         action_finished.emit(target_id, action_id, false, reason)
         return
     action_started.emit(target_id, action_id, serial)
+
+    # Track the exact WHEN result. Merely observing that the actor is no longer busy is
+    # insufficient: a failed Mechanical/commit action also leaves no active action.
+    var resolved: Dictionary = {}
+    var finished_callback := func(action: TimedAction) -> void:
+        if action != null and action.serial == serial:
+            resolved["status"] = action.status
+            resolved["reason"] = action.reason
+    _kernel.action_finished.connect(finished_callback)
     _kernel.run_until_stop()
-    var success: bool = not _kernel.has_active_action(_actor_id)
-    action_finished.emit(target_id, action_id, success, "completed" if success else "action_incomplete")
+    if _kernel.action_finished.is_connected(finished_callback):
+        _kernel.action_finished.disconnect(finished_callback)
+
+    var status: int = int(resolved.get("status", -1))
+    var success: bool = status == TickRulesClass.ActionStatus.COMPLETED
+    var final_reason: String = String(resolved.get("reason", ""))
+    if success and final_reason.is_empty():
+        final_reason = "completed"
+    elif not success and final_reason.is_empty():
+        final_reason = "action_incomplete"
+    action_finished.emit(target_id, action_id, success, final_reason)
 
 func _run_delegated(target_id: String, action_id: StringName, handler: Callable) -> void:
     var value: Variant = handler.call(_actor_id, target_id, action_id)

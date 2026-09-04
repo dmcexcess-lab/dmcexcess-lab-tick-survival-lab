@@ -4,6 +4,7 @@ class_name WorldInteractionOfferProvider
 const Layers = preload("res://scripts/foundation/spatial/SpatialLayer.gd")
 const DoorValue = preload("res://scripts/simulation/doors/DoorStateValue.gd")
 const Actions = preload("res://scripts/simulation/interaction/WorldInteractionActionService.gd")
+const RepairActions = preload("res://scripts/simulation/interaction/WorldObjectRepairActionService.gd")
 
 const CATEGORY: StringName = &"world"
 const PRIORITY: int = 110
@@ -64,6 +65,9 @@ func _append_door(result: Array[InteractionOffer], actor_id: String, target_id: 
     var locked: bool = _state.is_locked(target_id)
     var door_state: StringName = _doors.state(target_id)
     if broken:
+        var entity: WorldEntityRecord = _world.entity(target_id)
+        if entity != null and _catalog.repairable(entity.semantic_type):
+            _append(result, actor_id, target_id, placement, RepairActions.ACTION_ID, "REPAIR", PRIORITY + 12)
         return
     if boards > 0:
         _append(result, actor_id, target_id, placement, Actions.OPENING_UNBOARD, "REMOVE BOARD", PRIORITY + 8)

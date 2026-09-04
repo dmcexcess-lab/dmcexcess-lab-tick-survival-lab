@@ -16,6 +16,7 @@ const InteractionStateClass = preload("res://scripts/simulation/interaction/Worl
 const InteractionCatalogClass = preload("res://scripts/simulation/interaction/WorldInteractionCatalog.gd")
 const InteractionItemsClass = preload("res://scripts/simulation/interaction/WorldInteractionItemCatalog.gd")
 const InteractionActionsClass = preload("res://scripts/simulation/interaction/WorldInteractionActionService.gd")
+const RepairActionsClass = preload("res://scripts/simulation/interaction/WorldObjectRepairActionService.gd")
 const InteractionOffersClass = preload("res://scripts/simulation/interaction/WorldInteractionOfferProvider.gd")
 const SustainmentOffersClass = preload("res://scripts/simulation/interaction/SustainmentInteractionOfferProvider.gd")
 const InteractionPanelClass = preload("res://scripts/ui/WorldInteractionPanel.gd")
@@ -37,6 +38,7 @@ var _vehicle_controls: VehiclePlayerControls = null
 var _world_interaction_state: WorldInteractableState = null
 var _world_interaction_catalog: WorldInteractionCatalog = null
 var _world_interaction_actions: WorldInteractionActionService = null
+var _world_repair_actions: WorldObjectRepairActionService = null
 var _world_interaction_offers: WorldInteractionOfferProvider = null
 var _sustainment_interaction_offers: SustainmentInteractionOfferProvider = null
 var _world_interaction_panel: WorldInteractionPanel = null
@@ -179,6 +181,24 @@ func _boot_world_interactions() -> bool:
     )
     if not _world_interaction_actions.is_ready():
         return false
+    _world_repair_actions = RepairActionsClass.new(
+        _world,
+        _world_mutations,
+        _door_state,
+        _door_transition,
+        _interaction_reach,
+        _kernel,
+        _skill_checks,
+        _carry_query,
+        _hand_state,
+        _hand_mutations,
+        _inventory_state,
+        _inventory_mutations,
+        _world_interaction_state,
+        _world_interaction_catalog
+    )
+    if not _world_repair_actions.is_ready():
+        return false
     if not _door_passage.set_access_provider(Callable(self, "_door_passage_allowed")):
         return false
 
@@ -231,6 +251,11 @@ func _boot_world_interactions() -> bool:
     for action_id: StringName in InteractionActionsClass.CORE_ACTIONS:
         if not _world_interaction_controller.register_handler(action_id, Callable(_world_interaction_actions, "request_action")):
             return false
+    if not _world_interaction_controller.register_handler(
+        RepairActionsClass.ACTION_ID,
+        Callable(_world_repair_actions, "request_action")
+    ):
+        return false
     for action_id: StringName in [
         SustainmentOffersClass.DRINK_FROM_FIXTURE,
         SustainmentOffersClass.REST_ON_FURNITURE,

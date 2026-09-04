@@ -37,6 +37,8 @@ const METAL_DECONSTRUCT: Dictionary = {
 
 const WOOD_PLANK: StringName = &"item.material.wood_plank"
 const SCRAP_METAL: StringName = &"item.material.scrap_metal"
+const NAILS: StringName = &"item.material.nails_box"
+const HAMMER: StringName = &"item.tool.hammer"
 
 func is_door(semantic_type: StringName) -> bool:
     return String(semantic_type).begins_with("door.")
@@ -61,6 +63,24 @@ func rest_surface(semantic_type: StringName) -> StringName:
 
 func is_cooking_stove(semantic_type: StringName) -> bool:
     return COOKING_STOVES.has(semantic_type)
+
+## Repair profiles describe only repairs that can currently commit truthfully with
+## existing physical resources. Broken doors have real wood/fastener prerequisites.
+## Broken windows intentionally have no profile until a real glass replacement item
+## and acquisition path exist; clearing broken window truth without glass would be fake.
+func repair_profile(semantic_type: StringName) -> Dictionary:
+    if is_door(semantic_type):
+        return {
+            "repair_kind": &"door",
+            "tool_semantics": [HAMMER],
+            "material_semantics": [WOOD_PLANK, NAILS],
+            "difficulty": 3,
+            "base_duration_ticks": 16,
+        }
+    return {}
+
+func repairable(semantic_type: StringName) -> bool:
+    return not repair_profile(semantic_type).is_empty()
 
 func deconstruction_profile(semantic_type: StringName) -> Dictionary:
     if WOOD_DECONSTRUCT.has(semantic_type):
