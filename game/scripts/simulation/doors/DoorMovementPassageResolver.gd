@@ -7,6 +7,7 @@ const DoorValue = preload("res://scripts/simulation/doors/DoorStateValue.gd")
 var _world: WorldState = null
 var _state: DoorStateStore = null
 var _transitions: DoorPhysicalTransitionService = null
+var _access_provider: Callable = Callable()
 
 func _init(
     world_state: WorldState = null,
@@ -20,6 +21,11 @@ func _init(
 func is_ready() -> bool:
     return _world != null and _state != null and _transitions != null and _transitions.is_ready()
 
+func set_access_provider(provider: Callable) -> bool:
+    if not provider.is_valid(): return false
+    _access_provider = provider
+    return true
+
 func can_resolve(actor_id: String, action_type: StringName, query_result: SpatialQueryResult) -> bool:
     if not is_ready() or actor_id.strip_edges().is_empty() or query_result == null:
         return false
@@ -32,6 +38,8 @@ func can_resolve(actor_id: String, action_type: StringName, query_result: Spatia
         return false
     var entity: WorldEntityRecord = _world.entity(door_id)
     if entity == null or not String(entity.semantic_type).begins_with("door."):
+        return false
+    if _access_provider.is_valid() and not bool(_access_provider.call(actor_id, door_id, action_type)):
         return false
     return _state.state(door_id) == DoorValue.CLOSED
 

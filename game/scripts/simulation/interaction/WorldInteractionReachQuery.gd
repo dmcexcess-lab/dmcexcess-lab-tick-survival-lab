@@ -4,11 +4,12 @@ class_name WorldInteractionReachQuery
 const Facing = preload("res://scripts/foundation/spatial/SpatialFacing.gd")
 const Layers = preload("res://scripts/foundation/spatial/SpatialLayer.gd")
 
-## Neutral System-29 actor-to-world-object reach query.
-## Candidate 001 preserves the former System-24 rule exactly: actor footprint plus
-## the one-cell-forward fringe in current facing.
+## Neutral System-29 actor-to-world-interactable reach query.
+## CONTACT_FORWARD preserves the original actor footprint + one-cell-forward fringe.
+## Interactable targets may live on OBJECT or STRUCTURE; terrain/effects remain excluded.
 
 const CONTACT_FORWARD: StringName = &"contact_forward"
+const INTERACTABLE_CHANNELS: Array[int] = [Layers.Channel.OBJECT, Layers.Channel.STRUCTURE]
 
 var _world: WorldState = null
 
@@ -47,21 +48,10 @@ func reachable_cells(actor_id: String, profile_id: StringName = CONTACT_FORWARD)
     return result
 
 func candidate_object_ids(actor_id: String, profile_id: StringName = CONTACT_FORWARD) -> Array[String]:
-    var result: Array[String] = []
-    if not is_ready() or not supports_profile(profile_id):
-        return result
-    var seen: Dictionary = {}
-    for cell: Vector2i in reachable_cells(actor_id, profile_id):
-        for entity_id: String in _world.entities_at(cell, Layers.Channel.OBJECT):
-            if seen.has(entity_id):
-                continue
-            var placement: WorldPlacement = _world.placement(entity_id)
-            if placement == null or placement.channel != Layers.Channel.OBJECT:
-                continue
-            seen[entity_id] = true
-            result.append(entity_id)
-    result.sort()
-    return result
+    return _candidate_ids(actor_id, profile_id, [Layers.Channel.OBJECT])
+
+func candidate_interactable_ids(actor_id: String, profile_id: StringName = CONTACT_FORWARD) -> Array[String]:
+    return _candidate_ids(actor_id, profile_id, INTERACTABLE_CHANNELS)
 
 func target_reachable(actor_id: String, target_entity_id: String, profile_id: StringName = CONTACT_FORWARD) -> bool:
     if not is_ready() or not supports_profile(profile_id):
@@ -70,7 +60,7 @@ func target_reachable(actor_id: String, target_entity_id: String, profile_id: St
     if target.is_empty() or not _world.has_entity(target):
         return false
     var target_placement: WorldPlacement = _world.placement(target)
-    if target_placement == null or target_placement.channel != Layers.Channel.OBJECT:
+    if target_placement == null or target_placement.channel not in INTERACTABLE_CHANNELS:
         return false
 
     var reachable: Dictionary = {}
@@ -82,6 +72,24 @@ func target_reachable(actor_id: String, target_entity_id: String, profile_id: St
         if reachable.has(cell):
             return true
     return false
+
+func _candidate_ids(actor_id: String, profile_id: StringName, channels: Array[int]) -> Array[String]:
+    var result: Array[String] = []
+    if not is_ready() or not supports_profile(profile_id):
+        return result
+    var seen: Dictionary = {}
+    for cell: Vector2i in reachable_cells(actor_id, profile_id):
+        for channel: int in channels:
+            for entity_id: String in _world.entities_at(cell, channel):
+                if seen.has(entity_id):
+                    continue
+                var placement: WorldPlacement = _world.placement(entity_id)
+                if placement == null or placement.channel != channel:
+                    continue
+                seen[entity_id] = true
+                result.append(entity_id)
+    result.sort()
+    return result
 
 static func _cell_less(a: Vector2i, b: Vector2i) -> bool:
     if a.y == b.y:

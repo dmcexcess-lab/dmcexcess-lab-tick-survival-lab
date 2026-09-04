@@ -10,6 +10,7 @@ const ActorRendererClass = preload("res://scripts/render/ActorLayerRenderer.gd")
 const PowerLineRendererClass = preload("res://scripts/render/PowerLinePresentationRenderer.gd")
 const LightingRendererClass = preload("res://scripts/render/PhysicalLightingPresentationRenderer.gd")
 const WeatherRendererClass = preload("res://scripts/render/WeatherPresentationRenderer.gd")
+const WorldInteractionStateRendererClass = preload("res://scripts/render/WorldInteractionStateRenderer.gd")
 const InteractionRendererClass = preload("res://scripts/render/InteractionHighlightRenderer.gd")
 const PerceptionOverlayClass = preload("res://scripts/render/PerceptionOverlayRenderer.gd")
 const PerformanceDevPanelClass = preload("res://scripts/ui/PerformanceDevPanel.gd")
@@ -25,6 +26,7 @@ var _actors: ActorLayerRenderer = null
 var _power_lines: PowerLinePresentationRenderer = null
 var _lighting: PhysicalLightingPresentationRenderer = null
 var _weather: WeatherPresentationRenderer = null
+var _world_interaction_state: WorldInteractionStateRenderer = null
 var _interaction: InteractionHighlightRenderer = null
 var _perception: PerceptionOverlayRenderer = null
 var _performance_panel: PerformanceDevPanel = null
@@ -95,6 +97,14 @@ func weather_debug_snapshot() -> Dictionary:
     _ensure_layers()
     return _weather.presentation_snapshot()
 
+func configure_world_interaction_state(world: WorldState, state: WorldInteractableState) -> bool:
+    _ensure_layers()
+    if not _world_interaction_state.configure(world, state):
+        return false
+    if _ground.has_valid_view():
+        return _world_interaction_state.set_visible_window(_ground.visible_origin(), _ground.visible_size(), _ground.cell_pixels())
+    return true
+
 func configure_interaction_affordances(query: InteractionAffordanceQuery) -> bool:
     _ensure_layers()
     return _interaction.configure(query)
@@ -141,9 +151,16 @@ func set_visible_window(origin: Vector2i, size_cells: Vector2i, cell_pixels: flo
     if _lighting.is_configured(): lighting_ok = _lighting.set_visible_window(origin, size_cells, cell_pixels)
     var weather_ok := true
     if _weather.is_configured(): weather_ok = _weather.set_visible_window(origin, size_cells, cell_pixels)
+    var world_state_ok := true
+    if _world_interaction_state.is_configured(): world_state_ok = _world_interaction_state.set_visible_window(origin, size_cells, cell_pixels)
     var interaction_ok := true
     if _interaction.is_configured(): interaction_ok = _interaction.set_visible_window(origin, size_cells, cell_pixels)
-    return _ground.set_visible_window(origin, size_cells, cell_pixels) and _structures.set_visible_window(origin, size_cells, cell_pixels) and _props.set_visible_window(origin, size_cells, cell_pixels) and _actors.set_visible_window(origin, size_cells, cell_pixels) and power_ok and vehicle_ok and lighting_ok and weather_ok and interaction_ok and _perception.set_visible_window(origin, size_cells, cell_pixels)
+    return _ground.set_visible_window(origin, size_cells, cell_pixels) \
+        and _structures.set_visible_window(origin, size_cells, cell_pixels) \
+        and _props.set_visible_window(origin, size_cells, cell_pixels) \
+        and _actors.set_visible_window(origin, size_cells, cell_pixels) \
+        and power_ok and vehicle_ok and lighting_ok and weather_ok and world_state_ok and interaction_ok \
+        and _perception.set_visible_window(origin, size_cells, cell_pixels)
 
 func is_configured() -> bool:
     return _configured
@@ -171,6 +188,7 @@ func _ensure_layers() -> void:
     _prop_foreground = PropForegroundRendererClass.new(); _prop_foreground.name = "PropForeground"; _prop_foreground.z_index = 35; add_child(_prop_foreground)
     _lighting = LightingRendererClass.new(); _lighting.name = "PhysicalLighting"; _lighting.z_index = 40; add_child(_lighting)
     _weather = WeatherRendererClass.new(); _weather.name = "Weather"; _weather.z_index = 50; add_child(_weather)
+    _world_interaction_state = WorldInteractionStateRendererClass.new(); _world_interaction_state.name = "WorldInteractionState"; _world_interaction_state.z_index = 85; add_child(_world_interaction_state)
     _interaction = InteractionRendererClass.new(); _interaction.name = "InteractionHighlights"; _interaction.z_index = 90; add_child(_interaction)
     _perception = PerceptionOverlayClass.new(); _perception.name = "Perception"; _perception.z_index = 100; add_child(_perception)
     _performance_panel = PerformanceDevPanelClass.new(); _performance_panel.name = "PerformanceDev"; add_child(_performance_panel)

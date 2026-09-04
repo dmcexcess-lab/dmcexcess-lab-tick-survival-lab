@@ -3,8 +3,9 @@ class_name ActionSoundEmitterAdapter
 
 const Profiles = preload("res://scripts/simulation/sound/SoundEmissionProfileCatalog.gd")
 
-## Narrow adapter from already-committed physical Movement/Door events into
-## System 26 emissions. Source systems remain sound-agnostic.
+## Narrow adapter from already-committed physical Movement/Door events into System 26 emissions.
+## Door sound intentionally distinguishes quiet manual opening, normal walking passage,
+## and loud running/breaking passage.
 
 var _movement: MovementActionService = null
 var _door_transitions: DoorPhysicalTransitionService = null
@@ -40,12 +41,7 @@ func _on_movement_committed(
         return
     if action_type != MovementActionService.STEP_FORWARD and action_type != MovementActionService.STEP_BACKWARD:
         return
-    _sound.emit_sound(
-        Profiles.WALK_STEP,
-        target_anchor,
-        actor_id,
-        "footsteps:%s" % actor_id
-    )
+    _sound.emit_sound(Profiles.WALK_STEP, target_anchor, actor_id, "footsteps:%s" % actor_id)
 
 func _on_run_stride_committed(
     actor_id: String,
@@ -56,12 +52,7 @@ func _on_run_stride_committed(
 ) -> void:
     if _sound == null:
         return
-    _sound.emit_sound(
-        Profiles.RUN_STRIDE,
-        target_anchor,
-        actor_id,
-        "footsteps:%s" % actor_id
-    )
+    _sound.emit_sound(Profiles.RUN_STRIDE, target_anchor, actor_id, "footsteps:%s" % actor_id)
 
 func _on_door_transition_resolved(
     actor_id: String,
@@ -74,10 +65,9 @@ func _on_door_transition_resolved(
 ) -> void:
     if _sound == null:
         return
-    var profile_id: StringName = Profiles.DOOR_LOUD if noise_class == DoorPhysicalTransitionService.NOISE_LOUD else Profiles.DOOR_NORMAL
-    _sound.emit_sound(
-        profile_id,
-        cell,
-        actor_id,
-        "door:%s" % door_id
-    )
+    var profile_id: StringName = Profiles.DOOR_NORMAL
+    if noise_class == DoorPhysicalTransitionService.NOISE_QUIET:
+        profile_id = Profiles.DOOR_QUIET
+    elif noise_class == DoorPhysicalTransitionService.NOISE_LOUD:
+        profile_id = Profiles.DOOR_LOUD
+    _sound.emit_sound(profile_id, cell, actor_id, "door:%s" % door_id)

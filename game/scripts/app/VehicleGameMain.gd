@@ -12,6 +12,16 @@ const VehicleItems = preload("res://scripts/simulation/vehicles/VehicleItemCatal
 const VehicleControllerClass = preload("res://scripts/player/VehiclePlayerController.gd")
 const VehicleControlsClass = preload("res://scripts/ui/VehiclePlayerControls.gd")
 
+const InteractionStateClass = preload("res://scripts/simulation/interaction/WorldInteractableState.gd")
+const InteractionCatalogClass = preload("res://scripts/simulation/interaction/WorldInteractionCatalog.gd")
+const InteractionItemsClass = preload("res://scripts/simulation/interaction/WorldInteractionItemCatalog.gd")
+const InteractionActionsClass = preload("res://scripts/simulation/interaction/WorldInteractionActionService.gd")
+const InteractionOffersClass = preload("res://scripts/simulation/interaction/WorldInteractionOfferProvider.gd")
+const SustainmentOffersClass = preload("res://scripts/simulation/interaction/SustainmentInteractionOfferProvider.gd")
+const InteractionPanelClass = preload("res://scripts/ui/WorldInteractionPanel.gd")
+const InteractionControllerClass = preload("res://scripts/player/WorldInteractionPlayerController.gd")
+const Workstations = preload("res://scripts/simulation/crafting/CraftingWorkstationCatalog.gd")
+
 var _vehicle_profiles: VehicleProfileCatalog = null
 var _vehicle_state: VehicleState = null
 var _vehicle_seeder: VehicleWorldSeeder = null
@@ -22,10 +32,21 @@ var _vehicle_lighting: VehicleLightingSourceAdapter = null
 var _vehicle_controller: VehiclePlayerController = null
 var _vehicle_controls: VehiclePlayerControls = null
 
+var _world_interaction_state: WorldInteractableState = null
+var _world_interaction_catalog: WorldInteractionCatalog = null
+var _world_interaction_actions: WorldInteractionActionService = null
+var _world_interaction_offers: WorldInteractionOfferProvider = null
+var _sustainment_interaction_offers: SustainmentInteractionOfferProvider = null
+var _world_interaction_panel: WorldInteractionPanel = null
+var _world_interaction_controller: WorldInteractionPlayerController = null
+var _world_blocks_interaction: bool = false
+
 func _boot_canonical_demo() -> bool:
     if not super._boot_canonical_demo():
         return false
-    return _boot_system36()
+    if not _boot_system36():
+        return false
+    return _boot_world_interactions()
 
 func _boot_system36() -> bool:
     if _world == null or _world_mutations == null or _spatial_query == null or _collision_catalog == null \
@@ -122,6 +143,107 @@ func _boot_system36() -> bool:
         return false
     return true
 
+func _boot_world_interactions() -> bool:
+    if _interaction_reach == null or _interaction_affordances == null or _door_state == null \
+        or _door_transition == null or _door_passage == null or _spatial_query == null \
+        or _skill_checks == null or _carry_query == null or _hand_state == null or _hand_mutations == null \
+        or _carry_acquisition == null or _sustainment_actions == null or _utilities == null \
+        or _crafting_plans == null or _crafting_interaction_offers == null:
+        return false
+
+    _world_interaction_catalog = InteractionCatalogClass.new()
+    _world_interaction_state = InteractionStateClass.new()
+    if not InteractionItemsClass.register_physical_profiles(_physical_catalog):
+        return false
+
+    _world_interaction_actions = InteractionActionsClass.new(
+        _world,
+        _world_mutations,
+        _door_state,
+        _door_transition,
+        _interaction_reach,
+        _spatial_query,
+        _kernel,
+        _skill_checks,
+        _carry_query,
+        _hand_state,
+        _hand_mutations,
+        _inventory_state,
+        _inventory_mutations,
+        _carry_acquisition,
+        _world_interaction_state,
+        _world_interaction_catalog
+    )
+    if not _world_interaction_actions.is_ready():
+        return false
+    if not _door_passage.set_access_provider(Callable(self, "_door_passage_allowed")):
+        return false
+
+    _world_interaction_offers = InteractionOffersClass.new(
+        _world,
+        _interaction_reach,
+        _door_state,
+        _world_interaction_state,
+        _world_interaction_catalog
+    )
+    if not _interaction_affordances.register_provider(_world_interaction_offers):
+        return false
+
+    if not _sustainment_actions.set_potable_target_provider(Callable(self, "_potable_target_available")) \
+        or not _sustainment_actions.set_rest_target_provider(Callable(self, "_rest_target_surface")):
+        return false
+    _sustainment_interaction_offers = SustainmentOffersClass.new(
+        _world,
+        _interaction_reach,
+        _world_interaction_catalog,
+        Callable(self, "_potable_target_available")
+    )
+    if not _interaction_affordances.register_provider(_sustainment_interaction_offers):
+        return false
+
+    if not _crafting_plans.set_workstation_availability_provider(Callable(self, "_crafting_workstation_available")):
+        return false
+    var utility_callback := Callable(self, "_on_interaction_utility_changed")
+    if not _utilities.power_changed.is_connected(utility_callback):
+        _utilities.power_changed.connect(utility_callback)
+    if not _utilities.water_changed.is_connected(utility_callback):
+        _utilities.water_changed.connect(utility_callback)
+
+    if not _world_view.configure_world_interaction_state(_world, _world_interaction_state):
+        return false
+
+    _world_interaction_panel = InteractionPanelClass.new()
+    add_child(_world_interaction_panel)
+    _world_interaction_panel.interaction_blocked_changed.connect(_on_world_interaction_blocked_changed)
+    _world_interaction_controller = InteractionControllerClass.new(
+        _world,
+        _interaction_affordances,
+        _kernel,
+        _world_interaction_panel,
+        FixtureClass.PLAYER_ID
+    )
+    if not _world_interaction_controller.is_ready():
+        return false
+
+    for action_id: StringName in InteractionActionsClass.CORE_ACTIONS:
+        if not _world_interaction_controller.register_handler(action_id, Callable(_world_interaction_actions, "request_action")):
+            return false
+    for action_id: StringName in [
+        SustainmentOffersClass.DRINK_FROM_FIXTURE,
+        SustainmentOffersClass.REST_ON_FURNITURE,
+        SustainmentOffersClass.SLEEP_IN_BED,
+    ]:
+        if not _world_interaction_controller.register_handler(action_id, Callable(self, "_request_target_sustainment")):
+            return false
+
+    var old_door_callable := Callable(_door_controller, "submit_world_cell")
+    if _door_controller != null and _door_pointer.world_cell_primary.is_connected(old_door_callable):
+        _door_pointer.world_cell_primary.disconnect(old_door_callable)
+    var interaction_callable := Callable(_world_interaction_controller, "submit_world_cell")
+    if not _door_pointer.world_cell_primary.is_connected(interaction_callable):
+        _door_pointer.world_cell_primary.connect(interaction_callable)
+    return true
+
 func _route_player_intent(intent: StringName) -> void:
     if _vehicle_controller != null and _vehicle_controller.is_mounted():
         _vehicle_controller.submit_intent(intent)
@@ -156,3 +278,84 @@ func _on_vehicle_lighting_inputs_changed(_emitters: Array) -> void:
         return
     _lighting_refresh_pending = true
     call_deferred("_flush_pending_visual_state")
+
+func _door_passage_allowed(_actor_id: String, door_id: String, _action_type: StringName) -> bool:
+    if _world_interaction_state == null:
+        return true
+    return not _world_interaction_state.is_locked(door_id) \
+        and _world_interaction_state.board_count(door_id) == 0 \
+        and not _world_interaction_state.is_broken(door_id)
+
+func _potable_target_available(actor_id: String, target_id: String) -> bool:
+    if _world == null or _utilities == null or _interaction_reach == null \
+        or not _world.has_entity(target_id) \
+        or not _interaction_reach.target_reachable(actor_id, target_id, WorldInteractionReachQuery.CONTACT_FORWARD):
+        return false
+    var entity: WorldEntityRecord = _world.entity(target_id)
+    var placement: WorldPlacement = _world.placement(target_id)
+    if entity == null or placement == null or not _world_interaction_catalog.is_water_fixture(entity.semantic_type):
+        return false
+    var service_id: String = _utilities.water_service_for_cell(placement.anchor)
+    return not service_id.is_empty() and _utilities.water_service_available(service_id)
+
+func _rest_target_surface(actor_id: String, target_id: String) -> StringName:
+    if _world == null or _interaction_reach == null or not _world.has_entity(target_id) \
+        or not _interaction_reach.target_reachable(actor_id, target_id, WorldInteractionReachQuery.CONTACT_FORWARD):
+        return &""
+    var entity: WorldEntityRecord = _world.entity(target_id)
+    if entity == null:
+        return &""
+    return _world_interaction_catalog.rest_surface(entity.semantic_type)
+
+func _request_target_sustainment(actor_id: String, target_id: String, action_id: StringName) -> Dictionary:
+    var serial: int = 0
+    if action_id == SustainmentOffersClass.DRINK_FROM_FIXTURE:
+        serial = _sustainment_actions.begin_tap_drink_from(actor_id, target_id)
+    elif action_id == SustainmentOffersClass.REST_ON_FURNITURE:
+        serial = _sustainment_actions.begin_rest_on(actor_id, target_id)
+    elif action_id == SustainmentOffersClass.SLEEP_IN_BED:
+        serial = _sustainment_actions.begin_sleep_in(actor_id, target_id)
+    return {
+        "accepted": serial > 0,
+        "action_serial": serial,
+        "reason": "" if serial > 0 else "sustainment_target_unavailable",
+        "action_id": action_id,
+        "target_id": target_id,
+    }
+
+func _crafting_workstation_available(_actor_id: String, workstation_id: String, capability: StringName) -> bool:
+    if capability != Workstations.COOKING_STOVE:
+        return true
+    if _world == null or _utilities == null or not _world.has_entity(workstation_id):
+        return false
+    var entity: WorldEntityRecord = _world.entity(workstation_id)
+    var placement: WorldPlacement = _world.placement(workstation_id)
+    if entity == null or placement == null or not _world_interaction_catalog.is_cooking_stove(entity.semantic_type):
+        return false
+    var service_id: String = _utilities.power_service_for_cell(placement.anchor)
+    return not service_id.is_empty() and _utilities.power_service_available(service_id)
+
+func _on_interaction_utility_changed(_revision: int, _reason: StringName) -> void:
+    if _sustainment_interaction_offers != null:
+        _sustainment_interaction_offers.availability_changed.emit(&"utility_changed")
+    if _crafting_interaction_offers != null:
+        _crafting_interaction_offers.availability_changed.emit(&"utility_changed")
+
+func _on_world_interaction_blocked_changed(blocked: bool) -> void:
+    _world_blocks_interaction = blocked
+    _refresh_interaction_enabled()
+
+func _refresh_interaction_enabled() -> void:
+    super._refresh_interaction_enabled()
+    if not _world_blocks_interaction:
+        return
+    if _keyboard != null:
+        _keyboard.set_enabled(false)
+    if _controls != null:
+        _controls.set_enabled(false)
+    if _door_pointer != null:
+        _door_pointer.set_enabled(false)
+    if _camera_input != null:
+        _camera_input.set_enabled(false)
+    if _camera_controls != null:
+        _camera_controls.set_enabled(false)

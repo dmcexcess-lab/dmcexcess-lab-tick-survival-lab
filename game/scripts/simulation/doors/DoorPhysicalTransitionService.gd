@@ -5,13 +5,18 @@ const DoorValue = preload("res://scripts/simulation/doors/DoorStateValue.gd")
 
 ## Coherent OPEN/CLOSED physical transition coordinator.
 ## Door State owns semantic truth; CollisionOverrideState owns sparse collision exceptions.
+## Movement may auto-open a legal closed door, but nothing here ever auto-closes it.
 
 signal transition_resolved(actor_id, door_id, previous_state, new_state, cause, noise_class, cell)
 signal transition_failed(actor_id, door_id, target_state, reason)
 
 const CAUSE_WALK: StringName = &"walk_passage"
 const CAUSE_RUN: StringName = &"run_passage"
+const CAUSE_MANUAL_OPEN: StringName = &"manual_open"
 const CAUSE_MANUAL_CLOSE: StringName = &"manual_close"
+const CAUSE_BREAK: StringName = &"break_open"
+
+const NOISE_QUIET: StringName = &"quiet"
 const NOISE_NORMAL: StringName = &"normal"
 const NOISE_LOUD: StringName = &"loud"
 
@@ -35,12 +40,22 @@ func is_ready() -> bool:
     return _world != null and _state != null and _mutations != null and _mutations.is_ready() and _collision_overrides != null
 
 func open_for_passage(actor_id: String, door_id: String, action_type: StringName) -> bool:
-    var cause: StringName = CAUSE_RUN if action_type == &"movement.run_forward" else CAUSE_WALK
-    var noise: StringName = NOISE_LOUD if cause == CAUSE_RUN else NOISE_NORMAL
-    return _transition(actor_id, door_id, DoorValue.OPEN, cause, noise)
+    if action_type == &"movement.run_forward":
+        return _transition(actor_id, door_id, DoorValue.OPEN, CAUSE_RUN, NOISE_LOUD)
+    if action_type == &"interaction.door_open":
+        return _transition(actor_id, door_id, DoorValue.OPEN, CAUSE_MANUAL_OPEN, NOISE_QUIET)
+    if action_type == &"door_broken":
+        return _transition(actor_id, door_id, DoorValue.OPEN, CAUSE_BREAK, NOISE_LOUD)
+    return _transition(actor_id, door_id, DoorValue.OPEN, CAUSE_WALK, NOISE_NORMAL)
+
+func open_manually(actor_id: String, door_id: String) -> bool:
+    return _transition(actor_id, door_id, DoorValue.OPEN, CAUSE_MANUAL_OPEN, NOISE_QUIET)
 
 func close_manually(actor_id: String, door_id: String) -> bool:
     return _transition(actor_id, door_id, DoorValue.CLOSED, CAUSE_MANUAL_CLOSE, NOISE_NORMAL)
+
+func break_open(actor_id: String, door_id: String) -> bool:
+    return _transition(actor_id, door_id, DoorValue.OPEN, CAUSE_BREAK, NOISE_LOUD)
 
 func _transition(
     actor_id: String,
@@ -67,9 +82,8 @@ func _transition(
     var collision_ok: bool = true
     if target_state == DoorValue.OPEN:
         collision_ok = _collision_overrides.set_override(door_id, false)
-    else:
-        if _collision_overrides.has_override(door_id):
-            collision_ok = _collision_overrides.clear_override(door_id)
+    elif _collision_overrides.has_override(door_id):
+        collision_ok = _collision_overrides.clear_override(door_id)
 
     if not collision_ok:
         if previous != target_state:

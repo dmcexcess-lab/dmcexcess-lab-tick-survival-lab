@@ -1,0 +1,155 @@
+name: World interaction closure
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'game/scripts/app/VehicleGameMain.gd'
+      - 'game/scripts/simulation/interaction/**'
+      - 'game/scripts/simulation/doors/**'
+      - 'game/scripts/simulation/sound/ActionSoundEmitterAdapter.gd'
+      - 'game/scripts/simulation/sound/SoundEmissionProfileCatalog.gd'
+      - 'game/scripts/simulation/actors/condition/SurvivorSustainmentActionService.gd'
+      - 'game/scripts/simulation/actors/condition/SurvivorSustainmentProfileCatalog.gd'
+      - 'game/scripts/simulation/crafting/**'
+      - 'game/scripts/player/WorldInteractionPlayerController.gd'
+      - 'game/scripts/ui/WorldInteractionPanel.gd'
+      - 'game/scripts/render/WorldInteractionStateRenderer.gd'
+      - 'game/scripts/render/TacticalRendererStack.gd'
+      - 'game/scripts/ci/WorldInteractionSmoke.gd'
+      - '.github/workflows/world-interaction-closure.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'game/scripts/app/VehicleGameMain.gd'
+      - 'game/scripts/simulation/interaction/**'
+      - 'game/scripts/simulation/doors/**'
+      - 'game/scripts/simulation/sound/ActionSoundEmitterAdapter.gd'
+      - 'game/scripts/simulation/sound/SoundEmissionProfileCatalog.gd'
+      - 'game/scripts/simulation/actors/condition/SurvivorSustainmentActionService.gd'
+      - 'game/scripts/simulation/actors/condition/SurvivorSustainmentProfileCatalog.gd'
+      - 'game/scripts/simulation/crafting/**'
+      - 'game/scripts/player/WorldInteractionPlayerController.gd'
+      - 'game/scripts/ui/WorldInteractionPanel.gd'
+      - 'game/scripts/render/WorldInteractionStateRenderer.gd'
+      - 'game/scripts/render/TacticalRendererStack.gd'
+      - 'game/scripts/ci/WorldInteractionSmoke.gd'
+      - '.github/workflows/world-interaction-closure.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  statuses: write
+
+concurrency:
+  group: world-interaction-closure-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: verify/world-interaction-closure
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate ownership and performance boundary
+        shell: bash
+        run: |
+          set -euxo pipefail
+          for f in \
+            game/scripts/simulation/interaction/WorldInteractableState.gd \
+            game/scripts/simulation/interaction/WorldInteractionCatalog.gd \
+            game/scripts/simulation/interaction/WorldInteractionItemCatalog.gd \
+            game/scripts/simulation/interaction/WorldInteractionActionService.gd \
+            game/scripts/simulation/interaction/WorldInteractionOfferProvider.gd \
+            game/scripts/simulation/interaction/SustainmentInteractionOfferProvider.gd \
+            game/scripts/player/WorldInteractionPlayerController.gd \
+            game/scripts/ui/WorldInteractionPanel.gd \
+            game/scripts/render/WorldInteractionStateRenderer.gd \
+            game/scripts/ci/WorldInteractionSmoke.gd; do
+            test -f "$f"
+          done
+          grep -q 'NOISE_QUIET' game/scripts/simulation/doors/DoorPhysicalTransitionService.gd
+          grep -q 'DOOR_QUIET' game/scripts/simulation/sound/SoundEmissionProfileCatalog.gd
+          grep -q 'COOKING_STOVE' game/scripts/simulation/crafting/CraftingWorkstationCatalog.gd
+          ! grep -R -q 'func _process\|func _physics_process\|Timer.new' game/scripts/simulation/interaction
+
+      - name: Install Godot 4.7.1
+        shell: bash
+        run: |
+          set -euxo pipefail
+          curl -L -o godot.zip https://github.com/godotengine/godot-builds/releases/download/4.7.1-stable/Godot_v4.7.1-stable_linux.x86_64.zip
+          unzip -q godot.zip
+          chmod +x Godot_v4.7.1-stable_linux.x86_64
+
+      - name: Import and parse project
+        shell: bash
+        run: |
+          set -euxo pipefail
+          ./Godot_v4.7.1-stable_linux.x86_64 --headless --editor --path "$GITHUB_WORKSPACE/game" --quit 2>&1 | tee "$RUNNER_TEMP/import.log"
+          if grep -Eqi 'SCRIPT ERROR|Parse Error|Failed to load script' "$RUNNER_TEMP/import.log"; then exit 1; fi
+
+      - name: Live world interaction smoke
+        shell: bash
+        run: |
+          set -euxo pipefail
+          ./Godot_v4.7.1-stable_linux.x86_64 --headless --path "$GITHUB_WORKSPACE/game" --quit-after 90 --script res://scripts/ci/WorldInteractionSmoke.gd 2>&1 | tee "$RUNNER_TEMP/world-interaction.log"
+          grep -q 'WORLD_INTERACTION_SMOKE_OK' "$RUNNER_TEMP/world-interaction.log"
+          if grep -Eqi 'SCRIPT ERROR|Parse Error|Failed to load script|Invalid call|Invalid access|Assertion failed|WORLD_INTERACTION_SMOKE_FAIL' "$RUNNER_TEMP/world-interaction.log"; then exit 1; fi
+
+      - name: Protected movement condition inventory sound vehicle regressions
+        shell: bash
+        run: |
+          set -euxo pipefail
+          for spec in \
+            'MovementActionsSmoke.gd:MOVEMENT_ACTIONS_SMOKE_OK' \
+            'ActorSkillsSmoke.gd:ACTOR_SKILLS_SMOKE_OK' \
+            'System34SurvivorConditionSmoke.gd:SYSTEM34_SURVIVOR_CONDITION_SMOKE_OK' \
+            'InventoryContainmentSmoke.gd:INVENTORY_CONTAINMENT_SMOKE_OK' \
+            'ActorCarrySmoke.gd:ACTOR_CARRY_SMOKE_OK' \
+            'SpatialSoundSmoke.gd:SPATIAL_SOUND_SMOKE_OK' \
+            'VehicleSmoke.gd:VEHICLE_SMOKE_OK' \
+            'OutdoorForageSmoke.gd:OUTDOOR_FORAGE_SMOKE_OK' \
+            'PlayerInputResponsivenessSmoke.gd:PLAYER_INPUT_RESPONSIVENESS_SMOKE_OK'; do
+            script=${spec%%:*}
+            marker=${spec#*:}
+            log="$RUNNER_TEMP/${script%.gd}.log"
+            ./Godot_v4.7.1-stable_linux.x86_64 --headless --path "$GITHUB_WORKSPACE/game" --quit-after 60 --script "res://scripts/ci/$script" 2>&1 | tee "$log"
+            grep -q "$marker" "$log"
+            if grep -Eqi 'SCRIPT ERROR|Parse Error|Failed to load script|Invalid call|Invalid access|Assertion failed' "$log"; then exit 1; fi
+          done
+
+      - name: Canonical startup regression
+        shell: bash
+        run: |
+          set -euxo pipefail
+          ./Godot_v4.7.1-stable_linux.x86_64 --headless --path "$GITHUB_WORKSPACE/game" --quit-after 10 2>&1 | tee "$RUNNER_TEMP/startup.log"
+          grep -q 'CANONICAL_DEMO_BOOT_OK' "$RUNNER_TEMP/startup.log"
+          if grep -Eqi 'SCRIPT ERROR|Parse Error|Failed to load script|Invalid call|Invalid access|Assertion failed|CANONICAL_DEMO_BOOT_FAILED|ObjectDB instances leaked at exit|resources still in use at exit' "$RUNNER_TEMP/startup.log"; then exit 1; fi
+
+      - name: Publish exact-head status
+        if: always()
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SHA: ${{ github.sha }}
+          REPOSITORY: ${{ github.repository }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          JOB_STATUS: ${{ job.status }}
+        run: |
+          set -euo pipefail
+          case "$JOB_STATUS" in
+            success) state=success ;;
+            failure) state=failure ;;
+            cancelled) state=error ;;
+            *) state=error ;;
+          esac
+          payload=$(printf '{"state":"%s","context":"verify/world-interaction-closure","description":"World interaction closure contract","target_url":"%s"}' "$state" "$RUN_URL")
+          curl --fail --silent --show-error \
+            -X POST \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            -H "X-GitHub-Api-Version: 2022-11-28" \
+            "https://api.github.com/repos/$REPOSITORY/statuses/$SHA" \
+            -d "$payload"

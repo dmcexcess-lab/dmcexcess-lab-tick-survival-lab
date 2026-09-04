@@ -1,13 +1,12 @@
 extends RefCounted
 class_name SoundEmissionProfileCatalog
 
-## Candidate 001 source acoustic/recognition vocabulary. Budgets are gameplay
-## acoustic units, deliberately not calibrated decibels. Player-facing labels
-## prefer readable onomatopoeia once the listener recognizes the sound well
-## enough; vague tiers stay deliberately broad rather than guessing.
+## Source acoustic/recognition vocabulary. Budgets are gameplay acoustic units,
+## deliberately not calibrated decibels.
 
 const WALK_STEP: StringName = &"movement.walk_step"
 const RUN_STRIDE: StringName = &"movement.run_stride"
+const DOOR_QUIET: StringName = &"door.quiet"
 const DOOR_NORMAL: StringName = &"door.normal"
 const DOOR_LOUD: StringName = &"door.loud"
 const TEST_IMPACT: StringName = &"test.impact"
@@ -25,124 +24,56 @@ const DOMAIN_COMBAT: StringName = &"combat"
 
 const _PROFILES := {
     "movement.walk_step": {
-        "power": 120,
-        "category": "movement",
-        "unknown_word": "NOISE",
-        "broad_word": "*scuff*",
-        "specific_word": "*step step*",
-        "recognition_difficulty": 48,
-        "domain_skill": "survival",
-        "cue_lifetime_ticks": 30,
+        "power": 120, "category": "movement", "unknown_word": "NOISE", "broad_word": "*scuff*",
+        "specific_word": "*step step*", "recognition_difficulty": 48, "domain_skill": "survival", "cue_lifetime_ticks": 30,
     },
     "movement.run_stride": {
-        "power": 200,
-        "category": "movement",
-        "unknown_word": "NOISE",
-        "broad_word": "*thump thump*",
-        "specific_word": "*step step step*",
-        "recognition_difficulty": 38,
-        "domain_skill": "survival",
-        "cue_lifetime_ticks": 35,
+        "power": 200, "category": "movement", "unknown_word": "NOISE", "broad_word": "*thump thump*",
+        "specific_word": "*step step step*", "recognition_difficulty": 38, "domain_skill": "survival", "cue_lifetime_ticks": 35,
+    },
+    "door.quiet": {
+        "power": 70, "category": "impact", "unknown_word": "NOISE", "broad_word": "*click*",
+        "specific_word": "*soft creak*", "recognition_difficulty": 58, "domain_skill": "survival", "cue_lifetime_ticks": 24,
     },
     "door.normal": {
-        "power": 180,
-        "category": "impact",
-        "unknown_word": "NOISE",
-        "broad_word": "*thunk*",
-        "specific_word": "*creak*",
-        "recognition_difficulty": 45,
-        "domain_skill": "survival",
-        "cue_lifetime_ticks": 35,
+        "power": 180, "category": "impact", "unknown_word": "NOISE", "broad_word": "*thunk*",
+        "specific_word": "*creak*", "recognition_difficulty": 45, "domain_skill": "survival", "cue_lifetime_ticks": 35,
     },
     "door.loud": {
-        "power": 240,
-        "category": "impact",
-        "unknown_word": "NOISE",
-        "broad_word": "*BANG*",
-        "specific_word": "*SLAM*",
-        "recognition_difficulty": 35,
-        "domain_skill": "survival",
-        "cue_lifetime_ticks": 40,
+        "power": 240, "category": "impact", "unknown_word": "NOISE", "broad_word": "*BANG*",
+        "specific_word": "*SLAM*", "recognition_difficulty": 35, "domain_skill": "survival", "cue_lifetime_ticks": 40,
     },
     "test.impact": {
-        "power": 320,
-        "category": "impact",
-        "unknown_word": "NOISE",
-        "broad_word": "*thud*",
-        "specific_word": "*THUD*",
-        "recognition_difficulty": 40,
-        "domain_skill": "survival",
-        "cue_lifetime_ticks": 35,
+        "power": 320, "category": "impact", "unknown_word": "NOISE", "broad_word": "*thud*",
+        "specific_word": "*THUD*", "recognition_difficulty": 40, "domain_skill": "survival", "cue_lifetime_ticks": 35,
     },
     "utility.power_line_snap": {
-        "power": 300,
-        "category": "utility",
-        "unknown_word": "*SNAP*",
-        "broad_word": "*SNAP*",
-        "specific_word": "*SNAP*",
-        "recognition_difficulty": 25,
-        "domain_skill": "mechanical",
-        "cue_lifetime_ticks": 40,
+        "power": 300, "category": "utility", "unknown_word": "*SNAP*", "broad_word": "*SNAP*",
+        "specific_word": "*SNAP*", "recognition_difficulty": 25, "domain_skill": "mechanical", "cue_lifetime_ticks": 40,
     },
     "vehicle.skateboard": {
-        "power": 55,
-        "category": "vehicle",
-        "unknown_word": "NOISE",
-        "broad_word": "*rrrr*",
-        "specific_word": "*roll*",
-        "recognition_difficulty": 58,
-        "domain_skill": "mechanical",
-        "cue_lifetime_ticks": 24,
+        "power": 55, "category": "vehicle", "unknown_word": "NOISE", "broad_word": "*rrrr*",
+        "specific_word": "*roll*", "recognition_difficulty": 58, "domain_skill": "mechanical", "cue_lifetime_ticks": 24,
     },
     "vehicle.bicycle": {
-        "power": 80,
-        "category": "vehicle",
-        "unknown_word": "NOISE",
-        "broad_word": "*whirr*",
-        "specific_word": "*bike chain*",
-        "recognition_difficulty": 54,
-        "domain_skill": "mechanical",
-        "cue_lifetime_ticks": 26,
+        "power": 80, "category": "vehicle", "unknown_word": "NOISE", "broad_word": "*whirr*",
+        "specific_word": "*bike chain*", "recognition_difficulty": 54, "domain_skill": "mechanical", "cue_lifetime_ticks": 26,
     },
     "vehicle.motorcycle": {
-        "power": 330,
-        "category": "vehicle",
-        "unknown_word": "ENGINE",
-        "broad_word": "*BRRRAAP*",
-        "specific_word": "*motorcycle*",
-        "recognition_difficulty": 30,
-        "domain_skill": "mechanical",
-        "cue_lifetime_ticks": 45,
+        "power": 330, "category": "vehicle", "unknown_word": "ENGINE", "broad_word": "*BRRRAAP*",
+        "specific_word": "*motorcycle*", "recognition_difficulty": 30, "domain_skill": "mechanical", "cue_lifetime_ticks": 45,
     },
     "vehicle.car": {
-        "power": 250,
-        "category": "vehicle",
-        "unknown_word": "ENGINE",
-        "broad_word": "*vrrrrm*",
-        "specific_word": "*car engine*",
-        "recognition_difficulty": 34,
-        "domain_skill": "mechanical",
-        "cue_lifetime_ticks": 42,
+        "power": 250, "category": "vehicle", "unknown_word": "ENGINE", "broad_word": "*vrrrrm*",
+        "specific_word": "*car engine*", "recognition_difficulty": 34, "domain_skill": "mechanical", "cue_lifetime_ticks": 42,
     },
     "vehicle.truck": {
-        "power": 310,
-        "category": "vehicle",
-        "unknown_word": "ENGINE",
-        "broad_word": "*VRRROOM*",
-        "specific_word": "*truck engine*",
-        "recognition_difficulty": 30,
-        "domain_skill": "mechanical",
-        "cue_lifetime_ticks": 45,
+        "power": 310, "category": "vehicle", "unknown_word": "ENGINE", "broad_word": "*VRRROOM*",
+        "specific_word": "*truck engine*", "recognition_difficulty": 30, "domain_skill": "mechanical", "cue_lifetime_ticks": 45,
     },
     "vehicle.impact": {
-        "power": 440,
-        "category": "impact",
-        "unknown_word": "CRASH",
-        "broad_word": "*CRUNCH*",
-        "specific_word": "*vehicle crash*",
-        "recognition_difficulty": 18,
-        "domain_skill": "mechanical",
-        "cue_lifetime_ticks": 50,
+        "power": 440, "category": "impact", "unknown_word": "CRASH", "broad_word": "*CRUNCH*",
+        "specific_word": "*vehicle crash*", "recognition_difficulty": 18, "domain_skill": "mechanical", "cue_lifetime_ticks": 50,
     },
 }
 
