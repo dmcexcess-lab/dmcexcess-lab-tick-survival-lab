@@ -82,9 +82,6 @@ func request_enter_nearby(actor_id: String) -> Dictionary:
             break
     if nearest.is_empty():
         return _reject("no_vehicle_in_reach")
-    var rec := _state.record(nearest)
-    if bool(rec.get("locked", false)) and not _actor_has_matching_key(actor_id, nearest) and not bool(rec.get("hotwired", false)):
-        return _reject("vehicle_locked")
     return _begin(actor_id, nearest, ENTER, 4, {})
 
 func request_exit(actor_id: String) -> Dictionary:
@@ -133,8 +130,8 @@ func request_start(actor_id: String) -> Dictionary:
         return _reject("vehicle_disabled")
     if int(rec.get("fuel", 0)) <= 0:
         return _reject("vehicle_out_of_fuel")
-    if not bool(rec.get("hotwired", false)) and not _actor_has_matching_key(actor_id, vehicle_id):
-        return _reject("ignition_key_required")
+    if not bool(rec.get("key_in_ignition", false)) and not bool(rec.get("hotwired", false)):
+        return _reject("ignition_requires_hotwire")
     return _begin(actor_id, vehicle_id, START, 3, {})
 
 func request_hotwire(actor_id: String, vehicle_id: String = "") -> Dictionary:
@@ -143,10 +140,13 @@ func request_hotwire(actor_id: String, vehicle_id: String = "") -> Dictionary:
         target = _nearby_vehicle(actor_id)
     if target.is_empty() or not _state.has_vehicle(target):
         return _reject("no_vehicle_in_reach")
-    var kind := StringName(_state.record(target).get("kind", &""))
+    var rec := _state.record(target)
+    var kind := StringName(rec.get("kind", &""))
     if not _profiles.is_motorized(kind):
         return _reject("vehicle_not_motorized")
-    if bool(_state.record(target).get("hotwired", false)):
+    if bool(rec.get("key_in_ignition", false)):
+        return _reject("ignition_key_present")
+    if bool(rec.get("hotwired", false)):
         return _reject("vehicle_already_hotwired")
     if not _has_semantic(actor_id, &"item.tool.screwdriver") or not _has_semantic(actor_id, &"item.junk.scrap_wire"):
         return _reject("hotwire_requires_screwdriver_and_wire")
@@ -245,7 +245,7 @@ func _on_action_phase(action: TimedAction, phase: ActionPhase) -> void:
             ok = bool(result.get("ok", false))
             reason = String(result.get("reason", "movement_blocked"))
         START:
-            ok = _state.mutate(vehicle_id, {"powered": true, "locked": false})
+            ok = _state.mutate(vehicle_id, {"powered": true})
             reason = "start_failed"
         HOTWIRE:
             var result := _commit_skill_action(action, vehicle_id, HOTWIRE)
@@ -280,12 +280,8 @@ func _commit_enter(actor_id: String, vehicle_id: String) -> bool:
     var actor_place := _world.placement(actor_id)
     if vehicle_place == null or actor_place == null:
         return false
-    var rec := _state.record(vehicle_id)
-    if bool(rec.get("locked", false)) and not _actor_has_matching_key(actor_id, vehicle_id) and not bool(rec.get("hotwired", false)):
-        return false
     if not _state.set_driver(vehicle_id, actor_id):
         return false
-    _state.mutate(vehicle_id, {"locked": false})
     _overrides.set_override(actor_id, false)
     _mutations.set_placement(actor_id, Layers.Channel.ACTOR, vehicle_place.anchor, Facing.Value.NORTH, Footprint.single_cell())
     mounted_changed.emit(actor_id, vehicle_id, true)
@@ -363,7 +359,7 @@ func _commit_skill_action(action: TimedAction, vehicle_id: String, kind: StringN
     if kind == HOTWIRE:
         if not _consume_one_semantic(action.actor_id, &"item.junk.scrap_wire"):
             return {"ok": false, "reason": "hotwire_wire_commit_failed"}
-        return {"ok": _state.mutate(vehicle_id, {"hotwired": true, "locked": false}), "reason": "hotwire_commit_failed"}
+        return {"ok": _state.mutate(vehicle_id, {"hotwired": true}), "reason": "hotwire_commit_failed"}
     if kind == REPAIR:
         var rec := _state.record(vehicle_id)
         var gain := maxi(8, int(result.get("effectiveness_percent", 65)) / 4)
@@ -415,10 +411,6 @@ func _nearby_vehicle(actor_id: String) -> String:
             if _state.has_vehicle(entity_id):
                 return entity_id
     return ""
-
-func _actor_has_matching_key(actor_id: String, vehicle_id: String) -> bool:
-    var key_id := String(_state.record(vehicle_id).get("key_item_id", ""))
-    return not key_id.is_empty() and _inventory.contains_directly(actor_id, key_id)
 
 func _has_semantic(actor_id: String, semantic: StringName) -> bool:
     return not _find_semantic_item(actor_id, semantic).is_empty()
