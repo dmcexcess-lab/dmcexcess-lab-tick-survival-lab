@@ -2,8 +2,8 @@ extends RefCounted
 class_name ActorStatusSummaryQuery
 
 ## Read-only compact HUD/inspection composer.
-## Historical System-13 inputs remain available for legacy fixtures. Live System 34 may be
-## injected additively; presentation then reads real Health/Fatigue and six condition channels.
+## Live gameplay reads canonical System 34 condition. Historical System-13 inputs remain
+## optional so focused recovery fixtures can still exercise the superseded path in isolation.
 
 var _health: ActorHealthState = null
 var _needs: ActorNeedsState = null
@@ -39,7 +39,10 @@ func configure_condition(
     return true
 
 func is_ready() -> bool:
-    return _health != null and _needs != null and _carry_query != null and _moodlets != null
+    return _health != null and _carry_query != null
+
+func legacy_ready() -> bool:
+    return is_ready() and _needs != null and _moodlets != null
 
 func system34_ready() -> bool:
     return _condition != null and _condition.is_ready() \
@@ -51,7 +54,9 @@ func query(actor_id: String) -> Dictionary:
         return _failure("status_summary_unconfigured")
     if system34_ready():
         return _query_system34(actor_id)
-    return _query_legacy(actor_id)
+    if legacy_ready():
+        return _query_legacy(actor_id)
+    return _failure("condition_unconfigured")
 
 func _query_system34(actor_id: String) -> Dictionary:
     if not _health.has_actor(actor_id) or not _condition.has_actor(actor_id):
