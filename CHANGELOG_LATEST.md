@@ -2,6 +2,14 @@
 
 This compact ledger records the newest executable work. `CHANGELOG.md` remains the historical archive.
 
+## Compact Trucks + Full-Length Car Art — 2026-09-04
+
+Exact-head verification pending publication.
+
+- Reduced the authoritative truck footprint from 2×4 to 2×3 cells across procedural placement, occupancy, collision and rendering.
+- Kept cars authoritative 1×3 and changed the dedicated car sprite from a 1:2 to matching 1:3 canvas, allowing the artwork to fill all three real cells without a presentation scale override.
+- Updated owning smoke coverage for the exact six-cell truck mask and the car texture's footprint-matched dimensions.
+
 ## True Car + Truck Footprints — 2026-09-04
 
 Verified executable: `45571e50630bc5f61e1db2c36d0e2fda26ad8c89`.

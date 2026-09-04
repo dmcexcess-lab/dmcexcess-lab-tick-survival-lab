@@ -19,7 +19,7 @@ func _initialize() -> void:
     var car_footprint := profiles.footprint(Profiles.CAR)
     _check(car_footprint.cell_count() == 3 and car_footprint.contains_relative(Vector2i(0, 2)) and not car_footprint.contains_relative(Vector2i(1, 0)), "car owns an exact real 1x3 footprint", errors)
     var truck_footprint := profiles.footprint(Profiles.TRUCK)
-    _check(truck_footprint.cell_count() == 8 and truck_footprint.contains_relative(Vector2i(1, 3)) and not truck_footprint.contains_relative(Vector2i(2, 0)) and not truck_footprint.contains_relative(Vector2i(0, 4)), "truck owns an exact real 2x4 footprint", errors)
+    _check(truck_footprint.cell_count() == 6 and truck_footprint.contains_relative(Vector2i(1, 2)) and not truck_footprint.contains_relative(Vector2i(2, 0)) and not truck_footprint.contains_relative(Vector2i(0, 3)), "truck owns an exact real 2x3 footprint", errors)
 
     _check(Heading.turn_right(0) == 1 and Heading.degrees(1) == 30.0, "turning changes heading 30 degrees", errors)
     _check(Heading.turn_left(0) == 11 and Heading.degrees(11) == 330.0, "left wrap is deterministic", errors)
@@ -44,6 +44,8 @@ func _initialize() -> void:
         _check(ResourceLoader.exists(asset_path), "dedicated vehicle sprite exists: %s" % asset_path, errors)
     for kind: StringName in profiles.kinds():
         _check(Renderer.has_dedicated_sprite(kind), "approved class resolves dedicated texture: %s" % String(kind), errors)
+    var car_texture: Texture2D = load("res://assets/vehicle_car.svg")
+    _check(car_texture != null and car_texture.get_size() == Vector2(64, 192), "car sprite canvas matches the real 1x3 footprint aspect", errors)
 
     var controls := Controls.new()
     get_root().add_child(controls)
