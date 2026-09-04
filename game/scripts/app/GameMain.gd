@@ -13,7 +13,6 @@ const DaylightProfileClass = preload("res://scripts/simulation/world_time/Daylig
 const OutdoorAmbientLightServiceClass = preload("res://scripts/simulation/world_time/OutdoorAmbientLightService.gd")
 const PhysicalLightingClass = preload("res://scripts/simulation/lighting/PhysicalLightingService.gd")
 const LightingAcquisitionClass = preload("res://scripts/simulation/lighting/IlluminationVisualAcquisitionProvider.gd")
-const DemoLightingSourceClass = preload("res://scripts/demo/DemoLightingSourceAdapter.gd")
 const WeatherServiceClass = preload("res://scripts/simulation/weather/WeatherService.gd")
 const SkyExposureClass = preload("res://scripts/simulation/weather/SkyExposureQuery.gd")
 const WeatherOpticsClass = preload("res://scripts/simulation/weather/WeatherAtmosphericOpticsAdapter.gd")
@@ -21,7 +20,6 @@ const WeatherAcousticClass = preload("res://scripts/simulation/weather/WeatherAc
 const BaseTraversalPolicyClass = preload("res://scripts/simulation/movement/MovementTraversalPolicy.gd")
 const MovementActionServiceClass = preload("res://scripts/simulation/movement/PassageAwareMovementActionService.gd")
 const MovementDamageInterruptionClass = preload("res://scripts/simulation/movement/MovementDamageInterruptionService.gd")
-const MovementExertionClass = preload("res://scripts/simulation/movement/MovementExertionService.gd")
 const MovementRunImpactDamageClass = preload("res://scripts/simulation/movement/MovementRunImpactDamageService.gd")
 const LocomotionStateClass = preload("res://scripts/simulation/actors/locomotion/ActorLocomotionState.gd")
 const LocomotionMutationClass = preload("res://scripts/simulation/actors/locomotion/ActorLocomotionMutationService.gd")
@@ -33,8 +31,6 @@ const HandMutationClass = preload("res://scripts/simulation/actors/equipment/Act
 const InventoryStateClass = preload("res://scripts/simulation/inventory/InventoryContainmentState.gd")
 const InventoryMutationClass = preload("res://scripts/simulation/inventory/InventoryContainmentMutationService.gd")
 const HealthStateClass = preload("res://scripts/simulation/actors/health/ActorHealthState.gd")
-const NeedsStateClass = preload("res://scripts/simulation/actors/needs/ActorNeedsState.gd")
-const NeedsMobilityProviderClass = preload("res://scripts/simulation/actors/needs/ActorNeedsMobilityModifierProvider.gd")
 const SkillStateClass = preload("res://scripts/simulation/actors/skills/ActorSkillState.gd")
 const PhysicalCatalogClass = preload("res://scripts/simulation/items/properties/ItemPhysicalPropertyCatalog.gd")
 const WeightQueryClass = preload("res://scripts/simulation/items/properties/ItemWeightQuery.gd")
@@ -47,7 +43,6 @@ const CarryStateClass = preload("res://scripts/simulation/actors/carry/ActorCarr
 const CarryQueryClass = preload("res://scripts/simulation/actors/carry/ActorCarryQuery.gd")
 const CarryMobilityProviderClass = preload("res://scripts/simulation/actors/carry/ActorCarryMobilityModifierProvider.gd")
 const CarryAcquisitionClass = preload("res://scripts/simulation/actors/carry/ActorCarryAcquisitionPolicy.gd")
-const MoodletServiceClass = preload("res://scripts/simulation/actors/moodlets/ActorMoodletService.gd")
 const ItemTransferActionTypes = preload("res://scripts/simulation/items/transfer/ItemTransferActionType.gd")
 const ItemTransferTimingClass = preload("res://scripts/simulation/items/transfer/ItemTransferTimingPolicy.gd")
 const PolicyTransferClass = preload("res://scripts/simulation/items/transfer/PolicyAwareItemTransferActionService.gd")
@@ -88,7 +83,7 @@ const ControllerClass = preload("res://scripts/player/PlayerActionController.gd"
 const DoorControllerClass = preload("res://scripts/player/DoorPlayerInteractionController.gd")
 const LootControllerClass = preload("res://scripts/player/LootPlayerInteractionController.gd")
 
-## Canonical demo bootstrap/composition only.
+## Canonical gameplay bootstrap/composition only.
 
 const LIVE_ITEM_TRANSFER_TICKS: int = 5
 
@@ -104,7 +99,7 @@ const LIVE_ITEM_TRANSFER_TICKS: int = 5
 @onready var _hud: CanonicalStatusHud = $Hud
 @onready var _shell: CanonicalPlayerShell = $PlayerShell
 @onready var _loot_panel: LootContainerPanel = $LootPanel
-@onready var _weather_controls: WeatherDevControls = $WeatherControls
+@onready var _weather_controls: WeatherDevControls = get_node_or_null("WeatherControls") as WeatherDevControls
 
 var _world: WorldState = null
 var _world_mutations: WorldMutationService = null
@@ -116,7 +111,6 @@ var _world_time_profile: WorldTimeProfile = null
 var _world_time: WorldTimeService = null
 var _ambient_daylight: OutdoorAmbientLightService = null
 var _physical_lighting: PhysicalLightingService = null
-var _demo_lighting_sources: DemoLightingSourceAdapter = null
 var _weather: WeatherService = null
 var _sky_exposure: SkyExposureQuery = null
 var _base_traversal: MovementTraversalPolicy = null
@@ -126,7 +120,6 @@ var _movement_capability: ActorMovementCapabilityService = null
 var _actor_traversal: ActorMovementTraversalPolicy = null
 var _movement: MovementActionService = null
 var _movement_damage_interrupt: MovementDamageInterruptionService = null
-var _movement_exertion: MovementExertionService = null
 var _movement_run_impact_damage: MovementRunImpactDamageService = null
 var _stance_actions: ActorStanceActionService = null
 var _hand_state: ActorHandEquipmentState = null
@@ -134,7 +127,6 @@ var _hand_mutations: ActorHandEquipmentMutationService = null
 var _inventory_state: InventoryContainmentState = null
 var _inventory_mutations: InventoryContainmentMutationService = null
 var _health_state: ActorHealthState = null
-var _needs_state: ActorNeedsState = null
 var _skill_state: ActorSkillState = null
 var _physical_catalog: ItemPhysicalPropertyCatalog = null
 var _weight_query: ItemWeightQuery = null
@@ -146,7 +138,6 @@ var _freshness_query: ItemFreshnessQuery = null
 var _carry_state: ActorCarryState = null
 var _carry_query: ActorCarryQuery = null
 var _carry_acquisition: ItemAcquisitionCapacityPolicy = null
-var _moodlet_service: ActorMoodletService = null
 var _loot_items: LootItemCatalog = null
 var _loot_profiles: LootContainerProfileCatalog = null
 var _loot_state: LootState = null
@@ -228,8 +219,6 @@ func _boot_canonical_demo() -> bool:
         return false
 
     _movement_capability = MovementCapabilityClass.new(_locomotion_state)
-    if not _movement_capability.register_provider(NeedsMobilityProviderClass.new(_needs_state)):
-        return false
     if not _movement_capability.register_provider(CarryMobilityProviderClass.new(_carry_query)):
         return false
     _actor_traversal = ActorTraversalPolicyClass.new(_base_traversal, _movement_capability)
@@ -264,9 +253,8 @@ func _boot_canonical_demo() -> bool:
         return false
 
     _movement_damage_interrupt = MovementDamageInterruptionClass.new(_health_state, _kernel)
-    _movement_exertion = MovementExertionClass.new(_movement, _needs_state, _carry_query)
     _movement_run_impact_damage = MovementRunImpactDamageClass.new(_movement, _health_state)
-    if not _movement_damage_interrupt.is_ready() or not _movement_exertion.is_ready() or not _movement_run_impact_damage.is_ready():
+    if not _movement_damage_interrupt.is_ready() or not _movement_run_impact_damage.is_ready():
         return false
 
     _stance_actions = StanceActionClass.new(_world, _locomotion_state, _locomotion_mutations, _kernel, _movement_capability)
@@ -354,7 +342,7 @@ func _boot_canonical_demo() -> bool:
         return false
     _camera_controls.present_camera_state(_camera_controller.presentation_snapshot())
 
-    _status_summary = StatusSummaryClass.new(_health_state, _needs_state, _carry_query, _moodlet_service)
+    _status_summary = StatusSummaryClass.new(_health_state, null, _carry_query, null)
     _inspection_query = InspectionQueryClass.new(_world)
     if not _hud.configure(_kernel, _status_summary, _inspection_query, FixtureClass.PLAYER_ID):
         return false
@@ -370,7 +358,7 @@ func _boot_canonical_demo() -> bool:
         return false
     if not _controls.configure_stance(_locomotion_state, FixtureClass.PLAYER_ID):
         return false
-    if not _weather_controls.configure(_weather):
+    if _weather_controls != null and not _weather_controls.configure(_weather):
         return false
 
     _controller = ControllerClass.new(_movement, _kernel, FixtureClass.PLAYER_ID, _stance_actions, _locomotion_state)
@@ -402,10 +390,11 @@ func _boot_canonical_demo() -> bool:
     _loot_panel.store_requested.connect(Callable(_loot_controller, "request_store"))
     _shell.interaction_blocked_changed.connect(_on_shell_interaction_blocked_changed)
     _loot_panel.interaction_blocked_changed.connect(_on_loot_interaction_blocked_changed)
-    _weather_controls.force_weather_requested.connect(_on_dev_weather_force_requested)
-    _weather_controls.ambient_event_requested.connect(_on_dev_weather_ambient_requested)
+    if _weather_controls != null:
+        _weather_controls.force_weather_requested.connect(_on_dev_weather_force_requested)
+        _weather_controls.ambient_event_requested.connect(_on_dev_weather_ambient_requested)
+        _weather_controls.present_weather(_weather.debug_snapshot())
     _weather.weather_changed.connect(_on_weather_changed)
-    _weather_controls.present_weather(_weather.debug_snapshot())
     _refresh_interaction_enabled()
     return true
 
@@ -426,18 +415,11 @@ func _boot_item_freshness_query() -> bool:
 
 func _boot_physical_lighting() -> bool:
     _physical_lighting = PhysicalLightingClass.new(_world, _door_state, _ambient_daylight)
-    _demo_lighting_sources = DemoLightingSourceClass.new(_world, FixtureClass.PLAYER_ID)
-    if not _demo_lighting_sources.is_ready():
-        return false
-    if not _physical_lighting.set_emitters(_demo_lighting_sources.emitters()):
-        return false
-    _demo_lighting_sources.emitters_changed.connect(_on_demo_lighting_emitters_changed)
-    return true
+    var empty_emitters: Array[LightEmitter] = []
+    return _physical_lighting.set_emitters(empty_emitters)
 
 func _boot_weather() -> bool:
-    # Canonical island remains a DEV critique composition, so begin in RAIN for
-    # immediate Weather inspection. DEV controls can force every implemented profile.
-    _weather = WeatherServiceClass.new(_kernel, 28028, &"rain")
+    _weather = WeatherServiceClass.new(_kernel, 28028)
     _sky_exposure = SkyExposureClass.new(_world)
     if not _weather.is_ready() or not _sky_exposure.is_ready():
         return false
@@ -454,9 +436,6 @@ func _boot_actor_status() -> bool:
         return false
     _health_state = HealthStateClass.new(_world)
     if not _health_state.enroll_actor(FixtureClass.PLAYER_ID):
-        return false
-    _needs_state = NeedsStateClass.new(_world)
-    if not _needs_state.enroll_actor(FixtureClass.PLAYER_ID):
         return false
     _skill_state = SkillStateClass.new(_world)
     if not _skill_state.enroll_actor(FixtureClass.PLAYER_ID):
@@ -484,10 +463,7 @@ func _boot_actor_status() -> bool:
         return false
     _carry_query = CarryQueryClass.new(_world, _hand_state, _inventory_state, _weight_query, _carry_state)
     _carry_acquisition = CarryAcquisitionClass.new(_carry_query)
-    if not _carry_acquisition.is_ready():
-        return false
-    _moodlet_service = MoodletServiceClass.new(_health_state, _needs_state, _carry_query)
-    return true
+    return _carry_acquisition.is_ready()
 
 func _initialize_fixture_loot() -> bool:
     _loot_state = LootStateClass.new()
@@ -593,7 +569,7 @@ func _boot_spatial_sound() -> bool:
         _acoustic_materials,
         weather_environment
     )
-    _hearing_profile = HearingProfileClass.new(_skill_state, _needs_state)
+    _hearing_profile = HearingProfileClass.new(_skill_state)
     _heard_sounds = HeardSoundStoreClass.new()
     _spatial_sound = SpatialSoundClass.new(
         _world,
@@ -628,7 +604,7 @@ func _on_ambient_light_changed(level: float, _phase: StringName, _snapshot: Dict
     if _perception != null:
         _perception.recompute(&"ambient_light_changed")
 
-func _on_demo_lighting_emitters_changed(values: Array) -> void:
+func _on_lighting_emitters_changed(values: Array) -> void:
     if _physical_lighting != null:
         _physical_lighting.set_emitters(values)
         _lighting_refresh_pending = true
