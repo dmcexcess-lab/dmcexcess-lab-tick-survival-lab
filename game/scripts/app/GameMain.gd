@@ -354,6 +354,8 @@ func _boot_canonical_demo() -> bool:
         return false
     if not _shell.configure(_kernel, _stats_inspector, _inventory_inspector, FixtureClass.PLAYER_ID, _ui_icons):
         return false
+    if not _shell.configure_inventory_transfers(_item_transfer):
+        return false
     if not _loot_panel.configure(_loot_inspection, _inventory_inspector, FixtureClass.PLAYER_ID, _ui_icons):
         return false
     if not _controls.configure_stance(_locomotion_state, FixtureClass.PLAYER_ID):

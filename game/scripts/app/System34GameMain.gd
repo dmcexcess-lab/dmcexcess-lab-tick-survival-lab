@@ -103,6 +103,8 @@ func _boot_system34() -> bool:
     )
     if not _sustainment_actions.is_ready():
         return false
+    if _shell == null or not _shell.configure_inventory_actions(_sustainment_actions):
+        return false
     if not _sustainment_actions.set_potable_source_provider(Callable(self, "_potable_water_fixture_in_reach")):
         return false
     if not _sustainment_actions.set_sleep_surface_provider(Callable(self, "_sleep_surface_in_reach")):

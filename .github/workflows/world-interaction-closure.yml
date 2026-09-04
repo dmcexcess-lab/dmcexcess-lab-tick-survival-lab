@@ -5,6 +5,7 @@ on:
     branches: [main]
     paths:
       - 'game/scripts/app/VehicleGameMain.gd'
+      - 'game/scripts/app/GameMain.gd'
       - 'game/scripts/simulation/interaction/**'
       - 'game/scripts/simulation/doors/**'
       - 'game/scripts/simulation/sound/ActionSoundEmitterAdapter.gd'
@@ -14,6 +15,7 @@ on:
       - 'game/scripts/simulation/crafting/**'
       - 'game/scripts/player/WorldInteractionPlayerController.gd'
       - 'game/scripts/ui/WorldInteractionPanel.gd'
+      - 'game/scripts/ui/CanonicalPlayerShell.gd'
       - 'game/scripts/render/WorldInteractionStateRenderer.gd'
       - 'game/scripts/render/TacticalRendererStack.gd'
       - 'game/scripts/ci/WorldInteractionSmoke.gd'
@@ -22,6 +24,7 @@ on:
     branches: [main]
     paths:
       - 'game/scripts/app/VehicleGameMain.gd'
+      - 'game/scripts/app/GameMain.gd'
       - 'game/scripts/simulation/interaction/**'
       - 'game/scripts/simulation/doors/**'
       - 'game/scripts/simulation/sound/ActionSoundEmitterAdapter.gd'
@@ -31,6 +34,7 @@ on:
       - 'game/scripts/simulation/crafting/**'
       - 'game/scripts/player/WorldInteractionPlayerController.gd'
       - 'game/scripts/ui/WorldInteractionPanel.gd'
+      - 'game/scripts/ui/CanonicalPlayerShell.gd'
       - 'game/scripts/render/WorldInteractionStateRenderer.gd'
       - 'game/scripts/render/TacticalRendererStack.gd'
       - 'game/scripts/ci/WorldInteractionSmoke.gd'

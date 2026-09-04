@@ -1,6 +1,8 @@
 extends CanvasLayer
 class_name CanonicalPlayerShell
 
+const HandSlots = preload("res://scripts/simulation/actors/equipment/ActorHandSlot.gd")
+
 ## System 16 phone-first player shell.
 ## Owns inspector/menu presentation and hard-pause acquisition/restoration only.
 ## System 31 icons are optional presentation enrichment from semantic keys only.
@@ -16,6 +18,8 @@ const VIEW_SIZE := Vector2(640, 844)
 var _kernel: TickKernel = null
 var _stats_query: ActorStatsInspectorQuery = null
 var _inventory_query: ActorInventoryInspectorQuery = null
+var _inventory_actions: SurvivorSustainmentActionService = null
+var _inventory_transfers: ItemTransferActionService = null
 var _icons: SemanticUiIconCatalog = null
 var _actor_id: String = ""
 var _active_modal: StringName = MODAL_NONE
@@ -29,6 +33,8 @@ var _header_buttons: Dictionary = {}
 var _last_lines: Array[String] = []
 var _last_result: Dictionary = {}
 var _leave_result: String = ""
+var _selected_inventory_item_id: String = ""
+var _inventory_status: String = ""
 
 func _ready() -> void:
     layer = 40
@@ -62,6 +68,18 @@ func is_configured() -> bool:
         and _stats_query != null \
         and _inventory_query != null \
         and not _actor_id.is_empty()
+
+func configure_inventory_actions(actions: SurvivorSustainmentActionService) -> bool:
+    if actions == null or not actions.is_ready():
+        return false
+    _inventory_actions = actions
+    return true
+
+func configure_inventory_transfers(transfers: ItemTransferActionService) -> bool:
+    if transfers == null or not transfers.is_ready():
+        return false
+    _inventory_transfers = transfers
+    return true
 
 func active_modal() -> StringName:
     return _active_modal
@@ -293,12 +311,34 @@ func _render_stats() -> void:
         _append_line(skill_text, 14)
 
 func _render_inventory() -> void:
+    _clear_body()
     var result: Dictionary = _inventory_query.query(_actor_id)
     _last_result = result.duplicate(true)
     _last_lines = []
     if not bool(result.get("ok", false)):
         _append_line("Inventory unavailable: %s" % String(result.get("reason", "unknown")), 15)
         return
+
+    if not _inventory_status.is_empty():
+        _append_line(_inventory_status, 14)
+
+    var selected: Dictionary = _inventory_entry_by_id(result, _selected_inventory_item_id)
+    if not selected.is_empty():
+        _append_heading("SELECTED ITEM")
+        _append_line(_item_text(selected), 14)
+        var offer: Dictionary = _inventory_consumption_offer(_selected_inventory_item_id)
+        if bool(offer.get("available", false)):
+            var action_button := Button.new()
+            action_button.text = String(offer.get("label", "USE"))
+            action_button.custom_minimum_size = Vector2(0, 48)
+            action_button.focus_mode = Control.FOCUS_NONE
+            action_button.set_meta("inventory_action_item_id", _selected_inventory_item_id)
+            action_button.pressed.connect(_consume_selected_inventory_item)
+            _body.add_child(action_button)
+            _last_lines.append(action_button.text)
+        elif String(offer.get("reason", "")) == "item_spoiled":
+            _append_line("Spoiled — cannot consume.", 13)
+        _append_inventory_transfer_actions(result, _selected_inventory_item_id)
 
     _append_heading("HANDS / LOADOUT")
     _append_hand_row(result.get("primary_hand", {}))
@@ -348,7 +388,7 @@ func _append_hand_row(value: Variant) -> void:
         return
     var item: Dictionary = hand.get("item", {})
     var text_value: String = "%s: %s" % [String(hand.get("hand_label", "Hand")), _item_text(item)]
-    _append_icon_text_row(StringName(item.get("semantic_type", &"")), text_value, 0, 14)
+    _append_inventory_item_row(item, text_value, 0, 14)
 
 func _format_hand(value: Variant) -> String:
     if typeof(value) != TYPE_DICTIONARY:
@@ -365,11 +405,11 @@ func _append_inventory_entry(value: Variant, depth: int) -> void:
         _append_line("%sInvalid inventory entry" % _indent(depth), 13)
         return
     var entry: Dictionary = value
-    _append_icon_text_row(StringName(entry.get("semantic_type", &"")), _item_text(entry), depth, 13)
+    _append_inventory_item_row(entry, _item_text(entry), depth, 13)
     for child_value: Variant in entry.get("children", []):
         _append_inventory_entry(child_value, depth + 1)
 
-func _append_icon_text_row(semantic_key: StringName, text_value: String, depth: int, font_size: int) -> void:
+func _append_inventory_item_row(item: Dictionary, text_value: String, depth: int, font_size: int) -> void:
     var row := HBoxContainer.new()
     row.add_theme_constant_override("separation", 8)
     row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -381,6 +421,7 @@ func _append_icon_text_row(semantic_key: StringName, text_value: String, depth: 
         indent_space.mouse_filter = Control.MOUSE_FILTER_IGNORE
         row.add_child(indent_space)
 
+    var semantic_key := StringName(item.get("semantic_type", &""))
     if _icons != null and _icons.is_ready() and not String(semantic_key).is_empty():
         var texture: Texture2D = _icons.texture_for(semantic_key)
         if texture != null:
@@ -393,13 +434,169 @@ func _append_icon_text_row(semantic_key: StringName, text_value: String, depth: 
             icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
             row.add_child(icon)
 
-    var label := Label.new()
-    label.text = text_value
-    label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-    label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-    label.add_theme_font_size_override("font_size", font_size)
-    row.add_child(label)
+    var item_id: String = String(item.get("item_id", "")).strip_edges()
+    var button := Button.new()
+    button.text = text_value
+    button.alignment = HORIZONTAL_ALIGNMENT_LEFT
+    button.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+    button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+    button.focus_mode = Control.FOCUS_NONE
+    button.add_theme_font_size_override("font_size", font_size)
+    button.set_meta("inventory_item_id", item_id)
+    button.disabled = item_id.is_empty() or not bool(item.get("valid", false))
+    if not button.disabled:
+        button.pressed.connect(_select_inventory_item.bind(item_id))
+    row.add_child(button)
     _last_lines.append("%s%s" % [_indent(depth), text_value])
+
+func _select_inventory_item(item_id: String) -> void:
+    if _active_modal != MODAL_INVENTORY:
+        return
+    _selected_inventory_item_id = item_id.strip_edges()
+    _inventory_status = ""
+    _render_inventory()
+
+func _consume_selected_inventory_item() -> void:
+    var item_id: String = _selected_inventory_item_id
+    var offer: Dictionary = _inventory_consumption_offer(item_id)
+    if not bool(offer.get("available", false)):
+        _inventory_status = "Item can no longer be used."
+        _render_inventory()
+        return
+    if _pause_was_active:
+        _inventory_status = "Resume before using inventory actions."
+        _render_inventory()
+        return
+    var label: String = String(offer.get("label", "USE")).capitalize()
+    close_modal()
+    var serial: int = _inventory_actions.begin_consume(_actor_id, item_id)
+    if serial <= 0:
+        _inventory_status = "%s could not start." % label
+    else:
+        _kernel.run_until_stop()
+        var refreshed: Dictionary = _inventory_query.query(_actor_id)
+        if _inventory_entry_by_id(refreshed, item_id).is_empty():
+            _inventory_status = "%s complete." % label
+            _selected_inventory_item_id = ""
+        else:
+            _inventory_status = "%s failed during completion." % label
+    open_inventory()
+
+func _inventory_consumption_offer(item_id: String) -> Dictionary:
+    if _inventory_actions == null or not _inventory_actions.is_ready():
+        return {"available": false, "reason": "inventory_actions_unavailable"}
+    return _inventory_actions.consumption_offer(_actor_id, item_id)
+
+func _append_inventory_transfer_actions(result: Dictionary, item_id: String) -> void:
+    if _inventory_transfers == null or not _inventory_transfers.is_ready():
+        return
+    var hand_slot: int = _hand_slot_for_item(result, item_id)
+    if hand_slot >= 0:
+        _append_inventory_action_button("STOW", "stow", item_id, hand_slot)
+        _append_inventory_action_button("DROP", "drop_hand", item_id, hand_slot)
+        return
+    var primary: Dictionary = result.get("primary_hand", {})
+    var secondary: Dictionary = result.get("secondary_hand", {})
+    _append_inventory_action_button("RIGHT HAND", "equip", item_id, HandSlots.Value.PRIMARY_RIGHT, not bool(primary.get("empty", true)))
+    _append_inventory_action_button("LEFT HAND", "equip", item_id, HandSlots.Value.SECONDARY_LEFT, not bool(secondary.get("empty", true)))
+    _append_inventory_action_button("DROP", "drop_container", item_id, -1)
+
+func _append_inventory_action_button(
+    label: String,
+    action: String,
+    item_id: String,
+    slot: int,
+    disabled: bool = false
+) -> void:
+    var button := Button.new()
+    button.text = label
+    button.custom_minimum_size = Vector2(0, 44)
+    button.focus_mode = Control.FOCUS_NONE
+    button.disabled = disabled
+    button.set_meta("inventory_transfer_item_id", item_id)
+    button.set_meta("inventory_transfer_action", action)
+    button.pressed.connect(_run_inventory_transfer.bind(action, item_id, slot))
+    _body.add_child(button)
+    _last_lines.append(label)
+
+func _run_inventory_transfer(action: String, item_id: String, slot: int) -> void:
+    if _inventory_transfers == null or _pause_was_active:
+        _inventory_status = "Resume before using inventory actions."
+        _render_inventory()
+        return
+    close_modal()
+    var result: ItemTransferActionResult = null
+    match action:
+        "equip":
+            result = _inventory_transfers.request_equip_from_container(_actor_id, item_id, slot)
+        "stow":
+            result = _inventory_transfers.request_unequip_to_container(_actor_id, slot, _actor_id)
+        "drop_hand":
+            result = _inventory_transfers.request_drop_from_hand(_actor_id, slot)
+        "drop_container":
+            result = _inventory_transfers.request_drop_from_container(_actor_id, item_id)
+    if result == null or not result.is_accepted():
+        _inventory_status = "Action failed: %s" % ("unavailable" if result == null else result.reason.replace("_", " "))
+    else:
+        _kernel.run_until_stop()
+    var refreshed: Dictionary = _inventory_query.query(_actor_id)
+    if result != null and result.is_accepted():
+        _inventory_status = "%s %s." % [
+            action.replace("_", " ").capitalize(),
+            "complete" if _inventory_transfer_succeeded(action, item_id, slot, refreshed) else "failed during completion",
+        ]
+    if _inventory_entry_by_id(refreshed, item_id).is_empty():
+        _selected_inventory_item_id = ""
+    open_inventory()
+
+func _inventory_transfer_succeeded(action: String, item_id: String, slot: int, result: Dictionary) -> bool:
+    var located_slot: int = _hand_slot_for_item(result, item_id)
+    match action:
+        "equip":
+            return located_slot == slot
+        "stow":
+            return located_slot < 0 and not _inventory_entry_by_id(result, item_id).is_empty()
+        "drop_hand", "drop_container":
+            return _inventory_entry_by_id(result, item_id).is_empty()
+    return false
+
+func _hand_slot_for_item(result: Dictionary, item_id: String) -> int:
+    for hand_key: String in ["primary_hand", "secondary_hand"]:
+        var hand: Dictionary = result.get(hand_key, {})
+        var item: Dictionary = hand.get("item", {})
+        if String(item.get("item_id", "")) != item_id:
+            continue
+        return HandSlots.Value.PRIMARY_RIGHT if hand_key == "primary_hand" else HandSlots.Value.SECONDARY_LEFT
+    return -1
+
+func _inventory_entry_by_id(result: Dictionary, item_id: String) -> Dictionary:
+    var key: String = item_id.strip_edges()
+    if key.is_empty():
+        return {}
+    for hand_key: String in ["primary_hand", "secondary_hand"]:
+        var hand: Dictionary = result.get(hand_key, {})
+        var hand_item: Dictionary = hand.get("item", {})
+        var found: Dictionary = _find_inventory_entry(hand_item, key)
+        if not found.is_empty():
+            return found
+    for entry_value: Variant in result.get("inventory", []):
+        if typeof(entry_value) != TYPE_DICTIONARY:
+            continue
+        var found: Dictionary = _find_inventory_entry(entry_value as Dictionary, key)
+        if not found.is_empty():
+            return found
+    return {}
+
+func _find_inventory_entry(entry: Dictionary, item_id: String) -> Dictionary:
+    if String(entry.get("item_id", "")) == item_id:
+        return entry
+    for child_value: Variant in entry.get("children", []):
+        if typeof(child_value) != TYPE_DICTIONARY:
+            continue
+        var found: Dictionary = _find_inventory_entry(child_value as Dictionary, item_id)
+        if not found.is_empty():
+            return found
+    return {}
 
 func _item_text(item: Dictionary) -> String:
     var label: String = String(item.get("label", "Unknown Item"))

@@ -110,6 +110,33 @@ func begin_first_consumable(actor_id: String, action_kind: StringName) -> int:
             if serial > 0: return serial
     return 0
 
+func consumption_offer(actor_id: String, item_id: String) -> Dictionary:
+    var actor: String = actor_id.strip_edges()
+    var item: String = item_id.strip_edges()
+    if not is_ready() or not _condition.has_actor(actor):
+        return {"available": false, "reason": "sustainment_unavailable"}
+    if item.is_empty() or not _world.has_entity(item) or not _item_carried_by(actor, item):
+        return {"available": false, "reason": "item_not_carried"}
+    var entity: WorldEntityRecord = _world.entity(item)
+    if entity == null:
+        return {"available": false, "reason": "item_missing"}
+    var profile: Dictionary = _profiles.profile(entity.semantic_type)
+    if profile.is_empty():
+        return {"available": false, "reason": "item_not_consumable"}
+    if _item_spoiled(item):
+        return {"available": false, "reason": "item_spoiled"}
+    var action_kind := StringName(profile.get("action_kind", &""))
+    if action_kind not in [&"eat", &"drink"]:
+        return {"available": false, "reason": "unsupported_consumption_action"}
+    return {
+        "available": true,
+        "reason": "",
+        "item_id": item,
+        "action_kind": action_kind,
+        "label": "EAT" if action_kind == &"eat" else "DRINK",
+        "duration_ticks": int(profile.get("duration_ticks", 1)),
+    }
+
 func begin_consume(actor_id: String, item_id: String) -> int:
     var actor: String = actor_id.strip_edges()
     var item: String = item_id.strip_edges()

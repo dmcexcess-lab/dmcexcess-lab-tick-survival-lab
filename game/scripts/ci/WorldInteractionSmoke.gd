@@ -43,11 +43,13 @@ func _run() -> void:
     var interaction_state: WorldInteractableState = game.get("_world_interaction_state")
     var interactions: WorldInteractionActionService = game.get("_world_interaction_actions")
     var affordances: InteractionAffordanceQuery = game.get("_interaction_affordances")
+    var shell: CanonicalPlayerShell = game.get("_shell")
 
     _check(world != null and mutations != null and spatial != null and kernel != null, "core live owners available")
     _check(skills != null and condition != null and sustainment != null and crafting != null, "condition/crafting owners available")
     _check(interaction_state != null and interactions != null and interactions.is_ready(), "world interaction runtime ready")
     _check(affordances != null and affordances.is_ready(), "System 29 affordances remain ready")
+    _check(shell != null and shell.is_configured(), "live player shell is ready")
     if not failures.is_empty():
         _finish()
         return
@@ -57,12 +59,66 @@ func _run() -> void:
     _check(skills.set_skill(actor_id, SkillCatalog.SURVIVAL, 10, 0), "Survival fixture set to expert")
 
     _test_sink(world, mutations, sustainment, condition, kernel, actor_id)
+    _test_inventory_item_actions(world, mutations, inventory_mutations, condition, kernel, shell, actor_id)
     _test_rest_and_sleep(world, mutations, sustainment, condition, kernel, actor_id)
     _test_cooking(world, mutations, inventory_mutations, crafting, inventory, kernel, actor_id)
     _test_doors(world, mutations, door_state, door_transitions, interactions, interaction_state, kernel, actor_id)
     _test_window_and_reclamation(world, mutations, spatial, inventory, inventory_mutations, interactions, interaction_state, kernel, actor_id)
 
     _finish()
+
+func _test_inventory_item_actions(
+    world: WorldState,
+    mutations: WorldMutationService,
+    inventory_mutations: InventoryContainmentMutationService,
+    condition: ActorConditionService,
+    kernel: TickKernel,
+    shell: CanonicalPlayerShell,
+    actor_id: String
+) -> void:
+    var apple_id: String = "ci.inventory.action.apple"
+    var water_id: String = "ci.inventory.action.water"
+    _check(_give_item(world, mutations, inventory_mutations, actor_id, &"item.food.apple", apple_id), "specific edible item enters personal inventory")
+    _check(_give_item(world, mutations, inventory_mutations, actor_id, &"item.drink.water_bottle", water_id), "specific drink item enters personal inventory")
+    condition.set_condition(actor_id, ConditionState.SATIETY, 10)
+    var before_satiety: int = condition.value(actor_id, ConditionState.SATIETY)
+
+    shell.open_inventory()
+    _check(kernel.is_hard_paused() and shell.active_modal() == CanonicalPlayerShell.MODAL_INVENTORY, "inventory item action starts from normal paused inventory modal")
+    var apple_button: Button = _button_with_meta(shell, "inventory_item_id", apple_id)
+    _check(apple_button != null, "specific carried food is a clickable inventory row")
+    if apple_button != null:
+        apple_button.pressed.emit()
+    var eat_button: Button = _button_with_meta(shell, "inventory_action_item_id", apple_id)
+    _check(eat_button != null and eat_button.text == "EAT", "clicking the food exposes its direct EAT action")
+    if eat_button != null:
+        eat_button.pressed.emit()
+
+    _check(not world.has_entity(apple_id), "inventory EAT consumes the exact selected food entity")
+    _check(world.has_entity(water_id), "inventory EAT does not consume a different carried consumable")
+    _check(condition.value(actor_id, ConditionState.SATIETY) > before_satiety, "inventory EAT advances WHEN and changes canonical satiety")
+    _check(shell.active_modal() == CanonicalPlayerShell.MODAL_INVENTORY and kernel.is_hard_paused(), "inventory reopens after the completed item action")
+    shell.close_modal()
+
+    var hammer_id: String = "ci.inventory.action.hammer"
+    _check(_give_item(world, mutations, inventory_mutations, actor_id, &"item.tool.hammer", hammer_id), "specific tool enters personal inventory")
+    shell.open_inventory()
+    var hammer_button: Button = _button_with_meta(shell, "inventory_item_id", hammer_id)
+    _check(hammer_button != null, "specific carried tool is a clickable inventory row")
+    if hammer_button != null:
+        hammer_button.pressed.emit()
+    var equip_button: Button = _button_with_action(shell, hammer_id, "equip", "RIGHT HAND")
+    _check(equip_button != null, "selected pack item exposes a right-hand equip action")
+    if equip_button != null:
+        equip_button.pressed.emit()
+    var hands: ActorHandEquipmentState = game.get("_hand_state")
+    _check(hands != null and hands.primary_item(actor_id) == hammer_id, "inventory equip spends WHEN and moves the exact item to the real right hand")
+    var stow_button: Button = _button_with_action(shell, hammer_id, "stow", "STOW")
+    _check(stow_button != null, "selected hand item exposes a stow action")
+    if stow_button != null:
+        stow_button.pressed.emit()
+    _check(hands != null and hands.primary_item(actor_id).is_empty(), "inventory stow clears the real hand assignment")
+    shell.close_modal()
 
 func _test_sink(world: WorldState, mutations: WorldMutationService, sustainment: SurvivorSustainmentActionService, condition: ActorConditionService, kernel: TickKernel, actor_id: String) -> void:
     var sink: String = _first_reachable_target(world, mutations, actor_id, [&"prop.kitchen_sink", &"prop.bathroom_vanity", &"prop.utility_sink"], false)
@@ -267,6 +323,28 @@ func _give_item(world: WorldState, mutations: WorldMutationService, inventory_mu
         return true
     mutations.remove_entity(item_id)
     return false
+
+func _button_with_meta(root: Node, meta_key: String, expected: String) -> Button:
+    var button := root as Button
+    if button != null and button.has_meta(meta_key) and String(button.get_meta(meta_key)) == expected:
+        return button
+    for child: Node in root.get_children():
+        var found: Button = _button_with_meta(child, meta_key, expected)
+        if found != null:
+            return found
+    return null
+
+func _button_with_action(root: Node, item_id: String, action: String, label: String) -> Button:
+    var button := root as Button
+    if button != null and button.text == label \
+        and String(button.get_meta("inventory_transfer_item_id", "")) == item_id \
+        and String(button.get_meta("inventory_transfer_action", "")) == action:
+        return button
+    for child: Node in root.get_children():
+        var found: Button = _button_with_action(child, item_id, action, label)
+        if found != null:
+            return found
+    return null
 
 func _ids_of_any(world: WorldState, semantics: Array[StringName]) -> Array[String]:
     var result: Array[String] = []

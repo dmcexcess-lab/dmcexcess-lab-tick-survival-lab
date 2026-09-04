@@ -12,6 +12,7 @@ on:
       - 'game/scripts/ui/ActorStatusSummaryQuery.gd'
       - 'game/scripts/ui/CanonicalStatusHud.gd'
       - 'game/scripts/ui/CraftingPlayerShell.gd'
+      - 'game/scripts/ui/CanonicalPlayerShell.gd'
       - 'game/scripts/ui/ConditionPlayerControls.gd'
       - 'game/scripts/ci/System34SurvivorConditionSmoke.gd'
       - 'SYSTEM_DESIGNS/34_SURVIVOR_CONDITION_HEALTH_STAMINA_MOODLETS.md'
