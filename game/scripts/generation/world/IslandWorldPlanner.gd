@@ -8,7 +8,7 @@ const ProfilesClass = preload("res://scripts/generation/world/GlobalWorldProfile
 const BridgePlannerClass = preload("res://scripts/generation/world/GlobalBridgeIntentPlanner.gd")
 const HydrologyQueryClass = preload("res://scripts/generation/world/GlobalHydrologyQuery.gd")
 const SettlementHierarchyClass = preload("res://scripts/generation/world/IslandSettlementHierarchyPlanner.gd")
-const PopulationPlannerClass = preload("res://scripts/generation/world/IslandPopulationPlanner.gd")
+const PopulationPlannerClass = preload("res://scripts/simulation/population/IslandPopulationPlanner.gd")
 const Surface = preload("res://scripts/generation/shared/IslandSurfaceMath.gd")
 
 const INVALID_CELL := Vector2i(-999999, -999999)
