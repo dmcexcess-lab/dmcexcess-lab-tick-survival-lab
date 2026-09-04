@@ -2,6 +2,20 @@
 
 This compact ledger records the newest executable work. `CHANGELOG.md` remains the historical archive.
 
+## Forage Inventory Acquisition Repair — 2026-09-03
+
+Verified executable: `ad975a08c5a62d178d6bf8e79c2dc21b08c4905c`
+
+- Fixed the reported behavior where successful `FORAGE NEARBY` searches created the found Sturdy Stick / Smooth Stone only as a loose item at the survivor's feet instead of adding it to personal inventory.
+- Reused the existing owners instead of inventing a forage-only inventory path: `ActorCarryAcquisitionPolicy` decides whether the recovered mass can be admitted, and `InventoryContainmentMutationService` performs the real containment mutation.
+- Recovered resources remain real persistent WHAT entities. When admitted they are ordinary survivor inventory contents, appear through the existing inventory inspector and count toward canonical carry weight.
+- If the hard carry ceiling blocks admission, the recovered entity remains physically available as a normal `LOOSE_ITEM` at the survivor's feet rather than disappearing or bypassing capacity rules.
+- Updated rollback so a later forage commit failure can compensate either contained or loose recovered entities without leaving ghost containment.
+- Expanded `OutdoorForageSmoke.gd` to prove direct personal-inventory containment, real carry-weight accounting and the over-capacity loose-item fallback while retaining depletion, cancellation, failure, deterministic-result and impossible-environment coverage.
+- PR #3 passed the owning forage gate before merge: Godot import/parse, forage behavior, forage UI layout, protected Skills/Crafting/Loot regressions and canonical startup all succeeded.
+- Final executable `ad975a08c5a62d178d6bf8e79c2dc21b08c4905c` completed **51 exact-head Actions runs successfully**, with zero failures, queued or running runs.
+- Exact-head Pages deployment run `33819643054` completed successfully; the inventory-acquisition repair is deployed.
+
 ## Forage UI Overlap Repair — 2026-09-03
 
 Verified executable: `fd8913df39113356bfd908377c357bbb91d54e60`
@@ -26,7 +40,7 @@ Verified executable: `11035c7d0b1dd7eb01b076aec244b818d7f6fe56`
 - Plausibility is derived at request/commit boundaries from real materialized terrain, canonical sky exposure and actual generated tree/shrub/rock object semantics in the bounded local patch.
 - WHEN owns elapsed time/cancellation and the canonical Survival skill service owns duration, deterministic success/effectiveness and bounded XP.
 - Valid failed searches consume one finite local opportunity; cancellation and impossible environments do not. Depleted patches cannot be rerolled and do not passively respawn.
-- Successful recovery creates existing `Sturdy Stick` / `Smooth Stone` semantics as ordinary persistent `LOOSE_ITEM` WHAT entities at the survivor's location; pickup, hands, inventory and carry limits remain existing owners.
+- Successful recovery creates existing `Sturdy Stick` / `Smooth Stone` semantics as ordinary persistent WHAT entities. The later inventory-acquisition repair now admits them directly to personal inventory when carry capacity allows, with a real loose-world fallback when it does not.
 - Added a compact live forage control and a dedicated owning workflow/smoke.
 - No `_process`, `_physics_process`, per-resource timer, global entity scan or recurring resource replenishment was added.
 - Executable `11035c7d0b1dd7eb01b076aec244b818d7f6fe56` completed 51 exact-head Actions runs successfully, including the protected full repository suite and Pages deployment.
