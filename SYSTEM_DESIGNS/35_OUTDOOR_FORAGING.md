@@ -2,7 +2,7 @@
 
 Status: **IMPLEMENTED + EXACT-HEAD VERIFIED + DEPLOYED**
 
-Verified executable: `fd8913df39113356bfd908377c357bbb91d54e60`
+Verified executable: `ad975a08c5a62d178d6bf8e79c2dc21b08c4905c`
 
 ## Goal
 
@@ -12,13 +12,15 @@ Provide a small real outdoor Survival action that lets the survivor recover prim
 
 - `game/scripts/simulation/forage/OutdoorForageState.gd` — sparse finite local depletion truth.
 - `game/scripts/simulation/forage/ForageNearbyActionService.gd` — environment validation, WHEN action, Survival resolution and physical output commit.
+- `InventoryContainmentMutationService` — canonical containment mutation when a recovered item can enter personal inventory.
+- `ActorCarryAcquisitionPolicy` — canonical admission decision for recovered mass.
 - `game/scripts/ui/ForagePlayerControls.gd` — thin live request/result surface only.
 - `game/scripts/ci/OutdoorForageSmoke.gd` — owning behavior regression.
 - `game/scripts/ci/ForageUiLayoutSmoke.gd` — compact player/DEV panel non-overlap regression.
 
 ## Canonical contract
 
-> **The outdoor world supplies a finite local opportunity; WHEN charges the search time; Survival determines competence; successful recovery creates ordinary physical WHAT items.**
+> **The outdoor world supplies a finite local opportunity; WHEN charges the search time; Survival determines competence; successful recovery creates ordinary physical WHAT items and normally puts them into the survivor's real inventory.**
 
 ### Local resource truth
 
@@ -55,18 +57,29 @@ Water/unmaterialized/indoors or otherwise implausible contexts hard-block withou
 - A depleted patch hard-blocks further searches; there is no free reroll and no automatic refill.
 - Commit failures compensate only mutations that have not escaped the service.
 
-### Physical outputs
+### Physical outputs and inventory acquisition
 
 Successful recovery uses existing real loot semantics:
 
 - `item.outdoors.sturdy_stick`;
 - `item.outdoors.smooth_stone`.
 
-The service creates real persistent entities through `WorldMutationService` and places them on the survivor cell in the canonical `LOOSE_ITEM` spatial layer. It does **not** bypass pickup, hands, inventory, carry weight or containment. High effectiveness may recover two physical units from one opportunity; otherwise recovery is one unit.
+The forage service first creates each recovered result as a real persistent world entity through `WorldMutationService`. It then asks the existing `ActorCarryAcquisitionPolicy` whether that item can be admitted to the survivor's carried inventory.
+
+When admission is allowed:
+
+- `InventoryContainmentMutationService` places the real item entity in the survivor's personal inventory container;
+- the item has no simultaneous loose-world placement;
+- the existing inventory inspector sees it normally;
+- `ActorCarryQuery` includes its real physical mass in carried weight.
+
+If the hard carry ceiling blocks admission, the item is **not deleted and not invisibly granted**. It falls back to an ordinary `LOOSE_ITEM` on the survivor's current cell so normal pickup/carry rules remain authoritative.
+
+High effectiveness may recover two physical units from one opportunity; otherwise recovery is one unit. Each unit is admitted independently through the same capacity policy.
 
 ## Live interaction and compact UI layout
 
-`FORAGE NEARBY` is a thin player control: it requests the real action and reports the owning service result. It owns no resource, skill, time or item truth.
+`FORAGE NEARBY` is a thin player control: it requests the real action and reports the owning service result. It owns no resource, skill, time, inventory or item truth.
 
 The compact player/DEV controls use two explicit columns so higher-layer DEV panels cannot obscure player actions:
 
@@ -79,7 +92,7 @@ The original forage implementation accidentally placed forage at `(340, 66)`, al
 
 `ForageUiLayoutSmoke.gd` instantiates the real Survival, Weather, Forage and Utilities control layers, waits one normal Godot process frame so their `_ready()` callbacks build the live panels, asserts their canonical rectangles and stable forage node, and fails if forage intersects any neighboring panel.
 
-The dedicated `Outdoor forage` workflow now runs on both `push` to `main` and `pull_request` targeting `main`, so future forage/layout changes have a genuine pre-merge owning gate.
+The dedicated `Outdoor forage` workflow runs on both `push` to `main` and `pull_request` targeting `main`, so forage/layout changes have a genuine pre-merge owning gate.
 
 ## Performance contract
 
@@ -98,7 +111,9 @@ Allowed work is bounded to explicit forage request/commit boundaries and the cur
 `OutdoorForageSmoke.gd` proves:
 
 - valid outdoor request and finite depletion;
-- real loose-item outputs;
+- capacity-allowed recovered items become real survivor inventory contents;
+- inventory-acquired forage contributes to canonical carry weight;
+- hard-capacity rejection leaves the real recovered item as `LOOSE_ITEM` at the survivor's feet rather than deleting it;
 - high-skill bounded two-unit effectiveness;
 - cancel-without-consumption;
 - failed valid search consumes opportunity and grants bounded Survival practice XP without manufacturing an item;
@@ -108,4 +123,6 @@ Allowed work is bounded to explicit forage request/commit boundaries and the cur
 
 `ForageUiLayoutSmoke.gd` proves the live compact-control geometry is non-overlapping after the actual Godot UI lifecycle has run.
 
-Executable `fd8913df39113356bfd908377c357bbb91d54e60` completed **50 exact-head Actions runs successfully**, with zero failed, queued or running runs. The exact-head Pages workflow (`33818678774`) also completed successfully, deploying this repaired layout to the live build.
+PR #3 (`Store recovered forage in survivor inventory`) passed the owning forage gate before merge, including Godot import/parse, forage behavior, forage UI layout, protected Skills/Crafting/Loot regressions and canonical startup.
+
+Executable `ad975a08c5a62d178d6bf8e79c2dc21b08c4905c` completed **51 exact-head Actions runs successfully**, with zero failed, queued or running runs. Exact-head Pages deployment run `33819643054` completed successfully and deployed this inventory-acquisition behavior to the live build.
