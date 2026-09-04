@@ -119,7 +119,7 @@ func damage_asset(asset_id: String, damage: int, source_kind: StringName = &"dir
         return false
     return _refresh_services(services, &"physical_distribution_damage")
 
-func repair_asset(asset_id: String, electrical_skill: int, available_material_units: int) -> Dictionary:
+func repair_asset(asset_id: String, mechanical_skill: int, available_material_units: int) -> Dictionary:
     if not is_ready():
         return {"ok": false, "material_units_consumed": 0, "reason": &"power_network_unavailable"}
     var key: String = asset_id.strip_edges()
@@ -128,7 +128,7 @@ func repair_asset(asset_id: String, electrical_skill: int, available_material_un
         return {"ok": false, "material_units_consumed": 0, "reason": &"unknown_asset"}
     var result: Dictionary = _condition.repair_asset(
         key,
-        electrical_skill,
+        mechanical_skill,
         available_material_units,
         _world_tick()
     )
