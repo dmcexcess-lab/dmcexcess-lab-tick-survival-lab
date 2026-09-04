@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026-09-04 — Direct Inventory Item Actions
+
+- Made normal inventory rows clickable and bound actions to the exact selected persistent item.
+- Food/drink now uses the existing sustainment + WHEN owner; equip/stow/drop uses the existing timed item-transfer owner and real containment/hand state.
+- Added live-scene regression coverage for exact-item eating, satiety change, non-selected item preservation, right-hand equip and stow.
+- Exact executable `f54e35938d6ab6c3803d219374f3eea2e166d9cb` passed 49/49 Actions runs; Pages run `33903061600` deployed successfully.
+- Established the practical closure rule that simulation capability is not player-complete without a truthful normal-UI route.
+
 ## 2026-09-04 — Town-First Island Browser Startup Repair
 
 - Published the settlement-first island and building-derived population truth, then repaired the browser startup regression caused by synchronously regenerating the full island for both population and utility planning.

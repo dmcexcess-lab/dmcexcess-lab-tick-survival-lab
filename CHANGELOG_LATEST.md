@@ -2,6 +2,19 @@
 
 This compact ledger records the newest executable work. `CHANGELOG.md` remains the historical archive.
 
+## Direct Inventory Item Actions — 2026-09-04
+
+Verified executable: `f54e35938d6ab6c3803d219374f3eea2e166d9cb`.
+
+- Changed the normal inventory from a read-only item tree into an exact-item action surface. Clicking a carried item selects that persistent entity rather than choosing the first item of a matching type.
+- Carried food and drink now expose truthful **EAT** / **DRINK** actions through the existing sustainment owner and real WHEN completion; spoiled consumables remain unavailable.
+- Pack items can be equipped to the real right or left hand or dropped. Hand items can be stowed or dropped through the existing timed transfer owner.
+- The inventory closes for decision-time execution and reopens afterward, then verifies real containment/hand state before reporting completion.
+- Added live-scene regression coverage proving exact apple consumption changes satiety without consuming water, and proving a selected hammer can be equipped then stowed through real hand state.
+- Updated the semantic-icon contract to protect the new interactive row path instead of the retired read-only helper.
+- Exact executable head completed **49 successful Actions runs** with zero failures or pending runs. Pages run `33903061600` deployed successfully.
+- Canonical completion rule: an implemented player system is not player-complete until its normal gameplay UI exposes a truthful route to the owning action/state. Do not add generic fake **USE** buttons for effects without real owners.
+
 ## Town-First Island Browser Startup Repair — 2026-09-04
 
 Verified executable: `0f12cfcd1e5efb85bf5261fcbd92a497a44387e2`.
