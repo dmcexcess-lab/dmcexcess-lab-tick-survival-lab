@@ -202,7 +202,6 @@ func _begin_motion(actor_id: String, action_type: StringName, heading_delta: int
     var target_heading := VehicleHeading.normalize(int(rec.get("heading", 0)) + heading_delta)
     var distance := _profiles.movement_cells(kind)
     if kind == VehicleProfileCatalog.SKATEBOARD and heading_delta != 0:
-        # Skateboard is actor-like cardinal movement; turns change 90 degrees without a 30-degree driving arc.
         target_heading = VehicleHeading.normalize(int(rec.get("heading", 0)) + heading_delta * 3)
     return _begin(actor_id, vehicle_id, action_type, 3, {"heading": target_heading, "distance": distance})
 
@@ -265,7 +264,7 @@ func _commit_enter(actor_id: String, vehicle_id: String) -> bool:
         return false
     _state.mutate(vehicle_id, {"locked": false})
     _overrides.set_override(actor_id, false)
-    _mutations.set_placement(actor_id, Layers.Channel.ACTOR, vehicle_place.anchor, Facing.NORTH, Footprint.single_cell())
+    _mutations.set_placement(actor_id, Layers.Channel.ACTOR, vehicle_place.anchor, Facing.Value.NORTH, Footprint.single_cell())
     mounted_changed.emit(actor_id, vehicle_id, true)
     return true
 
@@ -277,7 +276,7 @@ func _commit_exit(actor_id: String, vehicle_id: String) -> bool:
         var target := vehicle_place.anchor + delta
         var check := _query.query_cell(target, actor_id, true)
         if check != null and check.is_clear():
-            if not _mutations.set_placement(actor_id, Layers.Channel.ACTOR, target, Facing.NORTH, Footprint.single_cell()):
+            if not _mutations.set_placement(actor_id, Layers.Channel.ACTOR, target, Facing.Value.NORTH, Footprint.single_cell()):
                 continue
             _overrides.clear_override(actor_id)
             _state.clear_driver(vehicle_id)
