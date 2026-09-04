@@ -56,14 +56,8 @@ func _boot_system34() -> bool:
     _condition_moodlets = ConditionMoodletClass.new(_condition_modifiers, _health_state, _carry_query)
     if not _condition_moodlets.is_ready():
         return false
-
-    # System 34 supersedes live legacy fatigue without deleting historical System-13 fixtures/tests.
-    if _movement_capability != null:
-        _movement_capability.remove_provider("actor_needs")
-    if _movement != null and _movement_exertion != null:
-        var legacy_exertion := Callable(_movement_exertion, "_on_movement_exertion_resolved")
-        if _movement.movement_exertion_resolved.is_connected(legacy_exertion):
-            _movement.movement_exertion_resolved.disconnect(legacy_exertion)
+    if _hearing_profile != null and not _hearing_profile.configure_condition(_condition_service):
+        return false
 
     if not _carry_query.configure_capacity_modifier(_condition_modifiers):
         return false
