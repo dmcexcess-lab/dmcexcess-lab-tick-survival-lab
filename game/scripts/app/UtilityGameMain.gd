@@ -7,7 +7,6 @@ const UtilityLightingClass = preload("res://scripts/simulation/utilities/Utility
 const PowerInfrastructureClass = preload("res://scripts/simulation/utilities/NeighborhoodPowerInfrastructureMaterializer.gd")
 const PowerNetworkRuntimeClass = preload("res://scripts/simulation/utilities/UtilityPowerNetworkRuntime.gd")
 const RefrigerationProviderClass = preload("res://scripts/simulation/utilities/UtilityRefrigerationEnvironmentProvider.gd")
-const UtilityControlsClass = preload("res://scripts/ui/UtilityDevControls.gd")
 
 const CENTRAL_SETTLEMENT_ID: String = "settlement.rural.crossroads.001"
 const INVALID_UTILITY_CELL := Vector2i(2147483647, 2147483647)
@@ -23,7 +22,6 @@ var _power_infrastructure: UtilityPowerInfrastructureMaterializer = null
 var _power_network: UtilityPowerNetworkRuntime = null
 var _local_power_topology: Dictionary = {}
 var _refrigeration_providers: Dictionary = {}
-var _utility_controls: UtilityDevControls = null
 var _central_power_service_id: String = ""
 var _central_water_service_id: String = ""
 var _central_refrigerator_id: String = ""
@@ -67,16 +65,6 @@ func _boot_utility_runtime() -> bool:
     var tick_callable := Callable(self, "_on_power_network_tick_advanced")
     if not _kernel.world_tick_advanced.is_connected(tick_callable):
         _kernel.world_tick_advanced.connect(tick_callable)
-
-    _utility_controls = UtilityControlsClass.new()
-    add_child(_utility_controls)
-    if not _utility_controls.configure(
-        _utilities,
-        _central_power_service_id,
-        _central_water_service_id,
-        _central_refrigerator_id
-    ):
-        return false
     return true
 
 func _wire_power_infrastructure(plan: GeneratedGlobalWorldPlan) -> bool:
@@ -107,10 +95,12 @@ func _wire_power_infrastructure(plan: GeneratedGlobalWorldPlan) -> bool:
 func damage_power_infrastructure(asset_id: String, damage: int, source_kind: StringName = &"direct") -> bool:
     return _power_network != null and _power_network.damage_asset(asset_id, damage, source_kind)
 
-func repair_power_infrastructure(asset_id: String, electrical_skill: int, available_material_units: int) -> Dictionary:
+## Low-level owner seam. Player-facing repair must supply real tools/materials and WHEN before
+## invoking this mutation; the only canonical competence vocabulary here is Mechanical.
+func repair_power_infrastructure(asset_id: String, mechanical_skill: int, available_material_units: int) -> Dictionary:
     if _power_network == null:
         return {"ok": false, "material_units_consumed": 0, "reason": &"power_network_unavailable"}
-    return _power_network.repair_asset(asset_id, electrical_skill, available_material_units)
+    return _power_network.repair_asset(asset_id, mechanical_skill, available_material_units)
 
 func power_infrastructure_repair_requirements(asset_id: String) -> Dictionary:
     if _power_network == null:
@@ -166,9 +156,6 @@ func _on_power_line_snapped(_asset_id: String, cell: Vector2i) -> void:
 func _wire_utility_lighting() -> bool:
     if _physical_lighting == null or _hand_state == null:
         return false
-    var inherited_callable := Callable(self, "_on_demo_lighting_emitters_changed")
-    if _demo_lighting_sources != null and _demo_lighting_sources.emitters_changed.is_connected(inherited_callable):
-        _demo_lighting_sources.emitters_changed.disconnect(inherited_callable)
     _utility_lighting = UtilityLightingClass.new(
         _world,
         _hand_state,
@@ -180,8 +167,9 @@ func _wire_utility_lighting() -> bool:
         return false
     if not _physical_lighting.set_emitters(_utility_lighting.emitters()):
         return false
-    if not _utility_lighting.emitters_changed.is_connected(inherited_callable):
-        _utility_lighting.emitters_changed.connect(inherited_callable)
+    var lighting_callable := Callable(self, "_on_lighting_emitters_changed")
+    if not _utility_lighting.emitters_changed.is_connected(lighting_callable):
+        _utility_lighting.emitters_changed.connect(lighting_callable)
     return true
 
 func _wire_refrigeration() -> bool:
