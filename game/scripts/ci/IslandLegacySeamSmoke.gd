@@ -133,7 +133,11 @@ func _initialize() -> void:
         var smalltown_bounds: Rect2i = smalltown.get("bounds", Rect2i())
         _check(not central_bounds.intersects(smalltown_bounds), "central and small-town generated sites remain distinct instead of overlapping")
         var gap: int = _rect_manhattan_gap(central_bounds, smalltown_bounds)
-        var max_seam: int = int(profile.get("protected_cross_half_span", 192))
+        # Town-first islands deliberately place villages and rural homes between
+        # the larger anchors.  The old 192-cell cross-fixture shortcut is no
+        # longer the seam contract; this remains bounded so a true empty belt
+        # cannot return.
+        var max_seam: int = int(profile.get("island_settlement_seam_max", 1280))
         print("ISLAND_CENTRAL_TO_SMALLTOWN_EDGE_GAP=%d MAX=%d" % [gap, max_seam])
         _check(max_seam > 0 and gap <= max_seam, "central-to-small-town countryside seam stays within the protected rural corridor instead of becoming a giant green belt")
 

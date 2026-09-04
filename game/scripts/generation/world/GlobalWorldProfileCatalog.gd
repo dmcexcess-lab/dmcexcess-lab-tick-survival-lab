@@ -33,6 +33,7 @@ func profile(profile_id: StringName) -> Dictionary:
         # Settlement geometry determines the playable envelope before geography
         # and coastline generation. The request bounds are only a stable anchor.
         result["island_edge_padding"] = 320
+        result["island_settlement_seam_max"] = 1280
 
         result["protected_cross_half_span"] = 160
         result["protected_cross_half_thickness"] = 96
