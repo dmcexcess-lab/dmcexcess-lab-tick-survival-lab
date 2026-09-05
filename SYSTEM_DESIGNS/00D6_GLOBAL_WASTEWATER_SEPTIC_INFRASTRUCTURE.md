@@ -4,6 +4,8 @@ Status: **RETIRED — NOT AN ACTIVE GAME SYSTEM OR PLANNING REQUIREMENT**
 
 Retired contract confirmed: **2026-08-30**
 
+Updated: **2026-09-05**
+
 ## Current authority
 
 Tick Survival Lab has **no active wastewater/sewer/septic system**.
@@ -22,9 +24,10 @@ Some legacy source files/data fields may remain in the repository for historical
 
 Potable water is governed by `00D5_GLOBAL_POTABLE_WATER_INFRASTRUCTURE.md` and `33_POWER_WATER_UTILITIES.md`:
 
-- one island-wide municipal treatment facility;
-- no municipal service radius or long-distance pipe simulation;
-- deterministic real private wells for a minority of generated rural homes;
+- one island-wide municipal facility using one already-generated real building;
+- no municipal service radius, water-node graph or long-distance pipe simulation;
+- deterministic real private wells for **10–20% of generated rural buildings**;
+- each selected well is that building's authoritative private source, with no municipal fallback while broken;
 - no wastewater counterpart.
 
 ## Reintroduction rule
