@@ -21,8 +21,6 @@ const RegistryClass = preload("res://scripts/streaming/MaterializationRegistry.g
 const AreaSourceClass = preload("res://scripts/streaming/AreaSiteMaterializationSource.gd")
 const IslandSurfaceCatalogClass = preload("res://scripts/streaming/IslandSurfaceSourceCatalog.gd")
 const IslandSurfaceSourceClass = preload("res://scripts/streaming/IslandSurfaceMaterializationSource.gd")
-const WatercourseCatalogClass = preload("res://scripts/streaming/WatercourseSourceCatalog.gd")
-const WatercourseSourceClass = preload("res://scripts/streaming/WatercourseMaterializationSource.gd")
 const MaterializationClass = preload("res://scripts/streaming/WorldMaterializationCoordinator.gd")
 const StreamingGridClass = preload("res://scripts/streaming/StreamingRegionGrid.gd")
 const StreamingClass = preload("res://scripts/streaming/WorldStreamingCoordinator.gd")
@@ -140,12 +138,10 @@ static func build(
     var registry := RegistryClass.new()
     var area_source := AreaSourceClass.new(registry)
     var surface_catalog := IslandSurfaceCatalogClass.new(global_plan)
-    var water_catalog := WatercourseCatalogClass.new(global_plan)
-    if not surface_catalog.is_ready() or not water_catalog.is_ready():
-        push_error("GeneratedIslandCritiqueFixture: island source catalogs failed")
+    if not surface_catalog.is_ready():
+        push_error("GeneratedIslandCritiqueFixture: island surface source catalog failed")
         return false
     var surface_source := IslandSurfaceSourceClass.new(registry, surface_catalog)
-    var water_source := WatercourseSourceClass.new(registry, water_catalog)
     var materialization := MaterializationClass.new(
         world,
         mutations,
@@ -154,7 +150,7 @@ static func build(
         registry,
         area_source,
         null,
-        [surface_source, water_source]
+        [surface_source]
     )
     if not materialization.is_ready():
         return false
@@ -325,11 +321,9 @@ static func _probe_initial_streaming(global_plan: GeneratedGlobalWorldPlan, play
     var registry := RegistryClass.new()
     var area_source := AreaSourceClass.new(registry)
     var surface_catalog := IslandSurfaceCatalogClass.new(global_plan)
-    var water_catalog := WatercourseCatalogClass.new(global_plan)
-    if not surface_catalog.is_ready() or not water_catalog.is_ready():
-        return {"ok": false, "failure_reason": "island_source_catalogs_failed"}
+    if not surface_catalog.is_ready():
+        return {"ok": false, "failure_reason": "island_surface_source_catalog_failed"}
     var surface_source := IslandSurfaceSourceClass.new(registry, surface_catalog)
-    var water_source := WatercourseSourceClass.new(registry, water_catalog)
     var materialization := MaterializationClass.new(
         probe_world,
         probe_mutations,
@@ -338,7 +332,7 @@ static func _probe_initial_streaming(global_plan: GeneratedGlobalWorldPlan, play
         registry,
         area_source,
         null,
-        [surface_source, water_source]
+        [surface_source]
     )
     if not materialization.is_ready():
         return {"ok": false, "failure_reason": "materialization_not_ready"}
