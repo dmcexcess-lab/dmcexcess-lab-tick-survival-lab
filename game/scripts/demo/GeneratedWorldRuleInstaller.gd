@@ -17,6 +17,7 @@ const ENVIRONMENT_GROUND_KEYS: Array[String] = [
 
 const EXTRA_WALKABLE_TERRAIN: Array[StringName] = [
     &"ground.road", &"ground.road_plain", &"ground.sidewalk",
+    &"ground.dirt_road", &"ground.road_white_line_h", &"ground.road_white_line_v",
     &"ground.parking", &"ground.parking_v", &"ground.crosswalk_h", &"ground.crosswalk_v",
     &"ground.gravel", &"ground.shoulder_gravel",
     &"ground.shore_sand", &"ground.shore_n", &"ground.shore_e", &"ground.shore_s", &"ground.shore_w",

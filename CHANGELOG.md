@@ -1,5 +1,11 @@
 # Changelog
 
+## 2026-09-05 — Dirt-road traversal repair
+
+- Registered generated dirt-road terrain and four-lane white divider terrain as walkable in the production movement policy.
+- Included yellow and white painted road markings in current and remembered road-neighbor topology.
+- Added complete-island coverage for the generated terrain traversal contract.
+
 ## 2026-09-05 — Island road hierarchy and alternate links
 
 - Added up to eight extra settlement connections beyond the connecting tree.

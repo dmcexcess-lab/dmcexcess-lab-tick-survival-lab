@@ -31,6 +31,8 @@ const ROAD_LIKE_TOKENS := {
     "road_t_nes": true, "road_t_esw": true, "road_t_swn": true, "road_t_wne": true,
     "road_cross": true, "road_end_n": true, "road_end_e": true, "road_end_s": true,
     "road_end_w": true, "road_plain": true, "dirt_road_h": true, "dirt_road_v": true,
+    "road_yellow_line_h": true, "road_yellow_line_v": true,
+    "road_white_line_h": true, "road_white_line_v": true,
 }
 
 var _perception: ObserverPerceptionService = null

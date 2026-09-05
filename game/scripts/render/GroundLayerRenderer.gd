@@ -37,6 +37,10 @@ const ROAD_LIKE_TOKENS := {
     "road_plain": true,
     "dirt_road_h": true,
     "dirt_road_v": true,
+    "road_yellow_line_h": true,
+    "road_yellow_line_v": true,
+    "road_white_line_h": true,
+    "road_white_line_v": true,
 }
 
 var _world: WorldState = null

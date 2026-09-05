@@ -9,6 +9,9 @@ const ProjectorClass = preload("res://scripts/generation/integration/System20Are
 const LocalGeneratorClass = preload("res://scripts/generation/areas/LocalAreaGenerator.gd")
 const IslandSurfaceGeneratorClass = preload("res://scripts/generation/areas/IslandSurfaceAreaGenerator.gd")
 const IslandSurfaceCatalogClass = preload("res://scripts/streaming/IslandSurfaceSourceCatalog.gd")
+const RuleInstallerClass = preload("res://scripts/demo/GeneratedWorldRuleInstaller.gd")
+const CollisionCatalogClass = preload("res://scripts/simulation/collision/CollisionCatalog.gd")
+const TraversalPolicyClass = preload("res://scripts/simulation/movement/MovementTraversalPolicy.gd")
 
 var failures: Array[String] = []
 
@@ -38,6 +41,12 @@ func _initialize() -> void:
     for road_type: StringName in [&"four_lane", &"two_lane", &"gravel", &"dirt"]:
         _check(road_types.has(road_type), "island includes %s roads" % road_type)
     _check(alternative_routes.size() > 0 and alternative_routes.size() <= 8, "island includes bounded alternate settlement routes")
+    var traversal := TraversalPolicyClass.new()
+    var installed: Dictionary = RuleInstallerClass.new().install(CollisionCatalogClass.new(), traversal)
+    _check(bool(installed.get("ok", false)), "generated-world traversal rules install")
+    for terrain: StringName in [&"ground.dirt_road", &"ground.road_white_line_h", &"ground.road_white_line_v"]:
+        var rule: Dictionary = traversal.terrain_rule(terrain)
+        _check(bool(rule.get("traversable", false)), "%s is traversable" % terrain)
     _check(plan.profile_id == ProfilesClass.TEMPERATE_ISLAND_REGION, "island profile identity is recorded")
     _check(plan.profile_version == 9, "rural infill island profile v9 is recorded")
     _check(plan.bounds.size == Vector2i(3072, 3072), "settlement-first envelope determines island size")
