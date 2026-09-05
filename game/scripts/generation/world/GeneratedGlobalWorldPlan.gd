@@ -7,22 +7,12 @@ var bounds: Rect2i = Rect2i()
 var profile_id: StringName = &""
 var profile_version: int = 0
 var geography_cells: Array[Dictionary] = []
-## Legacy storage only until part-two file deletion. These fields no longer
-## participate in generation validity, validation, projection, or signatures.
-var river_segments: Array[Dictionary] = []
 var regions: Array[Dictionary] = []
 var settlements: Array[Dictionary] = []
 var road_segments: Array[Dictionary] = []
-var bridge_intents: Array[Dictionary] = []
 var power_nodes: Array[Dictionary] = []
 var power_segments: Array[Dictionary] = []
 var water_services: Array[Dictionary] = []
-## Legacy storage only. Potable water is service/facility based; wastewater is retired.
-var water_nodes: Array[Dictionary] = []
-var water_segments: Array[Dictionary] = []
-var wastewater_services: Array[Dictionary] = []
-var wastewater_nodes: Array[Dictionary] = []
-var wastewater_segments: Array[Dictionary] = []
 var area_sites: Array[Dictionary] = []
 ## Compact, deterministic projection of the real local-area plans. This lets
 ## population and utility boot share one whole-island generation pass instead
