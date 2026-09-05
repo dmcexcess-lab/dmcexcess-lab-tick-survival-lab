@@ -48,7 +48,7 @@ func profile(profile_id: StringName) -> Dictionary:
 func _rural_profile() -> Dictionary:
     return {
         "id": TEMPERATE_RURAL_REGION,
-        "version": 7,
+        "version": 8,
         "minimum_world_size": Vector2i(1536, 1536),
         "local_site_size": Vector2i(256, 256),
         "primary_width": 5,
@@ -67,21 +67,8 @@ func _rural_profile() -> Dictionary:
         "road_cost_rolling": 14,
         "road_cost_upland": 32,
 
-        "primary_river_width": 5,
-        "hydrology_protected_margin": 0,
-        "river_uphill_penalty": 5,
-        "river_meander_cost": 7,
-        "road_cost_river_crossing": 120,
-        "settlement_river_clearance": 16,
-
         "power_cost_primary": 10,
         "power_cost_secondary": 12,
-
-        # Potable water is one island-wide municipal treatment facility. Its small
-        # physical plant is kept near the shore; long-distance pipe/flow simulation is
-        # intentionally absent. Rural private wells are selected later from real homes.
-        "water_plant_shore_offset_cells": 48,
-        "water_plant_internal_spacing_cells": 3,
 
         "smalltown_distance_min": 520,
         "smalltown_distance_max": 620,
