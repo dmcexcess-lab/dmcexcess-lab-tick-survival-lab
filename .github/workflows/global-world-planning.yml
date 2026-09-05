@@ -33,11 +33,8 @@ jobs:
           test -f game/scripts/generation/world/GlobalWorldProfileCatalog.gd
           test -f game/scripts/generation/world/GlobalGeographyPlanner.gd
           test -f game/scripts/generation/world/GlobalGeographyQuery.gd
-          test -f game/scripts/generation/world/GlobalHydrologyPlanner.gd
-          test -f game/scripts/generation/world/GlobalHydrologyQuery.gd
           test -f game/scripts/generation/world/GlobalSettlementPlanner.gd
           test -f game/scripts/generation/world/GlobalMajorRoadPlanner.gd
-          test -f game/scripts/generation/world/GlobalBridgeIntentPlanner.gd
           test -f game/scripts/generation/world/GlobalPowerInfrastructurePlanner.gd
           test -f game/scripts/generation/world/GlobalPowerInfrastructureQuery.gd
           test -f game/scripts/generation/world/GlobalPowerInfrastructureValidator.gd
@@ -55,6 +52,13 @@ jobs:
           test -f game/scripts/ci/GlobalWorldPlanningV6Smoke.gd
           test -f game/scripts/ci/CompleteIslandWorldPlanningSmoke.gd
           test -f game/scripts/ci/IslandLegacySeamSmoke.gd
+          test ! -e game/scripts/generation/world/GlobalHydrologyPlanner.gd
+          test ! -e game/scripts/generation/world/GlobalHydrologyQuery.gd
+          test ! -e game/scripts/generation/world/GlobalBridgeIntentPlanner.gd
+          test ! -e game/scripts/generation/world/GlobalWastewaterInfrastructurePlanner.gd
+          test ! -e game/scripts/generation/world/GlobalWastewaterInfrastructureQuery.gd
+          test ! -e game/scripts/generation/world/GlobalWastewaterInfrastructureValidator.gd
+          test ! -e game/scripts/generation/integration/System20WatercourseRequestProjection.gd
           ! grep -R -q 'scripts/generation/areas\|scripts/generation/buildings\|scripts/render\|scripts/art\|scripts/camera\|scripts/input\|scripts/ui\|scripts/player\|scripts/reboot\|WorldMutationService\|AreaMaterializationCoordinator' game/scripts/generation/world
 
       - name: Install Godot 4.7.1
@@ -72,7 +76,7 @@ jobs:
           ./Godot_v4.7.1-stable_linux.x86_64 --headless --editor --path "$GITHUB_WORKSPACE/game" --quit 2>&1 | tee "$RUNNER_TEMP/import.log"
           if grep -Eqi 'SCRIPT ERROR|Parse Error|Failed to load script' "$RUNNER_TEMP/import.log"; then exit 1; fi
 
-      - name: System 00D geography hydrology roads power water and System 20 projection smoke
+      - name: System 00D geography roads power water and System 20 projection smoke
         shell: bash
         run: |
           set -euxo pipefail
