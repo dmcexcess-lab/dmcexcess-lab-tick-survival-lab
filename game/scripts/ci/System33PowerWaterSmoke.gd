@@ -7,7 +7,6 @@ const UtilityStateClass = preload("res://scripts/simulation/utilities/Neighborho
 const RefrigerationProviderClass = preload("res://scripts/simulation/utilities/UtilityRefrigerationEnvironmentProvider.gd")
 
 const CENTRAL_SETTLEMENT: String = "settlement.rural.crossroads.001"
-const MUNICIPAL_PLANT_ASSET: String = "water.physical.plant.001"
 
 var _failures: Array[String] = []
 var _plan: GeneratedGlobalWorldPlan = null
@@ -28,7 +27,8 @@ func _initialize() -> void:
         _check(_utilities.initialize_from_plan(_plan), "neighborhood utility state initializes")
     if _utilities != null and _utilities.is_ready():
         _test_dynamic_power_topology()
-        _test_island_water_and_wells()
+        _test_island_water()
+        _test_rural_private_wells()
         _test_refrigeration_clock()
         _test_snapshot_restore()
     _finish()
@@ -60,25 +60,32 @@ func _test_dynamic_power_topology() -> void:
             _check(not covered.has(building_id), "a building cannot belong to two substations")
             covered[building_id] = true
             var service_id: String = _utilities.power_service_for_building(building_id)
-            _check(not service_id.is_empty() and _utilities.power_service_ids().has(service_id), "each building resolves one authoritative local service")
+            _check(not service_id.is_empty() and _utilities.power_service_ids().has(service_id), "each building resolves one authoritative local power service")
     _check(covered.size() == building_count, "every generated building belongs to one local substation")
     _check(_utilities.power_substation_component_ids().size() == substations.size(), "runtime substation count matches generated topology")
 
-func _test_island_water_and_wells() -> void:
+func _test_island_water() -> void:
     var central_power: String = _utilities.power_service_for_settlement(CENTRAL_SETTLEMENT)
     var central_water: String = _utilities.water_service_for_settlement(CENTRAL_SETTLEMENT)
     _check(not central_power.is_empty() and _utilities.power_service_available(central_power), "central local power starts operational")
     _check(not central_water.is_empty() and _utilities.water_service_available(central_water), "central municipal water starts operational")
-    _check(_utilities.water_required_power_service_id(central_water).is_empty(), "municipal treatment is independent of outside grid power")
+    _check(_utilities.water_required_power_service_id(central_water).is_empty(), "municipal water remains independent of outside grid power")
+    _check(_plan.water_nodes.is_empty() and _plan.water_segments.is_empty(), "municipal water has no pipe or node graph")
+    _check(_plan.wastewater_services.is_empty() and _plan.wastewater_nodes.is_empty() and _plan.wastewater_segments.is_empty(), "wastewater remains absent")
 
-    var plant_ids: Dictionary = {}
+    var facility_ids: Dictionary = {}
     for service: Dictionary in _plan.water_services:
         _check(StringName(service.get("service_mode", &"")) == &"island_wide_municipal", "every planned water service is island-wide municipal")
         _check(bool(service.get("island_wide", false)), "municipal service explicitly owns island-wide coverage")
-        _check(not service.has("service_radius") or int(service.get("service_radius", 0)) <= 0, "no hidden radius coverage survives")
-        plant_ids[String(service.get("plant_id", ""))] = true
-    _check(plant_ids.size() == 1, "one municipal treatment plant serves the island")
-    _check(_utilities.water_asset_ids(&"municipal_plant") == [MUNICIPAL_PLANT_ASSET], "one real condition-owned municipal plant asset exists")
+        facility_ids[String(service.get("facility_id", ""))] = true
+    _check(facility_ids.size() == 1, "one municipal facility serves the island")
+
+    var municipal_assets: Array[String] = _utilities.water_asset_ids(&"municipal_plant")
+    _check(municipal_assets.size() == 1, "one real condition-owned municipal facility building exists")
+    if municipal_assets.is_empty():
+        return
+    var municipal_asset: String = municipal_assets[0]
+    _check(municipal_asset == _utilities.water_facility_building_id(), "municipal water asset is the generated facility building")
 
     var branch: String = _utilities.power_branch_component_id(central_power)
     _check(_utilities.set_power_component_state(branch, UtilityRuntimeState.DAMAGED, &"smoke_grid_outage"), "local grid branch can fail")
@@ -86,51 +93,89 @@ func _test_island_water_and_wells() -> void:
     _check(_utilities.water_service_available(central_water), "municipal water survives outside-grid outage")
     _check(_utilities.set_power_component_state(branch, UtilityRuntimeState.OPERATIONAL, &"smoke_grid_restore"), "local grid branch restores")
 
-    _check(_utilities.damage_water_asset(MUNICIPAL_PLANT_ASSET, 1000, &"smoke_plant_damage"), "critical plant accepts real damage")
+    _check(_utilities.damage_water_asset(municipal_asset, 1000, &"smoke_plant_damage"), "municipal facility accepts real damage")
     for service: Dictionary in _plan.water_services:
-        _check(not _utilities.water_service_available(String(service.get("id", ""))), "critical plant failure removes municipal water island-wide")
-    _check(bool(_utilities.repair_water_asset(MUNICIPAL_PLANT_ASSET, 3).get("ok", false)), "critical plant repairs with real materials")
+        _check(not _utilities.water_service_available(String(service.get("id", ""))), "municipal facility failure removes municipal water island-wide")
+    _check(bool(_utilities.repair_water_asset(municipal_asset, 3).get("ok", false)), "municipal facility repairs with real materials")
     for service: Dictionary in _plan.water_services:
-        _check(_utilities.water_service_available(String(service.get("id", ""))), "plant repair restores municipal water island-wide")
+        _check(_utilities.water_service_available(String(service.get("id", ""))), "municipal repair restores island-wide service")
 
-    var rural_home_count: int = int(_topology.get("rural_home_count", 0))
+func _test_rural_private_wells() -> void:
+    var rural_building_count: int = int(_topology.get("rural_building_count", 0))
     var wells: Array = _topology.get("wells", [])
-    _check(rural_home_count > 0 and not wells.is_empty(), "generated rural homes receive deterministic wells")
-    if rural_home_count > 0:
-        _check(wells.size() * 100 >= rural_home_count * 10, "at least ten percent of rural homes have wells")
-        _check(wells.size() * 100 <= rural_home_count * 20, "no more than twenty percent of rural homes have wells")
+    _check(rural_building_count > 0 and not wells.is_empty(), "generated rural buildings receive deterministic private wells")
+    if rural_building_count > 0:
+        _check(wells.size() * 100 >= rural_building_count * 10, "at least ten percent of rural buildings have wells")
+        _check(wells.size() * 100 <= rural_building_count * 20, "no more than twenty percent of rural buildings have wells")
+
+    var replay: Dictionary = PowerTopologyPlannerClass.new().plan(_plan)
+    _check(bool(replay.get("ok", false)), "private-well topology replays")
+    _check(_well_signature(replay.get("wells", [])) == _well_signature(wells), "same world seed chooses the same rural wells")
+
+    var well_buildings: Dictionary = {}
+    for value: Variant in wells:
+        _check(typeof(value) == TYPE_DICTIONARY, "well record is valid")
+        if typeof(value) != TYPE_DICTIONARY:
+            continue
+        var well: Dictionary = value
+        var asset_id: String = String(well.get("asset_id", ""))
+        var building_id: String = String(well.get("building_id", ""))
+        var service_id: String = String(well.get("service_id", ""))
+        var site_id: String = String(well.get("site_id", ""))
+        var cell: Vector2i = well.get("cell", Vector2i(-999999, -999999))
+        _check(_site_is_rural(site_id), "only rural-site buildings receive wells")
+        _check(asset_id.begins_with("water.physical.well."), "well has stable private asset identity")
+        _check(not building_id.is_empty() and not well_buildings.has(building_id), "a rural building receives at most one well")
+        well_buildings[building_id] = true
+        _check(_utilities.water_asset_ids(&"private_well").has(asset_id), "runtime owns each planned private well")
+        _check(_utilities.well_service_for_building(building_id) == service_id, "well maps directly to its owning building")
+        _check(_utilities.water_service_for_building(building_id) == service_id, "well replaces municipal water for its building")
+        _check(_utilities.water_service_for_cell(cell) == service_id, "well-building cell lookup resolves the private source")
+        _check(_utilities.water_required_power_service_id(service_id).is_empty(), "simple private well has no electrical-grid dependency")
+        _check(_utilities.water_service_available(service_id), "private well starts operational")
+
+    var non_well_rural: Dictionary = _first_non_well_building(well_buildings, true)
+    _check(not non_well_rural.is_empty(), "at least one rural building remains on municipal water")
+    if not non_well_rural.is_empty():
+        var building_id: String = String(non_well_rural.get("building_id", ""))
+        var settlement_id: String = String(non_well_rural.get("settlement_id", ""))
+        _check(_utilities.well_service_for_building(building_id).is_empty(), "non-well rural building has no private source")
+        _check(_utilities.water_service_for_building(building_id) == _utilities.water_service_for_settlement(settlement_id), "non-well rural building remains municipal")
+
+    var town_building: Dictionary = _first_non_well_building(well_buildings, false)
+    _check(not town_building.is_empty(), "town building exists for municipal-only proof")
+    if not town_building.is_empty():
+        var town_id: String = String(town_building.get("building_id", ""))
+        var town_settlement: String = String(town_building.get("settlement_id", ""))
+        _check(_utilities.well_service_for_building(town_id).is_empty(), "town building never receives a private rural well")
+        _check(_utilities.water_service_for_building(town_id) == _utilities.water_service_for_settlement(town_settlement), "town building stays on municipal water")
+
     if wells.is_empty():
         return
+    var first_well: Dictionary = wells[0]
+    var well_asset: String = String(first_well.get("asset_id", ""))
+    var well_building: String = String(first_well.get("building_id", ""))
+    var well_service: String = String(first_well.get("service_id", ""))
+    var well_cell: Vector2i = first_well.get("cell", Vector2i(-999999, -999999))
+    var municipal_assets: Array[String] = _utilities.water_asset_ids(&"municipal_plant")
+    if municipal_assets.is_empty():
+        return
+    var municipal_asset: String = municipal_assets[0]
 
-    var well: Dictionary = wells[0]
-    var well_asset: String = String(well.get("asset_id", ""))
-    var well_building: String = String(well.get("building_id", ""))
-    var well_power: String = String(well.get("power_service_id", ""))
-    var well_service: String = _utilities.well_service_for_building(well_building)
-    _check(well_asset.begins_with("water.physical.well."), "well has stable real asset identity")
-    _check(not well_service.is_empty() and _utilities.water_service_available(well_service), "powered maintained well provides private water")
-    _check(_utilities.water_service_for_building(well_building) == well_service, "healthy well is the home's effective unlimited source")
-
-    _check(_utilities.damage_water_asset(MUNICIPAL_PLANT_ASSET, 1000, &"smoke_plant_with_well"), "municipal plant can fail independently")
+    _check(_utilities.damage_water_asset(municipal_asset, 1000, &"smoke_plant_with_well"), "municipal facility can fail independently")
     _check(_utilities.water_service_available(well_service), "private well survives island municipal failure")
-    _check(bool(_utilities.repair_water_asset(MUNICIPAL_PLANT_ASSET, 3).get("ok", false)), "municipal plant repairs after well independence proof")
-
-    var well_branch: String = _utilities.power_branch_component_id(well_power)
-    _check(not well_branch.is_empty(), "well's power service exposes local branch")
-    _check(_utilities.set_power_component_state(well_branch, UtilityRuntimeState.DAMAGED, &"smoke_well_power_loss"), "well local power can fail")
-    _check(not _utilities.water_service_available(well_service), "well stops when local electrical power fails")
-    _check(_utilities.water_service_for_building(well_building) != well_service, "home falls back to municipal water when well power is out")
-    _check(_utilities.set_power_component_state(well_branch, UtilityRuntimeState.OPERATIONAL, &"smoke_well_power_restore"), "well local power restores")
-    _check(_utilities.water_service_available(well_service), "well resumes when local power returns")
+    _check(_utilities.water_service_for_building(well_building) == well_service, "well building remains bound to its private source during municipal failure")
+    _check(bool(_utilities.repair_water_asset(municipal_asset, 3).get("ok", false)), "municipal facility repairs after well independence proof")
 
     _check(_utilities.damage_water_asset(well_asset, 1000, &"smoke_well_damage"), "well has real damageable condition")
     _check(not _utilities.water_service_available(well_service), "damaged well stops providing water")
-    _check(_utilities.water_service_for_building(well_building) != well_service, "damaged well falls back to municipal service")
-    _check(bool(_utilities.repair_water_asset(well_asset, 1).get("ok", false)), "well repairs with real maintenance material")
+    _check(_utilities.water_service_for_building(well_building) == well_service, "broken well does not silently fall back to municipal water")
+    _check(_utilities.water_service_for_cell(well_cell) == well_service, "broken well remains the building's authoritative source identity")
+    _check(bool(_utilities.repair_water_asset(well_asset, 1).get("ok", false)), "well repairs with one maintenance material")
     _check(_utilities.water_service_available(well_service), "well repair restores private service")
 
     var center: Vector2i = _settlement_center(CENTRAL_SETTLEMENT)
-    _check(_utilities.water_service_for_cell(center) == central_water, "cell lookup resolves island-wide municipal service without radius simulation")
+    _check(_utilities.water_service_for_cell(center) == _utilities.water_service_for_settlement(CENTRAL_SETTLEMENT), "ordinary outdoor cell lookup still resolves municipal water")
 
 func _test_refrigeration_clock() -> void:
     var service: String = _utilities.power_service_for_settlement(CENTRAL_SETTLEMENT)
@@ -151,23 +196,73 @@ func _test_snapshot_restore() -> void:
     var snapshot: Dictionary = _utilities.snapshot()
     var branch: String = _utilities.power_branch_component_id(central_power)
     _check(_utilities.set_power_component_state(branch, UtilityRuntimeState.DAMAGED, &"smoke_snapshot_power"), "snapshot test mutates power")
-    _check(_utilities.damage_water_asset(MUNICIPAL_PLANT_ASSET, 1000, &"smoke_snapshot_water"), "snapshot test mutates water asset")
+
+    var municipal_assets: Array[String] = _utilities.water_asset_ids(&"municipal_plant")
+    _check(not municipal_assets.is_empty(), "snapshot has municipal asset")
+    if not municipal_assets.is_empty():
+        _check(_utilities.damage_water_asset(municipal_assets[0], 1000, &"smoke_snapshot_water"), "snapshot test mutates municipal water asset")
+    var private_assets: Array[String] = _utilities.water_asset_ids(&"private_well")
+    if not private_assets.is_empty():
+        _check(_utilities.damage_water_asset(private_assets[0], 1000, &"smoke_snapshot_well"), "snapshot test mutates private well")
+
     _check(_utilities.restore_snapshot(snapshot), "valid neighborhood utility snapshot restores")
     _check(_utilities.power_service_available(central_power), "snapshot restores power")
-    _check(int(_utilities.water_asset_record(MUNICIPAL_PLANT_ASSET).get("condition", 0)) > 250, "snapshot restores physical water condition")
+    if not municipal_assets.is_empty():
+        _check(int(_utilities.water_asset_record(municipal_assets[0]).get("condition", 0)) > 250, "snapshot restores municipal water condition")
+    if not private_assets.is_empty():
+        _check(int(_utilities.water_asset_record(private_assets[0]).get("condition", 0)) > 250, "snapshot restores private well condition")
+        var well_building: String = _building_for_well_asset(private_assets[0])
+        var well_service: String = _utilities.well_service_for_building(well_building)
+        _check(not well_building.is_empty() and not well_service.is_empty(), "snapshot rebuilds private well building mapping")
+        _check(_utilities.water_service_available(well_service), "snapshot restores private well service")
     _check(_utilities.water_service_available(_utilities.water_service_for_settlement(CENTRAL_SETTLEMENT)), "snapshot restores municipal water")
-
-    var wells: Array = _topology.get("wells", [])
-    if not wells.is_empty():
-        var well: Dictionary = wells[0]
-        var well_service: String = _utilities.well_service_for_building(String(well.get("building_id", "")))
-        var settlement_service: String = _utilities.water_service_for_settlement(String(well.get("settlement_id", "")))
-        _check(not well_service.is_empty() and settlement_service != well_service, "snapshot keeps settlement municipal mapping separate from private well")
 
     var malformed: Dictionary = snapshot.duplicate(true)
     malformed["schema_version"] = 999
     _check(not _utilities.restore_snapshot(malformed), "wrong snapshot schema fails closed")
     _check(_utilities.power_service_available(central_power), "failed restore leaves current utility truth intact")
+
+func _first_non_well_building(well_buildings: Dictionary, rural: bool) -> Dictionary:
+    for value: Variant in _topology.get("buildings", []):
+        if typeof(value) != TYPE_DICTIONARY:
+            continue
+        var building: Dictionary = value
+        var building_id: String = String(building.get("building_id", ""))
+        var is_rural: bool = _site_is_rural(String(building.get("site_id", "")))
+        if is_rural == rural and not well_buildings.has(building_id):
+            return building
+    return {}
+
+func _site_is_rural(site_id: String) -> bool:
+    for site: Dictionary in _plan.area_sites:
+        if String(site.get("id", "")) != site_id:
+            continue
+        return String(StringName(site.get("area_profile_hint", &""))).begins_with("rural.")
+    return false
+
+func _building_for_well_asset(asset_id: String) -> String:
+    for value: Variant in _topology.get("wells", []):
+        if typeof(value) != TYPE_DICTIONARY:
+            continue
+        var well: Dictionary = value
+        if String(well.get("asset_id", "")) == asset_id:
+            return String(well.get("building_id", ""))
+    return ""
+
+func _well_signature(wells_value: Variant) -> String:
+    if typeof(wells_value) != TYPE_ARRAY:
+        return "invalid"
+    var parts: PackedStringArray = []
+    for value: Variant in wells_value:
+        if typeof(value) != TYPE_DICTIONARY:
+            return "invalid"
+        var well: Dictionary = value
+        parts.append("%s|%s|%s" % [
+            String(well.get("asset_id", "")),
+            String(well.get("building_id", "")),
+            String(well.get("service_id", "")),
+        ])
+    return ";".join(parts)
 
 func _settlement_center(settlement_id: String) -> Vector2i:
     for settlement: Dictionary in _plan.settlements:
