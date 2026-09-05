@@ -10,8 +10,12 @@ func _init() -> void:
 
 func plan(road_segments: Array[Dictionary], river_segments: Array[Dictionary]) -> Dictionary:
     var bridge_intents: Array[Dictionary] = []
-    if road_segments.is_empty() or river_segments.is_empty():
+    if road_segments.is_empty():
         return {"ok": false, "failure_reason": "invalid_bridge_intent_input", "bridge_intents": bridge_intents}
+    # Riverless worlds have no bridge work. This short-circuit is retained only
+    # while the remaining legacy regional caller is migrated off this class.
+    if river_segments.is_empty():
+        return {"ok": true, "failure_reason": "", "bridge_intents": bridge_intents}
 
     var crossing_records: Dictionary = {}
     for road: Dictionary in road_segments:
@@ -43,9 +47,6 @@ func plan(road_segments: Array[Dictionary], river_segments: Array[Dictionary]) -
         record["id"] = "bridge.intent.%03d" % ordinal
         bridge_intents.append(record)
         ordinal += 1
-
-    if bridge_intents.is_empty():
-        return {"ok": false, "failure_reason": "global_bridge_intent_missing", "bridge_intents": []}
     return {"ok": true, "failure_reason": "", "bridge_intents": bridge_intents}
 
 func _crossing_record(road: Dictionary, river: Dictionary, crossing: Vector2i) -> Dictionary:
