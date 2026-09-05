@@ -250,9 +250,44 @@ func _shared_distribution_tree(
     var local_reserved: Dictionary = reserved_cells.duplicate()
     for route_cell: Vector2i in placement_key_cells:
         if shared_pole_ids.has(route_cell):
-            pole_id_by_route_cell[route_cell] = shared_pole_ids[route_cell]
-            pole_cell_by_route_cell[route_cell] = shared_pole_cells[route_cell]
-            pole_state_by_route_cell[route_cell] = shared_pole_states.get(route_cell, {}).duplicate(true)
+            var shared_pole_id: String = String(shared_pole_ids.get(route_cell, ""))
+            var shared_pole_cell: Vector2i = shared_pole_cells.get(route_cell, INVALID_CELL)
+            if shared_pole_id.is_empty() or shared_pole_cell == INVALID_CELL:
+                return {"ok": false, "props": [], "wires": []}
+            pole_id_by_route_cell[route_cell] = shared_pole_id
+            pole_cell_by_route_cell[route_cell] = shared_pole_cell
+
+            # The support is globally shared, but roadside side/hold state is path-local.
+            # Recompute it from this tree's incoming parent so a pole first created by a
+            # different branch cannot erase a newly established two-pole cross-road hold.
+            var reused_state: Dictionary = shared_pole_states.get(route_cell, {}).duplicate(true)
+            if route_cell != root_road_cell:
+                var reused_parent_key: Vector2i = _nearest_key_parent(route_cell, key_cells, parents, root_road_cell)
+                if reused_parent_key == INVALID_CELL or not pole_cell_by_route_cell.has(reused_parent_key):
+                    return {"ok": false, "props": [], "wires": []}
+                var reused_direction: Vector2i = _cardinal_direction(reused_parent_key, route_cell)
+                if reused_direction == Vector2i.ZERO:
+                    return {"ok": false, "props": [], "wires": []}
+                var reused_parent_pole_cell: Vector2i = pole_cell_by_route_cell.get(reused_parent_key, INVALID_CELL)
+                var reused_parent_state: Dictionary = pole_state_by_route_cell.get(reused_parent_key, {})
+                var reused_preferred_side: int = _continuous_road_side(
+                    route_cell,
+                    reused_direction,
+                    reused_parent_pole_cell,
+                    reused_parent_state
+                )
+                var reused_actual_side: int = _road_side(route_cell, shared_pole_cell, reused_direction)
+                if reused_actual_side == 0:
+                    return {"ok": false, "props": [], "wires": []}
+                var reused_next_hold: int = maxi(0, int(reused_parent_state.get("hold", 0)) - 1)
+                if reused_preferred_side != 0 and reused_actual_side != reused_preferred_side:
+                    reused_next_hold = ROAD_SIDE_HOLD_POLES
+                reused_state = {
+                    "side": reused_actual_side,
+                    "direction": reused_direction,
+                    "hold": reused_next_hold,
+                }
+            pole_state_by_route_cell[route_cell] = reused_state
             continue
         var pole_ordinal: int = int(pole_ordinal_by_route_cell.get(route_cell, -1))
         if pole_ordinal < 0:
