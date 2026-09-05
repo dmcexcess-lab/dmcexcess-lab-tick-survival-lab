@@ -11,6 +11,8 @@ var _registry: MaterializationRegistry = null
 var _catalog: IslandSurfaceSourceCatalog = null
 var _projection: IslandSurfaceRequestProjection = ProjectionClass.new()
 var _generator: IslandSurfaceAreaGenerator = GeneratorClass.new()
+var _validated_plan: GeneratedGlobalWorldPlan = null
+var _validation_result: Dictionary = {}
 
 func _init(registry: MaterializationRegistry = null, catalog: IslandSurfaceSourceCatalog = null) -> void:
     _registry = registry
@@ -23,9 +25,16 @@ func source_kind() -> StringName:
     return SOURCE_KIND
 
 func validate_source_bounds(plan: GeneratedGlobalWorldPlan) -> Dictionary:
+    if plan == _validated_plan and not _validation_result.is_empty():
+        return _validation_result.duplicate(true)
+    var result: Dictionary
     if not is_ready():
-        return {"ok": false, "failure_reason": "island_surface_source_not_ready"}
-    return _catalog.validate_source_bounds(plan)
+        result = {"ok": false, "failure_reason": "island_surface_source_not_ready"}
+    else:
+        result = _catalog.validate_source_bounds(plan)
+    _validated_plan = plan
+    _validation_result = result.duplicate(true)
+    return result
 
 func source_handle(plan: GeneratedGlobalWorldPlan, source_id: String) -> Dictionary:
     if plan == null or not plan.is_generated() or not bool(validate_source_bounds(plan).get("ok", false)):
