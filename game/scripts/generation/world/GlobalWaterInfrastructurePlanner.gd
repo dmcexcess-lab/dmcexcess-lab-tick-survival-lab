@@ -25,7 +25,8 @@ func plan(
 
     # There is one physical water building. Per-settlement service records are only
     # cheap projection references so local-area generation can ask whether a site
-    # participates in island water without inventing pipes, wells, or local plants.
+    # participates in island water. Pipe/node topology is not part of this planner's
+    # contract anymore.
     var services: Array[Dictionary] = []
     for index: int in range(settlements.size()):
         var settlement_id: String = String(settlements[index].get("id", "")).strip_edges()
@@ -48,8 +49,6 @@ func plan(
         "ok": true,
         "failure_reason": "",
         "water_services": services,
-        "water_nodes": [],
-        "water_segments": [],
     }
 
 func _preferred_host_site(area_sites: Array[Dictionary]) -> Dictionary:
@@ -67,6 +66,4 @@ func _failure(reason: String) -> Dictionary:
         "ok": false,
         "failure_reason": reason,
         "water_services": [],
-        "water_nodes": [],
-        "water_segments": [],
     }
