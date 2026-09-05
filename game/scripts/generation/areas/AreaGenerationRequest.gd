@@ -12,7 +12,6 @@ var inherited_roads: Array[Dictionary] = []
 var forbidden_regions: Array[Rect2i] = []
 var inherited_planning_constraints: Array[Dictionary] = []
 var inherited_geography: Array[Dictionary] = []
-var inherited_hydrology: Array[Dictionary] = []
 ## Optional upstream world seed for natural ecology that must remain coherent
 ## across neighboring logical area bounds. Null preserves the historical local
 ## request-seed/local-coordinate dressing behavior for standalone fixtures.
@@ -27,8 +26,7 @@ func _init(
     p_inherited_roads: Array[Dictionary] = [],
     p_forbidden_regions: Array[Rect2i] = [],
     p_inherited_planning_constraints: Array[Dictionary] = [],
-    p_inherited_geography: Array[Dictionary] = [],
-    p_inherited_hydrology: Array[Dictionary] = []
+    p_inherited_geography: Array[Dictionary] = []
 ) -> void:
     area_id = p_area_id.strip_edges()
     seed = p_seed
@@ -39,7 +37,6 @@ func _init(
     forbidden_regions = p_forbidden_regions.duplicate()
     inherited_planning_constraints = p_inherited_planning_constraints.duplicate(true)
     inherited_geography = p_inherited_geography.duplicate(true)
-    inherited_hydrology = p_inherited_hydrology.duplicate(true)
 
 func is_valid() -> bool:
     if not EntityId.is_valid(area_id):
@@ -72,14 +69,6 @@ func is_valid() -> bool:
         if geography_ids.has(geography_id):
             return false
         geography_ids[geography_id] = true
-    var hydrology_ids: Dictionary = {}
-    for hydrology: Dictionary in inherited_hydrology:
-        if not _hydrology_record_valid(hydrology):
-            return false
-        var key: String = _hydrology_identity_key(hydrology)
-        if key.is_empty() or hydrology_ids.has(key):
-            return false
-        hydrology_ids[key] = true
     return true
 
 func _road_constraint_valid(road: Dictionary) -> bool:
@@ -153,58 +142,6 @@ func _geography_record_valid(geography: Dictionary) -> bool:
     if elevation < 0 or elevation > 100:
         return false
     return landform == &"lowland" or landform == &"rolling" or landform == &"upland" or landform == &"ridge"
-
-func _hydrology_record_valid(record: Dictionary) -> bool:
-    var kind: StringName = StringName(record.get("kind", &""))
-    if kind == &"river_segment":
-        return _river_hydrology_record_valid(record)
-    if kind == &"bridge_intent":
-        return _bridge_hydrology_record_valid(record)
-    return false
-
-func _river_hydrology_record_valid(record: Dictionary) -> bool:
-    var segment_id: String = String(record.get("segment_id", ""))
-    var river_id: String = String(record.get("river_id", ""))
-    var start: Vector2i = record.get("start", Vector2i.ZERO)
-    var finish: Vector2i = record.get("end", Vector2i.ZERO)
-    var width: int = int(record.get("width", 0))
-    var ordinal: int = int(record.get("ordinal", -1))
-    var corridor: Rect2i = record.get("corridor_rect", Rect2i())
-    if not EntityId.is_valid(segment_id) or not EntityId.is_valid(river_id):
-        return false
-    if start == finish or (start.x != finish.x and start.y != finish.y):
-        return false
-    if width <= 0 or width % 2 == 0 or ordinal < 0:
-        return false
-    return corridor.size.x > 0 and corridor.size.y > 0 and _rect_inside(bounds, corridor)
-
-func _bridge_hydrology_record_valid(record: Dictionary) -> bool:
-    var bridge_id: String = String(record.get("id", ""))
-    var road_id: String = String(record.get("road_id", ""))
-    var route_id: String = String(record.get("route_id", ""))
-    var river_id: String = String(record.get("river_id", ""))
-    var river_segment_id: String = String(record.get("river_segment_id", ""))
-    var axis: StringName = StringName(record.get("bridge_axis", &""))
-    var road_width: int = int(record.get("road_width", 0))
-    var river_width: int = int(record.get("river_width", 0))
-    var deck_rect: Rect2i = record.get("deck_rect", Rect2i())
-    if not EntityId.is_valid(bridge_id) or not EntityId.is_valid(road_id) \
-        or not EntityId.is_valid(route_id) or not EntityId.is_valid(river_id) \
-        or not EntityId.is_valid(river_segment_id):
-        return false
-    if axis != &"horizontal" and axis != &"vertical":
-        return false
-    if road_width <= 0 or road_width % 2 == 0 or river_width <= 0 or river_width % 2 == 0:
-        return false
-    return deck_rect.size.x > 0 and deck_rect.size.y > 0 and _rect_inside(bounds, deck_rect)
-
-func _hydrology_identity_key(record: Dictionary) -> String:
-    var kind: StringName = StringName(record.get("kind", &""))
-    if kind == &"river_segment":
-        return "river:%s" % String(record.get("segment_id", ""))
-    if kind == &"bridge_intent":
-        return "bridge:%s" % String(record.get("id", ""))
-    return ""
 
 static func _is_boundary_cell(rect: Rect2i, cell: Vector2i) -> bool:
     if not rect.has_point(cell):
