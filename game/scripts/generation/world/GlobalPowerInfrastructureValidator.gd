@@ -130,16 +130,12 @@ func validate(request: GlobalWorldGenerationRequest, plan: GeneratedGlobalWorldP
 func _claim_existing_plan_ids(plan: GeneratedGlobalWorldPlan, ids: Dictionary) -> void:
     for geography: Dictionary in plan.geography_cells:
         ids[String(geography.get("id", ""))] = true
-    for river: Dictionary in plan.river_segments:
-        ids[String(river.get("segment_id", ""))] = true
     for region: Dictionary in plan.regions:
         ids[String(region.get("id", ""))] = true
     for settlement: Dictionary in plan.settlements:
         ids[String(settlement.get("id", ""))] = true
     for road: Dictionary in plan.road_segments:
         ids[String(road.get("road_id", ""))] = true
-    for bridge: Dictionary in plan.bridge_intents:
-        ids[String(bridge.get("id", ""))] = true
     for site: Dictionary in plan.area_sites:
         ids[String(site.get("id", ""))] = true
 
