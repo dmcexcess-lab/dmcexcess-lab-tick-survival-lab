@@ -8,9 +8,6 @@ const LOCAL_COLLISION_SEMANTICS: Array[StringName] = [
     &"prop.transformer",
     &"prop.utility_box",
     &"prop.chainlink_fence",
-    &"prop.shed",
-    &"prop.water_heater_tall",
-    &"prop.industrial_machine",
     &"prop.manhole",
 ]
 
@@ -56,9 +53,8 @@ func _build_projection() -> Dictionary:
     var shared_pole_states: Dictionary = {}
     var trunk_wire_index_by_route: Dictionary = {}
 
-    # Municipal water is represented by one already-generated building. Do not
-    # manufacture a second utility shed/tank complex from the retired water-node
-    # graph. Private rural wells remain the only water props added here.
+    # Municipal water is represented by one already-generated building. Private
+    # rural wells are the only water props added by this power infrastructure owner.
     var road_graph: Dictionary = _build_local_road_graph()
     if road_graph.is_empty():
         return {"props": [], "wires": []}
@@ -629,44 +625,6 @@ func _find_roadside_available(
                     if _cell_available(candidate, reserved_cells):
                         return candidate
     return INVALID_CELL
-
-func _water_plant_records(reserved_cells: Dictionary) -> Array[Dictionary]:
-    var treatment_node: Dictionary = {}
-    for node: Dictionary in _plan.water_nodes:
-        if StringName(node.get("kind", &"")) == &"treatment_plant":
-            if not treatment_node.is_empty():
-                return []
-            treatment_node = node
-    if treatment_node.is_empty():
-        return []
-    var target: Vector2i = treatment_node.get("cell", INVALID_CELL)
-    var plant_id: String = String(treatment_node.get("critical_asset_id", "")).strip_edges()
-    if target == INVALID_CELL or plant_id.is_empty():
-        return []
-    var anchor: Vector2i = _find_local_facility_anchor(target, reserved_cells)
-    if anchor == INVALID_CELL:
-        return []
-    var records: Array[Dictionary] = [
-        {"id": plant_id, "semantic": &"prop.shed", "cell": anchor, "facing": Facing.Value.SOUTH},
-        {"id": "water.physical.plant.001.tank", "semantic": &"prop.water_heater_tall", "cell": anchor + Vector2i(-1, 0), "facing": Facing.Value.SOUTH},
-        {"id": "water.physical.plant.001.machine", "semantic": &"prop.industrial_machine", "cell": anchor + Vector2i(1, 0), "facing": Facing.Value.SOUTH},
-        {"id": "water.physical.plant.001.box", "semantic": &"prop.utility_box", "cell": anchor + Vector2i(0, -1), "facing": Facing.Value.SOUTH},
-    ]
-    var fence_ordinal: int = 0
-    for y: int in range(-FACILITY_RADIUS, FACILITY_RADIUS + 1):
-        for x: int in range(-FACILITY_RADIUS, FACILITY_RADIUS + 1):
-            if absi(x) != FACILITY_RADIUS and absi(y) != FACILITY_RADIUS:
-                continue
-            if x == 0 and y == FACILITY_RADIUS:
-                continue
-            records.append({
-                "id": "water.physical.plant.001.fence.%02d" % fence_ordinal,
-                "semantic": &"prop.chainlink_fence",
-                "cell": anchor + Vector2i(x, y),
-                "facing": Facing.Value.NORTH,
-            })
-            fence_ordinal += 1
-    return records
 
 func _substation_records(token: String, transformer_id: String, anchor: Vector2i) -> Array[Dictionary]:
     var records: Array[Dictionary] = [
