@@ -3,27 +3,24 @@ class_name IslandSettlementHierarchyPlanner
 
 const Seed = preload("res://scripts/generation/world/GlobalWorldSeed.gd")
 const GeographyQueryClass = preload("res://scripts/generation/world/GlobalGeographyQuery.gd")
-const HydrologyQueryClass = preload("res://scripts/generation/world/GlobalHydrologyQuery.gd")
 const Surface = preload("res://scripts/generation/shared/IslandSurfaceMath.gd")
 
 const INVALID_CELL := Vector2i(-999999, -999999)
 
 var _geography: GlobalGeographyQuery = GeographyQueryClass.new()
-var _hydrology: GlobalHydrologyQuery = HydrologyQueryClass.new()
 
 func plan(
     request: GlobalWorldGenerationRequest,
     profile: Dictionary,
     geography_cells: Array[Dictionary],
-    river_segments: Array[Dictionary]
+    _river_segments: Array[Dictionary] = []
 ) -> Dictionary:
     var settlements: Array[Dictionary] = []
     var area_sites: Array[Dictionary] = []
-    if request == null or not request.is_valid() or profile.is_empty() or geography_cells.is_empty() or river_segments.is_empty():
+    if request == null or not request.is_valid() or profile.is_empty() or geography_cells.is_empty():
         return _failure("invalid_island_settlement_planner_input")
 
     var specs: Array[Dictionary] = _settlement_specs(profile)
-
     var accepted_rects: Array[Rect2i] = []
     var accepted_centers: Array[Vector2i] = []
     var world_center: Vector2i = request.bounds.position + Vector2i(request.bounds.size.x / 2, request.bounds.size.y / 2)
@@ -35,7 +32,7 @@ func plan(
         var target_radius: float = float(spec.get("target_radius", 512))
         var desired: Vector2i = world_center + _direction(direction_index, target_radius)
         var site_size: Vector2i = spec.get("site_size", profile.get("local_site_size", Vector2i(256, 256)))
-        var candidates: Array[Dictionary] = _legal_candidates(request, profile, geography_cells, river_segments, site_size)
+        var candidates: Array[Dictionary] = _legal_candidates(request, profile, geography_cells, site_size)
         if candidates.is_empty():
             return _failure("insufficient_legal_island_settlement_candidates:%s" % String(spec.get("settlement_id", "unknown")))
         var selected: Dictionary = _select_candidate(
@@ -79,10 +76,6 @@ func plan(
 
     return {"ok": true, "failure_reason": "", "settlements": settlements, "area_sites": area_sites}
 
-# The incoming island request supplies a stable world anchor, never a hard coast.
-# Settlement intent owns the required land envelope; the coast is generated only
-# after this extent is known.  Keeping the result grid-aligned also preserves the
-# regional geography and streaming contracts.
 func planning_bounds(request: GlobalWorldGenerationRequest, profile: Dictionary) -> Rect2i:
     if request == null or not request.is_valid():
         return Rect2i()
@@ -116,9 +109,6 @@ func _settlement_specs(profile: Dictionary) -> Array[Dictionary]:
         _spec("settlement.rural.hamlet.005", "area.rural.scattered.005", &"rural_hamlet", &"rural.scattered", hamlet_radius, 1080, 0, hamlet_spacing, Vector2i(256, 256)),
         _spec("settlement.rural.hamlet.006", "area.rural.scattered.006", &"rural_hamlet", &"rural.scattered", hamlet_radius, 1080, 5, hamlet_spacing, Vector2i(256, 256)),
     ]
-
-    # Additional sparse lane catchments inhabit the gaps between the established
-    # towns and outer hamlets. They use the same legal-site/road/population owners.
     for index: int in range(int(profile.get("island_infill_rural_count", 24))):
         var ordinal: int = index + 7
         specs.append(_spec(
@@ -156,11 +146,9 @@ func _legal_candidates(
     request: GlobalWorldGenerationRequest,
     profile: Dictionary,
     geography_cells: Array[Dictionary],
-    river_segments: Array[Dictionary],
     site_size: Vector2i
 ) -> Array[Dictionary]:
     var result: Array[Dictionary] = []
-    var river_clearance: int = int(profile.get("settlement_river_clearance", 16))
     var ocean_margin: int = int(profile.get("island_ocean_margin", 24))
     var shore_width: int = int(profile.get("island_shore_width", 8))
     var coast_wobble: int = int(profile.get("island_coast_wobble", 8))
@@ -176,8 +164,6 @@ func _legal_candidates(
         if not _rect_inside(request.bounds, rect):
             continue
         if not Surface.rect_is_land(request.bounds, request.seed, rect, ocean_margin, shore_width, coast_wobble, coast_scale):
-            continue
-        if not _hydrology.rect_clear_of_rivers(rect, river_segments, river_clearance):
             continue
         result.append({"center": center, "rect": rect, "grid": geography_cell.get("grid", Vector2i.ZERO)})
     result.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
@@ -218,14 +204,8 @@ func _select_candidate(
 
 func _direction(index: int, radius: float) -> Vector2i:
     var directions: Array[Vector2] = [
-        Vector2(1.0, 0.0),
-        Vector2(0.7071, 0.7071),
-        Vector2(0.0, 1.0),
-        Vector2(-0.7071, 0.7071),
-        Vector2(-1.0, 0.0),
-        Vector2(-0.7071, -0.7071),
-        Vector2(0.0, -1.0),
-        Vector2(0.7071, -0.7071),
+        Vector2(1.0, 0.0), Vector2(0.7071, 0.7071), Vector2(0.0, 1.0), Vector2(-0.7071, 0.7071),
+        Vector2(-1.0, 0.0), Vector2(-0.7071, -0.7071), Vector2(0.0, -1.0), Vector2(0.7071, -0.7071),
     ]
     var direction: Vector2 = directions[posmod(index, directions.size())]
     return Vector2i(roundi(direction.x * radius), roundi(direction.y * radius))
