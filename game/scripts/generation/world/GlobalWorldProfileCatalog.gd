@@ -13,7 +13,7 @@ func profile(profile_id: StringName) -> Dictionary:
     if profile_id == TEMPERATE_ISLAND_REGION:
         var result: Dictionary = _rural_profile()
         result["id"] = TEMPERATE_ISLAND_REGION
-        result["version"] = 8
+        result["version"] = 9
         result["island_enabled"] = true
         result["settlement_layout"] = &"rural_island_hierarchy"
         result["reuse_world_seed_for_central_site"] = false
@@ -24,7 +24,8 @@ func profile(profile_id: StringName) -> Dictionary:
         # interior surface is reserved as undisturbed natural land.
         result["island_smalltown_count"] = 2
         result["island_crossroads_count"] = 3
-        result["island_hamlet_count"] = 6
+        result["island_hamlet_count"] = 30
+        result["island_infill_rural_count"] = 24
         result["island_smalltown_min_spacing"] = 640
         result["island_crossroads_min_spacing"] = 288
         result["island_hamlet_min_spacing"] = 256

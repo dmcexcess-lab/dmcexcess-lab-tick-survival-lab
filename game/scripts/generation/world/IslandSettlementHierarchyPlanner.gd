@@ -103,7 +103,7 @@ func _settlement_specs(profile: Dictionary) -> Array[Dictionary]:
     var town_spacing: int = int(profile.get("island_smalltown_min_spacing", 640))
     var crossroads_spacing: int = int(profile.get("island_crossroads_min_spacing", 288))
     var hamlet_spacing: int = int(profile.get("island_hamlet_min_spacing", 256))
-    return [
+    var specs: Array[Dictionary] = [
         _spec("settlement.smalltown.001", "area.smalltown.center.001", &"smalltown", &"smalltown.center", smalltown_radius, 640, 0, town_spacing, Vector2i(512, 512)),
         _spec("settlement.smalltown.002", "area.smalltown.center.002", &"smalltown", &"smalltown.center", smalltown_radius, 640, 4, town_spacing, Vector2i(512, 512)),
         _spec("settlement.rural.crossroads.001", "area.rural.crossroads.001", &"rural_crossroads", &"rural.crossroads", crossroads_radius, 820, 2, crossroads_spacing, Vector2i(256, 256)),
@@ -116,6 +116,18 @@ func _settlement_specs(profile: Dictionary) -> Array[Dictionary]:
         _spec("settlement.rural.hamlet.005", "area.rural.scattered.005", &"rural_hamlet", &"rural.scattered", hamlet_radius, 1080, 0, hamlet_spacing, Vector2i(256, 256)),
         _spec("settlement.rural.hamlet.006", "area.rural.scattered.006", &"rural_hamlet", &"rural.scattered", hamlet_radius, 1080, 5, hamlet_spacing, Vector2i(256, 256)),
     ]
+
+    # Additional sparse lane catchments inhabit the gaps between the established
+    # towns and outer hamlets. They use the same legal-site/road/population owners.
+    for index: int in range(int(profile.get("island_infill_rural_count", 24))):
+        var ordinal: int = index + 7
+        specs.append(_spec(
+            "settlement.rural.hamlet.%03d" % ordinal,
+            "area.rural.scattered.%03d" % ordinal,
+            &"rural_hamlet", &"rural.scattered", hamlet_radius,
+            400 + (index / 8) * 240, index % 8, hamlet_spacing, Vector2i(256, 256)
+        ))
+    return specs
 
 func _spec(
     settlement_id: String,

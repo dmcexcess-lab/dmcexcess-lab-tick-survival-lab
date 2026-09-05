@@ -186,6 +186,8 @@ For a continuation, use the already-recorded declaration/checkpoint in `README_C
 
 ## 12. Testing / verification
 
+**User-directed seed-test scope (2026-09-05):** do not run the twelve-seed planner or boot matrices on every change. Normal streaming CI uses reference seed 20001; the full matrix is explicit opt-in via workflow_dispatch `full_seed_matrix`. Use focused owner/protected regressions and a contrasting seed when generation changes justify it. Unrelated UI/inventory changes do not justify broad seed stress testing.
+
 Simulation/generation systems should be testable without presentation whenever practical.
 
 For executable changes:
