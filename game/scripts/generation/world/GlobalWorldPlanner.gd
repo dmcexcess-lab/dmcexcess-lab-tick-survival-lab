@@ -58,6 +58,7 @@ func generate(request: GlobalWorldGenerationRequest) -> GeneratedGlobalWorldPlan
         return plan
 
     var profile: Dictionary = _profiles.profile(request.profile_id)
+    var island_mode: bool = request.profile_id == ProfilesClass.TEMPERATE_ISLAND_REGION
 
     var geography_result: Dictionary = _geography_planner.plan(request, profile)
     if not bool(geography_result.get("ok", false)):
@@ -70,21 +71,23 @@ func generate(request: GlobalWorldGenerationRequest) -> GeneratedGlobalWorldPlan
             return plan
         geography_cells.append(geography_value)
 
-    var hydrology_result: Dictionary = _hydrology_planner.plan(request, profile, geography_cells)
-    if not bool(hydrology_result.get("ok", false)):
-        plan.failure_reason = String(hydrology_result.get("failure_reason", "global_hydrology_planning_failed"))
-        return plan
+    ## The live island no longer owns river geometry. Generic non-island profiles retain their
+    ## legacy hydrology path until those profiles are retired/migrated independently.
     var river_segments: Array[Dictionary] = []
-    for river_value: Variant in hydrology_result.get("river_segments", []):
-        if typeof(river_value) != TYPE_DICTIONARY:
-            plan.failure_reason = "global_hydrology_result_invalid"
+    if not island_mode:
+        var hydrology_result: Dictionary = _hydrology_planner.plan(request, profile, geography_cells)
+        if not bool(hydrology_result.get("ok", false)):
+            plan.failure_reason = String(hydrology_result.get("failure_reason", "global_hydrology_planning_failed"))
             return plan
-        river_segments.append(river_value)
+        for river_value: Variant in hydrology_result.get("river_segments", []):
+            if typeof(river_value) != TYPE_DICTIONARY:
+                plan.failure_reason = "global_hydrology_result_invalid"
+                return plan
+            river_segments.append(river_value)
 
-    var island_mode: bool = request.profile_id == ProfilesClass.TEMPERATE_ISLAND_REGION
     var settlement_result: Dictionary
     if island_mode:
-        settlement_result = _island_settlement_planner.plan(request, profile, geography_cells, river_segments)
+        settlement_result = _island_settlement_planner.plan(request, profile, geography_cells)
     else:
         settlement_result = _settlement_planner.plan(request, profile, geography_cells, river_segments)
     if not bool(settlement_result.get("ok", false)):
@@ -105,7 +108,7 @@ func generate(request: GlobalWorldGenerationRequest) -> GeneratedGlobalWorldPlan
 
     var road_result: Dictionary
     if island_mode:
-        road_result = _island_road_planner.plan(request, profile, settlements, geography_cells, river_segments)
+        road_result = _island_road_planner.plan(request, profile, settlements, geography_cells)
     else:
         road_result = _road_planner.plan(request, profile, settlements, geography_cells, river_segments)
     if not bool(road_result.get("ok", false)):
@@ -118,16 +121,17 @@ func generate(request: GlobalWorldGenerationRequest) -> GeneratedGlobalWorldPlan
             return plan
         road_segments.append(road_value)
 
-    var bridge_result: Dictionary = _bridge_planner.plan(road_segments, river_segments)
-    if not bool(bridge_result.get("ok", false)):
-        plan.failure_reason = String(bridge_result.get("failure_reason", "global_bridge_intent_planning_failed"))
-        return plan
     var bridge_intents: Array[Dictionary] = []
-    for bridge_value: Variant in bridge_result.get("bridge_intents", []):
-        if typeof(bridge_value) != TYPE_DICTIONARY:
-            plan.failure_reason = "global_bridge_intent_result_invalid"
+    if not island_mode:
+        var bridge_result: Dictionary = _bridge_planner.plan(road_segments, river_segments)
+        if not bool(bridge_result.get("ok", false)):
+            plan.failure_reason = String(bridge_result.get("failure_reason", "global_bridge_intent_planning_failed"))
             return plan
-        bridge_intents.append(bridge_value)
+        for bridge_value: Variant in bridge_result.get("bridge_intents", []):
+            if typeof(bridge_value) != TYPE_DICTIONARY:
+                plan.failure_reason = "global_bridge_intent_result_invalid"
+                return plan
+            bridge_intents.append(bridge_value)
 
     var power_result: Dictionary = _power_planner.plan(request, profile, settlements, road_segments)
     if not bool(power_result.get("ok", false)):
@@ -209,16 +213,16 @@ func generate(request: GlobalWorldGenerationRequest) -> GeneratedGlobalWorldPlan
     var power_validation: Dictionary = _power_validator.validate(request, plan)
     if not bool(power_validation.get("ok", false)):
         var power_failure_parts := PackedStringArray()
-        for failure_value: Variant in power_validation.get("failures", []):
-            power_failure_parts.append(String(failure_value))
+        for power_failure_value: Variant in power_validation.get("failures", []):
+            power_failure_parts.append(String(power_failure_value))
         plan.failure_reason = "global_power_validation_failed:%s" % ",".join(power_failure_parts)
         return plan
 
     var water_validation: Dictionary = _water_validator.validate(request, plan)
     if not bool(water_validation.get("ok", false)):
         var water_failure_parts := PackedStringArray()
-        for failure_value: Variant in water_validation.get("failures", []):
-            water_failure_parts.append(String(failure_value))
+        for water_failure_value: Variant in water_validation.get("failures", []):
+            water_failure_parts.append(String(water_failure_value))
         plan.failure_reason = "global_water_validation_failed:%s" % ",".join(water_failure_parts)
     return plan
 
