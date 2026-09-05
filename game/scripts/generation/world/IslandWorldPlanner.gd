@@ -550,8 +550,8 @@ func _validate(
         if not _point_on_any_road(settlement.get("center", INVALID_CELL), plan.road_segments):
             failures.append("island_settlement_disconnected:%s" % String(settlement.get("id", "")))
 
-    if plan.bridge_intents.is_empty():
-        failures.append("island_bridge_intent_missing")
+    if not plan.river_segments.is_empty() or not plan.bridge_intents.is_empty():
+        failures.append("island_retired_hydrology_present")
     if plan.power_nodes.is_empty() or plan.power_segments.is_empty():
         failures.append("island_power_missing")
     if plan.population_settlements.size() != plan.area_sites.size() or plan.resident_population <= 0:

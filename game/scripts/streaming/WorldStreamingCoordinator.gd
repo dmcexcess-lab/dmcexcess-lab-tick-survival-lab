@@ -239,8 +239,9 @@ func _handles_for_regions(regions: Array[Vector2i]) -> Dictionary:
             var bounds: Rect2i = _grid.region_bounds(coord)
             if bounds.size.x <= 0 or bounds.size.y <= 0:
                 return {"ok": false, "failure_reason": "active_region_bounds_invalid", "handles": []}
+            var bounds_list: Array[Rect2i] = [bounds]
             for provider: Variant in _providers:
-                var discovered_value: Variant = provider.call("source_handles_intersecting", _global_plan, [bounds])
+                var discovered_value: Variant = provider.call("source_handles_intersecting", _global_plan, bounds_list)
                 if typeof(discovered_value) != TYPE_ARRAY:
                     return {"ok": false, "failure_reason": "materialization_source_discovery_invalid:%s" % String(provider.call("source_kind")), "handles": []}
                 for handle_value: Variant in discovered_value:
