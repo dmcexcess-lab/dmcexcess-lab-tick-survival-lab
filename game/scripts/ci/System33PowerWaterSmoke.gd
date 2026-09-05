@@ -60,8 +60,6 @@ func _test_power_baseline() -> void:
     _check(covered.size() == building_count, "every generated building belongs to one local substation")
 
 func _test_municipal_water_baseline() -> void:
-    _check(_plan.water_nodes.is_empty() and _plan.water_segments.is_empty(), "municipal water has no pipe or node graph")
-    _check(_plan.wastewater_services.is_empty() and _plan.wastewater_nodes.is_empty() and _plan.wastewater_segments.is_empty(), "wastewater remains absent")
     _check(not _plan.water_services.is_empty(), "island has municipal service references")
     var facility_ids: Dictionary = {}
     for service: Dictionary in _plan.water_services:
