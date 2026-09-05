@@ -7,7 +7,8 @@ const Layers = preload("res://scripts/foundation/spatial/SpatialLayer.gd")
 const Facing = preload("res://scripts/foundation/spatial/SpatialFacing.gd")
 const HandStateClass = preload("res://scripts/simulation/actors/equipment/ActorHandEquipmentState.gd")
 const HandSlots = preload("res://scripts/simulation/actors/equipment/ActorHandSlot.gd")
-const UtilityStateClass = preload("res://scripts/simulation/utilities/UtilityRuntimeState.gd")
+const UtilityStateClass = preload("res://scripts/simulation/utilities/NeighborhoodUtilityRuntimeState.gd")
+const UtilityTopologyPlannerClass = preload("res://scripts/simulation/utilities/UtilityLocalPowerTopologyPlanner.gd")
 const LightingSourceClass = preload("res://scripts/simulation/utilities/UtilityPoweredLightingSourceAdapter.gd")
 const FlashlightStateClass = preload("res://scripts/simulation/items/lighting/FlashlightItemState.gd")
 
@@ -166,8 +167,12 @@ func _utility_state() -> UtilityRuntimeState:
     _check(plan != null and plan.is_generated(), "canonical island plan generates for lighting test")
     if plan == null or not plan.is_generated():
         return null
-    var utilities := UtilityStateClass.new()
-    _check(utilities.initialize_from_plan(plan), "utility state initializes for lighting test")
+    var topology: Dictionary = UtilityTopologyPlannerClass.new().plan(plan)
+    _check(bool(topology.get("ok", false)), "production local utility topology plans for lighting test")
+    if not bool(topology.get("ok", false)):
+        return null
+    var utilities := UtilityStateClass.new(topology)
+    _check(utilities.initialize_from_plan(plan), "production utility state initializes for lighting test")
     return utilities
 
 func _find_emitter(values: Array[LightEmitter], emitter_id: String) -> LightEmitter:
