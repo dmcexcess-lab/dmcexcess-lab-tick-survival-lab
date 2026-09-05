@@ -40,7 +40,6 @@ func _initialize() -> void:
     _test_mixed_materialization(global_plan, catalog)
     _test_revisit(global_plan, catalog)
     _test_mixed_rollback(global_plan, catalog)
-    _test_river_gap(global_plan, catalog)
     _finish()
 
 func _test_catalog(global_plan: GeneratedGlobalWorldPlan, catalog: CountrysideSourceCatalog) -> void:
@@ -68,11 +67,8 @@ func _test_catalog(global_plan: GeneratedGlobalWorldPlan, catalog: CountrysideSo
         _check(not parent.is_empty() and _rect_inside(parent.get("rect", Rect2i()), bounds), "source stays inside one geography parent")
         for site: Dictionary in global_plan.area_sites:
             _check(not _overlap(bounds, site.get("bounds", Rect2i())), "source does not overlap settlement ownership")
-        for river_rect: Rect2i in catalog.river_exclusion_rects():
-            _check(not _overlap(bounds, river_rect), "source does not overlap river corridor")
 
     _check(_exact_dry_coverage(catalog), "all dry cells are covered exactly once and exclusions zero times")
-    _check(_dry_land_beside_river_exists(global_plan, catalog), "dry land immediately beside river remains source-owned")
 
 func _test_preparation(global_plan: GeneratedGlobalWorldPlan, catalog: CountrysideSourceCatalog) -> void:
     var registry: MaterializationRegistry = RegistryClass.new()
@@ -190,22 +186,6 @@ func _test_mixed_rollback(global_plan: GeneratedGlobalWorldPlan, catalog: Countr
     _check(not bool(failed.get("ok", false)), "countryside collision fails entire mixed batch")
     _check(world.snapshot() == world_before and doors.snapshot() == doors_before and registry.snapshot() == registry_before, "mixed failure rolls all three domains back exactly")
 
-func _test_river_gap(global_plan: GeneratedGlobalWorldPlan, catalog: CountrysideSourceCatalog) -> void:
-    if global_plan.river_segments.is_empty():
-        _check(false, "canonical river exists")
-        return
-    var river: Dictionary = global_plan.river_segments[global_plan.river_segments.size() / 2]
-    var start: Vector2i = river.get("start", Vector2i.ZERO)
-    var finish: Vector2i = river.get("end", Vector2i.ZERO)
-    var river_cell := Vector2i((start.x + finish.x) / 2, (start.y + finish.y) / 2)
-    if not global_plan.bounds.has_point(river_cell):
-        _check(false, "river test cell inside world")
-        return
-    var stack: Dictionary = _stack(catalog)
-    var world: WorldState = stack.get("world") as WorldState
-    var streaming: WorldStreamingCoordinator = _streaming(global_plan, stack, 0)
-    _check(bool(streaming.update_focus(river_cell).get("ok", false)), "river-region focus can materialize surrounding dry sources")
-    _check(catalog.descriptor_for_cell(river_cell).is_empty() and not world.has_terrain(river_cell), "river corridor stays source-free and unmaterialized")
 
 func _stack(catalog: CountrysideSourceCatalog) -> Dictionary:
     var world: WorldState = WorldStateClass.new()
@@ -263,7 +243,6 @@ func _exact_dry_coverage(catalog: CountrysideSourceCatalog) -> bool:
     for source: Dictionary in catalog.sources():
         source_rects.append(source.get("bounds", Rect2i()))
     var settlement_rects: Array[Rect2i] = catalog.settlement_exclusion_rects()
-    var river_rects: Array[Rect2i] = catalog.river_exclusion_rects()
     var width: int = context.size.x
     for y in range(context.position.y, context.position.y + context.size.y):
         var counts := PackedByteArray()
@@ -276,8 +255,6 @@ func _exact_dry_coverage(catalog: CountrysideSourceCatalog) -> bool:
                     var index: int = x - context.position.x
                     counts[index] = mini(2, int(counts[index]) + 1)
         for rect: Rect2i in settlement_rects:
-            _mark_exclusion_row(rect, y, context, excluded)
-        for rect: Rect2i in river_rects:
             _mark_exclusion_row(rect, y, context, excluded)
         for index in range(width):
             if excluded[index] == 1:
@@ -293,13 +270,6 @@ func _mark_exclusion_row(rect: Rect2i, y: int, context: Rect2i, excluded: Packed
     for x in range(maxi(rect.position.x, context.position.x), mini(rect.position.x + rect.size.x, context.position.x + context.size.x)):
         excluded[x - context.position.x] = 1
 
-func _dry_land_beside_river_exists(global_plan: GeneratedGlobalWorldPlan, catalog: CountrysideSourceCatalog) -> bool:
-    for corridor: Rect2i in catalog.river_exclusion_rects():
-        var candidates: Array[Vector2i] = [Vector2i(corridor.position.x - 1, corridor.position.y + corridor.size.y / 2), Vector2i(corridor.position.x + corridor.size.x, corridor.position.y + corridor.size.y / 2), Vector2i(corridor.position.x + corridor.size.x / 2, corridor.position.y - 1), Vector2i(corridor.position.x + corridor.size.x / 2, corridor.position.y + corridor.size.y)]
-        for cell: Vector2i in candidates:
-            if global_plan.bounds.has_point(cell) and not _inside_site(global_plan, cell) and not catalog.descriptor_for_cell(cell).is_empty():
-                return true
-    return false
 
 func _inside_site(global_plan: GeneratedGlobalWorldPlan, cell: Vector2i) -> bool:
     for site: Dictionary in global_plan.area_sites:

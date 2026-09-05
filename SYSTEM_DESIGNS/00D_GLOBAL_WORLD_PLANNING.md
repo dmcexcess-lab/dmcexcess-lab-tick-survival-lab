@@ -48,6 +48,20 @@ Retiring generated river/watercourse systems **does not retire coastline, shore 
 
 ## 4. Geography / settlement / road invariants
 
+Island roads start with a connected settlement tree and add at most eight nearest
+unused settlement-pair links. Alternate links provide additional journeys while
+keeping the countryside sparse. Routing remains geography-owned and runs only
+during generation. This does not introduce a runtime traffic simulation.
+
+Road records preserve legacy primary/secondary frontage classes and additionally
+carry `road_type`, `lane_count`, `surface_family` and `paint_centerline` through
+System 20 projection. Primary routes use four-lane pavement (two each way);
+alternate links use two-lane pavement (one each way). Other rural connections
+deterministically use single-lane gravel or dirt. Four-lane roads receive dashed
+white lane dividers alongside the yellow directional centerline. Unpaved roads
+have no painted centerline. The existing odd corridor widths include the road
+center and shoulders; lane count is explicit rather than inferred from width.
+
 - island surface classification is world-generation truth;
 - settlements remain on legal land and do not overlap;
 - settlement envelopes leave substantial countryside outside settlement cores;

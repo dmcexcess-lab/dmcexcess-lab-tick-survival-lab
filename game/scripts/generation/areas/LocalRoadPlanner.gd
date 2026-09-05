@@ -510,6 +510,13 @@ func _cell_on_other_inherited_road(cell: Vector2i, spine: Dictionary, roads: Arr
         # intersection that should invalidate every possible branch anchor.
         if _same_straight_road_geometry(spine, road):
             continue
+        # Alternate routes can share only part of a straight approach. That
+        # overlap is still frontage, rather than a crossing at every cell.
+        if road.get("axis", &"") == spine.get("axis", &""):
+            var other_start: Vector2i = road.get("start", Vector2i.ZERO)
+            var spine_start: Vector2i = spine.get("start", Vector2i.ZERO)
+            if (road.get("axis", &"") == &"horizontal" and other_start.y == spine_start.y) or (road.get("axis", &"") == &"vertical" and other_start.x == spine_start.x):
+                continue
         if _point_on_road_path(cell, road):
             return true
     return false

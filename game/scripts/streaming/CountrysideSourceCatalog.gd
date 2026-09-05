@@ -1,34 +1,27 @@
 extends RefCounted
 class_name CountrysideSourceCatalog
 
-const HydrologyQueryClass = preload("res://scripts/generation/world/GlobalHydrologyQuery.gd")
 
 const CATALOG_VERSION: int = 1
 const SOURCE_KIND: StringName = &"system20_rural_open"
 const RURAL_OPEN_REGION_KIND: StringName = &"rural_open"
 const RURAL_OPEN_PROFILE: StringName = &"rural.open"
 
-var _hydrology: GlobalHydrologyQuery = null
 var _plan_signature: String = ""
 var _context_bounds: Rect2i = Rect2i()
 var _sources: Array[Dictionary] = []
 var _sources_by_id: Dictionary = {}
 var _parent_rects_by_id: Dictionary = {}
 var _settlement_exclusions: Array[Rect2i] = []
-var _river_exclusions: Array[Rect2i] = []
 var _failure_reason: String = ""
 
-func _init(
-    global_plan: GeneratedGlobalWorldPlan = null,
-    hydrology: GlobalHydrologyQuery = null
-) -> void:
-    _hydrology = hydrology if hydrology != null else HydrologyQueryClass.new()
+func _init(global_plan: GeneratedGlobalWorldPlan = null) -> void:
     if global_plan != null:
         configure(global_plan)
 
 func configure(global_plan: GeneratedGlobalWorldPlan) -> bool:
     _reset()
-    if _hydrology == null or global_plan == null or not global_plan.is_generated():
+    if global_plan == null or not global_plan.is_generated():
         return _fail("invalid_countryside_catalog_input")
 
     var context_result: Dictionary = _resolve_rural_open_context(global_plan)
@@ -50,10 +43,6 @@ func configure(global_plan: GeneratedGlobalWorldPlan) -> bool:
         return _fail(String(settlement_result.get("failure_reason", "countryside_settlement_exclusion_invalid")))
     _settlement_exclusions = settlement_result.get("rects", [])
 
-    var river_result: Dictionary = _ordered_river_exclusions(global_plan)
-    if not bool(river_result.get("ok", false)):
-        return _fail(String(river_result.get("failure_reason", "countryside_river_exclusion_invalid")))
-    _river_exclusions = river_result.get("rects", [])
 
     for parent: Dictionary in parents:
         var parent_id: String = String(parent.get("id", ""))
@@ -173,8 +162,6 @@ func descriptor_for_cell(cell: Vector2i) -> Dictionary:
 func settlement_exclusion_rects() -> Array[Rect2i]:
     return _settlement_exclusions.duplicate()
 
-func river_exclusion_rects() -> Array[Rect2i]:
-    return _river_exclusions.duplicate()
 
 func validate_source_bounds(global_plan: GeneratedGlobalWorldPlan) -> Dictionary:
     if global_plan == null or not global_plan.is_generated() or _plan_signature.is_empty():
@@ -204,9 +191,6 @@ func validate_source_bounds(global_plan: GeneratedGlobalWorldPlan) -> Dictionary
         for site_rect: Rect2i in _settlement_exclusions:
             if _rects_overlap_positive(bounds, site_rect):
                 return _validation_failure("countryside_source_overlaps_settlement:%s" % source_id)
-        for river_rect: Rect2i in _river_exclusions:
-            if _rects_overlap_positive(bounds, river_rect):
-                return _validation_failure("countryside_source_overlaps_river:%s" % source_id)
         for other_index in range(index + 1, _sources.size()):
             var other_bounds: Rect2i = _sources[other_index].get("bounds", Rect2i())
             if _rects_overlap_positive(bounds, other_bounds):
@@ -304,34 +288,10 @@ func _ordered_settlement_exclusions(global_plan: GeneratedGlobalWorldPlan) -> Di
         rects.append(entry.get("rect", Rect2i()))
     return {"ok": true, "failure_reason": "", "rects": rects}
 
-func _ordered_river_exclusions(global_plan: GeneratedGlobalWorldPlan) -> Dictionary:
-    var entries: Array[Dictionary] = []
-    for segment: Dictionary in global_plan.river_segments:
-        var segment_id: String = String(segment.get("segment_id", "")).strip_edges()
-        var start: Vector2i = segment.get("start", Vector2i.ZERO)
-        var finish: Vector2i = segment.get("end", Vector2i.ZERO)
-        var width: int = int(segment.get("width", 0))
-        if segment_id.is_empty() or width <= 0 or (start.x != finish.x and start.y != finish.y):
-            return {"ok": false, "failure_reason": "countryside_river_segment_invalid:%s" % segment_id, "rects": []}
-        var corridor: Rect2i = _hydrology.segment_corridor_rect(segment)
-        if corridor.size.x <= 0 or corridor.size.y <= 0:
-            return {"ok": false, "failure_reason": "countryside_river_corridor_invalid:%s" % segment_id, "rects": []}
-        var clipped: Rect2i = _rect_intersection(corridor, _context_bounds)
-        if clipped.size.x > 0 and clipped.size.y > 0:
-            entries.append({"id": segment_id, "rect": clipped})
-    entries.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
-        return String(a.get("id", "")) < String(b.get("id", ""))
-    )
-    var rects: Array[Rect2i] = []
-    for entry: Dictionary in entries:
-        rects.append(entry.get("rect", Rect2i()))
-    return {"ok": true, "failure_reason": "", "rects": rects}
 
 func _dry_pieces(parent_rect: Rect2i) -> Array[Rect2i]:
     var pieces: Array[Rect2i] = [parent_rect]
     for exclusion: Rect2i in _settlement_exclusions:
-        pieces = _subtract_from_pieces(pieces, exclusion)
-    for exclusion: Rect2i in _river_exclusions:
         pieces = _subtract_from_pieces(pieces, exclusion)
     _sort_rects(pieces)
     return pieces
@@ -429,5 +389,4 @@ func _reset() -> void:
     _sources_by_id.clear()
     _parent_rects_by_id.clear()
     _settlement_exclusions.clear()
-    _river_exclusions.clear()
     _failure_reason = ""

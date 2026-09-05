@@ -36,7 +36,7 @@ func plan(world_plan: GeneratedGlobalWorldPlan) -> Dictionary:
             return _failure("island_population_site_request_invalid:%s" % site_id)
         var area_plan: GeneratedAreaPlan = generator.generate_manifest(request)
         if area_plan == null or not area_plan.is_generated():
-            return _failure("island_population_site_generation_failed:%s" % site_id)
+            return _failure("island_population_site_generation_failed:%s:%s" % [site_id, "null" if area_plan == null else area_plan.failure_reason])
         var household_records: Array[Dictionary] = []
         var residents: int = 0
         for building: BuildingGenerationRequest in area_plan.building_requests:
