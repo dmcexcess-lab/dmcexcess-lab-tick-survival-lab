@@ -7,7 +7,6 @@ const RURAL_CROSSROADS: StringName = &"rural.crossroads"
 const SMALLTOWN_CENTER: StringName = &"smalltown.center"
 const RURAL_SCATTERED: StringName = &"rural.scattered"
 const RURAL_OPEN: StringName = &"rural.open"
-const RURAL_WATERCOURSE: StringName = &"rural.watercourse"
 
 var _baseline_profiles := BaselineProfilesClass.new()
 
@@ -16,7 +15,6 @@ func has_profile(profile_id: StringName) -> bool:
         or profile_id == SMALLTOWN_CENTER \
         or profile_id == RURAL_SCATTERED \
         or profile_id == RURAL_OPEN \
-        or profile_id == RURAL_WATERCOURSE \
         or _baseline_profiles.has_profile(profile_id)
 
 func profile(profile_id: StringName) -> Dictionary:
@@ -112,9 +110,6 @@ func profile(profile_id: StringName) -> Dictionary:
             "town_block_min_span": 12,
             "reservation_road_gap": 2,
             "reservation_substation_size": Vector2i(14, 12),
-            "reservation_groundwater_source_size": Vector2i(12, 12),
-            "reservation_water_treatment_size": Vector2i(16, 16),
-            "reservation_wastewater_treatment_size": Vector2i(20, 16),
             "town_edge_open_distance": 82,
             "residential_setback": 1,
             "farmstead_setback": 4,
@@ -215,24 +210,5 @@ func profile(profile_id: StringName) -> Dictionary:
             "rural_open_natural_density_rolling": 0.014,
             "rural_open_natural_density_upland": 0.020,
             "rural_open_natural_density_ridge": 0.024,
-        }
-    if profile_id == RURAL_WATERCOURSE:
-        return {
-            "id": RURAL_WATERCOURSE,
-            "version": 1,
-            "road_layout": &"inherit_only",
-            "signalize_first_inherited_intersection": false,
-            "land_use_mode": &"rural_watercourse",
-            "inherited_roads_required": false,
-            "local_road_spurs": 0,
-            "commercial_count": 0,
-            "residential_count": 0,
-            "farmstead_count": 0,
-            "local_residential_target": 0,
-            "local_farmstead_target": 0,
-            "commercial_archetypes": [],
-            "residential_archetypes": [],
-            "farmstead_archetypes": [],
-            "river_ground_semantic": &"ground.water_river",
         }
     return _baseline_profiles.profile(profile_id)
