@@ -56,16 +56,9 @@ func _build_projection() -> Dictionary:
     var shared_pole_states: Dictionary = {}
     var trunk_wire_index_by_route: Dictionary = {}
 
-    var plant_records: Array[Dictionary] = _water_plant_records(reserved_cells)
-    if plant_records.is_empty():
-        return {"props": [], "wires": []}
-    for record: Dictionary in plant_records:
-        var plant_cell: Vector2i = record.get("cell", INVALID_CELL)
-        if plant_cell == INVALID_CELL or reserved_cells.has(plant_cell):
-            return {"props": [], "wires": []}
-        props.append(record)
-        reserved_cells[plant_cell] = true
-
+    # Municipal water is represented by one already-generated building. Do not
+    # manufacture a second utility shed/tank complex from the retired water-node
+    # graph. Private rural wells remain the only water props added here.
     var road_graph: Dictionary = _build_local_road_graph()
     if road_graph.is_empty():
         return {"props": [], "wires": []}
