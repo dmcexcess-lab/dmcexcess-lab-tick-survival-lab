@@ -244,7 +244,20 @@ func _test_materialized_trunk_does_not_immediately_cross_back() -> void:
         if start_side == 0 or end_side == 0 or start_side == end_side:
             continue
         crossing_count += 1
-        _assert_hold_from(String(edge.get("end_id", "")), SIDE_HOLD_POLES, outgoing, world)
+        var held_services: Array[String] = _service_ids(edge)
+        var held_state := {
+            "side": end_side,
+            "direction": direction,
+            "hold": SIDE_HOLD_POLES,
+        }
+        _assert_hold_from(
+            String(edge.get("end_id", "")),
+            SIDE_HOLD_POLES,
+            outgoing,
+            world,
+            held_services,
+            held_state
+        )
     print("SYSTEM33_ROADSIDE_CROSSINGS=%d" % crossing_count)
     _check(not trunk_edges.is_empty(), "full trunk side regression inspects real shared feeder spans")
 
@@ -252,14 +265,19 @@ func _assert_hold_from(
     start_id: String,
     remaining: int,
     outgoing: Dictionary,
-    world: WorldState
+    world: WorldState,
+    held_services: Array[String],
+    parent_state: Dictionary
 ) -> void:
-    if remaining <= 0:
+    if remaining <= 0 or held_services.is_empty():
         return
     for edge_value: Variant in outgoing.get(start_id, []):
         if typeof(edge_value) != TYPE_DICTIONARY:
             continue
         var edge: Dictionary = edge_value
+        var continuing_services: Array[String] = _service_intersection(held_services, _service_ids(edge))
+        if continuing_services.is_empty():
+            continue
         var route_start: Vector2i = edge.get("route_start_cell", INVALID_CELL)
         var route_end: Vector2i = edge.get("route_end_cell", INVALID_CELL)
         var edge_direction: Vector2i = _cardinal_direction(route_start, route_end)
@@ -270,11 +288,47 @@ func _assert_hold_from(
         var end_placement: WorldPlacement = world.placement(end_id)
         if start_placement == null or end_placement == null:
             continue
-        var start_side: int = _side_of(route_start, start_placement.anchor, edge_direction)
+        var expected_side: int = NeighborhoodInfrastructureClass._continuous_road_side(
+            route_end,
+            edge_direction,
+            start_placement.anchor,
+            parent_state
+        )
         var end_side: int = _side_of(route_end, end_placement.anchor, edge_direction)
-        if start_side != 0 and end_side != 0:
-            _check(start_side == end_side, "shared trunk does not cross back during %d-pole side hold, including through road turns" % SIDE_HOLD_POLES)
-        _assert_hold_from(end_id, remaining - 1, outgoing, world)
+        if expected_side != 0 and end_side != 0:
+            _check(
+                end_side == expected_side,
+                "shared trunk stays on the same physical roadside bank for %d poles after a crossing, including through road turns" % SIDE_HOLD_POLES
+            )
+        var child_state := {
+            "side": end_side,
+            "direction": edge_direction,
+            "hold": maxi(0, int(parent_state.get("hold", remaining)) - 1),
+        }
+        _assert_hold_from(
+            end_id,
+            remaining - 1,
+            outgoing,
+            world,
+            continuing_services,
+            child_state
+        )
+
+func _service_ids(edge: Dictionary) -> Array[String]:
+    var result: Array[String] = []
+    for value: Variant in edge.get("service_settlement_ids", []):
+        var service_id: String = String(value).strip_edges()
+        if not service_id.is_empty() and not result.has(service_id):
+            result.append(service_id)
+    result.sort()
+    return result
+
+func _service_intersection(a: Array[String], b: Array[String]) -> Array[String]:
+    var result: Array[String] = []
+    for value: String in a:
+        if b.has(value):
+            result.append(value)
+    return result
 
 func _find_two_sided_route_fixture(plan: GeneratedGlobalWorldPlan, topology: Dictionary) -> Dictionary:
     var world := WorldStateClass.new()
