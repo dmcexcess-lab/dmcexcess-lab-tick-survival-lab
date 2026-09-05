@@ -1,12 +1,12 @@
 # Changelog
 
-## 2026-09-05 — Rural island density playtest candidate (local, publication pending)
+## 2026-09-05 — Rural island density playtest build
 
 - Expanded real housing to 1,002 reference-seed residents across 306 buildings, retaining two towns, three compact crossroads and six rural lane sites on the same island footprint.
 - Extended town envelopes and frontage instead of shrinking rural parcel spacing or inflating household capacity.
 - Added secondary-road commercial fallback and fit-aware crossroads business placement.
 - Added population/morphology regression checks and repaired the flashlight workflow’s misplaced literal-label assertion.
-- Local executable: `63e7006346b9177bb4fe64401849d9ccb2ddd3e1`. Push was rejected by automatic approval review; exact-head CI/Pages have not run for this candidate. See README_CONTEXT.md for the precise publication step.
+- Published executable: `0375481e94e9ca050c04f370beb4b760d24ed680`, identical tree to the locally reviewed candidate. Explicit publication approval received; standing direct-main authorization is recorded in README_SOPS.md. See README_CONTEXT.md for terminal CI/Pages verification.
 
 ## 2026-09-04 — Exact-Item Inventory First Aid
 

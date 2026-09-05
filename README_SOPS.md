@@ -208,6 +208,8 @@ Generated-world layout/behavior still requires human play acceptance even when C
 
 Direct `main` is normal unless the user requests a PR/branch workflow or destructive recovery warrants isolation.
 
+**Standing user authorization (2026-09-05):** DMC explicitly approved direct-to-`main` publication and requested that this approval never be asked again. For authorized Tick Lab coding work, commit/push to `main`, deploy Pages and verify closure without requesting another publication confirmation. This covers follow-up fixes and documentation closure for that work. Respect any newer explicit user restriction and actual platform access controls.
+
 Do not accumulate temporary compatibility adapters, diagnostic scaffolds, work branches, or duplicate process documents merely for tooling convenience.
 
 Git is canonical history. Historical source may be removed from the active tree when its recovery commit/blob remains documented.
