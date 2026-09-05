@@ -219,11 +219,6 @@ func _minimal_global_plan() -> GeneratedGlobalWorldPlan:
     plan.power_nodes = [{"id": "pn"}]
     plan.power_segments = [{"id": "ps"}]
     plan.water_services = [{"id": "ws"}]
-    plan.water_nodes = [{"id": "wn"}]
-    plan.water_segments = [{"id": "wseg"}]
-    plan.wastewater_services = [{"id": "wws"}]
-    plan.wastewater_nodes = [{"id": "wwn"}]
-    plan.wastewater_segments = [{"id": "wwseg"}]
     return plan
 
 func _on_world_changed(change: WorldChange) -> void:
