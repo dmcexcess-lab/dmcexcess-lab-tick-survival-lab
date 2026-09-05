@@ -5,8 +5,6 @@ const RequestClass = preload("res://scripts/generation/world/GlobalWorldGenerati
 const BasePlannerClass = preload("res://scripts/generation/world/GlobalWorldPlanner.gd")
 const PlanClass = preload("res://scripts/generation/world/GeneratedGlobalWorldPlan.gd")
 const ProfilesClass = preload("res://scripts/generation/world/GlobalWorldProfileCatalog.gd")
-const BridgePlannerClass = preload("res://scripts/generation/world/GlobalBridgeIntentPlanner.gd")
-const HydrologyQueryClass = preload("res://scripts/generation/world/GlobalHydrologyQuery.gd")
 const SettlementHierarchyClass = preload("res://scripts/generation/world/IslandSettlementHierarchyPlanner.gd")
 const PopulationPlannerClass = preload("res://scripts/simulation/population/IslandPopulationPlanner.gd")
 const Surface = preload("res://scripts/generation/shared/IslandSurfaceMath.gd")
@@ -14,8 +12,6 @@ const Surface = preload("res://scripts/generation/shared/IslandSurfaceMath.gd")
 const INVALID_CELL := Vector2i(-999999, -999999)
 
 var _base_planner: GlobalWorldPlanner = BasePlannerClass.new()
-var _bridges: GlobalBridgeIntentPlanner = BridgePlannerClass.new()
-var _hydrology: GlobalHydrologyQuery = HydrologyQueryClass.new()
 var _profiles: GlobalWorldProfileCatalog = ProfilesClass.new()
 var _settlement_hierarchy: IslandSettlementHierarchyPlanner = SettlementHierarchyClass.new()
 var _population_planner: IslandPopulationPlanner = PopulationPlannerClass.new()
@@ -30,9 +26,8 @@ func generate(request: GlobalWorldGenerationRequest) -> GeneratedGlobalWorldPlan
         failed.failure_reason = "island_profile_missing"
         return failed
 
-    # Compose the island through the proven rural regional planner pipeline, but
-    # use the island profile so island-specific settlement identity and spacing
-    # are authoritative before coast/ocean truth is layered over the skeleton.
+    # Compose the island through the proven regional geography/road pipeline while
+    # keeping the production island contract free of retired river/bridge plumbing.
     var planning_bounds: Rect2i = _settlement_hierarchy.planning_bounds(request, island_profile)
     if planning_bounds.size.x <= 0 or planning_bounds.size.y <= 0:
         failed.failure_reason = "island_settlement_envelope_invalid"
@@ -55,7 +50,6 @@ func generate(request: GlobalWorldGenerationRequest) -> GeneratedGlobalWorldPlan
     plan.profile_id = ProfilesClass.TEMPERATE_ISLAND_REGION
     plan.profile_version = int(island_profile.get("version", 1))
     plan.geography_cells = _decorate_geography(base.geography_cells, base_request, island_profile)
-    plan.river_segments = base.river_segments.duplicate(true)
     plan.settlements = base.settlements.duplicate(true)
 
     plan.road_segments = _clip_base_roads(base.road_segments, base_request, island_profile)
@@ -66,7 +60,6 @@ func generate(request: GlobalWorldGenerationRequest) -> GeneratedGlobalWorldPlan
     var base_sites_result: Dictionary = _copy_base_sites(
         base.area_sites,
         plan.settlements,
-        plan.river_segments,
         base_request,
         island_profile
     )
@@ -75,12 +68,6 @@ func generate(request: GlobalWorldGenerationRequest) -> GeneratedGlobalWorldPlan
         return plan
     plan.area_sites = base_sites_result.get("area_sites", [])
 
-    var bridge_result: Dictionary = _bridges.plan(plan.road_segments, plan.river_segments)
-    if not bool(bridge_result.get("ok", false)):
-        plan.failure_reason = String(bridge_result.get("failure_reason", "island_bridge_planning_failed"))
-        return plan
-    plan.bridge_intents = bridge_result.get("bridge_intents", [])
-
     var power_result: Dictionary = _adapt_power(base, plan.road_segments)
     if not bool(power_result.get("ok", false)):
         plan.failure_reason = String(power_result.get("failure_reason", "island_power_adaptation_failed"))
@@ -88,14 +75,9 @@ func generate(request: GlobalWorldGenerationRequest) -> GeneratedGlobalWorldPlan
     plan.power_nodes = power_result.get("nodes", [])
     plan.power_segments = power_result.get("segments", [])
 
-    # Utility records remain planning truth until Roadmap Phase 3 replaces their
-    # gameplay behavior with the approved three-tier power/water simulation.
+    # Potable water is one shared municipal facility/service contract. Rural private
+    # wells are added later by the local utility topology planner.
     plan.water_services = base.water_services.duplicate(true)
-    plan.water_nodes = base.water_nodes.duplicate(true)
-    plan.water_segments = base.water_segments.duplicate(true)
-    plan.wastewater_services = base.wastewater_services.duplicate(true)
-    plan.wastewater_nodes = base.wastewater_nodes.duplicate(true)
-    plan.wastewater_segments = base.wastewater_segments.duplicate(true)
     plan.regions = _build_regions(base.regions, planning_bounds)
 
     var population_result: Dictionary = _population_planner.plan(plan)
@@ -133,7 +115,6 @@ func _decorate_geography(
 func _copy_base_sites(
     source: Array[Dictionary],
     settlements: Array[Dictionary],
-    rivers: Array[Dictionary],
     request: GlobalWorldGenerationRequest,
     profile: Dictionary
 ) -> Dictionary:
@@ -143,13 +124,12 @@ func _copy_base_sites(
         site["site_role"] = &"primary"
         var rect: Rect2i = site.get("bounds", Rect2i())
         var site_id: String = String(site.get("id", ""))
-        if not _site_rect_physically_legal(rect, rivers, request, profile):
+        if not _site_rect_physically_legal(rect, request, profile):
             var repaired_invalid_rect: Rect2i = _repair_invalid_site_rect(
                 site,
                 rect,
                 sites,
                 settlements,
-                rivers,
                 request,
                 profile
             )
@@ -158,14 +138,11 @@ func _copy_base_sites(
             rect = repaired_invalid_rect
             site["bounds"] = rect
         elif _overlaps_any_site(rect, sites):
-            # Preserve the accepted overlap-only repair behavior for already
-            # island-legal sites so existing seeds keep their established layout.
             var repaired_rect: Rect2i = _repair_overlapping_site_rect(
                 site,
                 rect,
                 sites,
                 settlements,
-                rivers,
                 request,
                 profile
             )
@@ -181,7 +158,6 @@ func _repair_invalid_site_rect(
     original: Rect2i,
     accepted_sites: Array[Dictionary],
     settlements: Array[Dictionary],
-    rivers: Array[Dictionary],
     request: GlobalWorldGenerationRequest,
     profile: Dictionary
 ) -> Rect2i:
@@ -189,9 +165,6 @@ func _repair_invalid_site_rect(
     if settlement_center == INVALID_CELL or original.size.x <= 0 or original.size.y <= 0:
         return Rect2i()
 
-    # A local site may move, but it must keep owning the same settlement center.
-    # Search the finite top-left domain in nearest-first Manhattan order. This is
-    # a generation-only fallback: already legal sites never enter this path.
     var min_x: int = maxi(request.bounds.position.x, settlement_center.x - original.size.x + 1)
     var max_x: int = mini(request.bounds.position.x + request.bounds.size.x - original.size.x, settlement_center.x)
     var min_y: int = maxi(request.bounds.position.y, settlement_center.y - original.size.y + 1)
@@ -217,14 +190,14 @@ func _repair_invalid_site_rect(
             var lower_y: int = original.position.y - dy_abs
             if lower_y >= min_y and lower_y <= max_y:
                 var lower_candidate := Rect2i(Vector2i(candidate_x, lower_y), original.size)
-                if _site_rect_legal(lower_candidate, accepted_sites, rivers, request, profile):
+                if _site_rect_legal(lower_candidate, accepted_sites, request, profile):
                     return lower_candidate
             if dy_abs <= 0:
                 continue
             var upper_y: int = original.position.y + dy_abs
             if upper_y >= min_y and upper_y <= max_y:
                 var upper_candidate := Rect2i(Vector2i(candidate_x, upper_y), original.size)
-                if _site_rect_legal(upper_candidate, accepted_sites, rivers, request, profile):
+                if _site_rect_legal(upper_candidate, accepted_sites, request, profile):
                     return upper_candidate
     return Rect2i()
 
@@ -233,7 +206,6 @@ func _repair_overlapping_site_rect(
     original: Rect2i,
     accepted_sites: Array[Dictionary],
     settlements: Array[Dictionary],
-    rivers: Array[Dictionary],
     request: GlobalWorldGenerationRequest,
     profile: Dictionary
 ) -> Rect2i:
@@ -264,7 +236,7 @@ func _repair_overlapping_site_rect(
             var candidate := Rect2i(position, original.size)
             if not candidate.has_point(settlement_center):
                 continue
-            if not _site_rect_legal(candidate, accepted_sites, rivers, request, profile):
+            if not _site_rect_legal(candidate, accepted_sites, request, profile):
                 continue
             if best.size.x <= 0 \
                 or distance < best_distance \
@@ -274,15 +246,11 @@ func _repair_overlapping_site_rect(
     if best.size.x > 0 and best.size.y > 0:
         return best
 
-    # Preserve the accepted edge-aligned overlap repair above. Only when that
-    # bounded legacy path has no answer, reuse the exhaustive same-size search
-    # that still requires this site's original settlement center.
     return _repair_invalid_site_rect(
         site,
         original,
         accepted_sites,
         settlements,
-        rivers,
         request,
         profile
     )
@@ -290,23 +258,21 @@ func _repair_overlapping_site_rect(
 func _site_rect_legal(
     rect: Rect2i,
     accepted_sites: Array[Dictionary],
-    rivers: Array[Dictionary],
     request: GlobalWorldGenerationRequest,
     profile: Dictionary
 ) -> bool:
-    if not _site_rect_physically_legal(rect, rivers, request, profile):
+    if not _site_rect_physically_legal(rect, request, profile):
         return false
     return not _overlaps_any_site(rect, accepted_sites)
 
 func _site_rect_physically_legal(
     rect: Rect2i,
-    rivers: Array[Dictionary],
     request: GlobalWorldGenerationRequest,
     profile: Dictionary
 ) -> bool:
     if not _rect_inside(request.bounds, rect):
         return false
-    if not Surface.rect_is_land(
+    return Surface.rect_is_land(
         request.bounds,
         request.seed,
         rect,
@@ -314,12 +280,6 @@ func _site_rect_physically_legal(
         int(profile.get("island_shore_width", 8)),
         int(profile.get("island_coast_wobble", 8)),
         int(profile.get("island_coast_scale", 96))
-    ):
-        return false
-    return _hydrology.rect_clear_of_rivers(
-        rect,
-        rivers,
-        int(profile.get("settlement_river_clearance", 16))
     )
 
 func _site_settlement_center(site: Dictionary, settlements: Array[Dictionary]) -> Vector2i:
@@ -531,8 +491,6 @@ func _validate(
             int(profile.get("island_coast_scale", 96))
         ):
             failures.append("island_area_site_not_land:%s" % String(site.get("id", "")))
-        if not _hydrology.rect_clear_of_rivers(rect, plan.river_segments, int(profile.get("settlement_river_clearance", 16))):
-            failures.append("island_area_site_hits_river:%s" % String(site.get("id", "")))
         var profile_id: String = String(site.get("area_profile_hint", &""))
         profile_counts[profile_id] = int(profile_counts.get(profile_id, 0)) + 1
         for second_index in range(first_index + 1, plan.area_sites.size()):
@@ -550,8 +508,6 @@ func _validate(
         if not _point_on_any_road(settlement.get("center", INVALID_CELL), plan.road_segments):
             failures.append("island_settlement_disconnected:%s" % String(settlement.get("id", "")))
 
-    if not plan.river_segments.is_empty() or not plan.bridge_intents.is_empty():
-        failures.append("island_retired_hydrology_present")
     if plan.power_nodes.is_empty() or plan.power_segments.is_empty():
         failures.append("island_power_missing")
     if plan.population_settlements.size() != plan.area_sites.size() or plan.resident_population <= 0:
