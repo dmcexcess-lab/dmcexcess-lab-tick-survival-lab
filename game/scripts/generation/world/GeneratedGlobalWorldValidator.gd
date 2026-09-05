@@ -2,16 +2,13 @@ extends RefCounted
 class_name GeneratedGlobalWorldValidator
 
 const GeographyQueryClass = preload("res://scripts/generation/world/GlobalGeographyQuery.gd")
-const HydrologyQueryClass = preload("res://scripts/generation/world/GlobalHydrologyQuery.gd")
 const ProfilesClass = preload("res://scripts/generation/world/GlobalWorldProfileCatalog.gd")
 
 var _geography: GlobalGeographyQuery
-var _hydrology: GlobalHydrologyQuery
 var _profiles: GlobalWorldProfileCatalog
 
 func _init() -> void:
     _geography = GeographyQueryClass.new()
-    _hydrology = HydrologyQueryClass.new()
     _profiles = ProfilesClass.new()
 
 func validate(request: GlobalWorldGenerationRequest, plan: GeneratedGlobalWorldPlan) -> Dictionary:
@@ -27,7 +24,6 @@ func validate(request: GlobalWorldGenerationRequest, plan: GeneratedGlobalWorldP
 
     var ids: Dictionary = {}
     _validate_geography(plan, ids, failures)
-    _validate_hydrology(plan, profile, ids, failures)
 
     var settlement_centers: Dictionary = {}
     var settlement_ids: Dictionary = {}
@@ -105,15 +101,12 @@ func validate(request: GlobalWorldGenerationRequest, plan: GeneratedGlobalWorldP
         if not _endpoint_justified(finish, road_index, plan.bounds, plan.road_segments, settlement_centers):
             failures.append("global_road_end_unjustified")
 
-    _validate_bridge_intents(plan, ids, failures)
-
     for region: Dictionary in plan.regions:
         var region_settlement_id: String = String(region.get("settlement_id", ""))
         if not region_settlement_id.is_empty() and not settlement_ids.has(region_settlement_id):
             failures.append("global_region_settlement_missing")
 
     var site_ids: Dictionary = {}
-    var river_clearance: int = int(profile.get("settlement_river_clearance", 16))
     for site: Dictionary in plan.area_sites:
         var site_id: String = String(site.get("id", ""))
         _claim_id(ids, site_id, failures)
@@ -121,8 +114,6 @@ func validate(request: GlobalWorldGenerationRequest, plan: GeneratedGlobalWorldP
         var site_bounds: Rect2i = site.get("bounds", Rect2i())
         if not _rect_inside(plan.bounds, site_bounds):
             failures.append("global_area_site_out_of_bounds")
-        if not _hydrology.rect_clear_of_rivers(site_bounds, plan.river_segments, river_clearance):
-            failures.append("global_area_site_intersects_river_clearance")
         var settlement_id: String = String(site.get("settlement_id", ""))
         if not settlement_ids.has(settlement_id):
             failures.append("global_area_site_settlement_missing")
@@ -171,145 +162,6 @@ func _validate_geography(plan: GeneratedGlobalWorldPlan, ids: Dictionary, failur
                 break
     if total_area != plan.bounds.size.x * plan.bounds.size.y:
         failures.append("global_geography_does_not_tile_bounds")
-
-func _validate_hydrology(plan: GeneratedGlobalWorldPlan, profile: Dictionary, ids: Dictionary, failures: Array[String]) -> void:
-    if plan.profile_id == ProfilesClass.TEMPERATE_ISLAND_REGION:
-        if not plan.river_segments.is_empty():
-            failures.append("island_retired_hydrology_present")
-        return
-    if plan.river_segments.is_empty():
-        failures.append("global_hydrology_missing")
-        return
-    var by_river: Dictionary = {}
-    for river: Dictionary in plan.river_segments:
-        _claim_id(ids, String(river.get("segment_id", "")), failures)
-        var river_id: String = String(river.get("river_id", ""))
-        if river_id.strip_edges().is_empty():
-            failures.append("global_river_id_missing")
-            continue
-        var start: Vector2i = river.get("start", Vector2i(-999999, -999999))
-        var finish: Vector2i = river.get("end", Vector2i(-999999, -999999))
-        var width: int = int(river.get("width", 0))
-        if start == finish or (start.x != finish.x and start.y != finish.y):
-            failures.append("global_river_not_cardinal")
-        if width <= 0 or width % 2 == 0:
-            failures.append("global_river_width_invalid")
-        if not plan.bounds.has_point(start) or not plan.bounds.has_point(finish):
-            failures.append("global_river_endpoint_out_of_bounds")
-        if int(river.get("ordinal", 0)) <= 0:
-            failures.append("global_river_ordinal_invalid")
-        if _segment_intersects_protected_hydrology(river, plan.bounds, profile):
-            failures.append("global_river_enters_protected_center")
-        if not by_river.has(river_id):
-            by_river[river_id] = []
-        var values: Array = by_river[river_id]
-        values.append(river)
-        by_river[river_id] = values
-
-    for river_key: Variant in by_river.keys():
-        var segments: Array = by_river[river_key]
-        segments.sort_custom(func(a: Variant, b: Variant) -> bool:
-            return int((a as Dictionary).get("ordinal", 0)) < int((b as Dictionary).get("ordinal", 0))
-        )
-        if segments.is_empty():
-            continue
-        for index in range(segments.size()):
-            var segment: Dictionary = segments[index]
-            if int(segment.get("ordinal", 0)) != index + 1:
-                failures.append("global_river_ordinal_sequence_invalid")
-            if index > 0:
-                var previous: Dictionary = segments[index - 1]
-                if previous.get("end", Vector2i.ZERO) != segment.get("start", Vector2i.ZERO):
-                    failures.append("global_river_route_disconnected")
-        var first: Dictionary = segments[0]
-        var last: Dictionary = segments[segments.size() - 1]
-        if not _is_boundary_cell(plan.bounds, first.get("start", Vector2i.ZERO)):
-            failures.append("global_river_source_not_on_boundary")
-        if not _is_boundary_cell(plan.bounds, last.get("end", Vector2i.ZERO)):
-            failures.append("global_river_outlet_not_on_boundary")
-
-func _validate_bridge_intents(plan: GeneratedGlobalWorldPlan, ids: Dictionary, failures: Array[String]) -> void:
-    if plan.profile_id == ProfilesClass.TEMPERATE_ISLAND_REGION:
-        if not plan.bridge_intents.is_empty():
-            failures.append("island_retired_bridges_present")
-        return
-    var crossings: Dictionary = {}
-    for road: Dictionary in plan.road_segments:
-        for river: Dictionary in plan.river_segments:
-            if _hydrology.collinear_overlap_length(road, river) > 0:
-                failures.append("global_road_river_collinear_overlap")
-                continue
-            var crossing: Vector2i = _hydrology.perpendicular_crossing(road, river)
-            if crossing.x < -900000:
-                continue
-            var key: String = _bridge_key(String(road.get("route_id", "")), String(river.get("river_id", "")), crossing)
-            crossings[key] = true
-
-    if crossings.is_empty():
-        failures.append("global_road_river_crossing_missing")
-    if plan.bridge_intents.is_empty():
-        failures.append("global_bridge_intent_missing")
-
-    var bridge_keys: Dictionary = {}
-    for bridge: Dictionary in plan.bridge_intents:
-        _claim_id(ids, String(bridge.get("id", "")), failures)
-        var road_id: String = String(bridge.get("road_id", ""))
-        var route_id: String = String(bridge.get("route_id", ""))
-        var river_id: String = String(bridge.get("river_id", ""))
-        var river_segment_id: String = String(bridge.get("river_segment_id", ""))
-        var cell: Vector2i = bridge.get("cell", Vector2i(-999999, -999999))
-        var road: Dictionary = _road_by_id(plan.road_segments, road_id)
-        var river: Dictionary = _river_segment_by_id(plan.river_segments, river_segment_id)
-        if road.is_empty():
-            failures.append("global_bridge_road_missing")
-            continue
-        if river.is_empty():
-            failures.append("global_bridge_river_segment_missing")
-            continue
-        if String(road.get("route_id", "")) != route_id:
-            failures.append("global_bridge_route_mismatch")
-        if String(river.get("river_id", "")) != river_id:
-            failures.append("global_bridge_river_mismatch")
-        var actual_crossing: Vector2i = _hydrology.perpendicular_crossing(road, river)
-        if actual_crossing != cell:
-            failures.append("global_bridge_cell_not_real_crossing")
-        var road_start: Vector2i = road.get("start", Vector2i.ZERO)
-        var road_end: Vector2i = road.get("end", Vector2i.ZERO)
-        var expected_axis: StringName = &"horizontal" if road_start.y == road_end.y else &"vertical"
-        if StringName(bridge.get("bridge_axis", &"")) != expected_axis:
-            failures.append("global_bridge_axis_mismatch")
-        if int(bridge.get("road_width", 0)) != int(road.get("width", 0)) or int(bridge.get("river_width", 0)) != int(river.get("width", 0)):
-            failures.append("global_bridge_width_mismatch")
-        var key: String = _bridge_key(route_id, river_id, cell)
-        bridge_keys[key] = int(bridge_keys.get(key, 0)) + 1
-
-    for crossing_key: Variant in crossings.keys():
-        if int(bridge_keys.get(crossing_key, 0)) != 1:
-            failures.append("global_crossing_bridge_intent_count_invalid")
-    for bridge_key: Variant in bridge_keys.keys():
-        if not crossings.has(bridge_key):
-            failures.append("global_bridge_intent_orphan")
-        if int(bridge_keys[bridge_key]) != 1:
-            failures.append("global_bridge_intent_duplicate")
-
-func _segment_intersects_protected_hydrology(segment: Dictionary, bounds: Rect2i, profile: Dictionary) -> bool:
-    var center := Vector2i(bounds.position.x + bounds.size.x / 2, bounds.position.y + bounds.size.y / 2)
-    var half_span: int = int(profile.get("protected_cross_half_span", 640))
-    var half_thickness: int = int(profile.get("protected_cross_half_thickness", 192)) + int(profile.get("hydrology_protected_margin", 0))
-    var horizontal := Rect2i(Vector2i(center.x - half_span, center.y - half_thickness), Vector2i(half_span * 2, half_thickness * 2))
-    var vertical := Rect2i(Vector2i(center.x - half_thickness, center.y - half_span), Vector2i(half_thickness * 2, half_span * 2))
-    return _segment_intersects_rect_centerline(segment, horizontal) or _segment_intersects_rect_centerline(segment, vertical)
-
-func _segment_intersects_rect_centerline(segment: Dictionary, rect: Rect2i) -> bool:
-    var start: Vector2i = segment.get("start", Vector2i.ZERO)
-    var finish: Vector2i = segment.get("end", Vector2i.ZERO)
-    var max_x: int = rect.position.x + rect.size.x - 1
-    var max_y: int = rect.position.y + rect.size.y - 1
-    if start.y == finish.y:
-        return start.y >= rect.position.y and start.y <= max_y and _ranges_overlap(mini(start.x, finish.x), maxi(start.x, finish.x), rect.position.x, max_x)
-    if start.x == finish.x:
-        return start.x >= rect.position.x and start.x <= max_x and _ranges_overlap(mini(start.y, finish.y), maxi(start.y, finish.y), rect.position.y, max_y)
-    return true
 
 func _segment_intersects_ridge(road: Dictionary, geography_cells: Array[Dictionary]) -> bool:
     var start: Vector2i = road.get("start", Vector2i.ZERO)
@@ -407,21 +259,6 @@ func _settlement_center(settlements: Array[Dictionary], settlement_id: String) -
         if String(settlement.get("id", "")) == settlement_id:
             return settlement.get("center", Vector2i(-999999, -999999))
     return Vector2i(-999999, -999999)
-
-func _road_by_id(roads: Array[Dictionary], road_id: String) -> Dictionary:
-    for road: Dictionary in roads:
-        if String(road.get("road_id", "")) == road_id:
-            return road
-    return {}
-
-func _river_segment_by_id(rivers: Array[Dictionary], segment_id: String) -> Dictionary:
-    for river: Dictionary in rivers:
-        if String(river.get("segment_id", "")) == segment_id:
-            return river
-    return {}
-
-func _bridge_key(route_id: String, river_id: String, cell: Vector2i) -> String:
-    return "%s|%s|%d,%d" % [route_id, river_id, cell.x, cell.y]
 
 func _claim_id(ids: Dictionary, value: String, failures: Array[String]) -> void:
     if value.strip_edges().is_empty():
