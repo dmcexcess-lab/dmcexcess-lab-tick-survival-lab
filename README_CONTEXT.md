@@ -4,30 +4,27 @@ Last updated: **2026-09-05**
 
 This is the authoritative continuation checkpoint. Read `README_SOPS.md`, fetch current `main` once, and continue from **NEXT OPERATION**. Newer explicit user direction supersedes this handoff.
 
-## Current checkpoint — generator cleanup part one CLOSED
+## Current checkpoint — road hierarchy and alternate connections CLOSED
 
-The first cleanup pass that removed retired hydrology/wastewater/water-network assumptions from the **active production contract** is complete.
+- **Verified executable:** `9936d75186f269ab4e779389a8b62553684591fa`.
+- **53/53 GitHub Actions workflows succeeded**, no failures or pending runs for that executable.
+- **Pages SUCCESS:** https://github.com/dmcexcess-lab/dmcexcess-lab-tick-survival-lab/actions/runs/33998612624
+- **Play:** https://dmcexcess-lab.github.io/dmcexcess-lab-tick-survival-lab/
+- Closing commit is documentation-only. Local executable candidate `a89ea98` has the same tree `54d535f98e8cf394a82393ebbfa981d59d4e53da` as the published executable.
+- Standing direct-main/Pages authorization remains in the SOP; do not ask again.
 
-### Verified executable boundary
+### Completed in this continuation
 
-- **Executable:** `90a919ac367f9cf247c8915f065135f2f1592d79` — `Align System 20 CI with retired hydrology contract`.
-- `verify/system33-power-water` run `33992117806` — **SUCCESS**.
-- `verify/system20-local-area` run `33992117847` — **SUCCESS**; canonical boot passed inside this gate.
-- `verify/system00d-global-world` run `33992117848` — **SUCCESS**.
-- `verify/pages-deploy` run `33992117751` — **SUCCESS**.
-- Do **not** report the whole suite green. Known unrelated red contexts on this line include performance architecture, roadside pole routing, lighting truth, portable generator and flashlight-item checks.
-
-### What part one changed
-
-- Active municipal-water planning now validates the real current behavior rather than requiring old water-node/segment arrays to exist and be empty.
-- System 33 runtime no longer depends on `water_nodes` / `water_segments`.
-- Active global island validation no longer requires hydrology, river or bridge contracts and no longer treats “rivers must be empty” as a validity condition.
-- `IslandWorldPlanner` no longer invokes bridge planning, hydrology queries, river-clearance passes, or projects retired wastewater/water-network compatibility data.
-- System 20/local projection supplies current generation with roads, power and municipal-service facts only; it no longer projects fake potable pipe/node corridors or active hydrology/wastewater constraints.
-- The active System 20 rural-open gate no longer expects a regional river. Useful agriculture/seam/road coverage remains.
-- Current potable-water documentation now states that the retired arrays are outside the active contract rather than empty requirements.
-
-Part one deliberately stopped short of deleting historical source files and compatibility storage. That physical deletion is **part two**.
+- Added up to eight nearest unused settlement-pair connections beyond the road tree.
+- Road types survive global planning, local projection and surface materialization: four-lane paved (two each way), two-lane paved (one each way), single-lane gravel and single-lane dirt.
+- Four-lane routes paint dashed white lane dividers around the yellow directional centerline. Unpaved surfaces do not paint centerlines. Legacy primary/secondary frontage classes remain.
+- Fixed rural branch anchors on partially overlapping collinear approaches; shared route pavement is not a crossing at every cell.
+- Removed leftover deleted-hydrology dependencies and river exclusions from CountrysideSourceCatalog and its smoke contract, preserving coverage/materialization/revisit/rollback checks.
+- Population-generation errors now retain the local failure reason.
+- Local complete-island generation/replay, power/water, alternate-seed legacy seam, countryside materialization and canonical boot passed.
+- Initial published candidate `b708ba4` had two CI failures; both repaired in the verified executable above.
+- Cached Godot binary was damaged and crashed even on --version. A fresh official 4.7.1 executable resolved this; no current tooling blocker remains.
+- No browser FPS or long-distance memory performance claim is made. Human appearance/lag acceptance remains pending.
 
 ## Protected potable-water contract
 
@@ -78,14 +75,13 @@ Remaining streaming debt after the generator cleanup:
 
 ## Density/world scale to preserve
 
-Reference seed 20001 checkpoint:
+Reference seed 20001 after road expansion:
 
-- 306 buildings;
-- 286 residential building records;
-- 1,002 residents;
-- two towns, three compact crossroads, six rural lane sites;
-- population is building-derived; infected + survivors equals residential capacity;
-- no fake population multiplier or fake zombie-count source.
+- **627 physical buildings, 2,184 residents**;
+- infected allocation **1,929** + survivor allocation **255** equals residents;
+- two towns, three compact crossroads, thirty sparse rural sites;
+- island bounds remain 3072×3072; technical streaming radius/size remain unchanged;
+- population is building-derived, with no fake multiplier or spawned zombies.
 
 Do not run the old 12-seed matrix on every edit. `README_SOPS.md` records the focused-test rule; normal work uses focused owner/protected regressions and the reference seed unless broader testing is explicitly justified.
 
@@ -118,19 +114,10 @@ Preserve:
 
 Production inheritance remains `VehicleGameMain -> System34GameMain -> UtilityGameMain -> CraftingGameMain -> GameMain`; flattening is separate work.
 
-## NEXT OPERATION — PART TWO
+## NEXT OPERATION
 
-The user explicitly ordered: **close part one, then complete part two.** Part one is closed by this handoff.
-
-Part two:
-
-1. Delete retired hydrology/river/watercourse/wastewater implementation files that have no remaining live owner.
-2. Remove transitional `GeneratedGlobalWorldPlan` compatibility storage for rivers/bridges/water topology/wastewater and all dead signature/serialization/projection references.
-3. Remove dead local projection adapters and dead physical-water helpers such as `_water_plant_records()` if still present.
-4. Remove or retire stale CI/workflow code whose only purpose is the deleted river/watercourse/wastewater contract. Do not resurrect retired behavior to make old tests pass.
-5. Treat bridge code carefully: delete river-only bridge compatibility, but preserve any current road feature that is independently required.
-6. Search the resulting live source tree for `river`, `hydrology`, `watercourse`, `bridge`, `wastewater`, `water_nodes`, `water_segments`, and `_water_plant_records`; classify every remainder as legitimate current code, tombstone documentation, or remove it.
-7. Run focused `system00d-global-world`, `system20-local-area`, `system33-power-water`, canonical boot/generation checks, and Pages on the exact executable head. Do not run the full 12-seed matrix unless explicitly requested.
-8. Finish with updated design docs and a mandatory final `README_CONTEXT.md` handoff.
-
-Treat the roadside-pole side-hold failure as a separate pre-existing power-routing defect, not part of this cleanup.
+1. User playtests the deployed road/density build: four road types, alternate journeys, rural proportions, and movement lag. Adjust from concrete feedback.
+2. No CI or publication work remains for this executable. Keep normal seed checks focused; the full twelve-seed matrix remains explicit opt-in.
+3. Preserve the completed river/wastewater/water-graph removal and protected municipal/private-well contract above. Do not restart old cleanup steps from historical handoffs.
+4. Continue rendering/player/world interaction closure before combat and NPC/zombie work, as directed. Future zombies consume actual population records.
+5. Whole-world rollback snapshots, distant immutable unloading/persisted deltas, and human browser/iPhone acceptance remain open; this road change does not claim to solve them.
