@@ -67,6 +67,16 @@ func power_service_for_cell(cell: Vector2i) -> String:
             best_distance = distance
     return best_service
 
+func power_scope_for_cell(cell: Vector2i) -> String:
+    for value: Variant in _local_power_topology.get("buildings", []):
+        if typeof(value) != TYPE_DICTIONARY:
+            continue
+        var building: Dictionary = value
+        var rect: Rect2i = building.get("rect", Rect2i())
+        if rect.has_point(cell):
+            return String(building.get("building_id", ""))
+    return super.power_scope_for_cell(cell)
+
 func water_service_for_cell(cell: Vector2i) -> String:
     var best_service: String = ""
     var best_distance: int = 2147483647

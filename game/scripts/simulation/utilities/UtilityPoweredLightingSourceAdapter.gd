@@ -176,7 +176,14 @@ func _refresh_fixed_entity(entity_id: String) -> void:
         return
     var appliance_id: String = _fixed_appliance_id(key)
     _fixed_entities[key] = appliance_id
-    if not _utilities.bind_appliance(appliance_id, &"fixed_light", power_service_id, key, true):
+    if not _utilities.bind_appliance(
+        appliance_id,
+        &"fixed_light",
+        power_service_id,
+        key,
+        true,
+        _utilities.power_scope_for_cell(placement.anchor)
+    ):
         _fixed_entities.erase(key)
 
 func _equipped_flashlight_item_id() -> String:

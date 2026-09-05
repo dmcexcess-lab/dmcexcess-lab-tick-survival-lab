@@ -9,6 +9,7 @@ const PowerNetworkRuntimeClass = preload("res://scripts/simulation/utilities/Uti
 const RefrigerationProviderClass = preload("res://scripts/simulation/utilities/UtilityRefrigerationEnvironmentProvider.gd")
 const FlashlightStateClass = preload("res://scripts/simulation/items/lighting/FlashlightItemState.gd")
 const FlashlightActionClass = preload("res://scripts/simulation/items/lighting/FlashlightToggleActionService.gd")
+const PortableGeneratorStateClass = preload("res://scripts/simulation/utilities/PortableGeneratorState.gd")
 
 const CENTRAL_SETTLEMENT_ID: String = "settlement.rural.crossroads.001"
 const INVALID_UTILITY_CELL := Vector2i(2147483647, 2147483647)
@@ -24,6 +25,7 @@ var _power_infrastructure: UtilityPowerInfrastructureMaterializer = null
 var _power_network: UtilityPowerNetworkRuntime = null
 var _flashlight_state: FlashlightItemState = null
 var _flashlight_actions: FlashlightToggleActionService = null
+var _portable_generators: PortableGeneratorState = null
 var _local_power_topology: Dictionary = {}
 var _refrigeration_providers: Dictionary = {}
 var _central_power_service_id: String = ""
@@ -52,6 +54,8 @@ func _boot_utility_runtime() -> bool:
 
     if not _wire_power_infrastructure(plan):
         return false
+    if not _wire_portable_generators():
+        return false
     if not _wire_flashlight_items():
         return false
     if not _wire_utility_lighting():
@@ -72,6 +76,56 @@ func _boot_utility_runtime() -> bool:
     if not _kernel.world_tick_advanced.is_connected(tick_callable):
         _kernel.world_tick_advanced.connect(tick_callable)
     return true
+
+func _wire_portable_generators() -> bool:
+    if _world == null or _utilities == null or _kernel == null:
+        return false
+    _portable_generators = PortableGeneratorStateClass.new()
+    for generator_id: String in _world.entity_ids_of_type(PortableGeneratorState.SEMANTIC):
+        if not _try_enroll_portable_generator(generator_id):
+            return false
+    if not _utilities.set_local_power_provider(Callable(_portable_generators, "local_power_available")):
+        return false
+    _portable_generators.generator_changed.connect(_on_portable_generator_changed)
+    _portable_generators.state_reset.connect(_on_portable_generator_state_reset)
+    _kernel.world_tick_advanced.connect(_on_portable_generator_tick_advanced)
+    _world.changed.connect(_on_portable_generator_world_changed)
+    return true
+
+func _try_enroll_portable_generator(generator_id: String) -> bool:
+    if _portable_generators.has_generator(generator_id):
+        return true
+    var placement: WorldPlacement = _world.placement(generator_id)
+    if placement == null:
+        return true
+    var service_id: String = _utilities.power_service_for_cell(placement.anchor)
+    var scope_id: String = _utilities.power_scope_for_cell(placement.anchor)
+    return not service_id.is_empty() and not scope_id.is_empty() \
+        and _portable_generators.enroll(generator_id, service_id, scope_id, _kernel.world_tick())
+
+func _on_portable_generator_world_changed(change: WorldChange) -> void:
+    if change == null or _portable_generators == null or not _world.has_entity(change.entity_id):
+        return
+    var entity: WorldEntityRecord = _world.entity(change.entity_id)
+    if entity != null and entity.semantic_type == PortableGeneratorState.SEMANTIC:
+        _try_enroll_portable_generator(change.entity_id)
+
+func _on_portable_generator_tick_advanced(_previous_tick: int, new_tick: int) -> void:
+    if _portable_generators != null:
+        _portable_generators.advance_to_tick(new_tick)
+
+func _on_portable_generator_changed(_generator_id: String, _version: int, reason: StringName) -> void:
+    if _utilities != null and reason in [
+        &"generator_started",
+        &"generator_stopped",
+        &"generator_fuel_depleted",
+        &"generator_damaged",
+    ]:
+        _utilities.notify_local_power_changed(reason)
+
+func _on_portable_generator_state_reset() -> void:
+    if _utilities != null:
+        _utilities.notify_local_power_changed(&"generator_state_reset")
 
 func _wire_power_infrastructure(plan: GeneratedGlobalWorldPlan) -> bool:
     if plan == null or _collision_catalog == null or _world_view == null or _world_mutations == null:
@@ -205,7 +259,14 @@ func _wire_refrigeration() -> bool:
         var power_service_id: String = _utilities.power_service_for_cell(placement.anchor)
         if power_service_id.is_empty():
             continue
-        if not _utilities.bind_appliance(container_id, &"refrigeration", power_service_id, container_id, true):
+        if not _utilities.bind_appliance(
+            container_id,
+            &"refrigeration",
+            power_service_id,
+            container_id,
+            true,
+            _utilities.power_scope_for_cell(placement.anchor)
+        ):
             return false
         var provider: UtilityRefrigerationEnvironmentProvider = RefrigerationProviderClass.new(
             _utilities,

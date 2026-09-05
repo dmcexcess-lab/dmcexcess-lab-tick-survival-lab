@@ -26,6 +26,8 @@ const CraftingOffersClass = preload("res://scripts/simulation/crafting/CraftingI
 const Workstations = preload("res://scripts/simulation/crafting/CraftingWorkstationCatalog.gd")
 const UtilityRepairActionsClass = preload("res://scripts/simulation/utilities/UtilityPowerRepairActionService.gd")
 const UtilityRepairOffersClass = preload("res://scripts/simulation/utilities/UtilityPowerRepairInteractionOfferProvider.gd")
+const GeneratorActionsClass = preload("res://scripts/simulation/utilities/PortableGeneratorActionService.gd")
+const GeneratorOffersClass = preload("res://scripts/simulation/utilities/PortableGeneratorInteractionOfferProvider.gd")
 
 var _vehicle_profiles: VehicleProfileCatalog = null
 var _vehicle_state: VehicleState = null
@@ -42,9 +44,11 @@ var _world_interaction_catalog: WorldInteractionCatalog = null
 var _world_interaction_actions: WorldInteractionActionService = null
 var _world_repair_actions: WorldObjectRepairActionService = null
 var _utility_power_repair_actions: UtilityPowerRepairActionService = null
+var _generator_actions: PortableGeneratorActionService = null
 var _world_interaction_offers: WorldInteractionOfferProvider = null
 var _sustainment_interaction_offers: SustainmentInteractionOfferProvider = null
 var _utility_power_repair_offers: UtilityPowerRepairInteractionOfferProvider = null
+var _generator_offers: PortableGeneratorInteractionOfferProvider = null
 var _world_interaction_panel: WorldInteractionPanel = null
 var _world_interaction_controller: WorldInteractionPlayerController = null
 var _world_blocks_interaction: bool = false
@@ -156,6 +160,7 @@ func _boot_world_interactions() -> bool:
         or _door_transition == null or _door_passage == null or _spatial_query == null \
         or _skill_checks == null or _carry_query == null or _hand_state == null or _hand_mutations == null \
         or _carry_acquisition == null or _sustainment_actions == null or _utilities == null or _power_network == null \
+        or _portable_generators == null \
         or _crafting_plans == null or _crafting_interaction_offers == null \
         or _crafting_controller == null or _loot_controller == null:
         return false
@@ -218,6 +223,21 @@ func _boot_world_interactions() -> bool:
     )
     if not _utility_power_repair_actions.is_ready():
         return false
+    _generator_actions = GeneratorActionsClass.new(
+        _world,
+        _world_mutations,
+        _interaction_reach,
+        _kernel,
+        _skill_checks,
+        _carry_query,
+        _hand_state,
+        _hand_mutations,
+        _inventory_state,
+        _inventory_mutations,
+        _portable_generators
+    )
+    if not _generator_actions.is_ready():
+        return false
     if not _door_passage.set_access_provider(Callable(self, "_door_passage_allowed")):
         return false
 
@@ -236,6 +256,9 @@ func _boot_world_interactions() -> bool:
         _power_network
     )
     if not _interaction_affordances.register_provider(_utility_power_repair_offers):
+        return false
+    _generator_offers = GeneratorOffersClass.new(_world, _interaction_reach, _portable_generators)
+    if not _interaction_affordances.register_provider(_generator_offers):
         return false
 
     if not _sustainment_actions.set_potable_target_provider(Callable(self, "_potable_target_available")) \
@@ -287,6 +310,9 @@ func _boot_world_interactions() -> bool:
         Callable(_utility_power_repair_actions, "request_action")
     ):
         return false
+    for action_id: StringName in GeneratorActionsClass.ACTION_IDS:
+        if not _world_interaction_controller.register_handler(action_id, Callable(_generator_actions, "request_action")):
+            return false
     for action_id: StringName in [
         SustainmentOffersClass.DRINK_FROM_FIXTURE,
         SustainmentOffersClass.REST_ON_FURNITURE,
@@ -427,8 +453,7 @@ func _crafting_workstation_available(_actor_id: String, workstation_id: String, 
     var placement: WorldPlacement = _world.placement(workstation_id)
     if entity == null or placement == null or not _world_interaction_catalog.is_cooking_stove(entity.semantic_type):
         return false
-    var service_id: String = _utilities.power_service_for_cell(placement.anchor)
-    return not service_id.is_empty() and _utilities.power_service_available(service_id)
+    return _utilities.power_available_at_cell(placement.anchor)
 
 func _on_world_interaction_action_finished(_target_id: String, action_id: StringName, success: bool, reason: String) -> void:
     if action_id in [CraftingOffersClass.ACTION_ID, LootOffersClass.SEARCH_ACTION_ID]:
@@ -443,6 +468,8 @@ func _on_interaction_utility_changed(_revision: int, _reason: StringName) -> voi
         _crafting_interaction_offers.availability_changed.emit(&"utility_changed")
     if _utility_power_repair_offers != null:
         _utility_power_repair_offers.availability_changed.emit(&"utility_changed")
+    if _generator_offers != null:
+        _generator_offers.availability_changed.emit(&"utility_changed")
 
 func _on_world_interaction_blocked_changed(blocked: bool) -> void:
     _world_blocks_interaction = blocked

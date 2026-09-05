@@ -35,6 +35,7 @@ var _water_revision: int = 0
 var _appliance_revision: int = 0
 var _power_cache: Dictionary = {}
 var _water_cache: Dictionary = {}
+var _local_power_provider: Callable = Callable()
 var _telemetry: Dictionary = {
     "power_derivations": 0,
     "power_cache_hits": 0,
@@ -169,6 +170,38 @@ func power_service_available(service_id: String) -> bool:
     _power_cache[key] = {"revision": _power_revision, "available": available}
     return available
 
+## A service is still the canonical grid owner. The optional scope only narrows a
+## grid-independent contribution (for example, one building supplied by a portable
+## generator); it never creates another grid topology.
+func power_scope_for_cell(cell: Vector2i) -> String:
+    return power_service_for_cell(cell)
+
+func set_local_power_provider(provider: Callable) -> bool:
+    if not provider.is_valid():
+        return false
+    if _local_power_provider.is_valid():
+        return _local_power_provider == provider
+    _local_power_provider = provider
+    _mark_power_changed(&"local_power_provider_bound")
+    return true
+
+func power_service_available_for_scope(service_id: String, scope_id: String = "") -> bool:
+    var service: String = service_id.strip_edges()
+    var scope: String = scope_id.strip_edges()
+    if power_service_available(service):
+        return true
+    return _local_power_provider.is_valid() \
+        and bool(_local_power_provider.call(service, scope))
+
+func power_available_at_cell(cell: Vector2i) -> bool:
+    var service_id: String = power_service_for_cell(cell)
+    return not service_id.is_empty() \
+        and power_service_available_for_scope(service_id, power_scope_for_cell(cell))
+
+func notify_local_power_changed(reason: StringName = &"local_power_changed") -> void:
+    if is_ready():
+        _mark_power_changed(reason)
+
 func water_service_available(service_id: String) -> bool:
     var key: String = service_id.strip_edges()
     if not is_ready() or not _water_bindings.has(key):
@@ -193,7 +226,8 @@ func bind_appliance(
     kind: StringName,
     power_service_id: String,
     owner_entity_id: String = "",
-    switched_on: bool = true
+    switched_on: bool = true,
+    power_scope_id: String = ""
 ) -> bool:
     var key: String = appliance_id.strip_edges()
     var service: String = power_service_id.strip_edges()
@@ -208,6 +242,7 @@ func bind_appliance(
         "kind": kind,
         "power_service_id": service,
         "owner_entity_id": owner_entity_id.strip_edges(),
+        "power_scope_id": power_scope_id.strip_edges(),
         "operational_state": OPERATIONAL,
         "switched_on": switched_on,
     }
@@ -231,7 +266,10 @@ func appliance_powered(appliance_id: String) -> bool:
     if record.is_empty() or StringName(record.get("operational_state", &"")) != OPERATIONAL \
         or not bool(record.get("switched_on", false)):
         return false
-    return power_service_available(String(record.get("power_service_id", "")))
+    return power_service_available_for_scope(
+        String(record.get("power_service_id", "")),
+        String(record.get("power_scope_id", ""))
+    )
 
 func cold_storage_available(appliance_id: String) -> bool:
     var record: Dictionary = _appliances.get(appliance_id.strip_edges(), {})
