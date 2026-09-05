@@ -9,7 +9,6 @@ const ProjectorClass = preload("res://scripts/generation/integration/System20Are
 const LocalGeneratorClass = preload("res://scripts/generation/areas/LocalAreaGenerator.gd")
 const IslandSurfaceGeneratorClass = preload("res://scripts/generation/areas/IslandSurfaceAreaGenerator.gd")
 const IslandSurfaceCatalogClass = preload("res://scripts/streaming/IslandSurfaceSourceCatalog.gd")
-const WatercourseCatalogClass = preload("res://scripts/streaming/WatercourseSourceCatalog.gd")
 
 var failures: Array[String] = []
 
@@ -41,9 +40,7 @@ func _initialize() -> void:
     _check(_sites_do_not_overlap(plan), "settlement envelopes do not overlap")
     _check(_settlement_coverage_ratio(plan) <= 0.30, "compact settlement cores leave room for managed countryside")
     _check(_has_outer_rural_settlement(plan), "rural development reaches outward without filling the coast")
-    _check(plan.river_segments.is_empty(), "island river generation stays removed")
-    _check(plan.bridge_intents.is_empty(), "river-free island has no orphan bridges")
-    _check(plan.wastewater_services.is_empty() and plan.wastewater_nodes.is_empty() and plan.wastewater_segments.is_empty(), "wastewater generation stays removed")
+    _check(_retired_generator_sources_absent(), "retired river, watercourse, bridge, and wastewater generators stay deleted")
     _check(not plan.power_nodes.is_empty() and not plan.power_segments.is_empty(), "utilities consume the generated settlement road network")
     _check(plan.water_services.size() == plan.settlements.size(), "island-wide municipal water serves every generated settlement")
     _check((plan.local_area_manifest.get("buildings", []) as Array).size() >= 550 and (plan.local_area_manifest.get("buildings", []) as Array).size() <= 650, "reference island has roughly six hundred physical buildings")
@@ -61,6 +58,24 @@ func _initialize() -> void:
     _test_playable_spawn(plan)
     _test_surface_partition(plan)
     _finish()
+
+func _retired_generator_sources_absent() -> bool:
+    var retired_paths: Array[String] = [
+        "res://scripts/generation/world/GlobalHydrologyPlanner.gd",
+        "res://scripts/generation/world/GlobalHydrologyQuery.gd",
+        "res://scripts/generation/world/GlobalBridgeIntentPlanner.gd",
+        "res://scripts/generation/world/GlobalWastewaterInfrastructurePlanner.gd",
+        "res://scripts/generation/world/GlobalWastewaterInfrastructureQuery.gd",
+        "res://scripts/generation/world/GlobalWastewaterInfrastructureValidator.gd",
+        "res://scripts/generation/areas/LocalRiverBridgePlanner.gd",
+        "res://scripts/generation/integration/System20WatercourseRequestProjection.gd",
+        "res://scripts/streaming/WatercourseMaterializationSource.gd",
+        "res://scripts/streaming/WatercourseSourceCatalog.gd",
+    ]
+    for path: String in retired_paths:
+        if FileAccess.file_exists(path):
+            return false
+    return true
 
 func _test_rural_land_use_target() -> void:
     var profile: Dictionary = ProfilesClass.new().profile(ProfilesClass.TEMPERATE_ISLAND_REGION)
@@ -154,13 +169,10 @@ func _test_playable_spawn(plan: GeneratedGlobalWorldPlan) -> void:
 
 func _test_surface_partition(plan: GeneratedGlobalWorldPlan) -> void:
     var surface_catalog := IslandSurfaceCatalogClass.new(plan)
-    var water_catalog := WatercourseCatalogClass.new(plan)
     _check(surface_catalog.is_ready(), "island countryside surface catalog is ready")
-    _check(water_catalog.is_ready(), "watercourse source catalog is ready")
-    if not surface_catalog.is_ready() or not water_catalog.is_ready():
+    if not surface_catalog.is_ready():
         return
     _check(bool(surface_catalog.validate_source_bounds(plan).get("ok", false)), "countryside surface sources validate around settlement sites")
-    _check(bool(water_catalog.validate_source_bounds(plan).get("ok", false)), "watercourse sources validate around settlement sites")
 
 func _smalltown_has_required_buildings(plan: GeneratedAreaPlan) -> bool:
     var required: Dictionary = {
