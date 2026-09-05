@@ -3,24 +3,20 @@ class_name GlobalSettlementPlanner
 
 const Seed = preload("res://scripts/generation/world/GlobalWorldSeed.gd")
 const GeographyQueryClass = preload("res://scripts/generation/world/GlobalGeographyQuery.gd")
-const HydrologyQueryClass = preload("res://scripts/generation/world/GlobalHydrologyQuery.gd")
 
 var _geography: GlobalGeographyQuery
-var _hydrology: GlobalHydrologyQuery
 
 func _init() -> void:
     _geography = GeographyQueryClass.new()
-    _hydrology = HydrologyQueryClass.new()
 
 func plan(
     request: GlobalWorldGenerationRequest,
     profile: Dictionary,
-    geography_cells: Array[Dictionary],
-    river_segments: Array[Dictionary]
+    geography_cells: Array[Dictionary]
 ) -> Dictionary:
     var settlements: Array[Dictionary] = []
     var area_sites: Array[Dictionary] = []
-    if request == null or not request.is_valid() or profile.is_empty() or geography_cells.is_empty() or river_segments.is_empty():
+    if request == null or not request.is_valid() or profile.is_empty() or geography_cells.is_empty():
         return {"ok": false, "failure_reason": "invalid_settlement_planner_input", "settlements": settlements, "area_sites": area_sites}
 
     var minimum_size: Vector2i = profile.get("minimum_world_size", Vector2i.ZERO)
@@ -114,7 +110,6 @@ func plan(
     ]
 
     var occupied_centers: Array[Vector2i] = []
-    var river_clearance: int = int(profile.get("settlement_river_clearance", 16))
     var reuse_world_seed_for_central_site: bool = bool(profile.get("reuse_world_seed_for_central_site", true))
     for index in range(desired_centers.size()):
         var settlement_center: Vector2i = desired_centers[index]
@@ -124,21 +119,17 @@ func plan(
                 site_size,
                 request.bounds,
                 geography_cells,
-                river_segments,
-                river_clearance,
                 profile,
                 occupied_centers
             )
             if settlement_center.x < -900000:
-                return {"ok": false, "failure_reason": "settlement_geography_or_hydrology_unresolved", "settlements": settlements, "area_sites": area_sites}
+                return {"ok": false, "failure_reason": "settlement_geography_unresolved", "settlements": settlements, "area_sites": area_sites}
         elif not _geography.settlement_allowed(settlement_center, geography_cells):
             return {"ok": false, "failure_reason": "central_settlement_geography_invalid", "settlements": settlements, "area_sites": area_sites}
 
         var site_rect: Rect2i = _centered_rect(settlement_center, site_size)
         if not _rect_inside(request.bounds, site_rect):
             return {"ok": false, "failure_reason": "settlement_site_out_of_bounds", "settlements": settlements, "area_sites": area_sites}
-        if not _hydrology.rect_clear_of_rivers(site_rect, river_segments, river_clearance):
-            return {"ok": false, "failure_reason": "settlement_site_intersects_river_clearance", "settlements": settlements, "area_sites": area_sites}
 
         occupied_centers.append(settlement_center)
         var site_seed: int = request.seed if index == 0 and reuse_world_seed_for_central_site else Seed.derive(request.seed, "area_site:%s" % site_ids[index])
@@ -166,8 +157,6 @@ func _snap_to_legal_geography(
     site_size: Vector2i,
     world_bounds: Rect2i,
     geography_cells: Array[Dictionary],
-    river_segments: Array[Dictionary],
-    river_clearance: int,
     profile: Dictionary,
     occupied_centers: Array[Vector2i]
 ) -> Vector2i:
@@ -190,8 +179,6 @@ func _snap_to_legal_geography(
         var candidate: Vector2i = _geography.cell_center(cell)
         var site_rect: Rect2i = _centered_rect(candidate, site_size)
         if not _rect_inside(world_bounds, site_rect):
-            continue
-        if not _hydrology.rect_clear_of_rivers(site_rect, river_segments, river_clearance):
             continue
         if _too_close_to_existing(candidate, occupied_centers):
             continue
