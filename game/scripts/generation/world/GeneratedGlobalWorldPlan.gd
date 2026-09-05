@@ -7,6 +7,8 @@ var bounds: Rect2i = Rect2i()
 var profile_id: StringName = &""
 var profile_version: int = 0
 var geography_cells: Array[Dictionary] = []
+## Legacy storage only until part-two file deletion. These fields no longer
+## participate in generation validity, validation, projection, or signatures.
 var river_segments: Array[Dictionary] = []
 var regions: Array[Dictionary] = []
 var settlements: Array[Dictionary] = []
@@ -15,8 +17,7 @@ var bridge_intents: Array[Dictionary] = []
 var power_nodes: Array[Dictionary] = []
 var power_segments: Array[Dictionary] = []
 var water_services: Array[Dictionary] = []
-## Compatibility-only arrays while remaining callers migrate. The active island
-## water model has no nodes or segments, and wastewater is retired.
+## Legacy storage only. Potable water is service/facility based; wastewater is retired.
 var water_nodes: Array[Dictionary] = []
 var water_segments: Array[Dictionary] = []
 var wastewater_services: Array[Dictionary] = []
@@ -63,16 +64,6 @@ func signature() -> String:
             int(geography.get("elevation", 0)),
             String(geography.get("landform", &"")),
         ])
-    for river: Dictionary in river_segments:
-        var river_start: Vector2i = river.get("start", Vector2i.ZERO)
-        var river_end: Vector2i = river.get("end", Vector2i.ZERO)
-        parts.append("river=%s|%s|%d,%d>%d,%d|w%d|o%d" % [
-            String(river.get("segment_id", "")),
-            String(river.get("river_id", "")),
-            river_start.x, river_start.y, river_end.x, river_end.y,
-            int(river.get("width", 0)),
-            int(river.get("ordinal", 0)),
-        ])
     for region: Dictionary in regions:
         var rect: Rect2i = region.get("rect", Rect2i())
         parts.append("region=%s|%s|%d,%d,%d,%d|p%d|%s|%s" % [
@@ -102,19 +93,6 @@ func signature() -> String:
             int(road.get("width", 0)),
             String(road.get("route_id", "")),
         ])
-    for bridge: Dictionary in bridge_intents:
-        var cell: Vector2i = bridge.get("cell", Vector2i.ZERO)
-        parts.append("bridge=%s|%s|%s|%s|%s|%d,%d|%s|rw%d|ww%d" % [
-            String(bridge.get("id", "")),
-            String(bridge.get("road_id", "")),
-            String(bridge.get("route_id", "")),
-            String(bridge.get("river_id", "")),
-            String(bridge.get("river_segment_id", "")),
-            cell.x, cell.y,
-            String(bridge.get("bridge_axis", &"")),
-            int(bridge.get("road_width", 0)),
-            int(bridge.get("river_width", 0)),
-        ])
     for power_node: Dictionary in power_nodes:
         var power_cell: Vector2i = power_node.get("cell", Vector2i.ZERO)
         parts.append("power_node=%s|%s|%s|%d,%d|%s" % [
@@ -143,57 +121,6 @@ func signature() -> String:
             String(water_service.get("service_mode", &"")),
             String(water_service.get("source_type", &"")),
             String(water_service.get("facility_id", "")),
-        ])
-    for water_node: Dictionary in water_nodes:
-        var water_cell: Vector2i = water_node.get("cell", Vector2i.ZERO)
-        parts.append("water_node=%s|%s|%s|%d,%d|%s" % [
-            String(water_node.get("id", "")),
-            String(water_node.get("network_id", "")),
-            String(water_node.get("kind", &"")),
-            water_cell.x, water_cell.y,
-            String(water_node.get("settlement_id", "")),
-        ])
-    for water_segment: Dictionary in water_segments:
-        var water_start: Vector2i = water_segment.get("start", Vector2i.ZERO)
-        var water_end: Vector2i = water_segment.get("end", Vector2i.ZERO)
-        parts.append("water_segment=%s|%s|%s|%d,%d>%d,%d|o%d|%s|%s" % [
-            String(water_segment.get("id", "")),
-            String(water_segment.get("network_id", "")),
-            String(water_segment.get("water_class", &"")),
-            water_start.x, water_start.y, water_end.x, water_end.y,
-            int(water_segment.get("ordinal", 0)),
-            String(water_segment.get("source_road_id", "")),
-            String(water_segment.get("source_route_id", "")),
-        ])
-    for wastewater_service: Dictionary in wastewater_services:
-        parts.append("wastewater_service=%s|%s|%s|%s|%s|%s" % [
-            String(wastewater_service.get("id", "")),
-            String(wastewater_service.get("settlement_id", "")),
-            String(wastewater_service.get("service_mode", &"")),
-            String(wastewater_service.get("disposal_type", &"")),
-            String(wastewater_service.get("network_id", "")),
-            String(wastewater_service.get("separation_policy", &"")),
-        ])
-    for wastewater_node: Dictionary in wastewater_nodes:
-        var wastewater_cell: Vector2i = wastewater_node.get("cell", Vector2i.ZERO)
-        parts.append("wastewater_node=%s|%s|%s|%d,%d|%s" % [
-            String(wastewater_node.get("id", "")),
-            String(wastewater_node.get("network_id", "")),
-            String(wastewater_node.get("kind", &"")),
-            wastewater_cell.x, wastewater_cell.y,
-            String(wastewater_node.get("settlement_id", "")),
-        ])
-    for wastewater_segment: Dictionary in wastewater_segments:
-        var wastewater_start: Vector2i = wastewater_segment.get("start", Vector2i.ZERO)
-        var wastewater_end: Vector2i = wastewater_segment.get("end", Vector2i.ZERO)
-        parts.append("wastewater_segment=%s|%s|%s|%d,%d>%d,%d|o%d|%s|%s" % [
-            String(wastewater_segment.get("id", "")),
-            String(wastewater_segment.get("network_id", "")),
-            String(wastewater_segment.get("wastewater_class", &"")),
-            wastewater_start.x, wastewater_start.y, wastewater_end.x, wastewater_end.y,
-            int(wastewater_segment.get("ordinal", 0)),
-            String(wastewater_segment.get("source_road_id", "")),
-            String(wastewater_segment.get("source_route_id", "")),
         ])
     for site: Dictionary in area_sites:
         var site_bounds: Rect2i = site.get("bounds", Rect2i())
