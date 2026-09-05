@@ -10,9 +10,9 @@ Downstream runtime: `33_POWER_WATER_UTILITIES.md`
 
 ## 1. Purpose
 
-System 00D5 owns deterministic global potable-water planning identity. It defines the island's one municipal water facility and the settlement-facing service aliases that reference it before local materialization. System 33 owns current service availability, physical condition, private wells, outages and repair.
+System 00D5 owns deterministic global potable-water planning identity. It defines the island's one municipal water facility and settlement-facing service aliases that reference it before local materialization. System 33 owns current service availability, physical condition, private wells, outages and repair.
 
-The previous plant-node/network model, settlement-radius model and mixed decentralized municipal topology are superseded.
+The previous plant-node/network, service-radius and decentralized municipal topology are retired. They are not empty versions of the current contract; they are outside the active contract.
 
 ## 2. Current canonical model
 
@@ -27,58 +27,46 @@ Global planning records:
 - every service reference points to the same facility identity, host site and host settlement;
 - `service_mode = island_wide_municipal`;
 - `source_type = treated_municipal`;
-- `island_wide = true`;
-- no municipal water nodes;
-- no municipal water segments;
-- no pipe/network topology;
-- no positive service radius.
+- `island_wide = true`.
 
-The per-settlement records are aliases to the same island facility. They are not separate plants and they do not imply physical pipes between settlements.
+There is **no active municipal node/segment/pipe topology**. The per-settlement records are aliases to the same island facility, not separate plants or implied physical pipes.
 
 ## 3. Municipal availability rule
 
-Municipal water is intentionally simple:
-
 > **If the one municipal facility building is operational, municipal water is available island-wide. If that facility is failed, municipal water is unavailable island-wide.**
 
-Distance from the facility, settlement boundaries and technical streaming regions do not affect service.
+Distance, settlement boundaries and technical streaming regions do not affect service. There are intentionally no regional mains, parcel pipe routes, pressure zones, storage nodes, flow solvers or radius-based coverage checks.
 
-There are intentionally no regional municipal mains, parcel pipe routes, pressure zones, storage nodes, flow solvers or radius-based coverage checks.
-
-System 20 may project the lightweight municipal service reference into any settlement window. It must not create water-node geometry, pipe corridors or a local treatment facility merely because that settlement receives water.
+System 20 may project the lightweight municipal service reference into a settlement window. It must not create water-node geometry, pipe corridors or another local treatment facility.
 
 ## 4. Physical facility boundary
 
 System 33 resolves the 00D5 host identity to the **existing generated building** in the structural local-area manifest and uses that building as the real damageable municipal water asset.
 
-System 33 must not materialize a second treatment shed, tank complex or duplicate municipal plant shell beside it.
-
-The facility building exposes one stable operational component. Failure of that component removes municipal service island-wide; repair restores the same service.
+System 33 must not materialize a second treatment shed, tank complex or duplicate municipal plant shell. Failure removes municipal service island-wide; repair restores the same service.
 
 ## 5. Power relationship
 
-The municipal facility is **self-contained for this gameplay contract** and does not require external grid power.
-
-Its municipal water binding therefore has no required power-service dependency. A grid blackout alone must not disable municipal water.
+The municipal facility is **self-contained for this gameplay contract** and does not require external grid power. A grid blackout alone must not disable municipal water.
 
 This is a deliberate gameplay rule, not a claim about real-world water engineering.
 
 ## 6. Rural private wells
 
-Private wells are not global 00D5 settlement intent. They are selected downstream by System 33 from the **actual generated rural-building manifest**, so the game never creates a well for an imaginary property.
+Private wells are selected downstream by System 33 from the **actual generated rural-building manifest**.
 
 Current rule:
 
-- candidates are generated buildings whose owning area site is rural;
+- candidates are generated buildings on `rural.*` sites;
 - town/non-rural buildings are never candidates;
-- the deterministic selected count is within **10–20% of rural buildings** when the rural population is large enough for that range to be meaningful;
+- deterministic selection covers **10–20% of rural buildings** when the candidate count is sufficient;
 - selection is stable from world seed + stable building identity;
-- each selected building receives one private well identity/service;
-- the private well replaces municipal water for that building rather than acting as a fallback bonus source;
-- a private well has no external-grid dependency;
-- if that well fails, the owning building has no water until the well is repaired;
-- a broken well does **not** silently fall back to municipal water;
-- a working private well remains available during a municipal-facility outage.
+- one well maximum per selected building;
+- the private well replaces municipal water for that building;
+- private wells have no external-grid dependency;
+- a failed private well leaves the owning building dry until repaired;
+- a failed well does **not** fall back to municipal water;
+- a healthy private well remains available during a municipal-facility outage.
 
 Non-well rural buildings and all town buildings use the island-wide municipal facility.
 
@@ -88,26 +76,24 @@ For the same world seed/profile version:
 
 - municipal facility identity and host selection are stable;
 - settlement municipal-service references are stable;
-- all municipal aliases resolve to the same facility;
-- System 33's rural-well selection is stable because it consumes stable generated building IDs.
+- all aliases resolve to the same facility;
+- System 33 rural-well selection is stable because it consumes stable generated building IDs.
 
 No call-order RNG, renderer state or streaming state defines water truth.
 
 ## 8. Validation
 
-`GlobalWaterInfrastructureValidator` proves the current simplified contract:
+`GlobalWaterInfrastructureValidator` validates the current behavior directly:
 
 - municipal service references are present;
 - every current settlement has exactly one island-wide municipal service reference;
 - all references share one facility identity, host site and host settlement;
 - every reference uses the current municipal service/source modes;
-- `water_nodes` is empty;
-- `water_segments` is empty;
-- populated municipal topology is rejected;
-- wastewater service/node/segment arrays must remain empty;
 - host site/settlement identities are valid.
 
-`GlobalWorldPlanner` fails honestly if this contract is invalid.
+Retired `water_nodes`, `water_segments` and wastewater arrays are **not** required to exist or be empty for current water validity. Part one of the generator cleanup removed those compatibility assertions from active planning/runtime/CI contracts.
+
+`GlobalWorldPlanner` fails honestly if the current municipal-service contract is invalid.
 
 ## 9. Ownership boundaries
 
@@ -118,14 +104,18 @@ No call-order RNG, renderer state or streaming state defines water truth.
 - private-well selection;
 - building plumbing, drinking or container filling;
 - water quantity, pressure, flow or contamination;
-- wastewater/sewer/septic systems.
-
-Those concerns either belong downstream or are not active systems.
+- wastewater/sewer/septic systems;
+- retired hydrology/river/bridge topology.
 
 ## 10. Verification
 
-The current executable contract is covered by `verify/system00d-global-world` and `verify/system33-power-water`.
+Part-one contract cleanup executable: `90a919ac367f9cf247c8915f065135f2f1592d79` (`Align System 20 CI with retired hydrology contract`).
 
-Verified executable: `4ced86b353d273d54b89e0fb52499f564172364b`.
+On that exact head:
 
-On that exact executable, `verify/system33-power-water` run `33988514222` succeeded and `verify/pages-deploy` run `33988514204` succeeded.
+- `verify/system33-power-water` run `33992117806` — **SUCCESS**;
+- `verify/system20-local-area` run `33992117847` — **SUCCESS**;
+- `verify/system00d-global-world` run `33992117848` — **SUCCESS**;
+- `verify/pages-deploy` run `33992117751` — **SUCCESS**.
+
+The broader suite still contains unrelated pre-existing red checks; this document does not claim otherwise.
