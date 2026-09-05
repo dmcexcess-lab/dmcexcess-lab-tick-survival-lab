@@ -1,5 +1,27 @@
 # System 29 — Implementation Changelog
 
+## 2026-09-04 — Quiet-entry opening behavior
+
+Executable lineage is protected in verified flashlight executable `e4e5ccfadd087186e6addf937ad8c4ace5e5a818`.
+
+- Removed player-facing **LOCK / UNLOCK** actions from ordinary door/window interaction. Lock state is world/opening truth, not a routine player toggle system.
+- There is no house-key inventory and no house-wide authoritative `locked` boolean. Exterior doors and windows independently derive deterministic generated lock state from stable opening identity, with explicit state retained for mutations/snapshots.
+- A closed unlocked opening truthfully offers **OPEN**. A closed locked opening suppresses OPEN, leaving the player to check another exterior opening or choose noisy forced entry with **BREAK**.
+- This establishes the intended survival tradeoff: spend time/exposure walking the perimeter looking for quiet access versus make noise and force entry. Future zombie/perception work must consume the real sound consequence rather than a special-case entry flag.
+- Broken/open windows continue to use real collision/spatial **CLIMB THROUGH** behavior. Boarding remains the survival closure for a shattered opening; there is intentionally no replacement-glass repair item or fake broken-window REPAIR action.
+- Boarding/removing boards and broken-door repair continue through their existing exact tools/materials + Mechanical + WHEN owners.
+- `PlayerWorldUiRouteSmoke.gd` now proves quiet OPEN availability for an unlocked fixture, absence of player LOCK/UNLOCK controls, suppression of OPEN for a locked fixture, and continued BREAK availability, while retaining board/break/climb coverage.
+
+### Ownership boundary
+
+The unified chooser only reflects the exact opening's current owner state. It does not infer a house-level access state, invent keys, or store UI-only lock truth.
+
+### Next closure seam
+
+The flashlight item/switch route that followed this change is now complete at executable `e4e5ccfadd087186e6addf937ad8c4ace5e5a818`. Continue player/world closure with generator operation/fuel/start-stop.
+
+---
+
 ## 2026-09-04 — Mechanical repair + physical utility repair closure
 
 Verified executable runtime head: `6aab0596cb46d70d4739cbc045d149a25597193d`
