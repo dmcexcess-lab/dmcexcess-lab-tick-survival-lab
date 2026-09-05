@@ -413,6 +413,10 @@ func road_constraints_for_bounds(plan: GeneratedGlobalWorldPlan, bounds: Rect2i)
         roads.append({
             "road_id": String(segment.get("road_id", "")),
             "road_class": StringName(segment.get("road_class", &"")),
+            "road_type": StringName(segment.get("road_type", &"two_lane")),
+            "lane_count": int(segment.get("lane_count", 2)),
+            "surface_family": StringName(segment.get("surface_family", &"paved_centerline")),
+            "paint_centerline": bool(segment.get("paint_centerline", true)),
             "start": start,
             "end": finish,
             "width": int(segment.get("width", 0)),

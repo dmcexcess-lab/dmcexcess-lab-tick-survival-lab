@@ -74,6 +74,7 @@ func signature() -> String:
             String(settlement.get("area_site_id", "")),
         ])
     for road: Dictionary in road_segments:
+        parts.append("road_surface=%s|%s|%d|%s" % [String(road.get("road_id", "")), String(road.get("road_type", &"two_lane")), int(road.get("lane_count", 2)), String(road.get("surface_family", &"paved_centerline"))])
         var start: Vector2i = road.get("start", Vector2i.ZERO)
         var finish: Vector2i = road.get("end", Vector2i.ZERO)
         parts.append("road=%s|%s|%d,%d>%d,%d|w%d|%s" % [

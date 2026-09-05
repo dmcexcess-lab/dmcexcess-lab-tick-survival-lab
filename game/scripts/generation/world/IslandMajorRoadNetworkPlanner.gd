@@ -16,6 +16,7 @@ func plan(
     var primary_width: int = int(profile.get("primary_width", 5))
     var secondary_width: int = int(profile.get("secondary_width", 3))
     var connected: Dictionary = {0: true}
+    var used_edges: Dictionary = {}
     var edge_ordinal: int = 1
 
     while connected.size() < settlements.size():
@@ -45,7 +46,34 @@ func plan(
         ):
             return {"ok": false, "failure_reason": "island_settlement_road_edge_failed", "road_segments": []}
         connected[to_index] = true
+        used_edges[_edge_key(from_index, to_index)] = true
         edge_ordinal += 1
+
+    # Extra settlement links create alternate journeys without a dense road grid.
+    var alternatives: int = 0
+    for from_index: int in range(settlements.size()):
+        if alternatives >= int(profile.get("island_alternate_road_count", 8)):
+            break
+        var best_to: int = -1
+        var best_distance: int = 2147483647
+        var start: Vector2i = settlements[from_index].get("center", INVALID_CELL)
+        for to_index: int in range(settlements.size()):
+            if from_index == to_index or used_edges.has(_edge_key(from_index, to_index)):
+                continue
+            var finish: Vector2i = settlements[to_index].get("center", INVALID_CELL)
+            var distance: int = absi(start.x - finish.x) + absi(start.y - finish.y)
+            if distance < best_distance:
+                best_distance = distance
+                best_to = to_index
+        if best_to < 0:
+            continue
+        var extra: Array[Dictionary] = []
+        if _append_routed_path(extra, "road.island.loop.%03d" % alternatives,
+            &"secondary", "route.island.loop.%03d" % alternatives, start,
+            settlements[best_to].get("center", INVALID_CELL), secondary_width, geography_cells, profile):
+            road_segments.append_array(extra)
+            used_edges[_edge_key(from_index, best_to)] = true
+            alternatives += 1
 
     var gateway_sides: Array[StringName] = [&"west", &"east", &"north", &"south"]
     for side_index: int in range(gateway_sides.size()):
@@ -93,7 +121,19 @@ func plan(
 
     if road_segments.is_empty():
         return {"ok": false, "failure_reason": "island_major_road_network_empty", "road_segments": []}
+    for road: Dictionary in road_segments:
+        var route: String = String(road.get("route_id", ""))
+        var paved: bool = road.get("road_class", &"") == &"primary" or route.begins_with("route.island.loop.")
+        var four_lane: bool = road.get("road_class", &"") == &"primary"
+        var dirt: bool = not paved and route.hash() % 3 == 0
+        road["road_type"] = &"four_lane" if four_lane else (&"two_lane" if paved else (&"dirt" if dirt else &"gravel"))
+        road["lane_count"] = 4 if four_lane else (2 if paved else 1)
+        road["surface_family"] = &"paved_centerline" if paved else (&"rural_dirt" if dirt else &"rural_gravel")
+        road["paint_centerline"] = paved
     return {"ok": true, "failure_reason": "", "road_segments": road_segments}
+
+func _edge_key(a: int, b: int) -> String:
+    return "%d:%d" % [mini(a, b), maxi(a, b)]
 
 func _best_routable_edge(connected: Dictionary, settlements: Array[Dictionary]) -> Dictionary:
     var best: Dictionary = {}

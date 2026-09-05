@@ -71,6 +71,8 @@ func _add_road_ground_regions(
         var surface_semantic: StringName = StringName(environment.get("road_surface_ground", environment.get("road_ground", &"ground.road_plain")))
         if surface_family == &"rural_gravel":
             surface_semantic = StringName(environment.get("local_road_ground", &"ground.gravel_dark"))
+        elif surface_family == &"rural_dirt":
+            surface_semantic = &"ground.dirt_road"
         ground_regions.append({
             "id": "%s.ground.road.%s.surface" % [request.area_id, road_id],
             "semantic": surface_semantic,
@@ -81,6 +83,7 @@ func _add_road_ground_regions(
         if not bool(road.get("paint_centerline", false)):
             continue
         var line_groups: Dictionary = _centerline_cells_by_axis(road, intersections)
+        append_lane_dividers(request.area_id, road, line_groups, ground_regions)
         var horizontal: Array = line_groups.get(&"horizontal", [])
         if not horizontal.is_empty():
             ground_regions.append({
@@ -97,6 +100,23 @@ func _add_road_ground_regions(
                 "cells": vertical.duplicate(),
                 "priority": 110,
             })
+
+static func append_lane_dividers(area_id: String, road: Dictionary, groups: Dictionary, regions: Array[Dictionary]) -> void:
+    if int(road.get("lane_count", 2)) != 4:
+        return
+    for axis: StringName in [&"horizontal", &"vertical"]:
+        var cells: Array[Vector2i] = []
+        var offset: Vector2i = Vector2i.DOWN if axis == &"horizontal" else Vector2i.RIGHT
+        for cell: Vector2i in groups.get(axis, []):
+            var along: int = cell.x if axis == &"horizontal" else cell.y
+            if posmod(along, 6) >= 3:
+                continue
+            cells.append(cell + offset)
+            cells.append(cell - offset)
+        if not cells.is_empty():
+            regions.append({"id": "%s.ground.road.%s.lanes.%s" % [area_id, road.get("road_id", ""), axis],
+                "semantic": &"ground.road_white_line_h" if axis == &"horizontal" else &"ground.road_white_line_v",
+                "cells": cells, "priority": 110})
 
 func _centerline_cells_by_axis(road: Dictionary, intersections: Array[Dictionary]) -> Dictionary:
     var horizontal: Array[Vector2i] = []

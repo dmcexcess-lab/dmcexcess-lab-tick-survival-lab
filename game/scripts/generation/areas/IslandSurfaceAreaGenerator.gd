@@ -76,9 +76,14 @@ func generate(request: AreaGenerationRequest) -> GeneratedAreaPlan:
                 return plan
             road_cells.append(cell)
         if not road_cells.is_empty():
+            var surface: StringName = StringName(environment.get("road_surface_ground", &"ground.road_plain"))
+            if road.get("surface_family", &"") == &"rural_gravel":
+                surface = StringName(environment.get("local_road_ground", &"ground.gravel_dark"))
+            elif road.get("surface_family", &"") == &"rural_dirt":
+                surface = &"ground.dirt_road"
             ground_regions.append({
                 "id": "%s.ground.road.%s.surface" % [request.area_id, String(road.get("road_id", "road"))],
-                "semantic": StringName(environment.get("road_surface_ground", &"ground.road_plain")),
+                "semantic": surface,
                 "cells": road_cells,
                 "priority": 100,
             })
@@ -127,6 +132,7 @@ func _append_centerline_regions(
         return
     var road_id: String = String(road.get("road_id", "road"))
     var groups: Dictionary = _centerline_cells_by_axis(road, intersections)
+    OutdoorPropertyDressingPlanner.append_lane_dividers(request.area_id, road, groups, ground_regions)
     var horizontal: Array = groups.get(&"horizontal", [])
     if not horizontal.is_empty():
         ground_regions.append({

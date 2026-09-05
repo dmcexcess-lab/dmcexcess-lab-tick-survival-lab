@@ -91,8 +91,10 @@ func _build_inherited_road(constraint: Dictionary) -> Dictionary:
         "corridor_cells": corridor_cells,
         "inherited": true,
         "allowed_boundary_cells": (constraint.get("allowed_boundary_cells", []) as Array).duplicate(),
-        "surface_family": &"paved_centerline",
-        "paint_centerline": true,
+        "road_type": StringName(constraint.get("road_type", &"two_lane")),
+        "lane_count": int(constraint.get("lane_count", 2)),
+        "surface_family": StringName(constraint.get("surface_family", &"paved_centerline")),
+        "paint_centerline": bool(constraint.get("paint_centerline", true)),
         "parcel_frontage_enabled": true,
     }
 

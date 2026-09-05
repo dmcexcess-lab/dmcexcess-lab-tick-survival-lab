@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026-09-05 — Island road hierarchy and alternate links
+
+- Added up to eight extra settlement connections beyond the connecting tree.
+- Global road records carry four-lane/two-lane paved or single-lane gravel/dirt identity through local projection and terrain generation.
+- Four-lane pavement has dashed white lane dividers around its yellow directional centerline; unpaved roads have no painted centerline.
+- Reference seed generates 627 physical buildings and 2,184 residents. Population remains building-derived.
+- Preserves retired hydrology/wastewater cleanup and opt-in full seed matrices.
+
 ## 2026-09-05 — Rural island density playtest build
 
 - Expanded real housing to 1,002 reference-seed residents across 306 buildings, retaining two towns, three compact crossroads and six rural lane sites on the same island footprint.

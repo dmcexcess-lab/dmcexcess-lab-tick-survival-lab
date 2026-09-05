@@ -29,6 +29,15 @@ func _initialize() -> void:
         return
 
     print("ISLAND_DENSITY buildings=%d residents=%d infected=%d survivors=%d" % [(plan.local_area_manifest.get("buildings", []) as Array).size(), plan.resident_population, plan.infected_population, plan.survivor_population])
+    var road_types: Dictionary = {}
+    var alternative_routes: Dictionary = {}
+    for road: Dictionary in plan.road_segments:
+        road_types[road.get("road_type", &"")] = true
+        if String(road.get("route_id", "")).begins_with("route.island.loop."):
+            alternative_routes[road.get("route_id", "")] = true
+    for road_type: StringName in [&"four_lane", &"two_lane", &"gravel", &"dirt"]:
+        _check(road_types.has(road_type), "island includes %s roads" % road_type)
+    _check(alternative_routes.size() > 0 and alternative_routes.size() <= 8, "island includes bounded alternate settlement routes")
     _check(plan.profile_id == ProfilesClass.TEMPERATE_ISLAND_REGION, "island profile identity is recorded")
     _check(plan.profile_version == 9, "rural infill island profile v9 is recorded")
     _check(plan.bounds.size == Vector2i(3072, 3072), "settlement-first envelope determines island size")
