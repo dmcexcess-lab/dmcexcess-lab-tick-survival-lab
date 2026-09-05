@@ -124,10 +124,18 @@ func _build_projection() -> Dictionary:
             if StringName(wire.get("wire_role", &"")) != &"shared_trunk":
                 wires.append(wire)
                 continue
-            var route_key: String = _undirected_edge_key(
-                wire.get("route_start_cell", INVALID_CELL),
-                wire.get("route_end_cell", INVALID_CELL)
-            )
+            var start_id: String = String(wire.get("start_id", "")).strip_edges()
+            var end_id: String = String(wire.get("end_id", "")).strip_edges()
+            var support_key: String = "%s>%s" % [start_id, end_id]
+            if end_id < start_id:
+                support_key = "%s>%s" % [end_id, start_id]
+            var route_key: String = "%s|%s" % [
+                _undirected_edge_key(
+                    wire.get("route_start_cell", INVALID_CELL),
+                    wire.get("route_end_cell", INVALID_CELL)
+                ),
+                support_key,
+            ]
             if not trunk_wire_index_by_route.has(route_key):
                 trunk_wire_index_by_route[route_key] = wires.size()
                 wires.append(wire)
@@ -249,17 +257,12 @@ func _shared_distribution_tree(
     var pole_state_by_route_cell: Dictionary = {}
     var local_reserved: Dictionary = reserved_cells.duplicate()
     for route_cell: Vector2i in placement_key_cells:
-        if shared_pole_ids.has(route_cell):
+        var reuse_shared: bool = shared_pole_ids.has(route_cell)
+        if reuse_shared:
             var shared_pole_id: String = String(shared_pole_ids.get(route_cell, ""))
             var shared_pole_cell: Vector2i = shared_pole_cells.get(route_cell, INVALID_CELL)
             if shared_pole_id.is_empty() or shared_pole_cell == INVALID_CELL:
                 return {"ok": false, "props": [], "wires": []}
-            pole_id_by_route_cell[route_cell] = shared_pole_id
-            pole_cell_by_route_cell[route_cell] = shared_pole_cell
-
-            # The support is globally shared, but roadside side/hold state is path-local.
-            # Recompute it from this tree's incoming parent so a pole first created by a
-            # different branch cannot erase a newly established two-pole cross-road hold.
             var reused_state: Dictionary = shared_pole_states.get(route_cell, {}).duplicate(true)
             if route_cell != root_road_cell:
                 var reused_parent_key: Vector2i = _nearest_key_parent(route_cell, key_cells, parents, root_road_cell)
@@ -279,16 +282,27 @@ func _shared_distribution_tree(
                 var reused_actual_side: int = _road_side(route_cell, shared_pole_cell, reused_direction)
                 if reused_actual_side == 0:
                     return {"ok": false, "props": [], "wires": []}
-                var reused_next_hold: int = maxi(0, int(reused_parent_state.get("hold", 0)) - 1)
-                if reused_preferred_side != 0 and reused_actual_side != reused_preferred_side:
-                    reused_next_hold = ROAD_SIDE_HOLD_POLES
-                reused_state = {
-                    "side": reused_actual_side,
-                    "direction": reused_direction,
-                    "hold": reused_next_hold,
-                }
-            pole_state_by_route_cell[route_cell] = reused_state
-            continue
+                var reused_parent_hold: int = int(reused_parent_state.get("hold", 0))
+                if reused_parent_hold > 0 and reused_preferred_side != 0 and reused_actual_side != reused_preferred_side:
+                    # A shared support is only truly shareable when it respects this service
+                    # path's active cross-road hold. Otherwise this service gets its own real
+                    # roadside support instead of being forced into an immediate cross-back.
+                    reuse_shared = false
+                else:
+                    var reused_next_hold: int = maxi(0, reused_parent_hold - 1)
+                    if reused_preferred_side != 0 and reused_actual_side != reused_preferred_side:
+                        reused_next_hold = ROAD_SIDE_HOLD_POLES
+                    reused_state = {
+                        "side": reused_actual_side,
+                        "direction": reused_direction,
+                        "hold": reused_next_hold,
+                    }
+            if reuse_shared:
+                pole_id_by_route_cell[route_cell] = shared_pole_id
+                pole_cell_by_route_cell[route_cell] = shared_pole_cell
+                pole_state_by_route_cell[route_cell] = reused_state
+                continue
+
         var pole_ordinal: int = int(pole_ordinal_by_route_cell.get(route_cell, -1))
         if pole_ordinal < 0:
             return {"ok": false, "props": [], "wires": []}
@@ -345,9 +359,10 @@ func _shared_distribution_tree(
             "direction": direction,
             "hold": next_hold,
         }
-        shared_pole_ids[route_cell] = pole_id
-        shared_pole_cells[route_cell] = pole_cell
-        shared_pole_states[route_cell] = pole_state_by_route_cell[route_cell].duplicate(true)
+        if not shared_pole_ids.has(route_cell):
+            shared_pole_ids[route_cell] = pole_id
+            shared_pole_cells[route_cell] = pole_cell
+            shared_pole_states[route_cell] = pole_state_by_route_cell[route_cell].duplicate(true)
 
     var root_pole_id: String = String(pole_id_by_route_cell.get(root_road_cell, ""))
     var root_pole_cell: Vector2i = pole_cell_by_route_cell.get(root_road_cell, INVALID_CELL)
