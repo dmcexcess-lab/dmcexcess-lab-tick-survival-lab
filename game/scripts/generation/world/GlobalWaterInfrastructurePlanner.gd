@@ -1,7 +1,6 @@
 extends RefCounted
 class_name GlobalWaterInfrastructurePlanner
 
-const SERVICE_ID: String = "water.service.island"
 const FACILITY_ID: String = "water.facility.island"
 const PREFERRED_ARCHETYPE: StringName = &"civic.post_office.small"
 
@@ -24,32 +23,36 @@ func plan(
     if host_site_id.is_empty() or host_settlement_id.is_empty():
         return _failure("water_facility_host_identity_invalid")
 
-    # Water is intentionally binary at island scope. There is one physical building
-    # selected from the generated host site. Runtime availability is exactly that
-    # building/facility's operational state; there is no pipe, node, well, treatment
-    # chain, or settlement-by-settlement network model.
-    var service: Dictionary = {
-        "id": SERVICE_ID,
-        "facility_id": FACILITY_ID,
-        "settlement_id": host_settlement_id,
-        "host_site_id": host_site_id,
-        "preferred_archetype_id": PREFERRED_ARCHETYPE,
-        "service_mode": &"single_building_island_wide",
-        "source_type": &"facility_operational_state",
-        "island_wide": true,
-    }
+    # There is one physical water building. Per-settlement service records are only
+    # cheap projection references so local-area generation can ask whether a site
+    # participates in island water without inventing pipes, wells, or local plants.
+    var services: Array[Dictionary] = []
+    for index: int in range(settlements.size()):
+        var settlement_id: String = String(settlements[index].get("id", "")).strip_edges()
+        if settlement_id.is_empty():
+            return _failure("water_service_settlement_invalid")
+        services.append({
+            "id": "water.service.%03d" % [index + 1],
+            "facility_id": FACILITY_ID,
+            "plant_id": FACILITY_ID,
+            "settlement_id": settlement_id,
+            "host_settlement_id": host_settlement_id,
+            "host_site_id": host_site_id,
+            "preferred_archetype_id": PREFERRED_ARCHETYPE,
+            "service_mode": &"island_wide_municipal",
+            "source_type": &"treated_municipal",
+            "network_id": "",
+            "island_wide": true,
+        })
     return {
         "ok": true,
         "failure_reason": "",
-        "water_services": [service],
+        "water_services": services,
         "water_nodes": [],
         "water_segments": [],
     }
 
 func _preferred_host_site(area_sites: Array[Dictionary]) -> Dictionary:
-    # Prefer the first small-town center because its manifest always contains
-    # substantial civic/commercial buildings. Deterministic fallbacks keep older
-    # regional test fixtures valid without inventing another water object.
     var ordered: Array[Dictionary] = area_sites.duplicate(true)
     ordered.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
         return String(a.get("id", "")) < String(b.get("id", ""))
