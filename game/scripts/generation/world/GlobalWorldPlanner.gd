@@ -71,8 +71,8 @@ func generate(request: GlobalWorldGenerationRequest) -> GeneratedGlobalWorldPlan
             return plan
         geography_cells.append(geography_value)
 
-    ## The live island no longer owns river geometry. Generic non-island profiles retain their
-    ## legacy hydrology path until those profiles are retired/migrated independently.
+    ## The production island owns no river geometry. The older regional profile
+    ## still uses its isolated compatibility path until that profile is deleted.
     var river_segments: Array[Dictionary] = []
     if not island_mode:
         var hydrology_result: Dictionary = _hydrology_planner.plan(request, profile, geography_cells)
@@ -160,18 +160,6 @@ func generate(request: GlobalWorldGenerationRequest) -> GeneratedGlobalWorldPlan
             plan.failure_reason = "global_water_service_result_invalid"
             return plan
         water_services.append(water_service_value)
-    var water_nodes: Array[Dictionary] = []
-    for water_node_value: Variant in water_result.get("water_nodes", []):
-        if typeof(water_node_value) != TYPE_DICTIONARY:
-            plan.failure_reason = "global_water_node_result_invalid"
-            return plan
-        water_nodes.append(water_node_value)
-    var water_segments: Array[Dictionary] = []
-    for water_segment_value: Variant in water_result.get("water_segments", []):
-        if typeof(water_segment_value) != TYPE_DICTIONARY:
-            plan.failure_reason = "global_water_segment_result_invalid"
-            return plan
-        water_segments.append(water_segment_value)
 
     var region_result: Dictionary = _region_planner.plan(request, settlements)
     if not bool(region_result.get("ok", false)):
@@ -198,8 +186,6 @@ func generate(request: GlobalWorldGenerationRequest) -> GeneratedGlobalWorldPlan
     plan.power_nodes = power_nodes
     plan.power_segments = power_segments
     plan.water_services = water_services
-    plan.water_nodes = water_nodes
-    plan.water_segments = water_segments
     plan.area_sites = area_sites
 
     var validation: Dictionary = _validator.validate(request, plan)
