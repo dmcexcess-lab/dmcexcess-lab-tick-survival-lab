@@ -32,7 +32,7 @@ func _initialize() -> void:
     var validator: GeneratedAreaValidator = ValidatorClass.new()
     var global_plan: GeneratedGlobalWorldPlan = global_planner.generate(GlobalFixtureClass.request())
 
-    _check(global_plan.is_generated() and global_plan.profile_version == 7, "canonical System 00D v7 world generates before hamlet projection")
+    _check(global_plan.is_generated() and global_plan.profile_version == 8, "canonical System 00D v8 world generates before hamlet projection")
     if not global_plan.is_generated():
         push_error("RURAL_SCATTERED_GLOBAL_FAILURE: %s" % global_plan.failure_reason)
         _finish()
