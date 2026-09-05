@@ -8,7 +8,11 @@ Canonical status/routing index. Read `PROJECT_NORTH_STAR.md`, `PERFORMANCE_NORTH
 | 00A | Spatial Model — WHERE | **IMPLEMENTED** | `00A_SPATIAL_MODEL.md` |
 | 00B | Persistent World State — WHAT | **IMPLEMENTED** | `00B_PERSISTENT_WORLD_STATE.md` |
 | 00C | Tick / Action / Pause — WHEN | **IMPLEMENTED** | `00C_TICK_ACTION_PAUSE.md` |
-| 00D | Global World Planning / Generation | **IMPLEMENTED — current procedural island** | `00D_GLOBAL_WORLD_PLANNING.md` + children |
+| 00D | Global World Planning / Generation | **IMPLEMENTED — current procedural island** | `00D_GLOBAL_WORLD_PLANNING.md` + active children |
+| 00D3 | Global Hydrology / Bridge Intent | **RETIRED / historical only** | `00D3_GLOBAL_HYDROLOGY_BRIDGE_INTENT.md` |
+| 00D4 | Global Electrical Infrastructure | **IMPLEMENTED** | `00D4_GLOBAL_ELECTRICAL_INFRASTRUCTURE.md` |
+| 00D5 | Global Potable Water Infrastructure | **IMPLEMENTED — single-facility service model** | `00D5_GLOBAL_POTABLE_WATER_INFRASTRUCTURE.md` |
+| 00D6 | Global Wastewater / Septic Infrastructure | **RETIRED / historical only** | `00D6_GLOBAL_WASTEWATER_SEPTIC_INFRASTRUCTURE.md` |
 | 00F | Streaming / Materialization | **IMPLEMENTED** | `00F_STREAMING_MATERIALIZATION_ORCHESTRATION.md` |
 | 01–12 | Spatial, movement, rendering, equipment, inventory, transfer | **IMPLEMENTED** | numbered designs |
 | 13 | Actor Stats / Status Architecture | **IMPLEMENTED via children** | `13_ACTOR_STATS_STATUS_ARCHITECTURE.md` |
@@ -35,9 +39,9 @@ Canonical status/routing index. Read `PROJECT_NORTH_STAR.md`, `PERFORMANCE_NORTH
 | PERF | Performance Architecture Gate | **IMPLEMENTED + CI VERIFIED; human accepted** | `PERFORMANCE_ARCHITECTURE.md` |
 | 00E | Population / Household / Outbreak / Player Story | **NOT DESIGNED — Phase 8** | future design |
 
-## Retired infrastructure design
+## Retired infrastructure designs
 
-`00D6_GLOBAL_WASTEWATER_SEPTIC_INFRASTRUCTURE.md` is **RETIRED / historical only**. Wastewater/sewer/septic is not an active dependency.
+`00D3_GLOBAL_HYDROLOGY_BRIDGE_INTENT.md` and `00D6_GLOBAL_WASTEWATER_SEPTIC_INFRASTRUCTURE.md` are **RETIRED / historical only**. Generated rivers/watercourses, river-only bridge intents and wastewater/sewer/septic are not active dependencies. Coastline, shore and ocean generation remain active procedural-island truth.
 
 ## Current routing
 
@@ -45,15 +49,16 @@ Phase 1 content foundations, Phase 2 crafting, Phase 3 utilities, Phase 4/5 surv
 
 System 36 provides persistent skateboard/bicycle/motorcycle/car/truck state; bounded generated parked vehicles; enter/exit; skateboard 2-cell smooth-surface movement with no added Fatigue; bicycle 3-cell movement with real Fatigue; powered motorcycle/car/truck movement with finite fuel; 12 typed headings at 30-degree increments over deterministic integer rasters; 2-cell braking; real keys/locks/hot-wiring; real weighted cargo; bounded Mechanical repair and real installed cargo-rack modification; crash HP/sound consequences; and powered headlights. Exact arbitrary-angle collision polygons, partial fuel-fluid quantities, island-wide streaming vehicle population and richer component replacement remain explicit future closure rather than fake completion.
 
-**Next project operation after human vehicle acceptance or newer explicit direction:** one comprehensive skills/crafting/items/usable-object closure pass. That pass must include cooking, first aid, fire/ignition, Mechanical repair/modification/deconstruction/reclamation, richer vehicle maintenance where real components exist, real usable-object consumers, Awareness/Stealth consumers and the user-approved construction restriction: **no freeform base building; construction is limited to reinforcing existing doors/windows and repairing broken objects.**
+**Next project operation after current generator cleanup or newer explicit direction:** continue the comprehensive skills/crafting/items/usable-object closure pass. That pass includes cooking, first aid, fire/ignition, Mechanical repair/modification/deconstruction/reclamation, richer vehicle maintenance where real components exist, real usable-object consumers, Awareness/Stealth consumers and the user-approved construction restriction: **no freeform base building; construction is limited to reinforcing existing doors/windows and repairing broken objects.**
 
 ## Protected utility truth
 
 - local substations derive from real generated buildings, targeting roughly ten buildings each;
 - visible power uses shared roadside feeder trees and short service drops;
 - regional source -> local substation remains logical/non-physical;
-- one real grid-independent island municipal water plant serves municipal water;
-- real rural private wells persist and depend on their local electrical service;
+- one real grid-independent island municipal water facility serves municipal water island-wide through lightweight service aliases;
+- deterministic private wells cover 10–20% of generated rural buildings and have no external-grid dependency;
+- municipal pipe/node/segment topology is retired;
 - wastewater/sewer/septic remains retired.
 
 ## Verification discipline
