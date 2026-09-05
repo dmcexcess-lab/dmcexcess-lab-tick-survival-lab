@@ -30,7 +30,8 @@ jobs:
           test -f game/scripts/ci/FlashlightItemSmoke.gd
           grep -q 'item.tool.flashlight' game/scripts/simulation/loot/LootItemCatalog.gd
           grep -q 'TURN ON' game/scripts/ui/CraftingPlayerShell.gd
-          grep -q 'TURN OFF' game/scripts/ui/CraftingPlayerShell.gd
+          grep -q 'toggle_offer' game/scripts/ui/CraftingPlayerShell.gd
+          grep -q 'TURN OFF' game/scripts/simulation/items/lighting/FlashlightToggleActionService.gd
           grep -q 'configure_flashlight_actions' game/scripts/app/UtilityGameMain.gd
           grep -q 'is_switched_on' game/scripts/simulation/utilities/UtilityPoweredLightingSourceAdapter.gd
           ! grep -R -q '_process' game/scripts/simulation/items/lighting

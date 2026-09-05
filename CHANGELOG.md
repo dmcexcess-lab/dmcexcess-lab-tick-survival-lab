@@ -1,5 +1,13 @@
 # Changelog
 
+## 2026-09-05 — Rural island density playtest candidate (local, publication pending)
+
+- Expanded real housing to 1,002 reference-seed residents across 306 buildings, retaining two towns, three compact crossroads and six rural lane sites on the same island footprint.
+- Extended town envelopes and frontage instead of shrinking rural parcel spacing or inflating household capacity.
+- Added secondary-road commercial fallback and fit-aware crossroads business placement.
+- Added population/morphology regression checks and repaired the flashlight workflow’s misplaced literal-label assertion.
+- Local executable: `63e7006346b9177bb4fe64401849d9ccb2ddd3e1`. Push was rejected by automatic approval review; exact-head CI/Pages have not run for this candidate. See README_CONTEXT.md for the precise publication step.
+
 ## 2026-09-04 — Exact-Item Inventory First Aid
 
 - Added normal-inventory treatment of exact persistent injuries using real bandage/gauze/tape/kit supplies or the approved rag + disinfectant/alcohol-wipe combination.

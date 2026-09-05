@@ -378,6 +378,16 @@ func _classify_rural_land_use(seed: int, profile: Dictionary, center: Vector2i, 
         parcel["land_use"] = &"commercial_small"
         commercial_used += 1
 
+    # A crossroads can be served by secondary roads only. Keep a small service
+    # center on its nearest available frontage in that case.
+    for parcel: Dictionary in parcels:
+        if commercial_used >= commercial_target:
+            break
+        if StringName(parcel.get("land_use", &"")) != &"unclassified":
+            continue
+        parcel["land_use"] = &"commercial_small"
+        commercial_used += 1
+
     var residential_target: int = int(profile.get("residential_count", 6))
     var local_residential_target: int = mini(residential_target, int(profile.get("local_residential_target", 0)))
     var residential_used: int = _assign_local_land_use(

@@ -4,6 +4,14 @@ Status: **IMPLEMENTED — ten area profiles / seven environment palettes + live 
 
 Updated: **2026-08-27**
 
+## Island density content update — 2026-09-05
+
+Island-only rural overrides increase existing frontage targets while preserving parcel gaps, setbacks and building capacity semantics. The two 512-cell town sites target up to 100 residential buildings; legal geometry can yield fewer. Rural lane sites target ten houses plus four farmsteads. Crossroads target fourteen homes plus four farmsteads, but legal fits remain soft targets, not a mandate to crowd the site.
+
+Crossroads may allocate commercial frontage on secondary roads when primary frontage is unavailable. Fit-aware unique commercial matching reuses the existing town matching algorithm, so small service centers no longer depend on the global road being classified primary. Standalone rural density targets remain unchanged.
+
+No streaming radius, frame/tick loop, resident capacity, collision or item/utility ownership changes are part of this content expansion. Full island tests protect compact crossroads, bounded rural sites, two substantial towns, required town businesses and roughly one thousand reference-seed residents.
+
 ## 1. Core rule
 
 > **System 00D decides large-scale world truth; System 20 preserves that truth while adding profile-authorized local physical detail.**

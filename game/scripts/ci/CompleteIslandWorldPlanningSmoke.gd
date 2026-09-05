@@ -30,11 +30,11 @@ func _initialize() -> void:
         return
 
     _check(plan.profile_id == ProfilesClass.TEMPERATE_ISLAND_REGION, "island profile identity is recorded")
-    _check(plan.profile_version == 7, "town-first island profile v7 is recorded")
+    _check(plan.profile_version == 8, "expanded rural island profile v8 is recorded")
     _check(plan.bounds.size == Vector2i(3072, 3072), "settlement-first envelope determines island size")
     _check(plan.area_sites.size() == 11, "island has eleven procedural settlement cores")
     _check(_site_profile_count(plan, &"smalltown.center") == 2, "island has two larger small-town anchors")
-    _check(_site_bounds_size_count(plan, &"smalltown.center", Vector2i(384, 384)) == 2, "both town anchors receive full 384-cell town envelopes")
+    _check(_site_bounds_size_count(plan, &"smalltown.center", Vector2i(512, 512)) == 2, "both town anchors receive full 512-cell town envelopes")
     _check(_site_profile_count(plan, &"rural.crossroads") == 3, "island has three rural crossroads")
     _check(_site_profile_count(plan, &"rural.scattered") == 6, "island has six rural home-and-farm clusters")
     _check(_sites_do_not_overlap(plan), "settlement envelopes do not overlap")
@@ -44,6 +44,7 @@ func _initialize() -> void:
     _check(not plan.bridge_intents.is_empty(), "real road/river crossings retain explicit bridges")
     _check(not plan.power_nodes.is_empty() and not plan.power_segments.is_empty(), "utilities consume the generated settlement road network")
     _check(plan.water_services.size() == plan.settlements.size(), "island-wide municipal water serves every generated settlement")
+    _check(plan.resident_population >= 950 and plan.resident_population <= 1200, "reference island supports roughly one thousand real residents")
     _check(plan.population_settlements.size() == plan.area_sites.size(), "each real settlement manifest owns a population record")
     _check(plan.resident_population > 0 and plan.infected_population + plan.survivor_population == plan.resident_population, "infected population is constrained by actual island residents")
     _check(bool(plan.local_area_manifest.get("ok", false)), "real local-area manifest is retained for startup consumers")
@@ -123,7 +124,16 @@ func _test_all_area_sites(plan: GeneratedGlobalWorldPlan) -> void:
         if request.area_profile_id == &"smalltown.center":
             smalltown_count += 1
             _check(_smalltown_has_required_buildings(generated), "small town has real stores, post office, police, diner, and gas station: %s" % site_id)
-            _check(_count_residential_buildings(generated) >= 12, "small town has clustered residential density: %s" % site_id)
+            _check(_count_residential_buildings(generated) >= 70, "small town has clustered residential density: %s" % site_id)
+        if request.area_profile_id == &"rural.crossroads":
+            _check(generated.building_requests.size() <= 22, "crossroads remains a compact one-light settlement")
+            var businesses: int = 0
+            for building: BuildingGenerationRequest in generated.building_requests:
+                if String(building.archetype_id).begins_with("commercial."):
+                    businesses += 1
+            _check(businesses >= 1, "each crossroads has a real service center")
+        if request.area_profile_id == &"rural.scattered":
+            _check(generated.building_requests.size() <= 14, "rural lanes remain sparsely inhabited")
     _check(generated_count == plan.area_sites.size(), "every procedural settlement site materializes")
     _check(smalltown_count == 2, "both procedural small towns materialize")
 

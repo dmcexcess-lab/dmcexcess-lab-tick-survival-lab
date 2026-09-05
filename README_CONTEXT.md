@@ -1,10 +1,24 @@
 # Tick Survival Lab — Current Handoff
 
-Last updated: **2026-09-04**
+Last updated: **2026-09-05**
 
 This is the authoritative continuation checkpoint. Read `README_SOPS.md`, fetch current `main` once, and continue from **NEXT OPERATION**. Newer explicit user direction supersedes this handoff.
 
-## Current repository / executable truth
+## Active checkpoint — rural density candidate awaiting publication
+
+- **Local executable:** `63e7006346b9177bb4fe64401849d9ccb2ddd3e1` (direct child of remote main `880bde025d47881a5c9fded50489e29e09eaca7e`). The documentation closure is its local child; use local HEAD for publication after approval.
+- Working checkout: `/workspace/scratch/33a8459a76ce/tick-review` (detached worktree, all candidate changes committed at closure). Do not substitute older dirty worktrees.
+- User approved increasing actual buildings toward 1,000 possible residents while retaining two small towns, one-light crossroads, and scattered rural character. User will playtest.
+- Reference seed 20001 now has **306 real buildings, 286 residential building records, 1,002 residents, 923 infected allocation, 79 survivor allocation**. No fake population multiplier or spawned zombies.
+- Two main town envelopes increased from 384 to 512 cells square; overall 3072×3072 island bounds, eleven sites, parcel gaps and streaming radius are unchanged. Towns have 106/97 total buildings. Crossroads have 9/14/10; rural sites have 13/12/10/12/9/14.
+- Secondary-road commercial fallback and fit-aware business placement keep crossroads from becoming residential-only in the reference seed. Rural growth still uses the six existing lane sites; independent off-site farms remain unfinished.
+- Island profile is v8. Added owning population/morphology assertions. Fixed the flashlight CI assertion to follow the actual offer-owned TURN OFF label.
+- Local passes: CompleteIslandWorldPlanningSmoke, ProceduralIslandSeedMatrixSmoke (12 seeds, density configuration before metadata-only v8 bump), SmallTownCenterGenerationSmoke, LocalAreaGenerationSmoke, RuralScatteredGenerationSmoke, PerformanceArchitectureSmoke, PlayerInputResponsivenessSmoke, StreamingMaterializationSmoke, System33PowerWaterSmoke, System33PowerPhysicalNetworkSmoke, LargeAreaCritiqueRuntimeSmoke, FlashlightItemSmoke. Full-island and protected final tests passed on committed executable source.
+- One sequential headless comparison, same environment: baseline boot 10,125 ms / turn settle 85.1 ms; candidate boot 11,236 ms / turn settle 86.8 ms. This does not measure dense-town browser FPS, phone performance or long-route memory. Human acceptance remains pending.
+- **Concrete blocker:** automatic approval review rejected `git push origin HEAD:main`, saying the code approval did not explicitly authorize this exact direct-to-main publication. Do not bypass that rejection. The source is committed locally; remote main was verified unchanged at `880bde0...`. No candidate CI/Pages deployment has occurred.
+- No simulation ownership changes beyond generation content; protect utilities, collision/access, population accounting, WHEN input locking and existing player actions.
+
+## Previous remote executable checkpoint (historical)
 
 - **Verified gameplay executable:** `e4e5ccfadd087186e6addf937ad8c4ace5e5a818` — quiet-entry/vehicle simplification plus real flashlight item ON/OFF closure.
 - Exact executable-head GitHub check-runs reached terminal state with **no failures and no unfinished checks** before documentation was written.
@@ -232,7 +246,7 @@ Do not regress:
 
 Automated verification does not replace final browser/phone play feel. Continue checking desktop and iPhone/Safari for chooser readability/touch de-duplication, quiet-entry discoverability, board/break/climb feedback, inventory item actions and flashlight controls, condition/rest, vehicles/cargo/turning, utility feedback, and generated-world proportions.
 
-## NEXT OPERATION
+## Superseded pre-density next operation
 
 Unless newer user direction supersedes this:
 
@@ -246,3 +260,11 @@ Unless newer user direction supersedes this:
 8. After generators: **fire/ignition**, then broader Awareness / first real **Stealth detectability** consumer, then final player/world closure + desktop/iPhone acceptance, then **combat**, then the **first zombie** hydrated from real population/world truth.
 
 Do not reopen settled keys, house-wide locks, replacement-glass repair, or wall-light-switch systems unless the user explicitly changes those decisions.
+
+## NEXT OPERATION
+
+1. Obtain the explicit publication approval required by automatic review for the prepared density candidate (local executable `63e7006346b9177bb4fe64401849d9ccb2ddd3e1` plus its documentation-only closure).
+2. After approval, verify remote main has not moved, then publish the prepared local HEAD to main. If it has moved, reconcile the actual new changes without overwriting them.
+3. Verify the exact remote executable and all required CI checks / Pages to terminal state. Repair actual failures. Candidate has not yet had remote CI.
+4. Update the changelog/design verification and this context last with the published head and terminal verification. Give the user the live build for density/lag playtest.
+5. Keep player/world practical closure before combat. Portable generators already exist in remote `880bde0`; do not reimplement them merely because the older historical handoff says they are next. After the density playtest, continue the remaining approved player/world closure (fire/ignition, skill consumers) as directed.

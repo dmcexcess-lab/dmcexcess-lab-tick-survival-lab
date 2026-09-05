@@ -43,7 +43,7 @@ func place(request: AreaGenerationRequest, profile: Dictionary, parcels: Array[D
         &"industrial": maxi(0, industrial_offset),
     }
     var unique_commercial_assignments: Dictionary = {}
-    if land_use_mode == &"smalltown_center":
+    if land_use_mode in [&"smalltown_center", &"rural_crossroads"]:
         var matching: Dictionary = _match_unique_fitting_archetypes(profile, parcels, &"commercial_small", commercial_pool)
         unique_commercial_assignments = matching.get("assignments", {})
 
@@ -51,7 +51,7 @@ func place(request: AreaGenerationRequest, profile: Dictionary, parcels: Array[D
         var land_use: StringName = StringName(parcel.get("land_use", &""))
         var parcel_id: String = String(parcel.get("id", ""))
         var archetype_id: StringName = &""
-        if land_use == &"commercial_small" and land_use_mode == &"smalltown_center":
+        if land_use == &"commercial_small" and land_use_mode in [&"smalltown_center", &"rural_crossroads"]:
             if not unique_commercial_assignments.has(parcel_id):
                 continue
             archetype_id = StringName(unique_commercial_assignments[parcel_id])

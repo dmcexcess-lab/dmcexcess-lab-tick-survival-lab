@@ -4,6 +4,16 @@ Status: **IMPLEMENTED — rural v7 + complete island v4**
 
 Updated: **2026-08-30**
 
+## Current island density — 2026-09-05
+
+`temperate.island.region` v8 preserves the 3072×3072 island envelope, two town anchors, three crossroads and six rural lane sites. Town envelopes are now 512×512, allowing longer streets and more actual houses without reducing parcel gaps. Crossroads remain small service communities and rural sites retain at most fourteen home/farm buildings. Intervening island surface still adds no independent farmsteads; distributed off-site habitation is a separate follow-up, not claimed complete here.
+
+Reference seed 20001 has **306 buildings / 286 residential building records / 1,002 residents**. Towns provide 339 and 314 residents; crossroads provide 23, 42 and 28; rural sites provide 50, 42, 34, 46, 33 and 51. Infected 923 + survivors 79 equals actual residential capacity 1,002. No resident-capacity multiplier or independent zombie count was introduced. Other seeds vary with legal physical building fits.
+
+Local executable `63e7006346b9177bb4fe64401849d9ccb2ddd3e1` passes full reference-island generation/materialization checks. The twelve-seed playable-readiness matrix passes for this density configuration. Publication is pending automatic-review-required user approval; these are local results, not an exact-head CI or browser acceptance claim.
+
+The historical sections below describe earlier profile revisions where explicitly versioned.
+
 ## 1. Authority
 
 System 00D owns deterministic large-scale semantic world truth before local generation/materialization/runtime simulation.

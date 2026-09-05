@@ -216,6 +216,11 @@ func _generate(request: AreaGenerationRequest, include_natural_dressing: bool) -
     return plan
 
 func _effective_area_profile(request: AreaGenerationRequest, profile: Dictionary) -> Dictionary:
+    # Island density tuning leaves standalone regional profiles unchanged.
+    if request.inherited_ecology_seed != null and profile.has("island_overrides"):
+        var island_profile: Dictionary = profile.duplicate(true)
+        island_profile.merge(profile["island_overrides"], true)
+        return island_profile
     if request.area_profile_id != AreaProfileCatalog.SMALLTOWN_CENTER \
         or mini(request.bounds.size.x, request.bounds.size.y) < int(profile.get("island_large_minimum_size", 2147483647)):
         return profile

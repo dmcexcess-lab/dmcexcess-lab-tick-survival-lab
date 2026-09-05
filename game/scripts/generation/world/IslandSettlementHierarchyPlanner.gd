@@ -104,8 +104,8 @@ func _settlement_specs(profile: Dictionary) -> Array[Dictionary]:
     var crossroads_spacing: int = int(profile.get("island_crossroads_min_spacing", 288))
     var hamlet_spacing: int = int(profile.get("island_hamlet_min_spacing", 256))
     return [
-        _spec("settlement.smalltown.001", "area.smalltown.center.001", &"smalltown", &"smalltown.center", smalltown_radius, 640, 0, town_spacing, Vector2i(384, 384)),
-        _spec("settlement.smalltown.002", "area.smalltown.center.002", &"smalltown", &"smalltown.center", smalltown_radius, 640, 4, town_spacing, Vector2i(384, 384)),
+        _spec("settlement.smalltown.001", "area.smalltown.center.001", &"smalltown", &"smalltown.center", smalltown_radius, 640, 0, town_spacing, Vector2i(512, 512)),
+        _spec("settlement.smalltown.002", "area.smalltown.center.002", &"smalltown", &"smalltown.center", smalltown_radius, 640, 4, town_spacing, Vector2i(512, 512)),
         _spec("settlement.rural.crossroads.001", "area.rural.crossroads.001", &"rural_crossroads", &"rural.crossroads", crossroads_radius, 820, 2, crossroads_spacing, Vector2i(256, 256)),
         _spec("settlement.rural.crossroads.002", "area.rural.crossroads.002", &"rural_crossroads", &"rural.crossroads", crossroads_radius, 820, 5, crossroads_spacing, Vector2i(256, 256)),
         _spec("settlement.rural.crossroads.003", "area.rural.crossroads.003", &"rural_crossroads", &"rural.crossroads", crossroads_radius, 820, 7, crossroads_spacing, Vector2i(256, 256)),

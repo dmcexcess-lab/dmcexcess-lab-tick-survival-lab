@@ -13,7 +13,7 @@ func profile(profile_id: StringName) -> Dictionary:
     if profile_id == TEMPERATE_ISLAND_REGION:
         var result: Dictionary = _rural_profile()
         result["id"] = TEMPERATE_ISLAND_REGION
-        result["version"] = 7
+        result["version"] = 8
         result["island_enabled"] = true
         result["settlement_layout"] = &"rural_island_hierarchy"
         result["reuse_world_seed_for_central_site"] = false
