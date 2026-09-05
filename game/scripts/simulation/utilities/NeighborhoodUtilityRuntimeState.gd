@@ -234,7 +234,6 @@ func _materialize_power(plan: GeneratedGlobalWorldPlan) -> bool:
     var substations_value: Variant = _local_power_topology.get("substations", [])
     if typeof(substations_value) != TYPE_ARRAY or (substations_value as Array).is_empty():
         return false
-
     var ingress_id: String = ""
     for node: Dictionary in plan.power_nodes:
         if StringName(node.get("kind", &"")) != &"regional_ingress":
@@ -253,7 +252,6 @@ func _materialize_power(plan: GeneratedGlobalWorldPlan) -> bool:
         }
     if ingress_id.is_empty():
         return false
-
     var substations: Array = substations_value
     for value: Variant in substations:
         if typeof(value) != TYPE_DICTIONARY:
@@ -266,7 +264,6 @@ func _materialize_power(plan: GeneratedGlobalWorldPlan) -> bool:
         if planning_id.is_empty() or service_key.is_empty() or service_id.is_empty() or cell == INVALID_CELL \
             or _power_bindings.has(service_id):
             return false
-
         var substation_component_id: String = "power.component.%s" % planning_id
         var feeder_component_id: String = "power.component.feeder.%s" % service_key
         var terminal_component_id: String = "power.component.service.%s" % service_key
@@ -297,7 +294,6 @@ func _materialize_power(plan: GeneratedGlobalWorldPlan) -> bool:
         _insert_power_link("power.link.regional_to.%s" % service_key, ingress_id, substation_component_id, service_key)
         _insert_power_link("power.link.substation_to.%s" % service_key, substation_component_id, feeder_component_id, service_key)
         _insert_power_link("power.link.feeder_to.%s" % service_key, feeder_component_id, terminal_component_id, service_key)
-
         var settlement_ids: Array = (substation.get("settlement_ids", []) as Array).duplicate()
         var building_ids: Array = (substation.get("building_ids", []) as Array).duplicate()
         var building_rects: Array = (substation.get("building_rects", []) as Array).duplicate()
@@ -319,7 +315,6 @@ func _materialize_power(plan: GeneratedGlobalWorldPlan) -> bool:
             if not settlement_id.is_empty() and not _power_service_by_settlement.has(settlement_id):
                 _power_service_by_settlement[settlement_id] = service_id
         _power_branch_by_service[service_id] = feeder_component_id
-
     _rebuild_power_parent_index()
     return not _power_bindings.is_empty()
 
@@ -327,53 +322,53 @@ func _materialize_water(plan: GeneratedGlobalWorldPlan) -> bool:
     _water_asset_conditions.clear()
     _water_asset_components.clear()
     _water_asset_kinds.clear()
-    if plan.water_services.size() != 1 or not plan.water_nodes.is_empty() or not plan.water_segments.is_empty():
+    if plan.water_services.is_empty() or not plan.water_nodes.is_empty() or not plan.water_segments.is_empty():
         return false
-    var service: Dictionary = plan.water_services[0]
-    if StringName(service.get("service_mode", &"")) != &"single_building_island_wide" \
-        or not bool(service.get("island_wide", false)):
-        return false
-    var building: Dictionary = _resolve_facility_building(plan, service)
+    var first_service: Dictionary = plan.water_services[0]
+    var building: Dictionary = _resolve_facility_building(plan, first_service)
     if building.is_empty():
         return false
     var building_id: String = String(building.get("building_id", "")).strip_edges()
-    var service_id: String = String(service.get("id", "")).strip_edges()
-    var host_settlement_id: String = String(service.get("settlement_id", "")).strip_edges()
     var cell: Vector2i = building.get("cell", INVALID_CELL)
-    if building_id.is_empty() or service_id.is_empty() or host_settlement_id.is_empty() or cell == INVALID_CELL:
+    var facility_id: String = String(first_service.get("facility_id", "")).strip_edges()
+    if building_id.is_empty() or cell == INVALID_CELL or facility_id.is_empty():
         return false
-
     var component_id: String = "water.component.facility.%s" % building_id
     _water_components[component_id] = {
         "component_id": component_id,
         "role": &"source",
         "operational_state": OPERATIONAL,
         "required_power_service_id": "",
-        "planning_id": String(service.get("facility_id", service_id)),
+        "planning_id": facility_id,
         "plant_id": building_id,
-        "settlement_id": host_settlement_id,
+        "settlement_id": String(first_service.get("host_settlement_id", "")),
         "cell": cell,
         "owner_entity_id": building_id,
     }
-    _water_bindings[service_id] = {
-        "service_id": service_id,
-        "service_kind": &"municipal",
-        "terminal_component_id": component_id,
-        "treatment_component_id": component_id,
-        "owner_entity_id": building_id,
-        "settlement_id": host_settlement_id,
-        "service_cell": cell,
-        "plant_id": building_id,
-        "network_id": "",
-        "critical_asset_id": building_id,
-        "required_power_service_id": "",
-        "island_wide": true,
-    }
-    for settlement: Dictionary in plan.settlements:
-        var settlement_id: String = String(settlement.get("id", "")).strip_edges()
-        if not settlement_id.is_empty():
-            _water_service_by_settlement[settlement_id] = service_id
-    _water_local_by_service[service_id] = component_id
+    for service: Dictionary in plan.water_services:
+        var service_id: String = String(service.get("id", "")).strip_edges()
+        var settlement_id: String = String(service.get("settlement_id", "")).strip_edges()
+        if service_id.is_empty() or settlement_id.is_empty() or _water_bindings.has(service_id) \
+            or String(service.get("facility_id", "")) != facility_id \
+            or StringName(service.get("service_mode", &"")) != &"island_wide_municipal" \
+            or not bool(service.get("island_wide", false)):
+            return false
+        _water_bindings[service_id] = {
+            "service_id": service_id,
+            "service_kind": &"municipal",
+            "terminal_component_id": component_id,
+            "treatment_component_id": component_id,
+            "owner_entity_id": building_id,
+            "settlement_id": settlement_id,
+            "service_cell": cell,
+            "plant_id": building_id,
+            "network_id": "",
+            "critical_asset_id": building_id,
+            "required_power_service_id": "",
+            "island_wide": true,
+        }
+        _water_service_by_settlement[settlement_id] = service_id
+        _water_local_by_service[service_id] = component_id
     return _register_water_asset(building_id, &"municipal_plant", component_id)
 
 func _validate_water_topology(
@@ -382,29 +377,38 @@ func _validate_water_topology(
     bindings: Dictionary,
     _power_bindings_arg: Dictionary
 ) -> bool:
-    if components.size() != 1 or not links.is_empty() or bindings.size() != 1:
+    if components.size() != 1 or not links.is_empty() or bindings.is_empty():
         return false
     var component: Dictionary = components.values()[0]
-    if StringName(component.get("role", &"")) != &"source" \
+    var component_id: String = String(component.get("component_id", ""))
+    if component_id.is_empty() or StringName(component.get("role", &"")) != &"source" \
         or not _valid_state(StringName(component.get("operational_state", &""))):
         return false
-    var binding: Dictionary = bindings.values()[0]
-    return bool(binding.get("island_wide", false)) \
-        and StringName(binding.get("service_kind", &"")) == &"municipal" \
-        and String(binding.get("terminal_component_id", "")) == String(component.get("component_id", "")) \
-        and String(binding.get("treatment_component_id", "")) == String(component.get("component_id", "")) \
-        and not String(binding.get("owner_entity_id", "")).is_empty() \
-        and String(binding.get("required_power_service_id", "")).is_empty()
+    var owner_id: String = ""
+    for value: Variant in bindings.values():
+        var binding: Dictionary = value
+        var candidate_owner: String = String(binding.get("owner_entity_id", ""))
+        if not bool(binding.get("island_wide", false)) \
+            or StringName(binding.get("service_kind", &"")) != &"municipal" \
+            or String(binding.get("terminal_component_id", "")) != component_id \
+            or String(binding.get("treatment_component_id", "")) != component_id \
+            or candidate_owner.is_empty() \
+            or not String(binding.get("required_power_service_id", "")).is_empty():
+            return false
+        if owner_id.is_empty():
+            owner_id = candidate_owner
+        elif owner_id != candidate_owner:
+            return false
+    return true
 
 func _resolve_facility_building(plan: GeneratedGlobalWorldPlan, service: Dictionary) -> Dictionary:
     var buildings_value: Variant = plan.local_area_manifest.get("buildings", [])
     if typeof(buildings_value) != TYPE_ARRAY:
         return {}
-    var buildings: Array = buildings_value
     var host_site_id: String = String(service.get("host_site_id", "")).strip_edges()
     var preferred: StringName = StringName(service.get("preferred_archetype_id", &""))
     var fallback: Dictionary = {}
-    for value: Variant in buildings:
+    for value: Variant in buildings_value:
         if typeof(value) != TYPE_DICTIONARY:
             continue
         var building: Dictionary = value
