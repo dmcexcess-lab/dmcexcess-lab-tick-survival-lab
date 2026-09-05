@@ -420,13 +420,6 @@ func road_constraints_for_bounds(plan: GeneratedGlobalWorldPlan, bounds: Rect2i)
         })
     return {"ok": true, "failure_reason": "", "roads": roads}
 
-# Compatibility shell for old callers. Hydrology is retired from the production
-# projection contract and therefore always contributes zero constraints.
-func hydrology_constraints_for_bounds(plan: GeneratedGlobalWorldPlan, bounds: Rect2i) -> Dictionary:
-    if plan == null or not plan.is_generated() or not _rect_inside(plan.bounds, bounds):
-        return {"ok": false, "failure_reason": "invalid_global_hydrology_projection_bounds", "rivers": [], "bridges": []}
-    return {"ok": true, "failure_reason": "", "rivers": [], "bridges": []}
-
 func power_constraints_for_bounds(plan: GeneratedGlobalWorldPlan, bounds: Rect2i) -> Dictionary:
     var segments: Array[Dictionary] = []
     var nodes: Array[Dictionary] = []
@@ -467,13 +460,6 @@ func water_constraints_for_bounds(plan: GeneratedGlobalWorldPlan, bounds: Rect2i
         if bounds.has_point(center):
             services.append(service.duplicate(true))
     return {"ok": true, "failure_reason": "", "services": services}
-
-# Wastewater is retired. Keep an inert compatibility surface until the physical
-# legacy files are deleted in the next cleanup phase.
-func wastewater_constraints_for_bounds(plan: GeneratedGlobalWorldPlan, bounds: Rect2i) -> Dictionary:
-    if plan == null or not plan.is_generated() or not _rect_inside(plan.bounds, bounds):
-        return {"ok": false, "failure_reason": "invalid_global_wastewater_projection_bounds", "services": [], "nodes": [], "segments": []}
-    return {"ok": true, "failure_reason": "", "services": [], "nodes": [], "segments": []}
 
 func _segment_overlap_is_boundary_tangent(segment: Dictionary, bounds: Rect2i) -> bool:
     var start: Vector2i = segment.get("start", Vector2i.ZERO)
@@ -578,20 +564,3 @@ func _rect_inside(outer: Rect2i, inner: Rect2i) -> bool:
         return false
     var inner_max := Vector2i(inner.position.x + inner.size.x - 1, inner.position.y + inner.size.y - 1)
     return outer.has_point(inner.position) and outer.has_point(inner_max)
-
-func project_watercourse_bounds(
-    plan: GeneratedGlobalWorldPlan,
-    area_id: String,
-    bounds: Rect2i
-) -> Dictionary:
-    var helper_script: Variant = load("res://scripts/generation/integration/System20WatercourseRequestProjection.gd")
-    if helper_script == null:
-        return {"ok": false, "failure_reason": "watercourse_projection_helper_missing", "request": null}
-    var helper: Variant = helper_script.new()
-    return helper.project(
-        plan,
-        area_id,
-        bounds,
-        Callable(self, "_rural_open_context_contains_bounds"),
-        Callable(self, "road_constraints_for_bounds")
-    )
