@@ -99,7 +99,6 @@ func generate(request: AreaGenerationRequest) -> GeneratedAreaPlan:
     plan.blocks = []
     plan.parcels = []
     plan.building_requests = []
-    plan.hydrology_features = []
     plan.ground_regions = ground_regions
     plan.outdoor_props = outdoor_props
     return plan
