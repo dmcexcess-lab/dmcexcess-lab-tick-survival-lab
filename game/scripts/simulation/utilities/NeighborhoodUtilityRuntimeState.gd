@@ -4,9 +4,10 @@ class_name NeighborhoodUtilityRuntimeState
 const WATER_ASSET_FAILURE_THRESHOLD: int = 250
 const WATER_ASSET_INITIAL_CONDITION: int = 1000
 const WATER_ASSET_REPAIRED_CONDITION: int = 900
-const WATER_ASSET_SCHEMA_VERSION: int = 2
+const WATER_ASSET_SCHEMA_VERSION: int = 3
 
 var _local_power_topology: Dictionary = {}
+var _well_service_by_building: Dictionary = {}
 var _water_asset_conditions: Dictionary = {}
 var _water_asset_components: Dictionary = {}
 var _water_asset_kinds: Dictionary = {}
@@ -80,16 +81,26 @@ func water_service_for_settlement(settlement_id: String) -> String:
         return direct
     return _island_water_service_id()
 
-func water_service_for_cell(_cell: Vector2i) -> String:
+func water_service_for_cell(cell: Vector2i) -> String:
+    for value: Variant in _local_power_topology.get("buildings", []):
+        if typeof(value) != TYPE_DICTIONARY:
+            continue
+        var building: Dictionary = value
+        var rect: Rect2i = building.get("rect", Rect2i())
+        if rect.has_point(cell):
+            return water_service_for_building(String(building.get("building_id", "")))
     return _island_water_service_id()
 
-func well_service_for_building(_building_id: String) -> String:
-    return ""
+func well_service_for_building(building_id: String) -> String:
+    return String(_well_service_by_building.get(building_id.strip_edges(), ""))
 
 func water_service_for_building(building_id: String) -> String:
     var key: String = building_id.strip_edges()
     if key.is_empty():
         return ""
+    var well_service: String = well_service_for_building(key)
+    if not well_service.is_empty():
+        return well_service
     for value: Variant in _local_power_topology.get("buildings", []):
         if typeof(value) == TYPE_DICTIONARY and String((value as Dictionary).get("building_id", "")) == key:
             return _island_water_service_id()
@@ -116,13 +127,14 @@ func water_asset_record(asset_id: String) -> Dictionary:
     var component: Dictionary = _water_components.get(component_id, {})
     return {
         "asset_id": key,
-        "entity_id": key,
+        "entity_id": String(component.get("owner_entity_id", key)),
         "kind": StringName(_water_asset_kinds.get(key, &"")),
         "condition": int(_water_asset_conditions.get(key, 0)),
         "failure_threshold": WATER_ASSET_FAILURE_THRESHOLD,
         "component_id": component_id,
         "operational_state": StringName(component.get("operational_state", &"")),
-        "required_power_service_id": "",
+        "required_power_service_id": String(component.get("required_power_service_id", "")),
+        "cell": component.get("cell", INVALID_CELL),
     }
 
 func damage_water_asset(asset_id: String, damage: int, reason: StringName = &"physical_water_asset_damage") -> bool:
@@ -146,7 +158,8 @@ func repair_water_asset(asset_id: String, available_material_units: int) -> Dict
     var key: String = asset_id.strip_edges()
     if not is_ready() or not _water_asset_conditions.has(key):
         return {"ok": false, "material_units_consumed": 0, "reason": &"unknown_asset"}
-    var required_materials: int = 3
+    var kind: StringName = StringName(_water_asset_kinds.get(key, &""))
+    var required_materials: int = 3 if kind == &"municipal_plant" else 1
     if available_material_units < required_materials:
         return {"ok": false, "material_units_consumed": 0, "reason": &"insufficient_materials"}
     _water_asset_conditions[key] = WATER_ASSET_REPAIRED_CONDITION
@@ -186,6 +199,8 @@ func restore_snapshot(data: Dictionary) -> bool:
         var asset_id: String = String(record.get("asset_id", "")).strip_edges()
         if asset_id.is_empty() or not _water_asset_conditions.has(asset_id) or restored_conditions.has(asset_id):
             return false
+        if StringName(record.get("kind", &"")) != StringName(_water_asset_kinds.get(asset_id, &"")):
+            return false
         restored_conditions[asset_id] = clampi(int(record.get("condition", 0)), 0, 1000)
     if restored_conditions.size() != _water_asset_conditions.size():
         return false
@@ -221,6 +236,7 @@ func restore_snapshot(data: Dictionary) -> bool:
     _water_cache.clear()
     _initialized = true
     _rebuild_indices()
+    _rebuild_well_service_index()
     _water_asset_conditions = restored_conditions
     utility_reset.emit()
     power_changed.emit(_power_revision, &"utility_restore")
@@ -319,11 +335,13 @@ func _materialize_power(plan: GeneratedGlobalWorldPlan) -> bool:
     return not _power_bindings.is_empty()
 
 func _materialize_water(plan: GeneratedGlobalWorldPlan) -> bool:
+    _well_service_by_building.clear()
     _water_asset_conditions.clear()
     _water_asset_components.clear()
     _water_asset_kinds.clear()
     if plan.water_services.is_empty() or not plan.water_nodes.is_empty() or not plan.water_segments.is_empty():
         return false
+
     var first_service: Dictionary = plan.water_services[0]
     var building: Dictionary = _resolve_facility_building(plan, first_service)
     if building.is_empty():
@@ -337,6 +355,7 @@ func _materialize_water(plan: GeneratedGlobalWorldPlan) -> bool:
     _water_components[component_id] = {
         "component_id": component_id,
         "role": &"source",
+        "source_kind": &"municipal_plant",
         "operational_state": OPERATIONAL,
         "required_power_service_id": "",
         "planning_id": facility_id,
@@ -369,7 +388,58 @@ func _materialize_water(plan: GeneratedGlobalWorldPlan) -> bool:
         }
         _water_service_by_settlement[settlement_id] = service_id
         _water_local_by_service[service_id] = component_id
-    return _register_water_asset(building_id, &"municipal_plant", component_id)
+    if not _register_water_asset(building_id, &"municipal_plant", component_id):
+        return false
+
+    for value: Variant in _local_power_topology.get("wells", []):
+        if typeof(value) != TYPE_DICTIONARY:
+            return false
+        var well: Dictionary = value
+        var asset_id: String = String(well.get("asset_id", "")).strip_edges()
+        var well_component_id: String = String(well.get("component_id", "")).strip_edges()
+        var well_service_id: String = String(well.get("service_id", "")).strip_edges()
+        var well_building_id: String = String(well.get("building_id", "")).strip_edges()
+        var settlement_id: String = String(well.get("settlement_id", "")).strip_edges()
+        var well_cell: Vector2i = well.get("cell", INVALID_CELL)
+        if asset_id.is_empty() or well_component_id.is_empty() or well_service_id.is_empty() \
+            or well_building_id.is_empty() or settlement_id.is_empty() or well_cell == INVALID_CELL \
+            or _water_components.has(well_component_id) or _water_bindings.has(well_service_id) \
+            or _well_service_by_building.has(well_building_id):
+            return false
+        _water_components[well_component_id] = {
+            "component_id": well_component_id,
+            "role": &"source",
+            "source_kind": &"private_well",
+            "operational_state": OPERATIONAL,
+            "required_power_service_id": "",
+            "planning_id": "derived:%s" % well_building_id,
+            "plant_id": "",
+            "settlement_id": settlement_id,
+            "cell": well_cell,
+            "owner_entity_id": well_building_id,
+        }
+        _water_bindings[well_service_id] = {
+            "service_id": well_service_id,
+            "service_kind": &"well",
+            "terminal_component_id": well_component_id,
+            "treatment_component_id": well_component_id,
+            "owner_entity_id": well_building_id,
+            "settlement_id": settlement_id,
+            "building_id": well_building_id,
+            "service_cell": well_cell,
+            "plant_id": "",
+            "network_id": "",
+            "critical_asset_id": asset_id,
+            "required_power_service_id": "",
+            "island_wide": false,
+        }
+        _well_service_by_building[well_building_id] = well_service_id
+        _water_local_by_service[well_service_id] = well_component_id
+        if not _register_water_asset(asset_id, &"private_well", well_component_id):
+            return false
+
+    _rebuild_water_parent_index()
+    return not _water_service_by_settlement.is_empty() and _water_asset_conditions.has(building_id)
 
 func _validate_water_topology(
     components: Dictionary,
@@ -377,29 +447,72 @@ func _validate_water_topology(
     bindings: Dictionary,
     _power_bindings_arg: Dictionary
 ) -> bool:
-    if components.size() != 1 or not links.is_empty() or bindings.is_empty():
+    if components.is_empty() or not links.is_empty() or bindings.is_empty():
         return false
-    var component: Dictionary = components.values()[0]
-    var component_id: String = String(component.get("component_id", ""))
-    if component_id.is_empty() or StringName(component.get("role", &"")) != &"source" \
-        or not _valid_state(StringName(component.get("operational_state", &""))):
+
+    var municipal_component_id: String = ""
+    var private_well_components: Dictionary = {}
+    for value: Variant in components.values():
+        if typeof(value) != TYPE_DICTIONARY:
+            return false
+        var component: Dictionary = value
+        var candidate_id: String = String(component.get("component_id", "")).strip_edges()
+        var source_kind: StringName = StringName(component.get("source_kind", &""))
+        if candidate_id.is_empty() or StringName(component.get("role", &"")) != &"source" \
+            or not _valid_state(StringName(component.get("operational_state", &""))) \
+            or not String(component.get("required_power_service_id", "")).is_empty():
+            return false
+        if source_kind == &"municipal_plant":
+            if not municipal_component_id.is_empty():
+                return false
+            municipal_component_id = candidate_id
+        elif source_kind == &"private_well":
+            private_well_components[candidate_id] = true
+        else:
+            return false
+    if municipal_component_id.is_empty():
         return false
-    var owner_id: String = ""
+
+    var municipal_owner: String = ""
+    var well_buildings: Dictionary = {}
+    var referenced_components: Dictionary = {}
+    var municipal_bindings: int = 0
+    var well_bindings: int = 0
     for value: Variant in bindings.values():
+        if typeof(value) != TYPE_DICTIONARY:
+            return false
         var binding: Dictionary = value
-        var candidate_owner: String = String(binding.get("owner_entity_id", ""))
-        if not bool(binding.get("island_wide", false)) \
-            or StringName(binding.get("service_kind", &"")) != &"municipal" \
-            or String(binding.get("terminal_component_id", "")) != component_id \
-            or String(binding.get("treatment_component_id", "")) != component_id \
-            or candidate_owner.is_empty() \
-            or not String(binding.get("required_power_service_id", "")).is_empty():
+        var service_kind: StringName = StringName(binding.get("service_kind", &""))
+        var terminal: String = String(binding.get("terminal_component_id", "")).strip_edges()
+        var treatment: String = String(binding.get("treatment_component_id", "")).strip_edges()
+        var owner: String = String(binding.get("owner_entity_id", "")).strip_edges()
+        if terminal.is_empty() or treatment != terminal or not components.has(terminal) \
+            or owner.is_empty() or not String(binding.get("required_power_service_id", "")).is_empty():
             return false
-        if owner_id.is_empty():
-            owner_id = candidate_owner
-        elif owner_id != candidate_owner:
+        referenced_components[terminal] = true
+        if service_kind == &"municipal":
+            if terminal != municipal_component_id or not bool(binding.get("island_wide", false)):
+                return false
+            if municipal_owner.is_empty():
+                municipal_owner = owner
+            elif municipal_owner != owner:
+                return false
+            municipal_bindings += 1
+        elif service_kind == &"well":
+            var well_building: String = String(binding.get("building_id", "")).strip_edges()
+            if bool(binding.get("island_wide", false)) or not private_well_components.has(terminal) \
+                or well_building.is_empty() or owner != well_building or well_buildings.has(well_building):
+                return false
+            well_buildings[well_building] = true
+            well_bindings += 1
+        else:
             return false
-    return true
+
+    var expected_wells: int = (_local_power_topology.get("wells", []) as Array).size()
+    return municipal_bindings > 0 \
+        and well_bindings == expected_wells \
+        and private_well_components.size() == expected_wells \
+        and referenced_components.size() == components.size()
 
 func _resolve_facility_building(plan: GeneratedGlobalWorldPlan, service: Dictionary) -> Dictionary:
     var buildings_value: Variant = plan.local_area_manifest.get("buildings", [])
@@ -428,6 +541,16 @@ func _register_water_asset(asset_id: String, kind: StringName, component_id: Str
     _water_asset_components[key] = component_id
     _water_asset_kinds[key] = kind
     return true
+
+func _rebuild_well_service_index() -> void:
+    _well_service_by_building.clear()
+    for service_id: String in _sorted_keys(_water_bindings):
+        var binding: Dictionary = _water_bindings[service_id]
+        if StringName(binding.get("service_kind", &"")) != &"well":
+            continue
+        var building_id: String = String(binding.get("building_id", "")).strip_edges()
+        if not building_id.is_empty():
+            _well_service_by_building[building_id] = service_id
 
 func _island_water_service_id() -> String:
     for service_id: String in _sorted_keys(_water_bindings):
