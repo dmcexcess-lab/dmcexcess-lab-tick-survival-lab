@@ -4,13 +4,11 @@ class_name IslandSurfaceRequestProjection
 const AreaRequestClass = preload("res://scripts/generation/areas/AreaGenerationRequest.gd")
 const EnvironmentProfiles = preload("res://scripts/generation/areas/EnvironmentProfileCatalog.gd")
 const GlobalProfiles = preload("res://scripts/generation/world/GlobalWorldProfileCatalog.gd")
-const HydrologyQueryClass = preload("res://scripts/generation/world/GlobalHydrologyQuery.gd")
 const ProjectorClass = preload("res://scripts/generation/integration/System20AreaRequestProjector.gd")
 
 const AREA_PROFILE: StringName = &"island.surface"
 
 var _profiles: GlobalWorldProfileCatalog = GlobalProfiles.new()
-var _hydrology: GlobalHydrologyQuery = HydrologyQueryClass.new()
 var _projector: System20AreaRequestProjector = ProjectorClass.new()
 
 func project(plan: GeneratedGlobalWorldPlan, area_id: String, bounds: Rect2i) -> Dictionary:
@@ -22,9 +20,6 @@ func project(plan: GeneratedGlobalWorldPlan, area_id: String, bounds: Rect2i) ->
     for site: Dictionary in plan.area_sites:
         if _overlap(bounds, site.get("bounds", Rect2i())):
             return _failure("island_surface_overlaps_area_site")
-    for river: Dictionary in plan.river_segments:
-        if _overlap(bounds, _rect_intersection(_hydrology.segment_corridor_rect(river), plan.bounds)):
-            return _failure("island_surface_overlaps_watercourse")
 
     var road_result: Dictionary = _projector.road_constraints_for_bounds(plan, bounds)
     if not bool(road_result.get("ok", false)):
@@ -67,7 +62,6 @@ func project(plan: GeneratedGlobalWorldPlan, area_id: String, bounds: Rect2i) ->
         roads,
         [],
         [context],
-        [],
         []
     )
     if not request.is_valid():
@@ -76,12 +70,6 @@ func project(plan: GeneratedGlobalWorldPlan, area_id: String, bounds: Rect2i) ->
 
 func _failure(reason: String) -> Dictionary:
     return {"ok": false, "failure_reason": reason, "request": null}
-
-func _rect_inside(outer: Rect2i, inner: Rect2i) -> bool:
-    if inner.size.x <= 0 or inner.size.y <= 0:
-        return false
-    var max_cell: Vector2i = inner.position + inner.size - Vector2i.ONE
-    return outer.has_point(inner.position) and outer.has_point(max_cell)
 
 func _rect_intersection(a: Rect2i, b: Rect2i) -> Rect2i:
     var start := Vector2i(maxi(a.position.x, b.position.x), maxi(a.position.y, b.position.y))
@@ -93,3 +81,9 @@ func _rect_intersection(a: Rect2i, b: Rect2i) -> Rect2i:
 func _overlap(a: Rect2i, b: Rect2i) -> bool:
     var r: Rect2i = _rect_intersection(a, b)
     return r.size.x > 0 and r.size.y > 0
+
+func _rect_inside(outer: Rect2i, inner: Rect2i) -> bool:
+    if inner.size.x <= 0 or inner.size.y <= 0:
+        return false
+    var max_cell: Vector2i = inner.position + inner.size - Vector2i.ONE
+    return outer.has_point(inner.position) and outer.has_point(max_cell)
