@@ -2,7 +2,6 @@ extends SceneTree
 
 const WorldStateClass = preload("res://scripts/foundation/world/WorldState.gd")
 const WorldMutationClass = preload("res://scripts/foundation/world/WorldMutationService.gd")
-const UtilityStateClass = preload("res://scripts/simulation/utilities/UtilityRuntimeState.gd")
 const InfrastructureClass = preload("res://scripts/simulation/utilities/UtilityPowerInfrastructureMaterializer.gd")
 const LocalTopologyPlannerClass = preload("res://scripts/simulation/utilities/UtilityLocalPowerTopologyPlanner.gd")
 const NeighborhoodUtilityStateClass = preload("res://scripts/simulation/utilities/NeighborhoodUtilityRuntimeState.gd")
@@ -12,7 +11,6 @@ const EmitterProfileClass = preload("res://scripts/simulation/lighting/LightEmit
 const IslandFixtureClass = preload("res://scripts/demo/GeneratedIslandCritiqueFixture.gd")
 
 const INVALID_CELL := Vector2i(2147483647, 2147483647)
-const MUNICIPAL_PLANT_ASSET: String = "water.physical.plant.001"
 
 var _failures: Array[String] = []
 
@@ -37,10 +35,14 @@ func _test_power_infrastructure_projection() -> void:
         var services: Array = segment.get("service_settlement_ids", [])
         _check(not services.is_empty(), "00D4 physical segment carries downstream settlement mapping")
 
+    var topology: Dictionary = LocalTopologyPlannerClass.new().plan(plan)
+    _check(bool(topology.get("ok", false)), "canonical local utility topology plans")
+    if not bool(topology.get("ok", false)):
+        return
     var world := WorldStateClass.new()
     var mutations := WorldMutationClass.new(world)
-    var utilities := UtilityStateClass.new()
-    _check(utilities.initialize_from_plan(plan), "System 33 initializes from canonical 00D power plan")
+    var utilities := NeighborhoodUtilityStateClass.new(topology)
+    _check(utilities.initialize_from_plan(plan), "System 33 initializes from canonical island utility plan")
     if not utilities.is_ready():
         return
 
@@ -70,7 +72,7 @@ func _test_power_infrastructure_projection() -> void:
                 baseline_support_cell = placement.anchor
     _check(not baseline_support_id.is_empty(), "baseline support available for surface regression")
     if not baseline_support_id.is_empty():
-        _test_constructed_vehicle_surface_rejection(plan, baseline_support_id, baseline_support_cell)
+        _test_constructed_vehicle_surface_rejection(plan, topology, baseline_support_id, baseline_support_cell)
 
     var seen_assets: Dictionary = {}
     for wire: Dictionary in infrastructure.wire_edges():
@@ -100,22 +102,12 @@ func _test_neighborhood_utility_physicalization() -> void:
         return
     var infrastructure := NeighborhoodInfrastructureClass.new(world, mutations, plan, utilities, topology)
     _check(infrastructure.is_ready(), "neighborhood utility infrastructure materializer ready")
-    _check(infrastructure.materialize(), "neighborhood power, municipal water plant, and wells physicalize")
+    _check(infrastructure.materialize(), "neighborhood power and private well caps physicalize")
 
-    var plant: WorldEntityRecord = world.entity(MUNICIPAL_PLANT_ASSET)
-    var plant_placement: WorldPlacement = world.placement(MUNICIPAL_PLANT_ASSET)
-    _check(plant != null and plant_placement != null, "municipal treatment plant is a real persistent WHAT entity")
-    if plant_placement != null:
-        var horizontal_shore_distance: int = mini(
-            plant_placement.anchor.x - plan.bounds.position.x,
-            plan.bounds.end.x - 1 - plant_placement.anchor.x
-        )
-        var vertical_shore_distance: int = mini(
-            plant_placement.anchor.y - plan.bounds.position.y,
-            plan.bounds.end.y - 1 - plant_placement.anchor.y
-        )
-        var shore_distance: int = mini(horizontal_shore_distance, vertical_shore_distance)
-        _check(shore_distance >= 0 and shore_distance <= 128, "physical municipal treatment plant remains near shore")
+    var facility_building_id: String = utilities.water_facility_building_id()
+    _check(not facility_building_id.is_empty(), "municipal water resolves one generated facility building")
+    _check(_manifest_has_building(plan, facility_building_id), "municipal water facility is part of the generated building manifest")
+    _check(world.entity(facility_building_id) == null, "utility materializer does not manufacture a duplicate municipal building shell")
 
     var wells: Array = topology.get("wells", [])
     _check(not wells.is_empty(), "physicalization test has selected rural wells")
@@ -130,12 +122,12 @@ func _test_neighborhood_utility_physicalization() -> void:
         var placement: WorldPlacement = world.placement(asset_id)
         _check(entity != null and placement != null, "selected well is a real persistent WHAT entity: %s" % asset_id)
         if placement != null:
-            _check(not building_rect.has_point(placement.anchor), "well is physically outside its owning home footprint: %s" % asset_id)
+            _check(not building_rect.has_point(placement.anchor), "well is physically outside its owning building footprint: %s" % asset_id)
         _check(not utilities.water_asset_record(asset_id).is_empty(), "selected well shares identity with real condition/maintenance state: %s" % asset_id)
 
     var snapshot: Dictionary = infrastructure.debug_snapshot()
     var counts: Dictionary = snapshot.get("semantic_counts", {})
-    _check(int(counts.get("prop.shed", 0)) == 1, "one visible treatment-building shell is materialized")
+    _check(int(counts.get("prop.shed", 0)) == 0, "no duplicate municipal treatment shed is materialized")
     _check(int(counts.get("prop.manhole", 0)) == wells.size(), "every selected well has a visible physical ground-cap entity")
 
     var service_drop_count: int = 0
@@ -152,9 +144,9 @@ func _test_neighborhood_utility_physicalization() -> void:
             direct_substation_customer_count += 1
         if role == &"service_drop":
             service_drop_count += 1
-            _check(start_id.find(".road.") >= 0, "house service drop begins at a shared roadside pole")
-            _check(end_id.find(".customer.") >= 0, "house service drop ends at its customer pole")
-            _check(not String(wire.get("served_building_id", "")).is_empty(), "house service drop names the served building")
+            _check(start_id.find(".road.") >= 0, "building service drop begins at a shared roadside pole")
+            _check(end_id.find(".customer.") >= 0, "building service drop ends at its customer pole")
+            _check(not String(wire.get("served_building_id", "")).is_empty(), "building service drop names the served building")
         elif role == &"shared_trunk":
             shared_trunk_count += 1
             var route_start: Vector2i = wire.get("route_start_cell", INVALID_CELL)
@@ -176,12 +168,17 @@ func _test_neighborhood_utility_physicalization() -> void:
         if int(use_count) >= 2:
             shared_road_pole_exists = true
             break
-    _check(direct_substation_customer_count == 0, "substation does not radiate one direct wire to every house")
+    _check(direct_substation_customer_count == 0, "substation does not radiate one direct wire to every building")
     _check(service_drop_count == int(topology.get("building_count", 0)), "every generated building receives exactly one final service drop")
     _check(shared_trunk_count > 0, "local distribution includes a shared roadside trunk")
     _check(shared_road_pole_exists, "multiple customer routes reuse the same roadside chain")
 
-func _test_constructed_vehicle_surface_rejection(plan: GeneratedGlobalWorldPlan, baseline_support_id: String, baseline_support_cell: Vector2i) -> void:
+func _test_constructed_vehicle_surface_rejection(
+    plan: GeneratedGlobalWorldPlan,
+    topology: Dictionary,
+    baseline_support_id: String,
+    baseline_support_cell: Vector2i
+) -> void:
     var blocked_surfaces: Array[StringName] = [
         &"ground.road_plain", &"ground.parking_faded", &"ground.driveway_gravel",
         &"ground.gravel_dark", &"ground.gravel_light", &"ground.alley_stained", &"ground.concrete_oil",
@@ -190,7 +187,7 @@ func _test_constructed_vehicle_surface_rejection(plan: GeneratedGlobalWorldPlan,
         var world := WorldStateClass.new()
         var mutations := WorldMutationClass.new(world)
         _check(mutations.set_terrain(baseline_support_cell, semantic), "test surface materialized: %s" % String(semantic))
-        var utilities := UtilityStateClass.new()
+        var utilities := NeighborhoodUtilityStateClass.new(topology)
         _check(utilities.initialize_from_plan(plan), "utility state initializes for blocked surface")
         if not utilities.is_ready():
             continue
@@ -202,7 +199,7 @@ func _test_constructed_vehicle_surface_rejection(plan: GeneratedGlobalWorldPlan,
     var natural_world := WorldStateClass.new()
     var natural_mutations := WorldMutationClass.new(natural_world)
     _check(natural_mutations.set_terrain(baseline_support_cell, &"ground.grass_lush"), "natural-ground control materialized")
-    var natural_utilities := UtilityStateClass.new()
+    var natural_utilities := NeighborhoodUtilityStateClass.new(topology)
     _check(natural_utilities.initialize_from_plan(plan), "utility state initializes for natural-ground control")
     if natural_utilities.is_ready():
         var natural_infrastructure := InfrastructureClass.new(natural_world, natural_mutations, plan, natural_utilities)
@@ -223,6 +220,12 @@ func _test_colored_bloom_profiles_and_tick_phases() -> void:
     _check(green.profile_id == &"light.traffic.green.candidate001", "traffic begins green")
     _check(yellow.profile_id == &"light.traffic.yellow.candidate001", "traffic advances yellow")
     _check(red.profile_id == &"light.traffic.red.candidate001", "traffic advances red")
+
+func _manifest_has_building(plan: GeneratedGlobalWorldPlan, building_id: String) -> bool:
+    for value: Variant in plan.local_area_manifest.get("buildings", []):
+        if typeof(value) == TYPE_DICTIONARY and String((value as Dictionary).get("building_id", "")) == building_id:
+            return true
+    return false
 
 func _cell_in_planned_road_surface(cell: Vector2i, roads: Array[Dictionary]) -> bool:
     for road: Dictionary in roads:
