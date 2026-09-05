@@ -106,12 +106,6 @@ func _facility_size(profile: Dictionary, constraint: Dictionary) -> Vector2i:
     var kind: StringName = StringName(constraint.get("kind", &""))
     if domain == &"power" and kind == &"substation":
         return profile.get("reservation_substation_size", Vector2i(14, 12))
-    if domain == &"potable_water" and kind == &"groundwater_source":
-        return profile.get("reservation_groundwater_source_size", Vector2i(12, 12))
-    if domain == &"potable_water" and kind == &"treatment_storage":
-        return profile.get("reservation_water_treatment_size", Vector2i(16, 16))
-    if domain == &"wastewater" and kind == &"treatment_disposal":
-        return profile.get("reservation_wastewater_treatment_size", Vector2i(20, 16))
     return Vector2i.ZERO
 
 func _candidate_facility_rects(
