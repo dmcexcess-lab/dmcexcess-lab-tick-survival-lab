@@ -12,9 +12,8 @@ var settlements: Array[Dictionary] = []
 var road_segments: Array[Dictionary] = []
 var power_nodes: Array[Dictionary] = []
 var power_segments: Array[Dictionary] = []
-## Exactly one island-wide water service record. It names the host site and the
-## real generated building selected as the water facility. Availability is the
-## operational state of that building; there is no water graph.
+## Settlement entries are only references to one island-wide physical water
+## facility. They do not describe a network or local water assets.
 var water_services: Array[Dictionary] = []
 var area_sites: Array[Dictionary] = []
 
@@ -29,9 +28,6 @@ var wastewater_services: Array[Dictionary] = []
 var wastewater_nodes: Array[Dictionary] = []
 var wastewater_segments: Array[Dictionary] = []
 
-## Compact, deterministic projection of the real local-area plans. This lets
-## population and utility boot share one whole-island generation pass instead
-## of regenerating every settlement twice before the first frame.
 var local_area_manifest: Dictionary = {}
 var population_settlements: Array[Dictionary] = []
 var resident_population: int = 0
@@ -49,7 +45,7 @@ func is_generated() -> bool:
         and not road_segments.is_empty() \
         and not power_nodes.is_empty() \
         and not power_segments.is_empty() \
-        and water_services.size() == 1
+        and not water_services.is_empty()
 
 func signature() -> String:
     if not is_generated():
@@ -106,12 +102,12 @@ func signature() -> String:
             int(power_segment.get("ordinal", 0)), String(power_segment.get("source_road_id", "")),
             String(power_segment.get("source_route_id", "")),
         ])
-    var water: Dictionary = water_services[0]
-    parts.append("water_facility=%s|%s|%s|%s|%s|%s" % [
-        String(water.get("id", "")), String(water.get("facility_id", "")),
-        String(water.get("settlement_id", "")), String(water.get("host_site_id", "")),
-        String(water.get("preferred_archetype_id", &"")), String(water.get("service_mode", &"")),
-    ])
+    for water: Dictionary in water_services:
+        parts.append("water_ref=%s|%s|%s|%s|%s|%s" % [
+            String(water.get("id", "")), String(water.get("facility_id", "")),
+            String(water.get("settlement_id", "")), String(water.get("host_site_id", "")),
+            String(water.get("preferred_archetype_id", &"")), String(water.get("service_mode", &"")),
+        ])
     for site: Dictionary in area_sites:
         var site_bounds: Rect2i = site.get("bounds", Rect2i())
         parts.append("site=%s|%s|%d,%d,%d,%d|seed%d|%s|%s" % [
