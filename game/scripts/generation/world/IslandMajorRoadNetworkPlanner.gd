@@ -8,10 +8,10 @@ func plan(
     profile: Dictionary,
     settlements: Array[Dictionary],
     geography_cells: Array[Dictionary],
-    river_segments: Array[Dictionary]
+    river_segments: Array[Dictionary] = []
 ) -> Dictionary:
     var road_segments: Array[Dictionary] = []
-    if request == null or not request.is_valid() or profile.is_empty() or settlements.size() < 2 or geography_cells.is_empty() or river_segments.is_empty():
+    if request == null or not request.is_valid() or profile.is_empty() or settlements.size() < 2 or geography_cells.is_empty():
         return {"ok": false, "failure_reason": "invalid_island_major_road_planner_input", "road_segments": road_segments}
 
     var primary_width: int = int(profile.get("primary_width", 5))
@@ -19,9 +19,6 @@ func plan(
     var connected: Dictionary = {0: true}
     var edge_ordinal: int = 1
 
-    # Standard Prim-style minimum spanning tree over the generated settlements.
-    # Candidate selection uses deterministic geometric distance; the expensive
-    # terrain pathfinder runs only for the ten edges we actually materialize.
     while connected.size() < settlements.size():
         var best: Dictionary = _best_routable_edge(connected, settlements, geography_cells, river_segments, profile)
         if best.is_empty():
@@ -106,9 +103,9 @@ func plan(
 func _best_routable_edge(
     connected: Dictionary,
     settlements: Array[Dictionary],
-    geography_cells: Array[Dictionary],
-    river_segments: Array[Dictionary],
-    profile: Dictionary
+    _geography_cells: Array[Dictionary],
+    _river_segments: Array[Dictionary],
+    _profile: Dictionary
 ) -> Dictionary:
     var best: Dictionary = {}
     var best_score: int = 2147483647
