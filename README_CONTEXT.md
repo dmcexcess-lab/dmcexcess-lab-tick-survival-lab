@@ -4,17 +4,21 @@ Last updated: **2026-09-05**
 
 This is the authoritative continuation checkpoint. Read `README_SOPS.md`, fetch current `main` once, and continue from **NEXT OPERATION**. Newer explicit user direction supersedes this handoff.
 
-## Current checkpoint — road hierarchy and alternate connections CLOSED
+## Current checkpoint — dirt-road traversal repair CLOSED
 
-- **Verified executable:** `9936d75186f269ab4e779389a8b62553684591fa`.
-- **53/53 GitHub Actions workflows succeeded**, no failures or pending runs for that executable.
-- **Pages SUCCESS:** https://github.com/dmcexcess-lab/dmcexcess-lab-tick-survival-lab/actions/runs/33998612624
+- **Verified executable:** `86b201c24f867b5d823633f3f83ae7de982b92e6`.
+- **51/51 GitHub Actions workflows succeeded**, no failures or pending runs for that executable.
+- **Pages SUCCESS:** https://github.com/dmcexcess-lab/dmcexcess-lab-tick-survival-lab/actions/runs/33999144142
 - **Play:** https://dmcexcess-lab.github.io/dmcexcess-lab-tick-survival-lab/
-- Closing commit is documentation-only. Local executable candidate `a89ea98` has the same tree `54d535f98e8cf394a82393ebbfa981d59d4e53da` as the published executable.
+- Closing commit is documentation-only. Local executable candidate `206fcc7` has the same tree `dd7ec42d4433364ddd54cbe3ffbcd3b20eeac61d` as the published executable.
 - Standing direct-main/Pages authorization remains in the SOP; do not ask again.
 
 ### Completed in this continuation
 
+- Repaired the user-reported impassable dirt road. `ground.dirt_road` is now registered as traversable by the production generated-world movement rules.
+- Registered generated four-lane white-divider terrain as traversable so the markings cannot create invisible movement barriers.
+- Yellow and white road-marking cells now participate in live and remembered road-neighbor topology, preventing painted cells from visually breaking adjoining pavement.
+- Complete-island generation/replay explicitly proves the new generated terrain types are traversable. Movement, ground renderer and reference-seed playable boot checks passed locally.
 - Added up to eight nearest unused settlement-pair connections beyond the road tree.
 - Road types survive global planning, local projection and surface materialization: four-lane paved (two each way), two-lane paved (one each way), single-lane gravel and single-lane dirt.
 - Four-lane routes paint dashed white lane dividers around the yellow directional centerline. Unpaved surfaces do not paint centerlines. Legacy primary/secondary frontage classes remain.
@@ -116,8 +120,9 @@ Production inheritance remains `VehicleGameMain -> System34GameMain -> UtilityGa
 
 ## NEXT OPERATION
 
-1. User playtests the deployed road/density build: four road types, alternate journeys, rural proportions, and movement lag. Adjust from concrete feedback.
-2. No CI or publication work remains for this executable. Keep normal seed checks focused; the full twelve-seed matrix remains explicit opt-in.
-3. Preserve the completed river/wastewater/water-graph removal and protected municipal/private-well contract above. Do not restart old cleanup steps from historical handoffs.
-4. Continue rendering/player/world interaction closure before combat and NPC/zombie work, as directed. Future zombies consume actual population records.
-5. Whole-world rollback snapshots, distant immutable unloading/persisted deltas, and human browser/iPhone acceptance remain open; this road change does not claim to solve them.
+1. User playtests dirt-road traversal and completes the unfinished feedback that ended with “and”. Then adjust from the concrete remainder.
+2. Continue testing the deployed road/density build: four road types, alternate journeys, rural proportions, and movement lag.
+3. No CI or publication work remains for this executable. Keep normal seed checks focused; the full twelve-seed matrix remains explicit opt-in.
+4. Preserve the completed river/wastewater/water-graph removal and protected municipal/private-well contract above. Do not restart old cleanup steps from historical handoffs.
+5. Continue rendering/player/world interaction closure before combat and NPC/zombie work, as directed. Future zombies consume actual population records.
+6. Whole-world rollback snapshots, distant immutable unloading/persisted deltas, and human browser/iPhone acceptance remain open; this repair does not claim to solve them.
