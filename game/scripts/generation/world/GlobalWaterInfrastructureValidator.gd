@@ -8,8 +8,6 @@ func validate(request: GlobalWorldGenerationRequest, plan: GeneratedGlobalWorldP
     if plan.water_services.is_empty():
         failures.append("global_water_service_refs_missing")
         return {"ok": false, "failures": failures}
-    if not plan.water_nodes.is_empty() or not plan.water_segments.is_empty():
-        failures.append("global_water_network_topology_forbidden")
 
     var settlements: Dictionary = {}
     for settlement: Dictionary in plan.settlements:
@@ -54,9 +52,6 @@ func validate(request: GlobalWorldGenerationRequest, plan: GeneratedGlobalWorldP
         failures.append("global_water_facility_host_site_invalid")
     if not settlements.has(host_settlement_id):
         failures.append("global_water_facility_host_settlement_missing")
-
-    if not plan.wastewater_services.is_empty() or not plan.wastewater_nodes.is_empty() or not plan.wastewater_segments.is_empty():
-        failures.append("global_wastewater_model_forbidden")
     return {"ok": failures.is_empty(), "failures": failures}
 
 func _site_by_id(sites: Array[Dictionary], site_id: String) -> Dictionary:
