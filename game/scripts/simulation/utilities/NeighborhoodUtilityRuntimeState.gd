@@ -339,7 +339,7 @@ func _materialize_water(plan: GeneratedGlobalWorldPlan) -> bool:
     _water_asset_conditions.clear()
     _water_asset_components.clear()
     _water_asset_kinds.clear()
-    if plan.water_services.is_empty() or not plan.water_nodes.is_empty() or not plan.water_segments.is_empty():
+    if plan.water_services.is_empty():
         return false
 
     var first_service: Dictionary = plan.water_services[0]
