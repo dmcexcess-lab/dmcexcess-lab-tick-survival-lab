@@ -16,10 +16,10 @@ func _ready() -> void:
     var panel := PanelContainer.new()
     panel.anchor_left = 1.0
     panel.anchor_right = 1.0
-    panel.offset_left = -226.0
+    panel.offset_left = -286.0
     panel.offset_right = -8.0
     panel.offset_top = 158.0
-    panel.offset_bottom = 304.0
+    panel.offset_bottom = 390.0
     panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
     root.add_child(panel)
     _label = Label.new()
@@ -45,12 +45,21 @@ func _refresh_text() -> void:
     var lines: PackedStringArray = PackedStringArray()
     lines.append("PERF DEV  last / max ms")
     lines.append(_timing_line("STREAM", timings.get("stream_update", {})))
+    lines.append(_timing_line("  DISC", timings.get("stream_source_discovery", {})))
+    lines.append(_timing_line("  VALID", timings.get("stream_catalog_validation", {})))
+    lines.append(_timing_line("  PREP", timings.get("stream_plan_prepare", {})))
+    lines.append(_timing_line("  SNAP", timings.get("stream_world_snapshot", {})))
+    lines.append(_timing_line("  COMMIT", timings.get("stream_materialization_commit", {})))
+    lines.append(_timing_line("WINDOW", timings.get("render_window_shift", {})))
     lines.append(_timing_line("LIGHT SIM", timings.get("lighting_rebuild", {})))
     lines.append(_timing_line("LIGHT DRAW", timings.get("lighting_draw", {})))
     lines.append(_timing_line("VISION", timings.get("perception_recompute", {})))
     lines.append(_timing_line("INTERACT", timings.get("interaction_query", {})))
     lines.append(_timing_line("WEATHER", timings.get("weather_draw", {})))
     lines.append(_timing_line("SKY MASK", timings.get("sky_exposure_rebuild", {})))
+    lines.append("STREAM enter %d prep %d cached %d" % [int(values.get("stream_entering_regions", 0)), int(values.get("stream_lookahead_prepares", 0)), int(values.get("stream_prepared_cached", 0))])
+    lines.append("INDEX %d hits %d skip %d" % [int(values.get("stream_indexed_regions", 0)), int(values.get("stream_region_index_hits", 0)), int(values.get("stream_skipped_materialized", 0))])
+    lines.append("WINDOW shifts %d" % int(values.get("render_window_shifts", 0)))
     lines.append("LIGHT geo %d draw %d" % [int(values.get("lighting_geometry_rebuilds", 0)), int(values.get("lighting_draws", 0))])
     lines.append("VISION %d INT %d" % [int(values.get("perception_recomputes", 0)), int(values.get("interaction_queries", 0))])
     lines.append("BATCH %s" % ("--" if batch.is_empty() else "%d changes -> 1" % int(batch.get("change_count", 0))))
@@ -58,8 +67,4 @@ func _refresh_text() -> void:
 
 static func _timing_line(name: String, value: Variant) -> String:
     var entry: Dictionary = value if typeof(value) == TYPE_DICTIONARY else {}
-    return "%s %.2f / %.2f" % [
-        name,
-        float(int(entry.get("last_usec", 0))) / 1000.0,
-        float(int(entry.get("max_usec", 0))) / 1000.0,
-    ]
+    return "%s %.2f / %.2f" % [name, float(int(entry.get("last_usec", 0))) / 1000.0, float(int(entry.get("max_usec", 0))) / 1000.0]
