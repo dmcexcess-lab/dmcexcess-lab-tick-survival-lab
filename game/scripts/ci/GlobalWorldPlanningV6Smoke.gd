@@ -46,7 +46,7 @@ func _test_global_plan(
         push_error("GLOBAL_WORLD_PLAN_FAILURE_REASON: %s" % plan.failure_reason)
         return
 
-    _check(plan.profile_version == 7, "temperate.rural.region v7 is recorded")
+    _check(plan.profile_version == 8, "temperate.rural.region v8 is recorded")
     _check(bool(validator.validate(request, plan).get("ok", false)), "base geography/road validation remains green")
     _check(bool(power_validator.validate(request, plan).get("ok", false)), "regional power validation remains green")
     _check(bool(water_validator.validate(request, plan).get("ok", false)), "island-wide potable-water validation remains green")
@@ -97,7 +97,7 @@ func _test_system20_projection(projector: System20AreaRequestProjector, plan: Ge
         _check(smalltown_request.area_profile_id == &"smalltown.center", "small-town site selects smalltown.center")
         _check(not smalltown_request.inherited_planning_constraints.is_empty(), "small-town request carries current power/service infrastructure facts")
         var smalltown_plan: GeneratedAreaPlan = local_generator.generate(smalltown_request)
-        _check(smalltown_plan.is_generated(), "small-town Candidate 001 still generates from exact v7 global facts")
+        _check(smalltown_plan.is_generated(), "small-town Candidate 001 still generates from current global facts")
         if smalltown_plan.is_generated():
             _check(smalltown_plan.area_profile_version == 5, "small-town Candidate 001 records profile v5")
             _check(not smalltown_plan.reservations.is_empty(), "small-town local plan contains current infrastructure reservations")
@@ -117,7 +117,7 @@ func _test_system20_projection(projector: System20AreaRequestProjector, plan: Ge
         _check(hamlet_request.area_profile_id == &"rural.scattered", "%s selects rural.scattered" % hamlet_site_id)
         _check(not hamlet_request.inherited_planning_constraints.is_empty(), "%s consumes current service/infrastructure facts" % hamlet_site_id)
         var hamlet_plan: GeneratedAreaPlan = local_generator.generate(hamlet_request)
-        _check(hamlet_plan.is_generated(), "%s Candidate 001 generates from exact v7 global facts" % hamlet_site_id)
+        _check(hamlet_plan.is_generated(), "%s Candidate 001 generates from current global facts" % hamlet_site_id)
         if hamlet_plan.is_generated():
             _check(hamlet_plan.area_profile_version == 1, "%s records rural.scattered v1" % hamlet_site_id)
             _check(hamlet_plan.blocks.is_empty(), "%s remains block-free sparse rural morphology" % hamlet_site_id)
