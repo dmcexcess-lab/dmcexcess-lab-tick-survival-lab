@@ -1,8 +1,8 @@
 # Tick Survival Lab — System 33 Power / Water Utility Runtime
 
-Status: **IMPLEMENTED + EXACT-HEAD AUTOMATED VERIFIED; HUMAN RETEST PENDING**
+Status: **IMPLEMENTED; TARGETED EXACT-HEAD AUTOMATED VERIFIED; HUMAN RETEST PENDING**
 
-Current verified executable: `6aab0596cb46d70d4739cbc045d149a25597193d`
+Current verified water/well executable: `4ced86b353d273d54b89e0fb52499f564172364b`
 
 Roadmap phase: **Phase 3 — Power and Water**
 
@@ -15,7 +15,7 @@ Physical-network extension: `33B_POWER_PHYSICAL_NETWORK_CONDITION.md`
 
 ## 1. Authority
 
-System 33 owns current utility service truth and persistent utility condition. Planning and materialization may provide identities/geometry, but consumers never infer power or water from sprites, brightness, distance from a plant, or UI state.
+System 33 owns current utility service truth and persistent utility condition. Planning and materialization may provide identities/geometry, but consumers never infer power or water from sprites, brightness, distance from a facility, or UI state.
 
 > **Real infrastructure creates real service paths; System 33 owns whether those paths currently work.**
 
@@ -91,7 +91,7 @@ There is no continuous analytic wear scheduler, per-span Node, per-span Timer, r
 
 ### Player-facing physical support repair
 
-The low-level condition seam is now connected to ordinary player interaction for failed persistent **distribution supports**.
+The low-level condition seam is connected to ordinary player interaction for failed persistent **distribution supports**.
 
 A clicked power pole is the same persistent WHAT entity registered with the power network as a `distribution_support`; the interaction layer does not create another condition record. `UtilityPowerRepairInteractionOfferProvider` only offers REPAIR when that exact canonical asset is currently failed, and `UtilityPowerRepairActionService` commits through `UtilityPowerNetworkRuntime`.
 
@@ -107,54 +107,68 @@ The action snapshots the canonical utility runtime before commit and restores it
 
 Distribution **spans** remain real condition assets and retain their low-level repair seam, but they do not yet have an independent player-clickable WHAT identity. Therefore current ordinary player-facing utility repair is deliberately support-only rather than inventing a click target for a wire.
 
-## 5. Municipal water
+## 5. Municipal water — one real building
 
-The current global water contract is one **island-wide municipal treatment facility** near the shore.
+The current municipal contract is deliberately simple:
 
-The municipal runtime has one source -> treatment -> distribution-header chain shared by every settlement service. Municipal service records are explicitly `island_wide_municipal`; there is no service radius and no simulated long-distance municipal pipe network.
+> **One already-generated real building is the island's municipal water facility. If it works, municipal water works island-wide. If it fails, municipal water is off island-wide.**
 
-`NeighborhoodUtilityRuntimeState.water_service_for_cell()` resolves municipal service from the island-wide settlement-service records rather than using the retired plant-radius model. A generated small-town or rural settlement cell can therefore resolve its real municipal service even when the plant and its internal nodes are elsewhere on the island.
+System 00D5 provides lightweight per-settlement service references, but every reference resolves to the same facility identity and the same System-33 source component. There is no water-node graph, no water-link graph, no pipe routing, no simulated distribution header and no service radius.
 
-The plant's stable critical asset is real persistent world truth. Current physical materialization is a small fenced utility facility containing a shed/plant body, tank-like storage, industrial machinery and a utility box.
+`NeighborhoodUtilityRuntimeState` resolves the selected host from the global structural building manifest and uses that existing generated building as the one `municipal_plant` asset. `NeighborhoodPowerInfrastructureMaterializer` must **not** create a duplicate water-treatment shed, tank complex or second facility entity.
 
-If the critical municipal plant asset fails, every municipal settlement service loses water. Repair restores the same shared service chain.
+`water_service_for_settlement()` and ordinary non-well `water_service_for_building()` resolve one of the settlement aliases to this same island facility. A generated building therefore has municipal service because the shared facility is operational, not because a pipe reaches its cell.
 
-### Municipal plant power rule
+If the facility building is damaged below the water failure threshold, every municipal alias becomes unavailable. Repair of the same real facility building restores municipal service island-wide.
 
-The municipal plant **does not require external grid power**. Its water components/bindings have no required power-service ID. A grid outage by itself must not disable island-wide municipal water.
+### Municipal facility power rule
+
+The municipal facility **does not require external grid power**. Its water component/bindings have no required power-service ID. A grid outage by itself must not disable island-wide municipal water.
 
 ## 6. Rural private wells
 
-System 33 selects wells from the **actual generated rural residential building manifest**, not from settlement-radius intent.
+System 33 selects private wells from the **actual generated rural-building manifest**. Candidate status is based on the building's rural area site; it is not restricted to a residential archetype and it never applies to town/non-rural buildings.
 
-Current deterministic target:
+Current deterministic rule:
 
-- nominal target: **15%** of rural homes;
-- accepted range: **10–20%** when enough rural homes exist;
-- selection seed: world seed + stable building identity.
+- selected count is within **10–20% of generated rural buildings** when enough rural buildings exist for the range to be meaningful;
+- both count and selection are deterministic from world seed + stable building identity;
+- one selected building receives at most one well;
+- every selected well has a stable asset ID, component ID and private service ID;
+- the well is placed as a real persistent visible ground-cap entity adjacent to its owning generated building;
+- the well has persistent condition and repair state;
+- the well has **no required external power service**.
 
-Every selected well has:
+### Authoritative-source rule
 
-- a stable physical asset/entity ID;
-- a stable water component and private service ID;
-- a real placement adjacent to its owning generated building;
-- persistent condition and repair state;
-- a dependency on that building group's real electrical service.
+For a selected well building, the private well **replaces municipal water** as that building's authoritative source.
 
-The current visible ground-cap semantic reuses existing final prop art while stable System-33 identity carries actual well truth. Wells are not UI-only markers.
+`well_service_for_building(building_id)` returns that stable private service. `water_service_for_building(building_id)` returns the same private service whether the well is currently working or broken.
 
-`water_service_for_building()` prefers a working private well for that building; otherwise the building can use its settlement's island-wide municipal service.
+Consequences:
+
+- a healthy well building has private water;
+- a municipal-facility outage does not remove water from a healthy private-well building;
+- damaging the well makes that private service unavailable;
+- the building then has **no water** until the well is repaired;
+- a broken well does **not** fall back to municipal service;
+- repair restores the same private service identity;
+- rural buildings without wells and all town buildings remain municipal-water buildings.
+
+This is source ownership, not a preference order. Availability and source identity are separate truths.
 
 ## 7. Water asset condition and repair
 
-Municipal plant and private wells carry persistent physical condition. Current failure threshold is 250 from an initial condition of 1000; successful repair restores condition to 900.
+The municipal facility building and private wells carry persistent physical condition. Current failure threshold is 250 from an initial condition of 1000; successful repair restores condition to 900.
 
 Current low-level mechanical material requirements:
 
-- municipal plant: 3 material units;
+- municipal facility: 3 material units;
 - private well: 1 material unit.
 
-These remain low-level owner seams. They are not yet ordinary player-facing exact carried-resource actions and must not be presented as such until their physical target/tool/material routes are connected through the same truthful interaction pipeline.
+Snapshot/restore preserves municipal and private-well condition plus the stable binding identities. Restoring a snapshot rebuilds the derived private-well building index rather than rerolling selection.
+
+These repair methods remain low-level owner seams. They are not yet ordinary player-facing exact carried-resource actions and must not be presented as such until their physical target/tool/material routes are connected through the truthful interaction pipeline.
 
 ## 8. Lighting and refrigeration consumers
 
@@ -169,11 +183,11 @@ A power outage changes these consumers through service queries/events. Rendering
 
 ## 9. Persistent state and caching
 
-Utility state uses typed power/water components, links, bindings, appliance records and revisions. Service is derived from bounded upstream chains and cached by revision.
+Utility state uses typed power/water components, links/bindings where appropriate, appliance records and revisions. Municipal water specifically uses one source component and settlement bindings with **zero physical water links**; private wells each use one local source component/binding.
 
-Snapshot/restore preserves durable utility state and physical asset condition; derived caches are rebuilt. Streaming does not heal failed infrastructure.
+Service is derived from bounded authoritative state and cached by revision. Snapshot/restore preserves durable utility state and physical asset condition; derived caches are rebuilt. Streaming does not heal failed infrastructure.
 
-The player-facing support repair reuses this same snapshot/restore contract transactionally; it does not add a UI-layer rollback or duplicate utility state.
+The player-facing power-support repair reuses this same snapshot/restore contract transactionally; it does not add a UI-layer rollback or duplicate utility state.
 
 ## 10. Performance contract
 
@@ -185,7 +199,7 @@ Forbidden patterns include:
 - render/camera-driven service recomputation;
 - technical streaming state defining utility existence.
 
-The local topology is planned once from deterministic generated content. Daily line snaps are processed only when authoritative time crosses a day boundary. Local mutations invalidate only relevant cached/service state.
+The local topology is planned once from deterministic generated content. Rural-well selection happens in that one-shot planning pass. Daily line snaps are processed only when authoritative time crosses a day boundary. Local mutations invalidate only relevant cached/service state.
 
 ## 11. Wastewater boundary
 
@@ -193,46 +207,47 @@ There is **no wastewater/sewer/septic gameplay or live planning dependency**. `0
 
 ## 12. Verification contract
 
-`verify/system33-power-water` proves the current utility and physical-network behavior and protects:
+`verify/system33-power-water` is the owning water/well contract. On executable `4ced86b353d273d54b89e0fb52499f564172364b`, run `33988514222` succeeded. It proves, among the current utility checks:
 
 - project import/parse;
-- System-33 power/water smoke;
-- generated local substation/customer topology;
-- small-town generation when regional service exists but no legacy global substation node is inside the site;
-- zero direct substation-to-customer starburst spans;
-- exactly one final service drop per generated served building;
-- roadside shared-trunk spans tied to real generated-road centerline cells;
-- shared path deduplication and actual pole reuse across multiple wire edges;
-- physical network damage/repair and daily snap behavior;
-- island-wide municipal water cell/service lookup without radius inference;
-- plant/well service truth;
-- complete island planning;
-- System-27 physical lighting;
-- System-30 freshness;
-- performance architecture;
-- player input responsiveness;
-- canonical startup.
+- generated local power topology remains consumable by System 33;
+- municipal water has no node/segment graph;
+- wastewater arrays remain absent;
+- exactly one existing generated building is the authoritative municipal facility asset;
+- municipal facility failure removes municipal service island-wide and repair restores it;
+- municipal water is independent of outside-grid power;
+- deterministic private-well selection lands within 10–20% of rural buildings;
+- only rural buildings receive private wells;
+- same seed replays the same selected wells;
+- every selected well maps directly to its owning building;
+- wells have no grid-power dependency;
+- a private well survives municipal failure;
+- a damaged well leaves its building dry rather than falling back to municipal water;
+- well repair restores that same private source;
+- utility snapshots preserve the current water truth.
 
-The dedicated `verify/system33-roadside-pole-routing` contract additionally proves that generated driveway/parking access cells are carried into utility pole exclusions, real materialized local power poles do not occupy those cells, an obstructed support can remain on its current legal side, a genuinely forced crossing moves to the opposite side, and the next two straight-route supports cannot immediately cross back. It also scans the real shared-trunk materialization for the same side-hold behavior.
+The physical-infrastructure smoke additionally proves the municipal facility is an already generated building, no duplicate municipal shed is materialized, and every selected private well receives its persistent visible well-cap entity.
 
-Player-facing repair is additionally protected by `game/scripts/ci/UtilityPowerRepairUiSmoke.gd` inside `verify/world-interaction-closure`: it damages a real physical support, proves the corresponding outage, drives the real pointer/chooser REPAIR route, proves exact carried-resource consumption and WHEN completion, proves canonical condition/service restoration, and proves that the repaired healthy support no longer offers REPAIR.
+`verify/pages-deploy` run `33988514204` also succeeded for that exact executable.
 
-Verified executable: `6aab0596cb46d70d4739cbc045d149a25597193d`. On that exact head `verify/system33-power-water`, `verify/world-interaction-closure` (run `33915077349`), protected neighboring statuses and `verify/pages-deploy` (run `33915077391`) are green.
+### Known unrelated/pre-existing red checks
+
+Do **not** describe the entire `4ced86...` repository suite as green. Several other checks were already failing around this development line. In particular, `verify/system33-roadside-pole-routing` fails its shared-trunk two-pole side-hold assertion on `4ced86...`, and the same check was already failing on pre-well parent `12bcdcd40a7f6ab45ecd2bfa3424e10dfff61935`. That is a separate power-routing defect, not evidence of a private-well failure and not part of this water-contract completion.
 
 ## 13. Human acceptance
 
-Automated verification is green. Browser play should still verify the visible/game-feel result:
+Automated water/well verification is green. Browser play should still verify the visible/game-feel result:
 
-1. substations appear as small fenced electrical compounds and scale roughly one per ten generated buildings;
-2. no fake long-distance line is drawn from the regional source/power plant to substations;
-3. each substation's local distribution leaves as a shared roadside feeder tree rather than separate rays to every house;
-4. common route sections visibly reuse one set of poles/wires and forks occur only where needed;
-5. roadside support poles do not land on generated driveway/parking/access strips, and a feeder that crosses the road stays on the new side for two subsequent support placements before an elective cross-back;
-6. final service drops terminate near the real buildings they serve;
-7. line failure causes the expected local blackout and a failed wooden pole can be repaired through the ordinary chooser using the exact carried resources, restoring the causally affected service;
-8. the municipal water plant exists physically and a plant failure removes island-wide municipal water;
-9. ordinary grid loss does not disable the municipal plant;
-10. a deterministic minority of rural homes have real private wells and powered-well failure behaves correctly;
+1. substations appear as small fenced electrical compounds and local distribution remains readable;
+2. no fake long-distance source-to-substation line is drawn;
+3. the one municipal-water facility is an existing generated building, with no duplicate treatment shed/tank facility beside it;
+4. damaging that facility removes municipal water island-wide while grid loss alone does not;
+5. roughly 10–20% of rural buildings receive visible private well caps for a given generated island;
+6. town buildings never receive private wells;
+7. a well building retains water during municipal failure;
+8. a broken well building is dry and does not silently switch to municipal water;
+9. repairing the well restores that building's private water;
+10. no wastewater, pipe-network or radius behavior appears;
 11. no black-screen, first-step hitch growth or input-backlog regression returns, with phone/Safari remaining first-class.
 
 Do not mark Phase 3 HUMAN ACCEPTED solely from CI.
