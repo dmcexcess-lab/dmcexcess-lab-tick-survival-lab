@@ -4,12 +4,10 @@ class_name GlobalWorldPlanner
 const PlanClass = preload("res://scripts/generation/world/GeneratedGlobalWorldPlan.gd")
 const ProfilesClass = preload("res://scripts/generation/world/GlobalWorldProfileCatalog.gd")
 const GeographyPlannerClass = preload("res://scripts/generation/world/GlobalGeographyPlanner.gd")
-const HydrologyPlannerClass = preload("res://scripts/generation/world/GlobalHydrologyPlanner.gd")
 const SettlementPlannerClass = preload("res://scripts/generation/world/GlobalSettlementPlanner.gd")
 const IslandSettlementPlannerClass = preload("res://scripts/generation/world/IslandSettlementHierarchyPlanner.gd")
 const RoadPlannerClass = preload("res://scripts/generation/world/GlobalMajorRoadPlanner.gd")
 const IslandRoadPlannerClass = preload("res://scripts/generation/world/IslandMajorRoadNetworkPlanner.gd")
-const BridgePlannerClass = preload("res://scripts/generation/world/GlobalBridgeIntentPlanner.gd")
 const PowerPlannerClass = preload("res://scripts/generation/world/GlobalPowerInfrastructurePlanner.gd")
 const WaterPlannerClass = preload("res://scripts/generation/world/GlobalWaterInfrastructurePlanner.gd")
 const RegionPlannerClass = preload("res://scripts/generation/world/GlobalPlanningRegionPlanner.gd")
@@ -19,12 +17,10 @@ const WaterValidatorClass = preload("res://scripts/generation/world/GlobalWaterI
 
 var _profiles: GlobalWorldProfileCatalog
 var _geography_planner: GlobalGeographyPlanner
-var _hydrology_planner: GlobalHydrologyPlanner
 var _settlement_planner: GlobalSettlementPlanner
 var _island_settlement_planner: IslandSettlementHierarchyPlanner
 var _road_planner: GlobalMajorRoadPlanner
 var _island_road_planner: IslandMajorRoadNetworkPlanner
-var _bridge_planner: GlobalBridgeIntentPlanner
 var _power_planner: GlobalPowerInfrastructurePlanner
 var _water_planner: GlobalWaterInfrastructurePlanner
 var _region_planner: GlobalPlanningRegionPlanner
@@ -35,12 +31,10 @@ var _water_validator: GlobalWaterInfrastructureValidator
 func _init() -> void:
     _profiles = ProfilesClass.new()
     _geography_planner = GeographyPlannerClass.new()
-    _hydrology_planner = HydrologyPlannerClass.new()
     _settlement_planner = SettlementPlannerClass.new()
     _island_settlement_planner = IslandSettlementPlannerClass.new()
     _road_planner = RoadPlannerClass.new()
     _island_road_planner = IslandRoadPlannerClass.new()
-    _bridge_planner = BridgePlannerClass.new()
     _power_planner = PowerPlannerClass.new()
     _water_planner = WaterPlannerClass.new()
     _region_planner = RegionPlannerClass.new()
@@ -71,25 +65,11 @@ func generate(request: GlobalWorldGenerationRequest) -> GeneratedGlobalWorldPlan
             return plan
         geography_cells.append(geography_value)
 
-    ## The production island owns no river geometry. The older regional profile
-    ## still uses its isolated compatibility path until that profile is deleted.
-    var river_segments: Array[Dictionary] = []
-    if not island_mode:
-        var hydrology_result: Dictionary = _hydrology_planner.plan(request, profile, geography_cells)
-        if not bool(hydrology_result.get("ok", false)):
-            plan.failure_reason = String(hydrology_result.get("failure_reason", "global_hydrology_planning_failed"))
-            return plan
-        for river_value: Variant in hydrology_result.get("river_segments", []):
-            if typeof(river_value) != TYPE_DICTIONARY:
-                plan.failure_reason = "global_hydrology_result_invalid"
-                return plan
-            river_segments.append(river_value)
-
     var settlement_result: Dictionary
     if island_mode:
         settlement_result = _island_settlement_planner.plan(request, profile, geography_cells)
     else:
-        settlement_result = _settlement_planner.plan(request, profile, geography_cells, river_segments)
+        settlement_result = _settlement_planner.plan(request, profile, geography_cells)
     if not bool(settlement_result.get("ok", false)):
         plan.failure_reason = String(settlement_result.get("failure_reason", "global_settlement_planning_failed"))
         return plan
@@ -110,7 +90,7 @@ func generate(request: GlobalWorldGenerationRequest) -> GeneratedGlobalWorldPlan
     if island_mode:
         road_result = _island_road_planner.plan(request, profile, settlements, geography_cells)
     else:
-        road_result = _road_planner.plan(request, profile, settlements, geography_cells, river_segments)
+        road_result = _road_planner.plan(request, profile, settlements, geography_cells)
     if not bool(road_result.get("ok", false)):
         plan.failure_reason = String(road_result.get("failure_reason", "global_major_road_planning_failed"))
         return plan
@@ -120,18 +100,6 @@ func generate(request: GlobalWorldGenerationRequest) -> GeneratedGlobalWorldPlan
             plan.failure_reason = "global_major_road_result_invalid"
             return plan
         road_segments.append(road_value)
-
-    var bridge_intents: Array[Dictionary] = []
-    if not island_mode:
-        var bridge_result: Dictionary = _bridge_planner.plan(road_segments, river_segments)
-        if not bool(bridge_result.get("ok", false)):
-            plan.failure_reason = String(bridge_result.get("failure_reason", "global_bridge_intent_planning_failed"))
-            return plan
-        for bridge_value: Variant in bridge_result.get("bridge_intents", []):
-            if typeof(bridge_value) != TYPE_DICTIONARY:
-                plan.failure_reason = "global_bridge_intent_result_invalid"
-                return plan
-            bridge_intents.append(bridge_value)
 
     var power_result: Dictionary = _power_planner.plan(request, profile, settlements, road_segments)
     if not bool(power_result.get("ok", false)):
@@ -178,11 +146,9 @@ func generate(request: GlobalWorldGenerationRequest) -> GeneratedGlobalWorldPlan
     plan.profile_id = request.profile_id
     plan.profile_version = int(profile.get("version", 0))
     plan.geography_cells = geography_cells
-    plan.river_segments = river_segments
     plan.regions = regions
     plan.settlements = settlements
     plan.road_segments = road_segments
-    plan.bridge_intents = bridge_intents
     plan.power_nodes = power_nodes
     plan.power_segments = power_segments
     plan.water_services = water_services
