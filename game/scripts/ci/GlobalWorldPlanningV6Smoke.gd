@@ -51,8 +51,13 @@ func _test_global_plan(
     _check(bool(power_validator.validate(request, plan).get("ok", false)), "regional power validation remains green")
     _check(bool(water_validator.validate(request, plan).get("ok", false)), "island-wide potable-water validation remains green")
     _check(plan.water_services.size() == plan.settlements.size(), "every settlement receives island-wide municipal water service")
-    _check(plan.water_nodes.size() == 3, "one physical water plant exposes exactly three internal nodes")
-    _check(plan.water_segments.size() == 2, "one physical water plant exposes exactly two internal segments")
+    _check(plan.water_nodes.is_empty(), "island water has no topology nodes")
+    _check(plan.water_segments.is_empty(), "island water has no pipe or internal segments")
+    _check(
+        plan.wastewater_services.is_empty() and plan.wastewater_nodes.is_empty() and plan.wastewater_segments.is_empty(),
+        "wastewater remains removed"
+    )
+    _check(_all_water_services_share_one_facility(plan), "all settlements reference one physical water facility")
     _check(_all_water_services_are_island_wide(plan), "all potable-water services use the island-wide municipal contract")
 
     var replay: GeneratedGlobalWorldPlan = planner.generate(GlobalFixtureClass.request(GlobalFixtureClass.SEED))
@@ -65,6 +70,7 @@ func _test_global_plan(
         _check(bool(validator.validate(alternate_request, alternate).get("ok", false)), "alternate seed passes base validation")
         _check(bool(power_validator.validate(alternate_request, alternate).get("ok", false)), "alternate seed passes power validation")
         _check(bool(water_validator.validate(alternate_request, alternate).get("ok", false)), "alternate seed passes island-wide potable-water validation")
+        _check(_all_water_services_share_one_facility(alternate), "alternate seed preserves one shared water facility")
         _check(_all_water_services_are_island_wide(alternate), "alternate seed preserves island-wide municipal water service")
 
 func _test_system20_projection(projector: System20AreaRequestProjector, plan: GeneratedGlobalWorldPlan) -> void:
@@ -165,6 +171,20 @@ func _all_water_services_are_island_wide(plan: GeneratedGlobalWorldPlan) -> bool
         if service.has("service_radius") and int(service.get("service_radius", 0)) > 0:
             return false
     return true
+
+func _all_water_services_share_one_facility(plan: GeneratedGlobalWorldPlan) -> bool:
+    if plan.water_services.is_empty():
+        return false
+    var facility_id: String = ""
+    for service: Dictionary in plan.water_services:
+        var current: String = String(service.get("facility_id", "")).strip_edges()
+        if current.is_empty():
+            return false
+        if facility_id.is_empty():
+            facility_id = current
+        elif current != facility_id:
+            return false
+    return not facility_id.is_empty()
 
 func _projection_has_one_island_wide_water_service(result: Dictionary) -> bool:
     var services: Array = result.get("services", [])
