@@ -165,18 +165,20 @@ func _test_same_region_streaming_fast_path() -> void:
     var first_cell: Vector2i = global_plan.bounds.position + Vector2i(10, 10)
     var first: Dictionary = streaming.update_focus(first_cell)
     _check(bool(first.get("ok", false)) and not bool(first.get("fast_path", true)), "first focus uses normal discovery path")
-    _check(provider.discovery_calls == 1 and materialization.ensure_calls == 1, "first focus discovers and ensures exactly once")
+    _check(provider.discovery_calls == 1 and materialization.ensure_calls == 0, "first focus discovers exactly once and skips an empty ensure")
 
+    var discovery_after_first: int = provider.discovery_calls
+    var ensures_after_first: int = materialization.ensure_calls
     var second_cell: Vector2i = first_cell + Vector2i(1, 0)
     var second: Dictionary = streaming.update_focus(second_cell)
     _check(bool(second.get("ok", false)) and bool(second.get("fast_path", false)), "same technical region uses explicit fast path")
     _check(streaming.focus_cell() == second_cell, "same-region fast path still updates precise focus cell")
-    _check(provider.discovery_calls == 1 and materialization.ensure_calls == 1, "same-region move performs zero provider discovery/materialization calls")
+    _check(provider.discovery_calls == discovery_after_first and materialization.ensure_calls == ensures_after_first, "same-region move performs zero additional provider discovery/materialization calls")
 
     var third_cell: Vector2i = global_plan.bounds.position + Vector2i(266, 10)
     var third: Dictionary = streaming.update_focus(third_cell)
     _check(bool(third.get("ok", false)) and not bool(third.get("fast_path", true)), "cross-region move returns to normal path")
-    _check(provider.discovery_calls == 2 and materialization.ensure_calls == 2, "cross-region move discovers and ensures once more")
+    _check(provider.discovery_calls == discovery_after_first + 1 and materialization.ensure_calls == ensures_after_first, "cross-region move discovers the entering region once and still skips an empty ensure")
 
 func _simple_building_plan(instance_id: String, origin: Vector2i) -> GeneratedBuildingPlan:
     var plan := GeneratedBuildingPlan.new()
