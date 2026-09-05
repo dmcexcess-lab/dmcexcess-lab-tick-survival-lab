@@ -7,8 +7,7 @@ func plan(
     request: GlobalWorldGenerationRequest,
     profile: Dictionary,
     settlements: Array[Dictionary],
-    geography_cells: Array[Dictionary],
-    river_segments: Array[Dictionary] = []
+    geography_cells: Array[Dictionary]
 ) -> Dictionary:
     var road_segments: Array[Dictionary] = []
     if request == null or not request.is_valid() or profile.is_empty() or settlements.size() < 2 or geography_cells.is_empty():
@@ -20,7 +19,7 @@ func plan(
     var edge_ordinal: int = 1
 
     while connected.size() < settlements.size():
-        var best: Dictionary = _best_routable_edge(connected, settlements, geography_cells, river_segments, profile)
+        var best: Dictionary = _best_routable_edge(connected, settlements)
         if best.is_empty():
             return {"ok": false, "failure_reason": "island_settlement_road_tree_unresolved", "road_segments": []}
         var from_index: int = int(best.get("from", -1))
@@ -42,7 +41,6 @@ func plan(
             to_settlement.get("center", INVALID_CELL),
             width,
             geography_cells,
-            river_segments,
             profile
         ):
             return {"ok": false, "failure_reason": "island_settlement_road_edge_failed", "road_segments": []}
@@ -70,7 +68,6 @@ func plan(
             gateway,
             primary_width,
             geography_cells,
-            river_segments,
             profile
         ):
             gateway = _reachable_boundary_gateway(
@@ -79,7 +76,6 @@ func plan(
                 source_center,
                 gateway,
                 geography_cells,
-                river_segments,
                 profile
             )
             if gateway == INVALID_CELL or not _append_routed_path(
@@ -91,7 +87,6 @@ func plan(
                 gateway,
                 primary_width,
                 geography_cells,
-                river_segments,
                 profile
             ):
                 return {"ok": false, "failure_reason": "island_boundary_gateway_route_failed:%s" % String(side), "road_segments": []}
@@ -100,13 +95,7 @@ func plan(
         return {"ok": false, "failure_reason": "island_major_road_network_empty", "road_segments": []}
     return {"ok": true, "failure_reason": "", "road_segments": road_segments}
 
-func _best_routable_edge(
-    connected: Dictionary,
-    settlements: Array[Dictionary],
-    _geography_cells: Array[Dictionary],
-    _river_segments: Array[Dictionary],
-    _profile: Dictionary
-) -> Dictionary:
+func _best_routable_edge(connected: Dictionary, settlements: Array[Dictionary]) -> Dictionary:
     var best: Dictionary = {}
     var best_score: int = 2147483647
     for from_value: Variant in connected.keys():
