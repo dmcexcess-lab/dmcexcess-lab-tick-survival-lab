@@ -92,8 +92,8 @@ func _test_loot_freshness_icons() -> void:
     var freshness := FreshCatalogClass.new(time_profile)
     var icons := IconCatalogClass.new()
 
-    _check(items.catalog_version() == 4, "current loot catalog version is four")
-    _check(items.semantic_types().size() == 100, "current world loot exposes one hundred physical semantics")
+    _check(items.catalog_version() == 5, "current loot catalog version is five")
+    _check(items.semantic_types().size() == 108, "current world loot exposes one hundred eight physical semantics")
     _check(items.register_physical_profiles(physical), "every current loot semantic registers real physical weight")
     _check(profiles.catalog_version() == 3 and profiles.validate_items(items), "current location-aware loot tables validate against item truth")
     for profile_id: StringName in [&"civic.school.supplies", &"civic.church.supplies", &"civic.police.supplies", &"civic.fire.supplies"]:
@@ -110,7 +110,7 @@ func _test_loot_freshness_icons() -> void:
     _check(not freshness.has_profile(&"item.food.rice_bag"), "dry rice remains shelf stable")
 
     _check(icons.is_ready(), "current System 31 icon catalog remains ready")
-    _check(icons.known_semantics().size() == 112, "current icon vocabulary includes Phase 1E plus later primitive/crafting semantics")
+    _check(icons.known_semantics().size() == 120, "current icon vocabulary includes Phase 1E plus primitive/crafting/apparel semantics")
     for semantic: StringName in items.semantic_types():
         _check(icons.has_icon(semantic), "every current loot semantic has an explicit UI icon: %s" % String(semantic))
 
