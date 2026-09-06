@@ -10,8 +10,8 @@ func _initialize() -> void:
     var loot := LootItemCatalogClass.new()
 
     _check(icons.is_ready(), "current semantic icon catalog loads the atlas and validates mappings")
-    _check(loot.semantic_types().size() == 100, "current loot catalog exposes the expected 100 semantics")
-    _check(icons.known_semantics().size() == 112, "current icon catalog explicitly maps Phase-1, primitive resource, crafting output, and shell semantics")
+    _check(loot.semantic_types().size() == 108, "current loot catalog exposes the expected 108 semantics")
+    _check(icons.known_semantics().size() == 120, "current icon catalog explicitly maps Phase-1, primitive resource, crafting output, apparel, and shell semantics")
 
     for shell_key: StringName in [IconCatalogClass.SHELL_STATS, IconCatalogClass.SHELL_INVENTORY, IconCatalogClass.SHELL_MENU, IconCatalogClass.SHELL_CRAFT]:
         _check(icons.has_icon(shell_key), "shell icon is explicitly mapped: %s" % String(shell_key))
@@ -29,6 +29,8 @@ func _initialize() -> void:
         _check(icons.has_icon(primitive_semantic), "primitive Survival resource has an explicit icon mapping: %s" % String(primitive_semantic))
     for crafted_semantic: StringName in [&"item.crafting.sharpened_stake", &"item.crafting.stone_hammer", &"item.crafting.paper_tinder_bundle"]:
         _check(icons.has_icon(crafted_semantic), "primitive crafted output has an explicit icon mapping: %s" % String(crafted_semantic))
+    for apparel_semantic: StringName in [&"item.clothing.baseball_cap", &"item.clothing.t_shirt", &"item.clothing.hoodie", &"item.clothing.work_jacket", &"item.clothing.jeans", &"item.clothing.cargo_pants", &"item.clothing.sneakers", &"item.clothing.work_boots"]:
+        _check(icons.has_icon(apparel_semantic), "new apparel semantic has an explicit icon mapping: %s" % String(apparel_semantic))
 
     _check(icons.icon_key(&"item.food.canned_beans") == icons.icon_key(&"item.food.canned_soup"), "canned foods intentionally share one explicit glyph")
     _check(icons.icon_key(&"item.material.nails_box") == icons.icon_key(&"item.material.screws_box"), "fastener boxes intentionally share one explicit glyph")
