@@ -26,45 +26,58 @@ func _run() -> void:
         _check(enter_vehicle != null and enter_vehicle.position.y >= 600.0, "ENTER VEHICLE remains in the bottom control zone")
         _check(controls.forage_requested.get_connections().size() > 0, "FORAGE bottom action is wired to production gameplay")
         _check(controls.enter_vehicle_requested.get_connections().size() > 0, "ENTER VEHICLE bottom action is wired to production gameplay")
-        _check(controls.control_surface_visible() and controls.visible, "on-foot movement surface is visible while unmounted")
+        _check(controls.control_surface_visible() and controls.visible, "walking controls are visible while unmounted")
 
     _check(not _has_script(game, "ConditionPlayerControls.gd"), "legacy Survival panel is not instantiated")
     _check(not _has_script(game, "ForagePlayerControls.gd"), "legacy Forage panel is not instantiated")
     _check(game.find_child("PerformanceDev", true, false) == null, "player-visible Dev panel is not instantiated")
 
-    var vehicle_panel := game.find_child("VehiclePanel", true, false) as Control
-    _check(vehicle_panel != null, "mounted vehicle controls still exist")
-    if vehicle_panel != null:
-        var vehicle_controls := vehicle_panel.get_parent() as VehiclePlayerControls
-        _check(vehicle_controls != null, "vehicle controls own the mounted bottom surface")
-        _check(not vehicle_panel.visible, "vehicle control surface is hidden while on foot")
+    _check(game.find_child("VehiclePanel", true, false) == null, "mounted controls are not presented as a separate vehicle panel")
+    var vehicle_surface := game.find_child("VehicleControlSurface", true, false) as Control
+    _check(vehicle_surface != null, "replacement mounted driving surface exists")
+    if vehicle_surface != null:
+        var vehicle_controls := vehicle_surface.get_parent() as VehiclePlayerControls
+        _check(vehicle_controls != null, "vehicle controls own the replacement surface")
+        _check(not vehicle_surface.visible, "driving surface is hidden while on foot")
         _check(vehicle_controls != null and not vehicle_controls.visible, "vehicle CanvasLayer is hidden while on foot")
-        _check(vehicle_panel.position.y >= 600.0, "vehicle controls occupy the bottom control zone")
-        _check(vehicle_panel.find_child("EnterButton", true, false) == null, "vehicle controls do not duplicate ENTER")
-        for button_name: String in ["TurnLButton", "ForwardButton", "TurnRButton", "BackButton"]:
-            var movement_button := vehicle_panel.find_child(button_name, true, false) as Button
-            _check(movement_button != null, "mounted vehicle surface includes %s" % button_name)
+        _check(vehicle_surface.find_child("EnterButton", true, false) == null, "driving surface does not duplicate ENTER")
+        for button_name: String in ["TurnLButton", "ForwardButton", "TurnRButton", "BrakeButton", "ReverseButton", "BackButton"]:
+            var movement_button := vehicle_surface.find_child(button_name, true, false) as Button
+            _check(movement_button != null, "mounted replacement includes %s" % button_name)
+            _check(movement_button != null and movement_button.position.y >= 638.0, "%s occupies the walking-control footprint" % button_name)
             _check(movement_button != null and movement_button.pressed.get_connections().size() > 0, "%s is wired" % button_name)
         for button_name: String in [
-            "ExitButton", "StartButton", "HotwireButton", "BrakeButton", "ReverseButton",
-            "RepairButton", "AddRackButton", "RefuelButton", "Store→Button", "←TakeButton",
+            "ExitButton", "StartButton", "HotwireButton", "RepairButton", "AddRackButton", "RefuelButton",
+            "StoreCargoButton", "TakeCargoButton",
         ]:
-            _check(vehicle_panel.find_child(button_name, true, false) != null, "mounted vehicle surface preserves %s" % button_name)
+            var action_button := vehicle_surface.find_child(button_name, true, false) as Button
+            _check(action_button != null, "mounted replacement preserves %s" % button_name)
+            _check(action_button != null and action_button.position.y >= 638.0, "%s stays in the bottom replacement footprint" % button_name)
         if vehicle_controls != null and controls != null:
             vehicle_controls.call("_set_mounted_presentation", true)
-            _check(vehicle_controls.visible and vehicle_panel.visible, "vehicle surface appears when mounted")
-            _check(not controls.visible and not controls.control_surface_visible(), "player movement surface hides when mounted")
+            _check(vehicle_controls.visible and vehicle_surface.visible, "driving controls replace the walking surface when mounted")
+            _check(not controls.visible and not controls.control_surface_visible(), "walking controls are removed from view when mounted")
             vehicle_controls.call("_set_mounted_presentation", false)
-            _check(not vehicle_controls.visible and not vehicle_panel.visible, "vehicle surface hides after dismount")
-            _check(controls.visible and controls.control_surface_visible(), "player movement surface returns after dismount")
+            _check(not vehicle_controls.visible and not vehicle_surface.visible, "driving controls disappear after dismount")
+            _check(controls.visible and controls.control_surface_visible(), "walking controls return after dismount")
+
+    var camera_controls := game.get_node_or_null("CameraControls") as CameraControls
+    _check(camera_controls != null, "camera controls exist")
+    if camera_controls != null:
+        _check(not _has_button_text(camera_controls, "ZOOM -"), "ZOOM - button is removed")
+        _check(not _has_button_text(camera_controls, "ZOOM +"), "ZOOM + button is removed")
+        _check(_has_button_prefix(camera_controls, "CENTER"), "CENTER camera action remains available")
 
     var hud := game.get_node_or_null("Hud")
     _check(hud != null, "canonical HUD exists")
     if hud != null:
-        var health := hud.get_node_or_null("HealthBar") as ProgressBar
-        var fatigue := hud.get_node_or_null("FatigueBar") as ProgressBar
-        _check(health != null and health.position.y < 100.0, "health bar is at the top of the screen")
-        _check(fatigue != null and fatigue.position.y < 100.0, "fatigue/stamina bar is at the top of the screen")
+        _check(hud.get_node_or_null("HealthBar") == null, "health progress bar is removed")
+        _check(hud.get_node_or_null("FatigueBar") == null, "stamina/fatigue progress bar is removed")
+        var looking_panel := hud.get_node_or_null("LookingAtPanel") as Control
+        _check(looking_panel != null, "Looking at panel exists")
+        _check(looking_panel != null and looking_panel.position.y >= 58.0 and looking_panel.position.y < 100.0, "Looking at panel sits directly below the top menu buttons")
+        var looking_label := _find_label_prefix(hud, "Looking at:")
+        _check(looking_label != null and looking_label.position.y < 120.0, "Looking at text is presented at the top of the screen")
 
     game.queue_free()
     await process_frame
@@ -78,6 +91,27 @@ func _has_script(root: Node, suffix: String) -> bool:
         if script != null and String(script.resource_path).ends_with(suffix):
             return true
     return false
+
+func _has_button_text(root: Node, text_value: String) -> bool:
+    for node: Node in root.find_children("*", "Button", true, false):
+        var button := node as Button
+        if button != null and button.text == text_value:
+            return true
+    return false
+
+func _has_button_prefix(root: Node, prefix: String) -> bool:
+    for node: Node in root.find_children("*", "Button", true, false):
+        var button := node as Button
+        if button != null and button.text.begins_with(prefix):
+            return true
+    return false
+
+func _find_label_prefix(root: Node, prefix: String) -> Label:
+    for node: Node in root.find_children("*", "Label", true, false):
+        var label := node as Label
+        if label != null and label.text.begins_with(prefix):
+            return label
+    return null
 
 func _check(condition: bool, message: String) -> void:
     if not condition:
