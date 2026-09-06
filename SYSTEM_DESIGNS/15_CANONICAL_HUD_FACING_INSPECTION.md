@@ -2,94 +2,117 @@
 
 Status: **IMPLEMENTED**
 
-Approved by the user on 2026-08-16 after the live System 14 walking demo was playtested successfully. The approved slice is the recovered-style `Looking at:` HUD plus concise real System 13 status.
+Approved originally by the user on 2026-08-16 and subsequently simplified by explicit player-UI direction through 2026-09-05. The current contract is a compact top-screen `Looking at:`/status presentation that reports real canonical state without competing with the active movement or vehicle controls.
 
 ## 1. Goal
 
-Extend the live canonical walking demo with a compact, phone-readable HUD that presents only real canonical state:
+Present only real canonical player/world state in a compact, phone-readable HUD:
 
 - authoritative world tick;
 - current N/E/S/W facing;
 - one-cell-ahead `Looking at:` physical inspection;
-- HP;
-- fatigue;
-- hunger;
-- thirst;
-- sleep pressure;
-- current carried weight / carry capacity;
-- derived moodlets;
-- latest movement-action result.
+- HP and fatigue as textual status truth;
+- sustainment/carry/moodlet summaries;
+- latest movement/action result.
 
 This is presentation/read composition. It creates no gameplay truth.
 
-## 2. Non-goals
+## 2. Current player-facing layout contract
 
-System 15 does **not** add:
+Newest explicit user direction supersedes the older lower-HUD and vital-bar arrangements.
 
-- Stats modal / detailed skills display;
-- Inventory modal;
-- Menu / hard-pause UI;
-- crouch button or new movement actions;
-- doors or interaction actions;
-- items, loot, pickup/drop/equip UI;
+### Top inspection/status area
+
+- `CanonicalStatusHud.gd` owns a `LookingAtPanel` beginning at approximately `y = 66`.
+- The panel sits directly below the top **STATS / INVENTORY / MENU** row.
+- `Looking at:` is part of this top block and must not return to the lower movement/control footprint.
+- Health and Fatigue/Stamina **ProgressBar nodes are retired entirely**. They are not merely hidden or moved elsewhere.
+- Authoritative HP/fatigue values remain readable as compact text in the canonical status presentation.
+- Sustainment, carry and moodlet truth remain presentation-only reads from canonical simulation state.
+
+### Bottom control area
+
+The lower control footprint is reserved for exactly one locomotion mode at a time:
+
+- **On foot:** `PlayerMovementControls` is visible, including the normal walking controls plus the production **FORAGE** and **ENTER VEHICLE** actions.
+- **Mounted:** the entire walking `CanvasLayer` is hidden. A direct `VehicleControlSurface` occupies the same lower-screen footprint.
+- The mounted replacement is **not** a `VehiclePanel` and must not be restored as a separate vehicle window.
+- Mounted movement/actions include TURN L, FORWARD, TURN R, BRAKE, REVERSE, BACK, EXIT, START, HOTWIRE, REPAIR, ADD RACK, REFUEL and cargo transfer controls.
+- Dismounting hides the vehicle surface and restores the ordinary walking surface.
+
+### Camera controls
+
+- Visible **ZOOM -** and **ZOOM +** buttons are retired.
+- CENTER/FOLLOW remains available.
+- The zoom subsystem itself is not retired; gesture/keyboard/controller or other existing non-button zoom routes may continue to use the canonical zoom signals/state.
+
+## 3. Non-goals
+
+System 15 does **not** own or mutate:
+
+- movement or vehicle movement rules;
+- Stats/Inventory simulation truth;
+- interaction consequences;
+- health, needs, fatigue or carry progression;
 - perception/LOS/darkness knowledge filtering;
-- need progression, healing, hunger clocks, or any other stat mutation;
-- camera/zoom;
+- camera zoom rules;
 - procedural generation.
 
-Those remain later bounded extensions of the live canonical demo.
+Those remain with their canonical owners. This system only presents their public reads.
 
-## 3. Owners
+## 4. Owners
 
 ### `game/scripts/ui/FacingInspectionQuery.gd`
+
 Read-only physical inspection query over WHAT.
 
-Given a stable actor ID it reads the actor placement, computes the one-cell-forward target from canonical facing, and reports the highest-priority physical fact in that cell.
+Given a stable actor ID it reads actor placement, computes the one-cell-forward target from canonical facing, and reports the highest-priority physical fact in that cell.
 
-V1 priority:
+Priority remains:
 
 1. STRUCTURE;
 2. OBJECT;
 3. ACTOR;
 4. LOOSE_ITEM;
 5. terrain;
-6. Unknown if the cell has no known physical fact.
+6. Unknown when no known physical fact exists.
 
-This is deliberately **not** a perception system. Future vision/perception may filter or replace the information source without changing HUD layout/presentation ownership.
+This is deliberately **not** a perception system. A future vision/perception layer may filter the result without moving world truth into the HUD.
 
 ### `game/scripts/ui/ActorStatusSummaryQuery.gd`
-Read-only System 13 composer.
 
-It consumes public reads from Health, Needs, Carry Query, and Moodlet Service and returns one immutable-style summary dictionary for the requested actor. It owns no stored actor state and performs no mutations.
+Read-only canonical status composer. It consumes public Health, Needs, Carry and Moodlet reads and returns summary truth for the requested actor. It owns no stored actor state and performs no mutations.
 
 ### `game/scripts/ui/CanonicalStatusHud.gd`
-CanvasLayer presentation owner.
 
-It formats the status and inspection query results into a compact four-line panel occupying the existing gap between the 13x13 world view and touch buttons. It also displays the latest action result and current WHEN tick.
+CanvasLayer presentation owner for the top status/inspection block.
 
-HUD never mutates simulation state.
+Public surface:
 
-## 4. Demo state wiring
+- `configure(kernel, status_query, inspection_query, actor_id) -> bool`
+- `refresh() -> void`
+- `present_action_result(intent, success, reason, world_tick) -> void`
+- `presentation_snapshot() -> Dictionary`
 
-The live demo enrolls its existing survivor into the already-implemented canonical state required to make status queries honest:
+The HUD never mutates simulation state and does not poll every frame.
 
-- 13A Health;
-- 13B Needs;
-- 09 Hands;
-- 11 actor-root inventory container;
-- 13D Item Physical Property Catalog / weight query;
-- 13E Carry State / Carry Query;
-- 13F Moodlet Service.
+## 5. Demo/runtime state wiring
 
-No item profiles are fabricated. The actor begins with empty real hands/inventory, therefore current carry is truthfully 0 g against the canonical 18,000 g default capacity.
+The playable survivor uses the already-implemented canonical state needed for honest reads:
 
-Health/Needs use their existing canonical enrollment defaults: 100/100 HP and zero pressure for fatigue/hunger/thirst/sleep. Moodlets therefore truthfully derive `Well Rested` at boot.
+- Health;
+- Needs;
+- Hands/equipment;
+- actor-root inventory containment;
+- physical item/weight truth;
+- Carry State / Carry Query;
+- Moodlet Service.
 
-Skills are not part of this compact HUD; the future Stats inspector will display 13C.
+No fake item, health, need or carry values are created for HUD presentation.
 
-## 5. Public contracts
+Skills are owned by the Stats/player-shell route rather than this compact top HUD.
 
-### Facing inspection
+## 6. Facing-inspection public contract
 
 `query(actor_id: String) -> Dictionary`
 
@@ -101,65 +124,21 @@ Result includes:
 - semantic type/entity ID when applicable;
 - stable human-readable label.
 
-### Actor status summary
+Semantic IDs are converted to readable labels without changing world truth. Structure/object presence wins over underlying terrain in the inspected cell.
+
+## 7. Actor-status public contract
 
 `query(actor_id: String) -> Dictionary`
 
-Result includes:
+The summary exposes canonical health/needs/carry/moodlet values appropriate to the active simulation version. `CanonicalStatusHud` formats those values; it does not own them.
 
-- `ok` / `reason`;
-- `current_hp`, `max_hp`;
-- `fatigue`, `hunger`, `thirst`, `sleep_pressure`;
-- `carry_weight_grams`, `carry_capacity_grams`, `load_ratio_bp`;
-- ordered moodlet labels.
+The absence of Health/Fatigue ProgressBars does **not** mean health or fatigue state has been removed.
 
-### HUD
+## 8. Update model / performance
 
-- `configure(kernel, status_query, inspection_query, actor_id) -> bool`
-- `refresh() -> void`
-- `present_action_result(intent, success, reason, world_tick) -> void`
-- `presentation_snapshot() -> Dictionary` for deterministic presentation contract tests.
+No `_process()` HUD polling and no frame-driven whole-world scans.
 
-## 6. Label semantics
-
-Semantic IDs are converted to readable presentation labels without changing world truth.
-
-Examples:
-
-- `ground.road` -> `Road`
-- `ground.grass_lush` -> `Grass Lush`
-- `wall.house` -> `House Wall`
-- `prop.bench` -> `Bench`
-- `vegetation.tree` -> `Tree`
-- `actor.survivor` -> `Survivor`
-
-Structure/object presence wins over underlying terrain in the inspected cell.
-
-## 7. Layout / Safari
-
-The existing map remains unchanged at 38 px/cell and the existing touch controls remain unchanged.
-
-HUD uses a higher CanvasLayer and a compact panel at the existing 568..632 vertical gap so it overlays the old lightweight help/action text without obscuring the world or touch buttons.
-
-Four lines:
-
-1. `Tick ... • action result • Facing ...`
-2. `Looking at: ...`
-3. HP + Needs;
-4. Carry + Moodlets.
-
-Use normal Godot `Control`/`Label`/`Panel`; no hover, custom touch hit-testing, DOM code, or frame polling.
-
-## 8. Update model
-
-No `_process()` polling.
-
-Current live demo refreshes the HUD:
-
-- at initial configuration;
-- after each resolved player Movement action.
-
-Future stat/item/action systems may trigger the same explicit `refresh()` after their own resolved mutations. The query owners remain read-only and reusable by future Stats/Inventory presentation.
+The HUD refreshes at explicit lifecycle/action boundaries and through already-owned update paths. Queries remain read-only. Presentation work is bounded to the player-facing summary and one-cell inspection.
 
 ## 9. Dependencies
 
@@ -167,58 +146,54 @@ Allowed:
 
 - WHAT / WHERE reads for facing inspection;
 - WHEN read for current tick;
-- System 13 public reads;
-- 09/11/13D indirectly through canonical Carry Query;
+- canonical Health/Needs/Carry/Moodlet public reads;
 - semantic input labels for action-result presentation.
 
 Forbidden:
 
 - direct world/stat mutation from HUD/query code;
-- Movement/Collision rule implementation in HUD;
-- renderer/art lookup;
-- Reboot runtime;
+- movement/collision/vehicle-rule implementation in HUD;
+- renderer/art lookup as gameplay truth;
 - perception claims;
 - generator logic;
-- fake/default values inside presentation.
+- fake/default gameplay truth inside presentation.
 
-## 10. Acceptance tests
+## 10. Acceptance contract
 
-Dedicated System 15 CI proves:
+Protected player-facing acceptance now requires:
 
-1. Godot project parses;
-2. System 14 walking-demo integration regression remains green;
-3. System 13 Health/Needs/Carry/Moodlet regressions remain green;
-4. demo survivor is honestly enrolled in required real state;
-5. boot summary is HP 100/100, all four needs pressure 0, carry 0/18,000 g, and `Well Rested`;
-6. initial NORTH inspection from `(6,10)` targets `(6,9)` and labels `Road`;
-7. facing change changes the inspected cell/label without storing duplicate facing state;
-8. a wall/prop wins over underlying terrain when inspected;
-9. HUD formatted snapshot contains tick, facing, `Looking at:`, HP/needs/carry/moodlet text;
-10. no `_process()` HUD polling;
-11. no Reboot/render/gameplay-mutation dependencies in the new query/HUD owners;
-12. exact-final-SHA startup, Web export, and Pages deployment succeed.
+1. main scene and Godot project parse;
+2. `LookingAtPanel` exists at the top directly under the player menu row;
+3. `Looking at:` remains backed by canonical facing inspection;
+4. no `HealthBar` or `FatigueBar` ProgressBar nodes are instantiated;
+5. HP/fatigue simulation truth remains available textually;
+6. visible `ZOOM -` and `ZOOM +` buttons are absent while CENTER/FOLLOW remains;
+7. on foot, the walking control surface is visible and vehicle controls are absent;
+8. mounted, the complete walking CanvasLayer is hidden and direct `VehicleControlSurface` controls occupy the lower walking-control footprint;
+9. no separate `VehiclePanel` is instantiated;
+10. dismount restores the walking controls and removes the mounted surface;
+11. HUD/query owners perform no frame polling or simulation mutation;
+12. protected startup/Web/Pages checks remain green when executable changes touch this surface.
 
-## 11. Recovery source
+`PlayerUiCleanupSmoke.gd` protects the current cross-UI layout contract; Canonical HUD and camera contracts protect their narrower owners.
 
-Golden `MapPreview.gd` at commit `1763958f44eb7f855fd49944c00d1ffe608c0abe`, blob `8ef5d900e5f56bb557bba496d10acc47438b38de`, is recovery evidence for the useful one-cell-ahead `Looking at:` concept and compact tactical HUD. Its monolithic input/render/simulation architecture is not restored.
+## 11. Historical recovery source
+
+Golden `MapPreview.gd` at commit `1763958f44eb7f855fd49944c00d1ffe608c0abe`, blob `8ef5d900e5f56bb557bba496d10acc47438b38de`, remains recovery evidence for the useful one-cell-ahead `Looking at:` concept. Its monolithic input/render/simulation architecture is not restored.
 
 ## 12. Verification / implementation record
 
-Production implementation first landed at `87c8426247b90b83badc300a3c664f1da10f37f5`.
+Original System 15 implementation first landed at `87c8426247b90b83badc300a3c664f1da10f37f5`; hardened original verification head `fb19c7b86569c388dcb251b2b61210e745f3909a` passed the dedicated Canonical HUD Facing Inspection contract.
 
-The first dedicated run failed only in a CI boundary guard because the check matched the word `perception` inside a comment explaining that the query is **not** perception-aware. The guard was narrowed to actual perception `preload/load` dependencies; production code was unchanged.
-
-Hardened verification head `fb19c7b86569c388dcb251b2b61210e745f3909a` passed dedicated **Canonical HUD Facing Inspection contract** run `31994628336`, including Godot parse, Health, Needs, Carry, Moodlets, System 14 walking-demo regression, the full new HUD smoke, and actual main-scene startup.
-
-No production repair was required after the complete implementation candidate.
+The September 2026 player-UI cleanup superseded the original lower-gap placement. The corrected executable head `33afe7f459f1cd9d24b493ab935c97b2d4545a35` removes the visible vital bars and Zoom +/- buttons, moves `Looking at:` to the top under the menu row, and replaces walking controls with a direct mounted driving surface in the same bottom footprint. That executable head closed with **44/44 push workflows successful and no failures or pending runs**.
 
 ## 13. Future seams
 
-- Stats inspector may reuse `ActorStatusSummaryQuery` and add the separately implemented Skills readout.
-- Inventory presentation may use 09/11/12 directly and call HUD refresh after transfers.
-- A future perception service may wrap/filter `FacingInspectionQuery` results before HUD presentation.
-- Future calendar/time UI may add a separate tick-to-calendar presenter; WHEN itself remains calendar-agnostic.
+- Stats/Inventory may reuse canonical status reads without adding duplicate HUD truth.
+- A future perception service may wrap/filter `FacingInspectionQuery` results before presentation.
+- Future calendar/time presentation may add a separate WHEN-derived presenter.
+- Camera input may continue to expose zoom through non-button routes without restoring the retired Zoom +/- buttons.
 
 ## 14. North-star fit
 
-This makes the tiny canonical demo feel like an actual survival-game shell while preserving the project rule that presentation only reports typed simulation truth. It adds consequence readability without adding fake simulation complexity.
+The HUD keeps actionable world/status truth readable while reserving the lower screen for whichever locomotion mode is actually active. Presentation remains truthful, bounded and replaceable: no fake simulation state, no duplicate locomotion UI, and no permanent test panels.
