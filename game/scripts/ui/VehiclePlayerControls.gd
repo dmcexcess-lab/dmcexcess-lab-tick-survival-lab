@@ -1,8 +1,10 @@
 extends CanvasLayer
 class_name VehiclePlayerControls
 
-const PANEL_POSITION := Vector2(8, 252)
-const PANEL_SIZE := Vector2(624, 158)
+const Intents = preload("res://scripts/input/PlayerActionIntent.gd")
+
+const PANEL_POSITION := Vector2(8, 620)
+const PANEL_SIZE := Vector2(624, 214)
 
 var _controller: VehiclePlayerController
 var _service: VehicleActionService
@@ -19,6 +21,7 @@ var _movement_controls: PlayerMovementControls = null
 
 func _ready() -> void:
     layer = 34
+    visible = false
     _build_ui()
 
 func configure(
@@ -71,6 +74,13 @@ func _build_ui() -> void:
     _status.add_theme_font_size_override("font_size", 10)
     box.add_child(_status)
 
+    var movement_row := HBoxContainer.new()
+    box.add_child(movement_row)
+    _button(movement_row, "TURN L", Callable(self, "_turn_left"))
+    _button(movement_row, "FORWARD", Callable(self, "_forward"))
+    _button(movement_row, "TURN R", Callable(self, "_turn_right"))
+    _button(movement_row, "BACK", Callable(self, "_backward"))
+
     var row1 := HBoxContainer.new()
     box.add_child(row1)
     _button(row1, "EXIT", Callable(self, "_exit"))
@@ -106,11 +116,6 @@ func _build_ui() -> void:
     _cargo_status.add_theme_font_size_override("font_size", 9)
     box.add_child(_cargo_status)
 
-    var hint := Label.new()
-    hint.text = "Mounted: forward drives; back reverses 1 cell; left/right turn 90° across 3 squares; BRAKE stops over 2 cells."
-    hint.add_theme_font_size_override("font_size", 9)
-    box.add_child(hint)
-
 func _button(parent: Control, text: String, callback: Callable) -> void:
     var button := Button.new()
     button.name = "%sButton" % text.to_pascal_case().replace(" ", "")
@@ -120,6 +125,22 @@ func _button(parent: Control, text: String, callback: Callable) -> void:
     button.add_theme_font_size_override("font_size", 9)
     button.pressed.connect(callback)
     parent.add_child(button)
+
+func _forward() -> void:
+    _submit_drive_intent(Intents.FORWARD)
+
+func _turn_left() -> void:
+    _submit_drive_intent(Intents.TURN_LEFT)
+
+func _turn_right() -> void:
+    _submit_drive_intent(Intents.TURN_RIGHT)
+
+func _backward() -> void:
+    _submit_drive_intent(Intents.BACKWARD)
+
+func _submit_drive_intent(intent: StringName) -> void:
+    if _controller != null:
+        _controller.submit_intent(intent)
 
 func _enter() -> void:
     if _controller != null:
@@ -190,8 +211,7 @@ func _on_action_resolved(_intent: StringName, success: bool, reason: String, _wo
 func _on_mounted_changed(actor_id: String, _vehicle_id: String, mounted: bool) -> void:
     if actor_id != _actor_id:
         return
-    if _movement_controls != null:
-        _movement_controls.set_on_foot_actions_visible(not mounted)
+    _set_mounted_presentation(mounted)
     _refresh_all()
 
 func _on_item_containment_changed(_item_id: String, previous_container_id: String, new_container_id: String) -> void:
@@ -211,9 +231,7 @@ func _refresh_status() -> void:
         return
     var vehicle_id := _service.vehicle_for_driver(_actor_id)
     var mounted := not vehicle_id.is_empty()
-    _panel.visible = mounted
-    if _movement_controls != null:
-        _movement_controls.set_on_foot_actions_visible(not mounted)
+    _set_mounted_presentation(mounted)
     if not mounted:
         return
     var rec := _state.record(vehicle_id)
@@ -223,6 +241,13 @@ func _refresh_status() -> void:
         int(rec.get("heading", 0)) * 30,
         "moving" if bool(rec.get("moving", false)) else "stopped",
     ]
+
+func _set_mounted_presentation(mounted: bool) -> void:
+    visible = mounted
+    if _panel != null:
+        _panel.visible = mounted
+    if _movement_controls != null:
+        _movement_controls.set_control_surface_visible(not mounted)
 
 func _refresh_cargo() -> void:
     if _actor_items == null or _cargo_items == null or _cargo_status == null:
