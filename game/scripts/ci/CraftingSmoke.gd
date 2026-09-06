@@ -72,7 +72,7 @@ func _test_catalog_contract() -> void:
     _check(crafted_items.catalog_version() == 3 and crafted_items.semantic_types().size() == 10, "ten crafting-owned output semantics exist")
     _check(recipes.has_recipe(&"cooking.heated_soup") and recipes.has_recipe(&"cooking.heated_beans"), "powered-stove cooking recipes are explicit catalog members")
     _check(workstations.supports(&"prop.stove_range", CraftingWorkstationCatalog.COOKING_STOVE), "stove range explicitly supplies the cooking workstation capability")
-    _check(loot_items.catalog_version() == 4 and loot_profiles.catalog_version() == 3, "primitive source resources version canonical loot data")
+    _check(loot_items.catalog_version() == 5 and loot_profiles.catalog_version() == 3, "primitive source resources and apparel version canonical loot data")
     _check(loot_profiles.validate_items(loot_items), "primitive resource profiles resolve only canonical loot semantics")
     for semantic: StringName in [&"item.outdoors.sturdy_stick", &"item.outdoors.smooth_stone", &"item.junk.old_magazine"]:
         _check(loot_items.has_item(semantic) and physical.has_profile(semantic), "primitive source resource is a real weighted loot item: %s" % String(semantic))
