@@ -4,12 +4,15 @@ class_name CanonicalStatusHud
 const Intents = preload("res://scripts/input/PlayerActionIntent.gd")
 
 ## Compact canonical HUD. Presentation only: reads query results and WHEN tick.
-## System 34 adds permanent Health/Fatigue bars plus derived colored moodlet chips.
+## System 34 adds Health/Fatigue bars at the top of the screen plus derived moodlet chips.
 
 const PANEL_POSITION := Vector2(70, 536)
 const PANEL_SIZE := Vector2(500, 100)
 const LINE_HEIGHT: float = 14.0
 const FONT_SIZE: int = 11
+const HEALTH_BAR_POSITION := Vector2(70, 70)
+const FATIGUE_BAR_POSITION := Vector2(310, 70)
+const VITAL_BAR_SIZE := Vector2(220, 10)
 
 var _kernel: TickKernel = null
 var _status_query: ActorStatusSummaryQuery = null
@@ -99,7 +102,8 @@ func refresh() -> void:
     elif bool(status.get("ok", false)):
         line_three = "HP %d/%d  •  Fatigue %d  •  Hunger %d  •  Thirst %d  •  Sleep pressure %d" % [
             int(status.get("current_hp", -1)), int(status.get("max_hp", -1)),
-            int(status.get("fatigue", -1)), int(status.get("hunger", -1)),
+            int(status.get("fatigue", -1)),
+            int(status.get("hunger", -1)),
             int(status.get("thirst", -1)), int(status.get("sleep_pressure", -1)),
         ]
         var moodlet_labels: Array = status.get("moodlet_labels", [])
@@ -151,16 +155,18 @@ func _ensure_ui() -> void:
         add_child(label)
 
     _health_bar = ProgressBar.new()
-    _health_bar.position = PANEL_POSITION + Vector2(40, 45)
-    _health_bar.size = Vector2(190, 9)
+    _health_bar.name = "HealthBar"
+    _health_bar.position = HEALTH_BAR_POSITION
+    _health_bar.size = VITAL_BAR_SIZE
     _health_bar.show_percentage = false
     _health_bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
     _health_bar.visible = false
     add_child(_health_bar)
 
     _fatigue_bar = ProgressBar.new()
-    _fatigue_bar.position = PANEL_POSITION + Vector2(270, 45)
-    _fatigue_bar.size = Vector2(190, 9)
+    _fatigue_bar.name = "FatigueBar"
+    _fatigue_bar.position = FATIGUE_BAR_POSITION
+    _fatigue_bar.size = VITAL_BAR_SIZE
     _fatigue_bar.show_percentage = false
     _fatigue_bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
     _fatigue_bar.visible = false

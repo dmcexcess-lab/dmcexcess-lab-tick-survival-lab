@@ -12,11 +12,11 @@ const CraftingControllerClass = preload("res://scripts/player/CraftingPlayerInte
 const CraftingIconsClass = preload("res://scripts/ui/icons/CraftingSemanticUiIconCatalog.gd")
 const OutdoorForageStateClass = preload("res://scripts/simulation/forage/OutdoorForageState.gd")
 const ForageNearbyActionClass = preload("res://scripts/simulation/forage/ForageNearbyActionService.gd")
-const ForageControlsClass = preload("res://scripts/ui/ForagePlayerControls.gd")
 
 ## Canonical Phase-2 composition extension only. The inherited canonical root still owns
 ## every preexisting service; this layer composes System 32 and the bounded Survival
-## forage seam through their public owners.
+## forage seam through their public owners. Forage is requested from the normal on-foot
+## control strip rather than a separate feature panel.
 
 @onready var _crafting_panel: CraftingPanel = $CraftingPanel
 
@@ -30,7 +30,6 @@ var _crafting_interaction_offers: CraftingInteractionOfferProvider = null
 var _crafting_controller: CraftingPlayerInteractionController = null
 var _forage_state: OutdoorForageState = null
 var _forage_actions: ForageNearbyActionService = null
-var _forage_controls: ForagePlayerControls = null
 var _craft_blocks_interaction: bool = false
 
 func _boot_canonical_demo() -> bool:
@@ -59,10 +58,8 @@ func _boot_crafting_runtime() -> bool:
     )
     if not _forage_actions.is_ready():
         return false
-    _forage_controls = ForageControlsClass.new()
-    add_child(_forage_controls)
-    if not _forage_controls.configure(_forage_actions, _kernel, FixtureClass.PLAYER_ID):
-        return false
+    if not _controls.forage_requested.is_connected(_on_forage_requested):
+        _controls.forage_requested.connect(_on_forage_requested)
 
     _crafting_items = CraftingItemCatalogClass.new()
     if not _crafting_items.register_physical_profiles(_physical_catalog):
@@ -135,6 +132,13 @@ func _boot_crafting_runtime() -> bool:
     _crafting_panel.interaction_blocked_changed.connect(_on_craft_interaction_blocked_changed)
     _refresh_interaction_enabled()
     return true
+
+func _on_forage_requested() -> void:
+    if _forage_actions == null or _kernel == null or _kernel.is_hard_paused():
+        return
+    var request: Dictionary = _forage_actions.request_forage(FixtureClass.PLAYER_ID)
+    if bool(request.get("accepted", false)):
+        _kernel.run_until_stop()
 
 func _on_craft_interaction_blocked_changed(blocked: bool) -> void:
     _craft_blocks_interaction = blocked

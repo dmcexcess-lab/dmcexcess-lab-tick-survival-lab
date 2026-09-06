@@ -14,9 +14,9 @@ const WeatherRendererClass = preload("res://scripts/render/WeatherPresentationRe
 const WorldInteractionStateRendererClass = preload("res://scripts/render/WorldInteractionStateRenderer.gd")
 const InteractionRendererClass = preload("res://scripts/render/InteractionHighlightRenderer.gd")
 const PerceptionOverlayClass = preload("res://scripts/render/PerceptionOverlayRenderer.gd")
-const PerformanceDevPanelClass = preload("res://scripts/ui/PerformanceDevPanel.gd")
 
 ## Layer orchestration only. All drawing remains in focused renderers.
+## Performance diagnostics remain available through debug snapshots without a player-visible DEV panel.
 
 var _ground: GroundLayerRenderer = null
 var _structures: StructureLayerRenderer = null
@@ -31,7 +31,6 @@ var _weather: WeatherPresentationRenderer = null
 var _world_interaction_state: WorldInteractionStateRenderer = null
 var _interaction: InteractionHighlightRenderer = null
 var _perception: PerceptionOverlayRenderer = null
-var _performance_panel: PerformanceDevPanel = null
 var _configured: bool = false
 
 func _ready() -> void:
@@ -235,7 +234,6 @@ func _ensure_layers() -> void:
     _world_interaction_state = WorldInteractionStateRendererClass.new(); _world_interaction_state.name = "WorldInteractionState"; _world_interaction_state.z_index = 85; add_child(_world_interaction_state)
     _interaction = InteractionRendererClass.new(); _interaction.name = "InteractionHighlights"; _interaction.z_index = 90; add_child(_interaction)
     _perception = PerceptionOverlayClass.new(); _perception.name = "Perception"; _perception.z_index = 100; add_child(_perception)
-    _performance_panel = PerformanceDevPanelClass.new(); _performance_panel.name = "PerformanceDev"; add_child(_performance_panel)
 
 static func _count_diagnostics(commands: Array) -> int:
     var count: int = 0

@@ -13,7 +13,6 @@ const ConditionEnvironmentClass = preload("res://scripts/simulation/actors/condi
 const SustainmentProfilesClass = preload("res://scripts/simulation/actors/condition/SurvivorSustainmentProfileCatalog.gd")
 const SustainmentActionsClass = preload("res://scripts/simulation/actors/condition/SurvivorSustainmentActionService.gd")
 const FirstAidActionsClass = preload("res://scripts/simulation/actors/health/SurvivorFirstAidActionService.gd")
-const ConditionControlsClass = preload("res://scripts/ui/ConditionPlayerControls.gd")
 
 const WATER_FIXTURE_SEMANTICS: Array[StringName] = [&"prop.kitchen_sink", &"prop.bathroom_vanity"]
 const BED_SEMANTICS: Array[StringName] = [&"prop.bed_double", &"prop.bed_single"]
@@ -30,7 +29,6 @@ var _condition_environment: ConditionEnvironmentPressureAdapter = null
 var _sustainment_profiles: SurvivorSustainmentProfileCatalog = null
 var _sustainment_actions: SurvivorSustainmentActionService = null
 var _first_aid_actions: SurvivorFirstAidActionService = null
-var _condition_controls: ConditionPlayerControls = null
 
 func _boot_canonical_demo() -> bool:
     if not super._boot_canonical_demo():
@@ -131,11 +129,6 @@ func _boot_system34() -> bool:
         _condition_modifiers,
         _condition_moodlets
     ):
-        return false
-
-    _condition_controls = ConditionControlsClass.new()
-    add_child(_condition_controls)
-    if not _condition_controls.configure(_sustainment_actions, _kernel, FixtureClass.PLAYER_ID):
         return false
 
     var refresh_callable := Callable(self, "_on_system34_changed")

@@ -10,10 +10,12 @@ var _state: VehicleState
 var _cargo: VehicleCargoService
 var _inventory: InventoryContainmentState
 var _actor_id: String = ""
+var _panel: PanelContainer = null
 var _status: Label
 var _actor_items: OptionButton
 var _cargo_items: OptionButton
 var _cargo_status: Label
+var _movement_controls: PlayerMovementControls = null
 
 func _ready() -> void:
     layer = 34
@@ -38,6 +40,11 @@ func configure(
     _inventory = inventory
     _actor_id = actor_id.strip_edges()
     _build_ui()
+    var parent_node := get_parent()
+    if parent_node != null:
+        _movement_controls = parent_node.get_node_or_null("PlayerControls") as PlayerMovementControls
+    if _movement_controls != null and not _movement_controls.enter_vehicle_requested.is_connected(_enter):
+        _movement_controls.enter_vehicle_requested.connect(_enter)
     if not _controller.action_resolved.is_connected(_on_action_resolved):
         _controller.action_resolved.connect(_on_action_resolved)
     if not _service.mounted_changed.is_connected(_on_mounted_changed):
@@ -50,22 +57,22 @@ func configure(
 func _build_ui() -> void:
     if _status != null:
         return
-    var panel := PanelContainer.new()
-    panel.name = "VehiclePanel"
-    panel.position = PANEL_POSITION
-    panel.size = PANEL_SIZE
-    add_child(panel)
+    _panel = PanelContainer.new()
+    _panel.name = "VehiclePanel"
+    _panel.position = PANEL_POSITION
+    _panel.size = PANEL_SIZE
+    _panel.visible = false
+    add_child(_panel)
     var box := VBoxContainer.new()
     box.add_theme_constant_override("separation", 2)
-    panel.add_child(box)
+    _panel.add_child(box)
     _status = Label.new()
-    _status.text = "VEHICLE — on foot"
+    _status.text = "VEHICLE"
     _status.add_theme_font_size_override("font_size", 10)
     box.add_child(_status)
 
     var row1 := HBoxContainer.new()
     box.add_child(row1)
-    _button(row1, "ENTER", Callable(self, "_enter"))
     _button(row1, "EXIT", Callable(self, "_exit"))
     _button(row1, "START", Callable(self, "_start"))
     _button(row1, "HOTWIRE", Callable(self, "_hotwire"))
@@ -95,7 +102,7 @@ func _build_ui() -> void:
     _button(cargo_row, "← TAKE", Callable(self, "_take_selected"))
 
     _cargo_status = Label.new()
-    _cargo_status.text = "CARGO — mount a vehicle"
+    _cargo_status.text = "CARGO"
     _cargo_status.add_theme_font_size_override("font_size", 9)
     box.add_child(_cargo_status)
 
@@ -177,12 +184,15 @@ func _take_selected() -> void:
 func _on_action_resolved(_intent: StringName, success: bool, reason: String, _world_tick: int) -> void:
     if success:
         _refresh_all()
-    else:
+    elif _panel != null and _panel.visible:
         _status.text = "VEHICLE — %s" % reason.replace("_", " ")
 
-func _on_mounted_changed(actor_id: String, _vehicle_id: String, _mounted: bool) -> void:
-    if actor_id == _actor_id:
-        _refresh_all()
+func _on_mounted_changed(actor_id: String, _vehicle_id: String, mounted: bool) -> void:
+    if actor_id != _actor_id:
+        return
+    if _movement_controls != null:
+        _movement_controls.set_on_foot_actions_visible(not mounted)
+    _refresh_all()
 
 func _on_item_containment_changed(_item_id: String, previous_container_id: String, new_container_id: String) -> void:
     if _service == null:
@@ -197,11 +207,14 @@ func _refresh_all() -> void:
     _refresh_cargo()
 
 func _refresh_status() -> void:
-    if _service == null or _state == null:
+    if _service == null or _state == null or _panel == null:
         return
     var vehicle_id := _service.vehicle_for_driver(_actor_id)
-    if vehicle_id.is_empty():
-        _status.text = "VEHICLE — on foot; approach a vehicle and ENTER"
+    var mounted := not vehicle_id.is_empty()
+    _panel.visible = mounted
+    if _movement_controls != null:
+        _movement_controls.set_on_foot_actions_visible(not mounted)
+    if not mounted:
         return
     var rec := _state.record(vehicle_id)
     _status.text = "VEHICLE — %s | fuel %d | heading %d° | %s" % [
@@ -221,7 +234,7 @@ func _refresh_cargo() -> void:
         return
     var vehicle_id := _service.vehicle_for_driver(_actor_id)
     if vehicle_id.is_empty():
-        _cargo_status.text = "CARGO — mount a vehicle"
+        _cargo_status.text = "CARGO"
         return
     for item_id: String in _inventory.direct_contents(_actor_id):
         _add_item(_actor_items, item_id)
