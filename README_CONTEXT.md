@@ -4,30 +4,36 @@ Last updated: **2026-09-05**
 
 This is the authoritative continuation checkpoint. Read `README_SOPS.md`, fetch current `main` once, and continue from **NEXT OPERATION**. Newer explicit user direction supersedes this handoff.
 
-## Current checkpoint — player HUD cleanup closed; generalized loadout UI remains
+## Current checkpoint — player/vehicle bottom controls are mutually exclusive; generalized loadout UI remains
 
-- **Player UI cleanup executable head:** `3bc3f2abd74fe82b215b1fbfc7983f45a4bdf057`.
-- Exact executable-head verification for `3bc3f2ab` closed with **45/45 push workflows successful, 0 failed, 0 cancelled, 0 queued and 0 in-progress**.
-- UI-cleanup changelog commit: `a4d536bb5ef3de7c735f9f3fc2bf212ae71c8d9e` (`CHANGELOG_PLAYER_UI_CLEANUP.md`).
-- The prior apparel/catalog executable checkpoint was `da35f843020f32740b46dbfb944e3c85f363467d`, which closed with 44/44 push workflows successful before this HUD pass.
-- The earlier endpoint-driven island-road hierarchy remains closed and protected; executable road fix `f7cd362310cdabf3a827bd33b5c5d9628e3bc423`, exact-tree re-verification `a312a590fc6ce4eb511ebbb8d4e2bec06c240f69` with 52/52 terminal success.
+- **Current executable gameplay head:** `7842806e836f4d868407c96336f4b940e1586fbc`.
+- Exact executable-head verification for `7842806e` closed with **44/44 push workflows successful, 0 failed, 0 cancelled, 0 queued and 0 in-progress**.
+- Pages deployment run `34006934014` completed successfully for that executable head.
+- Mounted-control changelog update: `d093962dff883877a0d7e109e6797b8930b2c843` (`CHANGELOG_PLAYER_UI_CLEANUP.md`).
+- Previous HUD-cleanup executable head `3bc3f2abd74fe82b215b1fbfc7983f45a4bdf057` closed with 45/45 push workflows successful.
+- Prior apparel/catalog executable checkpoint `da35f843020f32740b46dbfb944e3c85f363467d` closed with 44/44 push workflows successful before the HUD work.
+- The endpoint-driven island-road hierarchy remains closed and protected; executable road fix `f7cd362310cdabf3a827bd33b5c5d9628e3bc423`, exact-tree re-verification `a312a590fc6ce4eb511ebbb8d4e2bec06c240f69` with 52/52 terminal success.
 - **Play:** https://dmcexcess-lab.github.io/dmcexcess-lab-tick-survival-lab/
 - Standing direct-main/Pages authorization remains in the SOP; do not ask again.
 
-### Protected player HUD cleanup contract
+### Protected player HUD / control-surface contract
 
-The user explicitly simplified the player-facing HUD. Preserve this unless later direction changes it:
+The user explicitly simplified the player-facing HUD and then made on-foot versus mounted controls mutually exclusive. Preserve this unless later direction changes it:
 
 - The standalone **Survival** player window is retired. Do **not** restore it. Condition, sustainment, exact-item eating/drinking, first aid, rest/sleep and related simulation truth remain authoritative and should be reached through ordinary inventory/world interactions rather than a duplicate Survival menu.
-- The standalone **Forage** panel is retired. Do **not** restore it. **FORAGE** now lives on the bottom on-foot action strip and calls the existing authoritative `ForageNearbyActionService`.
-- The player-visible **Dev** window is retired. Do **not** restore it. Performance telemetry and diagnostic/debug snapshots remain available internally, but `TacticalRendererStack.gd` must not instantiate `PerformanceDevPanel` during normal gameplay.
-- **ENTER VEHICLE** now lives on the bottom on-foot action strip and is wired to the production `VehiclePlayerController`.
-- The vehicle detail/cargo panel is **mounted-only**. It no longer duplicates ENTER while the player is on foot. Mounted controls such as EXIT, START, HOTWIRE, BRAKE, REVERSE, REPAIR, ADD RACK, REFUEL and cargo remain available when appropriate.
-- The bottom on-foot **FORAGE** and **ENTER VEHICLE** actions hide while mounted and return after dismount.
-- Health and Fatigue/Stamina bars are at the **top of the screen** (`y = 70` in `CanonicalStatusHud.gd`) rather than overlapping the lower `Looking at:` context presentation.
-- `PlayerUiCleanupSmoke.gd` protects the cleanup by booting the production scene and checking the retired panels are absent, the two bottom actions are production-wired, vehicle detail is hidden on foot, duplicate ENTER is absent, and both vital bars are in the top HUD zone.
-- The protected Performance Architecture workflow now explicitly requires the renderer **not** to reference/instantiate `PerformanceDevPanel`, while retaining the existing performance telemetry architecture.
-- CI caught a real scene-node wiring issue during this pass: the production bottom control node is named `Controls`, not `PlayerControls`. `VehiclePlayerControls.gd` now resolves `Controls`, so the bottom ENTER VEHICLE action actually reaches production gameplay. Preserve that real route.
+- The standalone **Forage** panel is retired. Do **not** restore it. **FORAGE** lives on the bottom on-foot control surface and calls the authoritative `ForageNearbyActionService`.
+- The player-visible **Dev** window is retired. Do **not** restore it. Performance telemetry and diagnostic/debug snapshots remain internal; `TacticalRendererStack.gd` must not instantiate `PerformanceDevPanel` during normal gameplay.
+- **ENTER VEHICLE** lives on the bottom on-foot control surface and is wired to the production `VehiclePlayerController`.
+- **On foot:** only `PlayerMovementControls` is visible in the bottom control zone. Its current surface includes FORAGE, FORWARD, ENTER VEHICLE, TURN L, TURN R, CROUCH/STAND, BACK and RUN.
+- **Mounted:** the entire `PlayerMovementControls` layer is hidden. Do not leave player movement buttons visible behind or beside vehicle controls.
+- **Mounted vehicle controls replace the player controls in the same bottom zone.** `VehiclePlayerControls` is invisible while on foot and visible only while mounted.
+- The mounted vehicle surface contains direct vehicle movement controls **TURN L, FORWARD, TURN R and BACK**, routed through the existing authoritative `VehiclePlayerController.submit_intent` path. Do not create a second vehicle-movement truth.
+- The mounted surface also preserves **EXIT, START, HOTWIRE, BRAKE, REVERSE, REPAIR, ADD RACK, REFUEL**, actor↔vehicle cargo selectors/actions and cargo status.
+- Dismounting immediately hides the vehicle surface and restores the normal on-foot movement surface.
+- Therefore the invariant is strict: **no vehicle controls when not mounted; no player movement controls when mounted**.
+- Health and Fatigue/Stamina bars remain at the **top of the screen** (`y = 70` in `CanonicalStatusHud.gd`) rather than overlapping the lower `Looking at:` context presentation.
+- `PlayerUiCleanupSmoke.gd` boots the production scene and now protects retired-panel absence, on-foot FORAGE/ENTER wiring, bottom placement, vehicle-surface absence on foot, mounted vehicle movement buttons, preserved vehicle actions, exclusive mount swap, restoration on dismount, and top vital-bar placement.
+- The production bottom control node remains named `Controls`. `VehiclePlayerControls.gd` resolves that node to connect ENTER and toggle the on-foot control layer. Preserve that real route.
 
 ## Vehicle / equipment / apparel checkpoint
 
@@ -42,12 +48,12 @@ The user explicitly simplified the player-facing HUD. Preserve this unless later
 - Authoritative equipment slots exist for **right hand, left hand, back, head, torso, legs, feet and hands**. Equipment is an exclusive physical-item disposition, not an item simultaneously duplicated inside inventory.
 - Actor presentation renders attached equipment from authoritative hand/back assignments and clothing/hat paper-doll overlays from authoritative worn equipment instead of maintaining separate cosmetic truth.
 - Current apparel semantics include baseball cap, beanie, T-shirt, hoodie, work jacket, jeans, cargo pants, sneakers, work boots and work gloves.
-- The newly added apparel semantics have explicit UI-icon coverage using the existing clothing/gloves glyph; that is truthful semantic coverage, not finished unique apparel icon art.
+- The added apparel semantics have explicit UI-icon coverage using the existing clothing/gloves glyph; that is truthful semantic coverage, not finished unique apparel icon art.
 - The production vehicle renderer contains **no separate front/heading-indicator overlay**. If a purple/front vehicle marker is still visibly present in the playable build, capture the vehicle/type/location and trace the actual source rather than inventing a removal target.
 
 ### Protected apparel protection model
 
-The user explicitly simplified clothing protection. Preserve this exact model unless later direction changes it:
+Preserve this exact model unless later direction changes it:
 
 - `bite_cut_armor`
 - `blunt_ballistic_armor`
@@ -61,7 +67,7 @@ Retired from apparel/equipment truth:
 - `insulation`
 - `wind_resistance`
 
-Do not reintroduce separate bite vs cut, separate blunt vs ballistic, insulation, or wind resistance merely because older notes/tests mention them. The merged bite/cut baseline uses the former cut value; the merged blunt/ballistic baseline uses the former blunt value, avoiding accidental inflation from summing retired categories. `ActorEquipmentProtectionQuery.gd` aggregates only the two merged armor values plus water resistance, capped at 100. `ActorHandEquipmentSmoke.gd` has focused regression coverage for the merged-stat contract, retired-key absence, skateboard slot restrictions and representative worn-equipment aggregation.
+Do not reintroduce separate bite vs cut, separate blunt vs ballistic, insulation, or wind resistance merely because older notes/tests mention them. The merged bite/cut baseline uses the former cut value; the merged blunt/ballistic baseline uses the former blunt value. `ActorEquipmentProtectionQuery.gd` aggregates only the two merged armor values plus water resistance, capped at 100. `ActorHandEquipmentSmoke.gd` protects the merged-stat contract, retired-key absence, skateboard slot restrictions and representative worn-equipment aggregation.
 
 ### Remaining player-facing equipment gap
 
@@ -71,7 +77,7 @@ The underlying equipment state and renderer understand back/worn slots, but the 
 - `CanonicalPlayerShell.gd` currently exposes RIGHT HAND / LEFT HAND / STOW / DROP-style actions, not ordinary equip/unequip actions for back/head/torso/legs/feet/hands.
 - The player shell does not yet expose the merged `bite_cut_armor`, `blunt_ballistic_armor` and `water_resistance` totals.
 
-This remains the clearest player-facing closure after the HUD cleanup. Extend the existing Inventory/loadout route rather than inventing a second cosmetic equipment UI.
+This remains the clearest player-facing closure after the HUD/control cleanup. Extend the existing Inventory/loadout route rather than inventing a second cosmetic equipment UI.
 
 ## Road contract now expected in the playable island
 
@@ -79,9 +85,9 @@ This remains the clearest player-facing closure after the HUD cleanup. Extend th
 - **Town-touching routes:** paved two-lane unless the route is a gateway.
 - **One-light-crossroads-touching routes:** paved two-lane unless the route is a gateway.
 - **Rural hamlet ↔ rural hamlet:** may be gravel or dirt.
-- **Alternate links/loops:** classify from their actual endpoint settlement types; they do not get a special pavement exemption.
+- **Alternate links/loops:** classify from actual endpoint settlement types; they do not get a special pavement exemption.
 - Dirt and gravel are single-lane rural roads and remain traversable.
-- Human visual acceptance of the generated road density/mix remains useful, but the endpoint classification itself is regression-protected and closed.
+- Human visual acceptance of generated road density/mix remains useful, but endpoint classification is regression-protected and closed.
 
 ## Protected potable-water contract
 
@@ -168,7 +174,8 @@ Preserve:
 - no wastewater resurrection;
 - no municipal water pipe graph;
 - no private-well municipal fallback;
-- no resurrection of the retired standalone Survival, Forage or player-visible Dev windows.
+- no resurrection of the retired standalone Survival, Forage or player-visible Dev windows;
+- mutually exclusive on-foot and mounted bottom control surfaces.
 
 Production inheritance remains `VehicleGameMain -> System34GameMain -> UtilityGameMain -> CraftingGameMain -> GameMain`; flattening is separate work.
 
@@ -177,8 +184,8 @@ Production inheritance remains `VehicleGameMain -> System34GameMain -> UtilityGa
 1. **Finish the ordinary Inventory/loadout UI for the generalized equipment state.** Extend the existing player inventory route so items can be equipped/unequipped to back, head, torso, legs, feet and hands as well as right/left hand. Do not create a second cosmetic equipment truth.
 2. Expose truthful equipped protection totals in ordinary gameplay UI: `bite_cut_armor`, `blunt_ballistic_armor`, and `water_resistance`. Do not restore insulation, wind resistance, separate bite/cut, or separate blunt/ballistic stats.
 3. Exercise the complete skateboard user path in production UI/gameplay: dismount → loose item → pick up/equip to either hand or back → backpack/personal storage rejected → return to world/mount the same physical board. Verify straight skateboard travel remains 2 cells, 90° turns stay on one cell, and all vehicle families require braking/stopping before reverse.
-4. Continue the standing full player/world/object-interaction/UI practicality audit and close every backend-only or debug-only gameplay route before combat. Keep Survival actions in ordinary inventory/world interaction surfaces, Forage and Enter Vehicle on the on-foot strip, and diagnostics internal.
+4. Continue the standing full player/world/object-interaction/UI practicality audit and close every backend-only or debug-only gameplay route before combat. Keep Survival actions in ordinary inventory/world interactions, Forage and Enter Vehicle on the on-foot surface, diagnostics internal, and the on-foot/mounted bottom surfaces mutually exclusive.
 5. If a purple/front vehicle marker is still visibly present, capture the actual vehicle/type/location and trace the rendering/asset source; current production renderer has no explicit heading overlay and this checkpoint does not invent a removal target.
 6. After the player/world/UI layer is practical end-to-end: implement combat, then hydrate the first real zombies from existing building-derived population records.
-7. Preserve the closed road hierarchy and continue human visual acceptance only as needed for island feel; do not reopen its endpoint classification without a concrete mismatch.
-8. Preserve the completed river/wastewater/water-graph removal, municipal/private-well contract, streaming boundaries, decision-pause semantics, building-derived population and the cleaned HUD contract above.
+7. Preserve the closed road hierarchy and continue human visual acceptance only as needed for island feel; do not reopen endpoint classification without a concrete mismatch.
+8. Preserve the completed river/wastewater/water-graph removal, municipal/private-well contract, streaming boundaries, decision-pause semantics, building-derived population and the cleaned HUD/control contract above.
