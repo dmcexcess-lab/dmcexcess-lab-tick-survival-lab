@@ -133,7 +133,9 @@ Exact executable head **`31bc923a92eabcd96f69603933d9669399858eeb`** passed the 
 
 Verification repair head **`d5197d971fe65f1be4d3bf654cba36e1b09c46cb`** corrected a stale Item Transfer regression that still treated `insulation` as forbidden. The repaired contract now protects the current rule instead: insulation is permitted only as derived thermal/comfort clothing data and remains separate from bite/cut armor, blunt/ballistic armor and water resistance. That exact head reached aggregate commit status **success**, with no failed or pending status observed, and `verify/pages-deploy` succeeded.
 
-The exact executable head's protected vehicle, HUD/camera, streaming, lighting, weather/condition, interaction and visual-geometry regressions remained green through the verification repair.
+A second exact-head verification exposed a stale System 16 CI boundary that still required `game/main.tscn` to reference `CraftingPlayerShell.gd` directly. That assumption was retired by this equipment integration: production intentionally uses `EquipmentPlayerShell -> CraftingPlayerShell -> CanonicalPlayerShell`. Repair head **`11ebe47697d7bcc3a728c6778e62b6314015e563`** updates the Canonical Player Shell contract to protect that real inheritance chain while continuing to require the production root `VehicleGameMain.gd`. The exact repair head drained with zero failed, queued or in-progress workflow runs, and Pages was green.
+
+The exact executable head's protected vehicle, HUD/camera, streaming, lighting, weather/condition, interaction and visual-geometry regressions remained green through the verification repairs.
 
 ## Protected integration invariants
 
