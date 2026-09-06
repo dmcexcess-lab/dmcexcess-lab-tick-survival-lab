@@ -4,40 +4,71 @@ Last updated: **2026-09-05**
 
 This is the authoritative continuation checkpoint. Read `README_SOPS.md`, fetch current `main` once, and continue from **NEXT OPERATION**. Newer explicit user direction supersedes this handoff.
 
-## Current checkpoint — player/vehicle bottom controls are mutually exclusive; generalized loadout UI remains
+## Current checkpoint — corrected HUD and exact mounted control replacement closed; generalized loadout UI remains
 
-- **Current executable gameplay head:** `7842806e836f4d868407c96336f4b940e1586fbc`.
-- Exact executable-head verification for `7842806e` closed with **44/44 push workflows successful, 0 failed, 0 cancelled, 0 queued and 0 in-progress**.
-- Pages deployment run `34006934014` completed successfully for that executable head.
-- Mounted-control changelog update: `d093962dff883877a0d7e109e6797b8930b2c843` (`CHANGELOG_PLAYER_UI_CLEANUP.md`).
-- Previous HUD-cleanup executable head `3bc3f2abd74fe82b215b1fbfc7983f45a4bdf057` closed with 45/45 push workflows successful.
-- Prior apparel/catalog executable checkpoint `da35f843020f32740b46dbfb944e3c85f363467d` closed with 44/44 push workflows successful before the HUD work.
+- **Current executable gameplay head:** `33afe7f459f1cd9d24b493ab935c97b2d4545a35`.
+- Exact executable-head verification for `33afe7f4` closed with **44/44 push workflows successful, 0 failed, 0 cancelled, 0 queued and 0 in-progress**.
+- Active HUD design correction commit: `09a8904f72df93b6fe03f1c720d5ba1b6ec5029b` (`SYSTEM_DESIGNS/15_CANONICAL_HUD_FACING_INSPECTION.md`).
+- Player-UI cleanup/changelog correction commit: `bc47af5973367eda0656b56966bb770a6b928d48` (`CHANGELOG_PLAYER_UI_CLEANUP.md`).
+- The prior mounted-panel interpretation at executable head `7842806e836f4d868407c96336f4b940e1586fbc` is **superseded** by the user’s newer direction. Do not restore its separate vehicle-panel presentation or top vital bars.
+- Prior HUD-cleanup executable head `3bc3f2abd74fe82b215b1fbfc7983f45a4bdf057` closed with 45/45 push workflows successful before the later corrections.
+- Prior apparel/catalog executable checkpoint `da35f843020f32740b46dbfb944e3c85f363467d` closed with 44/44 push workflows successful.
 - The endpoint-driven island-road hierarchy remains closed and protected; executable road fix `f7cd362310cdabf3a827bd33b5c5d9628e3bc423`, exact-tree re-verification `a312a590fc6ce4eb511ebbb8d4e2bec06c240f69` with 52/52 terminal success.
 - **Play:** https://dmcexcess-lab.github.io/dmcexcess-lab-tick-survival-lab/
 - Standing direct-main/Pages authorization remains in the SOP; do not ask again.
 
-### Protected player HUD / control-surface contract
+### Protected corrected player HUD / control-surface contract
 
-The user explicitly simplified the player-facing HUD and then made on-foot versus mounted controls mutually exclusive. Preserve this unless later direction changes it:
+The user explicitly simplified the player HUD and then corrected the mounted presentation. Preserve this exact current contract unless later direction changes it.
 
-- The standalone **Survival** player window is retired. Do **not** restore it. Condition, sustainment, exact-item eating/drinking, first aid, rest/sleep and related simulation truth remain authoritative and should be reached through ordinary inventory/world interactions rather than a duplicate Survival menu.
-- The standalone **Forage** panel is retired. Do **not** restore it. **FORAGE** lives on the bottom on-foot control surface and calls the authoritative `ForageNearbyActionService`.
-- The player-visible **Dev** window is retired. Do **not** restore it. Performance telemetry and diagnostic/debug snapshots remain internal; `TacticalRendererStack.gd` must not instantiate `PerformanceDevPanel` during normal gameplay.
-- **ENTER VEHICLE** lives on the bottom on-foot control surface and is wired to the production `VehiclePlayerController`.
-- **On foot:** only `PlayerMovementControls` is visible in the bottom control zone. Its current surface includes FORAGE, FORWARD, ENTER VEHICLE, TURN L, TURN R, CROUCH/STAND, BACK and RUN.
-- **Mounted:** the entire `PlayerMovementControls` layer is hidden. Do not leave player movement buttons visible behind or beside vehicle controls.
-- **Mounted vehicle controls replace the player controls in the same bottom zone.** `VehiclePlayerControls` is invisible while on foot and visible only while mounted.
-- The mounted vehicle surface contains direct vehicle movement controls **TURN L, FORWARD, TURN R and BACK**, routed through the existing authoritative `VehiclePlayerController.submit_intent` path. Do not create a second vehicle-movement truth.
-- The mounted surface also preserves **EXIT, START, HOTWIRE, BRAKE, REVERSE, REPAIR, ADD RACK, REFUEL**, actor↔vehicle cargo selectors/actions and cargo status.
-- Dismounting immediately hides the vehicle surface and restores the normal on-foot movement surface.
-- Therefore the invariant is strict: **no vehicle controls when not mounted; no player movement controls when mounted**.
-- Health and Fatigue/Stamina bars remain at the **top of the screen** (`y = 70` in `CanonicalStatusHud.gd`) rather than overlapping the lower `Looking at:` context presentation.
-- `PlayerUiCleanupSmoke.gd` boots the production scene and now protects retired-panel absence, on-foot FORAGE/ENTER wiring, bottom placement, vehicle-surface absence on foot, mounted vehicle movement buttons, preserved vehicle actions, exclusive mount swap, restoration on dismount, and top vital-bar placement.
-- The production bottom control node remains named `Controls`. `VehiclePlayerControls.gd` resolves that node to connect ENTER and toggle the on-foot control layer. Preserve that real route.
+#### Retired player-facing windows/options
+
+- The standalone **Survival** player window is retired. Do **not** restore it. Condition, sustainment, exact-item eating/drinking, first aid, rest/sleep and related simulation truth remain authoritative and should be reached through ordinary inventory/world interactions.
+- The standalone **Forage** panel is retired. Do **not** restore it. **FORAGE** lives on the on-foot bottom control surface and calls the authoritative `ForageNearbyActionService`.
+- The player-visible **Dev** window is retired. Do **not** restore it. Performance telemetry and diagnostic/debug snapshots remain internal; `TacticalRendererStack.gd` must not instantiate `PerformanceDevPanel` during ordinary gameplay.
+- Visible **ZOOM -** and **ZOOM +** buttons are retired. Do **not** restore them merely because the camera still supports zoom. CENTER/FOLLOW remains visible, and existing non-button zoom input routes/signals may continue to use canonical camera zoom state.
+- Health and Fatigue/Stamina **ProgressBars are retired entirely**. Do not move them elsewhere or recreate replacement bars. Health/fatigue simulation truth remains authoritative and is still available as compact status text.
+
+#### Top status / Looking At presentation
+
+- `CanonicalStatusHud.gd` owns `LookingAtPanel` beginning at approximately **`y = 66`**, directly below the top **STATS / INVENTORY / MENU** row.
+- `Looking at:` belongs in this top block. Do **not** return it to the lower movement/driving-control area.
+- Tick, action result, facing, Looking At, health/fatigue text, sustainment/carry/moodlet truth remain presentation-only reads from canonical simulation state.
+- The HUD owns no gameplay truth and must not add frame-driven polling.
+
+#### On-foot versus mounted bottom controls
+
+The invariant is strict: **no vehicle controls while on foot; no walking controls while mounted.**
+
+- **On foot:** `PlayerMovementControls` is the only locomotion/action surface in the lower control footprint. It includes FORAGE, FORWARD, ENTER VEHICLE, TURN L, TURN R, CROUCH/STAND, BACK and RUN.
+- **ENTER VEHICLE** is wired from the on-foot surface to the production `VehiclePlayerController`.
+- **Mounted:** the entire walking `PlayerMovementControls` CanvasLayer is hidden. Walking buttons must not remain visible behind, above, beside or underneath mounted controls.
+- A direct `VehicleControlSurface` in `VehiclePlayerControls.gd` replaces the walking controls in the **same lower-screen footprint**.
+- There is **no `VehiclePanel`** and no separate mounted vehicle window. Do not resurrect one.
+- The replacement mounted surface includes direct vehicle movement **TURN L, FORWARD, TURN R, BRAKE, REVERSE and BACK** using the existing authoritative `VehiclePlayerController.submit_intent` path.
+- The same mounted replacement preserves **EXIT, START, HOTWIRE, REPAIR, ADD RACK, REFUEL**, actor/vehicle cargo selectors, **STORE →**, **← TAKE**, vehicle status and cargo status.
+- Dismounting hides the direct vehicle surface and restores the ordinary walking CanvasLayer.
+- This swap is presentation/layout ownership only. Do not duplicate or move vehicle movement/action truth into UI code.
+- The production walking-control node remains named `Controls`; preserve the existing production hookup rather than inventing a parallel surface.
+
+#### Regression protection
+
+`PlayerUiCleanupSmoke.gd` now protects:
+
+- retired Survival/Forage/Dev surfaces remaining absent;
+- on-foot FORAGE and ENTER VEHICLE production wiring;
+- walking controls visible only on foot;
+- absence of `VehiclePanel`;
+- direct `VehicleControlSurface` existence and bottom-footprint placement;
+- mounted driving/action/cargo controls being present and wired;
+- complete walking→driving and driving→walking visibility swap;
+- visible Zoom +/- buttons remaining absent while CENTER remains;
+- Health/Fatigue ProgressBar nodes remaining absent;
+- `LookingAtPanel` and `Looking at:` living in the top-screen zone under the menu row.
 
 ## Vehicle / equipment / apparel checkpoint
 
-- Vehicle/equipment/apparel aggregate implementation began at `a74c60ea848a35e314c6606a197af6db36abf61b`; subsequent compile/catalog/icon contract repairs closed at `da35f843020f32740b46dbfb944e3c85f363467d` before the HUD cleanup.
+- Vehicle/equipment/apparel aggregate implementation began at `a74c60ea848a35e314c6606a197af6db36abf61b`; subsequent compile/catalog/icon contract repairs closed at `da35f843020f32740b46dbfb944e3c85f363467d` before the HUD work.
 - Skateboard straight movement remains **2 cells forward/back** according to its vehicle profile.
 - Skateboard steering is a **90° heading change on the current cell**; turning does not also translate the board two cells.
 - **All vehicles must brake/stop before reversing.** A reverse request while moving is rejected with `vehicle_brake_before_reverse`; reversing is not a direct direction flip while under motion.
@@ -175,7 +206,11 @@ Preserve:
 - no municipal water pipe graph;
 - no private-well municipal fallback;
 - no resurrection of the retired standalone Survival, Forage or player-visible Dev windows;
-- mutually exclusive on-foot and mounted bottom control surfaces.
+- no visible Zoom +/- buttons;
+- no Health/Fatigue ProgressBars;
+- top `LookingAtPanel` below the menu row;
+- mutually exclusive on-foot and mounted bottom control surfaces;
+- no separate `VehiclePanel` while mounted.
 
 Production inheritance remains `VehicleGameMain -> System34GameMain -> UtilityGameMain -> CraftingGameMain -> GameMain`; flattening is separate work.
 
@@ -184,8 +219,8 @@ Production inheritance remains `VehicleGameMain -> System34GameMain -> UtilityGa
 1. **Finish the ordinary Inventory/loadout UI for the generalized equipment state.** Extend the existing player inventory route so items can be equipped/unequipped to back, head, torso, legs, feet and hands as well as right/left hand. Do not create a second cosmetic equipment truth.
 2. Expose truthful equipped protection totals in ordinary gameplay UI: `bite_cut_armor`, `blunt_ballistic_armor`, and `water_resistance`. Do not restore insulation, wind resistance, separate bite/cut, or separate blunt/ballistic stats.
 3. Exercise the complete skateboard user path in production UI/gameplay: dismount → loose item → pick up/equip to either hand or back → backpack/personal storage rejected → return to world/mount the same physical board. Verify straight skateboard travel remains 2 cells, 90° turns stay on one cell, and all vehicle families require braking/stopping before reverse.
-4. Continue the standing full player/world/object-interaction/UI practicality audit and close every backend-only or debug-only gameplay route before combat. Keep Survival actions in ordinary inventory/world interactions, Forage and Enter Vehicle on the on-foot surface, diagnostics internal, and the on-foot/mounted bottom surfaces mutually exclusive.
+4. Continue the standing full player/world/object-interaction/UI practicality audit and close every backend-only or debug-only gameplay route before combat. Keep Survival actions in ordinary inventory/world interactions, Forage and Enter Vehicle on the on-foot surface, diagnostics internal, visible Zoom buttons retired, vital bars retired, Looking At at the top, and the on-foot/mounted bottom surfaces mutually exclusive.
 5. If a purple/front vehicle marker is still visibly present, capture the actual vehicle/type/location and trace the rendering/asset source; current production renderer has no explicit heading overlay and this checkpoint does not invent a removal target.
 6. After the player/world/UI layer is practical end-to-end: implement combat, then hydrate the first real zombies from existing building-derived population records.
 7. Preserve the closed road hierarchy and continue human visual acceptance only as needed for island feel; do not reopen endpoint classification without a concrete mismatch.
-8. Preserve the completed river/wastewater/water-graph removal, municipal/private-well contract, streaming boundaries, decision-pause semantics, building-derived population and the cleaned HUD/control contract above.
+8. Preserve the completed river/wastewater/water-graph removal, municipal/private-well contract, streaming boundaries, decision-pause semantics, building-derived population and the corrected HUD/control contract above.
