@@ -18,6 +18,8 @@ const InteractionItemsClass = preload("res://scripts/simulation/interaction/Worl
 const InteractionActionsClass = preload("res://scripts/simulation/interaction/WorldInteractionActionService.gd")
 const RepairActionsClass = preload("res://scripts/simulation/interaction/WorldObjectRepairActionService.gd")
 const InteractionOffersClass = preload("res://scripts/simulation/interaction/WorldInteractionOfferProvider.gd")
+const LooseItemPickupOffersClass = preload("res://scripts/simulation/interaction/LooseItemPickupInteractionOfferProvider.gd")
+const LooseItemPickupHandlerClass = preload("res://scripts/player/LooseItemPickupPlayerInteractionHandler.gd")
 const SustainmentOffersClass = preload("res://scripts/simulation/interaction/SustainmentInteractionOfferProvider.gd")
 const InteractionPanelClass = preload("res://scripts/ui/WorldInteractionPanel.gd")
 const InteractionControllerClass = preload("res://scripts/player/WorldInteractionPlayerController.gd")
@@ -46,6 +48,8 @@ var _world_repair_actions: WorldObjectRepairActionService = null
 var _utility_power_repair_actions: UtilityPowerRepairActionService = null
 var _generator_actions: PortableGeneratorActionService = null
 var _world_interaction_offers: WorldInteractionOfferProvider = null
+var _loose_item_pickup_offers: LooseItemPickupInteractionOfferProvider = null
+var _loose_item_pickup_handler: LooseItemPickupPlayerInteractionHandler = null
 var _sustainment_interaction_offers: SustainmentInteractionOfferProvider = null
 var _utility_power_repair_offers: UtilityPowerRepairInteractionOfferProvider = null
 var _generator_offers: PortableGeneratorInteractionOfferProvider = null
@@ -159,7 +163,7 @@ func _boot_world_interactions() -> bool:
     if _interaction_reach == null or _interaction_affordances == null or _door_state == null \
         or _door_transition == null or _door_passage == null or _spatial_query == null \
         or _skill_checks == null or _carry_query == null or _hand_state == null or _hand_mutations == null \
-        or _carry_acquisition == null or _sustainment_actions == null or _utilities == null or _power_network == null \
+        or _item_transfer == null or _carry_acquisition == null or _sustainment_actions == null or _utilities == null or _power_network == null \
         or _portable_generators == null \
         or _crafting_plans == null or _crafting_interaction_offers == null \
         or _crafting_controller == null or _loot_controller == null:
@@ -250,6 +254,12 @@ func _boot_world_interactions() -> bool:
     )
     if not _interaction_affordances.register_provider(_world_interaction_offers):
         return false
+    _loose_item_pickup_offers = LooseItemPickupOffersClass.new(_world, _interaction_reach)
+    if not _loose_item_pickup_offers.is_ready() or not _interaction_affordances.register_provider(_loose_item_pickup_offers):
+        return false
+    _loose_item_pickup_handler = LooseItemPickupHandlerClass.new(_world, _item_transfer, _hand_state)
+    if not _loose_item_pickup_handler.is_ready():
+        return false
     _utility_power_repair_offers = UtilityRepairOffersClass.new(
         _world,
         _interaction_reach,
@@ -300,6 +310,11 @@ func _boot_world_interactions() -> bool:
     for action_id: StringName in InteractionActionsClass.CORE_ACTIONS:
         if not _world_interaction_controller.register_handler(action_id, Callable(_world_interaction_actions, "request_action")):
             return false
+    if not _world_interaction_controller.register_handler(
+        LooseItemPickupOffersClass.ACTION_ID,
+        Callable(_loose_item_pickup_handler, "request_pickup")
+    ):
+        return false
     if not _world_interaction_controller.register_handler(
         RepairActionsClass.ACTION_ID,
         Callable(_world_repair_actions, "request_action")
