@@ -1,5 +1,14 @@
 # System 16 Implementation Changelog — Canonical Player Shell / Inspectors / Stance Integration
 
+## 2026-09-05 — Equipment insulation regression contract repair
+
+Verification repair: **`d5197d971fe65f1be4d3bf654cba36e1b09c46cb`**
+
+- Corrected the legacy Item Transfer regression that still asserted `insulation` must be absent as a retired aggregate stat.
+- The repaired test now enforces the current architecture: insulation is derived only from authoritative equipped clothing as thermal/comfort data and is not merged into bite/cut armor, blunt/ballistic armor or water resistance.
+- No equipment mutation, containment, transfer timing, skateboard restriction, renderer, paper-doll ownership or protection authority changed in this repair.
+- Exact repair head reached aggregate commit status **success** with no failed or pending status observed; `verify/pages-deploy` also succeeded.
+
 ## 2026-09-05 — Eight-slot equipment paper doll and clothing/protection UI
 
 Executable: **`31bc923a92eabcd96f69603933d9669399858eeb`**
