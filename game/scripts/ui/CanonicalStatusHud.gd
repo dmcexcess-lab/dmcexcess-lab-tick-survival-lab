@@ -4,15 +4,12 @@ class_name CanonicalStatusHud
 const Intents = preload("res://scripts/input/PlayerActionIntent.gd")
 
 ## Compact canonical HUD. Presentation only: reads query results and WHEN tick.
-## System 34 adds Health/Fatigue bars at the top of the screen plus derived moodlet chips.
+## The status / Looking at block lives directly below the top player menu row.
 
-const PANEL_POSITION := Vector2(70, 536)
+const PANEL_POSITION := Vector2(70, 66)
 const PANEL_SIZE := Vector2(500, 100)
 const LINE_HEIGHT: float = 14.0
 const FONT_SIZE: int = 11
-const HEALTH_BAR_POSITION := Vector2(70, 70)
-const FATIGUE_BAR_POSITION := Vector2(310, 70)
-const VITAL_BAR_SIZE := Vector2(220, 10)
 
 var _kernel: TickKernel = null
 var _status_query: ActorStatusSummaryQuery = null
@@ -21,8 +18,6 @@ var _actor_id: String = ""
 var _action_text: String = "Ready"
 var _panel: Panel = null
 var _labels: Array[Label] = []
-var _health_bar: ProgressBar = null
-var _fatigue_bar: ProgressBar = null
 var _moodlet_row: HBoxContainer = null
 var _last_presentation: Dictionary = {}
 
@@ -97,7 +92,6 @@ func refresh() -> void:
             _kg_text(int(status.get("carry_weight_grams", 0))),
             _kg_text(int(status.get("carry_capacity_grams", 0))),
         ]
-        _present_bars(status)
         _present_moodlets(status.get("moodlet_descriptors", []))
     elif bool(status.get("ok", false)):
         line_three = "HP %d/%d  •  Fatigue %d  •  Hunger %d  •  Thirst %d  •  Sleep pressure %d" % [
@@ -114,8 +108,6 @@ func refresh() -> void:
             _kg_text(int(status.get("carry_weight_grams", 0))),
             _kg_text(int(status.get("carry_capacity_grams", 0))), moodlet_text,
         ]
-        _health_bar.visible = false
-        _fatigue_bar.visible = false
         _clear_moodlets()
 
     _set_lines([line_one, line_two, line_three, line_four, line_five])
@@ -136,6 +128,7 @@ func _ensure_ui() -> void:
     if _panel != null:
         return
     _panel = Panel.new()
+    _panel.name = "LookingAtPanel"
     _panel.position = PANEL_POSITION
     _panel.size = PANEL_SIZE
     _panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -154,24 +147,6 @@ func _ensure_ui() -> void:
         _labels.append(label)
         add_child(label)
 
-    _health_bar = ProgressBar.new()
-    _health_bar.name = "HealthBar"
-    _health_bar.position = HEALTH_BAR_POSITION
-    _health_bar.size = VITAL_BAR_SIZE
-    _health_bar.show_percentage = false
-    _health_bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
-    _health_bar.visible = false
-    add_child(_health_bar)
-
-    _fatigue_bar = ProgressBar.new()
-    _fatigue_bar.name = "FatigueBar"
-    _fatigue_bar.position = FATIGUE_BAR_POSITION
-    _fatigue_bar.size = VITAL_BAR_SIZE
-    _fatigue_bar.show_percentage = false
-    _fatigue_bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
-    _fatigue_bar.visible = false
-    add_child(_fatigue_bar)
-
     _moodlet_row = HBoxContainer.new()
     _moodlet_row.position = PANEL_POSITION + Vector2(0, 100)
     _moodlet_row.size = Vector2(PANEL_SIZE.x, 20)
@@ -179,14 +154,6 @@ func _ensure_ui() -> void:
     _moodlet_row.add_theme_constant_override("separation", 5)
     _moodlet_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
     add_child(_moodlet_row)
-
-func _present_bars(status: Dictionary) -> void:
-    _health_bar.max_value = maxi(1, int(status.get("max_hp", 1)))
-    _health_bar.value = clampi(int(status.get("current_hp", 0)), 0, int(_health_bar.max_value))
-    _health_bar.visible = true
-    _fatigue_bar.max_value = 100
-    _fatigue_bar.value = clampi(int(status.get("fatigue", 0)), 0, 100)
-    _fatigue_bar.visible = true
 
 func _present_moodlets(values: Array) -> void:
     _clear_moodlets()
