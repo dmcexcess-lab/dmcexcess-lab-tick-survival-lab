@@ -4,12 +4,19 @@ Last updated: **2026-09-05**
 
 This is the authoritative continuation checkpoint. Read `README_SOPS.md`, fetch current `main` once, and continue from **NEXT OPERATION**. Newer explicit user direction supersedes this handoff.
 
-## Current checkpoint — vehicle/equipment/apparel pass landed; player-facing loadout UI remains
+## Current checkpoint — vehicle/equipment/apparel mechanics landed; armor model simplified; loadout UI remains
 
-- **Vehicle/equipment/apparel implementation head:** `a74c60ea848a35e314c6606a197af6db36abf61b`.
-- **Executable gameplay head after compile-boundary repair:** `05f2308d83804ed2547214074a7a23bc149f6750`.
-- `05f2308` fixes one import-time type typo in `TacticalRendererStack.gd` (`WorldInteractableStateRenderer` → the actual `WorldInteractionStateRenderer`). The initial broad failures on `a74c60e` were caused by that project-import compile error; they were not simulation/regression failures.
-- Exact-head verification of `05f2308` reached terminal state across **53 GitHub Actions runs** with **0 failed, 0 cancelled, 0 queued and 0 in-progress** at closure.
+- **Vehicle/equipment/apparel aggregate implementation:** `a74c60ea848a35e314c6606a197af6db36abf61b`.
+- `a74c60e` initially exposed one project-import typo in `TacticalRendererStack.gd`; that compile boundary was repaired at `05f2308d83804ed2547214074a7a23bc149f6750` by using the real `WorldInteractionStateRenderer` type.
+- Later exact-head workflow passes correctly exposed stale catalog/test assumptions caused by adding eight apparel semantics. Those were real CI contract failures, not runner noise, so do **not** describe `05f2308` as the final clean executable checkpoint.
+- Catalog/UI contract repairs landed through:
+  - `c4ad24623a9fcad23a890dad2af5808260710e50` — explicit UI-icon mappings for the eight new apparel semantics;
+  - `a6caaac905eca5d694320a31accbf7669455219f` — semantic-icon regression updated for 108 loot semantics / 120 icon semantics;
+  - `6d6904c9293d332cb6648cf72a7728b6dd75e37a` — Phase 1E workflow updated to loot catalog v5;
+  - `95ba35155a90954d07a741eba6601cedc408b0da` — crafting regression updated to loot catalog v5;
+  - `da35f843020f32740b46dbfb944e3c85f363467d` — Phase 1E integration regression updated for catalog v5 / 108 loot semantics / 120 icon semantics.
+- **Final executable gameplay head before this handoff write:** `da35f843020f32740b46dbfb944e3c85f363467d`.
+- Exact executable-head verification for `da35f843` closed with **44/44 push workflows successful, 0 failed, 0 queued and 0 in-progress**. Broad exact-head queries also showed 0 failed, 0 queued and 0 in-progress. Global World Planning run `34004735097` completed successfully.
 - The earlier endpoint-driven island-road hierarchy remains closed and protected; executable road fix `f7cd362310cdabf3a827bd33b5c5d9628e3bc423`, exact-tree re-verification `a312a590fc6ce4eb511ebbb8d4e2bec06c240f69` with 52/52 terminal success.
 - **Play:** https://dmcexcess-lab.github.io/dmcexcess-lab-tick-survival-lab/
 - Standing direct-main/Pages authorization remains in the SOP; do not ask again.
@@ -24,9 +31,10 @@ This is the authoritative continuation checkpoint. Read `README_SOPS.md`, fetch 
 - Skateboard legal equipment slots are **right hand, left hand or back only**.
 - Skateboard may not be stored in the actor's personal/backpack containment; rejected storage uses `skateboard_requires_hand_or_back`.
 - Authoritative equipment slots now exist for **right hand, left hand, back, head, torso, legs, feet and hands**. Equipment is an exclusive physical-item disposition, not an item simultaneously duplicated inside inventory.
-- Actor presentation can render floating/attached equipment from the authoritative slot assignments for **both hands and back**.
+- Actor presentation can render floating/attached equipment from authoritative slot assignments for **both hands and back**.
 - Actor presentation also applies clothing/hat paper-doll overlays from authoritative worn equipment instead of maintaining a separate cosmetic truth.
 - Current apparel semantics include baseball cap, beanie, T-shirt, hoodie, work jacket, jeans, cargo pants, sneakers, work boots and work gloves.
+- The eight newly added apparel semantics currently have explicit UI-icon mappings that reuse the existing clothing/gloves glyph. That is truthful semantic coverage, not finished unique apparel icon art.
 - The production vehicle renderer contains **no separate front/heading-indicator overlay**. No distinct purple-front marker source was found in the current renderer/SVG path during this pass, so do not claim an asset was removed; if one is still visibly present in the playable build, capture the vehicle/type/location and trace that actual source.
 
 ### Protected apparel protection model
@@ -45,11 +53,11 @@ Retired from apparel/equipment truth:
 - `insulation`
 - `wind_resistance`
 
-Do not reintroduce separate bite vs cut, separate blunt vs ballistic, insulation, or wind resistance merely because older notes/tests mention them. `ActorEquipmentProtectionQuery.gd` aggregates only the two merged armor values plus water resistance, capped at 100. `ActorHandEquipmentSmoke.gd` has focused regression coverage for the merged-stat contract, retired-key absence, skateboard slot restrictions and representative worn-equipment aggregation.
+Do not reintroduce separate bite vs cut, separate blunt vs ballistic, insulation, or wind resistance merely because older notes/tests mention them. The merged bite/cut baseline uses the former cut value; the merged blunt/ballistic baseline uses the former blunt value, avoiding accidental inflation from summing retired categories. `ActorEquipmentProtectionQuery.gd` aggregates only the two merged armor values plus water resistance, capped at 100. `ActorHandEquipmentSmoke.gd` has focused regression coverage for the merged-stat contract, retired-key absence, skateboard slot restrictions and representative worn-equipment aggregation.
 
 ### Remaining player-facing gap from this checkpoint
 
-The underlying equipment state and renderer now understand back/worn slots, but the ordinary player Inventory/loadout surface is still legacy-oriented:
+The underlying equipment state and renderer understand back/worn slots, but the ordinary player Inventory/loadout surface is still legacy-oriented:
 
 - `ActorInventoryInspectorQuery.gd` currently serializes only the two hand slots plus inventory/carry truth.
 - `CanonicalPlayerShell.gd` currently exposes RIGHT HAND / LEFT HAND / STOW / DROP-style actions, not ordinary equip/unequip actions for back/head/torso/legs/feet/hands.
