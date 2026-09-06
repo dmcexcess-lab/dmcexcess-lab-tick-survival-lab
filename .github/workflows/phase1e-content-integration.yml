@@ -31,7 +31,7 @@ jobs:
           grep -q 'MAX_ACCENTS_PER_BUILDING: int = 2' game/scripts/generation/buildings/content/Phase1EOneStoryContentDresser.gd
           grep -q 'prop.deciduous_large' game/scripts/art/PropVisualGeometryCatalog.gd
           grep -q 'prop.traffic_light' game/scripts/art/PropVisualGeometryCatalog.gd
-          grep -q 'CATALOG_VERSION: int = 4' game/scripts/simulation/loot/LootItemCatalog.gd
+          grep -q 'CATALOG_VERSION: int = 5' game/scripts/simulation/loot/LootItemCatalog.gd
           grep -q 'CATALOG_VERSION: int = 2' game/scripts/simulation/items/freshness/ItemFreshnessProfileCatalog.gd
           ! grep -R -q '_process' game/scripts/generation/buildings/content game/scripts/simulation/loot/LootItemCatalog.gd game/scripts/simulation/items/freshness/ItemFreshnessProfileCatalog.gd
           ! grep -R -q 'Timer.new' game/scripts/generation/buildings/content game/scripts/simulation/loot/LootItemCatalog.gd game/scripts/simulation/items/freshness/ItemFreshnessProfileCatalog.gd
