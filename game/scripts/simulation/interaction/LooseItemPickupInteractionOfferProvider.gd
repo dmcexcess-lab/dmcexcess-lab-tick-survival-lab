@@ -28,7 +28,7 @@ func offers_for_actor(actor_id: String, candidate_target_ids: Array[String]) -> 
             continue
         var entity: WorldEntityRecord = _world.entity(target_id)
         var placement: WorldPlacement = _world.placement(target_id)
-        if entity == null or placement == null or placement.channel != Layers.Channel.OBJECT:
+        if entity == null or placement == null or placement.channel != Layers.Channel.LOOSE_ITEM:
             continue
         if not String(entity.semantic_type).begins_with("item."):
             continue
