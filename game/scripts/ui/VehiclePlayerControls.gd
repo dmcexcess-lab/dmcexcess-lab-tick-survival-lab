@@ -3,8 +3,9 @@ class_name VehiclePlayerControls
 
 const Intents = preload("res://scripts/input/PlayerActionIntent.gd")
 
-const PANEL_POSITION := Vector2(8, 620)
-const PANEL_SIZE := Vector2(624, 214)
+const VIEW_SIZE := Vector2(640, 844)
+const BUTTON_SIZE := Vector2(132, 36)
+const CARGO_BUTTON_SIZE := Vector2(76, 28)
 
 var _controller: VehiclePlayerController
 var _service: VehicleActionService
@@ -12,7 +13,7 @@ var _state: VehicleState
 var _cargo: VehicleCargoService
 var _inventory: InventoryContainmentState
 var _actor_id: String = ""
-var _panel: PanelContainer = null
+var _surface: Control = null
 var _status: Label
 var _actor_items: OptionButton
 var _cargo_items: OptionButton
@@ -58,73 +59,95 @@ func configure(
     return true
 
 func _build_ui() -> void:
-    if _status != null:
+    if _surface != null:
         return
-    _panel = PanelContainer.new()
-    _panel.name = "VehiclePanel"
-    _panel.position = PANEL_POSITION
-    _panel.size = PANEL_SIZE
-    _panel.visible = false
-    add_child(_panel)
-    var box := VBoxContainer.new()
-    box.add_theme_constant_override("separation", 2)
-    _panel.add_child(box)
+    _surface = Control.new()
+    _surface.name = "VehicleControlSurface"
+    _surface.position = Vector2.ZERO
+    _surface.size = VIEW_SIZE
+    _surface.visible = false
+    _surface.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    add_child(_surface)
+
     _status = Label.new()
-    _status.text = "VEHICLE"
+    _status.name = "VehicleStatus"
+    _status.position = Vector2(70, 604)
+    _status.size = Vector2(500, 16)
+    _status.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
     _status.add_theme_font_size_override("font_size", 10)
-    box.add_child(_status)
-
-    var movement_row := HBoxContainer.new()
-    box.add_child(movement_row)
-    _button(movement_row, "TURN L", Callable(self, "_turn_left"))
-    _button(movement_row, "FORWARD", Callable(self, "_forward"))
-    _button(movement_row, "TURN R", Callable(self, "_turn_right"))
-    _button(movement_row, "BACK", Callable(self, "_backward"))
-
-    var row1 := HBoxContainer.new()
-    box.add_child(row1)
-    _button(row1, "EXIT", Callable(self, "_exit"))
-    _button(row1, "START", Callable(self, "_start"))
-    _button(row1, "HOTWIRE", Callable(self, "_hotwire"))
-    _button(row1, "BRAKE", Callable(self, "_brake"))
-    _button(row1, "REVERSE", Callable(self, "_reverse"))
-
-    var row2 := HBoxContainer.new()
-    box.add_child(row2)
-    _button(row2, "REPAIR", Callable(self, "_repair"))
-    _button(row2, "ADD RACK", Callable(self, "_modify"))
-    _button(row2, "REFUEL", Callable(self, "_refuel"))
-
-    var cargo_row := HBoxContainer.new()
-    cargo_row.add_theme_constant_override("separation", 4)
-    box.add_child(cargo_row)
-    _actor_items = OptionButton.new()
-    _actor_items.name = "ActorCargoSource"
-    _actor_items.custom_minimum_size = Vector2(188, 24)
-    _actor_items.add_theme_font_size_override("font_size", 9)
-    cargo_row.add_child(_actor_items)
-    _button(cargo_row, "STORE →", Callable(self, "_store_selected"))
-    _cargo_items = OptionButton.new()
-    _cargo_items.name = "VehicleCargoSource"
-    _cargo_items.custom_minimum_size = Vector2(188, 24)
-    _cargo_items.add_theme_font_size_override("font_size", 9)
-    cargo_row.add_child(_cargo_items)
-    _button(cargo_row, "← TAKE", Callable(self, "_take_selected"))
+    _status.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    _surface.add_child(_status)
 
     _cargo_status = Label.new()
-    _cargo_status.text = "CARGO"
+    _cargo_status.name = "CargoStatus"
+    _cargo_status.position = Vector2(70, 620)
+    _cargo_status.size = Vector2(500, 16)
+    _cargo_status.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
     _cargo_status.add_theme_font_size_override("font_size", 9)
-    box.add_child(_cargo_status)
+    _cargo_status.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    _surface.add_child(_cargo_status)
 
-func _button(parent: Control, text: String, callback: Callable) -> void:
+    _button_at("TURN L", "TurnLButton", Vector2(82, 638), Callable(self, "_turn_left"))
+    _button_at("FORWARD", "ForwardButton", Vector2(255, 638), Callable(self, "_forward"))
+    _button_at("TURN R", "TurnRButton", Vector2(426, 638), Callable(self, "_turn_right"))
+
+    _button_at("BRAKE", "BrakeButton", Vector2(82, 680), Callable(self, "_brake"))
+    _button_at("REVERSE", "ReverseButton", Vector2(255, 680), Callable(self, "_reverse"))
+    _button_at("BACK", "BackButton", Vector2(426, 680), Callable(self, "_backward"))
+
+    _button_at("EXIT", "ExitButton", Vector2(82, 722), Callable(self, "_exit"))
+    _button_at("START", "StartButton", Vector2(255, 722), Callable(self, "_start"))
+    _button_at("HOTWIRE", "HotwireButton", Vector2(426, 722), Callable(self, "_hotwire"))
+
+    _button_at("REPAIR", "RepairButton", Vector2(82, 764), Callable(self, "_repair"))
+    _button_at("ADD RACK", "AddRackButton", Vector2(255, 764), Callable(self, "_modify"))
+    _button_at("REFUEL", "RefuelButton", Vector2(426, 764), Callable(self, "_refuel"))
+
+    _actor_items = OptionButton.new()
+    _actor_items.name = "ActorCargoSource"
+    _actor_items.position = Vector2(34, 806)
+    _actor_items.size = Vector2(168, 28)
+    _actor_items.add_theme_font_size_override("font_size", 9)
+    _surface.add_child(_actor_items)
+
+    var store_button := Button.new()
+    store_button.name = "StoreCargoButton"
+    store_button.text = "STORE →"
+    store_button.position = Vector2(206, 806)
+    store_button.size = CARGO_BUTTON_SIZE
+    store_button.focus_mode = Control.FOCUS_NONE
+    store_button.add_theme_font_size_override("font_size", 9)
+    store_button.pressed.connect(_store_selected)
+    _surface.add_child(store_button)
+
+    _cargo_items = OptionButton.new()
+    _cargo_items.name = "VehicleCargoSource"
+    _cargo_items.position = Vector2(286, 806)
+    _cargo_items.size = Vector2(168, 28)
+    _cargo_items.add_theme_font_size_override("font_size", 9)
+    _surface.add_child(_cargo_items)
+
+    var take_button := Button.new()
+    take_button.name = "TakeCargoButton"
+    take_button.text = "← TAKE"
+    take_button.position = Vector2(458, 806)
+    take_button.size = CARGO_BUTTON_SIZE
+    take_button.focus_mode = Control.FOCUS_NONE
+    take_button.add_theme_font_size_override("font_size", 9)
+    take_button.pressed.connect(_take_selected)
+    _surface.add_child(take_button)
+
+func _button_at(text: String, node_name: String, position_value: Vector2, callback: Callable) -> Button:
     var button := Button.new()
-    button.name = "%sButton" % text.to_pascal_case().replace(" ", "")
+    button.name = node_name
     button.text = text
+    button.position = position_value
+    button.size = BUTTON_SIZE
     button.focus_mode = Control.FOCUS_NONE
-    button.custom_minimum_size = Vector2(78, 24)
-    button.add_theme_font_size_override("font_size", 9)
+    button.add_theme_font_size_override("font_size", 11)
     button.pressed.connect(callback)
-    parent.add_child(button)
+    _surface.add_child(button)
+    return button
 
 func _forward() -> void:
     _submit_drive_intent(Intents.FORWARD)
@@ -205,7 +228,7 @@ func _take_selected() -> void:
 func _on_action_resolved(_intent: StringName, success: bool, reason: String, _world_tick: int) -> void:
     if success:
         _refresh_all()
-    elif _panel != null and _panel.visible:
+    elif _surface != null and _surface.visible:
         _status.text = "VEHICLE — %s" % reason.replace("_", " ")
 
 func _on_mounted_changed(actor_id: String, _vehicle_id: String, mounted: bool) -> void:
@@ -227,7 +250,7 @@ func _refresh_all() -> void:
     _refresh_cargo()
 
 func _refresh_status() -> void:
-    if _service == null or _state == null or _panel == null:
+    if _service == null or _state == null or _surface == null:
         return
     var vehicle_id := _service.vehicle_for_driver(_actor_id)
     var mounted := not vehicle_id.is_empty()
@@ -244,8 +267,8 @@ func _refresh_status() -> void:
 
 func _set_mounted_presentation(mounted: bool) -> void:
     visible = mounted
-    if _panel != null:
-        _panel.visible = mounted
+    if _surface != null:
+        _surface.visible = mounted
     if _movement_controls != null:
         _movement_controls.set_control_surface_visible(not mounted)
 
