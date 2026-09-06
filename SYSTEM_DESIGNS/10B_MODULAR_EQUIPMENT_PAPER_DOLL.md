@@ -131,7 +131,9 @@ Exact executable head **`31bc923a92eabcd96f69603933d9669399858eeb`** passed the 
 - skateboard remains hand/back-only and cannot enter a clothing slot;
 - production equipment shell instantiates.
 
-The exact executable head's push workflows were checked after completion with no failure, queued or in-progress workflow found; protected vehicle, HUD/camera, streaming, lighting, weather/condition, interaction and visual-geometry regressions remained green.
+Verification repair head **`d5197d971fe65f1be4d3bf654cba36e1b09c46cb`** corrected a stale Item Transfer regression that still treated `insulation` as forbidden. The repaired contract now protects the current rule instead: insulation is permitted only as derived thermal/comfort clothing data and remains separate from bite/cut armor, blunt/ballistic armor and water resistance. That exact head reached aggregate commit status **success**, with no failed or pending status observed, and `verify/pages-deploy` succeeded.
+
+The exact executable head's protected vehicle, HUD/camera, streaming, lighting, weather/condition, interaction and visual-geometry regressions remained green through the verification repair.
 
 ## Protected integration invariants
 
