@@ -53,11 +53,13 @@ func _draw() -> void:
     var seen: Dictionary = {}
     for y in range(_origin.y, _origin.y + _size.y):
         for x in range(_origin.x, _origin.x + _size.x):
-            for entity_id: String in _world.entities_at(Vector2i(x, y), Layers.Channel.OBJECT):
-                if seen.has(entity_id) or not _state.has_vehicle(entity_id):
-                    continue
-                seen[entity_id] = true
-                _draw_vehicle(entity_id)
+            var cell := Vector2i(x, y)
+            for channel: int in [Layers.Channel.OBJECT, Layers.Channel.LOOSE_ITEM]:
+                for entity_id: String in _world.entities_at(cell, channel):
+                    if seen.has(entity_id) or not _state.has_vehicle(entity_id):
+                        continue
+                    seen[entity_id] = true
+                    _draw_vehicle(entity_id)
 
 func _draw_vehicle(vehicle_id: String) -> void:
     var placement := _world.placement(vehicle_id)
@@ -65,6 +67,8 @@ func _draw_vehicle(vehicle_id: String) -> void:
         return
     var rec := _state.record(vehicle_id)
     var kind := StringName(rec.get("kind", &""))
+    if placement.channel == Layers.Channel.LOOSE_ITEM and kind != VehicleProfileCatalog.SKATEBOARD:
+        return
     var p := _profiles.profile(kind)
     var width := float(p.get("width", 1)) * _cell_pixels
     var height := float(p.get("height", 1)) * _cell_pixels
@@ -88,6 +92,7 @@ func _draw_vehicle(vehicle_id: String) -> void:
     var fit_scale := minf(width / texture_size.x, height / texture_size.y)
     var draw_size := texture_size * fit_scale
     draw_set_transform(center, angle)
+    # Vehicle presentation intentionally contains no front/heading indicator overlay.
     draw_texture_rect(texture, Rect2(-draw_size * 0.5, draw_size), false)
     draw_set_transform(Vector2.ZERO, 0.0)
 
