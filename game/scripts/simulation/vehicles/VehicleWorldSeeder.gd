@@ -65,7 +65,8 @@ func seed_near(actor_id: String, radius: int = 42) -> int:
                 break
             if _mutations.create_entity(_profiles.semantic_type(kind), vehicle_id).is_empty():
                 continue
-            if not _mutations.set_placement(vehicle_id, Layers.Channel.OBJECT, anchor, cardinal_facing, footprint):
+            var channel := Layers.Channel.LOOSE_ITEM if kind == VehicleProfileCatalog.SKATEBOARD else Layers.Channel.OBJECT
+            if not _mutations.set_placement(vehicle_id, channel, anchor, cardinal_facing, footprint):
                 _mutations.remove_entity(vehicle_id)
                 continue
             if not _inventory_mutations.enroll_container(vehicle_id):
