@@ -1,5 +1,15 @@
 # System 16 Implementation Changelog — Canonical Player Shell / Inspectors / Stance Integration
 
+## 2026-09-05 — Equipment shell integration CI contract repair
+
+Verification repair: **`11ebe47697d7bcc3a728c6778e62b6314015e563`**
+
+- Exact-head documentation validation exposed a stale System 16 CI assumption that `game/main.tscn` must reference `CraftingPlayerShell.gd` directly.
+- The production inheritance chain is intentionally `EquipmentPlayerShell -> CraftingPlayerShell -> CanonicalPlayerShell`; this is how the modular equipment/paper-doll inventory UI extends the existing crafting and canonical player surfaces without creating a parallel shell.
+- Updated the Canonical Player Shell contract to protect that actual inheritance chain while continuing to require `VehicleGameMain.gd` as the production scene root.
+- No gameplay behavior, player-shell authority, equipment mutation, transfer timing, HUD geometry, vehicle behavior or world-generation rule changed in this CI-only repair.
+- Exact repair head drained with zero failed, queued or in-progress workflow runs; Pages was green.
+
 ## 2026-09-05 — Equipment insulation regression contract repair
 
 Verification repair: **`d5197d971fe65f1be4d3bf654cba36e1b09c46cb`**
