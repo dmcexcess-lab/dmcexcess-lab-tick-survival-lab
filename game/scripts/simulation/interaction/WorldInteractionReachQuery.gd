@@ -4,12 +4,12 @@ class_name WorldInteractionReachQuery
 const Facing = preload("res://scripts/foundation/spatial/SpatialFacing.gd")
 const Layers = preload("res://scripts/foundation/spatial/SpatialLayer.gd")
 
-## Neutral System-29 actor-to-world-interactable reach query.
+## Neutral actor-to-world-interactable reach query.
 ## CONTACT_FORWARD preserves the original actor footprint + one-cell-forward fringe.
-## Interactable targets may live on OBJECT or STRUCTURE; terrain/effects remain excluded.
+## Interactable targets may live on LOOSE_ITEM, OBJECT or STRUCTURE; terrain/effects remain excluded.
 
 const CONTACT_FORWARD: StringName = &"contact_forward"
-const INTERACTABLE_CHANNELS: Array[int] = [Layers.Channel.OBJECT, Layers.Channel.STRUCTURE]
+const INTERACTABLE_CHANNELS: Array[int] = [Layers.Channel.LOOSE_ITEM, Layers.Channel.OBJECT, Layers.Channel.STRUCTURE]
 
 var _world: WorldState = null
 
