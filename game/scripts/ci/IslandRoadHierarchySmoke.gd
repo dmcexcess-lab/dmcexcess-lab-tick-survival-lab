@@ -42,8 +42,9 @@ func _test_destination_based_hierarchy(plan: GeneratedGlobalWorldPlan) -> void:
         _check(not segments.is_empty(), "route retains physical segments: %s" % route_id)
         if segments.is_empty():
             continue
-        var road_type: StringName = StringName((segments[0] as Dictionary).get("road_type", &""))
-        var road_class: StringName = StringName((segments[0] as Dictionary).get("road_class", &""))
+        var first_segment: Dictionary = segments[0]
+        var road_type: StringName = StringName(first_segment.get("road_type", &""))
+        var road_class: StringName = StringName(first_segment.get("road_class", &""))
         _check(_route_metadata_is_consistent(segments, road_type, road_class), "route metadata is consistent: %s" % route_id)
 
         if route_id.begins_with("route.island.gateway."):
