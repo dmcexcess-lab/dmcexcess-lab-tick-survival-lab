@@ -6,11 +6,13 @@ const Change = preload("res://scripts/foundation/world/WorldChange.gd")
 const PerceptionClass = preload("res://scripts/simulation/perception/ObserverPerceptionService.gd")
 const PerformanceTelemetry = preload("res://scripts/foundation/diagnostics/PerformanceTelemetry.gd")
 
-## System-29 composition/query owner. It discovers actor-local reachable OBJECT and
-## STRUCTURE occupancy, asks real mechanic providers for offers, then applies current
-## System-23 knowledge before exposing player-facing descriptors.
+## System-29 composition/query owner. It discovers actor-local reachable loose items,
+## OBJECT and STRUCTURE occupancy, asks real mechanic providers for offers, then applies
+## current System-23 knowledge before exposing player-facing descriptors.
 
 signal affordances_changed(reason: StringName)
+
+const INTERACTABLE_CHANNELS: Array[int] = [Layers.Channel.LOOSE_ITEM, Layers.Channel.OBJECT, Layers.Channel.STRUCTURE]
 
 var _world: WorldState = null
 var _reach: WorldInteractionReachQuery = null
@@ -98,7 +100,7 @@ func highlight_descriptors() -> Array[Dictionary]:
         return []
     for offer: InteractionOffer in offers():
         var placement: WorldPlacement = _world.placement(offer.target_entity_id)
-        if placement == null or placement.channel not in [Layers.Channel.OBJECT, Layers.Channel.STRUCTURE]:
+        if placement == null or placement.channel not in INTERACTABLE_CHANNELS:
             continue
         var visible_cells: Array[Vector2i] = []
         for cell: Vector2i in placement.world_cells():
@@ -153,7 +155,7 @@ func _offer_is_current(offer: InteractionOffer, candidate_set: Dictionary) -> bo
         or not _reach.target_reachable(_actor_id, offer.target_entity_id, offer.reach_profile_id):
         return false
     var placement: WorldPlacement = _world.placement(offer.target_entity_id)
-    if placement == null or placement.channel not in [Layers.Channel.OBJECT, Layers.Channel.STRUCTURE]:
+    if placement == null or placement.channel not in INTERACTABLE_CHANNELS:
         return false
     return _same_cell_set(offer.target_cells, placement.world_cells())
 
@@ -211,10 +213,9 @@ func _on_world_changed(change: WorldChange) -> void:
         return
     if not _change_intersects_cached_reach(change):
         return
-    # Preserve System-29's established OBJECT invalidation vocabulary for old consumers.
-    # STRUCTURE interactions are additive and get a distinct reason only when no OBJECT
-    # channel participates in the same placement change.
-    if change.affects_channel(Layers.Channel.OBJECT):
+    if change.affects_channel(Layers.Channel.LOOSE_ITEM):
+        affordances_changed.emit(&"reachable_loose_item_changed")
+    elif change.affects_channel(Layers.Channel.OBJECT):
         affordances_changed.emit(&"reachable_object_changed")
     elif change.affects_channel(Layers.Channel.STRUCTURE):
         affordances_changed.emit(&"reachable_structure_changed")
@@ -233,7 +234,7 @@ func _on_world_batch_changed(batch: WorldChangeBatch) -> void:
         _provider_batch_dirty = false
         return
     var interactable_dirty: bool = false
-    for channel: int in [Layers.Channel.OBJECT, Layers.Channel.STRUCTURE]:
+    for channel: int in INTERACTABLE_CHANNELS:
         if batch.channel_changed(channel) and _dirty_rect_intersects_cached_reach(batch.dirty_rect_for_channel(channel)):
             interactable_dirty = true
             break
