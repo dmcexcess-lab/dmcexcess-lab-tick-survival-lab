@@ -67,10 +67,21 @@ func plan(
                 best_to = to_index
         if best_to < 0:
             continue
+        var target: Dictionary = settlements[best_to]
+        var road_class: StringName = _road_class_for_edge(settlements[from_index], target)
+        var width: int = primary_width if road_class == &"primary" else secondary_width
         var extra: Array[Dictionary] = []
-        if _append_routed_path(extra, "road.island.loop.%03d" % alternatives,
-            &"secondary", "route.island.loop.%03d" % alternatives, start,
-            settlements[best_to].get("center", INVALID_CELL), secondary_width, geography_cells, profile):
+        if _append_routed_path(
+            extra,
+            "road.island.loop.%03d" % alternatives,
+            road_class,
+            "route.island.loop.%03d" % alternatives,
+            start,
+            target.get("center", INVALID_CELL),
+            width,
+            geography_cells,
+            profile
+        ):
             road_segments.append_array(extra)
             used_edges[_edge_key(from_index, best_to)] = true
             alternatives += 1
@@ -123,8 +134,9 @@ func plan(
         return {"ok": false, "failure_reason": "island_major_road_network_empty", "road_segments": []}
     for road: Dictionary in road_segments:
         var route: String = String(road.get("route_id", ""))
-        var paved: bool = road.get("road_class", &"") == &"primary" or route.begins_with("route.island.loop.")
-        var four_lane: bool = road.get("road_class", &"") == &"primary"
+        var gateway_route: bool = route.begins_with("route.island.gateway.")
+        var paved: bool = gateway_route or road.get("road_class", &"") == &"primary"
+        var four_lane: bool = gateway_route
         var dirt: bool = not paved and route.hash() % 3 == 0
         road["road_type"] = &"four_lane" if four_lane else (&"two_lane" if paved else (&"dirt" if dirt else &"gravel"))
         road["lane_count"] = 4 if four_lane else (2 if paved else 1)
@@ -158,11 +170,12 @@ func _best_routable_edge(connected: Dictionary, settlements: Array[Dictionary]) 
 func _road_class_for_edge(a: Dictionary, b: Dictionary) -> StringName:
     var a_kind: StringName = StringName(a.get("kind", &""))
     var b_kind: StringName = StringName(b.get("kind", &""))
-    if a_kind == &"smalltown" and b_kind != &"rural_hamlet":
-        return &"primary"
-    if b_kind == &"smalltown" and a_kind != &"rural_hamlet":
+    if _settlement_requires_paved_access(a_kind) or _settlement_requires_paved_access(b_kind):
         return &"primary"
     return &"secondary"
+
+func _settlement_requires_paved_access(kind: StringName) -> bool:
+    return kind == &"smalltown" or kind == &"rural_crossroads"
 
 func _settlement_nearest_side(bounds: Rect2i, settlements: Array[Dictionary], side: StringName) -> Dictionary:
     var best: Dictionary = {}
