@@ -69,17 +69,7 @@ func request_enter_nearby(actor_id: String) -> Dictionary:
         return _reject("vehicle_not_ready")
     if is_mounted(actor_id):
         return _reject("already_mounted")
-    var actor_place := _world.placement(actor_id)
-    if actor_place == null:
-        return _reject("actor_unplaced")
-    var nearest: String = ""
-    for cell: Vector2i in [actor_place.anchor, actor_place.anchor + Vector2i.UP, actor_place.anchor + Vector2i.RIGHT, actor_place.anchor + Vector2i.DOWN, actor_place.anchor + Vector2i.LEFT]:
-        for entity_id: String in _world.entities_at(cell, Layers.Channel.OBJECT):
-            if _state.has_vehicle(entity_id):
-                nearest = entity_id
-                break
-        if not nearest.is_empty():
-            break
+    var nearest := _nearby_vehicle(actor_id)
     if nearest.is_empty():
         return _reject("no_vehicle_in_reach")
     return _begin(actor_id, nearest, ENTER, 4, {})
@@ -288,16 +278,34 @@ func _commit_enter(actor_id: String, vehicle_id: String) -> bool:
     var actor_place := _world.placement(actor_id)
     if vehicle_place == null or actor_place == null:
         return false
+    var rec := _state.record(vehicle_id)
+    var kind := StringName(rec.get("kind", &""))
+    var original_channel := vehicle_place.channel
+    if kind == VehicleProfileCatalog.SKATEBOARD and original_channel != Layers.Channel.OBJECT:
+        if not _mutations.set_placement(vehicle_id, Layers.Channel.OBJECT, vehicle_place.anchor, vehicle_place.facing, vehicle_place.footprint):
+            return false
     if not _state.set_driver(vehicle_id, actor_id):
+        if kind == VehicleProfileCatalog.SKATEBOARD and original_channel != Layers.Channel.OBJECT:
+            _mutations.set_placement(vehicle_id, original_channel, vehicle_place.anchor, vehicle_place.facing, vehicle_place.footprint)
         return false
     _overrides.set_override(actor_id, false)
-    _mutations.set_placement(actor_id, Layers.Channel.ACTOR, vehicle_place.anchor, Facing.Value.NORTH, Footprint.single_cell())
+    if not _mutations.set_placement(actor_id, Layers.Channel.ACTOR, vehicle_place.anchor, Facing.Value.NORTH, Footprint.single_cell()):
+        _state.clear_driver(vehicle_id)
+        _overrides.clear_override(actor_id)
+        if kind == VehicleProfileCatalog.SKATEBOARD and original_channel != Layers.Channel.OBJECT:
+            _mutations.set_placement(vehicle_id, original_channel, vehicle_place.anchor, vehicle_place.facing, vehicle_place.footprint)
+        return false
     mounted_changed.emit(actor_id, vehicle_id, true)
     return true
 
 func _commit_exit(actor_id: String, vehicle_id: String) -> bool:
     var vehicle_place := _world.placement(vehicle_id)
     if vehicle_place == null:
+        return false
+    var rec := _state.record(vehicle_id)
+    var kind := StringName(rec.get("kind", &""))
+    var skateboard := kind == VehicleProfileCatalog.SKATEBOARD
+    if skateboard and not _mutations.set_placement(vehicle_id, Layers.Channel.LOOSE_ITEM, vehicle_place.anchor, vehicle_place.facing, vehicle_place.footprint):
         return false
     for delta: Vector2i in [Vector2i.RIGHT, Vector2i.LEFT, Vector2i.DOWN, Vector2i.UP]:
         var target := vehicle_place.anchor + delta
@@ -309,6 +317,8 @@ func _commit_exit(actor_id: String, vehicle_id: String) -> bool:
             _state.clear_driver(vehicle_id)
             mounted_changed.emit(actor_id, vehicle_id, false)
             return true
+    if skateboard:
+        _mutations.set_placement(vehicle_id, Layers.Channel.OBJECT, vehicle_place.anchor, vehicle_place.facing, vehicle_place.footprint)
     return false
 
 func _commit_motion(actor_id: String, vehicle_id: String, action: TimedAction) -> Dictionary:
@@ -421,9 +431,10 @@ func _nearby_vehicle(actor_id: String) -> String:
     if place == null:
         return ""
     for cell: Vector2i in [place.anchor, place.anchor + Vector2i.UP, place.anchor + Vector2i.RIGHT, place.anchor + Vector2i.DOWN, place.anchor + Vector2i.LEFT]:
-        for entity_id: String in _world.entities_at(cell, Layers.Channel.OBJECT):
-            if _state.has_vehicle(entity_id):
-                return entity_id
+        for channel: int in [Layers.Channel.OBJECT, Layers.Channel.LOOSE_ITEM]:
+            for entity_id: String in _world.entities_at(cell, channel):
+                if _state.has_vehicle(entity_id):
+                    return entity_id
     return ""
 
 func _has_semantic(actor_id: String, semantic: StringName) -> bool:
