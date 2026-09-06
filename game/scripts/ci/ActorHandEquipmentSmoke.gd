@@ -4,6 +4,8 @@ const WorldStateClass = preload("res://scripts/foundation/world/WorldState.gd")
 const WorldMutationClass = preload("res://scripts/foundation/world/WorldMutationService.gd")
 const HandStateClass = preload("res://scripts/simulation/actors/equipment/ActorHandEquipmentState.gd")
 const HandMutationClass = preload("res://scripts/simulation/actors/equipment/ActorHandEquipmentMutationService.gd")
+const ProfilesClass = preload("res://scripts/simulation/actors/equipment/ActorEquipmentProfileCatalog.gd")
+const ProtectionQueryClass = preload("res://scripts/simulation/actors/equipment/ActorEquipmentProtectionQuery.gd")
 const Slots = preload("res://scripts/simulation/actors/equipment/ActorHandSlot.gd")
 const Layers = preload("res://scripts/foundation/spatial/SpatialLayer.gd")
 const Facing = preload("res://scripts/foundation/spatial/SpatialFacing.gd")
@@ -16,6 +18,7 @@ var reset_count: int = 0
 func _initialize() -> void:
     _test_enrollment_and_copy_safe_reads()
     _test_assignment_validation_and_uniqueness()
+    _test_equipment_profile_and_protection_contract()
     _test_lifecycle_versioning()
     _test_snapshot_restore()
     if failures.is_empty():
@@ -94,6 +97,40 @@ func _test_assignment_validation_and_uniqueness() -> void:
 
     _check(not world.has_placement("actor.a"), "actor may remain tactically unplaced")
     _check(state.primary_item("actor.a") == "item.knife.a", "unplaced actor retains hand state")
+
+func _test_equipment_profile_and_protection_contract() -> void:
+    var fixture: Dictionary = _fixture()
+    var wm: WorldMutationService = fixture["world_mutations"]
+    var world: WorldState = fixture["world"]
+    var state: ActorHandEquipmentState = fixture["state"]
+    var mutations: ActorHandEquipmentMutationService = fixture["mutations"]
+    var profiles := ProfilesClass.new()
+    wm.create_entity(&"actor.survivor", "actor.gear")
+    wm.create_entity(&"item.vehicle.skateboard", "item.board")
+    wm.create_entity(&"item.clothing.work_jacket", "item.jacket")
+    wm.create_entity(&"item.clothing.work_boots", "item.boots")
+    mutations.enroll_actor("actor.gear")
+
+    _check(profiles.allowed_slots(&"item.vehicle.skateboard") == [Slots.Value.PRIMARY_RIGHT, Slots.Value.SECONDARY_LEFT, Slots.Value.BACK], "skateboard is hand/back only")
+    _check(not profiles.is_allowed(&"item.vehicle.skateboard", Slots.Value.HEAD), "skateboard cannot be worn as apparel")
+    _check(mutations.set_item("actor.gear", Slots.Value.BACK, "item.board"), "skateboard equips to back")
+    _check(not mutations.set_item("actor.gear", Slots.Value.HEAD, "item.jacket"), "torso clothing rejects head slot")
+    _check(mutations.set_item("actor.gear", Slots.Value.TORSO, "item.jacket"), "work jacket equips to torso")
+    _check(mutations.set_item("actor.gear", Slots.Value.FEET, "item.boots"), "work boots equip to feet")
+
+    var jacket_values: Dictionary = profiles.protection_and_weather(&"item.clothing.work_jacket")
+    _check(jacket_values.has("bite_cut_armor") and jacket_values.has("blunt_ballistic_armor") and jacket_values.has("water_resistance"), "apparel exposes merged armor and water resistance")
+    for retired_key: String in ["armor_blunt", "armor_cut", "armor_bite", "insulation", "wind_resistance"]:
+        _check(not jacket_values.has(retired_key), "retired apparel stat absent: %s" % retired_key)
+
+    var protection := ProtectionQueryClass.new(world, state, profiles)
+    var aggregate: Dictionary = protection.query("actor.gear")
+    _check(bool(aggregate.get("known", false)), "equipped protection query resolves")
+    _check(int(aggregate.get("bite_cut_armor", -1)) == 14, "bite/cut armor aggregates jacket plus boots")
+    _check(int(aggregate.get("blunt_ballistic_armor", -1)) == 14, "blunt/ballistic armor aggregates jacket plus boots")
+    _check(int(aggregate.get("water_resistance", -1)) == 22, "water resistance remains separate")
+    for retired_key: String in ["armor_blunt", "armor_cut", "armor_bite", "insulation", "wind_resistance"]:
+        _check(not aggregate.has(retired_key), "retired aggregate stat absent: %s" % retired_key)
 
 func _test_lifecycle_versioning() -> void:
     var fixture: Dictionary = _fixture()
