@@ -67,6 +67,26 @@ func _run() -> void:
         _check(not _has_button_text(camera_controls, "ZOOM -"), "ZOOM - button is removed")
         _check(not _has_button_text(camera_controls, "ZOOM +"), "ZOOM + button is removed")
         _check(_has_button_prefix(camera_controls, "CENTER"), "CENTER camera action remains available")
+        var center_button := camera_controls.get_node_or_null("CenterButton") as Button
+        var map_button := camera_controls.get_node_or_null("MapButton") as Button
+        var forward_button := _find_button_prefix(controls, "FORWARD") if controls != null else null
+        _check(center_button != null, "CENTER button has a stable production identity")
+        _check(map_button != null and map_button.text == "MAP", "MAP button is adjacent to camera controls")
+        _check(center_button != null and map_button != null and is_equal_approx(center_button.position.y, map_button.position.y), "CENTER and MAP share one row")
+        _check(center_button != null and map_button != null and map_button.position.x > center_button.position.x, "MAP sits immediately to the right of CENTER")
+        if center_button != null and forward_button != null:
+            var vertical_gap: float = forward_button.position.y - (center_button.position.y + center_button.size.y)
+            _check(vertical_gap >= 0.0 and vertical_gap <= 20.0, "CENTER row is dropped close to FORWARD without overlap")
+        var island_map: IslandMapView = camera_controls.map_view()
+        _check(island_map != null and island_map.is_configured(), "production scene configures the canonical island map")
+        _check(island_map != null and island_map.map_bounds().size.x > 0 and island_map.map_bounds().size.y > 0, "island map owns generated world bounds")
+        _check(island_map != null and island_map.has_player_marker(), "island map resolves the canonical player placement")
+        _check(camera_controls.set_map_open(true), "MAP opens from the production camera control surface")
+        _check(camera_controls.map_is_open() and island_map.visible, "island map overlay becomes visible")
+        _check(camera_controls.layer > 22, "open island map is raised above the ordinary HUD")
+        _check(island_map.surface_texture_size() == Vector2i(256, 256), "island map materializes deterministic generated-island surface pixels")
+        _check(camera_controls.set_map_open(false), "island map closes cleanly")
+        _check(not camera_controls.map_is_open() and not island_map.visible and camera_controls.layer == 22, "closing MAP restores ordinary camera-control presentation")
 
     var hud := game.get_node_or_null("Hud")
     _check(hud != null, "canonical HUD exists")
@@ -100,11 +120,16 @@ func _has_button_text(root: Node, text_value: String) -> bool:
     return false
 
 func _has_button_prefix(root: Node, prefix: String) -> bool:
+    return _find_button_prefix(root, prefix) != null
+
+func _find_button_prefix(root: Node, prefix: String) -> Button:
+    if root == null:
+        return null
     for node: Node in root.find_children("*", "Button", true, false):
         var button := node as Button
         if button != null and button.text.begins_with(prefix):
-            return true
-    return false
+            return button
+    return null
 
 func _find_label_prefix(root: Node, prefix: String) -> Label:
     for node: Node in root.find_children("*", "Label", true, false):
