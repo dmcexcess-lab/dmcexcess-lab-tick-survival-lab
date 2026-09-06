@@ -5,12 +5,15 @@ const Facing = preload("res://scripts/foundation/spatial/SpatialFacing.gd")
 const QueryResult = preload("res://scripts/simulation/collision/SpatialQueryResult.gd")
 const DoorValue = preload("res://scripts/simulation/doors/DoorStateValue.gd")
 const Actions = preload("res://scripts/simulation/interaction/WorldInteractionActionService.gd")
+const PickupOffers = preload("res://scripts/simulation/interaction/LooseItemPickupInteractionOfferProvider.gd")
 const SustainmentOffers = preload("res://scripts/simulation/interaction/SustainmentInteractionOfferProvider.gd")
 const LootOffers = preload("res://scripts/simulation/loot/LootSearchInteractionOfferProvider.gd")
 const CraftingOffers = preload("res://scripts/simulation/crafting/CraftingInteractionOfferProvider.gd")
 const Workstations = preload("res://scripts/simulation/crafting/CraftingWorkstationCatalog.gd")
 const SkillCatalog = preload("res://scripts/simulation/actors/skills/ActorSkillCatalog.gd")
 const ConditionState = preload("res://scripts/simulation/actors/condition/ActorConditionState.gd")
+const EquipmentProfiles = preload("res://scripts/simulation/actors/equipment/ActorEquipmentProfileCatalog.gd")
+const Slots = preload("res://scripts/simulation/actors/equipment/ActorHandSlot.gd")
 
 var failures: Array[String] = []
 var game: Node = null
@@ -33,6 +36,8 @@ func _run() -> void:
     var spatial: SpatialQueryService = game.get("_spatial_query")
     var skills: ActorSkillState = game.get("_skill_state")
     var condition: ActorConditionService = game.get("_condition_service")
+    var hand_state: ActorHandEquipmentState = game.get("_hand_state")
+    var inventory_state: InventoryContainmentState = game.get("_inventory_state")
     var inventory_mutations: InventoryContainmentMutationService = game.get("_inventory_mutations")
     var door_state: DoorStateStore = game.get("_door_state")
     var door_transitions: DoorPhysicalTransitionService = game.get("_door_transition")
@@ -45,7 +50,7 @@ func _run() -> void:
     var loot_inspection: LootContainerInspectionQuery = game.get("_loot_inspection")
 
     _check(world != null and mutations != null and spatial != null, "world route owners available")
-    _check(skills != null and condition != null and inventory_mutations != null, "player state owners available")
+    _check(skills != null and condition != null and hand_state != null and inventory_state != null and inventory_mutations != null, "player state owners available")
     _check(door_state != null and door_transitions != null and interaction_state != null, "opening owners available")
     _check(controller != null and controller.is_ready() and panel != null and pointer != null, "unified world-click route ready")
     _check(crafting_panel != null and crafting_panel.is_configured(), "crafting panel ready")
@@ -63,6 +68,7 @@ func _run() -> void:
         resolved.append({"target": target_id, "action": String(action_id), "success": success, "reason": reason})
     )
 
+    await _test_loose_skateboard_pickup_route(world, mutations, spatial, hand_state, inventory_state, pointer, panel, actor_id)
     await _test_sink_route(world, mutations, condition, pointer, panel, actor_id)
     await _test_bed_route(world, mutations, condition, pointer, panel, actor_id)
     await _test_door_route(world, mutations, door_state, door_transitions, interaction_state, pointer, panel, actor_id)
@@ -74,12 +80,46 @@ func _run() -> void:
     var saw_native_success: bool = false
     for entry: Dictionary in resolved:
         if bool(entry.get("success", false)) and String(entry.get("action", "")) in [
-            String(Actions.DOOR_OPEN), String(Actions.WINDOW_OPEN), String(Actions.OPENING_BOARD), String(Actions.OBJECT_DECONSTRUCT)
+            String(PickupOffers.ACTION_ID), String(Actions.DOOR_OPEN), String(Actions.WINDOW_OPEN), String(Actions.OPENING_BOARD), String(Actions.OBJECT_DECONSTRUCT)
         ]:
             saw_native_success = true
             break
     _check(saw_native_success, "world chooser reports completed native actions")
     _finish()
+
+func _test_loose_skateboard_pickup_route(
+    world: WorldState,
+    mutations: WorldMutationService,
+    spatial: SpatialQueryService,
+    hand_state: ActorHandEquipmentState,
+    inventory_state: InventoryContainmentState,
+    pointer: DoorPointerInputAdapter,
+    panel: WorldInteractionPanel,
+    actor_id: String
+) -> void:
+    var skateboard: String = ""
+    for candidate: String in world.entity_ids_of_type(EquipmentProfiles.SKATEBOARD):
+        if world.placement(candidate) != null and _place_actor_facing(world, mutations, spatial, actor_id, candidate, false):
+            skateboard = candidate
+            break
+    _check(not skateboard.is_empty(), "seeded loose skateboard reachable")
+    if skateboard.is_empty(): return
+    var loose_cell: Vector2i = world.placement(skateboard).anchor
+    pointer.world_cell_primary.emit(loose_cell)
+    await process_frame
+    var pickup: Button = _world_button(panel, skateboard, PickupOffers.ACTION_ID)
+    _check(panel.is_open() and pickup != null and pickup.text == "PICK UP", "clicking loose skateboard exposes PICK UP")
+    if pickup != null: pickup.pressed.emit()
+    await process_frame
+
+    var equipped_slot: int = -1
+    for slot: int in [Slots.Value.PRIMARY_RIGHT, Slots.Value.SECONDARY_LEFT, Slots.Value.BACK]:
+        if hand_state.item_in_slot(actor_id, slot) == skateboard:
+            equipped_slot = slot
+            break
+    _check(world.placement(skateboard) == null, "PICK UP removes exact skateboard loose-world placement")
+    _check(equipped_slot >= 0, "PICK UP equips the same skateboard in RH/LH/back")
+    _check(not inventory_state.is_contained(skateboard), "skateboard pickup never routes through ordinary backpack/personal containment")
 
 func _test_sink_route(world: WorldState, mutations: WorldMutationService, condition: ActorConditionService, pointer: DoorPointerInputAdapter, panel: WorldInteractionPanel, actor_id: String) -> void:
     var sink: String = _first_reachable_target(world, mutations, actor_id, [&"prop.kitchen_sink", &"prop.bathroom_vanity", &"prop.utility_sink"], false)
@@ -121,7 +161,7 @@ func _test_door_route(world: WorldState, mutations: WorldMutationService, door_s
     pointer.world_cell_primary.emit(world.placement(door).anchor)
     await process_frame
     var open_button: Button = _world_button(panel, door, Actions.DOOR_OPEN)
-    _check(panel.is_open() and open_button != null, "unlocked closed door exposes OPEN")
+    _check(panel.is_open() and open_button != null and open_button.text == "OPEN", "unlocked closed door exposes OPEN")
     _check(_world_button(panel, door, Actions.DOOR_LOCK) == null and _world_button(panel, door, Actions.DOOR_UNLOCK) == null, "door chooser never exposes player LOCK/UNLOCK")
     if open_button != null: open_button.pressed.emit()
     _check(door_state.state(door) == DoorValue.OPEN, "door OPEN button mutates real door state")
@@ -138,9 +178,12 @@ func _test_door_route(world: WorldState, mutations: WorldMutationService, door_s
     interaction_state.set_locked(door, true, &"ci_quiet_entry_locked")
     pointer.world_cell_primary.emit(world.placement(door).anchor)
     await process_frame
-    _check(_world_button(panel, door, Actions.DOOR_OPEN) == null, "locked door does not expose quiet OPEN")
+    var try_open: Button = _world_button(panel, door, Actions.DOOR_OPEN)
+    _check(try_open != null and try_open.text == "TRY OPEN", "locked door exposes TRY OPEN without revealing success")
     _check(_world_button(panel, door, Actions.DOOR_LOCK) == null and _world_button(panel, door, Actions.DOOR_UNLOCK) == null, "locked door still exposes no key/lock management")
     _check(_world_button(panel, door, Actions.OPENING_BREAK) != null, "locked door still exposes noisy BREAK entry")
+    if try_open != null: try_open.pressed.emit()
+    _check(door_state.state(door) == DoorValue.CLOSED, "TRY OPEN leaves locked door closed")
     interaction_state.set_locked(door, false, &"ci_quiet_entry_cleanup")
     panel.close_panel()
     await process_frame
@@ -159,7 +202,7 @@ func _test_window_route(world: WorldState, mutations: WorldMutationService, spat
     pointer.world_cell_primary.emit(world.placement(window).anchor)
     await process_frame
     var open_button: Button = _world_button(panel, window, Actions.WINDOW_OPEN)
-    _check(open_button != null, "unlocked closed window exposes quiet OPEN")
+    _check(open_button != null and open_button.text == "OPEN", "unlocked closed window exposes quiet OPEN")
     _check(_world_button(panel, window, Actions.WINDOW_LOCK) == null and _world_button(panel, window, Actions.WINDOW_UNLOCK) == null, "window chooser never exposes player LOCK/UNLOCK")
     if open_button != null: open_button.pressed.emit()
     _check(interaction_state.window_open(window), "window OPEN button persists open state")
@@ -185,9 +228,12 @@ func _test_window_route(world: WorldState, mutations: WorldMutationService, spat
     interaction_state.set_locked(window, true, &"ci_quiet_entry_locked")
     pointer.world_cell_primary.emit(world.placement(window).anchor)
     await process_frame
-    _check(_world_button(panel, window, Actions.WINDOW_OPEN) == null, "locked window does not expose quiet OPEN")
+    var try_open: Button = _world_button(panel, window, Actions.WINDOW_OPEN)
+    _check(try_open != null and try_open.text == "TRY OPEN", "locked window exposes TRY OPEN without revealing success")
     _check(_world_button(panel, window, Actions.WINDOW_LOCK) == null and _world_button(panel, window, Actions.WINDOW_UNLOCK) == null, "locked window exposes no key/lock management")
     _check(_world_button(panel, window, Actions.OPENING_BREAK) != null, "locked window still exposes noisy BREAK entry")
+    if try_open != null: try_open.pressed.emit()
+    _check(not interaction_state.window_open(window), "TRY OPEN leaves locked window closed")
     interaction_state.set_locked(window, false, &"ci_quiet_entry_cleanup")
     panel.close_panel()
     await process_frame
