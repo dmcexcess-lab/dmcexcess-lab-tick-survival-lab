@@ -121,7 +121,9 @@ func _test_equipment_profile_and_protection_contract() -> void:
     var jacket_values: Dictionary = profiles.protection_and_weather(&"item.clothing.work_jacket")
     _check(jacket_values.has("bite_cut_armor") and jacket_values.has("blunt_ballistic_armor") and jacket_values.has("water_resistance"), "apparel exposes merged armor and water resistance")
     for retired_key: String in ["armor_blunt", "armor_cut", "armor_bite", "insulation", "wind_resistance"]:
-        _check(not jacket_values.has(retired_key), "retired apparel stat absent: %s" % retired_key)
+        _check(not jacket_values.has(retired_key), "armor/weather projection excludes legacy or thermal-only stat: %s" % retired_key)
+    var jacket_thermal: Dictionary = profiles.thermal_and_comfort(&"item.clothing.work_jacket")
+    _check(int(jacket_thermal.get("insulation", -1)) == 12, "insulation is exposed only through thermal/comfort profile seam")
 
     var protection := ProtectionQueryClass.new(world, state, profiles)
     var aggregate: Dictionary = protection.query("actor.gear")
@@ -129,8 +131,11 @@ func _test_equipment_profile_and_protection_contract() -> void:
     _check(int(aggregate.get("bite_cut_armor", -1)) == 14, "bite/cut armor aggregates jacket plus boots")
     _check(int(aggregate.get("blunt_ballistic_armor", -1)) == 14, "blunt/ballistic armor aggregates jacket plus boots")
     _check(int(aggregate.get("water_resistance", -1)) == 22, "water resistance remains separate")
-    for retired_key: String in ["armor_blunt", "armor_cut", "armor_bite", "insulation", "wind_resistance"]:
+    _check(int(aggregate.get("insulation", -1)) == 17, "insulation aggregates separately as thermal/comfort clothing truth")
+    for retired_key: String in ["armor_blunt", "armor_cut", "armor_bite", "wind_resistance"]:
         _check(not aggregate.has(retired_key), "retired aggregate stat absent: %s" % retired_key)
+    var thermal: Dictionary = protection.query_thermal("actor.gear")
+    _check(bool(thermal.get("known", false)) and int(thermal.get("insulation", -1)) == 17, "thermal query exposes insulation without changing armor semantics")
 
 func _test_lifecycle_versioning() -> void:
     var fixture: Dictionary = _fixture()
