@@ -56,7 +56,7 @@ func register_delegated_handler(action_id: StringName, handler: Callable) -> boo
 func submit_world_cell(cell: Vector2i) -> void:
     if not is_ready() or _kernel.is_hard_paused() or _kernel.has_active_action(_actor_id): return
     var target_ids: Dictionary = {}
-    for channel: int in [Layers.Channel.OBJECT, Layers.Channel.STRUCTURE]:
+    for channel: int in [Layers.Channel.LOOSE_ITEM, Layers.Channel.OBJECT, Layers.Channel.STRUCTURE]:
         for entity_id: String in _world.entities_at(cell, channel): target_ids[entity_id] = true
     if target_ids.is_empty():
         _panel.close_panel()
@@ -157,6 +157,6 @@ func _target_label(target_id: String) -> String:
     var entity: WorldEntityRecord = _world.entity(target_id)
     if entity == null: return "INTERACT"
     var label: String = String(entity.semantic_type)
-    for prefix: String in ["prop.", "door.", "window."]:
+    for prefix: String in ["prop.", "door.", "window.", "item."]:
         if label.begins_with(prefix): label = label.trim_prefix(prefix)
     return label.replace("_", " ").to_upper()
