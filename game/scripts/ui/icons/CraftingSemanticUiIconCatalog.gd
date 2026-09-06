@@ -3,7 +3,7 @@ class_name CraftingSemanticUiIconCatalog
 
 ## Phase-2 additive System-31 presentation adapter. The existing semantic icon catalog
 ## remains authoritative for Phase-1 vocabulary; this narrow extension deliberately maps
-## the current crafting/resource additions onto already-authored low-resolution glyphs.
+## the current crafting/resource/apparel additions onto already-authored low-resolution glyphs.
 
 const SHELL_CRAFT: StringName = &"ui.shell.craft"
 
@@ -20,6 +20,14 @@ const EXTRA_SEMANTIC_TO_GLYPH := {
     &"item.crafting.sharpened_stake": &"glyph.kitchen.knife",
     &"item.crafting.stone_hammer": &"glyph.tool.hammer",
     &"item.crafting.paper_tinder_bundle": &"glyph.junk.paper_trash",
+    &"item.clothing.baseball_cap": &"glyph.clothing.gloves",
+    &"item.clothing.t_shirt": &"glyph.clothing.gloves",
+    &"item.clothing.hoodie": &"glyph.clothing.gloves",
+    &"item.clothing.work_jacket": &"glyph.clothing.gloves",
+    &"item.clothing.jeans": &"glyph.clothing.gloves",
+    &"item.clothing.cargo_pants": &"glyph.clothing.gloves",
+    &"item.clothing.sneakers": &"glyph.clothing.gloves",
+    &"item.clothing.work_boots": &"glyph.clothing.gloves",
 }
 
 func is_ready() -> bool:
