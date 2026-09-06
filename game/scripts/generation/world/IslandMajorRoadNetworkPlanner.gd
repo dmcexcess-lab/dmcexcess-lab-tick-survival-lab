@@ -30,7 +30,6 @@ func plan(
         var from_settlement: Dictionary = settlements[from_index]
         var to_settlement: Dictionary = settlements[to_index]
         var road_class: StringName = _road_class_for_edge(from_settlement, to_settlement)
-        var width: int = primary_width if road_class == &"primary" else secondary_width
         var prefix: String = "road.island.network.%03d" % edge_ordinal
         var route_id: String = "route.island.network.%03d" % edge_ordinal
         if not _append_routed_path(
@@ -40,7 +39,7 @@ func plan(
             route_id,
             from_settlement.get("center", INVALID_CELL),
             to_settlement.get("center", INVALID_CELL),
-            width,
+            secondary_width,
             geography_cells,
             profile
         ):
@@ -69,7 +68,6 @@ func plan(
             continue
         var target: Dictionary = settlements[best_to]
         var road_class: StringName = _road_class_for_edge(settlements[from_index], target)
-        var width: int = primary_width if road_class == &"primary" else secondary_width
         var extra: Array[Dictionary] = []
         if _append_routed_path(
             extra,
@@ -78,7 +76,7 @@ func plan(
             "route.island.loop.%03d" % alternatives,
             start,
             target.get("center", INVALID_CELL),
-            width,
+            secondary_width,
             geography_cells,
             profile
         ):
