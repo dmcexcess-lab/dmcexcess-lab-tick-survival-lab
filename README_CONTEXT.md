@@ -4,38 +4,46 @@ Last updated: **2026-09-05**
 
 This is the authoritative continuation checkpoint. Read `README_SOPS.md`, fetch current `main` once, and continue from **NEXT OPERATION**. Newer explicit user direction supersedes this handoff.
 
-## Current checkpoint — vehicle/equipment/apparel mechanics landed; armor model simplified; loadout UI remains
+## Current checkpoint — player HUD cleanup closed; generalized loadout UI remains
 
-- **Vehicle/equipment/apparel aggregate implementation:** `a74c60ea848a35e314c6606a197af6db36abf61b`.
-- `a74c60e` initially exposed one project-import typo in `TacticalRendererStack.gd`; that compile boundary was repaired at `05f2308d83804ed2547214074a7a23bc149f6750` by using the real `WorldInteractionStateRenderer` type.
-- Later exact-head workflow passes correctly exposed stale catalog/test assumptions caused by adding eight apparel semantics. Those were real CI contract failures, not runner noise, so do **not** describe `05f2308` as the final clean executable checkpoint.
-- Catalog/UI contract repairs landed through:
-  - `c4ad24623a9fcad23a890dad2af5808260710e50` — explicit UI-icon mappings for the eight new apparel semantics;
-  - `a6caaac905eca5d694320a31accbf7669455219f` — semantic-icon regression updated for 108 loot semantics / 120 icon semantics;
-  - `6d6904c9293d332cb6648cf72a7728b6dd75e37a` — Phase 1E workflow updated to loot catalog v5;
-  - `95ba35155a90954d07a741eba6601cedc408b0da` — crafting regression updated to loot catalog v5;
-  - `da35f843020f32740b46dbfb944e3c85f363467d` — Phase 1E integration regression updated for catalog v5 / 108 loot semantics / 120 icon semantics.
-- **Final executable gameplay head before this handoff write:** `da35f843020f32740b46dbfb944e3c85f363467d`.
-- Exact executable-head verification for `da35f843` closed with **44/44 push workflows successful, 0 failed, 0 queued and 0 in-progress**. Broad exact-head queries also showed 0 failed, 0 queued and 0 in-progress. Global World Planning run `34004735097` completed successfully.
+- **Player UI cleanup executable head:** `3bc3f2abd74fe82b215b1fbfc7983f45a4bdf057`.
+- Exact executable-head verification for `3bc3f2ab` closed with **45/45 push workflows successful, 0 failed, 0 cancelled, 0 queued and 0 in-progress**.
+- UI-cleanup changelog commit: `a4d536bb5ef3de7c735f9f3fc2bf212ae71c8d9e` (`CHANGELOG_PLAYER_UI_CLEANUP.md`).
+- The prior apparel/catalog executable checkpoint was `da35f843020f32740b46dbfb944e3c85f363467d`, which closed with 44/44 push workflows successful before this HUD pass.
 - The earlier endpoint-driven island-road hierarchy remains closed and protected; executable road fix `f7cd362310cdabf3a827bd33b5c5d9628e3bc423`, exact-tree re-verification `a312a590fc6ce4eb511ebbb8d4e2bec06c240f69` with 52/52 terminal success.
 - **Play:** https://dmcexcess-lab.github.io/dmcexcess-lab-tick-survival-lab/
 - Standing direct-main/Pages authorization remains in the SOP; do not ask again.
 
-### Vehicle / equipment / apparel checkpoint
+### Protected player HUD cleanup contract
 
+The user explicitly simplified the player-facing HUD. Preserve this unless later direction changes it:
+
+- The standalone **Survival** player window is retired. Do **not** restore it. Condition, sustainment, exact-item eating/drinking, first aid, rest/sleep and related simulation truth remain authoritative and should be reached through ordinary inventory/world interactions rather than a duplicate Survival menu.
+- The standalone **Forage** panel is retired. Do **not** restore it. **FORAGE** now lives on the bottom on-foot action strip and calls the existing authoritative `ForageNearbyActionService`.
+- The player-visible **Dev** window is retired. Do **not** restore it. Performance telemetry and diagnostic/debug snapshots remain available internally, but `TacticalRendererStack.gd` must not instantiate `PerformanceDevPanel` during normal gameplay.
+- **ENTER VEHICLE** now lives on the bottom on-foot action strip and is wired to the production `VehiclePlayerController`.
+- The vehicle detail/cargo panel is **mounted-only**. It no longer duplicates ENTER while the player is on foot. Mounted controls such as EXIT, START, HOTWIRE, BRAKE, REVERSE, REPAIR, ADD RACK, REFUEL and cargo remain available when appropriate.
+- The bottom on-foot **FORAGE** and **ENTER VEHICLE** actions hide while mounted and return after dismount.
+- Health and Fatigue/Stamina bars are at the **top of the screen** (`y = 70` in `CanonicalStatusHud.gd`) rather than overlapping the lower `Looking at:` context presentation.
+- `PlayerUiCleanupSmoke.gd` protects the cleanup by booting the production scene and checking the retired panels are absent, the two bottom actions are production-wired, vehicle detail is hidden on foot, duplicate ENTER is absent, and both vital bars are in the top HUD zone.
+- The protected Performance Architecture workflow now explicitly requires the renderer **not** to reference/instantiate `PerformanceDevPanel`, while retaining the existing performance telemetry architecture.
+- CI caught a real scene-node wiring issue during this pass: the production bottom control node is named `Controls`, not `PlayerControls`. `VehiclePlayerControls.gd` now resolves `Controls`, so the bottom ENTER VEHICLE action actually reaches production gameplay. Preserve that real route.
+
+## Vehicle / equipment / apparel checkpoint
+
+- Vehicle/equipment/apparel aggregate implementation began at `a74c60ea848a35e314c6606a197af6db36abf61b`; subsequent compile/catalog/icon contract repairs closed at `da35f843020f32740b46dbfb944e3c85f363467d` before the HUD cleanup.
 - Skateboard straight movement remains **2 cells forward/back** according to its vehicle profile.
-- Skateboard steering is now a **90° heading change on the current cell**; turning does not also translate the board two cells.
+- Skateboard steering is a **90° heading change on the current cell**; turning does not also translate the board two cells.
 - **All vehicles must brake/stop before reversing.** A reverse request while moving is rejected with `vehicle_brake_before_reverse`; reversing is not a direct direction flip while under motion.
 - Skateboard is a real persistent item semantic: `item.vehicle.skateboard`.
 - The same physical skateboard transitions between **loose-item occupancy when parked/dropped**, **vehicle occupancy while ridden**, and loose-item occupancy again on dismount. Do not materialize a duplicate board for equipment/pickup.
 - Skateboard legal equipment slots are **right hand, left hand or back only**.
 - Skateboard may not be stored in the actor's personal/backpack containment; rejected storage uses `skateboard_requires_hand_or_back`.
-- Authoritative equipment slots now exist for **right hand, left hand, back, head, torso, legs, feet and hands**. Equipment is an exclusive physical-item disposition, not an item simultaneously duplicated inside inventory.
-- Actor presentation can render floating/attached equipment from authoritative slot assignments for **both hands and back**.
-- Actor presentation also applies clothing/hat paper-doll overlays from authoritative worn equipment instead of maintaining a separate cosmetic truth.
+- Authoritative equipment slots exist for **right hand, left hand, back, head, torso, legs, feet and hands**. Equipment is an exclusive physical-item disposition, not an item simultaneously duplicated inside inventory.
+- Actor presentation renders attached equipment from authoritative hand/back assignments and clothing/hat paper-doll overlays from authoritative worn equipment instead of maintaining separate cosmetic truth.
 - Current apparel semantics include baseball cap, beanie, T-shirt, hoodie, work jacket, jeans, cargo pants, sneakers, work boots and work gloves.
-- The eight newly added apparel semantics currently have explicit UI-icon mappings that reuse the existing clothing/gloves glyph. That is truthful semantic coverage, not finished unique apparel icon art.
-- The production vehicle renderer contains **no separate front/heading-indicator overlay**. No distinct purple-front marker source was found in the current renderer/SVG path during this pass, so do not claim an asset was removed; if one is still visibly present in the playable build, capture the vehicle/type/location and trace that actual source.
+- The newly added apparel semantics have explicit UI-icon coverage using the existing clothing/gloves glyph; that is truthful semantic coverage, not finished unique apparel icon art.
+- The production vehicle renderer contains **no separate front/heading-indicator overlay**. If a purple/front vehicle marker is still visibly present in the playable build, capture the vehicle/type/location and trace the actual source rather than inventing a removal target.
 
 ### Protected apparel protection model
 
@@ -55,7 +63,7 @@ Retired from apparel/equipment truth:
 
 Do not reintroduce separate bite vs cut, separate blunt vs ballistic, insulation, or wind resistance merely because older notes/tests mention them. The merged bite/cut baseline uses the former cut value; the merged blunt/ballistic baseline uses the former blunt value, avoiding accidental inflation from summing retired categories. `ActorEquipmentProtectionQuery.gd` aggregates only the two merged armor values plus water resistance, capped at 100. `ActorHandEquipmentSmoke.gd` has focused regression coverage for the merged-stat contract, retired-key absence, skateboard slot restrictions and representative worn-equipment aggregation.
 
-### Remaining player-facing gap from this checkpoint
+### Remaining player-facing equipment gap
 
 The underlying equipment state and renderer understand back/worn slots, but the ordinary player Inventory/loadout surface is still legacy-oriented:
 
@@ -63,7 +71,7 @@ The underlying equipment state and renderer understand back/worn slots, but the 
 - `CanonicalPlayerShell.gd` currently exposes RIGHT HAND / LEFT HAND / STOW / DROP-style actions, not ordinary equip/unequip actions for back/head/torso/legs/feet/hands.
 - The player shell does not yet expose the merged `bite_cut_armor`, `blunt_ballistic_armor` and `water_resistance` totals.
 
-Therefore this pass is **not yet player-complete** under the project's UI practicality rule. The next implementation should extend the existing inventory/loadout route rather than inventing a second cosmetic equipment UI.
+This remains the clearest player-facing closure after the HUD cleanup. Extend the existing Inventory/loadout route rather than inventing a second cosmetic equipment UI.
 
 ## Road contract now expected in the playable island
 
@@ -113,10 +121,10 @@ Already implemented:
 - already-materialized handles are prefiltered;
 - discovery/preparation/snapshot/commit timing instrumentation;
 - bounded directional look-ahead near region edges, max one new logical source per movement step;
-- render-window recenter timing and PERF DEV reporting;
+- render-window recenter timing and PERF/dev reporting through internal telemetry rather than the retired player-visible Dev window;
 - reduced/cached immutable catalog validation.
 
-Remaining streaming debt after the generator cleanup:
+Remaining streaming debt:
 
 - full-world rollback snapshots still scale with explored/materialized world state;
 - distant immutable base WHAT unloading/dematerialization plus persisted deltas is not implemented;
@@ -134,7 +142,7 @@ Reference seed 20001 after road expansion:
 
 Do not run the old 12-seed matrix on every edit. `README_SOPS.md` records the focused-test rule; normal work uses focused owner/protected regressions and the reference seed unless broader testing is explicitly justified.
 
-## Player/world priority after generator cleanup
+## Player/world priority
 
 The broader order remains:
 
@@ -159,7 +167,8 @@ Preserve:
 - building-derived population;
 - no wastewater resurrection;
 - no municipal water pipe graph;
-- no private-well municipal fallback.
+- no private-well municipal fallback;
+- no resurrection of the retired standalone Survival, Forage or player-visible Dev windows.
 
 Production inheritance remains `VehicleGameMain -> System34GameMain -> UtilityGameMain -> CraftingGameMain -> GameMain`; flattening is separate work.
 
@@ -168,8 +177,8 @@ Production inheritance remains `VehicleGameMain -> System34GameMain -> UtilityGa
 1. **Finish the ordinary Inventory/loadout UI for the generalized equipment state.** Extend the existing player inventory route so items can be equipped/unequipped to back, head, torso, legs, feet and hands as well as right/left hand. Do not create a second cosmetic equipment truth.
 2. Expose truthful equipped protection totals in ordinary gameplay UI: `bite_cut_armor`, `blunt_ballistic_armor`, and `water_resistance`. Do not restore insulation, wind resistance, separate bite/cut, or separate blunt/ballistic stats.
 3. Exercise the complete skateboard user path in production UI/gameplay: dismount → loose item → pick up/equip to either hand or back → backpack/personal storage rejected → return to world/mount the same physical board. Verify straight skateboard travel remains 2 cells, 90° turns stay on one cell, and all vehicle families require braking/stopping before reverse.
-4. If a purple/front vehicle marker is still visibly present, capture the actual vehicle/type/location and trace the rendering/asset source; current production renderer has no explicit heading overlay and this checkpoint does not invent a removal target.
-5. Continue the standing full player/world/object-interaction/UI practicality audit and close every backend-only or debug-only gameplay route before combat.
+4. Continue the standing full player/world/object-interaction/UI practicality audit and close every backend-only or debug-only gameplay route before combat. Keep Survival actions in ordinary inventory/world interaction surfaces, Forage and Enter Vehicle on the on-foot strip, and diagnostics internal.
+5. If a purple/front vehicle marker is still visibly present, capture the actual vehicle/type/location and trace the rendering/asset source; current production renderer has no explicit heading overlay and this checkpoint does not invent a removal target.
 6. After the player/world/UI layer is practical end-to-end: implement combat, then hydrate the first real zombies from existing building-derived population records.
 7. Preserve the closed road hierarchy and continue human visual acceptance only as needed for island feel; do not reopen its endpoint classification without a concrete mismatch.
-8. Preserve the completed river/wastewater/water-graph removal, municipal/private-well contract, streaming boundaries, decision-pause semantics, and building-derived population.
+8. Preserve the completed river/wastewater/water-graph removal, municipal/private-well contract, streaming boundaries, decision-pause semantics, building-derived population and the cleaned HUD contract above.
