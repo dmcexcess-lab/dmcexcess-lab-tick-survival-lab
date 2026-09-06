@@ -2,7 +2,7 @@
 
 Status: **IMPLEMENTED**
 
-Approved originally by the user on 2026-08-16 and subsequently simplified by explicit player-UI direction through 2026-09-05. The current contract is a compact top-screen `Looking at:`/status presentation that reports real canonical state without competing with the active movement or vehicle controls.
+Approved originally by the user on 2026-08-16 and subsequently simplified by explicit player-UI direction through 2026-09-05. The current contract is a compact top-screen `Looking at:`/status presentation that reports real canonical state without competing with the active movement or vehicle controls, plus compact camera/map controls immediately above the locomotion footprint.
 
 ## 1. Goal
 
@@ -13,7 +13,8 @@ Present only real canonical player/world state in a compact, phone-readable HUD:
 - one-cell-ahead `Looking at:` physical inspection;
 - HP and fatigue as textual status truth;
 - sustainment/carry/moodlet summaries;
-- latest movement/action result.
+- latest movement/action result;
+- a read-only generated-island map with the canonical player location.
 
 This is presentation/read composition. It creates no gameplay truth.
 
@@ -43,8 +44,20 @@ The lower control footprint is reserved for exactly one locomotion mode at a tim
 ### Camera controls
 
 - Visible **ZOOM -** and **ZOOM +** buttons are retired.
-- CENTER/FOLLOW remains available.
+- CENTER/FOLLOW remains available and is dropped down to the row immediately above FORWARD (`y = 574` in the current 720p reference layout), leaving a small non-overlapping gap to the locomotion controls.
+- A **MAP** button sits immediately to the right of CENTER/FOLLOW on that same row.
+- Because CENTER/MAP live outside the swappable walking/vehicle control surface, they remain available in either locomotion mode.
 - The zoom subsystem itself is not retired; gesture/keyboard/controller or other existing non-button zoom routes may continue to use the canonical zoom signals/state.
+
+### Island map overlay
+
+- `IslandMapView.gd` is a read-only player-facing overlay. It does not own navigation, movement, discovery or procedural-generation truth.
+- `PlayerMapBootstrap.gd` configures the map after the canonical playable world has booted while preserving `VehicleGameMain.gd` as the production composition root.
+- The map uses the active `GeneratedGlobalWorldPlan` bounds, seed and profile plus `IslandSurfaceMath.classify(...)` to rasterize the same deterministic island coastline/land/shore/ocean geometry used by world generation.
+- Existing generated `road_segments` and `settlements` are layered from the global plan; no duplicate road or settlement model is created.
+- The player marker is resolved from the canonical `WorldState` placement for the playable actor and redraws when world placement changes.
+- Opening MAP raises the overlay above ordinary HUD presentation; CLOSE/MAP toggle returns to the normal HUD without mutating world state.
+- The current island raster is generated lazily at a bounded `256 x 256` presentation resolution rather than scanning/materializing the live world.
 
 ## 3. Non-goals
 
@@ -56,9 +69,9 @@ System 15 does **not** own or mutate:
 - health, needs, fatigue or carry progression;
 - perception/LOS/darkness knowledge filtering;
 - camera zoom rules;
-- procedural generation.
+- procedural generation or generated map topology.
 
-Those remain with their canonical owners. This system only presents their public reads.
+Those remain with their canonical owners. This system only presents their public/read-only state.
 
 ## 4. Owners
 
@@ -96,6 +109,18 @@ Public surface:
 
 The HUD never mutates simulation state and does not poll every frame.
 
+### `game/scripts/ui/CameraControls.gd`
+
+CanvasLayer presentation/input owner for CENTER/FOLLOW and MAP. It preserves the pre-existing canonical camera signals and touch/mouse duplicate suppression, owns map open/close presentation state, and delegates map rendering to `IslandMapView`.
+
+### `game/scripts/ui/IslandMapView.gd`
+
+Read-only generated-island presenter. It accepts the active global world plan, canonical world state and playable actor ID, then derives a bounded presentation raster and current marker from those sources. It stores no gameplay topology or player position of its own.
+
+### `game/scripts/ui/PlayerMapBootstrap.gd`
+
+Composition-only adapter used by `main.tscn` to configure the map after the existing `VehicleGameMain` root boots the canonical world. This keeps map composition out of simulation owners and preserves the existing root ownership boundary.
+
 ## 5. Demo/runtime state wiring
 
 The playable survivor uses the already-implemented canonical state needed for honest reads:
@@ -106,9 +131,11 @@ The playable survivor uses the already-implemented canonical state needed for ho
 - actor-root inventory containment;
 - physical item/weight truth;
 - Carry State / Carry Query;
-- Moodlet Service.
+- Moodlet Service;
+- canonical `WorldState` placement;
+- active `GeneratedGlobalWorldPlan`.
 
-No fake item, health, need or carry values are created for HUD presentation.
+No fake item, health, need, carry, island or player-location values are created for HUD/map presentation.
 
 Skills are owned by the Stats/player-shell route rather than this compact top HUD.
 
@@ -136,26 +163,29 @@ The absence of Health/Fatigue ProgressBars does **not** mean health or fatigue s
 
 ## 8. Update model / performance
 
-No `_process()` HUD polling and no frame-driven whole-world scans.
+No `_process()` HUD/map polling and no frame-driven whole-world scans.
 
 The HUD refreshes at explicit lifecycle/action boundaries and through already-owned update paths. Queries remain read-only. Presentation work is bounded to the player-facing summary and one-cell inspection.
+
+The island surface texture is created lazily once per configured active plan at `256 x 256`; it samples deterministic island math and plan-level road/settlement records rather than live streamed entities. Player-marker redraws follow canonical world-change notifications only while the overlay is visible.
 
 ## 9. Dependencies
 
 Allowed:
 
-- WHAT / WHERE reads for facing inspection;
+- WHAT / WHERE reads for facing inspection and player marker;
 - WHEN read for current tick;
 - canonical Health/Needs/Carry/Moodlet public reads;
+- active generated global-plan reads for island bounds/coast/roads/settlements;
 - semantic input labels for action-result presentation.
 
 Forbidden:
 
-- direct world/stat mutation from HUD/query code;
+- direct world/stat mutation from HUD/query/map code;
 - movement/collision/vehicle-rule implementation in HUD;
 - renderer/art lookup as gameplay truth;
 - perception claims;
-- generator logic;
+- generator mutation or a second map/topology model;
 - fake/default gameplay truth inside presentation.
 
 ## 10. Acceptance contract
@@ -168,14 +198,17 @@ Protected player-facing acceptance now requires:
 4. no `HealthBar` or `FatigueBar` ProgressBar nodes are instantiated;
 5. HP/fatigue simulation truth remains available textually;
 6. visible `ZOOM -` and `ZOOM +` buttons are absent while CENTER/FOLLOW remains;
-7. on foot, the walking control surface is visible and vehicle controls are absent;
-8. mounted, the complete walking CanvasLayer is hidden and direct `VehicleControlSurface` controls occupy the lower walking-control footprint;
-9. no separate `VehiclePanel` is instantiated;
-10. dismount restores the walking controls and removes the mounted surface;
-11. HUD/query owners perform no frame polling or simulation mutation;
-12. protected startup/Web/Pages checks remain green when executable changes touch this surface.
+7. CENTER/FOLLOW is dropped close to FORWARD without overlap and MAP sits immediately to its right;
+8. MAP is configured from the active generated island plan and canonical player placement;
+9. opening MAP presents the generated island raster and a player marker, and closing restores normal HUD presentation;
+10. on foot, the walking control surface is visible and vehicle controls are absent;
+11. mounted, the complete walking CanvasLayer is hidden and direct `VehicleControlSurface` controls occupy the lower walking-control footprint;
+12. no separate `VehiclePanel` is instantiated;
+13. dismount restores the walking controls and removes the mounted surface;
+14. HUD/query/map owners perform no frame polling or simulation mutation;
+15. protected startup/Web/Pages checks remain green when executable changes touch this surface.
 
-`PlayerUiCleanupSmoke.gd` protects the current cross-UI layout contract; Canonical HUD and camera contracts protect their narrower owners.
+`PlayerUiCleanupSmoke.gd` protects the current cross-UI layout/map contract; Canonical HUD and camera contracts protect their narrower owners.
 
 ## 11. Historical recovery source
 
@@ -187,13 +220,16 @@ Original System 15 implementation first landed at `87c8426247b90b83badc300a3c664
 
 The September 2026 player-UI cleanup superseded the original lower-gap placement. The corrected executable head `33afe7f459f1cd9d24b493ab935c97b2d4545a35` removes the visible vital bars and Zoom +/- buttons, moves `Looking at:` to the top under the menu row, and replaces walking controls with a direct mounted driving surface in the same bottom footprint. That executable head closed with **44/44 push workflows successful and no failures or pending runs**.
 
+The island-map follow-up executable head `b4d4e59da5f185cce22a990ce9012b77bb1d3d84` drops CENTER/FOLLOW to `y = 574`, adds adjacent MAP, presents the canonical generated island (coast/land/shore plus generated roads/settlements), and marks the canonical player placement. The first composition candidate correctly exposed an existing ownership guard when it changed the root script; the repaired head preserves `VehicleGameMain.gd` as production root and configures the map through `PlayerMapBootstrap.gd`. The repaired executable head closed **47/47 push workflows successful, 0 failed, 0 cancelled**.
+
 ## 13. Future seams
 
 - Stats/Inventory may reuse canonical status reads without adding duplicate HUD truth.
 - A future perception service may wrap/filter `FacingInspectionQuery` results before presentation.
 - Future calendar/time presentation may add a separate WHEN-derived presenter.
 - Camera input may continue to expose zoom through non-button routes without restoring the retired Zoom +/- buttons.
+- The island map can add additional generated-plan overlays (for example named landmarks or road labels) without creating a second navigation/world model.
 
 ## 14. North-star fit
 
-The HUD keeps actionable world/status truth readable while reserving the lower screen for whichever locomotion mode is actually active. Presentation remains truthful, bounded and replaceable: no fake simulation state, no duplicate locomotion UI, and no permanent test panels.
+The HUD keeps actionable world/status truth readable while reserving the lower screen for whichever locomotion mode is actually active. CENTER/MAP remain compact and mode-independent, and the map visualizes the same canonical generated island/player truth the simulation already owns. Presentation remains truthful, bounded and replaceable: no fake simulation state, no duplicate locomotion UI, no second map model, and no permanent test panels.
