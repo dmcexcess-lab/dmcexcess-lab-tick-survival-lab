@@ -12,6 +12,7 @@ var _service: VehicleActionService
 var _state: VehicleState
 var _cargo: VehicleCargoService
 var _inventory: InventoryContainmentState
+var _profiles: VehicleProfileCatalog = VehicleProfileCatalog.new()
 var _actor_id: String = ""
 var _surface: Control = null
 var _status: Label
@@ -258,12 +259,21 @@ func _refresh_status() -> void:
     if not mounted:
         return
     var rec := _state.record(vehicle_id)
+    var kind := StringName(rec.get("kind", &""))
+    _apply_vehicle_capabilities(kind)
     _status.text = "VEHICLE — %s | fuel %d | heading %d° | %s" % [
-        String(rec.get("kind", &"vehicle")).to_upper(),
+        String(kind).to_upper(),
         int(rec.get("fuel", 0)),
         int(rec.get("heading", 0)) * 30,
         "moving" if bool(rec.get("moving", false)) else "stopped",
     ]
+
+func _apply_vehicle_capabilities(kind: StringName) -> void:
+    if _surface == null:
+        return
+    var brake_button := _surface.find_child("BrakeButton", true, false) as Button
+    if brake_button != null:
+        brake_button.visible = _profiles.has_brake(kind)
 
 func _set_mounted_presentation(mounted: bool) -> void:
     visible = mounted

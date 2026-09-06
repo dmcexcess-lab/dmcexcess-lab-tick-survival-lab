@@ -78,7 +78,9 @@ func request_exit(actor_id: String) -> Dictionary:
     var vehicle_id := vehicle_for_driver(actor_id)
     if vehicle_id.is_empty():
         return _reject("not_mounted")
-    if bool(_state.record(vehicle_id).get("moving", false)):
+    var rec := _state.record(vehicle_id)
+    var kind := StringName(rec.get("kind", &""))
+    if bool(rec.get("moving", false)) and _profiles.requires_stop_before_exit(kind):
         return _reject("vehicle_moving")
     return _begin(actor_id, vehicle_id, EXIT, 4, {})
 
@@ -95,7 +97,9 @@ func request_reverse(actor_id: String) -> Dictionary:
     var vehicle_id := vehicle_for_driver(actor_id)
     if vehicle_id.is_empty():
         return _reject("not_mounted")
-    if bool(_state.record(vehicle_id).get("moving", false)):
+    var rec := _state.record(vehicle_id)
+    var kind := StringName(rec.get("kind", &""))
+    if bool(rec.get("moving", false)) and _profiles.requires_stop_before_reverse(kind):
         return _reject("vehicle_brake_before_reverse")
     return _begin_motion(actor_id, REVERSE, 0, 1)
 
@@ -104,11 +108,11 @@ func request_brake(actor_id: String) -> Dictionary:
     if vehicle_id.is_empty():
         return _reject("not_mounted")
     var rec := _state.record(vehicle_id)
+    var kind := StringName(rec.get("kind", &""))
+    if not _profiles.has_brake(kind):
+        return _reject("vehicle_has_no_brake")
     if not bool(rec.get("moving", false)):
         return _reject("vehicle_already_stopped")
-    if StringName(rec.get("kind", &"")) == VehicleProfileCatalog.SKATEBOARD:
-        _state.mutate(vehicle_id, {"moving": false})
-        return {"accepted": true, "instant": true, "action_serial": 0}
     return _begin(actor_id, vehicle_id, BRAKE, 2, {"distance": 2})
 
 func request_start(actor_id: String) -> Dictionary:
@@ -212,7 +216,7 @@ func _begin_motion(actor_id: String, action_type: StringName, heading_delta: int
     elif heading_delta != 0:
         target_heading = VehicleHeading.completed_turn_heading(start_heading, heading_delta)
         distance = 3
-    return _begin(actor_id, vehicle_id, action_type, 3, {"start_heading": start_heading, "heading": target_heading, "turn_direction": heading_delta, "distance": distance, "pivot_in_place": pivot_in_place})
+    return _begin(actor_id, vehicle_id, action_type, _profiles.movement_ticks(kind), {"start_heading": start_heading, "heading": target_heading, "turn_direction": heading_delta, "distance": distance, "pivot_in_place": pivot_in_place})
 
 func _begin(actor_id: String, vehicle_id: String, action_type: StringName, duration: int, payload: Dictionary) -> Dictionary:
     if not _can_request(actor_id) or not _state.has_vehicle(vehicle_id):
