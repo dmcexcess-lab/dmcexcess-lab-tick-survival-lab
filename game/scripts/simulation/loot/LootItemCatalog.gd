@@ -5,83 +5,44 @@ class_name LootItemCatalog
 ## per-item state. Every loot item has exactly one top-level utility class, one primary
 ## family, optional secondary tags, a readable label, and real 13D weight.
 
-const CATALOG_VERSION: int = 4
+const CATALOG_VERSION: int = 5
 const USABLE: StringName = &"USABLE"
 const JUNK: StringName = &"JUNK"
-
 var _definitions: Dictionary = {}
 
-func _init() -> void:
-    _build_candidate_001()
-
-func catalog_version() -> int:
-    return CATALOG_VERSION
-
-func has_item(semantic_type: StringName) -> bool:
-    return _definitions.has(String(semantic_type))
-
+func _init() -> void: _build_candidate_001()
+func catalog_version() -> int: return CATALOG_VERSION
+func has_item(semantic_type: StringName) -> bool: return _definitions.has(String(semantic_type))
 func definition(semantic_type: StringName) -> Dictionary:
-    var key: String = String(semantic_type)
-    if not _definitions.has(key):
-        return {}
-    return (_definitions[key] as Dictionary).duplicate(true)
-
+    var key := String(semantic_type)
+    return (_definitions[key] as Dictionary).duplicate(true) if _definitions.has(key) else {}
 func semantic_types() -> Array[StringName]:
     var keys: Array[String] = []
-    for key: Variant in _definitions.keys():
-        keys.append(String(key))
+    for key: Variant in _definitions.keys(): keys.append(String(key))
     keys.sort()
     var result: Array[StringName] = []
-    for key: String in keys:
-        result.append(StringName(key))
+    for key: String in keys: result.append(StringName(key))
     return result
-
-func weight_grams(semantic_type: StringName) -> int:
-    return int(definition(semantic_type).get("weight_grams", -1))
-
-func utility_class(semantic_type: StringName) -> StringName:
-    return StringName(definition(semantic_type).get("utility_class", &""))
-
-func family(semantic_type: StringName) -> StringName:
-    return StringName(definition(semantic_type).get("family", &""))
+func weight_grams(semantic_type: StringName) -> int: return int(definition(semantic_type).get("weight_grams", -1))
+func utility_class(semantic_type: StringName) -> StringName: return StringName(definition(semantic_type).get("utility_class", &""))
+func family(semantic_type: StringName) -> StringName: return StringName(definition(semantic_type).get("family", &""))
 
 func register_physical_profiles(catalog: ItemPhysicalPropertyCatalog) -> bool:
-    if catalog == null:
-        return false
+    if catalog == null: return false
     for semantic_type: StringName in semantic_types():
-        var weight: int = weight_grams(semantic_type)
-        if weight <= 0:
-            return false
+        var weight := weight_grams(semantic_type)
+        if weight <= 0: return false
         if catalog.has_profile(semantic_type):
-            if catalog.weight_grams(semantic_type) != weight:
-                return false
-        elif not catalog.register_profile(semantic_type, weight):
-            return false
+            if catalog.weight_grams(semantic_type) != weight: return false
+        elif not catalog.register_profile(semantic_type, weight): return false
     return true
 
-func _add(
-    semantic_type: StringName,
-    label: String,
-    utility: StringName,
-    family_value: StringName,
-    weight: int,
-    tags: Array[StringName] = []
-) -> void:
-    var key: String = String(semantic_type)
-    if key.is_empty() or not key.begins_with("item.") or label.strip_edges().is_empty():
-        return
-    if utility != USABLE and utility != JUNK:
-        return
-    if String(family_value).is_empty() or weight <= 0 or _definitions.has(key):
-        return
-    _definitions[key] = {
-        "semantic_type": semantic_type,
-        "label": label,
-        "utility_class": utility,
-        "family": family_value,
-        "tags": tags.duplicate(),
-        "weight_grams": weight,
-    }
+func _add(semantic_type: StringName, label: String, utility: StringName, family_value: StringName, weight: int, tags: Array[StringName] = []) -> void:
+    var key := String(semantic_type)
+    if key.is_empty() or not key.begins_with("item.") or label.strip_edges().is_empty(): return
+    if utility != USABLE and utility != JUNK: return
+    if String(family_value).is_empty() or weight <= 0 or _definitions.has(key): return
+    _definitions[key] = {"semantic_type": semantic_type, "label": label, "utility_class": utility, "family": family_value, "tags": tags.duplicate(), "weight_grams": weight}
 
 func _build_candidate_001() -> void:
     # Food / drink.
@@ -161,14 +122,22 @@ func _build_candidate_001() -> void:
     _add(&"item.sanitation.toilet_paper_roll", "Toilet Paper", USABLE, &"sanitation", 160)
     _add(&"item.sanitation.cleaning_spray", "Cleaning Spray", USABLE, &"sanitation", 650, [&"cleaning"])
 
-    # Small first-pass families whose consuming systems arrive later.
+    # Office / clothing / outdoors / automotive / industrial.
     _add(&"item.office.notebook", "Notebook", USABLE, &"office", 250, [&"paper"])
     _add(&"item.office.permanent_marker", "Permanent Marker", USABLE, &"office", 25)
     _add(&"item.office.pencil_pack", "Pencil Pack", USABLE, &"office", 120, [&"paper"])
     _add(&"item.office.scissors", "Scissors", USABLE, &"office", 90)
-    _add(&"item.clothing.work_gloves", "Work Gloves", USABLE, &"clothing", 180)
+    _add(&"item.clothing.work_gloves", "Work Gloves", USABLE, &"clothing", 180, [&"wearable"])
     _add(&"item.clothing.socks_pair", "Pair of Socks", USABLE, &"clothing", 100)
-    _add(&"item.clothing.beanie", "Knit Beanie", USABLE, &"clothing", 90)
+    _add(&"item.clothing.beanie", "Knit Beanie", USABLE, &"clothing", 90, [&"wearable", &"headwear"])
+    _add(&"item.clothing.baseball_cap", "Baseball Cap", USABLE, &"clothing", 110, [&"wearable", &"headwear"])
+    _add(&"item.clothing.t_shirt", "T-Shirt", USABLE, &"clothing", 180, [&"wearable"])
+    _add(&"item.clothing.hoodie", "Hoodie", USABLE, &"clothing", 650, [&"wearable"])
+    _add(&"item.clothing.work_jacket", "Work Jacket", USABLE, &"clothing", 1400, [&"wearable", &"protective"])
+    _add(&"item.clothing.jeans", "Jeans", USABLE, &"clothing", 700, [&"wearable"])
+    _add(&"item.clothing.cargo_pants", "Cargo Pants", USABLE, &"clothing", 650, [&"wearable"])
+    _add(&"item.clothing.sneakers", "Sneakers", USABLE, &"clothing", 700, [&"wearable"])
+    _add(&"item.clothing.work_boots", "Work Boots", USABLE, &"clothing", 1600, [&"wearable", &"protective"])
     _add(&"item.outdoors.tarp", "Tarp", USABLE, &"outdoors", 1200)
     _add(&"item.outdoors.sturdy_stick", "Sturdy Stick", USABLE, &"outdoors", 650, [&"primitive_material"])
     _add(&"item.outdoors.smooth_stone", "Smooth Stone", USABLE, &"outdoors", 450, [&"primitive_material"])
