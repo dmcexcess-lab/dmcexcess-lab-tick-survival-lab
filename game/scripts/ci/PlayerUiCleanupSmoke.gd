@@ -14,6 +14,7 @@ func _run() -> void:
     var game := packed.instantiate()
     get_root().add_child(game)
     await process_frame
+    await process_frame
 
     var controls := game.get_node_or_null("Controls") as PlayerMovementControls
     _check(controls != null, "on-foot control strip exists")
@@ -78,6 +79,8 @@ func _run() -> void:
             var vertical_gap: float = forward_button.position.y - (center_button.position.y + center_button.size.y)
             _check(vertical_gap >= 0.0 and vertical_gap <= 20.0, "CENTER row is dropped close to FORWARD without overlap")
         var island_map: IslandMapView = camera_controls.map_view()
+        var map_bootstrap := game.get_node_or_null("PlayerMapBootstrap") as PlayerMapBootstrap
+        _check(map_bootstrap != null and map_bootstrap.is_configured(), "production composition bootstraps the player map")
         _check(island_map != null and island_map.is_configured(), "production scene configures the canonical island map")
         _check(island_map != null and island_map.map_bounds().size.x > 0 and island_map.map_bounds().size.y > 0, "island map owns generated world bounds")
         _check(island_map != null and island_map.has_player_marker(), "island map resolves the canonical player placement")

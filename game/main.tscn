@@ -1,6 +1,6 @@
-[gd_scene load_steps=14 format=3]
+[gd_scene load_steps=15 format=3]
 
-[ext_resource path="res://scripts/app/PlayerMapGameMain.gd" type="Script" id="1"]
+[ext_resource path="res://scripts/app/VehicleGameMain.gd" type="Script" id="1"]
 [ext_resource path="res://scripts/render/TacticalRendererStack.gd" type="Script" id="2"]
 [ext_resource path="res://scripts/input/KeyboardInputAdapter.gd" type="Script" id="3"]
 [ext_resource path="res://scripts/ui/PlayerMovementControls.gd" type="Script" id="4"]
@@ -13,6 +13,7 @@
 [ext_resource path="res://scripts/ui/CameraControls.gd" type="Script" id="11"]
 [ext_resource path="res://scripts/ui/LootContainerPanel.gd" type="Script" id="12"]
 [ext_resource path="res://scripts/ui/CraftingPanel.gd" type="Script" id="14"]
+[ext_resource path="res://scripts/ui/PlayerMapBootstrap.gd" type="Script" id="15"]
 
 [node name="TickSurvivalGame" type="Node"]
 script = ExtResource("1")
@@ -42,6 +43,9 @@ script = ExtResource("4")
 
 [node name="CameraControls" type="CanvasLayer" parent="."]
 script = ExtResource("11")
+
+[node name="PlayerMapBootstrap" type="Node" parent="."]
+script = ExtResource("15")
 
 [node name="Hud" type="CanvasLayer" parent="."]
 script = ExtResource("5")
