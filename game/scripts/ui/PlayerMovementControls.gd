@@ -19,9 +19,11 @@ var _locomotion: ActorLocomotionState = null
 var _actor_id: String = ""
 var _buttons_built: bool = false
 var _on_foot_actions_visible: bool = true
+var _control_surface_visible: bool = true
 
 func _ready() -> void:
     layer = 20
+    visible = _control_surface_visible
     _ensure_buttons()
     _refresh_stance_label()
 
@@ -46,6 +48,13 @@ func set_enabled(enabled: bool) -> void:
 
 func is_enabled() -> bool:
     return _enabled
+
+func set_control_surface_visible(value: bool) -> void:
+    _control_surface_visible = value
+    visible = value
+
+func control_surface_visible() -> bool:
+    return _control_surface_visible
 
 func set_on_foot_actions_visible(visible: bool) -> void:
     _on_foot_actions_visible = visible
