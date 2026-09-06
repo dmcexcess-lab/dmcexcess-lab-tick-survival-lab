@@ -1,5 +1,25 @@
 # System 36 — Implementation Changelog
 
+## 2026-09-05 — Per-class movement timing, island-crossing fuel range, skateboard braking exception
+
+Executable: **`d6eebd18b504a3b67113454488ddfbb5c4d41770`**
+
+- Skateboard movement is 2 cells per action and 2 WHEN ticks.
+- Bicycle movement is 3 cells per action and 2 WHEN ticks.
+- Motorcycle, car and truck movement is 3 cells per action and 1 WHEN tick.
+- Motorized fuel profiles now provide approximately 4,200 cells of full-tank forward range, exceeding the 3,072-cell reference-island crossing requirement.
+- Skateboard is the **only brakeless vehicle**.
+- Skateboard may immediately reverse while moving and may dismount while moving.
+- Bicycle, motorcycle, car and truck retain brakes and still require a stopped state before reverse or exit.
+- Skateboard retains its actor-like 90-degree in-place turn behavior.
+- Mounted UI hides BRAKE only when the mounted vehicle profile lacks braking capability and restores it for brake-capable classes.
+- `VehicleSmoke.gd` protects class timing, fuel range, braking capability, reverse/exit behavior and UI capability projection.
+- Before beginning the next feature pass, all 45 push-triggered workflows associated with this executable head were terminal with no failure or in-progress result found.
+
+### Compatibility rule
+
+Do **not** restore the old blanket rule that every vehicle must brake before reverse or exit. Skateboard is now the explicit capability-based exception.
+
 ## 2026-09-04 — Vehicle-owned ignition key state; no collectible car keys
 
 Executable lineage starts from the quiet-entry/vehicle simplification completed before flashlight closure and remains present in verified executable `e4e5ccfadd087186e6addf937ad8c4ace5e5a818`.
