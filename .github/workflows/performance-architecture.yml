@@ -37,7 +37,7 @@ jobs:
           grep -q 'placement_revision(Layers.Channel.STRUCTURE)' game/scripts/simulation/weather/SkyExposureQuery.gd
           grep -q '_on_world_batch_changed' game/scripts/simulation/perception/ObserverPerceptionService.gd
           grep -q '_on_world_batch_changed' game/scripts/simulation/interaction/InteractionAffordanceQuery.gd
-          grep -q 'PerformanceDevPanel' game/scripts/render/TacticalRendererStack.gd
+          ! grep -q 'PerformanceDevPanel' game/scripts/render/TacticalRendererStack.gd
 
       - name: Install Godot 4.7.1
         shell: bash
