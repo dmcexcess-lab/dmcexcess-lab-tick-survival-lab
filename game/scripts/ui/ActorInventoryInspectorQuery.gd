@@ -2,10 +2,12 @@ extends RefCounted
 class_name ActorInventoryInspectorQuery
 
 ## Read-only System 16 inventory/loadout inspection over WHAT + 09 + 11 + 13D/13E.
-## System 30 freshness is an optional read-only enrichment; possession truth stays unchanged.
+## System 30 freshness and the equipment paper doll are read-only enrichments;
+## possession/equipment truth stays in the existing authoritative owners.
 
 const MAX_DEPTH: int = 64
 const MAX_ITEMS: int = 4096
+const EquipmentPaperDollQueryClass = preload("res://scripts/ui/ActorEquipmentPaperDollQuery.gd")
 
 var _world: WorldState = null
 var _hands: ActorHandEquipmentState = null
@@ -13,6 +15,7 @@ var _inventory: InventoryContainmentState = null
 var _weight_query: ItemWeightQuery = null
 var _carry_query: ActorCarryQuery = null
 var _freshness_query: ItemFreshnessQuery = null
+var _equipment_query: ActorEquipmentPaperDollQuery = null
 
 func _init(
     world_state: WorldState = null,
@@ -28,6 +31,7 @@ func _init(
     _weight_query = weight_query
     _carry_query = carry_query
     _freshness_query = freshness_query
+    _equipment_query = EquipmentPaperDollQueryClass.new(_world, _hands)
 
 func is_ready() -> bool:
     return _world != null \
@@ -35,6 +39,7 @@ func is_ready() -> bool:
         and _inventory != null \
         and _weight_query != null \
         and _carry_query != null \
+        and _equipment_query != null and _equipment_query.is_ready() \
         and (_freshness_query == null or _freshness_query.is_ready())
 
 func query(actor_id: String) -> Dictionary:
@@ -72,6 +77,7 @@ func query(actor_id: String) -> Dictionary:
         "actor_id": normalized,
         "primary_hand": primary,
         "secondary_hand": secondary,
+        "equipment": _equipment_query.query(normalized),
         "inventory": root_entries,
         "carry": _carry_query.query(normalized).duplicate(true),
     }
@@ -169,6 +175,7 @@ static func _failure(reason: String) -> Dictionary:
         "actor_id": "",
         "primary_hand": {},
         "secondary_hand": {},
+        "equipment": {"known": false, "slots": [], "protection": {}},
         "inventory": [],
         "carry": {},
     }
