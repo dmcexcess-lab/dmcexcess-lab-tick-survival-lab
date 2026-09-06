@@ -3,7 +3,8 @@
 Status: **IMPLEMENTED + AUTOMATED VERIFIED; HUMAN PLAYTEST PENDING**
 
 Approved: **2026-09-03**  
-Latest tuning closure: **2026-09-05**
+Latest tuning closure: **2026-09-05**  
+Loose skateboard acquisition closure: **2026-09-06**
 
 ## Goal
 
@@ -62,11 +63,23 @@ The mounted survivor shares the vehicle anchor and receives the established nonb
 
 On foot, only the walking control layer is visible. Mounted, the walking layer hides completely and `VehicleControlSurface` replaces it in the same footprint. CENTER/FOLLOW and MAP remain available in both states. Walking and vehicle controls must never overlap.
 
-## Cargo and equipment boundary
+## Cargo, equipment and loose-item acquisition boundary
 
 Vehicle cargo reuses canonical inventory containment and weight truth. Current base capacities are 6 kg bicycle, 12 kg motorcycle, 70 kg car and 140 kg truck; skateboard has no ordinary cargo storage. The cargo-rack modification adds 12 kg through a real installed component entity.
 
 The skateboard item itself is equipment-constrained: it may occupy **right hand, left hand, or back only** and may not be stowed in ordinary personal/backpack containment.
+
+The skateboard is one stable physical item across loose, equipped and ridden states. A loose world skateboard is placed on the canonical `LOOSE_ITEM` spatial channel. Ordinary production interaction now reaches it through System 29's generic loose-item PICK UP route, but the actual transfer remains owned by the existing item-transfer/equipment policy.
+
+For `item.vehicle.skateboard`, acquisition therefore behaves as follows:
+
+- the exact loose physical board is selected;
+- the transfer owner attempts an allowed equipment destination only: right hand, left hand or back;
+- ordinary personal/backpack containment remains forbidden;
+- if no legal equipment destination or carry-capacity condition is satisfied, pickup fails rather than bypassing policy;
+- successful pickup moves the **same physical entity**; no duplicate board or shadow inventory state is created.
+
+`VehicleItemCatalog.gd` now records the skateboard's physical weight as **2.5 kg**. This is not a pickup special case: the authoritative carry-capacity owner requires known item weight, so System 36 supplies the physical classification and the normal transfer rule remains intact.
 
 ## Repair and modification
 
@@ -84,6 +97,8 @@ Blocked movement cannot pass through persistent obstacles. Failed vehicle moveme
 
 `VehicleWorldSeeder` performs a bounded deterministic materialization pass near the playable survivor over plausible road/driveway/parking/pavement cells. Generated vehicles are persistent real WHAT entities with typed vehicle state and real cargo containment. Broader island-wide vehicle population should extend this owner rather than introduce a second vehicle system.
 
+Loose skateboard placement remains physical WHAT truth and is discovered through the ordinary bounded player interaction path; System 36 does not create a separate proximity inventory or pickup scan.
+
 ## Performance contract
 
 Vehicle truth remains action/event/materialization bounded:
@@ -92,7 +107,8 @@ Vehicle truth remains action/event/materialization bounded:
 - no recurring per-vehicle timers;
 - no recurring whole-world fuel/damage scan;
 - no rigid-body continuous authoritative physics;
-- parked records remain dormant.
+- parked records remain dormant;
+- loose skateboard pickup uses System 29's bounded local interaction discovery and the existing transfer action, not a recurring vehicle-owned scan.
 
 ## Construction boundary
 
@@ -116,15 +132,30 @@ System 36 does not create freeform base building. Construction remains limited t
 - `game/scripts/ci/VehicleSmoke.gd`
 - `.github/workflows/system36-vehicles.yml`
 
+The loose-item player route additionally crosses System 29's interaction provider/controller and the existing item-transfer/equipment service; those systems remain owners of interaction presentation and transfer mutation respectively.
+
 Canonical production composition remains `VehicleGameMain -> System34GameMain -> UtilityGameMain -> CraftingGameMain -> GameMain`.
 
 ## Verification record
 
 Original implementation PR: **#4 — Implement System 36 vehicles**.
 
-The latest executable vehicle tuning head is **`d6eebd18b504a3b67113454488ddfbb5c4d41770`**. Its push-triggered Actions set was checked before the next feature pass: **45 workflows were terminal, with no failure and no in-progress result found**. The owning System 36 vehicle workflow had already been observed passing at that executable head.
+The executable vehicle tuning head remains **`d6eebd18b504a3b67113454488ddfbb5c4d41770`** for the movement/range tuning pass.
 
-This head protects:
+The later player-interaction executable **`736a5f4875d40cb437e760b89188419d98c5fef6`** closes loose skateboard acquisition without changing the protected movement/braking contract. On that exact head:
+
+- all **45** push workflows were terminal;
+- **0** failed, **0** cancelled, **0** queued and **0** in-progress runs remained at closure inspection;
+- `verify/world-interaction-closure` succeeded in run `34059987805`;
+- `verify/system29-interaction-affordance` succeeded in run `34059987832`;
+- `verify/pages-deploy` succeeded in run `34059987775`;
+- aggregate commit status was green.
+
+The production-route regression boots real `main.tscn`, targets a real loose skateboard placement, selects PICK UP and proves that the same physical item reaches an allowed equipment slot rather than ordinary storage.
+
+During closure CI exposed a real physical-data dependency: the transfer owner rejected the board because its weight was unknown. The fix registered the skateboard at **2.5 kg** in the existing physical item catalog instead of weakening carry-capacity policy. The owning world-interaction workflow now watches that catalog dependency.
+
+This closure protects:
 
 - per-class movement timing;
 - approximately 4,200-cell full-tank motorized range;
@@ -132,6 +163,10 @@ This head protects:
 - skateboard moving reverse/dismount exception;
 - stopped-before-reverse/exit rules for bicycle/motorcycle/car/truck;
 - mounted brake-button capability projection;
+- one stable skateboard physical identity;
+- skateboard RH/LH/back-only equipment restriction;
+- no ordinary skateboard backpack storage;
+- ordinary loose-world skateboard PICK UP through the shared interaction/transfer owners;
 - existing cargo, repair, lighting, sound and crash consequence paths.
 
 Human vehicle feel/UX acceptance remains pending.
@@ -142,7 +177,9 @@ Human vehicle feel/UX acceptance remains pending.
 - refueling still uses whole gas-can item semantics rather than partial fluid quantities.
 - generated vehicle placement is bounded near playable materialized space rather than a full island-wide streaming population source.
 - richer component replacement remains deferred to the broader player/object interaction practicality pass.
-- human playtesting is still required for steering feel, brake readability, cargo UX, generated placement plausibility, headlight presentation and phone/Safari behavior.
+- human playtesting is still required for steering feel, brake readability, cargo UX, loose-skateboard pickup feedback, generated placement plausibility, headlight presentation and phone/Safari behavior.
+
+The next vehicle-facing practicality work should reuse existing Mechanical/component state for truthful battery/wheel/component repair or replacement; do not introduce parallel maintenance booleans or a second inventory system.
 
 ## Approval record
 
@@ -153,5 +190,7 @@ Current approved invariants include:
 - motorcycle/car/truck: 3 cells, 1 tick, brake required before reverse/exit;
 - full motorized tank must be able to cross the 3,072-cell reference island;
 - cars remain real 1×3 objects; trucks remain real 2×3 objects;
+- skateboard is one physical item and may be loose/equipped/ridden without duplication;
+- skateboard may equip only RH/LH/back and may not enter ordinary backpack storage;
 - no Driving skill;
 - no freeform base building.
