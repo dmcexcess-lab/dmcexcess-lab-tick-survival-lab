@@ -17,6 +17,7 @@ on:
       - 'game/scripts/simulation/actors/condition/SurvivorSustainmentProfileCatalog.gd'
       - 'game/scripts/simulation/crafting/**'
       - 'game/scripts/player/WorldInteractionPlayerController.gd'
+      - 'game/scripts/player/LooseItemPickupPlayerInteractionHandler.gd'
       - 'game/scripts/player/CraftingPlayerInteractionController.gd'
       - 'game/scripts/player/LootPlayerInteractionController.gd'
       - 'game/scripts/ui/WorldInteractionPanel.gd'
@@ -46,6 +47,7 @@ on:
       - 'game/scripts/simulation/actors/condition/SurvivorSustainmentProfileCatalog.gd'
       - 'game/scripts/simulation/crafting/**'
       - 'game/scripts/player/WorldInteractionPlayerController.gd'
+      - 'game/scripts/player/LooseItemPickupPlayerInteractionHandler.gd'
       - 'game/scripts/player/CraftingPlayerInteractionController.gd'
       - 'game/scripts/player/LootPlayerInteractionController.gd'
       - 'game/scripts/ui/WorldInteractionPanel.gd'
@@ -87,10 +89,12 @@ jobs:
             game/scripts/simulation/interaction/WorldInteractionActionService.gd \
             game/scripts/simulation/interaction/WorldObjectRepairActionService.gd \
             game/scripts/simulation/interaction/WorldInteractionOfferProvider.gd \
+            game/scripts/simulation/interaction/LooseItemPickupInteractionOfferProvider.gd \
             game/scripts/simulation/interaction/SustainmentInteractionOfferProvider.gd \
             game/scripts/simulation/utilities/UtilityPowerRepairActionService.gd \
             game/scripts/simulation/utilities/UtilityPowerRepairInteractionOfferProvider.gd \
             game/scripts/player/WorldInteractionPlayerController.gd \
+            game/scripts/player/LooseItemPickupPlayerInteractionHandler.gd \
             game/scripts/ui/WorldInteractionPanel.gd \
             game/scripts/render/WorldInteractionStateRenderer.gd \
             game/scripts/ci/WorldInteractionSmoke.gd \
@@ -103,6 +107,7 @@ jobs:
           grep -q 'DOOR_QUIET' game/scripts/simulation/sound/SoundEmissionProfileCatalog.gd
           grep -q 'COOKING_STOVE' game/scripts/simulation/crafting/CraftingWorkstationCatalog.gd
           grep -q 'register_delegated_handler' game/scripts/player/WorldInteractionPlayerController.gd
+          grep -q 'request_pickup_to_hand' game/scripts/player/LooseItemPickupPlayerInteractionHandler.gd
           grep -q 'repair_profile' game/scripts/simulation/interaction/WorldInteractionCatalog.gd
           grep -q 'UtilityPowerNetworkRuntime' game/scripts/simulation/utilities/UtilityPowerRepairActionService.gd
           ! grep -R -q 'func _process\|func _physics_process\|Timer.new' game/scripts/simulation/interaction game/scripts/simulation/utilities/UtilityPowerRepairActionService.gd game/scripts/simulation/utilities/UtilityPowerRepairInteractionOfferProvider.gd
