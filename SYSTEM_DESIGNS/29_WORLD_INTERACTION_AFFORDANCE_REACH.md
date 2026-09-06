@@ -1,6 +1,6 @@
 # Tick Survival Lab — System 29 World Interaction Affordance / Reach
 
-Status: **IMPLEMENTED — unified player routing + Mechanical repair closure verified**
+Status: **IMPLEMENTED — unified player routing + loose-item pickup closure verified**
 
 Approved foundation: **2026-08-24**
 
@@ -8,9 +8,11 @@ Player-routing integration: **2026-09-04**
 
 Mechanical repair closure: **2026-09-04**
 
+Loose-item / TRY OPEN closure: **2026-09-06**
+
 Foundation playable head: `5b88d9172df51561ea760913873f62bd2cdc422a`.
 
-Current verified executable: `6aab0596cb46d70d4739cbc045d149a25597193d`.
+Current verified executable: `736a5f4875d40cb437e760b89188419d98c5fef6`.
 
 Exact-head owners include:
 
@@ -42,12 +44,13 @@ System 29 owns:
 - deterministic offer/highlight ordering and bounded local discovery;
 - presentation invalidation/lifecycle for movement, facing, perception and provider-state changes;
 - the unified exact-target player action chooser that presents all currently routed offers for one selected physical target;
-- delegated action routing back to existing mechanic-owned controllers when an offer opens another owner UI such as Crafting or Loot.
+- delegated action routing back to existing mechanic-owned controllers when an offer opens another owner UI such as Crafting or Loot;
+- inclusion of reachable loose physical items in ordinary chooser discovery without taking ownership of item transfer truth.
 
 System 29 does **not** own:
 
-- search, TAKE, STORE or container contents — Systems 24/12/11;
-- door/window physical state, broken state or collision — Systems 18/06A and the world-interactable owner;
+- search, TAKE, STORE, pickup transfer or container contents — Systems 24/12/11 and the existing equipment/item-transfer owners;
+- door/window physical state, lock state, broken state or collision — Systems 18/06A and the world-interactable owner;
 - power-network condition/service truth — System 33/33B;
 - cooking/crafting results — System 32;
 - vehicle state/actions — System 36;
@@ -105,14 +108,18 @@ Current providers include real offers for:
 - searchable containers / Loot;
 - crafting workstations;
 - doors and windows;
+- TRY OPEN / open / close behavior for openings without player-visible lock-state prefiltering;
 - boarding, unboarding, breaking and climbing openings;
 - Mechanical deconstruction of supported existing objects;
 - Mechanical repair of supported broken existing objects;
 - physical repair of failed distribution supports through System 33B;
 - potable fixtures;
-- beds/chairs/sofas for sleep/rest.
+- beds/chairs/sofas for sleep/rest;
+- reachable loose `item.*` world entities through the existing item-transfer/equipment owners.
 
 A repair offer is generated from current owner truth. An intact door or healthy power support does not expose REPAIR merely because its semantic type is repairable.
+
+A loose-item offer likewise does not create a new inventory truth. It identifies a reachable physical item and routes acquisition to the existing transfer policy. If that owner rejects the destination, capacity or equipment assignment, the pickup does not silently bypass the rejection.
 
 Additional player actions must join through real providers/owners rather than semantic-name guessing.
 
@@ -126,12 +133,14 @@ Normal production world-pointer input has **one** action-selection route:
 
 The controller:
 
-1. finds OBJECT/STRUCTURE entities at the clicked world cell;
+1. finds OBJECT, STRUCTURE and `LOOSE_ITEM` entities at the clicked world cell;
 2. consumes the already-composed current offer set;
 3. gathers every routed offer for each exact target;
 4. orders targets/actions deterministically by presentation priority and stable IDs;
 5. opens one `WorldInteractionPanel` for the chosen exact target;
 6. dispatches the selected action either to a native timed handler or an explicitly registered delegated handler.
+
+`LOOSE_ITEM` is a real chooser candidate channel. The generic loose-item provider only claims eligible `item.*` entities on that channel; admitting the channel does not turn unrelated placements into fake pickup actions.
 
 The previous independent production pointer listeners for Loot and Crafting are removed. Their controllers remain owners of their own mechanic behavior and retain narrow compatibility pointer seams for focused/historical fixtures only.
 
@@ -148,6 +157,8 @@ Delegated handlers are for owner UIs/lifecycles that must remain independent. Cu
 - `crafting.use_workstation` -> exact-target `CraftingPlayerInteractionController.request_open_workstation()` -> existing Crafting panel/action pipeline;
 - `scavenge.search_container` -> exact-target `LootPlayerInteractionController.request_search_container()` -> real System-24 search WHEN -> existing Loot panel.
 
+Loose-item pickup uses a thin player-route handler that delegates the actual acquisition to the existing item-transfer/equipment authority. Ordinary loose items go through normal carried-item policy. A skateboard is never forced into backpack storage: the same physical `item.vehicle.skateboard` is routed only to an available allowed equipment slot — right hand, left hand or back — or the authoritative transfer fails.
+
 Delegation revalidates the exact target and owner state. It does not create a fake `world.interaction` action.
 
 ### Multi-capability target rule
@@ -163,7 +174,53 @@ Concrete protected example:
 
 ---
 
-## 5. Mechanical repair closure
+## 5. Door/window TRY OPEN semantics
+
+The player-facing chooser must not reveal lock state for free by suppressing OPEN before the survivor attempts it.
+
+For a reachable opening in the relevant closed state:
+
+- the chooser exposes **TRY OPEN**;
+- selecting it performs the real timed owner action;
+- an unlocked opening opens normally;
+- a locked opening remains closed and reports the owner's truthful terminal failure such as `door_locked` or `window_locked`;
+- BREAK and other independently valid actions remain available where their owners permit them;
+- no fake player LOCK/UNLOCK control is introduced by System 29.
+
+The UI therefore reflects what the survivor can attempt, not hidden canonical lock truth learned without interaction.
+
+---
+
+## 6. Loose-item pickup closure
+
+Reachable loose physical items now participate in the same ordinary production chooser as objects and structures.
+
+The closure preserves these boundaries:
+
+- WHAT remains owner of the loose item's physical existence and placement;
+- System 29 discovers/offers the action only inside bounded local reach and current visibility;
+- the existing transfer/equipment service owns the actual move;
+- carry capacity and item physical properties remain authoritative;
+- equipment restrictions remain authoritative;
+- the item keeps one stable physical identity across loose/carried/equipped/ridden states.
+
+### Skateboard acquisition
+
+The seeded/world-placed skateboard is a `LOOSE_ITEM`, not an ordinary OBJECT/STRUCTURE. Production click targeting, affordance validation, presentation invalidation and highlighting now all admit that channel consistently.
+
+Choosing PICK UP for `item.vehicle.skateboard` routes the exact same board to an available allowed equipment slot:
+
+- right hand;
+- left hand;
+- back.
+
+It may not enter ordinary personal/backpack storage. The pickup route does not duplicate the board and does not create a special skateboard inventory shadow state.
+
+The physical item catalog now records the skateboard at **2.5 kg**. This is required because the existing carry-capacity owner correctly rejects acquisition when an item's physical weight is unknown; pickup does not bypass that rule.
+
+---
+
+## 7. Mechanical repair closure
 
 ### Broken doors
 
@@ -201,7 +258,7 @@ Healthy poles do not expose REPAIR after completion. Distribution spans retain c
 
 ---
 
-## 6. Loot reach migration remains authoritative
+## 8. Loot reach migration remains authoritative
 
 System 24 still uses the shared System-29 `CONTACT_FORWARD` geometry for search and external-container access. Search timing/content/access remain System-24 truth.
 
@@ -209,7 +266,7 @@ A SEARCH offer is legal only for current real searchable containers that still e
 
 ---
 
-## 7. Perception / hidden-information rule
+## 9. Perception / hidden-information rule
 
 System 23 remains the sole owner of visual knowledge.
 
@@ -222,14 +279,16 @@ For player-facing affordance/highlight presentation:
 
 System 29 cannot reveal hidden WHAT truth merely because an object is geometrically in reach.
 
+TRY OPEN follows the same principle for lock state: the chooser exposes an attempt when the visible/reachable opening can be tried; the owner reveals success or a locked failure only after the action is actually attempted.
+
 ---
 
-## 8. Bounded discovery and performance
+## 10. Bounded discovery and performance
 
 `InteractionAffordanceQuery` remains bounded to the actor-local reachable set:
 
 1. compute `CONTACT_FORWARD` cells;
-2. inspect WHAT occupancy only there;
+2. inspect WHAT occupancy only there, including eligible `LOOSE_ITEM` placements;
 3. deduplicate stable target IDs;
 4. ask registered providers about those candidates;
 5. revalidate identity/placement/reach;
@@ -241,19 +300,19 @@ There is no recurring whole-world scan, no per-object Node, no `_process()`/`_ph
 
 ---
 
-## 9. Player interaction panel
+## 11. Player interaction panel
 
 `WorldInteractionPanel` is a presentation-only exact-target chooser. It owns no gameplay truth.
 
 Each button carries stable exact-target/action metadata used by live-scene regression coverage. The panel blocks normal player/camera input while open through the existing decision-pause interaction contract, closes before dispatch, and never substitutes a generic fake `USE` action.
 
-Closed panels now destroy their old action controls instead of merely hiding them. This prevents obsolete executable controls from surviving target-state changes and ensures reopening a healthy/repaired target cannot retain a stale REPAIR button from the previous chooser lifecycle.
+Closed panels destroy their old action controls instead of merely hiding them. This prevents obsolete executable controls from surviving target-state changes and ensures reopening a healthy/repaired target cannot retain a stale REPAIR button from the previous chooser lifecycle.
 
 Native world/sustainment action completion is surfaced through the normal HUD. Delegated Crafting/Loot retain their own established result presentation to avoid double reporting.
 
 ---
 
-## 10. Verification
+## 12. Verification
 
 Foundation smoke:
 
@@ -277,26 +336,37 @@ Owning workflows:
 - `.github/workflows/world-interaction-affordance.yml`;
 - `.github/workflows/world-interaction-closure.yml`.
 
-The player-route coverage drives real `main.tscn`, emits the real world-pointer signal, locates exact chooser buttons and proves normal gameplay paths for sink DRINK, bed SLEEP/REST, door/window lifecycle, stove CRAFT + DECONSTRUCT coexistence, searchable-container SEARCH, furniture DECONSTRUCT, broken-door REPAIR and failed-power-support REPAIR.
+The player-route coverage drives real `main.tscn`, emits the real world-pointer signal, locates exact chooser buttons and proves normal gameplay paths for sink DRINK, bed SLEEP/REST, door/window lifecycle, stove CRAFT + DECONSTRUCT coexistence, searchable-container SEARCH, furniture DECONSTRUCT, broken-door REPAIR, failed-power-support REPAIR and a real loose skateboard world placement -> PICK UP -> same physical item in an allowed equipment slot.
 
-Executable `6aab0596cb46d70d4739cbc045d149a25597193d` is the verified Mechanical-repair closure head. On that exact head:
+Executable `736a5f4875d40cb437e760b89188419d98c5fef6` is the verified loose-item / TRY OPEN closure head. On that exact head:
 
-- `verify/world-interaction-closure` succeeded in run `33915077349`;
-- `verify/system29-interaction-affordance` succeeded;
+- all **45** push workflows reached terminal state;
+- there were **0 failures, 0 cancellations, 0 queued and 0 in-progress** runs at closure inspection;
+- `verify/world-interaction-closure` succeeded in run `34059987805`;
+- `verify/system29-interaction-affordance` succeeded in run `34059987832`;
 - `verify/system33-power-water` succeeded;
-- protected neighboring status set is green;
-- `verify/pages-deploy` succeeded in run `33915077391`.
+- `verify/pages-deploy` succeeded in run `34059987775`;
+- aggregate commit statuses were green.
 
-The dedicated closure initially exposed a stale hidden REPAIR control after successful pole repair. The provider and canonical utility state were already correct; `WorldInteractionPanel.close_panel()` was retaining old button nodes. The production panel lifecycle now clears those controls on close, and the exact-head owner gate is green without weakening the smoke.
+### CI-discovered regressions repaired during closure
+
+The focused production smoke exposed two real integration defects and they were repaired rather than bypassed:
+
+1. `LOOSE_ITEM` had been added to interaction discovery/click targeting but a stale System-29 affordance validator still rejected offers on that spatial channel. The validator plus loose-item invalidation/highlight handling now consistently accepts the channel while the pickup provider remains restricted to eligible `item.*` targets.
+2. The skateboard transfer reached the authoritative carry-capacity owner but was rejected because `item.vehicle.skateboard` had no registered physical weight. The existing vehicle item catalog now classifies the board at **2.5 kg**, preserving normal capacity policy instead of special-casing pickup.
+
+The owning `world-interaction-closure` workflow also watches the pickup handler and skateboard physical-item catalog dependency so these seams cannot silently fall out of coverage.
 
 ---
 
-## 11. Protected neighbors
+## 13. Protected neighbors
 
 Preserve:
 
 - System 24 deterministic loot/search timing/current-content behavior;
 - System 12 transfer mutation and external-container carry policy;
+- authoritative carry-capacity and item physical-property validation;
+- generalized equipment restrictions and one-item identity;
 - System 23 visibility/memory semantics;
 - System 27 physical lighting truth;
 - System 33/33B utility condition and service authority;
@@ -310,14 +380,17 @@ Preserve:
 
 ---
 
-## 12. Human/mobile acceptance remaining
+## 14. Human/mobile acceptance remaining
 
 Automated route verification is green. Ordinary desktop and iPhone/Safari acceptance should still check:
 
-- highlight readability at phone scale;
+- highlight readability at phone scale, including loose items;
 - chooser button size/placement when a target has several actions;
+- loose-item PICK UP discoverability and feedback;
+- skateboard ground pickup/equipment-slot feedback;
 - stove CRAFT + DECONSTRUCT readability;
-- door/window action labels and board/break feedback;
+- TRY OPEN / locked failure readability;
+- door/window board/break/climb feedback;
 - broken-door repair discoverability/material feedback;
 - failed-pole repair discoverability/outage-restoration feedback;
 - sink/bed interaction discoverability;
@@ -328,30 +401,25 @@ Visual/layout tuning remains presentation work and must not change action/reach 
 
 ---
 
-## 13. Deferred real consumers
+## 15. Deferred real consumers / next practicality items
 
-The unified route is available for future real owners, but System 29 itself must not invent them. Still pending elsewhere:
+The unified route is available for future real owners, but System 29 itself must not invent them. The next player-practicality audit should continue with existing owners in this order where still incomplete:
 
-- fixed light/switch interaction and persistent flashlight on/off state;
-- generator operation/fuel/start-stop;
-- real replacement-glass resource/source before shattered-window repair can become truthful;
-- an independent clickable physical WHAT identity for distribution spans before direct player span repair;
-- real fire/ignition lifecycle;
-- richer vehicle component maintenance;
-- future NPC interaction planning.
+1. verify exact carried-item **EAT / DRINK** actions are reachable from the ordinary Inventory surface and expose real prerequisites/failure results;
+2. close fixed light/switch interaction and persistent flashlight on/off state through the existing System-27/System-33/equipment truth;
+3. close generator operation, fuel and start/stop through its real utility/item owners;
+4. extend truthful vehicle component repair/replacement only through existing System-36 Mechanical/component state;
+5. add shattered-window repair only after a real replacement-glass resource/source exists;
+6. expose direct distribution-span repair only after spans have an independent clickable physical WHAT identity;
+7. close real fire/ignition lifecycle through its eventual owner;
+8. perform human/mobile acceptance of the already-automated interaction routes.
 
 No freeform base-building action belongs here. Construction remains limited to reinforcing existing openings and repairing broken existing objects.
 
----
-
-## 14. Next operation
-
-Close **fixed light/switch interaction and flashlight on/off persistent state** through the same WHAT -> `InteractionOffer` -> exact-target chooser -> owner -> WHEN pipeline. Reuse current System-27/System-33 lighting and hand-equipped flashlight truth; do not create UI-owned light state.
-
-After that, close generator operation/fuel/start-stop through its real utility/item owners.
+Only after the player/world/object interaction layer is practical end-to-end should work proceed to combat and then the first real infected hydrated from existing building-derived population records.
 
 ---
 
-## 15. North-star fit
+## 16. North-star fit
 
 System 29 provides one cheap, truthful interaction surface over the same physical state/actions that govern the simulation. It makes the small top-down world usable without turning the UI into a second simulation, and it prevents valid mechanics from becoming unreachable merely because two different owners apply to the same physical target.
