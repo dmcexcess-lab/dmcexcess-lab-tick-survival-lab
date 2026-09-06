@@ -15,7 +15,7 @@ func _run() -> void:
     get_root().add_child(game)
     await process_frame
 
-    var controls := game.get_node_or_null("PlayerControls") as PlayerMovementControls
+    var controls := game.get_node_or_null("Controls") as PlayerMovementControls
     _check(controls != null, "on-foot control strip exists")
     if controls != null:
         var forage := controls.get_node_or_null("ForageButton") as Button

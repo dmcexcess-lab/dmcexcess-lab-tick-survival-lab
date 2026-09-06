@@ -42,7 +42,7 @@ func configure(
     _build_ui()
     var parent_node := get_parent()
     if parent_node != null:
-        _movement_controls = parent_node.get_node_or_null("PlayerControls") as PlayerMovementControls
+        _movement_controls = parent_node.get_node_or_null("Controls") as PlayerMovementControls
     if _movement_controls != null and not _movement_controls.enter_vehicle_requested.is_connected(_enter):
         _movement_controls.enter_vehicle_requested.connect(_enter)
     if not _controller.action_resolved.is_connected(_on_action_resolved):
