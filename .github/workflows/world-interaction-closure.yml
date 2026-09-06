@@ -8,6 +8,7 @@ on:
       - 'game/scripts/app/GameMain.gd'
       - 'game/scripts/simulation/interaction/**'
       - 'game/scripts/simulation/doors/**'
+      - 'game/scripts/simulation/vehicles/VehicleItemCatalog.gd'
       - 'game/scripts/simulation/utilities/UtilityPowerRepairActionService.gd'
       - 'game/scripts/simulation/utilities/UtilityPowerRepairInteractionOfferProvider.gd'
       - 'game/scripts/simulation/utilities/UtilityPowerNetworkRuntime.gd'
@@ -38,6 +39,7 @@ on:
       - 'game/scripts/app/GameMain.gd'
       - 'game/scripts/simulation/interaction/**'
       - 'game/scripts/simulation/doors/**'
+      - 'game/scripts/simulation/vehicles/VehicleItemCatalog.gd'
       - 'game/scripts/simulation/utilities/UtilityPowerRepairActionService.gd'
       - 'game/scripts/simulation/utilities/UtilityPowerRepairInteractionOfferProvider.gd'
       - 'game/scripts/simulation/utilities/UtilityPowerNetworkRuntime.gd'
@@ -91,6 +93,7 @@ jobs:
             game/scripts/simulation/interaction/WorldInteractionOfferProvider.gd \
             game/scripts/simulation/interaction/LooseItemPickupInteractionOfferProvider.gd \
             game/scripts/simulation/interaction/SustainmentInteractionOfferProvider.gd \
+            game/scripts/simulation/vehicles/VehicleItemCatalog.gd \
             game/scripts/simulation/utilities/UtilityPowerRepairActionService.gd \
             game/scripts/simulation/utilities/UtilityPowerRepairInteractionOfferProvider.gd \
             game/scripts/player/WorldInteractionPlayerController.gd \
@@ -108,6 +111,7 @@ jobs:
           grep -q 'COOKING_STOVE' game/scripts/simulation/crafting/CraftingWorkstationCatalog.gd
           grep -q 'register_delegated_handler' game/scripts/player/WorldInteractionPlayerController.gd
           grep -q 'request_pickup_to_hand' game/scripts/player/LooseItemPickupPlayerInteractionHandler.gd
+          grep -q 'item.vehicle.skateboard' game/scripts/simulation/vehicles/VehicleItemCatalog.gd
           grep -q 'repair_profile' game/scripts/simulation/interaction/WorldInteractionCatalog.gd
           grep -q 'UtilityPowerNetworkRuntime' game/scripts/simulation/utilities/UtilityPowerRepairActionService.gd
           ! grep -R -q 'func _process\|func _physics_process\|Timer.new' game/scripts/simulation/interaction game/scripts/simulation/utilities/UtilityPowerRepairActionService.gd game/scripts/simulation/utilities/UtilityPowerRepairInteractionOfferProvider.gd
