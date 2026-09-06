@@ -4,32 +4,58 @@ Last updated: **2026-09-05**
 
 This is the authoritative continuation checkpoint. Read `README_SOPS.md`, fetch current `main` once, and continue from **NEXT OPERATION**. Newer explicit user direction supersedes this handoff.
 
-## Current checkpoint — endpoint-driven island road hierarchy CLOSED
+## Current checkpoint — vehicle/equipment/apparel pass landed; player-facing loadout UI remains
 
-- **Executable road fix:** `f7cd362310cdabf3a827bd33b5c5d9628e3bc423`.
-- **Exact-tree CI re-verification head:** `a312a590fc6ce4eb511ebbb8d4e2bec06c240f69`.
-- `a312a59` is an empty re-verification commit with the **same tree** (`35d6b403b8a2df288d8dcd52302e5b56d0dfbc0f`) as `f7cd362`; it contains no gameplay/code change.
-- **52/52 GitHub Actions checks reached terminal success** on `a312a59`; there were no failures or pending checks at closure.
-- **Global World Planning SUCCESS** on the exact-tree re-verification: https://github.com/dmcexcess-lab/dmcexcess-lab-tick-survival-lab/actions/runs/34000866485
-- **Pages SUCCESS** on the exact-tree re-verification: https://github.com/dmcexcess-lab/dmcexcess-lab-tick-survival-lab/actions/runs/34000866519
+- **Vehicle/equipment/apparel implementation head:** `a74c60ea848a35e314c6606a197af6db36abf61b`.
+- **Executable gameplay head after compile-boundary repair:** `05f2308d83804ed2547214074a7a23bc149f6750`.
+- `05f2308` fixes one import-time type typo in `TacticalRendererStack.gd` (`WorldInteractableStateRenderer` → the actual `WorldInteractionStateRenderer`). The initial broad failures on `a74c60e` were caused by that project-import compile error; they were not simulation/regression failures.
+- Exact-head verification of `05f2308` reached terminal state across **53 GitHub Actions runs** with **0 failed, 0 cancelled, 0 queued and 0 in-progress** at closure.
+- The earlier endpoint-driven island-road hierarchy remains closed and protected; executable road fix `f7cd362310cdabf3a827bd33b5c5d9628e3bc423`, exact-tree re-verification `a312a590fc6ce4eb511ebbb8d4e2bec06c240f69` with 52/52 terminal success.
 - **Play:** https://dmcexcess-lab.github.io/dmcexcess-lab-tick-survival-lab/
-- The first exact-head run on `f7cd362` had one infrastructure failure in Global World Planning at **Install Godot 4.7.1**, before any Godot/test step ran. The identical-tree re-verification succeeded; no code change was needed for that runner/download failure.
-- A later documentation-only handoff head, `c6e4ced5138151a8d57b43f263781fa4e1a3c39b`, re-ran the suite. Its final-head Global World Planning job completed successfully, including the **Island road destination hierarchy regression** and canonical startup. The unrelated System 29 workflow also completed its interaction, streaming, loot, perception, player-shell, and canonical startup tests successfully (`CANONICAL_DEMO_BOOT_OK`); it failed only afterward while publishing its exact-head commit status because the runner could not connect to `api.github.com` (`curl: (28)` after a runner-network timeout). No gameplay or test failure was involved. This README-only successor records that infrastructure failure accurately and retriggers the normal exact-head workflows.
 - Standing direct-main/Pages authorization remains in the SOP; do not ask again.
 
-### Completed in this continuation
+### Vehicle / equipment / apparel checkpoint
 
-- Replaced the old route-family/legacy-primary paving behavior with **endpoint-driven road hierarchy**.
-- Any generated route touching either a **town** or a **one-light crossroads** is paved.
-- Only **rural-to-rural** settlement links may become gravel or dirt.
-- Island gateway approaches remain **four-lane paved**.
-- Ordinary paved settlement routes remain **two-lane paved**; assigning primary hierarchy for pavement does not turn them into gateway-width roads.
-- Alternate/loop links use the same endpoint-driven classification as tree links instead of receiving pavement merely because their route ID belongs to an alternate family.
-- Added focused one-seed `IslandRoadHierarchySmoke.gd` regression coverage for gateway four-lane routes, town/crossroads paved routes, rural-only unpaved eligibility, and alternate-link endpoint classification.
-- Wired that focused regression into the owning **Global World Planning** workflow.
-- The old twelve-seed matrix was **not** restored. Normal edits remain reference-seed + focused owner/protected regressions unless broader testing is specifically justified.
-- Protected movement, streaming, population, power and potable-water behavior were not intentionally changed by this road-hierarchy repair.
-- Human visual acceptance of the generated road mix remains the next checkpoint; CI verifies generated classifications/contracts, not whether the island looks right to the user.
+- Skateboard straight movement remains **2 cells forward/back** according to its vehicle profile.
+- Skateboard steering is now a **90° heading change on the current cell**; turning does not also translate the board two cells.
+- **All vehicles must brake/stop before reversing.** A reverse request while moving is rejected with `vehicle_brake_before_reverse`; reversing is not a direct direction flip while under motion.
+- Skateboard is a real persistent item semantic: `item.vehicle.skateboard`.
+- The same physical skateboard transitions between **loose-item occupancy when parked/dropped**, **vehicle occupancy while ridden**, and loose-item occupancy again on dismount. Do not materialize a duplicate board for equipment/pickup.
+- Skateboard legal equipment slots are **right hand, left hand or back only**.
+- Skateboard may not be stored in the actor's personal/backpack containment; rejected storage uses `skateboard_requires_hand_or_back`.
+- Authoritative equipment slots now exist for **right hand, left hand, back, head, torso, legs, feet and hands**. Equipment is an exclusive physical-item disposition, not an item simultaneously duplicated inside inventory.
+- Actor presentation can render floating/attached equipment from the authoritative slot assignments for **both hands and back**.
+- Actor presentation also applies clothing/hat paper-doll overlays from authoritative worn equipment instead of maintaining a separate cosmetic truth.
+- Current apparel semantics include baseball cap, beanie, T-shirt, hoodie, work jacket, jeans, cargo pants, sneakers, work boots and work gloves.
+- The production vehicle renderer contains **no separate front/heading-indicator overlay**. No distinct purple-front marker source was found in the current renderer/SVG path during this pass, so do not claim an asset was removed; if one is still visibly present in the playable build, capture the vehicle/type/location and trace that actual source.
+
+### Protected apparel protection model
+
+The user explicitly simplified clothing protection. Preserve this exact model unless later direction changes it:
+
+- `bite_cut_armor`
+- `blunt_ballistic_armor`
+- `water_resistance`
+
+Retired from apparel/equipment truth:
+
+- `armor_bite`
+- `armor_cut`
+- `armor_blunt`
+- `insulation`
+- `wind_resistance`
+
+Do not reintroduce separate bite vs cut, separate blunt vs ballistic, insulation, or wind resistance merely because older notes/tests mention them. `ActorEquipmentProtectionQuery.gd` aggregates only the two merged armor values plus water resistance, capped at 100. `ActorHandEquipmentSmoke.gd` has focused regression coverage for the merged-stat contract, retired-key absence, skateboard slot restrictions and representative worn-equipment aggregation.
+
+### Remaining player-facing gap from this checkpoint
+
+The underlying equipment state and renderer now understand back/worn slots, but the ordinary player Inventory/loadout surface is still legacy-oriented:
+
+- `ActorInventoryInspectorQuery.gd` currently serializes only the two hand slots plus inventory/carry truth.
+- `CanonicalPlayerShell.gd` currently exposes RIGHT HAND / LEFT HAND / STOW / DROP-style actions, not ordinary equip/unequip actions for back/head/torso/legs/feet/hands.
+- The player shell does not yet expose the merged `bite_cut_armor`, `blunt_ballistic_armor` and `water_resistance` totals.
+
+Therefore this pass is **not yet player-complete** under the project's UI practicality rule. The next implementation should extend the existing inventory/loadout route rather than inventing a second cosmetic equipment UI.
 
 ## Road contract now expected in the playable island
 
@@ -39,6 +65,7 @@ This is the authoritative continuation checkpoint. Read `README_SOPS.md`, fetch 
 - **Rural hamlet ↔ rural hamlet:** may be gravel or dirt.
 - **Alternate links/loops:** classify from their actual endpoint settlement types; they do not get a special pavement exemption.
 - Dirt and gravel are single-lane rural roads and remain traversable.
+- Human visual acceptance of the generated road density/mix remains useful, but the endpoint classification itself is regression-protected and closed.
 
 ## Protected potable-water contract
 
@@ -130,9 +157,11 @@ Production inheritance remains `VehicleGameMain -> System34GameMain -> UtilityGa
 
 ## NEXT OPERATION
 
-1. **User visual acceptance of the deployed road hierarchy.** Inspect the playable island and verify that gateway approaches are four-lane, routes reaching either town or any one-light crossroads are paved two-lane, and gravel/dirt appear only on rural-to-rural links.
-2. Specifically inspect alternate/loop journeys: an alternate touching a town/crossroads must be paved; a rural-to-rural alternate may be gravel/dirt. If a mismatch is visible, capture the seed plus the route/endpoints or visible location pattern and make a targeted generator fix.
-3. Continue evaluating whether the overall road density/mix still feels like scattered rural and one-light-town geography rather than over-roaded suburbia. Classification is closed; appearance remains human acceptance.
-4. After road visual acceptance, return to the standing priority: rendering/player/world/object-interaction/UI practicality, then combat, then the first zombies hydrated from real population records.
-5. Preserve the completed river/wastewater/water-graph removal and protected municipal/private-well contract above. Do not restart old cleanup steps from historical handoffs.
-6. Whole-world rollback snapshots, distant immutable unloading/persisted deltas, and human browser/iPhone performance acceptance remain open; this road repair does not claim to solve them.
+1. **Finish the ordinary Inventory/loadout UI for the generalized equipment state.** Extend the existing player inventory route so items can be equipped/unequipped to back, head, torso, legs, feet and hands as well as right/left hand. Do not create a second cosmetic equipment truth.
+2. Expose truthful equipped protection totals in ordinary gameplay UI: `bite_cut_armor`, `blunt_ballistic_armor`, and `water_resistance`. Do not restore insulation, wind resistance, separate bite/cut, or separate blunt/ballistic stats.
+3. Exercise the complete skateboard user path in production UI/gameplay: dismount → loose item → pick up/equip to either hand or back → backpack/personal storage rejected → return to world/mount the same physical board. Verify straight skateboard travel remains 2 cells, 90° turns stay on one cell, and all vehicle families require braking/stopping before reverse.
+4. If a purple/front vehicle marker is still visibly present, capture the actual vehicle/type/location and trace the rendering/asset source; current production renderer has no explicit heading overlay and this checkpoint does not invent a removal target.
+5. Continue the standing full player/world/object-interaction/UI practicality audit and close every backend-only or debug-only gameplay route before combat.
+6. After the player/world/UI layer is practical end-to-end: implement combat, then hydrate the first real zombies from existing building-derived population records.
+7. Preserve the closed road hierarchy and continue human visual acceptance only as needed for island feel; do not reopen its endpoint classification without a concrete mismatch.
+8. Preserve the completed river/wastewater/water-graph removal, municipal/private-well contract, streaming boundaries, decision-pause semantics, and building-derived population.
