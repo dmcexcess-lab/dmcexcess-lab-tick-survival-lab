@@ -14,6 +14,11 @@ Date: 2026-09-05
 - Added and extended `PlayerUiCleanupSmoke.gd` plus protected HUD/camera workflow coverage for the cleaned player-facing contract.
 - Updated the Performance Architecture workflow so it protects the absence of a renderer-created Dev panel while retaining the telemetry architecture.
 - CI previously caught and fixed the real scene-node hookup error (`Controls`, not `PlayerControls`), ensuring **ENTER VEHICLE** reaches production gameplay.
+- Dropped **CENTER/FOLLOW** down to `y = 574`, directly above the FORWARD row with a small non-overlapping gap.
+- Added an adjacent **MAP** button that opens a read-only generated-island overlay in either walking or mounted mode.
+- The map raster uses the active generated world plan and canonical island-surface math, layers generated roads/settlements, and marks the player's canonical `WorldState` placement.
+- Map presentation is lazy and bounded (`256 x 256` raster); it does not scan the live streamed world or create duplicate navigation/topology truth.
+- Preserved `VehicleGameMain.gd` as the production root. Map configuration is a composition-only `PlayerMapBootstrap.gd` child after canonical world boot.
 
 ## Corrected mounted control replacement
 
@@ -32,12 +37,23 @@ Current contract:
 
 ## Corrected top HUD/camera layout
 
-- `LookingAtPanel` now begins at approximately `y = 66`, directly below the top menu buttons.
+- `LookingAtPanel` begins at approximately `y = 66`, directly below the top menu buttons.
 - `Looking at:` no longer occupies the lower movement/control region.
 - `HealthBar` and `FatigueBar` nodes are retired rather than repositioned.
 - Health/fatigue remain authoritative and readable in textual status output.
 - Visible Zoom +/- buttons are retired; CENTER/FOLLOW remains.
+- CENTER/FOLLOW now occupies `(x = 182, y = 574)` in the 720p reference layout; MAP occupies the same row immediately to its right at `x = 326`.
 - Existing zoom capability is preserved for non-button input paths.
+
+## Canonical island map follow-up
+
+- `CameraControls.gd` owns the MAP toggle alongside CENTER/FOLLOW while retaining its existing touch/mouse duplicate-suppression path.
+- `IslandMapView.gd` is a presentation-only full-screen overlay with a CLOSE action.
+- Coastline/shore/land/ocean are sampled from the active plan's bounds/seed/profile using `IslandSurfaceMath.classify(...)`, so the displayed island follows the same deterministic geometry contract as generation.
+- `GeneratedGlobalWorldPlan.road_segments` and `.settlements` are rendered as overlays rather than rediscovered from streamed entities.
+- The player marker is derived from the canonical playable actor placement and redraws from world-change notification while MAP is visible.
+- The initial attempt changed the root scene script to a subclass and was correctly rejected by existing System 34 ownership guards before Godot execution. The repaired implementation keeps the required `VehicleGameMain.gd` root and uses `PlayerMapBootstrap.gd` only for composition wiring.
+- `PlayerUiCleanupSmoke.gd` now proves CENTER/MAP positioning, canonical plan configuration, canonical player marker presence, open/close behavior, overlay layer restoration and deterministic raster materialization.
 
 ## Verification
 
@@ -49,11 +65,17 @@ Earlier exclusive mounted-control candidate: `7842806e836f4d868407c96336f4b940e1
 
 - 44/44 push workflows succeeded.
 
-**Corrected player-HUD / driving-replacement executable head:** `33afe7f459f1cd9d24b493ab935c97b2d4545a35`
+Corrected player-HUD / driving-replacement executable head: `33afe7f459f1cd9d24b493ab935c97b2d4545a35`
 
-- **44/44 push workflows succeeded.**
+- 44/44 push workflows succeeded.
 - 0 failed.
 - 0 cancelled.
-- 0 queued.
-- 0 in progress.
+
+**Canonical island-map executable head:** `b4d4e59da5f185cce22a990ce9012b77bb1d3d84`
+
+- **47/47 push workflows succeeded.**
+- **0 failed.**
+- **0 cancelled.**
+- Godot import/parse succeeded.
+- Protected UI/HUD/camera, vehicle, generation, performance, startup and Web/Pages regressions succeeded.
 - The executable tree is terminal-green; subsequent commits in this prompt are documentation/handoff only.
