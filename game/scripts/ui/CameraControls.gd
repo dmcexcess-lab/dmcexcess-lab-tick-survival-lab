@@ -13,9 +13,7 @@ const BUTTON_SIZE := Vector2(132, 52)
 const SYNTHETIC_MOUSE_SUPPRESS_MS: int = 500
 
 var _enabled: bool = true
-var _zoom_out_button: Button = null
 var _center_button: Button = null
-var _zoom_in_button: Button = null
 var _last_snapshot: Dictionary = {}
 var _suppress_mouse_until_ms: int = 0
 
@@ -26,9 +24,8 @@ func _ready() -> void:
 func set_enabled(value: bool) -> void:
     _enabled = value
     _build_controls()
-    _zoom_out_button.disabled = not value
-    _center_button.disabled = not value
-    _zoom_in_button.disabled = not value
+    if _center_button != null:
+        _center_button.disabled = not value
 
 func is_enabled() -> bool:
     return _enabled
@@ -67,9 +64,7 @@ func dispatch_control_event(event: InputEvent, action: StringName, now_ms: int =
 func _build_controls() -> void:
     if _center_button != null:
         return
-    _zoom_out_button = _add_button("ZOOM -", Vector2(82, ROW_Y), ACTION_ZOOM_OUT)
     _center_button = _add_button("CENTER\nFOLLOW", Vector2(255, ROW_Y), ACTION_RECENTER)
-    _zoom_in_button = _add_button("ZOOM +", Vector2(426, ROW_Y), ACTION_ZOOM_IN)
 
 func _add_button(text_value: String, position_value: Vector2, action: StringName) -> Button:
     var button := Button.new()
