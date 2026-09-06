@@ -4,31 +4,40 @@ Last updated: **2026-09-05**
 
 This is the authoritative continuation checkpoint. Read `README_SOPS.md`, fetch current `main` once, and continue from **NEXT OPERATION**. Newer explicit user direction supersedes this handoff.
 
-## Current checkpoint — dirt-road traversal repair CLOSED
+## Current checkpoint — endpoint-driven island road hierarchy CLOSED
 
-- **Verified executable:** `86b201c24f867b5d823633f3f83ae7de982b92e6`.
-- **51/51 GitHub Actions workflows succeeded**, no failures or pending runs for that executable.
-- **Pages SUCCESS:** https://github.com/dmcexcess-lab/dmcexcess-lab-tick-survival-lab/actions/runs/33999144142
+- **Executable road fix:** `f7cd362310cdabf3a827bd33b5c5d9628e3bc423`.
+- **Exact-tree CI re-verification head:** `a312a590fc6ce4eb511ebbb8d4e2bec06c240f69`.
+- `a312a59` is an empty re-verification commit with the **same tree** (`35d6b403b8a2df288d8dcd52302e5b56d0dfbc0f`) as `f7cd362`; it contains no gameplay/code change.
+- **52/52 GitHub Actions checks reached terminal success** on `a312a59`; there were no failures or pending checks at closure.
+- **Global World Planning SUCCESS** on the exact-tree re-verification: https://github.com/dmcexcess-lab/dmcexcess-lab-tick-survival-lab/actions/runs/34000866485
+- **Pages SUCCESS** on the exact-tree re-verification: https://github.com/dmcexcess-lab/dmcexcess-lab-tick-survival-lab/actions/runs/34000866519
 - **Play:** https://dmcexcess-lab.github.io/dmcexcess-lab-tick-survival-lab/
-- Closing commit is documentation-only. Local executable candidate `206fcc7` has the same tree `dd7ec42d4433364ddd54cbe3ffbcd3b20eeac61d` as the published executable.
+- The first exact-head run on `f7cd362` had one infrastructure failure in Global World Planning at **Install Godot 4.7.1**, before any Godot/test step ran. The identical-tree re-verification succeeded; no code change was needed for that runner/download failure.
 - Standing direct-main/Pages authorization remains in the SOP; do not ask again.
 
 ### Completed in this continuation
 
-- Repaired the user-reported impassable dirt road. `ground.dirt_road` is now registered as traversable by the production generated-world movement rules.
-- Registered generated four-lane white-divider terrain as traversable so the markings cannot create invisible movement barriers.
-- Yellow and white road-marking cells now participate in live and remembered road-neighbor topology, preventing painted cells from visually breaking adjoining pavement.
-- Complete-island generation/replay explicitly proves the new generated terrain types are traversable. Movement, ground renderer and reference-seed playable boot checks passed locally.
-- Added up to eight nearest unused settlement-pair connections beyond the road tree.
-- Road types survive global planning, local projection and surface materialization: four-lane paved (two each way), two-lane paved (one each way), single-lane gravel and single-lane dirt.
-- Four-lane routes paint dashed white lane dividers around the yellow directional centerline. Unpaved surfaces do not paint centerlines. Legacy primary/secondary frontage classes remain.
-- Fixed rural branch anchors on partially overlapping collinear approaches; shared route pavement is not a crossing at every cell.
-- Removed leftover deleted-hydrology dependencies and river exclusions from CountrysideSourceCatalog and its smoke contract, preserving coverage/materialization/revisit/rollback checks.
-- Population-generation errors now retain the local failure reason.
-- Local complete-island generation/replay, power/water, alternate-seed legacy seam, countryside materialization and canonical boot passed.
-- Initial published candidate `b708ba4` had two CI failures; both repaired in the verified executable above.
-- Cached Godot binary was damaged and crashed even on --version. A fresh official 4.7.1 executable resolved this; no current tooling blocker remains.
-- No browser FPS or long-distance memory performance claim is made. Human appearance/lag acceptance remains pending.
+- Replaced the old route-family/legacy-primary paving behavior with **endpoint-driven road hierarchy**.
+- Any generated route touching either a **town** or a **one-light crossroads** is paved.
+- Only **rural-to-rural** settlement links may become gravel or dirt.
+- Island gateway approaches remain **four-lane paved**.
+- Ordinary paved settlement routes remain **two-lane paved**; assigning primary hierarchy for pavement does not turn them into gateway-width roads.
+- Alternate/loop links use the same endpoint-driven classification as tree links instead of receiving pavement merely because their route ID belongs to an alternate family.
+- Added focused one-seed `IslandRoadHierarchySmoke.gd` regression coverage for gateway four-lane routes, town/crossroads paved routes, rural-only unpaved eligibility, and alternate-link endpoint classification.
+- Wired that focused regression into the owning **Global World Planning** workflow.
+- The old twelve-seed matrix was **not** restored. Normal edits remain reference-seed + focused owner/protected regressions unless broader testing is specifically justified.
+- Protected movement, streaming, population, power and potable-water behavior were not intentionally changed by this road-hierarchy repair.
+- Human visual acceptance of the generated road mix remains the next checkpoint; CI verifies generated classifications/contracts, not whether the island looks right to the user.
+
+## Road contract now expected in the playable island
+
+- **Gateway routes:** four-lane paved, two lanes each direction.
+- **Town-touching routes:** paved two-lane unless the route is a gateway.
+- **One-light-crossroads-touching routes:** paved two-lane unless the route is a gateway.
+- **Rural hamlet ↔ rural hamlet:** may be gravel or dirt.
+- **Alternate links/loops:** classify from their actual endpoint settlement types; they do not get a special pavement exemption.
+- Dirt and gravel are single-lane rural roads and remain traversable.
 
 ## Protected potable-water contract
 
@@ -120,9 +129,9 @@ Production inheritance remains `VehicleGameMain -> System34GameMain -> UtilityGa
 
 ## NEXT OPERATION
 
-1. User playtests dirt-road traversal and completes the unfinished feedback that ended with “and”. Then adjust from the concrete remainder.
-2. Continue testing the deployed road/density build: four road types, alternate journeys, rural proportions, and movement lag.
-3. No CI or publication work remains for this executable. Keep normal seed checks focused; the full twelve-seed matrix remains explicit opt-in.
-4. Preserve the completed river/wastewater/water-graph removal and protected municipal/private-well contract above. Do not restart old cleanup steps from historical handoffs.
-5. Continue rendering/player/world interaction closure before combat and NPC/zombie work, as directed. Future zombies consume actual population records.
-6. Whole-world rollback snapshots, distant immutable unloading/persisted deltas, and human browser/iPhone acceptance remain open; this repair does not claim to solve them.
+1. **User visual acceptance of the deployed road hierarchy.** Inspect the playable island and verify that gateway approaches are four-lane, routes reaching either town or any one-light crossroads are paved two-lane, and gravel/dirt appear only on rural-to-rural links.
+2. Specifically inspect alternate/loop journeys: an alternate touching a town/crossroads must be paved; a rural-to-rural alternate may be gravel/dirt. If a mismatch is visible, capture the seed plus the route/endpoints or visible location pattern and make a targeted generator fix.
+3. Continue evaluating whether the overall road density/mix still feels like scattered rural and one-light-town geography rather than over-roaded suburbia. Classification is closed; appearance remains human acceptance.
+4. After road visual acceptance, return to the standing priority: rendering/player/world/object-interaction/UI practicality, then combat, then the first zombies hydrated from real population records.
+5. Preserve the completed river/wastewater/water-graph removal and protected municipal/private-well contract above. Do not restart old cleanup steps from historical handoffs.
+6. Whole-world rollback snapshots, distant immutable unloading/persisted deltas, and human browser/iPhone performance acceptance remain open; this road repair does not claim to solve them.
