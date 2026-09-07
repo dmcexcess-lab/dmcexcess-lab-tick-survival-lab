@@ -1,261 +1,395 @@
 # Tick Survival Lab — Current Repository Handoff
 
-This file is the authoritative short handoff for the next repository operation. Read this first, then follow `README_SOPS.md`. Do not broadly rediscover already-closed work.
+This file is the authoritative short handoff for the next repository operation. Read this first, then `README_SOPS.md`. Do not broadly rediscover already-closed work.
 
-## Current checkpoint — HUMAN/MOBILE PLAYER INTERACTION PRACTICALITY CLOSED 2026-09-07
+## Current checkpoint — SYSTEM 37 COMBAT FOUNDATION + FIRST REAL INFECTED HYDRATION CLOSED 2026-09-07
 
-Production root remains `game/main.tscn` -> `VehicleGameMain.gd`.
+Production root is now:
 
-The player/world/object practicality layer is now closed through the available production-scene acceptance pass. Do not reopen these systems unless real play exposes a concrete defect.
+`game/main.tscn -> CombatGameMain.gd -> VehicleGameMain.gd`
 
-The next major phase is **combat**. After combat is practical, hydrate the first real infected from the already-existing population records.
+The combat prerequisite for infected play is closed through real melee, exact firearm/ammunition state, resumable reload, generic living-actor death/corpse transition, and integrated production-scene verification against the first resident-backed infected.
+
+The first infected is now a real production actor hydrated from the already-authoritative island population plan. It is **not autonomous yet**. The next major phase is first-infected behavior through existing perception/sound/movement/combat/WHEN owners.
 
 ## Prompt start / turnover completed
 
-This prompt began from exact requested checkpoint:
+This prompt began from exact `main`:
 
-- `1268fd12a0b6b1ea27a0f62d88515e8074864508`
+- `36027c1537909d3271859d72ad512a150e413752`
 
-The previous prompt-owned vehicle-maintenance verifier pair was deleted first as required:
+The previous prompt-owned combat-actions verifier pair was deleted first as required:
 
-- `game/scripts/ci/PromptVehicleMaintenanceSmoke.gd`
-- `.github/workflows/prompt-vehicle-maintenance.yml`
+- `game/scripts/ci/PromptCombatActionsSmoke.gd`
+- `.github/workflows/prompt-combat-actions.yml`
 
-`README_CONTEXT.md` was read first, then `README_SOPS.md`, and `main` was fetched once at prompt start.
+Then `README_CONTEXT.md` was read first, `README_SOPS.md` second, and current `main` was fetched once. No broad historical regression fleet or seed matrix was restored.
 
-## Human/mobile acceptance — concrete defects found and repaired
+## System 37 — combat foundation now closed
 
-The acceptance audit stayed on production interaction/input seams and did not add gameplay features.
+### Existing melee slice retained
 
-Two systemic defects were found in the shared world chooser:
+The earlier melee/action slice remains authoritative:
 
-1. **Overlapping actionable entities could shadow each other.** `WorldInteractionPlayerController` previously ordered candidates by presentation priority and effectively exposed only the first actionable target on a clicked cell. Lower-priority physical entities occupying that same cell could therefore be impossible to select.
-2. **The world interaction chooser was not touch/mobile practical.** `WorldInteractionPanel` used a fixed desktop-ish position and small action controls; its first responsive revision also exposed a real Godot container-layout timing problem that could still push the settled panel off-screen.
+- `combat.strike_primary` uses the exact anatomical RIGHT HAND item;
+- `combat.strike_secondary` uses the exact anatomical LEFT HAND item;
+- `combat.strike_unarmed` requires a physically empty hand;
+- `combat.shove` is a physical committed displacement attempt;
+- strikes resolve through explicit CONTACT timing, not immediate button damage;
+- movement before CONTACT is real evasion; attacks do not home;
+- light effective striking mass is WHEN CANCELABLE;
+- heavy strikes and shove are WHEN COMMITTED;
+- same-tick contacts resolve together before decision pause;
+- canonical Health owns HP/injury;
+- System 34 owns Fatigue/condition, with no separate combat Stamina;
+- System 26 owns physical combat sound;
+- the shared System-29 chooser may expose exact visible ACTOR combat offers, but ACTOR occupancy alone grants no interaction;
+- the practical on-foot center `STRIKE` / desktop `F` route remains the blind-forward physical attack intent.
 
-Repairs now in production:
+Previous focused melee evidence:
 
-- a clicked cell preserves **every actionable exact target** across `LOOSE_ITEM`, `OBJECT` and `STRUCTURE` candidate channels;
-- presentation priority orders target/action groups but never erases lower-priority target identity;
-- one `WorldInteractionPanel` presents target headings when several exact actionable entities share the clicked cell;
-- every action button carries and dispatches its own exact target ID, so choosing one object cannot silently operate another;
-- action and CANCEL controls use 52 px minimum height;
-- the chooser uses a scroll surface and responsive viewport width/height sizing;
-- a deferred post-layout clamp rechecks actual settled Godot container size and keeps the chooser inside the visible viewport;
-- existing modal blocking remains intact: opening the chooser blocks ordinary pointer/movement/camera routes and closing/selecting restores them;
-- no gameplay truth moved into UI.
+- functional head `9e06f6949062c7598a6a595ca6daed5e369e52f8`;
+- `Prompt Combat Actions` run `34165616529` — SUCCESS.
 
-Functional runtime head that first verified these repairs:
+### Exact firearm / ammunition state
 
-- `69bd99983dc07865caa37a570ec352f760db864a`
+New authoritative firearm vocabulary:
 
-Focused successful verification on that exact functional head:
+- `item.firearm.service_pistol`;
+- `item.firearm.magazine.9mm`;
+- `item.ammo.9mm_round`.
 
-- `Prompt Human Mobile Interaction` run `34106166284` — SUCCESS
-- Pages run `34106166327` — SUCCESS
+`FirearmProfileCatalog` supplies the minimum physical firearm profile and registers canonical physical masses.
 
-The first focused run before the final layout repair failed only the viewport-containment assertion. The actual log showed exact overlapping-target routing, touch-sized buttons and modal blocking were already correct. The failure identified the post-container-layout overflow above; production was repaired rather than the assertion weakened.
+`FirearmState` owns only firearm-specific physical relationships:
 
-## Fresh disposable verifier for this closed prompt
+- exact firearm WHAT ID;
+- exact inserted magazine WHAT ID;
+- exact chambered live-round WHAT ID.
 
-Current prompt-owned pair:
+Important invariant:
 
-- `game/scripts/ci/PromptHumanMobileInteractionSmoke.gd`
-- `.github/workflows/prompt-human-mobile-interaction.yml`
+> **Ammunition truth is physical item identity, not an integer counter.**
 
-It boots real `res://main.tscn` and tests only the interaction seam changed in this prompt. It creates two prompt-only actionable entities on one reachable world cell and proves:
+The firearm and magazine are real containment owners. Magazine quantity is derived from the exact round WHAT entities contained by that magazine. Chambering moves one exact round from magazine containment into firearm containment.
 
-1. the production chooser opens through the real `WorldInteractionPlayerController`;
-2. both higher- and lower-priority overlapping exact targets remain reachable;
-3. action controls are touch-practical (>=48 px; production minimum is 52 px);
-4. the settled chooser remains inside the viewport;
-5. choosing the lower-priority target dispatches that exact target/action identity;
-6. world pointer input is blocked while the chooser is open and restored after selection.
+### Fire / aim actions
 
-### Mandatory next-prompt CI turnover
+`FirearmActionService` implements:
 
-At the START of the next code prompt, delete:
+- `combat.fire_snap` — WHEN COMMITTED, discharge at tick +2, total 4 ticks, 6-cell first-slice range;
+- `combat.fire_aimed` — WHEN COMMITTED, discharge at tick +5, total 7 ticks, 12-cell first-slice range;
+- `combat.reload` — WHEN RESUMABLE.
 
-- `game/scripts/ci/PromptHumanMobileInteractionSmoke.gd`
-- `.github/workflows/prompt-human-mobile-interaction.yml`
+Discharge:
 
-Then create a completely fresh combat-only prompt-local verifier pair if combat code is touched. Do not restore historical/broad regression fleets or seed matrices.
+- revalidates the same exact equipped firearm and exact chambered round;
+- follows the latched forward direction through real terrain/collision cells;
+- does not target-home;
+- applies canonical Health damage/injury on a living actor hit;
+- consumes that exact chambered live-round WHAT entity;
+- cycles the next exact magazine round into the chamber when available;
+- emits physical System-26 combat sound through `FirearmSoundEmitterAdapter`.
 
-## Acceptance audit — existing routes retained, not reinvented
+`CombatPlayerController` routes the existing `player.combat_forward` intent through an equipped firearm first. With no firearm it falls back to existing melee. An equipped empty-chamber firearm can enter its lawful reload path; UI does not own ammo state.
 
-The requested ordinary production routes were reviewed against their current player-facing owners. This pass did not reopen mechanics that were already practical and wired:
+### Resumable reload
 
-- loose-world item pickup/drop;
-- skateboard pickup/equip/ride/dismount with one physical identity;
-- Inventory EAT / DRINK on the selected exact persistent item;
-- flashlight equip/toggle/stow with exact-item persistent switched state;
-- doors and windows, including truthful TRY OPEN and existing board/unboard/break/climb behavior;
-- searchable loot containers;
-- supported deconstruction;
-- Crafting/workstations;
-- rest/sleep;
-- potable water fixtures;
-- forage;
-- portable generator inspect/refuel/start/stop;
-- physical power-support repair;
-- vehicle enter/drive/exit;
-- exact on-foot vehicle repair/refuel;
-- MAP / CENTER / FOLLOW;
-- Looking At / ordinary world chooser;
-- touch/mouse pointer conversion and modal input blocking.
+Reload physical phases:
 
-Targeted neighboring source audit confirmed:
+1. `combat.reload_eject` — old exact magazine leaves firearm and returns to actor containment;
+2. `combat.reload_insert` — selected exact compatible magazine moves into firearm containment;
+3. `combat.reload_chamber` — one exact live round moves from magazine to firearm chamber.
 
-- `DoorPointerInputAdapter` already owns mouse + touch world-cell conversion, drag rejection and synthetic-mouse suppression after touch;
-- `PlayerMovementControls` already uses touch-practical control sizing;
-- `CanonicalPlayerShell` already exposes exact-item EAT/DRINK and flashlight actions through touch-practical inventory/modal controls;
-- production composition already blocks pointer/movement/camera input while the interaction chooser is open.
+`FirearmDamageInterruptionService` routes real Health damage into ordinary WHEN interruption. Because reload is RESUMABLE, completed physical phases remain true after interruption and resume continues the unfinished action using the same exact selected magazine.
 
-The available repository/CI environment does not provide a literal physical iPhone/Safari touchscreen session. Do not claim one occurred. The closure is based on the production scene, focused interaction execution and targeted source audit of the real touch/mouse/modal owners. If future device play reveals a concrete defect, repair that exact seam rather than redesigning the interaction architecture.
+The focused verifier specifically proves interruption after ejection leaves truthful empty-magwell / carried-magazine state, then resumes and inserts the same replacement magazine rather than resetting or teleporting ammunition.
+
+### Generic living-actor death / corpse transition
+
+`ActorDeathTransitionService` watches canonical Health crossing from HP > 0 to HP <= 0. Death is generic actor consequence, not firearm-only or infected-only behavior.
+
+On death it:
+
+1. force-fails any active WHEN action;
+2. creates exact persistent corpse identity `corpse.<actor_id>` with semantic `object.corpse`;
+3. enrolls the corpse as a real containment owner;
+4. clears living right/left hand assignment;
+5. moves the actor's exact directly carried WHAT identities into corpse containment;
+6. removes living ACTOR placement;
+7. places the corpse at the same physical location;
+8. records source actor <-> corpse provenance in `CorpseState`.
+
+Exact items are moved, never copied into a fake loot table. `object.corpse` has an explicit non-blocking collision profile so corpse persistence does not accidentally become UNKNOWN blocking geometry.
+
+The first firearm/death focused run found a real integration defect: the new death listener initially used the wrong Health `hp_changed` arity. Production was repaired to the canonical five-argument signal contract; the verifier assertion was not weakened.
+
+## System 38 — first real infected hydration closed
+
+### Population truth remains aggregate and authoritative
+
+`IslandWorldPlanner` already runs `IslandPopulationPlanner` and retains on the generated global plan:
+
+- `population_settlements`;
+- `resident_population`;
+- `infected_population`;
+- `survivor_population`;
+- `local_area_manifest`.
+
+Settlement records contain real household building IDs and resident capacities. The planner intentionally does not pre-create thousands of person entities.
+
+### Deterministic resident-slot projection
+
+`PopulationResidentProjection` gives stable individual identity to already-counted household capacity only when an individual is needed.
+
+Resident IDs are derived as:
+
+`resident.<building_id>.<ordinal>`
+
+Each projected record preserves:
+
+- exact resident ID;
+- source building ID;
+- household resident ordinal;
+- settlement ID;
+- area-site ID;
+- real generated home/building cell.
+
+A stable infection score is derived from world seed + building ID + resident ordinal. Within each settlement, exactly the existing `infected_population` number of resident slots is classified infected. This does not increment population totals or invent an extra zombie population.
+
+### Infection is a human-state overlay
+
+`InfectedState` stores infection/provenance on the exact human actor identity.
+
+The production infected remains semantic:
+
+- `actor.survivor`
+
+This is deliberate. Infection is state/behavior, not a parallel species requiring duplicate Health/equipment/movement/combat owners.
+
+### First active infected hydration
+
+`FirstInfectedHydrationService`:
+
+- selects a deterministic infected resident slot, preferring the central playable area;
+- starts from that resident's real generated home cell;
+- finds a real clear currently materialized cell within a bounded search radius;
+- creates the exact resident ID as a normal ACTOR;
+- enrolls canonical locomotion, hand equipment, inventory containment, Health, skills, carry and System-34 condition state;
+- records infection/resident provenance;
+- fails closed if a truthful materialized placement cannot be found.
+
+`CombatGameMain` reuses the already-generated global population/local-area plan. It does **not** regenerate all 35 local areas just to obtain one infected. Player perception is recomputed after hydration.
+
+The first integrated production boot exposed a narrow owner-interface defect: `ActorSkillState` and `ActorCarryState` do not expose `is_ready()` methods. The hydrator was corrected to their actual non-null/enrollment contract without changing those owners or weakening the test.
+
+## Integrated focused verification
+
+Current prompt-owned disposable pair:
+
+- `game/scripts/ci/PromptCombatFirearmDeathSmoke.gd`
+- `.github/workflows/prompt-combat-firearm-death.yml`
+
+Integrated functional head:
+
+- `e997ac13b74a1955fb5fe152f1b0753886009acc`
+
+Successful focused run:
+
+- `Prompt Combat Firearm Death` run `34170545140` — SUCCESS.
+
+That unchanged production-scene verifier boots real `res://main.tscn` and proves:
+
+1. production firearm and generic death/corpse owners are ready;
+2. production first infected is hydrated;
+3. its exact actor ID is a deterministic central household resident slot already counted infected;
+4. infection overlays shared human semantic `actor.survivor`;
+5. the exact actor has real ACTOR occupancy;
+6. canonical Health, equipment, containment, condition, locomotion, carry and skill owners enroll;
+7. exact firearm/magazine/live-round entities use real containment;
+8. reload is WHEN RESUMABLE;
+9. eject creates truthful physical intermediate state;
+10. real damage interrupts reload without erasing progress;
+11. resume inserts the same exact selected replacement magazine;
+12. one exact persistent live round is chambered;
+13. magazine quantity derives from remaining exact round identities;
+14. the same real resident-backed infected can be physically repositioned into the focused firing scenario without changing identity;
+15. that infected can carry/equip one exact item identity;
+16. the infected can have an ordinary active WHEN action;
+17. snap fire begins as a real timed action;
+18. the exact chambered round is consumed on discharge;
+19. lethal firearm consequence triggers the generic death transition on that exact infected;
+20. death removes living ACTOR occupancy and creates persistent corpse occupancy;
+21. death force-fails the infected's active WHEN action;
+22. exact equipped/carried item identity moves into corpse containment without copying;
+23. infection/population provenance survives the source actor's death;
+24. corpse collision is explicit and non-blocking;
+25. firearm discharge reaches System 26;
+26. semiautomatic cycling chambers the next exact remaining magazine round.
+
+The final log ended:
+
+`PROMPT_COMBAT_FIREARM_DEATH_SMOKE: PASS`
 
 ## Material documentation updated
 
-- `SYSTEM_DESIGNS/29_IMPLEMENTATION_CHANGELOG.md` — human/mobile interaction practicality closure recorded at docs commit `838b34190f3ac8f0a7ab26800e3c3e34b55d5e76`.
-- `SYSTEM_DESIGNS/29_WORLD_INTERACTION_AFFORDANCE_REACH.md` — current exact overlapping-target and touch-practical chooser contract recorded at docs commit `20105d2029d9654be967afd5f0e0092e480443f2`.
+- `SYSTEM_DESIGNS/37_TACTICAL_COMBAT_PHYSICAL_IMPACT.md` — System-37 combat foundation now records melee + exact firearm/ammunition/reload + generic death/corpse closure and focused evidence.
+- `SYSTEM_DESIGNS/38_FIRST_INFECTED_POPULATION_HYDRATION.md` — records aggregate population truth, deterministic resident-slot projection, infection-as-human-state overlay, first hydration, integrated death/combat evidence, and explicit behavior boundary.
+- `SYSTEM_DESIGNS/29_IMPLEMENTATION_CHANGELOG.md` — records this combat + first-infected closure.
+
+## Deliberately not implemented yet
+
+Do not misread this checkpoint as full infected/NPC completion.
+
+Still deferred:
+
+- autonomous infected perception/intention behavior;
+- heard-sound investigation;
+- autonomous movement/action submission;
+- infected attacks against player through System 37;
+- scaling hydration to many infected;
+- survivor NPC behavior/dialogue;
+- true stability/knockdown/brace system;
+- broader firearm/magazine/ammunition catalog and advanced firearm mechanics;
+- richer corpse dragging/decomposition unless later justified by physical primitives.
+
+No Combat skill was reintroduced.
+
+## Fresh disposable verifier for this closed prompt
+
+Current prompt-owned pair to delete FIRST at the start of the next code prompt:
+
+- `game/scripts/ci/PromptCombatFirearmDeathSmoke.gd`
+- `.github/workflows/prompt-combat-firearm-death.yml`
+
+Then create one brand-new prompt-local focused verifier pair only for first-infected behavior actually changed. Do not restore historical combat, architecture, seed-matrix or broad regression fleets.
+
+## Protected neighboring contracts — preserve
+
+### Vehicle / skateboard
+
+- on foot click the exact vehicle for lawful ordinary interaction;
+- REPAIR / REFUEL appear there only when physically valid;
+- HOTWIRE remains mounted-only;
+- clicking one vehicle must never silently operate another;
+- no separate vehicle-maintenance window;
+- `ADD RACK` is optional/legacy, not a protected gameplay requirement;
+- skateboard movement 2 cells / 2 ticks;
+- bicycle 3 / 2;
+- motorcycle/car/truck 3 / 1;
+- skateboard only is brakeless and may reverse/dismount while moving;
+- other vehicles require stopped state before reverse/exit;
+- mounted controls replace walking controls in the same lower footprint.
+
+### Inventory / equipment
+
+- exact selected persistent item -> lawful action -> authoritative WHEN -> mutate/remove only that exact entity;
+- skateboard remains one physical identity across loose/equipped/ridden states;
+- skateboard legal equipment destinations RIGHT HAND / LEFT HAND / BACK only;
+- equipment slots remain RIGHT HAND, LEFT HAND, BACK, HEAD, TORSO, LEGS, FEET, HANDS;
+- one physical item cannot occupy multiple slots.
+
+### Doors / windows / lighting / utilities
+
+- closed locked openings expose TRY OPEN rather than leaking hidden lock truth;
+- break/board/unboard/climb remain existing closed work;
+- shattered-window repair remains deferred until real replacement glass exists;
+- generated fixed room lighting follows System-33 power automatically; no residential light-switch gameplay;
+- exact flashlight item owns persistent switched state; no invented battery depletion;
+- portable generator ordinary click INSPECT/REFUEL/START/STOP uses real fuel/running truth and only local-power contribution;
+- physical distribution-support repair remains System 33B/System-33 truth; direct span repair waits for clickable WHAT span identity.
+
+### Player HUD / interaction
+
+- no Survival window;
+- no Forage panel;
+- no player-visible Dev window;
+- no visible Zoom +/-;
+- no Health/Fatigue bars;
+- `Looking at:` remains below STATS / INVENTORY / MENU;
+- CENTER/FOLLOW + MAP remain available on foot/mounted;
+- walking controls disappear while mounted and vehicle controls replace the same footprint;
+- shared world chooser preserves every actionable exact overlapping target;
+- action/cancel controls remain touch-practical and chooser remains viewport-clamped;
+- UI owns no game truth.
+
+### World / streaming
+
+- island 3072x3072;
+- stream regions 128x128, active radius 1 unless deliberately changed;
+- gateway roads four-lane paved;
+- routes touching town/crossroads paved two-lane unless gateway;
+- only rural-rural links gravel/dirt, traversable single lane;
+- reference seed 20001 roughly 627 buildings / 2184 residents / 2 towns / 3 crossroads / 30 rural settlements;
+- exactly one municipal water facility plus aliases;
+- no municipal pipe/node/pressure graph;
+- deterministic 10–20% rural private wells only;
+- wastewater/sewer/septic retired;
+- no routine 12-seed matrix.
 
 ## Design philosophy — preserve
-
-Do not pursue depth by copying a long bespoke feature list from Project Zomboid or another survival game.
 
 Target:
 
 > **deep interaction as an emergent property of relatively light simulation**
 
-Prefer reusable physical/stateful truth such as:
+Prefer exact physical/stateful primitives over bespoke genre features:
 
-- physical item identity;
+- WHAT identity;
 - containment;
 - equipment/hand state;
-- material type;
-- condition/damage;
-- openings/barriers;
-- power;
-- fuel/fluid;
+- material/condition/damage;
+- collision/LOS;
+- perception and sound;
+- power/fuel/fluid;
 - temperature/weather exposure;
 - tools/capabilities;
-- weight/carry constraints;
-- authoritative WHEN/action cost.
+- weight/carry;
+- authoritative WHEN action timing and interruption.
 
-When an interaction can fall naturally out of existing owner truth, route to that owner instead of adding a bespoke one-off mechanic or UI-owned shadow state.
-
-## Protected neighboring contracts — do not reopen casually
-
-### Vehicle interaction
-
-Protected rule:
-
-- on foot, click the **exact vehicle** for ordinary relevant interaction;
-- REPAIR and REFUEL belong there when physically valid;
-- HOTWIRE remains mounted-only;
-- clicking one vehicle must never silently operate on another nearer vehicle;
-- no separate vehicle-maintenance panel;
-- mounted driving controls remain unchanged.
-
-`ADD RACK` is **not a protected gameplay requirement**. It remains optional/legacy behavior. Do not spend future acceptance/combat work polishing or expanding cargo-rack gameplay merely because it exists; do not remove it unless it causes a concrete defect or a later simplification pass explicitly chooses to.
-
-Vehicle movement remains:
-
-- skateboard: 2 cells/action, 2 ticks;
-- bicycle: 3/2;
-- motorcycle/car/truck: 3/1;
-- skateboard only is brakeless and may reverse/dismount while moving;
-- bicycle/motorcycle/car/truck require stopped state before reverse/exit;
-- mounted controls replace walking controls in the same lower footprint.
-
-### Inventory / equipment / skateboard
-
-- selected exact persistent item -> consumption offer -> EAT/DRINK -> authoritative WHEN -> remove only that exact physical item;
-- skateboard is one physical identity across loose/equipped/ridden states;
-- skateboard legal equipment destinations are RIGHT HAND / LEFT HAND / BACK only;
-- no ordinary backpack storage for skateboard;
-- skateboard physical weight is 2.5 kg;
-- equipment slots remain RIGHT HAND, LEFT HAND, BACK, HEAD, TORSO, LEGS, FEET, HANDS;
-- one physical item cannot occupy multiple slots.
-
-### Doors / windows
-
-- closed locked openings expose TRY OPEN rather than leaking hidden lock truth through UI prefiltering;
-- authoritative owner reports the locked failure after the attempt;
-- existing break/board/unboard/climb routes remain closed work;
-- shattered-window repair remains intentionally deferred until a real replacement-glass resource/source exists.
-
-### Lighting / flashlight
-
-There are no residential/fixed-light switches. Generated fixed room lighting automatically follows System-33 power service.
-
-Flashlight remains the player-controlled portable light:
-
-- exact persistent flashlight owns `switched_on` truth;
-- TURN ON / TURN OFF is available only while that exact flashlight is hand-equipped;
-- state survives stow/equip/drop as exact-item state;
-- stowing an ON flashlight removes the beam without erasing ON state;
-- re-equipping restores it;
-- no battery-depletion system was invented.
-
-### Generator / utilities
-
-Generator operation remains:
-
-- ordinary click INSPECT / REFUEL / START / STOP;
-- real gas-can consumption;
-- authoritative fuel/running state;
-- System-33 local-power contribution only;
-- generator never fake-repairs canonical grid state.
-
-Physical distribution-support repair remains with System 33B/System 33 condition/service truth. Direct span repair remains deferred until spans have independent clickable WHAT identity.
-
-### Player HUD
-
-- no standalone Survival window;
-- no standalone Forage panel;
-- no player-visible Dev window;
-- no visible Zoom +/-;
-- no Health/Fatigue progress bars;
-- `Looking at:` remains below STATS / INVENTORY / MENU;
-- CENTER/FOLLOW and MAP remain available on foot and mounted;
-- walking controls disappear while mounted and vehicle controls replace the same footprint;
-- UI owns no gameplay truth.
-
-### World / streaming
-
-- island 3072x3072;
-- technical stream regions 128x128, active radius 1 unless intentionally changed;
-- gateway roads four-lane paved;
-- routes touching town/crossroads paved 2-lane unless gateway;
-- only rural-rural links gravel/dirt, traversable single lane;
-- reference seed 20001 roughly 627 buildings / 2184 residents / 2 towns / 3 crossroads / 30 rural settlements;
-- exactly one municipal facility `water.facility.island` plus aliases;
-- no municipal pipe/node/pressure graph;
-- deterministic 10–20% rural private wells; town/non-rural never wells;
-- wastewater/sewer/septic retired;
-- no routine 12-seed matrix.
+For infected behavior especially, reuse ordinary actor actions. Do not create a zombie-only simulation clock, magic aggro radius, teleport movement, private attack cooldown, duplicate health, or duplicate combat system.
 
 ## Permanent disposable prompt-local CI policy
 
 `README_SOPS.md` remains authoritative:
 
-- no standing gameplay regression fleet;
 - every code prompt deletes the previous prompt-owned smoke + workflow first;
-- every code prompt creates a brand-new verifier pair only for code actually changed;
-- test only the exact touched module/play path plus required protected seam behavior;
-- do not restore or gate on historical broad smokes, architecture suites or seed matrices;
+- create a completely fresh focused verifier pair only for code actually changed;
+- test only touched play path plus necessary protected seam behavior;
+- no standing broad gameplay regression fleet;
+- no historical architecture suite / seed matrix restoration;
 - `.github/workflows/pages.yml` remains deployment-only;
-- inspect actual focused-job logs for failures and repair production defects rather than weakening truthful assertions.
+- inspect actual focused job logs and repair production defects instead of weakening truthful assertions.
 
-# NEXT OPERATION — COMBAT
+# NEXT OPERATION — FIRST INFECTED BEHAVIOR
 
-Start the next code prompt by deleting the current human/mobile prompt-owned verifier pair, reading this file then `README_SOPS.md`, and fetching current `main` once.
+Start the next code prompt by deleting the current firearm/death prompt-owned verifier pair, reading this file first, then `README_SOPS.md`, then fetching current `main` once.
 
-Build combat through the same simulation-first philosophy. Do not start infected/NPC behavior yet except for the minimum test target representation genuinely required to exercise combat mechanics. Prefer reusable physical/stateful combat truth over genre feature lists: exact actor/item identity, equipped/hand state, weapon/tool capability, reach/range, body/condition/damage, stamina/exertion, sound, collision/LOS, and authoritative WHEN costs.
+Build behavior for **exactly the already-hydrated first resident-backed infected** before scaling population hydration.
 
-Combat must become practical through its real player controls and real consequences before beginning the first infected phase.
+Target architecture:
 
-After combat closure:
+> **perception -> intention -> ordinary WHEN action**
 
-> **Hydrate the first real infected from existing population records rather than spawning a disconnected fake zombie fixture into production.**
+Use existing owners:
 
-This `README_CONTEXT.md` update is the FINAL repository write for the human/mobile acceptance prompt. After this commit there must be zero repository mutations; only read-only exact-head / CI / Pages verification is allowed.
+- System 23 current visual/perception truth;
+- System 26 heard-sound observations/uncertainty;
+- ordinary actor placement/collision/movement;
+- System 37 melee/combat actions;
+- canonical Health/condition;
+- the one shared WHEN clock.
+
+Minimum first behavior closure should prove the real infected can:
+
+1. perceive a currently visible player without omniscient position access;
+2. hear/investigate a real propagated System-26 sound when the player is not visible;
+3. choose a small deterministic intention from those observations;
+4. submit ordinary movement actions on the shared WHEN clock toward the lawful perceived/investigated target;
+5. submit ordinary System-37 attack when physically in reach;
+6. stop acting when generic death removes living ACTOR occupancy;
+7. retain the same resident/infection provenance throughout.
+
+Do not scale to hordes until one actor's behavior loop is correct and focused-CI proven.
+
+This `README_CONTEXT.md` update is the **FINAL repository write** for the combat/firearm/death/first-infected-hydration prompt. After this commit there must be zero repository mutations; only read-only exact-head branch / focused-CI / Pages verification is allowed.
