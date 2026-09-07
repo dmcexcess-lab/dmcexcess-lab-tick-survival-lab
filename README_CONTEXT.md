@@ -1,263 +1,167 @@
 # Tick Survival Lab — Current Handoff
 
-Last updated: **2026-09-06 UTC player/world interaction closure**
+Last updated: **2026-09-07 UTC — ordinary Inventory exact-item EAT / DRINK + prompt-local CI conversion closed**
 
-This is the authoritative continuation checkpoint. Read `README_SOPS.md`, fetch current `main` once, and continue from **NEXT OPERATION**. Newer explicit user direction supersedes this handoff.
+This is the authoritative continuation checkpoint. For the next coding prompt, read this file once, fetch current `main` once, and continue directly from **NEXT OPERATION**. Do not rediscover already-closed work.
 
-This README update is the **FINAL repository write for the current loose-item / TRY OPEN closure prompt**. The fully verified documentation parent immediately before this handoff is **`ba19ce100163f27ef710aa2026c4570a16937889`**. The verified executable/functional head for the behavior closed here is **`736a5f4875d40cb437e760b89188419d98c5fef6`**. After this write, verification for this prompt is strictly read-only against the exact commit containing this file.
+This README update is the **FINAL repository write for the Inventory EAT / DRINK closure prompt**. The fully verified pre-context documentation head is **`ac84e20049dd54feaa86176c8d9fafb823700bf4`**. The focused functional verifier first reached green on exact head **`77f58cb5776d193cae2c6ae98190f7a65b47952d`**. After this file is committed, verification for this prompt is strictly read-only.
 
-## Current checkpoint — loose-item pickup and truthful opening attempts closed
+## Current checkpoint — ordinary Inventory exact-item EAT / DRINK CLOSED
 
-The player/world/object practicality audit remains the active phase. This slice closed two missing ordinary-play routes without creating parallel gameplay truth:
+The player/world/object practicality audit remains the active phase. This slice verified that carried food and drink are already usable through the ordinary production Inventory UI without creating a new survival/item-use subsystem.
 
-1. reachable loose physical `item.*` world entities now participate in the normal production interaction chooser and can expose **PICK UP**;
-2. closed doors/windows now expose a truthful **TRY OPEN** attempt rather than allowing UI prefiltering to reveal lock state for free.
+Production path:
 
-Focused canonical docs were updated before this handoff:
+`EquipmentPlayerShell -> CraftingPlayerShell -> CanonicalPlayerShell -> SurvivorSustainmentActionService -> WHEN`
 
-- System 29 interaction closure: **`b878192a5192034e59e46009b3d7ee67c3543d7c`** (`docs: close loose item interaction route`);
-- System 36 skateboard acquisition closure / verified docs parent: **`ba19ce100163f27ef710aa2026c4570a16937889`** (`docs: record skateboard pickup closure`).
+The selected persistent physical item ID is preserved end-to-end:
 
-## Functional verification record
+1. the player selects an exact carried item in ordinary Inventory;
+2. `CanonicalPlayerShell` asks `SurvivorSustainmentActionService.consumption_offer(actor_id, exact_item_id)` for that exact item;
+3. the Inventory action button stores that exact ID as `inventory_action_item_id`;
+4. `_begin_inventory_item_action(exact_item_id)` routes to the existing sustainment owner;
+5. `begin_consume(actor_id, exact_item_id)` schedules the authoritative timed action;
+6. the physical item remains real and carried while the action is pending;
+7. only authoritative completion removes that exact selected item.
 
-Executable/functional closure head:
+Existing sustainment profiles already provide:
 
-**`736a5f4875d40cb437e760b89188419d98c5fef6`**
+- `item.food.apple` -> `action_kind = eat` -> **EAT**;
+- `item.drink.water_bottle` -> `action_kind = drink` -> **DRINK**.
 
-That exact head completed **45 push workflows** with:
+**No production gameplay source change was required for DRINK.** The generic exact-item Inventory route was already correct. This prompt closed the missing verification/usability confidence rather than inventing duplicate state.
 
-- **0 failed**;
-- **0 cancelled**;
-- **0 queued**;
-- **0 in-progress**.
+## Focused verification record
 
-Its aggregate status set was green, including:
+Prompt-owned disposable verifier:
 
-- `verify/world-interaction-closure` — success, run **`34059987805`**;
-- `verify/system29-interaction-affordance` — success, run **`34059987832`**;
-- `verify/system33-power-water` — success;
-- `verify/pages-deploy` — success, run **`34059987775`**.
+- script: `game/scripts/ci/PromptInventoryItemUseSmoke.gd`;
+- workflow: `.github/workflows/prompt-inventory-item-use.yml`;
+- workflow name: **Prompt Inventory Item Use**.
 
-The documentation parent **`ba19ce100163f27ef710aa2026c4570a16937889`** was also allowed to drain to terminal status before this final context write and had **0 failed, 0 cancelled, 0 queued and 0 in-progress** push workflows.
+The fresh smoke boots real production `res://main.tscn` and tests only ordinary Inventory item use. It proves:
 
-## Loose-item interaction contract
+- exact selected `food.apple.001` exposes **EAT**;
+- exact selected `drink.water.001` exposes **DRINK**;
+- offer/button state preserves the selected persistent physical `item_id`;
+- the selected item remains in authoritative actor containment before timed completion;
+- authoritative WHEN completion removes only the exact selected physical item;
+- a same-type sibling remains, proving semantic-type alias consumption does not occur.
 
-Normal production world-pointer interaction remains one chooser route. The bounded interaction candidate set now consistently includes eligible WHAT placements on the **`LOOSE_ITEM`** spatial channel in addition to OBJECT/STRUCTURE candidates.
+### Initial fresh-run setup failure
 
-The loose-item provider is intentionally generic but narrow:
+The first fresh workflow run on cutover head `21c29643cd086003ca30cf00836bb40e53fa1c4f`, run **`34086732422`**, failed because direct Godot script invocation on a clean runner had no project class cache. Main-scene `class_name` dependencies therefore could not resolve.
 
-- it claims reachable, visible loose physical `item.*` entities;
-- it creates only a presentation/routing offer;
-- it does not own inventory or equipment mutation;
-- actual acquisition delegates to the existing authoritative item-transfer/equipment owners;
-- carry capacity, physical item data, containment restrictions and equipment restrictions remain authoritative;
-- failed policy validation remains a real failure rather than being bypassed by UI code.
+This was a verifier/toolchain setup problem, not a gameplay defect. The focused repair added a Godot editor/cache preparation step and nothing else.
 
-There is no recurring whole-world loose-item scan and no parallel pickup inventory.
+### Successful owning functional head
 
-### Skateboard ground pickup
+Exact functional head:
 
-Stable semantic: **`item.vehicle.skateboard`**.
+**`77f58cb5776d193cae2c6ae98190f7a65b47952d`**
 
-A world skateboard is a real loose physical entity on `LOOSE_ITEM`. The production interaction path now supports:
+Prompt Inventory Item Use run:
 
-`real world placement -> ordinary click/chooser -> PICK UP -> existing transfer/equipment owner -> legal equipment slot`
+**`34086785612` — SUCCESS**
 
-Protected skateboard acquisition rules:
+Pages on the same head:
 
-- the **same physical board** moves between loose/equipped/ridden states;
-- no duplicate board or shadow inventory state may be created;
-- legal equipment destinations are only **right hand, left hand or back**;
-- ordinary personal/backpack containment remains prohibited;
-- if no legal slot/capacity exists, pickup fails truthfully;
-- `VehicleItemCatalog.gd` records the skateboard at **2.5 kg** so the normal carry-capacity owner can evaluate it.
+**`34086785614` — SUCCESS**
 
-The production player-route regression boots real `main.tscn`, targets a real loose skateboard, selects PICK UP and proves that the exact same item reaches an allowed equipment slot rather than ordinary storage.
+The later focused docs/SOP head `ac84e20049dd54feaa86176c8d9fafb823700bf4` also completed the same current prompt-local verifier successfully, run **`34086997410`**, and Pages successfully, run **`34086997434`**, before this final context write.
 
-## TRY OPEN / lock-information contract
+## CI policy conversion — NO MORE STANDING GAMEPLAY GATES
 
-The interaction UI must present what the survivor can **attempt**, not hidden canonical lock truth.
+The previous broad standing GitHub Actions gameplay fan-out was retired atomically in this prompt.
 
-For a reachable closed door/window where an open attempt is appropriate:
+The active `.github/workflows` directory now contains only:
 
-- the chooser exposes **TRY OPEN**;
-- choosing it invokes the real timed opening owner through WHEN;
-- an unlocked opening opens normally;
-- a locked door remains closed and reports the real owner result such as `door_locked`;
-- a locked window remains closed and reports the real owner result such as `window_locked`;
-- independently valid **BREAK** behavior remains available where its owner permits it;
-- System 29 does not invent player-facing LOCK/UNLOCK controls.
+1. `.github/workflows/pages.yml` — build/export/deployment only;
+2. `.github/workflows/prompt-inventory-item-use.yml` — this prompt's disposable exact-module verifier.
 
-Do not restore the old behavior where OPEN disappeared solely because the UI already knew the canonical lock state.
+`pages.yml` no longer contains gameplay smokes, architecture checks, protected-regression suites, historical test matrices, or general gameplay gates. It exists only to produce/deploy the live web build.
 
-## CI-discovered regressions repaired in this slice
+`README_SOPS.md` now makes the following permanent process rule authoritative:
 
-Focused CI exposed two real integration defects. Both were repaired at the owning seam instead of weakening tests or bypassing simulation policy.
+- every code prompt deletes the previous code prompt's prompt-owned smoke/test script and workflow;
+- every code prompt creates a **brand-new** smoke/test script and workflow for the exact module/play path being touched;
+- only that exact module may be asserted by the new verifier;
+- pre-existing/historical smokes and workflows are never current gates;
+- no unrelated protected regressions, broad architecture gates, seed matrices, rendering/world/vehicle/UI suites, or full-project gameplay suites are run for confidence;
+- failures are repaired only from the actual current prompt-local workflow/job evidence;
+- Pages is deployment, not gameplay CI;
+- `README_CONTEXT.md` remains the final repository write, followed by read-only verification only.
 
-### 1. Stale `LOOSE_ITEM` affordance rejection
+Do not restore the retired standing workflow fleet.
 
-Candidate discovery/click targeting had been broadened to admit `LOOSE_ITEM`, but a stale System-29 affordance validator still rejected offers on that spatial channel. Result: the board could physically exist in reach but the normal chooser could not complete the route.
+## Documentation disposition
 
-Repair:
+System 34 was updated to record the ordinary Inventory exact-item EAT / DRINK closure and current prompt-local verification evidence.
 
-- System-29 validation now accepts eligible `LOOSE_ITEM` candidates;
-- invalidation/highlight handling also recognizes the channel consistently;
-- only the generic loose-item provider claims eligible `item.*` entities, so unrelated placements do not gain fake pickup actions.
+System 11 Inventory / Containment required **no contract change**: its low-level stable physical containment behavior already supported the exact-item consumption route correctly. Do not rewrite System 11 to make it own Inventory UI or sustainment actions; those remain outside its ownership boundary.
 
-### 2. Missing skateboard physical weight
+## Already-closed interaction work — do not reopen without a concrete defect
 
-Once the chooser route reached the actual transfer owner, pickup still failed because carry-capacity truth correctly rejects an item whose physical weight is unknown.
+Preserve these completed production routes:
 
-Repair:
+- ordinary loose physical item pickup through the one interaction chooser;
+- skateboard pickup into a legal right-hand / left-hand / back equipment slot without duplicate identity;
+- truthful **TRY OPEN** for closed doors/windows without leaking lock state through UI filtering;
+- door/window open/close, board/unboard, smash/break and valid climb-through behavior where owner state permits it;
+- sink/fixture DRINK;
+- bed SLEEP / REST;
+- searchable-container SEARCH / Loot;
+- supported object/furniture DECONSTRUCT;
+- powered stove CRAFT/COOK + DECONSTRUCT coexistence;
+- broken-door Mechanical REPAIR using real requirements/materials/WHEN;
+- physical power-support repair through System 33B;
+- ordinary Inventory exact-item **EAT / DRINK** closed in this prompt.
 
-- the existing vehicle physical-item catalog now defines the skateboard at **2.5 kg**;
-- carry-capacity policy was **not** weakened or special-cased;
-- the world-interaction closure workflow now watches the pickup handler and skateboard physical-item catalog dependency.
+Do not duplicate these mechanics in UI or System 29. UI remains routing/presentation only; owning simulation systems retain truth and mutation.
 
-## Already-closed ordinary interaction routes to preserve
+## Protected equipment / vehicle / HUD contracts
 
-The production player/world route already has automated coverage for existing ordinary mechanics including:
+Equipment remains one authoritative stable-item assignment state with exactly eight slots: right hand, left hand, back, head, torso, legs, feet, hands. One physical item cannot occupy multiple slots. Skateboards remain legal only in right hand, left hand, or back, never ordinary personal/backpack storage.
 
-- sink/fixture **DRINK**;
-- bed **SLEEP / REST**;
-- door/window open/close lifecycle plus boarding/unboarding, break/smash and valid climb-through behavior where owner state permits it;
-- powered stove **CRAFT/COOK + DECONSTRUCT** coexistence through one exact-target chooser;
-- searchable-container **SEARCH / Loot**;
-- supported furniture/object **DECONSTRUCT**;
-- broken-door Mechanical **REPAIR** using real prerequisites/materials/WHEN;
-- failed physical power-support **REPAIR** through System 33B;
-- loose skateboard **PICK UP** into a legal equipment slot.
+Equipment protection remains `bite_cut_armor`, `blunt_ballistic_armor`, `water_resistance`, plus `insulation` as separate thermal/comfort data. **Insulation is not armor and must not be retired.**
 
-Do not duplicate these mechanics inside System 29. It remains presentation/composition/routing; owning simulation systems retain truth and mutation.
+Vehicle timings remain:
 
-## Authoritative equipment / paper-doll contract
+- skateboard 2 cells/action, 2 ticks;
+- bicycle 3 cells/action, 2 ticks;
+- motorcycle/car/truck 3 cells/action, 1 tick.
 
-Equipment state is authoritative. Player visuals, paper doll and protection displays are read-only projections.
+Skateboard remains the only brakeless vehicle and may reverse/dismount while moving. Other vehicles retain stop-before-reverse/exit behavior. Do not restore a blanket brake-before-reverse rule.
 
-Canonical slots remain exactly:
+Player HUD/control invariants remain:
 
-1. right hand;
-2. left hand;
-3. back;
-4. head;
-5. torso;
-6. legs;
-7. feet;
-8. hands.
-
-One stable physical item cannot occupy multiple slots.
-
-Protection/clothing totals remain:
-
-- `bite_cut_armor`;
-- `blunt_ballistic_armor`;
-- `water_resistance`;
-- `insulation` as a **separate thermal/comfort** value.
-
-Insulation is **not armor**. Do not retire it again.
-
-## Authoritative vehicle behavior
-
-Preserve current movement/timing:
-
-- skateboard: **2 cells/action, 2 ticks**;
-- bicycle: **3 cells/action, 2 ticks**;
-- motorcycle: **3 cells/action, 1 tick**;
-- car: **3 cells/action, 1 tick**;
-- truck: **3 cells/action, 1 tick**.
-
-Gas vehicles retain approximately **4,200 cells** of full-tank range.
-
-The skateboard remains the **only brakeless vehicle**:
-
-- immediate moving reverse allowed;
-- moving dismount allowed;
-- 90-degree in-place turns;
-- mounted BRAKE hidden for skateboard only.
-
-Bicycle/motorcycle/car/truck retain brake + stop-before-reverse / stop-before-exit behavior.
-
-Do not restore a blanket brake-before-reverse rule.
-
-## Protected player HUD / map / control contract
-
-Preserve unless newer explicit direction changes it:
-
-- no standalone Survival player window;
-- no standalone Forage panel; FORAGE remains in on-foot bottom controls;
-- no player-visible Dev window;
-- visible Zoom +/- buttons remain retired;
-- Health/Fatigue ProgressBars remain retired;
-- `LookingAtPanel` remains near `y = 66` below STATS / INVENTORY / MENU;
-- CENTER/FOLLOW remains near `x = 182, y = 574`, size `132 x 52`;
-- MAP remains near `x = 326, y = 574`, size `132 x 52`;
-- walking FORWARD begins near `y = 638` with the existing 12 px gap;
-- CENTER/MAP remain available on foot and mounted;
-- production root remains **`VehicleGameMain.gd`**;
-- on foot, `PlayerMovementControls` owns the lower locomotion/action footprint;
-- mounted, walking controls hide completely and `VehicleControlSurface` replaces the same footprint;
-- no separate `VehiclePanel`;
-- dismount restores walking controls;
+- production root `VehicleGameMain.gd`;
+- no standalone Survival, Forage, Dev, or Vehicle panel;
+- no visible Zoom +/-;
+- Health/Fatigue progress bars remain retired;
+- `LookingAtPanel` remains near the top below STATS / INVENTORY / MENU;
+- on-foot lower controls are replaced in-place by vehicle controls while mounted and restored on dismount;
+- CENTER/FOLLOW and MAP remain available on foot and mounted;
 - UI owns no gameplay truth.
 
-## Road / world-generation contract to preserve
+## Protected world / utilities / streaming contracts
 
-- island bounds **3072 x 3072**;
-- technical stream regions **128 x 128**, active radius 1 unless intentionally changed;
-- gateway routes four-lane paved, two lanes each direction;
-- any route touching a town or one-light crossroads is paved two-lane unless gateway;
-- only rural-to-rural routes may be gravel/dirt;
-- gravel/dirt remain traversable single-lane roads;
-- alternate/loop links classify from actual endpoints;
-- reference seed 20001 remains approximately **627 buildings / 2,184 residents / 2 towns / 3 crossroads / 30 rural settlements**;
-- do not restore the old 12-seed matrix for routine edits.
+Preserve unless newer explicit direction changes them:
 
-Population remains building-derived; do not add fake multipliers.
+- island 3072 x 3072;
+- technical stream regions 128 x 128, active radius 1;
+- gateway roads four-lane paved;
+- routes touching a town/crossroads paved two-lane unless gateway;
+- only rural-to-rural routes may be gravel/dirt, both traversable single-lane;
+- reference seed 20001 approximately 627 buildings / 2,184 residents / 2 towns / 3 crossroads / 30 rural settlements;
+- population building-derived, no fake multiplier;
+- no routine twelve-seed matrix;
+- exactly one island-wide municipal water facility plus service aliases;
+- deterministic 10–20% rural private wells, no town/non-rural wells;
+- wastewater/sewer/septic remains retired;
+- current cached/indexed streaming, entering-strip discovery, materialized-handle prefilter, look-ahead, timing telemetry and decision-pause input lock remain intact.
 
-## Potable water / retired wastewater contract
-
-- exactly one authoritative island-wide municipal water facility plus lightweight service aliases;
-- no municipal pipe/node graph, pressure simulation or duplicate plants;
-- deterministically 10–20% of buildings on `rural.*` sites receive private wells;
-- town/non-rural buildings do not receive rural private wells;
-- a selected broken private well remains authoritative and does not fall back to municipal;
-- wastewater/sewer/septic remains retired and must not be resurrected for stale tests/docs.
-
-## Streaming/performance state to preserve
-
-Already implemented:
-
-- 128x128 technical stream regions, radius 1;
-- cached/indexed source discovery;
-- entering-strip boundary discovery;
-- already-materialized-handle prefiltering;
-- phase timing instrumentation;
-- bounded directional look-ahead;
-- cached immutable catalog validation;
-- decision-pause input locking to prevent movement backlog/overshoot.
-
-Remaining architectural debt includes full-world rollback snapshots and eventual distant immutable-base unloading/dematerialization. Use existing phase timing before another streaming rewrite.
-
-## Protected architecture
-
-Preserve:
-
-- WHERE / WHAT / WHEN ownership boundaries;
-- one production exact-target interaction chooser;
-- exact WHEN terminal semantics;
-- no UI-owned gameplay truth;
-- no frame-driven authoritative simulation or recurring whole-world scans;
-- System 12/item-transfer authority for acquisition/containment;
-- authoritative carry-capacity and physical-item validation;
-- authoritative generalized equipment state and one-item identity;
-- System 23 visibility/memory semantics;
-- System 27 physical-lighting truth;
-- System 33/33B utility authority;
-- building-derived population;
-- `VehicleGameMain.gd` production root;
-- skateboard braking/equipment exceptions above;
-- insulation as thermal/comfort data rather than armor;
-- all protected HUD/map/world/water/streaming rules above.
+Known streaming architectural debt remains full-world rollback snapshot scaling and eventual distant immutable-base unloading/dematerialization. Do not reopen streaming without measured phase evidence.
 
 ## Player/world priority
 
@@ -265,24 +169,44 @@ Broader order remains:
 
 1. finish rendering/player/world/object interaction/UI practicality;
 2. combat;
-3. first infected/zombies hydrated from real building-derived population records.
+3. first infected hydrated from existing real building-derived population records.
 
-A backend feature is not player-complete until ordinary gameplay provides a truthful route to its owning action/state.
+A backend feature is not player-complete until ordinary production gameplay exposes a truthful route to its authoritative owner.
 
-Do not begin combat/NPC/infected work before the player-facing practicality pass is closed end-to-end.
+## NEXT OPERATION — fixed lights / switches + persistent flashlight state
 
-## NEXT OPERATION — continue player/world/object interaction practicality audit
+Proceed directly. **Do not redo Inventory EAT / DRINK discovery or verification. Do not reopen loose pickup, TRY OPEN, equipment, vehicles, world generation, or other closed interaction work unless this exact lighting play path exposes a concrete defect.**
 
-Proceed directly from this checkpoint. **Do not reopen loose-item/skateboard pickup or TRY OPEN unless a concrete play-path defect is found.** Prefer wiring existing owners to ordinary player surfaces over inventing new systems.
+### Mandatory CI turnover FIRST
 
-### Next targeted pass
+This is a new code prompt, so before implementing the lighting work:
 
-1. **Inventory exact-item EAT / DRINK:** verify carried food and drink can be selected through the ordinary production Inventory UI and invoke their real item-use/sustainment owner. Close any missing wiring and expose truthful prerequisites/failure reasons rather than debug-only invocation.
-2. **Fixed lights / switches + flashlight state:** wire ordinary interaction for physical light/switch control and persistent equipped-flashlight on/off through existing System-27/System-33/equipment truth. Do not create UI-owned light state.
-3. **Generator practicality:** close operation, fuel and start/stop through the existing portable-generator, utility and item owners.
-4. **Vehicle maintenance practicality:** extend truthful System-36 Mechanical component repair/replacement only through existing vehicle/component state; do not add parallel maintenance booleans.
-5. **Human/mobile acceptance:** check current interaction highlight/chooser readability, TRY OPEN locked feedback, loose pickup feedback, door/window lifecycle, repair/deconstruct, Loot/Crafting transitions and touch de-duplication on ordinary desktop + iPhone/Safari.
-6. Add shattered-window repair only after a real replacement-glass resource/source exists; add direct distribution-span repair only after spans have independent clickable WHAT identity; close real fire/ignition only through its actual owner.
-7. Once the player/world/object interaction layer is practical end-to-end, proceed to **combat**, then the **first real infected** hydrated from existing population records.
+1. delete `game/scripts/ci/PromptInventoryItemUseSmoke.gd`;
+2. delete `.github/workflows/prompt-inventory-item-use.yml`;
+3. create a brand-new prompt-local verifier pair for this operation, suggested names:
+   - `game/scripts/ci/PromptLightingFlashlightSmoke.gd`;
+   - `.github/workflows/prompt-lighting-flashlight.yml`;
+4. that fresh verifier may test **only fixed-light/switch interaction and persistent flashlight state**;
+5. do not run or resurrect any historical/broad suite.
 
-Operating rule: **try not to reinvent the wheel — reuse the existing simulation/action owner and make it reachable through ordinary player interaction.**
+Keep `pages.yml` deployment-only.
+
+### Targeted lighting practicality pass
+
+Trace only the existing System-27 physical-lighting, System-33 utility/power, equipment/item, and ordinary production interaction surfaces needed for this play path. Prefer wiring existing owners over inventing anything new.
+
+Close these ordinary-play behaviors where the backend already supports them:
+
+1. reachable physical fixed lights / switches expose truthful ordinary interaction for on/off control;
+2. switch/light state persists in authoritative simulation state rather than a renderer/UI boolean;
+3. power availability still comes from existing System-33 authority—switching on an unpowered light must not fake illumination;
+4. an exact physical flashlight can be equipped/carried and toggled through an ordinary player action;
+5. flashlight on/off state remains attached to the persistent physical flashlight item across normal equip/stow/hand transitions where existing ownership supports it;
+6. rendering reads the authoritative light/flashlight state; rendering does not own it;
+7. expose truthful failure/prerequisite feedback where power/item/equipment state prevents the requested action.
+
+Do not expand this prompt into generator practicality, vehicle maintenance, fire/ignition, combat, NPCs, or infected.
+
+After the fresh lighting verifier is green, update only the owning lighting/utility/equipment interaction docs materially affected. Then make `README_CONTEXT.md` the FINAL repository write, record the new successful owning head/run and exact remaining next operation, and perform zero writes afterward.
+
+Operating rule: **try not to reinvent the wheel — use the existing authoritative simulation/action owner and make it reachable through ordinary production interaction.**
