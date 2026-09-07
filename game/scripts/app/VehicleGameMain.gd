@@ -285,7 +285,8 @@ func _boot_world_interactions() -> bool:
     _vehicle_maintenance_handler = VehicleMaintenanceHandlerClass.new(
         _interaction_reach,
         _vehicle_state,
-        _vehicle_actions
+        _vehicle_actions,
+        _kernel
     )
     if not _vehicle_maintenance_handler.is_ready():
         return false
@@ -348,7 +349,7 @@ func _boot_world_interactions() -> bool:
         if not _world_interaction_controller.register_handler(action_id, Callable(_generator_actions, "request_action")):
             return false
     for action_id: StringName in [VehicleActionsClass.REPAIR, VehicleActionsClass.MODIFY, VehicleActionsClass.REFUEL]:
-        if not _world_interaction_controller.register_handler(action_id, Callable(_vehicle_maintenance_handler, "request_action")):
+        if not _world_interaction_controller.register_delegated_handler(action_id, Callable(_vehicle_maintenance_handler, "request_action")):
             return false
     for action_id: StringName in [
         SustainmentOffersClass.DRINK_FROM_FIXTURE,
