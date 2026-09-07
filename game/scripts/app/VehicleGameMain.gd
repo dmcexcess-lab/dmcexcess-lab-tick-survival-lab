@@ -11,6 +11,8 @@ const VehicleLightingClass = preload("res://scripts/simulation/vehicles/VehicleL
 const VehicleItems = preload("res://scripts/simulation/vehicles/VehicleItemCatalog.gd")
 const VehicleControllerClass = preload("res://scripts/player/VehiclePlayerController.gd")
 const VehicleControlsClass = preload("res://scripts/ui/VehiclePlayerControls.gd")
+const VehicleMaintenanceOffersClass = preload("res://scripts/simulation/vehicles/VehicleMaintenanceInteractionOfferProvider.gd")
+const VehicleMaintenanceHandlerClass = preload("res://scripts/player/VehicleMaintenancePlayerInteractionHandler.gd")
 
 const InteractionStateClass = preload("res://scripts/simulation/interaction/WorldInteractableState.gd")
 const InteractionCatalogClass = preload("res://scripts/simulation/interaction/WorldInteractionCatalog.gd")
@@ -40,6 +42,8 @@ var _vehicle_consequences: VehicleConsequenceAdapter = null
 var _vehicle_lighting: VehicleLightingSourceAdapter = null
 var _vehicle_controller: VehiclePlayerController = null
 var _vehicle_controls: VehiclePlayerControls = null
+var _vehicle_maintenance_offers: VehicleMaintenanceInteractionOfferProvider = null
+var _vehicle_maintenance_handler: VehicleMaintenancePlayerInteractionHandler = null
 
 var _world_interaction_state: WorldInteractableState = null
 var _world_interaction_catalog: WorldInteractionCatalog = null
@@ -164,7 +168,7 @@ func _boot_world_interactions() -> bool:
         or _door_transition == null or _door_passage == null or _spatial_query == null \
         or _skill_checks == null or _carry_query == null or _hand_state == null or _hand_mutations == null \
         or _item_transfer == null or _carry_acquisition == null or _sustainment_actions == null or _utilities == null or _power_network == null \
-        or _portable_generators == null \
+        or _portable_generators == null or _vehicle_actions == null or _vehicle_state == null or _vehicle_profiles == null \
         or _crafting_plans == null or _crafting_interaction_offers == null \
         or _crafting_controller == null or _loot_controller == null:
         return false
@@ -270,6 +274,21 @@ func _boot_world_interactions() -> bool:
     _generator_offers = GeneratorOffersClass.new(_world, _interaction_reach, _portable_generators)
     if not _interaction_affordances.register_provider(_generator_offers):
         return false
+    _vehicle_maintenance_offers = VehicleMaintenanceOffersClass.new(
+        _world,
+        _interaction_reach,
+        _vehicle_state,
+        _vehicle_profiles
+    )
+    if not _vehicle_maintenance_offers.is_ready() or not _interaction_affordances.register_provider(_vehicle_maintenance_offers):
+        return false
+    _vehicle_maintenance_handler = VehicleMaintenanceHandlerClass.new(
+        _interaction_reach,
+        _vehicle_state,
+        _vehicle_actions
+    )
+    if not _vehicle_maintenance_handler.is_ready():
+        return false
 
     if not _sustainment_actions.set_potable_target_provider(Callable(self, "_potable_target_available")) \
         or not _sustainment_actions.set_rest_target_provider(Callable(self, "_rest_target_surface")):
@@ -327,6 +346,9 @@ func _boot_world_interactions() -> bool:
         return false
     for action_id: StringName in GeneratorActionsClass.ACTION_IDS:
         if not _world_interaction_controller.register_handler(action_id, Callable(_generator_actions, "request_action")):
+            return false
+    for action_id: StringName in [VehicleActionsClass.REPAIR, VehicleActionsClass.MODIFY, VehicleActionsClass.REFUEL]:
+        if not _world_interaction_controller.register_handler(action_id, Callable(_vehicle_maintenance_handler, "request_action")):
             return false
     for action_id: StringName in [
         SustainmentOffersClass.DRINK_FROM_FIXTURE,
