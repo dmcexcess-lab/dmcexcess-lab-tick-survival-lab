@@ -61,7 +61,9 @@ func submit_world_cell(cell: Vector2i) -> void:
     if target_ids.is_empty():
         _panel.close_panel()
         return
+
     var all_offers: Array[InteractionOffer] = _affordances.offers()
+    var entries: Array[Dictionary] = []
     for target_id: String in _ordered_targets(target_ids, all_offers):
         var target_offers: Array[InteractionOffer] = []
         for offer: InteractionOffer in all_offers:
@@ -69,14 +71,22 @@ func submit_world_cell(cell: Vector2i) -> void:
             var key: String = String(offer.action_id)
             if _handlers.has(key) or _delegated_handlers.has(key):
                 target_offers.append(offer.copy())
-        if not target_offers.is_empty():
-            target_offers.sort_custom(func(a: InteractionOffer, b: InteractionOffer) -> bool:
-                if a.presentation_priority != b.presentation_priority: return a.presentation_priority > b.presentation_priority
-                return String(a.action_id) < String(b.action_id)
-            )
-            _panel.open_for_target(target_id, _target_label(target_id), target_offers)
-            return
-    _panel.close_panel()
+        if target_offers.is_empty():
+            continue
+        target_offers.sort_custom(func(a: InteractionOffer, b: InteractionOffer) -> bool:
+            if a.presentation_priority != b.presentation_priority: return a.presentation_priority > b.presentation_priority
+            return String(a.action_id) < String(b.action_id)
+        )
+        entries.append({
+            "target_id": target_id,
+            "title": _target_label(target_id),
+            "offers": target_offers,
+        })
+
+    if entries.is_empty():
+        _panel.close_panel()
+        return
+    _panel.open_for_targets(entries)
 
 func _on_action_requested(target_id: String, action_id: StringName) -> void:
     if not is_ready(): return
