@@ -10,6 +10,7 @@ const CombatControllerClass = preload("res://scripts/player/CombatPlayerControll
 const FirearmProfilesClass = preload("res://scripts/simulation/combat/FirearmProfileCatalog.gd")
 const FirearmStateClass = preload("res://scripts/simulation/combat/FirearmState.gd")
 const FirearmActionsClass = preload("res://scripts/simulation/combat/FirearmActionService.gd")
+const FirearmDamageClass = preload("res://scripts/simulation/combat/FirearmDamageInterruptionService.gd")
 const FirearmSoundClass = preload("res://scripts/simulation/sound/FirearmSoundEmitterAdapter.gd")
 const CorpseStateClass = preload("res://scripts/simulation/combat/CorpseState.gd")
 const DeathTransitionsClass = preload("res://scripts/simulation/combat/ActorDeathTransitionService.gd")
@@ -22,6 +23,7 @@ var _combat_controller: CombatPlayerController = null
 var _firearm_profiles: FirearmProfileCatalog = null
 var _firearm_state: FirearmState = null
 var _firearm_actions: FirearmActionService = null
+var _firearm_damage: FirearmDamageInterruptionService = null
 var _firearm_sound: FirearmSoundEmitterAdapter = null
 var _corpse_state: CorpseState = null
 var _death_transitions: ActorDeathTransitionService = null
@@ -55,6 +57,8 @@ func _boot_system37_combat() -> bool:
     if not _firearm_state.is_ready(): return false
     _firearm_actions = FirearmActionsClass.new(_world, _world_mutations, _spatial_query, _kernel, _hand_state, _health_state, _inventory_state, _inventory_mutations, _firearm_profiles, _firearm_state)
     if not _firearm_actions.is_ready(): return false
+    _firearm_damage = FirearmDamageClass.new(_health_state, _kernel)
+    if not _firearm_damage.is_ready(): return false
     _firearm_sound = FirearmSoundClass.new(_firearm_actions, _spatial_sound)
     if not _firearm_sound.is_ready(): return false
 
