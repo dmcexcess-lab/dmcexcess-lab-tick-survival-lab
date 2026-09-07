@@ -80,6 +80,10 @@ func _build_buttons() -> void:
     _add_button("FORWARD", Vector2(255, 638), Vector2(130, 52), Intents.FORWARD)
     _add_command_button("ENTER VEHICLE", "EnterVehicleButton", Vector2(426, 638), Vector2(132, 52), enter_vehicle_requested)
     _add_button("TURN L", Vector2(82, 704), Vector2(132, 56), Intents.TURN_LEFT)
+    var strike := _add_button("STRIKE", Vector2(255, 704), Vector2(130, 56), Intents.COMBAT_FORWARD)
+    strike.name = "CombatForwardButton"
+    _on_foot_action_buttons.append(strike)
+    strike.visible = _on_foot_actions_visible
     _add_button("TURN R", Vector2(426, 704), Vector2(132, 56), Intents.TURN_RIGHT)
     _stance_button = _add_button("CROUCH", Vector2(82, 772), Vector2(132, 52), Intents.STANCE_TOGGLE)
     _add_button("BACK", Vector2(255, 772), Vector2(130, 52), Intents.BACKWARD)

@@ -39,6 +39,8 @@ static func _intent_for_key(event: InputEventKey) -> StringName:
         return Intents.TURN_RIGHT
     if _matches(event, KEY_C):
         return Intents.STANCE_TOGGLE
+    if _matches(event, KEY_F):
+        return Intents.COMBAT_FORWARD
     return &""
 
 static func _matches(event: InputEventKey, code: Key) -> bool:

@@ -6,13 +6,14 @@ const Change = preload("res://scripts/foundation/world/WorldChange.gd")
 const PerceptionClass = preload("res://scripts/simulation/perception/ObserverPerceptionService.gd")
 const PerformanceTelemetry = preload("res://scripts/foundation/diagnostics/PerformanceTelemetry.gd")
 
-## System-29 composition/query owner. It discovers actor-local reachable loose items,
-## OBJECT and STRUCTURE occupancy, asks real mechanic providers for offers, then applies
-## current System-23 knowledge before exposing player-facing descriptors.
+## System-29 composition/query owner. It discovers actor-local reachable physical
+## entities, asks real mechanic providers for offers, then applies current System-23
+## knowledge before exposing presentation descriptors. ACTOR is a discovery channel;
+## occupancy alone never creates an offer.
 
 signal affordances_changed(reason: StringName)
 
-const INTERACTABLE_CHANNELS: Array[int] = [Layers.Channel.LOOSE_ITEM, Layers.Channel.OBJECT, Layers.Channel.STRUCTURE]
+const INTERACTABLE_CHANNELS: Array[int] = [Layers.Channel.LOOSE_ITEM, Layers.Channel.OBJECT, Layers.Channel.STRUCTURE, Layers.Channel.ACTOR]
 
 var _world: WorldState = null
 var _reach: WorldInteractionReachQuery = null
@@ -219,6 +220,8 @@ func _on_world_changed(change: WorldChange) -> void:
         affordances_changed.emit(&"reachable_object_changed")
     elif change.affects_channel(Layers.Channel.STRUCTURE):
         affordances_changed.emit(&"reachable_structure_changed")
+    elif change.affects_channel(Layers.Channel.ACTOR):
+        affordances_changed.emit(&"reachable_actor_changed")
 
 func _on_world_batch_changed(batch: WorldChangeBatch) -> void:
     if batch == null: return

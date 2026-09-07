@@ -43,9 +43,6 @@ func register_handler(action_id: StringName, handler: Callable) -> bool:
     _handlers[key] = handler
     return true
 
-## Delegated handlers own their own timing/UI lifecycle. They are used only when the
-## unified target chooser needs to hand an offered action back to another canonical
-## owner such as Crafting or Loot. No fake action serial is created here.
 func register_delegated_handler(action_id: StringName, handler: Callable) -> bool:
     var key: String = String(action_id)
     if key.is_empty() or not handler.is_valid() or _handlers.has(key): return false
@@ -56,8 +53,10 @@ func register_delegated_handler(action_id: StringName, handler: Callable) -> boo
 func submit_world_cell(cell: Vector2i) -> void:
     if not is_ready() or _kernel.is_hard_paused() or _kernel.has_active_action(_actor_id): return
     var target_ids: Dictionary = {}
-    for channel: int in [Layers.Channel.LOOSE_ITEM, Layers.Channel.OBJECT, Layers.Channel.STRUCTURE]:
-        for entity_id: String in _world.entities_at(cell, channel): target_ids[entity_id] = true
+    for channel: int in [Layers.Channel.LOOSE_ITEM, Layers.Channel.OBJECT, Layers.Channel.STRUCTURE, Layers.Channel.ACTOR]:
+        for entity_id: String in _world.entities_at(cell, channel):
+            if entity_id != _actor_id:
+                target_ids[entity_id] = true
     if target_ids.is_empty():
         _panel.close_panel()
         return
@@ -114,8 +113,6 @@ func _on_action_requested(target_id: String, action_id: StringName) -> void:
         return
     action_started.emit(target_id, action_id, serial)
 
-    # Track the exact WHEN result. Merely observing that the actor is no longer busy is
-    # insufficient: a failed Mechanical/commit action also leaves no active action.
     var resolved: Dictionary = {}
     var finished_callback := func(action: TimedAction) -> void:
         if action != null and action.serial == serial:
@@ -167,6 +164,6 @@ func _target_label(target_id: String) -> String:
     var entity: WorldEntityRecord = _world.entity(target_id)
     if entity == null: return "INTERACT"
     var label: String = String(entity.semantic_type)
-    for prefix: String in ["prop.", "door.", "window.", "item."]:
+    for prefix: String in ["prop.", "door.", "window.", "item.", "actor."]:
         if label.begins_with(prefix): label = label.trim_prefix(prefix)
     return label.replace("_", " ").to_upper()

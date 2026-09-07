@@ -11,6 +11,7 @@ const TURN_LEFT: StringName = &"player.turn_left"
 const TURN_RIGHT: StringName = &"player.turn_right"
 const STANCE_TOGGLE: StringName = &"player.stance_toggle"
 const DOOR_CLOSE: StringName = &"player.door_close"
+const COMBAT_FORWARD: StringName = &"player.combat_forward"
 
 static func is_valid(value: StringName) -> bool:
     return value == FORWARD \
@@ -19,7 +20,8 @@ static func is_valid(value: StringName) -> bool:
         or value == TURN_LEFT \
         or value == TURN_RIGHT \
         or value == STANCE_TOGGLE \
-        or value == DOOR_CLOSE
+        or value == DOOR_CLOSE \
+        or value == COMBAT_FORWARD
 
 static func is_movement(value: StringName) -> bool:
     return value == FORWARD \
@@ -44,5 +46,7 @@ static func label(value: StringName) -> String:
             return "Stance"
         DOOR_CLOSE:
             return "Close Door"
+        COMBAT_FORWARD:
+            return "Strike"
         _:
             return "Unknown"

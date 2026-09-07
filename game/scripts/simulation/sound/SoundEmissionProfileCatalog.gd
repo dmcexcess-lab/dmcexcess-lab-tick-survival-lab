@@ -17,9 +17,13 @@ const VEHICLE_MOTORCYCLE: StringName = &"vehicle.motorcycle"
 const VEHICLE_CAR: StringName = &"vehicle.car"
 const VEHICLE_TRUCK: StringName = &"vehicle.truck"
 const VEHICLE_IMPACT: StringName = &"vehicle.impact"
+const COMBAT_SWING: StringName = &"combat.swing"
+const COMBAT_IMPACT: StringName = &"combat.impact"
 
 const DOMAIN_SURVIVAL: StringName = &"survival"
 const DOMAIN_MECHANICAL: StringName = &"mechanical"
+# Historical vocabulary constant retained for compatibility. There is no canonical
+# Combat skill; combat profiles below intentionally use Survival for recognition.
 const DOMAIN_COMBAT: StringName = &"combat"
 
 const _PROFILES := {
@@ -74,6 +78,14 @@ const _PROFILES := {
     "vehicle.impact": {
         "power": 440, "category": "impact", "unknown_word": "CRASH", "broad_word": "*CRUNCH*",
         "specific_word": "*vehicle crash*", "recognition_difficulty": 18, "domain_skill": "mechanical", "cue_lifetime_ticks": 50,
+    },
+    "combat.swing": {
+        "power": 85, "category": "combat", "unknown_word": "NOISE", "broad_word": "*swish*",
+        "specific_word": "*swing*", "recognition_difficulty": 54, "domain_skill": "survival", "cue_lifetime_ticks": 24,
+    },
+    "combat.impact": {
+        "power": 190, "category": "combat", "unknown_word": "NOISE", "broad_word": "*thud*",
+        "specific_word": "*impact*", "recognition_difficulty": 42, "domain_skill": "survival", "cue_lifetime_ticks": 34,
     },
 }
 
