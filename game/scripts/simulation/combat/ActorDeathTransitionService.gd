@@ -58,6 +58,6 @@ func transition_if_dead(actor_id: String) -> String:
     actor_died.emit(actor_id, corpse_id)
     return corpse_id
 
-func _on_hp_changed(actor_id: String, previous_hp: int, hp: int, _version: int) -> void:
+func _on_hp_changed(actor_id: String, previous_hp: int, hp: int, _max_hp: int, _version: int) -> void:
     if previous_hp > 0 and hp <= 0:
         transition_if_dead(actor_id)
