@@ -1,5 +1,33 @@
 # System 29 — Implementation Changelog
 
+## 2026-09-07 — First resident-backed infected autonomous behavior closure
+
+Verified functional runtime head: `90f1c0c974afebcee71403bdd39c8ce4d7a52451`
+
+- Kept the already-hydrated production infected and added `FirstInfectedBehaviorService` as an intention-only adapter over existing simulation owners rather than a zombie-specific AI clock.
+- Production gives the exact infected resident its own `ObserverPerceptionService` over shared System-23 memory and the same visual-acquisition/lighting provider used by the player.
+- Visible player knowledge is observer-scoped. The infected pursues a currently visible player cell, can continue toward the last seen cell after LOS loss, and never reads exact hidden player placement for visual pursuit.
+- Registered the same resident actor as a normal System-26 listener. Unseen sound investigation consumes only `HeardSoundObservation.perceived_cell`/certainty/tick truth and carries no hidden exact source actor identity.
+- Added the deliberately small intention vocabulary `idle`, `pursue_visible`, `pursue_last_seen`, `investigate_sound`, and `attack_visible`.
+- There is no frame-time zombie loop. While player decision-paused, render frames do not advance the infected. When the player commits an action and the shared WHEN clock opens, the ready infected submits ordinary movement/combat actions; infected action completion can continue the chain while world time is running.
+- Pursuit/investigation uses the existing movement owner for physical turns/steps, collision and traversal. Only a bounded deterministic local left/right detour exists; no teleport correction or bespoke path movement was added.
+- Contact attack asks System 37 for the currently lawful exact strike and submits that ordinary combat action. The first empty-handed infected therefore reaches the player through movement and lands canonical `combat.strike_unarmed` Health consequences.
+- Generic Health/death remains authoritative. HP <= 0 stops behavior because living ACTOR truth disappears; the resident-backed infected submits no more actions while `InfectedState` continues to retain population provenance.
+- Fresh prompt-local verifier `PromptFirstInfectedBehaviorSmoke.gd` + `prompt-first-infected-behavior.yml` boots real `main.tscn` and proves pause inactivity, System-23 visual acquisition, visible pursuit, ordinary WHEN movement, System-37 attack/Health damage, System-26 hearing-only investigation toward the perceived cell, no hidden auditory source identity, provenance preservation, and death shutdown.
+- Initial run `34171408724` found only parser issues in new composition/test typing; those were corrected without changing behavior semantics.
+- Run `34171525608` exposed a verifier fixture defect: its two-step `unplace_entity()` + `set_placement()` relocation truthfully made the production behavior fail-stop during the transient missing-ACTOR state. The fixture was corrected to use `WorldMutationService.set_placement()` as an atomic placement replacement; no gameplay assertion was weakened.
+- Focused run `34171663807` then succeeded on `90f1c0c974afebcee71403bdd39c8ce4d7a52451` with the full one-infected perception -> intention -> ordinary WHEN action chain green.
+
+### Ownership boundary
+
+System 38 owns resident projection/infection state and the small intention adapter only. System 23 owns visual knowledge; System 26 owns uncertain heard observations; WHEN owns time/readiness; movement/world/collision own locomotion; System 37 owns physical attack; Health/generic corpse transition owns death. No parallel zombie truth layer exists.
+
+### Next major phase
+
+The one-infected loop is proven. Scale it first to a **small active resident-backed infected cohort**, with explicit activation/streaming and bounded event-driven scheduling/performance rules. Measure before increasing counts; do not introduce per-frame AI loops, magical shared targeting, global aggro radii, or a separate combat clock to make hordes easier.
+
+---
+
 ## 2026-09-07 — System 37 combat foundation + first population-backed infected
 
 Integrated functional runtime head: `e997ac13b74a1955fb5fe152f1b0753886009acc`
