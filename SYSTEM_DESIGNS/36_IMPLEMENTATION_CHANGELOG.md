@@ -1,5 +1,32 @@
 # System 36 — Implementation Changelog
 
+## 2026-09-07 — On-foot exact-vehicle maintenance click menu; HOTWIRE mounted-only
+
+Functional head: **`9f25db747de56b51bd4bb4de9fd7d29a0e8ab9b9`**
+
+Fresh prompt-local verifier: `PromptVehicleMaintenanceSmoke.gd` via `prompt-vehicle-maintenance.yml`; owning successful run **`34103905916`**. Deployment-only Pages on the same functional head succeeded in run **`34103905808`**.
+
+- Standing beside a reachable vehicle and clicking that **exact vehicle** now uses the ordinary shared world-interaction click menu for maintenance. No standalone maintenance panel was added.
+- The on-foot menu exposes only currently relevant existing maintenance actions:
+  - **REPAIR** when vehicle condition is damaged;
+  - **REFUEL** for a motorized vehicle below full fuel;
+  - **ADD RACK** when the vehicle supports cargo and has no rack installed.
+- The clicked vehicle ID is passed explicitly into the existing `VehicleActionService`; the maintenance route never substitutes whichever other vehicle happens to be nearest.
+- Missing wrench, parts, gas can, cargo rack, Mechanical classification, reach, target identity, or other existing action prerequisites return the authoritative failure reason through the same click-menu route.
+- Maintenance execution delegates through `VehicleActionService.action_completed` / `action_failed`, so a completed WHEN action with a failed Mechanical check is not falsely presented as success.
+- **HOTWIRE is intentionally NOT an on-foot maintenance action.** It remains on the mounted driving control surface only. `VehicleActionService.request_hotwire()` now rejects an unmounted actor with `not_mounted`, and an explicit target that is not the actor's mounted vehicle with `vehicle_target_not_mounted`.
+- Mounted driving/control behavior was otherwise left unchanged.
+
+The fresh verifier deliberately places a second nearer decoy vehicle and proves REPAIR, REFUEL and ADD RACK mutate only the vehicle that was clicked. It also proves HOTWIRE is absent from the on-foot menu while the mounted `HotwireButton` still exists.
+
+The first focused verifier run exposed a **test-fixture omission**, not a production defect: its hand-created cars were not enrolled as canonical inventory containers, unlike every real `VehicleWorldSeeder` vehicle. The smoke fixture was repaired to reproduce that real seeder invariant; production ADD RACK code was not weakened or bypassed.
+
+### Protected interaction rule
+
+> **On foot: click the vehicle for REPAIR / REFUEL / ADD RACK. HOTWIRE is mounted-only.**
+
+Do not add HOTWIRE to the walking/world click menu and do not reintroduce a separate maintenance window.
+
 ## 2026-09-05 — Per-class movement timing, island-crossing fuel range, skateboard braking exception
 
 Executable: **`d6eebd18b504a3b67113454488ddfbb5c4d41770`**
