@@ -15,7 +15,6 @@ const NEW_MAG := "item.prompt.mag.new"
 const OLD_ROUND := "item.prompt.round.old"
 const ROUND_A := "item.prompt.round.a"
 const ROUND_B := "item.prompt.round.b"
-const TARGET := "actor.prompt.firearm.target"
 const KEEPSAKE := "item.prompt.target.keepsake"
 
 var failures: Array[String] = []
@@ -43,11 +42,36 @@ func run_smoke() -> void:
     var corpse_state: CorpseState = game.get("_corpse_state")
     var death: ActorDeathTransitionService = game.get("_death_transitions")
     var sound: SpatialSoundService = game.get("_spatial_sound")
+    var infected: InfectedState = game.get("_infected_state")
+    var projection: PopulationResidentProjection = game.get("_population_resident_projection")
+    var first_infected: Dictionary = game.get("_first_infected_result")
+    var condition_state: ActorConditionState = game.get("_condition_state")
+    var locomotion_state: ActorLocomotionState = game.get("_locomotion_state")
+    var carry_state: ActorCarryState = game.get("_carry_state")
+    var skill_state: ActorSkillState = game.get("_skill_state")
 
     expect(firearm_state != null and firearm_state.is_ready() and firearm_actions != null and firearm_actions.is_ready(), "production firearm owners are ready")
     expect(corpse_state != null and death != null and death.is_ready(), "generic death/corpse owners are ready")
     expect(inventory.has_container(Fixture.PLAYER_ID), "player is a real inventory container")
+    expect(infected != null and projection != null and bool(first_infected.get("ok", false)), "production first infected is hydrated")
     if not failures.is_empty(): game.queue_free(); return finish()
+
+    var target := String(first_infected.get("actor_id", ""))
+    var resident := infected.resident_record(target)
+    var global_plan: GeneratedGlobalWorldPlan = Fixture.global_plan()
+    var population_plan := {
+        "ok": global_plan != null and global_plan.is_generated(),
+        "settlements": [] if global_plan == null else global_plan.population_settlements.duplicate(true),
+        "local_area_manifest": {} if global_plan == null else global_plan.local_area_manifest.duplicate(true),
+    }
+    var projected_central := projection.infected_records(population_plan, Fixture.CENTRAL_SITE_ID)
+    expect(not target.is_empty() and infected.is_infected(target), "hydrated actor has infection state on the same human identity")
+    expect(String(resident.get("resident_id", "")) == target and String(resident.get("area_site_id", "")) == Fixture.CENTRAL_SITE_ID, "infected identity preserves central household resident provenance")
+    expect(_record_exists(projected_central, target), "hydrated infected is one of the deterministic resident slots already counted as infected")
+    expect(world.has_entity(target) and world.entity(target).semantic_type == &"actor.survivor", "infection overlays the shared human actor semantic instead of creating a parallel zombie species")
+    expect(world.has_placement(target) and world.placement(target).channel == Layers.Channel.ACTOR, "first infected has real ACTOR occupancy")
+    expect(health.has_actor(target) and hands.has_actor(target) and inventory.has_container(target), "first infected uses canonical Health equipment and containment owners")
+    expect(condition_state.has_actor(target) and locomotion_state.has_actor(target) and carry_state.has_actor(target) and skill_state.has_actor(target), "first infected is fully enrolled in shared actor simulation state")
 
     create_item(mutations, Profiles.SERVICE_PISTOL, GUN)
     create_item(mutations, Profiles.SERVICE_MAGAZINE, OLD_MAG)
@@ -87,31 +111,30 @@ func run_smoke() -> void:
 
     var player := world.placement(Fixture.PLAYER_ID)
     expect(player != null, "player placement exists")
+    expect(mutations.unplace_entity(target), "real infected can be repositioned by physical world mutation for the focused firing scenario")
     var target_cell := find_clear_forward_cell(spatial, player.anchor, player.facing)
     expect(target_cell != Vector2i(-99999, -99999), "found real clear firearm line")
-    expect(mutations.create_entity(&"actor.survivor", TARGET) == TARGET, "created DEV-only living target")
-    expect(mutations.set_placement(TARGET, Layers.Channel.ACTOR, target_cell, Facing.opposite(player.facing), Footprint.single_cell()), "target occupies physical firing line")
-    expect(health.enroll_actor(TARGET) and hand_mutations.enroll_actor(TARGET), "target uses canonical Health and equipment")
-    expect(inventory_mutations.enroll_container(TARGET), "target is a real inventory container")
+    expect(mutations.set_placement(target, Layers.Channel.ACTOR, target_cell, Facing.opposite(player.facing), Footprint.single_cell()), "resident-backed infected occupies physical firing line")
     create_item(mutations, &"item.prompt.keepsake", KEEPSAKE)
-    expect(inventory_mutations.set_container(KEEPSAKE, TARGET), "target carries exact keepsake")
-    expect(hand_mutations.set_item(TARGET, Slots.Value.PRIMARY_RIGHT, KEEPSAKE), "target equips that same exact keepsake")
-    health.apply_damage(TARGET, 70)
-    var target_action := kernel.begin_action(TARGET, &"prompt.target.long_action", 50, Rules.InterruptionPolicy.COMMITTED)
-    expect(target_action > 0 and kernel.has_active_action(TARGET), "target has an ordinary active WHEN action before lethal hit")
+    expect(inventory_mutations.set_container(KEEPSAKE, target), "infected carries exact keepsake")
+    expect(hand_mutations.set_item(target, Slots.Value.PRIMARY_RIGHT, KEEPSAKE), "infected equips that same exact keepsake")
+    health.apply_damage(target, 70)
+    var target_action := kernel.begin_action(target, &"prompt.target.long_action", 50, Rules.InterruptionPolicy.COMMITTED)
+    expect(target_action > 0 and kernel.has_active_action(target), "infected has an ordinary active WHEN action before lethal hit")
 
     var fired_round := firearm_state.chamber_round(GUN)
     var fire := firearm_actions.request_fire(Fixture.PLAYER_ID, Firearms.FIRE_SNAP)
     expect(bool(fire.get("accepted", false)), "snap fire begins as a real timed action")
     kernel.run_until_stop()
     expect(not world.has_entity(fired_round), "discharge consumes the exact chambered live round identity")
-    expect(corpse_state.has_corpse_for_actor(TARGET), "lethal firearm consequence triggers generic corpse transition")
-    var corpse_id := corpse_state.corpse_for_actor(TARGET)
-    expect(not world.has_placement(TARGET) and world.has_placement(corpse_id), "death removes living ACTOR occupancy and creates persistent corpse occupancy")
-    expect(not kernel.has_active_action(TARGET), "death force-fails target active WHEN action")
-    expect(hands.primary_item(TARGET).is_empty(), "death clears living hand assignment")
+    expect(corpse_state.has_corpse_for_actor(target), "lethal firearm consequence triggers generic corpse transition for real infected")
+    var corpse_id := corpse_state.corpse_for_actor(target)
+    expect(not world.has_placement(target) and world.has_placement(corpse_id), "death removes infected ACTOR occupancy and creates persistent corpse occupancy")
+    expect(not kernel.has_active_action(target), "death force-fails infected active WHEN action")
+    expect(hands.primary_item(target).is_empty(), "death clears living infected hand assignment")
     expect(inventory.contains_directly(corpse_id, KEEPSAKE), "corpse preserves same exact equipped/carried item identity without loot copying")
     expect(world.has_entity(KEEPSAKE), "preserved corpse item still exists as same WHAT entity")
+    expect(infected.is_infected(target) and String(infected.resident_record(target).get("building_id", "")) == String(resident.get("building_id", "")), "corpse transition does not erase population provenance of the source infected")
     var corpse_query := spatial.query_cell(target_cell, Fixture.PLAYER_ID, true)
     expect(corpse_id not in corpse_query.unclassified_entity_ids and corpse_id not in corpse_query.blocking_entity_ids, "corpse has explicit non-blocking collision truth")
     expect(has_combat_sound(sound.presentation_descriptors(Fixture.PLAYER_ID)), "firearm discharge produces physical System-26 combat sound")
@@ -132,6 +155,11 @@ func find_clear_forward_cell(spatial: SpatialQueryService, origin: Vector2i, fac
                 all_clear = false; break
         if all_clear: return origin + direction * distance
     return Vector2i(-99999, -99999)
+
+func _record_exists(records: Array[Dictionary], actor_id: String) -> bool:
+    for record: Dictionary in records:
+        if String(record.get("resident_id", "")) == actor_id: return true
+    return false
 
 func has_combat_sound(descriptors: Array[Dictionary]) -> bool:
     for value: Dictionary in descriptors:
