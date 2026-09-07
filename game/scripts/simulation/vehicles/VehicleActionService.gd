@@ -134,11 +134,14 @@ func request_start(actor_id: String) -> Dictionary:
     return _begin(actor_id, vehicle_id, START, 3, {})
 
 func request_hotwire(actor_id: String, vehicle_id: String = "") -> Dictionary:
-    var target := vehicle_id
-    if target.is_empty():
-        target = _nearby_vehicle(actor_id)
-    if target.is_empty() or not _state.has_vehicle(target):
-        return _reject("no_vehicle_in_reach")
+    var mounted_vehicle := vehicle_for_driver(actor_id)
+    if mounted_vehicle.is_empty():
+        return _reject("not_mounted")
+    var target := mounted_vehicle if vehicle_id.is_empty() else vehicle_id
+    if target != mounted_vehicle:
+        return _reject("vehicle_target_not_mounted")
+    if not _state.has_vehicle(target):
+        return _reject("vehicle_not_ready")
     var rec := _state.record(target)
     var kind := StringName(rec.get("kind", &""))
     if not _profiles.is_motorized(kind):
