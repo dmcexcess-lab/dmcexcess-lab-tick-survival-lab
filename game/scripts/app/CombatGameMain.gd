@@ -14,6 +14,9 @@ const FirearmDamageClass = preload("res://scripts/simulation/combat/FirearmDamag
 const FirearmSoundClass = preload("res://scripts/simulation/sound/FirearmSoundEmitterAdapter.gd")
 const CorpseStateClass = preload("res://scripts/simulation/combat/CorpseState.gd")
 const DeathTransitionsClass = preload("res://scripts/simulation/combat/ActorDeathTransitionService.gd")
+const PopulationProjectionClass = preload("res://scripts/simulation/population/PopulationResidentProjection.gd")
+const InfectedStateClass = preload("res://scripts/simulation/infected/InfectedState.gd")
+const FirstInfectedHydratorClass = preload("res://scripts/simulation/infected/FirstInfectedHydrationService.gd")
 
 var _combat_impact_profiles: CombatImpactProfileCatalog = null
 var _combat_actions: CombatActionService = null
@@ -27,10 +30,15 @@ var _firearm_damage: FirearmDamageInterruptionService = null
 var _firearm_sound: FirearmSoundEmitterAdapter = null
 var _corpse_state: CorpseState = null
 var _death_transitions: ActorDeathTransitionService = null
+var _population_resident_projection: PopulationResidentProjection = null
+var _infected_state: InfectedState = null
+var _first_infected_hydrator: FirstInfectedHydrationService = null
+var _first_infected_result: Dictionary = {}
 
 func _boot_canonical_demo() -> bool:
     if not super._boot_canonical_demo(): return false
-    return _boot_system37_combat()
+    if not _boot_system37_combat(): return false
+    return _boot_first_real_infected()
 
 func _boot_system37_combat() -> bool:
     if _world == null or _world_mutations == null or _spatial_query == null or _kernel == null \
@@ -72,6 +80,36 @@ func _boot_system37_combat() -> bool:
     if not _combat_controller.is_ready(): return false
     _combat_controller.action_resolved.connect(Callable(_hud, "present_action_result"))
     _combat_controller.action_busy_changed.connect(_on_player_action_busy_changed)
+    return true
+
+func _boot_first_real_infected() -> bool:
+    var global_plan: GeneratedGlobalWorldPlan = FixtureClass.global_plan()
+    var player: WorldPlacement = _world.placement(FixtureClass.PLAYER_ID)
+    if global_plan == null or not global_plan.is_generated() or player == null \
+        or _locomotion_mutations == null or _skill_state == null or _carry_state == null or _condition_state == null:
+        return false
+    var population_plan := {
+        "ok": true,
+        "settlements": global_plan.population_settlements.duplicate(true),
+        "resident_population": global_plan.resident_population,
+        "infected_population": global_plan.infected_population,
+        "survivor_population": global_plan.survivor_population,
+        "local_area_manifest": global_plan.local_area_manifest.duplicate(true),
+    }
+    _population_resident_projection = PopulationProjectionClass.new()
+    _infected_state = InfectedStateClass.new()
+    _first_infected_hydrator = FirstInfectedHydratorClass.new(
+        _world, _world_mutations, _spatial_query, _kernel,
+        _population_resident_projection, _infected_state,
+        _locomotion_mutations, _hand_mutations, _inventory_mutations,
+        _health_state, _skill_state, _carry_state, _condition_state
+    )
+    if not _first_infected_hydrator.is_ready(): return false
+    _first_infected_result = _first_infected_hydrator.hydrate_first(population_plan, FixtureClass.CENTRAL_SITE_ID, player.anchor)
+    if not bool(_first_infected_result.get("ok", false)):
+        push_error("CombatGameMain: first infected hydration failed: %s" % String(_first_infected_result.get("reason", "unknown")))
+        return false
+    if _perception != null: _perception.recompute(&"first_infected_hydrated")
     return true
 
 func _route_player_intent(intent: StringName) -> void:
