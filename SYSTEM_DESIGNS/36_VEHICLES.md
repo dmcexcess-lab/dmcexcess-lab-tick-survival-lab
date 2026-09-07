@@ -4,7 +4,8 @@ Status: **IMPLEMENTED + AUTOMATED VERIFIED; HUMAN PLAYTEST PENDING**
 
 Approved: **2026-09-03**  
 Latest tuning closure: **2026-09-05**  
-Loose skateboard acquisition closure: **2026-09-06**
+Loose skateboard acquisition closure: **2026-09-06**  
+Vehicle-maintenance practicality closure: **2026-09-07**
 
 ## Goal
 
@@ -54,6 +55,8 @@ Typed persistent state is keyed by stable WHAT vehicle entity ID and stores the 
 
 Motorized vehicle access does not use collectible matching-key inventory bookkeeping. The vehicle owns whether its ignition key is present; otherwise the existing real Mechanical hotwire path can establish persistent bypass state.
 
+**HOTWIRE is a mounted driving-control action only.** The authoritative `VehicleActionService.request_hotwire()` rejects an unmounted actor with `not_mounted`, and an explicit target other than the actor's currently mounted vehicle with `vehicle_target_not_mounted`. The ordinary on-foot vehicle click menu must never offer HOTWIRE.
+
 ## Entering, driving and exiting
 
 The mounted survivor shares the vehicle anchor and receives the established nonblocking actor collision override so a second independent actor body does not obstruct the vehicle. Existing keyboard/touch movement intents route to the vehicle controller only while mounted.
@@ -62,6 +65,8 @@ The mounted survivor shares the vehicle anchor and receives the established nonb
 - skateboard: may reverse or dismount while moving.
 
 On foot, only the walking control layer is visible. Mounted, the walking layer hides completely and `VehicleControlSurface` replaces it in the same footprint. CENTER/FOLLOW and MAP remain available in both states. Walking and vehicle controls must never overlap.
+
+HOTWIRE stays on this mounted replacement surface. It is not a walking control and is not an on-foot world-interaction action.
 
 ## Cargo, equipment and loose-item acquisition boundary
 
@@ -79,13 +84,38 @@ For `item.vehicle.skateboard`, acquisition therefore behaves as follows:
 - if no legal equipment destination or carry-capacity condition is satisfied, pickup fails rather than bypassing policy;
 - successful pickup moves the **same physical entity**; no duplicate board or shadow inventory state is created.
 
-`VehicleItemCatalog.gd` now records the skateboard's physical weight as **2.5 kg**. This is not a pickup special case: the authoritative carry-capacity owner requires known item weight, so System 36 supplies the physical classification and the normal transfer rule remains intact.
+`VehicleItemCatalog.gd` records the skateboard's physical weight as **2.5 kg**. This is not a pickup special case: the authoritative carry-capacity owner requires known item weight, so System 36 supplies the physical classification and the normal transfer rule remains intact.
 
-## Repair and modification
+## Repair, refuel and modification
 
 Bounded Mechanical repair uses real tools/materials, WHEN timing and the existing skill path. The implemented cargo-rack modification requires an adjustable wrench, the actual rack item, Mechanical competence and elapsed action time; success transfers the component into persistent vehicle ownership and expands cargo capacity.
 
-Dedicated battery/wheel replacement and richer component-specific consumers remain later interaction closure rather than invented placeholder booleans.
+Current action requirements remain owned by `VehicleActionService`:
+
+- REPAIR: adjustable wrench retained + one real eligible repair part consumed + Mechanical check;
+- REFUEL: one real `item.automotive.gas_can` consumed, motorized vehicle only;
+- ADD RACK: adjustable wrench retained + exact `item.automotive.cargo_rack` installed into vehicle containment + Mechanical check.
+
+Dedicated battery/wheel replacement and richer component-specific consumers remain later work rather than invented placeholder booleans.
+
+### On-foot vehicle maintenance click menu
+
+When unmounted and standing within normal interaction reach, the player clicks the **specific vehicle itself**. The existing shared `WorldInteractionPanel` opens as the vehicle's click menu; there is no separate maintenance window or VehiclePanel.
+
+`VehicleMaintenanceInteractionOfferProvider` presents only state-relevant on-foot maintenance actions for that exact clicked vehicle:
+
+- **REPAIR** only while at least one body/propulsion/wheels/electrical condition field is damaged;
+- **REFUEL** only for a motorized vehicle below profile maximum fuel;
+- **ADD RACK** only for a cargo-capable vehicle without an installed cargo rack;
+- **HOTWIRE is never offered on foot.**
+
+`VehicleMaintenancePlayerInteractionHandler` then revalidates that the actor is unmounted, that the exact target still exists, and that it is still in contact reach. It passes the exact clicked vehicle ID into the existing `VehicleActionService`, eliminating nearest-vehicle ambiguity.
+
+The maintenance handler is delegated through the ordinary world-interaction controller and resolves against `VehicleActionService.action_completed` / `action_failed`. This matters for Mechanical actions: a timed WHEN action may complete while its skill consequence fails, so the UI must show the authoritative vehicle-service result rather than generic tick completion.
+
+Truthful failures therefore include the existing action prerequisites such as `repair_requires_wrench`, `repair_requires_parts`, `refuel_requires_gas_can`, `modify_requires_wrench_and_cargo_rack`, Mechanical classification/check failures, plus interaction-boundary failures such as `vehicle_out_of_reach` and `vehicle_target_missing`.
+
+A nearer second vehicle must never be mutated merely because it is nearer to the player. The clicked target identity is authoritative for this route.
 
 ## Lighting, sound and collision consequences
 
@@ -96,6 +126,8 @@ Blocked movement cannot pass through persistent obstacles. Failed vehicle moveme
 ## World generation / persistence
 
 `VehicleWorldSeeder` performs a bounded deterministic materialization pass near the playable survivor over plausible road/driveway/parking/pavement cells. Generated vehicles are persistent real WHAT entities with typed vehicle state and real cargo containment. Broader island-wide vehicle population should extend this owner rather than introduce a second vehicle system.
+
+Real seeded vehicles are enrolled as inventory containers, which is required for exact installed-component ownership such as cargo racks.
 
 Loose skateboard placement remains physical WHAT truth and is discovered through the ordinary bounded player interaction path; System 36 does not create a separate proximity inventory or pickup scan.
 
@@ -108,6 +140,7 @@ Vehicle truth remains action/event/materialization bounded:
 - no recurring whole-world fuel/damage scan;
 - no rigid-body continuous authoritative physics;
 - parked records remain dormant;
+- on-foot maintenance uses the existing bounded local interaction query and exact action target;
 - loose skateboard pickup uses System 29's bounded local interaction discovery and the existing transfer action, not a recurring vehicle-owned scan.
 
 ## Construction boundary
@@ -126,36 +159,51 @@ System 36 does not create freeform base building. Construction remains limited t
 - `VehicleConsequenceAdapter.gd`
 - `VehicleLightingSourceAdapter.gd`
 - `VehicleItemCatalog.gd`
+- `VehicleMaintenanceInteractionOfferProvider.gd`
 - `game/scripts/player/VehiclePlayerController.gd`
+- `game/scripts/player/VehicleMaintenancePlayerInteractionHandler.gd`
 - `game/scripts/render/VehicleRenderer.gd`
 - `game/scripts/ui/VehiclePlayerControls.gd`
-- `game/scripts/ci/VehicleSmoke.gd`
-- `.github/workflows/system36-vehicles.yml`
 
-The loose-item player route additionally crosses System 29's interaction provider/controller and the existing item-transfer/equipment service; those systems remain owners of interaction presentation and transfer mutation respectively.
+The on-foot maintenance route additionally crosses System 29's ordinary interaction provider/controller/panel. System 36 still owns all vehicle action consequences; System 29 only discovers, presents and routes the exact target/action.
 
 Canonical production composition remains `VehicleGameMain -> System34GameMain -> UtilityGameMain -> CraftingGameMain -> GameMain`.
 
 ## Verification record
 
+### 2026-09-07 maintenance practicality closure
+
+Functional head **`9f25db747de56b51bd4bb4de9fd7d29a0e8ab9b9`** passed the fresh disposable `PromptVehicleMaintenanceSmoke.gd` verifier in workflow run **`34103905916`**. Deployment-only Pages on the same head passed build/deploy in run **`34103905808`**.
+
+That focused production-scene verifier proves:
+
+- clicking the exact reachable vehicle opens the ordinary maintenance click menu;
+- damaged target exposes REPAIR;
+- non-full motor vehicle exposes REFUEL;
+- eligible unracked cargo vehicle exposes ADD RACK;
+- HOTWIRE is absent from the on-foot click menu while the mounted `HotwireButton` still exists;
+- direct unmounted HOTWIRE is rejected authoritatively with `not_mounted`;
+- missing wrench, parts, gas can, rack and Mechanical classification are reported truthfully;
+- successful REPAIR mutates only the clicked target, retains the wrench and consumes the exact part;
+- successful REFUEL fills only the clicked target and consumes the exact gas can;
+- successful ADD RACK installs the exact physical rack into only the clicked vehicle;
+- full/racked state removes no-longer-valid REFUEL/ADD RACK offers;
+- missing/out-of-reach exact targets are rejected;
+- mounted actors receive no on-foot maintenance menu.
+
+The first focused run exposed an incomplete hand-built test fixture: unlike real `VehicleWorldSeeder` vehicles, the fixture cars had not been enrolled as canonical inventory containers, so ADD RACK could not transfer its exact rack entity. The smoke setup was corrected to reproduce the real seeder invariant; production ADD RACK logic was not weakened.
+
+### Earlier closures
+
 Original implementation PR: **#4 — Implement System 36 vehicles**.
 
 The executable vehicle tuning head remains **`d6eebd18b504a3b67113454488ddfbb5c4d41770`** for the movement/range tuning pass.
 
-The later player-interaction executable **`736a5f4875d40cb437e760b89188419d98c5fef6`** closes loose skateboard acquisition without changing the protected movement/braking contract. On that exact head:
+The later player-interaction executable **`736a5f4875d40cb437e760b89188419d98c5fef6`** closed loose skateboard acquisition without changing the protected movement/braking contract. Its then-current historical workflow suite verified the production loose-board route. Those historical standing gameplay workflows are no longer current gates under `README_SOPS.md`.
 
-- all **45** push workflows were terminal;
-- **0** failed, **0** cancelled, **0** queued and **0** in-progress runs remained at closure inspection;
-- `verify/world-interaction-closure` succeeded in run `34059987805`;
-- `verify/system29-interaction-affordance` succeeded in run `34059987832`;
-- `verify/pages-deploy` succeeded in run `34059987775`;
-- aggregate commit status was green.
+During that closure a real physical-data dependency was found: the transfer owner rejected the board because its weight was unknown. The fix registered the skateboard at **2.5 kg** in the existing physical item catalog instead of weakening carry-capacity policy.
 
-The production-route regression boots real `main.tscn`, targets a real loose skateboard placement, selects PICK UP and proves that the same physical item reaches an allowed equipment slot rather than ordinary storage.
-
-During closure CI exposed a real physical-data dependency: the transfer owner rejected the board because its weight was unknown. The fix registered the skateboard at **2.5 kg** in the existing physical item catalog instead of weakening carry-capacity policy. The owning world-interaction workflow now watches that catalog dependency.
-
-This closure protects:
+Current protected behavior includes:
 
 - per-class movement timing;
 - approximately 4,200-cell full-tank motorized range;
@@ -166,8 +214,10 @@ This closure protects:
 - one stable skateboard physical identity;
 - skateboard RH/LH/back-only equipment restriction;
 - no ordinary skateboard backpack storage;
-- ordinary loose-world skateboard PICK UP through the shared interaction/transfer owners;
-- existing cargo, repair, lighting, sound and crash consequence paths.
+- ordinary loose-world skateboard PICK UP through shared interaction/transfer owners;
+- **on-foot exact-vehicle REPAIR / REFUEL / ADD RACK through the shared click menu**;
+- **mounted-only HOTWIRE**;
+- existing cargo, lighting, sound and crash consequence paths.
 
 Human vehicle feel/UX acceptance remains pending.
 
@@ -176,10 +226,10 @@ Human vehicle feel/UX acceptance remains pending.
 - 30-degree heading is exact typed state, but collision remains deterministic integer-grid occupancy rather than arbitrary-angle polygon physics.
 - refueling still uses whole gas-can item semantics rather than partial fluid quantities.
 - generated vehicle placement is bounded near playable materialized space rather than a full island-wide streaming population source.
-- richer component replacement remains deferred to the broader player/object interaction practicality pass.
-- human playtesting is still required for steering feel, brake readability, cargo UX, loose-skateboard pickup feedback, generated placement plausibility, headlight presentation and phone/Safari behavior.
+- richer battery/wheel/component replacement remains deferred rather than represented by fake replacement booleans.
+- human playtesting is still required for click-menu readability, maintenance feedback, steering feel, brake readability, cargo UX, loose-skateboard pickup feedback, generated placement plausibility, headlight presentation and phone/Safari behavior.
 
-The next vehicle-facing practicality work should reuse existing Mechanical/component state for truthful battery/wheel/component repair or replacement; do not introduce parallel maintenance booleans or a second inventory system.
+The next repository operation is the broader **human/mobile interaction acceptance pass** over the now-closed player/world/object practicality layer. Do not reopen vehicle maintenance architecture unless that acceptance pass reveals a concrete defect.
 
 ## Approval record
 
@@ -192,5 +242,8 @@ Current approved invariants include:
 - cars remain real 1×3 objects; trucks remain real 2×3 objects;
 - skateboard is one physical item and may be loose/equipped/ridden without duplication;
 - skateboard may equip only RH/LH/back and may not enter ordinary backpack storage;
+- on foot, clicking the exact vehicle uses the ordinary world click menu for REPAIR / REFUEL / ADD RACK where valid;
+- HOTWIRE is mounted-only and remains on the driving control surface;
+- no separate vehicle-maintenance panel;
 - no Driving skill;
 - no freeform base building.
