@@ -130,7 +130,7 @@ func place_visible_lane(world: WorldState, mutations: WorldMutationService, spat
         return {"ok": false}
     for distance in [2, 3]:
         for direction in [Vector2i.UP, Vector2i.RIGHT, Vector2i.DOWN, Vector2i.LEFT]:
-            var candidate := player.anchor + direction * distance
+            var candidate: Vector2i = player.anchor + direction * distance
             if not _clear_lane(spatial, actor_id, player.anchor, direction, distance):
                 continue
             if world.has_placement(actor_id):
@@ -150,7 +150,7 @@ func place_hearing_lane(world: WorldState, mutations: WorldMutationService, spat
         return {"ok": false}
     for distance in [4, 5, 6]:
         for direction in [Vector2i.UP, Vector2i.RIGHT, Vector2i.DOWN, Vector2i.LEFT]:
-            var candidate := player.anchor + direction * distance
+            var candidate: Vector2i = player.anchor + direction * distance
             if not _clear_lane(spatial, actor_id, player.anchor, direction, distance):
                 continue
             if world.has_placement(actor_id):
