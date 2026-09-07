@@ -8,7 +8,7 @@ const PANEL_SIDE_MARGIN: float = 24.0
 const PANEL_TOP_FRACTION: float = 0.18
 const PANEL_MAX_WIDTH: float = 520.0
 const PANEL_MIN_SCROLL_HEIGHT: float = 56.0
-const PANEL_VERTICAL_RESERVED: float = 220.0
+const PANEL_VERTICAL_RESERVED: float = 280.0
 const ACTION_TOUCH_HEIGHT: float = 52.0
 const CANCEL_TOUCH_HEIGHT: float = 52.0
 
@@ -160,10 +160,39 @@ func _refresh_layout() -> void:
     var minimum_size: Vector2 = _panel.get_combined_minimum_size()
     var panel_height: float = minf(minimum_size.y, maxf(80.0, viewport_size.y - PANEL_SIDE_MARGIN * 2.0))
     _panel.size = Vector2(panel_width, panel_height)
-    var max_y: float = maxf(PANEL_SIDE_MARGIN, viewport_size.y - panel_height - PANEL_SIDE_MARGIN)
+    _position_panel(viewport_size, _panel.size)
+    # Container minimum sizes settle after children enter the layout queue. Clamp once
+    # more on the deferred pass so the first visible frame cannot drift off-screen.
+    call_deferred("_clamp_after_layout")
+
+func _clamp_after_layout() -> void:
+    if _panel == null or not _panel.visible:
+        return
+    var viewport_size: Vector2 = get_viewport().get_visible_rect().size
+    if viewport_size.x <= 0.0 or viewport_size.y <= 0.0:
+        return
+    var max_size := Vector2(
+        maxf(120.0, viewport_size.x - PANEL_SIDE_MARGIN * 2.0),
+        maxf(80.0, viewport_size.y - PANEL_SIDE_MARGIN * 2.0)
+    )
+    var actual_size: Vector2 = _panel.size
+    if actual_size.y > max_size.y:
+        var overflow: float = actual_size.y - max_size.y
+        _scroll.custom_minimum_size.y = maxf(PANEL_MIN_SCROLL_HEIGHT, _scroll.custom_minimum_size.y - overflow)
+        _panel.reset_size()
+        actual_size = _panel.size
+    if actual_size.x > max_size.x:
+        actual_size.x = max_size.x
+        _panel.size.x = max_size.x
+    _position_panel(viewport_size, actual_size)
+
+func _position_panel(viewport_size: Vector2, panel_size: Vector2) -> void:
+    var max_x: float = maxf(PANEL_SIDE_MARGIN, viewport_size.x - panel_size.x - PANEL_SIDE_MARGIN)
+    var max_y: float = maxf(PANEL_SIDE_MARGIN, viewport_size.y - panel_size.y - PANEL_SIDE_MARGIN)
+    var desired_x: float = (viewport_size.x - panel_size.x) * 0.5
     var desired_y: float = viewport_size.y * PANEL_TOP_FRACTION
     _panel.position = Vector2(
-        maxf(PANEL_SIDE_MARGIN, (viewport_size.x - panel_width) * 0.5),
+        minf(maxf(PANEL_SIDE_MARGIN, desired_x), max_x),
         minf(maxf(PANEL_SIDE_MARGIN, desired_y), max_y)
     )
 
