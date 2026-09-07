@@ -1,6 +1,6 @@
 # System 34 — Survivor Condition, Health, Fatigue & Moodlets
 
-Status: **IMPLEMENTED + EXACT-HEAD AUTOMATED VERIFIED — human playtest pending**
+Status: **IMPLEMENTED + EXACT-ITEM INVENTORY USE VERIFIED — human playtest pending**
 
 The filename retains its approved-candidate history; the canonical model has no separate Stamina resource.
 
@@ -58,6 +58,19 @@ Satiety, Hydration, Rest and Engagement decline with authoritative time. Comfort
 
 Eating/drinking consumes a real carried persistent item after a committed action. Spoiled/raw foods are not silently converted into safe meals. Tap drinking requires a real reachable fixture with currently available System-33 service and revalidates on completion. Rest and sleep are real WHEN actions; bed/ground truth affects Comfort while all elapsed-time pressures continue to advance.
 
+### Ordinary Inventory exact-item EAT / DRINK closure — 2026-09-07
+
+No new consumption subsystem or parallel UI action state was required. The production `EquipmentPlayerShell -> CraftingPlayerShell -> CanonicalPlayerShell` Inventory path asks `SurvivorSustainmentActionService.consumption_offer(actor_id, exact_item_id)` for the currently selected persistent item and preserves that exact physical `item_id` through the Inventory action button and timed action start.
+
+Canonical sustainment profiles already map:
+
+- `item.food.apple` -> `action_kind = eat` -> ordinary Inventory label **EAT**;
+- `item.drink.water_bottle` -> `action_kind = drink` -> ordinary Inventory label **DRINK**.
+
+`begin_consume(actor_id, exact_item_id)` schedules the authoritative WHEN action. The selected item remains a real carried entity while that action is pending; only on committed completion is that exact physical item removed. A same-type sibling is unaffected, proving consumption does not alias by semantic type.
+
+Fresh prompt-local verification on functional head `77f58cb5776d193cae2c6ae98190f7a65b47952d`, workflow run `34086785612`, proved both exact apple EAT and exact water DRINK through the ordinary production Inventory surface. The verifier was `game/scripts/ci/PromptInventoryItemUseSmoke.gd` owned by `.github/workflows/prompt-inventory-item-use.yml` and intentionally tested no unrelated module.
+
 First aid is also live through the normal inventory. An exact selected bandage/gauze/tape/kit targets an exact real injury; the approved improvised path requires both a rag bundle and disinfectant/alcohol wipes. Survival changes duration and outcome quality. The action consumes real supplies only at completion and writes stabilization/treatment/severity only through canonical Health.
 
 Engagement improves from meaningful completed activity. Comfort reads real rest surface, weather/sky exposure and severe carried load. Calm/fear reads real injury, current visible threats and sufficiently alarming heard observations—never hidden source truth.
@@ -68,6 +81,8 @@ The live HUD permanently shows Health and Fatigue plus the six condition meters.
 
 ## Verification
 
-`System34SurvivorConditionSmoke.gd` proves tier boundaries, quiet normal/positive presentation, all pressure moodlets, real injury/load moodlets, WHEN-only Fatigue recovery, run blocking, overexertion harm down to zero Health, modifier caps, Health ceiling behavior, lethal physical needs, deterministic snapshot/restore and real sustainment semantics. `WorldInteractionSmoke.gd` additionally proves exact-item inventory eating/equipment and rag+disinfectant treatment of an exact injury. The later death/corpse transition remains outside System 34.
+Historical system-level smokes remain useful implementation history, but they are no longer standing CI gates. Under the repository prompt-local verification policy, executable prompts create a fresh disposable verifier for only the module being changed and retire the previous prompt-owned verifier.
 
-Protected actor Health/Needs/Carry/Freshness, movement/input, System-33 utility, spatial-sound and canonical startup regressions must remain green. Human browser acceptance remains separate from automated verification.
+For the 2026-09-07 Inventory usability closure, `PromptInventoryItemUseSmoke.gd` proved the player can select exact persistent carried items through ordinary Inventory and receive EAT/DRINK from the existing sustainment owner. It also proved the selected item still exists before timed completion, the exact selected item disappears only after authoritative completion, and a same-type sibling remains. Workflow `Prompt Inventory Item Use` run `34086785612` passed on exact functional head `77f58cb5776d193cae2c6ae98190f7a65b47952d`.
+
+Human browser acceptance remains separate from automated verification.
