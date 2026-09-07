@@ -78,8 +78,8 @@ func _run() -> void:
     var decoy_cell: Vector2i = fixture_cells[0]
     var target_cell: Vector2i = fixture_cells[1]
 
-    _expect(_create_test_car(world, mutations, state, profiles, DECOY_ID, decoy_cell, 0), "created deliberately nearer decoy car")
-    _expect(_create_test_car(world, mutations, state, profiles, TARGET_ID, target_cell, 0), "created exact clicked maintenance target car")
+    _expect(_create_test_car(world, mutations, inventory_mutations, state, profiles, DECOY_ID, decoy_cell, 0), "created deliberately nearer decoy car")
+    _expect(_create_test_car(world, mutations, inventory_mutations, state, profiles, TARGET_ID, target_cell, 0), "created exact clicked maintenance target car")
     _expect(state.mutate(DECOY_ID, {"body": 35, "propulsion": 45, "wheels": 55, "electrical": 65}), "damaged decoy state for exact-target proof")
     _expect(state.mutate(TARGET_ID, {"body": 40, "propulsion": 50, "wheels": 60, "electrical": 70}), "damaged target state for maintenance menu")
 
@@ -98,13 +98,10 @@ func _run() -> void:
     var unmounted_hotwire: Dictionary = actions.request_hotwire(Fixture.PLAYER_ID, TARGET_ID)
     _expect(not bool(unmounted_hotwire.get("accepted", false)) and String(unmounted_hotwire.get("reason", "")) == "not_mounted", "authoritative HOTWIRE rejects an unmounted actor")
 
-    # Missing prerequisites fail truthfully through the same click menu.
     _press_and_expect_failure(controller, panel, target_cell, TARGET_ID, Actions.REPAIR, "repair_requires_wrench")
     _press_and_expect_failure(controller, panel, target_cell, TARGET_ID, Actions.REFUEL, "refuel_requires_gas_can")
     _press_and_expect_failure(controller, panel, target_cell, TARGET_ID, Actions.MODIFY, "modify_requires_wrench_and_cargo_rack")
 
-    # Mechanical classification is also a truthful prerequisite. Supply the physical
-    # wrench/part first, then temporarily remove the actor's skill classification.
     _expect(_carry_item(mutations, inventory_mutations, &"item.tool.adjustable_wrench", WRENCH_ID), "carries exact wrench through authoritative containment")
     _expect(_carry_item(mutations, inventory_mutations, &"item.crafting.metal_scrap", PART_ID), "carries exact repair part through authoritative containment")
     _expect(skill_state.remove_actor(Fixture.PLAYER_ID), "focused setup removes Mechanical classification")
@@ -112,8 +109,6 @@ func _run() -> void:
     _expect(skill_state.enroll_actor(Fixture.PLAYER_ID), "focused setup restores player skill classification")
     _expect(skill_state.set_skill(Fixture.PLAYER_ID, Skills.MECHANICAL, Skills.LEVEL_MAX, 0), "sets focused Mechanical skill high enough for deterministic maintenance success")
 
-    # Successful REPAIR must mutate only the clicked target, retain the wrench, consume
-    # the exact part, and surface the real VehicleActionService outcome.
     _last_result.clear()
     controller.submit_world_cell(target_cell)
     var repair_button: Button = _find_action_button(panel, TARGET_ID, Actions.REPAIR)
@@ -127,7 +122,6 @@ func _run() -> void:
     _expect(world.has_entity(WRENCH_ID) and inventory.direct_contents(Fixture.PLAYER_ID).has(WRENCH_ID), "repair retains exact wrench")
     _expect(not world.has_entity(PART_ID), "repair consumes exact carried part")
 
-    # Successful REFUEL must fill only the clicked target and consume the exact gas can.
     _expect(_carry_item(mutations, inventory_mutations, &"item.automotive.gas_can", GAS_ID), "carries exact gas can")
     _last_result.clear()
     controller.submit_world_cell(target_cell)
@@ -140,7 +134,6 @@ func _run() -> void:
     _expect(int(state.record(DECOY_ID).get("fuel", -1)) == 0, "nearer decoy fuel is unchanged")
     _expect(not world.has_entity(GAS_ID), "refuel consumes exact carried gas-can entity")
 
-    # Successful ADD RACK installs the exact physical rack into the clicked vehicle.
     _expect(_carry_item(mutations, inventory_mutations, &"item.automotive.cargo_rack", RACK_ID), "carries exact cargo rack")
     _last_result.clear()
     controller.submit_world_cell(target_cell)
@@ -154,18 +147,15 @@ func _run() -> void:
     _expect(inventory.container_of(RACK_ID) == TARGET_ID, "exact physical rack becomes contained by clicked vehicle")
     _expect(&"cargo_rack" not in state.record(DECOY_ID).get("mods", []), "nearer decoy does not receive clicked-target rack")
 
-    # State-sensitive offers disappear once no longer valid.
     controller.submit_world_cell(target_cell)
     _expect(_find_action_button(panel, TARGET_ID, Actions.REFUEL) == null, "full vehicle no longer offers REFUEL")
     _expect(_find_action_button(panel, TARGET_ID, Actions.MODIFY) == null, "racked vehicle no longer offers ADD RACK")
     _expect(_find_action_button(panel, TARGET_ID, Actions.HOTWIRE) == null, "HOTWIRE remains absent from on-foot click menu")
 
-    # Handler validates exact reach and on-foot state at invocation time rather than
-    # relying only on stale menu visibility.
     var far_cell: Vector2i = _find_far_clear_cell(world, player.anchor)
     _expect(far_cell != Vector2i(2147483647, 2147483647), "found far clear vehicle fixture cell")
     if far_cell != Vector2i(2147483647, 2147483647):
-        _expect(_create_test_car(world, mutations, state, profiles, FAR_ID, far_cell, 0), "created out-of-reach vehicle fixture")
+        _expect(_create_test_car(world, mutations, inventory_mutations, state, profiles, FAR_ID, far_cell, 0), "created out-of-reach vehicle fixture")
         var far_result: Dictionary = handler.request_action(Fixture.PLAYER_ID, FAR_ID, Actions.REFUEL)
         _expect(not bool(far_result.get("success", false)) and String(far_result.get("reason", "")) == "vehicle_out_of_reach", "out-of-reach exact vehicle is rejected truthfully")
 
@@ -186,6 +176,7 @@ func _run() -> void:
 func _create_test_car(
     world: WorldState,
     mutations: WorldMutationService,
+    inventory_mutations: InventoryContainmentMutationService,
     state: VehicleState,
     profiles: VehicleProfileCatalog,
     vehicle_id: String,
@@ -195,6 +186,8 @@ func _create_test_car(
     if mutations.create_entity(profiles.semantic_type(Profiles.CAR), vehicle_id) != vehicle_id:
         return false
     if not mutations.set_placement(vehicle_id, Layers.Channel.OBJECT, cell, Facing.Value.NORTH, Footprint.single_cell()):
+        return false
+    if not inventory_mutations.enroll_container(vehicle_id):
         return false
     return state.create_vehicle(vehicle_id, Profiles.CAR, fuel, false, 0, false)
 
