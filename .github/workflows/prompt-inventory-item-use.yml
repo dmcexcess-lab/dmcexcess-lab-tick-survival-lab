@@ -23,6 +23,12 @@ jobs:
           unzip -q godot.zip
           chmod +x Godot_v4.7.1-stable_linux.x86_64
 
+      - name: Prepare Godot project class cache
+        shell: bash
+        run: |
+          set -euxo pipefail
+          ./Godot_v4.7.1-stable_linux.x86_64 --headless --editor --path "$GITHUB_WORKSPACE/game" --quit
+
       - name: Verify ordinary Inventory exact-item EAT and DRINK
         shell: bash
         run: |
