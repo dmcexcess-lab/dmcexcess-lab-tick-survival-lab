@@ -1,6 +1,6 @@
 # Tick Survival Lab — System 29 World Interaction Affordance / Reach
 
-Status: **IMPLEMENTED — unified player routing + loose-item pickup closure verified**
+Status: **IMPLEMENTED — unified player routing + human/mobile interaction practicality verified**
 
 Approved foundation: **2026-08-24**
 
@@ -10,22 +10,17 @@ Mechanical repair closure: **2026-09-04**
 
 Loose-item / TRY OPEN closure: **2026-09-06**
 
+Human/mobile interaction closure: **2026-09-07**
+
 Foundation playable head: `5b88d9172df51561ea760913873f62bd2cdc422a`.
 
-Current verified executable: `736a5f4875d40cb437e760b89188419d98c5fef6`.
-
-Exact-head owners include:
-
-- `verify/system29-interaction-affordance`;
-- `verify/world-interaction-closure`;
-- `verify/system33-power-water` for the physical utility repair consequence;
-- `verify/pages-deploy`.
+Current verified functional executable: `69bd99983dc07865caa37a570ec352f760db864a`.
 
 Core rules:
 
 > **A highlight explains an already-valid interaction. It never creates interaction truth.**
 
-> **One ordinary world click must expose the complete truthful action set for the selected physical target. UI routing may delegate to mechanic owners, but it may not hide another valid action or invent a fake one.**
+> **One ordinary world click must expose the complete truthful action set for every actionable physical target on the selected cell. UI routing may delegate to mechanic owners, but it may not hide another valid action, silently substitute another target, or invent a fake one.**
 
 The player can understand which nearby, currently perceived physical objects can actually be acted on from the survivor's present position/facing, and can use the same exact-target affordance truth to choose normal gameplay actions. System 29 remains a read/query/composition layer; action consequences stay with their owning mechanics.
 
@@ -43,7 +38,7 @@ System 29 owns:
 - low-resolution nearby-object highlight presentation;
 - deterministic offer/highlight ordering and bounded local discovery;
 - presentation invalidation/lifecycle for movement, facing, perception and provider-state changes;
-- the unified exact-target player action chooser that presents all currently routed offers for one selected physical target;
+- the unified player action chooser that presents all currently routed offers for every actionable exact physical target on the selected cell;
 - delegated action routing back to existing mechanic-owned controllers when an offer opens another owner UI such as Crafting or Loot;
 - inclusion of reachable loose physical items in ordinary chooser discovery without taking ownership of item transfer truth.
 
@@ -137,12 +132,18 @@ The controller:
 2. consumes the already-composed current offer set;
 3. gathers every routed offer for each exact target;
 4. orders targets/actions deterministically by presentation priority and stable IDs;
-5. opens one `WorldInteractionPanel` for the chosen exact target;
-6. dispatches the selected action either to a native timed handler or an explicitly registered delegated handler.
+5. opens one `WorldInteractionPanel` containing each actionable exact target and its truthful offers;
+6. dispatches the selected action using that exact target ID either to a native timed handler or an explicitly registered delegated handler.
 
 `LOOSE_ITEM` is a real chooser candidate channel. The generic loose-item provider only claims eligible `item.*` entities on that channel; admitting the channel does not turn unrelated placements into fake pickup actions.
 
 The previous independent production pointer listeners for Loot and Crafting are removed. Their controllers remain owners of their own mechanic behavior and retain narrow compatibility pointer seams for focused/historical fixtures only.
+
+### Exact overlapping-target rule
+
+Several physical entities may legitimately occupy one clicked cell. Presentation priority may order their sections and actions, but it may not erase lower-priority actionable entities. Every routed exact target remains selectable, and the selected button carries that target identity through dispatch.
+
+This matters for all overlapping world content and directly protects vehicle interaction: clicking one exact vehicle can never silently operate on another nearer or higher-priority vehicle.
 
 ### Native handlers
 
@@ -248,7 +249,7 @@ The physical WHAT support retains its System-33B `distribution_support` identity
 - requires a currently failed supported pole;
 - requires Mechanical through the current player-facing repair profile;
 - retains a real carried hammer;
-- consumes two real carried wood-plank entities and one real carried nails-box entity;
+- consumes two real wood-plank entities and one real carried nails-box entity;
 - spends real WHEN time;
 - calls the existing System-33B condition/service repair seam rather than copying utility condition into System 29;
 - uses the utility runtime snapshot/restore contract for transactional rollback;
@@ -302,13 +303,17 @@ There is no recurring whole-world scan, no per-object Node, no `_process()`/`_ph
 
 ## 11. Player interaction panel
 
-`WorldInteractionPanel` is a presentation-only exact-target chooser. It owns no gameplay truth.
+`WorldInteractionPanel` is presentation-only and owns no gameplay truth.
 
-Each button carries stable exact-target/action metadata used by live-scene regression coverage. The panel blocks normal player/camera input while open through the existing decision-pause interaction contract, closes before dispatch, and never substitutes a generic fake `USE` action.
+For one actionable target it presents the familiar exact-target action list. If multiple actionable entities occupy the clicked cell, the same panel presents deterministic target headings with the truthful action list under each exact target instead of silently choosing one entity.
 
-Closed panels destroy their old action controls instead of merely hiding them. This prevents obsolete executable controls from surviving target-state changes and ensures reopening a healthy/repaired target cannot retain a stale REPAIR button from the previous chooser lifecycle.
+Each action button carries stable exact-target/action metadata. Action and cancel controls use 52 px minimum height for touch practicality. The action surface is scrollable, responds to viewport width/height changes, and performs a deferred post-layout clamp after Godot container minimum sizes settle so the visible chooser cannot drift off-screen.
+
+The panel blocks normal player/camera input while open through the existing decision-pause interaction contract, closes before dispatch, and never substitutes a generic fake `USE` action. Closed panels destroy their old action controls instead of merely hiding them, preventing stale executable actions from surviving target-state changes.
 
 Native world/sustainment action completion is surfaced through the normal HUD. Delegated Crafting/Loot retain their own established result presentation to avoid double reporting.
+
+Touch/mouse event ownership remains in `DoorPointerInputAdapter`, including drag rejection and synthetic-mouse suppression after touch. The chooser does not add a second pointer listener.
 
 ---
 
@@ -331,16 +336,32 @@ Mechanical repair UI smokes:
 - `game/scripts/ci/WorldObjectRepairUiSmoke.gd`;
 - `game/scripts/ci/UtilityPowerRepairUiSmoke.gd`.
 
-Owning workflows:
+Historical owning workflows include:
 
 - `.github/workflows/world-interaction-affordance.yml`;
 - `.github/workflows/world-interaction-closure.yml`.
 
-The player-route coverage drives real `main.tscn`, emits the real world-pointer signal, locates exact chooser buttons and proves normal gameplay paths for sink DRINK, bed SLEEP/REST, door/window lifecycle, stove CRAFT + DECONSTRUCT coexistence, searchable-container SEARCH, furniture DECONSTRUCT, broken-door REPAIR, failed-power-support REPAIR and a real loose skateboard world placement -> PICK UP -> same physical item in an allowed equipment slot.
+The normal player-route coverage drives real `main.tscn`, emits the real world-pointer signal, locates exact chooser buttons and proves normal gameplay paths for sink DRINK, bed SLEEP/REST, door/window lifecycle, stove CRAFT + DECONSTRUCT coexistence, searchable-container SEARCH, furniture DECONSTRUCT, broken-door REPAIR, failed-power-support REPAIR and a real loose skateboard world placement -> PICK UP -> same physical item in an allowed equipment slot.
 
-Executable `736a5f4875d40cb437e760b89188419d98c5fef6` is the verified loose-item / TRY OPEN closure head. On that exact head:
+Human/mobile practicality is covered by the prompt-local:
 
-- all **45** push workflows reached terminal state;
+- `game/scripts/ci/PromptHumanMobileInteractionSmoke.gd`;
+- `.github/workflows/prompt-human-mobile-interaction.yml`.
+
+That verifier boots real `res://main.tscn`, creates two prompt-only actionable entities on one reachable cell, submits the cell through the production `WorldInteractionPlayerController`, proves both priority levels remain independently selectable, checks >=48 px action surfaces, verifies the settled chooser remains in the viewport, dispatches the lower-priority exact target, and proves world pointer blocking/restoration across the modal lifecycle.
+
+Verified functional head `69bd99983dc07865caa37a570ec352f760db864a`:
+
+- `Prompt Human Mobile Interaction` run `34106166284` — SUCCESS;
+- Pages run `34106166327` — SUCCESS.
+
+The first prompt-local run failed only the viewport-containment assertion. That was a real production presentation defect caused by Godot container minimum sizes settling after the initial layout pass. The runtime was repaired with a deferred clamp; the succeeding focused run above proves the repaired behavior.
+
+### Earlier loose-item / TRY OPEN closure evidence
+
+Executable `736a5f4875d40cb437e760b89188419d98c5fef6` was the verified loose-item / TRY OPEN closure head. On that exact head:
+
+- all **45** then-current push workflows reached terminal state;
 - there were **0 failures, 0 cancellations, 0 queued and 0 in-progress** runs at closure inspection;
 - `verify/world-interaction-closure` succeeded in run `34059987805`;
 - `verify/system29-interaction-affordance` succeeded in run `34059987832`;
@@ -348,14 +369,10 @@ Executable `736a5f4875d40cb437e760b89188419d98c5fef6` is the verified loose-item
 - `verify/pages-deploy` succeeded in run `34059987775`;
 - aggregate commit statuses were green.
 
-### CI-discovered regressions repaired during closure
-
-The focused production smoke exposed two real integration defects and they were repaired rather than bypassed:
+### Earlier CI-discovered regressions repaired during loose-item closure
 
 1. `LOOSE_ITEM` had been added to interaction discovery/click targeting but a stale System-29 affordance validator still rejected offers on that spatial channel. The validator plus loose-item invalidation/highlight handling now consistently accepts the channel while the pickup provider remains restricted to eligible `item.*` targets.
 2. The skateboard transfer reached the authoritative carry-capacity owner but was rejected because `item.vehicle.skateboard` had no registered physical weight. The existing vehicle item catalog now classifies the board at **2.5 kg**, preserving normal capacity policy instead of special-casing pickup.
-
-The owning `world-interaction-closure` workflow also watches the pickup handler and skateboard physical-item catalog dependency so these seams cannot silently fall out of coverage.
 
 ---
 
@@ -380,46 +397,38 @@ Preserve:
 
 ---
 
-## 14. Human/mobile acceptance remaining
+## 14. Human/mobile interaction acceptance closure
 
-Automated route verification is green. Ordinary desktop and iPhone/Safari acceptance should still check:
+The production interaction surfaces were audited for the requested acceptance targets. No new gameplay mechanics were invented. Existing owners already provide the ordinary routes for loose pickup/drop, skateboard pickup/equip/ride/dismount, Inventory EAT/DRINK, flashlight equip/toggle/stow, doors/windows including TRY OPEN/board/unboard/break/climb, Loot, deconstruction, Crafting/workstations, rest/sleep, water fixtures, forage, portable generators, power repair, vehicle enter/drive/exit and exact on-foot vehicle maintenance, plus MAP/CENTER/FOLLOW and Looking At.
 
-- highlight readability at phone scale, including loose items;
-- chooser button size/placement when a target has several actions;
-- loose-item PICK UP discoverability and feedback;
-- skateboard ground pickup/equipment-slot feedback;
-- stove CRAFT + DECONSTRUCT readability;
-- TRY OPEN / locked failure readability;
-- door/window board/break/climb feedback;
-- broken-door repair discoverability/material feedback;
-- failed-pole repair discoverability/outage-restoration feedback;
-- sink/bed interaction discoverability;
-- exact Loot/Crafting transition feel;
-- no accidental double-click/touch dispatch.
+The concrete systemic defects found were both in the shared chooser and are now repaired:
 
-Visual/layout tuning remains presentation work and must not change action/reach authority.
+1. overlapping actionable entities no longer shadow one another;
+2. the chooser is now touch-sized, scrollable, responsive and clamped on-screen after real container layout settles.
+
+Neighboring source audit also confirmed:
+
+- `DoorPointerInputAdapter` already owns touch + mouse conversion, drag rejection and synthetic-mouse de-duplication;
+- `PlayerMovementControls` already uses touch-practical control sizing;
+- `CanonicalPlayerShell` already exposes exact-item Inventory EAT/DRINK and flashlight actions through touch-practical modal controls;
+- the production root already blocks world pointer/movement/camera input while the chooser is open.
+
+The available verification environment does not provide a physical iPhone/Safari touchscreen session, so this closure does not pretend to be a literal device-hand test. It does verify the production scene and the exact touch/mouse/modal seams available to automation. Future real-device play should report any concrete residual defect rather than trigger speculative redesign.
 
 ---
 
-## 15. Deferred real consumers / next practicality items
+## 15. Deferred real consumers / next phase
 
-The unified route is available for future real owners, but System 29 itself must not invent them. The next player-practicality audit should continue with existing owners in this order where still incomplete:
+System 29 itself must not invent one-off interactions. Remaining future interactions should arise only when their physical/state owners exist. Examples still intentionally deferred include:
 
-1. verify exact carried-item **EAT / DRINK** actions are reachable from the ordinary Inventory surface and expose real prerequisites/failure results;
-2. close fixed light/switch interaction and persistent flashlight on/off state through the existing System-27/System-33/equipment truth;
-3. close generator operation, fuel and start/stop through its real utility/item owners;
-4. extend truthful vehicle component repair/replacement only through existing System-36 Mechanical/component state;
-5. add shattered-window repair only after a real replacement-glass resource/source exists;
-6. expose direct distribution-span repair only after spans have an independent clickable physical WHAT identity;
-7. close real fire/ignition lifecycle through its eventual owner;
-8. perform human/mobile acceptance of the already-automated interaction routes.
+- shattered-window repair only after a real replacement-glass resource/source exists;
+- direct distribution-span repair only after spans have an independent clickable physical WHAT identity;
+- real fire/ignition lifecycle through its eventual owner.
 
-No freeform base-building action belongs here. Construction remains limited to reinforcing existing openings and repairing broken existing objects.
-
-Only after the player/world/object interaction layer is practical end-to-end should work proceed to combat and then the first real infected hydrated from existing building-derived population records.
+Human/mobile player/world/object practicality is now closed through the available acceptance pass. The next major phase is **combat**. Only after combat is practical should the first real infected be hydrated from the already-existing population records.
 
 ---
 
 ## 16. North-star fit
 
-System 29 provides one cheap, truthful interaction surface over the same physical state/actions that govern the simulation. It makes the small top-down world usable without turning the UI into a second simulation, and it prevents valid mechanics from becoming unreachable merely because two different owners apply to the same physical target.
+System 29 provides one cheap, truthful interaction surface over the same physical state/actions that govern the simulation. It makes the small top-down world usable without turning the UI into a second simulation, and it prevents valid mechanics or physical targets from becoming unreachable merely because several owners or entities share one clicked location.
