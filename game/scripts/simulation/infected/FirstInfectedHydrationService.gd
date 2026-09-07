@@ -30,7 +30,7 @@ func is_ready() -> bool:
     return _world != null and _mutations != null and _spatial != null and _kernel != null and _projection != null and _infected != null \
         and _locomotion != null and _locomotion.is_ready() and _hands != null and _hands.is_ready() \
         and _inventory != null and _inventory.is_ready() and _health != null and _health.is_ready() \
-        and _skills != null and _skills.is_ready() and _carry != null and _carry.is_ready() \
+        and _skills != null and _carry != null \
         and _condition != null and _condition.is_ready()
 
 func hydrate_first(population_plan: Dictionary, preferred_area_site_id: String, reference_cell: Vector2i) -> Dictionary:
