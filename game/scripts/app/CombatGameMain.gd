@@ -18,8 +18,6 @@ const PopulationProjectionClass = preload("res://scripts/simulation/population/P
 const InfectedStateClass = preload("res://scripts/simulation/infected/InfectedState.gd")
 const FirstInfectedHydratorClass = preload("res://scripts/simulation/infected/FirstInfectedHydrationService.gd")
 const FirstInfectedBehaviorClass = preload("res://scripts/simulation/infected/FirstInfectedBehaviorService.gd")
-const ObserverPerceptionClass = preload("res://scripts/simulation/perception/ObserverPerceptionService.gd")
-const VisionProfileClass = preload("res://scripts/simulation/perception/VisionProfile.gd")
 
 var _combat_impact_profiles: CombatImpactProfileCatalog = null
 var _combat_actions: CombatActionService = null
