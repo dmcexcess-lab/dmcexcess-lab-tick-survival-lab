@@ -115,12 +115,13 @@ func run_smoke() -> void:
     var light_serial := int(light.get("action_serial", 0))
     var light_action := kernel.action_by_serial(light_serial)
     expect(light_action != null and light_action.interruption_policy == Rules.InterruptionPolicy.CANCELABLE, "light strike is interruptible")
-    var light_status := -1
+    var light_outcome: Dictionary = {}
     var capture_light := func(action: TimedAction) -> void:
-        if action != null and action.serial == light_serial: light_status = action.status
+        if action != null and action.serial == light_serial:
+            light_outcome["status"] = action.status
     kernel.action_finished.connect(capture_light)
     health.apply_damage(Fixture.PLAYER_ID, 1)
-    expect(light_status == Rules.ActionStatus.CANCELED, "pre-contact damage cancels light strike")
+    expect(int(light_outcome.get("status", -1)) == Rules.ActionStatus.CANCELED, "pre-contact damage cancels light strike")
     if kernel.action_finished.is_connected(capture_light): kernel.action_finished.disconnect(capture_light)
     health.heal(Fixture.PLAYER_ID, 100)
 
