@@ -133,8 +133,6 @@ func place_visible_lane(world: WorldState, mutations: WorldMutationService, spat
             var candidate: Vector2i = player.anchor + direction * distance
             if not _clear_lane(spatial, actor_id, player.anchor, direction, distance):
                 continue
-            if world.has_placement(actor_id):
-                mutations.unplace_entity(actor_id)
             var toward_player := Facing.from_vector(-direction)
             if not mutations.set_placement(actor_id, Layers.Channel.ACTOR, candidate, toward_player, Footprint.single_cell()):
                 continue
@@ -153,8 +151,6 @@ func place_hearing_lane(world: WorldState, mutations: WorldMutationService, spat
             var candidate: Vector2i = player.anchor + direction * distance
             if not _clear_lane(spatial, actor_id, player.anchor, direction, distance):
                 continue
-            if world.has_placement(actor_id):
-                mutations.unplace_entity(actor_id)
             var away_from_player := Facing.from_vector(direction)
             if not mutations.set_placement(actor_id, Layers.Channel.ACTOR, candidate, away_from_player, Footprint.single_cell()):
                 continue
