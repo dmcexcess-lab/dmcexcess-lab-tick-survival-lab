@@ -2,211 +2,203 @@
 
 This file is the authoritative short handoff for the next repository operation. Read this first, then follow `README_SOPS.md`. Do not broadly rediscover already-closed work.
 
-## Current checkpoint — player/world/object practicality code layer CLOSED; human/mobile acceptance next
+## Current checkpoint — HUMAN/MOBILE PLAYER INTERACTION PRACTICALITY CLOSED 2026-09-07
 
-Production root remains `VehicleGameMain.gd` through `game/main.tscn`.
+Production root remains `game/main.tscn` -> `VehicleGameMain.gd`.
 
-Closed ordinary-player practicality slices now include:
+The player/world/object practicality layer is now closed through the available production-scene acceptance pass. Do not reopen these systems unless real play exposes a concrete defect.
 
-- generic loose-world-item pickup;
-- same-identity skateboard pickup with RIGHT HAND / LEFT HAND / BACK-only storage rules;
-- truthful locked-opening TRY OPEN flow;
-- exact-item Inventory EAT / DRINK;
-- power-driven generated room lighting + persistent exact-item flashlight state;
-- portable generator inspect / refuel / start / stop + System-33 local-power contribution;
-- on-foot exact-vehicle maintenance click menu for REPAIR / REFUEL / ADD RACK;
-- HOTWIRE explicitly preserved as mounted-only driving-control behavior.
+The next major phase is **combat**. After combat is practical, hydrate the first real infected from the already-existing population records.
 
-Do not reopen these slices unless the human/mobile acceptance pass reveals a concrete play-path defect.
+## Prompt start / turnover completed
 
-# VEHICLE MAINTENANCE PRACTICALITY — CLOSED 2026-09-07
+This prompt began from exact requested checkpoint:
 
-## User-approved interaction rule
+- `1268fd12a0b6b1ea27a0f62d88515e8074864508`
 
-> **On foot, click the exact vehicle itself to open the ordinary world-interaction menu for valid maintenance actions. HOTWIRE is NOT available unmounted and stays on the mounted driving controls.**
+The previous prompt-owned vehicle-maintenance verifier pair was deleted first as required:
 
-There is no separate maintenance panel and no parallel vehicle-maintenance state.
+- `game/scripts/ci/PromptVehicleMaintenanceSmoke.gd`
+- `.github/workflows/prompt-vehicle-maintenance.yml`
 
-## Functional / verification heads
+`README_CONTEXT.md` was read first, then `README_SOPS.md`, and `main` was fetched once at prompt start.
 
-Fresh prompt-local verifier first reached green on functional head:
+## Human/mobile acceptance — concrete defects found and repaired
 
-- `9f25db747de56b51bd4bb4de9fd7d29a0e8ab9b9`
+The acceptance audit stayed on production interaction/input seams and did not add gameplay features.
 
-Owning successful focused workflow:
+Two systemic defects were found in the shared world chooser:
 
-- `Prompt Vehicle Maintenance`
-- run `34103905916` — SUCCESS
+1. **Overlapping actionable entities could shadow each other.** `WorldInteractionPlayerController` previously ordered candidates by presentation priority and effectively exposed only the first actionable target on a clicked cell. Lower-priority physical entities occupying that same cell could therefore be impossible to select.
+2. **The world interaction chooser was not touch/mobile practical.** `WorldInteractionPanel` used a fixed desktop-ish position and small action controls; its first responsive revision also exposed a real Godot container-layout timing problem that could still push the settled panel off-screen.
 
-Deployment-only Pages on that same functional head:
+Repairs now in production:
 
-- run `34103905808` — build SUCCESS / deploy SUCCESS
+- a clicked cell preserves **every actionable exact target** across `LOOSE_ITEM`, `OBJECT` and `STRUCTURE` candidate channels;
+- presentation priority orders target/action groups but never erases lower-priority target identity;
+- one `WorldInteractionPanel` presents target headings when several exact actionable entities share the clicked cell;
+- every action button carries and dispatches its own exact target ID, so choosing one object cannot silently operate another;
+- action and CANCEL controls use 52 px minimum height;
+- the chooser uses a scroll surface and responsive viewport width/height sizing;
+- a deferred post-layout clamp rechecks actual settled Godot container size and keeps the chooser inside the visible viewport;
+- existing modal blocking remains intact: opening the chooser blocks ordinary pointer/movement/camera routes and closing/selecting restores them;
+- no gameplay truth moved into UI.
 
-Focused System-36 documentation head:
+Functional runtime head that first verified these repairs:
 
-- `f04ebf03ee563456c17f0e2879199c63178ab7fd`
+- `69bd99983dc07865caa37a570ec352f760db864a`
 
-Pre-handoff verification on that docs head:
+Focused successful verification on that exact functional head:
 
-- vehicle-maintenance run `34104320896` — SUCCESS
-- Pages run `34104320950` — build SUCCESS / deploy SUCCESS
+- `Prompt Human Mobile Interaction` run `34106166284` — SUCCESS
+- Pages run `34106166327` — SUCCESS
 
-Materially updated documents:
-
-- `SYSTEM_DESIGNS/36_VEHICLES.md`
-- `SYSTEM_DESIGNS/36_IMPLEMENTATION_CHANGELOG.md`
-
-## Current production implementation
-
-New focused interaction owners:
-
-- `game/scripts/simulation/vehicles/VehicleMaintenanceInteractionOfferProvider.gd`
-- `game/scripts/player/VehicleMaintenancePlayerInteractionHandler.gd`
-
-Production composition:
-
-- `VehicleGameMain._boot_world_interactions()` registers the maintenance offer provider with the existing shared affordance query;
-- REPAIR / REFUEL / MODIFY (`ADD RACK`) are registered as delegated exact-target handlers with the existing `WorldInteractionPlayerController`;
-- the existing `WorldInteractionPanel` is the vehicle click menu;
-- the handler revalidates actor unmounted state, exact target existence and contact reach before calling `VehicleActionService`;
-- the exact clicked vehicle ID is passed explicitly into `VehicleActionService`, eliminating nearest-vehicle ambiguity;
-- delegated completion waits for the real `VehicleActionService.action_completed` / `action_failed` result, so a Mechanical failure cannot be falsely shown as success merely because WHEN completed.
-
-## On-foot menu behavior
-
-The exact clicked vehicle exposes only currently relevant supported maintenance actions:
-
-- **REPAIR** when body / propulsion / wheels / electrical condition is damaged;
-- **REFUEL** for a motorized vehicle below profile maximum fuel;
-- **ADD RACK** for a cargo-capable vehicle without an installed cargo rack;
-- **HOTWIRE never appears on this on-foot menu.**
-
-Existing authoritative prerequisites/consequences remain unchanged:
-
-### REPAIR
-
-- requires carried `item.tool.adjustable_wrench`;
-- requires one eligible real repair part;
-- requires Mechanical classification/check;
-- uses authoritative WHEN duration;
-- retains wrench;
-- consumes one exact repair-part entity on successful commit;
-- raises authoritative vehicle condition.
-
-### REFUEL
-
-- motorized vehicle only;
-- requires one real carried `item.automotive.gas_can`;
-- uses authoritative WHEN duration;
-- consumes the exact gas-can entity on successful commit;
-- fills only the clicked vehicle to its profile maximum.
-
-### ADD RACK
-
-- requires wrench + exact carried `item.automotive.cargo_rack`;
-- requires Mechanical classification/check;
-- uses authoritative WHEN duration;
-- exact rack becomes contained by the clicked vehicle and appears in installed component IDs/mod state;
-- real seeded vehicles are canonical inventory containers through `VehicleWorldSeeder`.
-
-Truthful failure reasons remain surfaced through the same menu route, including missing wrench/parts/gas/rack, Mechanical unavailable/check failure, target missing, target out of reach and mounted actor attempting the on-foot route.
-
-## HOTWIRE protected rule — mounted only
-
-`VehicleActionService.request_hotwire()` now enforces this design at the authoritative service boundary:
-
-- unmounted actor -> `not_mounted`;
-- explicit target other than actor's mounted vehicle -> `vehicle_target_not_mounted`;
-- existing screwdriver + scrap-wire + Mechanical + ignition-state rules remain unchanged after the mounted-target check.
-
-`VehicleControlSurface` still owns the visible HOTWIRE button while mounted. Do not add HOTWIRE to walking controls or the vehicle world click menu.
+The first focused run before the final layout repair failed only the viewport-containment assertion. The actual log showed exact overlapping-target routing, touch-sized buttons and modal blocking were already correct. The failure identified the post-container-layout overflow above; production was repaired rather than the assertion weakened.
 
 ## Fresh disposable verifier for this closed prompt
 
 Current prompt-owned pair:
 
-- `game/scripts/ci/PromptVehicleMaintenanceSmoke.gd`
-- `.github/workflows/prompt-vehicle-maintenance.yml`
+- `game/scripts/ci/PromptHumanMobileInteractionSmoke.gd`
+- `.github/workflows/prompt-human-mobile-interaction.yml`
 
-The fresh smoke boots real `res://main.tscn` and tests only the on-foot vehicle-maintenance interaction route. It proves:
+It boots real `res://main.tscn` and tests only the interaction seam changed in this prompt. It creates two prompt-only actionable entities on one reachable world cell and proves:
 
-1. the normal vehicle click menu exposes REPAIR / REFUEL / ADD RACK when valid;
-2. HOTWIRE is absent on foot while the mounted Hotwire button still exists;
-3. direct unmounted HOTWIRE is authoritatively rejected with `not_mounted`;
-4. missing wrench, gas can, rack and Mechanical classification fail truthfully;
-5. successful REPAIR mutates only the exact clicked target, retains wrench and consumes the exact part;
-6. successful REFUEL fills only the exact clicked target and consumes the exact gas can;
-7. successful ADD RACK installs the exact physical rack into the exact clicked target;
-8. a deliberately nearer decoy vehicle remains unchanged, proving no nearest-target substitution;
-9. full/racked state removes no-longer-valid REFUEL / ADD RACK offers;
-10. missing/out-of-reach exact targets fail truthfully;
-11. mounted actors do not receive the on-foot maintenance menu.
+1. the production chooser opens through the real `WorldInteractionPlayerController`;
+2. both higher- and lower-priority overlapping exact targets remain reachable;
+3. action controls are touch-practical (>=48 px; production minimum is 52 px);
+4. the settled chooser remains inside the viewport;
+5. choosing the lower-priority target dispatches that exact target/action identity;
+6. world pointer input is blocked while the chooser is open and restored after selection.
 
-### Focused verifier failure repaired during this prompt
-
-Initial run `34103609240` failed only the ADD RACK assertions. The actual log showed REPAIR, REFUEL, exact-target behavior and HOTWIRE rules were already correct.
-
-Root cause was an incomplete **test fixture**: its hand-created cars had `VehicleState` but had not been enrolled as inventory containers. Real production vehicles created by `VehicleWorldSeeder` always call `InventoryContainmentMutationService.enroll_container(vehicle_id)`. The fresh smoke fixture was corrected to reproduce that real invariant. Production rack-install logic was not weakened or bypassed.
-
-# Permanent disposable prompt-local CI policy
-
-`README_SOPS.md` remains authoritative:
-
-- no standing gameplay regression fleet;
-- every code prompt deletes the previous prompt-owned smoke + workflow;
-- every code prompt creates a brand-new exact-module verifier pair;
-- only the exact touched module/play path is tested;
-- do not invoke, restore or gate on historical/broad smokes, architecture suites, seed matrices or unrelated systems;
-- `.github/workflows/pages.yml` is deployment-only;
-- current prompt-local gameplay verifier + Pages are the only expected push workflows;
-- inspect actual focused-job logs for failures; do not weaken real failing assertions.
-
-## Mandatory next-prompt CI turnover
+### Mandatory next-prompt CI turnover
 
 At the START of the next code prompt, delete:
-
-- `game/scripts/ci/PromptVehicleMaintenanceSmoke.gd`
-- `.github/workflows/prompt-vehicle-maintenance.yml`
-
-Then create a completely fresh acceptance/input-only pair if repository code is touched, recommended:
 
 - `game/scripts/ci/PromptHumanMobileInteractionSmoke.gd`
 - `.github/workflows/prompt-human-mobile-interaction.yml`
 
-Do not reuse the vehicle-maintenance verifier.
+Then create a completely fresh combat-only prompt-local verifier pair if combat code is touched. Do not restore historical/broad regression fleets or seed matrices.
 
-# Protected neighboring contracts — do not reopen
+## Acceptance audit — existing routes retained, not reinvented
 
-## Vehicle driving
+The requested ordinary production routes were reviewed against their current player-facing owners. This pass did not reopen mechanics that were already practical and wired:
+
+- loose-world item pickup/drop;
+- skateboard pickup/equip/ride/dismount with one physical identity;
+- Inventory EAT / DRINK on the selected exact persistent item;
+- flashlight equip/toggle/stow with exact-item persistent switched state;
+- doors and windows, including truthful TRY OPEN and existing board/unboard/break/climb behavior;
+- searchable loot containers;
+- supported deconstruction;
+- Crafting/workstations;
+- rest/sleep;
+- potable water fixtures;
+- forage;
+- portable generator inspect/refuel/start/stop;
+- physical power-support repair;
+- vehicle enter/drive/exit;
+- exact on-foot vehicle repair/refuel;
+- MAP / CENTER / FOLLOW;
+- Looking At / ordinary world chooser;
+- touch/mouse pointer conversion and modal input blocking.
+
+Targeted neighboring source audit confirmed:
+
+- `DoorPointerInputAdapter` already owns mouse + touch world-cell conversion, drag rejection and synthetic-mouse suppression after touch;
+- `PlayerMovementControls` already uses touch-practical control sizing;
+- `CanonicalPlayerShell` already exposes exact-item EAT/DRINK and flashlight actions through touch-practical inventory/modal controls;
+- production composition already blocks pointer/movement/camera input while the interaction chooser is open.
+
+The available repository/CI environment does not provide a literal physical iPhone/Safari touchscreen session. Do not claim one occurred. The closure is based on the production scene, focused interaction execution and targeted source audit of the real touch/mouse/modal owners. If future device play reveals a concrete defect, repair that exact seam rather than redesigning the interaction architecture.
+
+## Material documentation updated
+
+- `SYSTEM_DESIGNS/29_IMPLEMENTATION_CHANGELOG.md` — human/mobile interaction practicality closure recorded at docs commit `838b34190f3ac8f0a7ab26800e3c3e34b55d5e76`.
+- `SYSTEM_DESIGNS/29_WORLD_INTERACTION_AFFORDANCE_REACH.md` — current exact overlapping-target and touch-practical chooser contract recorded at docs commit `20105d2029d9654be967afd5f0e0092e480443f2`.
+
+## Design philosophy — preserve
+
+Do not pursue depth by copying a long bespoke feature list from Project Zomboid or another survival game.
+
+Target:
+
+> **deep interaction as an emergent property of relatively light simulation**
+
+Prefer reusable physical/stateful truth such as:
+
+- physical item identity;
+- containment;
+- equipment/hand state;
+- material type;
+- condition/damage;
+- openings/barriers;
+- power;
+- fuel/fluid;
+- temperature/weather exposure;
+- tools/capabilities;
+- weight/carry constraints;
+- authoritative WHEN/action cost.
+
+When an interaction can fall naturally out of existing owner truth, route to that owner instead of adding a bespoke one-off mechanic or UI-owned shadow state.
+
+## Protected neighboring contracts — do not reopen casually
+
+### Vehicle interaction
+
+Protected rule:
+
+- on foot, click the **exact vehicle** for ordinary relevant interaction;
+- REPAIR and REFUEL belong there when physically valid;
+- HOTWIRE remains mounted-only;
+- clicking one vehicle must never silently operate on another nearer vehicle;
+- no separate vehicle-maintenance panel;
+- mounted driving controls remain unchanged.
+
+`ADD RACK` is **not a protected gameplay requirement**. It remains optional/legacy behavior. Do not spend future acceptance/combat work polishing or expanding cargo-rack gameplay merely because it exists; do not remove it unless it causes a concrete defect or a later simplification pass explicitly chooses to.
+
+Vehicle movement remains:
 
 - skateboard: 2 cells/action, 2 ticks;
 - bicycle: 3/2;
 - motorcycle/car/truck: 3/1;
-- full motorized tank target about 4,200 tactical cells;
-- skateboard is the only brakeless vehicle;
-- skateboard may reverse and dismount while moving and turns 90 degrees in place;
+- skateboard only is brakeless and may reverse/dismount while moving;
 - bicycle/motorcycle/car/truck require stopped state before reverse/exit;
-- mounted controls replace walking controls in the same lower footprint;
-- no separate VehiclePanel;
-- **HOTWIRE is mounted-only**;
-- production root remains `VehicleGameMain.gd`.
+- mounted controls replace walking controls in the same lower footprint.
 
-## Lighting / flashlight
+### Inventory / equipment / skateboard
 
-**There are NO residential/fixed-light switches.** Houses/services are powered or unpowered; generated `fixture.room_light` illumination automatically follows System-33 power service.
+- selected exact persistent item -> consumption offer -> EAT/DRINK -> authoritative WHEN -> remove only that exact physical item;
+- skateboard is one physical identity across loose/equipped/ridden states;
+- skateboard legal equipment destinations are RIGHT HAND / LEFT HAND / BACK only;
+- no ordinary backpack storage for skateboard;
+- skateboard physical weight is 2.5 kg;
+- equipment slots remain RIGHT HAND, LEFT HAND, BACK, HEAD, TORSO, LEGS, FEET, HANDS;
+- one physical item cannot occupy multiple slots.
 
-Flashlight is the player-controlled portable-light switch:
+### Doors / windows
 
-- exact persistent `item.tool.flashlight` owns `switched_on` truth;
-- ordinary Inventory TURN ON / TURN OFF only while exact flashlight is hand-equipped;
+- closed locked openings expose TRY OPEN rather than leaking hidden lock truth through UI prefiltering;
+- authoritative owner reports the locked failure after the attempt;
+- existing break/board/unboard/climb routes remain closed work;
+- shattered-window repair remains intentionally deferred until a real replacement-glass resource/source exists.
+
+### Lighting / flashlight
+
+There are no residential/fixed-light switches. Generated fixed room lighting automatically follows System-33 power service.
+
+Flashlight remains the player-controlled portable light:
+
+- exact persistent flashlight owns `switched_on` truth;
+- TURN ON / TURN OFF is available only while that exact flashlight is hand-equipped;
 - state survives stow/equip/drop as exact-item state;
-- stowing an ON flashlight removes beam without erasing ON state;
-- re-equipping restores beam;
+- stowing an ON flashlight removes the beam without erasing ON state;
+- re-equipping restores it;
 - no battery-depletion system was invented.
 
-## Generator
+### Generator / utilities
 
-Generator operation is closed:
+Generator operation remains:
 
 - ordinary click INSPECT / REFUEL / START / STOP;
 - real gas-can consumption;
@@ -214,35 +206,9 @@ Generator operation is closed:
 - System-33 local-power contribution only;
 - generator never fake-repairs canonical grid state.
 
-## Inventory EAT / DRINK
+Physical distribution-support repair remains with System 33B/System 33 condition/service truth. Direct span repair remains deferred until spans have independent clickable WHAT identity.
 
-Closed path:
-
-`selected exact persistent item -> consumption_offer() -> EAT/DRINK -> begin_consume() -> authoritative WHEN -> remove only exact physical item`
-
-## Loose item / skateboard
-
-- ordinary chooser includes `LOOSE_ITEM`;
-- generic loose PICK UP uses existing transfer owner;
-- skateboard is one physical identity across loose/equipped/ridden;
-- skateboard legal equipment destinations RH / LH / BACK only;
-- no ordinary backpack storage;
-- physical weight 2.5 kg.
-
-## Doors / windows
-
-- closed locked openings still expose TRY OPEN rather than leaking lock state by hiding OPEN;
-- authoritative action reports locked failure;
-- existing break/board/unboard/climb routes remain closed work;
-- do not expose fake key/lock ownership behavior without an explicit design decision.
-
-## Equipment
-
-Authoritative slots remain exactly RIGHT HAND, LEFT HAND, BACK, HEAD, TORSO, LEGS, FEET, HANDS. One physical item cannot occupy multiple slots. Equipment truth is assignment state; Inventory/paper-doll/rendering are projections/routing only.
-
-Protection semantics remain bite/cut armor, blunt/ballistic armor, water resistance, with `insulation` thermal/comfort only.
-
-## Player HUD
+### Player HUD
 
 - no standalone Survival window;
 - no standalone Forage panel;
@@ -250,11 +216,11 @@ Protection semantics remain bite/cut armor, blunt/ballistic armor, water resista
 - no visible Zoom +/-;
 - no Health/Fatigue progress bars;
 - `Looking at:` remains below STATS / INVENTORY / MENU;
-- CENTER/FOLLOW and MAP available on foot and mounted;
-- walking controls disappear while mounted and vehicle controls replace same footprint;
+- CENTER/FOLLOW and MAP remain available on foot and mounted;
+- walking controls disappear while mounted and vehicle controls replace the same footprint;
 - UI owns no gameplay truth.
 
-## World / utilities
+### World / streaming
 
 - island 3072x3072;
 - technical stream regions 128x128, active radius 1 unless intentionally changed;
@@ -268,34 +234,28 @@ Protection semantics remain bite/cut armor, blunt/ballistic armor, water resista
 - wastewater/sewer/septic retired;
 - no routine 12-seed matrix.
 
-# NEXT OPERATION — human/mobile interaction acceptance
+## Permanent disposable prompt-local CI policy
 
-The player/world/object practicality code layer is now closed enough for a deliberate human/mobile acceptance pass before combat.
+`README_SOPS.md` remains authoritative:
 
-Do **not** start by redesigning or re-auditing the completed systems. Use the live production build and the current handoff to exercise the already-closed ordinary player routes as a real player, especially phone/Safari/touch behavior and click-menu readability.
+- no standing gameplay regression fleet;
+- every code prompt deletes the previous prompt-owned smoke + workflow first;
+- every code prompt creates a brand-new verifier pair only for code actually changed;
+- test only the exact touched module/play path plus required protected seam behavior;
+- do not restore or gate on historical broad smokes, architecture suites or seed matrices;
+- `.github/workflows/pages.yml` remains deployment-only;
+- inspect actual focused-job logs for failures and repair production defects rather than weakening truthful assertions.
 
-At prompt start:
+# NEXT OPERATION — COMBAT
 
-1. delete the current vehicle-maintenance disposable verifier/workflow;
-2. if code is touched during acceptance, create a fresh `PromptHumanMobileInteractionSmoke.gd` + `prompt-human-mobile-interaction.yml` focused ONLY on the exact input/modal/mobile interaction defect being repaired;
-3. never use historical/broad suites as acceptance gates.
+Start the next code prompt by deleting the current human/mobile prompt-owned verifier pair, reading this file then `README_SOPS.md`, and fetching current `main` once.
 
-Acceptance focus:
+Build combat through the same simulation-first philosophy. Do not start infected/NPC behavior yet except for the minimum test target representation genuinely required to exercise combat mechanics. Prefer reusable physical/stateful combat truth over genre feature lists: exact actor/item identity, equipped/hand state, weapon/tool capability, reach/range, body/condition/damage, stamina/exertion, sound, collision/LOS, and authoritative WHEN costs.
 
-- tap/click world targets reliably without duplicate mouse+touch submission;
-- ordinary click menus appear on the intended exact target and remain readable/usable;
-- modal/menu blocking does not leak movement or queue unintended actions;
-- Inventory exact-item EAT/DRINK and flashlight action are practically reachable;
-- loose-item/skateboard pickup is practically reachable;
-- door/window TRY OPEN / break / board / climb routes are understandable in live play;
-- bed/chair/sink sleep/rest/drink routes are practically reachable;
-- generator INSPECT / REFUEL / START / STOP is practical;
-- vehicle on-foot click menu REPAIR / REFUEL / ADD RACK is practical;
-- HOTWIRE appears only after mounting, on the driving controls;
-- walking/mounted control replacement works cleanly on desktop and mobile;
-- no keyboard requirement blocks touch-first play;
-- no accidental interaction duplication, stale click menu or focus trap appears.
+Combat must become practical through its real player controls and real consequences before beginning the first infected phase.
 
-This is primarily an acceptance/defect-finding pass. **Do not manufacture code changes merely to have a code prompt.** If the live acceptance path is clean, record human acceptance evidence and proceed. If a concrete defect is found, repair only that exact defect with a freshly created focused verifier.
+After combat closure:
 
-After acceptance closure, the next feature operation is **combat**. Only after combat is practical should the first real infected be hydrated from the already-existing population records.
+> **Hydrate the first real infected from existing population records rather than spawning a disconnected fake zombie fixture into production.**
+
+This `README_CONTEXT.md` update is the FINAL repository write for the human/mobile acceptance prompt. After this commit there must be zero repository mutations; only read-only exact-head / CI / Pages verification is allowed.
