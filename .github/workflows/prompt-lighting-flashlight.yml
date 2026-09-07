@@ -29,7 +29,7 @@ jobs:
           set -euxo pipefail
           ./Godot_v4.7.1-stable_linux.x86_64 --headless --editor --path "$GITHUB_WORKSPACE/game" --quit
 
-      - name: Verify fixed lights switches and persistent flashlight state
+      - name: Verify power-driven room lighting and persistent flashlight state
         shell: bash
         run: |
           set -euxo pipefail
