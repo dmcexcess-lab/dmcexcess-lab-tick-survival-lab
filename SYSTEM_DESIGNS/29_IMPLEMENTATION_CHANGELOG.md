@@ -1,5 +1,31 @@
 # System 29 — Implementation Changelog
 
+## 2026-09-07 — Human/mobile interaction practicality closure
+
+Verified functional runtime head: `69bd99983dc07865caa37a570ec352f760db864a`
+
+- Audited the production pointer, chooser, movement-control and inventory/modal seams from the player's perspective rather than adding new gameplay.
+- Found a systemic overlap defect in `WorldInteractionPlayerController`: when several actionable physical entities occupied the clicked cell, presentation priority silently chose only one target and made the others unreachable. The controller now preserves every routed exact target on the clicked cell, orders them deterministically, and passes all truthful target/action groups into one chooser.
+- Exact target identity remains authoritative through dispatch. Choosing an action for one overlapping object cannot silently operate a different nearer/higher-priority object.
+- Reworked `WorldInteractionPanel` presentation for touch practicality: action and cancel controls are 52 px tall, the action list scrolls, width responds to the viewport, and the panel is clamped inside the visible viewport.
+- The first prompt-local production-scene verifier caught a real post-container-layout overflow even after the initial responsive sizing change. The panel now performs a deferred post-layout clamp so its settled minimum size cannot push the chooser off-screen.
+- Existing modal blocking remains authoritative: while the chooser is open the production pointer/movement/camera route is blocked, and pointer input is restored after close/selection.
+- Existing `DoorPointerInputAdapter` remains the single mouse/touch world-cell input owner, including drag rejection and synthetic-mouse suppression after touch. No duplicate touch listener was introduced.
+- Existing inventory EAT/DRINK, exact flashlight item actions, movement controls and other mechanic-owned surfaces were audited in place; this pass did not duplicate their owners or reopen their mechanics.
+- Added prompt-local `PromptHumanMobileInteractionSmoke.gd` + `prompt-human-mobile-interaction.yml`. It boots the real `main.tscn`, creates two prompt-only overlapping actionable entities, verifies both remain reachable, checks >=48 px action surfaces and viewport containment, selects the lower-priority exact target, and verifies pointer blocking/restoration.
+- Focused run `34106166284` succeeded on `69bd99983dc07865caa37a570ec352f760db864a`; Pages run `34106166327` also succeeded on that exact functional head.
+- The previous prompt-owned vehicle-maintenance verifier/workflow were retired at prompt start as required. Vehicle gameplay itself was not changed.
+
+### Ownership boundary
+
+This closure changes only player routing/presentation. Affordance providers, WHAT identity/placement, item transfer/equipment, opening state, Loot, Crafting, utilities, vehicles and WHEN consequences remain with their existing owners. Presentation priority orders choices; it never replaces exact physical identity.
+
+### Next major phase
+
+Human/mobile interaction is practical through the available production-scene verification and source audit. No combat, NPC or infected work was added here. The next major phase is combat; after combat is practical, hydrate the first real infected from the existing population records.
+
+---
+
 ## 2026-09-04 — Quiet-entry opening behavior
 
 Executable lineage is protected in verified flashlight executable `e4e5ccfadd087186e6addf937ad8c4ace5e5a818`.
