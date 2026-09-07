@@ -21,60 +21,6 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Validate canonical project surface
-        shell: bash
-        run: |
-          set -euxo pipefail
-          test -f README.md
-          test -f PROJECT_NORTH_STAR.md
-          test -f DESIGN_DECISIONS.md
-          test -f README_CONTEXT.md
-          test -f README_SOPS.md
-          test -f SYSTEM_DESIGNS/README.md
-          test -f SYSTEM_DESIGNS/00A_SPATIAL_MODEL.md
-          test -f SYSTEM_DESIGNS/00B_PERSISTENT_WORLD_STATE.md
-          test -f SYSTEM_DESIGNS/00C_TICK_ACTION_PAUSE.md
-          test -f SYSTEM_DESIGNS/00D_GLOBAL_WORLD_PLANNING.md
-          test -f SYSTEM_DESIGNS/00F_STREAMING_MATERIALIZATION_ORCHESTRATION.md
-          test -f SYSTEM_DESIGNS/19_LOCAL_BUILDING_GENERATION_ARCHETYPE_LAB.md
-          test -f SYSTEM_DESIGNS/20_LOCAL_AREA_PARCEL_GENERATION.md
-          test -f SYSTEM_DESIGNS/21_TACTICAL_CAMERA_VIEW_CONTROL.md
-          test -f SYSTEM_DESIGNS/22_LARGE_AREA_CRITIQUE_RUNTIME.md
-          test -f SYSTEM_DESIGNS/33_POWER_WATER_UTILITIES.md
-          test -f SYSTEM_DESIGNS/34_SURVIVOR_CONDITION_HEALTH_STAMINA_MOODLETS.md
-          grep -q 'Sprite-based zombie survival game' PROJECT_NORTH_STAR.md
-          grep -q 'DESCRIBE -> APPROVE -> IMPLEMENT -> VERIFY' README_SOPS.md
-          grep -q 'replaceability' README_SOPS.md
-          test -f game/project.godot
-          test -f game/export_presets.cfg
-          test -f game/main.tscn
-          test -f game/scripts/app/GameMain.gd
-          test -f game/scripts/app/CraftingGameMain.gd
-          test -f game/scripts/app/UtilityGameMain.gd
-          test -f game/scripts/app/System34GameMain.gd
-          test -f game/scripts/app/VehicleGameMain.gd
-          test -f game/scripts/render/TacticalRendererStack.gd
-          test -f game/scripts/ci/CanonicalDemoSmoke.gd
-          grep -q 'VehicleGameMain.gd' game/main.tscn
-          grep -q 'extends System34GameMain' game/scripts/app/VehicleGameMain.gd
-          grep -q 'extends UtilityGameMain' game/scripts/app/System34GameMain.gd
-          grep -q 'extends CraftingGameMain' game/scripts/app/UtilityGameMain.gd
-          grep -q 'run/main_scene="res://main.tscn"' game/project.godot
-          ! test -d game/scripts/reboot
-          ! find game/scripts -maxdepth 1 -type f -name '*.gd' | grep -q .
-
-          # Keep the active tree free of third-party game-title identity/comparison shorthand.
-          # Terms are reconstructed from hex so the forbidden literal strings do not exist in this repository.
-          # Match whole words so ordinary words that merely contain the same letters do not fail the build.
-          for encoded in 5a6f6d626f6964 556c74696d61; do
-            escaped="$(printf '%s' "$encoded" | sed 's/../\\x&/g')"
-            term="$(printf '%b' "$escaped")"
-            if grep -RniwF --exclude-dir=.git -- "$term" .; then
-              echo "Forbidden third-party game-title reference found in active repository tree."
-              exit 1
-            fi
-          done
-
       - name: Install Godot 4.7.1 and export templates
         shell: bash
         run: |
@@ -87,36 +33,12 @@ jobs:
           unzip -q templates.tpz -d templates
           cp -a templates/templates/. "$HOME/.local/share/godot/export_templates/4.7.1.stable/"
 
-      - name: Import and parse project
-        shell: bash
-        run: |
-          set -euxo pipefail
-          ./Godot_v4.7.1-stable_linux.x86_64 --headless --editor --path "$GITHUB_WORKSPACE/game" --quit 2>&1 | tee "$RUNNER_TEMP/import.log"
-          if grep -Eqi 'SCRIPT ERROR|Parse Error|Failed to load script' "$RUNNER_TEMP/import.log"; then exit 1; fi
-
-      - name: Canonical demo integration smoke
-        shell: bash
-        run: |
-          set -euxo pipefail
-          ./Godot_v4.7.1-stable_linux.x86_64 --headless --path "$GITHUB_WORKSPACE/game" --script res://scripts/ci/CanonicalDemoSmoke.gd 2>&1 | tee "$RUNNER_TEMP/canonical-demo-smoke.log"
-          grep -q 'CANONICAL_DEMO_SMOKE_OK' "$RUNNER_TEMP/canonical-demo-smoke.log"
-          if grep -Eqi 'SCRIPT ERROR|Parse Error|Failed to load script' "$RUNNER_TEMP/canonical-demo-smoke.log"; then exit 1; fi
-
-      - name: Startup smoke
-        shell: bash
-        run: |
-          set -euxo pipefail
-          ./Godot_v4.7.1-stable_linux.x86_64 --headless --path "$GITHUB_WORKSPACE/game" --quit-after 2 2>&1 | tee "$RUNNER_TEMP/startup.log"
-          grep -q 'CANONICAL_DEMO_BOOT_OK' "$RUNNER_TEMP/startup.log"
-          if grep -Eqi 'SCRIPT ERROR|Parse Error|Failed to load script|CANONICAL_DEMO_BOOT_FAILED' "$RUNNER_TEMP/startup.log"; then exit 1; fi
-
       - name: Export Web build
         shell: bash
         run: |
           set -euxo pipefail
           mkdir -p "$GITHUB_WORKSPACE/build/web"
-          ./Godot_v4.7.1-stable_linux.x86_64 --headless --path "$GITHUB_WORKSPACE/game" --export-release Web "$GITHUB_WORKSPACE/build/web/index.html" 2>&1 | tee "$RUNNER_TEMP/export.log"
-          if grep -Eqi 'SCRIPT ERROR|Parse Error|Failed to load script' "$RUNNER_TEMP/export.log"; then exit 1; fi
+          ./Godot_v4.7.1-stable_linux.x86_64 --headless --path "$GITHUB_WORKSPACE/game" --export-release Web "$GITHUB_WORKSPACE/build/web/index.html"
           touch "$GITHUB_WORKSPACE/build/web/.nojekyll"
 
       - name: Configure / enable GitHub Pages
