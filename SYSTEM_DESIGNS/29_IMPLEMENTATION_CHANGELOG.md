@@ -1,5 +1,33 @@
 # System 29 — Implementation Changelog
 
+## 2026-09-07 — System 37 combat foundation + first population-backed infected
+
+Integrated functional runtime head: `e997ac13b74a1955fb5fe152f1b0753886009acc`
+
+- Closed the remaining System-37 lethal-combat foundation without adding combat-owned shadow state.
+- Added exact firearm/magazine/live-round truth. Firearm and magazine are real containment owners; chamber and inserted magazine store exact WHAT identities; magazine quantity is derived from exact contained round entities rather than an ammo counter.
+- Added COMMITTED snap/aimed fire on the shared WHEN clock. Discharge revalidates the exact equipped firearm and chambered round, follows a physical forward grid ray through real terrain/collision, consumes the exact live-round WHAT entity and cycles the next exact magazine round when present.
+- Added RESUMABLE reload with explicit eject/insert/chamber phases. Real damage can interrupt reload after an already-completed phase; the physical intermediate state remains authoritative and resume continues the same exact selected magazine/action rather than resetting.
+- Routed firearm discharge through System 26 instead of creating a zombie-attraction radius or combat-only hearing layer.
+- Added generic Health-driven death/corpse transition. HP <= 0 force-fails the actor's active WHEN action, removes living ACTOR occupancy, creates persistent non-blocking corpse truth and moves the actor's exact carried/equipped WHAT identities into corpse containment without loot copying.
+- The first firearm/death run exposed only a Health signal-arity mismatch in the new death listener; production was corrected to the canonical five-argument `hp_changed` contract.
+- Reused the existing aggregate island population plan rather than spawning a disconnected production zombie. `PopulationResidentProjection` deterministically names already-counted household resident slots and assigns exactly each settlement's existing infected count from stable world-seed/building/ordinal scores.
+- Added `InfectedState` as a state overlay on the shared human `actor.survivor` semantic and `FirstInfectedHydrationService` to materialize one real resident-backed infected near its source household, enrolled in canonical locomotion, hands, containment, Health, skills, carry and condition owners.
+- Production boot now hydrates the first infected from the already-generated global population/local-area manifest; it does not rerun all population/local-area generation to create one actor.
+- The first infected boot exposed a narrow owner-interface mismatch because Skill/Carry states do not expose `is_ready()` methods. The hydrator was corrected to their actual state/enrollment API.
+- Fresh prompt-local verifier `PromptCombatFirearmDeathSmoke.gd` + `prompt-combat-firearm-death.yml` boots real `main.tscn`, proves resident provenance, exact firearm/ammunition containment, interrupted/resumed reload, physical firing, System-26 sound and generic corpse transition on that exact production-hydrated infected.
+- Integrated focused run `34170545140` succeeded on `e997ac13b74a1955fb5fe152f1b0753886009acc` with all firearm/reload/death/first-infected assertions green.
+
+### Ownership boundary
+
+System 37 owns combat action semantics and firearm state only. WHEN remains the clock/interruption owner; Inventory/hand equipment own containment and assignment; Health owns HP/injury; System 26 owns hearing; world/collision own physical placement. System 38 projects/materializes identities already counted by population planning and records infection state; it does not create a second population or bespoke zombie health/combat stack.
+
+### Next major phase
+
+Keep exactly the first resident-backed infected and give it the first autonomous **perception -> intention -> ordinary WHEN action** loop. It must consume existing System-23 vision / System-26 heard observations and submit ordinary movement/System-37 combat actions. Do not create a zombie-specific tick, teleport movement, attack cooldown or magic attraction radius; prove one actor before scaling hydration.
+
+---
+
 ## 2026-09-07 — Human/mobile interaction practicality closure
 
 Verified functional runtime head: `69bd99983dc07865caa37a570ec352f760db864a`
