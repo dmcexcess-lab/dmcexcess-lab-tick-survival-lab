@@ -17,6 +17,9 @@ const DeathTransitionsClass = preload("res://scripts/simulation/combat/ActorDeat
 const PopulationProjectionClass = preload("res://scripts/simulation/population/PopulationResidentProjection.gd")
 const InfectedStateClass = preload("res://scripts/simulation/infected/InfectedState.gd")
 const FirstInfectedHydratorClass = preload("res://scripts/simulation/infected/FirstInfectedHydrationService.gd")
+const FirstInfectedBehaviorClass = preload("res://scripts/simulation/infected/FirstInfectedBehaviorService.gd")
+const ObserverPerceptionClass = preload("res://scripts/simulation/perception/ObserverPerceptionService.gd")
+const VisionProfileClass = preload("res://scripts/simulation/perception/VisionProfile.gd")
 
 var _combat_impact_profiles: CombatImpactProfileCatalog = null
 var _combat_actions: CombatActionService = null
@@ -34,6 +37,8 @@ var _population_resident_projection: PopulationResidentProjection = null
 var _infected_state: InfectedState = null
 var _first_infected_hydrator: FirstInfectedHydrationService = null
 var _first_infected_result: Dictionary = {}
+var _first_infected_perception: ObserverPerceptionService = null
+var _first_infected_behavior: FirstInfectedBehaviorService = null
 
 func _boot_canonical_demo() -> bool:
     if not super._boot_canonical_demo(): return false
@@ -110,6 +115,42 @@ func _boot_first_real_infected() -> bool:
         push_error("CombatGameMain: first infected hydration failed: %s" % String(_first_infected_result.get("reason", "unknown")))
         return false
     if _perception != null: _perception.recompute(&"first_infected_hydrated")
+    return _boot_first_infected_behavior()
+
+func _boot_first_infected_behavior() -> bool:
+    var infected_id: String = String(_first_infected_result.get("actor_id", ""))
+    if infected_id.is_empty() or _perception_memory == null or _perception == null \
+        or _spatial_sound == null or _movement == null or _combat_actions == null:
+        return false
+
+    _first_infected_perception = ObserverPerceptionClass.new(
+        _world,
+        _door_state,
+        _kernel,
+        _perception_memory,
+        infected_id,
+        VisionProfileClass.new(),
+        _perception.acquisition_provider()
+    )
+    if not _first_infected_perception.is_ready():
+        return false
+    if not _spatial_sound.register_listener(infected_id):
+        return false
+
+    _first_infected_behavior = FirstInfectedBehaviorClass.new(
+        _world,
+        _kernel,
+        _infected_state,
+        _first_infected_perception,
+        _spatial_sound,
+        _movement,
+        _combat_actions,
+        _health_state,
+        infected_id,
+        FixtureClass.PLAYER_ID
+    )
+    if not _first_infected_behavior.start():
+        return false
     return true
 
 func _route_player_intent(intent: StringName) -> void:
