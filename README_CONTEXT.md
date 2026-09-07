@@ -2,7 +2,7 @@
 
 This file is the authoritative short handoff for the next repository operation. Read this first, then follow `README_SOPS.md`. Do not broadly rediscover already-closed work.
 
-## Current checkpoint — player/world practicality pass
+## Current checkpoint — player/world/object practicality code layer CLOSED; human/mobile acceptance next
 
 Production root remains `VehicleGameMain.gd` through `game/main.tscn`.
 
@@ -13,91 +13,140 @@ Closed ordinary-player practicality slices now include:
 - truthful locked-opening TRY OPEN flow;
 - exact-item Inventory EAT / DRINK;
 - power-driven generated room lighting + persistent exact-item flashlight state;
-- portable generator inspect / refuel / start / stop + System-33 local-power contribution.
+- portable generator inspect / refuel / start / stop + System-33 local-power contribution;
+- on-foot exact-vehicle maintenance click menu for REPAIR / REFUEL / ADD RACK;
+- HOTWIRE explicitly preserved as mounted-only driving-control behavior.
 
-Do not reopen these slices unless a concrete play-path defect is found.
+Do not reopen these slices unless the human/mobile acceptance pass reveals a concrete play-path defect.
 
-# GENERATOR OPERATION / FUEL / START-STOP PRACTICALITY — CLOSED 2026-09-07
+# VEHICLE MAINTENANCE PRACTICALITY — CLOSED 2026-09-07
 
-No production gameplay source change was required. The existing generator owners and ordinary interaction composition were already correctly wired; this prompt closed the ordinary-play verification/documentation gap.
+## User-approved interaction rule
+
+> **On foot, click the exact vehicle itself to open the ordinary world-interaction menu for valid maintenance actions. HOTWIRE is NOT available unmounted and stays on the mounted driving controls.**
+
+There is no separate maintenance panel and no parallel vehicle-maintenance state.
 
 ## Functional / verification heads
 
 Fresh prompt-local verifier first reached green on functional head:
 
-- `52a095e769ce59ec4a79f31caa1ce6799bc7964e`
+- `9f25db747de56b51bd4bb4de9fd7d29a0e8ab9b9`
 
-Owning successful generator workflow:
+Owning successful focused workflow:
 
-- `Prompt Generator Operation`
-- run `34099092193` — SUCCESS
+- `Prompt Vehicle Maintenance`
+- run `34103905916` — SUCCESS
 
-Deployment-only Pages on the same functional head:
+Deployment-only Pages on that same functional head:
 
-- run `34099092255` — build SUCCESS / deploy SUCCESS
+- run `34103905808` — build SUCCESS / deploy SUCCESS
 
-Focused generator/utility documentation head:
+Focused System-36 documentation head:
 
-- `b97ef0a37b4e5496506e938b0340411675d6ae87`
+- `f04ebf03ee563456c17f0e2879199c63178ab7fd`
 
 Pre-handoff verification on that docs head:
 
-- generator run `34099331463` — SUCCESS
-- Pages run `34099331518` — build SUCCESS / deploy SUCCESS
+- vehicle-maintenance run `34104320896` — SUCCESS
+- Pages run `34104320950` — build SUCCESS / deploy SUCCESS
 
-Focused current-system document added:
+Materially updated documents:
 
-- `SYSTEM_DESIGNS/33C_PORTABLE_GENERATOR_OPERATION.md`
+- `SYSTEM_DESIGNS/36_VEHICLES.md`
+- `SYSTEM_DESIGNS/36_IMPLEMENTATION_CHANGELOG.md`
+
+## Current production implementation
+
+New focused interaction owners:
+
+- `game/scripts/simulation/vehicles/VehicleMaintenanceInteractionOfferProvider.gd`
+- `game/scripts/player/VehicleMaintenancePlayerInteractionHandler.gd`
+
+Production composition:
+
+- `VehicleGameMain._boot_world_interactions()` registers the maintenance offer provider with the existing shared affordance query;
+- REPAIR / REFUEL / MODIFY (`ADD RACK`) are registered as delegated exact-target handlers with the existing `WorldInteractionPlayerController`;
+- the existing `WorldInteractionPanel` is the vehicle click menu;
+- the handler revalidates actor unmounted state, exact target existence and contact reach before calling `VehicleActionService`;
+- the exact clicked vehicle ID is passed explicitly into `VehicleActionService`, eliminating nearest-vehicle ambiguity;
+- delegated completion waits for the real `VehicleActionService.action_completed` / `action_failed` result, so a Mechanical failure cannot be falsely shown as success merely because WHEN completed.
+
+## On-foot menu behavior
+
+The exact clicked vehicle exposes only currently relevant supported maintenance actions:
+
+- **REPAIR** when body / propulsion / wheels / electrical condition is damaged;
+- **REFUEL** for a motorized vehicle below profile maximum fuel;
+- **ADD RACK** for a cargo-capable vehicle without an installed cargo rack;
+- **HOTWIRE never appears on this on-foot menu.**
+
+Existing authoritative prerequisites/consequences remain unchanged:
+
+### REPAIR
+
+- requires carried `item.tool.adjustable_wrench`;
+- requires one eligible real repair part;
+- requires Mechanical classification/check;
+- uses authoritative WHEN duration;
+- retains wrench;
+- consumes one exact repair-part entity on successful commit;
+- raises authoritative vehicle condition.
+
+### REFUEL
+
+- motorized vehicle only;
+- requires one real carried `item.automotive.gas_can`;
+- uses authoritative WHEN duration;
+- consumes the exact gas-can entity on successful commit;
+- fills only the clicked vehicle to its profile maximum.
+
+### ADD RACK
+
+- requires wrench + exact carried `item.automotive.cargo_rack`;
+- requires Mechanical classification/check;
+- uses authoritative WHEN duration;
+- exact rack becomes contained by the clicked vehicle and appears in installed component IDs/mod state;
+- real seeded vehicles are canonical inventory containers through `VehicleWorldSeeder`.
+
+Truthful failure reasons remain surfaced through the same menu route, including missing wrench/parts/gas/rack, Mechanical unavailable/check failure, target missing, target out of reach and mounted actor attempting the on-foot route.
+
+## HOTWIRE protected rule — mounted only
+
+`VehicleActionService.request_hotwire()` now enforces this design at the authoritative service boundary:
+
+- unmounted actor -> `not_mounted`;
+- explicit target other than actor's mounted vehicle -> `vehicle_target_not_mounted`;
+- existing screwdriver + scrap-wire + Mechanical + ignition-state rules remain unchanged after the mounted-target check.
+
+`VehicleControlSurface` still owns the visible HOTWIRE button while mounted. Do not add HOTWIRE to walking controls or the vehicle world click menu.
 
 ## Fresh disposable verifier for this closed prompt
 
 Current prompt-owned pair:
 
-- `game/scripts/ci/PromptGeneratorOperationSmoke.gd`
-- `.github/workflows/prompt-generator-operation.yml`
+- `game/scripts/ci/PromptVehicleMaintenanceSmoke.gd`
+- `.github/workflows/prompt-vehicle-maintenance.yml`
 
-The fresh smoke boots real `res://main.tscn` and tests only generator operation/local-power behavior. It proves:
+The fresh smoke boots real `res://main.tscn` and tests only the on-foot vehicle-maintenance interaction route. It proves:
 
-1. an exact persistent `prop.portable_generator` WHAT entity enrolls in `PortableGeneratorState`;
-2. ordinary click interaction exposes INSPECT status with ON/OFF, fuel and condition;
-3. REFUEL is ordinarily reachable while stopped and below full fuel;
-4. REFUEL without a gas can fails truthfully with `generator_refuel_requires_gas_can` and leaves fuel unchanged;
-5. one real carried exact `item.automotive.gas_can` is consumed only by successful timed REFUEL;
-6. successful REFUEL fills authoritative fuel to `PortableGeneratorState.MAX_FUEL_TICKS` (`240`);
-7. START becomes ordinarily reachable only after fuel exists;
-8. successful START sets authoritative running state;
-9. START does not repair or alter a deliberately failed canonical grid branch;
-10. a running generator makes its enrolled System-33 local service/scope available through the existing local-power provider;
-11. running status exposes STOP while REFUEL/START are not offered;
-12. generator fuel decreases only as authoritative WHEN advances;
-13. successful STOP clears running/local generator power while canonical grid outage remains failed.
+1. the normal vehicle click menu exposes REPAIR / REFUEL / ADD RACK when valid;
+2. HOTWIRE is absent on foot while the mounted Hotwire button still exists;
+3. direct unmounted HOTWIRE is authoritatively rejected with `not_mounted`;
+4. missing wrench, gas can, rack and Mechanical classification fail truthfully;
+5. successful REPAIR mutates only the exact clicked target, retains wrench and consumes the exact part;
+6. successful REFUEL fills only the exact clicked target and consumes the exact gas can;
+7. successful ADD RACK installs the exact physical rack into the exact clicked target;
+8. a deliberately nearer decoy vehicle remains unchanged, proving no nearest-target substitution;
+9. full/racked state removes no-longer-valid REFUEL / ADD RACK offers;
+10. missing/out-of-reach exact targets fail truthfully;
+11. mounted actors do not receive the on-foot maintenance menu.
 
-## Generator authority / behavior protected rules
+### Focused verifier failure repaired during this prompt
 
-- Physical generator semantic: `prop.portable_generator`.
-- `PortableGeneratorState` owns exact generator identity, fuel ticks, condition, running state, bound power service/scope, last authoritative tick and persistence.
-- `PortableGeneratorActionService` owns timed INSPECT / REFUEL / START / STOP / existing REPAIR action consequences.
-- `PortableGeneratorInteractionOfferProvider` owns ordinary generator offers.
-- `VehicleGameMain._boot_world_interactions()` registers the provider and all generator action IDs with the one ordinary world chooser.
-- REFUEL uses a real carried `item.automotive.gas_can`; successful completion consumes that exact entity.
-- Fuel is consumed only from authoritative WHEN advancement. No render-frame drain, Node/Timer loop or UI-owned fuel state.
-- System 33 remains power authority. Generator power is a local contribution through `UtilityRuntimeState.set_local_power_provider()` / `power_service_available_for_scope()`.
-- A generator never fake-repairs, replaces or rewrites canonical grid topology.
-- No standalone generator window/panel. UI only presents/routes authoritative state.
-- Existing generator REPAIR remains present, but this prompt did not expand or redesign its Mechanical/tool/material rules.
+Initial run `34103609240` failed only the ADD RACK assertions. The actual log showed REPAIR, REFUEL, exact-target behavior and HOTWIRE rules were already correct.
 
-## Human acceptance still pending for generator feel
-
-Automated generator practicality is green. A later human/mobile pass should still verify:
-
-- approach/click a real generator;
-- status text is readable;
-- REFUEL/START/STOP availability is intuitive;
-- missing-gas failure text is understandable;
-- real gas-can refuel/start/stop feels correct;
-- during a real local grid outage, generator-backed local consumers recover without unrelated/grid truth being visually or mechanically repaired.
-
-Do not mark HUMAN ACCEPTED solely from CI.
+Root cause was an incomplete **test fixture**: its hand-created cars had `VehicleState` but had not been enrolled as inventory containers. Real production vehicles created by `VehicleWorldSeeder` always call `InventoryContainmentMutationService.enroll_container(vehicle_id)`. The fresh smoke fixture was corrected to reproduce that real invariant. Production rack-install logic was not weakened or bypassed.
 
 # Permanent disposable prompt-local CI policy
 
@@ -116,66 +165,82 @@ Do not mark HUMAN ACCEPTED solely from CI.
 
 At the START of the next code prompt, delete:
 
-- `game/scripts/ci/PromptGeneratorOperationSmoke.gd`
-- `.github/workflows/prompt-generator-operation.yml`
-
-Then create a completely fresh vehicle-maintenance-only pair, recommended:
-
 - `game/scripts/ci/PromptVehicleMaintenanceSmoke.gd`
 - `.github/workflows/prompt-vehicle-maintenance.yml`
 
-Do not reuse the generator verifier as a vehicle test.
+Then create a completely fresh acceptance/input-only pair if repository code is touched, recommended:
+
+- `game/scripts/ci/PromptHumanMobileInteractionSmoke.gd`
+- `.github/workflows/prompt-human-mobile-interaction.yml`
+
+Do not reuse the vehicle-maintenance verifier.
 
 # Protected neighboring contracts — do not reopen
 
+## Vehicle driving
+
+- skateboard: 2 cells/action, 2 ticks;
+- bicycle: 3/2;
+- motorcycle/car/truck: 3/1;
+- full motorized tank target about 4,200 tactical cells;
+- skateboard is the only brakeless vehicle;
+- skateboard may reverse and dismount while moving and turns 90 degrees in place;
+- bicycle/motorcycle/car/truck require stopped state before reverse/exit;
+- mounted controls replace walking controls in the same lower footprint;
+- no separate VehiclePanel;
+- **HOTWIRE is mounted-only**;
+- production root remains `VehicleGameMain.gd`.
+
 ## Lighting / flashlight
 
-**There are NO residential/fixed-light switches.** Houses/services are powered or unpowered; generated `fixture.room_light` illumination automatically follows System-33 power service. Do not infer permission for wall/fixed-light switches from generic appliance fields.
+**There are NO residential/fixed-light switches.** Houses/services are powered or unpowered; generated `fixture.room_light` illumination automatically follows System-33 power service.
 
-The flashlight is the player-controlled light switch already closed:
+Flashlight is the player-controlled portable-light switch:
 
 - exact persistent `item.tool.flashlight` owns `switched_on` truth;
 - ordinary Inventory TURN ON / TURN OFF only while exact flashlight is hand-equipped;
 - state survives stow/equip/drop as exact-item state;
-- stowing an ON flashlight removes its beam without erasing ON state;
-- re-equipping restores the beam;
+- stowing an ON flashlight removes beam without erasing ON state;
+- re-equipping restores beam;
 - no battery-depletion system was invented.
+
+## Generator
+
+Generator operation is closed:
+
+- ordinary click INSPECT / REFUEL / START / STOP;
+- real gas-can consumption;
+- authoritative fuel/running state;
+- System-33 local-power contribution only;
+- generator never fake-repairs canonical grid state.
 
 ## Inventory EAT / DRINK
 
-Closed production path:
+Closed path:
 
 `selected exact persistent item -> consumption_offer() -> EAT/DRINK -> begin_consume() -> authoritative WHEN -> remove only exact physical item`
 
-Do not create another item-use/sustainment UI owner.
-
-## Loose-item / skateboard
+## Loose item / skateboard
 
 - ordinary chooser includes `LOOSE_ITEM`;
-- generic loose physical item PICK UP uses existing transfer owner;
+- generic loose PICK UP uses existing transfer owner;
 - skateboard is one physical identity across loose/equipped/ridden;
-- skateboard legal destinations are RIGHT HAND / LEFT HAND / BACK only;
-- skateboard cannot enter ordinary backpack storage;
-- skateboard physical weight is 2.5 kg.
+- skateboard legal equipment destinations RH / LH / BACK only;
+- no ordinary backpack storage;
+- physical weight 2.5 kg.
+
+## Doors / windows
+
+- closed locked openings still expose TRY OPEN rather than leaking lock state by hiding OPEN;
+- authoritative action reports locked failure;
+- existing break/board/unboard/climb routes remain closed work;
+- do not expose fake key/lock ownership behavior without an explicit design decision.
 
 ## Equipment
 
-Authoritative slots remain exactly RIGHT HAND, LEFT HAND, BACK, HEAD, TORSO, LEGS, FEET, HANDS. One physical item cannot occupy multiple slots. Equipment truth is authoritative assignment state; Inventory/paper-doll/rendering are projections/routing only.
+Authoritative slots remain exactly RIGHT HAND, LEFT HAND, BACK, HEAD, TORSO, LEGS, FEET, HANDS. One physical item cannot occupy multiple slots. Equipment truth is assignment state; Inventory/paper-doll/rendering are projections/routing only.
 
-Protection semantics remain bite/cut armor, blunt/ballistic armor, water resistance, with `insulation` as thermal/comfort only.
-
-## Vehicle driving
-
-- skateboard 2 cells/action, 2 ticks;
-- bicycle 3/2;
-- motorcycle/car/truck 3/1;
-- gas vehicle full tank target about 4200 cells;
-- skateboard is the only brakeless vehicle;
-- skateboard may reverse and dismount while moving;
-- other vehicle classes require stop before reverse/exit;
-- mounted controls replace walking controls in the same lower footprint;
-- no separate VehiclePanel;
-- production root remains `VehicleGameMain.gd`.
+Protection semantics remain bite/cut armor, blunt/ballistic armor, water resistance, with `insulation` thermal/comfort only.
 
 ## Player HUD
 
@@ -185,52 +250,52 @@ Protection semantics remain bite/cut armor, blunt/ballistic armor, water resista
 - no visible Zoom +/-;
 - no Health/Fatigue progress bars;
 - `Looking at:` remains below STATS / INVENTORY / MENU;
-- CENTER/FOLLOW and MAP remain available on foot and mounted;
+- CENTER/FOLLOW and MAP available on foot and mounted;
+- walking controls disappear while mounted and vehicle controls replace same footprint;
 - UI owns no gameplay truth.
 
-## World / generation
+## World / utilities
 
 - island 3072x3072;
 - technical stream regions 128x128, active radius 1 unless intentionally changed;
-- gateway routes four-lane paved;
+- gateway roads four-lane paved;
 - routes touching town/crossroads paved 2-lane unless gateway;
 - only rural-rural links gravel/dirt, traversable single lane;
 - reference seed 20001 roughly 627 buildings / 2184 residents / 2 towns / 3 crossroads / 30 rural settlements;
-- population remains building-derived; no fake multiplier;
-- do not restore routine 12-seed matrices.
-
-## Water / power
-
-- exactly one municipal facility `water.facility.island` with service aliases;
-- no municipal pipe/node/pressure/service topology;
-- municipal facility has no external-grid dependency;
+- exactly one municipal facility `water.facility.island` plus aliases;
+- no municipal pipe/node/pressure graph;
 - deterministic 10–20% rural private wells; town/non-rural never wells;
-- broken selected well remains authoritative; no municipal fallback;
-- wells have no external-grid dependency;
-- wastewater/sewer/septic remains retired.
+- wastewater/sewer/septic retired;
+- no routine 12-seed matrix.
 
-# NEXT OPERATION — vehicle maintenance practicality closure
+# NEXT OPERATION — human/mobile interaction acceptance
 
-Proceed directly from the already-audited gap: vehicle maintenance actions are authoritative and can target nearby vehicles, but the ordinary on-foot player route needs practicality verification/wiring so the player can service a vehicle while standing beside it rather than only seeing maintenance controls in the mounted replacement surface.
+The player/world/object practicality code layer is now closed enough for a deliberate human/mobile acceptance pass before combat.
 
-At prompt start, delete the current generator verifier pair and create the fresh vehicle-maintenance-only pair named above.
+Do **not** start by redesigning or re-auditing the completed systems. Use the live production build and the current handoff to exercise the already-closed ordinary player routes as a real player, especially phone/Safari/touch behavior and click-menu readability.
 
-Trace only the existing vehicle maintenance owners and the ordinary production world-interaction seam needed for:
+At prompt start:
 
-- nearby exact-vehicle target selection;
-- HOTWIRE where appropriate;
-- REPAIR with existing real wrench/parts/Mechanical prerequisites;
-- REFUEL with existing real gas-can requirement;
-- ADD RACK / existing modification requirement where already supported;
-- truthful failure reasons / prerequisites;
-- no nearest-vehicle ambiguity when the player clicks a specific vehicle;
-- no parallel vehicle state or separate maintenance panel;
-- preserve all protected mounted driving/control behavior unchanged.
+1. delete the current vehicle-maintenance disposable verifier/workflow;
+2. if code is touched during acceptance, create a fresh `PromptHumanMobileInteractionSmoke.gd` + `prompt-human-mobile-interaction.yml` focused ONLY on the exact input/modal/mobile interaction defect being repaired;
+3. never use historical/broad suites as acceptance gates.
 
-Prefer wiring existing `VehicleActionService` methods to the ordinary world chooser rather than inventing another maintenance system.
+Acceptance focus:
 
-Do **not** expand this next prompt into generator rework, lighting/flashlight, fixed-light switches, Inventory EAT/DRINK, loose-item/skateboard pickup, doors/windows, fire/ignition, combat, NPCs, infected or world generation.
+- tap/click world targets reliably without duplicate mouse+touch submission;
+- ordinary click menus appear on the intended exact target and remain readable/usable;
+- modal/menu blocking does not leak movement or queue unintended actions;
+- Inventory exact-item EAT/DRINK and flashlight action are practically reachable;
+- loose-item/skateboard pickup is practically reachable;
+- door/window TRY OPEN / break / board / climb routes are understandable in live play;
+- bed/chair/sink sleep/rest/drink routes are practically reachable;
+- generator INSPECT / REFUEL / START / STOP is practical;
+- vehicle on-foot click menu REPAIR / REFUEL / ADD RACK is practical;
+- HOTWIRE appears only after mounting, on the driving controls;
+- walking/mounted control replacement works cleanly on desktop and mobile;
+- no keyboard requirement blocks touch-first play;
+- no accidental interaction duplication, stale click menu or focus trap appears.
 
-Verify only the fresh vehicle-maintenance prompt-local workflow plus deployment-only Pages. Update only materially affected vehicle/interaction docs. Then make `README_CONTEXT.md` the FINAL repository write and perform zero repository writes afterward.
+This is primarily an acceptance/defect-finding pass. **Do not manufacture code changes merely to have a code prompt.** If the live acceptance path is clean, record human acceptance evidence and proceed. If a concrete defect is found, repair only that exact defect with a freshly created focused verifier.
 
-After vehicle maintenance closure: human/mobile interaction acceptance. Only after the player/world/object layer is practical end-to-end: combat, then the first real infected hydrated from existing population records.
+After acceptance closure, the next feature operation is **combat**. Only after combat is practical should the first real infected be hydrated from the already-existing population records.
