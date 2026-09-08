@@ -17,6 +17,10 @@ const CUSTOMER_CLEARANCE: int = 2
 const CUSTOMER_SEARCH_RADIUS: int = 6
 const ROAD_POLE_SEARCH_RADIUS: int = 8
 const ROAD_POLE_SPACING: int = 10
+# Independent service roots can nominate nearby keys on the same physical road.
+# Collapse those visits onto one support so a shared distribution chain cannot
+# produce visible two/three-pole bunches while retaining its nominal 10-cell cadence.
+const ROAD_POLE_MIN_SPACING: int = 8
 const ROAD_SIDE_HOLD_POLES: int = 2
 const MAX_WIRE_SPAN: int = 16
 const WELL_CLEARANCE: int = 1
@@ -301,6 +305,11 @@ func _shared_distribution_tree(
             var end_cell: Vector2i = pole_cell_by_route_cell.get(route_end, INVALID_CELL)
             if start_id.is_empty() or end_id.is_empty() or end_cell == INVALID_CELL:
                 return {"ok": false, "props": [], "wires": []}
+            # Nearby route keys may intentionally share one physical support.
+            # They are topology visits, not zero-length physical wire spans.
+            if start_id == end_id:
+                seen_trunk_edges[edge_key] = true
+                continue
             wires.append({
                 "asset_id": "power.asset.span.%s.trunk.%03d" % [token, trunk_ordinal],
                 "start_id": start_id,
@@ -515,7 +524,16 @@ func _place_shared_road_poles(
         var direction: Vector2i = _road_direction(entries[0], graph)
         var side: int = -1 if direction.x != 0 else 1
         var hold: int = 0
+        var last_route_cell: Vector2i = INVALID_CELL
+        var last_pole_id: String = ""
+        var last_pole_cell: Vector2i = INVALID_CELL
         for route_cell: Vector2i in entries:
+            if last_route_cell != INVALID_CELL:
+                var route_gap: int = absi(route_cell.x - last_route_cell.x) + absi(route_cell.y - last_route_cell.y)
+                if route_gap < ROAD_POLE_MIN_SPACING:
+                    ids[route_cell] = last_pole_id
+                    cells[route_cell] = last_pole_cell
+                    continue
             var cell: Vector2i = _find_roadside_available(
                 route_cell, direction, side, reserved, ROAD_POLE_SEARCH_RADIUS, hold == 0
             )
@@ -534,6 +552,9 @@ func _place_shared_road_poles(
             reserved[cell] = true
             ids[route_cell] = id
             cells[route_cell] = cell
+            last_route_cell = route_cell
+            last_pole_id = id
+            last_pole_cell = cell
     return result
 
 # A service on the other bank crosses at its tap, then runs to the customer.

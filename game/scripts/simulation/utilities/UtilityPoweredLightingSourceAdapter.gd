@@ -43,6 +43,8 @@ var _hand_state: ActorHandEquipmentState = null
 var _player_id: String = ""
 var _utilities: UtilityRuntimeState = null
 var _kernel: TickKernel = null
+var _ambient_daylight: OutdoorAmbientLightService = null
+var _daylight_phase: StringName = &""
 var _flashlight_state: FlashlightItemState = null
 var _fixed_entities: Dictionary = {}
 var _support_power_services: Dictionary = {}
@@ -54,6 +56,7 @@ func _init(
     controlled_actor_id: String = "",
     utilities: UtilityRuntimeState = null,
     tick_kernel: TickKernel = null,
+    ambient_daylight: OutdoorAmbientLightService = null,
     flashlight_state: FlashlightItemState = null,
     support_power_services: Dictionary = {}
 ) -> void:
@@ -62,6 +65,8 @@ func _init(
     _player_id = controlled_actor_id.strip_edges()
     _utilities = utilities
     _kernel = tick_kernel
+    _ambient_daylight = ambient_daylight
+    _daylight_phase = _ambient_daylight.current_phase() if _ambient_daylight != null and _ambient_daylight.is_ready() else &""
     _flashlight_state = flashlight_state
     _support_power_services = support_power_services.duplicate()
     if not is_ready():
@@ -104,6 +109,8 @@ func emitters() -> Array[LightEmitter]:
         var placement: WorldPlacement = _world.placement(entity_id)
         if record == null or placement == null:
             continue
+        if record.semantic_type == &"prop.streetlight" and not _streetlights_should_emit():
+            continue
         var profile: LightEmitterProfile = _profile_for_semantic(record.semantic_type)
         if profile == null:
             continue
@@ -135,6 +142,8 @@ func debug_snapshot() -> Dictionary:
         "equipped_flashlight_item_id": flashlight_item_id,
         "equipped_flashlight_switched_on": not flashlight_item_id.is_empty() and _flashlight_state != null and _flashlight_state.is_switched_on(flashlight_item_id),
         "traffic_phase": traffic_phase_for_tick(_current_world_tick()),
+        "daylight_phase": _daylight_phase,
+        "streetlights_emit": _streetlights_should_emit(),
         "fake_sources_retired": true,
     }
 
@@ -245,6 +254,11 @@ func _sorted_fixed_fixture_ids() -> Array[String]:
 func _current_world_tick() -> int:
     return _kernel.world_tick() if _kernel != null else 0
 
+func _streetlights_should_emit() -> bool:
+    # Compatibility for non-production fixtures that do not compose System 25.
+    # Production always supplies the canonical ambient-daylight owner.
+    return _ambient_daylight == null or _ambient_daylight.current_phase() == OutdoorAmbientLightService.PHASE_NIGHT
+
 func _has_traffic_lights() -> bool:
     return _world != null and not _world.entity_ids_of_type(&"prop.traffic_light").is_empty()
 
@@ -286,6 +300,10 @@ func _connect_signals() -> void:
             _flashlight_state.item_removed.connect(flashlight_removed_callable)
         if not _flashlight_state.state_reset.is_connected(flashlight_reset_callable):
             _flashlight_state.state_reset.connect(flashlight_reset_callable)
+    if _ambient_daylight != null:
+        var daylight_callable := Callable(self, "_on_ambient_light_changed")
+        if not _ambient_daylight.ambient_light_changed.is_connected(daylight_callable):
+            _ambient_daylight.ambient_light_changed.connect(daylight_callable)
     if _kernel != null:
         var tick_callable := Callable(self, "_on_world_tick_advanced")
         var reset_callable := Callable(self, "_on_timing_state_reset")
@@ -360,6 +378,12 @@ func _on_flashlight_item_removed(item_id: String, _version: int) -> void:
         _emit_if_changed()
 
 func _on_flashlight_state_reset() -> void:
+    _emit_if_changed()
+
+func _on_ambient_light_changed(_level: float, phase: StringName, _snapshot: Dictionary) -> void:
+    if phase == _daylight_phase:
+        return
+    _daylight_phase = phase
     _emit_if_changed()
 
 func _on_world_tick_advanced(previous_tick: int, new_tick: int) -> void:
