@@ -21,92 +21,179 @@ jobs:
           python3 - <<'PY'
           from pathlib import Path
 
-          def replace_once(path, old, new):
-              p = Path(path)
-              text = p.read_text()
-              count = text.count(old)
-              if count != 1:
-                  raise SystemExit(f'{path}: expected exactly one match, got {count}')
-              p.write_text(text.replace(old, new, 1))
+          p = Path('game/scripts/simulation/utilities/NeighborhoodPowerInfrastructureMaterializer.gd')
+          text = p.read_text()
 
-          materializer = 'game/scripts/simulation/utilities/NeighborhoodPowerInfrastructureMaterializer.gd'
-          replace_once(
-              materializer,
-              'const ROAD_POLE_SPACING: int = 10\nconst ROAD_SIDE_HOLD_POLES: int = 2',
-              'const ROAD_POLE_SPACING: int = 10\n# Independent service roots can nominate nearby keys on the same physical road.\n# Collapse those visits onto one support so a shared distribution chain cannot\n# produce visible two/three-pole bunches while retaining its nominal 10-cell cadence.\nconst ROAD_POLE_MIN_SPACING: int = 8\nconst ROAD_SIDE_HOLD_POLES: int = 2'
-          )
-          replace_once(
-              materializer,
-              '        var direction: Vector2i = _road_direction(entries[0], graph)\n        var side: int = -1 if direction.x != 0 else 1\n        var hold: int = 0\n        for route_cell: Vector2i in entries:\n            var cell: Vector2i = _find_roadside_available(',
-              '        var direction: Vector2i = _road_direction(entries[0], graph)\n        var side: int = -1 if direction.x != 0 else 1\n        var hold: int = 0\n        var last_route_cell: Vector2i = INVALID_CELL\n        var last_pole_id: String = ""\n        var last_pole_cell: Vector2i = INVALID_CELL\n        for route_cell: Vector2i in entries:\n            if last_route_cell != INVALID_CELL:\n                var route_gap: int = absi(route_cell.x - last_route_cell.x) + absi(route_cell.y - last_route_cell.y)\n                if route_gap < ROAD_POLE_MIN_SPACING:\n                    ids[route_cell] = last_pole_id\n                    cells[route_cell] = last_pole_cell\n                    continue\n            var cell: Vector2i = _find_roadside_available('
-          )
-          replace_once(
-              materializer,
-              '            reserved[cell] = true\n            ids[route_cell] = id\n            cells[route_cell] = cell\n    return result',
-              '            reserved[cell] = true\n            ids[route_cell] = id\n            cells[route_cell] = cell\n            last_route_cell = route_cell\n            last_pole_id = id\n            last_pole_cell = cell\n    return result'
-          )
-          replace_once(
-              materializer,
-              '            if start_id.is_empty() or end_id.is_empty() or end_cell == INVALID_CELL:\n                return {"ok": false, "props": [], "wires": []}\n            wires.append({',
-              '            if start_id.is_empty() or end_id.is_empty() or end_cell == INVALID_CELL:\n                return {"ok": false, "props": [], "wires": []}\n            # Nearby route keys may intentionally share one physical support.\n            # They are topology visits, not zero-length physical wire spans.\n            if start_id == end_id:\n                seen_trunk_edges[edge_key] = true\n                continue\n            wires.append({'
-          )
+          old = '''func _lead_crossing_support(
+    road: Dictionary, target: Vector2i, reserved: Dictionary
+) -> Vector2i:
+    var route: Vector2i = road["road_cell"]
+    var direction: Vector2i = road["road_direction"]
+    var origin: Vector2i = road["cell"]
+    var target_side: int = _road_side(route, target, direction)
+    if target_side == 0 or target_side == _road_side(route, origin, direction):
+        return INVALID_CELL
+    var normal := Vector2i(-direction.y, direction.x)
+    var aligned_route: Vector2i = Vector2i(origin.x, route.y) if direction.x != 0 else Vector2i(route.x, origin.y)
+    for offset: int in range(1, MAX_WIRE_SPAN + 1):
+        var candidate: Vector2i = aligned_route + normal * target_side * offset
+        if _cell_available(candidate, reserved):
+            return candidate
+    return INVALID_CELL
+'''
+          new = '''func _roadside_candidate_clear(
+    candidate: Vector2i, route: Vector2i, direction: Vector2i, bank: int, records: Dictionary
+) -> bool:
+    var candidate_along: int = candidate.x if direction.x != 0 else candidate.y
+    var run_key: String = _road_run_key(route, direction)
+    for value: Variant in records.values():
+        if typeof(value) != TYPE_DICTIONARY:
+            continue
+        var prop: Dictionary = value
+        if not prop.has("road_cell") or not prop.has("road_direction"):
+            continue
+        var prop_route: Vector2i = prop["road_cell"]
+        var prop_direction: Vector2i = prop["road_direction"]
+        if _road_run_key(prop_route, prop_direction) != run_key:
+            continue
+        if _road_side(prop_route, prop["cell"], prop_direction) != bank:
+            continue
+        var prop_cell: Vector2i = prop["cell"]
+        var prop_along: int = prop_cell.x if direction.x != 0 else prop_cell.y
+        if absi(candidate_along - prop_along) < ROAD_POLE_MIN_SPACING:
+            return false
+    return true
 
-          adapter = 'game/scripts/simulation/utilities/UtilityPoweredLightingSourceAdapter.gd'
-          replace_once(
-              adapter,
-              'var _kernel: TickKernel = null\nvar _flashlight_state: FlashlightItemState = null',
-              'var _kernel: TickKernel = null\nvar _ambient_daylight: OutdoorAmbientLightService = null\nvar _daylight_phase: StringName = &""\nvar _flashlight_state: FlashlightItemState = null'
-          )
-          replace_once(
-              adapter,
-              '    utilities: UtilityRuntimeState = null,\n    tick_kernel: TickKernel = null,\n    flashlight_state: FlashlightItemState = null,',
-              '    utilities: UtilityRuntimeState = null,\n    tick_kernel: TickKernel = null,\n    ambient_daylight: OutdoorAmbientLightService = null,\n    flashlight_state: FlashlightItemState = null,'
-          )
-          replace_once(
-              adapter,
-              '    _utilities = utilities\n    _kernel = tick_kernel\n    _flashlight_state = flashlight_state',
-              '    _utilities = utilities\n    _kernel = tick_kernel\n    _ambient_daylight = ambient_daylight\n    _daylight_phase = _ambient_daylight.current_phase() if _ambient_daylight != null and _ambient_daylight.is_ready() else &""\n    _flashlight_state = flashlight_state'
-          )
-          replace_once(
-              adapter,
-              '        if record == null or placement == null:\n            continue\n        var profile: LightEmitterProfile = _profile_for_semantic(record.semantic_type)',
-              '        if record == null or placement == null:\n            continue\n        if record.semantic_type == &"prop.streetlight" and not _streetlights_should_emit():\n            continue\n        var profile: LightEmitterProfile = _profile_for_semantic(record.semantic_type)'
-          )
-          replace_once(
-              adapter,
-              'func _current_world_tick() -> int:\n    return _kernel.world_tick() if _kernel != null else 0\n\nfunc _has_traffic_lights() -> bool:',
-              'func _current_world_tick() -> int:\n    return _kernel.world_tick() if _kernel != null else 0\n\nfunc _streetlights_should_emit() -> bool:\n    # Compatibility for non-production fixtures that do not compose System 25.\n    # Production always supplies the canonical ambient-daylight owner.\n    return _ambient_daylight == null or _ambient_daylight.current_phase() == OutdoorAmbientLightService.PHASE_NIGHT\n\nfunc _has_traffic_lights() -> bool:'
-          )
-          replace_once(
-              adapter,
-              '    if _kernel != null:\n        var tick_callable := Callable(self, "_on_world_tick_advanced")',
-              '    if _ambient_daylight != null:\n        var daylight_callable := Callable(self, "_on_ambient_light_changed")\n        if not _ambient_daylight.ambient_light_changed.is_connected(daylight_callable):\n            _ambient_daylight.ambient_light_changed.connect(daylight_callable)\n    if _kernel != null:\n        var tick_callable := Callable(self, "_on_world_tick_advanced")'
-          )
-          replace_once(
-              adapter,
-              'func _on_world_tick_advanced(previous_tick: int, new_tick: int) -> void:\n    if not _has_traffic_lights():',
-              'func _on_ambient_light_changed(_level: float, phase: StringName, _snapshot: Dictionary) -> void:\n    if phase == _daylight_phase:\n        return\n    _daylight_phase = phase\n    _emit_if_changed()\n\nfunc _on_world_tick_advanced(previous_tick: int, new_tick: int) -> void:\n    if not _has_traffic_lights():'
-          )
-          replace_once(
-              adapter,
-              '        "traffic_phase": traffic_phase_for_tick(_current_world_tick()),\n        "fake_sources_retired": true,',
-              '        "traffic_phase": traffic_phase_for_tick(_current_world_tick()),\n        "daylight_phase": _daylight_phase,\n        "streetlights_emit": _streetlights_should_emit(),\n        "fake_sources_retired": true,'
-          )
+func _existing_roadside_support(
+    route: Vector2i, direction: Vector2i, bank: int, records: Dictionary
+) -> Dictionary:
+    var route_along: int = route.x if direction.x != 0 else route.y
+    var run_key: String = _road_run_key(route, direction)
+    var best: Dictionary = {}
+    var best_gap: int = ROAD_POLE_MIN_SPACING
+    for value: Variant in records.values():
+        if typeof(value) != TYPE_DICTIONARY:
+            continue
+        var prop: Dictionary = value
+        if not prop.has("road_cell") or not prop.has("road_direction"):
+            continue
+        var prop_route: Vector2i = prop["road_cell"]
+        var prop_direction: Vector2i = prop["road_direction"]
+        if _road_run_key(prop_route, prop_direction) != run_key:
+            continue
+        if _road_side(prop_route, prop["cell"], prop_direction) != bank:
+            continue
+        var prop_cell: Vector2i = prop["cell"]
+        var prop_along: int = prop_cell.x if direction.x != 0 else prop_cell.y
+        var gap: int = absi(route_along - prop_along)
+        if gap < best_gap:
+            best_gap = gap
+            best = {"id": String(prop["id"]), "cell": prop_cell}
+    return best
 
-          app = 'game/scripts/app/UtilityGameMain.gd'
-          replace_once(
-              app,
-              '        _utilities,\n        _kernel,\n        _flashlight_state,',
-              '        _utilities,\n        _kernel,\n        _ambient_daylight,\n        _flashlight_state,'
-          )
+func _lead_crossing_support(
+    road: Dictionary, target: Vector2i, reserved: Dictionary, records: Dictionary
+) -> Dictionary:
+    var route: Vector2i = road["road_cell"]
+    var direction: Vector2i = road["road_direction"]
+    var origin: Vector2i = road["cell"]
+    var target_side: int = _road_side(route, target, direction)
+    if target_side == 0 or target_side == _road_side(route, origin, direction):
+        return {}
+    var existing: Dictionary = _existing_roadside_support(route, direction, target_side, records)
+    if not existing.is_empty():
+        return existing
+    var normal := Vector2i(-direction.y, direction.x)
+    var aligned_route: Vector2i = Vector2i(origin.x, route.y) if direction.x != 0 else Vector2i(route.x, origin.y)
+    for shift_distance: int in range(0, ROAD_POLE_MIN_SPACING + 1):
+        var shifts: Array[int] = [0] if shift_distance == 0 else [-shift_distance, shift_distance]
+        for shift: int in shifts:
+            for offset: int in range(1, MAX_WIRE_SPAN + 1):
+                var candidate: Vector2i = aligned_route + direction * shift + normal * target_side * offset
+                var candidate_route: Vector2i = Vector2i(candidate.x, route.y) if direction.x != 0 else Vector2i(route.x, candidate.y)
+                if _cell_available(candidate, reserved) and _roadside_candidate_clear(candidate, candidate_route, direction, target_side, records):
+                    return {"cell": candidate, "road_cell": candidate_route}
+    return {}
+'''
+          if text.count(old) != 1:
+              raise SystemExit(f'crossing function match count={text.count(old)}')
+          text = text.replace(old, new, 1)
+
+          old = '''            var crossing: Vector2i = _lead_crossing_support(road, target, reserved)
+            if crossing != INVALID_CELL:
+                var crossing_id: String = "%s.crossing" % wire["asset_id"]
+                var prop: Dictionary = {
+                    "id": crossing_id, "cell": crossing, "semantic": &"prop.utility_pole_wood",
+                    "facing": _facing_toward_cell(crossing, road["road_cell"]),
+                    "road_cell": road["road_cell"], "road_direction": road["road_direction"],
+                }
+                props.append(prop)
+                records[crossing_id] = prop
+                reserved[crossing] = true
+                ids_by_cell[crossing] = crossing_id
+                waypoints.append({"id": crossing_id, "cell": crossing})
+'''
+          new = '''            var crossing: Dictionary = _lead_crossing_support(road, target, reserved, records)
+            if not crossing.is_empty():
+                if crossing.has("id"):
+                    waypoints.append({"id": String(crossing["id"]), "cell": crossing["cell"]})
+                else:
+                    var crossing_cell: Vector2i = crossing["cell"]
+                    var crossing_id: String = "%s.crossing" % wire["asset_id"]
+                    var prop: Dictionary = {
+                        "id": crossing_id, "cell": crossing_cell, "semantic": &"prop.utility_pole_wood",
+                        "facing": _facing_toward_cell(crossing_cell, crossing["road_cell"]),
+                        "road_cell": crossing["road_cell"], "road_direction": road["road_direction"],
+                    }
+                    props.append(prop)
+                    records[crossing_id] = prop
+                    reserved[crossing_cell] = true
+                    ids_by_cell[crossing_cell] = crossing_id
+                    waypoints.append({"id": crossing_id, "cell": crossing_cell})
+'''
+          if text.count(old) != 1:
+              raise SystemExit(f'crossing call match count={text.count(old)}')
+          text = text.replace(old, new, 1)
+
+          old = '''                if role == &"shared_trunk":
+                    var route: Vector2i = wire["route_start_cell"]
+                    var direction: Vector2i = _cardinal_direction(route, wire["route_end_cell"])
+                    direction = Vector2i.RIGHT if direction.x != 0 else Vector2i.DOWN
+                    prop["road_cell"] = Vector2i(cell.x, route.y) if direction.x != 0 else Vector2i(route.x, cell.y)
+                    prop["road_direction"] = direction
+'''
+          new = '''                if role == &"shared_trunk":
+                    var route: Vector2i = wire["route_start_cell"]
+                    var direction: Vector2i = _cardinal_direction(route, wire["route_end_cell"])
+                    direction = Vector2i.RIGHT if direction.x != 0 else Vector2i.DOWN
+                    var projected_route: Vector2i = Vector2i(cell.x, route.y) if direction.x != 0 else Vector2i(route.x, cell.y)
+                    var bank: int = _road_side(projected_route, cell, direction)
+                    if not _roadside_candidate_clear(cell, projected_route, direction, bank, records):
+                        var shared_road: Dictionary = _existing_roadside_support(projected_route, direction, bank, records)
+                        if not shared_road.is_empty() \
+                            and Vector2(previous["cell"]).distance_to(Vector2(shared_road["cell"])) <= float(MAX_WIRE_SPAN) \
+                            and Vector2(shared_road["cell"]).distance_to(Vector2(target["cell"])) < Vector2(previous["cell"]).distance_to(Vector2(target["cell"])) \
+                            and _span_crossings(previous["cell"], shared_road["cell"], span_buckets).is_empty():
+                            _append_span(result, wire, previous, shared_road, ordinal, span_buckets)
+                            ordinal += 1
+                            previous = shared_road
+                            continue
+                    prop["road_cell"] = projected_route
+                    prop["road_direction"] = direction
+'''
+          if text.count(old) != 1:
+              raise SystemExit(f'intermediate match count={text.count(old)}')
+          text = text.replace(old, new, 1)
+
+          p.write_text(text)
           PY
           git diff --check
-          git diff -- game/scripts/simulation/utilities/NeighborhoodPowerInfrastructureMaterializer.gd game/scripts/simulation/utilities/UtilityPoweredLightingSourceAdapter.gd game/scripts/app/UtilityGameMain.gd
+          git diff -- game/scripts/simulation/utilities/NeighborhoodPowerInfrastructureMaterializer.gd
       - name: Commit production repair
         shell: bash
         run: |
           git config user.name 'dmcexcess-lab'
           git config user.email 'dmcexcess@gmail.com'
-          git add game/scripts/simulation/utilities/NeighborhoodPowerInfrastructureMaterializer.gd game/scripts/simulation/utilities/UtilityPoweredLightingSourceAdapter.gd game/scripts/app/UtilityGameMain.gd
-          git commit -m 'fix: de-bunch roadside supports and gate streetlights to night'
+          git add game/scripts/simulation/utilities/NeighborhoodPowerInfrastructureMaterializer.gd
+          git commit -m 'fix: reuse and space auxiliary roadside supports'
           git push origin HEAD:main
