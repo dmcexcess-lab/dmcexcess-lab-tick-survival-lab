@@ -3,12 +3,16 @@ class_name EnvironmentalPressureGameMain
 
 const OpeningPressureClass = preload("res://scripts/simulation/interaction/ActorOpeningPressureActionService.gd")
 
+@onready var _resolution_indicator: WorldResolutionIndicator = $ResolutionIndicator
+
 var _opening_pressure: ActorOpeningPressureActionService = null
 
 func _boot_canonical_demo() -> bool:
     if not super._boot_canonical_demo():
         return false
-    return _boot_system39_environmental_pressure()
+    if not _boot_system39_environmental_pressure():
+        return false
+    return _boot_world_resolution_indicator()
 
 func _boot_system39_environmental_pressure() -> bool:
     if _world == null or _world_interaction_state == null or _door_state == null \
@@ -38,5 +42,14 @@ func _boot_system39_environmental_pressure() -> bool:
             return false
     return true
 
+func _boot_world_resolution_indicator() -> bool:
+    var streaming: WorldStreamingCoordinator = FixtureClass.streaming_coordinator()
+    if _resolution_indicator == null or _kernel == null or _infected_cohort == null or streaming == null:
+        return false
+    return _resolution_indicator.configure(_kernel, _infected_cohort, streaming)
+
 func opening_pressure_service() -> ActorOpeningPressureActionService:
     return _opening_pressure
+
+func world_resolution_indicator() -> WorldResolutionIndicator:
+    return _resolution_indicator
