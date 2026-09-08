@@ -1,5 +1,29 @@
 # System 29 — Implementation Changelog
 
+## 2026-09-08 — World-resolution `ZOMBIES` / `LOADING` indicator
+
+Verified functional runtime head before final documentation: `bda3b12b31430b8feafa0a5b52e4bec2d99647aa`
+
+- Added `WorldResolutionIndicator` as a presentation-only explanation for pauses that already exist in the playable runtime. It creates no new turn, timer, pause, AI scheduler, streaming owner, or gameplay truth.
+- While shared WHEN is resolving and at least one resident-backed infected is currently stream-active, the centered indicator shows **`ZOMBIES`**. It disappears immediately when the authoritative player decision pause returns.
+- The label is driven directly by `TickKernel.is_decision_paused()` / hard-pause truth plus `ActiveInfectedCohortService.active_actor_ids()`. The existing player controller continues to advance one WHEN batch per rendered frame and the existing busy/input gate remains the sole input lock.
+- Technical streaming region transitions use the existing `WorldStreamingCoordinator.active_regions_changed` signal to present **`LOADING`** for a rendered presentation pulse. `LOADING` has priority over `ZOMBIES`; it does not change streaming state or invent progress.
+- The UI contains only the word label: no progress bar, spinner, percentage, fake estimate, modal window, or queued input behavior was added.
+- Mounted the indicator in real `game/main.tscn` and configured it from `EnvironmentalPressureGameMain` using the already-existing production TickKernel, active infected cohort, and fixture-owned streaming coordinator.
+- Production root and gameplay architecture remain `game/main.tscn -> EnvironmentalPressureGameMain.gd -> CombatGameMain.gd -> VehicleGameMain.gd`; the active infected cohort remains **8**.
+- Fresh prompt-local verifier `PromptWorldResolutionIndicatorSmoke.gd` + `prompt-world-resolution-indicator.yml` boots real seed-20001 production `main.tscn` and proves ready-state silence, shared-WHEN `ZOMBIES`, existing input lock, `LOADING` priority, return to `ZOMBIES` while unresolved, and complete clearing/unlock at the real decision pause.
+- Focused run `34180003360`, job `101916994037`, succeeded on `bda3b12b31430b8feafa0a5b52e4bec2d99647aa` with `PROMPT_WORLD_RESOLUTION_INDICATOR_SMOKE: PASS` and no parser/load errors.
+
+### Ownership boundary
+
+WHEN still owns simulation time and player decision readiness; `ActiveInfectedCohortService` still owns only stream-active infected participation; technical streaming still owns active regions/materialization; existing player controllers own the busy/input lock. `WorldResolutionIndicator` only reads those truths and explains the otherwise sudden pacing change.
+
+### Next major phase
+
+Return to the already-recorded System-39 gameplay operation: test the eight-member resident-backed cohort against **naturally generated seed-20001 houses and their real generated doors/windows**. Do not add route planning preemptively. Only if that real generated-building scenario demonstrates a concrete navigation failure should the smallest generic route-planning seam be considered.
+
+---
+
 ## 2026-09-08 — System 39 environmental pressure / forced-entry closure
 
 Verified functional runtime head before final documentation: `a4126f97ddd26711c768edd92a0cf98b519e3978`
@@ -41,10 +65,10 @@ Final functional runtime candidate before documentation: `d3f4a0544be6abec32b084
 - Count 8 passed on `afc5a175f3f0c07827a090cec3f7aa7376b0f74d`, run `34173978788`: perception sweep 113,309 µs; worst behavior evaluation 14,732 µs; worst activation sync 161,719 µs.
 - Count 16 passed functionally on `0c0b3e7026afff623e3b2f5cd1129056a05c9eea`, run `34174095120`: perception sweep 233,611 µs; worst behavior evaluation 15,224 µs; worst activation sync 308,325 µs; eight ordinary infected action submissions occurred in the scenario.
 - The 16-member result showed no pathological growth in the simple intention/WHEN behavior itself. The expensive seam is the expected roughly linear cost of doing full real System-23 work for more simultaneous observers.
-- Targeted inspection confirmed `ActiveInfectedCohortService` already avoids a needless whole-roster rescan on ordinary placement/Health changes: only the changed infected is resynchronized. There was no justified tiny optimization to make before inventing larger machinery.
+- Targeted inspection confirmed `ActiveInfectedCohortService` already avoids a needless whole-roster rescan on ordinary actor movement or Health change: only the changed infected is resynchronized. There was no justified tiny optimization to make before inventing larger machinery.
 - Rather than over-engineer around a count that is not yet needed, production was intentionally returned to `ACTIVE_INFECTED_COHORT_SIZE = 8`.
 - Final 8-member functional rerun `34174173692` succeeded on `d3f4a0544be6abec32b084ed77a57880330836be`: perception sweep 118,140 µs; worst behavior evaluation 17,430 µs; worst activation sync 165,307 µs; all exact resident/collision/System-23/shared-WHEN assertions remained green.
-- The microsecond values are CI-machine observations, not universal budgets. The durable decision is that eight is a useful real production increase from four using the existing simple systems, while sixteen is proven functional but deliberately not adopted yet.
+- The microsecond values are CI-machine observations, not universal performance budgets. The durable conclusion is that eight is a useful real production increase from four using the existing simple systems, while sixteen is proven functional but deliberately not adopted yet.
 
 ### Ownership boundary
 
