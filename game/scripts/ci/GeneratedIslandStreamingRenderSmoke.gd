@@ -31,6 +31,22 @@ func _initialize() -> void:
         _finish()
         return
 
+    # Lock the reported phone failure directly instead of depending on the headless CI viewport.
+    var phone_margin: Vector2i = ViewerClass.edge_margin_for_view(
+        Vector2(832, 1792),
+        Vector2.ONE,
+        FixtureClass.CELL_PIXELS,
+        FixtureClass.RENDER_WINDOW_SIZE
+    )
+    _check(phone_margin == Vector2i(20, 40), "phone viewport expands render safety margin beyond the old fixed 12 cells")
+    var phone_far_margin: Vector2i = ViewerClass.edge_margin_for_view(
+        Vector2(832, 1792),
+        Vector2(0.75, 0.75),
+        FixtureClass.CELL_PIXELS,
+        FixtureClass.RENDER_WINDOW_SIZE
+    )
+    _check(phone_far_margin.x > phone_margin.x and phone_far_margin.y >= phone_margin.y, "zooming out never shrinks phone render coverage")
+
     var renderer := RendererClass.new()
     var pointer := PointerClass.new()
     var camera_controller := CameraControllerClass.new()
@@ -52,11 +68,9 @@ func _initialize() -> void:
     var streaming: WorldStreamingCoordinator = FixtureClass.streaming_coordinator()
     _check(streaming != null and streaming.has_focus(), "production streaming has initial focus")
 
-    # The live mobile failure was not a failed stream transition: the camera could expose cells
-    # beyond the bounded renderer before the old fixed 12-cell recenter threshold fired.
     var before_origin: Vector2i = viewer.render_origin()
     var edge_margin: Vector2i = viewer.presentation_snapshot().get("edge_margin", Vector2i(12, 12))
-    _check(edge_margin.x > 12 or edge_margin.y > 12, "render edge margin expands to cover the actual viewport")
+    _check(edge_margin.x >= 12 and edge_margin.y >= 12, "runtime render margin preserves fixed safety floor")
     var edge_target := Vector2i(before_origin.x + FixtureClass.RENDER_WINDOW_SIZE.x - edge_margin.x, start.y)
     if not FixtureClass.AREA_BOUNDS.has_point(edge_target):
         edge_target = Vector2i(before_origin.x + edge_margin.x - 1, start.y)
