@@ -2,315 +2,272 @@
 
 This file is the authoritative short handoff for the next repository operation. Read this first, then `README_SOPS.md`. Do not broadly rediscover already-closed work.
 
-## Current checkpoint — SMALL ACTIVE INFECTED COHORT SCALING PROOF CLOSED 2026-09-08
+## Current checkpoint — INFECTED COUNT LADDER CLOSED; PRODUCTION ACTIVE COHORT = 8 — 2026-09-08
 
 Production root:
 
 `game/main.tscn -> CombatGameMain.gd -> VehicleGameMain.gd`
 
-System 37 combat and the one-infected System-38 behavior loop remain closed. Production now proves a deliberately small **four-member resident-backed infected cohort** using the same architecture:
+System 37 combat and System 38 resident-backed infected behavior remain closed. The active infected cohort now uses the same simple production architecture at a measured production count of **8**:
 
-> **population resident -> physical hydration -> technical-stream activation -> System 23 / System 26 perception -> intention -> ordinary WHEN movement/combat -> generic Health/death**
+> **population resident -> physical hydration -> technical-stream activation -> System 23 / System 26 knowledge -> simple intention -> ordinary WHEN movement/combat -> generic Health/death**
 
-No zombie-only clock, per-frame AI loop, private cooldown, magic aggro radius, hidden shared target truth, teleport movement, duplicate Health/combat state or horde ghosting was added.
+The approved 4 -> 8 -> 16 ladder is complete. All three counts passed functionally. Production deliberately stays at **8** because the full real System-23 perception sweep grows roughly linearly and reached ~234 ms at 16 on CI. The behavior policy itself stayed stable around ~15–18 ms worst individual evaluation.
 
-The architecture is proven at four, but current measurements explicitly do **not** justify jumping directly to hordes. The next operation is an active-cohort scheduling/perception budget plus a controlled 4 -> 8 -> 16 count ladder.
+No horde AI, AI scheduler, crowd manager, perception queue, group coordination, hidden target sharing, second activation radius or zombie-only optimization layer was added.
 
-## Prompt start / turnover completed
+Project rule reinforced by the user:
 
-This prompt deleted the previous prompt-owned verifier pair FIRST:
+> **Complex behavior, simple systems. Do not over-engineer it.**
 
-- `game/scripts/ci/PromptFirstInfectedBehaviorSmoke.gd`
-- `.github/workflows/prompt-first-infected-behavior.yml`
+## Prompt start / turnover
 
-Turnover completed at:
-
-- `ddb2e031b3c70fd9a0d3255058ff0e20fff7147d`
-
-Then this file was read first, `README_SOPS.md` second, and current `main` was fetched once. That exact turnover SHA was the prompt starting head.
-
-No broad gameplay regression fleet, historical architecture suite or seed matrix was restored.
-
-## System 38 — deterministic small cohort
-
-### Population truth remains authoritative
-
-`PopulationResidentProjection` still names only household slots already counted by island population planning.
-
-Resident identity remains:
-
-`resident.<building_id>.<ordinal>`
-
-Infection assignment remains deterministic from world seed + building identity + ordinal, with exactly each settlement's already-planned infected count selected.
-
-New `infected_near(...)` returns deterministic cohort candidates:
-
-1. preferred-site infected sorted by Manhattan distance to the reference cell, then actor ID;
-2. remaining infected appended deterministically without duplicate identities.
-
-No new population is created for cohort scaling.
-
-### Physical cohort hydration
-
-`FirstInfectedHydrationService` now supports `hydrate_cohort(...)` while retaining `hydrate_first(...)` as the one-infected compatibility path.
-
-Production currently sets:
-
-`ACTIVE_INFECTED_COHORT_SIZE = 4`
-
-Each cohort member is the exact projected resident identity and is enrolled through the same ordinary owners:
-
-- ACTOR placement;
-- locomotion;
-- hand equipment;
-- inventory containment;
-- Health;
-- skills;
-- carry;
-- System-34 condition;
-- `InfectedState` provenance.
-
-Hydration searches real currently materialized clear cells near the resident's home and respects ordinary collision. It never overlaps blocking ACTOR occupancy merely to reach the target count.
-
-The four-member value is a measured proof size, not a declared final active-population limit.
-
-## Technical streaming owns behavior activation
-
-New owner:
-
-- `game/scripts/simulation/infected/ActiveInfectedCohortService.gd`
-
-The existing `WorldStreamingCoordinator` is the **sole activation-envelope authority**.
-
-A living infected is behavior-active only when its exact ACTOR cell satisfies:
-
-`WorldStreamingCoordinator.is_cell_active(actor_cell)`
-
-The cohort listens to the existing `active_regions_changed` signal plus exact cohort actor placement and Health changes. There is no second zombie activation radius.
-
-Existing technical streaming remains 128x128 regions with active radius 1 unless deliberately changed elsewhere.
-
-## Active versus dormant semantics
-
-Leaving the technical active envelope does **not** delete the infected or reset simulation state.
-
-A dormant cohort member retains:
-
-- exact resident/actor identity;
-- physical ACTOR placement;
-- Health;
-- inventory/equipment;
-- condition/skills/carry;
-- infection/population provenance;
-- existing perception memory.
-
-Only expensive behavior participation sleeps:
-
-- System-26 listener registration is removed;
-- `StreamingObserverPerceptionService` refuses System-23 recomputation while inactive;
-- the same behavior adapter is stopped so event callbacks cannot evaluate/submit actions.
-
-On technical-stream re-entry:
-
-- the same resident identity remains;
-- the same perception object is reactivated/recomputed through System 23;
-- the same behavior object resumes;
-- System-26 listener registration returns.
-
-No replacement actor is substituted.
-
-## Reused behavior policy
-
-`FirstInfectedBehaviorService` remains the behavior policy. Scaling did not add new zombie abilities.
-
-The same intentions remain:
-
-- `infected.idle`;
-- `infected.pursue_visible`;
-- `infected.pursue_last_seen`;
-- `infected.investigate_sound`;
-- `infected.attack_visible`.
-
-`CohortInfectedBehaviorService` subclasses that exact policy only to add lifecycle/performance measurement.
-
-Visual truth remains observer-scoped System 23. Heard investigation remains System-26 `HeardSoundObservation` truth and carries only observer-safe perceived location/certainty, never hidden exact source identity.
-
-## Shared WHEN scheduling now proven with multiple infected
-
-There is still no infected clock.
-
-At player decision pause, render frames create no cohort behavior evaluations.
-
-When one ordinary player commitment opens shared WHEN time, multiple active infected can independently submit lawful ordinary actions on that same timeline.
-
-The focused production-scene proof placed two active infected in truthful visible approach lanes and confirmed both increased ordinary action-submission counts from the same player-opened WHEN interval.
-
-Movement remains ordinary movement service truth; attacks remain System 37.
-
-## Physical congestion preserved
-
-Cohort members are ordinary ACTOR occupancy.
-
-The verifier proves:
-
-- all four hydrated residents occupy distinct cells;
-- two concurrently scheduled infected remain on distinct cells;
-- one infected's occupied cell is blocking to another through the ordinary collision query.
-
-There is no horde-specific pass-through or teleport correction.
-
-## Death remains generic and actor-local
-
-Canonical Health/generic corpse transition remains authoritative.
-
-The focused proof kills one cohort member and confirms:
-
-- that actor leaves active cohort scheduling;
-- another living infected remains active;
-- active count drops by exactly one;
-- resident/infection provenance survives death.
-
-System 38 does not own HP or corpse truth.
-
-## Production measurement added
-
-`ActiveInfectedCohortService` and `CohortInfectedBehaviorService` expose/record:
-
-- roster count;
-- active/dormant counts;
-- activation/deactivation counts;
-- activation-sync count / total / maximum microseconds;
-- behavior evaluation count / total / maximum microseconds;
-- ordinary action submission count.
-
-These are real production-path measurements and also feed `PerformanceTelemetry`.
-
-Successful four-member focused run metrics:
-
-```text
-roster_count = 4
-active_actor_count = 3        # after one deliberate lethal transition in the scenario
-dormant_actor_count = 1
-activation_count = 8
-deactivation_count = 5
-activation_sync_count = 7
-behavior_evaluation_count = 24
-ordinary_action_submission_count = 2
-behavior_evaluation_total_usec = 124569
-behavior_evaluation_max_usec = 16672
-activation_sync_total_usec = 182013
-activation_sync_max_usec = 95595
-```
-
-Derived from that focused run:
-
-- average measured behavior evaluation ~= 5.19 ms;
-- worst behavior evaluation = 16.67 ms;
-- average activation-sync pass ~= 26.00 ms;
-- worst activation-sync pass = 95.60 ms.
-
-These numbers include real System-23 / behavior activation work during a deliberately forced technical-stream exit/re-entry. They are not a universal hardware budget, but they establish the next optimization gate.
-
-## Scaling limitation now explicit
-
-Dormant infected no longer pay active hearing, System-23 recomputation or behavior evaluation/submission cost.
-
-However, each hydrated perception/behavior object still inherits its ordinary shared-event signal connections and returns cheaply while stopped/inactive. That fan-out is acceptable at four but must be measured/centralized if it becomes material before hundreds of hydrated actors exist.
-
-Likewise, a 16.67 ms worst behavior evaluation and 95.60 ms worst activation-sync pass are large enough that increasing counts blindly would be the wrong next step.
-
-Do **not** start hordes yet.
-
-## Focused verifier evidence
-
-Current prompt-owned disposable pair:
+At the START of this code prompt the previous prompt-owned verifier pair was deleted FIRST:
 
 - `game/scripts/ci/PromptSmallInfectedCohortSmoke.gd`
 - `.github/workflows/prompt-small-infected-cohort.yml`
 
-Functional code/test head before documentation:
+Turnover commits:
 
-- `dd178a7c445ea382ea11e27400d3c1c22ec65e79`
+- `f2dee7c341327fe81e11cffc08b26c8fac63b03c`
+- `cc074ba538e360ca53fffe5232b0e33c45006102`
 
-Initial focused run:
+Then this file was read first, `README_SOPS.md` second, and current `main` was fetched once.
 
-- `34172671153` — failed before gameplay only because two smoke locals required explicit `Vector2i` typing. Production parsed cleanly. Only verifier typing changed; no scaling assertion was weakened.
+Prompt starting head:
 
-Successful focused run:
+- `cc074ba538e360ca53fffe5232b0e33c45006102`
 
-- `Prompt Small Infected Cohort` run `34172818895` — **SUCCESS**
+No broad historical CI fleet, architecture suite, seed matrix or unrelated regression suite was restored.
 
-The successful real-`main.tscn` log proves deterministic resident hydration, distinct physical ACTOR occupancy, authoritative stream activation/deactivation, dormant System-23/System-26 work suspension, identity-preserving re-entry, shared-WHEN multi-actor submission, physical congestion, isolated generic death and real timing metrics.
+## Current production active count
 
-The log ended:
+`CombatGameMain.gd` now intentionally sets:
 
-`PROMPT_SMALL_INFECTED_COHORT_SMOKE: PASS`
+`ACTIVE_INFECTED_COHORT_SIZE = 8`
 
-## Documentation updated
+This is not a permanent game-design maximum. It is the highest count adopted in production by this prompt because it provides a real increase over 4 without introducing architecture solely to support a larger number.
 
-- `SYSTEM_DESIGNS/38_FIRST_INFECTED_POPULATION_HYDRATION.md` — now records deterministic cohort hydration, stream activation semantics, dormant/reactivation policy, metrics, measured ceiling and next scaling gate.
-- `SYSTEM_DESIGNS/29_IMPLEMENTATION_CHANGELOG.md` — records the four-member scaling proof, verifier history, measurements and ownership boundary.
+Count 16 is **proven functional** but intentionally not the current production active count.
+
+## Count ladder verifier
+
+Current prompt-owned disposable pair:
+
+- `game/scripts/ci/PromptInfectedCountLadderSmoke.gd`
+- `.github/workflows/prompt-infected-count-ladder.yml`
+
+Workflow:
+
+- `Prompt Infected Count Ladder`
+
+The smoke boots real `res://main.tscn`. For the configured production count it:
+
+1. confirms the count is one of the approved 4 / 8 / 16 ladder values;
+2. confirms exact resident-backed hydrated identities;
+3. places every member in a distinct valid ACTOR cell inside the existing technical active envelope;
+4. proves ordinary physical congestion is preserved;
+5. proves active membership still comes from the existing streaming owner;
+6. proves render frames do not become an AI scheduler while player decision-paused;
+7. explicitly recomputes System 23 once for every active infected and measures the all-observer sweep;
+8. opens ordinary shared WHEN with one player commitment and proves infected react through the existing event-driven behavior path;
+9. records placement/perception/cohort timing metrics.
+
+## 4 -> 8 -> 16 evidence
+
+### 4 members — baseline
+
+Head:
+
+- `4d32bd3b848c18731aca96b619a334e905bdb077`
+
+Run:
+
+- `Prompt Infected Count Ladder` run `34173867420` — **SUCCESS**
+
+Measured:
+
+```text
+placement_burst_usec      = 260124
+perception_sweep_usec     = 60955
+behavior_evaluation_max   = 17835
+activation_sync_max_usec  = 98580
+```
+
+Approximate explicit all-observer System-23 sweep: **61 ms**.
+
+### 8 members — first ladder run
+
+Head:
+
+- `afc5a175f3f0c07827a090cec3f7aa7376b0f74d`
+
+Run:
+
+- `Prompt Infected Count Ladder` run `34173978788` — **SUCCESS**
+
+Measured:
+
+```text
+placement_burst_usec      = 694732
+perception_sweep_usec     = 113309
+behavior_evaluation_max   = 14732
+activation_sync_max_usec  = 161719
+```
+
+Approximate explicit all-observer System-23 sweep: **113 ms**.
+
+### 16 members — functional but measured bend
+
+Head:
+
+- `0c0b3e7026afff623e3b2f5cd1129056a05c9eea`
+
+Run:
+
+- `Prompt Infected Count Ladder` run `34174095120` — **SUCCESS**
+
+Measured:
+
+```text
+placement_burst_usec       = 2517070
+perception_sweep_usec      = 233611
+behavior_evaluation_max    = 15224
+activation_sync_max_usec   = 308325
+ordinary_action_submissions = 8
+```
+
+Approximate explicit all-observer System-23 sweep: **234 ms**.
+
+All 16 remained valid resident-backed physical ACTORs and ordinary behavior continued to function. The important finding is that the simple behavior did **not** explode in cost. The main growth is the expected cost of doing real observer-scoped perception for more simultaneous observers.
+
+## Decision — do not engineer around 16
+
+A targeted read of `ActiveInfectedCohortService` confirmed there is no obvious needless whole-roster rescan on ordinary actor movement or Health change. Those callbacks already resynchronize only the changed cohort actor.
+
+Therefore no tiny obvious owner-local fix existed that justified modifying production behavior.
+
+Instead of inventing a scheduler/perception queue/horde architecture just to make 16 cheaper, production was returned to **8**.
+
+Final functional 8-member candidate before docs:
+
+- `d3f4a0544be6abec32b084ed77a57880330836be`
+
+Final functional run:
+
+- `Prompt Infected Count Ladder` run `34174173692` — **SUCCESS**
+
+Measured:
+
+```text
+placement_burst_usec            = 718903
+perception_sweep_usec           = 118140
+activation_sync_max_usec        = 165307
+behavior_evaluation_count       = 65
+behavior_evaluation_max_usec    = 17430
+behavior_evaluation_total_usec  = 159910
+ordinary_action_submission_count = 3
+```
+
+The microsecond values are CI-machine observations, not universal performance budgets. The durable conclusion is:
+
+- 8 is a useful production increase from 4;
+- 16 is functionally proven;
+- behavior remains simple/event-driven;
+- simultaneous perception is the current scaling cost;
+- there is no reason to build extra infrastructure until actual gameplay needs more active infected.
+
+## Existing System 38 ownership — preserve
+
+### Population / identity
+
+- infected identities derive only from already-counted household resident slots;
+- no extra zombie population exists;
+- resident IDs remain deterministic `resident.<building_id>.<ordinal>`;
+- `InfectedState` is an overlay on the same shared human actor identity and preserves provenance through death.
+
+### Streaming
+
+- `WorldStreamingCoordinator` remains the sole active-envelope authority;
+- dormant infected keep exact physical/state truth;
+- dormant System-26 listener work is removed;
+- dormant `StreamingObserverPerceptionService` refuses expensive recomputation;
+- dormant behavior does not evaluate/submit actions;
+- re-entry reuses the same actor/perception/behavior identity.
+
+### Perception / behavior
+
+- System 23 owns observer-scoped vision/memory;
+- System 26 owns uncertain heard observations and never leaks hidden exact sound-source identity to behavior;
+- intentions remain only idle / pursue visible / pursue last seen / investigate sound / attack visible;
+- no group brain, shared target truth, per-frame loop, zombie timer or private cooldown.
+
+### Time / movement / congestion / combat
+
+- WHEN owns simulation time/readiness/interruption;
+- movement/world/collision own physical locomotion;
+- infected occupy ordinary blocking ACTOR cells;
+- congestion/bunching must emerge from collision, not crowd-management code;
+- System 37 owns physical melee/firearm combat;
+- Health/generic death owns HP/corpse transition.
+
+## Material docs updated
+
+- `SYSTEM_DESIGNS/38_FIRST_INFECTED_POPULATION_HYDRATION.md` — 4 -> 8 -> 16 ladder, measurements, production=8 decision, and simple-systems boundary recorded at docs commit `efdc2cd5fe8d29daa66cbc354ff4901451aa9c22`.
+- `SYSTEM_DESIGNS/29_IMPLEMENTATION_CHANGELOG.md` — ladder evidence and explicit no-overengineering decision recorded at docs commit `117a0a310dd043f825441f0889f7bf6114db83ee`.
 - This `README_CONTEXT.md` is the **final repository write for this prompt**.
 
 ## Current prompt-owned CI turnover rule
 
 At the START of the next code prompt, delete FIRST:
 
-- `game/scripts/ci/PromptSmallInfectedCohortSmoke.gd`
-- `.github/workflows/prompt-small-infected-cohort.yml`
+- `game/scripts/ci/PromptInfectedCountLadderSmoke.gd`
+- `.github/workflows/prompt-infected-count-ladder.yml`
 
-Then read this file first, read `README_SOPS.md`, and fetch current `main` once.
+Then read this file first, read `README_SOPS.md` second, and fetch current `main` once.
 
-Create one fresh focused verifier pair only for the scheduling/perception-budget/count-ladder work actually touched. Do not restore previous infected/combat/human-mobile workflows, broad architecture fleets or routine seed matrices.
+Create one brand-new focused verifier pair only for the next environmental-pressure code actually changed. Do not restore this ladder verifier afterward, prior infected/combat verifiers, broad architecture fleets or routine seed matrices.
 
 ## Protected neighboring contracts — preserve
 
-### Infected / combat
+### Combat
 
-- infection remains an overlay on shared human semantic `actor.survivor`;
-- resident identities derive from already-counted household slots; no extra zombie population;
-- System 23 owns observer-scoped visual knowledge/memory;
-- System 26 owns uncertain heard observations and never leaks hidden source identity to behavior;
-- technical `WorldStreamingCoordinator` owns active-envelope truth;
-- WHEN owns timing/readiness/interruption;
-- ordinary movement/world/collision own locomotion and congestion;
-- System 37 owns physical melee/firearm combat;
-- Health/generic death owns HP/corpse transition;
-- exact firearm/magazine/round identities remain physical containment truth;
+- physical melee/contact remains WHEN-timed with committed/interruption semantics;
+- exact firearm/magazine/live-round identity remains containment truth, never an ammo integer;
 - reload remains WHEN RESUMABLE with truthful eject/insert/chamber intermediate state;
-- no Combat skill;
-- no zombie clock, per-frame AI, magic aggro radius, hidden group target, private attack cooldown, teleport movement, duplicate combat/Health or collision ghosting.
+- System 26 owns firearm/combat sound;
+- generic Health-driven death/corpse transition preserves exact carried item identity;
+- no Combat skill.
 
 ### Vehicle / skateboard
 
 - on foot click exact vehicle for lawful interaction;
-- REPAIR/REFUEL appear there only when physically valid; HOTWIRE remains mounted-only;
-- clicking one vehicle never silently operates another;
+- REPAIR/REFUEL appear only when physically valid; HOTWIRE mounted-only;
+- clicking one vehicle never operates another;
 - no separate vehicle-maintenance panel;
-- `ADD RACK` remains optional/legacy, not protected gameplay;
 - skateboard 2 cells / 2 ticks; bicycle 3 / 2; motorcycle/car/truck 3 / 1;
 - skateboard only is brakeless and may reverse/dismount while moving;
 - other vehicles require stopped state before reverse/exit;
-- mounted controls replace walking controls in the same lower footprint.
+- mounted controls replace walking controls in the same footprint.
 
 ### Inventory / equipment / interaction
 
 - exact selected persistent item -> lawful action -> authoritative WHEN -> exact-entity consequence;
 - equipment slots remain RIGHT HAND, LEFT HAND, BACK, HEAD, TORSO, LEGS, FEET, HANDS;
 - one physical item cannot occupy multiple slots;
-- skateboard remains one identity across loose/equipped/ridden; legal equipment destinations RIGHT HAND / LEFT HAND / BACK only;
+- skateboard remains one physical identity across loose/equipped/ridden;
 - shared world chooser preserves every actionable exact overlapping target;
 - UI owns no gameplay truth.
 
 ### Doors / lighting / utilities
 
-- closed locked openings expose TRY OPEN instead of leaking hidden lock truth;
+- locked closed openings expose TRY OPEN instead of hidden lock truth;
 - break/board/unboard/climb remain closed work;
 - shattered-window repair remains deferred until real replacement glass exists;
 - fixed room lighting follows System-33 power automatically; no residential light-switch gameplay;
-- exact flashlight item owns persistent switched state; no invented battery depletion;
+- exact flashlight owns persistent switched state; no invented battery depletion;
 - portable generators use real INSPECT/REFUEL/START/STOP fuel/running/local-power truth;
-- physical distribution-support repair remains System 33B/System-33 truth; direct span repair waits for clickable WHAT span identity.
+- physical distribution-support repair remains System 33B/System-33 truth.
 
 ### HUD / world
 
@@ -318,11 +275,11 @@ Create one fresh focused verifier pair only for the scheduling/perception-budget
 - `Looking at:` remains below STATS / INVENTORY / MENU;
 - CENTER/FOLLOW + MAP remain available on foot/mounted;
 - island remains 3072x3072;
-- stream regions remain 128x128 active radius 1 unless deliberately changed;
+- technical stream regions remain 128x128 with active radius 1 unless deliberately changed;
 - gateway roads four-lane paved; town/crossroads routes two-lane paved unless gateway; only rural-rural links gravel/dirt single-lane traversable;
 - reference seed 20001 remains roughly 627 buildings / 2184 residents / 2 towns / 3 crossroads / 30 rural settlements;
-- exactly one municipal water facility plus aliases; no municipal pipe/node/pressure graph;
-- deterministic 10-20% rural private wells only;
+- exactly one municipal water facility plus aliases; no municipal pipe graph;
+- deterministic 10–20% rural private wells only;
 - wastewater/sewer/septic remain retired;
 - no routine 12-seed matrix.
 
@@ -332,21 +289,27 @@ Target:
 
 > **deep interaction as an emergent property of relatively light simulation**
 
-Prefer reusable physical/stateful primitives and owner truth over bespoke feature stacks: WHAT identity, containment, equipment, material/condition/damage, collision/LOS, observer-scoped perception, sound, power/fuel/fluid, weather/temperature, tools/capabilities, carry/weight and authoritative WHEN action costs.
+Prefer reusable physical/stateful primitives and owner truth over feature-specific stacks: WHAT identity, containment, equipment, material/condition/damage, openings/barriers, collision/LOS, observer-scoped perception, sound, power/fuel/fluid, weather/temperature, tools/capabilities, carry/weight and authoritative WHEN action costs.
 
-## NEXT OPERATION — ACTIVE COHORT SCHEDULING / PERCEPTION BUDGET + COUNT LADDER
+Especially for infected:
 
-Start the next code prompt by deleting the current small-cohort verifier/workflow first, reading this file, reading `README_SOPS.md`, then fetching current `main` once.
+> **Complex behavior should emerge from simple systems interacting.**
 
-Preserve the exact resident-backed / streaming / System-23 / System-26 / intention / ordinary-WHEN architecture.
+Do not build a horde brain because ordinary hearing, sight, collision, openings, WHEN and combat can create herding, bunching, pursuit and pressure themselves.
 
-Next work:
+## NEXT OPERATION — EMERGENT ENVIRONMENTAL PRESSURE
 
-1. Profile whether dormant inherited shared-signal fan-out materially contributes cost; centralize/batch only if measurement justifies it.
-2. Reduce or budget activation-time System-23 recomputation so stream-boundary activation cannot create an uncontrolled spike, without creating a fake AI clock.
-3. Establish an explicit interaction-latency/per-tick budget from production measurements.
-4. Run controlled active-count steps **4 -> 8 -> 16** using the same production-scene metrics. This is a count ladder, not a seed matrix.
-5. Preserve physical ACTOR congestion and observer-scoped visual/heard knowledge at every count.
-6. Stop increasing the count when measured behavior/activation work exceeds the chosen budget; fix the owner/scheduling seam before proceeding.
-7. Do not start hordes yet.
-8. Only after the count ladder is healthy should the next phase establish materialization/persistence policy for larger off-screen infected populations.
+Do **not** increase infected counts again yet.
+
+Use the now-eight-member active cohort to prove that existing simple systems create meaningful pressure against the real environment:
+
+1. infected pursue real System-23 sight and System-26 sound through ordinary movement;
+2. ordinary ACTOR collision creates bunching/congestion naturally;
+3. real doors/windows/barriers interrupt movement rather than being ignored or teleported through;
+4. infected interact with openings only through real physical timed actions;
+5. reuse existing door/window state, collision, movement, System-26 sound, WHEN and System-37 consequences;
+6. if non-player actors currently cannot open/break/traverse an opening, add only the minimum **generic actor/opening action seam** needed to expose the already-existing physical action;
+7. breaking/opening must create ordinary sound and state consequences that other infected can perceive naturally;
+8. do not add group coordination, shared aggro, horde AI, formation logic or zombie-only environmental shortcuts.
+
+The desired result is emergent: one infected hears/sees something, acts physically, its movement/noise/state changes alter what nearby infected perceive, and crowd pressure develops from those ordinary interactions.
