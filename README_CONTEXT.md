@@ -1,62 +1,31 @@
 # Tick Survival Lab — Current Repository Handoff
 
-Read this file first, then `README_SOPS.md`. Fetch current `main` once at prompt start. This is the authoritative continuation checkpoint.
+Read this file first, then README_SOPS.md. Fetch current main once at prompt start.
 
-## Current checkpoint — STREETLIGHT SPACING / NIGHT-GATING OPERATION REVERTED — 2026-09-08
+## Current checkpoint — STREETLIGHT FIX PUBLISHED AND VERIFIED — 2026-09-08
 
-The user reported that the immediately preceding streetlight-spacing/night-gating operation broke the live game and explicitly requested a full revert. Do not continue, repair, or partially preserve that operation.
+User explicitly requested another attempt to fix the pole issue and make streetlights active only at night. This supersedes the prior revert's prohibition on retrying without a new request.
 
-The production repository tree from immediately before that operation was restored exactly from:
+Functional published head: `feee318732890aebd12a0b868bdc0578f91bb4a1`.
+Its tree `d5b9794552cb6677c793e9a17f0e015a56363b26` exactly matches locally tested commit `4669b743992104a15d1672847e368499e677f776`.
+User explicitly confirmed direct-to-main publication in the next turn. Shell push lacked HTTPS credentials; publication succeeded through the connected GitHub API as a non-forced fast-forward.
 
-- pre-operation head: `5a97067773dd0745b1fc32accd87c92eb31d0855`
-- pre-operation tree: `2f99ffdeec3afbbd6880beab314d4c8742b5f02f`
-- revert commit restoring that exact tree: `529f07ec3d5ecfd4d6d10f480f1986bdeb732f2f`
+Completed:
+- Shared coordinate cadence replaces independently offset periodic pole samples from each substation. Seed 20001 now has 935 streetlights rather than 1048. Customer taps/bends/junctions remain, and every other roadside support is still a streetlight. This reduces redundant periodic placement; it does not impose a minimum gap on required customer supports.
+- Existing UtilityPoweredLightingSourceAdapter consumes the production OutdoorAmbientLightService. Streetlights emit only during its night phase, 20:30 to 05:30. Power availability still applies. Other fixtures retain their behavior. No wrappers, new clocks, or renderer/streaming changes.
+- Removed prior revert verifier pair; created `game/scripts/ci/PromptStreetlightCycleSmoke.gd` and `.github/workflows/prompt-streetlight-cycle.yml`.
+- Local Godot 4.7.1 production test PASS: boot, day/night boundaries including midnight, source outage/restoration, reduced streetlight count, valid endpoints, maximum 16-cell spans, no duplicate spans and no unsupported X crossings. Supported T junctions are permitted.
+- Changelog updated. Screenshot location and Safari visual acceptance were not reproduced; original missing-new-cells rendering issue remains open.
 
-The unwanted operation ending at `179779450a9743ee6e8ccc24d941e0a9a5a23832` is fully retired. Its 16-cell minimum streetlight-spacing change, customer-tap coalescing change, streetlight day/night gating, temporary base-wrapper scripts, smoke, workflow, and handoff are not part of production anymore.
-
-After the exact-tree revert, one fresh prompt-local verifier pair was added only to prove the restored production state:
-
-- `game/scripts/ci/PromptStreetlightRevertSmoke.gd`
-- `.github/workflows/prompt-streetlight-revert.yml`
-
-The executable verification head before this final handoff write is `de3f2218ba610ab14d4b8d1a2dd0a2edef7200ac`.
-
-Focused verification succeeded on run `34189250794`. It proves the production game boots, roadside power and utility lighting are ready, seed 20001 is back to the prior 1,048 streetlights and 3,157 wire spans, and the temporary spacing/night-gating base wrappers are absent.
-
-Pages build/deploy succeeded on run `34189250810` for that executable verification head.
-
-## Preserved production baseline
-
-Roadside power / alternating real streetlights are back to the pre-operation behavior. The prior reference contract remains:
-
-- 3,157 wire spans;
-- 1,048 alternating roadside streetlights;
-- maximum wire span 16.00 cells;
-- zero duplicate spans;
-- zero unsupported wire crossings;
-- real powered illumination, outage/restoration, and physical-support damage behavior.
-
-Do not reintroduce the just-reverted spacing or night-only behavior unless a future prompt explicitly asks for another attempt after the live game is stable.
-
-The earlier failed viewport-aware render-window recenter experiment also remains reverted. Do **not** treat its diagnosis as established.
+Verification / closure:
+- Local Godot 4.7.1 focused production verifier passed.
+- Published owning-head Prompt Streetlight Cycle run `34191841093`: success.
+- Published owning-head Pages run `34191841151`: build job `101951330999` and deployment job `101951514119` both success.
+- No publication blocker remains. This handoff is the FINAL repository write. After publishing its containing documentation commit, verify that exact main head, current focused workflow and Pages read-only to terminal success. Do not mutate again to insert final run IDs.
+- Keep the active verifier during this publication closure. At the next distinct code operation delete `game/scripts/ci/PromptStreetlightCycleSmoke.gd` and `.github/workflows/prompt-streetlight-cycle.yml`, then create one fresh pair restricted to the module being changed.
 
 ## NEXT OPERATION — DIAGNOSE ORIGINAL NEW-CELL RENDER FAILURE
 
-The original bug where new cells fail to appear in live play remains open. Diagnose it fresh from the restored production state rather than changing streetlights, world generation, or render-window margins speculatively.
+After streetlight publication, the separately recorded next task remains diagnosis of the original new-cell render failure: establish the first failed streaming/materialization/render boundary from current truth. Preserve 3072×3072 world, 128×128 regions, active radius 1 and 80×96 render window unless concrete evidence proves a defect. Do not revive reverted viewport-margin experiments speculatively.
 
-Determine separately whether:
-
-1. movement reaches a new technical streaming region;
-2. the streaming coordinator activates the expected neighboring regions;
-3. materialization produces authoritative terrain/entities for newly activated cells;
-4. the renderer receives the changed world state;
-5. the render-window origin/coverage updates when required;
-6. camera transform, culling, clipping, or stale renderer caches prevent already-materialized cells from appearing.
-
-Use the smallest focused instrumentation needed to identify the first broken boundary. Phone/Safari remains first-class. Preserve world size 3072×3072, technical streaming regions 128×128, active radius 1, and the existing 80×96 render window unless concrete evidence proves one of those contracts is itself defective.
-
-At the start of the next code prompt, delete the current prompt-owned verifier pair (`PromptStreetlightRevertSmoke.gd` and `prompt-streetlight-revert.yml`) and create one fresh focused pair for the diagnosed render/stream seam.
-
-## Final closure rule
-
-This `README_CONTEXT.md` update is the final repository mutation of this prompt. After it is published, perform only read-only exact-head branch, focused Actions, and Pages verification. If exact-final-head verification fails, report the evidence and make repair the next operation rather than writing again in this prompt.
+This handoff is the FINAL repository write for this publication turn. Perform only read-only exact-head verification afterward.
