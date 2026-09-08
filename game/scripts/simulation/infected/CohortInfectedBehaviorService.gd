@@ -1,7 +1,6 @@
 extends FirstInfectedBehaviorService
 class_name CohortInfectedBehaviorService
 
-const Facing = preload("res://scripts/foundation/spatial/SpatialFacing.gd")
 const PerformanceTelemetry = preload("res://scripts/foundation/diagnostics/PerformanceTelemetry.gd")
 
 ## The exact first-infected behavior policy with measurement/lifecycle hooks for
@@ -82,9 +81,6 @@ func _submit_move_toward(destination: Vector2i) -> bool:
         _record_submission(step.action_serial, step.action_type)
         return true
 
-    # The only System-39 behavior addition. Ordinary movement failed first.
-    # Query/act on the exact physical opening blocker; if no such lawful action
-    # exists, preserve the already-proven bounded local detour behavior.
     if _opening_pressure != null:
         var pressure: Dictionary = _opening_pressure.request_for_forward_blocker(_actor_id)
         if bool(pressure.get("accepted", false)):
