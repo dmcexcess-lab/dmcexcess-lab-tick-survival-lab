@@ -1,5 +1,31 @@
 # System 29 — Implementation Changelog
 
+## 2026-09-08 — Infected 4 → 8 → 16 count ladder; production held at eight
+
+Final functional runtime candidate before documentation: `d3f4a0544be6abec32b084ed77a57880330836be`
+
+- Followed the explicit project rule **complex behavior, simple systems**. No horde brain, AI scheduler, crowd manager, perception queue, new activation radius, group target sharing or zombie-only optimization layer was added.
+- Added fresh prompt-local `PromptInfectedCountLadderSmoke.gd` + `prompt-infected-count-ladder.yml`, booting real `main.tscn` and measuring the existing production cohort at controlled counts 4 → 8 → 16.
+- The smoke keeps every infected as an exact resident-backed physical ACTOR in the existing technical active stream envelope, proves distinct collision occupancy, proves render frames do not schedule AI, runs an explicit all-observer System-23 perception sweep, then opens ordinary shared WHEN and proves the existing event-driven behavior reacts.
+- Count 4 passed on `4d32bd3b848c18731aca96b619a334e905bdb077`, run `34173867420`: perception sweep 60,955 µs; worst behavior evaluation 17,835 µs; worst activation sync 98,580 µs.
+- Count 8 passed on `afc5a175f3f0c07827a090cec3f7aa7376b0f74d`, run `34173978788`: perception sweep 113,309 µs; worst behavior evaluation 14,732 µs; worst activation sync 161,719 µs.
+- Count 16 passed functionally on `0c0b3e7026afff623e3b2f5cd1129056a05c9eea`, run `34174095120`: perception sweep 233,611 µs; worst behavior evaluation 15,224 µs; worst activation sync 308,325 µs; eight ordinary infected action submissions occurred in the scenario.
+- The 16-member result showed no pathological growth in the simple intention/WHEN behavior itself. The expensive seam is the expected roughly linear cost of doing full real System-23 work for more simultaneous observers.
+- Targeted inspection confirmed `ActiveInfectedCohortService` already avoids a needless whole-roster rescan on ordinary placement/Health changes: only the changed infected is resynchronized. There was no justified tiny optimization to make before inventing larger machinery.
+- Rather than over-engineer around a count that is not yet needed, production was intentionally returned to `ACTIVE_INFECTED_COHORT_SIZE = 8`.
+- Final 8-member functional rerun `34174173692` succeeded on `d3f4a0544be6abec32b084ed77a57880330836be`: perception sweep 118,140 µs; worst behavior evaluation 17,430 µs; worst activation sync 165,307 µs; all exact resident/collision/System-23/shared-WHEN assertions remained green.
+- The microsecond values are CI-machine observations, not universal budgets. The durable decision is that eight is a useful real production increase from four using the existing simple systems, while sixteen is proven functional but deliberately not adopted yet.
+
+### Ownership boundary
+
+Nothing moved. Population/resident projection owns identity; technical streaming owns active area; System 23 owns observer knowledge; System 26 owns heard observations; WHEN owns time; movement/collision own locomotion and congestion; System 37 owns combat; Health/death own mortality. Scaling remains composition of those systems, not a new zombie simulation.
+
+### Next major phase
+
+Stop scaling counts for now. Use the eight-member cohort to prove **emergent environmental pressure**: sight and sound should drive ordinary pursuit into real doors/windows/barriers, collision should create bunching, and infected should traverse/open/break only through real physical timed actions. If an opening interaction seam is missing for non-player actors, add the minimum generic actor/opening seam rather than horde AI or group coordination.
+
+---
+
 ## 2026-09-08 — Small resident-backed infected cohort scaling proof
 
 Verified functional runtime head: `dd178a7c445ea382ea11e27400d3c1c22ec65e79`
