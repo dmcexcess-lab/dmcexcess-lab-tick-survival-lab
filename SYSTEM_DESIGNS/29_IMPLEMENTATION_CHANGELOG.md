@@ -1,5 +1,35 @@
 # System 29 — Implementation Changelog
 
+## 2026-09-08 — Small resident-backed infected cohort scaling proof
+
+Verified functional runtime head: `dd178a7c445ea382ea11e27400d3c1c22ec65e79`
+
+- Expanded production from one autonomous infected to a deliberately bounded four-member cohort projected from the existing infected household resident slots. No extra zombie population is created.
+- Added deterministic `PopulationResidentProjection.infected_near()` ordering and `FirstInfectedHydrationService.hydrate_cohort()` while preserving exact resident identity, ordinary actor enrollment and collision truth.
+- Added `ActiveInfectedCohortService`, which uses the existing `WorldStreamingCoordinator.is_cell_active()` / `active_regions_changed` contract as the sole behavior-activation envelope. There is no second zombie radius.
+- A stream-dormant infected keeps exact ACTOR placement, Health, inventory/equipment, condition/skills/carry state and population/infection provenance. Only expensive participation sleeps: System-26 listener registration is removed, System-23 recomputation is gated, and the reused behavior adapter is stopped.
+- Stream re-entry reactivates the same resident identity and the same perception/behavior objects; it does not substitute a fresh zombie.
+- `StreamingObserverPerceptionService` only gates the ordinary System-23 observer. `CohortInfectedBehaviorService` only adds lifecycle/performance measurement around the already-proven `FirstInfectedBehaviorService` policy.
+- Preserved shared WHEN scheduling. A single ordinary player commitment opened the same simulation timeline and two active infected independently submitted ordinary movement/combat actions.
+- Preserved physical congestion. Four hydrated ACTORs occupy distinct cells, concurrent actors remain distinct, and ordinary collision sees another infected body as blocking occupancy rather than horde pass-through.
+- Generic Health/death remains authoritative: killing one cohort member removes only that actor from active scheduling while another living cohort member continues; population provenance survives.
+- Added real production instrumentation for roster/active/dormant counts, activations/deactivations, activation-sync cost, behavior-evaluation cost and ordinary action submissions.
+- Fresh prompt-local verifier `PromptSmallInfectedCohortSmoke.gd` + `prompt-small-infected-cohort.yml` boots real `main.tscn` and proves deterministic hydration, streaming exit/re-entry, dormant work suppression, shared-WHEN multi-actor scheduling, congestion, one-member death isolation and measured runtime work.
+- Initial run `34172671153` failed before gameplay only because two verifier locals required explicit `Vector2i` typing. Production parsed cleanly; only the smoke typing was corrected and no scaling assertion was weakened.
+- Focused run `34172818895` succeeded on `dd178a7c445ea382ea11e27400d3c1c22ec65e79`.
+- Measured successful-run values: 4-member roster; 24 behavior evaluations totaling 124,569 µs with 16,672 µs maximum; 7 activation-sync passes totaling 182,013 µs with 95,595 µs maximum; 8 activations, 5 deactivations and 2 ordinary action submissions in the forced scaling scenario.
+- The architecture is therefore proven at four active/hydrated residents, but the measured 16.67 ms worst behavior evaluation and 95.60 ms worst activation sync explicitly do **not** justify jumping directly to hordes.
+
+### Ownership boundary
+
+System 38 owns deterministic resident projection/hydration, infection provenance and active/dormant behavior enrollment only. `WorldStreamingCoordinator` owns the technical active envelope; System 23 owns visual knowledge; System 26 owns heard observations; WHEN owns time; ordinary movement/world/collision own locomotion and congestion; System 37 owns attacks; Health/generic corpse transition owns death. No parallel zombie simulation layer was added for scaling.
+
+### Next major phase
+
+Build an **active-cohort scheduling/perception budget + controlled count ladder**. Preserve the exact architecture, profile dormant shared-signal fan-out and activation-time perception work, then test controlled active counts such as 4 → 8 → 16. Stop increasing count when interaction-latency cost crosses the chosen budget. Do not start island-wide hordes or trade observer-scoped knowledge/physical congestion away for scale.
+
+---
+
 ## 2026-09-07 — First resident-backed infected autonomous behavior closure
 
 Verified functional runtime head: `90f1c0c974afebcee71403bdd39c8ce4d7a52451`
