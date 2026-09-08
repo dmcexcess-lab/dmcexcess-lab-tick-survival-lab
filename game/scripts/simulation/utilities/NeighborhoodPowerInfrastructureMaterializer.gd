@@ -18,9 +18,11 @@ const CUSTOMER_SEARCH_RADIUS: int = 6
 const ROAD_POLE_SEARCH_RADIUS: int = 8
 const ROAD_POLE_SPACING: int = 10
 const ROAD_SIDE_HOLD_POLES: int = 2
+const MAX_WIRE_SPAN: int = 16
 const WELL_CLEARANCE: int = 1
 
 var _topology: Dictionary = {}
+var _roadside_runs: Dictionary = {}
 var _blocked_prop_lookup: Dictionary = {}
 var _pole_exclusion_lookup: Dictionary = {}
 
@@ -50,7 +52,8 @@ func _build_projection() -> Dictionary:
     var reserved_cells: Dictionary = {}
     var shared_pole_ids: Dictionary = {}
     var shared_pole_cells: Dictionary = {}
-    var shared_pole_states: Dictionary = {}
+    var distribution_jobs: Array[Dictionary] = []
+    var all_road_keys: Dictionary = {}
     var trunk_wire_index_by_route: Dictionary = {}
 
     # Municipal water is represented by one already-generated building. Private
@@ -97,17 +100,29 @@ func _build_projection() -> Dictionary:
                 "ordinal": index,
             })
 
+        var routes: Dictionary = _distribution_routes(anchor, customers, road_graph)
+        if routes.is_empty():
+            return {"props": [], "wires": []}
+        for cell: Vector2i in routes["key_cells"]:
+            all_road_keys[cell] = true
+        distribution_jobs.append({
+            "token": token, "service_key": service_key,
+            "transformer_id": transformer_id, "anchor": anchor,
+            "routes": routes,
+        })
+
+    # The physical roadside chain is planned once for ALL services. Substations may
+    # share its spans, but cannot independently move a shared pole to another bank
+    # or skip a neighboring service's tap when selecting span endpoints.
+    var road_props: Array[Dictionary] = _place_shared_road_poles(
+        all_road_keys, road_graph, reserved_cells, shared_pole_ids, shared_pole_cells
+    )
+    if road_props.is_empty():
+        return {"props": [], "wires": []}
+    props.append_array(road_props)
+    for job: Dictionary in distribution_jobs:
         var distribution: Dictionary = _shared_distribution_tree(
-            token,
-            service_key,
-            transformer_id,
-            anchor,
-            customers,
-            road_graph,
-            reserved_cells,
-            shared_pole_ids,
-            shared_pole_cells,
-            shared_pole_states
+            job, all_road_keys, reserved_cells, shared_pole_ids, shared_pole_cells
         )
         if not bool(distribution.get("ok", false)):
             return {"props": [], "wires": []}
@@ -172,26 +187,23 @@ func _build_projection() -> Dictionary:
         })
         reserved_cells[well_cell] = true
 
-    return {"props": props, "wires": wires}
+    var bounded: Dictionary = _bound_wire_spans(props, wires, reserved_cells)
+    if bounded.is_empty():
+        return {"props": [], "wires": []}
+    _assign_roadside_lights(props)
+    return {"props": props, "wires": bounded["wires"]}
 
-func _shared_distribution_tree(
-    token: String,
-    service_key: String,
-    transformer_id: String,
+func _distribution_routes(
     transformer_cell: Vector2i,
     customers: Array[Dictionary],
-    road_graph: Dictionary,
-    reserved_cells: Dictionary,
-    shared_pole_ids: Dictionary,
-    shared_pole_cells: Dictionary,
-    shared_pole_states: Dictionary
+    road_graph: Dictionary
 ) -> Dictionary:
     var root_road_cell: Vector2i = _nearest_graph_cell(transformer_cell, road_graph.keys())
     if root_road_cell == INVALID_CELL:
-        return {"ok": false, "props": [], "wires": []}
+        return {}
     var parents: Dictionary = _road_parents_from_root(road_graph, root_road_cell)
     if parents.is_empty():
-        return {"ok": false, "props": [], "wires": []}
+        return {}
 
     var customer_paths: Array[Dictionary] = []
     var union_graph: Dictionary = {}
@@ -201,10 +213,10 @@ func _shared_distribution_tree(
         var building_center: Vector2i = _rect_center(building_rect)
         var tap_cell: Vector2i = _nearest_graph_cell(building_center, parents.keys())
         if tap_cell == INVALID_CELL:
-            return {"ok": false, "props": [], "wires": []}
+            return {}
         var path: Array[Vector2i] = _path_from_root(parents, root_road_cell, tap_cell)
         if path.is_empty():
-            return {"ok": false, "props": [], "wires": []}
+            return {}
         key_cells[tap_cell] = true
         for path_index: int in range(1, path.size()):
             _graph_connect(union_graph, path[path_index - 1], path[path_index])
@@ -231,138 +243,24 @@ func _shared_distribution_tree(
         if da + db != Vector2i.ZERO:
             key_cells[cell] = true
 
-    # Keep existing route-cell ordering for stable pole IDs, but place root-outward so each
-    # child pole can inherit the physical roadside bank used by its parent span.
-    var ordered_key_cells: Array[Vector2i] = []
-    for value: Variant in key_cells.keys():
-        ordered_key_cells.append(value)
-    ordered_key_cells.sort_custom(_cell_before)
-    var pole_ordinal_by_route_cell: Dictionary = {}
-    for index: int in range(ordered_key_cells.size()):
-        pole_ordinal_by_route_cell[ordered_key_cells[index]] = index
+    return {"root": root_road_cell, "key_cells": key_cells, "customer_paths": customer_paths}
 
-    var placement_key_cells: Array[Vector2i] = ordered_key_cells.duplicate()
-    placement_key_cells.sort_custom(func(a: Vector2i, b: Vector2i) -> bool:
-        var a_depth: int = _route_depth(parents, root_road_cell, a)
-        var b_depth: int = _route_depth(parents, root_road_cell, b)
-        if a_depth != b_depth:
-            return a_depth < b_depth
-        return _cell_before(a, b)
-    )
-
+func _shared_distribution_tree(
+    job: Dictionary,
+    key_cells: Dictionary,
+    reserved_cells: Dictionary,
+    pole_id_by_route_cell: Dictionary,
+    pole_cell_by_route_cell: Dictionary
+) -> Dictionary:
+    var token: String = job["token"]
+    var service_key: String = job["service_key"]
+    var transformer_id: String = job["transformer_id"]
+    var routes: Dictionary = job["routes"]
+    var root_road_cell: Vector2i = routes["root"]
+    var customer_paths: Array[Dictionary] = routes["customer_paths"]
     var props: Array[Dictionary] = []
     var wires: Array[Dictionary] = []
-    var pole_id_by_route_cell: Dictionary = {}
-    var pole_cell_by_route_cell: Dictionary = {}
-    var pole_state_by_route_cell: Dictionary = {}
     var local_reserved: Dictionary = reserved_cells.duplicate()
-    for route_cell: Vector2i in placement_key_cells:
-        var reuse_shared: bool = shared_pole_ids.has(route_cell)
-        if reuse_shared:
-            var shared_pole_id: String = String(shared_pole_ids.get(route_cell, ""))
-            var shared_pole_cell: Vector2i = shared_pole_cells.get(route_cell, INVALID_CELL)
-            if shared_pole_id.is_empty() or shared_pole_cell == INVALID_CELL:
-                return {"ok": false, "props": [], "wires": []}
-            var reused_state: Dictionary = shared_pole_states.get(route_cell, {}).duplicate(true)
-            if route_cell != root_road_cell:
-                var reused_parent_key: Vector2i = _nearest_key_parent(route_cell, key_cells, parents, root_road_cell)
-                if reused_parent_key == INVALID_CELL or not pole_cell_by_route_cell.has(reused_parent_key):
-                    return {"ok": false, "props": [], "wires": []}
-                var reused_direction: Vector2i = _cardinal_direction(reused_parent_key, route_cell)
-                if reused_direction == Vector2i.ZERO:
-                    return {"ok": false, "props": [], "wires": []}
-                var reused_parent_pole_cell: Vector2i = pole_cell_by_route_cell.get(reused_parent_key, INVALID_CELL)
-                var reused_parent_state: Dictionary = pole_state_by_route_cell.get(reused_parent_key, {})
-                var reused_preferred_side: int = _continuous_road_side(
-                    route_cell,
-                    reused_direction,
-                    reused_parent_pole_cell,
-                    reused_parent_state
-                )
-                var reused_actual_side: int = _road_side(route_cell, shared_pole_cell, reused_direction)
-                if reused_actual_side == 0:
-                    return {"ok": false, "props": [], "wires": []}
-                var reused_parent_hold: int = int(reused_parent_state.get("hold", 0))
-                if reused_parent_hold > 0 and reused_preferred_side != 0 and reused_actual_side != reused_preferred_side:
-                    # A shared support is only truly shareable when it respects this service
-                    # path's active cross-road hold. Otherwise this service gets its own real
-                    # roadside support instead of being forced into an immediate cross-back.
-                    reuse_shared = false
-                else:
-                    var reused_next_hold: int = maxi(0, reused_parent_hold - 1)
-                    if reused_preferred_side != 0 and reused_actual_side != reused_preferred_side:
-                        reused_next_hold = ROAD_SIDE_HOLD_POLES
-                    reused_state = {
-                        "side": reused_actual_side,
-                        "direction": reused_direction,
-                        "hold": reused_next_hold,
-                    }
-            if reuse_shared:
-                pole_id_by_route_cell[route_cell] = shared_pole_id
-                pole_cell_by_route_cell[route_cell] = shared_pole_cell
-                pole_state_by_route_cell[route_cell] = reused_state
-                continue
-
-        var pole_ordinal: int = int(pole_ordinal_by_route_cell.get(route_cell, -1))
-        if pole_ordinal < 0:
-            return {"ok": false, "props": [], "wires": []}
-
-        var direction: Vector2i = Vector2i.ZERO
-        var preferred_side: int = -1
-        var side_hold_remaining: int = 0
-        if route_cell == root_road_cell:
-            direction = _root_route_direction(root_road_cell, union_graph, road_graph)
-        else:
-            var parent_key: Vector2i = _nearest_key_parent(route_cell, key_cells, parents, root_road_cell)
-            if parent_key == INVALID_CELL or not pole_cell_by_route_cell.has(parent_key):
-                return {"ok": false, "props": [], "wires": []}
-            direction = _cardinal_direction(parent_key, route_cell)
-            if direction == Vector2i.ZERO:
-                return {"ok": false, "props": [], "wires": []}
-            var parent_pole_cell: Vector2i = pole_cell_by_route_cell.get(parent_key, INVALID_CELL)
-            var parent_state: Dictionary = pole_state_by_route_cell.get(parent_key, {})
-            preferred_side = _continuous_road_side(route_cell, direction, parent_pole_cell, parent_state)
-            side_hold_remaining = int(parent_state.get("hold", 0))
-        if direction == Vector2i.ZERO:
-            direction = Vector2i(1, 0)
-
-        var pole_cell: Vector2i = _find_roadside_available(
-            route_cell,
-            direction,
-            preferred_side,
-            local_reserved,
-            ROAD_POLE_SEARCH_RADIUS,
-            side_hold_remaining <= 0
-        )
-        if pole_cell == INVALID_CELL:
-            return {"ok": false, "props": [], "wires": []}
-        var actual_side: int = _road_side(route_cell, pole_cell, direction)
-        if actual_side == 0:
-            return {"ok": false, "props": [], "wires": []}
-
-        var next_hold: int = maxi(0, side_hold_remaining - 1)
-        if route_cell != root_road_cell and preferred_side != 0 and actual_side != preferred_side:
-            next_hold = ROAD_SIDE_HOLD_POLES
-
-        var pole_id: String = "power.physical.%s.road.%03d" % [token, pole_ordinal]
-        props.append({
-            "id": pole_id,
-            "semantic": &"prop.utility_pole_wood",
-            "cell": pole_cell,
-            "facing": _facing_toward_cell(pole_cell, route_cell),
-        })
-        local_reserved[pole_cell] = true
-        pole_id_by_route_cell[route_cell] = pole_id
-        pole_cell_by_route_cell[route_cell] = pole_cell
-        pole_state_by_route_cell[route_cell] = {
-            "side": actual_side,
-            "direction": direction,
-            "hold": next_hold,
-        }
-        if not shared_pole_ids.has(route_cell):
-            shared_pole_ids[route_cell] = pole_id
-            shared_pole_cells[route_cell] = pole_cell
-            shared_pole_states[route_cell] = pole_state_by_route_cell[route_cell].duplicate(true)
 
     var root_pole_id: String = String(pole_id_by_route_cell.get(root_road_cell, ""))
     var root_pole_cell: Vector2i = pole_cell_by_route_cell.get(root_road_cell, INVALID_CELL)
@@ -548,54 +446,6 @@ func _undirected_edge_key(a: Vector2i, b: Vector2i) -> String:
         b = swap
     return "%d,%d>%d,%d" % [a.x, a.y, b.x, b.y]
 
-func _route_depth(parents: Dictionary, root: Vector2i, target: Vector2i) -> int:
-    if not parents.has(target):
-        return 2147483647
-    var depth: int = 0
-    var current: Vector2i = target
-    while current != root:
-        current = parents.get(current, INVALID_CELL)
-        if current == INVALID_CELL:
-            return 2147483647
-        depth += 1
-        if depth > parents.size():
-            return 2147483647
-    return depth
-
-func _nearest_key_parent(
-    route_cell: Vector2i,
-    key_cells: Dictionary,
-    parents: Dictionary,
-    root: Vector2i
-) -> Vector2i:
-    var current: Vector2i = route_cell
-    var guard: int = 0
-    while current != root:
-        current = parents.get(current, INVALID_CELL)
-        if current == INVALID_CELL:
-            return INVALID_CELL
-        if key_cells.has(current):
-            return current
-        guard += 1
-        if guard > parents.size():
-            return INVALID_CELL
-    return root
-
-func _root_route_direction(root: Vector2i, union_graph: Dictionary, road_graph: Dictionary) -> Vector2i:
-    var neighbors: Array = union_graph.get(root, [])
-    if neighbors.is_empty():
-        neighbors = road_graph.get(root, [])
-    if neighbors.is_empty():
-        return Vector2i.ZERO
-    var typed: Array[Vector2i] = []
-    for value: Variant in neighbors:
-        if typeof(value) == TYPE_VECTOR2I:
-            typed.append(value)
-    typed.sort_custom(_cell_before)
-    if typed.is_empty():
-        return Vector2i.ZERO
-    return _cardinal_direction(root, typed[0])
-
 static func _cardinal_direction(start: Vector2i, finish: Vector2i) -> Vector2i:
     var delta: Vector2i = finish - start
     if delta.x != 0 and delta.y == 0:
@@ -603,47 +453,6 @@ static func _cardinal_direction(start: Vector2i, finish: Vector2i) -> Vector2i:
     if delta.y != 0 and delta.x == 0:
         return Vector2i(0, signi(delta.y))
     return Vector2i.ZERO
-
-static func _same_axis(a: Vector2i, b: Vector2i) -> bool:
-    if a == Vector2i.ZERO or b == Vector2i.ZERO:
-        return false
-    return (a.x != 0 and b.x != 0) or (a.y != 0 and b.y != 0)
-
-static func _continuous_road_side(
-    route_cell: Vector2i,
-    direction: Vector2i,
-    parent_pole_cell: Vector2i,
-    parent_state: Dictionary
-) -> int:
-    if direction == Vector2i.ZERO or parent_pole_cell == INVALID_CELL:
-        return int(parent_state.get("side", -1))
-
-    # Road-side signs are local to segment direction. At a bend, simply reusing the
-    # previous sign can flip the physical bank. Choose the child segment bank whose
-    # ideal one-cell offset is geometrically closest to the actual parent support.
-    # This preserves a continuous roadside polyline even when an earlier pole was
-    # displaced by a driveway/access exclusion.
-    var positive_normal := Vector2i(-direction.y, direction.x)
-    var positive_probe: Vector2i = route_cell + positive_normal
-    var negative_probe: Vector2i = route_cell - positive_normal
-    var positive_distance: int = absi(parent_pole_cell.x - positive_probe.x) + absi(parent_pole_cell.y - positive_probe.y)
-    var negative_distance: int = absi(parent_pole_cell.x - negative_probe.x) + absi(parent_pole_cell.y - negative_probe.y)
-    if positive_distance < negative_distance:
-        return 1
-    if negative_distance < positive_distance:
-        return -1
-
-    var projected_side: int = _road_side(route_cell, parent_pole_cell, direction)
-    if projected_side != 0:
-        return projected_side
-
-    var parent_side: int = int(parent_state.get("side", -1))
-    var parent_direction: Vector2i = parent_state.get("direction", Vector2i.ZERO)
-    if parent_side == 0:
-        parent_side = -1
-    if _same_axis(direction, parent_direction) and (direction.x * parent_direction.x + direction.y * parent_direction.y) < 0:
-        return -parent_side
-    return parent_side
 
 static func _road_side(route_cell: Vector2i, support_cell: Vector2i, direction: Vector2i) -> int:
     if support_cell == INVALID_CELL or direction == Vector2i.ZERO:
@@ -663,18 +472,272 @@ func _find_roadside_available(
     var sides: Array[int] = [side]
     if allow_opposite:
         sides.append(-side)
+    var normal := Vector2i(-direction.y, direction.x)
     for candidate_side: int in sides:
-        for radius: int in range(1, max_radius + 1):
-            for y: int in range(-radius, radius + 1):
-                for x: int in range(-radius, radius + 1):
-                    if absi(x) != radius and absi(y) != radius:
-                        continue
-                    var candidate: Vector2i = route_cell + Vector2i(x, y)
-                    if _road_side(route_cell, candidate, direction) != candidate_side:
-                        continue
+        for along_distance: int in range(max_radius + 1):
+            var shifts: Array = [0] if along_distance == 0 else [-along_distance, along_distance]
+            for offset: int in range(1, max_radius + 1):
+                for shift: int in shifts:
+                    var candidate: Vector2i = route_cell + normal * candidate_side * offset + direction * shift
                     if _cell_available(candidate, reserved_cells):
                         return candidate
     return INVALID_CELL
+
+# Canonical straight-road runs use physical compass banks, independent of the
+# direction any particular substation traverses them.
+func _road_direction(cell: Vector2i, graph: Dictionary) -> Vector2i:
+    for value: Variant in graph.get(cell, []):
+        var neighbor: Vector2i = value
+        if neighbor.y == cell.y:
+            return Vector2i.RIGHT
+    return Vector2i.DOWN
+
+static func _road_run_key(cell: Vector2i, direction: Vector2i) -> String:
+    return "h:%d" % cell.y if direction.x != 0 else "v:%d" % cell.x
+
+func _place_shared_road_poles(
+    keys: Dictionary, graph: Dictionary, reserved: Dictionary,
+    ids: Dictionary, cells: Dictionary
+) -> Array[Dictionary]:
+    var groups: Dictionary = {}
+    for cell: Vector2i in keys:
+        var direction: Vector2i = _road_direction(cell, graph)
+        var group: String = _road_run_key(cell, direction)
+        var entries: Array = groups.get(group, [])
+        entries.append(cell)
+        groups[group] = entries
+    var group_names: Array = groups.keys()
+    group_names.sort()
+    var result: Array[Dictionary] = []
+    for group: String in group_names:
+        var entries: Array = groups[group]
+        entries.sort_custom(_cell_before)
+        var direction: Vector2i = _road_direction(entries[0], graph)
+        var side: int = -1 if direction.x != 0 else 1
+        var hold: int = 0
+        for route_cell: Vector2i in entries:
+            var cell: Vector2i = _find_roadside_available(
+                route_cell, direction, side, reserved, ROAD_POLE_SEARCH_RADIUS, hold == 0
+            )
+            if cell == INVALID_CELL:
+                push_error("Power roadside placement blocked at %s" % route_cell)
+                return []
+            var actual_side: int = _road_side(route_cell, cell, direction)
+            hold = ROAD_SIDE_HOLD_POLES if actual_side != side else maxi(0, hold - 1)
+            side = actual_side
+            var id: String = "power.physical.road.%d.%d" % [route_cell.x, route_cell.y]
+            result.append({
+                "id": id, "semantic": &"prop.utility_pole_wood", "cell": cell,
+                "facing": _facing_toward_cell(cell, route_cell),
+                "road_cell": route_cell, "road_direction": direction,
+            })
+            reserved[cell] = true
+            ids[route_cell] = id
+            cells[route_cell] = cell
+    return result
+
+# A service on the other bank crosses at its tap, then runs to the customer.
+# The two-pole trunk hold never governed service drops; diagonal house leads
+# previously crossed unrelated roadside spans without an explicit crossing pole.
+func _lead_crossing_support(
+    road: Dictionary, target: Vector2i, reserved: Dictionary
+) -> Vector2i:
+    var route: Vector2i = road["road_cell"]
+    var direction: Vector2i = road["road_direction"]
+    var origin: Vector2i = road["cell"]
+    var target_side: int = _road_side(route, target, direction)
+    if target_side == 0 or target_side == _road_side(route, origin, direction):
+        return INVALID_CELL
+    var normal := Vector2i(-direction.y, direction.x)
+    var aligned_route: Vector2i = Vector2i(origin.x, route.y) if direction.x != 0 else Vector2i(route.x, origin.y)
+    for offset: int in range(1, MAX_WIRE_SPAN + 1):
+        var candidate: Vector2i = aligned_route + normal * target_side * offset
+        if _cell_available(candidate, reserved):
+            return candidate
+    return INVALID_CELL
+
+func _bound_wire_spans(
+    props: Array[Dictionary], wires: Array[Dictionary], reserved: Dictionary
+) -> Dictionary:
+    var records: Dictionary = {}
+    for prop: Dictionary in props:
+        records[prop["id"]] = prop
+    var result: Array[Dictionary] = []
+    var span_buckets: Dictionary = {}
+    var ids_by_cell: Dictionary = {}
+    for prop: Dictionary in props:
+        ids_by_cell[prop["cell"]] = prop["id"]
+    for wire: Dictionary in wires:
+        var start_id: String = wire["start_id"]
+        var end_id: String = wire["end_id"]
+        var start: Vector2i = records[start_id]["cell"]
+        var finish: Vector2i = records[end_id]["cell"]
+        var waypoints: Array[Dictionary] = [{"id": start_id, "cell": start}]
+        var role: StringName = wire.get("wire_role", &"")
+        if role in [&"service_drop", &"substation_lead"]:
+            var road: Dictionary = records[start_id] if role == &"service_drop" else records[end_id]
+            var target: Vector2i = finish if role == &"service_drop" else start
+            var crossing: Vector2i = _lead_crossing_support(road, target, reserved)
+            if crossing != INVALID_CELL:
+                var crossing_id: String = "%s.crossing" % wire["asset_id"]
+                var prop: Dictionary = {
+                    "id": crossing_id, "cell": crossing, "semantic": &"prop.utility_pole_wood",
+                    "facing": _facing_toward_cell(crossing, road["road_cell"]),
+                    "road_cell": road["road_cell"], "road_direction": road["road_direction"],
+                }
+                props.append(prop)
+                records[crossing_id] = prop
+                reserved[crossing] = true
+                ids_by_cell[crossing] = crossing_id
+                waypoints.append({"id": crossing_id, "cell": crossing})
+        waypoints.append({"id": end_id, "cell": finish})
+        var previous: Dictionary = waypoints[0]
+        var ordinal: int = 0
+        for point_index: int in range(1, waypoints.size()):
+            var target: Dictionary = waypoints[point_index]
+            while Vector2(previous["cell"]).distance_to(Vector2(target["cell"])) > float(MAX_WIRE_SPAN) \
+                or not _span_crossings(previous["cell"], target["cell"], span_buckets).is_empty():
+                var cell: Vector2i = _shared_span_junction(previous["cell"], target["cell"], span_buckets)
+                if cell == INVALID_CELL:
+                    cell = _span_support_cell(previous["cell"], target["cell"], reserved, span_buckets)
+                if cell == INVALID_CELL:
+                    push_error("Power span cannot be supported: %s -> %s" % [previous["cell"], target["cell"]])
+                    return {}
+                if ids_by_cell.has(cell):
+                    var shared: Dictionary = {"id": ids_by_cell[cell], "cell": cell}
+                    _append_span(result, wire, previous, shared, ordinal, span_buckets)
+                    ordinal += 1
+                    previous = shared
+                    continue
+                var id: String = "%s.support.%03d" % [wire["asset_id"], ordinal]
+                var prop: Dictionary = {
+                    "id": id, "cell": cell, "semantic": &"prop.utility_pole_wood",
+                    "facing": _facing_toward_cell(cell, target["cell"]),
+                }
+                if role == &"shared_trunk":
+                    var route: Vector2i = wire["route_start_cell"]
+                    var direction: Vector2i = _cardinal_direction(route, wire["route_end_cell"])
+                    direction = Vector2i.RIGHT if direction.x != 0 else Vector2i.DOWN
+                    prop["road_cell"] = Vector2i(cell.x, route.y) if direction.x != 0 else Vector2i(route.x, cell.y)
+                    prop["road_direction"] = direction
+                props.append(prop)
+                reserved[cell] = true
+                ids_by_cell[cell] = id
+                var next: Dictionary = {"id": id, "cell": cell}
+                _append_span(result, wire, previous, next, ordinal, span_buckets)
+                ordinal += 1
+                previous = next
+            _append_span(result, wire, previous, target, ordinal, span_buckets)
+            ordinal += 1
+            previous = target
+    return {"wires": result}
+
+func _span_support_cell(start: Vector2i, finish: Vector2i, reserved: Dictionary, buckets: Dictionary) -> Vector2i:
+    var delta := Vector2(finish - start)
+    var target := Vector2i((Vector2(start) + delta.normalized() * minf(delta.length() * 0.75, float(MAX_WIRE_SPAN - 4))).round())
+    for radius: int in range(ROAD_POLE_SEARCH_RADIUS + 1):
+        for y: int in range(-radius, radius + 1):
+            for x: int in range(-radius, radius + 1):
+                if radius > 0 and absi(x) != radius and absi(y) != radius:
+                    continue
+                var candidate := target + Vector2i(x, y)
+                if Vector2(start).distance_to(Vector2(candidate)) > float(MAX_WIRE_SPAN) \
+                    or Vector2(candidate).distance_to(Vector2(finish)) >= delta.length() - 1.0:
+                    continue
+                if _cell_available(candidate, reserved) and _span_crossings(start, candidate, buckets).is_empty():
+                    return candidate
+    return INVALID_CELL
+
+# Spatially bounded, one-shot geometry checks. A meeting lead branches at an
+# existing physical support rather than drawing an unsupported X through it.
+static func _proper_crossing(a: Vector2i, b: Vector2i, c: Vector2i, d: Vector2i) -> bool:
+    var ab := Vector2(b - a)
+    var cd := Vector2(d - c)
+    return ab.cross(Vector2(c - a)) * ab.cross(Vector2(d - a)) < 0.0 \
+        and cd.cross(Vector2(a - c)) * cd.cross(Vector2(b - c)) < 0.0
+
+static func _span_bucket_cells(start: Vector2i, finish: Vector2i) -> Array[Vector2i]:
+    var result: Array[Vector2i] = []
+    for y: int in range(floori(float(mini(start.y, finish.y)) / MAX_WIRE_SPAN), floori(float(maxi(start.y, finish.y)) / MAX_WIRE_SPAN) + 1):
+        for x: int in range(floori(float(mini(start.x, finish.x)) / MAX_WIRE_SPAN), floori(float(maxi(start.x, finish.x)) / MAX_WIRE_SPAN) + 1):
+            result.append(Vector2i(x, y))
+    return result
+
+func _span_crossings(start: Vector2i, finish: Vector2i, buckets: Dictionary) -> Array[Dictionary]:
+    var result: Array[Dictionary] = []
+    var seen: Dictionary = {}
+    for cell: Vector2i in _span_bucket_cells(start, finish):
+        for edge: Dictionary in buckets.get(cell, []):
+            if seen.has(edge["id"]):
+                continue
+            seen[edge["id"]] = true
+            if _proper_crossing(start, finish, edge["a"], edge["b"]):
+                result.append(edge)
+    return result
+
+func _shared_span_junction(start: Vector2i, finish: Vector2i, buckets: Dictionary) -> Vector2i:
+    var best: Vector2i = INVALID_CELL
+    var best_distance: float = INF
+    for edge: Dictionary in _span_crossings(start, finish, buckets):
+        for candidate: Vector2i in [edge["a"], edge["b"]]:
+            var remaining: float = Vector2(candidate).distance_to(Vector2(finish))
+            if candidate == start or remaining >= Vector2(start).distance_to(Vector2(finish)) \
+                or Vector2(start).distance_to(Vector2(candidate)) > float(MAX_WIRE_SPAN):
+                continue
+            if not _span_crossings(start, candidate, buckets).is_empty():
+                continue
+            if remaining < best_distance:
+                best_distance = remaining
+                best = candidate
+    return best
+
+func _append_span(result: Array[Dictionary], wire: Dictionary, start: Dictionary, finish: Dictionary, ordinal: int, buckets: Dictionary) -> void:
+    var span: Dictionary = _physical_span(wire, start, finish, ordinal)
+    result.append(span)
+    var edge: Dictionary = {"id": span["asset_id"], "a": start["cell"], "b": finish["cell"]}
+    for cell: Vector2i in _span_bucket_cells(start["cell"], finish["cell"]):
+        var entries: Array = buckets.get(cell, [])
+        entries.append(edge)
+        buckets[cell] = entries
+
+static func _physical_span(wire: Dictionary, start: Dictionary, finish: Dictionary, ordinal: int) -> Dictionary:
+    var result: Dictionary = wire.duplicate(true)
+    result["asset_id"] = "%s.part.%03d" % [wire["asset_id"], ordinal]
+    result["start_id"] = start["id"]
+    result["end_id"] = finish["id"]
+    result["snap_cell"] = finish["cell"]
+    return result
+
+# Count physical supports, not service visits or per-substation ordinals. A shared
+# pole has one identity/semantic and participates once in its roadside sequence.
+func _assign_roadside_lights(props: Array[Dictionary]) -> void:
+    var runs: Dictionary = {}
+    for prop: Dictionary in props:
+        if not prop.has("road_cell"):
+            continue
+        var route: Vector2i = prop["road_cell"]
+        var direction: Vector2i = prop["road_direction"]
+        var bank: int = _road_side(route, prop["cell"], direction)
+        var key: String = "%s:%d" % [_road_run_key(route, direction), bank]
+        var entries: Array = runs.get(key, [])
+        entries.append(prop)
+        runs[key] = entries
+    for key: String in runs:
+        var entries: Array = runs[key]
+        entries.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
+            var ac: Vector2i = a["cell"]
+            var bc: Vector2i = b["cell"]
+            var direction: Vector2i = a["road_direction"]
+            var av: int = ac.x if direction.x != 0 else ac.y
+            var bv: int = bc.x if direction.x != 0 else bc.y
+            return av < bv if av != bv else String(a["id"]) < String(b["id"])
+        )
+        var ids: Array[String] = []
+        for index: int in range(entries.size()):
+            var prop: Dictionary = entries[index]
+            prop["semantic"] = &"prop.streetlight" if index % 2 == 1 else &"prop.utility_pole_wood"
+            ids.append(prop["id"])
+        _roadside_runs[key] = ids
 
 func _substation_records(token: String, transformer_id: String, anchor: Vector2i) -> Array[Dictionary]:
     var records: Array[Dictionary] = [
@@ -718,7 +781,7 @@ func _facility_fits(anchor: Vector2i, reserved_cells: Dictionary) -> bool:
     return true
 
 func _find_customer_pole(building_rect: Rect2i, trunk_cell: Vector2i, reserved_cells: Dictionary) -> Vector2i:
-    var center: Vector2i = _rect_center(building_rect)
+    var center := Vector2i(clampi(trunk_cell.x, building_rect.position.x, building_rect.end.x - 1), clampi(trunk_cell.y, building_rect.position.y, building_rect.end.y - 1))
     var candidates: Array[Vector2i] = [
         Vector2i(building_rect.position.x - CUSTOMER_CLEARANCE, center.y),
         Vector2i(building_rect.end.x - 1 + CUSTOMER_CLEARANCE, center.y),
@@ -734,6 +797,22 @@ func _find_customer_pole(building_rect: Rect2i, trunk_cell: Vector2i, reserved_c
             return a.y < b.y
         return a.x < b.x
     )
+    for candidate: Vector2i in candidates:
+        # Keep the attachment aligned to its road tap; search outward from the
+        # building face before shifting sideways toward a neighboring service.
+        var outward: Vector2i = Vector2i.ZERO
+        if candidate.x < building_rect.position.x:
+            outward = Vector2i.LEFT
+        elif candidate.x >= building_rect.end.x:
+            outward = Vector2i.RIGHT
+        elif candidate.y < building_rect.position.y:
+            outward = Vector2i.UP
+        else:
+            outward = Vector2i.DOWN
+        for distance: int in range(CUSTOMER_SEARCH_RADIUS + 1):
+            var resolved: Vector2i = candidate + outward * distance
+            if _cell_available(resolved, reserved_cells):
+                return resolved
     for candidate: Vector2i in candidates:
         var resolved: Vector2i = _find_nearby_available(candidate, reserved_cells, CUSTOMER_SEARCH_RADIUS)
         if resolved != INVALID_CELL:

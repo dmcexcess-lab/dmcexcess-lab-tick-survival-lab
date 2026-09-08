@@ -23,12 +23,21 @@ The current playable topology is generated from actual local-area building manif
 - each substation leaves through one short lead into a **shared roadside feeder tree** built from the actual generated local-road centerlines;
 - customer root-to-tap paths are unioned so common road sections become one deduplicated physical trunk;
 - roadside poles are placed at the root, taps, turns, junctions and deterministic spacing points;
+- all substation routes contribute their keys before physical poles are placed: one shared road-cell identity and one ordered physical chain, with compass-bank continuity independent of service traversal direction;
+- same-bank placements prefer road-normal alignment before longitudinal displacement; necessary bank changes retain the two-pole hold;
+- house leads prefer aligned customer supports, and opposite-bank leads use explicit crossing supports;
+- every actual span (trunk, house lead, and substation lead) is at most **16 cells Euclidean distance**, with real intermediate supports when necessary;
+- span construction checks nearby accepted geometry in a temporary spatial index and branches through existing supports where a direct lead would create an unsupported X; this is one-time generation work, with no tick/frame planner;
+- every second physical support in each ordered straight roadside/bank sequence is `prop.streetlight`, including roadside crossing/intermediate supports; shared supports are counted once, while off-road customer and facility supports are not part of this alternation;
+- streetlights use the existing powered emitter and physical-lighting/glow pipeline. Their appliance binding comes from the support's actual distribution service (lexicographically first when physically shared), rather than nearest-substation geography. Source outages and physical network damage remove real emission;
 - the shared trunk forks only where road/customer topology requires it;
 - each generated served building receives one short final service drop from its shared roadside tap to a nearby customer pole;
 - there are no direct transformer-to-every-house starburst spans;
 - visible shared-trunk and service-drop spans carry the service/building provenance needed for causal local outages.
 
 Global 00D4 power facts remain upstream planning/provenance. The playable local topology does not invent a second service authority; `NeighborhoodUtilityRuntimeState` translates the generated local topology into canonical System-33 power components/links/bindings.
+
+Current focused proof (2026-09-08): `PromptRoadsidePowerSmoke.gd` boots seed 20001 production, checks all actual span lengths and intersections independently, rejects duplicate spans, checks every alternating roadside identity, and proves artificial illumination plus upstream outage/restoration and physical-support damage. A small crossed-lead/long-span geometry case also proves real supports and service provenance. Historical tests below are documentary only under current README_SOPS; they are not standing gates.
 
 ## 3. Stable physical identity
 

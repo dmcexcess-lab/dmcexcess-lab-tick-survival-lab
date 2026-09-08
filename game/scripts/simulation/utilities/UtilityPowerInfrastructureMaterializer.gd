@@ -100,6 +100,21 @@ func materialize() -> bool:
 func wire_edges() -> Array[Dictionary]:
     return _wire_edges.duplicate(true)
 
+func support_power_services() -> Dictionary:
+    # Bind physical fixtures to their actual distribution service, not whichever
+    # substation happens to be closest to a displaced roadside support.
+    var result: Dictionary = {}
+    for wire: Dictionary in _wire_edges:
+        for key: String in _string_array(wire.get("service_settlement_ids", [])):
+            var service: String = _utilities.power_service_for_settlement(key)
+            if service.is_empty():
+                continue
+            for endpoint: String in ["start_id", "end_id"]:
+                var id: String = wire[endpoint]
+                if not result.has(id) or service < String(result[id]):
+                    result[id] = service
+    return result
+
 func created_entity_ids() -> Array[String]:
     return _created_ids.duplicate()
 

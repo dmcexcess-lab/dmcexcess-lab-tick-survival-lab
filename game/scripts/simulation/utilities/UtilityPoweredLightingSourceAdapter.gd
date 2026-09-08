@@ -45,6 +45,7 @@ var _utilities: UtilityRuntimeState = null
 var _kernel: TickKernel = null
 var _flashlight_state: FlashlightItemState = null
 var _fixed_entities: Dictionary = {}
+var _support_power_services: Dictionary = {}
 var _signature: String = ""
 
 func _init(
@@ -53,7 +54,8 @@ func _init(
     controlled_actor_id: String = "",
     utilities: UtilityRuntimeState = null,
     tick_kernel: TickKernel = null,
-    flashlight_state: FlashlightItemState = null
+    flashlight_state: FlashlightItemState = null,
+    support_power_services: Dictionary = {}
 ) -> void:
     _world = world_state
     _hand_state = hand_state
@@ -61,6 +63,7 @@ func _init(
     _utilities = utilities
     _kernel = tick_kernel
     _flashlight_state = flashlight_state
+    _support_power_services = support_power_services.duplicate()
     if not is_ready():
         return
     _discover_existing_fixed_emitters()
@@ -170,7 +173,9 @@ func _refresh_fixed_entity(entity_id: String) -> void:
     if record == null or placement == null or _profile_for_semantic(record.semantic_type) == null:
         _fixed_entities.erase(key)
         return
-    var power_service_id: String = _utilities.power_service_for_cell(placement.anchor)
+    var power_service_id: String = String(_support_power_services.get(key, ""))
+    if power_service_id.is_empty():
+        power_service_id = _utilities.power_service_for_cell(placement.anchor)
     if power_service_id.is_empty():
         _fixed_entities.erase(key)
         return
