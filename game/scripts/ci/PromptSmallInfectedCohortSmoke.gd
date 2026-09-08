@@ -170,7 +170,7 @@ func _place_visible_distinct(world: WorldState, mutations: WorldMutationService,
     var candidates: Array[Dictionary] = []
     for distance in [2, 3]:
         for direction in [Vector2i.UP, Vector2i.RIGHT, Vector2i.DOWN, Vector2i.LEFT]:
-            var cell := player.anchor + direction * distance
+            var cell: Vector2i = player.anchor + direction * distance
             if not _clear_lane(spatial, actor_a, player.anchor, direction, distance): continue
             candidates.append({"cell": cell, "facing": Facing.from_vector(-direction)})
     for a_index in range(candidates.size()):
@@ -194,7 +194,7 @@ func _place_visible_distinct(world: WorldState, mutations: WorldMutationService,
 
 func _clear_lane(spatial: SpatialQueryService, actor_id: String, origin: Vector2i, direction: Vector2i, distance: int) -> bool:
     for step in range(1, distance + 1):
-        var cell := origin + direction * step
+        var cell: Vector2i = origin + direction * step
         if not spatial.has_terrain(cell): return false
         var query := spatial.query_cell(cell, actor_id, true)
         if query == null or not query.is_clear(): return false
@@ -203,7 +203,7 @@ func _clear_lane(spatial: SpatialQueryService, actor_id: String, origin: Vector2
 func _far_focus(bounds: Rect2i, origin: Vector2i) -> Vector2i:
     var stride := Fixture.STREAM_REGION_SIZE.x * 4
     for delta in [Vector2i(stride, 0), Vector2i(-stride, 0), Vector2i(0, stride), Vector2i(0, -stride)]:
-        var candidate := origin + delta
+        var candidate: Vector2i = origin + delta
         if bounds.has_point(candidate): return candidate
     return origin
 
