@@ -1,5 +1,35 @@
 # System 29 — Implementation Changelog
 
+## 2026-09-08 — System 39 environmental pressure / forced-entry closure
+
+Verified functional runtime head before final documentation: `a4126f97ddd26711c768edd92a0cf98b519e3978`
+
+- Closed the first emergent environmental-pressure slice without adding horde AI, group target sharing, a zombie-only timer, pathfinder, crowd multiplier, teleport movement, or a second combat/health stack.
+- Added production root layering `game/main.tscn -> EnvironmentalPressureGameMain.gd -> CombatGameMain.gd -> VehicleGameMain.gd`.
+- Added one shared actor-generic `ActorOpeningPressureActionService`; it depends on existing placement, opening state, collision, WHEN and System-26 owners rather than `InfectedState`.
+- Ordinary infected pursuit still attempts normal movement first. Only after a rejected forward step does the existing collision query identify the exact blocking WHAT entity; if that blocker is a lawful door/window opening, behavior may request generic opening pressure against that exact entity.
+- Added timed `opening.try_open` behavior that does not inspect hidden lock truth before physical resolution. Resistance becomes actor/target-local knowledge only after the committed try resolves.
+- Added persistent generic opening-condition damage to `WorldInteractableState` rather than zombie-specific building HP. The first slice uses 25 damage per wooden-door body contact and 55 per window contact, with breach at 100; boards reduce each contact rather than creating a crowd-strength abstraction.
+- Door breach updates existing canonical truth: broken, unlocked/unboarded, physically opened through `DoorPhysicalTransitionService`, then ordinary collision/movement sees a passable opening.
+- Window breach updates existing broken/open truth and delegates subsequent traversal to the already-existing generic `WINDOW_CLIMB` action.
+- Opening impacts and breaks emit through System 26 at the exact opening cell. There is no zombie-attraction radius. A second infected can join because its own heard observation causes the existing `investigate_sound` intention.
+- Physical congestion remains ordinary ACTOR collision. Only actors that physically reach the opening can contribute their own impact; no synthetic horde-force total exists.
+- Fresh prompt-local verifier `PromptEnvironmentalPressureSmoke.gd` + `prompt-environmental-pressure.yml` boots real production `main.tscn` and proves the door pressure chain plus an actor-generic window pressure/climb chain.
+- Run `34175706820` exposed a production parser defect from redeclaring inherited `Facing`; only that duplicate declaration was removed.
+- Run `34175793072` proved the mechanics but exposed a prompt-fixture LOS setup defect: the prompt-only static blocking semantic occluded System 23 even while its door collision override was open. The verifier was corrected to establish legitimate last-seen knowledge before introducing the barrier; no gameplay assertion was weakened.
+- Run `34175935673` succeeded on `a4126f97ddd26711c768edd92a0cf98b519e3978`. It proved: legitimate System-23 pursuit memory; exact locked-door blocker discovery; timed TRY OPEN and learned resistance; repeated 25-point physical impacts; real System-26 propagation; a second no-visual infected independently choosing `investigate_sound`; four-contact door breach; ordinary post-breach movement; preserved actor congestion; generic non-infected window damage; shatter; and existing climb-through traversal.
+- Added `SYSTEM_DESIGNS/39_ENVIRONMENTAL_PRESSURE_FORCED_ENTRY.md` at documentation commit `8f3397d99a0fc5f233060251b8a14fa07bb9e7ba`.
+
+### Ownership boundary
+
+System 39 adds only a generic actor/opening pressure action seam and persistent opening-condition consequences. System 23 still owns observer-scoped knowledge; System 26 owns heard observations; WHEN owns time; movement/collision own locomotion and blocker truth; existing door/window owners control passability; System 37 owns actor combat; Health/death own mortality. Infected behavior remains a small intention policy over those owners.
+
+### Next major phase
+
+Do **not** add navigation architecture yet. Use the existing eight-member resident-backed cohort and the exact System-39 production chain against **naturally generated seed-20001 houses and their existing generated doors/windows**. Prove that legitimate visual/last-seen/heard knowledge can lead an infected to a real generated opening, that ordinary collision discovers that exact opening, that System 39 can try/pressure/breach it, that System-26 sound can attract another infected independently, and that ordinary movement/climb traverses the changed opening. Only if this real generated-building scenario exposes a concrete navigation failure should the smallest generic route-planning seam be considered.
+
+---
+
 ## 2026-09-08 — Infected 4 → 8 → 16 count ladder; production held at eight
 
 Final functional runtime candidate before documentation: `d3f4a0544be6abec32b084ed77a57880330836be`
@@ -175,7 +205,7 @@ Verified executable runtime head: `6aab0596cb46d70d4739cbc045d149a25597193d`
 - Tightened native timed-action result reporting in `WorldInteractionPlayerController`: success now requires the exact accepted WHEN serial to terminate as `COMPLETED`. A failed commit can no longer be misreported simply because the survivor stopped being busy.
 - Added `WorldObjectRepairUiSmoke.gd` and `UtilityPowerRepairUiSmoke.gd` to the dedicated `verify/world-interaction-closure` owner.
 - The first utility UI smoke exposed a real chooser lifecycle defect after a successful repair: `WorldInteractionPanel.close_panel()` hid the panel but retained obsolete action-button nodes. The provider and canonical utility state were already correct. Production close/open lifecycle now clears stale controls rather than weakening the test.
-- Exact executable `6aab0596cb46d70d4739cbc045d149a25597193d` is green for `verify/world-interaction-closure` run `33915077349`, `verify/system29-interaction-affordance`, `verify/system33-power-water`, protected neighboring statuses and `verify/pages-deploy` run `33915077391`.
+- Exact executable `6aab0596cb46d70d4739cbc045d149a25597193d` is green for `verify/world-interaction-closure` run `33915077349`, `verify/system29-interaction-affordance`, protected neighboring statuses and `verify/pages-deploy` run `33915077391`.
 
 ### Protected ownership
 
