@@ -3,7 +3,7 @@ class_name WorldInteractableState
 
 ## Sparse persistent state for player-modified world interactables.
 ## Door OPEN/CLOSED remains owned by DoorStateStore; this store owns only orthogonal
-## security, fortification, window aperture, breakage and destruction truth.
+## security, fortification, window aperture, breakage, opening damage and destruction truth.
 ## Unmodified exterior openings derive independent deterministic lock defaults from
 ## stable target identity; no house-level lock flag or key inventory exists.
 
@@ -12,6 +12,7 @@ signal state_reset
 
 const SNAPSHOT_SCHEMA_VERSION: int = 1
 const MAX_BOARDS: int = 3
+const MAX_OPENING_DAMAGE: int = 100
 const DOOR_LOCK_PERCENT: int = 55
 const WINDOW_LOCK_PERCENT: int = 35
 
@@ -36,6 +37,9 @@ func is_broken(target_id: String) -> bool:
 func board_count(target_id: String) -> int:
     return int(_record(target_id).get("board_count", 0))
 
+func opening_damage(target_id: String) -> int:
+    return int(_record(target_id).get("opening_damage", 0))
+
 func window_open(target_id: String) -> bool:
     return bool(_record(target_id).get("window_open", false))
 
@@ -52,6 +56,11 @@ func set_board_count(target_id: String, value: int, reason: StringName = &"board
     if value < 0 or value > MAX_BOARDS:
         return false
     return _set_field(target_id, "board_count", value, reason)
+
+func set_opening_damage(target_id: String, value: int, reason: StringName = &"opening_damage_changed") -> bool:
+    if value < 0 or value > MAX_OPENING_DAMAGE:
+        return false
+    return _set_field(target_id, "opening_damage", value, reason)
 
 func set_window_open(target_id: String, value: bool, reason: StringName = &"window_aperture_changed") -> bool:
     return _set_field(target_id, "window_open", value, reason)
@@ -90,9 +99,11 @@ func load_snapshot(data: Dictionary) -> bool:
         var entry: Dictionary = value
         var target_id: String = String(entry.get("target_id", "")).strip_edges()
         var board_count_value: int = int(entry.get("board_count", -1))
+        var opening_damage_value: int = int(entry.get("opening_damage", 0))
         var entry_version: int = int(entry.get("version", -1))
         if target_id.is_empty() or restored.has(target_id) \
             or board_count_value < 0 or board_count_value > MAX_BOARDS \
+            or opening_damage_value < 0 or opening_damage_value > MAX_OPENING_DAMAGE \
             or entry_version < 1 or entry_version > restored_revision:
             return false
         restored[target_id] = {
@@ -100,6 +111,7 @@ func load_snapshot(data: Dictionary) -> bool:
             "locked": bool(entry.get("locked", _default_locked(target_id))),
             "broken": bool(entry.get("broken", false)),
             "board_count": board_count_value,
+            "opening_damage": opening_damage_value,
             "window_open": bool(entry.get("window_open", false)),
             "destroyed": bool(entry.get("destroyed", false)),
             "version": entry_version,
@@ -117,6 +129,7 @@ func _record(target_id: String) -> Dictionary:
             "locked": _default_locked(key),
             "broken": false,
             "board_count": 0,
+            "opening_damage": 0,
             "window_open": false,
             "destroyed": false,
             "version": 0,

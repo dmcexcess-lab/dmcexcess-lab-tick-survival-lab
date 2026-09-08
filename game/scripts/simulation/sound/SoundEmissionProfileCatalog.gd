@@ -9,6 +9,8 @@ const RUN_STRIDE: StringName = &"movement.run_stride"
 const DOOR_QUIET: StringName = &"door.quiet"
 const DOOR_NORMAL: StringName = &"door.normal"
 const DOOR_LOUD: StringName = &"door.loud"
+const OPENING_IMPACT: StringName = &"opening.impact"
+const OPENING_BREAK: StringName = &"opening.break"
 const TEST_IMPACT: StringName = &"test.impact"
 const POWER_LINE_SNAP: StringName = &"utility.power_line_snap"
 const VEHICLE_SKATEBOARD: StringName = &"vehicle.skateboard"
@@ -46,6 +48,14 @@ const _PROFILES := {
     "door.loud": {
         "power": 240, "category": "impact", "unknown_word": "NOISE", "broad_word": "*BANG*",
         "specific_word": "*SLAM*", "recognition_difficulty": 35, "domain_skill": "survival", "cue_lifetime_ticks": 40,
+    },
+    "opening.impact": {
+        "power": 230, "category": "impact", "unknown_word": "NOISE", "broad_word": "*BANG*",
+        "specific_word": "*pounding*", "recognition_difficulty": 36, "domain_skill": "survival", "cue_lifetime_ticks": 40,
+    },
+    "opening.break": {
+        "power": 360, "category": "impact", "unknown_word": "CRASH", "broad_word": "*CRASH*",
+        "specific_word": "*breaking opening*", "recognition_difficulty": 24, "domain_skill": "survival", "cue_lifetime_ticks": 48,
     },
     "test.impact": {
         "power": 320, "category": "impact", "unknown_word": "NOISE", "broad_word": "*thud*",
