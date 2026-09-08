@@ -1,0 +1,112 @@
+name: Apply Streetlight Followup Patch
+
+on:
+  push:
+    paths:
+      - '.github/workflows/repo-patch-streetlight-followup.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Apply targeted production patch
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          def replace_once(path, old, new):
+              p = Path(path)
+              text = p.read_text()
+              count = text.count(old)
+              if count != 1:
+                  raise SystemExit(f'{path}: expected exactly one match, got {count}')
+              p.write_text(text.replace(old, new, 1))
+
+          materializer = 'game/scripts/simulation/utilities/NeighborhoodPowerInfrastructureMaterializer.gd'
+          replace_once(
+              materializer,
+              'const ROAD_POLE_SPACING: int = 10\nconst ROAD_SIDE_HOLD_POLES: int = 2',
+              'const ROAD_POLE_SPACING: int = 10\n# Independent service roots can nominate nearby keys on the same physical road.\n# Collapse those visits onto one support so a shared distribution chain cannot\n# produce visible two/three-pole bunches while retaining its nominal 10-cell cadence.\nconst ROAD_POLE_MIN_SPACING: int = 8\nconst ROAD_SIDE_HOLD_POLES: int = 2'
+          )
+          replace_once(
+              materializer,
+              '        var direction: Vector2i = _road_direction(entries[0], graph)\n        var side: int = -1 if direction.x != 0 else 1\n        var hold: int = 0\n        for route_cell: Vector2i in entries:\n            var cell: Vector2i = _find_roadside_available(',
+              '        var direction: Vector2i = _road_direction(entries[0], graph)\n        var side: int = -1 if direction.x != 0 else 1\n        var hold: int = 0\n        var last_route_cell: Vector2i = INVALID_CELL\n        var last_pole_id: String = ""\n        var last_pole_cell: Vector2i = INVALID_CELL\n        for route_cell: Vector2i in entries:\n            if last_route_cell != INVALID_CELL:\n                var route_gap: int = absi(route_cell.x - last_route_cell.x) + absi(route_cell.y - last_route_cell.y)\n                if route_gap < ROAD_POLE_MIN_SPACING:\n                    ids[route_cell] = last_pole_id\n                    cells[route_cell] = last_pole_cell\n                    continue\n            var cell: Vector2i = _find_roadside_available('
+          )
+          replace_once(
+              materializer,
+              '            reserved[cell] = true\n            ids[route_cell] = id\n            cells[route_cell] = cell\n    return result',
+              '            reserved[cell] = true\n            ids[route_cell] = id\n            cells[route_cell] = cell\n            last_route_cell = route_cell\n            last_pole_id = id\n            last_pole_cell = cell\n    return result'
+          )
+          replace_once(
+              materializer,
+              '            if start_id.is_empty() or end_id.is_empty() or end_cell == INVALID_CELL:\n                return {"ok": false, "props": [], "wires": []}\n            wires.append({',
+              '            if start_id.is_empty() or end_id.is_empty() or end_cell == INVALID_CELL:\n                return {"ok": false, "props": [], "wires": []}\n            # Nearby route keys may intentionally share one physical support.\n            # They are topology visits, not zero-length physical wire spans.\n            if start_id == end_id:\n                seen_trunk_edges[edge_key] = true\n                continue\n            wires.append({'
+          )
+
+          adapter = 'game/scripts/simulation/utilities/UtilityPoweredLightingSourceAdapter.gd'
+          replace_once(
+              adapter,
+              'var _kernel: TickKernel = null\nvar _flashlight_state: FlashlightItemState = null',
+              'var _kernel: TickKernel = null\nvar _ambient_daylight: OutdoorAmbientLightService = null\nvar _daylight_phase: StringName = &""\nvar _flashlight_state: FlashlightItemState = null'
+          )
+          replace_once(
+              adapter,
+              '    utilities: UtilityRuntimeState = null,\n    tick_kernel: TickKernel = null,\n    flashlight_state: FlashlightItemState = null,',
+              '    utilities: UtilityRuntimeState = null,\n    tick_kernel: TickKernel = null,\n    ambient_daylight: OutdoorAmbientLightService = null,\n    flashlight_state: FlashlightItemState = null,'
+          )
+          replace_once(
+              adapter,
+              '    _utilities = utilities\n    _kernel = tick_kernel\n    _flashlight_state = flashlight_state',
+              '    _utilities = utilities\n    _kernel = tick_kernel\n    _ambient_daylight = ambient_daylight\n    _daylight_phase = _ambient_daylight.current_phase() if _ambient_daylight != null and _ambient_daylight.is_ready() else &""\n    _flashlight_state = flashlight_state'
+          )
+          replace_once(
+              adapter,
+              '        if record == null or placement == null:\n            continue\n        var profile: LightEmitterProfile = _profile_for_semantic(record.semantic_type)',
+              '        if record == null or placement == null:\n            continue\n        if record.semantic_type == &"prop.streetlight" and not _streetlights_should_emit():\n            continue\n        var profile: LightEmitterProfile = _profile_for_semantic(record.semantic_type)'
+          )
+          replace_once(
+              adapter,
+              'func _current_world_tick() -> int:\n    return _kernel.world_tick() if _kernel != null else 0\n\nfunc _has_traffic_lights() -> bool:',
+              'func _current_world_tick() -> int:\n    return _kernel.world_tick() if _kernel != null else 0\n\nfunc _streetlights_should_emit() -> bool:\n    # Compatibility for non-production fixtures that do not compose System 25.\n    # Production always supplies the canonical ambient-daylight owner.\n    return _ambient_daylight == null or _ambient_daylight.current_phase() == OutdoorAmbientLightService.PHASE_NIGHT\n\nfunc _has_traffic_lights() -> bool:'
+          )
+          replace_once(
+              adapter,
+              '    if _kernel != null:\n        var tick_callable := Callable(self, "_on_world_tick_advanced")',
+              '    if _ambient_daylight != null:\n        var daylight_callable := Callable(self, "_on_ambient_light_changed")\n        if not _ambient_daylight.ambient_light_changed.is_connected(daylight_callable):\n            _ambient_daylight.ambient_light_changed.connect(daylight_callable)\n    if _kernel != null:\n        var tick_callable := Callable(self, "_on_world_tick_advanced")'
+          )
+          replace_once(
+              adapter,
+              'func _on_world_tick_advanced(previous_tick: int, new_tick: int) -> void:\n    if not _has_traffic_lights():',
+              'func _on_ambient_light_changed(_level: float, phase: StringName, _snapshot: Dictionary) -> void:\n    if phase == _daylight_phase:\n        return\n    _daylight_phase = phase\n    _emit_if_changed()\n\nfunc _on_world_tick_advanced(previous_tick: int, new_tick: int) -> void:\n    if not _has_traffic_lights():'
+          )
+          replace_once(
+              adapter,
+              '        "traffic_phase": traffic_phase_for_tick(_current_world_tick()),\n        "fake_sources_retired": true,',
+              '        "traffic_phase": traffic_phase_for_tick(_current_world_tick()),\n        "daylight_phase": _daylight_phase,\n        "streetlights_emit": _streetlights_should_emit(),\n        "fake_sources_retired": true,'
+          )
+
+          app = 'game/scripts/app/UtilityGameMain.gd'
+          replace_once(
+              app,
+              '        _utilities,\n        _kernel,\n        _flashlight_state,',
+              '        _utilities,\n        _kernel,\n        _ambient_daylight,\n        _flashlight_state,'
+          )
+          PY
+          git diff --check
+          git diff -- game/scripts/simulation/utilities/NeighborhoodPowerInfrastructureMaterializer.gd game/scripts/simulation/utilities/UtilityPoweredLightingSourceAdapter.gd game/scripts/app/UtilityGameMain.gd
+      - name: Commit production repair
+        shell: bash
+        run: |
+          git config user.name 'dmcexcess-lab'
+          git config user.email 'dmcexcess@gmail.com'
+          git add game/scripts/simulation/utilities/NeighborhoodPowerInfrastructureMaterializer.gd game/scripts/simulation/utilities/UtilityPoweredLightingSourceAdapter.gd game/scripts/app/UtilityGameMain.gd
+          git commit -m 'fix: de-bunch roadside supports and gate streetlights to night'
+          git push origin HEAD:main
