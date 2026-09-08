@@ -2,41 +2,49 @@
 
 Read this file first, then `README_SOPS.md`. Fetch current `main` once at prompt start. This is the authoritative continuation checkpoint.
 
-## Current checkpoint — MOBILE RENDER-WINDOW EXPERIMENT REVERTED — 2026-09-08
+## Current checkpoint — STREETLIGHT SPACING / NIGHT-GATING OPERATION REVERTED — 2026-09-08
 
-The user reported that new cells were not rendering. A viewport-aware render-window recenter experiment was attempted, but the user immediately reported that it made the live problem worse and explicitly requested a revert.
+The user reported that the immediately preceding streetlight-spacing/night-gating operation broke the live game and explicitly requested a full revert. Do not continue, repair, or partially preserve that operation.
 
-The entire experiment has been reverted to the exact pre-experiment repository tree from:
+The production repository tree from immediately before that operation was restored exactly from:
 
-- known-good pre-experiment head: `848c4f601716151c198f2a29ae410626321740c9`
-- known-good tree: `ac9a2dabd598d4f854b53e6146c164a27915d483`
-- revert commit restoring that exact tree: `08b06fdb90933a3dc099cebd927c4da3be7464cf`
+- pre-operation head: `5a97067773dd0745b1fc32accd87c92eb31d0855`
+- pre-operation tree: `2f99ffdeec3afbbd6880beab314d4c8742b5f02f`
+- revert commit restoring that exact tree: `529f07ec3d5ecfd4d6d10f480f1986bdeb732f2f`
 
-Do **not** reapply the viewport-aware recenter-margin change or treat the previous diagnosis as established. The failed experiment changed presentation-window behavior only; the user's original symptom remains unresolved and must be diagnosed fresh from live production behavior.
+The unwanted operation ending at `179779450a9743ee6e8ccc24d941e0a9a5a23832` is fully retired. Its 16-cell minimum streetlight-spacing change, customer-tap coalescing change, streetlight day/night gating, temporary base-wrapper scripts, smoke, workflow, and handoff are not part of production anymore.
 
-## Preserved closed work
+After the exact-tree revert, one fresh prompt-local verifier pair was added only to prove the restored production state:
 
-Roadside power / alternating real streetlights remain closed and restored exactly as they were before the failed render-window experiment.
+- `game/scripts/ci/PromptStreetlightRevertSmoke.gd`
+- `.github/workflows/prompt-streetlight-revert.yml`
 
-Reference proof remains:
+The executable verification head before this final handoff write is `de3f2218ba610ab14d4b8d1a2dd0a2edef7200ac`.
 
-- 3,157 wire spans
-- 1,048 alternating roadside streetlights
-- maximum span 16.00 cells
-- zero duplicate spans
-- zero unsupported wire crossings
-- real powered illumination, outage/restoration, and physical-support damage behavior
+Focused verification succeeded on run `34189250794`. It proves the production game boots, roadside power and utility lighting are ready, seed 20001 is back to the prior 1,048 streetlights and 3,157 wire spans, and the temporary spacing/night-gating base wrappers are absent.
 
-The restored prompt-owned verifier pair is again:
+Pages build/deploy succeeded on run `34189250810` for that executable verification head.
 
-- `game/scripts/ci/PromptRoadsidePowerSmoke.gd`
-- `.github/workflows/prompt-roadside-power.yml`
+## Preserved production baseline
+
+Roadside power / alternating real streetlights are back to the pre-operation behavior. The prior reference contract remains:
+
+- 3,157 wire spans;
+- 1,048 alternating roadside streetlights;
+- maximum wire span 16.00 cells;
+- zero duplicate spans;
+- zero unsupported wire crossings;
+- real powered illumination, outage/restoration, and physical-support damage behavior.
+
+Do not reintroduce the just-reverted spacing or night-only behavior unless a future prompt explicitly asks for another attempt after the live game is stable.
+
+The earlier failed viewport-aware render-window recenter experiment also remains reverted. Do **not** treat its diagnosis as established.
 
 ## NEXT OPERATION — DIAGNOSE ORIGINAL NEW-CELL RENDER FAILURE
 
-Treat the original bug as open. Do not assume it is caused by camera margin, render-window edge distance, or viewport size.
+The original bug where new cells fail to appear in live play remains open. Diagnose it fresh from the restored production state rather than changing streetlights, world generation, or render-window margins speculatively.
 
-Start from the restored production state and reproduce the exact failure path. Determine separately whether:
+Determine separately whether:
 
 1. movement reaches a new technical streaming region;
 2. the streaming coordinator activates the expected neighboring regions;
@@ -45,12 +53,10 @@ Start from the restored production state and reproduce the exact failure path. D
 5. the render-window origin/coverage updates when required;
 6. camera transform, culling, clipping, or stale renderer caches prevent already-materialized cells from appearing.
 
-Use the smallest focused instrumentation needed to identify the first broken boundary. Do not broaden into generation, streaming, renderer, or camera rewrites until the first failing seam is proven.
+Use the smallest focused instrumentation needed to identify the first broken boundary. Phone/Safari remains first-class. Preserve world size 3072×3072, technical streaming regions 128×128, active radius 1, and the existing 80×96 render window unless concrete evidence proves one of those contracts is itself defective.
 
-Phone/Safari remains first-class. Preserve world size 3072×3072, streaming regions 128×128, active radius 1, and the existing 80×96 render window unless concrete evidence proves one of those contracts is itself defective.
-
-At the start of the next code prompt, delete the restored roadside-power prompt verifier pair and create one fresh prompt-local verifier only for the diagnosed render/stream seam.
+At the start of the next code prompt, delete the current prompt-owned verifier pair (`PromptStreetlightRevertSmoke.gd` and `prompt-streetlight-revert.yml`) and create one fresh focused pair for the diagnosed render/stream seam.
 
 ## Final closure rule
 
-This handoff is the final repository write for the revert prompt. After this commit is published, perform only read-only exact-head branch/Actions/Pages verification. If deployment or verification unexpectedly fails, report the evidence without making another repository write in this prompt.
+This `README_CONTEXT.md` update is the final repository mutation of this prompt. After it is published, perform only read-only exact-head branch, focused Actions, and Pages verification. If exact-final-head verification fails, report the evidence and make repair the next operation rather than writing again in this prompt.
