@@ -1,18 +1,18 @@
-# System 38 — First Infected / Population-Backed Hydration
+# System 38 — Population-Backed Infected Hydration + Active Cohort
 
-Status: **FIRST REAL INFECTED HYDRATED + PERCEPTION / INTENTION / WHEN BEHAVIOR CLOSED IN PRODUCTION**
+Status: **FIRST REAL INFECTED BEHAVIOR + SMALL STREAMING COHORT SCALING PROOF CLOSED IN PRODUCTION**
 
 ## 1. Core rule
 
 > **An infected is a real human resident in an infected state, not a disconnected zombie fixture.**
 
-The island population planner already owns how many residents exist in each settlement and household. System 38 does not create an extra population. It deterministically projects individual identities from already-counted household resident slots only when an individual must enter active simulation.
+The island population planner owns how many residents exist. System 38 never creates a second zombie population. It deterministically projects already-counted household resident slots into exact identities only when those people must enter active simulation.
 
-Infection is an overlay on the shared human actor identity. The hydrated actor remains semantic `actor.survivor` so canonical Health, equipment, inventory, locomotion, condition, carry, skills, collision, perception, sound and WHEN action systems remain reusable.
+Infection remains an overlay on shared human semantic `actor.survivor`, so Health, equipment, inventory, locomotion, condition, carry, skills, collision, perception, sound, combat and WHEN remain ordinary shared owners.
 
 ## 2. Existing population truth reused
 
-`IslandWorldPlanner` already runs `IslandPopulationPlanner` while generating the global world plan and retains:
+`IslandWorldPlanner` already retains:
 
 - `population_settlements`;
 - `resident_population`;
@@ -20,65 +20,55 @@ Infection is an overlay on the shared human actor identity. The hydrated actor r
 - `survivor_population`;
 - `local_area_manifest`.
 
-Each settlement population record contains household records tied to generated buildings, including building identity, household resident capacity, settlement/site identity and aggregate resident/infected/survivor counts.
+Settlement population records already point at real generated household buildings and household resident capacity. System 38 names those slots; it does not add residents.
 
-The planner intentionally does not pre-create thousands of person WHAT entities. System 38 preserves that aggregate truth and materializes an individual only when needed.
+## 3. Deterministic resident projection
 
-## 3. Deterministic resident projection and infection
-
-`PopulationResidentProjection` converts already-counted household capacity into stable resident slots on demand. For each household building with capacity N it derives:
+`PopulationResidentProjection` names each existing household slot as:
 
 `resident.<building_id>.<ordinal>`
 
-The projected record retains resident ID, source building, resident ordinal, settlement/site identity and generated home cell. It does not increment population totals.
+Each record keeps the exact resident ID, source building, household ordinal, settlement/site identity and generated home cell.
 
-A stable infection score is derived from world seed plus building identity and resident ordinal. Resident slots are ordered by that score and exactly each settlement's existing `infected_population` count is marked infected. The same world plan therefore produces the same infected resident identities without inventing population.
+Stable infection scores are derived from world seed + building identity + resident ordinal, then exactly each settlement's existing `infected_population` count is selected.
 
-The first active infected prefers the central playable area and selects the nearest deterministic infected resident record to the player reference cell, with fallback to another valid infected resident only if the preferred site has none.
+For cohort work, `infected_near(...)` returns a deterministic order: infected resident slots from the preferred site sorted by Manhattan distance to the reference cell and resident ID, followed by remaining infected records without duplicate identities. `first_infected_near(...)` is now simply the one-record compatibility view over that deterministic list.
 
 ## 4. Infection state overlay
 
-`InfectedState` stores resident provenance for hydrated infected actors. It does not replace the actor with a parallel zombie species.
+`InfectedState` stores resident provenance on the exact shared actor identity. A valid infected record requires the same resident/actor ID, `infected = true`, a real source building ID and a positive resident ordinal.
 
-A valid infected record requires the same exact resident/actor ID, `infected = true`, a real source building ID and a positive household resident ordinal. The actor remains `actor.survivor`: infection changes state and behavior, not the physical fact that this is a human body using shared simulation owners.
+Death does not erase provenance. The same population identity remains traceable after generic Health/corpse transition.
 
-## 5. Hydration into active simulation
+## 5. Cohort hydration
 
-`FirstInfectedHydrationService`:
+`FirstInfectedHydrationService` now supports both:
 
-1. selects one deterministic infected resident slot;
-2. reads its real generated home cell;
-3. finds a real clear materialized cell near that household;
-4. creates the exact resident ID as an `actor.survivor` WHAT entity;
-5. places it on the normal ACTOR channel;
-6. enrolls it in shared locomotion, hand equipment, inventory containment, Health, skills, carry and System-34 condition state;
-7. records infection/provenance in `InfectedState`;
-8. returns the exact hydrated actor identity/record/cell.
+- `hydrate_first(...)` for the already-closed one-infected compatibility path;
+- `hydrate_cohort(...)` for a deliberately bounded deterministic set.
 
-`CombatGameMain` performs this after System-37 combat composition boots using the already-generated global plan. It does not rerun island population/local-area generation just to obtain one actor.
+For each selected resident it:
 
-## 6. Physical spawn rule
+1. starts from the resident's real generated home cell;
+2. finds a real clear materialized cell through the ordinary spatial/collision query;
+3. creates the exact resident identity as `actor.survivor`;
+4. places it on the normal ACTOR channel;
+5. enrolls ordinary locomotion, hands, inventory containment, Health, skills, carry and System-34 condition state;
+6. records infection/provenance in `InfectedState`.
 
-The infected remains materially tied to its household record, but active placement must also respect the materialized playable world. The hydrator searches a bounded radius around the source home and uses the existing spatial/collision query to choose a real clear cell. If no valid cell exists, hydration fails closed.
+Hydration never overlaps another blocking ACTOR merely to reach a target count. If a candidate's home is not currently materialized or the identity is unavailable, the deterministic selector can continue to the next valid resident. Other enrollment failures still fail closed.
 
-## 7. First infected behavior adapter
+Production currently sets:
 
-`FirstInfectedBehaviorService` is the first production autonomous behavior adapter. It owns **only intention selection**.
+`ACTIVE_INFECTED_COHORT_SIZE = 4`
 
-It does not own:
+This is a proof size, not a design declaration that four is the final active limit.
 
-- a second clock or frame update loop;
-- visual truth;
-- hearing/source truth;
-- movement/collision;
-- Health;
-- combat damage;
-- attack cooldowns;
-- teleport/path snapping.
+## 6. First infected behavior remains the policy
 
-It consumes observer-scoped information and submits ordinary actor actions into the existing owners.
+`FirstInfectedBehaviorService` remains the proven intention-only behavior policy. The small cohort does not get new zombie abilities.
 
-The implemented intention vocabulary is intentionally small:
+Intentions remain:
 
 - `infected.idle`;
 - `infected.pursue_visible`;
@@ -86,142 +76,214 @@ The implemented intention vocabulary is intentionally small:
 - `infected.investigate_sound`;
 - `infected.attack_visible`.
 
-This is sufficient to prove the simulation chain without starting a bespoke AI framework before the underlying owner contracts are known to work.
+The policy still consumes observer-scoped System-23 visual truth and observer-safe System-26 heard observations, then submits ordinary movement/System-37 actions on shared WHEN.
 
-## 8. System-23 visual behavior
+No per-frame AI, zombie timer, private cooldown, teleport movement, global aggro radius or hidden shared target truth was introduced for scaling.
 
-Production creates a dedicated `ObserverPerceptionService` for the exact resident-backed infected. It shares:
+## 7. Technical-stream activation is authoritative
 
-- the canonical world/door state;
-- the same WHEN clock;
-- the shared `PerceptionMemoryStore` under the infected's own observer ID;
-- the same visual-acquisition provider used by the player, so physical lighting/acquisition rules remain common.
+`ActiveInfectedCohortService` uses the existing `WorldStreamingCoordinator` as the only activation-envelope owner.
 
-Visual behavior reads only the infected observer's actor observation and `VISIBLE` state.
+The service listens to:
 
-When the player is currently visible:
+- `WorldStreamingCoordinator.active_regions_changed`;
+- exact cohort actor placement changes;
+- canonical Health changes.
 
-- the current observed player cell becomes the target;
-- if the player is in physical forward contact, intention becomes `attack_visible`;
-- otherwise intention becomes `pursue_visible`.
+A living cohort member is behavior-active only when its exact ACTOR placement satisfies:
 
-When current visibility is lost but a prior actor observation remains, the infected may pursue the **last seen cell**. It does not read the player's current world placement to cheat around LOS.
+`WorldStreamingCoordinator.is_cell_active(actor_cell)`
 
-## 9. System-26 hearing behavior
+There is no second zombie radius layered over streaming.
 
-The exact infected actor is registered as an ordinary `SpatialSoundService` listener.
+The existing technical stream geometry remains 128×128 regions with active radius 1 unless intentionally changed elsewhere.
 
-Behavior consumes only `HeardSoundObservation` data. In particular, it uses the observer-safe `perceived_cell`, strength/certainty/tick metadata and never receives or reconstructs an exact hidden source actor/cell from the sound system.
+## 8. Dormant means simulation state persists, expensive behavior work sleeps
 
-When the player is unseen and a useful external cue is heard, intention becomes `investigate_sound` and the target actor identity remains empty.
+Leaving the technical active envelope does **not** delete the resident body or reset gameplay state.
 
-The investigation target is latched to the uncertain perceived cell so ordinary self-generated footsteps do not repeatedly replace an external investigation with a fake exact source. A cue localized to the infected's own occupied cell is not used as an investigation destination.
+Dormant cohort members retain:
 
-## 10. Ordinary WHEN movement
+- exact actor identity;
+- ACTOR placement;
+- Health;
+- inventory/equipment;
+- condition/skills/carry state;
+- infection/population provenance;
+- perception memory already acquired.
 
-There is no infected update clock.
+But dormant members are removed from active behavior costs:
 
-The behavior adapter reacts to simulation events such as perception/sound changes and shared WHEN action transitions. While the player is decision-paused, perception/intention may update but the infected does not advance merely because render frames pass.
+- their System-26 listener registration is removed;
+- `StreamingObserverPerceptionService` refuses expensive System-23 recomputation while stream-inactive;
+- their reused behavior adapter is stopped, so shared event callbacks return without action evaluation/submission.
 
-When the player commits an action and the shared WHEN clock opens, a ready infected may submit an ordinary action at that same world tick. Subsequent infected action completions can select/submit the next ordinary action while the world remains running.
+On stream re-entry the **same objects and identities** reactivate: hearing re-registers, perception recomputes through System 23, and the same behavior service resumes. No fresh zombie is substituted.
 
-Pursuit/investigation uses the existing movement service:
+## 9. Streaming System-23 adapter
 
-- normal turn-left/turn-right actions;
-- normal step-forward actions;
-- normal collision/traversal validation;
-- deterministic directional preference;
-- only a small bounded left/right local detour when a direct step is blocked.
+`StreamingObserverPerceptionService` subclasses the ordinary `ObserverPerceptionService` only to add a stream-active gate.
 
-Full many-actor navigation is deliberately not invented in the one-infected proof. Every actual movement consequence remains owned by the existing movement/world/collision systems.
+It does not own visual truth. While active, it delegates directly to ordinary System 23. While dormant, `recompute()` exits before expensive acquisition/visibility work and current visibility reports inactive. Existing perception memory remains in the shared memory owner.
 
-## 11. Ordinary System-37 attack
+This avoids creating a duplicate zombie perception stack while providing a real activation seam for measured scaling.
 
-When the currently visible player physically occupies the infected's forward contact cell, the behavior adapter asks the existing `CombatActionService` for lawful strike offers and submits the first lawful ordinary strike path.
+## 10. Cohort behavior measurement
 
-The current empty-handed first infected therefore uses the existing `combat.strike_unarmed` action. Contact timing, physical occupancy, misses, Health/injury consequences, exertion and System-26 combat sound remain System-37/shared-owner behavior.
+`CohortInfectedBehaviorService` subclasses the exact proven first-infected behavior policy and only adds lifecycle/measurement hooks.
 
-There is no infected-only damage number, attack timer or aggro hit routine.
+It records:
 
-## 12. Death/corpse shutdown
+- behavior evaluation count;
+- total evaluation microseconds;
+- maximum single evaluation microseconds;
+- ordinary action submissions through the inherited behavior owner.
 
-System 38 still owns neither Health nor corpse truth.
+`ActiveInfectedCohortService` also measures:
 
-When canonical Health reaches zero, the generic death service removes living ACTOR occupancy and creates persistent corpse truth. `FirstInfectedBehaviorService` observes the loss of living Health/placement and stops. A dead infected cannot submit another movement or combat action.
+- roster count;
+- active/dormant counts;
+- activation count;
+- deactivation count;
+- activation-envelope synchronization count;
+- total/max activation-sync microseconds.
 
-`InfectedState` retains the exact resident provenance after death so the corpse/dead resident is still traceable to the same population slot.
+Metrics are also surfaced through `PerformanceTelemetry`.
 
-## 13. Focused verification
+This is deliberately instrumentation of real production work, not a synthetic benchmark loop.
 
-Current prompt-owned verifier pair:
+## 11. Shared WHEN scheduling
 
-- `game/scripts/ci/PromptFirstInfectedBehaviorSmoke.gd`
-- `.github/workflows/prompt-first-infected-behavior.yml`
+There is still no infected clock.
+
+At player decision pause, render frames do not create cohort behavior evaluations. When an ordinary player commitment opens the shared WHEN clock, multiple active infected can independently submit lawful ordinary actions on that same simulation timeline.
+
+The focused proof places two active infected in truthful visible approach lanes and confirms both increase their ordinary action-submission counts from one shared player-opened WHEN interval.
+
+## 12. Physical congestion remains ordinary collision
+
+Each hydrated infected occupies an ordinary ACTOR cell. Two infected cannot occupy the same blocking cell merely because they are cohort members.
+
+The focused verifier confirms:
+
+- all four hydration placements are distinct;
+- two concurrently scheduled infected remain on distinct ACTOR cells;
+- querying one infected's cell from another actor sees normal blocking occupancy.
+
+There is no horde-specific ghosting, pass-through mode or crowd teleport correction.
+
+## 13. Death remains generic
+
+Killing one cohort member through canonical Health:
+
+- triggers the existing generic death/corpse path;
+- removes only that actor from active cohort scheduling;
+- leaves other living cohort members active;
+- preserves the dead actor's population/infection provenance.
+
+System 38 still owns neither HP nor corpse truth.
+
+## 14. Focused verification
+
+Current prompt-owned disposable verifier pair:
+
+- `game/scripts/ci/PromptSmallInfectedCohortSmoke.gd`
+- `.github/workflows/prompt-small-infected-cohort.yml`
 
 Verified functional head:
 
-- `90f1c0c974afebcee71403bdd39c8ce4d7a52451`
-- `Prompt First Infected Behavior` run `34171663807` — **SUCCESS**.
+- `dd178a7c445ea382ea11e27400d3c1c22ec65e79`
+- `Prompt Small Infected Cohort` run `34172818895` — **SUCCESS**.
 
-The real production-scene verifier proves:
+The production-scene verifier proves:
 
-1. the first resident-backed infected remains production-hydrated;
-2. its behavior service and dedicated System-23 observer are running;
-3. no autonomous actions advance merely from render frames during player decision pause;
-4. a truthful visible player observation becomes `pursue_visible`;
-5. opening the shared WHEN clock causes autonomous submission of ordinary movement;
-6. pursuit reaches contact and submits an ordinary System-37 strike;
-7. that strike produces canonical player Health damage;
-8. resident/infection provenance is unchanged by pursuit/combat;
-9. with player visual knowledge removed, a real propagated System-26 cue is heard;
-10. the resulting intention is `investigate_sound` with **no exact source actor identity**;
-11. the target cell equals System-26's observer-safe perceived cell;
-12. the infected physically moves closer to that perceived cell through ordinary movement;
-13. generic lethal Health damage stops behavior, removes ACTOR occupancy and prevents future WHEN submissions;
-14. resident/infection provenance survives death.
+1. production hydrates exactly four deterministic resident-backed infected;
+2. every member maps back to a projected population slot already classified infected;
+3. all four remain ordinary physical ACTORs with distinct occupied cells;
+4. cohort scheduling order is deterministic by exact actor identity;
+5. active membership is exactly tied to `WorldStreamingCoordinator.is_cell_active()`;
+6. active members are System-26 listeners with active System-23 perception and the reused behavior loop;
+7. render frames during player decision pause create no behavior evaluations;
+8. moving the technical stream envelope away deactivates the resident without deleting placement/state/provenance;
+9. a dormant resident unregisters from System 26 and refuses System-23 recomputation work;
+10. returning the stream envelope reactivates the same resident/perception/behavior identity;
+11. two active infected submit ordinary actions on one shared WHEN interval;
+12. ordinary collision preserves physical congestion;
+13. killing one member removes only that actor from active scheduling while another remains active;
+14. metrics are produced from real cohort work.
 
-### Verification failures repaired without weakening gameplay assertions
+### Verifier repair
 
-The first verifier run (`34171408724`) stopped at parsing because `CombatGameMain` redeclared two preload names already inherited from `GameMain`, and two verifier candidate cells needed explicit `Vector2i` typing. Those compile defects were corrected.
+The first run `34172671153` failed before gameplay because two smoke locals needed explicit `Vector2i` typing under Godot's parser. Production parsed cleanly. Only those verifier types were corrected; all scaling assertions were unchanged.
 
-The next executable run (`34171525608`) showed correct perception/sound production truth but no autonomous action. The root cause was the verifier itself: scenario relocation did `unplace_entity()` then `set_placement()`. The intermediate unplaced state truthfully caused the production behavior to fail-stop because the infected temporarily had no living ACTOR placement. The smoke was corrected to use `WorldMutationService.set_placement()` as the existing atomic placement-replacement path. No production behavior assertion was weakened.
+The next run `34172818895` passed the full production-scene proof.
 
-The unchanged behavior expectations then passed on `34171663807`.
+## 15. Measured result
 
-## 14. Scaling boundary
+The successful four-member focused run reported:
 
-The **one-infected simulation loop is now proven**. Do not reopen this behavior model merely to add variety before scaling work exposes a concrete need.
+```text
+roster_count = 4
+active_actor_count = 3   # after one deliberate lethal transition in the scenario
+dormant_actor_count = 1
+activation_count = 8
+deactivation_count = 5
+activation_sync_count = 7
+behavior_evaluation_count = 24
+ordinary_action_submission_count = 2
+behavior_evaluation_total_usec = 124569
+behavior_evaluation_max_usec = 16672
+activation_sync_total_usec = 182013
+activation_sync_max_usec = 95595
+```
 
-Still intentionally not solved here:
+Derived from that run:
 
-- materializing/activating many infected simultaneously;
-- many-observer perception/hearing scheduling and cost control;
-- full crowd/path navigation and congestion policy;
-- group/herd behavior emerging from shared sound/occupancy;
-- persistence/streaming policy for large inactive populations;
-- survivor NPC behavior/dialogue.
+- average measured behavior evaluation ≈ **5.19 ms** across 24 evaluations;
+- worst measured behavior evaluation = **16.67 ms**;
+- average activation-sync pass ≈ **26.00 ms** across 7 syncs;
+- worst activation-sync pass = **95.60 ms**.
 
-## 15. Next operation
+These values include real System-23/behavior activation work exercised by the production scene and the deliberate forced stream exit/re-entry test. They are not a stable hardware-independent performance budget, but they are sufficient to establish the next engineering boundary.
 
-Scale the proven resident-backed loop carefully rather than designing new zombie abilities.
+## 16. Scaling conclusion
 
-Start with a **small active infected cohort**, not island-wide hordes. Reuse the same resident projection/hydration, observer-safe System-23/System-26 knowledge and ordinary WHEN movement/combat submission per actor. Establish activation/streaming and bounded event-driven scheduling/performance rules, then measure before increasing active counts.
+The architecture is proven for a small cohort, but the measurements explicitly **do not justify jumping to hordes yet**.
 
-Do not introduce per-frame AI loops, magical shared target knowledge, global aggro radii, teleport path correction or a parallel combat clock to make scaling easier.
+Current dormant cost is already reduced substantially: no System-26 listener work, no System-23 recomputation, no action evaluation/submission. However, every hydrated behavior/perception object still owns its inherited event connections and returns cheaply while stopped/inactive. That fan-out is acceptable at four and becomes a concrete scaling seam to measure before hundreds of hydrated actors exist.
 
-## 16. North-star fit
+Likewise, the measured 16.67 ms worst behavior evaluation and 95.60 ms worst activation-sync pass are large enough that the next step should optimize/budget active scheduling and perception activation before simply multiplying actor count.
 
-The first autonomous infected now emerges from already-existing simulation truth:
+## 17. Next operation
 
-- world generation produced the household;
-- population planning counted the resident and infection;
-- deterministic projection names the existing resident slot;
-- hydration gives that same identity a physical body;
-- System 23 supplies observer-scoped visual knowledge;
+Do **not** start hordes yet.
+
+Next, build a measured **active-cohort scheduling/perception budget** and count ladder:
+
+1. preserve this exact resident/streaming/WHEN architecture;
+2. reduce shared-signal fan-out for dormant hydrated actors if profiling confirms it matters;
+3. batch or budget activation-time System-23 recomputation without creating a fake AI clock;
+4. run controlled active-count steps such as 4 → 8 → 16 using the same production-scene metrics;
+5. stop increasing count when behavior/activation cost crosses the chosen interaction-latency budget;
+6. only after that establish the materialization policy for larger off-screen populations/hordes.
+
+Do not trade physical congestion or observer-scoped knowledge away for scale.
+
+## 18. North-star fit
+
+The small cohort still emerges from ordinary simulation truth:
+
+- world generation produced homes;
+- population planning counted residents/infections;
+- deterministic projection names existing resident slots;
+- hydration gives those same identities physical bodies;
+- technical streaming decides which bodies are behavior-active;
+- System 23 supplies observer-scoped vision;
 - System 26 supplies uncertain heard observations;
-- the behavior adapter chooses only an intention;
-- shared movement and WHEN perform locomotion;
-- System 37 performs physical attack;
-- Health/generic death performs mortality/corpse transition.
+- the behavior policy chooses intention only;
+- shared movement/WHEN perform locomotion;
+- System 37 performs attack;
+- Health/generic death owns mortality;
+- ordinary ACTOR collision creates congestion.
 
-No hidden zombie reality layer was added to make the first infected behave.
+Scaling did not create a hidden zombie reality layer.
