@@ -62,7 +62,7 @@ func _run() -> void:
 
     _check(not streetlight_ids.is_empty(), "generated roadside streetlights exist")
     _check(daylight.current_phase() == OutdoorAmbientLightService.PHASE_DAY, "reference game starts in canonical daytime")
-    var daytime_emitters: Dictionary = _streetlight_emitters(lighting)
+    var daytime_emitters: Dictionary = _streetlight_emitters(lighting, world)
     _check(daytime_emitters.is_empty(), "powered streetlights are physically dark during daytime")
 
     var time_profile: WorldTimeProfile = world_time.profile()
@@ -74,7 +74,7 @@ func _run() -> void:
     kernel.reset(night_tick)
     _check(daylight.current_phase() == OutdoorAmbientLightService.PHASE_NIGHT, "authoritative WHEN reset reaches canonical night")
 
-    var night_emitters: Dictionary = _streetlight_emitters(lighting)
+    var night_emitters: Dictionary = _streetlight_emitters(lighting, world)
     _check(night_emitters.size() == streetlight_ids.size(), "all powered generated streetlights emit at night")
     var sample_found: bool = false
     for id: String in streetlight_ids:
@@ -92,12 +92,16 @@ func _run() -> void:
     await process_frame
     _finish()
 
-func _streetlight_emitters(lighting: UtilityPoweredLightingSourceAdapter) -> Dictionary:
+func _streetlight_emitters(lighting: UtilityPoweredLightingSourceAdapter, world: WorldState) -> Dictionary:
     var result: Dictionary = {}
     for emitter: LightEmitter in lighting.emitters():
-        var id: String = String(emitter.emitter_id)
-        if id.begins_with("utility.light:power.physical.road.") and emitter.profile != null:
-            result[id] = true
+        var emitter_id: String = String(emitter.emitter_id)
+        if not emitter_id.begins_with("utility.light:") or emitter.profile == null:
+            continue
+        var entity_id: String = emitter_id.trim_prefix("utility.light:")
+        var record: WorldEntityRecord = world.entity(entity_id)
+        if record != null and record.semantic_type == &"prop.streetlight":
+            result[emitter_id] = true
     return result
 
 func _check(ok: bool, message: String) -> void:
