@@ -2,242 +2,344 @@
 
 This file is the authoritative short handoff for the next repository operation. Read this first, then `README_SOPS.md`. Do not broadly rediscover already-closed work.
 
-## Current checkpoint — INFECTED COUNT LADDER CLOSED; PRODUCTION ACTIVE COHORT = 8 — 2026-09-08
+## Current checkpoint — SYSTEM 39 ENVIRONMENTAL PRESSURE CLOSED — 2026-09-08
 
 Production root:
 
-`game/main.tscn -> CombatGameMain.gd -> VehicleGameMain.gd`
+`game/main.tscn -> EnvironmentalPressureGameMain.gd -> CombatGameMain.gd -> VehicleGameMain.gd`
 
-System 37 combat and System 38 resident-backed infected behavior remain closed. The active infected cohort now uses the same simple production architecture at a measured production count of **8**:
+The production active infected cohort remains intentionally **8** resident-backed actors.
 
-> **population resident -> physical hydration -> technical-stream activation -> System 23 / System 26 knowledge -> simple intention -> ordinary WHEN movement/combat -> generic Health/death**
+The closed production chain is now:
 
-The approved 4 -> 8 -> 16 ladder is complete. All three counts passed functionally. Production deliberately stays at **8** because the full real System-23 perception sweep grows roughly linearly and reached ~234 ms at 16 on CI. The behavior policy itself stayed stable around ~15–18 ms worst individual evaluation.
+> **population resident -> physical hydration -> technical-stream activation -> System 23 / System 26 knowledge -> simple intention -> ordinary WHEN movement/combat -> exact physical blocker -> generic opening pressure -> canonical opening consequence -> ordinary traversal -> generic Health/death**
 
-No horde AI, AI scheduler, crowd manager, perception queue, group coordination, hidden target sharing, second activation radius or zombie-only optimization layer was added.
+System 39 proves the first emergent environmental-pressure behavior without adding horde AI, a horde clock, group target sharing, a crowd multiplier, teleport movement, a global attraction radius, a building-attack mode, or a new navigation stack.
 
-Project rule reinforced by the user:
+Project rule remains:
 
 > **Complex behavior, simple systems. Do not over-engineer it.**
 
 ## Prompt start / turnover
 
-At the START of this code prompt the previous prompt-owned verifier pair was deleted FIRST:
-
-- `game/scripts/ci/PromptSmallInfectedCohortSmoke.gd`
-- `.github/workflows/prompt-small-infected-cohort.yml`
-
-Turnover commits:
-
-- `f2dee7c341327fe81e11cffc08b26c8fac63b03c`
-- `cc074ba538e360ca53fffe5232b0e33c45006102`
-
-Then this file was read first, `README_SOPS.md` second, and current `main` was fetched once.
-
-Prompt starting head:
-
-- `cc074ba538e360ca53fffe5232b0e33c45006102`
-
-No broad historical CI fleet, architecture suite, seed matrix or unrelated regression suite was restored.
-
-## Current production active count
-
-`CombatGameMain.gd` now intentionally sets:
-
-`ACTIVE_INFECTED_COHORT_SIZE = 8`
-
-This is not a permanent game-design maximum. It is the highest count adopted in production by this prompt because it provides a real increase over 4 without introducing architecture solely to support a larger number.
-
-Count 16 is **proven functional** but intentionally not the current production active count.
-
-## Count ladder verifier
-
-Current prompt-owned disposable pair:
+At the START of the System-39 code prompt the previous prompt-owned count-ladder verifier pair was deleted FIRST:
 
 - `game/scripts/ci/PromptInfectedCountLadderSmoke.gd`
 - `.github/workflows/prompt-infected-count-ladder.yml`
 
+Then this file was read first, `README_SOPS.md` second, and current `main` was fetched once.
+
+Prompt starting head after turnover:
+
+- `47ce1b917ceca7cf0a6a25ac22c416cbd41f2cc9`
+
+No broad historical CI fleet, architecture suite, seed matrix, or unrelated regression suite was restored.
+
+## System 39 — environmental pressure / forced entry
+
+### Core rule
+
+An infected does not receive a special "attack building" mode.
+
+It pursues a destination through the already-existing simple behavior and ordinary movement. When an ordinary forward movement attempt is physically rejected, the behavior asks the existing collision query for the exact forward blocking WHAT identities. If the blocker is a lawful opening, it may submit the shared generic actor/opening action against that exact entity.
+
+If there is no lawful opening blocker, existing bounded local detour behavior remains the fallback.
+
+### Generic actor/opening action owner
+
+Production now creates one shared `ActorOpeningPressureActionService` from existing owners:
+
+- world placement / exact WHAT identity;
+- spatial collision query;
+- canonical door/window/interactable state;
+- shared WHEN timing;
+- System 26 spatial sound.
+
+The service is actor-generic and does not depend on `InfectedState`.
+
+The focused verifier proves the same owner with both:
+
+- a real resident-backed infected against a door; and
+- a generic non-infected `actor.survivor` against a window.
+
+This is intentionally reusable physical simulation, not a zombie-only mechanic.
+
+## TRY OPEN — hidden lock truth is not leaked
+
+An intact closed door is physically tried before resistance is known.
+
+Current first-slice timing:
+
+- `opening.try_open`: **3 ticks**, COMMITTED;
+- `opening.impact`: **8 ticks**, COMMITTED, with physical contact at the action phase.
+
+The request path does not inspect hidden lock state to decide whether the actor "knows" the opening is locked. Only after the timed physical try resolves can that actor learn that that exact door resisted.
+
+A resisted try:
+
+- leaves the canonical door closed/locked;
+- creates no fake barrier damage;
+- does not tell other infected anything directly.
+
+Resistance knowledge is actor/target-local.
+
+## Persistent generic opening condition
+
+`WorldInteractableState` now owns persistent opening damage from 0..100.
+
+This is generic opening condition, not zombie-owned building HP.
+
+Current first-slice contact values:
+
+- wooden-door style body impact: **25**;
+- window impact: **55**;
+- each board reduces a contact by **5**, minimum **5**;
+- breach threshold: **100**.
+
+Each actor contributes only its own real contact. There is no crowd-size multiplier, shared pressure number, or synthetic horde force.
+
+## Canonical breach consequences
+
+### Door
+
+At breach threshold:
+
+- `broken = true`;
+- lock truth is destroyed;
+- boards are removed as failed fortification truth;
+- `DoorPhysicalTransitionService` opens the passage through the existing canonical door transition;
+- ordinary collision/movement then sees the opening as passable.
+
+### Window
+
+At breach threshold:
+
+- `broken = true`;
+- lock truth is destroyed;
+- boards are removed;
+- `window_open = true`;
+- subsequent lawful traversal delegates to the already-existing generic `WINDOW_CLIMB` action.
+
+There is no special zombie vault/breach movement mode.
+
+## Sound creates environmental attraction
+
+System 39 adds only physical opening sound profiles:
+
+- `opening.impact`;
+- `opening.break`.
+
+They emit through System 26 at the exact opening cell.
+
+The successful focused proof establishes the intended causal chain:
+
+> **first infected physically impacts door -> System 26 propagates sound -> second infected receives its own heard observation -> existing behavior chooses `investigate_sound`**
+
+The second infected is not handed the first infected's target, the hidden exact player location, or group aggro state.
+
+## Minimal infected behavior change
+
+`CohortInfectedBehaviorService` remains the small existing behavior wrapper over the already-proven simple intention policy.
+
+System 39 adds one intention label:
+
+- `infected.press_barrier`
+
+The new decision seam is only after ordinary forward movement fails:
+
+1. query exact physical forward blockers from the existing collision owner;
+2. if one is a lawful opening, request the generic opening action;
+3. otherwise keep the existing bounded local detour path.
+
+There is still no behavior tree, horde coordinator, per-frame AI, group target, private cooldown, or second simulation clock.
+
+## Physical congestion remains real
+
+Infected remain ordinary blocking ACTOR bodies.
+
+System 39 does not allow overlap, ghosting, abstract attacker slots, or pressure transfer through bodies. Only an actor that physically reaches contact with an opening can apply its own impact.
+
+Literal crowd-force transfer remains deferred until a real generic actor force/stability system exists. Do not fake it with a horde-strength number.
+
+## Functional verification
+
+Current prompt-owned disposable verifier pair:
+
+- `game/scripts/ci/PromptEnvironmentalPressureSmoke.gd`
+- `.github/workflows/prompt-environmental-pressure.yml`
+
 Workflow:
 
-- `Prompt Infected Count Ladder`
+- `Prompt Environmental Pressure`
 
-The smoke boots real `res://main.tscn`. For the configured production count it:
+Verified functional head before documentation:
 
-1. confirms the count is one of the approved 4 / 8 / 16 ladder values;
-2. confirms exact resident-backed hydrated identities;
-3. places every member in a distinct valid ACTOR cell inside the existing technical active envelope;
-4. proves ordinary physical congestion is preserved;
-5. proves active membership still comes from the existing streaming owner;
-6. proves render frames do not become an AI scheduler while player decision-paused;
-7. explicitly recomputes System 23 once for every active infected and measures the all-observer sweep;
-8. opens ordinary shared WHEN with one player commitment and proves infected react through the existing event-driven behavior path;
-9. records placement/perception/cohort timing metrics.
+- `a4126f97ddd26711c768edd92a0cf98b519e3978`
 
-## 4 -> 8 -> 16 evidence
+Successful focused run:
 
-### 4 members — baseline
+- run `34175935673`
+- job `101905204489`
+- `PROMPT_ENVIRONMENTAL_PRESSURE_SMOKE: PASS`
 
-Head:
+That production-scene verifier proves:
 
-- `4d32bd3b848c18731aca96b619a334e905bdb077`
+1. real `main.tscn` boots through the System-39 root;
+2. the production resident-backed cohort remains size 8;
+3. two real infected share the same generic pressure owner;
+4. the first infected obtains legitimate System-23 player knowledge before the barrier blocks line of sight;
+5. the second infected has no visual player knowledge in the causal hearing proof;
+6. blocked pursuit submits generic opening pressure against the exact door;
+7. hidden lock resistance is not known before timed TRY OPEN resolves;
+8. a resisted try leaves canonical locked-door truth intact and causes no fake damage;
+9. the first body impact adds exactly one actor's 25 damage;
+10. that impact emits real System-26 sound;
+11. the second infected receives its own heard observation and chooses ordinary `investigate_sound` rather than shared aggro;
+12. repeated independent contacts reach the 100-point breach threshold;
+13. breach destroys lock truth and opens the canonical door passage;
+14. the first infected then enters through ordinary movement;
+15. ACTOR congestion remains intact;
+16. a generic non-infected actor can use the same pressure owner on a window;
+17. first window contact leaves persistent partial damage;
+18. second contact shatters/opens the canonical window;
+19. the broken window delegates to the existing `WINDOW_CLIMB` action;
+20. the generic actor traverses through that existing climb path.
 
-Run:
+### Verification history
 
-- `Prompt Infected Count Ladder` run `34173867420` — **SUCCESS**
+Run `34175706820` failed before gameplay because the new cohort subclass redeclared inherited `Facing`. That was a real production parser defect. The duplicate declaration was removed without changing gameplay design.
 
-Measured:
+Run `34175793072` reached the real gameplay chain and System-39 mechanics passed, but two fixture assertions expected the prompt-only static blocking semantic to be transparent to System 23 while its door collision override was open. That was a focused-fixture LOS defect. The verifier was corrected to establish legitimate visual/last-seen memory before introducing the prompt barrier. No gameplay assertion was weakened.
 
-```text
-placement_burst_usec      = 260124
-perception_sweep_usec     = 60955
-behavior_evaluation_max   = 17835
-activation_sync_max_usec  = 98580
-```
+Run `34175935673` then passed the complete door + sound + second-infected + breach + window/climb chain.
 
-Approximate explicit all-observer System-23 sweep: **61 ms**.
+## Documentation closure
 
-### 8 members — first ladder run
+Material documentation writes completed before this final handoff:
 
-Head:
+- `SYSTEM_DESIGNS/39_ENVIRONMENTAL_PRESSURE_FORCED_ENTRY.md`
+  - created at commit `8f3397d99a0fc5f233060251b8a14fa07bb9e7ba`;
+  - defines the System-39 ownership boundary, timings, persistent opening damage, sound causality, exact-blocker behavior, non-goals, verification, and next operation.
+- `SYSTEM_DESIGNS/29_IMPLEMENTATION_CHANGELOG.md`
+  - updated at commit `9a34d80ab664b4cb74cf43dd5554c33a6350af3b`;
+  - records the functional evidence, parser/fixture failures, ownership boundary, and generated-house next phase.
+- This `README_CONTEXT.md` update is the **FINAL repository write for this prompt**.
 
-- `afc5a175f3f0c07827a090cec3f7aa7376b0f74d`
+After this file is committed, perform read-only exact-head verification only. No repository mutation is permitted after this handoff write.
 
-Run:
+## Current prompt-owned CI turnover rule
 
-- `Prompt Infected Count Ladder` run `34173978788` — **SUCCESS**
+At the START of the next code prompt, delete FIRST:
 
-Measured:
+- `game/scripts/ci/PromptEnvironmentalPressureSmoke.gd`
+- `.github/workflows/prompt-environmental-pressure.yml`
 
-```text
-placement_burst_usec      = 694732
-perception_sweep_usec     = 113309
-behavior_evaluation_max   = 14732
-activation_sync_max_usec  = 161719
-```
+Then:
 
-Approximate explicit all-observer System-23 sweep: **113 ms**.
+1. read this `README_CONTEXT.md` first;
+2. read `README_SOPS.md` second;
+3. fetch current `main` once;
+4. create one brand-new focused verifier pair only for the generated-house environmental-pressure scenario.
 
-### 16 members — functional but measured bend
+Do not restore this prompt verifier afterward, the count-ladder verifier, prior infected/combat verifiers, broad architecture fleets, routine seed matrices, or unrelated historical regression suites.
 
-Head:
+# NEXT OPERATION — REAL GENERATED-HOUSE ENVIRONMENTAL PRESSURE
 
-- `0c0b3e7026afff623e3b2f5cd1129056a05c9eea`
+Do **not** add navigation architecture first.
 
-Run:
+Use the existing production System-39 chain against **naturally generated seed-20001 island houses and their existing generated doors/windows**.
 
-- `Prompt Infected Count Ladder` run `34174095120` — **SUCCESS**
+The next focused verifier must use real generated building/opening geometry rather than prompt-created door/window semantics.
 
-Measured:
+Prove, in order:
 
-```text
-placement_burst_usec       = 2517070
-perception_sweep_usec      = 233611
-behavior_evaluation_max    = 15224
-activation_sync_max_usec   = 308325
-ordinary_action_submissions = 8
-```
+1. identify a suitable real generated seed-20001 house/building and one of its existing exterior doors or windows through the existing world/materialization/building truth;
+2. use a real resident-backed infected from the production cohort;
+3. establish a lawful destination from existing observer-scoped System-23 sight/last-seen truth or System-26 heard observation — never hidden exact player coordinates;
+4. let ordinary shared-WHEN movement approach the generated building;
+5. confirm ordinary collision discovers the exact generated opening as the physical blocker;
+6. submit the existing generic System-39 TRY OPEN / pressure path against that exact generated WHAT identity;
+7. if the generated door resists, prove resistance is learned only after the timed try;
+8. prove repeated physical impacts change the same persistent opening condition and eventually change canonical passability when breach is physically reached;
+9. prove impact/break sound propagates through System 26 and can cause another infected with no visual target knowledge to independently investigate;
+10. prove the infected passes through the changed generated opening using ordinary movement or the existing window climb action;
+11. preserve ordinary ACTOR congestion and exact resident/infection provenance throughout.
 
-Approximate explicit all-observer System-23 sweep: **234 ms**.
+### Navigation gate
 
-All 16 remained valid resident-backed physical ACTORs and ordinary behavior continued to function. The important finding is that the simple behavior did **not** explode in cost. The main growth is the expected cost of doing real observer-scoped perception for more simultaneous observers.
+If that exact real generated-building scenario succeeds with the current bounded local behavior, **stop there**. Do not add pathfinding.
 
-## Decision — do not engineer around 16
+Only if the real generated-house proof exposes a concrete navigation failure should the failing geometry and behavior trace be inspected. Then add only the smallest **generic** route-planning/navigation seam needed to solve that demonstrated failure.
 
-A targeted read of `ActiveInfectedCohortService` confirmed there is no obvious needless whole-roster rescan on ordinary actor movement or Health change. Those callbacks already resynchronize only the changed cohort actor.
+Do not preemptively add:
 
-Therefore no tiny obvious owner-local fix existed that justified modifying production behavior.
+- global A*;
+- horde routing;
+- zombie navigation grids;
+- group flow fields;
+- attack slots;
+- shared destinations;
+- magical door targeting;
+- teleport correction;
+- crowd coordinators.
 
-Instead of inventing a scheduler/perception queue/horde architecture just to make 16 cheaper, production was returned to **8**.
+A route-planning seam, if proven necessary, must remain an ordinary actor/world capability reusable outside infected behavior.
 
-Final functional 8-member candidate before docs:
-
-- `d3f4a0544be6abec32b084ed77a57880330836be`
-
-Final functional run:
-
-- `Prompt Infected Count Ladder` run `34174173692` — **SUCCESS**
-
-Measured:
-
-```text
-placement_burst_usec            = 718903
-perception_sweep_usec           = 118140
-activation_sync_max_usec        = 165307
-behavior_evaluation_count       = 65
-behavior_evaluation_max_usec    = 17430
-behavior_evaluation_total_usec  = 159910
-ordinary_action_submission_count = 3
-```
-
-The microsecond values are CI-machine observations, not universal performance budgets. The durable conclusion is:
-
-- 8 is a useful production increase from 4;
-- 16 is functionally proven;
-- behavior remains simple/event-driven;
-- simultaneous perception is the current scaling cost;
-- there is no reason to build extra infrastructure until actual gameplay needs more active infected.
-
-## Existing System 38 ownership — preserve
+## Existing System 38 / cohort ownership — preserve
 
 ### Population / identity
 
 - infected identities derive only from already-counted household resident slots;
 - no extra zombie population exists;
 - resident IDs remain deterministic `resident.<building_id>.<ordinal>`;
-- `InfectedState` is an overlay on the same shared human actor identity and preserves provenance through death.
+- `InfectedState` is an overlay on the same shared human actor identity;
+- population/infection provenance survives ordinary behavior and generic death.
 
-### Streaming
+### Active count / streaming
 
+- production active cohort remains **8**;
+- 16 is functionally proven but intentionally not adopted;
 - `WorldStreamingCoordinator` remains the sole active-envelope authority;
 - dormant infected keep exact physical/state truth;
-- dormant System-26 listener work is removed;
-- dormant `StreamingObserverPerceptionService` refuses expensive recomputation;
-- dormant behavior does not evaluate/submit actions;
-- re-entry reuses the same actor/perception/behavior identity.
+- dormant listener/perception/behavior work sleeps through the existing stream lifecycle;
+- re-entry reuses the same identity/state objects.
 
-### Perception / behavior
+### Perception / sound / behavior
 
-- System 23 owns observer-scoped vision/memory;
-- System 26 owns uncertain heard observations and never leaks hidden exact sound-source identity to behavior;
-- intentions remain only idle / pursue visible / pursue last seen / investigate sound / attack visible;
-- no group brain, shared target truth, per-frame loop, zombie timer or private cooldown.
+- System 23 owns observer-scoped visual truth and memory;
+- System 26 owns uncertain heard observations;
+- no auditory path may leak hidden exact source identity to behavior;
+- intentions remain deliberately small: idle / pursue visible / pursue last seen / investigate sound / attack visible / press barrier;
+- no group brain, shared target truth, per-frame AI, zombie timer, or private attack cooldown.
 
-### Time / movement / congestion / combat
+### Time / movement / collision / combat
 
-- WHEN owns simulation time/readiness/interruption;
-- movement/world/collision own physical locomotion;
+- WHEN owns shared simulation time, action phase, interruption, readiness and pause semantics;
+- movement/world/collision own locomotion and physical blockage;
 - infected occupy ordinary blocking ACTOR cells;
-- congestion/bunching must emerge from collision, not crowd-management code;
-- System 37 owns physical melee/firearm combat;
-- Health/generic death owns HP/corpse transition.
-
-## Material docs updated
-
-- `SYSTEM_DESIGNS/38_FIRST_INFECTED_POPULATION_HYDRATION.md` — 4 -> 8 -> 16 ladder, measurements, production=8 decision, and simple-systems boundary recorded at docs commit `efdc2cd5fe8d29daa66cbc354ff4901451aa9c22`.
-- `SYSTEM_DESIGNS/29_IMPLEMENTATION_CHANGELOG.md` — ladder evidence and explicit no-overengineering decision recorded at docs commit `117a0a310dd043f825441f0889f7bf6114db83ee`.
-- This `README_CONTEXT.md` is the **final repository write for this prompt**.
-
-## Current prompt-owned CI turnover rule
-
-At the START of the next code prompt, delete FIRST:
-
-- `game/scripts/ci/PromptInfectedCountLadderSmoke.gd`
-- `.github/workflows/prompt-infected-count-ladder.yml`
-
-Then read this file first, read `README_SOPS.md` second, and fetch current `main` once.
-
-Create one brand-new focused verifier pair only for the next environmental-pressure code actually changed. Do not restore this ladder verifier afterward, prior infected/combat verifiers, broad architecture fleets or routine seed matrices.
+- System 39 only reacts to exact physical opening blockers found by those owners;
+- System 37 owns actor combat;
+- canonical Health/generic corpse transition owns mortality;
+- no duplicate infected health/combat clock exists.
 
 ## Protected neighboring contracts — preserve
 
-### Combat
+### Combat / firearms
 
-- physical melee/contact remains WHEN-timed with committed/interruption semantics;
-- exact firearm/magazine/live-round identity remains containment truth, never an ammo integer;
-- reload remains WHEN RESUMABLE with truthful eject/insert/chamber intermediate state;
+- melee/contact remains physical and WHEN-timed;
+- exact firearm/magazine/live-round identities remain real containment truth, never integer ammo counters;
+- reload remains RESUMABLE with truthful eject/insert/chamber intermediate state;
 - System 26 owns firearm/combat sound;
-- generic Health-driven death/corpse transition preserves exact carried item identity;
+- generic death/corpse transition moves exact carried/equipped entities rather than cloning loot;
 - no Combat skill.
+
+### Openings / world interaction
+
+- closed locked ordinary openings do not leak hidden lock truth to player or NPC behavior;
+- player-facing ordinary lock/unlock actions remain retired;
+- existing BREAK / BOARD / UNBOARD / CLIMB behavior remains with canonical world-opening owners;
+- shattered-window replacement remains deferred until real glass inventory truth exists;
+- System 39 opening damage is generic condition truth, not a UI state or zombie-only HP bar.
 
 ### Vehicle / skateboard
 
@@ -250,66 +352,39 @@ Create one brand-new focused verifier pair only for the next environmental-press
 - other vehicles require stopped state before reverse/exit;
 - mounted controls replace walking controls in the same footprint.
 
-### Inventory / equipment / interaction
+### Inventory / equipment / UI
 
 - exact selected persistent item -> lawful action -> authoritative WHEN -> exact-entity consequence;
 - equipment slots remain RIGHT HAND, LEFT HAND, BACK, HEAD, TORSO, LEGS, FEET, HANDS;
 - one physical item cannot occupy multiple slots;
 - skateboard remains one physical identity across loose/equipped/ridden;
 - shared world chooser preserves every actionable exact overlapping target;
-- UI owns no gameplay truth.
-
-### Doors / lighting / utilities
-
-- locked closed openings expose TRY OPEN instead of hidden lock truth;
-- break/board/unboard/climb remain closed work;
-- shattered-window repair remains deferred until real replacement glass exists;
-- fixed room lighting follows System-33 power automatically; no residential light-switch gameplay;
-- exact flashlight owns persistent switched state; no invented battery depletion;
-- portable generators use real INSPECT/REFUEL/START/STOP fuel/running/local-power truth;
-- physical distribution-support repair remains System 33B/System-33 truth.
-
-### HUD / world
-
-- no Survival window, Forage panel, player-visible Dev window, visible Zoom +/- or Health/Fatigue bars;
+- UI owns no gameplay truth;
+- no Survival window, Forage panel, player-visible Dev window, Zoom +/- buttons, or Health/Fatigue bars;
 - `Looking at:` remains below STATS / INVENTORY / MENU;
-- CENTER/FOLLOW + MAP remain available on foot/mounted;
-- island remains 3072x3072;
-- technical stream regions remain 128x128 with active radius 1 unless deliberately changed;
-- gateway roads four-lane paved; town/crossroads routes two-lane paved unless gateway; only rural-rural links gravel/dirt single-lane traversable;
-- reference seed 20001 remains roughly 627 buildings / 2184 residents / 2 towns / 3 crossroads / 30 rural settlements;
-- exactly one municipal water facility plus aliases; no municipal pipe graph;
-- deterministic 10–20% rural private wells only;
-- wastewater/sewer/septic remain retired;
-- no routine 12-seed matrix.
+- CENTER/FOLLOW + MAP remain available on foot/mounted.
 
-## Design philosophy — preserve
+## World / performance contracts — preserve
 
-Target:
+- world size remains 3072x3072;
+- streaming regions remain 128x128 with active radius 1;
+- gateways remain four-lane paved;
+- routes touching town/crossroads remain paved two-lane unless gateway;
+- rural-rural links may be gravel/dirt single-lane traversable;
+- reference seed 20001 remains the generated-world target for focused real-building verification;
+- water remains one municipal facility + service aliases with deterministic rural private wells and no municipal pipe network;
+- wastewater remains retired;
+- do not reintroduce routine 12-seed testing.
 
-> **deep interaction as an emergent property of relatively light simulation**
+## Final closure rule
 
-Prefer reusable physical/stateful primitives and owner truth over feature-specific stacks: WHAT identity, containment, equipment, material/condition/damage, openings/barriers, collision/LOS, observer-scoped perception, sound, power/fuel/fluid, weather/temperature, tools/capabilities, carry/weight and authoritative WHEN action costs.
+This file is the final repository mutation for System 39.
 
-Especially for infected:
+From this point onward in this prompt:
 
-> **Complex behavior should emerge from simple systems interacting.**
-
-Do not build a horde brain because ordinary hearing, sight, collision, openings, WHEN and combat can create herding, bunching, pursuit and pressure themselves.
-
-## NEXT OPERATION — EMERGENT ENVIRONMENTAL PRESSURE
-
-Do **not** increase infected counts again yet.
-
-Use the now-eight-member active cohort to prove that existing simple systems create meaningful pressure against the real environment:
-
-1. infected pursue real System-23 sight and System-26 sound through ordinary movement;
-2. ordinary ACTOR collision creates bunching/congestion naturally;
-3. real doors/windows/barriers interrupt movement rather than being ignored or teleported through;
-4. infected interact with openings only through real physical timed actions;
-5. reuse existing door/window state, collision, movement, System-26 sound, WHEN and System-37 consequences;
-6. if non-player actors currently cannot open/break/traverse an opening, add only the minimum **generic actor/opening action seam** needed to expose the already-existing physical action;
-7. breaking/opening must create ordinary sound and state consequences that other infected can perceive naturally;
-8. do not add group coordination, shared aggro, horde AI, formation logic or zombie-only environmental shortcuts.
-
-The desired result is emergent: one infected hears/sees something, acts physically, its movement/noise/state changes alter what nearby infected perceive, and crowd pressure develops from those ordinary interactions.
+- do not edit code;
+- do not edit docs;
+- do not delete the current prompt verifier;
+- do not create commits;
+- do not rerun by changing workflow files;
+- only perform read-only branch, commit, focused-CI, and Pages verification.
