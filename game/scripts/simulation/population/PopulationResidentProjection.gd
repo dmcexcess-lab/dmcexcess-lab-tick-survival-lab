@@ -33,16 +33,39 @@ func infected_records(population_plan: Dictionary, preferred_area_site_id: Strin
     result.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return String(a.get("resident_id", "")) < String(b.get("resident_id", "")))
     return result
 
+func infected_near(population_plan: Dictionary, preferred_area_site_id: String, reference_cell: Vector2i) -> Array[Dictionary]:
+    var preferred: Array[Dictionary] = infected_records(population_plan, preferred_area_site_id)
+    var all_records: Array[Dictionary] = infected_records(population_plan)
+    _sort_by_distance(preferred, reference_cell)
+    _sort_by_distance(all_records, reference_cell)
+    if preferred_area_site_id.is_empty():
+        return all_records
+
+    var result: Array[Dictionary] = []
+    var seen: Dictionary = {}
+    for record: Dictionary in preferred:
+        var actor_id := String(record.get("resident_id", ""))
+        if actor_id.is_empty() or seen.has(actor_id): continue
+        result.append(record.duplicate(true))
+        seen[actor_id] = true
+    for record: Dictionary in all_records:
+        var actor_id := String(record.get("resident_id", ""))
+        if actor_id.is_empty() or seen.has(actor_id): continue
+        result.append(record.duplicate(true))
+        seen[actor_id] = true
+    return result
+
 func first_infected_near(population_plan: Dictionary, preferred_area_site_id: String, reference_cell: Vector2i) -> Dictionary:
-    var records := infected_records(population_plan, preferred_area_site_id)
-    if records.is_empty() and not preferred_area_site_id.is_empty(): records = infected_records(population_plan)
+    var records := infected_near(population_plan, preferred_area_site_id, reference_cell)
+    return {} if records.is_empty() else records[0].duplicate(true)
+
+func _sort_by_distance(records: Array[Dictionary], reference_cell: Vector2i) -> void:
     records.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
         var ac: Vector2i = a.get("home_cell", Vector2i.ZERO); var bc: Vector2i = b.get("home_cell", Vector2i.ZERO)
         var ad := absi(ac.x-reference_cell.x)+absi(ac.y-reference_cell.y); var bd := absi(bc.x-reference_cell.x)+absi(bc.y-reference_cell.y)
         if ad == bd: return String(a.get("resident_id", "")) < String(b.get("resident_id", ""))
         return ad < bd
     )
-    return {} if records.is_empty() else records[0].duplicate(true)
 
 func _resident_slots(world_seed: int, settlement: Dictionary, building_cells: Dictionary) -> Array[Dictionary]:
     var slots: Array[Dictionary] = []

@@ -17,7 +17,9 @@ const DeathTransitionsClass = preload("res://scripts/simulation/combat/ActorDeat
 const PopulationProjectionClass = preload("res://scripts/simulation/population/PopulationResidentProjection.gd")
 const InfectedStateClass = preload("res://scripts/simulation/infected/InfectedState.gd")
 const FirstInfectedHydratorClass = preload("res://scripts/simulation/infected/FirstInfectedHydrationService.gd")
-const FirstInfectedBehaviorClass = preload("res://scripts/simulation/infected/FirstInfectedBehaviorService.gd")
+const ActiveInfectedCohortClass = preload("res://scripts/simulation/infected/ActiveInfectedCohortService.gd")
+
+const ACTIVE_INFECTED_COHORT_SIZE: int = 4
 
 var _combat_impact_profiles: CombatImpactProfileCatalog = null
 var _combat_actions: CombatActionService = null
@@ -34,6 +36,10 @@ var _death_transitions: ActorDeathTransitionService = null
 var _population_resident_projection: PopulationResidentProjection = null
 var _infected_state: InfectedState = null
 var _first_infected_hydrator: FirstInfectedHydrationService = null
+var _infected_cohort_results: Array[Dictionary] = []
+var _infected_cohort: ActiveInfectedCohortService = null
+
+# Compatibility aliases for the already-closed one-infected seam.
 var _first_infected_result: Dictionary = {}
 var _first_infected_perception: ObserverPerceptionService = null
 var _first_infected_behavior: FirstInfectedBehaviorService = null
@@ -108,48 +114,69 @@ func _boot_first_real_infected() -> bool:
         _health_state, _skill_state, _carry_state, _condition_state
     )
     if not _first_infected_hydrator.is_ready(): return false
-    _first_infected_result = _first_infected_hydrator.hydrate_first(population_plan, FixtureClass.CENTRAL_SITE_ID, player.anchor)
-    if not bool(_first_infected_result.get("ok", false)):
-        push_error("CombatGameMain: first infected hydration failed: %s" % String(_first_infected_result.get("reason", "unknown")))
-        return false
-    if _perception != null: _perception.recompute(&"first_infected_hydrated")
-    return _boot_first_infected_behavior()
 
-func _boot_first_infected_behavior() -> bool:
-    var infected_id: String = String(_first_infected_result.get("actor_id", ""))
-    if infected_id.is_empty() or _perception_memory == null or _perception == null \
+    var cohort_result: Dictionary = _first_infected_hydrator.hydrate_cohort(
+        population_plan,
+        FixtureClass.CENTRAL_SITE_ID,
+        player.anchor,
+        ACTIVE_INFECTED_COHORT_SIZE
+    )
+    if not bool(cohort_result.get("ok", false)):
+        push_error("CombatGameMain: infected cohort hydration failed: %s" % String(cohort_result.get("reason", "unknown")))
+        return false
+    for value: Variant in cohort_result.get("members", []):
+        if typeof(value) == TYPE_DICTIONARY:
+            _infected_cohort_results.append((value as Dictionary).duplicate(true))
+    if _infected_cohort_results.size() != ACTIVE_INFECTED_COHORT_SIZE:
+        return false
+    _first_infected_result = _infected_cohort_results[0].duplicate(true)
+    if _perception != null: _perception.recompute(&"infected_cohort_hydrated")
+    return _boot_infected_cohort_behavior()
+
+func _boot_infected_cohort_behavior() -> bool:
+    var streaming: WorldStreamingCoordinator = FixtureClass.streaming_coordinator()
+    if streaming == null or _perception_memory == null or _perception == null \
         or _spatial_sound == null or _movement == null or _combat_actions == null:
         return false
-
-    _first_infected_perception = ObserverPerceptionClass.new(
+    _infected_cohort = ActiveInfectedCohortClass.new(
         _world,
         _door_state,
         _kernel,
-        _perception_memory,
-        infected_id,
-        VisionProfileClass.new(),
-        _perception.acquisition_provider()
-    )
-    if not _first_infected_perception.is_ready():
-        return false
-    if not _spatial_sound.register_listener(infected_id):
-        return false
-
-    _first_infected_behavior = FirstInfectedBehaviorClass.new(
-        _world,
-        _kernel,
         _infected_state,
-        _first_infected_perception,
+        _perception_memory,
+        _perception.acquisition_provider(),
         _spatial_sound,
         _movement,
         _combat_actions,
         _health_state,
-        infected_id,
+        streaming,
         FixtureClass.PLAYER_ID
     )
-    if not _first_infected_behavior.start():
+    if _infected_cohort == null or not _infected_cohort.configure(_infected_cohort_results):
         return false
-    return true
+
+    var first_id: String = String(_first_infected_result.get("actor_id", ""))
+    _first_infected_perception = _infected_cohort.perception_for_actor(first_id)
+    _first_infected_behavior = _infected_cohort.behavior_for_actor(first_id)
+    return not first_id.is_empty() and _first_infected_perception != null and _first_infected_behavior != null
+
+func infected_cohort_service() -> ActiveInfectedCohortService:
+    return _infected_cohort
+
+func infected_cohort_results() -> Array[Dictionary]:
+    var result: Array[Dictionary] = []
+    for member: Dictionary in _infected_cohort_results:
+        result.append(member.duplicate(true))
+    return result
+
+func first_infected_result() -> Dictionary:
+    return _first_infected_result.duplicate(true)
+
+func first_infected_behavior() -> FirstInfectedBehaviorService:
+    return _first_infected_behavior
+
+func first_infected_perception() -> ObserverPerceptionService:
+    return _first_infected_perception
 
 func _route_player_intent(intent: StringName) -> void:
     if intent == Intents.COMBAT_FORWARD and _combat_controller != null and (_vehicle_controller == null or not _vehicle_controller.is_mounted()):
