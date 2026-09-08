@@ -50,6 +50,19 @@ func world_cell_global_center(cell: Vector2i) -> Vector2:
 func presentation_snapshot() -> Dictionary:
     return {"configured": _configured, "area_bounds": _area_bounds, "render_origin": _render_origin, "render_size": _window_size, "cell_pixels": _cell_pixels, "world_view_position": Vector2.ZERO if _world_view == null else _world_view.position, "edge_margin": _last_edge_margin}
 
+static func edge_margin_for_view(viewport_pixels: Vector2, zoom: Vector2, cell_pixels: float, window_size: Vector2i) -> Vector2i:
+    if viewport_pixels.x <= 0.0 or viewport_pixels.y <= 0.0 or cell_pixels <= 0.0 or window_size.x <= 2 or window_size.y <= 2:
+        return Vector2i(EDGE_BUFFER_CELLS, EDGE_BUFFER_CELLS)
+    var zoom_x: float = maxf(absf(zoom.x), 0.001)
+    var zoom_y: float = maxf(absf(zoom.y), 0.001)
+    var half_visible_x: int = int(ceil(viewport_pixels.x / (cell_pixels * zoom_x * 2.0)))
+    var half_visible_y: int = int(ceil(viewport_pixels.y / (cell_pixels * zoom_y * 2.0)))
+    var desired_x: int = maxi(EDGE_BUFFER_CELLS, half_visible_x + VIEWPORT_SAFETY_CELLS)
+    var desired_y: int = maxi(EDGE_BUFFER_CELLS, half_visible_y + VIEWPORT_SAFETY_CELLS)
+    var max_x: int = maxi(1, int(window_size.x / 2) - 1)
+    var max_y: int = maxi(1, int(window_size.y / 2) - 1)
+    return Vector2i(mini(desired_x, max_x), mini(desired_y, max_y))
+
 func _on_camera_presentation_changed(snapshot: Dictionary) -> void:
     if not _configured or _shifting: return
     var camera_cell: Vector2i = _world_cell_for_global_position(snapshot.get("camera_global_position", Vector2.ZERO))
@@ -77,21 +90,10 @@ func _apply_window(origin: Vector2i, notify_camera: bool) -> bool:
 func _edge_margin_for_snapshot(snapshot: Dictionary) -> Vector2i:
     var zoom_value: Variant = snapshot.get("camera_zoom", Vector2.ONE)
     var zoom: Vector2 = zoom_value if typeof(zoom_value) == TYPE_VECTOR2 else Vector2.ONE
-    var zoom_x: float = maxf(absf(zoom.x), 0.001)
-    var zoom_y: float = maxf(absf(zoom.y), 0.001)
     var viewport_pixels: Vector2 = Vector2.ZERO
     if is_inside_tree() and get_viewport() != null:
         viewport_pixels = get_viewport().get_visible_rect().size
-    if viewport_pixels.x <= 0.0 or viewport_pixels.y <= 0.0:
-        return Vector2i(EDGE_BUFFER_CELLS, EDGE_BUFFER_CELLS)
-
-    var half_visible_x: int = int(ceil(viewport_pixels.x / (_cell_pixels * zoom_x * 2.0)))
-    var half_visible_y: int = int(ceil(viewport_pixels.y / (_cell_pixels * zoom_y * 2.0)))
-    var desired_x: int = maxi(EDGE_BUFFER_CELLS, half_visible_x + VIEWPORT_SAFETY_CELLS)
-    var desired_y: int = maxi(EDGE_BUFFER_CELLS, half_visible_y + VIEWPORT_SAFETY_CELLS)
-    var max_x: int = maxi(1, int(_window_size.x / 2) - 1)
-    var max_y: int = maxi(1, int(_window_size.y / 2) - 1)
-    return Vector2i(mini(desired_x, max_x), mini(desired_y, max_y))
+    return edge_margin_for_view(viewport_pixels, zoom, _cell_pixels, _window_size)
 
 func _needs_shift(cell: Vector2i, margin: Vector2i) -> bool:
     var local: Vector2i = cell - _render_origin
