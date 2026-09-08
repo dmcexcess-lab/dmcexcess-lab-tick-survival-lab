@@ -1,154 +1,79 @@
 # Tick Survival Lab — Current Repository Handoff
 
-This file is the authoritative short handoff for the next repository operation. Read this first, then `README_SOPS.md`. Do not broadly rediscover already-closed work.
+Read this file first, then `README_SOPS.md`. Fetch current `main` once at prompt start. This is the authoritative continuation checkpoint; do not broadly rediscover closed work.
 
-## Current checkpoint — WORLD RESOLUTION INDICATOR CLOSED — 2026-09-08
+## Current checkpoint — ROADSIDE POWER / REAL STREETLIGHTS CLOSED — 2026-09-08
 
-Production root remains:
+The user reported tangled electric-pole wires and approved the complete repair, adding the requirement that every other roadside pole be a streetlight with a real light effect.
 
-`game/main.tscn -> EnvironmentalPressureGameMain.gd -> CombatGameMain.gd -> VehicleGameMain.gd`
+Functional/executable owning head: **`c069cf6f28a5148571c76ba6b2a3479ecb26c839`**.
 
-Production active infected cohort remains intentionally **8** resident-backed actors.
+- Implementation publication: `b9c2e64aff86a548a7b32cfdbe13d0f4442f27d4`.
+- Previous verifier workflow turnover correction: `c069cf6f28a5148571c76ba6b2a3479ecb26c839`.
+- Locally tested source tree: `ed17ba5820077eb05458c944195691b26529ef53`; it exactly matches the functional GitHub head's tree.
+- Changelog closure: `2d90ea17027351fe5c40821c9c05a3f87077bbe3`.
+- This handoff is the **FINAL repository write**. Its containing commit is the final documentation head; after publication perform only read-only exact-head Actions/Pages/status verification.
 
-System 39 environmental pressure remains closed. This prompt added only a presentation seam to explain two pauses the player already feels during normal play:
+## Completed repair
 
-- **`ZOMBIES`** while shared WHEN is resolving and at least one infected is currently stream-active;
-- **`LOADING`** when the existing technical streaming owner reports a real active-region transition; `LOADING` has display priority over `ZOMBIES`.
+Production uses `NeighborhoodPowerInfrastructureMaterializer`, composed by `UtilityGameMain`. The older base materializer's segment placement is not the live neighborhood placement path.
 
-There is no new turn system, AI scheduler, streaming system, progress model, gameplay pause, or UI-owned simulation truth.
+Root causes repaired:
 
-Project rule remains:
+1. Separate substation traversals sampled and reused road poles independently, allowing a shared pole to override physical bank continuity and bypass other services' intervening taps.
+2. Customer service drops bypassed the existing roadside crossing hold and could cross neighboring leads.
+3. Placement searched square rings with an upper-left bias, displacing nearby supports/attachments sideways.
+4. Ten-cell route sampling was not a maximum actual wire length; customer and substation leads had no cap.
 
-> **Complex behavior, simple systems. Do not over-engineer it.**
+Current contracts:
 
-## Prompt start / turnover
+- Collect all substation/customer road keys first; place one canonical shared roadside chain. Every service uses the same intervening road keys and physical support identities.
+- Compass-bank continuity is independent of a service's direction of traversal. Placement prefers road-normal alignment; necessary bank changes retain a two-pole hold.
+- Customer supports prefer alignment with their tap, searching outward from the building face before shifting sideways.
+- Opposite-bank leads get explicit crossing supports. Nearby span geometry is checked in a temporary generation-only spatial index; intersecting leads branch through existing supports instead of making unsupported X crossings.
+- **All actual wire spans are at most 16 cells Euclidean distance**, including roadside trunks, substation leads and house leads. Longer connections receive real supports and distinct physical span assets with retained service provenance.
+- Every second physical support in each ordered straight roadside/bank sequence is **`prop.streetlight`**. Shared supports count once; roadside crossing/intermediate supports participate. Off-road customer/facility supports are outside roadside alternation.
+- Streetlights use the existing `UtilityPoweredLightingSourceAdapter` -> `PhysicalLightingService`/rendered glow path. They bind to the support's actual distribution service, deterministically choosing the first service when shared, rather than whichever substation is geometrically nearest.
+- Source outages/restoration change real world illumination. Damage to the physical support disables its real emitter through existing System-33 network consequences.
+- No new runtime route planner, per-frame infrastructure scan, timer, power-state owner, or decorative-only light system was introduced.
 
-At the START of this prompt the previous prompt-owned System-39 verifier pair was deleted FIRST:
+Seed-20001 production verification: **3,157 spans; 1,048 alternating roadside streetlights; longest span 16.00 cells; zero duplicate physical spans; zero unsupported wire crossings** across all span roles.
 
-- `game/scripts/ci/PromptEnvironmentalPressureSmoke.gd`
-- `.github/workflows/prompt-environmental-pressure.yml`
-
-Turnover commits:
-
-- `7cec0a2ab7ddd8aec697729e5dce040621b03675`
-- `08559d1342d859ef74fbc42de185d22605ace9c0`
-
-Then this file was read first, `README_SOPS.md` second, and current `main` was fetched once.
-
-Prompt starting head after turnover:
-
-- `08559d1342d859ef74fbc42de185d22605ace9c0`
-
-No broad historical CI fleet, architecture suite, seed matrix, or unrelated regression suite was restored.
-
-## World-resolution indicator
-
-Production now mounts:
-
-- `game/scripts/ui/WorldResolutionIndicator.gd`
-- `ResolutionIndicator` node in real `game/main.tscn`
-
-`EnvironmentalPressureGameMain` configures the indicator from the already-existing authoritative owners:
-
-- `TickKernel` for shared WHEN / player decision-pause truth;
-- `ActiveInfectedCohortService` for the current stream-active infected set;
-- `WorldStreamingCoordinator` for technical active-region transitions.
-
-### `ZOMBIES`
-
-`ZOMBIES` is visible only when:
-
-1. WHEN is not hard-paused;
-2. the player is not at the authoritative decision pause;
-3. at least one infected is currently stream-active.
-
-It does **not** mean infected have a private turn. It is presentation shorthand for the shared world-resolution interval that feels slower when active infected are participating.
-
-The existing `PlayerActionController` remains authoritative for action resolution. It already advances one due-tick WHEN batch per rendered frame and discards player input while busy. The indicator does not add or change input locking.
-
-When the real player decision pause returns, `ZOMBIES` disappears and the existing controls unlock at the same boundary.
-
-### `LOADING`
-
-`LOADING` listens to the existing `WorldStreamingCoordinator.active_regions_changed` signal.
-
-A real technical region transition raises a short presentation pulse so the player understands a boundary/materialization hitch. It does not change streaming state, start a second loader, estimate progress, or add a fake delay.
-
-`LOADING` has presentation priority over `ZOMBIES`.
-
-There is intentionally:
-
-- no progress bar;
-- no spinner;
-- no percentage;
-- no fake ETA;
-- no modal window;
-- no queued input behavior.
-
-## Functional verification
+## Focused verification / publication
 
 Current prompt-owned disposable verifier pair:
 
-- `game/scripts/ci/PromptWorldResolutionIndicatorSmoke.gd`
-- `.github/workflows/prompt-world-resolution-indicator.yml`
+- `game/scripts/ci/PromptRoadsidePowerSmoke.gd`
+- `.github/workflows/prompt-roadside-power.yml`
+- Workflow: **Prompt Roadside Power**.
 
-Workflow:
+The verifier boots real production `main.tscn` at seed 20001 and checks endpoint existence, actual maximum length, duplicates, independent segment intersection geometry, each alternating roadside identity, real emitter profiles, physical illumination, source off/on, physical-support damage, and actual service bindings. A small crossed-lead/long-span case checks intermediate supports and service provenance. It does not run historical suites or seed matrices.
 
-- `Prompt World Resolution Indicator`
+Verified owning head: `c069cf6f28a5148571c76ba6b2a3479ecb26c839`.
 
-Verified functional head before documentation:
+- Focused CI run **`34182205529`**, job **`101923389370`**: **success**.
+- Local Godot 4.7.1 focused proof: **`PROMPT_ROADSIDE_POWER_SMOKE: PASS`**, clean of script/parser/load errors.
+- Pages run **`34182205542`**, build job **`101923389488`**, deploy job **`101923503646`**: **success** on the functional head.
+- Final documentation-head CI/Pages must be verified read-only after this handoff commit. Do not mutate this file afterward to insert those run IDs.
 
-- `bda3b12b31430b8feafa0a5b52e4bec2d99647aa`
+Publication used the connected GitHub write API because shell git push had no HTTPS credentials. The first publication omitted the old pathname of the renamed verifier workflow, causing that obsolete workflow to fail on its deliberately removed script. The turnover correction deleted the old workflow and restored exact equality with the locally verified source tree. Only the new focused verifier and Pages remain active.
 
-Successful focused run:
+## Turnover for the next code prompt
 
-- run `34180003360`
-- job `101916994037`
-- `PROMPT_WORLD_RESOLUTION_INDICATOR_SMOKE: PASS`
+Delete this prompt's verifier pair at the start of the next code operation, then create one new focused pair for the actual module being changed:
 
-The real seed-20001 production-scene proof confirms:
+- `game/scripts/ci/PromptRoadsidePowerSmoke.gd`
+- `.github/workflows/prompt-roadside-power.yml`
 
-1. real `main.tscn` boots with the existing System-39 root;
-2. the indicator is mounted and configured from authoritative owners;
-3. ready state is silent and player controls are enabled;
-4. real stream-active infected exist;
-5. an ordinary player action opens shared WHEN;
-6. `ZOMBIES` becomes visible while that shared world time resolves;
-7. existing player input remains locked during the same interval;
-8. a technical active-region transition raises `LOADING`;
-9. `LOADING` overrides `ZOMBIES` without inventing a new simulation pause;
-10. when shared WHEN returns to the player decision pause, `ZOMBIES` clears and controls unlock;
-11. a region transition while no zombie resolution is active still shows `LOADING`;
-12. `LOADING` clears without a spinner, progress bar, or persistent modal.
+Do not restore the previous World Resolution Indicator verifier or other historical gameplay gates. The real `ZOMBIES` / `LOADING` runtime indicator remains intact.
 
-The focused run parsed cleanly and required no gameplay, infected, combat, WHEN, or streaming repair.
+## Remaining work / blocker
 
-## Documentation closure
+The requested roadside-wire and alternating powered-streetlight repair is complete. No unresolved implementation or publication blocker remains at this checkpoint. The user's exact screenshot location was not reproduced; verification covers the real seed-20001 island's complete generated wire geometry and live lighting owners.
 
-Material documentation writes before this final handoff:
+Resume the previously recorded generated-house environmental-pressure acceptance operation below. Do not expand NPC navigation preemptively. Production root remains `game/main.tscn -> EnvironmentalPressureGameMain.gd -> CombatGameMain.gd -> VehicleGameMain.gd`; the active infected cohort remains **8**.
 
-- `SYSTEM_DESIGNS/29_IMPLEMENTATION_CHANGELOG.md`
-  - updated at commit `a5d66e023aaa5454fa3ef30cf2c5f5d502b99820`;
-  - records the `ZOMBIES` / `LOADING` presentation contract, focused evidence, ownership boundary, and unchanged next gameplay operation.
-- This `README_CONTEXT.md` update is the **FINAL repository write for this prompt**.
-
-After this file is committed, perform read-only exact-head verification only. No repository mutation is permitted after this handoff write.
-
-## Current prompt-owned CI turnover rule
-
-At the START of the next code prompt, delete FIRST:
-
-- `game/scripts/ci/PromptWorldResolutionIndicatorSmoke.gd`
-- `.github/workflows/prompt-world-resolution-indicator.yml`
-
-Then:
-
-1. read this `README_CONTEXT.md` first;
-2. read `README_SOPS.md` second;
-3. fetch current `main` once;
-4. create one brand-new focused verifier pair only for the generated-house environmental-pressure work actually changed.
-
-Do not restore this prompt verifier afterward, the prior System-39 prompt verifier, count-ladder verifier, infected/combat verifiers, broad architecture fleets, routine seed matrices, or unrelated historical regression suites.
+Project rule: **Complex behavior, simple systems. Do not over-engineer it.**
 
 # NEXT OPERATION — REAL GENERATED-HOUSE ENVIRONMENTAL PRESSURE
 
@@ -251,13 +176,4 @@ Do not preemptively add:
 
 ## Final closure rule
 
-This file is the final repository mutation for the world-resolution-indicator prompt.
-
-From this point onward in this prompt:
-
-- do not edit code;
-- do not edit docs;
-- do not delete the current prompt verifier;
-- do not create commits;
-- do not rerun by changing workflow files;
-- only perform read-only branch, commit, focused-CI, and Pages verification.
+This is the final repository mutation for the roadside power/streetlight prompt. After this handoff commit/push, perform only read-only final branch/commit/status and current focused CI/Pages verification. Do not edit code/docs, delete the active verifier, create more commits, or rerun by editing workflows. Any unexpectedly discovered failure after this point must be reported with its exact evidence for the next operation.
