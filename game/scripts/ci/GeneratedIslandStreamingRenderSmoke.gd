@@ -12,6 +12,9 @@ const ArtCatalogClass = preload("res://scripts/art/ArtCatalog.gd")
 const PointerClass = preload("res://scripts/input/DoorPointerInputAdapter.gd")
 const CameraControllerClass = preload("res://scripts/camera/TacticalCameraController.gd")
 const ViewerClass = preload("res://scripts/view/LargeAreaRenderWindowController.gd")
+const Facing = preload("res://scripts/foundation/spatial/SpatialFacing.gd")
+const Footprint = preload("res://scripts/foundation/spatial/SpatialFootprint.gd")
+const Layers = preload("res://scripts/foundation/spatial/SpatialLayer.gd")
 
 var failures: Array[String] = []
 
@@ -51,9 +54,9 @@ func _initialize() -> void:
     var start_region: Vector2i = streaming.focus_region_coord()
     var before_origin: Vector2i = viewer.render_origin()
 
-    var target := _target_across_stream_seam(start, start_region)
+    var target := _target_across_stream_seam(start)
     _check(FixtureClass.AREA_BOUNDS.has_point(target), "test target remains inside playable island bounds")
-    _check(mutations.set_placement(FixtureClass.PLAYER_ID, 3, target, 1, Vector2i.ONE), "player placement crosses render and stream seam")
+    _check(mutations.set_placement(FixtureClass.PLAYER_ID, Layers.Channel.ACTOR, target, Facing.Value.EAST, Footprint.single_cell()), "player placement crosses render and stream seam")
 
     _check(FixtureClass.streaming_failure().is_empty(), "player focus adapter reports no hard streaming failure")
     _check(streaming.focus_cell() == target, "streaming focus follows player into new cells")
@@ -64,17 +67,15 @@ func _initialize() -> void:
 
     _finish()
 
-func _target_across_stream_seam(start: Vector2i, start_region: Vector2i) -> Vector2i:
+func _target_across_stream_seam(start: Vector2i) -> Vector2i:
     var candidates: Array[Vector2i] = [
         start + Vector2i(140, 0),
         start + Vector2i(-140, 0),
         start + Vector2i(0, 140),
         start + Vector2i(0, -140),
     ]
-    var streaming: WorldStreamingCoordinator = FixtureClass.streaming_coordinator()
     for candidate: Vector2i in candidates:
         if FixtureClass.AREA_BOUNDS.has_point(candidate):
-            # Prefer a candidate that demonstrably crosses the coordinator's region seam after placement.
             return candidate
     return start
 
