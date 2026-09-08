@@ -1,5 +1,8 @@
 extends SceneTree
 
+const InfrastructureClass = preload("res://scripts/simulation/utilities/NeighborhoodPowerInfrastructureMaterializer.gd")
+const STREETLIGHT_MIN_SPACING: int = 16
+
 var _failures: int = 0
 
 func _initialize() -> void:
@@ -40,7 +43,7 @@ func _run() -> void:
             var horizontal: bool = run_key.begins_with("h:")
             var axis: int = placement.anchor.x if horizontal else placement.anchor.y
             if previous_light_axis != -2147483648:
-                _check(absi(axis - previous_light_axis) >= infrastructure.STREETLIGHT_MIN_SPACING, "streetlights never bunch inside minimum physical cadence")
+                _check(absi(axis - previous_light_axis) >= STREETLIGHT_MIN_SPACING, "streetlights never bunch inside minimum physical cadence")
             previous_light_axis = axis
     _check(streetlight_count > 0, "real generated roadside streetlights exist")
 
@@ -85,7 +88,7 @@ func _run() -> void:
     _finish()
 
 func _check_tap_cadence_coalescing() -> void:
-    var infrastructure := NeighborhoodPowerInfrastructureMaterializer.new()
+    var infrastructure = InfrastructureClass.new()
     var graph: Dictionary = {}
     for x: int in range(0, 31):
         graph[Vector2i(x, 0)] = []
