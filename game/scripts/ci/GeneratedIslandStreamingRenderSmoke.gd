@@ -51,10 +51,22 @@ func _initialize() -> void:
 
     var streaming: WorldStreamingCoordinator = FixtureClass.streaming_coordinator()
     _check(streaming != null and streaming.has_focus(), "production streaming has initial focus")
-    var start_region: Vector2i = streaming.focus_region_coord()
-    var before_origin: Vector2i = viewer.render_origin()
 
-    var target := _target_across_stream_seam(start)
+    # The live mobile failure was not a failed stream transition: the camera could expose cells
+    # beyond the bounded renderer before the old fixed 12-cell recenter threshold fired.
+    var before_origin: Vector2i = viewer.render_origin()
+    var edge_margin: Vector2i = viewer.presentation_snapshot().get("edge_margin", Vector2i(12, 12))
+    _check(edge_margin.x > 12 or edge_margin.y > 12, "render edge margin expands to cover the actual viewport")
+    var edge_target := Vector2i(before_origin.x + FixtureClass.RENDER_WINDOW_SIZE.x - edge_margin.x, start.y)
+    if not FixtureClass.AREA_BOUNDS.has_point(edge_target):
+        edge_target = Vector2i(before_origin.x + edge_margin.x - 1, start.y)
+    _check(mutations.set_placement(FixtureClass.PLAYER_ID, Layers.Channel.ACTOR, edge_target, Facing.Value.EAST, Footprint.single_cell()), "player reaches viewport-aware recenter threshold")
+    _check(viewer.render_origin() != before_origin, "render window recenters before the camera can expose its unrendered edge")
+
+    var seam_start: Vector2i = world.placement(FixtureClass.PLAYER_ID).anchor
+    var start_region: Vector2i = streaming.focus_region_coord()
+    var origin_before_seam: Vector2i = viewer.render_origin()
+    var target := _target_across_stream_seam(seam_start)
     _check(FixtureClass.AREA_BOUNDS.has_point(target), "test target remains inside playable island bounds")
     _check(mutations.set_placement(FixtureClass.PLAYER_ID, Layers.Channel.ACTOR, target, Facing.Value.EAST, Footprint.single_cell()), "player placement crosses render and stream seam")
 
@@ -62,7 +74,7 @@ func _initialize() -> void:
     _check(streaming.focus_cell() == target, "streaming focus follows player into new cells")
     _check(streaming.focus_region_coord() != start_region, "player crosses a technical streaming region")
     _check(world.has_terrain(target), "newly focused player cell has authoritative terrain")
-    _check(viewer.render_origin() != before_origin, "render window shifts after player enters new cells")
+    _check(viewer.render_origin() != origin_before_seam, "render window shifts after player enters new cells")
     _check(Rect2i(viewer.render_origin(), viewer.render_size()).has_point(target), "shifted render window contains player target")
 
     _finish()
