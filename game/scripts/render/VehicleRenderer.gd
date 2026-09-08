@@ -47,6 +47,16 @@ func set_visible_window(origin: Vector2i, size_cells: Vector2i, cell_pixels: flo
     queue_redraw()
     return true
 
+func owns_entity(entity_id: String) -> bool:
+    if not _configured or not _state.has_vehicle(entity_id):
+        return false
+    var kind: StringName = _state.record(entity_id).get("kind", &"")
+    var placement: WorldPlacement = _world.placement(entity_id)
+    return placement != null and has_dedicated_sprite(kind) and (
+        placement.channel == Layers.Channel.OBJECT
+        or (placement.channel == Layers.Channel.LOOSE_ITEM and kind == VehicleProfileCatalog.SKATEBOARD)
+    )
+
 func _draw() -> void:
     if not _configured or _cell_pixels <= 0.0:
         return

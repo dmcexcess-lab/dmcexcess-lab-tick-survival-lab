@@ -70,6 +70,7 @@ func configure_vehicles(world: WorldState, state: VehicleState, profiles: Vehicl
     _ensure_layers()
     if not _vehicles.configure(world, state, profiles):
         return false
+    _props.set_vehicle_renderer(_vehicles)
     if _ground.has_valid_view():
         return _vehicles.set_visible_window(_ground.visible_origin(), _ground.visible_size(), _ground.cell_pixels())
     return true

@@ -1,0 +1,36 @@
+name: Prompt Vehicle Visual
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'game/scripts/render/**'
+      - 'game/scripts/ci/PromptVehicleVisualSmoke.gd'
+      - '.github/workflows/prompt-vehicle-visual.yml'
+      - 'README_CONTEXT.md'
+  workflow_dispatch:
+
+jobs:
+  vehicle-visual:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Godot 4.7.1
+        shell: bash
+        run: |
+          set -euxo pipefail
+          curl -L -o godot.zip https://github.com/godotengine/godot-builds/releases/download/4.7.1-stable/Godot_v4.7.1-stable_linux.x86_64.zip
+          unzip -q godot.zip
+          chmod +x Godot_v4.7.1-stable_linux.x86_64
+      - name: Prepare Godot project class cache
+        shell: bash
+        run: |
+          set -euxo pipefail
+          ./Godot_v4.7.1-stable_linux.x86_64 --headless --editor --path "$GITHUB_WORKSPACE/game" --quit
+      - name: Verify exclusive vehicle presentation
+        shell: bash
+        run: |
+          set -euxo pipefail
+          ./Godot_v4.7.1-stable_linux.x86_64 --headless --path "$GITHUB_WORKSPACE/game" --script res://scripts/ci/PromptVehicleVisualSmoke.gd 2>&1 | tee "$RUNNER_TEMP/prompt-vehicle-visual.log"
+          grep -q 'PROMPT_VEHICLE_VISUAL_SMOKE: PASS' "$RUNNER_TEMP/prompt-vehicle-visual.log"
+          if grep -Eqi 'SCRIPT ERROR|Parse Error|Failed to load script' "$RUNNER_TEMP/prompt-vehicle-visual.log"; then exit 1; fi

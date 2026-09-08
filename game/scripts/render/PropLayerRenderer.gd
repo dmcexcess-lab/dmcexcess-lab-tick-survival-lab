@@ -19,6 +19,7 @@ const MAX_DIAGNOSTIC_REASONS: int = 64
 const DIAGNOSTIC_FILL := Color(0.78, 0.08, 0.72, 1.0)
 const DIAGNOSTIC_LINE := Color(1.0, 0.92, 1.0, 1.0)
 
+var _vehicle_renderer: VehicleRenderer = null
 var _world: WorldState = null
 var _catalog: ArtCatalog = null
 var _visible_origin: Vector2i = Vector2i.ZERO
@@ -42,6 +43,10 @@ func configure(world_state: WorldState, art_catalog: ArtCatalog) -> bool:
     _connect_world_signals()
     _request_redraw(&"configured")
     return true
+
+func set_vehicle_renderer(renderer: VehicleRenderer) -> void:
+    _vehicle_renderer = renderer
+    _request_redraw(&"vehicle_renderer_changed")
 
 func is_configured() -> bool:
     return _world != null and _catalog != null
@@ -176,6 +181,10 @@ func _draw() -> void:
             _draw_diagnostic(command.destination)
 
 func _plan_entity(entity_id: String, observed_cell: Vector2i) -> PropDrawCommand:
+    # Registered vehicles with dedicated art are drawn by VehicleRenderer.
+    # Do not also draw the generic missing-prop-art square underneath them.
+    if is_instance_valid(_vehicle_renderer) and _vehicle_renderer.owns_entity(entity_id):
+        return null
     var fallback_destination: Rect2 = _destination_for_anchor(observed_cell)
     var observed_cells: Array[Vector2i] = _single_cell_list(observed_cell)
     var entity: WorldEntityRecord = _world.entity(entity_id)

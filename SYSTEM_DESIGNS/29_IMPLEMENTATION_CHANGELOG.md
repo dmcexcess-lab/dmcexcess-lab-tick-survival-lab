@@ -1,5 +1,12 @@
 # System 29 — Implementation Changelog
 
+## 2026-09-08 — Remove duplicate purple vehicle diagnostic
+
+- The generic OBJECT prop renderer attempted to draw registered vehicles as ordinary props, creating its magenta missing-art square beneath the dedicated vehicle sprite (including a ridden skateboard).
+- TacticalRendererStack now connects the configured VehicleRenderer to PropLayerRenderer. Generic prop planning skips only identities actually covered by registered vehicle state, supported placement channels and dedicated sprite availability. Other missing-art diagnostics remain intact.
+- Existing vehicle sprites, movement, collision, lighting and state are unchanged.
+- Fresh prompt-local pair: PromptVehicleVisualSmoke.gd / prompt-vehicle-visual.yml. Local Godot 4.7.1 PASS covers all five types, mounted/loose/remounted skateboard, production renderer composition, and retained diagnostics when no dedicated renderer owns the entity.
+
 ## 2026-09-08 — Shared roadside spacing cadence and night-only streetlights
 
 - Fresh attempt explicitly requested after the prior revert. Edited the existing owners directly; no base wrappers or render-window changes.
