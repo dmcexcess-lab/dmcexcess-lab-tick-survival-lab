@@ -233,7 +233,6 @@ func _wire_utility_lighting() -> bool:
         FixtureClass.PLAYER_ID,
         _utilities,
         _kernel,
-        _ambient_daylight,
         _flashlight_state,
         _power_infrastructure.support_power_services()
     )

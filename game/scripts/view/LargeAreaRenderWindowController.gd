@@ -2,7 +2,6 @@ extends Node
 class_name LargeAreaRenderWindowController
 
 const EDGE_BUFFER_CELLS: int = 12
-const VIEWPORT_SAFETY_CELLS: int = 2
 const PerformanceTelemetry = preload("res://scripts/foundation/diagnostics/PerformanceTelemetry.gd")
 
 var _renderer: TacticalRendererStack = null
@@ -16,7 +15,6 @@ var _base_pixel_origin: Vector2 = Vector2.ZERO
 var _render_origin: Vector2i = Vector2i.ZERO
 var _configured: bool = false
 var _shifting: bool = false
-var _last_edge_margin: Vector2i = Vector2i(EDGE_BUFFER_CELLS, EDGE_BUFFER_CELLS)
 
 func configure(renderer: TacticalRendererStack, world_view: Node2D, door_pointer: DoorPointerInputAdapter, area_bounds: Rect2i, window_size: Vector2i, cell_pixels: float, initial_origin: Vector2i, base_pixel_origin: Vector2 = Vector2.ZERO) -> bool:
     if renderer == null or world_view == null or door_pointer == null: return false
@@ -48,27 +46,12 @@ func world_cell_global_center(cell: Vector2i) -> Vector2:
     return _base_pixel_origin + Vector2((float(cell.x - _area_bounds.position.x) + 0.5) * _cell_pixels, (float(cell.y - _area_bounds.position.y) + 0.5) * _cell_pixels)
 
 func presentation_snapshot() -> Dictionary:
-    return {"configured": _configured, "area_bounds": _area_bounds, "render_origin": _render_origin, "render_size": _window_size, "cell_pixels": _cell_pixels, "world_view_position": Vector2.ZERO if _world_view == null else _world_view.position, "edge_margin": _last_edge_margin}
-
-static func edge_margin_for_view(viewport_pixels: Vector2, zoom: Vector2, cell_pixels: float, window_size: Vector2i) -> Vector2i:
-    if viewport_pixels.x <= 0.0 or viewport_pixels.y <= 0.0 or cell_pixels <= 0.0 or window_size.x <= 2 or window_size.y <= 2:
-        return Vector2i(EDGE_BUFFER_CELLS, EDGE_BUFFER_CELLS)
-    var zoom_x: float = maxf(absf(zoom.x), 0.001)
-    var zoom_y: float = maxf(absf(zoom.y), 0.001)
-    var half_visible_x: int = int(ceil(viewport_pixels.x / (cell_pixels * zoom_x * 2.0)))
-    var half_visible_y: int = int(ceil(viewport_pixels.y / (cell_pixels * zoom_y * 2.0)))
-    var desired_x: int = maxi(EDGE_BUFFER_CELLS, half_visible_x + VIEWPORT_SAFETY_CELLS)
-    var desired_y: int = maxi(EDGE_BUFFER_CELLS, half_visible_y + VIEWPORT_SAFETY_CELLS)
-    var max_x: int = maxi(1, int(window_size.x / 2) - 1)
-    var max_y: int = maxi(1, int(window_size.y / 2) - 1)
-    return Vector2i(mini(desired_x, max_x), mini(desired_y, max_y))
+    return {"configured": _configured, "area_bounds": _area_bounds, "render_origin": _render_origin, "render_size": _window_size, "cell_pixels": _cell_pixels, "world_view_position": Vector2.ZERO if _world_view == null else _world_view.position}
 
 func _on_camera_presentation_changed(snapshot: Dictionary) -> void:
     if not _configured or _shifting: return
     var camera_cell: Vector2i = _world_cell_for_global_position(snapshot.get("camera_global_position", Vector2.ZERO))
-    if not _area_bounds.has_point(camera_cell): return
-    _last_edge_margin = _edge_margin_for_snapshot(snapshot)
-    if not _needs_shift(camera_cell, _last_edge_margin): return
+    if not _area_bounds.has_point(camera_cell) or not _needs_shift(camera_cell): return
     _apply_window(_clamp_origin(camera_cell - Vector2i(_window_size.x / 2, _window_size.y / 2)), true)
 
 func _apply_window(origin: Vector2i, notify_camera: bool) -> bool:
@@ -87,17 +70,9 @@ func _apply_window(origin: Vector2i, notify_camera: bool) -> bool:
         PerformanceTelemetry.increment(&"render_window_shifts")
     return ok
 
-func _edge_margin_for_snapshot(snapshot: Dictionary) -> Vector2i:
-    var zoom_value: Variant = snapshot.get("camera_zoom", Vector2.ONE)
-    var zoom: Vector2 = zoom_value if typeof(zoom_value) == TYPE_VECTOR2 else Vector2.ONE
-    var viewport_pixels: Vector2 = Vector2.ZERO
-    if is_inside_tree() and get_viewport() != null:
-        viewport_pixels = get_viewport().get_visible_rect().size
-    return edge_margin_for_view(viewport_pixels, zoom, _cell_pixels, _window_size)
-
-func _needs_shift(cell: Vector2i, margin: Vector2i) -> bool:
+func _needs_shift(cell: Vector2i) -> bool:
     var local: Vector2i = cell - _render_origin
-    return local.x < margin.x or local.y < margin.y or local.x >= _window_size.x - margin.x or local.y >= _window_size.y - margin.y
+    return local.x < EDGE_BUFFER_CELLS or local.y < EDGE_BUFFER_CELLS or local.x >= _window_size.x - EDGE_BUFFER_CELLS or local.y >= _window_size.y - EDGE_BUFFER_CELLS
 
 func _clamp_origin(origin: Vector2i) -> Vector2i:
     var max_origin: Vector2i = _area_bounds.position + _area_bounds.size - _window_size
