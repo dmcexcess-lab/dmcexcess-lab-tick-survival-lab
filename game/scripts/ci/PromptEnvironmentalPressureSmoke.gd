@@ -38,7 +38,6 @@ func run_smoke() -> void:
     var kernel: TickKernel = game.get("_kernel")
     var door_state: DoorStateStore = game.get("_door_state")
     var door_mutations: DoorStateMutationService = game.get("_door_mutations")
-    var door_transition: DoorPhysicalTransitionService = game.get("_door_transition")
     var interactable: WorldInteractableState = game.get("_world_interaction_state")
     var sound: SpatialSoundService = game.get("_spatial_sound")
     var memory: PerceptionMemoryStore = game.get("_perception_memory")
@@ -78,27 +77,26 @@ func run_smoke() -> void:
     var door_cell: Vector2i = base + direction * 9
     var player_cell: Vector2i = base + direction * 10
 
-    expect(collision.register(PROMPT_DOOR_SEMANTIC, true), "prompt door registers ordinary blocking collision")
-    expect(mutations.create_entity(PROMPT_DOOR_SEMANTIC, PROMPT_DOOR_ID) == PROMPT_DOOR_ID, "prompt door is exact WHAT identity")
-    expect(mutations.set_placement(PROMPT_DOOR_ID, Layers.Channel.STRUCTURE, door_cell, facing, Footprint.single_cell()), "prompt door occupies exact structure cell")
-    expect(door_mutations.enroll(PROMPT_DOOR_ID, DoorValue.CLOSED), "prompt door uses canonical door state")
-    expect(interactable.set_locked(PROMPT_DOOR_ID, false, &"prompt_setup"), "prompt door setup begins unlocked")
-    expect(door_transition.open_manually(first_id, PROMPT_DOOR_ID), "prompt door opens through canonical transition for initial sight")
-
     expect(_relocate_actor(world, mutations, second_id, second_cell, Facing.opposite(facing)), "second real infected is physically placed behind the pressure scene")
-    expect(_relocate_actor(world, mutations, first_id, first_cell, facing), "first real infected is physically placed at door contact")
-    expect(_relocate_actor(world, mutations, Fixture.PLAYER_ID, player_cell, Facing.opposite(facing)), "player is physically beyond the opening")
+    expect(_relocate_actor(world, mutations, first_id, first_cell, facing), "first real infected is physically placed at future door contact")
+    expect(_relocate_actor(world, mutations, Fixture.PLAYER_ID, player_cell, Facing.opposite(facing)), "player is physically beyond the future opening")
     expect(cohort.sync_active_now(), "cohort remains tied to authoritative technical streaming")
 
     var first_perception: StreamingObserverPerceptionService = cohort.perception_for_actor(first_id)
     var second_perception: StreamingObserverPerceptionService = cohort.perception_for_actor(second_id)
-    expect(first_perception.recompute(&"prompt_open_door_sight"), "first infected recomputes ordinary System-23 sight")
+    expect(first_perception.recompute(&"prompt_pre_barrier_sight"), "first infected recomputes ordinary System-23 sight before barrier closes")
     var seen: Dictionary = memory.last_seen_actor(first_id, Fixture.PLAYER_ID)
-    expect(not seen.is_empty() and seen.get("cell", Vector2i.ZERO) == player_cell, "first infected truthfully sees player through open doorway")
+    expect(not seen.is_empty() and seen.get("cell", Vector2i.ZERO) == player_cell, "first infected truthfully acquires player before the barrier is introduced")
 
-    expect(door_transition.close_manually(first_id, PROMPT_DOOR_ID), "door closes through canonical transition")
-    expect(interactable.set_locked(PROMPT_DOOR_ID, true, &"prompt_locked"), "exact door becomes locked physical truth")
-    expect(first_perception.recompute(&"prompt_closed_door"), "first infected updates perception after closure")
+    # The prompt opening semantic is intentionally blocking to ordinary spatial/LOS
+    # queries even when a door collision override is open. Establish the legitimate
+    # last-seen memory first, then introduce the exact closed barrier being tested.
+    expect(collision.register(PROMPT_DOOR_SEMANTIC, true), "prompt door registers ordinary blocking collision")
+    expect(mutations.create_entity(PROMPT_DOOR_SEMANTIC, PROMPT_DOOR_ID) == PROMPT_DOOR_ID, "prompt door is exact WHAT identity")
+    expect(mutations.set_placement(PROMPT_DOOR_ID, Layers.Channel.STRUCTURE, door_cell, facing, Footprint.single_cell()), "prompt door occupies exact structure cell")
+    expect(door_mutations.enroll(PROMPT_DOOR_ID, DoorValue.CLOSED), "prompt door uses canonical door state")
+    expect(interactable.set_locked(PROMPT_DOOR_ID, true, &"prompt_locked"), "exact door begins as locked physical truth")
+    expect(first_perception.recompute(&"prompt_closed_door"), "first infected updates perception after physical barrier appears")
     expect(not memory.last_seen_actor(first_id, Fixture.PLAYER_ID).is_empty(), "first infected retains only legitimate last-seen player memory")
 
     expect(memory.clear_observer(second_id), "second infected prior visual memory is cleared for causal hearing proof")
