@@ -1,5 +1,23 @@
 # System 29 — Implementation Changelog
 
+## 2026-09-08 — Coherent roadside power and alternating real streetlights
+
+Functional/publication head: `c069cf6f28a5148571c76ba6b2a3479ecb26c839` (same source tree as locally verified `957db15deb0c4168259d960a3eeead89617187f6`).
+
+- Fixed per-substation pole reuse overriding physical roadside continuity: collect all road-route keys first, place one canonical shared support chain, and use the same intervening keys in every service route.
+- Roadside placement prefers alignment normal to the road, with the existing two-pole hold for a necessary bank change. Customer attachments search outward from the relevant building face before wandering toward neighboring leads.
+- Opposite-bank leads get explicit crossing supports. A spatially bounded generation-time span check routes intersecting leads through existing supports instead of leaving unsupported X crossings.
+- Enforced a 16-cell Euclidean maximum on every actual wire, including service and substation leads. Longer wires receive real persistent supports and separately registered physical span assets with retained service provenance.
+- Every second physical pole in each straight roadside/bank sequence is `prop.streetlight`. Shared poles count once; roadside crossing/intermediate supports participate; off-road customer/facility supports are excluded.
+- Connected streetlights to the existing physical lighting and glow pipeline, binding each fixture to its actual physical distribution service. Upstream outage/restoration changes illumination, and physical-support damage stops its emission.
+- Seed-20001 production proof: 3,157 physical spans, 1,048 alternating roadside streetlights, maximum actual span 16.00 cells, zero duplicate spans, and zero unsupported wire intersections across all roles.
+- Fresh prompt-owned pair: `game/scripts/ci/PromptRoadsidePowerSmoke.gd` and `.github/workflows/prompt-roadside-power.yml`. It also checks a small crossed-lead/long-span case, real support/provenance, per-roadside alternation, live illumination, upstream power off/on, and physical-support damage.
+- Focused GitHub run `34182205529`, job `101923389370`: success. Pages run `34182205542`, build `101923389488` and deploy `101923503646`: success on the functional head.
+- Removed the previous indicator prompt verifier pair. The runtime ZOMBIES/LOADING indicator remains. The initial connector publication missed the renamed workflow's old pathname; the turnover follow-up removed it and restores the exact locally verified tree. No historical gameplay gate was adopted.
+- NPC/environmental-pressure gameplay, vehicles, roads, water and streaming rules were not changed. Resume the previously recorded real generated-house environmental-pressure acceptance operation after this repair.
+
+---
+
 ## 2026-09-08 — World-resolution `ZOMBIES` / `LOADING` indicator
 
 Verified functional runtime head before final documentation: `bda3b12b31430b8feafa0a5b52e4bec2d99647aa`
