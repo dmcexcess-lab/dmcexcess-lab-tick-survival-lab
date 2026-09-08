@@ -19,7 +19,7 @@ const InfectedStateClass = preload("res://scripts/simulation/infected/InfectedSt
 const FirstInfectedHydratorClass = preload("res://scripts/simulation/infected/FirstInfectedHydrationService.gd")
 const ActiveInfectedCohortClass = preload("res://scripts/simulation/infected/ActiveInfectedCohortService.gd")
 
-const ACTIVE_INFECTED_COHORT_SIZE: int = 4
+const ACTIVE_INFECTED_COHORT_SIZE: int = 8
 
 var _combat_impact_profiles: CombatImpactProfileCatalog = null
 var _combat_actions: CombatActionService = null
