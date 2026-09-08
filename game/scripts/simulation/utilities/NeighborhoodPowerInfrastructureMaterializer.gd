@@ -220,8 +220,14 @@ func _distribution_routes(
         key_cells[tap_cell] = true
         for path_index: int in range(1, path.size()):
             _graph_connect(union_graph, path[path_index - 1], path[path_index])
-        for path_index: int in range(ROAD_POLE_SPACING, path.size() - 1, ROAD_POLE_SPACING):
-            key_cells[path[path_index]] = true
+        # Shared road coordinates keep overlapping substation routes on the same
+        # spacing cadence instead of interleaving independently offset poles.
+        for path_index: int in range(1, path.size() - 1):
+            var cell: Vector2i = path[path_index]
+            var direction: Vector2i = path[path_index + 1] - path[path_index - 1]
+            var along: int = cell.x if direction.x != 0 else cell.y
+            if posmod(along, ROAD_POLE_SPACING) == 0:
+                key_cells[cell] = true
         customer_paths.append({
             "building_id": customer.get("building_id", ""),
             "rect": building_rect,

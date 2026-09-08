@@ -234,7 +234,8 @@ func _wire_utility_lighting() -> bool:
         _utilities,
         _kernel,
         _flashlight_state,
-        _power_infrastructure.support_power_services()
+        _power_infrastructure.support_power_services(),
+        _ambient_daylight
     )
     if not _utility_lighting.is_ready():
         return false

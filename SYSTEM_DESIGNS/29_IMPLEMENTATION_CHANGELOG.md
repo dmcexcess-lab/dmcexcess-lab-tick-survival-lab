@@ -1,5 +1,14 @@
 # System 29 — Implementation Changelog
 
+## 2026-09-08 — Shared roadside spacing cadence and night-only streetlights
+
+- Fresh attempt explicitly requested after the prior revert. Edited the existing owners directly; no base wrappers or render-window changes.
+- Periodic roadside poles use a shared coordinate cadence, preventing overlapping substation paths from interleaving offset spacing sequences. Customer taps, bends and junction supports remain physical requirements; every other roadside support remains a streetlight.
+- Streetlight emission follows the existing OutdoorAmbientLightService night phase (20:30 through 05:29:59). Dawn/day/dusk suppress streetlights; power availability still gates nighttime emission. Other fixtures and traffic signals retain their existing behavior.
+- Daylight signals only rebuild the emitter set when the night gate changes. No new timers, per-frame scans or clock owner.
+- Fresh disposable verifier: PromptStreetlightCycleSmoke.gd / prompt-streetlight-cycle.yml; production boot, boundary transitions, outage/restoration, reduced excess lights, wire endpoints, maximum span, duplicate spans and unsupported X crossings.
+- The separately recorded new-cell rendering defect remains open.
+
 ## 2026-09-08 — Coherent roadside power and alternating real streetlights
 
 Functional/publication head: `c069cf6f28a5148571c76ba6b2a3479ecb26c839` (same source tree as locally verified `957db15deb0c4168259d960a3eeead89617187f6`).

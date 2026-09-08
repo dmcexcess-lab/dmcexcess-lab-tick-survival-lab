@@ -47,6 +47,8 @@ var _flashlight_state: FlashlightItemState = null
 var _fixed_entities: Dictionary = {}
 var _support_power_services: Dictionary = {}
 var _signature: String = ""
+var _daylight: OutdoorAmbientLightService = null
+var _streetlights_on: bool = false
 
 func _init(
     world_state: WorldState = null,
@@ -55,8 +57,11 @@ func _init(
     utilities: UtilityRuntimeState = null,
     tick_kernel: TickKernel = null,
     flashlight_state: FlashlightItemState = null,
-    support_power_services: Dictionary = {}
+    support_power_services: Dictionary = {},
+    daylight: OutdoorAmbientLightService = null
 ) -> void:
+    _daylight = daylight
+    _streetlights_on = _daylight != null and _daylight.current_phase() == &"night"
     _world = world_state
     _hand_state = hand_state
     _player_id = controlled_actor_id.strip_edges()
@@ -103,6 +108,8 @@ func emitters() -> Array[LightEmitter]:
         var record: WorldEntityRecord = _world.entity(entity_id)
         var placement: WorldPlacement = _world.placement(entity_id)
         if record == null or placement == null:
+            continue
+        if record.semantic_type == &"prop.streetlight" and not _streetlights_on:
             continue
         var profile: LightEmitterProfile = _profile_for_semantic(record.semantic_type)
         if profile == null:
@@ -249,6 +256,8 @@ func _has_traffic_lights() -> bool:
     return _world != null and not _world.entity_ids_of_type(&"prop.traffic_light").is_empty()
 
 func _connect_signals() -> void:
+    if _daylight != null:
+        _daylight.ambient_light_changed.connect(_on_daylight_changed)
     var world_callable := Callable(self, "_on_world_changed")
     var world_reset_callable := Callable(self, "_on_world_reset")
     var hand_callable := Callable(self, "_on_hand_assignment_changed")
@@ -293,6 +302,13 @@ func _connect_signals() -> void:
             _kernel.world_tick_advanced.connect(tick_callable)
         if not _kernel.timing_state_reset.is_connected(reset_callable):
             _kernel.timing_state_reset.connect(reset_callable)
+
+func _on_daylight_changed(_level: float, phase: StringName, _snapshot: Dictionary) -> void:
+    var enabled: bool = phase == &"night"
+    if enabled == _streetlights_on:
+        return
+    _streetlights_on = enabled
+    _emit_if_changed()
 
 func _on_world_changed(change: WorldChange) -> void:
     if change == null:
