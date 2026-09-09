@@ -3,6 +3,9 @@ class_name SurvivorNpcBehaviorService
 
 ## Reuses the proven event-driven movement/perception/combat adapter, but replaces
 ## infected intention policy with survivor roles. No second clock or AI scheduler.
+## Survivor NPCs receive one ordinary action opportunity per player commitment;
+## activation, boot, sound and perception updates may change intention but never
+## grant free world-tick actions.
 
 const NPC_IDLE: StringName = &"survivor.idle"
 const FOLLOW_PLAYER: StringName = &"survivor.follow_player"
@@ -12,6 +15,7 @@ const RAID_INVESTIGATE_SOUND: StringName = &"raider.investigate_sound"
 const RAID_ATTACK_VISIBLE: StringName = &"raider.attack_visible"
 
 var _npc_state: SurvivorNpcState = null
+var _turn_action_budget: int = 0
 
 func configure_survivor_state(state: SurvivorNpcState) -> bool:
     if state == null:
@@ -31,6 +35,19 @@ func is_ready() -> bool:
         return false
     var placement: WorldPlacement = _world.placement(_actor_id)
     return placement != null and placement.channel == SpatialLayer.Channel.ACTOR and SpatialFacing.is_valid(placement.facing)
+
+func _on_action_started(action: TimedAction) -> void:
+    if not _running or action == null:
+        return
+    if action.actor_id == _player_id:
+        _turn_action_budget = 1
+        _drive(&"player_action_started")
+
+func _on_action_finished(action: TimedAction) -> void:
+    if not _running or action == null:
+        return
+    if action.actor_id == _actor_id:
+        _drive(&"survivor_action_finished")
 
 func _refresh_intention(_reason: StringName) -> void:
     var role := _npc_state.role(_actor_id)
@@ -80,6 +97,9 @@ func _refresh_intention(_reason: StringName) -> void:
     _set_intention(NPC_IDLE, placement.anchor, "", _kernel.world_tick())
 
 func _submit_for_current_intention() -> void:
+    if _turn_action_budget <= 0:
+        return
+    _turn_action_budget -= 1
     if _intention == RAID_ATTACK_VISIBLE:
         if _submit_attack():
             return
