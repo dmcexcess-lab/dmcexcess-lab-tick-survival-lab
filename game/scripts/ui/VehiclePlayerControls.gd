@@ -6,6 +6,8 @@ const Intents = preload("res://scripts/input/PlayerActionIntent.gd")
 const VIEW_SIZE := Vector2(640, 844)
 const BUTTON_SIZE := Vector2(132, 36)
 const CARGO_BUTTON_SIZE := Vector2(76, 28)
+const STATUS_HEIGHT: float = 24.0
+const STATUS_TOP: float = CameraControls.ROW_Y - STATUS_HEIGHT * 2.0 - 6.0
 
 var _controller: VehiclePlayerController
 var _service: VehicleActionService
@@ -72,8 +74,8 @@ func _build_ui() -> void:
 
     _status = Label.new()
     _status.name = "VehicleStatus"
-    _status.position = Vector2(70, 604)
-    _status.size = Vector2(500, 16)
+    _status.position = Vector2(70, STATUS_TOP)
+    _status.size = Vector2(500, STATUS_HEIGHT)
     _status.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
     _status.add_theme_font_size_override("font_size", 10)
     _status.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -81,8 +83,8 @@ func _build_ui() -> void:
 
     _cargo_status = Label.new()
     _cargo_status.name = "CargoStatus"
-    _cargo_status.position = Vector2(70, 620)
-    _cargo_status.size = Vector2(500, 16)
+    _cargo_status.position = Vector2(70, STATUS_TOP + STATUS_HEIGHT)
+    _cargo_status.size = Vector2(500, STATUS_HEIGHT)
     _cargo_status.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
     _cargo_status.add_theme_font_size_override("font_size", 9)
     _cargo_status.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -113,7 +115,7 @@ func _build_ui() -> void:
 
     var store_button := Button.new()
     store_button.name = "StoreCargoButton"
-    store_button.text = "STORE →"
+    store_button.text = "STORE"
     store_button.position = Vector2(206, 806)
     store_button.size = CARGO_BUTTON_SIZE
     store_button.focus_mode = Control.FOCUS_NONE
@@ -130,7 +132,7 @@ func _build_ui() -> void:
 
     var take_button := Button.new()
     take_button.name = "TakeCargoButton"
-    take_button.text = "← TAKE"
+    take_button.text = "TAKE"
     take_button.position = Vector2(458, 806)
     take_button.size = CARGO_BUTTON_SIZE
     take_button.focus_mode = Control.FOCUS_NONE

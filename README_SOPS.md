@@ -27,6 +27,8 @@ The user permanently approved direct-to-main publication on 2026-09-05 and asked
 
 ## 3. Scope: one coherent operation
 
+**User direction, 2026-09-09:** work in small, bounded pieces toward completion, balance, bug fixing and UI/UX. Complete and publish one piece through focused verification and handoff, then ask for approval before starting the next piece so the user can inspect usage. This is a continuation gate between pieces, not a new approval requirement for already-authorized commits/pushes within a piece.
+
 One code prompt normally touches one subsystem or one tightly coupled wiring/refactor operation. Small seam edits needed to connect the requested play path are allowed; unrelated neighbor rewrites are not.
 
 Prefer wiring existing authoritative systems to ordinary production player surfaces over inventing parallel state or replacement systems. Search/inspect the known owner before creating a new owner.

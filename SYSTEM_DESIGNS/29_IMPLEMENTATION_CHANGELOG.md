@@ -1,5 +1,12 @@
 # System 29 — Implementation Changelog
 
+## 2026-09-09 — Vehicle status and camera control overlap
+
+- Moved vehicle and cargo status rows above CENTER/FOLLOW and MAP with a six-pixel gap; their layout derives from CameraControls.ROW_Y. Previously the status rows at y=604/620 overlapped the camera buttons spanning y=574–626.
+- Replaced unsupported arrow glyphs in cargo buttons with plain STORE and TAKE labels. Existing action wiring and mounted control footprint are preserved.
+- Focused disposable verifier: PromptVehicleControlsSmoke.gd / prompt-vehicle-controls.yml; checks actual Godot control rectangles, font fit, viewport containment, separate status rows, non-overlapping buttons and dismount visibility. Previous world-boundary verifier pair retired.
+- Recorded the user's new work cadence in README_SOPS.md: finish and publish one bounded piece, then request approval before another piece so usage can be reviewed.
+
 ## 2026-09-09 — Fix exploration beyond the legacy render area
 
 - Production boundary probe reproduced the failure at (2025,1552): streaming advanced into region (19,7), all 441 nearby terrain cells existed, but the player was outside render coverage. The render controller still used the legacy 1792×1792 request area while IslandWorldPlanner expands the generated world to 3072×3072.
