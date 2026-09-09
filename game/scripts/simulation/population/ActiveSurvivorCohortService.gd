@@ -1,10 +1,7 @@
 extends DynamicInfectedCohortService
 class_name ActiveSurvivorCohortService
 
-const StreamingPerceptionClass = preload("res://scripts/simulation/perception/StreamingObserverPerceptionService.gd")
 const SurvivorBehaviorClass = preload("res://scripts/simulation/population/SurvivorNpcBehaviorService.gd")
-const VisionProfileClass = preload("res://scripts/simulation/perception/VisionProfile.gd")
-const Layers = preload("res://scripts/foundation/spatial/SpatialLayer.gd")
 
 ## Technical-stream lifecycle for resident-backed survivors. The inherited cohort
 ## machinery owns only activation/deactivation; survivor role state owns policy.
