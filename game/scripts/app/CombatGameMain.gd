@@ -17,9 +17,16 @@ const DeathTransitionsClass = preload("res://scripts/simulation/combat/ActorDeat
 const PopulationProjectionClass = preload("res://scripts/simulation/population/PopulationResidentProjection.gd")
 const InfectedStateClass = preload("res://scripts/simulation/infected/InfectedState.gd")
 const FirstInfectedHydratorClass = preload("res://scripts/simulation/infected/FirstInfectedHydrationService.gd")
-const ActiveInfectedCohortClass = preload("res://scripts/simulation/infected/ActiveInfectedCohortService.gd")
+const DynamicInfectedCohortClass = preload("res://scripts/simulation/infected/DynamicInfectedCohortService.gd")
+const SurvivorNpcStateClass = preload("res://scripts/simulation/population/SurvivorNpcState.gd")
+const SurvivorHydratorClass = preload("res://scripts/simulation/population/SurvivorHydrationService.gd")
+const ActiveSurvivorCohortClass = preload("res://scripts/simulation/population/ActiveSurvivorCohortService.gd")
+const SurvivorInteractionOffersClass = preload("res://scripts/simulation/population/SurvivorInteractionOfferProvider.gd")
+const SurvivorInteractionClass = preload("res://scripts/simulation/population/SurvivorInteractionService.gd")
+const SurvivorInfectionClass = preload("res://scripts/simulation/population/SurvivorInfectionService.gd")
 
 const ACTIVE_INFECTED_COHORT_SIZE: int = 8
+const ACTIVE_SURVIVOR_COHORT_SIZE: int = 4
 
 var _combat_impact_profiles: CombatImpactProfileCatalog = null
 var _combat_actions: CombatActionService = null
@@ -37,7 +44,14 @@ var _population_resident_projection: PopulationResidentProjection = null
 var _infected_state: InfectedState = null
 var _first_infected_hydrator: FirstInfectedHydrationService = null
 var _infected_cohort_results: Array[Dictionary] = []
-var _infected_cohort: ActiveInfectedCohortService = null
+var _infected_cohort: DynamicInfectedCohortService = null
+var _survivor_npc_state: SurvivorNpcState = null
+var _survivor_hydrator: SurvivorHydrationService = null
+var _survivor_cohort_results: Array[Dictionary] = []
+var _survivor_cohort: ActiveSurvivorCohortService = null
+var _survivor_interaction_offers: SurvivorInteractionOfferProvider = null
+var _survivor_interactions: SurvivorInteractionService = null
+var _survivor_infection: SurvivorInfectionService = null
 
 # Compatibility aliases for the already-closed one-infected seam.
 var _first_infected_result: Dictionary = {}
@@ -47,7 +61,8 @@ var _first_infected_behavior: FirstInfectedBehaviorService = null
 func _boot_canonical_demo() -> bool:
     if not super._boot_canonical_demo(): return false
     if not _boot_system37_combat(): return false
-    return _boot_first_real_infected()
+    if not _boot_first_real_infected(): return false
+    return _boot_resident_survivors()
 
 func _boot_system37_combat() -> bool:
     if _world == null or _world_mutations == null or _spatial_query == null or _kernel == null \
@@ -91,13 +106,11 @@ func _boot_system37_combat() -> bool:
     _combat_controller.action_busy_changed.connect(_on_player_action_busy_changed)
     return true
 
-func _boot_first_real_infected() -> bool:
+func _population_plan_snapshot() -> Dictionary:
     var global_plan: GeneratedGlobalWorldPlan = FixtureClass.global_plan()
-    var player: WorldPlacement = _world.placement(FixtureClass.PLAYER_ID)
-    if global_plan == null or not global_plan.is_generated() or player == null \
-        or _locomotion_mutations == null or _skill_state == null or _carry_state == null or _condition_state == null:
-        return false
-    var population_plan := {
+    if global_plan == null or not global_plan.is_generated():
+        return {}
+    return {
         "ok": true,
         "settlements": global_plan.population_settlements.duplicate(true),
         "resident_population": global_plan.resident_population,
@@ -105,6 +118,13 @@ func _boot_first_real_infected() -> bool:
         "survivor_population": global_plan.survivor_population,
         "local_area_manifest": global_plan.local_area_manifest.duplicate(true),
     }
+
+func _boot_first_real_infected() -> bool:
+    var population_plan := _population_plan_snapshot()
+    var player: WorldPlacement = _world.placement(FixtureClass.PLAYER_ID)
+    if population_plan.is_empty() or player == null or _locomotion_mutations == null or _skill_state == null \
+        or _carry_state == null or _condition_state == null:
+        return false
     _population_resident_projection = PopulationProjectionClass.new()
     _infected_state = InfectedStateClass.new()
     _first_infected_hydrator = FirstInfectedHydratorClass.new(
@@ -116,10 +136,7 @@ func _boot_first_real_infected() -> bool:
     if not _first_infected_hydrator.is_ready(): return false
 
     var cohort_result: Dictionary = _first_infected_hydrator.hydrate_cohort(
-        population_plan,
-        FixtureClass.CENTRAL_SITE_ID,
-        player.anchor,
-        ACTIVE_INFECTED_COHORT_SIZE
+        population_plan, FixtureClass.CENTRAL_SITE_ID, player.anchor, ACTIVE_INFECTED_COHORT_SIZE
     )
     if not bool(cohort_result.get("ok", false)):
         push_error("CombatGameMain: infected cohort hydration failed: %s" % String(cohort_result.get("reason", "unknown")))
@@ -138,36 +155,114 @@ func _boot_infected_cohort_behavior() -> bool:
     if streaming == null or _perception_memory == null or _perception == null \
         or _spatial_sound == null or _movement == null or _combat_actions == null:
         return false
-    _infected_cohort = ActiveInfectedCohortClass.new(
-        _world,
-        _door_state,
-        _kernel,
-        _infected_state,
-        _perception_memory,
-        _perception.acquisition_provider(),
-        _spatial_sound,
-        _movement,
-        _combat_actions,
-        _health_state,
-        streaming,
-        FixtureClass.PLAYER_ID
+    _infected_cohort = DynamicInfectedCohortClass.new(
+        _world, _door_state, _kernel, _infected_state, _perception_memory,
+        _perception.acquisition_provider(), _spatial_sound, _movement, _combat_actions,
+        _health_state, streaming, FixtureClass.PLAYER_ID
     )
     if _infected_cohort == null or not _infected_cohort.configure(_infected_cohort_results):
         return false
-
     var first_id: String = String(_first_infected_result.get("actor_id", ""))
     _first_infected_perception = _infected_cohort.perception_for_actor(first_id)
     _first_infected_behavior = _infected_cohort.behavior_for_actor(first_id)
     return not first_id.is_empty() and _first_infected_perception != null and _first_infected_behavior != null
 
+func _boot_resident_survivors() -> bool:
+    var population_plan := _population_plan_snapshot()
+    var player: WorldPlacement = _world.placement(FixtureClass.PLAYER_ID)
+    var streaming: WorldStreamingCoordinator = FixtureClass.streaming_coordinator()
+    if population_plan.is_empty() or player == null or streaming == null or _population_resident_projection == null \
+        or _infected_state == null or _perception_memory == null or _perception == null:
+        return false
+    _survivor_npc_state = SurvivorNpcStateClass.new()
+    _survivor_hydrator = SurvivorHydratorClass.new(
+        _world, _world_mutations, _spatial_query, _kernel, _population_resident_projection,
+        _survivor_npc_state, _locomotion_mutations, _hand_mutations, _inventory_mutations,
+        _health_state, _skill_state, _carry_state, _condition_state
+    )
+    if not _survivor_hydrator.is_ready(): return false
+    var cohort_result := _survivor_hydrator.hydrate_cohort(
+        population_plan, FixtureClass.CENTRAL_SITE_ID, player.anchor, ACTIVE_SURVIVOR_COHORT_SIZE
+    )
+    if not bool(cohort_result.get("ok", false)):
+        push_error("CombatGameMain: survivor cohort hydration failed: %s" % String(cohort_result.get("reason", "unknown")))
+        return false
+    for value: Variant in cohort_result.get("members", []):
+        if typeof(value) == TYPE_DICTIONARY:
+            _survivor_cohort_results.append((value as Dictionary).duplicate(true))
+    if _survivor_cohort_results.size() != ACTIVE_SURVIVOR_COHORT_SIZE:
+        return false
+
+    _survivor_cohort = ActiveSurvivorCohortClass.new(
+        _world, _door_state, _kernel, _infected_state, _perception_memory,
+        _perception.acquisition_provider(), _spatial_sound, _movement, _combat_actions,
+        _health_state, streaming, FixtureClass.PLAYER_ID
+    )
+    if _survivor_cohort == null or not _survivor_cohort.configure_survivor_state(_survivor_npc_state) \
+        or not _survivor_cohort.configure(_survivor_cohort_results):
+        return false
+
+    _survivor_interaction_offers = SurvivorInteractionOffersClass.new(_world, _interaction_reach, _survivor_npc_state, _health_state)
+    if not _survivor_interaction_offers.is_ready() or not _interaction_affordances.register_provider(_survivor_interaction_offers):
+        return false
+    _survivor_interactions = SurvivorInteractionClass.new(_world, _survivor_npc_state, _infected_state, _health_state)
+    if not _survivor_interactions.is_ready(): return false
+    for action_id: StringName in SurvivorInteractionOffersClass.ACTION_IDS:
+        if not _world_interaction_controller.register_delegated_handler(action_id, Callable(_survivor_interactions, "request_action")):
+            return false
+
+    _survivor_infection = SurvivorInfectionClass.new(_combat_actions, _infected_state, _survivor_npc_state, _health_state, _kernel)
+    if not _survivor_infection.is_ready(): return false
+    _survivor_infection.survivor_infected.connect(_on_survivor_infected)
+    if _perception != null: _perception.recompute(&"survivor_cohort_hydrated")
+    return true
+
+func _on_survivor_infected(actor_id: String, _source_actor_id: String, resident_record: Dictionary) -> void:
+    if _survivor_cohort == null or _infected_cohort == null:
+        return
+    if not _survivor_cohort.remove_member(actor_id, &"infected"):
+        push_error("CombatGameMain: failed to remove converted survivor from survivor cohort: %s" % actor_id)
+        return
+    var placement: WorldPlacement = _world.placement(actor_id)
+    var member := {
+        "ok": true,
+        "actor_id": actor_id,
+        "resident_record": resident_record.duplicate(true),
+        "cell": placement.anchor if placement != null else Vector2i.ZERO,
+        "existing": true,
+    }
+    if not _infected_cohort.add_member(member):
+        push_error("CombatGameMain: failed to add converted resident to infected cohort: %s" % actor_id)
+        return
+    if _perception != null:
+        _perception.recompute(&"survivor_infected")
+
 func infected_cohort_service() -> ActiveInfectedCohortService:
     return _infected_cohort
+
+func infected_state() -> InfectedState:
+    return _infected_state
 
 func infected_cohort_results() -> Array[Dictionary]:
     var result: Array[Dictionary] = []
     for member: Dictionary in _infected_cohort_results:
         result.append(member.duplicate(true))
     return result
+
+func survivor_npc_state() -> SurvivorNpcState:
+    return _survivor_npc_state
+
+func survivor_cohort_service() -> ActiveSurvivorCohortService:
+    return _survivor_cohort
+
+func survivor_interaction_service() -> SurvivorInteractionService:
+    return _survivor_interactions
+
+func survivor_infection_service() -> SurvivorInfectionService:
+    return _survivor_infection
+
+func population_plan_snapshot() -> Dictionary:
+    return _population_plan_snapshot().duplicate(true)
 
 func first_infected_result() -> Dictionary:
     return _first_infected_result.duplicate(true)

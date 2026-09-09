@@ -41,12 +41,6 @@ func _on_impact_resolved(attacker_id: String, target_id: String, _serial: int, _
     if next >= EXPOSURE_THRESHOLD:
         _convert(target_id, attacker_id)
 
-func force_exposure_for_verification(actor_id: String, source_actor_id: String, amount: int) -> bool:
-    if amount <= 0 or not _survivors.has_actor(actor_id) or not _infected.is_infected(source_actor_id):
-        return false
-    _exposure[actor_id] = exposure(actor_id) + amount
-    return _convert(actor_id, source_actor_id) if exposure(actor_id) >= EXPOSURE_THRESHOLD else true
-
 func _convert(actor_id: String, source_actor_id: String) -> bool:
     if not _survivors.has_actor(actor_id) or _infected.is_infected(actor_id):
         return false

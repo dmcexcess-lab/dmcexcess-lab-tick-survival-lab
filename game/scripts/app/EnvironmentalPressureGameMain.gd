@@ -35,12 +35,23 @@ func _boot_system39_environmental_pressure() -> bool:
     )
     if _opening_pressure == null or not _opening_pressure.is_ready():
         return false
+    var callback := Callable(self, "_on_infected_active_members_changed")
+    if not _infected_cohort.active_members_changed.is_connected(callback):
+        _infected_cohort.active_members_changed.connect(callback)
+    return _sync_infected_opening_pressure()
 
+func _sync_infected_opening_pressure() -> bool:
     for actor_id: String in _infected_cohort.roster_actor_ids():
         var behavior: CohortInfectedBehaviorService = _infected_cohort.behavior_for_actor(actor_id)
-        if behavior == null or not behavior.configure_opening_pressure(_opening_pressure):
+        if behavior == null:
+            continue
+        if behavior.opening_pressure_service() == null and not behavior.configure_opening_pressure(_opening_pressure):
             return false
     return true
+
+func _on_infected_active_members_changed(_active_actor_ids: Array[String]) -> void:
+    if not _sync_infected_opening_pressure():
+        push_error("EnvironmentalPressureGameMain: failed to configure opening pressure for activated infected")
 
 func _boot_world_resolution_indicator() -> bool:
     var streaming: WorldStreamingCoordinator = FixtureClass.streaming_coordinator()
