@@ -2,125 +2,151 @@
 
 Read this file first, then `README_SOPS.md`. Fetch current `main` once at prompt start.
 
-## Current checkpoint — CORE FEATURE ROADMAP CLOSED / BETA CANDIDATE — 2026-09-09
+## Current checkpoint — NATIVE HUMAN PLAY ACCEPTANCE ESTABLISHED — 2026-09-09
 
-The user explicitly asked to finish the game from the approximately 90% state. The stale roadmap was reconciled against the executable rather than reimplementing systems that already existed. The remaining real core gap was the human-survivor/social/local-outbreak half of Phase 8. That gap is now implemented and verified.
+The core feature roadmap remains closed and the game remains a beta candidate. This prompt solved the previous cloud-browser/WebGL acceptance blocker by creating a prompt-local native Linux play harness from the exact repository head, downloading that artifact into the execution sandbox, running it under Xvfb with Mesa software rendering, and driving the actual game with real mouse input while capturing frames.
 
-The game is now **core-feature complete as a beta candidate**. Remaining work is human-play acceptance, concrete defect repair, balance/art/content/accessibility polish, and explicitly optional fidelity expansion. Do not invent another missing architecture phase merely because older roadmap text said one existed.
+No production gameplay system was rewritten in this operation. The purpose was human-style play acceptance and concrete defect discovery.
 
-Owning functional/executable head: `52c6ef02c8f78b05c6761e73be4c525d1d975efe`.
+Owning functional / native-play harness head: `8759e03e42c9aff4e0109b0a161f9f083f0802d9`.
 
-Documentation closure before this final handoff: `339ce20d6e0cb25a6ef658afd1d90ea15e310dba`.
+## Prompt-local verifier / native play harness
 
-## Completed in this core-finish operation
-
-### Roadmap reconciliation
-
-The old roadmap materially lagged the production tree. Targeted owner inspection confirmed these are already real and connected rather than missing placeholders:
-
-- procedural island, streaming and rendering;
-- day/night, generated weather, physical lighting, streetlights and spatial sound;
-- inventory/equipment, loot/search, freshness, food/drink/medicine and carry;
-- Health/injury, hunger/thirst, Fatigue, rest/sleep and first aid;
-- crafting/cooking, foraging, primitive resources, repair and deconstruction/reclamation;
-- Awareness, Stealth, Mechanical and Survival consumers;
-- doors/windows including open/break/board/reinforce/climb and environmental opening pressure;
-- generators, switches/lights, sinks/water sources, beds/chairs and utilities;
-- skateboards, bicycles, motorcycles, cars and trucks with keys/locks/hot-wire, fuel, cargo, repair, rack install, crash consequence and headlights;
-- melee/firearms, actor Health/death and the existing resident-backed infected AI/cohort.
-
-`ROADMAP.md` now records the core feature roadmap as closed and routes future work to defect-driven beta acceptance rather than stale subsystem invention.
-
-### System 40 — resident survivors / social roles / causal local outbreak
-
-Implemented the real missing Phase-8 core without adding duplicate truth owners:
-
-- `PopulationResidentProjection` deterministically partitions the existing generated household residents into infected and survivors. The two projections exactly cover aggregate residents and cannot duplicate one identity.
-- Production still starts with the established **8 resident-backed infected**.
-- Production now hydrates **4 resident-backed human NPCs** from exact survivor identities: 2 neutral survivors and 2 raiders.
-- Human NPCs use ordinary `actor.survivor` entities and the existing locomotion, inventory, hand equipment, Health, four-skill, carry, condition/Fatigue, perception, sound, movement, combat, streaming and WHEN owners.
-- Neutral survivors expose contextual `TALK` and `ASK TO FOLLOW`; followers expose `TALK` and `TELL TO STAY` through the normal world interaction/HUD path. Raiders do not expose friendly social actions while hostile.
-- Followers use the existing movement owner and trail the player with a small spacing buffer.
-- Raiders use their own observer-scoped sight, last-seen memory and heard observations, then submit ordinary movement/combat actions. They receive no hidden world truth.
-- Survivor NPCs receive at most one ordinary action opportunity per player commitment. Boot, stream activation, sound and perception changes may refresh intention but may not grant free world-tick actions.
-- `SurvivorInfectionService` consumes real infected combat impacts. Repeated damaging infected melee exposure can cross the local infection threshold.
-- Conversion preserves the **same resident/actor identity**: the actor leaves survivor role/cohort ownership and enters the existing infected cohort. No replacement zombie or duplicate population count is created.
-- Newly converted active infected inherit the existing perception/behavior/System-39 environmental-opening-pressure path.
-
-Canonical design: `SYSTEM_DESIGNS/40_SURVIVOR_SOCIAL_OUTBREAK.md`.
-
-### Verification defect found and repaired
-
-The first diagnostic run was not a true runtime hang. Godot rejected `ActiveSurvivorCohortService.gd` because it redundantly redeclared inherited constants already owned by `ActiveInfectedCohortService` (`StreamingPerceptionClass`, `VisionProfileClass`, `Layers`). The half-booted production scene then caused the smoke to continue until timeout.
-
-Repair on functional head `52c6ef02c8f78b05c6761e73be4c525d1d975efe` removed only those duplicate declarations and reused the inherited constants. No gameplay ownership or survivor/infected behavior was weakened.
-
-The disposable workflow was also bounded with an Actions job timeout plus shell timeout/line-buffered diagnostics so a future prompt-local failure cannot sit indefinitely without preserving its last phase marker.
-
-## Verification / publication
-
-Fresh prompt-local pair for this operation:
+Previous prompt pair was retired first:
 
 - `game/scripts/ci/PromptSurvivorOutbreakClosureSmoke.gd`
 - `.github/workflows/prompt-survivor-outbreak-closure.yml`
 
-Owning functional-head verification:
+Fresh prompt-local pair:
 
-- Functional head: `52c6ef02c8f78b05c6761e73be4c525d1d975efe`.
-- Focused workflow run `34406705296`, job `102651283682`: **SUCCESS**.
-- Godot class-cache/load preparation completed successfully with no parser/load errors.
-- Real production seed-20001 scene booted successfully (`PLAYABLE_ISLAND_WORLD_READY`, `CANONICAL_DEMO_BOOT_OK`).
-- The smoke reached all production phases: population partition, cohort composition, social roles, infection conversion and converted-cohort verification.
-- Terminal marker: `PROMPT_SURVIVOR_OUTBREAK_CLOSURE_SMOKE: PASS`.
-- Exact functional-head Pages run `34406705275`: **SUCCESS**; Web export/deploy completed.
+- `game/scripts/ci/PromptNativePlayAcceptanceSmoke.gd`
+- `.github/workflows/prompt-native-play-acceptance.yml`
 
-Per `README_SOPS.md`, no unrelated historical gameplay/regression suite was run. Prompt-local module verification is the gameplay gate; Pages is deployment only.
+The workflow:
 
-This `README_CONTEXT.md` update is the **FINAL repository write** for the prompt. After its commit, perform read-only exact-final-head verification only. Do not write again merely to insert final-head run IDs.
+- installs Godot 4.7.1 + export templates;
+- prepares the project class cache;
+- boots the real production scene headlessly and requires `PROMPT_NATIVE_PLAY_ACCEPTANCE_SMOKE: PASS`;
+- appends a temporary, CI-only Linux export preset at runtime without modifying committed `game/export_presets.cfg`;
+- exports an embedded-PCK Linux x86_64 executable;
+- uploads one-day artifact `tick-native-play` for local/native acceptance.
 
-## Core status at close
+Owning workflow run `34410809441`, job `102664521738`: **SUCCESS**.
 
-There is no known missing core gameplay architecture phase remaining in the reconciled roadmap. The deployed game now has the intended persistent procedural zombie-survival loop and the major player/world/NPC systems are connected.
+Exact-head Pages run `34410809468`: **SUCCESS**.
 
-This does **not** mean every possible fidelity feature exists or that human browser/game-feel acceptance is complete. The following remain optional expansion or acceptance/polish, not fake-completed core features:
+The native artifact used for play came from workflow run `34410809441`, artifact id `10127178016`, head `8759e03e42c9aff4e0109b0a161f9f083f0802d9`.
 
-- detachable/replacement vehicle battery and wheel consumers;
-- arbitrary-angle rotated vehicle collision polygons beyond the deterministic typed-heading raster model;
-- partial-liquid fuel simulation instead of whole transfer units;
-- island-wide streamed parked-vehicle population beyond the bounded playable-area seeding;
-- broader vehicle modification/salvage detail;
-- deep persistent relationships, factions, diplomacy, long-form dialogue and authored quests;
-- large survivor settlements and richer follower command UI;
-- island-wide aggregate offscreen epidemic propagation between distant households;
-- more sophisticated route planning only if a concrete generated-world navigation failure proves the bounded local policy insufficient;
-- additional art/content variety, balance tuning and accessibility/UI polish.
+## Actual play performed in this prompt
 
-Do not present those optional fidelity items as already implemented. Also do not treat them as blockers to the current core beta candidate unless the user explicitly promotes one into required scope.
+The native client was launched under a virtual X display with software OpenGL rendering. Real mouse input was sent to the Godot window and screenshots were inspected after actions. This was not a headless-state-only test.
+
+The play path covered:
+
+- spawned into the generated island and visually confirmed the live road/utility environment;
+- attempted movement into a utility pole and confirmed collision / `Target Blocked` feedback;
+- turned and walked along the road for many actions while streaming/rendering continued;
+- opened and closed the island map;
+- foraged successfully and gained a real carried item;
+- opened inventory, selected the foraged item, and equipped it to the right hand;
+- used `STRIKE` with the equipped item;
+- approached chain-link substation fencing and confirmed movement collision;
+- walked far enough to reach the generated vehicle/house area;
+- entered a real motorcycle and saw the mounted control replacement UI;
+- tried `START` and got the concrete failure `ignition requires hotwire`;
+- tried `HOTWIRE` and got the concrete prerequisite failure `hotwire requires screwdriver and wire`;
+- exited the motorcycle;
+- approached a generated rural house;
+- aligned to and clicked the real rural wood door;
+- opened the contextual interaction panel and used `OPEN`;
+- walked through the opened door into the revealed interior;
+- targeted the kitchen sink, opened its contextual action panel, and used `DRINK`;
+- hydration increased from 58 to 86, proving the world-object -> sustainment path worked in ordinary play.
+
+## Concrete human-play defects discovered
+
+These are real observations from the native play session and should drive the next bounded fixes.
+
+### 1. Player-facing action label falls back to `Unknown`
+
+Several successful non-movement interactions updated the top HUD as `Unknown` rather than naming the action. Observed examples include:
+
+- entering/exiting a vehicle;
+- opening the rural wood door;
+- drinking from the kitchen sink.
+
+The detailed reason text below can still be useful (for example `Ignition Requires Hotwire` / `Hotwire Requires Screwdriver And Wire`), but the primary action name should not be `Unknown` for ordinary valid interactions.
+
+This is a concrete UI/action-feedback defect, not a gameplay-ownership defect.
+
+### 2. Foraged item exposes internal generated ID in inventory
+
+After ordinary `FORAGE`, inventory displayed a player-facing label like:
+
+`Outdoors Sturdy Stick [forage.2045245590.2045245590.38.257.000.00]`
+
+The internal deterministic forage identity is useful canonical state but should not be rendered as part of the human-facing item name. The selected-item panel repeats the same internal ID.
+
+This is a concrete presentation defect. Preserve the exact item identity internally; sanitize only the display label.
+
+### 3. Mounted controls are visibly shorter than the walking controls
+
+The motorcycle replacement controls were usable in this desktop native session, but their vertical touch target is visibly smaller than the normal walking buttons. Since phone/Safari is first-class, this should be checked during the next mobile/touch UI acceptance pass. Do not call this a confirmed touch failure until measured/tested on the owning UI path.
+
+## Behaviors that worked and should not be reopened without evidence
+
+- real world rendering under native software GL;
+- ordinary walking/turning and collision;
+- map open/close;
+- forage creating a real item and carry weight;
+- inventory selection and hand equip;
+- vehicle detection, enter/exit and mounted control swap;
+- concrete start/hotwire prerequisite messaging;
+- direct world-object click affordance for the generated door;
+- door contextual actions and open-state change;
+- crossing through the opened doorway;
+- interior reveal/rendering;
+- kitchen sink contextual interaction;
+- sink drink changing canonical hydration;
+- previously completed resident survivor/infected architecture and all earlier protected systems.
+
+The Mesa/llvmpipe native acceptance client is intentionally not a performance benchmark; its high CPU use is a software-rendering artifact and should not be treated as evidence of a production browser performance regression.
+
+## Core status
+
+The game remains **core-feature complete as a beta candidate**. Human acceptance is now possible without depending on cloud WebGL support: when browser execution is blocked, export a native prompt-local artifact and drive that build under a virtual display.
+
+Optional fidelity backlog remains optional unless explicitly promoted by the user. Do not reopen completed architecture merely because the beta still has presentation/interaction defects.
 
 ## Preserve established behavior
 
 - Preserve the existing eight-member resident-backed infected baseline plus the four resident-backed survivor exemplars unless a future explicit balancing decision changes counts.
-- Preserve same-identity survivor -> infected conversion; never spawn a replacement identity for this path.
-- Preserve observer-scoped NPC sight/hearing and shared WHEN. No render-frame AI waking, hidden-world knowledge, second AI timer or free boot turns.
+- Preserve same-identity survivor -> infected conversion.
+- Preserve observer-scoped NPC sight/hearing and shared WHEN; no free boot turns or render-frame AI.
 - Preserve System-39 generic door/window opening pressure and ordinary collision/movement ownership.
 - Preserve authoritative item/action/state ownership; UI/rendering never owns gameplay truth.
 - Preserve current world generation, roads/towns/rural density, coastline, utility topology, night-only streetlights, generated weather, bounded streaming and render-window architecture.
 - Preserve dedicated vehicle rendering without the retired purple diagnostic artifact.
-- Preserve same-tick actor consequences resolving through the existing WHEN priority/owner/serial ordering; simultaneous movement was discussed but is not implemented.
+- Preserve same-tick actor consequence ordering through WHEN.
 - Do not resurrect retired generated rivers/wastewater/sewer/septic systems.
-- Do not run historical broad gameplay suites or routine seed matrices. Follow the prompt-local verifier rules in `README_SOPS.md`.
+- Do not run historical broad gameplay suites or routine seed matrices.
 
-## NEXT OPERATION — WAIT FOR USER APPROVAL / HUMAN BETA ACCEPTANCE
+## NEXT OPERATION — defect-driven polish from observed native play
 
-The next distinct operation is **human-play beta acceptance and defect-driven polish**, not another architecture build-out.
+Continue with one bounded human-observed defect, not a broad audit.
 
-After approval or a concrete user-reported play defect:
+Recommended first fix: **replace `Unknown` top-HUD action feedback for ordinary delegated/world interactions with the actual action label while preserving owning service reason text and timing.**
+
+Alternative next fix if the user prefers: **hide internal deterministic forage IDs from inventory/selected-item display while preserving canonical item identity/state.**
+
+At the start of the next code operation:
 
 1. delete this prompt's verifier pair first:
-   - `game/scripts/ci/PromptSurvivorOutbreakClosureSmoke.gd`
-   - `.github/workflows/prompt-survivor-outbreak-closure.yml`
-2. create a fresh prompt-local verifier only for the next touched module/play path;
-3. repair the concrete desktop/mobile/Safari interaction, rendering, streaming, control, pacing, NPC/combat, balance or presentation defect in its existing owner;
-4. publish through focused verification, exact-head Pages and a new final `README_CONTEXT.md` handoff.
+   - `game/scripts/ci/PromptNativePlayAcceptanceSmoke.gd`
+   - `.github/workflows/prompt-native-play-acceptance.yml`
+2. create a fresh prompt-local verifier only for the exact chosen defect;
+3. repair the smallest owning UI/presentation seam;
+4. replay the corrected path when useful using the native-artifact workaround;
+5. publish through focused verification, exact-head Pages, and a new final `README_CONTEXT.md` write.
 
-If the user simply asks whether the game is finished, answer that the **core feature roadmap is closed and the current build is a beta candidate**; human acceptance/polish and optional fidelity remain. Do not reopen completed systems without concrete evidence.
+This `README_CONTEXT.md` update is the **FINAL repository write** for this prompt. After this commit, perform read-only exact-final-head verification only.
