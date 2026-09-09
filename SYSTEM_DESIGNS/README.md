@@ -36,8 +36,9 @@ Canonical status/routing index. Read `PROJECT_NORTH_STAR.md`, `PERFORMANCE_NORTH
 | 34 | Survivor Condition / Health / Fatigue / Moodlets | **IMPLEMENTED + automated verified; HUMAN PLAYTEST PENDING** | `34_SURVIVOR_CONDITION_HEALTH_STAMINA_MOODLETS.md` |
 | 35 | Outdoor Foraging | **IMPLEMENTED + EXACT-HEAD VERIFIED; HUMAN PLAYTEST PENDING** | `35_OUTDOOR_FORAGING.md` |
 | 36 | Vehicles | **IMPLEMENTED + AUTOMATED VERIFIED; HUMAN PLAYTEST PENDING** | `36_VEHICLES.md` |
-| PERF | Performance Architecture Gate | **IMPLEMENTED + CI VERIFIED; human accepted** | `PERFORMANCE_ARCHITECTURE.md` |
-| 00E | Population / Household / Outbreak / Player Story | **NOT DESIGNED — Phase 8** | future design |
+| 37–39 | Combat, resident infected, environmental opening pressure | **IMPLEMENTED** | numbered designs + implementation changelog |
+| 40 / 00E | Resident Survivors / Social Roles / Causal Local Outbreak | **IMPLEMENTED — core Phase 8 closure** | `40_SURVIVOR_SOCIAL_OUTBREAK.md` |
+| PERF | Performance Architecture Gate | **IMPLEMENTED + CI VERIFIED; human accepted baseline** | `PERFORMANCE_ARCHITECTURE.md` |
 
 ## Retired infrastructure designs
 
@@ -45,11 +46,11 @@ Canonical status/routing index. Read `PROJECT_NORTH_STAR.md`, `PERFORMANCE_NORTH
 
 ## Current routing
 
-Phase 1 content foundations, Phase 2 crafting, Phase 3 utilities, Phase 4/5 survivor condition/moodlets, exact-item inventory consumption/equipment/first aid, the four-skill foundation, primitive Survival crafting, System 35 outdoor foraging and **System 36 Vehicles** are implemented in the current executable lineage.
+The executable now contains the core gameplay chain the old roadmap was still describing as future work: persistent procedural island/streaming, rendering and mobile-capable HUD/input, loot/inventory/equipment, food/drink/medicine, rest/sleep, crafting/cooking, first aid, utilities, lights/switches/generators, doors/windows/boarding/deconstruction/repair, four broad skills with concrete consumers, foraging, vehicles, melee/firearms, resident-backed infected, environmental opening pressure, and System 40 resident survivors/followers/raiders with causal same-identity local infection.
 
-System 36 provides persistent skateboard/bicycle/motorcycle/car/truck state; bounded generated parked vehicles; enter/exit; skateboard 2-cell smooth-surface movement with no added Fatigue; bicycle 3-cell movement with real Fatigue; powered motorcycle/car/truck movement with finite fuel; 12 typed headings at 30-degree increments over deterministic integer rasters; 2-cell braking; real keys/locks/hot-wiring; real weighted cargo; bounded Mechanical repair and real installed cargo-rack modification; crash HP/sound consequences; and powered headlights. Exact arbitrary-angle collision polygons, partial fuel-fluid quantities, island-wide streaming vehicle population and richer component replacement remain explicit future closure rather than fake completion.
+System 40 does not add another population authority. `PopulationResidentProjection` partitions the existing generated household residents into infected and survivors; active human NPCs use ordinary actor Health/inventory/skills/condition/movement/combat/perception/WHEN owners. The production start keeps eight resident-backed infected and adds four survivor NPC exemplars (two neutral, two raiders). Recruitment changes a neutral survivor into a follower; damaging infected contact can causally convert the same resident identity into the existing infected cohort.
 
-**Next project operation after current generator cleanup or newer explicit direction:** continue the comprehensive skills/crafting/items/usable-object closure pass. That pass includes cooking, first aid, fire/ignition, Mechanical repair/modification/deconstruction/reclamation, richer vehicle maintenance where real components exist, real usable-object consumers, Awareness/Stealth consumers and the user-approved construction restriction: **no freeform base building; construction is limited to reinforcing existing doors/windows and repairing broken objects.**
+System 36 remains intentionally exact-cell rather than pretending arbitrary-angle physics exists. Dedicated battery/wheel replacement, arbitrary-angle collision polygons, partial-fluid fuel, broader modifications and island-wide streaming vehicle population remain optional fidelity expansion, not missing core runtime.
 
 ## Protected utility truth
 
@@ -63,4 +64,4 @@ System 36 provides persistent skateboard/bicycle/motorcycle/car/truck state; bou
 
 ## Verification discipline
 
-Automated green does not replace human generated-world/game-feel acceptance. Exact executable SHA and current terminal workflow state are recorded in `README_CONTEXT.md`.
+Automated green does not replace human generated-world/game-feel acceptance. The core feature roadmap may be closed while defect-driven browser/mobile acceptance, balance, art/content tuning and optional fidelity expansion continue. Exact executable SHA and current terminal workflow state are recorded in `README_CONTEXT.md`.
