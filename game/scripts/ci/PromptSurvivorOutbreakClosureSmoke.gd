@@ -47,6 +47,10 @@ func _run() -> void:
     check(infected != null and infected.roster_actor_ids().size() == CombatGameMain.ACTIVE_INFECTED_COHORT_SIZE, "Existing eight infected remain intact")
     check(state.actor_ids_for_role(SurvivorNpcState.NEUTRAL).size() == 2, "Two initially non-hostile survivors exist")
     check(state.actor_ids_for_role(SurvivorNpcState.RAIDER).size() == 2, "Two hostile raiders exist")
+    check(main._door_state != null and not main._door_state.door_ids().is_empty(), "Production generated island exposes real persisted doors")
+    for infected_id: String in infected.active_actor_ids():
+        var active_behavior := infected.behavior_for_actor(infected_id)
+        check(active_behavior != null and active_behavior.opening_pressure_service() == main.opening_pressure_service(), "Active infected uses production opening pressure on generated world")
 
     var neutral_ids := state.actor_ids_for_role(SurvivorNpcState.NEUTRAL)
     var target_id := "" if neutral_ids.is_empty() else neutral_ids[0]
@@ -64,11 +68,11 @@ func _run() -> void:
     var source_id := infected.roster_actor_ids()[0]
     var target_placement: WorldPlacement = main._world.placement(target_id)
     var contact_cell := Vector2i.ZERO if target_placement == null else target_placement.anchor
-    main._combat_actions.impact_resolved.emit(source_id, target_id, 9001, contact_cell, 8, "blunt")
-    check(infection.exposure(target_id) > 0, "Successful infected melee impact produces causal exposure")
-    main._combat_actions.impact_resolved.emit(source_id, target_id, 9002, contact_cell, 8, "blunt")
+    main._combat_actions.impact_resolved.emit(source_id, target_id, 9001, contact_cell, 3, "blunt")
+    check(infection.exposure(target_id) > 0 and not main.infected_state().is_infected(target_id), "First infected melee impact produces sub-threshold causal exposure")
+    main._combat_actions.impact_resolved.emit(source_id, target_id, 9002, contact_cell, 3, "blunt")
     await process_frame
-    check(main.infected_state().is_infected(target_id), "Exposed survivor converts on the same resident identity")
+    check(main.infected_state().is_infected(target_id), "Repeated exposure converts the same resident identity")
     check(not state.has_actor(target_id), "Converted resident leaves survivor role state")
     check(survivors.roster_actor_ids().size() == initial_survivor_count - 1, "Converted resident leaves survivor cohort")
     check(infected.roster_actor_ids().size() == initial_infected_count + 1 and infected.roster_actor_ids().has(target_id), "Converted resident joins active infected cohort without replacement spawn")
