@@ -312,7 +312,7 @@ func _boot_canonical_demo() -> bool:
         _world_view,
         _world_view,
         _door_pointer,
-        FixtureClass.AREA_BOUNDS,
+        FixtureClass.render_bounds(),
         FixtureClass.RENDER_WINDOW_SIZE,
         FixtureClass.CELL_PIXELS,
         initial_render_origin,

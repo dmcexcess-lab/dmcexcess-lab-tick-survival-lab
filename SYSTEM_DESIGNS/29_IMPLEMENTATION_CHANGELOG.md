@@ -1,5 +1,13 @@
 # System 29 — Implementation Changelog
 
+## 2026-09-09 — Fix exploration beyond the legacy render area
+
+- Production boundary probe reproduced the failure at (2025,1552): streaming advanced into region (19,7), all 441 nearby terrain cells existed, but the player was outside render coverage. The render controller still used the legacy 1792×1792 request area while IslandWorldPlanner expands the generated world to 3072×3072.
+- Composition and initial-window clamping now use the generated global plan's bounds through GeneratedIslandCritiqueFixture.render_bounds(). The generation request is unchanged. Window size remains 80×96; streaming remains 128×128 with radius 1.
+- Focused production test now passes on both sides of the old east boundary. No speculative viewport-buffer changes or scheduler changes.
+- Fresh disposable pair: PromptWorldBoundarySmoke.gd / prompt-world-boundary.yml; previous vehicle visual pair retired.
+- Broader beta acceptance was attempted but the cloud browser cannot launch the game: its error explicitly reports missing WebGL2. This is an environment limitation, not evidence that the game is finished or that ordinary desktop/mobile browsers fail.
+
 ## 2026-09-08 — Remove duplicate purple vehicle diagnostic
 
 - The generic OBJECT prop renderer attempted to draw registered vehicles as ordinary props, creating its magenta missing-art square beneath the dedicated vehicle sprite (including a ridden skateboard).

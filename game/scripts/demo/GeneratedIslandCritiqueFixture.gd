@@ -193,12 +193,15 @@ static func build(
 static func active_seed() -> int:
     return _active_seed
 
+static func render_bounds() -> Rect2i:
+    return _global_plan.bounds if _global_plan != null and _global_plan.is_generated() else AREA_BOUNDS
+
 static func initial_render_origin(world: WorldState) -> Vector2i:
     if world == null:
-        return AREA_BOUNDS.position
+        return render_bounds().position
     var placement: WorldPlacement = world.placement(PLAYER_ID)
     if placement == null:
-        return AREA_BOUNDS.position
+        return render_bounds().position
     return _window_origin_for_cell(placement.anchor)
 
 static func global_plan() -> GeneratedGlobalWorldPlan:
@@ -403,8 +406,9 @@ static func _diner_parcel(plan: GeneratedAreaPlan) -> Dictionary:
 
 static func _window_origin_for_cell(cell: Vector2i) -> Vector2i:
     var desired := cell - Vector2i(RENDER_WINDOW_SIZE.x / 2, RENDER_WINDOW_SIZE.y / 2)
-    var max_origin := AREA_BOUNDS.position + AREA_BOUNDS.size - RENDER_WINDOW_SIZE
+    var bounds: Rect2i = render_bounds()
+    var max_origin := bounds.position + bounds.size - RENDER_WINDOW_SIZE
     return Vector2i(
-        clampi(desired.x, AREA_BOUNDS.position.x, max_origin.x),
-        clampi(desired.y, AREA_BOUNDS.position.y, max_origin.y)
+        clampi(desired.x, bounds.position.x, max_origin.x),
+        clampi(desired.y, bounds.position.y, max_origin.y)
     )
