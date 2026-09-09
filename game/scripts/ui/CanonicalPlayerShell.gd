@@ -554,7 +554,8 @@ func _append_inventory_action_button(
     disabled: bool = false
 ) -> void:
     var button := Button.new()
-    button.text = label
+    button.text = "%s (occupied)" % label if disabled else label
+    button.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
     button.custom_minimum_size = Vector2(0, 44)
     button.focus_mode = Control.FOCUS_NONE
     button.disabled = disabled
@@ -562,7 +563,9 @@ func _append_inventory_action_button(
     button.set_meta("inventory_transfer_action", action)
     button.pressed.connect(_run_inventory_transfer.bind(action, item_id, slot))
     _body.add_child(button)
-    _last_lines.append(label)
+    _last_lines.append(button.text)
+    if disabled:
+        _append_line("Select the item in this slot and STOW or DROP it first.", 14)
 
 func _run_inventory_transfer(action: String, item_id: String, slot: int) -> void:
     if _inventory_transfers == null or _pause_was_active:

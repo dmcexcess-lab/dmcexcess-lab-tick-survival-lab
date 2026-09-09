@@ -1,5 +1,10 @@
 # System 29 — Implementation Changelog
 
+## 2026-09-09 — Explain occupied inventory slots
+
+- Disabled equipment actions now explicitly say “occupied” and show a visible instruction to select the current item and STOW or DROP it first. Feedback is available on touch without hovering; available actions keep their labels and wiring.
+- Fresh focused verifier: PromptInventoryFeedbackSmoke.gd / prompt-inventory-feedback.yml; covers occupied/free equipment slots and recovery actions. Prior vehicle-layout verifier pair retired.
+
 ## 2026-09-09 — Vehicle status and camera control overlap
 
 - Moved vehicle and cargo status rows above CENTER/FOLLOW and MAP with a six-pixel gap; their layout derives from CameraControls.ROW_Y. Previously the status rows at y=604/620 overlapped the camera buttons spanning y=574–626.
