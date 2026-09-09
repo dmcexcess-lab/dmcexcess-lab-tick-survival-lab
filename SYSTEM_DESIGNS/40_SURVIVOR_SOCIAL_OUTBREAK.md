@@ -1,6 +1,6 @@
 # System 40 — Resident Survivors, Social Roles, and Causal Local Outbreak
 
-Status: **IMPLEMENTED — automated verification in progress; human gameplay acceptance remains defect-driven**
+Status: **IMPLEMENTED + AUTOMATED VERIFIED — human gameplay acceptance remains defect-driven**
 
 ## Purpose
 
@@ -119,7 +119,7 @@ Those additions must remain causal consumers of the same resident/actor owners i
 
 ## Verification contract
 
-The prompt-owned closure verifier must prove, without replacing production owners:
+The prompt-owned closure verifier proves, without replacing production owners:
 
 - Godot production scripts load/parse;
 - infected and survivor projections exactly partition aggregate resident population;
@@ -132,4 +132,13 @@ The prompt-owned closure verifier must prove, without replacing production owner
 - converted active infected receive the existing System-39 environmental-opening-pressure owner;
 - Pages export remains green.
 
-Exact executable SHA and terminal workflow state are recorded in `README_CONTEXT.md` after verification.
+## Verification closure — 2026-09-09
+
+Owning functional head: `52c6ef02c8f78b05c6761e73be4c525d1d975efe`.
+
+- Fresh prompt-local verifier: `game/scripts/ci/PromptSurvivorOutbreakClosureSmoke.gd` + `.github/workflows/prompt-survivor-outbreak-closure.yml`.
+- Focused run `34406705296`, job `102651283682`: **success** with `PROMPT_SURVIVOR_OUTBREAK_CLOSURE_SMOKE: PASS` after booting the real seed-20001 production scene.
+- Exact-head Pages run `34406705275`: **success**.
+- The diagnostic run exposed duplicate inherited constant declarations in `ActiveSurvivorCohortService`; removing only those redundant declarations restored Godot parsing. No production survivor/infected ownership rule was weakened.
+
+Exact prompt-close publication/handoff state remains recorded in `README_CONTEXT.md`.
