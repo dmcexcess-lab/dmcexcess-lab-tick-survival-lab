@@ -482,12 +482,12 @@ func _consume_selected_inventory_item() -> void:
         _inventory_status = "%s could not start." % label
     else:
         _kernel.run_until_stop()
-        var refreshed: Dictionary = _inventory_query.query(_actor_id)
-        if _inventory_entry_by_id(refreshed, item_id).is_empty():
+        var outcome: Dictionary = _inventory_actions.consumption_outcome(serial)
+        if bool(outcome.get("committed", false)):
             _inventory_status = "%s complete." % label
             _selected_inventory_item_id = ""
         else:
-            _inventory_status = "%s failed during completion." % label
+            _inventory_status = "%s failed: %s." % [label, String(outcome.get("reason", "completion not confirmed")).replace("_", " ")]
     open_inventory()
 
 func _inventory_consumption_offer(item_id: String) -> Dictionary:

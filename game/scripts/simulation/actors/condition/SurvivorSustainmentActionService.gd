@@ -13,6 +13,10 @@ const ACTION_TAP_DRINK: StringName = &"condition.tap_drink"
 const ACTION_REST: StringName = &"condition.rest"
 const ACTION_SLEEP: StringName = &"condition.sleep"
 
+const OUTCOME_LIMIT: int = 64
+var _consumption_outcomes: Dictionary = {}
+var _consumption_order: Array[int] = []
+
 var _world: WorldState = null
 var _world_mutations: WorldMutationService = null
 var _hands: ActorHandEquipmentState = null
@@ -197,11 +201,27 @@ func begin_sleep_in(actor_id: String, target_id: String) -> int:
         "surface": "bed", "target_id": target
     })
 
+func consumption_outcome(action_serial: int) -> Dictionary:
+    return (_consumption_outcomes.get(action_serial, {}) as Dictionary).duplicate(true)
+
+func _record_consumption_outcome(serial: int, committed: bool, reason: String = "") -> void:
+    if not _consumption_outcomes.has(serial):
+        _consumption_order.append(serial)
+    _consumption_outcomes[serial] = {"committed": committed, "reason": reason}
+    while _consumption_order.size() > OUTCOME_LIMIT:
+        _consumption_outcomes.erase(_consumption_order.pop_front())
+
 func _on_action_finished(action: TimedAction) -> void:
+    if action != null and action.action_type == ACTION_CONSUME:
+        if action.status != Rules.ActionStatus.COMPLETED:
+            _record_consumption_outcome(action.serial, false, action.reason if not action.reason.is_empty() else "action_interrupted")
+        elif not _condition.has_actor(action.actor_id):
+            _record_consumption_outcome(action.serial, false, "actor_unavailable")
+        else:
+            _complete_consume(action)
+        return
     if action == null or action.status != Rules.ActionStatus.COMPLETED or not _condition.has_actor(action.actor_id): return
     match action.action_type:
-        ACTION_CONSUME:
-            _complete_consume(action)
         ACTION_TAP_DRINK:
             var target: String = String(action.payload.get("target_id", ""))
             var source_ok: bool = false
@@ -229,15 +249,27 @@ func _target_still_valid(action: TimedAction) -> bool:
 
 func _complete_consume(action: TimedAction) -> void:
     var item_id: String = String(action.payload.get("item_id", "")).strip_edges()
-    if item_id.is_empty() or not _item_carried_by(action.actor_id, item_id) or not _world.has_entity(item_id): return
+    if item_id.is_empty() or not _item_carried_by(action.actor_id, item_id) or not _world.has_entity(item_id):
+        _record_consumption_outcome(action.serial, false, "item_no_longer_carried")
+        return
     var entity: WorldEntityRecord = _world.entity(item_id)
-    if entity == null or String(entity.semantic_type) != String(action.payload.get("semantic_type", "")) or _item_spoiled(item_id): return
-    if not _detach_item(action.actor_id, item_id): return
+    if entity == null or String(entity.semantic_type) != String(action.payload.get("semantic_type", "")):
+        _record_consumption_outcome(action.serial, false, "item_changed")
+        return
+    if _item_spoiled(item_id):
+        _record_consumption_outcome(action.serial, false, "item_spoiled")
+        return
+    if not _detach_item(action.actor_id, item_id):
+        _record_consumption_outcome(action.serial, false, "item_release_failed")
+        return
     if _freshness_mutations.has_record(item_id): _freshness_mutations.remove_item(item_id)
-    if not _world_mutations.remove_entity(item_id): return
+    if not _world_mutations.remove_entity(item_id):
+        _record_consumption_outcome(action.serial, false, "item_removal_failed")
+        return
     _condition.change_condition(action.actor_id, StateClass.SATIETY, int(action.payload.get("satiety_gain", 0)), &"food_consumed")
     _condition.change_condition(action.actor_id, StateClass.HYDRATION, int(action.payload.get("hydration_gain", 0)), &"drink_consumed")
     _condition.change_condition(action.actor_id, StateClass.ENGAGEMENT, int(action.payload.get("engagement_gain", 0)), &"meal_enjoyed")
+    _record_consumption_outcome(action.serial, true)
 
 func _detach_item(actor_id: String, item_id: String) -> bool:
     var assignment: Dictionary = _hands.assignment_for_item(item_id)

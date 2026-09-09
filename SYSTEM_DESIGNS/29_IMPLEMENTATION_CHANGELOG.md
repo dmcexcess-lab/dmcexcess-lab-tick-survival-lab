@@ -1,5 +1,10 @@
 # System 29 — Implementation Changelog
 
+## 2026-09-09 — Authoritative food/drink completion feedback
+
+- Consumption service now exposes bounded, copy-protected outcomes by action serial, including cancellation and completion revalidation failures. Inventory reports success only for committed consumption instead of inferring it from an item disappearing. Failure feedback includes the service reason.
+- Fresh verifier PromptConsumptionOutcomeSmoke.gd / prompt-consumption-outcome.yml exercises real eating and drinking, nutrition/hydration gains, item removal during an action, cancellation and outcome copy protection. Modal presentation alone is suppressed in the test. Previous inventory-feedback verifier retired.
+
 ## 2026-09-09 — Explain occupied inventory slots
 
 - Disabled equipment actions now explicitly say “occupied” and show a visible instruction to select the current item and STOW or DROP it first. Feedback is available on touch without hovering; available actions keep their labels and wiring.
