@@ -10,19 +10,27 @@ func check(value: bool, message: String) -> void:
         failures.append(message)
         push_error(message)
 
+func _mark(label: String) -> void:
+    print("PROMPT_SURVIVOR_OUTBREAK_PHASE: %s" % label)
+
 func _run() -> void:
+    _mark("load_scene")
     var packed := load("res://main.tscn") as PackedScene
     check(packed != null, "Production scene loads")
     if packed == null:
         _finish()
         return
+    _mark("instantiate_scene")
     var main := packed.instantiate() as EnvironmentalPressureGameMain
     check(main != null, "Production root is EnvironmentalPressureGameMain")
     if main == null:
         _finish()
         return
+    _mark("add_production_root")
     root.add_child(main)
+    _mark("production_root_added")
     await process_frame
+    _mark("first_frame")
 
     var population := main.population_plan_snapshot()
     var projection := PopulationResidentProjection.new()
@@ -36,6 +44,7 @@ func _run() -> void:
         identities[String(record.get("resident_id", ""))] = true
     for record: Dictionary in survivor_records:
         check(not identities.has(String(record.get("resident_id", ""))), "No resident is projected both survivor and infected")
+    _mark("population_partition")
 
     var state := main.survivor_npc_state()
     var survivors := main.survivor_cohort_service()
@@ -51,6 +60,7 @@ func _run() -> void:
     for infected_id: String in infected.active_actor_ids():
         var active_behavior := infected.behavior_for_actor(infected_id)
         check(active_behavior != null and active_behavior.opening_pressure_service() == main.opening_pressure_service(), "Active infected uses production opening pressure on generated world")
+    _mark("cohort_composition")
 
     var neutral_ids := state.actor_ids_for_role(SurvivorNpcState.NEUTRAL)
     var target_id := "" if neutral_ids.is_empty() else neutral_ids[0]
@@ -62,6 +72,7 @@ func _run() -> void:
     if follower_behavior != null:
         follower_behavior._drive(&"prompt_verification")
         check(follower_behavior.current_intention() in [SurvivorNpcBehaviorService.FOLLOW_PLAYER, SurvivorNpcBehaviorService.NPC_IDLE], "Follower resolves through survivor behavior policy")
+    _mark("social_roles")
 
     var initial_infected_count := infected.roster_actor_ids().size()
     var initial_survivor_count := survivors.roster_actor_ids().size()
@@ -71,6 +82,7 @@ func _run() -> void:
     main._combat_actions.impact_resolved.emit(source_id, target_id, 9001, contact_cell, 3, "blunt")
     check(infection.exposure(target_id) > 0 and not main.infected_state().is_infected(target_id), "First infected melee impact produces sub-threshold causal exposure")
     main._combat_actions.impact_resolved.emit(source_id, target_id, 9002, contact_cell, 3, "blunt")
+    _mark("conversion_signal")
     await process_frame
     check(main.infected_state().is_infected(target_id), "Repeated exposure converts the same resident identity")
     check(not state.has_actor(target_id), "Converted resident leaves survivor role state")
@@ -79,9 +91,11 @@ func _run() -> void:
     var converted_behavior := infected.behavior_for_actor(target_id)
     if converted_behavior != null:
         check(converted_behavior.opening_pressure_service() == main.opening_pressure_service(), "Newly infected resident receives ordinary environmental opening pressure")
+    _mark("conversion_verified")
 
     main.queue_free()
     await process_frame
+    _mark("finish")
     _finish()
 
 func _finish() -> void:
