@@ -96,11 +96,14 @@ func _on_action_requested(target_id: String, action_id: StringName) -> void:
     if not _handlers.has(key): return
     var handler: Callable = _handlers[key]
     var value: Variant = handler.call(_actor_id, target_id, action_id)
+    var outcome_query: Callable = Callable()
     var accepted: bool = false
     var serial: int = 0
     var reason: String = "interaction_rejected"
     if typeof(value) == TYPE_DICTIONARY:
         var result: Dictionary = value
+        if result.get("outcome_query") is Callable:
+            outcome_query = result["outcome_query"]
         accepted = bool(result.get("accepted", false))
         serial = int(result.get("action_serial", 0))
         reason = String(result.get("reason", reason))
@@ -126,6 +129,10 @@ func _on_action_requested(target_id: String, action_id: StringName) -> void:
     var status: int = int(resolved.get("status", -1))
     var success: bool = status == TickRulesClass.ActionStatus.COMPLETED
     var final_reason: String = String(resolved.get("reason", ""))
+    if success and outcome_query.is_valid():
+        var outcome: Dictionary = outcome_query.call(serial)
+        success = bool(outcome.get("committed", false))
+        final_reason = String(outcome.get("reason", "completion_not_confirmed"))
     if success and final_reason.is_empty():
         final_reason = "completed"
     elif not success and final_reason.is_empty():

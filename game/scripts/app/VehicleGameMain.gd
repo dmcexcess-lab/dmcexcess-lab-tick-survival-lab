@@ -456,6 +456,7 @@ func _request_target_sustainment(actor_id: String, target_id: String, action_id:
     elif action_id == SustainmentOffersClass.SLEEP_IN_BED:
         serial = _sustainment_actions.begin_sleep_in(actor_id, target_id)
     return {
+        "outcome_query": Callable(_sustainment_actions, "rest_outcome") if action_id in [SustainmentOffersClass.REST_ON_FURNITURE, SustainmentOffersClass.SLEEP_IN_BED] else Callable(),
         "accepted": serial > 0,
         "action_serial": serial,
         "reason": "" if serial > 0 else "sustainment_target_unavailable",

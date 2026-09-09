@@ -16,6 +16,8 @@ const ACTION_SLEEP: StringName = &"condition.sleep"
 const OUTCOME_LIMIT: int = 64
 var _consumption_outcomes: Dictionary = {}
 var _consumption_order: Array[int] = []
+var _rest_outcomes: Dictionary = {}
+var _rest_order: Array[int] = []
 
 var _world: WorldState = null
 var _world_mutations: WorldMutationService = null
@@ -211,7 +213,27 @@ func _record_consumption_outcome(serial: int, committed: bool, reason: String = 
     while _consumption_order.size() > OUTCOME_LIMIT:
         _consumption_outcomes.erase(_consumption_order.pop_front())
 
+func rest_outcome(action_serial: int) -> Dictionary:
+    return (_rest_outcomes.get(action_serial, {}) as Dictionary).duplicate(true)
+
+func _record_rest_outcome(serial: int, committed: bool, reason: String = "") -> void:
+    if not _rest_outcomes.has(serial):
+        _rest_order.append(serial)
+    _rest_outcomes[serial] = {"committed": committed, "reason": reason}
+    while _rest_order.size() > OUTCOME_LIMIT:
+        _rest_outcomes.erase(_rest_order.pop_front())
+
 func _on_action_finished(action: TimedAction) -> void:
+    if action != null and action.action_type in [ACTION_REST, ACTION_SLEEP]:
+        if action.status != Rules.ActionStatus.COMPLETED:
+            _record_rest_outcome(action.serial, false, action.reason if not action.reason.is_empty() else "action_interrupted")
+            return
+        if not _condition.has_actor(action.actor_id):
+            _record_rest_outcome(action.serial, false, "actor_unavailable")
+            return
+        if not _target_still_valid(action):
+            _record_rest_outcome(action.serial, false, "rest_target_no_longer_available")
+            return
     if action != null and action.action_type == ACTION_CONSUME:
         if action.status != Rules.ActionStatus.COMPLETED:
             _record_consumption_outcome(action.serial, false, action.reason if not action.reason.is_empty() else "action_interrupted")
@@ -232,15 +254,15 @@ func _on_action_finished(action: TimedAction) -> void:
             if source_ok:
                 _condition.change_condition(action.actor_id, StateClass.HYDRATION, int(action.payload.get("hydration_gain", 0)), &"potable_water_drunk")
         ACTION_REST:
-            if not _target_still_valid(action): return
             _condition.change_condition(action.actor_id, StateClass.REST, 16, &"rested")
             _condition.relieve_fatigue(action.actor_id, 35, &"rested")
             _apply_surface_comfort(action.actor_id, StringName(action.payload.get("surface", &"ground")), false)
+            _record_rest_outcome(action.serial, true)
         ACTION_SLEEP:
-            if not _target_still_valid(action): return
             _condition.change_condition(action.actor_id, StateClass.REST, 72, &"slept")
             _condition.relieve_fatigue(action.actor_id, 100, &"slept")
             _apply_surface_comfort(action.actor_id, StringName(action.payload.get("surface", &"ground")), true)
+            _record_rest_outcome(action.serial, true)
 
 func _target_still_valid(action: TimedAction) -> bool:
     var target: String = String(action.payload.get("target_id", ""))

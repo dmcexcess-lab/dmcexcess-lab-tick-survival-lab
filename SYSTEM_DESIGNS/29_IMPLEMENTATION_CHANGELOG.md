@@ -1,5 +1,10 @@
 # System 29 — Implementation Changelog
 
+## 2026-09-09 — Furniture rest/sleep completion feedback
+
+- Rest/sleep service records bounded, copy-protected outcomes including unavailable target and cancellation. Production furniture requests provide an outcome query; WorldInteractionPlayerController consults it after timer completion before reporting success. Existing handler results without an outcome query retain their behavior.
+- Fresh focused verifier PromptRestOutcomeSmoke.gd / prompt-rest-outcome.yml tests real recovery and lost-target failure for both chair rest and bed sleep through the production request/controller path, plus cancellation and copy protection. Target availability is controlled; unrelated affordance discovery is bypassed. Previous consumption verifier retired.
+
 ## 2026-09-09 — Authoritative food/drink completion feedback
 
 - Consumption service now exposes bounded, copy-protected outcomes by action serial, including cancellation and completion revalidation failures. Inventory reports success only for committed consumption instead of inferring it from an item disappearing. Failure feedback includes the service reason.
