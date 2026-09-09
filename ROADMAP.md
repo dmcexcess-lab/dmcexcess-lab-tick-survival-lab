@@ -1,6 +1,8 @@
 # Tick Survival Lab — Roadmap to Beta
 
-Status: **canonical priority roadmap**
+Last reconciled: **2026-09-09**
+
+Status: **core feature roadmap closed; beta-candidate acceptance/polish remains defect-driven**
 
 Current game identity:
 
@@ -8,118 +10,92 @@ Current game identity:
 >
 > **Mini means reduced complexity, not reduced consequence or mood.**
 
-Each independently owned phase follows `README_SOPS.md` and **DESCRIBE -> APPROVE -> IMPLEMENT -> VERIFY**. New explicit user direction supersedes older ordering.
+New explicit user direction supersedes older ordering. `README_SOPS.md` remains process authority; `README_CONTEXT.md` records the exact executable checkpoint and next operation.
 
 ## Current milestone state
 
-- **Phase 1 — COMPLETE.** Physical items, freshness, semantic UI, interaction/reach, content breadth and world presentation foundations are implemented.
-- **Phase 2 / System 32 Crafting — COMPLETE + CI VERIFIED.** Crafting transforms exact persistent inputs into exact persistent outputs through real broad-skill checks and concrete physical tools/materials.
-- **World/island performance recovery — COMPLETE + HUMAN ACCEPTED baseline.** Preserve responsive decision-pause input, full physical-light window and stateless LOS.
-- **Phase 3 / System 33 Power + Water — IMPLEMENTED + AUTOMATED VERIFIED; HUMAN PLAYTEST PENDING.** Preserve real local substations, roadside feeder trees/service drops, island-wide municipal plant and persistent rural wells. Wastewater/sewer/septic is retired.
-- **Phase 4 / System 34 Physical Survival — IMPLEMENTED + AUTOMATED VERIFIED; HUMAN PLAYTEST PENDING.** Health, hunger, thirst, Rest and canonical Fatigue are live. Fatigue is 0 rested -> 100 exhausted; there is no parallel live Stamina pool.
-- **Phase 5 Moodlets — IMPLEMENTED + AUTOMATED VERIFIED; HUMAN PLAYTEST PENDING.** Moodlets are derived warnings, not duplicate state.
-- **Phase 6 Four Skills / Survival Interaction Foundation — IN PROGRESS.** Four-skill migration, skill-aware crafting/search, primitive resources/recipes and bounded outdoor foraging are implemented. The final consumer-closure pass is next after vehicle human acceptance or newer explicit direction.
-- **Phase 7 / System 36 Vehicles — IMPLEMENTED + AUTOMATED VERIFIED; HUMAN PLAYTEST PENDING.** Persistent playable vehicles are deployed from `SYSTEM_DESIGNS/36_VEHICLES.md`.
+The older roadmap lagged materially behind the executable. The repository now has real production owners and player-facing consumers for the major systems that were still listed below as future work.
 
-## Phase 6 — Four broad skills and real interactions
+- **Phase 1 — COMPLETE.** Persistent WHERE/WHAT/WHEN foundation, procedural island/streaming, rendering, inventory/equipment, loot, freshness, semantic UI, reach/interaction, day/night, weather, physical light/sound and broad world/content foundations are live.
+- **Phase 2 / Crafting — COMPLETE.** Exact persistent inputs become exact persistent outputs through real tools/materials, broad-skill checks and WHEN. Cooking recipes use real ingredients and heat-source requirements.
+- **Phase 3 / Power + Water — COMPLETE CORE.** Real local substations, roadside feeder/service infrastructure, grid-independent municipal water service and deterministic rural wells are live. Wastewater/sewer/septic and generated rivers are intentionally retired.
+- **Phase 4 / Physical Survival — COMPLETE CORE.** Health/injury, hunger, thirst, Rest, Fatigue, food/drink consumption, furniture rest/sleep and first aid are connected to player UI/actions. Fatigue remains 0 rested -> 100 exhausted; no parallel live Stamina pool exists.
+- **Phase 5 / Moodlets — COMPLETE.** Moodlets derive from canonical actor condition rather than duplicating state.
+- **Phase 6 / Four Skills + Real Interactions — COMPLETE CORE.** Awareness, Stealth, Mechanical and Survival have real consumers. Crafting, scavenging, foraging, repair, deconstruction/reclamation, first aid, primitive survival outputs, vehicle maintenance and world-object interactions use concrete prerequisites plus owning state plus broad skill plus real WHEN.
+- **Phase 7 / Vehicles — COMPLETE CORE.** Skateboard, bicycle, motorcycle, car and truck transport, cargo, keys/locks/hot-wire, fuel, repair, cargo-rack install, crash consequence and headlights are live. Current exact-cell/typed-heading fidelity is canonical; richer component replacement is optional expansion.
+- **Phase 8 / NPC AI, Combat + Causal Outbreak — COMPLETE CORE.** Melee/firearms, resident-backed infected, observer-scoped sight/hearing, environmental opening pressure, resident survivor projection, neutral survivors, recruitable followers, hostile raiders, contextual talk/recruit/dismiss and same-identity local survivor -> infected transition are production-composed. See `SYSTEM_DESIGNS/40_SURVIVOR_SOCIAL_OUTBREAK.md`.
+- **Phase 9 / Beta Gate — CORE DELIVERY REACHED; ACCEPTANCE/POLISH ONGOING.** The production game is exported to Web/Pages with desktop/mobile interaction work, real sprites/rendering, lighting/weather/sound, inventory/menu controls and protected CI. Remaining work is concrete human-play defects, browser/mobile acceptance, balance/art/content tuning and optional fidelity—not an undiscovered missing gameplay architecture phase.
 
-Canonical skills are exactly:
+## Canonical four skills
+
+The skill schema is exactly:
 
 - **Awareness**
 - **Stealth**
 - **Mechanical**
 - **Survival**
 
-Shared philosophy:
+Shared rule:
 
 > **concrete physical prerequisite + owning world state + relevant broad skill + real WHEN time**
 
-Skill changes competence; it never conjures a missing tool/material or replaces another system's truth.
-
-### Implemented Phase-6 foundation
-
-- schema-v2 four-skill persistent state and legacy migration;
-- shared deterministic action-boundary `ActorSkillCheckService`;
-- Mechanical/Survival-aware System-32 crafting;
-- Survival-aware persistent-container scavenging without rerolling physical contents;
-- real primitive loot semantics and bounded primitive Survival recipes;
-- **System 35 Outdoor Foraging:** finite deterministic local outdoor stick/stone opportunities using real sky exposure, terrain and generated natural props; WHEN + Survival resolution; successful outputs become real persistent items and enter personal inventory when carry admission allows, with a physical loose-item fallback at hard capacity;
-- **System 36 Mechanical vehicle consumers:** real matching keys, Mechanical hot-wiring, bounded repair, real installed cargo-rack modification, weighted cargo, finite fuel and real vehicle target interactions.
-
-### Final Phase-6 closure after vehicle human acceptance
-
-Perform one comprehensive skills/crafting/items/usable-object run-through covering:
-
-1. cooking through real ingredients/tools/heat sources and Survival;
-2. first aid through Health/Injury ownership and Survival;
-3. richer Mechanical vehicle component maintenance where real parts have real owners/consumers;
-4. Mechanical repair of broken world objects and deconstruction/reclamation through actual target owners;
-5. real fire/ignition through tinder/fuel/ignition prerequisites and Survival;
-6. primitive crafted outputs connected to actual combat/tool/fire consumers rather than item-name special cases;
-7. food/drink/medicine usable-item consumers through real owning systems;
-8. usable world objects such as beds, sinks/water sources, refrigeration, stoves/ovens, lights/switches, workbenches, generators/utilities, doors/windows and vehicles;
-9. real Awareness and Stealth gameplay consumers;
-10. construction restricted to **reinforcing existing doors/windows and repairing broken objects** — no freeform base-building system.
+Skill changes competence. It never conjures a missing tool/material or replaces another system's truth.
 
 Hunting is not a separate skill; it emerges from Awareness, Stealth, Survival knowledge and the concrete weapon/trap/tool used.
 
-## Phase 7 — System 36 Vehicles
+Construction remains deliberately restricted: **no freeform base-building system.** Player construction is reinforcement/repair of existing physical structures such as doors/windows and broken objects.
 
-Status: **IMPLEMENTED + AUTOMATED VERIFIED; HUMAN PLAYTEST PENDING.**
+## Core systems now connected
 
-Implemented vehicle classes:
+The executable includes real player-facing paths for:
 
-- cars;
-- trucks;
-- motorcycles;
-- bicycles;
-- skateboards.
+- generated island roads/towns/rural buildings, coastline, utilities and streaming;
+- day/night, weather, light, shadows, powered streetlights and spatial sound;
+- inventory, equipment, loot/search, food/drink/medicine, freshness and carrying;
+- sleep/rest, Health/injury, condition/Fatigue and first aid;
+- crafting/cooking, primitive resources, foraging, repair and deconstruction/reclamation;
+- doors/windows including open, smash/break, board/reinforce, climb and environmental pressure;
+- generators, switches/lights, sinks/water sources, beds/chairs and other usable objects;
+- Awareness/Stealth/Mechanical/Survival consumers;
+- skateboards, bicycles, motorcycles, cars and trucks with class-specific movement and maintenance;
+- melee/firearms and actor-generic Health/death consequences;
+- eight resident-backed active infected using observer-scoped perception/hearing and shared WHEN;
+- four resident-backed survivor NPC exemplars with neutral/follower/raider roles;
+- contextual survivor conversation and recruit/dismiss interactions through the normal interaction panel;
+- causal local infection from real infected combat impacts, preserving the exact resident identity as it changes cohorts;
+- generic infected pressure against real doors/windows without a second zombie-only damage/navigation stack.
 
-Canonical movement/handling now live:
+## Intentional fidelity backlog — not core blockers
 
-- **skateboard:** actor-like 2-cell smooth-surface movement, no added Fatigue, no fuel, nearly silent;
-- **bicycle:** 3-cell vehicle movement, no fuel, quiet, real Fatigue cost;
-- **motorcycle:** powered 3-cell movement, lower fuel use, low storage, easier Mechanical hot-wire than cars;
-- **car/truck:** powered 3-cell movement with larger storage and higher fuel use by class;
-- bicycle/motorcycle/car/truck use **12 typed vehicle headings at 30-degree increments** over deterministic integer-grid rasters;
-- true vehicle classes require **2 cells of stopping/braking distance**;
-- no separate Driving skill; hot-wiring/repair/modification belong to Mechanical.
+Do not call these implemented until they are actually built, but do not confuse them with an unfinished core game either:
 
-Also implemented:
+- detachable/replacement vehicle battery and wheel consumers;
+- arbitrary-angle rotated vehicle collision polygons beyond the current deterministic typed-heading raster model;
+- partial-liquid fuel quantities rather than whole transfer units;
+- island-wide streamed parked-vehicle population beyond the bounded playable-area population;
+- broader vehicle modifications and salvage/collision detail;
+- persistent deep relationships, factions, diplomacy, long-form dialogue and authored quest content;
+- large survivor settlements/follower command interfaces;
+- island-wide aggregate offscreen epidemic propagation between distant households;
+- more sophisticated route planning if a concrete generated-world navigation failure proves the bounded local movement policy insufficient;
+- additional art variety, balance/content density and accessibility polish.
 
-- sparse persistent vehicle state keyed by WHAT entity ID;
-- bounded generated parked vehicles on plausible materialized road/driveway/parking/pavement cells near the canonical playable start;
-- enter/exit and mounted input routing without replacing ordinary on-foot movement;
-- real matching key entities, locks and persistent hot-wire bypass;
-- compact finite fuel by class;
-- real vehicle inventory containers with weight/capacity and live STORE/TAKE controls;
-- real cargo-rack installation that keeps the component item persistent;
-- bounded Mechanical repair using real tools/materials;
-- crash body damage, real occupant HP damage and spatial impact/movement sound;
-- powered headlights merged into the existing physical-light owner;
-- dedicated vehicle renderer and System-36 owning CI gate.
-
-Explicit remaining closure instead of fake completion:
-
-- exact arbitrary-angle rotated collision polygons are not authoritative; typed 30° headings use deterministic raster movement with the existing cardinal WHAT footprint vocabulary;
-- fuel cans are whole-item transfer units, not partial-liquid simulation;
-- vehicle population is currently a bounded canonical playable-area seeding pass, not an island-wide streaming population source;
-- battery/wheel items exist physically but dedicated replacement consumers are not yet implemented;
-- broader modifications remain future real-component consumers;
-- human browser/game-feel acceptance is pending.
-
-## Phase 8 — Actor/NPC AI, combat and causal outbreak
-
-Scope includes infected/zombie AI, survivors/followers/raiders, melee/firearms, conversations, population/coarse distant behavior and the causal outbreak/collapse. AI receives observer knowledge, not hidden world truth.
-
-## Phase 9 — Final graphics/UI overhaul -> Beta
-
-Audit desktop plus phone/Safari layout, inventory/menu/icon consistency, interaction readability, world art, lighting/weather/sound presentation, obsolete DEV UI, accessibility and final performance. Completion of Phase 9 is the planned Beta gate.
+Any future implementation must continue using existing owners rather than adding duplicate clocks, population counts, health stacks, inventory truth, perception truth, or presentation-owned gameplay state.
 
 ## Performance architecture gate — always active
 
 Do not add frame-driven condition/skill/resource processing, per-item/per-actor simulation timers, recurring whole-world scans or fake presentation-owned truth. Prefer action/event boundaries, analytical state, revisions, bounded local queries and cached shared derivations.
 
-## Current next operation
+NPCs use the shared player-decision/WHEN cadence. Boot, stream activation, perception changes and sound changes may update intention, but they must not grant free autonomous world-tick actions.
 
-Human-play the deployed **System 36 Vehicles** build and repair any concrete vehicle/game-feel/browser issues found. After that acceptance gate—or a newer explicit user direction—perform the comprehensive skills/crafting/items/usable-object closure pass described above. New explicit user direction supersedes this ordering.
+## Beta acceptance operation
+
+With the core feature roadmap closed, the next work is **human-play acceptance and defect-driven polish**, not another architecture phase:
+
+1. play the deployed build on desktop and mobile/Safari;
+2. record only concrete failures in interaction, UI readability, rendering, streaming, controls, pacing, combat/NPC behavior, balance or content presentation;
+3. repair each failure in its existing owner with a fresh prompt-local verifier;
+4. keep optional fidelity requests separate from bugs/core closure;
+5. preserve exact-head CI/Pages verification and handoff in `README_CONTEXT.md`.
+
+A green automated build does not substitute for human game-feel acceptance, but there is no longer a roadmap item that requires inventing a new core gameplay subsystem before that acceptance can proceed.
