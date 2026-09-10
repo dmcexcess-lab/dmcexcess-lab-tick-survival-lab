@@ -2,102 +2,106 @@
 
 Read this file first, then `README_SOPS.md`. For the next distinct repository operation, follow the normal SOP from this recorded final head.
 
-## Current checkpoint — MAP TICK-500 NONBLOCKING OPEN CLOSED — 2026-09-10
+## Current checkpoint — MAP SINGLE-PRESS + LOADING ELLIPSIS CLOSED — 2026-09-10
 
-The core feature roadmap remains closed and the game remains a beta candidate. This bounded operation reproduced the player's MAP issue in the full production gameplay scene at authoritative simulation tick 500, isolated it to synchronous first-open island texture generation, and replaced that blocking path with incremental prewarming.
+The core feature roadmap remains closed and the game remains a beta candidate. This bounded UI/input pass implements the user's newly confirmed MAP behavior and adds a visible loading-status ellipsis animation to the lightweight startup menu.
 
 Starting head:
 
-`995c4d433a17bec945d364ebfd223a9414877f47`
+`aad85681f8e7fed94520c5b8d8568be9cba587c8`
 
-Production repair commit:
+Owning functional head:
 
-`d7960e86ff2e04e45580bb5a8813d150b1992e06`
-
-Owning fully gated functional head:
-
-`d6da269b20b2269fba5bcca13b4177b97fb4a558`
+`585cc0753505530a0d700d286827eab9efb4ed86`
 
 Documentation head immediately before this final context write:
 
-`bb357ee0207373b8a2690713498e5b5ab33635a1`
+`59e6d9593afdb8e980134d87a532102790e527ce`
 
-## Reproduction / root cause
+## User decision / superseded behavior
 
-The production map wiring itself was intact:
+The user identified the MAP interaction problem as a double-tap/double-click feel and explicitly set the desired contract:
 
-- `game/gameplay.tscn` owns `CameraControls` and `PlayerMapBootstrap`;
-- `PlayerMapBootstrap` configures the map from the generated global island plan plus live `WorldState`;
-- `CameraControls` owns the user MAP input path;
-- `IslandMapView` resolves the player marker from live placement truth.
+> MAP should open on one press.
 
-The failure was responsiveness. Before this repair, the first MAP open synchronously generated the complete 256 x 256 island surface before returning from the input event. That meant one MAP click performed 65,536 coastline/surface classifications, painted roads and settlements, and created the texture on the main thread.
+The previous release-driven MAP activation is superseded.
 
-A production acceptance verifier advanced the real `TickKernel` to tick 500 with a committed player action and then used the same MAP mouse-release path as the game.
+The user also requested animation of the trailing loading dots under the startup loading bar so users can visibly tell that loading is progressing rather than looking at a static screen.
 
-Baseline focused run:
+## Implemented behavior
 
-- workflow run `34505921836` — **SUCCESS**;
-- authoritative WHEN: `500`;
-- first MAP open: `244576` microseconds;
-- cached reopen: `26` microseconds.
+### MAP opens on first press
 
-This proved the map was configured and input-connected, but the first-open synchronous workload was large enough to make the control appear dead/frozen in a browser.
+`game/scripts/ui/CameraControls.gd` now:
 
-## Implemented repair
+- activates MAP on the first left-mouse **press**;
+- activates MAP on the first screen-touch **press**;
+- consumes the matching release without toggling the map closed again;
+- starts the existing synthetic-mouse suppression window immediately on touch press so browser-generated mouse input cannot double-toggle the touch-opened map;
+- leaves the other camera controls on their existing release-driven semantics.
 
-`game/scripts/ui/IslandMapView.gd` now:
+The previous nonblocking/cached map-generation repair remains intact.
 
-- begins static island-map prewarming as soon as canonical map configuration succeeds;
-- samples only 4 map-texture rows per process frame;
-- completes the 256 rows in 64 bounded frame slices;
-- no longer performs full island generation synchronously from the MAP input path;
-- makes the map shell visible immediately;
-- displays `PREPARING MAP... N%` if the cached surface is not finished yet;
-- paints roads and settlements once the sampled surface is complete;
-- retains the completed 256 x 256 texture for instant close/reopen behavior;
-- continues to resolve the player marker from live `WorldState` truth.
+### Animated loading ellipsis
 
-No simulation-time ownership, road generation, settlement generation, world streaming, movement, combat, population, utilities, or persistence behavior changed in this repair.
+`game/scripts/ui/StartupMenu.gd` now cycles the status suffix:
+
+`.` -> `..` -> `...` -> `.`
+
+at 0.32-second intervals while a loading status is active.
+
+The animation is used while:
+
+- menu-time gameplay resources are preloading;
+- NEW GAME is finishing gameplay resource load;
+- the status line says the island/start region is being generated/activated.
+
+Completed and error states stay static.
+
+Important truthfulness boundary: the existing legacy synchronous post-NEW-GAME gameplay boot can still block Godot's main thread during its heaviest generation/materialization work. A normal in-engine animation cannot advance while the main thread is genuinely blocked, so the dots pause in that interval rather than falsely indicating responsiveness. Startup-loading phase 2 remains the proper future fix if the user promotes that serial boot again.
 
 ## Verification
 
-Fresh prompt-local verifier pair:
+The previous prompt-owned MAP tick-500 verifier/workflow was retired at operation start:
 
 - `game/scripts/ci/PromptMapTick500Smoke.gd`
 - `.github/workflows/prompt-map-tick-500.yml`
 
-The verifier boots the actual production gameplay scene, waits for `PlayerMapBootstrap`, advances the authoritative `TickKernel` to tick 500, sends the production MAP event, enforces a 50,000-microsecond first-open ceiling, waits for the incremental map build, verifies the final 256 x 256 surface and player marker, then closes and reopens the map under a 10,000-microsecond cached-reopen ceiling.
+Fresh prompt-local verifier pair:
 
-Post-repair focused run:
+- `game/scripts/ci/PromptLoadingUiSinglePressSmoke.gd`
+- `.github/workflows/prompt-loading-ui-single-press.yml`
 
-- run `34506535591` on `d6da269b20b2269fba5bcca13b4177b97fb4a558` — **SUCCESS**;
-- authoritative WHEN: `500`;
-- first MAP open: `58` microseconds;
-- incremental build: `64` process frames, progress `1.000`;
-- cached reopen: `36` microseconds;
-- output: `PROMPT_MAP_TICK_500_SMOKE_OK`.
+Focused run:
 
-Compared with the baseline, the measured first-open input latency fell from 244,576 microseconds to 58 microseconds on the CI runner, approximately a 4,200x reduction.
+- `34508126852` on `585cc0753505530a0d700d286827eab9efb4ed86` — **SUCCESS**.
+
+The focused smoke proves only this prompt's requested path:
+
+- loading status cycles `. -> .. -> ... -> .` without changing its base words;
+- MAP opens on the first mouse press;
+- matching mouse release does not toggle it closed;
+- MAP opens on the first touch press;
+- matching touch release does not toggle it closed;
+- synthetic mouse press following touch is consumed and cannot double-toggle MAP.
 
 Functional-head Pages/Web publication:
 
-- run `34506535611` on `d6da269b20b2269fba5bcca13b4177b97fb4a558`;
+- run `34508126847` on `585cc0753505530a0d700d286827eab9efb4ed86` — **SUCCESS**;
 - Web export — **SUCCESS**;
-- Pages artifact upload — **SUCCESS**;
 - Pages deploy — **SUCCESS**.
 
-After this final context commit, perform exact-final-head focused-CI and Pages verification read-only. No further repository writes are permitted in this operation.
+After this final context commit, perform exact-final-head Pages/status verification read-only. No further repository writes are permitted in this operation.
 
 ## Documentation
 
 Operation-specific ledger:
 
-- `CHANGELOG_MAP_TICK_500.md`
+- `CHANGELOG_LOADING_UI_SINGLE_PRESS.md`
 
 Documentation commit immediately before this final context write:
 
-`bb357ee0207373b8a2690713498e5b5ab33635a1`
+`59e6d9593afdb8e980134d87a532102790e527ce`
 
 ## Established systems to preserve
 
@@ -107,8 +111,8 @@ Unless a focused failure proves otherwise, preserve:
 - same-WHEN deterministic movement batching and decision-pause semantics;
 - healthy ordinary WALK remaining fatigue-free; RUN remains routinely fatiguing;
 - the lightweight startup menu plus menu-time gameplay-resource preload boundary;
+- MAP first-press activation and touch/mouse de-duplication;
 - `PlayerMapBootstrap` as the production map configuration bridge;
-- `CameraControls` as the user MAP input owner;
 - generated global-plan geography as island-map truth;
 - live `WorldState` placement as the player-marker source;
 - nonblocking incremental static-map generation and cached reopen behavior;
@@ -124,19 +128,19 @@ Unless a focused failure proves otherwise, preserve:
 
 ## Confirmed performance issues still open
 
-This MAP repair does **not** close the separate region-streaming problem. Ordinary live play can still hit large region-boundary long frames severe enough for browser `Page Unresponsive` warnings; that problem was independently reproduced around the ~800-tick area in deployed play and remains a valid future bounded target.
+This UI/input pass does **not** close the separate region-streaming problem. Ordinary live play can still hit large region-boundary long frames severe enough for browser `Page Unresponsive` warnings; that remains a valid future bounded performance target.
 
-Startup loading phase 1 also only established the lightweight menu/resource boundary. If the user promotes startup performance again, phase 2 remains: instrument and slice/cache/defer the dominant post-NEW-GAME global-plan, central-area, initial-streaming, materialization, placement/focus, and service-installation work while preserving deterministic world truth.
+Startup loading phase 1 also only established the menu/resource boundary. The long post-NEW-GAME synchronous boot remains capable of pausing the new dot animation because the main thread itself is blocked. If promoted again, startup loading phase 2 should instrument and slice/cache/defer the dominant global-plan, central-area, initial-streaming, materialization, placement/focus, and service-installation work while preserving deterministic world truth.
 
 ## NEXT OPERATION — wait for the next explicit bounded target
 
-Do not automatically broaden this map repair into streaming, startup, UI, worldgen, or gameplay work.
+Do not automatically broaden this UI/input pass into streaming, startup phase 2, worldgen, gameplay, or general polish.
 
 For the next **code** operation, retire this prompt-owned verifier pair first:
 
-- `game/scripts/ci/PromptMapTick500Smoke.gd`
-- `.github/workflows/prompt-map-tick-500.yml`
+- `game/scripts/ci/PromptLoadingUiSinglePressSmoke.gd`
+- `.github/workflows/prompt-loading-ui-single-press.yml`
 
 Then create a fresh prompt-local verifier for only the next requested behavior and follow the normal direct-to-main closure SOP.
 
-This `README_CONTEXT.md` commit is the **FINAL repository write for the map tick-500 repair operation**. After it lands, perform read-only exact-head and CI/Pages verification only.
+This `README_CONTEXT.md` commit is the **FINAL repository write for the MAP single-press + loading-ellipsis operation**. After it lands, perform read-only exact-head and CI/Pages verification only.
