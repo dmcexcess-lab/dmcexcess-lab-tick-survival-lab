@@ -98,6 +98,71 @@ func set_placement(
     _state._commit_change(change)
     return true
 
+## Applies a validated placement set atomically at the occupancy-record level.
+## All records are installed before any change notification is emitted, so every
+## observer sees the complete final occupancy for the timestamp batch.
+func set_placements_batch(values: Array) -> bool:
+    if _state == null:
+        return false
+    if values.is_empty():
+        return true
+
+    var candidates_by_id: Dictionary = {}
+    for value: Variant in values:
+        if not (value is WorldPlacement):
+            return false
+        var candidate: WorldPlacement = value
+        if not candidate.is_valid() or not _state.has_entity(candidate.entity_id):
+            return false
+        if candidates_by_id.has(candidate.entity_id):
+            return false
+        candidates_by_id[candidate.entity_id] = candidate.copy()
+
+    var entity_ids: Array[String] = []
+    for key: Variant in candidates_by_id.keys():
+        entity_ids.append(String(key))
+    entity_ids.sort()
+
+    var previous_by_id: Dictionary = {}
+    var changed_ids: Array[String] = []
+    for entity_id: String in entity_ids:
+        var previous: WorldPlacement = _state._placement_ref(entity_id)
+        previous_by_id[entity_id] = previous.copy() if previous != null else null
+        var candidate: WorldPlacement = candidates_by_id[entity_id]
+        if previous == null or not previous.equivalent(candidate):
+            changed_ids.append(entity_id)
+
+    if changed_ids.is_empty():
+        return true
+
+    var applied_ids: Array[String] = []
+    for entity_id: String in changed_ids:
+        var candidate: WorldPlacement = candidates_by_id[entity_id]
+        if not _state._set_placement_record(candidate):
+            for rollback_index in range(applied_ids.size() - 1, -1, -1):
+                var rollback_id: String = applied_ids[rollback_index]
+                var rollback_previous: WorldPlacement = previous_by_id[rollback_id]
+                if rollback_previous != null:
+                    _state._set_placement_record(rollback_previous)
+                else:
+                    _state._remove_placement_record(rollback_id)
+            return false
+        applied_ids.append(entity_id)
+
+    _state.begin_change_batch(&"placement_batch")
+    for entity_id: String in changed_ids:
+        var previous: WorldPlacement = previous_by_id[entity_id]
+        var candidate: WorldPlacement = candidates_by_id[entity_id]
+        var change := ChangeClass.new(ChangeClass.Kind.PLACEMENT_SET, entity_id)
+        if previous != null:
+            change.before_cells = previous.world_cells()
+            change.before_channel = previous.channel
+        change.after_cells = candidate.world_cells()
+        change.after_channel = candidate.channel
+        _state._commit_change(change)
+    _state.end_change_batch()
+    return true
+
 func unplace_entity(entity_id: String) -> bool:
     if _state == null or not _state.has_placement(entity_id):
         return false

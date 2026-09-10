@@ -12,6 +12,7 @@ const TickRulesClass = preload("res://scripts/foundation/time/TickRules.gd")
 
 ## Canonical WHERE + WHAT + Collision + WHEN actor movement bridge.
 ## Input, rendering, AI, health, needs, carry, stance, pathfinding, etc. remain outside.
+## Same-WHEN successful movement phases are resolved as one deterministic occupancy batch.
 
 signal movement_committed(actor_id, action_serial, action_type, target_anchor, target_facing)
 signal movement_failed(actor_id, action_serial, action_type, reason)
@@ -27,12 +28,17 @@ const TURN_RIGHT: StringName = &"movement.turn_right"
 const COMMIT_PHASE: StringName = &"movement.commit"
 const RUN_STRIDE_1_PHASE: StringName = &"movement.run_stride_1"
 const RUN_STRIDE_2_PHASE: StringName = &"movement.run_stride_2"
+const TIMESTAMP_BATCH_FLUSH_EVENT: StringName = &"movement.timestamp_batch_flush"
+const TIMESTAMP_BATCH_FLUSH_OWNER: String = "when.movement.timestamp_batch"
+const TIMESTAMP_BATCH_FLUSH_PRIORITY: int = 2147483647
 
 var _world: WorldState = null
 var _mutations: WorldMutationService = null
 var _query: SpatialQueryService = null
 var _kernel: TickKernel = null
 var _policy: MovementTraversalPolicy = null
+var _pending_commits: Array[Dictionary] = []
+var _pending_flush_event_serial: int = 0
 
 func _init(
     world_state: WorldState = null,
@@ -51,6 +57,10 @@ func _init(
             _kernel.action_phase.connect(_on_action_phase)
         if not _kernel.action_finished.is_connected(_on_action_finished):
             _kernel.action_finished.connect(_on_action_finished)
+        if not _kernel.external_event_due.is_connected(_on_external_event_due):
+            _kernel.external_event_due.connect(_on_external_event_due)
+        if not _kernel.timing_state_reset.is_connected(_on_timing_state_reset):
+            _kernel.timing_state_reset.connect(_on_timing_state_reset)
 
 func is_ready() -> bool:
     return _world != null \
@@ -310,18 +320,47 @@ func _apply_policy_result(result: MovementActionResult, decision: MovementPolicy
 func _on_action_phase(action: TimedAction, phase: ActionPhase) -> void:
     if action == null or phase == null:
         return
+
+    var candidate: Dictionary = {}
     if action.action_type == RUN_FORWARD:
         if phase.phase_id == RUN_STRIDE_1_PHASE:
-            _commit_run_stride(action, 1)
+            candidate = _prepare_run_stride(action, 1)
         elif phase.phase_id == RUN_STRIDE_2_PHASE:
-            _commit_run_stride(action, 2)
+            candidate = _prepare_run_stride(action, 2)
+        else:
+            return
+    elif phase.phase_id == COMMIT_PHASE and _is_standard_movement_action(action.action_type):
+        candidate = _prepare_standard_action(action)
+    else:
         return
-    if phase.phase_id == COMMIT_PHASE and _is_standard_movement_action(action.action_type):
-        _commit_standard_action(action)
+
+    if candidate.is_empty():
+        return
+    if bool(candidate.get("ready", false)):
+        if not _queue_timestamp_commit(candidate):
+            _fail_commit(action, "movement_batch_schedule_failed")
+        return
+    if bool(candidate.get("impact", false)):
+        _emit_run_impact_failure(candidate)
+        return
+    _fail_commit(action, String(candidate.get("reason", "movement_commit_failed")))
+
+func _on_external_event_due(event: ScheduledEvent) -> void:
+    if event == null or event.event_type != TIMESTAMP_BATCH_FLUSH_EVENT:
+        return
+    if _pending_flush_event_serial > 0 and event.serial != _pending_flush_event_serial:
+        return
+    _pending_flush_event_serial = 0
+    _flush_timestamp_commits()
+
+func _on_timing_state_reset() -> void:
+    _pending_commits.clear()
+    _pending_flush_event_serial = 0
 
 func _on_action_finished(action: TimedAction) -> void:
     if action == null or not _is_movement_action(action.action_type):
         return
+    _remove_pending_action(action.serial)
     if action.status == TickRulesClass.ActionStatus.CANCELED or action.status == TickRulesClass.ActionStatus.INTERRUPTED:
         movement_failed.emit(
             action.actor_id,
@@ -330,36 +369,31 @@ func _on_action_finished(action: TimedAction) -> void:
             action.reason if not action.reason.is_empty() else "movement_interrupted"
         )
 
-func _commit_standard_action(action: TimedAction) -> void:
+func _prepare_standard_action(action: TimedAction) -> Dictionary:
+    var candidate: Dictionary = _candidate_base(action, 0)
     if not is_ready():
-        _fail_commit(action, "movement_not_ready")
-        return
+        return _candidate_failure(candidate, "movement_not_ready")
 
     var expected: WorldPlacement = _expected_origin(action)
     if expected == null:
-        _fail_commit(action, "invalid_payload")
-        return
+        return _candidate_failure(candidate, "invalid_payload")
     var current: WorldPlacement = _world.placement(action.actor_id)
     if current == null or not current.equivalent(expected):
-        _fail_commit(action, "origin_changed")
-        return
+        return _candidate_failure(candidate, "origin_changed")
 
     var target_anchor_value: Variant = action.payload.get("target_anchor", [])
     if typeof(target_anchor_value) != TYPE_ARRAY or target_anchor_value.size() != 2:
-        _fail_commit(action, "invalid_payload")
-        return
+        return _candidate_failure(candidate, "invalid_payload")
     var target_anchor := Vector2i(int(target_anchor_value[0]), int(target_anchor_value[1]))
     var target_facing: int = int(action.payload.get("target_facing", -1))
     if not Facing.is_valid(target_facing):
-        _fail_commit(action, "invalid_payload")
-        return
+        return _candidate_failure(candidate, "invalid_payload")
 
     var canonical_target: Dictionary = _target_for(expected, action.action_type)
     if canonical_target.is_empty() \
         or canonical_target["anchor"] != target_anchor \
         or int(canonical_target["facing"]) != target_facing:
-        _fail_commit(action, "invalid_payload")
-        return
+        return _candidate_failure(candidate, "invalid_payload")
 
     var query_result: SpatialQueryResult = _query.query_entity_footprint(
         action.actor_id,
@@ -368,45 +402,265 @@ func _commit_standard_action(action: TimedAction) -> void:
         true
     )
     if query_result == null or query_result.status == QueryResultClass.Status.UNKNOWN:
-        _fail_commit(action, "target_unknown")
-        return
+        return _candidate_failure(candidate, "target_unknown")
     if query_result.status == QueryResultClass.Status.BLOCKED:
-        _fail_commit(action, "target_blocked")
-        return
+        return _candidate_failure(candidate, "target_blocked")
     if query_result.status != QueryResultClass.Status.CLEAR:
-        _fail_commit(action, "target_unknown")
-        return
+        return _candidate_failure(candidate, "target_unknown")
 
     var policy_decision: MovementPolicyDecision = null
     var walk_terrain_ticks: int = 0
     if _is_walk_step(action.action_type):
         var terrain_types: Array[StringName] = _terrain_types(query_result.cells)
         if terrain_types.is_empty():
-            _fail_commit(action, "terrain_unclassified")
-            return
+            return _candidate_failure(candidate, "terrain_unclassified")
         policy_decision = _policy.evaluate_step(action.actor_id, action.action_type, terrain_types)
         walk_terrain_ticks = _policy.terrain_walk_ticks(action.actor_id, terrain_types)
     else:
         policy_decision = _policy.evaluate_turn(action.actor_id, action.action_type)
     if policy_decision == null:
-        _fail_commit(action, "movement_policy_not_ready")
-        return
+        return _candidate_failure(candidate, "movement_policy_not_ready")
     if not policy_decision.is_allowed():
-        _fail_commit(action, _policy_reason(policy_decision))
-        return
+        return _candidate_failure(candidate, _policy_reason(policy_decision))
     if _is_walk_step(action.action_type) and walk_terrain_ticks < 1:
-        _fail_commit(action, "invalid_duration")
-        return
+        return _candidate_failure(candidate, "invalid_duration")
 
-    if not _mutations.set_placement(
+    candidate["ready"] = true
+    candidate["current"] = current.copy()
+    candidate["target_anchor"] = target_anchor
+    candidate["target_facing"] = target_facing
+    candidate["target_cells"] = query_result.cells.duplicate()
+    candidate["walk_terrain_ticks"] = walk_terrain_ticks
+    return candidate
+
+func _prepare_run_stride(action: TimedAction, stride_index: int) -> Dictionary:
+    var candidate: Dictionary = _candidate_base(action, stride_index)
+    if not is_ready() or stride_index < 1 or stride_index > 2:
+        return _candidate_failure(
+            candidate,
+            "movement_not_ready" if not is_ready() else "invalid_payload"
+        )
+
+    var origin: WorldPlacement = _expected_origin(action)
+    if origin == null:
+        return _candidate_failure(candidate, "invalid_payload")
+    var target_facing: int = int(action.payload.get("target_facing", -1))
+    if not Facing.is_valid(target_facing) or target_facing != origin.facing:
+        return _candidate_failure(candidate, "invalid_payload")
+
+    var stride_1_anchor: Vector2i = _anchor_from_payload(action.payload, "stride_1_anchor")
+    var stride_2_anchor: Vector2i = _anchor_from_payload(action.payload, "stride_2_anchor")
+    var forward: Vector2i = Facing.vector(origin.facing)
+    if stride_1_anchor != origin.anchor + forward or stride_2_anchor != stride_1_anchor + forward:
+        return _candidate_failure(candidate, "invalid_payload")
+
+    var expected_current: WorldPlacement = origin.copy()
+    expected_current.anchor = origin.anchor if stride_index == 1 else stride_1_anchor
+    var target_anchor: Vector2i = stride_1_anchor if stride_index == 1 else stride_2_anchor
+    var current: WorldPlacement = _world.placement(action.actor_id)
+    if current == null or not current.equivalent(expected_current):
+        return _candidate_failure(candidate, "origin_changed")
+
+    var query_result: SpatialQueryResult = _query.query_entity_footprint(
         action.actor_id,
-        current.channel,
         target_anchor,
         target_facing,
-        current.footprint,
-        current.structure_axis
-    ):
-        _fail_commit(action, "placement_mutation_failed")
+        true
+    )
+    if query_result == null or query_result.status == QueryResultClass.Status.UNKNOWN:
+        return _candidate_failure(candidate, "target_unknown")
+
+    var terrain_key: String = "stride_%d_terrain" % stride_index
+    var stored_terrain: Variant = action.payload.get(terrain_key, [])
+    if typeof(stored_terrain) != TYPE_ARRAY or _terrain_snapshot(query_result.cells) != stored_terrain:
+        return _candidate_failure(candidate, "terrain_changed")
+    var walk_ticks: int = int(action.payload.get("stride_%d_walk_ticks" % stride_index, 0))
+    if walk_ticks < 1:
+        return _candidate_failure(candidate, "invalid_payload")
+
+    candidate["current"] = current.copy()
+    candidate["target_anchor"] = target_anchor
+    candidate["target_facing"] = target_facing
+    candidate["target_cells"] = query_result.cells.duplicate()
+    candidate["walk_terrain_ticks"] = walk_ticks
+
+    if query_result.status == QueryResultClass.Status.BLOCKED:
+        candidate["impact"] = true
+        candidate["reason"] = "run_impact"
+        candidate["blocking_entity_ids"] = query_result.blocking_entity_ids.duplicate()
+        return candidate
+    if query_result.status != QueryResultClass.Status.CLEAR:
+        return _candidate_failure(candidate, "target_unknown")
+
+    candidate["ready"] = true
+    return candidate
+
+func _queue_timestamp_commit(candidate: Dictionary) -> bool:
+    if candidate.is_empty() or not bool(candidate.get("ready", false)) or _kernel == null:
+        return false
+    if _pending_flush_event_serial <= 0:
+        _pending_flush_event_serial = _kernel.schedule_event(
+            _kernel.world_tick(),
+            TIMESTAMP_BATCH_FLUSH_OWNER,
+            TIMESTAMP_BATCH_FLUSH_EVENT,
+            "",
+            {},
+            TIMESTAMP_BATCH_FLUSH_PRIORITY
+        )
+        if _pending_flush_event_serial <= 0:
+            _pending_flush_event_serial = 0
+            return false
+    _pending_commits.append(candidate)
+    return true
+
+func _flush_timestamp_commits() -> void:
+    if _pending_commits.is_empty():
+        return
+
+    var candidates: Array[Dictionary] = []
+    for pending: Dictionary in _pending_commits:
+        candidates.append(pending)
+    _pending_commits.clear()
+    candidates.sort_custom(_candidate_less)
+
+    var eligible: Array[Dictionary] = []
+    for candidate: Dictionary in candidates:
+        var action: TimedAction = candidate.get("action", null)
+        if action == null:
+            continue
+        var active: TimedAction = _kernel.active_action_for_actor(action.actor_id)
+        if active == null or active.serial != action.serial:
+            continue
+
+        var current: WorldPlacement = _world.placement(action.actor_id)
+        var expected_current: WorldPlacement = candidate.get("current", null)
+        if current == null or expected_current == null or not current.equivalent(expected_current):
+            candidate["ready"] = false
+            candidate["reason"] = "origin_changed"
+            eligible.append(candidate)
+            continue
+
+        var target_anchor: Vector2i = candidate.get("target_anchor", Vector2i.ZERO)
+        var target_facing: int = int(candidate.get("target_facing", -1))
+        var query_result: SpatialQueryResult = _query.query_entity_footprint(
+            action.actor_id,
+            target_anchor,
+            target_facing,
+            true
+        )
+        if query_result == null or query_result.status == QueryResultClass.Status.UNKNOWN:
+            candidate["ready"] = false
+            candidate["reason"] = "target_unknown"
+        elif query_result.status == QueryResultClass.Status.BLOCKED:
+            candidate["ready"] = false
+            if action.action_type == RUN_FORWARD:
+                candidate["impact"] = true
+                candidate["reason"] = "run_impact"
+                candidate["blocking_entity_ids"] = query_result.blocking_entity_ids.duplicate()
+            else:
+                candidate["reason"] = "target_blocked"
+        elif query_result.status != QueryResultClass.Status.CLEAR:
+            candidate["ready"] = false
+            candidate["reason"] = "target_unknown"
+        else:
+            candidate["target_cells"] = query_result.cells.duplicate()
+        eligible.append(candidate)
+
+    var claims: Dictionary = {}
+    for candidate: Dictionary in eligible:
+        if not bool(candidate.get("ready", false)):
+            continue
+        var blocking_claimants: Dictionary = {}
+        var target_cells: Array = candidate.get("target_cells", [])
+        for value: Variant in target_cells:
+            if typeof(value) != TYPE_VECTOR2I:
+                continue
+            var cell: Vector2i = value
+            if claims.has(cell):
+                blocking_claimants[String(claims[cell])] = true
+        if not blocking_claimants.is_empty():
+            candidate["ready"] = false
+            var action: TimedAction = candidate.get("action", null)
+            if action != null and action.action_type == RUN_FORWARD:
+                candidate["impact"] = true
+                candidate["reason"] = "run_impact"
+                candidate["blocking_entity_ids"] = _sorted_string_keys(blocking_claimants)
+            else:
+                candidate["reason"] = "target_blocked"
+            continue
+
+        var actor_id: String = String(candidate.get("actor_id", ""))
+        for value: Variant in target_cells:
+            if typeof(value) == TYPE_VECTOR2I:
+                claims[value] = actor_id
+
+    var placement_batch: Array = []
+    for candidate: Dictionary in eligible:
+        if not bool(candidate.get("ready", false)):
+            continue
+        var current: WorldPlacement = candidate.get("current", null)
+        if current == null:
+            candidate["ready"] = false
+            candidate["reason"] = "placement_mutation_failed"
+            continue
+        placement_batch.append(PlacementClass.new(
+            String(candidate.get("actor_id", "")),
+            current.channel,
+            candidate.get("target_anchor", current.anchor),
+            int(candidate.get("target_facing", current.facing)),
+            current.footprint,
+            current.structure_axis
+        ))
+
+    if not placement_batch.is_empty() and not _mutations.set_placements_batch(placement_batch):
+        for candidate: Dictionary in eligible:
+            if bool(candidate.get("ready", false)):
+                candidate["ready"] = false
+                candidate["reason"] = "placement_mutation_failed"
+
+    for candidate: Dictionary in eligible:
+        if bool(candidate.get("ready", false)):
+            _emit_commit_success(candidate)
+        elif bool(candidate.get("impact", false)):
+            _emit_run_impact_failure(candidate)
+        else:
+            var action: TimedAction = candidate.get("action", null)
+            if action != null:
+                _fail_commit(action, String(candidate.get("reason", "movement_commit_failed")))
+
+func _emit_commit_success(candidate: Dictionary) -> void:
+    var action: TimedAction = candidate.get("action", null)
+    if action == null:
+        return
+    var target_anchor: Vector2i = candidate.get("target_anchor", Vector2i.ZERO)
+    var target_facing: int = int(candidate.get("target_facing", -1))
+    var walk_ticks: int = int(candidate.get("walk_terrain_ticks", 0))
+    var stride_index: int = int(candidate.get("stride_index", 0))
+
+    if action.action_type == RUN_FORWARD:
+        run_stride_committed.emit(
+            action.actor_id,
+            action.serial,
+            stride_index,
+            target_anchor,
+            target_facing
+        )
+        movement_exertion_resolved.emit(
+            action.actor_id,
+            action.serial,
+            RUN_FORWARD,
+            stride_index,
+            walk_ticks,
+            false
+        )
+        if stride_index == 2:
+            movement_committed.emit(
+                action.actor_id,
+                action.serial,
+                action.action_type,
+                target_anchor,
+                target_facing
+            )
         return
 
     if _is_walk_step(action.action_type):
@@ -415,7 +669,7 @@ func _commit_standard_action(action: TimedAction) -> void:
             action.serial,
             action.action_type,
             1,
-            walk_terrain_ticks,
+            walk_ticks,
             false
         )
     movement_committed.emit(
@@ -426,111 +680,57 @@ func _commit_standard_action(action: TimedAction) -> void:
         target_facing
     )
 
-func _commit_run_stride(action: TimedAction, stride_index: int) -> void:
-    if not is_ready() or stride_index < 1 or stride_index > 2:
-        _fail_commit(action, "movement_not_ready" if not is_ready() else "invalid_payload")
+func _emit_run_impact_failure(candidate: Dictionary) -> void:
+    var action: TimedAction = candidate.get("action", null)
+    if action == null:
         return
-    var origin: WorldPlacement = _expected_origin(action)
-    if origin == null:
-        _fail_commit(action, "invalid_payload")
-        return
-    var target_facing: int = int(action.payload.get("target_facing", -1))
-    if not Facing.is_valid(target_facing) or target_facing != origin.facing:
-        _fail_commit(action, "invalid_payload")
-        return
-
-    var stride_1_anchor: Vector2i = _anchor_from_payload(action.payload, "stride_1_anchor")
-    var stride_2_anchor: Vector2i = _anchor_from_payload(action.payload, "stride_2_anchor")
-    var forward: Vector2i = Facing.vector(origin.facing)
-    if stride_1_anchor != origin.anchor + forward or stride_2_anchor != stride_1_anchor + forward:
-        _fail_commit(action, "invalid_payload")
-        return
-
-    var expected_current: WorldPlacement = origin.copy()
-    expected_current.anchor = origin.anchor if stride_index == 1 else stride_1_anchor
-    var target_anchor: Vector2i = stride_1_anchor if stride_index == 1 else stride_2_anchor
-    var current: WorldPlacement = _world.placement(action.actor_id)
-    if current == null or not current.equivalent(expected_current):
-        _fail_commit(action, "origin_changed")
-        return
-
-    var query_result: SpatialQueryResult = _query.query_entity_footprint(
-        action.actor_id,
-        target_anchor,
-        target_facing,
-        true
-    )
-    if query_result == null or query_result.status == QueryResultClass.Status.UNKNOWN:
-        _fail_commit(action, "target_unknown")
-        return
-
-    var terrain_key: String = "stride_%d_terrain" % stride_index
-    var stored_terrain: Variant = action.payload.get(terrain_key, [])
-    if typeof(stored_terrain) != TYPE_ARRAY or _terrain_snapshot(query_result.cells) != stored_terrain:
-        _fail_commit(action, "terrain_changed")
-        return
-    var walk_ticks: int = int(action.payload.get("stride_%d_walk_ticks" % stride_index, 0))
-    if walk_ticks < 1:
-        _fail_commit(action, "invalid_payload")
-        return
-
-    if query_result.status == QueryResultClass.Status.BLOCKED:
-        movement_exertion_resolved.emit(
-            action.actor_id,
-            action.serial,
-            RUN_FORWARD,
-            stride_index,
-            walk_ticks,
-            true
-        )
-        run_impact.emit(
-            action.actor_id,
-            action.serial,
-            stride_index,
-            target_anchor,
-            target_facing,
-            query_result.blocking_entity_ids.duplicate()
-        )
-        _fail_commit(action, "run_impact")
-        return
-    if query_result.status != QueryResultClass.Status.CLEAR:
-        _fail_commit(action, "target_unknown")
-        return
-
-    if not _mutations.set_placement(
-        action.actor_id,
-        current.channel,
-        target_anchor,
-        target_facing,
-        current.footprint,
-        current.structure_axis
-    ):
-        _fail_commit(action, "placement_mutation_failed")
-        return
-
-    run_stride_committed.emit(
-        action.actor_id,
-        action.serial,
-        stride_index,
-        target_anchor,
-        target_facing
-    )
+    var stride_index: int = int(candidate.get("stride_index", 0))
+    var target_anchor: Vector2i = candidate.get("target_anchor", Vector2i.ZERO)
+    var target_facing: int = int(candidate.get("target_facing", -1))
+    var walk_ticks: int = int(candidate.get("walk_terrain_ticks", 0))
+    var blocking_entity_ids: Array = candidate.get("blocking_entity_ids", [])
     movement_exertion_resolved.emit(
         action.actor_id,
         action.serial,
         RUN_FORWARD,
         stride_index,
         walk_ticks,
-        false
+        true
     )
-    if stride_index == 2:
-        movement_committed.emit(
-            action.actor_id,
-            action.serial,
-            action.action_type,
-            target_anchor,
-            target_facing
-        )
+    run_impact.emit(
+        action.actor_id,
+        action.serial,
+        stride_index,
+        target_anchor,
+        target_facing,
+        blocking_entity_ids.duplicate()
+    )
+    _fail_commit(action, "run_impact")
+
+func _candidate_base(action: TimedAction, stride_index: int) -> Dictionary:
+    return {
+        "action": action.copy() if action != null else null,
+        "actor_id": action.actor_id if action != null else "",
+        "action_serial": action.serial if action != null else 0,
+        "stride_index": stride_index,
+        "ready": false,
+        "impact": false,
+        "reason": "",
+        "blocking_entity_ids": [],
+        "target_cells": [],
+        "walk_terrain_ticks": 0,
+    }
+
+static func _candidate_failure(candidate: Dictionary, reason: String) -> Dictionary:
+    candidate["ready"] = false
+    candidate["impact"] = false
+    candidate["reason"] = reason
+    return candidate
+
+func _remove_pending_action(action_serial: int) -> void:
+    for index in range(_pending_commits.size() - 1, -1, -1):
+        if int(_pending_commits[index].get("action_serial", 0)) == action_serial:
+            _pending_commits.remove_at(index)
 
 func _expected_origin(action: TimedAction) -> WorldPlacement:
     var expected_value: Variant = action.payload.get("expected_placement", {})
@@ -664,6 +864,24 @@ static func _is_standard_movement_action(action_type: StringName) -> bool:
 
 static func _is_movement_action(action_type: StringName) -> bool:
     return _is_standard_movement_action(action_type) or action_type == RUN_FORWARD
+
+static func _candidate_less(a: Dictionary, b: Dictionary) -> bool:
+    var actor_a: String = String(a.get("actor_id", ""))
+    var actor_b: String = String(b.get("actor_id", ""))
+    if actor_a != actor_b:
+        return actor_a < actor_b
+    var serial_a: int = int(a.get("action_serial", 0))
+    var serial_b: int = int(b.get("action_serial", 0))
+    if serial_a != serial_b:
+        return serial_a < serial_b
+    return int(a.get("stride_index", 0)) < int(b.get("stride_index", 0))
+
+static func _sorted_string_keys(values: Dictionary) -> Array[String]:
+    var result: Array[String] = []
+    for key: Variant in values.keys():
+        result.append(String(key))
+    result.sort()
+    return result
 
 static func _cell_less(a: Vector2i, b: Vector2i) -> bool:
     if a.y == b.y:

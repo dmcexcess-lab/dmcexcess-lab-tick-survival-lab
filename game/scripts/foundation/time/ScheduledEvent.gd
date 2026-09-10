@@ -113,6 +113,15 @@ static func from_snapshot(data: Dictionary, minimum_tick: int = -1) -> Scheduled
 static func less(a: ScheduledEvent, b: ScheduledEvent) -> bool:
     if a.due_tick != b.due_tick:
         return a.due_tick < b.due_tick
+
+    # A timestamp is one consequence boundary. Terminal completion is deliberately
+    # ordered after all other work due at that timestamp so same-WHEN mechanics can
+    # gather and resolve their intents before actions become terminal.
+    var a_completion: bool = a.kind == Rules.EventKind.ACTION_COMPLETE
+    var b_completion: bool = b.kind == Rules.EventKind.ACTION_COMPLETE
+    if a_completion != b_completion:
+        return not a_completion
+
     if a.priority != b.priority:
         return a.priority < b.priority
     if a.owner_key != b.owner_key:
