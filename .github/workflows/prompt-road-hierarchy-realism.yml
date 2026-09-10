@@ -6,6 +6,7 @@ on:
     paths:
       - 'game/scripts/generation/world/IslandMajorRoadNetworkPlanner.gd'
       - 'game/scripts/ci/PromptRoadHierarchyRealismSmoke.gd'
+      - 'game/scripts/ci/IslandRoadHierarchySmoke.gd'
       - '.github/workflows/prompt-road-hierarchy-realism.yml'
   workflow_dispatch:
 
@@ -33,8 +34,14 @@ jobs:
           set -euxo pipefail
           ./Godot_v4.7.1-stable_linux.x86_64 --headless --editor --path "$GITHUB_WORKSPACE/game" --quit
 
-      - name: Verify geographic road hierarchy
+      - name: Verify prompt road hierarchy acceptance
         shell: bash
         run: |
           set -euxo pipefail
           ./Godot_v4.7.1-stable_linux.x86_64 --headless --path "$GITHUB_WORKSPACE/game" --script res://scripts/ci/PromptRoadHierarchyRealismSmoke.gd
+
+      - name: Verify permanent road hierarchy regression
+        shell: bash
+        run: |
+          set -euxo pipefail
+          ./Godot_v4.7.1-stable_linux.x86_64 --headless --path "$GITHUB_WORKSPACE/game" --script res://scripts/ci/IslandRoadHierarchySmoke.gd
