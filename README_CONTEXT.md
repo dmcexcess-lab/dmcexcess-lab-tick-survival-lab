@@ -2,123 +2,178 @@
 
 Read this file first, then `README_SOPS.md`. For the next distinct repository operation, follow the normal SOP from this recorded final head.
 
-## Current checkpoint — WALK FATIGUE POLICY CLOSED — 2026-09-09
+## Current checkpoint — STARTUP LOADING SPLIT PHASE 1 CLOSED — 2026-09-10
 
-The core feature roadmap remains closed and the game remains a beta candidate. This bounded balance/production repair fixes the ordinary WALK fatigue drain in the live movement-to-condition path.
+The core feature roadmap remains closed and the game remains a beta candidate. This bounded performance/UX operation separates the old single startup wall into a lightweight first menu, menu-time gameplay-resource preload, and explicit post-selection world boot.
 
-Owning production commit:
+Starting head:
 
-`3660521498aebf45d4986af803ebf9792625a492`
+`5ba5ad951b0f15145bfde2fcd73fe50f63257acd`
 
 Owning fully gated functional head:
 
-`eef3eb87a03c927361fa94e5121c755e659f2c4b`
+`64fcedecfd6d55dc052ba7afeea31b6547cc0cee`
 
 Documentation head immediately before this final context write:
 
-`1451d54f55d296471ac11d57b476ff043898a770`
+`245c845bdd88b7da448712349f438627e7c845f1`
 
-## Root cause
+## Root cause / prior startup shape
 
-The live `MovementConditionExertionService` adapter explicitly charged at least one fatigue point for every forward/backward WALK stride. Routine healthy walking therefore accumulated fatigue even though WALK is intended to be baseline locomotion.
+Before this pass, `game/main.tscn` was the full production gameplay scene. Its root `_ready()` immediately executed the complete canonical boot before the player received a usable game frame.
 
-The older `MovementExertionService` path is not the live System 34 adapter. It was deliberately left alone rather than creating a second competing exertion policy.
+That meant the initial wall stacked:
 
-## Implemented policy
+1. Godot/scene startup;
+2. the entire gameplay script/resource dependency graph;
+3. generated-island planning and playable-seed resolution;
+4. central-area generation;
+5. playable initial-streaming preflight;
+6. actual initial streaming/materialization;
+7. player creation/focus setup;
+8. the remaining gameplay-service boot.
 
-`game/scripts/simulation/actors/condition/MovementConditionExertionService.gd` now applies these rules:
+This matched the user's observation that loading work was not meaningfully spread out.
 
-- healthy forward/backward WALK adds **0 fatigue**;
-- orange/mild physical pressure alone leaves WALK fatigue-free;
-- one severe physical pressure alone leaves WALK fatigue-free;
-- WALK becomes exertion only when at least **two severe physical burdens overlap**;
-- severe burden inputs are red-tier satiety, hydration, rest or comfort; fatigue already at 90+; and carry load above 100% capacity;
-- overburden alone therefore does not tax ordinary WALK, while overburden plus another severe burden can;
-- when WALK is taxing, its cost scales with terrain walk time and is at least 1;
-- RUN remains materially fatiguing and keeps its terrain/load scaling.
+## Implemented phase-1 split
 
-This operation did **not** change health damage, max health, movement timing, collision, pathing, WHEN scheduling, same-WHEN simultaneity, vehicle movement, NPC/zombie behavior, or UI presentation.
+### Lightweight first scene
+
+`game/main.tscn` is now a small startup/menu scene only. It no longer directly contains the production gameplay renderer, camera, simulation, HUD, inventory, crafting, map, interaction, or other heavy gameplay nodes.
+
+The former full production scene was moved intact to:
+
+- `game/gameplay.tscn`
+
+The menu provides:
+
+- `NEW GAME`;
+- disabled `CONTINUE — NO SAVE YET`;
+- a loading progress indicator;
+- explicit status text.
+
+There is currently no persistent save/continue implementation in the repository, so CONTINUE is deliberately truthful rather than simulated.
+
+### Menu-time gameplay-resource preload
+
+`game/scripts/ui/StartupMenu.gd` lets the lightweight menu paint first, then requests `res://gameplay.tscn` with Godot's threaded `ResourceLoader`.
+
+This allows the heavy gameplay scene/script/resource dependency graph to load while the player can already see the menu.
+
+Resource preloading does **not** choose a new-game seed or generate world truth.
+
+### Post-NEW-GAME world boot
+
+Pressing NEW GAME:
+
+1. enters a visible loading state;
+2. finishes the gameplay-scene resource load if needed;
+3. shows `Generating island and activating the starting region…`;
+4. instantiates/adds the unchanged production gameplay scene;
+5. keeps the menu present while the existing synchronous generated-world/service boot runs;
+6. hands current-scene ownership to gameplay only after production boot returns.
+
+Interactive new-game seed selection therefore remains where it belongs: after the player chooses NEW GAME.
+
+## What this phase intentionally does not claim
+
+This phase does **not** yet spread the internals of world generation/materialization across frames. It establishes the scene/loading boundary and removes the full gameplay dependency graph from the initial menu scene.
+
+It also does not fix the separately confirmed runtime region-streaming long-frame spikes that can trigger browser `Page Unresponsive` warnings on desktop Firefox/Chromium.
+
+No save/persistence system was added.
 
 ## Verification
 
+Previous WALK prompt verifier/workflow was retired at operation start.
+
 Fresh prompt-local verifier pair:
 
-- `game/scripts/ci/PromptWalkFatiguePolicySmoke.gd`
-- `.github/workflows/prompt-walk-fatigue-policy.yml`
+- `game/scripts/ci/PromptStartupLoadingSplitSmoke.gd`
+- `.github/workflows/prompt-startup-loading-split.yml`
 
-Verifier creation heads:
+Focused run:
 
-- `5545258c9dea3b9ab2f81c1953796914d9fb28e9` — smoke
-- `eef3eb87a03c927361fa94e5121c755e659f2c4b` — workflow / fully gated functional head
+- `34503585383` on `64fcedecfd6d55dc052ba7afeea31b6547cc0cee` — **SUCCESS**.
 
-The focused smoke exercises the real `MovementActionService -> movement_exertion_resolved -> MovementConditionExertionService -> ActorConditionService` path and verifies:
+The smoke proves:
 
-- repeated healthy WALK adds zero fatigue and does not alter health;
-- orange pressure adds no WALK fatigue;
-- one red physical pressure adds no WALK fatigue;
-- two red physical pressures make WALK exertion;
-- overburden alone adds no WALK fatigue;
-- overburden plus one red pressure makes WALK exertion;
-- healthy RUN still increases fatigue.
+- `main.tscn` starts as the lightweight menu;
+- production `TickSurvivalGame` is absent before NEW GAME;
+- generated-island active seed remains unset while the menu is open;
+- gameplay resources preload while the menu remains current;
+- menu preload alone does not create world truth;
+- NEW GAME enters explicit loading state;
+- the unchanged production gameplay scene then boots successfully;
+- generated-island world truth exists only after NEW GAME.
 
-Focused workflow:
+Production smoke log timing on the CI runner also exposed the next bottleneck:
 
-- run `34439671502` on `eef3eb87a03c927361fa94e5121c755e659f2c4b` — **SUCCESS**.
+- smoke/process start approximately `16:41:16.8Z`;
+- `PLAYABLE_ISLAND_WORLD_READY` approximately `16:41:29.8Z`, about **13 seconds later**;
+- `CANONICAL_DEMO_BOOT_OK` approximately `16:41:39.2Z`, another **~9.4 seconds later**.
 
-Pages/Web publication proof:
+Thus the new menu/resource phase is split successfully, while roughly 22 seconds of post-selection generated-world + service boot remains serial in that headless run.
 
-- run `34439671427` on functional head `eef3eb87a03c927361fa94e5121c755e659f2c4b` — **SUCCESS**;
-- run `34447830031` on documentation head `1451d54f55d296471ac11d57b476ff043898a770` — Web build, artifact upload and deploy **SUCCESS**.
+Functional-head Pages/Web publication:
 
-After this final context commit, verify the exact final-head Pages run read-only. No further repository writes are permitted in this operation.
+- run `34503585382` on `64fcedecfd6d55dc052ba7afeea31b6547cc0cee` — **SUCCESS**, including Web export and deploy.
+
+After this final context commit, perform exact-final-head Pages verification read-only. No further repository writes are permitted in this operation.
 
 ## Documentation
 
-Operation-specific closure ledger:
+Operation-specific ledger:
 
-- `CHANGELOG_WALK_FATIGUE_POLICY.md`
+- `CHANGELOG_STARTUP_LOADING_SPLIT.md`
 
 Documentation commit immediately before this final context write:
 
-`1451d54f55d296471ac11d57b476ff043898a770`
+`245c845bdd88b7da448712349f438627e7c845f1`
 
 ## Established systems to preserve
 
-Unless concrete evidence requires a bounded repair, preserve:
+Unless a focused failure proves otherwise, preserve:
 
-- the single authoritative WHEN clock;
+- the single authoritative WHEN/TickKernel clock;
 - same-WHEN deterministic movement batching and decision-pause semantics;
-- ordinary WALK being fatigue-free under normal/single-pressure conditions;
-- RUN remaining the routine fatiguing locomotion mode;
-- current settlement-first procedural island, building-derived population and streaming architecture;
-- current geographic road hierarchy and dirt/gravel/paved contracts;
+- healthy ordinary WALK remaining fatigue-free; RUN remains routinely fatiguing;
+- current settlement-first procedural island and building-derived population;
+- current road hierarchy and dirt/gravel/paved contracts;
+- current generated weather/day-night/physical lighting/night-only streetlights;
+- current power/water infrastructure;
 - observer-scoped infected/survivor perception and existing population ownership;
-- day/night, generated weather, physical lighting and night-only streetlights;
-- power/water infrastructure and current roadside pole behavior;
 - inventory/equipment/sustainment/crafting/skills/doors/windows/utilities/vehicles/combat systems already closed;
 - dedicated vehicle rendering without the retired purple diagnostic artifact;
 - no generated rivers/wastewater/sewer/septic resurrection;
-- no routine broad seed matrices or standing gameplay gates for ordinary bounded prompt closure.
+- no routine broad seed matrices for bounded prompt closure.
 
-## Known beta observations still available for later bounded polish
+## Confirmed performance issue still open
 
-Not part of this WALK operation:
+Ordinary live play can hit large region-streaming long frames severe enough for browser `Page Unresponsive` warnings. The assistant reproduced one around the ~800-tick area in an actual deployed-build playtest, and the user reports the same behavior consistently in desktop Firefox.
 
-- zombie/infected presence can cause significant slowdown; the `ZOMBIES` overlay is intentional diagnostic context, not itself the performance bug;
-- some delegated/world interactions can still show `Unknown` as a top-HUD action label;
-- foraged inventory labels can expose internal deterministic generated IDs;
-- mounted mobile controls deserve a real touch acceptance pass;
-- utility pole generation remains imperfect but currently beta-acceptable.
+Do not dismiss this as renderer/test-machine noise. It is a confirmed production performance problem.
 
-## NEXT OPERATION — wait for the next explicit bounded target
+## NEXT OPERATION — startup loading phase 2: profile and slice post-NEW-GAME boot
 
-The WALK fatigue policy pass is closed. Do not broaden it automatically into stamina-system redesign, sprint tuning, condition rebalance, NPC fatigue, health changes, or zombie performance work.
+If the user continues this loading/performance work, do **not** redesign blindly. First instrument the post-NEW-GAME production boot by phase, then use those measurements to spread/cache/defer the dominant chunks while preserving deterministic world truth.
+
+Priority measurement boundaries:
+
+1. global island plan / playable-seed resolution;
+2. central-area generation;
+3. playable initial-streaming preflight;
+4. actual initial streaming/materialization;
+5. player placement + streaming focus;
+6. remaining canonical gameplay-service installation.
+
+Important candidate: `GeneratedIslandCritiqueFixture._resolve_playable_boot()` performs an initial-streaming **probe**, and `build()` later performs the real initial streaming/materialization again. Investigate whether that duplicated work can be safely reused or transformed into a staged prewarm, but preserve the playable-seed correctness guarantee unless a fresh verifier proves the replacement.
 
 For the next **code** operation, retire this prompt-owned verifier pair first:
 
-- `game/scripts/ci/PromptWalkFatiguePolicySmoke.gd`
-- `.github/workflows/prompt-walk-fatigue-policy.yml`
+- `game/scripts/ci/PromptStartupLoadingSplitSmoke.gd`
+- `.github/workflows/prompt-startup-loading-split.yml`
 
-Then create a fresh prompt-local verifier for only the newly requested behavior and follow the normal direct-to-main closure SOP.
+Then create a fresh prompt-local verifier for only the next requested behavior and follow the normal direct-to-main closure SOP.
 
-This `README_CONTEXT.md` commit is the **FINAL repository write for the WALK fatigue policy operation**. After it lands, perform read-only exact-head and CI/Pages verification only.
+This `README_CONTEXT.md` commit is the **FINAL repository write for startup loading split phase 1**. After it lands, perform read-only exact-head and CI/Pages verification only.
