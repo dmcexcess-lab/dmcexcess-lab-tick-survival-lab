@@ -41,7 +41,7 @@ func _process(_delta: float) -> void:
     if not _preload_requested or _gameplay_scene != null or _preload_failed:
         return
     var progress: Array = []
-    var status: ResourceLoader.ThreadLoadStatus = ResourceLoader.load_threaded_get_status(GAMEPLAY_SCENE_PATH, progress)
+    var status: int = ResourceLoader.load_threaded_get_status(GAMEPLAY_SCENE_PATH, progress)
     if not progress.is_empty():
         var ratio: float = clampf(float(progress[0]), 0.0, 1.0)
         _progress_bar.value = PRELOAD_PROGRESS_START + PRELOAD_PROGRESS_SPAN * ratio
@@ -107,7 +107,7 @@ func _obtain_gameplay_scene() -> PackedScene:
     if _preload_requested and not _preload_failed:
         while _gameplay_scene == null and not _preload_failed:
             var progress: Array = []
-            var status: ResourceLoader.ThreadLoadStatus = ResourceLoader.load_threaded_get_status(GAMEPLAY_SCENE_PATH, progress)
+            var status: int = ResourceLoader.load_threaded_get_status(GAMEPLAY_SCENE_PATH, progress)
             if status == ResourceLoader.THREAD_LOAD_LOADED:
                 var resource: Resource = ResourceLoader.load_threaded_get(GAMEPLAY_SCENE_PATH)
                 _gameplay_scene = resource as PackedScene
