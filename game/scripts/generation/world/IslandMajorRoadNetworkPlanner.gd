@@ -84,6 +84,7 @@ func plan(
             used_edges[_edge_key(from_index, best_to)] = true
             alternatives += 1
 
+    var gateway_sources: Dictionary = {}
     var gateway_sides: Array[StringName] = [&"west", &"east", &"north", &"south"]
     for side_index: int in range(gateway_sides.size()):
         var side: StringName = gateway_sides[side_index]
@@ -127,20 +128,156 @@ func plan(
                 profile
             ):
                 return {"ok": false, "failure_reason": "island_boundary_gateway_route_failed:%s" % String(side), "road_segments": []}
+        gateway_sources[route_id] = source
 
     if road_segments.is_empty():
         return {"ok": false, "failure_reason": "island_major_road_network_empty", "road_segments": []}
-    for road: Dictionary in road_segments:
-        var route: String = String(road.get("route_id", ""))
-        var gateway_route: bool = route.begins_with("route.island.gateway.")
-        var paved: bool = gateway_route or road.get("road_class", &"") == &"primary"
-        var four_lane: bool = gateway_route
-        var dirt: bool = not paved and route.hash() % 3 == 0
-        road["road_type"] = &"four_lane" if four_lane else (&"two_lane" if paved else (&"dirt" if dirt else &"gravel"))
-        road["lane_count"] = 4 if four_lane else (2 if paved else 1)
-        road["surface_family"] = &"paved_centerline" if paved else (&"rural_dirt" if dirt else &"rural_gravel")
-        road["paint_centerline"] = paved
+    road_segments = _apply_road_hierarchy(
+        road_segments,
+        settlements,
+        gateway_sources,
+        primary_width,
+        secondary_width
+    )
     return {"ok": true, "failure_reason": "", "road_segments": road_segments}
+
+func _apply_road_hierarchy(
+    roads: Array[Dictionary],
+    settlements: Array[Dictionary],
+    gateway_sources: Dictionary,
+    primary_width: int,
+    secondary_width: int
+) -> Array[Dictionary]:
+    var result: Array[Dictionary] = []
+    var freeway_sides: Dictionary = _freeway_gateway_sides(settlements)
+    var gateway_progress: Dictionary = {}
+
+    for source_road: Dictionary in roads:
+        var route_id: String = String(source_road.get("route_id", ""))
+        if route_id.begins_with("route.island.gateway."):
+            var side: StringName = StringName(route_id.substr("route.island.gateway.".length()))
+            if not freeway_sides.has(side):
+                result.append(_styled_road(source_road, &"two_lane", secondary_width))
+                continue
+
+            var source_settlement: Dictionary = gateway_sources.get(route_id, {})
+            var approach_length: int = maxi(96, int(source_settlement.get("influence_radius", 160)))
+            var traveled: int = int(gateway_progress.get(route_id, 0))
+            var segment_length: int = _road_segment_length(source_road)
+            var approach_remaining: int = approach_length - traveled
+
+            if approach_remaining <= 0:
+                result.append(_styled_road(source_road, &"four_lane", primary_width))
+            elif approach_remaining >= segment_length:
+                result.append(_styled_road(source_road, &"two_lane", secondary_width))
+            else:
+                result.append_array(_split_gateway_transition(
+                    source_road,
+                    approach_remaining,
+                    primary_width,
+                    secondary_width
+                ))
+            gateway_progress[route_id] = traveled + segment_length
+            continue
+
+        var road_class: StringName = StringName(source_road.get("road_class", &""))
+        if road_class == &"primary":
+            # Towns and one-light crossroads are served by ordinary paved two-lane roads.
+            result.append(_styled_road(source_road, &"two_lane", secondary_width))
+        elif route_id.begins_with("route.island.loop."):
+            # Alternate rural links behave like local/farm access rather than another county highway.
+            result.append(_styled_road(source_road, &"dirt", secondary_width))
+        else:
+            # The settlement tree is the dependable secondary rural network.
+            result.append(_styled_road(source_road, &"gravel", secondary_width))
+
+    return result
+
+func _freeway_gateway_sides(settlements: Array[Dictionary]) -> Dictionary:
+    var smalltowns: Array[Dictionary] = []
+    for settlement: Dictionary in settlements:
+        if StringName(settlement.get("kind", &"")) == &"smalltown":
+            smalltowns.append(settlement)
+    if smalltowns.size() < 2:
+        return {&"west": true, &"east": true}
+
+    smalltowns.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
+        return String(a.get("id", "")) < String(b.get("id", ""))
+    )
+    var first: Vector2i = smalltowns[0].get("center", INVALID_CELL)
+    var second: Vector2i = smalltowns[1].get("center", INVALID_CELL)
+    var dx: int = absi(second.x - first.x)
+    var dy: int = absi(second.y - first.y)
+    if dx >= dy:
+        return {&"west": true, &"east": true}
+    return {&"north": true, &"south": true}
+
+func _split_gateway_transition(
+    source_road: Dictionary,
+    approach_length: int,
+    primary_width: int,
+    secondary_width: int
+) -> Array[Dictionary]:
+    var result: Array[Dictionary] = []
+    var start: Vector2i = source_road.get("start", INVALID_CELL)
+    var finish: Vector2i = source_road.get("end", INVALID_CELL)
+    var split_cell: Vector2i = _point_along_cardinal_segment(start, finish, approach_length)
+    if split_cell == INVALID_CELL or split_cell == start or split_cell == finish:
+        result.append(_styled_road(source_road, &"two_lane", secondary_width))
+        return result
+
+    var road_id: String = String(source_road.get("road_id", "road.island.gateway"))
+    var approach: Dictionary = source_road.duplicate(true)
+    approach["road_id"] = "%s.approach" % road_id
+    approach["end"] = split_cell
+    result.append(_styled_road(approach, &"two_lane", secondary_width))
+
+    var freeway: Dictionary = source_road.duplicate(true)
+    freeway["road_id"] = "%s.freeway" % road_id
+    freeway["start"] = split_cell
+    result.append(_styled_road(freeway, &"four_lane", primary_width))
+    return result
+
+func _styled_road(source_road: Dictionary, road_type: StringName, width: int) -> Dictionary:
+    var road: Dictionary = source_road.duplicate(true)
+    road["road_type"] = road_type
+    road["width"] = width
+    if road_type == &"four_lane":
+        road["lane_count"] = 4
+        road["surface_family"] = &"paved_centerline"
+        road["paint_centerline"] = true
+    elif road_type == &"two_lane":
+        road["lane_count"] = 2
+        road["surface_family"] = &"paved_centerline"
+        road["paint_centerline"] = true
+    elif road_type == &"dirt":
+        road["lane_count"] = 1
+        road["surface_family"] = &"rural_dirt"
+        road["paint_centerline"] = false
+    else:
+        road["road_type"] = &"gravel"
+        road["lane_count"] = 1
+        road["surface_family"] = &"rural_gravel"
+        road["paint_centerline"] = false
+    return road
+
+func _road_segment_length(road: Dictionary) -> int:
+    var start: Vector2i = road.get("start", INVALID_CELL)
+    var finish: Vector2i = road.get("end", INVALID_CELL)
+    if start == INVALID_CELL or finish == INVALID_CELL:
+        return 0
+    return absi(finish.x - start.x) + absi(finish.y - start.y)
+
+func _point_along_cardinal_segment(start: Vector2i, finish: Vector2i, distance: int) -> Vector2i:
+    if distance <= 0 or start == INVALID_CELL or finish == INVALID_CELL:
+        return INVALID_CELL
+    if start.x == finish.x:
+        var direction_y: int = 1 if finish.y > start.y else -1
+        return Vector2i(start.x, start.y + direction_y * distance)
+    if start.y == finish.y:
+        var direction_x: int = 1 if finish.x > start.x else -1
+        return Vector2i(start.x + direction_x * distance, start.y)
+    return INVALID_CELL
 
 func _edge_key(a: int, b: int) -> String:
     return "%d:%d" % [mini(a, b), maxi(a, b)]
