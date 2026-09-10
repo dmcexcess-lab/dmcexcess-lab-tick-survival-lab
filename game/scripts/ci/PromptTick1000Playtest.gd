@@ -5,6 +5,7 @@ const Fixture = preload("res://scripts/demo/GeneratedIslandCritiqueFixture.gd")
 const TARGET_TICK: int = 1000
 const MAX_ACTION_ATTEMPTS: int = 4000
 const MAX_SETTLE_FRAMES: int = 240
+const MAX_STARTUP_FRAMES: int = 1200
 const LONG_ACTION_USEC: int = 100000
 const VERY_LONG_ACTION_USEC: int = 500000
 
@@ -20,29 +21,52 @@ func _run() -> void:
         _finish({})
         return
 
-    var main: Node = packed.instantiate()
-    root.add_child(main)
-    current_scene = main
+    var startup: Node = packed.instantiate()
+    root.add_child(startup)
+    current_scene = startup
     await process_frame
 
-    var controller: PlayerActionController = _find_controller(main)
-    var world: WorldState = main.get("_world") as WorldState
-    var kernel: TickKernel = main.get("_kernel") as TickKernel
-    var perception: ObserverPerceptionService = main.get("_perception") as ObserverPerceptionService
-    var world_view: TacticalRendererStack = main.get("_world_view") as TacticalRendererStack
+    var new_game: Button = _find_button(startup, "NEW GAME")
+    _check(new_game != null, "production NEW GAME button exists")
+    if new_game == null:
+        _finish({})
+        return
+    new_game.emit_signal("pressed")
+
+    var gameplay: Node = null
+    var startup_frames: int = 0
+    while startup_frames < MAX_STARTUP_FRAMES:
+        startup_frames += 1
+        await process_frame
+        var candidate: Node = current_scene
+        if candidate != null and candidate != startup and candidate.scene_file_path == "res://gameplay.tscn":
+            gameplay = candidate
+            if bool(gameplay.get("_session_started")):
+                break
+    _check(gameplay != null, "NEW GAME transitions to production gameplay scene")
+    _check(gameplay != null and bool(gameplay.get("_session_started")), "production gameplay boot completes")
+    if gameplay == null or not bool(gameplay.get("_session_started")):
+        _finish({"startup_frames": startup_frames})
+        return
+
+    var controller: PlayerActionController = _find_controller(gameplay)
+    var world: WorldState = gameplay.get("_world") as WorldState
+    var kernel: TickKernel = gameplay.get("_kernel") as TickKernel
+    var perception: ObserverPerceptionService = gameplay.get("_perception") as ObserverPerceptionService
+    var world_view: TacticalRendererStack = gameplay.get("_world_view") as TacticalRendererStack
     _check(controller != null, "production PlayerActionController exists")
     _check(world != null, "production WorldState exists")
     _check(kernel != null, "production TickKernel exists")
     _check(perception != null, "production perception exists")
     _check(world_view != null, "production renderer exists")
     if controller == null or world == null or kernel == null or perception == null or world_view == null:
-        _finish({})
+        _finish({"startup_frames": startup_frames})
         return
 
     var initial: WorldPlacement = world.placement(Fixture.PLAYER_ID)
     _check(initial != null, "player placement exists at playtest start")
     if initial == null:
-        _finish({})
+        _finish({"startup_frames": startup_frames})
         return
 
     var start_tick: int = kernel.world_tick()
@@ -82,12 +106,13 @@ func _run() -> void:
             failures.append("player placement disappeared before action %d" % attempts)
             break
         var tick_before: int = kernel.world_tick()
+        var submitted_intent: StringName = next_intent
         var action_start_usec: int = Time.get_ticks_usec()
-        controller.submit_intent(next_intent)
+        controller.submit_intent(submitted_intent)
 
         if not controller.is_busy():
             rejected_actions += 1
-            if next_intent == Intents.FORWARD:
+            if submitted_intent == Intents.FORWARD or submitted_intent == Intents.BACKWARD:
                 blocked_moves += 1
                 consecutive_blocked += 1
                 next_intent = Intents.TURN_RIGHT
@@ -124,7 +149,7 @@ func _run() -> void:
         max_anchor.y = maxi(max_anchor.y, after.anchor.y)
         unique_cells[after.anchor] = true
 
-        if next_intent == Intents.FORWARD:
+        if submitted_intent == Intents.FORWARD or submitted_intent == Intents.BACKWARD:
             if after.anchor != before.anchor:
                 moves += 1
                 consecutive_blocked = 0
@@ -133,7 +158,7 @@ func _run() -> void:
                 blocked_moves += 1
                 consecutive_blocked += 1
                 next_intent = Intents.TURN_RIGHT
-        elif next_intent == Intents.TURN_RIGHT:
+        elif submitted_intent == Intents.TURN_RIGHT or submitted_intent == Intents.TURN_LEFT:
             turns += 1
             next_intent = Intents.FORWARD
 
@@ -141,13 +166,12 @@ func _run() -> void:
             failures.append("accepted action %d did not advance authoritative WHEN" % attempts)
             break
 
-        # If the local geometry traps the simple explorer, deliberately vary the
-        # action rather than manufacturing progress by directly advancing WHEN.
+        # Four failed headings means the simple explorer is locally boxed in.
+        # Try a real backward action rather than manufacturing progress by
+        # directly mutating placement or advancing WHEN.
         if consecutive_blocked >= 4:
             next_intent = Intents.BACKWARD
             consecutive_blocked = 0
-        elif next_intent == Intents.BACKWARD:
-            next_intent = Intents.TURN_LEFT
 
     var wall_usec: int = Time.get_ticks_usec() - wall_start_usec
     var final_placement: WorldPlacement = world.placement(Fixture.PLAYER_ID)
@@ -167,6 +191,7 @@ func _run() -> void:
 
     var end_anchor: Vector2i = start_anchor if final_placement == null else final_placement.anchor
     var metrics: Dictionary = {
+        "startup_frames": startup_frames,
         "start_tick": start_tick,
         "final_tick": final_tick,
         "attempts": attempts,
@@ -193,6 +218,15 @@ func _run() -> void:
         "max_luminance": float(final_light_view.get("max_luminance", 0.0)),
     }
     _finish(metrics)
+
+func _find_button(node: Node, text: String) -> Button:
+    if node is Button and (node as Button).text == text:
+        return node as Button
+    for child: Node in node.get_children():
+        var found: Button = _find_button(child, text)
+        if found != null:
+            return found
+    return null
 
 func _find_controller(node: Node) -> PlayerActionController:
     if node is PlayerActionController:
