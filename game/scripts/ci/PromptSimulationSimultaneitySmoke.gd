@@ -122,25 +122,25 @@ func _test_distinct_moves_publish_atomically() -> void:
     _place_actor(fixture, "actor_a", Vector2i(1, 2), Facing.Value.EAST)
     _place_actor(fixture, "actor_b", Vector2i(4, 2), Facing.Value.EAST)
 
-    var changed_observation: Dictionary = {}
-    var committed_observation: Dictionary = {}
+    var changed_observations: Array[Dictionary] = []
+    var committed_observations: Array[Dictionary] = []
     var batch_change_counts: Array[int] = []
     world.changed.connect(func(_change):
-        if changed_observation.is_empty():
-            changed_observation = {
+        if changed_observations.is_empty():
+            changed_observations.append({
                 "a": world.placement("actor_a").anchor,
                 "b": world.placement("actor_b").anchor,
-            }
+            })
     )
     world.batch_changed.connect(func(batch):
         batch_change_counts.append(int(batch.change_count))
     )
     movement.movement_committed.connect(func(_actor_id, _serial, _action_type, _anchor, _facing):
-        if committed_observation.is_empty():
-            committed_observation = {
+        if committed_observations.is_empty():
+            committed_observations.append({
                 "a": world.placement("actor_a").anchor,
                 "b": world.placement("actor_b").anchor,
-            }
+            })
     )
 
     var result_a: MovementActionResult = movement.request_step_forward("actor_a")
@@ -151,13 +151,15 @@ func _test_distinct_moves_publish_atomically() -> void:
     _check(world.placement("actor_a").anchor == Vector2i(2, 2), "distinct actor_a reaches destination")
     _check(world.placement("actor_b").anchor == Vector2i(5, 2), "distinct actor_b reaches destination")
     _check(
-        changed_observation.get("a", Vector2i.ZERO) == Vector2i(2, 2) \
-            and changed_observation.get("b", Vector2i.ZERO) == Vector2i(5, 2),
+        changed_observations.size() == 1 \
+            and changed_observations[0].get("a", Vector2i.ZERO) == Vector2i(2, 2) \
+            and changed_observations[0].get("b", Vector2i.ZERO) == Vector2i(5, 2),
         "first placement change observer sees complete same-WHEN occupancy batch"
     )
     _check(
-        committed_observation.get("a", Vector2i.ZERO) == Vector2i(2, 2) \
-            and committed_observation.get("b", Vector2i.ZERO) == Vector2i(5, 2),
+        committed_observations.size() == 1 \
+            and committed_observations[0].get("a", Vector2i.ZERO) == Vector2i(2, 2) \
+            and committed_observations[0].get("b", Vector2i.ZERO) == Vector2i(5, 2),
         "first movement signal sees complete same-WHEN occupancy batch"
     )
     _check(batch_change_counts == [2], "distinct movement commits as one two-change world batch")
