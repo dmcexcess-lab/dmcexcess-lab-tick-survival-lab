@@ -2,135 +2,85 @@
 
 Read this file first, then `README_SOPS.md`. For the next distinct repository operation, follow the normal SOP from this recorded final head.
 
-## Current checkpoint — ISLAND ROAD HIERARCHY REALISM CLOSED — 2026-09-09
+## Current checkpoint — WALK FATIGUE POLICY CLOSED — 2026-09-09
 
-The core feature roadmap remains closed and the game remains a beta candidate. This bounded operation changed the **meaning/classification of the existing island road network** so the map reads more like a believable hierarchy while preserving the generated settlement layout and route graph.
+The core feature roadmap remains closed and the game remains a beta candidate. This bounded balance/production repair fixes the ordinary WALK fatigue drain in the live movement-to-condition path.
 
-The user-directed target was:
+Owning production commit:
 
-- sparse 4-lane major trunks/freeways;
-- 2-lane paved routes through town/city centers;
-- gravel secondary/side roads;
-- dirt predominantly for rural/farm/home access;
-- preserve the existing settlement layout;
-- never regress to the historical “everything becomes gravel” failure.
+`3660521498aebf45d4986af803ebf9792625a492`
 
-Starting immutable repository tree recorded for this operation:
+Owning fully gated functional head:
 
-`07429fcdf6941e394cfa9423a6185886daa2e311`
-
-Owning production hierarchy commit:
-
-`fb956834f99ce7ba6d177e40e0bc0051d3a35b25`
-
-Owning fully gated functional/regression head:
-
-`d5c25ec8d9ff0b3583f8c7a33424f179270e220d`
+`eef3eb87a03c927361fa94e5121c755e659f2c4b`
 
 Documentation head immediately before this final context write:
 
-`7f1aa5fc1a592fc8be94fa4744549a9fb92dd464`
+`1451d54f55d296471ac11d57b476ff043898a770`
 
 ## Root cause
 
-`IslandMajorRoadNetworkPlanner.gd` already generated four road identities, but geography did not give them meaningful roles:
+The live `MovementConditionExertionService` adapter explicitly charged at least one fatigue point for every forward/backward WALK stride. Routine healthy walking therefore accumulated fatigue even though WALK is intended to be baseline locomotion.
 
-- all four island boundary gateway spokes were `four_lane` from a settlement center all the way to the coast;
-- non-primary rural routes selected gravel versus dirt from a route hash rather than from what the road served.
+The older `MovementExertionService` path is not the live System 34 adapter. It was deliberately left alone rather than creating a second competing exertion policy.
 
-The map renderer was already correctly displaying road metadata, and global-to-local projection already preserved `road_type`, `lane_count`, `surface_family` and centerline metadata. Therefore this was fixed in the production world planner instead of adding renderer/map special cases.
+## Implemented policy
 
-## Implemented geographic hierarchy
+`game/scripts/simulation/actors/condition/MovementConditionExertionService.gd` now applies these rules:
 
-`game/scripts/generation/world/IslandMajorRoadNetworkPlanner.gd` now generates the existing route graph first, then applies deterministic geographic road hierarchy.
+- healthy forward/backward WALK adds **0 fatigue**;
+- orange/mild physical pressure alone leaves WALK fatigue-free;
+- one severe physical pressure alone leaves WALK fatigue-free;
+- WALK becomes exertion only when at least **two severe physical burdens overlap**;
+- severe burden inputs are red-tier satiety, hydration, rest or comfort; fatigue already at 90+; and carry load above 100% capacity;
+- overburden alone therefore does not tax ordinary WALK, while overburden plus another severe burden can;
+- when WALK is taxing, its cost scales with terrain walk time and is at least 1;
+- RUN remains materially fatiguing and keeps its terrain/load scaling.
 
-### Major freeway axis
-
-- The broad axis joining the two generated `smalltown` centers determines the island’s major highway orientation.
-- Exactly two opposite gateway directions on that axis become the genuine freeway pair.
-- Each major gateway leaves its source settlement as an ordinary paved **2-lane approach**.
-- Outside the source settlement influence/approach distance, that same route widens once into a **4-lane paved trunk**.
-- If the widening point lands inside an existing cardinal segment, that segment is split collinearly into `.approach` and `.freeway` pieces. The path itself does not move.
-- The two perpendicular island gateways remain ordinary **2-lane paved roads**, preventing the old four-freeway-spokes look.
-
-### Settlement and rural roads
-
-- Primary routes serving a `smalltown` or `rural_crossroads` are paved **2-lane** roads.
-- Secondary settlement-tree links between rural hamlets are **gravel**. These form the dependable secondary rural network.
-- Secondary alternate/loop links between rural hamlets are **dirt**. These now read as local/farm/home-style rural access instead of being chosen by hash.
-
-Road surface contracts remain explicit:
-
-- `four_lane` -> 4 lanes, `paved_centerline`, painted centerline;
-- `two_lane` -> 2 lanes, `paved_centerline`, painted centerline;
-- `gravel` -> 1 lane, `rural_gravel`, no painted centerline;
-- `dirt` -> 1 lane, `rural_dirt`, no painted centerline.
-
-## Preserved boundaries
-
-This operation did **not**:
-
-- move or regenerate settlement centers;
-- change settlement kinds, influence radii or area-site identities;
-- replace the settlement connection tree;
-- change alternate-route destinations;
-- change gateway destinations;
-- replace terrain-aware routing;
-- change the map renderer;
-- change dirt-road traversal policy;
-- change vehicle movement;
-- change utility/power-pole generation;
-- change NPC/zombie timing, AI or performance;
-- change the previously closed same-WHEN movement simultaneity behavior.
-
-Utility pole generation is still somewhat imperfect but remains explicitly beta-acceptable unless the user promotes it again.
+This operation did **not** change health damage, max health, movement timing, collision, pathing, WHEN scheduling, same-WHEN simultaneity, vehicle movement, NPC/zombie behavior, or UI presentation.
 
 ## Verification
 
-Fresh prompt-local verifier pair for this operation:
+Fresh prompt-local verifier pair:
 
-- `game/scripts/ci/PromptRoadHierarchyRealismSmoke.gd`
-- `.github/workflows/prompt-road-hierarchy-realism.yml`
+- `game/scripts/ci/PromptWalkFatiguePolicySmoke.gd`
+- `.github/workflows/prompt-walk-fatigue-policy.yml`
 
-Permanent regression updated to own the new semantics:
+Verifier creation heads:
 
-- `game/scripts/ci/IslandRoadHierarchySmoke.gd`
+- `5545258c9dea3b9ab2f81c1953796914d9fb28e9` — smoke
+- `eef3eb87a03c927361fa94e5121c755e659f2c4b` — workflow / fully gated functional head
 
-The road gates verify:
+The focused smoke exercises the real `MovementActionService -> movement_exertion_resolved -> MovementConditionExertionService -> ActorConditionService` path and verifies:
 
-- all four island gateway routes remain;
-- exactly two opposite gateways contain 4-lane freeway trunks;
-- major freeway routes begin at their settlement as 2-lane and widen only once;
-- the perpendicular gateway pair remains entirely 2-lane;
-- town/crossroads routes remain paved 2-lane;
-- gravel secondary rural routes exist;
-- dirt rural/local routes exist and terminate at rural hamlets;
-- all four road types keep correct lane/surface/paint metadata;
-- every generated settlement remains attached to the road graph;
-- every route remains geometrically contiguous after freeway transition splitting;
-- the road network cannot collapse to all gravel.
+- repeated healthy WALK adds zero fatigue and does not alter health;
+- orange pressure adds no WALK fatigue;
+- one red physical pressure adds no WALK fatigue;
+- two red physical pressures make WALK exertion;
+- overburden alone adds no WALK fatigue;
+- overburden plus one red pressure makes WALK exertion;
+- healthy RUN still increases fatigue.
 
-Focused workflow results:
+Focused workflow:
 
-- run `34434454261` on `e2254f18b73e6351a7a1e193e1a982f60c4294bf` — **SUCCESS** after project class-cache import; prompt acceptance passed.
-- run `34434543382` on `d5c25ec8d9ff0b3583f8c7a33424f179270e220d` — **SUCCESS**; both prompt acceptance and permanent road regression passed.
+- run `34439671502` on `eef3eb87a03c927361fa94e5121c755e659f2c4b` — **SUCCESS**.
 
-An earlier standalone smoke launch failed before assertions because bare Godot `--script` execution had not built the global class cache. The normal Web export was already green, proving production parsed. The prompt workflow was corrected to import the project once before running standalone smokes; no production road behavior was weakened to satisfy the harness.
+Pages/Web publication proof:
 
-Pages/Web proof during this operation:
+- run `34439671427` on functional head `eef3eb87a03c927361fa94e5121c755e659f2c4b` — **SUCCESS**;
+- run `34447830031` on documentation head `1451d54f55d296471ac11d57b476ff043898a770` — Web build, artifact upload and deploy **SUCCESS**.
 
-- run `34434334637` on `75995be1f2ddaa8101285b03b9b899bb7c090c8f` — Web build **SUCCESS**, artifact upload **SUCCESS**, deploy **SUCCESS** with the production hierarchy code present.
-- Later Pages runs were superseded/cancelled by subsequent direct-to-main verifier/documentation writes under the repository’s Pages concurrency policy. After this final context commit, verify the newest exact final-head Pages run read-only; no further repository writes are permitted in this operation.
+After this final context commit, verify the exact final-head Pages run read-only. No further repository writes are permitted in this operation.
 
 ## Documentation
 
 Operation-specific closure ledger:
 
-- `CHANGELOG_ROAD_HIERARCHY_REALISM.md`
+- `CHANGELOG_WALK_FATIGUE_POLICY.md`
 
 Documentation commit immediately before this final context write:
 
-`7f1aa5fc1a592fc8be94fa4744549a9fb92dd464`
+`1451d54f55d296471ac11d57b476ff043898a770`
 
 ## Established systems to preserve
 
@@ -138,20 +88,21 @@ Unless concrete evidence requires a bounded repair, preserve:
 
 - the single authoritative WHEN clock;
 - same-WHEN deterministic movement batching and decision-pause semantics;
+- ordinary WALK being fatigue-free under normal/single-pressure conditions;
+- RUN remaining the routine fatiguing locomotion mode;
 - current settlement-first procedural island, building-derived population and streaming architecture;
-- the geographic road hierarchy described above;
-- dirt-road traversability and painted/unpainted road material contracts;
-- observer-scoped infected/survivor perception and existing survivor/infected population ownership;
+- current geographic road hierarchy and dirt/gravel/paved contracts;
+- observer-scoped infected/survivor perception and existing population ownership;
 - day/night, generated weather, physical lighting and night-only streetlights;
 - power/water infrastructure and current roadside pole behavior;
 - inventory/equipment/sustainment/crafting/skills/doors/windows/utilities/vehicles/combat systems already closed;
 - dedicated vehicle rendering without the retired purple diagnostic artifact;
 - no generated rivers/wastewater/sewer/septic resurrection;
-- no routine broad seed matrices for ordinary bounded prompt closure.
+- no routine broad seed matrices or standing gameplay gates for ordinary bounded prompt closure.
 
 ## Known beta observations still available for later bounded polish
 
-Not part of this road operation:
+Not part of this WALK operation:
 
 - zombie/infected presence can cause significant slowdown; the `ZOMBIES` overlay is intentional diagnostic context, not itself the performance bug;
 - some delegated/world interactions can still show `Unknown` as a top-HUD action label;
@@ -161,15 +112,13 @@ Not part of this road operation:
 
 ## NEXT OPERATION — wait for the next explicit bounded target
 
-The road-hierarchy realism pass is closed. Do not broaden it automatically into new road geometry, interchanges, traffic simulation, pole cleanup or zombie performance work.
+The WALK fatigue policy pass is closed. Do not broaden it automatically into stamina-system redesign, sprint tuning, condition rebalance, NPC fatigue, health changes, or zombie performance work.
 
 For the next **code** operation, retire this prompt-owned verifier pair first:
 
-- `game/scripts/ci/PromptRoadHierarchyRealismSmoke.gd`
-- `.github/workflows/prompt-road-hierarchy-realism.yml`
-
-Keep the permanent `game/scripts/ci/IslandRoadHierarchySmoke.gd` regression.
+- `game/scripts/ci/PromptWalkFatiguePolicySmoke.gd`
+- `.github/workflows/prompt-walk-fatigue-policy.yml`
 
 Then create a fresh prompt-local verifier for only the newly requested behavior and follow the normal direct-to-main closure SOP.
 
-This `README_CONTEXT.md` commit is the **FINAL repository write for the island road hierarchy realism operation**. After it lands, perform read-only exact-head and CI/Pages verification only.
+This `README_CONTEXT.md` commit is the **FINAL repository write for the WALK fatigue policy operation**. After it lands, perform read-only exact-head and CI/Pages verification only.
