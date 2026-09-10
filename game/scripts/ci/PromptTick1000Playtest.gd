@@ -41,11 +41,11 @@ func _run() -> void:
         var candidate: Node = current_scene
         if candidate != null and candidate != startup and candidate.scene_file_path == "res://gameplay.tscn":
             gameplay = candidate
-            if bool(gameplay.get("_session_started")):
+            if gameplay.get("_session_started") == true:
                 break
     _check(gameplay != null, "NEW GAME transitions to production gameplay scene")
-    _check(gameplay != null and bool(gameplay.get("_session_started")), "production gameplay boot completes")
-    if gameplay == null or not bool(gameplay.get("_session_started")):
+    _check(gameplay != null and gameplay.get("_session_started") == true, "production gameplay boot completes")
+    if gameplay == null or gameplay.get("_session_started") != true:
         _finish({"startup_frames": startup_frames})
         return
 
@@ -185,8 +185,8 @@ func _run() -> void:
     if final_placement != null:
         _check(perception.is_visible(final_placement.anchor), "player remains visible at tick 1000")
     _check(int(final_perception.get("visible", 0)) > 1, "visible field remains populated at tick 1000")
-    _check(bool(final_light_view.get("multiply_texture_ready", false)), "multiply lighting texture remains ready")
-    _check(bool(final_light_view.get("glow_texture_ready", false)), "glow lighting texture remains ready")
+    _check(final_light_view.get("multiply_texture_ready", false) == true, "multiply lighting texture remains ready")
+    _check(final_light_view.get("glow_texture_ready", false) == true, "glow lighting texture remains ready")
     _check(float(final_light_view.get("max_luminance", 0.0)) > 0.001, "lighting remains nonblack at tick 1000")
 
     var end_anchor: Vector2i = start_anchor if final_placement == null else final_placement.anchor
