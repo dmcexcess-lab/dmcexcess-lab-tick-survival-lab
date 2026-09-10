@@ -5,6 +5,8 @@ const RequestClass = preload("res://scripts/generation/world/GlobalWorldGenerati
 const ProfilesClass = preload("res://scripts/generation/world/GlobalWorldProfileCatalog.gd")
 const IslandPlannerClass = preload("res://scripts/generation/world/IslandWorldPlanner.gd")
 
+const INVALID_CELL := Vector2i(-999999, -999999)
+
 var failures: Array[String] = []
 
 func _initialize() -> void:
@@ -14,27 +16,35 @@ func _initialize() -> void:
         FixtureClass.BOUNDS,
         ProfilesClass.TEMPERATE_ISLAND_REGION
     )
-    var plan: GeneratedGlobalWorldPlan = IslandPlannerClass.new().generate(request)
+    var plan: Variant = IslandPlannerClass.new().generate(request)
     _check(plan != null and plan.is_generated(), "procedural island generates for road hierarchy regression")
     if plan != null and plan.is_generated():
-        _test_destination_based_hierarchy(plan)
+        _test_geographic_hierarchy(plan)
+        _test_settlement_connectivity(plan)
     _finish()
 
-func _test_destination_based_hierarchy(plan: GeneratedGlobalWorldPlan) -> void:
-    var routes: Dictionary = {}
-    for road: Dictionary in plan.road_segments:
-        var route_id: String = String(road.get("route_id", ""))
-        _check(not route_id.is_empty(), "every island road segment has a route id")
-        if route_id.is_empty():
-            continue
-        var route_segments: Array = routes.get(route_id, [])
-        route_segments.append(road)
-        routes[route_id] = route_segments
-
+func _test_geographic_hierarchy(plan: Variant) -> void:
+    var routes: Dictionary = _routes(plan)
+    var freeway_sides: Dictionary = _expected_freeway_sides(plan.settlements)
+    var type_counts: Dictionary = {
+        &"four_lane": 0,
+        &"two_lane": 0,
+        &"gravel": 0,
+        &"dirt": 0,
+    }
     var gateway_routes: int = 0
+    var freeway_gateway_routes: int = 0
+    var ordinary_gateway_routes: int = 0
     var paved_settlement_routes: int = 0
-    var rural_settlement_routes: int = 0
-    var alternate_routes: int = 0
+    var gravel_rural_routes: int = 0
+    var dirt_rural_routes: int = 0
+
+    for road: Dictionary in plan.road_segments:
+        var road_type: StringName = StringName(road.get("road_type", &""))
+        _check(type_counts.has(road_type), "road uses a supported hierarchy type: %s" % String(road.get("road_id", "")))
+        if type_counts.has(road_type):
+            type_counts[road_type] = int(type_counts[road_type]) + 1
+        _check(_surface_contract_is_valid(road), "road metadata matches its physical hierarchy: %s" % String(road.get("road_id", "")))
 
     for route_value: Variant in routes.keys():
         var route_id: String = String(route_value)
@@ -42,94 +52,183 @@ func _test_destination_based_hierarchy(plan: GeneratedGlobalWorldPlan) -> void:
         _check(not segments.is_empty(), "route retains physical segments: %s" % route_id)
         if segments.is_empty():
             continue
-        var first_segment: Dictionary = segments[0]
-        var road_type: StringName = StringName(first_segment.get("road_type", &""))
-        var road_class: StringName = StringName(first_segment.get("road_class", &""))
-        _check(_route_metadata_is_consistent(segments, road_type, road_class), "route metadata is consistent: %s" % route_id)
+        _check(_route_is_contiguous(segments), "route remains contiguous after hierarchy styling: %s" % route_id)
 
         if route_id.begins_with("route.island.gateway."):
             gateway_routes += 1
-            _check(road_class == &"primary", "gateway remains primary: %s" % route_id)
-            _check(road_type == &"four_lane", "gateway remains four-lane: %s" % route_id)
-            _check(_all_segments_match_surface(segments, 4, &"paved_centerline", true), "gateway retains four-lane paved material contract: %s" % route_id)
+            var side: StringName = StringName(route_id.substr("route.island.gateway.".length()))
+            _check(_all_class(segments, &"primary"), "gateway remains primary: %s" % route_id)
+            if freeway_sides.has(side):
+                freeway_gateway_routes += 1
+                _check(StringName(segments[0].get("road_type", &"")) == &"two_lane", "freeway gateway begins as a two-lane settlement approach: %s" % route_id)
+                _check(_contains_type(segments, &"four_lane"), "freeway gateway contains a four-lane trunk: %s" % route_id)
+                _check(_single_forward_freeway_transition(segments), "freeway gateway widens once outside the settlement approach: %s" % route_id)
+            else:
+                ordinary_gateway_routes += 1
+                _check(_all_type(segments, &"two_lane"), "perpendicular gateway stays two-lane: %s" % route_id)
             continue
 
-        var endpoints: Array[Vector2i] = _route_endpoint_cells(segments)
-        _check(endpoints.size() == 2, "settlement route has exactly two physical endpoints: %s" % route_id)
-        if endpoints.size() != 2:
-            continue
-
-        var endpoint_kinds: Array[StringName] = []
-        for endpoint: Vector2i in endpoints:
-            var kind: StringName = _settlement_kind_at(plan, endpoint)
-            if kind != &"":
-                endpoint_kinds.append(kind)
-        _check(endpoint_kinds.size() == 2, "non-gateway route terminates at two settlements: %s" % route_id)
-        if endpoint_kinds.size() != 2:
-            continue
-
-        var requires_pavement: bool = _requires_paved_access(endpoint_kinds[0]) or _requires_paved_access(endpoint_kinds[1])
-        if requires_pavement:
+        var road_class: StringName = StringName(segments[0].get("road_class", &""))
+        if road_class == &"primary":
             paved_settlement_routes += 1
-            _check(road_class == &"primary", "town/crossroads route is primary: %s" % route_id)
-            _check(road_type == &"two_lane", "town/crossroads route is paved two-lane: %s" % route_id)
-            _check(_all_segments_match_surface(segments, 2, &"paved_centerline", true), "town/crossroads route retains paved material contract: %s" % route_id)
+            _check(_all_type(segments, &"two_lane"), "town/crossroads route is paved two-lane: %s" % route_id)
+            _check(_route_has_paved_destination(plan, segments), "primary two-lane route serves a town or crossroads: %s" % route_id)
+        elif route_id.begins_with("route.island.loop."):
+            dirt_rural_routes += 1
+            _check(_all_type(segments, &"dirt"), "alternate rural/local route is dirt: %s" % route_id)
+            _check(_route_endpoints_are_rural_hamlets(plan, segments), "dirt route remains rural/farm/home access: %s" % route_id)
         else:
-            rural_settlement_routes += 1
-            _check(road_class == &"secondary", "rural-to-rural route is secondary: %s" % route_id)
-            _check(road_type == &"gravel" or road_type == &"dirt", "only rural-to-rural route may be unpaved: %s" % route_id)
-            var expected_surface: StringName = &"rural_dirt" if road_type == &"dirt" else &"rural_gravel"
-            _check(_all_segments_match_surface(segments, 1, expected_surface, false), "rural-to-rural route retains one-lane unpaved contract: %s" % route_id)
+            gravel_rural_routes += 1
+            _check(_all_type(segments, &"gravel"), "settlement-tree rural route is gravel: %s" % route_id)
+            _check(_route_endpoints_are_rural_hamlets(plan, segments), "gravel secondary route serves rural hamlets: %s" % route_id)
 
-        if route_id.begins_with("route.island.loop."):
-            alternate_routes += 1
+    _check(gateway_routes == 4, "island retains four gateway routes")
+    _check(freeway_gateway_routes == 2, "exactly two opposite gateways form the sparse freeway axis")
+    _check(ordinary_gateway_routes == 2, "the perpendicular gateway pair remains ordinary two-lane")
+    _check(paved_settlement_routes > 0, "reference island retains paved town/crossroads routes")
+    _check(gravel_rural_routes > 0, "reference island retains gravel secondary rural routes")
+    _check(dirt_rural_routes > 0, "reference island retains dirt rural/local routes")
+    _check(int(type_counts[&"four_lane"]) > 0, "four-lane trunk segments exist")
+    _check(int(type_counts[&"two_lane"]) > 0, "two-lane paved segments exist")
+    _check(int(type_counts[&"gravel"]) > 0, "gravel segments exist")
+    _check(int(type_counts[&"dirt"]) > 0, "dirt segments exist")
+    _check(int(type_counts[&"gravel"]) < plan.road_segments.size(), "road network never collapses to all gravel")
 
-    _check(gateway_routes == 4, "island retains four four-lane gateway routes")
-    _check(paved_settlement_routes > 0, "reference island has destination-driven paved settlement routes")
-    _check(rural_settlement_routes > 0, "reference island retains rural-to-rural gravel/dirt routes")
-    _check(alternate_routes > 0, "alternate settlement links participate in endpoint-based classification")
-
-func _route_endpoint_cells(segments: Array) -> Array[Vector2i]:
-    var degree: Dictionary = {}
-    for value: Variant in segments:
-        var segment: Dictionary = value
-        var start: Vector2i = segment.get("start", Vector2i(-999999, -999999))
-        var finish: Vector2i = segment.get("end", Vector2i(-999999, -999999))
-        degree[start] = int(degree.get(start, 0)) + 1
-        degree[finish] = int(degree.get(finish, 0)) + 1
-    var endpoints: Array[Vector2i] = []
-    for cell_value: Variant in degree.keys():
-        var cell: Vector2i = cell_value
-        if int(degree[cell]) == 1:
-            endpoints.append(cell)
-    return endpoints
-
-func _settlement_kind_at(plan: GeneratedGlobalWorldPlan, cell: Vector2i) -> StringName:
+func _test_settlement_connectivity(plan: Variant) -> void:
+    var settlement_centers: Dictionary = {}
     for settlement: Dictionary in plan.settlements:
-        if settlement.get("center", Vector2i(-999999, -999999)) == cell:
-            return StringName(settlement.get("kind", &""))
-    return &""
+        var center: Vector2i = settlement.get("center", INVALID_CELL)
+        _check(center != INVALID_CELL, "settlement retains a valid center")
+        if center != INVALID_CELL:
+            settlement_centers[center] = String(settlement.get("id", ""))
 
-func _requires_paved_access(kind: StringName) -> bool:
-    return kind == &"smalltown" or kind == &"rural_crossroads"
+    var touched: Dictionary = {}
+    for road: Dictionary in plan.road_segments:
+        var start: Vector2i = road.get("start", INVALID_CELL)
+        var finish: Vector2i = road.get("end", INVALID_CELL)
+        if settlement_centers.has(start):
+            touched[start] = true
+        if settlement_centers.has(finish):
+            touched[finish] = true
+    _check(touched.size() == settlement_centers.size(), "road hierarchy styling preserves every settlement connection")
 
-func _route_metadata_is_consistent(segments: Array, road_type: StringName, road_class: StringName) -> bool:
-    for value: Variant in segments:
-        var segment: Dictionary = value
-        if StringName(segment.get("road_type", &"")) != road_type:
-            return false
-        if StringName(segment.get("road_class", &"")) != road_class:
+func _routes(plan: Variant) -> Dictionary:
+    var routes: Dictionary = {}
+    for road: Dictionary in plan.road_segments:
+        var route_id: String = String(road.get("route_id", ""))
+        _check(not route_id.is_empty(), "every island road segment has a route id")
+        if route_id.is_empty():
+            continue
+        var segments: Array = routes.get(route_id, [])
+        segments.append(road)
+        routes[route_id] = segments
+    return routes
+
+func _expected_freeway_sides(settlements: Array[Dictionary]) -> Dictionary:
+    var smalltowns: Array[Dictionary] = []
+    for settlement: Dictionary in settlements:
+        if StringName(settlement.get("kind", &"")) == &"smalltown":
+            smalltowns.append(settlement)
+    _check(smalltowns.size() >= 2, "reference island retains two small towns")
+    if smalltowns.size() < 2:
+        return {&"west": true, &"east": true}
+    smalltowns.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
+        return String(a.get("id", "")) < String(b.get("id", ""))
+    )
+    var first: Vector2i = smalltowns[0].get("center", INVALID_CELL)
+    var second: Vector2i = smalltowns[1].get("center", INVALID_CELL)
+    if absi(second.x - first.x) >= absi(second.y - first.y):
+        return {&"west": true, &"east": true}
+    return {&"north": true, &"south": true}
+
+func _route_is_contiguous(segments: Array) -> bool:
+    for index: int in range(segments.size() - 1):
+        var finish: Vector2i = segments[index].get("end", INVALID_CELL)
+        var next_start: Vector2i = segments[index + 1].get("start", INVALID_CELL)
+        if finish != next_start:
             return false
     return true
 
-func _all_segments_match_surface(segments: Array, lane_count: int, surface_family: StringName, paint_centerline: bool) -> bool:
+func _single_forward_freeway_transition(segments: Array) -> bool:
+    var entered_freeway: bool = false
+    var transition_count: int = 0
     for value: Variant in segments:
         var segment: Dictionary = value
-        if int(segment.get("lane_count", 0)) != lane_count:
+        var road_type: StringName = StringName(segment.get("road_type", &""))
+        if road_type == &"four_lane":
+            if not entered_freeway:
+                entered_freeway = true
+                transition_count += 1
+            continue
+        if road_type != &"two_lane" or entered_freeway:
             return false
-        if StringName(segment.get("surface_family", &"")) != surface_family:
+    return entered_freeway and transition_count == 1
+
+func _surface_contract_is_valid(road: Dictionary) -> bool:
+    var road_type: StringName = StringName(road.get("road_type", &""))
+    var lanes: int = int(road.get("lane_count", 0))
+    var surface: StringName = StringName(road.get("surface_family", &""))
+    var centerline: bool = bool(road.get("paint_centerline", false))
+    match road_type:
+        &"four_lane":
+            return lanes == 4 and surface == &"paved_centerline" and centerline
+        &"two_lane":
+            return lanes == 2 and surface == &"paved_centerline" and centerline
+        &"gravel":
+            return lanes == 1 and surface == &"rural_gravel" and not centerline
+        &"dirt":
+            return lanes == 1 and surface == &"rural_dirt" and not centerline
+    return false
+
+func _route_has_paved_destination(plan: Variant, segments: Array) -> bool:
+    if segments.is_empty():
+        return false
+    var endpoints: Array[Vector2i] = [
+        segments[0].get("start", INVALID_CELL),
+        segments[segments.size() - 1].get("end", INVALID_CELL),
+    ]
+    for endpoint: Vector2i in endpoints:
+        var kind: StringName = _settlement_kind_at(plan, endpoint)
+        if kind == &"smalltown" or kind == &"rural_crossroads":
+            return true
+    return false
+
+func _route_endpoints_are_rural_hamlets(plan: Variant, segments: Array) -> bool:
+    if segments.is_empty():
+        return false
+    var endpoints: Array[Vector2i] = [
+        segments[0].get("start", INVALID_CELL),
+        segments[segments.size() - 1].get("end", INVALID_CELL),
+    ]
+    for endpoint: Vector2i in endpoints:
+        if _settlement_kind_at(plan, endpoint) != &"rural_hamlet":
             return false
-        if bool(segment.get("paint_centerline", false)) != paint_centerline:
+    return true
+
+func _settlement_kind_at(plan: Variant, cell: Vector2i) -> StringName:
+    for settlement: Dictionary in plan.settlements:
+        if settlement.get("center", INVALID_CELL) == cell:
+            return StringName(settlement.get("kind", &""))
+    return &""
+
+func _contains_type(segments: Array, expected: StringName) -> bool:
+    for value: Variant in segments:
+        var segment: Dictionary = value
+        if StringName(segment.get("road_type", &"")) == expected:
+            return true
+    return false
+
+func _all_type(segments: Array, expected: StringName) -> bool:
+    for value: Variant in segments:
+        var segment: Dictionary = value
+        if StringName(segment.get("road_type", &"")) != expected:
+            return false
+    return true
+
+func _all_class(segments: Array, expected: StringName) -> bool:
+    for value: Variant in segments:
+        var segment: Dictionary = value
+        if StringName(segment.get("road_class", &"")) != expected:
             return false
     return true
 
