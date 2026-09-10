@@ -1,0 +1,40 @@
+name: Prompt walk fatigue policy
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'game/scripts/simulation/actors/condition/MovementConditionExertionService.gd'
+      - 'game/scripts/ci/PromptWalkFatiguePolicySmoke.gd'
+      - '.github/workflows/prompt-walk-fatigue-policy.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  walk-fatigue-policy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Godot 4.7.1
+        shell: bash
+        run: |
+          set -euxo pipefail
+          curl -L -o godot.zip https://github.com/godotengine/godot-builds/releases/download/4.7.1-stable/Godot_v4.7.1-stable_linux.x86_64.zip
+          unzip -q godot.zip
+          chmod +x Godot_v4.7.1-stable_linux.x86_64
+
+      - name: Import project class cache
+        shell: bash
+        run: |
+          set -euxo pipefail
+          ./Godot_v4.7.1-stable_linux.x86_64 --headless --path "$GITHUB_WORKSPACE/game" --editor --quit
+
+      - name: Verify walk fatigue policy
+        shell: bash
+        run: |
+          set -euxo pipefail
+          ./Godot_v4.7.1-stable_linux.x86_64 --headless --path "$GITHUB_WORKSPACE/game" --script res://scripts/ci/PromptWalkFatiguePolicySmoke.gd
