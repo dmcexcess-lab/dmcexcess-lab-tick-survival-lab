@@ -14,17 +14,17 @@ jobs:
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
-      - name: Install Godot 4.7.1
+      - name: Install Godot 4.6.1
         run: |
           set -euxo pipefail
-          curl -L -o godot.zip https://github.com/godotengine/godot-builds/releases/download/4.7.1-stable/Godot_v4.7.1-stable_linux.x86_64.zip
+          curl -L -o godot.zip https://github.com/godotengine/godot-builds/releases/download/4.6.1-stable/Godot_v4.6.1-stable_linux.x86_64.zip
           unzip -q godot.zip
-          chmod +x Godot_v4.7.1-stable_linux.x86_64
+          chmod +x Godot_v4.6.1-stable_linux.x86_64
       - name: Import project class cache
         run: |
           set -euxo pipefail
-          ./Godot_v4.7.1-stable_linux.x86_64 --headless --path "$GITHUB_WORKSPACE/game" --editor --quit
+          ./Godot_v4.6.1-stable_linux.x86_64 --headless --path "$GITHUB_WORKSPACE/game" --editor --quit
       - name: Play production scene to tick 1000
         run: |
           set -euxo pipefail
-          ./Godot_v4.7.1-stable_linux.x86_64 --headless --path "$GITHUB_WORKSPACE/game" --script res://scripts/ci/PromptTick1000Playtest.gd
+          ./Godot_v4.6.1-stable_linux.x86_64 --headless --path "$GITHUB_WORKSPACE/game" --script res://scripts/ci/PromptTick1000Playtest.gd
