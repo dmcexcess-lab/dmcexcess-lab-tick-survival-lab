@@ -34,32 +34,30 @@ func _run() -> void:
     new_game.emit_signal("pressed")
 
     var gameplay: Node = null
+    var controller: PlayerActionController = null
+    var world: WorldState = null
+    var kernel: TickKernel = null
+    var perception: ObserverPerceptionService = null
+    var world_view: TacticalRendererStack = null
     var startup_frames: int = 0
     while startup_frames < MAX_STARTUP_FRAMES:
         startup_frames += 1
         await process_frame
         var candidate: Node = current_scene
-        if candidate != null and candidate != startup and candidate.scene_file_path == "res://gameplay.tscn":
-            gameplay = candidate
-            if gameplay.get("_session_started") == true:
-                break
-    _check(gameplay != null, "NEW GAME transitions to production gameplay scene")
-    _check(gameplay != null and gameplay.get("_session_started") == true, "production gameplay boot completes")
-    if gameplay == null or gameplay.get("_session_started") != true:
-        _finish({"startup_frames": startup_frames})
-        return
+        if candidate == null or candidate == startup or candidate.scene_file_path != "res://gameplay.tscn":
+            continue
+        gameplay = candidate
+        controller = _find_controller(gameplay)
+        world = gameplay.get("_world") as WorldState
+        kernel = gameplay.get("_kernel") as TickKernel
+        perception = gameplay.get("_perception") as ObserverPerceptionService
+        world_view = gameplay.get("_world_view") as TacticalRendererStack
+        if controller != null and controller.is_ready() and world != null and kernel != null and perception != null and world_view != null:
+            break
 
-    var controller: PlayerActionController = _find_controller(gameplay)
-    var world: WorldState = gameplay.get("_world") as WorldState
-    var kernel: TickKernel = gameplay.get("_kernel") as TickKernel
-    var perception: ObserverPerceptionService = gameplay.get("_perception") as ObserverPerceptionService
-    var world_view: TacticalRendererStack = gameplay.get("_world_view") as TacticalRendererStack
-    _check(controller != null, "production PlayerActionController exists")
-    _check(world != null, "production WorldState exists")
-    _check(kernel != null, "production TickKernel exists")
-    _check(perception != null, "production perception exists")
-    _check(world_view != null, "production renderer exists")
-    if controller == null or world == null or kernel == null or perception == null or world_view == null:
+    _check(gameplay != null, "NEW GAME transitions to production gameplay scene")
+    _check(controller != null and controller.is_ready() and world != null and kernel != null and perception != null and world_view != null, "production gameplay boot completes")
+    if gameplay == null or controller == null or not controller.is_ready() or world == null or kernel == null or perception == null or world_view == null:
         _finish({"startup_frames": startup_frames})
         return
 
@@ -166,9 +164,6 @@ func _run() -> void:
             failures.append("accepted action %d did not advance authoritative WHEN" % attempts)
             break
 
-        # Four failed headings means the simple explorer is locally boxed in.
-        # Try a real backward action rather than manufacturing progress by
-        # directly mutating placement or advancing WHEN.
         if consecutive_blocked >= 4:
             next_intent = Intents.BACKWARD
             consecutive_blocked = 0
