@@ -2,162 +2,174 @@
 
 Read this file first, then `README_SOPS.md`. For the next distinct repository operation, follow the normal SOP from this recorded final head.
 
-## Current checkpoint — SAME-TIMESTAMP MOVEMENT SIMULTANEITY CLOSED — 2026-09-09
+## Current checkpoint — ISLAND ROAD HIERARCHY REALISM CLOSED — 2026-09-09
 
-The core feature roadmap remains closed and the game remains a beta candidate. This operation repaired simulation ordering so actor movement due at the same authoritative WHEN timestamp no longer mutates WHAT occupancy one actor at a time.
+The core feature roadmap remains closed and the game remains a beta candidate. This bounded operation changed the **meaning/classification of the existing island road network** so the map reads more like a believable hierarchy while preserving the generated settlement layout and route graph.
 
-Scope was deliberately limited to **simulation simultaneity**. Visual interpolation/rendering was not changed.
+The user-directed target was:
 
-Starting ref for this operation, reused exactly without another `main` fetch:
+- sparse 4-lane major trunks/freeways;
+- 2-lane paved routes through town/city centers;
+- gravel secondary/side roads;
+- dirt predominantly for rural/farm/home access;
+- preserve the existing settlement layout;
+- never regress to the historical “everything becomes gravel” failure.
 
-`1fee3f3c320fdc15e32f0a341dbb1f0678ef4da5`
+Starting immutable repository tree recorded for this operation:
 
-Owning functional head:
+`07429fcdf6941e394cfa9423a6185886daa2e311`
 
-`2734666fe75b747b097dfead5c30ad5e6db6691b`
+Owning production hierarchy commit:
+
+`fb956834f99ce7ba6d177e40e0bc0051d3a35b25`
+
+Owning fully gated functional/regression head:
+
+`d5c25ec8d9ff0b3583f8c7a33424f179270e220d`
 
 Documentation head immediately before this final context write:
 
-`62876211ffacbb51554d91c4fede33d98658d222`
+`7f1aa5fc1a592fc8be94fa4744549a9fb92dd464`
 
-## Production mutation point located
+## Root cause
 
-The authoritative occupancy mutation seam was confirmed in production movement: movement phases ultimately wrote actor placement through `WorldMutationService.set_placement()` during each individual `action_phase` callback.
+`IslandMajorRoadNetworkPlanner.gd` already generated four road identities, but geography did not give them meaningful roles:
 
-That meant actors with movement consequences due at the same world tick were physically committed in scheduler order. Later actors therefore observed occupancy already changed by earlier same-timestamp actors, even though WHEN correctly treated the timestamp as one drained consequence batch.
+- all four island boundary gateway spokes were `four_lane` from a settlement center all the way to the coast;
+- non-primary rural routes selected gravel versus dirt from a route hash rather than from what the road served.
 
-The fix was made at that production simulation seam rather than in rendering, input, AI presentation or a second scheduler.
+The map renderer was already correctly displaying road metadata, and global-to-local projection already preserved `road_type`, `lane_count`, `surface_family` and centerline metadata. Therefore this was fixed in the production world planner instead of adding renderer/map special cases.
 
-## Implemented same-WHEN movement batching
+## Implemented geographic hierarchy
 
-Same-timestamp successful movement phases now resolve through one deterministic occupancy batch.
+`game/scripts/generation/world/IslandMajorRoadNetworkPlanner.gd` now generates the existing route graph first, then applies deterministic geographic road hierarchy.
 
-Key rules:
+### Major freeway axis
 
-- movement intents due at the same authoritative world tick are gathered before terminal action completion;
-- non-overlapping successful moves are installed together;
-- all winning placement records are installed before placement-change or movement-commit observers are notified, so observers see complete final occupancy for that timestamp;
-- overlapping otherwise-valid destination claims are resolved deterministically by stable actor identity;
-- the deterministic loser remains at its origin and receives ordinary blocked movement truth;
-- already-occupied request/commit snapshot cells remain blocked — this pass does **not** introduce swaps, movement chains or phasing through occupied actors;
-- Run keeps authoritative impact semantics: a same-timestamp conflict loser reports the deterministic winning actor as the impact blocker;
-- passage-aware movement now uses the same base batching path instead of bypassing it with direct placement mutation;
-- expected-origin/intermediate placement validation, terrain rules, collision ownership and existing movement policy remain authoritative;
-- `TickKernel` remains the only scheduler.
+- The broad axis joining the two generated `smalltown` centers determines the island’s major highway orientation.
+- Exactly two opposite gateway directions on that axis become the genuine freeway pair.
+- Each major gateway leaves its source settlement as an ordinary paved **2-lane approach**.
+- Outside the source settlement influence/approach distance, that same route widens once into a **4-lane paved trunk**.
+- If the widening point lands inside an existing cardinal segment, that segment is split collinearly into `.approach` and `.freeway` pieces. The path itself does not move.
+- The two perpendicular island gateways remain ordinary **2-lane paved roads**, preventing the old four-freeway-spokes look.
 
-`ScheduledEvent` ordering was narrowly adjusted so same-timestamp action completion runs after other consequences due at that timestamp, allowing mechanic owners to collect/resolve their same-WHEN work before actions become terminal.
+### Settlement and rural roads
 
-`WorldMutationService` gained an atomic validated placement-set path that installs all records before emitting the resulting WHAT change notifications.
+- Primary routes serving a `smalltown` or `rural_crossroads` are paved **2-lane** roads.
+- Secondary settlement-tree links between rural hamlets are **gravel**. These form the dependable secondary rural network.
+- Secondary alternate/loop links between rural hamlets are **dirt**. These now read as local/farm/home-style rural access instead of being chosen by hash.
 
-## Explicit non-goals / preserve boundaries
+Road surface contracts remain explicit:
+
+- `four_lane` -> 4 lanes, `paved_centerline`, painted centerline;
+- `two_lane` -> 2 lanes, `paved_centerline`, painted centerline;
+- `gravel` -> 1 lane, `rural_gravel`, no painted centerline;
+- `dirt` -> 1 lane, `rural_dirt`, no painted centerline.
+
+## Preserved boundaries
 
 This operation did **not**:
 
-- add visual interpolation;
-- change renderer or sprite movement;
-- change player input buffering;
-- add another turn/tick scheduler;
-- make actors swap through each other;
-- change AI decision logic;
-- change vehicle presentation;
-- change combat balance;
-- reopen world generation, streaming or utilities.
+- move or regenerate settlement centers;
+- change settlement kinds, influence radii or area-site identities;
+- replace the settlement connection tree;
+- change alternate-route destinations;
+- change gateway destinations;
+- replace terrain-aware routing;
+- change the map renderer;
+- change dirt-road traversal policy;
+- change vehicle movement;
+- change utility/power-pole generation;
+- change NPC/zombie timing, AI or performance;
+- change the previously closed same-WHEN movement simultaneity behavior.
 
-Keep visual interpolation as a separate presentation concern if it is ever requested.
-
-## Focused verifier
-
-Fresh prompt-local verifier pair for this operation:
-
-- `game/scripts/ci/PromptSimulationSimultaneitySmoke.gd`
-- `.github/workflows/prompt-simulation-simultaneity.yml`
-
-The verifier covers:
-
-- deterministic contested-destination winner independent of request order;
-- one blocked loser with stable result;
-- two independent same-WHEN moves publishing atomically so the first WHAT/movement observer already sees both final placements;
-- one two-change world batch for independent simultaneous moves;
-- conservative blocking when a destination was occupied in the pre-batch snapshot;
-- same-WHEN Run conflict preserving authoritative impact blocker truth.
-
-An initial verifier run exposed two implementation/test defects: passage-aware movement still depended on inherited movement hooks that had been removed, and GDScript closure rebinding did not persist two observer-capture dictionaries. Those were repaired without changing the simultaneity design: passage-aware movement was restored onto the base batching hook surface, and verifier captures were changed to shared mutable containers.
+Utility pole generation is still somewhat imperfect but remains explicitly beta-acceptable unless the user promotes it again.
 
 ## Verification
 
-Focused exact-functional-head workflow:
+Fresh prompt-local verifier pair for this operation:
 
-- run `34424284356` — **SUCCESS**
-- job `simulation-simultaneity` — **SUCCESS**
-- Godot 4.7.1 full class registration completed, including `MovementActionService` and `PassageAwareMovementActionService`;
-- focused smoke printed `PROMPT_SIMULATION_SIMULTANEITY_SMOKE: PASS`;
-- focused log contained no `SCRIPT ERROR`, parse error or failed script load.
+- `game/scripts/ci/PromptRoadHierarchyRealismSmoke.gd`
+- `.github/workflows/prompt-road-hierarchy-realism.yml`
 
-The smoke exits with the existing test-harness ObjectDB/resource cleanup warnings; these are not script failures and were not introduced as production gameplay behavior.
+Permanent regression updated to own the new semantics:
 
-Exact functional-head Pages workflow:
+- `game/scripts/ci/IslandRoadHierarchySmoke.gd`
 
-- run `34424284342` — **SUCCESS**
-- Web export — **SUCCESS**
-- Pages artifact upload — **SUCCESS**
-- GitHub Pages deployment — **SUCCESS**
+The road gates verify:
 
-The final repository head after this context-only commit must be verified read-only. No repository writes are permitted after this file is committed in this operation.
+- all four island gateway routes remain;
+- exactly two opposite gateways contain 4-lane freeway trunks;
+- major freeway routes begin at their settlement as 2-lane and widen only once;
+- the perpendicular gateway pair remains entirely 2-lane;
+- town/crossroads routes remain paved 2-lane;
+- gravel secondary rural routes exist;
+- dirt rural/local routes exist and terminate at rural hamlets;
+- all four road types keep correct lane/surface/paint metadata;
+- every generated settlement remains attached to the road graph;
+- every route remains geometrically contiguous after freeway transition splitting;
+- the road network cannot collapse to all gravel.
+
+Focused workflow results:
+
+- run `34434454261` on `e2254f18b73e6351a7a1e193e1a982f60c4294bf` — **SUCCESS** after project class-cache import; prompt acceptance passed.
+- run `34434543382` on `d5c25ec8d9ff0b3583f8c7a33424f179270e220d` — **SUCCESS**; both prompt acceptance and permanent road regression passed.
+
+An earlier standalone smoke launch failed before assertions because bare Godot `--script` execution had not built the global class cache. The normal Web export was already green, proving production parsed. The prompt workflow was corrected to import the project once before running standalone smokes; no production road behavior was weakened to satisfy the harness.
+
+Pages/Web proof during this operation:
+
+- run `34434334637` on `75995be1f2ddaa8101285b03b9b899bb7c090c8f` — Web build **SUCCESS**, artifact upload **SUCCESS**, deploy **SUCCESS** with the production hierarchy code present.
+- Later Pages runs were superseded/cancelled by subsequent direct-to-main verifier/documentation writes under the repository’s Pages concurrency policy. After this final context commit, verify the newest exact final-head Pages run read-only; no further repository writes are permitted in this operation.
 
 ## Documentation
 
 Operation-specific closure ledger:
 
-- `CHANGELOG_SIMULATION_SIMULTANEITY.md`
+- `CHANGELOG_ROAD_HIERARCHY_REALISM.md`
 
-The documentation commit immediately preceding this final context write is:
+Documentation commit immediately before this final context write:
 
-`62876211ffacbb51554d91c4fede33d98658d222`
+`7f1aa5fc1a592fc8be94fa4744549a9fb92dd464`
 
-## Behaviors that remain established
+## Established systems to preserve
 
-Preserve unless concrete new evidence requires a bounded repair:
+Unless concrete evidence requires a bounded repair, preserve:
 
-- single authoritative WHEN clock and same-tick drain semantics;
-- same-WHEN actor movement batching described above;
-- observer-scoped infected/survivor perception and ordinary WHEN-driven NPC actions;
-- existing eight-member resident-backed infected baseline plus four resident-backed survivor exemplars unless an explicit balancing decision changes counts;
-- same-identity survivor -> infected conversion;
-- System-39 generic opening pressure and ordinary collision ownership;
-- authoritative item/action/state ownership;
-- current world generation, roads/towns/rural density, coastline, utilities, night-only streetlights, generated weather, bounded streaming and render-window architecture;
+- the single authoritative WHEN clock;
+- same-WHEN deterministic movement batching and decision-pause semantics;
+- current settlement-first procedural island, building-derived population and streaming architecture;
+- the geographic road hierarchy described above;
+- dirt-road traversability and painted/unpainted road material contracts;
+- observer-scoped infected/survivor perception and existing survivor/infected population ownership;
+- day/night, generated weather, physical lighting and night-only streetlights;
+- power/water infrastructure and current roadside pole behavior;
+- inventory/equipment/sustainment/crafting/skills/doors/windows/utilities/vehicles/combat systems already closed;
 - dedicated vehicle rendering without the retired purple diagnostic artifact;
-- existing native human-play acceptance findings;
 - no generated rivers/wastewater/sewer/septic resurrection;
-- no historical broad gameplay suites or routine seed matrices for ordinary prompt closure.
+- no routine broad seed matrices for ordinary bounded prompt closure.
 
-## Known beta / human-play observations still available for later bounded polish
+## Known beta observations still available for later bounded polish
 
-These were previously observed in native human play and were not part of this simultaneity operation:
+Not part of this road operation:
 
-- some delegated/world interactions can still surface `Unknown` as the top-HUD action label;
-- foraged inventory labels can expose their internal deterministic generated ID;
-- mounted control buttons looked vertically shorter than walking controls and deserve a real mobile/touch check before calling it a touch defect;
-- utility pole generation remains somewhat imperfect but was explicitly judged good enough for beta;
-- the `ZOMBIES` overlay is intentional diagnostic output used to correlate zombie presence with slowdown; do not mistake the label itself for a gameplay defect. If performance is promoted later, profile the underlying infected workload rather than deleting the diagnostic first.
+- zombie/infected presence can cause significant slowdown; the `ZOMBIES` overlay is intentional diagnostic context, not itself the performance bug;
+- some delegated/world interactions can still show `Unknown` as a top-HUD action label;
+- foraged inventory labels can expose internal deterministic generated IDs;
+- mounted mobile controls deserve a real touch acceptance pass;
+- utility pole generation remains imperfect but currently beta-acceptable.
 
 ## NEXT OPERATION — wait for the next explicit bounded target
 
-The simultaneity pass is closed. Do not broaden it into interpolation, AI architecture or unrelated polish automatically.
+The road-hierarchy realism pass is closed. Do not broaden it automatically into new road geometry, interchanges, traffic simulation, pole cleanup or zombie performance work.
 
 For the next **code** operation, retire this prompt-owned verifier pair first:
 
-- `game/scripts/ci/PromptSimulationSimultaneitySmoke.gd`
-- `.github/workflows/prompt-simulation-simultaneity.yml`
+- `game/scripts/ci/PromptRoadHierarchyRealismSmoke.gd`
+- `.github/workflows/prompt-road-hierarchy-realism.yml`
+
+Keep the permanent `game/scripts/ci/IslandRoadHierarchySmoke.gd` regression.
 
 Then create a fresh prompt-local verifier for only the newly requested behavior and follow the normal direct-to-main closure SOP.
 
-Good existing bounded beta-polish candidates, only if the user selects/promotes one, remain:
-
-- replace `Unknown` delegated/world-interaction HUD labels with truthful action labels;
-- hide deterministic forage IDs from human-facing inventory names while retaining canonical identity;
-- mobile/touch acceptance for mounted controls;
-- infected/zombie performance profiling using the existing diagnostic context;
-- additional pole-generation polish if the user later chooses to promote it beyond beta-acceptable status.
-
-This `README_CONTEXT.md` commit is the **FINAL repository write for the same-timestamp movement simultaneity operation**. After it lands, perform read-only final-head verification only.
+This `README_CONTEXT.md` commit is the **FINAL repository write for the island road hierarchy realism operation**. After it lands, perform read-only exact-head and CI/Pages verification only.
