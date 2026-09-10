@@ -16,14 +16,14 @@ func _initialize() -> void:
         FixtureClass.BOUNDS,
         ProfilesClass.TEMPERATE_ISLAND_REGION
     )
-    var plan: GeneratedGlobalWorldPlan = IslandPlannerClass.new().generate(request)
+    var plan: Variant = IslandPlannerClass.new().generate(request)
     _check(plan != null and plan.is_generated(), "reference island generates")
     if plan != null and plan.is_generated():
         _test_hierarchy(plan)
         _test_settlement_graph_still_connected(plan)
     _finish()
 
-func _test_hierarchy(plan: GeneratedGlobalWorldPlan) -> void:
+func _test_hierarchy(plan: Variant) -> void:
     var routes: Dictionary = _routes(plan)
     var freeway_sides: Dictionary = _expected_freeway_sides(plan.settlements)
     var type_counts: Dictionary = {
@@ -91,7 +91,7 @@ func _test_hierarchy(plan: GeneratedGlobalWorldPlan) -> void:
     _check(int(type_counts[&"dirt"]) > 0, "dirt does not disappear")
     _check(int(type_counts[&"gravel"]) < plan.road_segments.size(), "road network does not collapse to all gravel")
 
-func _test_settlement_graph_still_connected(plan: GeneratedGlobalWorldPlan) -> void:
+func _test_settlement_graph_still_connected(plan: Variant) -> void:
     var settlement_centers: Dictionary = {}
     for settlement: Dictionary in plan.settlements:
         var center: Vector2i = settlement.get("center", INVALID_CELL)
@@ -109,7 +109,7 @@ func _test_settlement_graph_still_connected(plan: GeneratedGlobalWorldPlan) -> v
             touched[finish] = true
     _check(touched.size() == settlement_centers.size(), "every existing settlement remains attached to the road graph")
 
-func _routes(plan: GeneratedGlobalWorldPlan) -> Dictionary:
+func _routes(plan: Variant) -> Dictionary:
     var routes: Dictionary = {}
     for road: Dictionary in plan.road_segments:
         var route_id: String = String(road.get("route_id", ""))
@@ -177,7 +177,7 @@ func _surface_contract_is_valid(road: Dictionary) -> bool:
             return lanes == 1 and surface == &"rural_dirt" and not centerline
     return false
 
-func _route_endpoints_are_rural_hamlets(plan: GeneratedGlobalWorldPlan, segments: Array) -> bool:
+func _route_endpoints_are_rural_hamlets(plan: Variant, segments: Array) -> bool:
     if segments.is_empty():
         return false
     var endpoints: Array[Vector2i] = [
@@ -189,7 +189,7 @@ func _route_endpoints_are_rural_hamlets(plan: GeneratedGlobalWorldPlan, segments
             return false
     return true
 
-func _settlement_kind_at(plan: GeneratedGlobalWorldPlan, cell: Vector2i) -> StringName:
+func _settlement_kind_at(plan: Variant, cell: Vector2i) -> StringName:
     for settlement: Dictionary in plan.settlements:
         if settlement.get("center", INVALID_CELL) == cell:
             return StringName(settlement.get("kind", &""))
