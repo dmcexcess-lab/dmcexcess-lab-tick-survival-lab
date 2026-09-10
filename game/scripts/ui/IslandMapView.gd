@@ -7,6 +7,7 @@ const IslandSurface = preload("res://scripts/generation/shared/IslandSurfaceMath
 const ProfileCatalogClass = preload("res://scripts/generation/world/GlobalWorldProfileCatalog.gd")
 
 const SAMPLE_SIZE := Vector2i(256, 256)
+const SURFACE_ROWS_PER_FRAME: int = 4
 const HEADER_HEIGHT: float = 72.0
 const EDGE_MARGIN: float = 24.0
 
@@ -15,8 +16,12 @@ var _world: WorldState = null
 var _player_id: String = ""
 var _profile: Dictionary = {}
 var _surface_texture: ImageTexture = null
+var _surface_build_image: Image = null
+var _surface_build_row: int = 0
+var _surface_build_active: bool = false
 var _close_button: Button = null
 var _title_label: Label = null
+var _loading_label: Label = null
 
 func _ready() -> void:
     name = "IslandMapView"
@@ -25,6 +30,10 @@ func _ready() -> void:
     visible = false
     _build_chrome()
     resized.connect(_on_resized)
+    set_process(_surface_build_active)
+
+func _process(_delta: float) -> void:
+    _build_surface_rows()
 
 func configure(plan: GeneratedGlobalWorldPlan, world: WorldState, player_id: String) -> bool:
     var normalized_player_id: String = player_id.strip_edges()
@@ -43,8 +52,12 @@ func configure(plan: GeneratedGlobalWorldPlan, world: WorldState, player_id: Str
     _player_id = normalized_player_id
     _profile = profile.duplicate(true)
     _surface_texture = null
+    _surface_build_image = null
+    _surface_build_row = 0
+    _surface_build_active = false
     if not _world.changed.is_connected(callback):
         _world.changed.connect(callback)
+    _start_surface_build()
     queue_redraw()
     return true
 
@@ -55,9 +68,10 @@ func set_map_visible(value: bool) -> void:
     if value and not is_configured():
         return
     visible = value
-    if value:
-        _ensure_surface_texture()
-        queue_redraw()
+    if value and _surface_texture == null and not _surface_build_active:
+        _start_surface_build()
+    _update_loading_state()
+    queue_redraw()
 
 func has_player_marker() -> bool:
     return _world != null and not _player_id.is_empty() and _world.has_placement(_player_id)
@@ -72,10 +86,22 @@ func map_bounds() -> Rect2i:
     return Rect2i() if _plan == null else _plan.bounds
 
 func surface_texture_size() -> Vector2i:
-    _ensure_surface_texture()
     if _surface_texture == null:
         return Vector2i.ZERO
     return _surface_texture.get_size()
+
+func surface_build_complete() -> bool:
+    return _surface_texture != null
+
+func surface_build_active() -> bool:
+    return _surface_build_active
+
+func surface_build_progress() -> float:
+    if _surface_texture != null:
+        return 1.0
+    if _surface_build_image == null:
+        return 0.0
+    return clampf(float(_surface_build_row) / float(SAMPLE_SIZE.y), 0.0, 1.0)
 
 func _build_chrome() -> void:
     if _title_label != null:
@@ -102,14 +128,27 @@ func _build_chrome() -> void:
     _close_button.pressed.connect(_on_close_pressed)
     add_child(_close_button)
 
+    _loading_label = Label.new()
+    _loading_label.name = "MapLoadingLabel"
+    _loading_label.text = "PREPARING MAP..."
+    _loading_label.anchor_left = 0.0
+    _loading_label.anchor_right = 1.0
+    _loading_label.anchor_top = 0.5
+    _loading_label.anchor_bottom = 0.5
+    _loading_label.offset_top = -24.0
+    _loading_label.offset_bottom = 24.0
+    _loading_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+    _loading_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+    _loading_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    _loading_label.add_theme_font_size_override("font_size", 18)
+    _loading_label.visible = false
+    add_child(_loading_label)
+
 func _draw() -> void:
     if not visible or size.x <= 0.0 or size.y <= 0.0:
         return
     draw_rect(Rect2(Vector2.ZERO, size), Color(0.035, 0.045, 0.055, 0.97), true)
-    if not is_configured():
-        return
-    _ensure_surface_texture()
-    if _surface_texture == null:
+    if not is_configured() or _surface_texture == null:
         return
 
     var target: Rect2 = _map_rect()
@@ -122,14 +161,30 @@ func _draw() -> void:
         draw_circle(marker, 6.0, Color(1.0, 0.26, 0.18, 1.0))
         draw_arc(marker, 11.0, 0.0, TAU, 28, Color(1.0, 0.92, 0.76, 1.0), 2.0)
 
-func _ensure_surface_texture() -> void:
-    if _surface_texture != null or not is_configured():
+func _start_surface_build() -> void:
+    if _surface_texture != null or _surface_build_active or not is_configured():
         return
-    var image := Image.create(SAMPLE_SIZE.x, SAMPLE_SIZE.y, false, Image.FORMAT_RGBA8)
+    _surface_build_image = Image.create(SAMPLE_SIZE.x, SAMPLE_SIZE.y, false, Image.FORMAT_RGBA8)
+    _surface_build_row = 0
+    _surface_build_active = true
+    set_process(true)
+    _update_loading_state()
+
+func _build_surface_rows() -> void:
+    if not _surface_build_active:
+        set_process(false)
+        return
+    if _surface_build_image == null or not is_configured():
+        _surface_build_active = false
+        set_process(false)
+        _update_loading_state()
+        return
+
     var ocean := Color("17394d")
     var shore := Color("cbb979")
     var land := Color("627b4d")
-    for y: int in range(SAMPLE_SIZE.y):
+    var end_row: int = mini(SAMPLE_SIZE.y, _surface_build_row + SURFACE_ROWS_PER_FRAME)
+    for y: int in range(_surface_build_row, end_row):
         for x: int in range(SAMPLE_SIZE.x):
             var cell: Vector2i = _texture_to_world(Vector2i(x, y))
             var kind: StringName = IslandSurface.classify(
@@ -141,11 +196,28 @@ func _ensure_surface_texture() -> void:
                 int(_profile.get("island_coast_wobble", 8)),
                 int(_profile.get("island_coast_scale", 96))
             )
-            image.set_pixel(x, y, ocean if kind == IslandSurface.OCEAN else shore if kind == IslandSurface.SHORE else land)
+            _surface_build_image.set_pixel(x, y, ocean if kind == IslandSurface.OCEAN else shore if kind == IslandSurface.SHORE else land)
+    _surface_build_row = end_row
 
-    _paint_roads(image)
-    _paint_settlements(image)
-    _surface_texture = ImageTexture.create_from_image(image)
+    if _surface_build_row >= SAMPLE_SIZE.y:
+        _paint_roads(_surface_build_image)
+        _paint_settlements(_surface_build_image)
+        _surface_texture = ImageTexture.create_from_image(_surface_build_image)
+        _surface_build_image = null
+        _surface_build_active = false
+        set_process(false)
+        _update_loading_state()
+        queue_redraw()
+        return
+
+    _update_loading_state()
+
+func _update_loading_state() -> void:
+    if _loading_label == null:
+        return
+    _loading_label.visible = visible and is_configured() and _surface_texture == null
+    if _loading_label.visible:
+        _loading_label.text = "PREPARING MAP... %d%%" % roundi(surface_build_progress() * 100.0)
 
 func _paint_roads(image: Image) -> void:
     for road: Dictionary in _plan.road_segments:
