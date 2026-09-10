@@ -89,6 +89,15 @@ func dispatch_control_event(event: InputEvent, action: StringName, now_ms: int =
     var resolved_now: int = Time.get_ticks_msec() if now_ms < 0 else now_ms
     if event is InputEventScreenTouch:
         var touch := event as InputEventScreenTouch
+        if action == ACTION_MAP:
+            # MAP is intentionally press-driven. Opening the full-screen map on the
+            # first contact avoids the browser/mobile double-tap feel created by
+            # waiting for release, and consuming release prevents a second toggle.
+            if not touch.pressed:
+                return true
+            _suppress_mouse_until_ms = resolved_now + SYNTHETIC_MOUSE_SUPPRESS_MS
+            _emit_action(action)
+            return true
         if touch.pressed:
             return false
         _suppress_mouse_until_ms = resolved_now + SYNTHETIC_MOUSE_SUPPRESS_MS
@@ -96,10 +105,17 @@ func dispatch_control_event(event: InputEvent, action: StringName, now_ms: int =
         return true
     if event is InputEventMouseButton:
         var mouse := event as InputEventMouseButton
-        if mouse.button_index != MOUSE_BUTTON_LEFT or mouse.pressed:
+        if mouse.button_index != MOUSE_BUTTON_LEFT:
             return false
         if resolved_now <= _suppress_mouse_until_ms:
             return true
+        if action == ACTION_MAP:
+            if not mouse.pressed:
+                return true
+            _emit_action(action)
+            return true
+        if mouse.pressed:
+            return false
         _emit_action(action)
         return true
     return false
