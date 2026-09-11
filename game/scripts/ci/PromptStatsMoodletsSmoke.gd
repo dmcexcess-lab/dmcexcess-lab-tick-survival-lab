@@ -2,6 +2,8 @@ extends SceneTree
 
 const Fixture = preload("res://scripts/demo/GeneratedIslandCritiqueFixture.gd")
 const MAX_STARTUP_FRAMES: int = 1200
+const DESIGN_RECT := Rect2(Vector2.ZERO, Vector2(640, 844))
+const EXPECTED_HUD_LAYER: int = 36
 
 var failures: Array[String] = []
 
@@ -40,6 +42,7 @@ func _run() -> void:
 
     var shell: CanonicalPlayerShell = gameplay.get_node_or_null("PlayerShell") as CanonicalPlayerShell
     var hud: CanonicalStatusHud = gameplay.get_node_or_null("Hud") as CanonicalStatusHud
+    var resolution: WorldResolutionIndicator = gameplay.get_node_or_null("ResolutionIndicator") as WorldResolutionIndicator
     var status: ActorStatusSummaryQuery = gameplay.get("_status_summary") as ActorStatusSummaryQuery
     var condition: ActorConditionService = gameplay.get("_condition_service") as ActorConditionService
     _check(shell != null and shell.is_configured(), "production stats shell is configured")
@@ -50,10 +53,16 @@ func _run() -> void:
         _finish()
         return
 
+    _check(hud.visible, "HUD CanvasLayer is visible")
+    _check(hud.layer == EXPECTED_HUD_LAYER, "HUD owns the protected persistent-status layer")
+    if resolution != null:
+        _check(hud.layer > resolution.layer, "HUD draws above transient world-resolution text")
+    _check(hud.layer < shell.layer, "HUD remains below PlayerShell modal")
+    _verify_hud_geometry(hud)
+
     var initial: Dictionary = status.query(Fixture.PLAYER_ID)
     _check(bool(initial.get("ok", false)) and bool(initial.get("system34", false)), "initial status query uses live System 34")
     _check(int(initial.get("satiety", -1)) >= 0 and int(initial.get("hydration", -1)) >= 0 and int(initial.get("rest", -1)) >= 0, "initial condition values are valid")
-    _check(hud.visible and hud.layer > 0, "HUD CanvasLayer is visible")
     _verify_hud_labels_visible(hud, "initial HUD")
 
     shell.open_stats()
@@ -90,7 +99,8 @@ func _run() -> void:
     shell.close_modal()
 
     print("PROMPT_STATS_MOODLETS_STATE %s" % JSON.stringify({
-        "viewport": [root.size.x, root.size.y],
+        "headless_viewport": [root.size.x, root.size.y],
+        "design_rect": [DESIGN_RECT.size.x, DESIGN_RECT.size.y],
         "hud_layer": hud.layer,
         "shell_layer": shell.layer,
         "initial": initial,
@@ -99,9 +109,21 @@ func _run() -> void:
         "pressured_stats_lines": pressured_lines,
         "hud": hud_snapshot,
         "hud_visibility": _hud_visibility_snapshot(hud),
-        "shell_visibility": _shell_visibility_snapshot(shell),
     }))
     _finish()
+
+func _verify_hud_geometry(hud: CanonicalStatusHud) -> void:
+    var panel: Panel = hud.get("_panel") as Panel
+    var row: HBoxContainer = hud.get("_moodlet_row") as HBoxContainer
+    _check(panel != null, "HUD background panel exists")
+    _check(row != null, "moodlet row exists")
+    if panel == null or row == null:
+        return
+    _check(_control_intersects_design(panel), "HUD background intersects the 640x844 design surface")
+    _check(_control_intersects_design(row), "moodlet row intersects the 640x844 design surface")
+    var panel_bottom: float = panel.position.y + panel.size.y
+    var row_bottom: float = row.position.y + row.size.y
+    _check(row_bottom <= panel_bottom, "HUD background extends behind the complete moodlet row")
 
 func _verify_hud_labels_visible(hud: CanonicalStatusHud, context: String) -> void:
     var values: Variant = hud.get("_labels")
@@ -117,7 +139,8 @@ func _verify_hud_labels_visible(hud: CanonicalStatusHud, context: String) -> voi
             continue
         _check(label.is_visible_in_tree(), "%s label %d is visible in tree" % [context, index])
         _check(label.size.x > 0.0 and label.size.y > 0.0, "%s label %d has drawable size" % [context, index])
-        _check(_control_intersects_viewport(label), "%s label %d intersects viewport" % [context, index])
+        _check(_control_intersects_design(label), "%s label %d intersects the 640x844 design surface" % [context, index])
+        _check(label.z_index > 0, "%s label %d draws above HUD background" % [context, index])
 
 func _verify_moodlet_row_visible(hud: CanonicalStatusHud) -> void:
     var row: HBoxContainer = hud.get("_moodlet_row") as HBoxContainer
@@ -125,20 +148,21 @@ func _verify_moodlet_row_visible(hud: CanonicalStatusHud) -> void:
     if row == null:
         return
     _check(row.is_visible_in_tree(), "moodlet row is visible in tree")
-    _check(_control_intersects_viewport(row), "moodlet row intersects viewport")
+    _check(_control_intersects_design(row), "moodlet row intersects the 640x844 design surface")
+    _check(row.z_index > 0, "moodlet row draws above HUD background")
     _check(row.get_child_count() > 0, "moodlet row has rendered chip children")
     var visible_text: bool = false
     for child: Node in row.get_children():
         var label: Label = child as Label
         if label != null and label.is_visible_in_tree() and not label.text.strip_edges().is_empty():
             visible_text = true
-            break
+            _check(label.get_theme_constant("outline_size") >= 3, "moodlet chip has contrast outline")
     _check(visible_text, "moodlet row has visible text")
 
 func _verify_stats_modal_visible(shell: CanonicalPlayerShell) -> void:
     var overlay: ColorRect = shell.get("_overlay") as ColorRect
     var body: VBoxContainer = shell.get("_body") as VBoxContainer
-    _check(shell.visible and shell.layer > 0, "PlayerShell CanvasLayer is visible")
+    _check(shell.visible and shell.layer > EXPECTED_HUD_LAYER, "PlayerShell modal owns a layer above HUD")
     _check(overlay != null and overlay.is_visible_in_tree(), "STATS overlay is visible in tree")
     _check(body != null and body.is_visible_in_tree(), "STATS body is visible in tree")
     if body != null:
@@ -154,12 +178,18 @@ func _node_has_visible_label(node: Node) -> bool:
             return true
     return false
 
-func _control_intersects_viewport(control: Control) -> bool:
+func _control_intersects_design(control: Control) -> bool:
     var rect := Rect2(control.global_position, control.size)
-    return rect.intersects(Rect2(Vector2.ZERO, root.size))
+    return rect.intersects(DESIGN_RECT)
 
 func _hud_visibility_snapshot(hud: CanonicalStatusHud) -> Dictionary:
-    var result: Dictionary = {"visible": hud.visible, "layer": hud.layer, "labels": [], "moodlets": {}}
+    var result: Dictionary = {"visible": hud.visible, "layer": hud.layer, "panel": {}, "labels": [], "moodlets": {}}
+    var panel: Panel = hud.get("_panel") as Panel
+    if panel != null:
+        result["panel"] = {
+            "position": [panel.global_position.x, panel.global_position.y],
+            "size": [panel.size.x, panel.size.y],
+        }
     var labels: Variant = hud.get("_labels")
     if typeof(labels) == TYPE_ARRAY:
         for value: Variant in labels:
@@ -171,6 +201,7 @@ func _hud_visibility_snapshot(hud: CanonicalStatusHud) -> Dictionary:
                 "visible": label.is_visible_in_tree(),
                 "position": [label.global_position.x, label.global_position.y],
                 "size": [label.size.x, label.size.y],
+                "z": label.z_index,
             })
     var row: HBoxContainer = hud.get("_moodlet_row") as HBoxContainer
     if row != null:
@@ -178,20 +209,10 @@ func _hud_visibility_snapshot(hud: CanonicalStatusHud) -> Dictionary:
             "visible": row.is_visible_in_tree(),
             "position": [row.global_position.x, row.global_position.y],
             "size": [row.size.x, row.size.y],
+            "z": row.z_index,
             "children": row.get_child_count(),
         }
     return result
-
-func _shell_visibility_snapshot(shell: CanonicalPlayerShell) -> Dictionary:
-    var overlay: ColorRect = shell.get("_overlay") as ColorRect
-    var body: VBoxContainer = shell.get("_body") as VBoxContainer
-    return {
-        "visible": shell.visible,
-        "layer": shell.layer,
-        "overlay_visible": false if overlay == null else overlay.is_visible_in_tree(),
-        "body_visible": false if body == null else body.is_visible_in_tree(),
-        "body_children": 0 if body == null else body.get_child_count(),
-    }
 
 func _find_button(node: Node, text_value: String) -> Button:
     var button := node as Button
