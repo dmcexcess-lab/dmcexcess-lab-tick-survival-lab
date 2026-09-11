@@ -2,74 +2,68 @@
 
 Read this file first, then `README_SOPS.md`. Fetch current `main` once before the next repository operation.
 
-## Current checkpoint — HUMAN PLAYTEST REPAIR CANDIDATE VERIFIED LOCALLY, PUBLICATION BLOCKED — 2026-09-10
+## Current checkpoint — REPEATED-SESSION LIFECYCLE REPAIR CLOSED — 2026-09-10
 
-The user authorized action on the concrete problems found during the genuine production-browser playtest. A bounded repair candidate is complete and locally verified on branch `fix/human-playtest`, but this workspace has no GitHub push credentials, so it has not reached `main`, GitHub Actions, or Pages.
+The repeated-session signal-lifetime failure found in the hands-on browser playtest is repaired and published. `NEW GAME` now begins through a deferred button connection, so the asynchronous startup callback retires the title tree only after Godot has finished emitting the original UI signal.
 
-Remote starting head fetched exactly once: `cf03ec1`
+Starting published head: `566bfb59023d3f2fafd61531a87ffbd32a0633be`
 
-Functional repair head: `8477de7`
+Functional published head: `b24bc050b58bf27bd3fca3e8075a9eb117acab31`
 
-The final context commit is the commit containing this file after `8477de7`.
+Local functional commit with equivalent tree changes: `a05b4a6`
 
-## Completed repair scope
+The final documentation head is the commit containing this file after the functional head.
 
-- `LEAVE GAME` and the death return action now change to the in-game `main.tscn` title scene; the web-only Google redirect and native process quit are removed.
-- Player death now opens a hard-paused `YOU DIED` modal with `RETURN TO TITLE`.
-- Open/broken windows expose `CLIMB THROUGH` only when the authoritative action service currently finds a clear far-side destination.
-- Unknown dotted action IDs receive readable fallback labels, including `window.open -> Open` and `survival.forage_nearby -> Forage Nearby`.
-- Forage completion, failure, cancellation, and immediate rejection now report through the canonical HUD.
-- Valid inventory rows no longer expose internal instance IDs.
-- Consumable inventory actions explicitly warn that using the item advances time and nearby threats may act. Authoritative WHEN and hostile action opportunities were intentionally preserved.
-- The persistent resolution message is now a compact `ZOMBIES NEARBY` indicator instead of a large central `ZOMBIES` banner. It remains presentation-only and mouse-ignoring.
-- Previous prompt-owned verifier pairs were retired as required by SOP.
+## Completed scope
+
+- `StartupMenu` connects `NewGameButton.pressed` with `CONNECT_DEFERRED`.
+- The existing asynchronous preload/world-generation sequence and truthful loading surface are preserved.
+- `LEAVE GAME` still returns to the production title scene.
+- A second `NEW GAME` creates a fresh gameplay tree and fresh authoritative world/kernel services.
+- The previous prompt-owned human-playtest repair verifier/workflow were retired.
 
 ## Focused verification
 
 Fresh prompt-local verifier pair:
 
-- `game/scripts/ci/PromptHumanPlaytestRepairsSmoke.gd`
-- `.github/workflows/prompt-human-playtest-repairs.yml`
+- `game/scripts/ci/PromptRepeatedSessionLifecycleSmoke.gd`
+- `.github/workflows/prompt-repeated-session-lifecycle.yml`
 
-Local Godot 4.7.1 production-path result on `8477de7`:
+The verifier runs exactly two production title-to-game transitions with a real leave-to-title transition between them. It asserts retirement of the first title and gameplay trees, successful second-world boot, and fresh authoritative services. Its workflow also rejects the exact Godot warning `Object was freed or unreferenced while a signal is being emitted` if it appears in the log.
 
-- full asset import completed;
-- production `NEW GAME` boot printed `CANONICAL_DEMO_BOOT_OK`;
-- terminal marker `PROMPT_HUMAN_PLAYTEST_REPAIRS_OK`;
-- process exit code `0`.
+Results on functional head `b24bc050b58bf27bd3fca3e8075a9eb117acab31`:
 
-The verifier covers only this repair path: readable fallback labels, compact threat indicator, production startup, clear/blocked window offer behavior, inventory ID presentation, death hard-pause/modal, and return to the actual title scene.
+- local Godot 4.7.1: `PROMPT_REPEATED_SESSION_LIFECYCLE_OK`, exit 0, warning absent;
+- GitHub workflow `Prompt repeated session lifecycle`, run `34545792065`: **SUCCESS**;
+- `Build and deploy Tick Survival Lab`, run `34545791992`: **SUCCESS**.
 
-## Publication status and concrete blocker
+After publishing this final context commit, verify its exact-head workflow and Pages runs read-only. Do not write another repair commit in this operation.
 
-- Direct `HEAD:main` push was not performed because the managed approval reviewer required more explicit approval for publishing production changes together with deletion of the two superseded verifier pairs.
-- A safer push to remote branch `fix/human-playtest` then failed because the HTTPS remote requested a username and no GitHub credential helper/token is available.
-- `gh` is not installed in this workspace.
-- Therefore there is no remote workflow run and no exact-head Pages run for this candidate. Do not describe it as deployed.
+## Prior human-playtest repairs preserved
 
-## Known playtest findings not changed in this bounded repair
+- leave/death returns to the title instead of redirecting externally;
+- death opens a hard-paused terminal modal;
+- impossible window climbs are not offered;
+- action and forage feedback is readable;
+- valid inventory rows hide internal IDs and timed consumption warns about nearby threats;
+- the nearby-zombie resolution indicator is compact.
 
-- Region-boundary and ordinary action latency remain open. The hands-on run observed typical control round trips around 0.7–0.9 seconds, spikes around 1.0–1.3 seconds, one control stall near tick 738, and about 4.7 seconds near tick 988; browser-control overhead prevents clean phase attribution.
-- The earlier production verifier measured roughly 472 ms p50, 633 ms p95, and one 14.07-second action on a route crossing a 128-cell streaming boundary, also without enough instrumentation to attribute the spike.
-- A second-world startup after leaving/reloading emitted three Godot signal-lifetime errors involving objects freed while a signal was being emitted. This needs its own lifecycle-focused repair.
-- Combat escape/damage cadence and RUN discoverability remain balance/UX follow-ups rather than changes in this repair.
+## Known playtest findings still open
 
-## Established behavior to preserve
+- Region-boundary and ordinary action latency need phase instrumentation before optimization. Browser observations included typical control round trips around 0.7–0.9 seconds and isolated multi-second stalls; earlier headless measurement found roughly 472 ms p50, 633 ms p95, and one 14.07-second action on a route crossing a streaming boundary, without phase attribution.
+- Combat escape/damage cadence and RUN discoverability remain balance/UX follow-ups.
 
-- the single authoritative WHEN/TickKernel clock and decision-pause semantics;
-- no synthetic/direct tick advancement in human playtests;
-- timed eating, drinking, forage, movement, combat, and interaction consequences;
-- input intent ownership, simulation consequence ownership, and presentation-only UI;
-- technical streaming boundaries never becoming gameplay geography or identity;
-- existing generation, population, perception, inventory, crafting, utilities, vehicles, doors/windows, and combat ownership unless focused evidence identifies a defect.
+## Protected behavior
 
-## NEXT OPERATION
+Preserve the single authoritative WHEN/TickKernel clock, decision-pause semantics, timed gameplay consequences, input/simulation/UI ownership boundaries, current startup preload/loading behavior, and existing generation/population/perception/gameplay subsystem ownership.
 
-Restore GitHub write authentication, then publish the existing local candidate without changing it, obtain terminal success for `Prompt human playtest repairs`, and verify exact-head Pages deployment. If publication requires explicit confirmation, state clearly that the push changes production and deletes these superseded prompt-local verifier pairs:
+## NEXT OPERATION — wait for explicit approval
 
-- `game/scripts/ci/PromptTick1000Playtest.gd`
-- `.github/workflows/prompt-tick-1000-playtest.yml`
-- `game/scripts/ci/PromptLoadingUiSinglePressSmoke.gd`
-- `.github/workflows/prompt-loading-ui-single-press.yml`
+Do not begin another code operation automatically. The strongest next technical target is a bounded per-action/streaming phase timing pass to isolate ordinary latency and boundary spikes before attempting optimization. A separate smaller product target is RUN discoverability/combat escape balance.
 
-If a code change is required after inspecting a concrete failure, this becomes a new repository operation: first delete `PromptHumanPlaytestRepairsSmoke.gd` and `prompt-human-playtest-repairs.yml`, then create a new focused verifier pair for that repair. Otherwise do not replace the successful local verifier before publication.
+At the start of the next approved code prompt, delete:
+
+- `game/scripts/ci/PromptRepeatedSessionLifecycleSmoke.gd`
+- `.github/workflows/prompt-repeated-session-lifecycle.yml`
+
+Then create a fresh prompt-local verifier/workflow limited to that next target.
