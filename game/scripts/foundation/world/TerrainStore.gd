@@ -2,47 +2,77 @@ extends RefCounted
 class_name TerrainStore
 
 ## Internal semantic terrain store keyed by authoritative global cells.
-## Chunk summaries accelerate exact bulk rectangle rewrites without changing the
-## cell-authoritative storage/query contract.
+## Uniform full chunks are represented compactly; sparse overrides and explicit
+## holes preserve exact cell-authoritative query semantics.
 
 const BULK_CHUNK_SIZE: int = 16
 const BULK_CHUNK_AREA: int = BULK_CHUNK_SIZE * BULK_CHUNK_SIZE
 
-var _by_cell: Dictionary = {}
-var _chunk_known_counts: Dictionary = {}
-var _chunk_type_counts: Dictionary = {}
+## A chunk default means every cell in that 16x16 chunk is known with that
+## semantic unless a sparse override or explicit hole says otherwise.
+var _chunk_defaults: Dictionary = {}
+## Without a default these are ordinary known cells; with a default they are
+## sparse semantic overrides.
+var _chunk_cells: Dictionary = {}
+## Holes are explicit unknown cells inside an otherwise fully known default chunk.
+var _chunk_holes: Dictionary = {}
 
 func has(cell: Vector2i) -> bool:
-    return _by_cell.has(cell)
+    var chunk: Vector2i = _chunk_coord(cell)
+    var index: int = _local_index(cell)
+    var cells: Dictionary = _chunk_cells.get(chunk, {})
+    if cells.has(index):
+        return true
+    if not _chunk_defaults.has(chunk):
+        return false
+    var holes: Dictionary = _chunk_holes.get(chunk, {})
+    return not holes.has(index)
 
 func get_type(cell: Vector2i) -> StringName:
-    return StringName(_by_cell.get(cell, &""))
+    var chunk: Vector2i = _chunk_coord(cell)
+    var index: int = _local_index(cell)
+    var cells: Dictionary = _chunk_cells.get(chunk, {})
+    if cells.has(index):
+        return StringName(cells[index])
+    if not _chunk_defaults.has(chunk):
+        return &""
+    var holes: Dictionary = _chunk_holes.get(chunk, {})
+    if holes.has(index):
+        return &""
+    return StringName(_chunk_defaults[chunk])
 
 func set_type(cell: Vector2i, semantic_type: StringName) -> void:
-    var had_previous: bool = _by_cell.has(cell)
-    var previous: StringName = StringName(_by_cell.get(cell, &""))
-    if had_previous and previous == semantic_type:
+    var chunk: Vector2i = _chunk_coord(cell)
+    var index: int = _local_index(cell)
+    var cells: Dictionary = _chunk_cells.get(chunk, {})
+
+    if _chunk_defaults.has(chunk):
+        var default_type: StringName = StringName(_chunk_defaults[chunk])
+        var holes: Dictionary = _chunk_holes.get(chunk, {})
+        holes.erase(index)
+        if holes.is_empty():
+            _chunk_holes.erase(chunk)
+        else:
+            _chunk_holes[chunk] = holes
+
+        if semantic_type == default_type:
+            cells.erase(index)
+        else:
+            cells[index] = semantic_type
+        if cells.is_empty():
+            _chunk_cells.erase(chunk)
+        else:
+            _chunk_cells[chunk] = cells
         return
 
-    var chunk: Vector2i = _chunk_coord(cell)
-    var counts: Dictionary = _chunk_type_counts.get(chunk, {})
-    if had_previous:
-        var previous_count: int = int(counts.get(previous, 0))
-        if previous_count <= 1:
-            counts.erase(previous)
-        else:
-            counts[previous] = previous_count - 1
-    else:
-        _chunk_known_counts[chunk] = int(_chunk_known_counts.get(chunk, 0)) + 1
+    cells[index] = semantic_type
+    _chunk_cells[chunk] = cells
+    if cells.size() == BULK_CHUNK_AREA:
+        _try_compress_complete_chunk(chunk)
 
-    counts[semantic_type] = int(counts.get(semantic_type, 0)) + 1
-    _chunk_type_counts[chunk] = counts
-    _by_cell[cell] = semantic_type
-
-## Exact bulk rectangle assignment. Fully known 16x16 chunks that already carry
-## the requested semantic are skipped without touching their cells. Mixed/full
-## chunks are rewritten directly and partial edge chunks preserve cell-level
-## behavior. The returned counters are diagnostics only.
+## Exact bulk rectangle assignment. Fully covered chunks are assigned as one
+## compact semantic default instead of performing 256 Dictionary writes. Only
+## partial edge chunks and sparse exceptions are inspected cell-by-cell.
 func set_rect_type(rect: Rect2i, semantic_type: StringName) -> Dictionary:
     var result: Dictionary = {
         "ok": false,
@@ -51,6 +81,7 @@ func set_rect_type(rect: Rect2i, semantic_type: StringName) -> Dictionary:
         "visited_cells": 0,
         "skipped_cells": 0,
         "skipped_chunks": 0,
+        "compact_chunks": 0,
     }
     if rect.size.x <= 0 or rect.size.y <= 0 or String(semantic_type).strip_edges().is_empty():
         return result
@@ -77,30 +108,19 @@ func set_rect_type(rect: Rect2i, semantic_type: StringName) -> Dictionary:
             )
 
             if full_chunk:
-                var known_count: int = int(_chunk_known_counts.get(chunk, 0))
-                var counts: Dictionary = _chunk_type_counts.get(chunk, {})
-                var matching_count: int = int(counts.get(semantic_type, 0))
-                if known_count == BULK_CHUNK_AREA and matching_count == BULK_CHUNK_AREA:
-                    result["skipped_cells"] = int(result["skipped_cells"]) + BULK_CHUNK_AREA
-                    result["skipped_chunks"] = int(result["skipped_chunks"]) + 1
-                    continue
-
-                for y in range(chunk_origin.y, chunk_origin.y + BULK_CHUNK_SIZE):
-                    for x in range(chunk_origin.x, chunk_origin.x + BULK_CHUNK_SIZE):
-                        _by_cell[Vector2i(x, y)] = semantic_type
-                result["visited_cells"] = int(result["visited_cells"]) + BULK_CHUNK_AREA
-                result["changed_cells"] = int(result["changed_cells"]) + (BULK_CHUNK_AREA - matching_count)
-                _chunk_known_counts[chunk] = BULK_CHUNK_AREA
-                var uniform_counts: Dictionary = {}
-                uniform_counts[semantic_type] = BULK_CHUNK_AREA
-                _chunk_type_counts[chunk] = uniform_counts
+                var chunk_result: Dictionary = _assign_full_chunk(chunk, semantic_type)
+                result["changed_cells"] = int(result["changed_cells"]) + int(chunk_result.get("changed_cells", 0))
+                result["visited_cells"] = int(result["visited_cells"]) + int(chunk_result.get("visited_cells", 0))
+                result["skipped_cells"] = int(result["skipped_cells"]) + int(chunk_result.get("skipped_cells", 0))
+                result["skipped_chunks"] = int(result["skipped_chunks"]) + 1
+                result["compact_chunks"] = int(result["compact_chunks"]) + 1
                 continue
 
             for y in range(start_y, end_y):
                 for x in range(start_x, end_x):
                     var cell := Vector2i(x, y)
                     result["visited_cells"] = int(result["visited_cells"]) + 1
-                    if _by_cell.has(cell) and StringName(_by_cell[cell]) == semantic_type:
+                    if has(cell) and get_type(cell) == semantic_type:
                         result["skipped_cells"] = int(result["skipped_cells"]) + 1
                         continue
                     set_type(cell, semantic_type)
@@ -111,42 +131,129 @@ func set_rect_type(rect: Rect2i, semantic_type: StringName) -> Dictionary:
     return result
 
 func erase(cell: Vector2i) -> void:
-    if not _by_cell.has(cell):
+    if not has(cell):
         return
-    var previous: StringName = StringName(_by_cell[cell])
     var chunk: Vector2i = _chunk_coord(cell)
-    var counts: Dictionary = _chunk_type_counts.get(chunk, {})
-    var previous_count: int = int(counts.get(previous, 0))
-    if previous_count <= 1:
-        counts.erase(previous)
-    else:
-        counts[previous] = previous_count - 1
+    var index: int = _local_index(cell)
+    var cells: Dictionary = _chunk_cells.get(chunk, {})
 
-    var known_count: int = int(_chunk_known_counts.get(chunk, 0)) - 1
-    if known_count <= 0:
-        _chunk_known_counts.erase(chunk)
-        _chunk_type_counts.erase(chunk)
+    if _chunk_defaults.has(chunk):
+        cells.erase(index)
+        if cells.is_empty():
+            _chunk_cells.erase(chunk)
+        else:
+            _chunk_cells[chunk] = cells
+        var holes: Dictionary = _chunk_holes.get(chunk, {})
+        holes[index] = true
+        _chunk_holes[chunk] = holes
+        return
+
+    cells.erase(index)
+    if cells.is_empty():
+        _chunk_cells.erase(chunk)
     else:
-        _chunk_known_counts[chunk] = known_count
-        _chunk_type_counts[chunk] = counts
-    _by_cell.erase(cell)
+        _chunk_cells[chunk] = cells
 
 func clear() -> void:
-    _by_cell.clear()
-    _chunk_known_counts.clear()
-    _chunk_type_counts.clear()
+    _chunk_defaults.clear()
+    _chunk_cells.clear()
+    _chunk_holes.clear()
 
 func snapshot_entries() -> Array:
-    var cells: Array = _by_cell.keys()
-    cells.sort_custom(_cell_less)
+    var chunk_set: Dictionary = {}
+    for value: Variant in _chunk_defaults.keys():
+        chunk_set[value] = true
+    for value: Variant in _chunk_cells.keys():
+        chunk_set[value] = true
+
+    var rows: Dictionary = {}
+    for value: Variant in chunk_set.keys():
+        var chunk: Vector2i = value
+        var xs: Array = rows.get(chunk.y, [])
+        xs.append(chunk.x)
+        rows[chunk.y] = xs
+
+    var ys: Array = rows.keys()
+    ys.sort()
     var entries: Array = []
-    for value: Variant in cells:
-        var cell: Vector2i = value
-        entries.append({
-            "cell": [cell.x, cell.y],
-            "semantic_type": String(_by_cell[cell]),
-        })
+    for y_value: Variant in ys:
+        var chunk_y: int = int(y_value)
+        var xs: Array = rows[chunk_y]
+        xs.sort()
+        for local_y in range(BULK_CHUNK_SIZE):
+            for x_value: Variant in xs:
+                var chunk_x: int = int(x_value)
+                var chunk := Vector2i(chunk_x, chunk_y)
+                var default_exists: bool = _chunk_defaults.has(chunk)
+                var default_type: StringName = StringName(_chunk_defaults.get(chunk, &""))
+                var cells: Dictionary = _chunk_cells.get(chunk, {})
+                var holes: Dictionary = _chunk_holes.get(chunk, {})
+                for local_x in range(BULK_CHUNK_SIZE):
+                    var index: int = local_y * BULK_CHUNK_SIZE + local_x
+                    var semantic_type: StringName = &""
+                    if cells.has(index):
+                        semantic_type = StringName(cells[index])
+                    elif default_exists and not holes.has(index):
+                        semantic_type = default_type
+                    else:
+                        continue
+                    entries.append({
+                        "cell": [chunk_x * BULK_CHUNK_SIZE + local_x, chunk_y * BULK_CHUNK_SIZE + local_y],
+                        "semantic_type": String(semantic_type),
+                    })
     return entries
+
+func _assign_full_chunk(chunk: Vector2i, semantic_type: StringName) -> Dictionary:
+    var cells: Dictionary = _chunk_cells.get(chunk, {})
+    var holes: Dictionary = _chunk_holes.get(chunk, {})
+    var visited: int = cells.size() + holes.size()
+    var changed: int = 0
+
+    if _chunk_defaults.has(chunk):
+        var default_type: StringName = StringName(_chunk_defaults[chunk])
+        if default_type == semantic_type:
+            changed = cells.size() + holes.size()
+        else:
+            var matching_overrides: int = 0
+            for value: Variant in cells.values():
+                if StringName(value) == semantic_type:
+                    matching_overrides += 1
+            changed = BULK_CHUNK_AREA - matching_overrides
+    else:
+        var matching_cells: int = 0
+        for value: Variant in cells.values():
+            if StringName(value) == semantic_type:
+                matching_cells += 1
+        changed = BULK_CHUNK_AREA - matching_cells
+
+    _chunk_defaults[chunk] = semantic_type
+    _chunk_cells.erase(chunk)
+    _chunk_holes.erase(chunk)
+    return {
+        "changed_cells": changed,
+        "visited_cells": visited,
+        "skipped_cells": BULK_CHUNK_AREA - visited,
+    }
+
+func _try_compress_complete_chunk(chunk: Vector2i) -> void:
+    if _chunk_defaults.has(chunk):
+        return
+    var cells: Dictionary = _chunk_cells.get(chunk, {})
+    if cells.size() != BULK_CHUNK_AREA:
+        return
+    var first: StringName = &""
+    var has_first: bool = false
+    for value: Variant in cells.values():
+        var semantic_type: StringName = StringName(value)
+        if not has_first:
+            first = semantic_type
+            has_first = true
+        elif semantic_type != first:
+            return
+    if not has_first:
+        return
+    _chunk_defaults[chunk] = first
+    _chunk_cells.erase(chunk)
 
 static func _chunk_coord(cell: Vector2i) -> Vector2i:
     return Vector2i(
@@ -154,9 +261,5 @@ static func _chunk_coord(cell: Vector2i) -> Vector2i:
         floori(float(cell.y) / float(BULK_CHUNK_SIZE))
     )
 
-static func _cell_less(a: Variant, b: Variant) -> bool:
-    var cell_a: Vector2i = a
-    var cell_b: Vector2i = b
-    if cell_a.y == cell_b.y:
-        return cell_a.x < cell_b.x
-    return cell_a.y < cell_b.y
+static func _local_index(cell: Vector2i) -> int:
+    return posmod(cell.y, BULK_CHUNK_SIZE) * BULK_CHUNK_SIZE + posmod(cell.x, BULK_CHUNK_SIZE)
