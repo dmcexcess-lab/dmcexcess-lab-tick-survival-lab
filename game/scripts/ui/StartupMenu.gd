@@ -22,7 +22,10 @@ var _status_dot_elapsed: float = 0.0
 var _status_dot_index: int = 0
 
 func _ready() -> void:
-    _new_game_button.pressed.connect(_on_new_game_pressed)
+    # NEW GAME awaits loading frames and eventually retires this entire menu tree.
+    # Start it after Button.pressed finishes emitting so the signal owner cannot be
+    # freed while Godot is still unwinding the original UI signal.
+    _new_game_button.pressed.connect(_on_new_game_pressed, CONNECT_DEFERRED)
     _continue_button.tooltip_text = "Persistent save/continue is not implemented yet."
     _progress_bar.value = PRELOAD_PROGRESS_START
     _set_status("Menu ready. Loading game systems", true)
