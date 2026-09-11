@@ -60,6 +60,9 @@ func _boot_crafting_runtime() -> bool:
         return false
     if not _controls.forage_requested.is_connected(_on_forage_requested):
         _controls.forage_requested.connect(_on_forage_requested)
+    _forage_actions.forage_completed.connect(_on_forage_completed)
+    _forage_actions.forage_failed.connect(_on_forage_failed)
+    _forage_actions.forage_canceled.connect(_on_forage_canceled)
 
     _crafting_items = CraftingItemCatalogClass.new()
     if not _crafting_items.register_physical_profiles(_physical_catalog):
@@ -139,6 +142,20 @@ func _on_forage_requested() -> void:
     var request: Dictionary = _forage_actions.request_forage(FixtureClass.PLAYER_ID)
     if bool(request.get("accepted", false)):
         _kernel.run_until_stop()
+    elif _hud != null:
+        _hud.present_action_result(ForageNearbyActionClass.ACTION_TYPE, false, String(request.get("reason", "forage_rejected")), _kernel.world_tick())
+
+func _on_forage_completed(actor_id: String, _serial: int, _patch_key: String, _item_ids: Variant, _semantics: Variant) -> void:
+    if actor_id == FixtureClass.PLAYER_ID and _hud != null:
+        _hud.present_action_result(ForageNearbyActionClass.ACTION_TYPE, true, "", _kernel.world_tick())
+
+func _on_forage_failed(actor_id: String, _serial: int, _patch_key: String, reason: String, _opportunity_consumed: bool) -> void:
+    if actor_id == FixtureClass.PLAYER_ID and _hud != null:
+        _hud.present_action_result(ForageNearbyActionClass.ACTION_TYPE, false, reason, _kernel.world_tick())
+
+func _on_forage_canceled(actor_id: String, _serial: int, _patch_key: String, reason: String) -> void:
+    if actor_id == FixtureClass.PLAYER_ID and _hud != null:
+        _hud.present_action_result(ForageNearbyActionClass.ACTION_TYPE, false, reason, _kernel.world_tick())
 
 func _on_craft_interaction_blocked_changed(blocked: bool) -> void:
     _craft_blocks_interaction = blocked

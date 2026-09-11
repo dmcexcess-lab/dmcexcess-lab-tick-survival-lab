@@ -500,6 +500,9 @@ func _window_climb_destination(actor_id: String, target_id: String) -> Variant:
         return null
     return destination
 
+func can_window_climb(actor_id: String, target_id: String) -> bool:
+    return typeof(_window_climb_destination(actor_id.strip_edges(), target_id.strip_edges())) == TYPE_VECTOR2I
+
 func _commit_deconstruct(action: TimedAction, target: String, semantic: StringName) -> bool:
     var profile: Dictionary = _catalog.deconstruction_profile(semantic)
     if profile.is_empty():

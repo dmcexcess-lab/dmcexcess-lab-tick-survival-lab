@@ -1,0 +1,27 @@
+name: Prompt human playtest repairs
+
+on:
+  push:
+    branches: [main, fix/human-playtest]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  focused-repairs:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Install Godot 4.7.1
+        shell: bash
+        run: |
+          set -euxo pipefail
+          curl -L -o godot.zip https://github.com/godotengine/godot-builds/releases/download/4.7.1-stable/Godot_v4.7.1-stable_linux.x86_64.zip
+          unzip -q godot.zip
+          chmod +x Godot_v4.7.1-stable_linux.x86_64
+      - name: Import project classes
+        run: ./Godot_v4.7.1-stable_linux.x86_64 --headless --path game --import
+      - name: Verify human playtest repairs
+        run: ./Godot_v4.7.1-stable_linux.x86_64 --headless --path game --script res://scripts/ci/PromptHumanPlaytestRepairsSmoke.gd

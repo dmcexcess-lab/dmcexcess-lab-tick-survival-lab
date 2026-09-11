@@ -13,7 +13,9 @@ const MODAL_NONE: StringName = &""
 const MODAL_STATS: StringName = &"stats"
 const MODAL_INVENTORY: StringName = &"inventory"
 const MODAL_MENU: StringName = &"menu"
+const MODAL_DEATH: StringName = &"death"
 const VIEW_SIZE := Vector2(640, 844)
+const STARTUP_SCENE_PATH: String = "res://main.tscn"
 
 var _kernel: TickKernel = null
 var _stats_query: ActorStatsInspectorQuery = null
@@ -114,6 +116,17 @@ func open_menu() -> void:
     _active_modal = MODAL_MENU
     _show_overlay("PAUSED", "RESUME")
     _render_menu()
+
+func open_death() -> void:
+    if not is_configured() or _active_modal == MODAL_DEATH:
+        return
+    _acquire_pause_if_needed()
+    _active_modal = MODAL_DEATH
+    _show_overlay("YOU DIED", "RETURN TO TITLE")
+    _last_result = {"ok": true, "dead": true}
+    _last_lines = []
+    _append_line("This survivor has died.", 18)
+    _append_line("Return to the title screen to begin a new world.", 14)
 
 func close_modal() -> void:
     if _active_modal == MODAL_NONE:
@@ -231,7 +244,7 @@ func _build_modal_shell() -> void:
     _close_button.text = "CLOSE"
     _close_button.custom_minimum_size = Vector2(110, 46)
     _close_button.focus_mode = Control.FOCUS_NONE
-    _close_button.pressed.connect(close_modal)
+    _close_button.pressed.connect(_on_close_button_pressed)
     header.add_child(_close_button)
 
     var scroll := ScrollContainer.new()
@@ -335,6 +348,7 @@ func _render_inventory() -> void:
         _append_line(_item_text(selected), 14)
         var offer: Dictionary = _inventory_consumption_offer(_selected_inventory_item_id)
         if bool(offer.get("available", false)):
+            _append_line("Using this item advances time. Nearby threats may act.", 13)
             var action_button := Button.new()
             action_button.text = String(offer.get("label", "USE"))
             action_button.custom_minimum_size = Vector2(0, 48)
@@ -654,7 +668,7 @@ func _item_text(item: Dictionary) -> String:
     var weight_text: String = "Weight: Unknown"
     if bool(item.get("weight_known", false)):
         weight_text = "Weight: %s kg" % _kg_text(int(item.get("weight_grams", -1)))
-    return "%s [%s] — %s" % [label, item_id, weight_text]
+    return "%s — %s" % [label, weight_text]
 
 func _append_heading(text_value: String) -> void:
     var separator := HSeparator.new()
@@ -680,12 +694,21 @@ func _clear_body() -> void:
 
 func _leave_game() -> void:
     _leave_result = "requested"
-    if OS.has_feature("web"):
-        var result: Variant = JavaScriptBridge.eval("window.location.assign('https://www.google.com/'); 'google';", true)
-        _leave_result = "web:%s" % String(result)
+    _active_modal = MODAL_NONE
+    if _overlay != null:
+        _overlay.visible = false
+    _leave_result = "returning_to_title"
+    call_deferred("_return_to_startup_menu")
+
+func _on_close_button_pressed() -> void:
+    if _active_modal == MODAL_DEATH:
+        _leave_game()
         return
-    _leave_result = "native:quit"
-    get_tree().quit()
+    close_modal()
+
+func _return_to_startup_menu() -> void:
+    var error: Error = get_tree().change_scene_to_file(STARTUP_SCENE_PATH)
+    _leave_result = "title" if error == OK else "failed:%s" % error_string(error)
 
 static func _kg_text(grams: int) -> String:
     if grams < 0:

@@ -254,7 +254,8 @@ func _boot_world_interactions() -> bool:
         _interaction_reach,
         _door_state,
         _world_interaction_state,
-        _world_interaction_catalog
+        _world_interaction_catalog,
+        _world_interaction_actions
     )
     if not _interaction_affordances.register_provider(_world_interaction_offers):
         return false

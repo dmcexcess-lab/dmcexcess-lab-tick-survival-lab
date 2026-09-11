@@ -5,10 +5,11 @@ class_name WorldResolutionIndicator
 ## WHEN remains authoritative for decision timing; streaming remains authoritative for
 ## technical region changes. This layer owns no gameplay state and creates no new turn.
 
-const ZOMBIES_TEXT: String = "ZOMBIES"
+const ZOMBIES_TEXT: String = "ZOMBIES NEARBY"
 const LOADING_TEXT: String = "LOADING"
-const LABEL_SIZE := Vector2(360.0, 72.0)
-const FONT_SIZE: int = 30
+const LABEL_SIZE := Vector2(190.0, 38.0)
+const LABEL_POSITION := Vector2(426.0, 176.0)
+const FONT_SIZE: int = 16
 
 var _kernel: TickKernel = null
 var _infected_cohort: ActiveInfectedCohortService = null
@@ -134,14 +135,8 @@ func _ensure_ui() -> void:
         return
     _label = Label.new()
     _label.name = "ResolutionLabel"
-    _label.anchor_left = 0.5
-    _label.anchor_top = 0.5
-    _label.anchor_right = 0.5
-    _label.anchor_bottom = 0.5
-    _label.offset_left = -LABEL_SIZE.x * 0.5
-    _label.offset_top = -LABEL_SIZE.y * 0.5
-    _label.offset_right = LABEL_SIZE.x * 0.5
-    _label.offset_bottom = LABEL_SIZE.y * 0.5
+    _label.position = LABEL_POSITION
+    _label.size = LABEL_SIZE
     _label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
     _label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
     _label.mouse_filter = Control.MOUSE_FILTER_IGNORE

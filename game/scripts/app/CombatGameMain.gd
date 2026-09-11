@@ -98,6 +98,7 @@ func _boot_system37_combat() -> bool:
     if not _collision_catalog.register(DeathTransitionsClass.CORPSE_SEMANTIC, false): return false
     _death_transitions = DeathTransitionsClass.new(_world, _world_mutations, _kernel, _health_state, _hand_state, _hand_mutations, _inventory_state, _inventory_mutations, _corpse_state)
     if not _death_transitions.is_ready(): return false
+    _death_transitions.actor_died.connect(_on_actor_died)
 
     _combat_controller = CombatControllerClass.new(_combat_actions, _kernel, FixtureClass.PLAYER_ID, _firearm_actions)
     add_child(_combat_controller)
@@ -105,6 +106,11 @@ func _boot_system37_combat() -> bool:
     _combat_controller.action_resolved.connect(Callable(_hud, "present_action_result"))
     _combat_controller.action_busy_changed.connect(_on_player_action_busy_changed)
     return true
+
+func _on_actor_died(actor_id: String, _corpse_id: String) -> void:
+    if actor_id != FixtureClass.PLAYER_ID or _shell == null:
+        return
+    _shell.call_deferred("open_death")
 
 func _population_plan_snapshot() -> Dictionary:
     var global_plan: GeneratedGlobalWorldPlan = FixtureClass.global_plan()

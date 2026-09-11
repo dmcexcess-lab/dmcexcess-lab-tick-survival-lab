@@ -49,4 +49,7 @@ static func label(value: StringName) -> String:
         COMBAT_FORWARD:
             return "Strike"
         _:
-            return "Unknown"
+            var parts: PackedStringArray = String(value).split(".", false)
+            if parts.is_empty():
+                return "Action"
+            return String(parts[parts.size() - 1]).replace("_", " ").capitalize()

@@ -14,19 +14,22 @@ var _reach: WorldInteractionReachQuery = null
 var _doors: DoorStateStore = null
 var _state: WorldInteractableState = null
 var _catalog: WorldInteractionCatalog = null
+var _actions: WorldInteractionActionService = null
 
 func _init(
     world: WorldState = null,
     reach: WorldInteractionReachQuery = null,
     doors: DoorStateStore = null,
     state: WorldInteractableState = null,
-    catalog: WorldInteractionCatalog = null
+    catalog: WorldInteractionCatalog = null,
+    actions: WorldInteractionActionService = null
 ) -> void:
     _world = world
     _reach = reach
     _doors = doors
     _state = state
     _catalog = catalog
+    _actions = actions
     if _state != null:
         var callback := Callable(self, "_on_state_changed")
         if not _state.state_changed.is_connected(callback):
@@ -37,7 +40,7 @@ func _init(
             _doors.door_state_changed.connect(door_callback)
 
 func is_ready() -> bool:
-    return _world != null and _reach != null and _reach.is_ready() and _doors != null and _state != null and _catalog != null
+    return _world != null and _reach != null and _reach.is_ready() and _doors != null and _state != null and _catalog != null and _actions != null and _actions.is_ready()
 
 func offers_for_actor(actor_id: String, candidate_target_ids: Array[String]) -> Array[InteractionOffer]:
     var result: Array[InteractionOffer] = []
@@ -91,10 +94,12 @@ func _append_window(result: Array[InteractionOffer], actor_id: String, target_id
         _append(result, actor_id, target_id, placement, Actions.OPENING_BREAK, "BREAK", PRIORITY)
         return
     if broken:
-        _append(result, actor_id, target_id, placement, Actions.WINDOW_CLIMB, "CLIMB THROUGH", PRIORITY + 12)
+        if _actions.can_window_climb(actor_id, target_id):
+            _append(result, actor_id, target_id, placement, Actions.WINDOW_CLIMB, "CLIMB THROUGH", PRIORITY + 12)
         return
     if opened:
-        _append(result, actor_id, target_id, placement, Actions.WINDOW_CLIMB, "CLIMB THROUGH", PRIORITY + 12)
+        if _actions.can_window_climb(actor_id, target_id):
+            _append(result, actor_id, target_id, placement, Actions.WINDOW_CLIMB, "CLIMB THROUGH", PRIORITY + 12)
         _append(result, actor_id, target_id, placement, Actions.WINDOW_CLOSE, "CLOSE", PRIORITY + 6)
         _append(result, actor_id, target_id, placement, Actions.OPENING_BREAK, "BREAK", PRIORITY - 5)
         return
