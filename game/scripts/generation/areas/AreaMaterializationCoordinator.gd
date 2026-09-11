@@ -8,6 +8,7 @@ const BuildingMaterializerClass = preload("res://scripts/generation/buildings/Ge
 const Facing = preload("res://scripts/foundation/spatial/SpatialFacing.gd")
 const Footprint = preload("res://scripts/foundation/spatial/SpatialFootprint.gd")
 const Layers = preload("res://scripts/foundation/spatial/SpatialLayer.gd")
+const PerformanceTelemetry = preload("res://scripts/foundation/diagnostics/PerformanceTelemetry.gd")
 
 var _world: WorldState = null
 var _mutations: WorldMutationService = null
@@ -47,28 +48,41 @@ func materialize_in_transaction(request: AreaGenerationRequest, plan: GeneratedA
 func _materialize(request: AreaGenerationRequest, plan: GeneratedAreaPlan, owns_transaction: bool) -> bool:
     if not is_ready() or request == null or plan == null:
         return false
+
+    var phase_started: int = Time.get_ticks_usec()
     var area_validation: Dictionary = _area_validator.validate(request, plan)
+    PerformanceTelemetry.record_timing(&"stream_area_validate", Time.get_ticks_usec() - phase_started)
     if not bool(area_validation.get("ok", false)):
         return false
 
+    phase_started = Time.get_ticks_usec()
     var building_plans: Array[GeneratedBuildingPlan] = []
     var planned_ids: Dictionary = {}
     for building_request: BuildingGenerationRequest in plan.building_requests:
         var building_plan: GeneratedBuildingPlan = _building_generator.generate(building_request)
         if building_plan == null or not building_plan.is_generated():
+            PerformanceTelemetry.record_timing(&"stream_building_plan_generation", Time.get_ticks_usec() - phase_started)
             return false
         var validation: Dictionary = _building_validator.validate(building_plan)
         if not bool(validation.get("ok", false)):
+            PerformanceTelemetry.record_timing(&"stream_building_plan_generation", Time.get_ticks_usec() - phase_started)
             return false
         if not _preflight_building_ids(building_plan, planned_ids):
+            PerformanceTelemetry.record_timing(&"stream_building_plan_generation", Time.get_ticks_usec() - phase_started)
             return false
         building_plans.append(building_plan)
+    PerformanceTelemetry.record_timing(&"stream_building_plan_generation", Time.get_ticks_usec() - phase_started)
+    PerformanceTelemetry.record_value(&"stream_building_plan_count", building_plans.size())
 
+    phase_started = Time.get_ticks_usec()
     for prop: Dictionary in plan.outdoor_props:
         var prop_id: String = String(prop.get("id", "")).strip_edges()
         if prop_id.is_empty() or planned_ids.has(prop_id) or _world.has_entity(prop_id):
+            PerformanceTelemetry.record_timing(&"stream_area_prop_preflight", Time.get_ticks_usec() - phase_started)
             return false
         planned_ids[prop_id] = true
+    PerformanceTelemetry.record_timing(&"stream_area_prop_preflight", Time.get_ticks_usec() - phase_started)
+    PerformanceTelemetry.record_value(&"stream_outdoor_prop_count", plan.outdoor_props.size())
 
     var world_snapshot: Dictionary = {}
     var door_snapshot: Dictionary = {}
@@ -76,10 +90,17 @@ func _materialize(request: AreaGenerationRequest, plan: GeneratedAreaPlan, owns_
         world_snapshot = _world.snapshot()
         door_snapshot = _door_state.snapshot()
 
+    phase_started = Time.get_ticks_usec()
     if not _materialize_ground(plan):
+        PerformanceTelemetry.record_timing(&"stream_area_ground_commit", Time.get_ticks_usec() - phase_started)
         return _rollback_if_owned(owns_transaction, world_snapshot, door_snapshot)
+    PerformanceTelemetry.record_timing(&"stream_area_ground_commit", Time.get_ticks_usec() - phase_started)
+
+    phase_started = Time.get_ticks_usec()
     if not _materialize_outdoor_props(plan):
+        PerformanceTelemetry.record_timing(&"stream_area_outdoor_commit", Time.get_ticks_usec() - phase_started)
         return _rollback_if_owned(owns_transaction, world_snapshot, door_snapshot)
+    PerformanceTelemetry.record_timing(&"stream_area_outdoor_commit", Time.get_ticks_usec() - phase_started)
 
     var building_materializer := BuildingMaterializerClass.new(
         _world,
@@ -88,9 +109,12 @@ func _materialize(request: AreaGenerationRequest, plan: GeneratedAreaPlan, owns_
         _door_mutations,
         _building_validator
     )
+    phase_started = Time.get_ticks_usec()
     for building_plan: GeneratedBuildingPlan in building_plans:
         if not building_materializer.materialize_in_transaction(building_plan):
+            PerformanceTelemetry.record_timing(&"stream_building_materialization", Time.get_ticks_usec() - phase_started)
             return _rollback_if_owned(owns_transaction, world_snapshot, door_snapshot)
+    PerformanceTelemetry.record_timing(&"stream_building_materialization", Time.get_ticks_usec() - phase_started)
     return true
 
 func generated_building_plans(plan: GeneratedAreaPlan) -> Array[GeneratedBuildingPlan]:
