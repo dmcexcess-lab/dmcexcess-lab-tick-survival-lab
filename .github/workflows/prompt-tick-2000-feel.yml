@@ -1,0 +1,33 @@
+name: Prompt 2000 tick feel playtest
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  tick-2000-feel:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Install Godot 4.7.1
+        shell: bash
+        run: |
+          set -euxo pipefail
+          curl -L -o godot.zip https://github.com/godotengine/godot-builds/releases/download/4.7.1-stable/Godot_v4.7.1-stable_linux.x86_64.zip
+          unzip -q godot.zip
+          chmod +x Godot_v4.7.1-stable_linux.x86_64
+      - name: Import project assets and classes
+        run: ./Godot_v4.7.1-stable_linux.x86_64 --headless --path game --import
+      - name: Play production path to 2000 ticks and measure feel
+        shell: bash
+        run: |
+          set -o pipefail
+          ./Godot_v4.7.1-stable_linux.x86_64 --headless --path game --script res://scripts/ci/PromptTick2000FeelPlaytest.gd 2>&1 | tee tick-2000-feel.log
+          grep -q "PROMPT_TICK_2000_OK" tick-2000-feel.log
+          grep "PROMPT_TICK_2000_RESULT" tick-2000-feel.log
