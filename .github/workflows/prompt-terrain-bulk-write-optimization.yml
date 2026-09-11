@@ -1,0 +1,32 @@
+name: Prompt terrain bulk write optimization
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  terrain-bulk-write:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Install Godot 4.7.1
+        shell: bash
+        run: |
+          set -euxo pipefail
+          curl -L -o godot.zip https://github.com/godotengine/godot-builds/releases/download/4.7.1-stable/Godot_v4.7.1-stable_linux.x86_64.zip
+          unzip -q godot.zip
+          chmod +x Godot_v4.7.1-stable_linux.x86_64
+      - name: Import project assets and classes
+        run: ./Godot_v4.7.1-stable_linux.x86_64 --headless --path game --import
+      - name: Verify terrain bulk write optimization
+        shell: bash
+        run: |
+          set -o pipefail
+          ./Godot_v4.7.1-stable_linux.x86_64 --headless --path game --script res://scripts/ci/PromptTerrainBulkWriteOptimizationSmoke.gd 2>&1 | tee terrain-bulk-write.log
+          grep -q "PROMPT_TERRAIN_BULK_WRITE_OPTIMIZATION_OK" terrain-bulk-write.log
+          grep "PROMPT_TERRAIN_BULK_BOUNDARY" terrain-bulk-write.log
