@@ -5,6 +5,7 @@ const EntityIdRules = preload("res://scripts/foundation/world/WorldEntityId.gd")
 const EntityRecordClass = preload("res://scripts/foundation/world/WorldEntityRecord.gd")
 const PlacementClass = preload("res://scripts/foundation/world/WorldPlacement.gd")
 const ChangeClass = preload("res://scripts/foundation/world/WorldChange.gd")
+const PerformanceTelemetry = preload("res://scripts/foundation/diagnostics/PerformanceTelemetry.gd")
 
 ## Normal validated write path for foundation WHAT facts.
 ## Gameplay legality/collision/mechanic rules remain outside this service.
@@ -195,20 +196,23 @@ func set_terrain(cell: Vector2i, semantic_type: StringName) -> bool:
 
 ## Coalesced rectangular terrain write. The full rectangle is replay-safe dirty geometry;
 ## WHAT revision and change notification advance once for the whole successful batch.
+## TerrainStore chunk summaries skip fully known uniform chunks without revisiting cells.
 func set_terrain_rect(rect: Rect2i, semantic_type: StringName) -> bool:
     if _state == null or rect.size.x <= 0 or rect.size.y <= 0 or String(semantic_type).strip_edges().is_empty():
         return false
 
-    var changed_any: bool = false
-    for y in range(rect.position.y, rect.position.y + rect.size.y):
-        for x in range(rect.position.x, rect.position.x + rect.size.x):
-            var cell := Vector2i(x, y)
-            if _state.has_terrain(cell) and _state.terrain_at(cell) == semantic_type:
-                continue
-            _state._set_terrain_record(cell, semantic_type)
-            changed_any = true
+    var bulk_result: Dictionary = _state._set_terrain_rect_records(rect, semantic_type)
+    if not bool(bulk_result.get("ok", false)):
+        return false
 
-    if changed_any:
+    PerformanceTelemetry.increment(&"terrain_bulk_rect_calls")
+    PerformanceTelemetry.increment(&"terrain_bulk_rect_requested_cells", rect.size.x * rect.size.y)
+    PerformanceTelemetry.increment(&"terrain_bulk_rect_changed_cells", int(bulk_result.get("changed_cells", 0)))
+    PerformanceTelemetry.increment(&"terrain_bulk_rect_visited_cells", int(bulk_result.get("visited_cells", 0)))
+    PerformanceTelemetry.increment(&"terrain_bulk_rect_skipped_cells", int(bulk_result.get("skipped_cells", 0)))
+    PerformanceTelemetry.increment(&"terrain_bulk_rect_skipped_chunks", int(bulk_result.get("skipped_chunks", 0)))
+
+    if bool(bulk_result.get("changed_any", false)):
         var change := ChangeClass.new(ChangeClass.Kind.TERRAIN_BATCH_SET)
         change.terrain_rect = rect
         change.terrain_after = semantic_type
