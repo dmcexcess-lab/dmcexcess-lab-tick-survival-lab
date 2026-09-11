@@ -218,6 +218,9 @@ func _remove_placement_record(entity_id: String) -> WorldPlacement:
 func _set_terrain_record(cell: Vector2i, semantic_type: StringName) -> void:
     _terrain.set_type(cell, semantic_type)
 
+func _set_terrain_rect_records(rect: Rect2i, semantic_type: StringName) -> Dictionary:
+    return _terrain.set_rect_type(rect, semantic_type)
+
 func _remove_terrain_record(cell: Vector2i) -> void:
     _terrain.erase(cell)
 
