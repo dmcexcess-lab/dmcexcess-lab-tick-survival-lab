@@ -136,7 +136,19 @@ func _materialize_ground(plan: GeneratedAreaPlan) -> bool:
             return ap < bp
         return String(a.get("id", "")) < String(b.get("id", ""))
     )
-    for region: Dictionary in regions:
+
+    ## Island-surface generation intentionally authors exact horizontal runs.
+    ## Before WHAT mutation, collapse only priority groups proven to be disjoint
+    ## one-row rectangles. This preserves every covered cell and semantic while
+    ## avoiding hundreds of redundant mutation/notification boundaries. The
+    ## generated plan itself is untouched, so source identity/signatures remain
+    ## deterministic and replay provenance does not change.
+    var scheduled: Array[Dictionary] = _coalesce_disjoint_row_rect_groups(regions)
+    PerformanceTelemetry.increment(&"stream_ground_regions_authored", regions.size())
+    PerformanceTelemetry.increment(&"stream_ground_regions_scheduled", scheduled.size())
+    PerformanceTelemetry.increment(&"stream_ground_regions_coalesced", regions.size() - scheduled.size())
+
+    for region: Dictionary in scheduled:
         var semantic: StringName = StringName(region.get("semantic", &""))
         if semantic == &"":
             return false
@@ -154,6 +166,129 @@ func _materialize_ground(plan: GeneratedAreaPlan) -> bool:
             if not _mutations.set_terrain_cells(cells, semantic):
                 return false
     return true
+
+## Coalescing is deliberately conservative. A priority group is eligible only
+## when every member is a positive one-row rectangle and row intervals are
+## non-overlapping. In that case order cannot affect final WHAT semantics, so
+## vertically adjacent runs with the same x-span and semantic may be fused.
+func _coalesce_disjoint_row_rect_groups(regions: Array[Dictionary]) -> Array[Dictionary]:
+    var result: Array[Dictionary] = []
+    var index: int = 0
+    while index < regions.size():
+        var priority: int = int(regions[index].get("priority", 0))
+        var group: Array[Dictionary] = []
+        while index < regions.size() and int(regions[index].get("priority", 0)) == priority:
+            group.append(regions[index])
+            index += 1
+        var coalesced: Array[Dictionary] = _try_coalesce_disjoint_row_group(group)
+        for region: Dictionary in coalesced:
+            result.append(region)
+    return result
+
+func _try_coalesce_disjoint_row_group(group: Array[Dictionary]) -> Array[Dictionary]:
+    if group.size() < 2:
+        return group
+
+    var rows: Dictionary = {}
+    for region: Dictionary in group:
+        if not region.has("rect") or region.has("cells"):
+            return group
+        var rect: Rect2i = region.get("rect", Rect2i())
+        if rect.size.x <= 0 or rect.size.y != 1:
+            return group
+        var row: Array = rows.get(rect.position.y, [])
+        row.append(region)
+        rows[rect.position.y] = row
+
+    ## Prove that authored same-priority runs are disjoint before allowing any
+    ## reordering implied by vertical fusion.
+    for y_value: Variant in rows.keys():
+        var row: Array = rows[y_value]
+        row.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
+            var ar: Rect2i = a.get("rect", Rect2i())
+            var br: Rect2i = b.get("rect", Rect2i())
+            if ar.position.x != br.position.x:
+                return ar.position.x < br.position.x
+            return ar.size.x < br.size.x
+        )
+        var previous_end: int = -2147483648
+        for value: Variant in row:
+            var region: Dictionary = value
+            var rect: Rect2i = region.get("rect", Rect2i())
+            if rect.position.x < previous_end:
+                return group
+            previous_end = rect.position.x + rect.size.x
+
+    var ys: Array = rows.keys()
+    ys.sort()
+    var active: Dictionary = {}
+    var merged: Array[Dictionary] = []
+    var previous_y: int = -2147483648
+
+    for y_value: Variant in ys:
+        var y: int = int(y_value)
+        if previous_y != -2147483648 and y != previous_y + 1:
+            _flush_active_row_runs(active, merged)
+            active.clear()
+
+        var row: Array = rows[y]
+        row.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
+            var ar: Rect2i = a.get("rect", Rect2i())
+            var br: Rect2i = b.get("rect", Rect2i())
+            if ar.position.x != br.position.x:
+                return ar.position.x < br.position.x
+            if ar.size.x != br.size.x:
+                return ar.size.x < br.size.x
+            return String(a.get("semantic", &"")) < String(b.get("semantic", &""))
+        )
+
+        var seen_keys: Dictionary = {}
+        for value: Variant in row:
+            var region: Dictionary = value
+            var rect: Rect2i = region.get("rect", Rect2i())
+            var semantic: StringName = StringName(region.get("semantic", &""))
+            var key: String = "%d:%d:%s" % [rect.position.x, rect.size.x, String(semantic)]
+            seen_keys[key] = true
+            if active.has(key):
+                var current: Dictionary = active[key]
+                var current_rect: Rect2i = current.get("rect", Rect2i())
+                if current_rect.position.y + current_rect.size.y == y:
+                    current_rect.size.y += 1
+                    current["rect"] = current_rect
+                    active[key] = current
+                    continue
+                merged.append(current)
+            active[key] = region.duplicate(true)
+
+        var expired: Array[String] = []
+        for key_value: Variant in active.keys():
+            var key: String = String(key_value)
+            if not seen_keys.has(key):
+                merged.append(active[key])
+                expired.append(key)
+        for key: String in expired:
+            active.erase(key)
+        previous_y = y
+
+    _flush_active_row_runs(active, merged)
+    merged.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
+        var ar: Rect2i = a.get("rect", Rect2i())
+        var br: Rect2i = b.get("rect", Rect2i())
+        if ar.position.y != br.position.y:
+            return ar.position.y < br.position.y
+        if ar.position.x != br.position.x:
+            return ar.position.x < br.position.x
+        if ar.size.y != br.size.y:
+            return ar.size.y < br.size.y
+        if ar.size.x != br.size.x:
+            return ar.size.x < br.size.x
+        return String(a.get("semantic", &"")) < String(b.get("semantic", &""))
+    )
+    return merged
+
+func _flush_active_row_runs(active: Dictionary, output: Array[Dictionary]) -> void:
+    for value: Variant in active.values():
+        output.append(value)
 
 func _materialize_outdoor_props(plan: GeneratedAreaPlan) -> bool:
     for prop: Dictionary in plan.outdoor_props:
