@@ -2,122 +2,153 @@
 
 Read this file first, then `README_SOPS.md`. Fetch current `main` once before the next repository operation.
 
-## Current checkpoint — STATS / MOODLET HUD VISIBILITY REPAIR CLOSED — 2026-09-10
+## Current checkpoint — 2000-TICK FEEL / NPC PROXIMITY PERFORMANCE PLAYTEST CLOSED — 2026-09-10
 
-The player reported that after the terrain-streaming performance improvement, the stats/status information and moodlets were not appearing in the live game. The final clarification was specifically **not** that System 34 said unavailable or that the state was logically broken; the visible presentation was missing/obscured.
+The player reported that the game still does not feel right as a tick-based simulation: nearby NPCs make ordinary movement feel like sudden lag, actors appear to resolve one at a time rather than as one coherent turn, and the slowdown seemed to return when mood/stats presentation was restored. The player requested a 2000-tick playtest/report before changing the architecture.
 
-Starting head for this operation: `bef76f776f0d5c4f84e4e1131b2d5362eba8f2dd`
+Starting head for this operation: `a98f0d2238ca44caa433becc152afd8ac7bc8d1b`
 
-Successful functional/owning verifier head: `2edc622852eea7990d750128d93b7b02717c7a8e`
+Owning verifier head: `95722460dfa7278f1c02d387c8651cc97952e85e`
 
-Documentation head immediately before this final context write: `2f8d3ea8360b4b69fc90f991110711f02ec1d183`
+Documentation head immediately before this final context write: `706c65b16ff999325c5ed7a91da5367550bd7686`
 
-Closure ledger: `CHANGELOG_STATS_MOODLET_VISIBILITY.md`
+Closure ledger: `CHANGELOG_TICK_2000_FEEL_PLAYTEST.md`
 
 The commit containing this file is the final repository write for this operation. After it lands, verification is read-only only.
 
-## Diagnosis
+## Playtest method
 
-Production-scene verification established that the underlying gameplay data was healthy:
+The prompt-owned verifier boots the actual production `main.tscn`, presses `NEW GAME`, and exercises the real `gameplay.tscn` composition with production `PlayerActionController`, `TickKernel`, world, status HUD/query, active infected cohort, and active survivor cohort.
 
-- System 34 condition state was configured and queryable;
-- the status summary returned valid condition values;
-- the STATS modal projection contained live health, condition, modifiers, skills, and moodlet text;
-- an authoritative condition change into hunger pressure produced a real hunger moodlet descriptor/chip.
+This was a production-path headless gameplay/performance exercise, not a synthetic direct-tick fast-forward and not a literal Chromium/manual input session. It advances only through accepted production player intents and normal authoritative WHEN resolution.
 
-The persistent `CanonicalStatusHud` presentation contract was too weak. It remained on CanvasLayer 21 while newer ordinary/transient presentation surfaces existed above it. Its moodlet row also began immediately below the old 100-pixel status panel background, so colored moodlet text could float directly over world art.
+Owning workflow:
 
-A diagnostic attempt that treated the headless test runner viewport as browser geometry was explicitly discarded: headless Godot reports a synthetic 64x64 root viewport for this script path, while the canonical production design surface is 640x844. The final verifier validates the actual UI design bounds and draw-order contract instead.
+- `Prompt 2000 tick feel playtest`
+- run `34555968346`
+- job `103128615281`
+- result: `PROMPT_TICK_2000_OK`
 
-Historical standalone `ConditionPlayerControls`, `ForagePlayerControls`, `WeatherDevControls`, and `UtilityDevControls` source files were inspected during diagnosis, but they are not instantiated by current `gameplay.tscn`; they were not modified and are not claimed as the cause.
+## Route / completion
 
-## Completed implementation
+- authoritative tick `0 -> 2001`; the final accepted action crossed the 2000 target;
+- `223 / 223` accepted player actions;
+- `222` successful moves;
+- `1` planned turn;
+- `0` blocked moves;
+- `223` unique player cells visited;
+- start cell `[1708, 1552]`;
+- end cell `[1862, 1485]`;
+- normal local active population was approximately `10` actors; final cohort was `6` infected + `4` survivors.
 
-`game/scripts/ui/CanonicalStatusHud.gd` now:
+## Primary performance finding
 
-- owns persistent HUD layer 36;
-- draws above the transient `WorldResolutionIndicator` layer 35;
-- remains below interactive/modal presentation such as `WorldInteractionPanel` and `PlayerShell`;
-- expands the status panel from 100 to 122 pixels tall so the moodlet row is fully backed by the same HUD surface;
-- explicitly places status labels and the moodlet row above the panel background with local z-index 1;
-- gives status text and colored moodlet chips dark outlines for contrast against world art.
+The player's feel complaint is valid. Ordinary accepted actions remain far too expensive to read as responsive turn resolution:
 
-The status block remains directly below the top STATS / INVENTORY / MENU/CRAFT header as previously approved. No condition, health, carry, skill, moodlet, world, rendering truth, or WHEN/TickKernel semantics were changed.
+- whole accepted action p50 `364.187 ms`;
+- p95 `487.752 ms`;
+- p99 `513.454 ms`;
+- worst action `8.763 s`;
+- synchronous `submit_intent()` p50 `112.672 ms`, p95 `120.836 ms`, max `130.155 ms`;
+- largest rendered-frame wait inside an action p50 `245.658 ms`, p95 `304.100 ms`, max `402.252 ms`;
+- player-finished-to-controller-ready tail p50 `0.124 ms`, p95 `0.150 ms`.
 
-## Focused verification
+Normal actions usually completed in one rendered simulation batch (`settle_frames` p50/p95 `1`). The exceptional long action required `47` rendered frames.
 
-Fresh prompt-owned verifier pair:
+Latency stayed approximately flat through the run. Whole-action p50 stayed about `360–370 ms` in all four 500-tick quarters and p95 stayed about `476–492 ms`. This is steady per-turn cost, not a progressive leak accumulating with world time.
+
+The single `8.763 s` outlier is consistent with the known transition/streaming class of hitch, but this verifier did not conclusively attribute that individual sample to a specific streaming phase. Do not claim an exact streaming subphase until targeted instrumentation proves it.
+
+## NPC fan-out is the dominant scalable cost
+
+Almost every player action had `10` active NPCs. Each player action caused a median/p95 of `10` NPC behavior evaluations while only about `3` NPC ordinary actions were actually submitted.
+
+Measured behavior work:
+
+- infected: `1332` behavior evaluations, `17.081518 s` total evaluation time, max single evaluation `92.810 ms`;
+- survivors: `888` behavior evaluations, `13.025175 s` total evaluation time, max single evaluation `359.930 ms`;
+- combined: about `30.1 s` measured behavior evaluation over `222` player action starts, roughly `135.6 ms` of NPC behavior evaluation per player decision in aggregate.
+
+Current behavior services independently subscribe to the shared action lifecycle. On player `action_started`, each active infected/survivor behavior may synchronously drive itself, including perception work, before the player's submit path can return to presentation. The current architecture therefore pays N behavior/perception reactions per player action even when most actors ultimately do not submit a meaningful action.
+
+Perception is a likely dominant sub-cost: individual observers can recompute a roughly 12-cell-radius visibility field, LOS, acquisition/memory, and related state independently. The next optimization should prove/cache/invalidate this work rather than repeatedly scanning unchanged local state for every active actor.
+
+## Why it feels sequential even with one authoritative clock
+
+The simulation does use one deterministic authoritative `TickKernel` clock. It is not one independent clock per actor.
+
+However, `PlayerActionController` currently exposes scheduler cadence to presentation by advancing one due-tick batch per rendered frame. Actor actions can have different durations, so their completions can occur on different due ticks and therefore different rendered frames. That makes nearby actors appear to resolve one after another rather than as one coherent player turn.
+
+The 2000-tick run adds an important qualification: ordinary actions usually needed only one rendered batch, so the normal `364–488 ms` lag is not caused merely by dozens of sequential batches. A single normal turn is already computationally too heavy, especially because NPC behavior/perception fans out synchronously around player action start. Presentation cadence then compounds the feel problem when multiple due ticks are involved.
+
+Animation can improve the visual interpretation, but animation alone cannot hide a 300–500 ms simulation frame. CPU work must be reduced first; then outcomes should be presented concurrently in a short intentional animation window.
+
+## Mood / stats are not the performance regression
+
+Direct measurement rules out the current canonical status/moodlet UI as a material source of the lag:
+
+- status query p50 `0.039 ms`, p95 `0.044 ms`, max `0.093 ms`;
+- explicit HUD refresh p50 `0.088 ms`, p95 `0.097 ms`, max `0.099 ms`.
+
+These are orders of magnitude below ordinary action latency. The mood/stats repair coincided with the user noticing the slowdown but did not cause it. Do not remove or simplify the status/moodlet UI as a performance fix.
+
+## Recommended architecture for the next implementation pass
+
+Keep tick-based determinism. Change orchestration and presentation so the player does not experience internal scheduler mechanics.
+
+1. Replace N independent NPC reactions to player `action_started` with one bounded cohort/turn coordinator. Capture one stable decision snapshot, evaluate active actors together, and enqueue their intents/results without N global callback fan-outs.
+2. Add perception invalidation/caching plus a cheap spatial broad phase. Recompute expensive LOS/memory only when observer position/facing, relevant targets, or visibility-affecting world state changes.
+3. Separate simulation resolution from presentation. Resolve the current player decision to a coherent decision boundary internally, then present all resulting actor changes together/concurrently. Preserve authoritative due ticks internally; do not visually expose one-NPC-after-another scheduler ordering.
+4. Instrument and budget streaming separately. Prewarm/incrementally materialize upcoming regions so boundary transitions cannot create a multi-second frame.
+5. After CPU cost is low enough, use a short concurrent animation window to communicate movement/combat/state changes. Animation should explain the turn, not mask blocking work.
+
+Performance acceptance target for the next pass:
+
+- ordinary player-decision simulation under roughly `50 ms` with the current ~10–12 active actors;
+- no individual rendered frame over `100 ms`;
+- no multi-second transition hitch;
+- player-visible actor outcomes presented coherently/concurrently rather than exposing internal due-tick sequencing.
+
+## Previous verifier cleanup
+
+At this operation's start, the preceding stats/moodlet prompt-owned pair was retired:
 
 - `game/scripts/ci/PromptStatsMoodletsSmoke.gd`
 - `.github/workflows/prompt-stats-moodlets.yml`
 
-The final verifier boots the real production `main.tscn -> NEW GAME -> gameplay.tscn` path and checks only this repaired presentation seam:
+Current temporary prompt-owned verification pair:
 
-- System 34 status is configured and valid;
-- HUD CanvasLayer is visible and exactly layer 36;
-- HUD is above transient resolution presentation and below PlayerShell;
-- all five persistent status lines have drawable size and occupy the canonical 640x844 design surface;
-- the expanded background fully contains the moodlet row;
-- status labels/moodlets draw above the background;
-- an authoritative hunger-pressure change produces an active hunger moodlet and visible moodlet-chip child;
-- moodlet chips have contrast outlines;
-- STATS modal opens and contains live health, condition, and moodlet text.
+- `game/scripts/ci/PromptTick2000FeelPlaytest.gd`
+- `.github/workflows/prompt-tick-2000-feel.yml`
 
-Functional-head focused verifier:
-
-- run `34554733414`: **SUCCESS** on `2edc622852eea7990d750128d93b7b02717c7a8e`.
-
-Functional-head Pages:
-
-- run `34554733439`: build **SUCCESS**, deploy **SUCCESS**.
-
-Documentation-head verification on `2f8d3ea8360b4b69fc90f991110711f02ec1d183`:
-
-- focused verifier run `34554849685`: **SUCCESS**;
-- Pages run `34554849744`: build **SUCCESS**, deploy **SUCCESS**.
-
-After this final context commit, verify its exact-head focused verifier and Pages runs read-only. Do not make another repository write in this operation.
-
-## Previous verifier cleanup
-
-The preceding terrain optimization prompt-owned verifier pair was retired at the start of this operation:
-
-- `game/scripts/ci/PromptTerrainBulkWriteOptimizationSmoke.gd`
-- `.github/workflows/prompt-terrain-bulk-write-optimization.yml`
-
-At the start of the next code operation, retire the current stats/moodlet verifier pair listed above before creating a fresh prompt-local verifier/workflow.
+Retire both at the start of the next code operation unless that operation explicitly extends this same verifier.
 
 ## Protected behavior
 
 Preserve:
 
-- one authoritative WHEN/TickKernel clock and decision-pause semantics;
-- production `PlayerActionController` one-authoritative-batch-per-rendered-frame behavior;
-- the terrain bulk-write/coalescing optimization and its measured streaming-seam improvement;
-- System 34 condition state/query semantics and analytic time drift;
+- one deterministic authoritative WHEN/TickKernel clock and decision semantics;
+- real production world/actor/perception/condition state rather than demo-only approximations;
+- System 34 condition state/query semantics and the current status/moodlet UI presentation;
+- terrain bulk-write/coalescing optimization and previous streaming improvements;
 - STATS / INVENTORY / CRAFT / MENU modal ownership and interaction blocking;
-- current world generation, utilities, weather, perception, interaction, vehicle, combat, population, and rendering ownership boundaries;
-- the persistent status location directly below the top player menu row.
+- current world generation, utilities, weather, interaction, vehicle, combat, population, and rendering ownership boundaries unless a measured hotspot requires a bounded change.
 
-Do not resurrect historical standalone DEV/control panels as production UI without an explicit target.
+The old `PlayerActionController` one-due-tick-batch-per-rendered-frame presentation behavior is no longer protected as a player-facing requirement. Internal deterministic due-tick ordering may remain, but presentation should be redesigned so the scheduler does not look like lag or serial actor animation.
 
-## Known follow-up targets from player direction
+## Other known player targets
 
-These remain separate operations unless explicitly promoted:
+Still separate from this completed measurement pass unless explicitly promoted:
 
-- ordinary same-region action latency / nearby-infected performance profiling and optimization;
 - more realistic vehicle placement tied to roads/residences/business/parking context;
 - higher believable road/building density and more alternate routes/loops;
 - removal of the player-facing `ZOMBIES`/`ZOMBIES NEARBY` status bar/indicator while preserving underlying infected systems;
-- gameplay-density polish: interaction affordance clarity, less dead travel, stronger early survival decisions, clearer action-time costs, distinct building usefulness, and stronger vehicle progression.
+- gameplay-density polish: clearer affordances, less dead travel, stronger first-day survival decisions, clearer time costs, distinct building usefulness, and stronger vehicle progression.
 
-## NEXT OPERATION — wait for explicit bounded target
+## NEXT OPERATION — wait for explicit implementation target
 
-Do not begin another code operation automatically.
+Do not change simulation architecture automatically from this measurement-only request.
 
-At the start of the next approved code prompt, delete:
+If the player promotes the performance fix, start with the smallest coherent implementation pass around NPC decision fan-out + perception caching/invalidation + coherent turn presentation, preserving deterministic TickKernel truth. Instrument before/after and compare against the 2000-tick baseline above.
 
-- `game/scripts/ci/PromptStatsMoodletsSmoke.gd`
-- `.github/workflows/prompt-stats-moodlets.yml`
-
-Then create a fresh prompt-local verifier/workflow limited to that next target.
+At the start of that next code operation, retire the current prompt-owned verifier pair unless intentionally extending it.
