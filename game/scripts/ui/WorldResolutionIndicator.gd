@@ -5,7 +5,6 @@ class_name WorldResolutionIndicator
 ## WHEN remains authoritative for decision timing; streaming remains authoritative for
 ## technical region changes. This layer owns no gameplay state and creates no new turn.
 
-const ZOMBIES_TEXT: String = "ZOMBIES NEARBY"
 const LOADING_TEXT: String = "LOADING"
 const LABEL_SIZE := Vector2(190.0, 38.0)
 const LABEL_POSITION := Vector2(426.0, 176.0)
@@ -121,11 +120,6 @@ func _refresh() -> void:
     var next_text: String = ""
     if _loading_visible:
         next_text = LOADING_TEXT
-    elif _kernel != null and _infected_cohort != null \
-        and not _kernel.is_hard_paused() \
-        and not _kernel.is_decision_paused() \
-        and not _infected_cohort.active_actor_ids().is_empty():
-        next_text = ZOMBIES_TEXT
 
     _label.text = next_text
     _label.visible = not next_text.is_empty()
