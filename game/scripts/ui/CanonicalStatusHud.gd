@@ -5,11 +5,16 @@ const Intents = preload("res://scripts/input/PlayerActionIntent.gd")
 
 ## Compact canonical HUD. Presentation only: reads query results and WHEN tick.
 ## The status / Looking at block lives directly below the top player menu row.
+##
+## Layer contract: this persistent status surface sits above ordinary movement/camera
+## controls and transient resolution text, but below interactive/modal panels.
 
+const HUD_LAYER: int = 36
 const PANEL_POSITION := Vector2(70, 66)
-const PANEL_SIZE := Vector2(500, 100)
+const PANEL_SIZE := Vector2(500, 122)
 const LINE_HEIGHT: float = 14.0
 const FONT_SIZE: int = 11
+const CONTENT_Z_INDEX: int = 1
 
 var _kernel: TickKernel = null
 var _status_query: ActorStatusSummaryQuery = null
@@ -22,7 +27,7 @@ var _moodlet_row: HBoxContainer = null
 var _last_presentation: Dictionary = {}
 
 func _ready() -> void:
-    layer = 21
+    layer = HUD_LAYER
     _ensure_ui()
 
 func configure(
@@ -132,6 +137,7 @@ func _ensure_ui() -> void:
     _panel.position = PANEL_POSITION
     _panel.size = PANEL_SIZE
     _panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    _panel.z_index = 0
     add_child(_panel)
 
     for index in range(5):
@@ -143,7 +149,10 @@ func _ensure_ui() -> void:
         label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
         label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
         label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+        label.z_index = CONTENT_Z_INDEX
         label.add_theme_font_size_override("font_size", FONT_SIZE)
+        label.add_theme_constant_override("outline_size", 3)
+        label.add_theme_color_override("font_outline_color", Color(0.0, 0.0, 0.0, 0.9))
         _labels.append(label)
         add_child(label)
 
@@ -153,6 +162,7 @@ func _ensure_ui() -> void:
     _moodlet_row.alignment = BoxContainer.ALIGNMENT_CENTER
     _moodlet_row.add_theme_constant_override("separation", 5)
     _moodlet_row.mouse_filter = Control.MOUSE_FILTER_IGNORE
+    _moodlet_row.z_index = CONTENT_Z_INDEX
     add_child(_moodlet_row)
 
 func _present_moodlets(values: Array) -> void:
@@ -165,6 +175,8 @@ func _present_moodlets(values: Array) -> void:
         chip.text = String(descriptor.get("label", ""))
         chip.add_theme_font_size_override("font_size", 10)
         chip.add_theme_color_override("font_color", _tier_color(StringName(descriptor.get("tier", &""))))
+        chip.add_theme_constant_override("outline_size", 3)
+        chip.add_theme_color_override("font_outline_color", Color(0.0, 0.0, 0.0, 0.95))
         chip.mouse_filter = Control.MOUSE_FILTER_IGNORE
         _moodlet_row.add_child(chip)
 
