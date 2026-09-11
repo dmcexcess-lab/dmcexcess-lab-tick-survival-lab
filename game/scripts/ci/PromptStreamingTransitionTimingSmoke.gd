@@ -18,7 +18,6 @@ func _run() -> void:
     if packed == null:
         _finish([])
         return
-
     var title: Node = packed.instantiate()
     root.add_child(title)
     current_scene = title
@@ -57,7 +56,6 @@ func _run() -> void:
     var records: Array[Dictionary] = []
     var initial_region: Vector2i = streaming.focus_region_coord()
     var transitions: int = 0
-
     for action_index: int in range(1, ACTION_COUNT + 1):
         if controller.is_busy() or not kernel.is_decision_paused():
             failures.append("controller not ready before action %d" % action_index)
@@ -74,7 +72,6 @@ func _run() -> void:
         if not controller.is_busy():
             failures.append("forward action %d was rejected" % action_index)
             break
-
         var settle_frames: int = 0
         while controller.is_busy() and settle_frames < MAX_SETTLE_FRAMES:
             settle_frames += 1
@@ -83,7 +80,6 @@ func _run() -> void:
         if controller.is_busy():
             failures.append("action %d did not settle" % action_index)
             break
-
         var after: WorldPlacement = world.placement(Fixture.PLAYER_ID)
         if after == null:
             failures.append("player placement missing after action %d" % action_index)
@@ -112,6 +108,14 @@ func _run() -> void:
             "catalog_validation_usec": _total_timing(timings, "stream_catalog_validation"),
             "world_snapshot_usec": _total_timing(timings, "stream_world_snapshot"),
             "materialization_commit_usec": _total_timing(timings, "stream_materialization_commit"),
+            "area_validate_usec": _total_timing(timings, "stream_area_validate"),
+            "building_plan_generation_usec": _total_timing(timings, "stream_building_plan_generation"),
+            "area_prop_preflight_usec": _total_timing(timings, "stream_area_prop_preflight"),
+            "area_ground_commit_usec": _total_timing(timings, "stream_area_ground_commit"),
+            "area_outdoor_commit_usec": _total_timing(timings, "stream_area_outdoor_commit"),
+            "building_materialization_usec": _total_timing(timings, "stream_building_materialization"),
+            "building_plan_count": int(values.get("stream_building_plan_count", 0)),
+            "outdoor_prop_count": int(values.get("stream_outdoor_prop_count", 0)),
             "lookahead_generated": int(values.get("stream_prepare_generated_last", 0)),
             "entering_regions": int(values.get("stream_entering_regions", 0)),
             "last_sources": int(values.get("stream_last_sources", 0)),
