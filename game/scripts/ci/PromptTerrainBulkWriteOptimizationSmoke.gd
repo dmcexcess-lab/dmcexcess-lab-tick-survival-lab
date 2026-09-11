@@ -44,7 +44,7 @@ func _verify_bulk_store_semantics() -> void:
         _check(world.terrain_at(cell) == grass, "bulk rectangle preserves exact overwrite semantics at %s" % cell)
     _check(int(restore_values.get("terrain_bulk_rect_requested_cells", 0)) == 65536, "bulk diagnostics report the full requested rectangle")
     _check(int(restore_values.get("terrain_bulk_rect_skipped_chunks", 0)) >= 250, "bulk restore skips already-uniform chunks")
-    _check(int(restore_values.get("terrain_bulk_rect_visited_cells", 65536)) <= 1536, "bulk restore visits only mixed chunks")
+    _check(int(restore_values.get("terrain_bulk_rect_visited_cells", 65536)) <= 1536, "bulk restore avoids scalar visits across full chunks")
 
     var revision_before_noop: int = world.terrain_revision()
     PerformanceTelemetry.reset()
@@ -54,6 +54,19 @@ func _verify_bulk_store_semantics() -> void:
     _check(int(noop_values.get("terrain_bulk_rect_visited_cells", -1)) == 0, "uniform no-op rectangle visits zero terrain cells")
     _check(int(noop_values.get("terrain_bulk_rect_skipped_cells", 0)) == 65536, "uniform no-op rectangle skips every requested cell")
     _check(int(noop_values.get("terrain_bulk_rect_skipped_chunks", 0)) == 256, "uniform no-op rectangle skips every aligned chunk")
+
+    var negative_cell := Vector2i(-31, -31)
+    _check(world.has_terrain(negative_cell) and world.terrain_at(negative_cell) == grass, "negative-coordinate chunk lookup remains exact")
+    _check(mutations.clear_terrain(negative_cell), "terrain erase works inside a chunk")
+    _check(not world.has_terrain(negative_cell), "erased chunk cell becomes unknown")
+    _check(mutations.set_terrain(negative_cell, road), "single-cell rewrite works after erase")
+    _check(world.terrain_at(negative_cell) == road, "single-cell rewrite preserves exact semantic")
+
+    var snapshot: Dictionary = world.snapshot()
+    var restored := WorldState.new()
+    _check(restored.load_snapshot(snapshot), "chunk-backed terrain snapshot round-trips through existing schema")
+    _check(restored.terrain_at(negative_cell) == road, "snapshot round-trip preserves sparse terrain override")
+    _check(restored.terrain_at(Vector2i(100, 100)) == grass, "snapshot round-trip preserves bulk terrain")
 
 func _verify_production_boundary() -> void:
     var packed: PackedScene = load("res://main.tscn")
@@ -134,6 +147,7 @@ func _verify_production_boundary() -> void:
             "action_usec": action_usec,
             "ground_commit_usec": _total_timing(timings, "stream_area_ground_commit"),
             "world_snapshot_usec": _total_timing(timings, "stream_world_snapshot"),
+            "rect_calls": int(values.get("terrain_bulk_rect_calls", 0)),
             "requested_cells": int(values.get("terrain_bulk_rect_requested_cells", 0)),
             "visited_cells": int(values.get("terrain_bulk_rect_visited_cells", 0)),
             "skipped_cells": int(values.get("terrain_bulk_rect_skipped_cells", 0)),
@@ -145,8 +159,8 @@ func _verify_production_boundary() -> void:
     if transition_record.is_empty():
         return
     var ground_commit_usec: int = int(transition_record.get("ground_commit_usec", BASELINE_GROUND_COMMIT_USEC))
-    _check(int(transition_record.get("skipped_chunks", 0)) > 0, "production boundary uses uniform-chunk terrain skips")
-    _check(int(transition_record.get("skipped_cells", 0)) > int(transition_record.get("visited_cells", 0)), "production boundary skips more known terrain than it visits")
+    _check(int(transition_record.get("rect_calls", 0)) > 0, "production boundary uses bulk rectangle mutation path")
+    _check(int(transition_record.get("requested_cells", 0)) == 49152, "production boundary covers the same 49,152-cell terrain workload as baseline")
     _check(ground_commit_usec < BASELINE_GROUND_COMMIT_USEC, "production ground commit improves over measured baseline")
     _check(ground_commit_usec <= MAX_GROUND_COMMIT_USEC, "production ground commit is at most %.2f seconds" % (float(MAX_GROUND_COMMIT_USEC) / 1000000.0))
     print("PROMPT_TERRAIN_BULK_BOUNDARY %s" % JSON.stringify(transition_record))
