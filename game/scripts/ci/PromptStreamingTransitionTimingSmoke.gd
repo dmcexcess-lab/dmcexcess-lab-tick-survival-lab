@@ -3,7 +3,7 @@ extends SceneTree
 const Intents = preload("res://scripts/input/PlayerActionIntent.gd")
 const Fixture = preload("res://scripts/demo/GeneratedIslandCritiqueFixture.gd")
 const PerformanceTelemetry = preload("res://scripts/foundation/diagnostics/PerformanceTelemetry.gd")
-const ACTION_COUNT: int = 40
+const ACTION_COUNT: int = 100
 const MAX_STARTUP_FRAMES: int = 1200
 const MAX_SETTLE_FRAMES: int = 240
 
