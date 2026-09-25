@@ -26,17 +26,17 @@ const DECAY_RAW_PER_DAY: Dictionary = {
 }
 const NEUTRAL_RAW: int = 60000
 const COMFORT_RECOVERY_RAW_PER_DAY: int = 18000
-const CALM_RECOVERY_RAW_PER_DAY: int = 50000
+const CALM_RECOVERY_RAW_PER_DAY: int = 600000
 const FATIGUE_RECOVERY_POINTS_PER_MINUTE: int = 12
 
-# Potency in tenths: hunger 1.0, thirst 1.1, sleep 1.0, boredom .5, comfort .6, fear .8.
+# Generic physical-condition potency in tenths. Calm/fear is intentionally excluded here; fear has explicit coordination/exertion/bracing effects below.
 const POTENCY_TENTHS: Dictionary = {
     "satiety": 10,
     "hydration": 11,
     "rest": 10,
     "engagement": 5,
     "comfort": 6,
-    "calm": 8,
+    "calm": 0,
 }
 
 var _state: ActorConditionState = null
@@ -131,6 +131,7 @@ func modifier_snapshot(actor_id: String) -> Dictionary:
     var base_condition_tenths: int = _condition_weighted_tenths(values)
     var fatigue_recovery_bp: int = _derived_multiplier(base_condition_tenths, 150, 4000, 10500)
     var fatigue_gain_bp: int = clampi(20000 - fatigue_recovery_bp, 9500, 16000)
+    fatigue_gain_bp = int((fatigue_gain_bp * fear_fatigue_gain_multiplier_bp(actor_id)) / 10000)
     return {
         "ok": true,
         "reason": "",
@@ -151,7 +152,44 @@ func health_multiplier_bp(actor_id: String) -> int:
 
 func fatigue_gain_multiplier_bp(actor_id: String) -> int:
     var values: Dictionary = current_values(actor_id)
-    return 10000 if values.is_empty() else clampi(20000 - _derived_multiplier(_condition_weighted_tenths(values), 150, 4000, 10500), 9500, 16000)
+    if values.is_empty():
+        return 10000
+    var base: int = clampi(
+        20000 - _derived_multiplier(_condition_weighted_tenths(values), 150, 4000, 10500),
+        9500,
+        16000
+    )
+    return int((base * fear_fatigue_gain_multiplier_bp(actor_id)) / 10000)
+
+func fear_tier(actor_id: String) -> StringName:
+    return tier(actor_id, StateClass.CALM)
+
+func deliberate_action_duration_multiplier_bp(actor_id: String) -> int:
+    match fear_tier(actor_id):
+        TIER_ORANGE:
+            return 11500
+        TIER_RED:
+            return 13000
+        _:
+            return 10000
+
+func fear_fatigue_gain_multiplier_bp(actor_id: String) -> int:
+    match fear_tier(actor_id):
+        TIER_ORANGE:
+            return 11000
+        TIER_RED:
+            return 12000
+        _:
+            return 10000
+
+func hold_resistance_multiplier_bp(actor_id: String) -> int:
+    match fear_tier(actor_id):
+        TIER_ORANGE:
+            return 9500
+        TIER_RED:
+            return 9000
+        _:
+            return 10000
 
 func fatigue_recovery_multiplier_bp(actor_id: String) -> int:
     var values: Dictionary = current_values(actor_id)
