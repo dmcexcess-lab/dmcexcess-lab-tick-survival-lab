@@ -42,7 +42,9 @@ Strikes carry an explicit `combat.contact` phase. Facing is latched at action st
 
 Light effective striking mass (<900 g) is WHEN `CANCELABLE`; heavy strikes (>=900 g) and SHOVE are `COMMITTED`. A real Health damage event requests ordinary interruption before contact. WHEN policy remains authoritative about whether the action actually stops.
 
-CONTACT intents are resolved through the existing late same-tick impact batch so two same-tick attacks can both land before tactical decision pause. Queue/source ordering is not hidden initiative.
+CONTACT intents are resolved through one same-tick consequence batch. Target occupancy and strike damage are frozen from the same pre-impact state before any HP/death/corpse mutation is allowed to remove an actor. Same-target strike damage is aggregated for canonical HP mutation, every valid contact still records its own injury/impact consequence, and lethal actor/corpse transitions publish only after the batch closes.
+
+There is no attacker-first initiative inside a tick. If two actors mutually reach lethal CONTACT on the same tick, both hits land and both die. If several strikes reach one target on the same tick, none is erased merely because aggregate HP reaches zero during that timestamp. Deterministic internal sorting is data stability only; it must not decide which already-due hit exists.
 
 ## 4. Exact melee item identity and physical impact
 
@@ -108,7 +110,7 @@ Combat owns no zombie-attraction radius. Future infected behavior must hear the 
 
 Death is downstream of Health, not a special firearm or infected rule.
 
-`ActorDeathTransitionService` watches the canonical Health transition from HP > 0 to HP <= 0. For any enrolled living actor it:
+`ActorDeathTransitionService` watches the canonical Health transition from HP > 0 to HP <= 0. Outside an active Health consequence batch it transitions immediately. During a same-tick combat consequence batch it defers the lethal transition until the batch closes, so death cannot erase another already-due contact. For any enrolled living actor it:
 
 1. force-fails the actor's active WHEN action;
 2. creates persistent corpse identity `corpse.<actor_id>` with semantic `object.corpse`;
@@ -183,6 +185,19 @@ It boots real `res://main.tscn` and proves:
 16. the same generic death path works on the first production resident-backed infected described by System 38.
 
 Early focused runs found two narrow integration defects and were repaired in production rather than weakening assertions: the initial death listener used the wrong five-argument Health signal contract, and the first infected hydrator incorrectly assumed Skill/Carry states exposed `is_ready()` methods. The final unchanged integrated assertions are green on the head/run above.
+
+### Phase 2B simultaneous impact/death boundary
+
+Fresh prompt-local verifier:
+
+- `game/scripts/ci/Phase2BSimultaneousImpactsSmoke.gd`
+- `.github/workflows/phase2b-simultaneous-impacts.yml`
+
+Functional head: `a33e302467921ab58541c462a89fc37b6f2b6964`.
+
+Focused run `36185910858`: **SUCCESS** with `PHASE2B_SIMULTANEOUS_IMPACTS_OK shared_tick=3 mutual_tick=10 impacts_before_death=true`.
+
+The production-scene verifier proved two same-tick hits on one 1-HP target both publish before its corpse transition, both injuries persist, and mutual lethal player/zombie contact publishes both impacts before either death; both actors then reach HP 0 and receive corpses.
 
 ## 13. Deliberately deferred extensions
 
