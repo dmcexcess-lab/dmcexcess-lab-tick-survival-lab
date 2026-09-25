@@ -17,11 +17,14 @@ var _hand_mutations: ActorHandEquipmentMutationService = null
 var _inventory: InventoryContainmentState = null
 var _inventory_mutations: InventoryContainmentMutationService = null
 var _corpses: CorpseState = null
+var _pending_deaths: Dictionary = {}
 
 func _init(world=null, world_mutations=null, kernel=null, health=null, hands=null, hand_mutations=null, inventory=null, inventory_mutations=null, corpses=null) -> void:
     _world=world; _world_mutations=world_mutations; _kernel=kernel; _health=health; _hands=hands; _hand_mutations=hand_mutations
     _inventory=inventory; _inventory_mutations=inventory_mutations; _corpses=corpses
-    if _health != null: _health.hp_changed.connect(_on_hp_changed)
+    if _health != null:
+        _health.hp_changed.connect(_on_hp_changed)
+        _health.consequence_batch_finished.connect(_on_consequence_batch_finished)
 
 func is_ready() -> bool:
     return _world != null and _world_mutations != null and _kernel != null and _health != null and _hands != null and _hand_mutations != null and _inventory != null and _inventory_mutations != null and _corpses != null
@@ -59,5 +62,20 @@ func transition_if_dead(actor_id: String) -> String:
     return corpse_id
 
 func _on_hp_changed(actor_id: String, previous_hp: int, hp: int, _max_hp: int, _version: int) -> void:
-    if previous_hp > 0 and hp <= 0:
+    if previous_hp <= 0 or hp > 0:
+        return
+    if _health != null and _health.consequence_batch_active():
+        _pending_deaths[actor_id] = true
+        return
+    transition_if_dead(actor_id)
+
+func _on_consequence_batch_finished() -> void:
+    if _pending_deaths.is_empty():
+        return
+    var actor_ids: Array[String] = []
+    for key: Variant in _pending_deaths.keys():
+        actor_ids.append(String(key))
+    actor_ids.sort()
+    _pending_deaths.clear()
+    for actor_id: String in actor_ids:
         transition_if_dead(actor_id)
