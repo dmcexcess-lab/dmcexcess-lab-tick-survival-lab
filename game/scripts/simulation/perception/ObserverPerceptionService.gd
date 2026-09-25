@@ -32,6 +32,7 @@ var _vision: VisionQuery = null
 var _acquisition: VisualAcquisitionProvider = null
 var _visible: Dictionary = {}
 var _recompute_count: int = 0
+var _last_recompute_tick: int = -1
 
 func _init(
     world_state: WorldState = null,
@@ -88,6 +89,14 @@ func set_acquisition_provider(value: VisualAcquisitionProvider) -> bool:
 func acquisition_provider() -> VisualAcquisitionProvider:
     return _acquisition
 
+func recompute_if_stale(reason: StringName = &"manual") -> bool:
+    if _kernel != null and _last_recompute_tick == _kernel.world_tick():
+        return true
+    return recompute(reason)
+
+func last_recompute_tick() -> int:
+    return _last_recompute_tick
+
 func recompute(reason: StringName = &"manual") -> bool:
     var started: int = Time.get_ticks_usec()
     _recompute_count += 1
@@ -96,6 +105,7 @@ func recompute(reason: StringName = &"manual") -> bool:
         _visible.clear()
         if had_visible:
             perception_changed.emit(reason)
+        _last_recompute_tick = _kernel.world_tick() if _kernel != null else -1
         _record_recompute(started)
         return false
 
@@ -111,6 +121,7 @@ func recompute(reason: StringName = &"manual") -> bool:
 
     _refresh_environment_memory(acquired_cells)
     _refresh_actor_memory(acquired_cells)
+    _last_recompute_tick = _kernel.world_tick()
     perception_changed.emit(reason)
     _record_recompute(started)
     return true
