@@ -2,6 +2,19 @@
 
 This compact ledger records the newest executable work. `CHANGELOG.md` remains the historical archive.
 
+## Phase 2B — simultaneous melee impact/death boundary — 2026-09-25
+
+Functional executable head: `a33e302467921ab58541c462a89fc37b6f2b6964`.
+
+- Made one melee contact tick a real consequence boundary rather than a sequence of miniature turns. Combat now freezes target occupancy and derived strike damage for every contact due on that tick before mutating HP or death state.
+- Aggregates same-tick strike damage per target for the canonical Health mutation while still recording every valid contact's own injury and `impact_resolved` event. HP remains clamped at zero; overkill does not erase a hit that already reached contact.
+- Added a bounded Health consequence-batch seam and changed generic death/corpse transition so lethal actors are not unplaced or converted to corpses until the batch closes.
+- This enforces the approved rule: if player and zombie land lethal hits on the same tick, both hits land and both die. Likewise, multiple attackers can all hit a target on the same tick even if aggregate damage is lethal.
+- Deterministic attacker sorting remains an implementation-stability detail only; it no longer decides whether an already-due hit survives another actor's death callback.
+- Fresh prompt-local verifier/workflow: `game/scripts/ci/Phase2BSimultaneousImpactsSmoke.gd` + `.github/workflows/phase2b-simultaneous-impacts.yml`.
+- Focused production run `36185910858`: **success** with `PHASE2B_SIMULTANEOUS_IMPACTS_OK shared_tick=3 mutual_tick=10 impacts_before_death=true`.
+- Phase 2 remains open for contested movement/shove ordering, mob force, canonical fear effects, zombie callback/perception cost, presentation coherence and crowded-fight performance.
+
 ## Phase 2A — explicit melee commitment windows — 2026-09-25
 
 Functional executable head: `bd69adcb19d8b473018cbdbbcd01c9cf41a3c2cd`.
