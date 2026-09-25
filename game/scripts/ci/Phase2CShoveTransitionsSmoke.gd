@@ -154,7 +154,7 @@ func _run() -> void:
         return
     var corpse_placement: WorldPlacement = world.placement(corpse_id)
     if corpse_placement == null or corpse_placement.anchor != cells["east"]:
-        _fail("corpse did not inherit post-shove outgoing position")
+        _fail("corpse did not inherit post-shove outgoing position; shove_results=%s" % str(shove_results))
         return
     if not _has_shove_result(shove_results, lethal_shove_serial, true):
         _fail("lethal same-tick shove was retroactively erased by death")
