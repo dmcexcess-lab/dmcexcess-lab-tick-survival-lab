@@ -49,10 +49,15 @@ func _run() -> void:
     var perception_after: int = _perception_recompute_total(cohort, active)
     var behavior_after: Dictionary = cohort.metrics_snapshot()
     var perception_delta: int = perception_after - perception_before
-    var evaluation_delta: int = int(behavior_after.get("behavior_evaluation_count", 0))         - int(behavior_before.get("behavior_evaluation_count", 0))
-    var submission_delta: int = int(behavior_after.get("ordinary_action_submission_count", 0))         - int(behavior_before.get("ordinary_action_submission_count", 0))
+    var evaluation_delta: int = int(behavior_after.get("behavior_evaluation_count", 0)) \
+        - int(behavior_before.get("behavior_evaluation_count", 0))
+    var evaluation_usec_delta: int = int(behavior_after.get("behavior_evaluation_total_usec", 0)) \
+        - int(behavior_before.get("behavior_evaluation_total_usec", 0))
+    var evaluation_max_usec: int = int(behavior_after.get("behavior_evaluation_max_usec", 0))
+    var submission_delta: int = int(behavior_after.get("ordinary_action_submission_count", 0)) \
+        - int(behavior_before.get("ordinary_action_submission_count", 0))
 
-    if perception_delta < 0 or evaluation_delta < 0 or submission_delta < 0:
+    if perception_delta < 0 or evaluation_delta < 0 or evaluation_usec_delta < 0 or submission_delta < 0:
         _fail("performance counters moved backward")
         return
 
