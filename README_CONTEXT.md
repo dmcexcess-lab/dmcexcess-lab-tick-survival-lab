@@ -2,147 +2,134 @@
 
 Read this file first, then `README_SOPS.md`. Fetch current `main` once before the next repository operation.
 
-## Current checkpoint — SURVIVAL RELEASE PHASE 2B SIMULTANEOUS MELEE CONSEQUENCES COMPLETE — 2026-09-25
+## Current checkpoint — SURVIVAL RELEASE PHASE 2C WALK ARBITRATION COMPLETE — 2026-09-25
 
-Phase 1 remains complete. Phase 2A commitment windows remain protected. This bounded Phase-2B slice implements the approved rule that one combat tick has no internal initiative: every melee contact due on that tick is resolved from the same pre-impact state, every valid hit is accounted for, and death/corpse transition publishes only afterward.
+Phase 1 remains complete. Phase 2A commitment windows and Phase 2B simultaneous melee hit/death semantics remain protected. This bounded Phase-2C slice removes hidden initiative from canonical same-tick actor walking: movement consequences due on one timestamp now resolve as a physical conflict set rather than serial occupancy mutations.
 
-Starting main for this operation: `004f55a77ca93c17bfa6a4501c60a5c40a486fa7`.
+Starting main for this operation: `912a86a43ee42b1bced33f7c6c4205f14f53fdeb`.
 
-Functional/executable owning head: `a33e302467921ab58541c462a89fc37b6f2b6964`.
+Functional/executable owning head: `d87f1402b0f06f69f1f8a614b3a7557dd7641b71`.
 
-Focused verifier owning run: `36185910858` — **SUCCESS**.
+Focused verifier head/run: `f605987f7feb4fd24e06f3724d90622d900beee9` / `36187796332` — **SUCCESS**.
 
-Documentation head immediately before this final handoff write: `02c00963d1ac203a79c7809198b85848dd83af31`.
+Documentation head immediately before this final handoff write: `e661e54e9724758881cd4da836ce3aacfedeecf4`.
 
 This `README_CONTEXT.md` commit is the final repository write for the operation. Identify its exact SHA from `main`; everything after it is read-only verification.
 
-## User-approved simultaneous tick rule
-
-The user's explicit combat rule is now canonical:
-
-- there is no "first attacker" inside one authoritative tick;
-- freeze the relevant pre-resolution state;
-- determine all attacks that legitimately reach contact on that tick;
-- calculate all those impacts from that same frozen state;
-- account for every hit/injury;
-- only then publish HP-zero death, corpse conversion and downstream removal.
-
-Therefore:
-
-- if player and zombie mutually land lethal hits on one tick, both hits land and both actors die;
-- if multiple attackers hit one target on one tick, every already-due hit lands even when aggregate damage is lethal;
-- deterministic sorting may stabilize processing but may never become hidden initiative or erase an already-due consequence.
-
-This rule is also recorded in `DESIGN_DECISIONS.md` and System 37.
-
 ## Prompt-local verifier lifecycle
 
-The Phase-2A prompt-owned pair was deleted before Phase-2B code work:
-
-- `game/scripts/ci/Phase2CombatCommitmentWindowsSmoke.gd`
-- `.github/workflows/phase2-combat-commitment-windows.yml`
-
-Fresh current pair:
+The Phase-2B prompt-owned pair was deleted before Phase-2C code work:
 
 - `game/scripts/ci/Phase2BSimultaneousImpactsSmoke.gd`
 - `.github/workflows/phase2b-simultaneous-impacts.yml`
 
-The next code prompt must delete this Phase-2B pair before changing code and create its own focused verifier/workflow.
+Fresh current pair:
+
+- `game/scripts/ci/Phase2CMovementConflictsSmoke.gd`
+- `.github/workflows/phase2c-movement-conflicts.yml`
+
+The next code prompt must delete this Phase-2C pair before changing code and create its own focused verifier/workflow.
 
 ## Completed
 
-### Combat consequence preparation
+### Same-tick actor movement arbitration
 
-`CombatActionService` already collected all CONTACT intents due on one tick and selected targets from a stable actor-cell snapshot. Phase 2B completes that seam:
+`MovementActionService` already collected successful movement phases into one late timestamp placement batch. The old implementation still allowed hidden initiative because:
 
-- all target choices are frozen before mutation;
-- all strike damage values are derived before mutation;
-- same-target strike damage is aggregated for canonical HP mutation;
-- every valid contact retains its own injury and `impact_resolved` publication;
-- HP is clamped at zero, but overkill does not erase an already-due contact.
+- an actor-occupied walk target could be rejected before the timestamp batch ever saw a possible simultaneous swap;
+- same-destination claims were assigned in sorted candidate order, allowing the first processed actor to win the space.
 
-### Health consequence batch
+This slice changes the canonical walk path so:
 
-`ActorHealthState` now provides a bounded nested consequence-batch boundary:
+- all due movement candidates re-read one unchanged pre-resolution occupancy state;
+- actor-only occupied walk targets may be admitted to timestamp arbitration;
+- static/non-ACTOR blockers remain immediate physical blockers;
+- multiple movers claiming any same destination cell all fail with `target_contested`;
+- no actor ID, callback order or queue order wins a contested empty space;
+- reciprocal swaps may succeed atomically when both actors vacate each other's required cells on the same timestamp;
+- compatible vacating chains/cycles may succeed only while each blocking actor has a surviving move that actually vacates the required cells;
+- dependency failure is propagated to a fixed point so a follower cannot phase through an actor whose own move ultimately failed;
+- successful placements continue through `WorldMutationService.set_placements_batch`, preserving one final occupancy publication rather than serial intermediate positions.
 
-- `begin_consequence_batch()`;
-- `end_consequence_batch()`;
-- `consequence_batch_active()`;
-- start/finish signals for downstream canonical owners.
+In-place turns are not treated as vacating their occupied cell.
 
-The batch does not create a parallel health model. System 13A remains the HP/injury owner.
+### Passage-aware production path
 
-### Deferred lethal transition
+Production uses `PassageAwareMovementActionService`.
 
-`ActorDeathTransitionService` still owns generic death/corpse conversion.
+Its wrapper previously classified any occupied destination as a blocked passage before base movement arbitration. It now delegates actor-only occupancy to the canonical movement service. Doors/other passage blockers keep their existing resolver path.
 
-Outside a consequence batch, HP > 0 -> HP <= 0 transitions remain immediate.
+### Walk commitment boundary
 
-Inside a combat consequence batch:
+Ordinary walk remains WHEN `CANCELABLE` during wind-up.
 
-- lethal HP changes are recorded as pending deaths;
-- no actor is unplaced and no corpse is created while same-tick impacts are still being published;
-- when the outer batch closes, pending lethal actors are transitioned deterministically;
-- active WHEN actions are then failed by the existing death owner;
-- exact carried/equipped item identities still move through the existing corpse path.
+Its final `movement.commit` offset is now declared as the action's Phase-2A commitment point. Once the action reaches that timestamp, later interruption on the same tick cannot retroactively erase the already-due movement consequence.
 
-### Protected Phase 2A semantics
-
-The new batch does not weaken commitment windows:
-
-- light/unarmed strike wind-up remains interruptible;
-- contact is still the point of no return;
-- after contact, same-tick damage cannot retroactively cancel the already-due attack;
-- heavy strikes/shoves remain committed according to their existing policy;
-- WHEN remains the single authoritative clock.
+Run remains COMMITTED under its existing contract. Turn behavior is unchanged.
 
 ## Focused production verification
 
-Fresh focused run `36185910858`: **SUCCESS**.
+Fresh focused verifier head/run:
 
-Successful marker:
+- `f605987f7feb4fd24e06f3724d90622d900beee9`
+- run `36187796332` — **SUCCESS**
 
-`PHASE2B_SIMULTANEOUS_IMPACTS_OK shared_tick=3 mutual_tick=10 impacts_before_death=true`
+Marker:
 
-The production-scene verifier proves two required cases.
+`PHASE2C_MOVEMENT_CONFLICTS_OK contest_tick=10 swap_tick=20 no_hidden_winner=true`
 
-### Two hits on one lethal target
+The real production scene proves:
 
-- player and a second attacker both reach CONTACT against the same 1-HP infected on tick 3;
-- both `impact_resolved` events publish;
-- both contacts create injuries;
-- the target reaches canonical HP 0;
-- the death/corpse event occurs only after both impacts;
-- one persistent corpse is created for the dead target.
+### Same destination
 
-### Mutual lethal contact
+- two production infected begin on opposite sides of one empty cell;
+- both ordinary walk actions are accepted and reach their commit point on tick 10;
+- both claim the same destination from the same pre-resolution occupancy;
+- neither moves;
+- both fail explicitly with `target_contested`;
+- there is no sorted first-actor winner.
 
-- player and infected begin from living pre-tick state at 1 HP each;
-- both attacks reach CONTACT on tick 10;
-- both `impact_resolved` events publish on tick 10;
-- neither death/corpse transition publishes before both hits;
-- both actors reach HP 0;
-- both receive their generic persistent corpse transition.
+### Reciprocal occupied-cell swap
 
-This directly verifies the user's approved "we both got hit and both died" rule in the real production combat/death owners.
+- two production infected begin in adjacent cells facing each other;
+- both occupied-cell walk requests are admitted to timestamp arbitration;
+- both reach the same commit timestamp, tick 20;
+- each actor's destination is the other actor's pre-resolution origin;
+- because both blockers simultaneously vacate, `set_placements_batch` atomically swaps their positions;
+- both movement commits publish.
 
-## What Phase 2B does NOT claim
+An earlier focused run `36187606605` failed only the reciprocal-swap acceptance assertion. Its log identified the production `PassageAwareMovementActionService` wrapper as still rejecting actor occupancy before base arbitration. That exact wrapper was repaired at `d87f1402...`; the unchanged physical assertions then passed. A later test-only commit fixed the evidence marker so the contest tick remains visible after the test clears its event array.
+
+## Durable design rule
+
+`DESIGN_DECISIONS.md` now records:
+
+- same-tick actor movement is a physical conflict set, not serial mini-turns;
+- same-destination conflicts fail all competing movers rather than choose an initiative winner;
+- reciprocal/vacating movement may succeed atomically;
+- deterministic sort order is implementation stability only;
+- static blockers do not disappear merely because simultaneous arbitration exists.
+
+`SYSTEM_DESIGNS/02_MOVEMENT_ACTIONS.md` now reflects the live timestamp arbitration and walk commitment boundary instead of the older serial race wording.
+
+## What this slice does NOT claim
 
 Phase 2 remains open.
 
-This slice does not yet close:
+This operation establishes the canonical same-tick **walk placement** primitive. It does not yet close:
 
-- contested same-tick movement into the same cell;
+- shove-vs-move ordering;
 - simultaneous shove/displacement conflicts;
-- mob-force/crowd-pressure rules;
-- opening/fortification force aggregation;
+- mob-force/crowd-pressure aggregation;
+- opening/fortification pressure resolution;
+- final cross-system rule for an actor that reaches committed movement on the same tick it is lethally struck;
+- firearm/movement same-tick conflicts;
 - canonical fear tuning/effects;
 - zombie callback/perception fan-out and performance;
-- presentation of overlapping outcomes as one visual/audio beat;
-- crowded-fight timing budgets or Safari acceptance;
-- firearm same-tick batching beyond existing firearm behavior.
+- presentation of overlapping outcomes as one coherent visual/audio beat;
+- crowded-fight timing budgets or Safari acceptance.
 
-Shoves remain in the melee resolver but conflicting displacement ordering is not claimed solved by this operation.
+Do not claim that all spatial consequences are solved yet.
 
 ## Current release direction
 
@@ -150,34 +137,36 @@ The game remains player versus zombies. Living survivor NPCs, raiders, followers
 
 Core loop: scavenge, fight, craft, survive on the persistent map with day/night, weather, power and water. A base is an existing fortified house/building with supplies, generator and well.
 
-Combat identity now has two executable Phase-2 foundations:
+Combat/time identity now has three executable Phase-2 foundations:
 
 1. explicit interruptible -> committed action windows;
-2. true simultaneous melee consequence/death semantics at one CONTACT tick.
+2. simultaneous melee hit/damage/death semantics;
+3. same-tick actor walk arbitration without hidden initiative.
 
 ## NEXT OPERATION
 
-Phase 2C: define and implement deterministic same-tick physical conflict resolution for movement/displacement, using the simultaneous-tick rule rather than actor order.
+Phase 2C continuation: integrate combat displacement/shove with the same timestamp spatial-arbitration rule, then close the committed-movement-vs-same-tick-death seam.
 
 Start with targeted current owners only:
 
-- movement action CONTACT/completion and any existing batch placement seam;
-- `WorldMutationService.set_placements_batch` and exact occupancy validation;
-- `CombatActionService._resolve_shove`;
-- current infected forward movement submission;
-- opening-pressure/mob-pressure code only where a concrete displacement/force seam requires it.
+- `CombatActionService._apply_resolution_batch` / `_resolve_shove`;
+- current `MovementActionService` timestamp candidate/placement batch;
+- `ActorHealthState` consequence-batch boundary;
+- `ActorDeathTransitionService` deferred lethal transition;
+- production composition seam only if one existing service reference must be wired.
 
-Required rule:
+Required outcomes:
 
-- actors due to move/displace on the same tick evaluate against one stable pre-resolution occupancy state;
-- processing order cannot allow one actor to "win" merely because its callback ran first;
-- direct swaps, same-destination contests, shove-vs-move and blocked displacement need explicit deterministic outcomes;
-- no actor phases through a blocker;
-- a zombie killed by a same-tick attack still contributes any movement/force consequence that had already reached its own committed consequence point on that tick.
+- a shove and an ordinary move due on the same tick evaluate from one stable physical state;
+- two simultaneous displacement claims cannot receive an attacker-ID/order winner;
+- blocked shove/displacement cannot phase actors through static or surviving actor blockers;
+- a movement or displacement consequence that already reached its commitment point is not erased merely because that actor also receives lethal damage on the same tick;
+- death/corpse placement publishes only after every already-committed same-tick spatial consequence that should survive has been accounted for;
+- preserve Phase-2B mutual lethal hit semantics.
 
-This operation should establish the physical conflict primitive needed by later mob force. Do not broaden into final mob-force tuning, fear, zombie performance or presentation until same-tick spatial consequences are trustworthy.
+This should create the shared displacement primitive needed before actual zombie mob-force aggregation. Do not tune mob force or fear yet.
 
-Before changing code, delete the Phase-2B verifier pair and create a new prompt-local verifier/workflow scoped to same-tick movement/displacement conflicts.
+Before changing code, delete the Phase-2C verifier pair and create a new prompt-local verifier/workflow scoped to shove/move/death timestamp interaction.
 
 ## Protected behavior
 
@@ -186,6 +175,7 @@ Preserve:
 - WHERE / WHAT / WHEN authority and one clock;
 - Phase-2A commitment offsets and snapshot compatibility;
 - Phase-2B simultaneous melee hit/death rule;
+- Phase-2C no-hidden-initiative walk arbitration;
 - stable pre-contact melee target snapshot;
 - existing eight resident-backed infected startup cohort;
 - no live survivor/raider/social runtime;
