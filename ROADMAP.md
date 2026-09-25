@@ -78,17 +78,17 @@ Fear must change meaningful capability or action execution under danger and reco
 
 ## 4. Delivery order and acceptance
 
-All implementation phases below are **OPEN**. Existing features should be reused and tested through their actual play paths. A phase closes only when its listed player outcomes are demonstrated; partial technical work stays partial. Work remains bounded under README_SOPS.md.
+Phase 1 is **COMPLETE** as of 2026-09-25. Phases 2–8 remain **OPEN**. Existing features should be reused and tested through their actual play paths. A phase closes only when its listed player outcomes are demonstrated; partial technical work stays partial. Work remains bounded under README_SOPS.md.
 
 ### Phase 0 — Establish the release contract
 
 **Plan completed in this documentation update.** Reconcile game identity, scope and handoff; preserve old decisions as explicitly superseded history. Keep the existing executable as the recovery baseline. No code was removed or changed by this phase.
 
-### Phase 1 — Retire live survivor/society dependencies
+### Phase 1 — Retire live survivor/society dependencies — COMPLETE 2026-09-25
 
-Disable/remove production composition and UI for living survivor cohorts, social roles and recruitment. Preserve zombie behavior, resident-derived identities where needed for compatibility, and shared mechanic owners. Replace any required live-society dependency with a bounded initial-state rule using existing generation/state owners. Remove obsolete implementation code only after confirming its consumers; Git preserves recovery history.
+Production no longer hydrates or activates living survivor cohorts, survivor AI/perception/hearing, neutral/follower/raider roles, social interaction providers/handlers, or survivor-to-infected conversion. The infected path now composes the non-dynamic `ActiveInfectedCohortService`; resident-derived generation/identity data remains available where the zombie path needs it. Dormant survivor/social implementation files remain only as recovery/history substrate.
 
-**Done when:** a new game has no living survivor/raider/social runtime, zombies still work through the ordinary path, and time, inventory, world generation and utilities remain intact. Record before/after startup and action costs. Removing four survivors alone is not closure of zombie performance.
+Focused production verification kept the eight infected cohort intact, found zero live non-infected survivor NPCs, completed an ordinary player commitment, and confirmed world time, the player inventory container and utilities still operate. Same-run-class CI evidence changed boot from 19,780,576 µs to 19,563,557 µs; the measured player commitment retained 8 infected evaluations while removing 2 survivor evaluations / 43,198 µs of survivor behavior work from the pre-change sample. These are single-run observations, not a stable performance benchmark. Zombie/perception performance remains Phase 2 work.
 
 ### Phase 2 — Make shared-tick combat responsive and coherent
 
@@ -193,6 +193,6 @@ Fix blockers in their existing owners, then rerun the affected scenario. Release
 
 ## 6. Next operation
 
-**Phase 1: retire the live survivor/social runtime from production composition while preserving zombies and shared mechanics.** Read the current handoff and exact cohort/composition consumers, not the entire repository. Establish before/after behavior and cost evidence. Then continue to Phase 2's zombie decision/perception and simultaneous-combat work through the normal bounded-operation gate.
+**Phase 2: implement the shared-tick combat contract and make the surviving zombie path responsive and coherent.** Begin from the current infected cohort/kernel/combat seams. Define and implement simultaneous due-tick consequence ordering, interruptible versus committed action windows, mob force and canonical fear effects, while measuring zombie decision/perception/presentation cost. Keep the operation bounded under README_SOPS.md; do not reopen the retired survivor/social runtime.
 
 Save/continue is a required release phase, not optional polish. Parking enrichment, environmental stories and balancing are required scope, not an invitation to restart global world generation.
