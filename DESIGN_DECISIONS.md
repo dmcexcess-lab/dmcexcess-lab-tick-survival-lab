@@ -8,6 +8,24 @@ If a later discussion changes a decision, do not erase history. Add a newer entr
 
 ---
 
+## 2026-09-25 — Physical edge cases resolve from canonical stats
+
+**Decision:** When simultaneous physical outcomes genuinely compete for the same exclusive result, resolve the conflict from frozen canonical actor state rather than callback order, actor ID, queue order, or an arbitrary coin flip.
+
+**Current movement rule:** same-tick movers claiming the same destination compare a derived physical contest score. A unique highest score wins the destination; exact top-score ties remain a stalemate and no claimant moves.
+
+The current score intentionally creates no new persistent Strength attribute. It derives from existing canonical facts: condition-adjusted carry capacity, current carried load, current HP relative to max HP, locomotion stance, and movement intent. Load reduces usable force; injury/low HP reduces physical effectiveness; crouched movement has less forward leverage; running carries more momentum than walking; backward movement carries less.
+
+**Future extension rule:** if a dedicated body/Strength attribute is later introduced, it should plug into this contest provider rather than creating a parallel conflict system. Shoves, displacement and mob pressure should reuse the same physical-contest seam, adding only mechanic-specific force inputs when justified.
+
+**Tie rule:** exact or unclassifiable top physical scores do not fall back to hidden initiative. The contested movement remains unresolved for that timestamp.
+
+**Affected systems:** movement arbitration, future shove/displacement, mob force, opening pressure and other exclusive same-tick physical conflicts.
+
+**Supersedes:** the earlier Phase-2C provisional rule that every same-destination movement contest automatically fails all claimants. That remains the fallback only when no unique physical-stat winner exists.
+
+---
+
 ## 2026-09-25 — Same-tick movement conflicts have no priority winner
 
 **Decision:** Actor movement consequences due on the same authoritative WHEN timestamp are resolved as a physical conflict set, not as serial occupancy mutations.
