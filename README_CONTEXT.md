@@ -2,250 +2,268 @@
 
 Read this file first, then `README_SOPS.md`. Fetch current `main` once before the next repository operation.
 
-## Current checkpoint — SURVIVAL RELEASE PHASE 2C MOB-FORCE CORE COMPLETE — 2026-09-25
+## Current checkpoint — SURVIVAL RELEASE PHASE 2 CANONICAL FEAR COMPLETE — 2026-09-25
 
-Phase 1 remains complete. Phase 2A commitment windows, Phase 2B simultaneous melee consequences, and the causal movement/shove/death transition foundation remain protected.
+Phase 1 remains complete. Phase 2A commitment windows, Phase 2B simultaneous melee consequences, Phase-2C causal movement/shove/death ordering, and the closed mob-force core remain protected.
 
-The user explicitly asked to stop subdividing crowd pressure and **wrap this system up**. This operation therefore closes the release-level mob-force architecture rather than creating another pressure sub-phase.
+The user approved the complete canonical fear contract on 2026-09-25 and this operation implemented it as one coherent system rather than another sequence of micro-slices.
 
-Starting main for this operation: `fdf69f1ab2b18d3b251cea9abba15091b0cd10ff`.
+Starting main for this operation: `7790741157aedf6a56926eb1ace89e9600b6051a`.
 
-Functional/executable owning head: `a5a92abb245ac7204b9cad0f71166e04bd61057a`.
+Functional/executable owning head: `82deda793337ea49b7cd47e52325e346bcbafec7`.
 
-Focused verifier head/run: `ac75eda66dcd10e181f360456dc9fc49dc4f3c56` / `36196436906` — **SUCCESS**. The functional code under test is `a5a92abb245ac7204b9cad0f71166e04bd61057a`; the verifier/workflow commits only add the prompt-local proof.
+Focused production verifier head/run: `82deda793337ea49b7cd47e52325e346bcbafec7` / `36199423801` — **SUCCESS**.
 
-Documentation head immediately before this final handoff write: `8346da24cda864957196b2726d031166af11af77`.
+Focused marker:
+
+`PHASE2_FEAR_OK aggregate_cap=true explicit_effects=true escape_responsive=true injury=true pressure=true recovery=true`
+
+Functional-head Pages run `36199423817` — **SUCCESS**.
+
+Documentation head immediately before this final handoff write: `00b9560717232e3feb9286f7a0f2d7873ff87dcb`.
 
 This `README_CONTEXT.md` commit is the final repository write for the operation. Identify its exact SHA from `main`; everything after it is read-only verification.
 
 ## Prompt-local verifier lifecycle
 
-The previous prompt-local crowd-pressure pair was deleted before code work:
+The previous crowd-pressure closure verifier pair was deleted before fear code work:
 
-- `game/scripts/ci/Phase2CCrowdPressureSmoke.gd`
-- `.github/workflows/phase2c-crowd-pressure.yml`
+- `game/scripts/ci/Phase2CCrowdPressureClosureSmoke.gd`
+- `.github/workflows/phase2c-crowd-pressure-closure.yml`
 
 Fresh current pair:
 
-- `game/scripts/ci/Phase2CCrowdPressureClosureSmoke.gd`
-- `.github/workflows/phase2c-crowd-pressure-closure.yml`
+- `game/scripts/ci/Phase2FearSmoke.gd`
+- `.github/workflows/phase2-fear.yml`
 
-The next code prompt must delete this pair before changing code and create a fresh verifier/workflow for that next module.
+The next code prompt must delete this pair before changing code and create a brand-new focused verifier/workflow for the next module.
 
-## MOB-FORCE CORE — CLOSED
+## CANONICAL FEAR — COMPLETE
 
-The release-level crowd-pressure / mob-force architecture is now complete enough to stop reopening it as a sequence of architecture slices.
+Fear uses the existing persistent `CALM` condition as its only authoritative state.
 
-### Ordinary movement now creates body pressure
+No second fear/panic meter exists.
 
-The critical gameplay gap found during this closure was that the existing pressure solver depended on explicit shove inputs, while production infected behavior normally submits ordinary pursuit movement and melee attacks.
+### Same-timestamp fear pressure
 
-That is now fixed in the physical simulation, not in zombie AI.
+New owner:
 
-When a committed movement trajectory enters an actor-occupied cell:
+- `ActorFearPressureService.gd`
 
-- the movement itself still cannot phase into the occupied cell;
-- its already-frozen locomotion physical score becomes contact force on the blocking actor;
-- that contact force enters the same aggregate physical-pressure resolver used by shove;
-- if downstream bodies move and release cells, the original mover may inherit the released cell through the existing fixed-point occupancy rules;
-- if pressure fails, the original movement remains blocked.
+Observation/consequence systems no longer mutate Calm independently. They submit fear pressure to one current-timestamp owner.
 
-Thus ordinary zombie pursuit can create crowd pressure simply by zombies walking into one another.
+Current production fear sources:
 
-No infected-specific shove policy was added.
+- visible infected threat from canonical Perception;
+- sufficiently strong recognized `threat` Sound observations;
+- bounded injury shock from canonical Health damage;
+- resolved physical crowd pressure from Movement.
 
-### Multi-body propagation is complete as a bounded release primitive
+Pressure generated on one authoritative timestamp is aggregated before mutation.
 
-Residual force is no longer capped at one packed actor.
+The total Calm loss is capped at **20 points per tick**.
 
-Pressure can now propagate through a contiguous multi-body chain during one authoritative timestamp.
+This prevents callback order or multiple simultaneous danger channels from producing arbitrary runaway fear.
 
-At each actor:
+The fear owner publishes one `fear_resolved` consequence after applying the capped aggregate.
 
-1. all relevant same-direction/ opposing force already present at that actor is resolved through the existing aggregate trajectory rules;
-2. the actor's frozen resistance consumes force;
-3. only positive residual force may continue;
-4. the next occupied actor receives that residual as another physical input;
-5. independently earned force already acting on that downstream actor can combine with it;
-6. surviving outgoing trajectories are still resolved through the same destination/edge/occupancy rules;
-7. final placements publish atomically through WHAT.
+## Fear tiers and explicit mechanical effects
 
-The implementation transmits only **new/unsent force deltas** during bounded resolution passes so the same force cannot be recursively amplified merely because the resolver loops.
+Existing condition tier boundaries remain canonical.
 
-### Movement and pressure reinforce naturally
+Fear interpretation:
 
-If an actor is already committed to move in the same direction as incoming pressure, aligned physical input supports that trajectory rather than behaving like an unrelated shove.
+- Calm 45–100: **Composed** — no fear penalty.
+- Calm 30–44: **Uneasy** — player-facing warning only.
+- Calm 15–29: **Afraid** — +15% deliberate-action duration, +10% Fatigue gain, -5% hold/bracing resistance.
+- Calm 0–14: **Terrified** — +30% deliberate-action duration, +20% Fatigue gain, -10% hold/bracing resistance.
 
-This allows a packed moving line to transmit pressure forward naturally:
+The existing Moodlet path continues to present `Uneasy`, `Afraid`, and `Terrified`.
 
-- rear movement contacts the body ahead;
-- downstream actors contribute their own locomotion/contact force;
-- incoming residual adds;
-- the resulting physical state decides whether the chain advances.
+### What fear does NOT alter
 
-Again, this occurs in Movement/spatial arbitration. AI does not know about mob-force tactics.
+Calm has been removed from the generic condition potency calculation.
 
-### Force exhaustion is real
+Fear therefore no longer silently modifies:
 
-Every packed actor consumes frozen resistance before force continues.
+- maximum Health;
+- general movement speed;
+- carry capacity;
+- body-powered/melee damage;
+- raw locomotion force;
+- raw shove force.
 
-A pressure wave therefore can die inside a crowd.
+Fear also never:
 
-When residual force falls below the resistance needed to continue the chain:
+- chooses actions for the player;
+- forces fleeing;
+- drops equipment;
+- rejects a valid command merely because the actor is afraid;
+- creates random loss-of-control behavior.
 
-- the downstream actor stays;
-- its cell is not released;
-- fixed-point occupancy causes dependent upstream advances to fail;
-- the whole affected portion of the line can jam in place.
+## Player-agency / escape rule
 
-There is no arbitrary "push N zombies" distance.
+Fear affects deliberate coordination-heavy execution rather than gross escape behavior.
 
-### Opposing pressure remains order-free
+Fear timing is currently wired into:
 
-Existing aggregate rules remain protected:
+- melee strikes;
+- aimed firearm discharge;
+- firearm reload phases;
+- first aid;
+- crafting.
 
-- parallel force adds;
-- opposite cardinal force subtracts;
-- exact aggregate balance produces no directional winner;
-- callback order, actor ID, serial order and sorting do not choose a winner;
-- exact perpendicular-axis net ties remain stalemated rather than inventing a diagonal or arbitrary turn.
+Escape/reactive actions retain normal timing:
 
-### Static geometry terminates pressure
+- ordinary walk;
+- run;
+- shove;
+- snap fire.
 
-Static/non-ACTOR collision remains absolute for this core.
+The focused verifier explicitly proves terrified locomotion duration remains unchanged while deliberate melee becomes slower, and that terrified shove retains its normal 6-tick duration.
 
-Even very strong multi-body pressure cannot push actors through a wall or other static blocked cell.
+## Fear and Fatigue
 
-If the front body cannot release its cell:
+Fear increases Fatigue gain explicitly:
 
-- the front displacement fails;
-- fixed-point occupancy blocks the actor behind it;
-- that dependency propagates backward through the packed line;
-- nobody phases.
+- Afraid: ×1.10;
+- Terrified: ×1.20.
 
-Converting trapped pressure into crush injury, knockdown, door damage or fortification damage is a **downstream consequence mechanic**, not missing crowd-pressure architecture.
+This flows through the existing canonical condition/exertion path.
 
-### Explicit finite/cycle protection
+Fear itself does not create Fatigue recovery penalties through a parallel subsystem.
 
-Pressure propagation now has both:
+## Fear and physical bracing
 
-- a visited actor path carried through the propagation chain;
-- explicit maximum propagation depth and maximum propagation passes.
+Only `physical.hold` resistance receives the explicit fear reduction:
 
-Therefore malformed/cyclic occupancy can never create an infinite pressure resolver.
+- Afraid: ×0.95;
+- Terrified: ×0.90.
 
-These are safety bounds, not gameplay-distance rules. Normal force still stops from resistance or geometry before the bound whenever the physical state dictates it.
+Raw shove and locomotion force are unchanged.
 
-## Zombie behavior remains simulation-first
+This allows a frightened survivor to be somewhat easier to physically displace without creating a runaway loss of strength.
 
-`FirstInfectedBehaviorService` remains unchanged.
+## Visible-threat fear
 
-Infected still do simple things:
+`ConditionPerceptionFearAdapter` now uses encounter-aware distance bands instead of a flat repeated per-zombie Calm mutation.
 
-- perceive;
-- pursue;
-- turn;
-- walk;
-- attack.
+Current bands:
 
-They do not:
+- far;
+- near;
+- close;
+- contact.
 
-- coordinate formations;
-- call a mob controller;
-- pick scripted crowd lanes;
-- deliberately arrange shove chains;
-- randomly stumble for visual flavor;
-- know the force propagation graph.
+Crossing into a worse band creates additional pressure.
 
-Crowd behavior now comes from ordinary intentions interacting with:
+Additional simultaneous visible infected contribute with diminishing weight rather than linearly charging the full amount for every body.
 
-- occupancy;
-- committed movement;
-- locomotion momentum;
-- shove force;
-- frozen resistance;
-- blocked/released cells;
-- geometry;
-- aggregate pressure.
+The same visible threat does **not** repeatedly charge fear merely because Perception refreshes.
 
-This supports the user's direction to let the simulation win: orderly flow, traffic jams and sudden surges can all emerge from the same rules.
+Encounter memory resets only after a meaningful visible-threat-free interval: currently five in-game minutes.
 
-## Focused production verification
+## Heard-threat fear
 
-Fresh current verifier/workflow:
+`ConditionHeardFearAdapter` now submits bounded pressure instead of mutating Calm directly.
 
-- `game/scripts/ci/Phase2CCrowdPressureClosureSmoke.gd`
-- `.github/workflows/phase2c-crowd-pressure-closure.yml`
+Only observations already recognized by Sound as category `threat` qualify.
 
-Focused run:
+Current perceived-strength thresholds:
 
-- run `36196436906` — **SUCCESS**
+- >= 0.65: modest fear pressure;
+- >= 0.85: stronger fear pressure.
+
+This adapter does not expose hidden exact source identity or location.
+
+## Injury fear
+
+`ConditionInjuryFearAdapter` now owns the Health-to-fear seam.
+
+Damage creates a bounded shock pulse based on damage magnitude.
+
+The old direct `ActorConditionService` injury-to-Calm mutation was removed, so injury now participates in the same same-tick fear aggregate as other danger.
+
+## Crowd-pressure fear
+
+Movement now exposes one resolved `physical_pressure_resolved` consequence summary for psychological consumers.
+
+`ConditionPhysicalPressureFearAdapter` interprets the physical result without owning force:
+
+- resisted body pressure creates modest fear;
+- actual displacement creates stronger fear;
+- pressure trapped/terminated against geometry creates the strongest current crowd-pressure fear impulse.
+
+This does **not** reopen or alter the closed mob-force architecture. Fear consumes its result.
+
+## Recovery / anti-spiral rule
+
+Calm still recovers analytically toward neutral 60 as authoritative WHEN advances.
+
+Current tuning:
+
+- approximately +25 Calm points per in-game hour when below neutral;
+- 0 Calm reaches neutral in roughly 2.4 in-game hours if no new fear pressure occurs.
+
+Fear state itself never generates additional fear pressure.
+
+This prevents a self-sustaining psychological feedback loop.
+
+Decision pause advances no time, so it grants no free fear recovery.
+
+## Focused verification
+
+Fresh prompt-local production verifier:
+
+- `game/scripts/ci/Phase2FearSmoke.gd`
+- `.github/workflows/phase2-fear.yml`
+
+Successful functional run:
+
+- head: `82deda793337ea49b7cd47e52325e346bcbafec7`
+- run: `36199423801`
+- result: **SUCCESS**
 
 Marker:
 
-`PHASE2C_CROWD_PRESSURE_CLOSED movement_contact=true multi_body=true exhaustion=true opposing_cancel=true static_stop=true`
+`PHASE2_FEAR_OK aggregate_cap=true explicit_effects=true escape_responsive=true injury=true pressure=true recovery=true`
 
 The verifier boots the real production scene and proves:
 
-### Ordinary-movement multi-body surge
+1. three same-tick fear inputs aggregate before one Calm mutation;
+2. the per-tick Calm-loss cap is exactly 20;
+3. Calm no longer changes generic Health/speed/carry/melee-damage multipliers;
+4. Terrified explicit multipliers are 13000 deliberate timing / 12000 Fatigue gain / 9000 hold resistance;
+5. existing `Terrified` moodlet feedback remains visible;
+6. ordinary movement timing is unchanged by terror;
+7. deliberate melee timing increases under terror;
+8. shove remains a responsive escape action;
+9. first aid, crafting and firearm services are production-wired to the same fear timing query;
+10. injury shock reaches the fear-pressure owner;
+11. resolved body pressure reaches the fear-pressure owner;
+12. visual threat bands and heard-threat classification are bounded as designed;
+13. one in-game hour of recovery from 0 Calm reaches the intended roughly 25-point range.
 
-A strong production infected performs an ordinary `movement.step_forward` into a line of three stationary infected.
+## Focused repair history
 
-No combat shove is submitted.
+The first verifier attempt exposed two test/tooling issues and one real production wiring mismatch:
 
-The locomotion contact pressure propagates through all three packed bodies and the entire line advances atomically into the open downstream cell.
+- a malformed verifier line-continuation caused a parse failure;
+- the verifier was given a watchdog/stage diagnostics so script failures terminate explicitly rather than hanging CI;
+- script-chain verification then exposed that `System34GameMain` passed the new fear modifier to `SurvivorFirstAidActionService` while that service still had its old 10-argument constructor.
 
-This proves the actual infected movement path can create mob force without authored crowd behavior.
+The first-aid constructor was repaired to accept/store the shared condition modifier query.
 
-### Natural force exhaustion
+A dedicated prompt-local `--check-only` step now validates the fear-touched script chain before the runtime verifier.
 
-The same packed line is reset with a weaker rear mover.
-
-The first body consumes enough force that residual pressure cannot defeat the next body's resistance.
-
-The downstream body remains, its cell is not released, and all dependent upstream actors remain in place.
-
-### Opposing aggregate cancellation
-
-Equal opposite force inputs on the same actor still cancel without a hidden winner.
-
-### Static endpoint termination
-
-A stronger ordinary movement pressure chain is placed against real static production geometry.
-
-The front cannot move into the blocked endpoint and the entire dependent chain remains in place. No actor tunnels or phases.
+The final functional run is green.
 
 ## Durable documentation updated
 
-- `DESIGN_DECISIONS.md` explicitly closes crowd-pressure as a core system and records ordinary locomotion contact as physical pressure.
-- `SYSTEM_DESIGNS/02_MOVEMENT_ACTIONS.md` records movement-contact pressure, bounded multi-body propagation, force exhaustion, safety bounds and closure evidence.
-- `SYSTEM_DESIGNS/37_TACTICAL_COMBAT_PHYSICAL_IMPACT.md` records the closed shared force seam and treats knockdown/crush/fortification damage as downstream consumers.
-- `ROADMAP.md` now marks the release-level mob-force core complete rather than leaving deeper pressure architecture open.
-- `CHANGELOG_LATEST.md` records this closure slice and verifier evidence.
-
-## What is deliberately NOT part of reopening mob-force
-
-Do not reopen the pressure architecture merely to add:
-
-- knockdown / stumble / prone;
-- crush injury;
-- wall/body impact injury;
-- door / barricade / fortification durability damage;
-- fear.
-
-Those mechanics may later consume already-resolved pressure/impact information through their proper owners.
-
-They are not additional phases of "finish crowd pressure."
-
-If actual play later reveals a concrete force-solver defect, repair that defect. Otherwise the mob-force architecture is closed.
-
-## Scope note — humans and pets
-
-Living survivor society, raiders, human followers, recruitment/dialogue and social simulation remain retired.
-
-Pets remain future bounded scope and should use the same ordinary movement/occupancy/physical consequence rules rather than reviving human follower/social architecture.
-
-No pet runtime was added here.
+- `DESIGN_DECISIONS.md` records the approved fear/player-agency contract.
+- `SYSTEM_DESIGNS/34_SURVIVOR_CONDITION_HEALTH_STAMINA_MOODLETS.md` records the implemented canonical fear owner, sources, tiers, explicit effects, recovery and focused evidence.
+- `ROADMAP.md` marks canonical fear complete within Phase 2.
+- `CHANGELOG_LATEST.md` records implementation and repair evidence.
 
 ## Current release direction
 
@@ -255,55 +273,45 @@ Core loop remains:
 
 on the persistent map with day/night, weather, power, water and vehicles.
 
-A base is an existing fortified house/building with supplies, generator and well.
+A base remains an existing fortified house/building with supplies, generator and well.
 
-Phase-2 executable foundations now include:
+Human survivor society, raiders and human followers remain outside release scope. Pets remain future bounded scope.
+
+Phase-2 defining mechanics now include:
 
 1. explicit interruptible -> committed action windows;
-2. simultaneous melee hit/damage semantics;
-3. deferred terminal death after surviving current-tick spatial consequences;
+2. simultaneous same-tick melee consequences;
+3. terminal death after already-earned same-tick spatial consequences;
 4. causal `S_t -> transition -> S_t+1` ordering;
-5. conditional origin releases / destination arrival claims;
-6. atomic compatible movement chains;
-7. stat-based exclusive physical contests;
-8. head-on/physical movement conflict handling;
-9. shove as a frozen forced trajectory;
-10. shove-vs-movement trajectory competition;
-11. aggregate opposing/parallel force;
-12. ordinary locomotion contact pressure;
-13. bounded multi-body residual force transmission;
-14. force exhaustion through body resistance;
-15. finite/cycle-safe pressure resolution;
-16. static endpoint termination without phasing.
+5. conditional origin release / destination arrival;
+6. atomic movement chains and deterministic physical contests;
+7. head-on edge conflicts;
+8. shove as shared forced trajectory;
+9. aggregate multi-body mob pressure with natural exhaustion and static termination;
+10. canonical fear with bounded same-tick pressure, explicit action/exertion/bracing effects and analytic recovery.
 
-**Mob-force core is complete.**
+**Mob-force core is complete. Canonical fear is complete.**
 
 ## NEXT OPERATION
 
-Do **not** continue subdividing crowd pressure.
+Continue Phase 2 with the next remaining release blocker: **zombie callback/perception performance under ordinary combat load**.
 
-Move to the next open Phase-2 defining mechanic: **canonical fear**.
+Do not redesign mob force or fear.
 
-Because fear has not yet received a settled final behavior contract, follow the SOP's `DESCRIBE -> APPROVE -> IMPLEMENT -> VERIFY` rule before writing that new mechanic.
+Target the existing eight-infected production cohort first.
 
-The design discussion should stay bounded and answer:
+The next bounded operation should:
 
-- which existing canonical condition/moodlet owner stores fear;
-- what concrete observations create fear pressure;
-- what fear changes mechanically (action timing, interruption/stability, accuracy/awareness, etc.) without stealing player control arbitrarily;
-- how recovery works;
-- how crowd pressure / nearby zombies / injury interact without double-counting;
-- how to avoid an unrecoverable feedback loop;
-- what minimal player-facing feedback explains the effect.
+- delete this prompt's fear verifier/workflow before code changes;
+- create a fresh performance-focused prompt-local verifier/workflow;
+- measure actual per-decision/per-tick infected callback and perception work on the production scene;
+- identify repeated Perception/visibility/path/acquisition work that is duplicated within one authoritative decision/timestamp;
+- remove or cache only proven redundant work without changing perception truth or zombie intentions;
+- preserve dumb/simple infected behavior and all current causal movement/combat/fear semantics;
+- report before/after timings from the same focused route;
+- avoid broad renderer/streaming optimization unless the evidence shows it is the actual blocker.
 
-Do not implement fear until that behavior is approved.
-
-After approval, the first fear code prompt must delete the current prompt-local verifier pair:
-
-- `game/scripts/ci/Phase2CCrowdPressureClosureSmoke.gd`
-- `.github/workflows/phase2c-crowd-pressure-closure.yml`
-
-and create a brand-new focused fear verifier/workflow.
+After callback/perception cost is bounded, Phase 2 can move to coherent overlapping consequence presentation and then crowded-fight/Safari acceptance.
 
 ## Protected behavior
 
@@ -311,25 +319,27 @@ Preserve:
 
 - WHERE / WHAT / WHEN authority and one clock;
 - `S_t -> transition -> S_t+1` causal ordering;
-- Phase-2A commitment offsets;
-- Phase-2B simultaneous melee contacts/damage;
-- terminal death after surviving same-tick spatial consequences;
-- frozen current-tick physical scores;
-- stat-based destination/trajectory arbitration;
+- Phase-2A commitment windows;
+- Phase-2B simultaneous melee consequences;
+- deferred terminal death after surviving current-tick spatial consequences;
+- frozen physical state for current-tick contests;
+- same-destination stat arbitration;
 - release-chain/fixed-point occupancy semantics;
+- head-on edge conflicts;
 - shove-vs-move arbitration;
-- aggregate force semantics;
-- ordinary movement contact pressure;
-- bounded multi-body propagation and safety limits;
-- static no-phasing behavior;
+- closed aggregate multi-body mob-force system;
+- ordinary locomotion contact pressure;
+- canonical fear as CALM only;
+- fear aggregation cap and encounter-aware observations;
+- explicit Afraid/Terrified effects;
+- responsive movement/run/shove/snap-fire escape timing;
+- no forced flee/random panic control theft;
+- existing player/infected Health, inventory, movement, perception, condition, skills and equipment;
+- day/night, weather, utilities and vehicles;
+- persistence/terrain/streaming;
 - simple infected intention selection with no crowd choreography;
-- stable pre-contact melee target snapshot;
-- existing resident-backed infected startup cohort;
 - no live survivor/raider/human-follower/social runtime;
 - pets only as future bounded scope;
-- player movement, Health/injury, inventory, condition/moodlets, skills and equipment;
-- day/night, weather, utilities and vehicles;
-- persistent world changes and terrain/streaming improvements;
 - input locked until legitimate decision pause;
 - hard application pause;
 - STATS / INVENTORY / CRAFT / MENU ownership;
