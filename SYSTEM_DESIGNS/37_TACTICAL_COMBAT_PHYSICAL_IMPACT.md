@@ -36,13 +36,15 @@ Implemented melee actions remain:
 - `combat.strike_primary` — exact RIGHT HAND item;
 - `combat.strike_secondary` — exact LEFT HAND item;
 - `combat.strike_unarmed` — only when the relevant hand is actually empty;
-- `combat.shove` — committed forward displacement attempt.
+- `combat.shove` — committed forward force/contact that submits a forced target trajectory to the shared spatial transition arbiter.
 
 Strikes carry an explicit `combat.contact` phase. Facing is latched at action start, while attacker/target placement is re-read at CONTACT. The intended target is hit only if it is still physically in the strike cell; if it moved away, the strike does not home. If another living Health actor now occupies that exact contact cell, physical occupancy may make that actor the contact instead.
 
 Light effective striking mass (<900 g) is WHEN `CANCELABLE`; heavy strikes (>=900 g) and SHOVE are `COMMITTED`. A real Health damage event requests ordinary interruption before contact. WHEN policy remains authoritative about whether the action actually stops.
 
-CONTACT intents are resolved through one same-tick consequence batch. Target occupancy and strike damage are frozen from the same pre-impact state before any HP/death/corpse mutation is allowed to remove an actor. Same-target strike damage is aggregated for canonical HP mutation, every valid contact still records its own injury/impact consequence, and lethal actor/corpse transitions publish only after the batch closes.
+CONTACT intents are resolved through one same-tick consequence batch. Target occupancy, strike damage, shove source force and shove target resistance are frozen from the same incoming state before generated HP changes can alter an already-earned consequence. Same-target strike damage is aggregated for canonical HP mutation, every valid contact still records its own injury/impact consequence, and shove no longer writes placement directly from Combat.
+
+A shove instead submits a forced trajectory to `MovementActionService`, which resolves it in the same late timestamp batch as ordinary movement. Target movement and shove may align or compete; competing target trajectories use frozen canonical physical scores. Equal opposing shove forces do not get an attacker-order winner. Static blockers remain absolute here; later crowd-force/push-chain work extends this same seam rather than replacing it.
 
 There is no attacker-first initiative inside a tick. If two actors mutually reach lethal CONTACT on the same tick, both hits land and both die. If several strikes reach one target on the same tick, none is erased merely because aggregate HP reaches zero during that timestamp. Deterministic internal sorting is data stability only; it must not decide which already-due hit exists.
 
@@ -110,7 +112,7 @@ Combat owns no zombie-attraction radius. Future infected behavior must hear the 
 
 Death is downstream of Health, not a special firearm or infected rule.
 
-`ActorDeathTransitionService` watches the canonical Health transition from HP > 0 to HP <= 0. Outside an active Health consequence batch it transitions immediately. During a same-tick combat consequence batch it defers the lethal transition until the batch closes, so death cannot erase another already-due contact. For any enrolled living actor it:
+`ActorDeathTransitionService` watches the canonical Health transition from HP > 0 to HP <= 0. Outside an active Health consequence batch it transitions immediately. During a same-tick combat consequence batch it defers the lethal transition until the batch closes. Combat now holds that batch open through the shared late spatial transition flush, so death cannot erase another already-due contact or spatial consequence. For any enrolled living actor it:
 
 1. force-fails the actor's active WHEN action;
 2. creates persistent corpse identity `corpse.<actor_id>` with semantic `object.corpse`;
@@ -118,7 +120,7 @@ Death is downstream of Health, not a special firearm or infected rule.
 4. clears living right/left hand assignment;
 5. moves the actor's exact directly carried item identities into corpse containment;
 6. removes living ACTOR placement;
-7. places the corpse in the same physical location;
+7. places the corpse at the actor's resolved outgoing location for that timestamp;
 8. records source actor <-> corpse provenance in `CorpseState`.
 
 Items are moved, not cloned into a loot table. A physical item that existed before death remains that same WHAT identity afterward.
@@ -198,6 +200,21 @@ Functional head: `a33e302467921ab58541c462a89fc37b6f2b6964`.
 Focused run `36185910858`: **SUCCESS** with `PHASE2B_SIMULTANEOUS_IMPACTS_OK shared_tick=3 mutual_tick=10 impacts_before_death=true`.
 
 The production-scene verifier proved two same-tick hits on one 1-HP target both publish before its corpse transition, both injuries persist, and mutual lethal player/zombie contact publishes both impacts before either death; both actors then reach HP 0 and receive corpses.
+
+### Phase 2C shove / movement / terminal ordering
+
+Fresh prompt-local verifier/workflow:
+
+- `game/scripts/ci/Phase2CShoveTransitionsSmoke.gd`
+- `.github/workflows/phase2c-shove-transitions.yml`
+
+Functional production head: `355de006567289ac257b0b3437f87946d72c427c`.
+
+Focused verifier repair head/run: `f161e1673fb23e351399f5d778d4cf8efa4fe4d4` / `36194398176` — **SUCCESS**.
+
+Marker: `PHASE2C_SHOVE_TRANSITIONS_OK shove_beats_move=true opposing_tie=true corpse_after_displacement=true`.
+
+This run proves the first cross-system executable form of the approved causal tick transition: shove contact seals force before damage mutation, forced displacement arbitrates with same-tick movement, equal opposing shoves do not gain serial initiative, and lethal death publication occurs only after the surviving spatial consequence publishes. The corpse therefore appears at the post-displacement position rather than snapping back to the incoming cell.
 
 ## 13. Deliberately deferred extensions
 
