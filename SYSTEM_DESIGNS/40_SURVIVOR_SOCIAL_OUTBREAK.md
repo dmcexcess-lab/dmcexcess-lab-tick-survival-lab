@@ -1,144 +1,76 @@
 # System 40 — Resident Survivors, Social Roles, and Causal Local Outbreak
 
-Status: **IMPLEMENTED + AUTOMATED VERIFIED — human gameplay acceptance remains defect-driven**
+Status: **RETIRED FROM PRODUCTION — 2026-09-25**
 
-## Purpose
+## Current release contract
 
-Close the missing human-survivor half of the existing island population model without introducing a second population authority, second actor stack, second clock, or fake conversation/combat layer.
+System 40 is no longer part of the production game composition. The survival release deliberately removes living survivor NPCs, followers, raiders, recruitment/dialogue, survivor social roles, and local survivor-to-infected outbreak conversion.
 
-The authoritative aggregate population remains the generated household/population plan. System 40 deterministically projects the resident slots that are *not* assigned to the existing infected count, hydrates a small active survivor cohort from those exact identities, and gives those real actors neutral/follower/raider behavior through existing movement, perception, sound, combat, Health, inventory, skills, condition, streaming, and WHEN owners.
+`CombatGameMain` now boots the existing infected population path directly and does **not** hydrate a survivor cohort, create survivor AI/perception/hearing participants, register survivor social interaction providers/handlers, or attach `SurvivorInfectionService`.
 
-## Population identity
+The production infected cohort uses `ActiveInfectedCohortService`, not the former dynamic outbreak-mutation subclass. The eight resident-backed infected at the starting area remain ordinary actors using the shared movement, perception, sound, combat, Health, inventory/condition enrollment and WHEN owners.
 
-`PopulationResidentProjection` now exposes complementary deterministic views:
+Generated aggregate resident/household data and `PopulationResidentProjection` may remain as cheap deterministic generation/identity inputs where the zombie path still consumes them. Their presence does not imply a live society simulation.
 
-- infected residents are the first `infected_population` slots after the existing deterministic infection-score ordering;
-- survivors are the remaining slots from the same household capacities;
-- infected + survivor records therefore equal the exact resident aggregate;
-- a resident ID cannot exist in both projections;
-- projection creates no additional population and owns no independent count.
+## Retained code
 
-Each hydrated survivor keeps the same `resident.<building>.<ordinal>` identity used by the population plan.
+The following implementation files remain in the repository as recovery/history substrate but have no production composition consumer:
 
-## Active survivor cohort
+- `ActiveSurvivorCohortService.gd`
+- `SurvivorNpcBehaviorService.gd`
+- `SurvivorNpcState.gd`
+- `SurvivorHydrationService.gd`
+- `SurvivorInteractionOfferProvider.gd`
+- `SurvivorInteractionService.gd`
+- `SurvivorInfectionService.gd`
+- `DynamicInfectedCohortService.gd`
 
-The production root hydrates four bounded resident-backed survivor NPCs near the playable start:
+Do not reconnect those files merely to satisfy historical tests or older design text. Git history remains the recovery source if the feature is ever intentionally revived.
 
-- two begin `survivor.neutral`;
-- two begin `survivor.raider`.
+Shared classes whose names contain “Survivor” but are used by the player or infected/shared mechanics are **not** retired by this decision. Examples include the canonical condition/sustainment/first-aid owners and the shared hearing profile. Retirement is by live responsibility, not filename vocabulary.
 
-Hydration creates ordinary `actor.survivor` entities and enrolls them in the canonical owners already used by the player/infected path:
-
-- locomotion;
-- hand equipment;
-- inventory containment;
-- Health;
-- the four broad skills;
-- carry state;
-- survivor condition/Fatigue.
-
-`ActiveSurvivorCohortService` reuses the existing technical-stream activation model. Observer perception is scoped to the NPC itself; there is no hidden-world omniscience and no second AI scheduler.
-
-## Behavior and turn cadence
-
-`SurvivorNpcBehaviorService` is a small intention policy over existing owners:
-
-- neutral survivors remain where they are;
-- followers trail the player while preserving a small spacing buffer;
-- raiders use their own current sight, last-seen memory, and heard observations to pursue/investigate;
-- hostile contact uses ordinary System-37 combat;
-- movement/collision still validates every real step.
-
-Survivor NPCs receive at most **one ordinary action opportunity per player commitment**. Boot, stream activation, perception changes, and sound updates may refresh intention but do not grant free world-tick actions. This preserves the existing player-decision / shared-WHEN cadence instead of creating autonomous free turns during scene boot.
-
-## Player-facing social actions
-
-Survivor targets use the existing world interaction/affordance/controller/HUD path. No parallel dialogue UI is introduced.
-
-Available actions:
-
-- `TALK` — returns short context-derived text based on role, injury, and nearby infected pressure;
-- `ASK TO FOLLOW` — changes a neutral survivor into a follower;
-- `TELL TO STAY` — returns a follower to neutral/waiting state.
-
-Raiders do not expose friendly social offers while hostile.
-
-This is intentionally systemic conversation rather than authored quest dialogue. Richer relationships, memories, factions, authored identities, and longer conversation content remain content/fidelity expansion rather than prerequisites for the core runtime.
-
-## Causal local infection
-
-`SurvivorInfectionService` listens to real `CombatActionService.impact_resolved` events.
-
-A damaging melee impact from an actor already marked infected adds bounded exposure to the struck survivor. Repeated exposure can cross the local infection threshold. Conversion then:
-
-1. keeps the exact same resident/actor ID;
-2. records that resident as infected with source actor and tick provenance;
-3. removes the actor from survivor social-role/cohort ownership;
-4. adds the same already-real actor to the active infected cohort;
-5. gives an active converted resident the same perception/behavior/environmental-pressure path as other infected.
-
-No replacement zombie is spawned, no aggregate resident is duplicated, and no invisible outbreak counter substitutes for the physical local event.
-
-## Production composition
+## Production ownership after retirement
 
 The production lineage remains:
 
-`game/main.tscn -> EnvironmentalPressureGameMain -> CombatGameMain -> VehicleGameMain -> System34GameMain -> UtilityGameMain -> CraftingGameMain -> GameMain`
+`game/main.tscn -> gameplay.tscn -> EnvironmentalPressureGameMain -> CombatGameMain -> VehicleGameMain -> System34GameMain -> UtilityGameMain -> CraftingGameMain -> GameMain`
 
-System 40 composes inside `CombatGameMain`, because it consumes population, actor ownership, perception, movement, sound, combat, and streaming that are already live there. System 39 continues to attach generic opening pressure in `EnvironmentalPressureGameMain`; newly converted infected are resynchronized into that same pressure service.
+Within that lineage:
 
-The existing active infected cohort remains eight resident-backed infected at startup. System 40 adds four survivor NPCs; it does not replace or silently resize the infected baseline.
+- `CombatGameMain` owns combat plus resident-backed infected hydration and the active infected cohort.
+- `EnvironmentalPressureGameMain` continues attaching opening pressure only to infected behavior.
+- Player condition, inventory, time, utilities, vehicles, crafting and other shared systems remain unchanged.
+- No TALK / ASK TO FOLLOW / TELL TO STAY provider or handler is registered by production composition.
+- No live neutral/follower/raider state or survivor infection conversion is required for a new game.
 
-## What this closes
+## Retirement verification — 2026-09-25
 
-This closes the core Phase-8 holes that were still real after the roadmap became stale:
+Fresh prompt-local verifier:
 
-- real non-infected resident identities;
-- neutral survivor NPCs;
-- recruitable followers;
-- hostile human raiders;
-- observer-scoped survivor/raider behavior;
-- player-facing conversation/recruit/dismiss actions;
-- same-identity local survivor -> infected transition;
-- converted infected joining the existing streaming/perception/combat/environmental-pressure runtime.
+- `game/scripts/ci/Phase1SurvivorRuntimeRetirementSmoke.gd`
+- `.github/workflows/phase1-survivor-runtime-retirement.yml`
 
-Melee/firearms, infected AI, household population, perception/hearing, streaming, Health/death, and environmental opening pressure were already implemented by earlier systems and are reused rather than rebuilt.
+Pre-change production measurement on run `36180918709`:
 
-## Intentional post-core fidelity backlog
+- boot: 19,780,576 µs;
+- infected roster: 8;
+- survivor roster: 4;
+- one ordinary player commitment caused 8 infected behavior evaluations / 164,489 µs and 2 survivor behavior evaluations / 43,198 µs.
 
-These are not fake-completed inside System 40:
+Post-change focused run `36181091707` succeeded:
 
-- richer persistent personal relationships and named-character history;
-- factions and diplomacy beyond the neutral/follower/raider role slice;
-- long-form dialogue or quest scripting;
-- island-wide offscreen epidemic propagation between aggregate households;
-- large survivor settlements or follower command UI;
-- navigation architecture beyond the existing bounded local movement/detour behavior.
+- boot: 19,563,557 µs on the same GitHub runner class;
+- infected roster: 8;
+- live non-infected survivor NPCs: 0;
+- the same ordinary commitment caused 8 infected behavior evaluations / 154,043 µs;
+- survivor behavior evaluation work is absent;
+- world time remains tied to the authoritative tick;
+- the player inventory container and utility runtime remain live.
 
-Those additions must remain causal consumers of the same resident/actor owners if pursued later.
+These are single-run CI observations, useful as before/after evidence rather than a stable performance benchmark. Removing four survivors does not by itself close zombie/perception performance work.
 
-## Verification contract
+## Historical reference
 
-The prompt-owned closure verifier proves, without replacing production owners:
+System 40 was originally closed on 2026-09-09 at functional head `52c6ef02c8f78b05c6761e73be4c525d1d975efe`. That implementation included survivor hydration, neutral/follower/raider policy, social actions and same-identity survivor-to-infected conversion. Its detailed historical contract remains recoverable from Git history.
 
-- Godot production scripts load/parse;
-- infected and survivor projections exactly partition aggregate resident population;
-- four resident-backed survivor NPCs hydrate while the existing eight infected remain intact;
-- neutral and raider roles exist;
-- recruit/talk behavior is reachable through the real social service;
-- survivor intention policy does not receive free boot actions;
-- repeated real combat-impact exposure converts the same identity;
-- the converted resident moves from the survivor cohort to the infected cohort;
-- converted active infected receive the existing System-39 environmental-opening-pressure owner;
-- Pages export remains green.
-
-## Verification closure — 2026-09-09
-
-Owning functional head: `52c6ef02c8f78b05c6761e73be4c525d1d975efe`.
-
-- Fresh prompt-local verifier: `game/scripts/ci/PromptSurvivorOutbreakClosureSmoke.gd` + `.github/workflows/prompt-survivor-outbreak-closure.yml`.
-- Focused run `34406705296`, job `102651283682`: **success** with `PROMPT_SURVIVOR_OUTBREAK_CLOSURE_SMOKE: PASS` after booting the real seed-20001 production scene.
-- Exact-head Pages run `34406705275`: **success**.
-- The diagnostic run exposed duplicate inherited constant declarations in `ActiveSurvivorCohortService`; removing only those redundant declarations restored Godot parsing. No production survivor/infected ownership rule was weakened.
-
-Exact prompt-close publication/handoff state remains recorded in `README_CONTEXT.md`.
+The superseding release decision is the 2026-09-25 survival roadmap reset. Phase 2 now owns shared-tick combat coherence, commitment/interruption, mob force/fear and measured zombie decision/perception/presentation cost.
