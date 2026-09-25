@@ -62,7 +62,10 @@ func _request_walk_with_passage(actor_id: String, action_type: StringName) -> Mo
         probe.status = ResultRules.Status.TARGET_UNKNOWN
         probe.reason = "target_unknown"
         return probe
-    if query_result.status == QueryRules.Status.CLEAR:
+    if query_result.status == QueryRules.Status.CLEAR         or (query_result.status == QueryRules.Status.BLOCKED and _has_only_actor_blockers(query_result)):
+        # Actor occupancy is not a passage problem. The canonical movement owner
+        # defers it to same-timestamp arbitration so swaps/chains can resolve
+        # without callback-order initiative.
         return super.request_step_forward(actor_id) if action_type == STEP_FORWARD else super.request_step_backward(actor_id)
     if query_result.status != QueryRules.Status.BLOCKED or not _passage_resolver.can_resolve(normalized_actor, action_type, query_result):
         probe.status = ResultRules.Status.TARGET_BLOCKED
