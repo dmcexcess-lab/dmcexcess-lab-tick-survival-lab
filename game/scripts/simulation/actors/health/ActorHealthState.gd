@@ -16,6 +16,8 @@ signal injury_added(actor_id, injury_id, version)
 signal injury_changed(actor_id, injury_id, version)
 signal injury_removed(actor_id, injury_id, version)
 signal health_reset
+signal consequence_batch_started
+signal consequence_batch_finished
 
 const SNAPSHOT_SCHEMA_VERSION: int = 1
 const DEFAULT_MAX_HP: int = 100
@@ -24,6 +26,7 @@ var _world: WorldState = null
 var _records: Dictionary = {}
 var _revision: int = 0
 var _next_injury_serial: int = 1
+var _consequence_batch_depth: int = 0
 
 func _init(world_state: WorldState = null) -> void:
     _world = world_state
@@ -33,6 +36,23 @@ func is_ready() -> bool:
 
 func revision() -> int:
     return _revision
+
+func begin_consequence_batch() -> bool:
+    _consequence_batch_depth += 1
+    if _consequence_batch_depth == 1:
+        consequence_batch_started.emit()
+    return true
+
+func end_consequence_batch() -> bool:
+    if _consequence_batch_depth <= 0:
+        return false
+    _consequence_batch_depth -= 1
+    if _consequence_batch_depth == 0:
+        consequence_batch_finished.emit()
+    return true
+
+func consequence_batch_active() -> bool:
+    return _consequence_batch_depth > 0
 
 func has_actor(actor_id: String) -> bool:
     return _records.has(actor_id)
