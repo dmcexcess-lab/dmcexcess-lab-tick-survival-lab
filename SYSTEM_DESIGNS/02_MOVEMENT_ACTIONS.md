@@ -1,6 +1,6 @@
 # Tick Survival Lab — 02 Movement Actions
 
-Status: **IMPLEMENTED — canonical modular source; revised by implemented System 17 on 2026-08-16**
+Status: **IMPLEMENTED — canonical modular source; same-tick movement arbitration revised 2026-09-25**
 
 Approval basis: original Movement was approved with “Approved code it.” System 03 later extended the typed actor-capability seam. System 17, explicitly approved with “17 is go for approval,” revises walking interruption and activates explicit two-cell running.
 
@@ -56,7 +56,7 @@ Public methods:
 - `request_turn_left(actor_id)`
 - `request_turn_right(actor_id)`
 
-Requests reject without spending time when dependencies, actor/placement, collision, terrain, capability, duration, or WHEN submission are invalid. Target cells are never reserved.
+Requests reject without spending time when dependencies, actor/placement, static collision, terrain, capability, duration, or WHEN submission are invalid. A walk request aimed at a cell occupied only by blocking ACTOR placement may be admitted so the authoritative timestamp batch can decide whether that actor simultaneously vacates. This is not a reservation and does not guarantee success.
 
 Typed failures continue to distinguish target BLOCKED/UNKNOWN, terrain unclassified/blocked, actor unclassified, capability unknown/blocked, invalid duration, and timing rejection.
 
@@ -76,12 +76,16 @@ Forward/backward Walk sequence:
 
 **request -> validate -> spend time -> revalidate at `movement.commit` -> mutate WHAT**
 
-Walk actions use WHEN `CANCELABLE` interruption policy after System 17. Real HP damage is observed by `MovementDamageInterruptionService`, which asks WHEN to interrupt the actor's active movement action. A canceled walk:
+Walk actions use WHEN `CANCELABLE` during wind-up and declare their final `movement.commit` offset as the point of no return. Real HP damage is observed by `MovementDamageInterruptionService`, which asks WHEN to interrupt the actor's active movement action.
+
+Before `movement.commit`, cancellation:
 
 - keeps ticks already elapsed;
 - removes the remaining movement phase;
 - leaves WHAT placement at the pre-walk cell;
 - emits movement failure so callers resolve the action honestly.
+
+At and after the commit timestamp, the action is effectively COMMITTED. Damage arriving later on that same authoritative tick cannot retroactively erase a movement consequence that already reached its commit boundary.
 
 Healing or max-HP bookkeeping is not damage interruption.
 
@@ -114,9 +118,23 @@ Run does not re-evaluate actor capability between strides. Capability is intenti
 
 If stride 1 succeeds and stride 2 later fails, the actor remains at the intermediate cell; there is no rollback.
 
-## 10. No reservation / race semantics
+## 10. No reservation / simultaneous timestamp arbitration
 
-Walk and Run reserve no cells. Request-time clarity does not guarantee commit-time clarity. Deterministic WHEN ordering plus per-phase collision/path revalidation resolves races. Movement never overwrites a newer external placement because expected origin/intermediate placement must still match.
+Walk and Run reserve no cells. Request-time clarity does not guarantee commit-time success, and deterministic callback ordering is not initiative.
+
+Movement phases due on the same WHEN timestamp are collected before placement mutation. The resolver re-reads one unchanged pre-resolution occupancy state, then resolves physical conflicts as a set:
+
+- one uncontested mover into genuinely available space succeeds;
+- two or more movers claiming any same destination cell all fail with an explicit timestamp conflict rather than awarding the cell to the first sorted actor;
+- reciprocal swaps may succeed atomically when each actor vacates the other's required cells on the same timestamp;
+- longer vacating chains/cycles may succeed only while every blocking actor has a surviving simultaneous move that actually vacates the claimed cells;
+- if one mover in such a dependency set fails, blocked followers are removed to a fixed point rather than phasing through the actor that stayed;
+- static/non-ACTOR blockers are never deferred;
+- in-place turns do not count as vacating their occupied cell.
+
+Successful placements are installed through `WorldMutationService.set_placements_batch`, so observers see the complete final occupancy rather than serial intermediate positions. Expected origin/intermediate placement must still match, preventing stale actions from overwriting newer WHAT truth.
+
+This slice establishes actor movement arbitration only. Shove/displacement conflicts and broader mob-force aggregation remain Phase-2 work and must reuse this no-hidden-initiative rule rather than inventing an attacker-order exception.
 
 ## 11. Damage and exertion coordination
 
@@ -156,6 +174,21 @@ Movement + System 17 CI cover:
 - no persistent run-mode state;
 - no Health/Needs import in MovementActionService;
 - frozen Reboot remains untouched.
+
+## 13A. Phase 2C same-tick conflict verification — 2026-09-25
+
+Fresh prompt-local verifier/workflow:
+
+- `game/scripts/ci/Phase2CMovementConflictsSmoke.gd`
+- `.github/workflows/phase2c-movement-conflicts.yml`
+
+Functional production head: `d87f1402b0f06f69f1f8a614b3a7557dd7641b71`.
+
+Focused verifier head/run: `f605987f7feb4fd24e06f3724d90622d900beee9` / `36187796332` — **SUCCESS**.
+
+Marker: `PHASE2C_MOVEMENT_CONFLICTS_OK contest_tick=10 swap_tick=20 no_hidden_winner=true`.
+
+The production scene proved that two infected reaching the same empty destination on one timestamp both remain at their origins and both fail with `target_contested`, while two adjacent infected moving into each other's occupied cells on one timestamp are both admitted to arbitration and atomically exchange positions.
 
 ## 14. Supersession note
 
