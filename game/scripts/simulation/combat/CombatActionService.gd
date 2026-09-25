@@ -198,7 +198,7 @@ func _strike_quote(actor_id: String, action_id: StringName) -> Dictionary:
     if action_id == STRIKE_UNARMED:
         if not _hands.primary_item(actor_id).is_empty() and not _hands.secondary_item(actor_id).is_empty():
             return {"available": false, "reason": "no_empty_hand"}
-        return _quote_from_profile(action_id, "", -1, UNARMED_EFFECTIVE_MASS_GRAMS, _impact_profiles.unarmed_profile(), "FIST")
+        return _quote_from_profile(actor_id, action_id, "", -1, UNARMED_EFFECTIVE_MASS_GRAMS, _impact_profiles.unarmed_profile(), "FIST")
     var slot: int = Slots.Value.PRIMARY_RIGHT if action_id == STRIKE_PRIMARY else Slots.Value.SECONDARY_LEFT
     var item_id: String = _hands.item_in_slot(actor_id, slot)
     if item_id.is_empty() or not _world.has_entity(item_id):
@@ -213,15 +213,19 @@ func _strike_quote(actor_id: String, action_id: StringName) -> Dictionary:
     if profile == null or not profile.is_valid():
         return {"available": false, "reason": "item_impact_unclassified"}
     var side: String = "R" if slot == Slots.Value.PRIMARY_RIGHT else "L"
-    return _quote_from_profile(action_id, item_id, slot, weight, profile, "%s [%s]" % [_item_label(entity.semantic_type), side])
+    return _quote_from_profile(actor_id, action_id, item_id, slot, weight, profile, "%s [%s]" % [_item_label(entity.semantic_type), side])
 
-func _quote_from_profile(action_id: StringName, item_id: String, slot: int, weight: int, profile: CombatImpactProfile, display: String) -> Dictionary:
+func _quote_from_profile(actor_id: String, action_id: StringName, item_id: String, slot: int, weight: int, profile: CombatImpactProfile, display: String) -> Dictionary:
     if profile == null or not profile.is_valid():
         return {"available": false, "reason": "impact_profile_invalid"}
     var weight_ticks: int = maxi(1, ceili(float(weight) / 800.0))
     var handling_penalty: int = maxi(0, ceili(float(10000 - mini(10000, profile.balance_bp)) / 2500.0))
     var contact_ticks: int = clampi(2 + weight_ticks + handling_penalty, 3, 8)
     var duration_ticks: int = contact_ticks + 3 + maxi(0, ceili(float(weight) / 1400.0))
+    if _condition_modifiers.has_actor(actor_id):
+        var fear_timing_bp: int = _condition_modifiers.deliberate_action_duration_multiplier_bp(actor_id)
+        contact_ticks = maxi(1, int(ceili(float(contact_ticks * fear_timing_bp) / 10000.0)))
+        duration_ticks = maxi(contact_ticks + 1, int(ceili(float(duration_ticks * fear_timing_bp) / 10000.0)))
     var policy: int = TickRulesClass.InterruptionPolicy.COMMITTED if weight >= 900 else TickRulesClass.InterruptionPolicy.CANCELABLE
     var policy_label: String = "COMMITTED" if policy == TickRulesClass.InterruptionPolicy.COMMITTED else "INTERRUPTIBLE → COMMITTED @%dt" % contact_ticks
     return {
