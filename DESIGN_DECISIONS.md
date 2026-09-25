@@ -8,6 +8,31 @@ If a later discussion changes a decision, do not erase history. Add a newer entr
 
 ---
 
+## 2026-09-25 — Fear is canonical Calm pressure, not loss of player agency
+
+**Decision:** Fear uses the existing persistent `CALM` condition as its only authoritative state. Do not add a second panic/fear meter.
+
+Same-timestamp danger observations submit **fear pressure** to one bounded consequence owner. Visual threat, recognized alarming sound, injury shock and resolved physical crowd pressure aggregate before one Calm mutation, capped at 20 Calm loss per authoritative tick. Callback order does not decide psychological severity.
+
+Canonical Calm interpretation:
+
+- 45–100: composed/no mechanical fear penalty;
+- 30–44: **Uneasy** — player-facing warning only;
+- 15–29: **Afraid** — +15% deliberate-action duration, +10% fatigue gain, -5% hold/bracing resistance;
+- 0–14: **Terrified** — +30% deliberate-action duration, +20% fatigue gain, -10% hold/bracing resistance.
+
+Fear does **not** directly reduce max Health, carry capacity, locomotion speed, body-powered damage or raw shove/movement force. Calm is excluded from the generic condition potency calculation.
+
+**Player-agency rule:** fear never chooses actions, forces fleeing, drops equipment, rejects commands, or adds random loss-of-control behavior. It changes execution of deliberate coordination-heavy actions. Walking, running, shove and snap-fire escape responses retain their normal timing. Melee strikes, aimed fire, reload, first aid and crafting use the explicit fear timing multiplier.
+
+Visual fear is encounter-aware rather than a repeated refresh tax. Visible infected contribute distance-banded threat pressure with diminishing contributions from additional threats; the same visible threat only contributes again when it reaches a worse band or after a meaningful threat-free reset interval. Heard fear uses only recognized threat-category observations and never reveals hidden source truth.
+
+Injury shock is bounded. Resolved crowd pressure contributes fear according to whether pressure was merely resisted, caused displacement, or terminated/trapped against geometry; fear consumes that physical result without changing mob-force ownership.
+
+Calm analytically returns toward neutral 60 on authoritative game time. Current tuning recovers from 0 to roughly 25 after one in-game hour and to neutral in about 2.4 hours with no new threat. Fear state itself never generates more fear pressure, preventing a self-sustaining panic loop.
+
+---
+
 ## 2026-09-25 — Crowd-pressure core is closed at the physics layer
 
 **Decision:** Crowd pressure is now considered a complete core physical primitive for release work. Do not keep subdividing it into progressively smaller architecture slices.
