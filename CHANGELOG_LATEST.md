@@ -2,6 +2,24 @@
 
 This compact ledger records the newest executable work. `CHANGELOG.md` remains the historical archive.
 
+## Phase 2 — canonical fear — 2026-09-25
+
+Functional production head: `82deda793337ea49b7cd47e52325e346bcbafec7`.
+
+- Kept existing persistent `CALM` as the sole fear state; no parallel panic meter was added.
+- Added `ActorFearPressureService` as the same-timestamp consequence owner. Visual threat, heard threat, injury shock and resolved physical crowd pressure aggregate before one Calm mutation, capped at 20 points per tick.
+- Replaced direct injury/perception/sound Calm mutations with narrow fear-pressure adapters.
+- Visible infected fear now uses distance bands, diminishing additional-threat pressure and encounter memory so ordinary perception refreshes do not repeatedly charge the same unchanged danger.
+- Calm is removed from the generic physical condition potency calculation. Fear no longer silently reduces max Health, movement speed, carry capacity or melee damage.
+- Explicit fear effects are now: Afraid = +15% deliberate-action time, +10% Fatigue gain, -5% hold resistance; Terrified = +30%, +20%, -10%. Uneasy remains warning-only.
+- Deliberate-action timing is wired to melee strikes, aimed fire, reload, first aid and crafting. Walking, running, shove and snap fire remain responsive escape actions.
+- Physical hold/bracing reads the explicit fear resistance multiplier; shove/movement force itself is unchanged.
+- Calm recovery is retuned to about 25 points per in-game hour toward neutral 60, with no fear-from-fear feedback.
+- Movement now publishes one resolved physical-pressure consequence summary for psychological consumers without moving fear logic into the force solver.
+- Prompt-local verifier/workflow: `game/scripts/ci/Phase2FearSmoke.gd` + `.github/workflows/phase2-fear.yml`.
+- Focused production run `36199423801`: **SUCCESS** with marker `PHASE2_FEAR_OK aggregate_cap=true explicit_effects=true escape_responsive=true injury=true pressure=true recovery=true`.
+- During focused verification, a real constructor mismatch in first-aid fear wiring was exposed by script-chain checking and repaired before the production verifier passed.
+
 ## Phase 2C — crowd-pressure core closure — 2026-09-25
 
 Functional production head: `a5a92abb245ac7204b9cad0f71166e04bd61057a`.
