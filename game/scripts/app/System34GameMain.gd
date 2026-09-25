@@ -10,6 +10,7 @@ const ConditionExertionClass = preload("res://scripts/simulation/actors/conditio
 const ConditionFearClass = preload("res://scripts/simulation/actors/condition/ConditionPerceptionFearAdapter.gd")
 const ConditionHeardFearClass = preload("res://scripts/simulation/actors/condition/ConditionHeardFearAdapter.gd")
 const ConditionEnvironmentClass = preload("res://scripts/simulation/actors/condition/ConditionEnvironmentPressureAdapter.gd")
+const PhysicalContestClass = preload("res://scripts/simulation/actors/locomotion/ActorPhysicalContestQuery.gd")
 const SustainmentProfilesClass = preload("res://scripts/simulation/actors/condition/SurvivorSustainmentProfileCatalog.gd")
 const SustainmentActionsClass = preload("res://scripts/simulation/actors/condition/SurvivorSustainmentActionService.gd")
 const FirstAidActionsClass = preload("res://scripts/simulation/actors/health/SurvivorFirstAidActionService.gd")
@@ -26,6 +27,7 @@ var _condition_exertion: MovementConditionExertionService = null
 var _condition_fear: ConditionPerceptionFearAdapter = null
 var _condition_heard_fear: ConditionHeardFearAdapter = null
 var _condition_environment: ConditionEnvironmentPressureAdapter = null
+var _physical_contest: ActorPhysicalContestQuery = null
 var _sustainment_profiles: SurvivorSustainmentProfileCatalog = null
 var _sustainment_actions: SurvivorSustainmentActionService = null
 var _first_aid_actions: SurvivorFirstAidActionService = null
@@ -60,6 +62,9 @@ func _boot_system34() -> bool:
         return false
 
     if not _carry_query.configure_capacity_modifier(_condition_modifiers):
+        return false
+    _physical_contest = PhysicalContestClass.new(_carry_query, _health_state, _locomotion_state)
+    if not _physical_contest.is_ready() or _movement == null or not _movement.configure_physical_contest(_physical_contest):
         return false
     _condition_mobility = ConditionMobilityClass.new(_condition_service, _condition_modifiers)
     if _movement_capability == null or not _movement_capability.register_provider(_condition_mobility):
