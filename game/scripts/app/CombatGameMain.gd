@@ -59,7 +59,7 @@ func _boot_system37_combat() -> bool:
         return false
 
     _combat_impact_profiles = CombatImpactProfilesClass.new()
-    _combat_actions = CombatActionsClass.new(_world, _world_mutations, _spatial_query, _kernel, _hand_state, _health_state, _condition_service, _condition_modifiers, _physical_catalog, _combat_impact_profiles)
+    _combat_actions = CombatActionsClass.new(_world, _world_mutations, _spatial_query, _kernel, _hand_state, _health_state, _condition_service, _condition_modifiers, _physical_catalog, _combat_impact_profiles, _movement)
     if not _combat_actions.is_ready(): return false
     _combat_sound = CombatSoundClass.new(_world, _combat_actions, _spatial_sound)
     if not _combat_sound.is_ready(): return false
