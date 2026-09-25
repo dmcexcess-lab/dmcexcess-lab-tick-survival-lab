@@ -113,7 +113,8 @@ func _request(actor_id: String, action_type: StringName) -> MovementActionResult
         target_facing,
         true
     )
-    if not _apply_query_failure(result, query_result):
+    var deferred_actor_occupancy: bool = _is_walk_step(action_type) and _has_only_actor_blockers(query_result)
+    if not deferred_actor_occupancy and not _apply_query_failure(result, query_result):
         return result
 
     var policy_decision: MovementPolicyDecision = null
@@ -138,7 +139,8 @@ func _request(actor_id: String, action_type: StringName) -> MovementActionResult
         duration_ticks,
         _interruption_policy(action_type),
         phases,
-        payload
+        payload,
+        duration_ticks if _is_walk_step(action_type) else -1
     )
     if action_serial <= 0:
         result.status = ResultClass.Status.TIMING_REJECTED
@@ -404,8 +406,10 @@ func _prepare_standard_action(action: TimedAction) -> Dictionary:
     if query_result == null or query_result.status == QueryResultClass.Status.UNKNOWN:
         return _candidate_failure(candidate, "target_unknown")
     if query_result.status == QueryResultClass.Status.BLOCKED:
-        return _candidate_failure(candidate, "target_blocked")
-    if query_result.status != QueryResultClass.Status.CLEAR:
+        if not _is_walk_step(action.action_type) or not _has_only_actor_blockers(query_result):
+            return _candidate_failure(candidate, "target_blocked")
+        candidate["blocking_entity_ids"] = query_result.blocking_entity_ids.duplicate()
+    elif query_result.status != QueryResultClass.Status.CLEAR:
         return _candidate_failure(candidate, "target_unknown")
 
     var policy_decision: MovementPolicyDecision = null
@@ -523,6 +527,9 @@ func _flush_timestamp_commits() -> void:
     _pending_commits.clear()
     candidates.sort_custom(_candidate_less)
 
+    # Re-read every candidate against one unchanged pre-resolution occupancy
+    # state. Actor occupancy may be deferred to timestamp arbitration; static
+    # blockers never are.
     var eligible: Array[Dictionary] = []
     for candidate: Dictionary in candidates:
         var action: TimedAction = candidate.get("action", null)
@@ -552,47 +559,80 @@ func _flush_timestamp_commits() -> void:
             candidate["ready"] = false
             candidate["reason"] = "target_unknown"
         elif query_result.status == QueryResultClass.Status.BLOCKED:
-            candidate["ready"] = false
-            if action.action_type == RUN_FORWARD:
-                candidate["impact"] = true
-                candidate["reason"] = "run_impact"
+            if _has_only_actor_blockers(query_result) and _candidate_changes_anchor(candidate):
                 candidate["blocking_entity_ids"] = query_result.blocking_entity_ids.duplicate()
+                candidate["target_cells"] = query_result.cells.duplicate()
             else:
-                candidate["reason"] = "target_blocked"
+                candidate["ready"] = false
+                if action.action_type == RUN_FORWARD:
+                    candidate["impact"] = true
+                    candidate["reason"] = "run_impact"
+                    candidate["blocking_entity_ids"] = query_result.blocking_entity_ids.duplicate()
+                else:
+                    candidate["reason"] = "target_blocked"
         elif query_result.status != QueryResultClass.Status.CLEAR:
             candidate["ready"] = false
             candidate["reason"] = "target_unknown"
         else:
+            candidate["blocking_entity_ids"] = []
             candidate["target_cells"] = query_result.cells.duplicate()
         eligible.append(candidate)
 
-    var claims: Dictionary = {}
-    for candidate: Dictionary in eligible:
-        if not bool(candidate.get("ready", false)):
+    # No hidden initiative for two movers claiming the same physical cell.
+    # Every claimant in that conflict loses the timestamp instead of a sorted
+    # first actor receiving the cell.
+    var claims_by_cell: Dictionary = {}
+    for index: int in range(eligible.size()):
+        var candidate: Dictionary = eligible[index]
+        if not bool(candidate.get("ready", false)) or not _candidate_changes_anchor(candidate):
             continue
-        var blocking_claimants: Dictionary = {}
-        var target_cells: Array = candidate.get("target_cells", [])
-        for value: Variant in target_cells:
+        for value: Variant in candidate.get("target_cells", []):
             if typeof(value) != TYPE_VECTOR2I:
                 continue
             var cell: Vector2i = value
-            if claims.has(cell):
-                blocking_claimants[String(claims[cell])] = true
-        if not blocking_claimants.is_empty():
-            candidate["ready"] = false
-            var action: TimedAction = candidate.get("action", null)
-            if action != null and action.action_type == RUN_FORWARD:
-                candidate["impact"] = true
-                candidate["reason"] = "run_impact"
-                candidate["blocking_entity_ids"] = _sorted_string_keys(blocking_claimants)
-            else:
-                candidate["reason"] = "target_blocked"
-            continue
+            var claimants: Array = claims_by_cell.get(cell, [])
+            claimants.append(index)
+            claims_by_cell[cell] = claimants
 
-        var actor_id: String = String(candidate.get("actor_id", ""))
-        for value: Variant in target_cells:
-            if typeof(value) == TYPE_VECTOR2I:
-                claims[value] = actor_id
+    var contested_indexes: Dictionary = {}
+    for value: Variant in claims_by_cell.values():
+        var claimants: Array = value
+        if claimants.size() < 2:
+            continue
+        for index_value: Variant in claimants:
+            contested_indexes[int(index_value)] = true
+    for index_value: Variant in contested_indexes.keys():
+        var index: int = int(index_value)
+        if index < 0 or index >= eligible.size():
+            continue
+        _mark_timestamp_conflict(eligible[index], "target_contested")
+
+    # Actor blockers are legal only when every blocking actor has a surviving
+    # simultaneous move that vacates the exact cells being claimed. Iterate to
+    # a fixed point so failure of one mover correctly blocks followers behind it.
+    var changed: bool = true
+    while changed:
+        changed = false
+        var moving_by_actor: Dictionary = {}
+        for candidate: Dictionary in eligible:
+            if bool(candidate.get("ready", false)) and _candidate_changes_anchor(candidate):
+                moving_by_actor[String(candidate.get("actor_id", ""))] = candidate
+
+        for candidate: Dictionary in eligible:
+            if not bool(candidate.get("ready", false)) or not _candidate_changes_anchor(candidate):
+                continue
+            var target_cells: Array = candidate.get("target_cells", [])
+            for blocker_value: Variant in candidate.get("blocking_entity_ids", []):
+                var blocker_id: String = String(blocker_value)
+                if not moving_by_actor.has(blocker_id):
+                    _mark_timestamp_conflict(candidate, "target_blocked")
+                    changed = true
+                    break
+                var blocker: Dictionary = moving_by_actor[blocker_id]
+                if _candidate_final_cells_overlap(blocker, target_cells):
+                    _mark_timestamp_conflict(candidate, "target_blocked")
+                    changed = true
+                    break
 
     var placement_batch: Array = []
     for candidate: Dictionary in eligible:
@@ -706,6 +746,43 @@ func _emit_run_impact_failure(candidate: Dictionary) -> void:
         blocking_entity_ids.duplicate()
     )
     _fail_commit(action, "run_impact")
+
+func _has_only_actor_blockers(query_result: SpatialQueryResult) -> bool:
+    if query_result == null or query_result.status != QueryResultClass.Status.BLOCKED         or query_result.blocking_entity_ids.is_empty()         or not query_result.missing_terrain_cells.is_empty()         or not query_result.unclassified_entity_ids.is_empty():
+        return false
+    for blocker_id: String in query_result.blocking_entity_ids:
+        var placement: WorldPlacement = _world.placement(blocker_id)
+        if placement == null or placement.channel != Layers.Channel.ACTOR:
+            return false
+    return true
+
+static func _candidate_changes_anchor(candidate: Dictionary) -> bool:
+    var current: WorldPlacement = candidate.get("current", null)
+    if current == null:
+        return false
+    return candidate.get("target_anchor", current.anchor) != current.anchor
+
+static func _candidate_final_cells_overlap(candidate: Dictionary, cells: Array) -> bool:
+    var current: WorldPlacement = candidate.get("current", null)
+    if current == null or current.footprint == null:
+        return true
+    var target_anchor: Vector2i = candidate.get("target_anchor", current.anchor)
+    var target_facing: int = int(candidate.get("target_facing", current.facing))
+    var final_cells: Array[Vector2i] = current.footprint.world_cells(target_anchor, target_facing)
+    for cell_value: Variant in cells:
+        if typeof(cell_value) == TYPE_VECTOR2I and cell_value in final_cells:
+            return true
+    return false
+
+func _mark_timestamp_conflict(candidate: Dictionary, reason: String) -> void:
+    candidate["ready"] = false
+    var action: TimedAction = candidate.get("action", null)
+    if action != null and action.action_type == RUN_FORWARD:
+        candidate["impact"] = true
+        candidate["reason"] = "run_impact"
+    else:
+        candidate["impact"] = false
+        candidate["reason"] = reason
 
 func _candidate_base(action: TimedAction, stride_index: int) -> Dictionary:
     return {
