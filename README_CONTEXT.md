@@ -2,99 +2,58 @@
 
 Read this file first, then `README_SOPS.md`. Fetch current `main` once before the next repository operation.
 
-## Current checkpoint — PLAYER-FACING ZOMBIE WARNING REMOVED — 2026-09-10
+## Current checkpoint — SURVIVAL RELEASE ROADMAP RESET — 2026-09-25
 
-This was a deliberately narrow UI closure following the completed 2000-tick feel/performance playtest.
+Documentation-only operation following the user's explicit scope decisions. The commit containing this handoff is the final repository write for this operation; identify its exact SHA from `main`. Subsequent publication verification is read-only.
 
-Starting head after retiring the previous prompt-owned 2000-tick verifier pair: `c8f86a0275946d93a5a0971017d36d51764b8ba9`
+Starting main: `a6c48cdb582ff08d9814a70fdce0bf4a3ba9118d`.
 
-Executable/UI head: `621f28ef880d41e8beb730134310c078f7c9bded`
+Unchanged executable/UI owning head: `621f28ef880d41e8beb730134310c078f7c9bded`.
 
-The commit containing this file is the final repository write for this operation. After it lands, verification is read-only only.
+## Completed
 
-## Completed change
+- Replaced ROADMAP.md with a finite survival release plan, explicit exclusions, implementation order and player-facing acceptance criteria.
+- Reconciled PROJECT_NORTH_STAR.md and README.md with the new scope.
+- Recorded the superseding September 25 decision in DESIGN_DECISIONS.md without erasing historical decisions.
+- Updated CHANGELOG_LATEST.md.
+- No gameplay, generation, test, workflow or process code changed. No runtime feature was removed or newly implemented by this documentation operation.
 
-`game/scripts/ui/WorldResolutionIndicator.gd` no longer presents the player-facing `ZOMBIES NEARBY` message.
+## Authoritative direction
 
-The change removed only the presentation constant/branch that selected that text when the active infected cohort was non-empty.
+Core loop: scavenge, fight, craft, survive on the existing persistent map with day/night, weather, power and water. A base is an existing fortified house/building with supplies, generator and well. No freeform building or settlement management.
 
-Preserved unchanged:
+Keep zombies. Retire living survivor/follower/raider/social runtime and broader household/job/society/outbreak simulation. Preserve shared mechanics used by zombies/player; cheap initial generation data may remain without live society dependencies.
 
-- infected cohort activation and proximity behavior;
-- infected simulation, perception, combat, and opening-pressure logic;
-- authoritative TickKernel/WHEN behavior;
-- the `LOADING` region-transition indicator and its existing streaming signal path;
-- the rest of the canonical status HUD and moodlet/condition presentation.
+Shared ticks, interruptible versus committed actions, simultaneous per-tick resolution, mob force and fear define combat. It should feel like real time with automatic pauses, not manually selectable tactical pauses. Hard application pause still protects real-life interruptions without cancellation or free orders.
 
-This is a UI cleanup only, not a zombie-system simplification or performance workaround.
+Required remaining scope includes durable save/continue, responsive combat, practical fortified-house survival, zombie-damageable power/water features, realistic vehicle placement via parking/carport/garage/site enrichment, persistent crashes/abandoned or dead-occupant fortified-house stories, loot and moodlet/needs balance, combat cleanup and repeated-day desktop/Safari acceptance.
 
-## Verification
+Old “core roadmap closed” language is superseded. All implementation phases of the new roadmap remain open until their actual outcomes are accepted. Exact formulas/rates are bounded implementation design/tuning work, not newly implemented facts.
 
-Read-back of `WorldResolutionIndicator.gd` at executable head `621f28ef880d41e8beb730134310c078f7c9bded` confirms:
+## Verification / publication
 
-- `ZOMBIES_TEXT` is absent;
-- the infected-active branch that set `ZOMBIES NEARBY` is absent;
-- `_refresh()` still shows `LOADING` while `_loading_visible` is true;
-- infected cohort wiring remains present for the existing resolution-indicator composition/snapshot contract.
+Documentation diff and consistency reviewed; `git diff --check` passed before this final handoff write. The final documentation bundle must also pass that read-only check. Runtime and workflow files are unchanged; no gameplay tests were run or invented for a documentation-only task.
 
-GitHub Pages build/deploy for executable head:
+The starting main's exact-head Pages run `34559224322` succeeded. The final documentation commit's Pages run cannot exist before publication; verify its exact SHA and terminal result read-only after publishing. Do not equate deployment success with gameplay acceptance.
 
-- workflow: `Build and deploy Tick Survival Lab`;
-- run: `34558848632`;
-- head: `621f28ef880d41e8beb730134310c078f7c9bded`;
-- build job: success;
-- deploy job: success.
+There is no prompt-owned verifier pair from this operation. The previous 2000-tick pair was already retired. The next code prompt should confirm there is no current pair to delete, then create its focused module-local verifier/workflow under the unchanged README_SOPS.md policy. Do not revive historical suites or the twelve-seed matrix. The review's suggested SOP changes were not enacted by this roadmap request.
 
-## Previous performance baseline remains authoritative
+## Retained performance evidence
 
-The immediately preceding 2000-tick production-path playtest remains the performance baseline. Do not reinterpret this UI removal as addressing the measured simulation cost.
+CHANGELOG_TICK_2000_FEEL_PLAYTEST.md is the measured baseline: ordinary action p50 about 364 ms, p95 488 ms, p99 513 ms; worst 8.763 s; roughly 10 active NPCs; aggregate NPC evaluation about 135.6 ms per player decision. Status/moodlet query costs were negligible. These are recorded headless figures, not measurements from the user's phone. The specific worst action's cause was not conclusively attributed.
 
-Key findings from that closed pass:
-
-- whole accepted action p50 about `364 ms`, p95 about `488 ms`, p99 about `513 ms`;
-- one multi-second transition-class outlier remained;
-- approximately 10 active NPCs caused synchronous behavior/perception fan-out around player actions;
-- combined measured NPC behavior evaluation was about `135.6 ms` per player decision in aggregate;
-- status/moodlet query and HUD refresh costs were negligible relative to the action latency.
-
-The existing recommendation remains: optimize NPC decision fan-out/perception work and coherent turn presentation before treating animation as a solution.
-
-## Prompt-owned verifier cleanup
-
-The preceding 2000-tick temporary verifier pair was retired before this UI change:
-
-- `game/scripts/ci/PromptTick2000FeelPlaytest.gd`
-- `.github/workflows/prompt-tick-2000-feel.yml`
-
-There is no new prompt-owned verifier pair from this UI-only operation.
-
-## Protected behavior
-
-Preserve:
-
-- one deterministic authoritative WHEN/TickKernel clock and decision semantics;
-- real production world/actor/perception/condition state;
-- System 34 condition state/query semantics and current status/moodlet UI;
-- existing terrain bulk-write/coalescing and streaming improvements;
-- STATS / INVENTORY / CRAFT / MENU modal ownership and interaction blocking;
-- current world generation, utilities, weather, interaction, vehicle, combat, population, and rendering ownership boundaries unless a measured hotspot requires a bounded change;
-- the `LOADING` transition indicator unless a later UX pass intentionally replaces it.
-
-Do not restore the player-facing `ZOMBIES` / `ZOMBIES NEARBY` indicator unless explicitly requested.
-
-## Known player targets still open
-
-- reduce ordinary action latency caused by NPC behavior/perception fan-out;
-- make nearby actor outcomes feel coherent/concurrent rather than visibly serial;
-- eliminate remaining multi-second transition hitching;
-- more realistic vehicle placement tied to roads, residences, businesses, parking, and roadside context;
-- higher believable road/building density with alternate routes/loops while keeping rural/open farmland character;
-- gameplay-density polish: clearer affordances, less dead travel, stronger first-day decisions, clearer time costs, distinct building usefulness, and stronger vehicle progression.
+Keep terrain bulk-write/coalescing improvements and shared WHEN truth. Retiring survivors alone does not prove zombie performance solved. Resolve remaining fan-out, repeated perception work, presentation coherence and measured streaming hitches without a new engine.
 
 ## NEXT OPERATION
 
-Continue from the measured performance work unless the player promotes another target.
+Phase 1 of ROADMAP.md: retire the live survivor/social runtime from production composition while preserving zombies and shared mechanics. This roadmap-writing request did not execute that code phase. Follow the existing bounded-operation approval gate when beginning new implementation.
 
-For performance, start with the smallest coherent pass around NPC decision fan-out and perception caching/invalidation, preserving deterministic TickKernel truth. Measure before/after against the closed 2000-tick baseline.
+Targeted starting reads: production composition consumers of ActiveSurvivorCohortService and SurvivorNpcBehaviorService; survivor/social interaction consumers; the exact dependencies shared with zombie cohorts. Determine existing owners and measure the production path before changing it. Do not broadly rediscover the repo.
 
-Do not broadly reread the repository unless a targeted failure requires it.
+Close the bounded retirement with ordinary startup/zombie/time/inventory/utility behavior and before/after cost evidence. Next comes Phase 2's shared-tick combat contract, mob force/fear and measured zombie decision/perception/presentation work. Save/continue is the next required release phase, not optional polish.
+
+## Protected behavior
+
+Preserve WHERE/WHAT/WHEN authority; zombie/player mechanics; existing terrain/streaming improvements; canonical condition/moodlet state; input and STATS/INVENTORY/CRAFT/MENU ownership; day/night/weather; current world changes; utility and vehicle state; physical rendering and perception boundaries; hard application pause.
+
+Do not restore the player-facing ZOMBIES/ZOMBIES NEARBY indicator. Keep LOADING unless a later UX decision intentionally replaces it. Do not protect obsolete survivor/society consumers merely because the previous handoff listed population among preserved systems.

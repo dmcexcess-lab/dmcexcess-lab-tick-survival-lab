@@ -8,6 +8,24 @@ If a later discussion changes a decision, do not erase history. Add a newer entr
 
 ---
 
+## 2026-09-25 — Finish the survival loop; retire society simulation
+
+**Decision:** Release scope is scavenging, fighting, crafting and survival on the existing persistent map with day/night, weather, vehicles, electricity and water. Shared ticks, interruptible versus committed actions, simultaneous tick consequences, mob force and fear are defining mechanics, not optional fidelity.
+
+**Pause:** automatic tactical decision boundaries remain authoritative. Hard application pause freezes/resumes a pending commitment without a new order or cancellation advantage.
+
+**Base:** an existing fortified building with supplies, generator and well. No freeform construction or settlement management. Generator/well installation and repairs are bounded site interactions.
+
+**World content:** add suitable carports, garages, driveways and parking lots to already generated building layouts; derive vehicle placement from usable site capacity. Preserve visited/player-modified facts through one-time versioned enrichment. Add persistent environmental stories using real crashes, fortified houses, abandoned refuges, bodies or turned occupants; no living quest NPCs.
+
+**Retire:** living survivor/follower/raider/social runtime, household/job/schedule simulation and island-wide outbreak/society simulation. Zombies and shared time, health, inventory, condition, perception and physical state remain. Cheap initial population data may be reused without a live society dependency.
+
+**Release requirements:** durable save/continue, responsive shared-tick combat, realistic vehicle placement, useful environmental stories, balanced loot/needs/moodlet deterioration/recovery and accepted repeated-day play on desktop and mobile/Safari. ROADMAP.md owns the sequence and criteria. Exact balance values and force/fear formulas remain implementation design work.
+
+**Supersedes:** older freeform-base, personal-household and society/outbreak promises as release obligations; the previous “core roadmap closed” assessment; any protection of retired population/social consumers solely because they were formerly in scope. Older entries below preserve history, not permission to restore these ambitions. This decision changes scope, not the current executable or the existing SOP verification/approval policy.
+
+---
+
 ## 2026-08-16 — Game identity
 
 **Decision:** Use **“Sprite-based zombie survival game”** as the primary design shorthand.

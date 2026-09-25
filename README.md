@@ -4,7 +4,9 @@
 >
 > **Mini means reduced complexity, not reduced consequence or mood.**
 
-Tick Survival Lab is an original Godot 4 top-down zombie survival simulation built around a logically continuous persistent open world, discrete variable-duration actions, systemic consequences, emergent bases and deliberately simplified-but-interconnected survival mechanics.
+Tick Survival Lab is an original Godot 4 top-down zombie survival game: **scavenge, fight, craft, survive**. Shared tick time, committed/interruptible actions, simultaneous consequences, mob force and fear define combat. The persistent world includes day/night, weather, vehicles, power and water; a base is an existing building you fortify.
+
+**Release scope reset — 2026-09-25:** [ROADMAP.md](ROADMAP.md) defines the finite completion plan. Living survivor/society simulation and freeform construction are retired from the target scope; their runtime removal is still pending. Save/continue, realistic parking/vehicle placement, environmental stories and integrated balance remain release requirements. This documentation update is not an implementation claim.
 
 Live build:
 
@@ -17,14 +19,14 @@ The canonical modular stack includes:
 - **WHERE** — global integer-cell spatial model;
 - **WHAT** — one authoritative persistent current world;
 - **WHEN** — deterministic tick/action/pause kernel;
-- **System 00D** — global world planning (geography, settlements, roads, hydrology/bridge intent, regional utilities);
+- **System 00D** — global world planning (geography, settlements, roads and regional utilities);
 - **System 19** — local building grammar with 24 callable archetypes: six protected references plus an 18-profile one-story baseline library;
 - **System 20** — local area generation with ten area profiles and seven environment palettes spanning current rural content plus reusable suburban, urban, commercial, industrial and civic baselines;
 - **System 00F** — logical materialization + technical streaming activation;
 - **System 23** — deterministic facing-based LOS, true unexplored fog, stale remembered-world knowledge and last-seen living-actor observations;
 - modular collision, movement, actor state, inventory/equipment, doors, rendering, camera, HUD/player-shell and DEV critique systems.
 
-The live project boots the canonical modular `GameMain.gd` composition stack. The expanded baseline generators are reusable content; they do not silently replace the current Rural Crossroads live critique fixture.
+The live project uses the canonical modular composition and generated island. See `README_CONTEXT.md` for the exact executable checkpoint and `ROADMAP.md` for planned scope changes.
 
 ## World model
 
@@ -32,7 +34,7 @@ The physical world is persistent and logically continuous, not a sequence of rai
 
 Global planning owns world-spanning coherence before local detail. Streaming partitions are technical only. Once virgin generated facts are materialized, WHAT and typed mechanic stores own subsequent current reality.
 
-There is no required extraction-shooter loop. The survivor may roam, relocate, fortify existing places, build elsewhere, maintain multiple safe sites or remain nomadic.
+There is no required extraction-shooter loop. The survivor may roam, relocate, fortify existing places, maintain multiple safe sites or remain nomadic. Freeform construction is outside the release scope.
 
 ## Baseline building and area model
 
@@ -48,7 +50,7 @@ Environment profiles are local palettes, not global geography authority. Woodlan
 
 The simulation is turn-based through an authoritative variable-duration tick/action kernel.
 
-While the player is choosing, simulation pauses. A committed action consumes world ticks; other scheduled actors/systems may act during those ticks. A separate hard application pause protects real-life interruption without treating it as a tactical mistake.
+While the player is choosing, world time pauses. An action consumes ticks under its commitment/interruption rules. Effects due at each tick must resolve coherently and overlapping activity must appear simultaneous. Tactical pauses occur at legitimate decision boundaries, not whenever the player wishes. A separate hard application pause freezes pending actions for real-life interruptions without cancellation or free tactical choices. Full combat acceptance is still open in the roadmap.
 
 ## Spatial model
 

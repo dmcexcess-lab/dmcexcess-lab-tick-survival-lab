@@ -2,6 +2,10 @@
 
 This compact ledger records the newest executable work. `CHANGELOG.md` remains the historical archive.
 
+## Survival release roadmap reset — 2026-09-25
+
+Documentation only. Replaced the previous core-complete roadmap with a finite release plan covering scope retirement, simultaneous tick combat/commitment/mob force/fear, responsiveness, durable save/continue, fortified-house survival and utilities, contextual parking/vehicles, persistent environmental stories, balance and desktop/mobile acceptance. Reconciled the North Star, README and cross-system decisions. No runtime system has been removed or implemented by this update; README_SOPS.md remains unchanged.
+
 ## Exact-Item Inventory First Aid — 2026-09-04
 
 Verified executable: `7d3341dc41e2cf7d32c0f83837e92955b807d9b4`.
