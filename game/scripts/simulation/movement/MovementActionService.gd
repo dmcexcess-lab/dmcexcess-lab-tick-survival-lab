@@ -20,6 +20,7 @@ signal run_stride_committed(actor_id, action_serial, stride_index, target_anchor
 signal movement_exertion_resolved(actor_id, action_serial, action_type, stride_index, terrain_walk_ticks, impacted)
 signal run_impact(actor_id, action_serial, stride_index, target_anchor, target_facing, blocking_entity_ids)
 signal forced_displacement_resolved(source_actor_id, target_actor_id, source_action_serial, displaced, reason, target_anchor)
+signal physical_pressure_resolved(target_actor_id, pressure_score, displaced, trapped)
 
 const STEP_FORWARD: StringName = &"movement.step_forward"
 const STEP_BACKWARD: StringName = &"movement.step_backward"
@@ -850,6 +851,8 @@ func _flush_timestamp_commits() -> void:
                 candidate["ready"] = false
                 candidate["reason"] = "placement_mutation_failed"
 
+    _emit_physical_pressure_summaries(eligible)
+
     for index: int in range(eligible.size()):
         var candidate: Dictionary = eligible[index]
         var kind: StringName = StringName(candidate.get("kind", CANDIDATE_MOVEMENT))
@@ -866,6 +869,38 @@ func _flush_timestamp_commits() -> void:
             var action: TimedAction = candidate.get("action", null)
             if action != null:
                 _fail_commit(action, String(candidate.get("reason", "movement_commit_failed")))
+
+func _emit_physical_pressure_summaries(candidates: Array[Dictionary]) -> void:
+    var summaries: Dictionary = {}
+    for index: int in range(candidates.size()):
+        var candidate: Dictionary = candidates[index]
+        if StringName(candidate.get("kind", CANDIDATE_MOVEMENT)) != CANDIDATE_FORCED:
+            continue
+        var actor_id: String = String(candidate.get("actor_id", ""))
+        if actor_id.is_empty():
+            continue
+        var score_value: int = maxi(0, _physical_contest_score(candidate))
+        if score_value <= 0:
+            continue
+        var summary: Dictionary = (summaries.get(actor_id, {
+            "pressure_score": 0,
+            "displaced": false,
+            "trapped": false,
+        }) as Dictionary).duplicate(true)
+        summary["pressure_score"] = maxi(int(summary.get("pressure_score", 0)), score_value)
+        summary["displaced"] = bool(summary.get("displaced", false))             or _candidate_or_link_succeeded(candidates, index)
+        var reason: String = String(candidate.get("reason", ""))
+        summary["trapped"] = bool(summary.get("trapped", false))             or reason in ["pressure_blocked_static", "displacement_blocked"]
+        summaries[actor_id] = summary
+
+    for actor_id: String in _sorted_string_keys(summaries):
+        var summary: Dictionary = summaries[actor_id]
+        physical_pressure_resolved.emit(
+            actor_id,
+            int(summary.get("pressure_score", 0)),
+            bool(summary.get("displaced", false)),
+            bool(summary.get("trapped", false))
+        )
 
 func _resolve_actor_trajectory_conflicts(
     candidates: Array[Dictionary],
