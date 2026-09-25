@@ -21,7 +21,8 @@ func _run() -> void:
     var kernel: TickKernel = game.get("_kernel")
     var movement: MovementActionService = game.get("_movement")
     var cohort: ActiveInfectedCohortService = game.infected_cohort_service()
-    if kernel == null or movement == null or cohort == null or not cohort.is_configured():
+    var player_perception: ObserverPerceptionService = game.get("_perception")
+    if kernel == null or movement == null or cohort == null or not cohort.is_configured()         or player_perception == null:
         _fail("production infected performance owners are incomplete")
         return
 
@@ -31,6 +32,9 @@ func _run() -> void:
         return
 
     var perception_before: int = _perception_recompute_total(cohort, active)
+    var infected_perception_usec_before: int = _perception_usec_total(cohort, active)
+    var player_perception_count_before: int = player_perception.recompute_count()
+    var player_perception_usec_before: int = player_perception.recompute_total_usec()
     var behavior_before: Dictionary = cohort.metrics_snapshot()
     var start_tick: int = kernel.world_tick()
     var started_usec: int = Time.get_ticks_usec()
@@ -47,8 +51,14 @@ func _run() -> void:
         return
 
     var perception_after: int = _perception_recompute_total(cohort, active)
+    var infected_perception_usec_after: int = _perception_usec_total(cohort, active)
+    var player_perception_count_after: int = player_perception.recompute_count()
+    var player_perception_usec_after: int = player_perception.recompute_total_usec()
     var behavior_after: Dictionary = cohort.metrics_snapshot()
     var perception_delta: int = perception_after - perception_before
+    var infected_perception_usec_delta: int = infected_perception_usec_after - infected_perception_usec_before
+    var player_perception_delta: int = player_perception_count_after - player_perception_count_before
+    var player_perception_usec_delta: int = player_perception_usec_after - player_perception_usec_before
     var evaluation_delta: int = int(behavior_after.get("behavior_evaluation_count", 0)) \
         - int(behavior_before.get("behavior_evaluation_count", 0))
     var evaluation_usec_delta: int = int(behavior_after.get("behavior_evaluation_total_usec", 0)) \
@@ -57,15 +67,18 @@ func _run() -> void:
     var submission_delta: int = int(behavior_after.get("ordinary_action_submission_count", 0)) \
         - int(behavior_before.get("ordinary_action_submission_count", 0))
 
-    if perception_delta < 0 or evaluation_delta < 0 or evaluation_usec_delta < 0 or submission_delta < 0:
+    if perception_delta < 0 or infected_perception_usec_delta < 0         or player_perception_delta < 0 or player_perception_usec_delta < 0         or evaluation_delta < 0 or evaluation_usec_delta < 0 or submission_delta < 0:
         _fail("performance counters moved backward")
         return
 
-    print("PHASE2_INFECTED_PERF_METRIC head_route=player_turn active=%d tick_delta=%d elapsed_usec=%d perception_recomputes=%d behavior_evaluations=%d behavior_eval_usec=%d behavior_eval_max_usec=%d submissions=%d stop_reason=%d" % [
+    print("PHASE2_INFECTED_PERF_METRIC head_route=player_turn active=%d tick_delta=%d elapsed_usec=%d infected_perception_recomputes=%d infected_perception_usec=%d player_perception_recomputes=%d player_perception_usec=%d behavior_evaluations=%d behavior_eval_usec=%d behavior_eval_max_usec=%d submissions=%d stop_reason=%d" % [
         active.size(),
         kernel.world_tick() - start_tick,
         elapsed_usec,
         perception_delta,
+        infected_perception_usec_delta,
+        player_perception_delta,
+        player_perception_usec_delta,
         evaluation_delta,
         evaluation_usec_delta,
         evaluation_max_usec,
@@ -73,6 +86,14 @@ func _run() -> void:
         stop_reason,
     ])
     quit(0)
+
+func _perception_usec_total(cohort: ActiveInfectedCohortService, actor_ids: Array[String]) -> int:
+    var total: int = 0
+    for actor_id: String in actor_ids:
+        var perception: StreamingObserverPerceptionService = cohort.perception_for_actor(actor_id)
+        if perception != null:
+            total += perception.recompute_total_usec()
+    return total
 
 func _perception_recompute_total(cohort: ActiveInfectedCohortService, actor_ids: Array[String]) -> int:
     var total: int = 0
