@@ -33,6 +33,7 @@ var _disposition: ItemDispositionQuery = null
 var _commit_outcomes: Dictionary = {}
 var _diagnostics: Array[Dictionary] = []
 var _dev_fail_after_removed_inputs: int = -1
+var _condition_modifiers: ActorConditionModifierQuery = null
 
 func _init(
     world_state: WorldState = null,
@@ -77,6 +78,12 @@ func is_ready() -> bool:
         and _skill_checks != null and _skill_checks.is_ready() \
         and _disposition != null and _disposition.is_ready()
 
+func configure_condition_modifiers(modifiers: ActorConditionModifierQuery) -> bool:
+    if modifiers == null or not modifiers.is_ready():
+        return false
+    _condition_modifiers = modifiers
+    return true
+
 func recent_diagnostics() -> Array[Dictionary]:
     return _diagnostics.duplicate(true)
 
@@ -107,6 +114,10 @@ func request_craft(actor_id: String, recipe_id: StringName, workstation_id: Stri
     if not bool(skill_profile.get("ok", false)):
         return _request_result(false, 0, actor, recipe_id, String(skill_profile.get("reason", "skill_profile_unavailable")))
     var duration: int = int(skill_profile.get("duration_ticks", 0))
+    if _condition_modifiers != null and _condition_modifiers.is_ready()         and _condition_modifiers.has_actor(actor):
+        duration = maxi(1, int(ceili(float(
+            duration * _condition_modifiers.deliberate_action_duration_multiplier_bp(actor)
+        ) / 10000.0)))
     if duration < 1:
         return _request_result(false, 0, actor, recipe_id, "skill_duration_invalid")
 
