@@ -2,6 +2,20 @@
 
 This compact ledger records the newest executable work. `CHANGELOG.md` remains the historical archive.
 
+## Phase 2C — same-tick movement arbitration — 2026-09-25
+
+Functional production head: `d87f1402b0f06f69f1f8a614b3a7557dd7641b71`.
+
+- Reworked canonical movement timestamp resolution so actor movement due on the same tick is decided from one unchanged pre-resolution occupancy state rather than serial callback/order effects.
+- Actor-only occupied walk targets may now enter the timestamp arbiter instead of being rejected before simultaneous movement can be considered. Static/non-ACTOR blockers still fail closed.
+- Two or more movers claiming the same destination space all fail with `target_contested`; sorted actor ID/order no longer awards a hidden winner.
+- Reciprocal actor swaps and compatible vacating chains can commit atomically through `WorldMutationService.set_placements_batch`. Dependency failure propagates to blocked followers, preventing an actor from phasing through a mover that ultimately stayed put.
+- Walk remains CANCELABLE during wind-up but now declares its final movement commit offset as the point of no return, preserving Phase-2A commitment semantics.
+- Fixed the production `PassageAwareMovementActionService` wrapper so actor occupancy is delegated to movement arbitration rather than being misclassified as a door/passage rejection.
+- Fresh prompt-local verifier/workflow: `game/scripts/ci/Phase2CMovementConflictsSmoke.gd` + `.github/workflows/phase2c-movement-conflicts.yml`.
+- Focused verifier head/run `f605987f7feb4fd24e06f3724d90622d900beee9` / `36187796332`: **success** with `PHASE2C_MOVEMENT_CONFLICTS_OK contest_tick=10 swap_tick=20 no_hidden_winner=true`.
+- Phase 2 remains open for shove-vs-move/displacement arbitration, same-tick death/movement closure, mob force, canonical fear effects, zombie callback/perception cost, presentation coherence and crowded-fight performance.
+
 ## Phase 2B — simultaneous melee impact/death boundary — 2026-09-25
 
 Functional executable head: `a33e302467921ab58541c462a89fc37b6f2b6964`.
