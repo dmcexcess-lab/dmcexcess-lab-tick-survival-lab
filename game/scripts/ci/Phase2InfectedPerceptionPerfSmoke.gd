@@ -56,12 +56,14 @@ func _run() -> void:
         _fail("performance counters moved backward")
         return
 
-    print("PHASE2_INFECTED_PERF_METRIC head_route=player_turn active=%d tick_delta=%d elapsed_usec=%d perception_recomputes=%d behavior_evaluations=%d submissions=%d stop_reason=%d" % [
+    print("PHASE2_INFECTED_PERF_METRIC head_route=player_turn active=%d tick_delta=%d elapsed_usec=%d perception_recomputes=%d behavior_evaluations=%d behavior_eval_usec=%d behavior_eval_max_usec=%d submissions=%d stop_reason=%d" % [
         active.size(),
         kernel.world_tick() - start_tick,
         elapsed_usec,
         perception_delta,
         evaluation_delta,
+        evaluation_usec_delta,
+        evaluation_max_usec,
         submission_delta,
         stop_reason,
     ])
