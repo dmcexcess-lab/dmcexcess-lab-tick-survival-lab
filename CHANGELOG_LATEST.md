@@ -2,6 +2,21 @@
 
 This compact ledger records the newest executable work. `CHANGELOG.md` remains the historical archive.
 
+## Phase 2C — shove as causal forced trajectory — 2026-09-25
+
+Functional production head: `355de006567289ac257b0b3437f87946d72c427c`.
+
+- Removed Combat's immediate shove placement mutation. A shove contact now freezes source force and target resistance before same-timestamp damage, then submits a forced target trajectory into the shared Movement timestamp arbiter.
+- Movement physical scores are frozen when a movement consequence enters the current timestamp, preventing damage generated later in that same tick from retroactively weakening an already-earned movement contest.
+- A target's own committed movement and an incoming shove are resolved as trajectories for the same actor. Different-direction trajectories compare frozen physical scores; aligned movement/shove share one destination claim instead of producing an extra square of movement.
+- Equal simultaneous shoves from opposite sides produce no attacker-ID/order winner and leave the target in place.
+- Forced displacement obeys the same destination claims, occupied-cell release dependencies, edge conflicts and static blockers as ordinary spatial transitions.
+- Combat's Health consequence batch now remains open through the late spatial flush. Same-tick lethal damage therefore cannot erase a shove/move that already reached consequence; corpse publication uses the resolved outgoing position.
+- Fresh prompt-local verifier/workflow: `game/scripts/ci/Phase2CShoveTransitionsSmoke.gd` + `.github/workflows/phase2c-shove-transitions.yml`.
+- Initial focused run `36194296697` failed only because the verifier accidentally left the previous opposing shover occupying the lethal-shove destination. The production path itself had reached the expected earlier assertions. The focused fixture was corrected without weakening behavior.
+- Focused repair run `36194398176`: **success** with marker `PHASE2C_SHOVE_TRANSITIONS_OK shove_beats_move=true opposing_tie=true corpse_after_displacement=true`.
+- Same-direction crowd-force aggregation, force propagation through packed bodies and crush/impact consequences remain intentionally deferred to the next mob-pressure work.
+
 ## Phase 2C — causal transition edges — 2026-09-25
 
 Functional production head: `54a62812bf692816ebf8907ff3f1c91e85296f41`.
