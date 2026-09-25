@@ -136,11 +136,19 @@ func queue_forced_displacement(
         "source_action_serial": source_action_serial,
         "physical_score": source_score,
         "resistance_score": resistance_score,
+        "resistance_consumed": -1,
         "linked_candidate_index": -1,
+        "blocking_resistance_scores": {},
+        "pressure_depth": 0,
+        "report_resolution": true,
     }
     if query_result.status == QueryResultClass.Status.BLOCKED:
         if _has_only_actor_blockers(query_result):
             candidate["blocking_entity_ids"] = query_result.blocking_entity_ids.duplicate()
+            var blocker_resistance: Dictionary = {}
+            for blocker_id: String in query_result.blocking_entity_ids:
+                blocker_resistance[blocker_id] = physical_contest_score(blocker_id, HOLD_ACTION)
+            candidate["blocking_resistance_scores"] = blocker_resistance
         else:
             candidate["ready"] = false
             candidate["reason"] = "displacement_blocked"
@@ -683,6 +691,8 @@ func _flush_timestamp_commits() -> void:
         eligible.append(candidate)
 
     _resolve_actor_trajectory_conflicts(eligible)
+    _propagate_forced_pressure_one_step(eligible)
+    _finalize_forced_hold_resistance(eligible)
 
     # Opposite traversal of one physical edge cannot pass through. Ordinary
     # walks collide head-on; forced displacement also cannot phase through a
@@ -827,8 +837,9 @@ func _flush_timestamp_commits() -> void:
         var candidate: Dictionary = eligible[index]
         var kind: StringName = StringName(candidate.get("kind", CANDIDATE_MOVEMENT))
         if kind == CANDIDATE_FORCED:
-            var displaced: bool = _candidate_or_link_succeeded(eligible, index)
-            _emit_forced_displacement(candidate, displaced)
+            if bool(candidate.get("report_resolution", true)):
+                var displaced: bool = _candidate_or_link_succeeded(eligible, index)
+                _emit_forced_displacement(candidate, displaced)
             continue
         if bool(candidate.get("ready", false)):
             _emit_commit_success(candidate)
@@ -839,19 +850,24 @@ func _flush_timestamp_commits() -> void:
             if action != null:
                 _fail_commit(action, String(candidate.get("reason", "movement_commit_failed")))
 
-func _resolve_actor_trajectory_conflicts(candidates: Array[Dictionary]) -> void:
+func _resolve_actor_trajectory_conflicts(
+    candidates: Array[Dictionary],
+    only_actor_id: String = ""
+) -> void:
     var by_actor: Dictionary = {}
     for index: int in range(candidates.size()):
         var candidate: Dictionary = candidates[index]
         if not bool(candidate.get("ready", false)) or not _candidate_changes_anchor(candidate):
             continue
         var actor_id: String = String(candidate.get("actor_id", ""))
+        if not only_actor_id.is_empty() and actor_id != only_actor_id:
+            continue
         var indexes: Array = by_actor.get(actor_id, [])
         indexes.append(index)
         by_actor[actor_id] = indexes
 
-    for value: Variant in by_actor.values():
-        var indexes: Array = value
+    for actor_id: String in _sorted_string_keys(by_actor):
+        var indexes: Array = by_actor[actor_id]
         var movement_indexes: Array[int] = []
         var forced_indexes: Array[int] = []
         for index_value: Variant in indexes:
@@ -868,73 +884,228 @@ func _resolve_actor_trajectory_conflicts(candidates: Array[Dictionary]) -> void:
                 _mark_timestamp_conflict(candidates[index], "trajectory_conflict")
             movement_indexes.clear()
 
-        var best_force: int = -1
-        var top_forced: Array[int] = []
+        var force_right: int = 0
+        var force_left: int = 0
+        var force_down: int = 0
+        var force_up: int = 0
         var unknown_force: bool = false
+        var direction_by_index: Dictionary = {}
         for index: int in forced_indexes:
-            var score_value: int = _physical_contest_score(candidates[index])
-            if score_value < 0:
+            var candidate: Dictionary = candidates[index]
+            var score_value: int = _physical_contest_score(candidate)
+            var direction: Vector2i = _forced_direction(candidate)
+            if score_value < 0 or direction == Vector2i.ZERO:
                 unknown_force = true
                 break
-            if score_value > best_force:
-                best_force = score_value
-                top_forced = [index]
-            elif score_value == best_force:
-                top_forced.append(index)
+            direction_by_index[index] = direction
+            match direction:
+                Vector2i.RIGHT:
+                    force_right += score_value
+                Vector2i.LEFT:
+                    force_left += score_value
+                Vector2i.DOWN:
+                    force_down += score_value
+                Vector2i.UP:
+                    force_up += score_value
+
         if unknown_force:
             for index: int in forced_indexes:
                 _mark_timestamp_conflict(candidates[index], "displacement_force_unknown")
             continue
 
-        var top_targets: Dictionary = {}
-        for index: int in top_forced:
-            var anchor: Vector2i = candidates[index].get("target_anchor", Vector2i.ZERO)
-            top_targets[anchor] = true
-        if top_targets.size() != 1:
+        var net_x: int = force_right - force_left
+        var net_y: int = force_down - force_up
+        var abs_x: int = absi(net_x)
+        var abs_y: int = absi(net_y)
+        if (abs_x == 0 and abs_y == 0) or (abs_x > 0 and abs_x == abs_y):
             for index: int in forced_indexes:
                 _mark_timestamp_conflict(candidates[index], "displacement_force_tied")
             continue
-        var winning_target: Vector2i = Vector2i.ZERO
-        for target_value: Variant in top_targets.keys():
-            winning_target = target_value
 
-        var representative: int = top_forced[0]
+        var winning_direction: Vector2i = Vector2i.ZERO
+        var net_force: int = 0
+        if abs_x > abs_y:
+            winning_direction = Vector2i.RIGHT if net_x > 0 else Vector2i.LEFT
+            net_force = abs_x
+        else:
+            winning_direction = Vector2i.DOWN if net_y > 0 else Vector2i.UP
+            net_force = abs_y
+
+        var representative: int = -1
+        for index: int in forced_indexes:
+            if direction_by_index.get(index, Vector2i.ZERO) == winning_direction:
+                representative = index
+                break
+        if representative < 0:
+            for index: int in forced_indexes:
+                _mark_timestamp_conflict(candidates[index], "displacement_force_tied")
+            continue
+
+        candidates[representative]["physical_score"] = net_force
+        candidates[representative]["resistance_consumed"] = -1
         for index: int in forced_indexes:
             if index == representative:
                 continue
-            if candidates[index].get("target_anchor", Vector2i.ZERO) == winning_target:
+            if direction_by_index.get(index, Vector2i.ZERO) == winning_direction:
                 candidates[index]["ready"] = false
-                candidates[index]["reason"] = "displacement_parallel"
+                candidates[index]["reason"] = "pressure_aggregated"
                 candidates[index]["linked_candidate_index"] = representative
             else:
                 _mark_timestamp_conflict(candidates[index], "displacement_force_lost")
 
         var forced: Dictionary = candidates[representative]
         if movement_indexes.is_empty():
-            var resistance: int = int(forced.get("resistance_score", -1))
-            if resistance < 0 or best_force <= resistance:
-                _mark_timestamp_conflict(
-                    forced,
-                    "displacement_force_tied" if best_force == resistance else "displacement_resisted"
-                )
+            # Hold resistance is finalized after one-step pressure propagation so
+            # an individually weak downstream shove can combine with transmitted
+            # residual force before the outgoing trajectory is decided.
             continue
 
         var movement_index: int = movement_indexes[0]
         var movement: Dictionary = candidates[movement_index]
         var movement_score: int = _physical_contest_score(movement)
         if movement.get("target_anchor", Vector2i.ZERO) == forced.get("target_anchor", Vector2i.ZERO):
-            movement["physical_score"] = maxi(movement_score, best_force)
+            movement["physical_score"] = maxi(movement_score, net_force)
             forced["ready"] = false
             forced["reason"] = "displacement_aligned"
             forced["linked_candidate_index"] = movement_index
             continue
-        if movement_score < 0 or movement_score == best_force:
+        if movement_score < 0 or movement_score == net_force:
             _mark_timestamp_conflict(movement, "trajectory_contest_tied")
             _mark_timestamp_conflict(forced, "trajectory_contest_tied")
-        elif best_force > movement_score:
+        elif net_force > movement_score:
+            forced["resistance_consumed"] = movement_score
             _mark_timestamp_conflict(movement, "shoved")
         else:
             _mark_timestamp_conflict(forced, "target_trajectory_won")
+
+func _propagate_forced_pressure_one_step(candidates: Array[Dictionary]) -> void:
+    var initial_size: int = candidates.size()
+    var affected_actors: Dictionary = {}
+
+    for index: int in range(initial_size):
+        var candidate: Dictionary = candidates[index]
+        if StringName(candidate.get("kind", CANDIDATE_MOVEMENT)) != CANDIDATE_FORCED             or not bool(candidate.get("ready", false))             or int(candidate.get("pressure_depth", 0)) >= 1:
+            continue
+        var blockers: Array = candidate.get("blocking_entity_ids", [])
+        if blockers.size() != 1:
+            continue
+
+        var current: WorldPlacement = candidate.get("current", null)
+        if current == null:
+            continue
+        var direction: Vector2i = _forced_direction(candidate)
+        if direction == Vector2i.ZERO:
+            continue
+
+        var force_value: int = _physical_contest_score(candidate)
+        var consumed: int = int(candidate.get("resistance_consumed", -1))
+        if consumed < 0:
+            consumed = int(candidate.get("resistance_score", -1))
+        var residual_force: int = force_value - consumed
+        if residual_force <= 0:
+            continue
+
+        var blocker_id: String = String(blockers[0])
+        var frozen_resistance: Dictionary = candidate.get("blocking_resistance_scores", {})
+        var blocker_resistance: int = int(frozen_resistance.get(blocker_id, -1))
+        if blocker_resistance < 0:
+            continue
+        var blocker: WorldPlacement = _world.placement(blocker_id)
+        if blocker == null or blocker.channel != Layers.Channel.ACTOR:
+            continue
+
+        var propagated: Dictionary = _forced_candidate_for_pressure(
+            candidate,
+            blocker,
+            direction,
+            residual_force,
+            blocker_resistance
+        )
+        if propagated.is_empty():
+            continue
+        candidates.append(propagated)
+        affected_actors[blocker_id] = true
+
+    for actor_id: String in _sorted_string_keys(affected_actors):
+        _resolve_actor_trajectory_conflicts(candidates, actor_id)
+
+func _forced_candidate_for_pressure(
+    source_candidate: Dictionary,
+    current: WorldPlacement,
+    direction: Vector2i,
+    source_score: int,
+    resistance_score: int
+) -> Dictionary:
+    var target_anchor: Vector2i = current.anchor + direction
+    var query_result: SpatialQueryResult = _query.query_entity_footprint(
+        current.entity_id,
+        target_anchor,
+        current.facing,
+        true
+    )
+    if query_result == null or query_result.status == QueryResultClass.Status.UNKNOWN:
+        return {}
+
+    var propagated: Dictionary = {
+        "kind": CANDIDATE_FORCED,
+        "action": null,
+        "actor_id": current.entity_id,
+        "action_serial": int(source_candidate.get("action_serial", 0)),
+        "stride_index": 0,
+        "ready": true,
+        "impact": false,
+        "reason": "",
+        "blocking_entity_ids": [],
+        "target_cells": query_result.cells.duplicate(),
+        "walk_terrain_ticks": 0,
+        "current": current.copy(),
+        "target_anchor": target_anchor,
+        "target_facing": current.facing,
+        "source_actor_id": String(source_candidate.get("source_actor_id", "")),
+        "source_action_serial": int(source_candidate.get("source_action_serial", 0)),
+        "physical_score": source_score,
+        "resistance_score": resistance_score,
+        "resistance_consumed": -1,
+        "linked_candidate_index": -1,
+        "blocking_resistance_scores": {},
+        "pressure_depth": int(source_candidate.get("pressure_depth", 0)) + 1,
+        "report_resolution": false,
+    }
+
+    if query_result.status == QueryResultClass.Status.BLOCKED:
+        if _has_only_actor_blockers(query_result):
+            propagated["blocking_entity_ids"] = query_result.blocking_entity_ids.duplicate()
+        else:
+            propagated["ready"] = false
+            propagated["reason"] = "pressure_blocked_static"
+    elif query_result.status != QueryResultClass.Status.CLEAR:
+        propagated["ready"] = false
+        propagated["reason"] = "displacement_unknown"
+    return propagated
+
+func _finalize_forced_hold_resistance(candidates: Array[Dictionary]) -> void:
+    for candidate: Dictionary in candidates:
+        if StringName(candidate.get("kind", CANDIDATE_MOVEMENT)) != CANDIDATE_FORCED             or not bool(candidate.get("ready", false)):
+            continue
+        if int(candidate.get("resistance_consumed", -1)) >= 0:
+            continue
+        var force_value: int = _physical_contest_score(candidate)
+        var resistance: int = int(candidate.get("resistance_score", -1))
+        if resistance < 0 or force_value <= resistance:
+            _mark_timestamp_conflict(
+                candidate,
+                "displacement_force_tied" if force_value == resistance else "displacement_resisted"
+            )
+
+static func _forced_direction(candidate: Dictionary) -> Vector2i:
+    var current: WorldPlacement = candidate.get("current", null)
+    if current == null:
+        return Vector2i.ZERO
+    var target_anchor: Vector2i = candidate.get("target_anchor", current.anchor)
+    var direction: Vector2i = target_anchor - current.anchor
+    if direction in [Vector2i.UP, Vector2i.RIGHT, Vector2i.DOWN, Vector2i.LEFT]:
+        return direction
+    return Vector2i.ZERO
 
 func _candidate_or_link_succeeded(candidates: Array[Dictionary], start_index: int) -> bool:
     var index: int = start_index
@@ -1102,7 +1273,11 @@ func _candidate_base(action: TimedAction, stride_index: int) -> Dictionary:
         "walk_terrain_ticks": 0,
         "physical_score": -1,
         "resistance_score": -1,
+        "resistance_consumed": -1,
         "linked_candidate_index": -1,
+        "blocking_resistance_scores": {},
+        "pressure_depth": 0,
+        "report_resolution": true,
     }
 
 static func _candidate_failure(candidate: Dictionary, reason: String) -> Dictionary:
