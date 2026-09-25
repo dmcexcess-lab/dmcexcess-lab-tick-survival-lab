@@ -616,19 +616,26 @@ func _flush_timestamp_commits() -> void:
     _pending_commits.clear()
     candidates.sort_custom(_candidate_less)
 
-    # Re-read every candidate against one unchanged pre-resolution occupancy
-    # state. Actor occupancy may be deferred to timestamp arbitration; static
-    # blockers never are.
+    # Re-read every trajectory against one unchanged pre-resolution occupancy.
+    # Physical scores were frozen when each consequence entered this timestamp.
     var eligible: Array[Dictionary] = []
     for candidate: Dictionary in candidates:
-        var action: TimedAction = candidate.get("action", null)
-        if action == null:
-            continue
-        var active: TimedAction = _kernel.active_action_for_actor(action.actor_id)
-        if active == null or active.serial != action.serial:
+        var kind: StringName = StringName(candidate.get("kind", CANDIDATE_MOVEMENT))
+        var actor_id: String = String(candidate.get("actor_id", ""))
+        if actor_id.is_empty():
             continue
 
-        var current: WorldPlacement = _world.placement(action.actor_id)
+        if kind == CANDIDATE_MOVEMENT:
+            var action: TimedAction = candidate.get("action", null)
+            if action == null:
+                continue
+            var active: TimedAction = _kernel.active_action_for_actor(action.actor_id)
+            if active == null or active.serial != action.serial:
+                continue
+        elif kind != CANDIDATE_FORCED:
+            continue
+
+        var current: WorldPlacement = _world.placement(actor_id)
         var expected_current: WorldPlacement = candidate.get("current", null)
         if current == null or expected_current == null or not current.equivalent(expected_current):
             candidate["ready"] = false
@@ -636,42 +643,51 @@ func _flush_timestamp_commits() -> void:
             eligible.append(candidate)
             continue
 
+        if not bool(candidate.get("ready", false)):
+            eligible.append(candidate)
+            continue
+
         var target_anchor: Vector2i = candidate.get("target_anchor", Vector2i.ZERO)
         var target_facing: int = int(candidate.get("target_facing", -1))
         var query_result: SpatialQueryResult = _query.query_entity_footprint(
-            action.actor_id,
+            actor_id,
             target_anchor,
             target_facing,
             true
         )
         if query_result == null or query_result.status == QueryResultClass.Status.UNKNOWN:
             candidate["ready"] = false
-            candidate["reason"] = "target_unknown"
+            candidate["reason"] = "displacement_unknown" if kind == CANDIDATE_FORCED else "target_unknown"
         elif query_result.status == QueryResultClass.Status.BLOCKED:
             if _has_only_actor_blockers(query_result) and _candidate_changes_anchor(candidate):
                 candidate["blocking_entity_ids"] = query_result.blocking_entity_ids.duplicate()
                 candidate["target_cells"] = query_result.cells.duplicate()
             else:
                 candidate["ready"] = false
-                if action.action_type == RUN_FORWARD:
-                    candidate["impact"] = true
-                    candidate["reason"] = "run_impact"
-                    candidate["blocking_entity_ids"] = query_result.blocking_entity_ids.duplicate()
+                if kind == CANDIDATE_MOVEMENT:
+                    var movement_action: TimedAction = candidate.get("action", null)
+                    if movement_action != null and movement_action.action_type == RUN_FORWARD:
+                        candidate["impact"] = true
+                        candidate["reason"] = "run_impact"
+                        candidate["blocking_entity_ids"] = query_result.blocking_entity_ids.duplicate()
+                    else:
+                        candidate["reason"] = "target_blocked"
                 else:
-                    candidate["reason"] = "target_blocked"
+                    candidate["reason"] = "displacement_blocked"
         elif query_result.status != QueryResultClass.Status.CLEAR:
             candidate["ready"] = false
-            candidate["reason"] = "target_unknown"
+            candidate["reason"] = "displacement_unknown" if kind == CANDIDATE_FORCED else "target_unknown"
         else:
             candidate["blocking_entity_ids"] = []
             candidate["target_cells"] = query_result.cells.duplicate()
         eligible.append(candidate)
 
-    # Departures and arrivals are distinct transition facts. A follower may
-    # inherit a cell vacated in the same timestamp, but two walkers traversing
-    # one edge in opposite directions physically meet; they do not phase through
-    # each other as a free atomic swap.
-    var edge_conflicts: Dictionary = {}
+    _resolve_actor_trajectory_conflicts(eligible)
+
+    # Opposite traversal of one physical edge cannot pass through. Ordinary
+    # walks collide head-on; forced displacement also cannot phase through a
+    # body coming the other way until later push-chain mechanics can propagate
+    # that pressure further.
     for left_index: int in range(eligible.size()):
         var left: Dictionary = eligible[left_index]
         if not bool(left.get("ready", false)) or not _candidate_changes_anchor(left):
@@ -680,17 +696,18 @@ func _flush_timestamp_commits() -> void:
             var right: Dictionary = eligible[right_index]
             if not bool(right.get("ready", false)) or not _candidate_changes_anchor(right):
                 continue
-            if _candidates_cross_same_edge(left, right):
-                edge_conflicts[left_index] = true
-                edge_conflicts[right_index] = true
-    for index_value: Variant in edge_conflicts.keys():
-        var index: int = int(index_value)
-        if index >= 0 and index < eligible.size():
-            _mark_timestamp_conflict(eligible[index], "movement_edge_conflict")
+            if not _candidates_cross_same_edge(left, right):
+                continue
+            _mark_timestamp_conflict(
+                left,
+                "displacement_edge_conflict" if StringName(left.get("kind", CANDIDATE_MOVEMENT)) == CANDIDATE_FORCED else "movement_edge_conflict"
+            )
+            _mark_timestamp_conflict(
+                right,
+                "displacement_edge_conflict" if StringName(right.get("kind", CANDIDATE_MOVEMENT)) == CANDIDATE_FORCED else "movement_edge_conflict"
+            )
 
-    # No callback/ID initiative for simultaneous shared-space claims.
-    # A unique stronger canonical physical score may win the contested cell;
-    # an exact/unknown top tie remains a stalemate.
+    # Exclusive destination claims compare the already-frozen physical scores.
     var claims_by_cell: Dictionary = {}
     for index: int in range(eligible.size()):
         var candidate: Dictionary = eligible[index]
@@ -707,9 +724,8 @@ func _flush_timestamp_commits() -> void:
     var candidate_scores: Dictionary = {}
     for index: int in range(eligible.size()):
         var candidate: Dictionary = eligible[index]
-        if not bool(candidate.get("ready", false)) or not _candidate_changes_anchor(candidate):
-            continue
-        candidate_scores[index] = _physical_contest_score(candidate)
+        if bool(candidate.get("ready", false)) and _candidate_changes_anchor(candidate):
+            candidate_scores[index] = _physical_contest_score(candidate)
 
     var contested_losses: Dictionary = {}
     var contested_ties: Dictionary = {}
@@ -717,7 +733,6 @@ func _flush_timestamp_commits() -> void:
         var claimants: Array = value
         if claimants.size() < 2:
             continue
-
         var best_score: int = -1
         var winners: Array[int] = []
         var all_known: bool = true
@@ -732,12 +747,10 @@ func _flush_timestamp_commits() -> void:
                 winners = [index]
             elif score_value == best_score:
                 winners.append(index)
-
         if not all_known or winners.size() != 1:
             for index_value: Variant in claimants:
                 contested_ties[int(index_value)] = true
             continue
-
         var winner: int = winners[0]
         for index_value: Variant in claimants:
             var index: int = int(index_value)
@@ -753,9 +766,9 @@ func _flush_timestamp_commits() -> void:
         if index >= 0 and index < eligible.size() and bool(eligible[index].get("ready", false)):
             _mark_timestamp_conflict(eligible[index], "target_contest_lost")
 
-    # Actor blockers are legal only when every blocking actor has a surviving
-    # simultaneous move that vacates the exact cells being claimed. Iterate to
-    # a fixed point so failure of one mover correctly blocks followers behind it.
+    # A claimed occupied cell is available only if its incoming occupant has a
+    # surviving trajectory that actually releases those cells. Propagate failed
+    # releases to a fixed point.
     var changed: bool = true
     while changed:
         changed = false
@@ -771,12 +784,18 @@ func _flush_timestamp_commits() -> void:
             for blocker_value: Variant in candidate.get("blocking_entity_ids", []):
                 var blocker_id: String = String(blocker_value)
                 if not moving_by_actor.has(blocker_id):
-                    _mark_timestamp_conflict(candidate, "target_blocked")
+                    _mark_timestamp_conflict(
+                        candidate,
+                        "displacement_blocked" if StringName(candidate.get("kind", CANDIDATE_MOVEMENT)) == CANDIDATE_FORCED else "target_blocked"
+                    )
                     changed = true
                     break
                 var blocker: Dictionary = moving_by_actor[blocker_id]
                 if _candidate_final_cells_overlap(blocker, target_cells):
-                    _mark_timestamp_conflict(candidate, "target_blocked")
+                    _mark_timestamp_conflict(
+                        candidate,
+                        "displacement_blocked" if StringName(candidate.get("kind", CANDIDATE_MOVEMENT)) == CANDIDATE_FORCED else "target_blocked"
+                    )
                     changed = true
                     break
 
@@ -804,7 +823,13 @@ func _flush_timestamp_commits() -> void:
                 candidate["ready"] = false
                 candidate["reason"] = "placement_mutation_failed"
 
-    for candidate: Dictionary in eligible:
+    for index: int in range(eligible.size()):
+        var candidate: Dictionary = eligible[index]
+        var kind: StringName = StringName(candidate.get("kind", CANDIDATE_MOVEMENT))
+        if kind == CANDIDATE_FORCED:
+            var displaced: bool = _candidate_or_link_succeeded(eligible, index)
+            _emit_forced_displacement(candidate, displaced)
+            continue
         if bool(candidate.get("ready", false)):
             _emit_commit_success(candidate)
         elif bool(candidate.get("impact", false)):
@@ -813,6 +838,126 @@ func _flush_timestamp_commits() -> void:
             var action: TimedAction = candidate.get("action", null)
             if action != null:
                 _fail_commit(action, String(candidate.get("reason", "movement_commit_failed")))
+
+func _resolve_actor_trajectory_conflicts(candidates: Array[Dictionary]) -> void:
+    var by_actor: Dictionary = {}
+    for index: int in range(candidates.size()):
+        var candidate: Dictionary = candidates[index]
+        if not bool(candidate.get("ready", false)) or not _candidate_changes_anchor(candidate):
+            continue
+        var actor_id: String = String(candidate.get("actor_id", ""))
+        var indexes: Array = by_actor.get(actor_id, [])
+        indexes.append(index)
+        by_actor[actor_id] = indexes
+
+    for value: Variant in by_actor.values():
+        var indexes: Array = value
+        var movement_indexes: Array[int] = []
+        var forced_indexes: Array[int] = []
+        for index_value: Variant in indexes:
+            var index: int = int(index_value)
+            var candidate: Dictionary = candidates[index]
+            if StringName(candidate.get("kind", CANDIDATE_MOVEMENT)) == CANDIDATE_FORCED:
+                forced_indexes.append(index)
+            else:
+                movement_indexes.append(index)
+        if forced_indexes.is_empty():
+            continue
+        if movement_indexes.size() > 1:
+            for index: int in movement_indexes:
+                _mark_timestamp_conflict(candidates[index], "trajectory_conflict")
+            movement_indexes.clear()
+
+        var best_force: int = -1
+        var top_forced: Array[int] = []
+        var unknown_force: bool = false
+        for index: int in forced_indexes:
+            var score_value: int = _physical_contest_score(candidates[index])
+            if score_value < 0:
+                unknown_force = true
+                break
+            if score_value > best_force:
+                best_force = score_value
+                top_forced = [index]
+            elif score_value == best_force:
+                top_forced.append(index)
+        if unknown_force:
+            for index: int in forced_indexes:
+                _mark_timestamp_conflict(candidates[index], "displacement_force_unknown")
+            continue
+
+        var top_targets: Dictionary = {}
+        for index: int in top_forced:
+            var anchor: Vector2i = candidates[index].get("target_anchor", Vector2i.ZERO)
+            top_targets[anchor] = true
+        if top_targets.size() != 1:
+            for index: int in forced_indexes:
+                _mark_timestamp_conflict(candidates[index], "displacement_force_tied")
+            continue
+        var winning_target: Vector2i = Vector2i.ZERO
+        for target_value: Variant in top_targets.keys():
+            winning_target = target_value
+
+        var representative: int = top_forced[0]
+        for index: int in forced_indexes:
+            if index == representative:
+                continue
+            if candidates[index].get("target_anchor", Vector2i.ZERO) == winning_target:
+                candidates[index]["ready"] = false
+                candidates[index]["reason"] = "displacement_parallel"
+                candidates[index]["linked_candidate_index"] = representative
+            else:
+                _mark_timestamp_conflict(candidates[index], "displacement_force_lost")
+
+        var forced: Dictionary = candidates[representative]
+        if movement_indexes.is_empty():
+            var resistance: int = int(forced.get("resistance_score", -1))
+            if resistance < 0 or best_force <= resistance:
+                _mark_timestamp_conflict(
+                    forced,
+                    "displacement_force_tied" if best_force == resistance else "displacement_resisted"
+                )
+            continue
+
+        var movement_index: int = movement_indexes[0]
+        var movement: Dictionary = candidates[movement_index]
+        var movement_score: int = _physical_contest_score(movement)
+        if movement.get("target_anchor", Vector2i.ZERO) == forced.get("target_anchor", Vector2i.ZERO):
+            movement["physical_score"] = maxi(movement_score, best_force)
+            forced["ready"] = false
+            forced["reason"] = "displacement_aligned"
+            forced["linked_candidate_index"] = movement_index
+            continue
+        if movement_score < 0 or movement_score == best_force:
+            _mark_timestamp_conflict(movement, "trajectory_contest_tied")
+            _mark_timestamp_conflict(forced, "trajectory_contest_tied")
+        elif best_force > movement_score:
+            _mark_timestamp_conflict(movement, "shoved")
+        else:
+            _mark_timestamp_conflict(forced, "target_trajectory_won")
+
+func _candidate_or_link_succeeded(candidates: Array[Dictionary], start_index: int) -> bool:
+    var index: int = start_index
+    var visited: Dictionary = {}
+    while index >= 0 and index < candidates.size() and not visited.has(index):
+        visited[index] = true
+        var candidate: Dictionary = candidates[index]
+        if bool(candidate.get("ready", false)):
+            return true
+        index = int(candidate.get("linked_candidate_index", -1))
+    return false
+
+func _emit_forced_displacement(candidate: Dictionary, displaced: bool) -> void:
+    var target_id: String = String(candidate.get("actor_id", ""))
+    var source_id: String = String(candidate.get("source_actor_id", ""))
+    var source_serial: int = int(candidate.get("source_action_serial", 0))
+    var target_anchor: Vector2i = candidate.get("target_anchor", Vector2i.ZERO)
+    var reason: String = "" if displaced else String(candidate.get("reason", "displacement_failed"))
+    if displaced:
+        var active: TimedAction = _kernel.active_action_for_actor(target_id)
+        if active != null:
+            _kernel.interrupt_action(active.serial, "shoved")
+    forced_displacement_resolved.emit(source_id, target_id, source_serial, displaced, reason, target_anchor)
 
 func _emit_commit_success(candidate: Dictionary) -> void:
     var action: TimedAction = candidate.get("action", null)
@@ -912,12 +1057,6 @@ static func _candidate_changes_anchor(candidate: Dictionary) -> bool:
     return candidate.get("target_anchor", current.anchor) != current.anchor
 
 static func _candidates_cross_same_edge(left: Dictionary, right: Dictionary) -> bool:
-    var left_action: TimedAction = left.get("action", null)
-    var right_action: TimedAction = right.get("action", null)
-    if left_action == null or right_action == null:
-        return false
-    if left_action.action_type not in [STEP_FORWARD, STEP_BACKWARD]         or right_action.action_type not in [STEP_FORWARD, STEP_BACKWARD]:
-        return false
     var left_current: WorldPlacement = left.get("current", null)
     var right_current: WorldPlacement = right.get("current", null)
     if left_current == null or right_current == null:
