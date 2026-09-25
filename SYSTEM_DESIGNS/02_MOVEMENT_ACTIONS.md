@@ -137,7 +137,7 @@ Successful placements are installed through `WorldMutationService.set_placements
 
 `ActorPhysicalContestQuery` currently derives that score from existing state only: condition-adjusted carry capacity, current load, current HP relative to max HP, stance, and movement intent. It deliberately does not create a persistent Strength stat. A later dedicated body/Strength attribute can extend this provider without changing movement arbitration.
 
-This slice establishes actor movement arbitration only. Shove/displacement conflicts and broader mob-force aggregation remain Phase-2 work and must reuse this stat-based no-hidden-initiative rule rather than inventing an attacker-order exception.
+Movement now also accepts combat-owned forced-displacement trajectories through its narrow public transition seam. Shove contact supplies a frozen source score plus target resistance before same-timestamp damage mutation; Movement arbitrates that forced trajectory beside any already-due movement for the target and beside other spatial claims. Ordinary walking still never acquires implicit displacement authority. Broader same-direction crowd-force aggregation and push-chain propagation remain Phase-2 work.
 
 ## 11. Damage and exertion coordination
 
@@ -151,7 +151,8 @@ Movement emits:
 
 - `movement_committed`
 - `movement_failed`
-- `run_stride_committed` for each successful physical sprint stride.
+- `run_stride_committed` for each successful physical sprint stride;
+- `forced_displacement_resolved` for combat-owned shove/displacement trajectories after the shared spatial batch settles.
 
 Presentation/input/AI may observe/request through public contracts without owning physical truth.
 
@@ -225,6 +226,27 @@ The production scene proves both sides of the new transition model:
 - three walkers in a one-direction chain may all advance together when the leading actor moves into genuinely empty space, allowing each trailing actor to inherit the cell released ahead of it.
 
 This supersedes the earlier Phase-2C claim that reciprocal occupied-cell swaps are always valid. Same-timestamp occupancy is now understood as conditional origin release plus destination arrival claim, with opposing traversal of the same edge treated as a physical conflict.
+
+## 13D. Phase 2C shove-transition verification — 2026-09-25
+
+Fresh prompt-local verifier/workflow:
+
+- `game/scripts/ci/Phase2CShoveTransitionsSmoke.gd`
+- `.github/workflows/phase2c-shove-transitions.yml`
+
+Functional production head: `355de006567289ac257b0b3437f87946d72c427c`.
+
+Focused verifier repair head/run: `f161e1673fb23e351399f5d778d4cf8efa4fe4d4` / `36194398176` — **SUCCESS**.
+
+Marker: `PHASE2C_SHOVE_TRANSITIONS_OK shove_beats_move=true opposing_tie=true corpse_after_displacement=true`.
+
+The production scene proves:
+
+- a stronger shove and the target's already-committed movement can mature on the same tick; frozen physical scores select one target trajectory and the losing move fails with `shoved`;
+- two equal simultaneous shoves from opposite sides produce no attacker-order winner and leave the target in place;
+- a shove and lethal unarmed strike reaching the same target on the same contact tick both remain real consequences: spatial arbitration moves the target first, then deferred death publication creates its corpse at the post-shove outgoing position.
+
+Movement physical scores are now frozen when each movement consequence enters the timestamp batch rather than re-read after combat damage. This prevents same-tick injury from retroactively weakening an already-earned movement contest.
 
 ## 14. Supersession note
 
