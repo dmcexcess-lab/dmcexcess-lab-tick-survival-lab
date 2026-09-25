@@ -2,6 +2,18 @@
 
 This compact ledger records the newest executable work. `CHANGELOG.md` remains the historical archive.
 
+## Phase 2A — explicit melee commitment windows — 2026-09-25
+
+Functional executable head: `bd69adcb19d8b473018cbdbbcd01c9cf41a3c2cd`.
+
+- Added an explicit `commit_offset_ticks` point of no return to canonical `TimedAction` / `TickKernel` timing state. CANCELABLE and RESUMABLE actions keep their original policy before that offset and become effectively COMMITTED at and after it; already-COMMITTED actions remain committed throughout.
+- Commitment timing survives action copies and WHEN snapshots/restores. `TickKernel.interrupt_action` now evaluates the effective policy at the current authoritative world tick rather than treating interruption policy as immutable for the whole action.
+- Wired melee strike contact into that timing seam. Light/unarmed attacks remain interruptible during wind-up and become committed at contact, preventing later shove/damage interruption from retroactively canceling an already-consequential impact. Existing heavy strikes and shoves remain fully committed.
+- Updated light-attack quote text to expose the transition as `INTERRUPTIBLE → COMMITTED @Nt`.
+- Fresh prompt-local verifier/workflow: `game/scripts/ci/Phase2CombatCommitmentWindowsSmoke.gd` + `.github/workflows/phase2-combat-commitment-windows.yml`.
+- Focused run `36183887142`: **success**. It proved pre-commit cancellation, same-tick contact-phase batching for two actors, committed post-contact recovery, snapshot restoration, and the real production player unarmed-strike path returning to the normal decision pause.
+- Phase 2 remains open: full same-tick consequence ordering across combat/movement/death, zombie callback/perception cost, mob force, canonical fear effects, coherent presentation and crowded-fight performance are not claimed complete by this slice.
+
 ## Phase 1 survivor/social runtime retirement — 2026-09-25
 
 Functional executable head: `46827d36fd0621a59aadb1e808d004c7ddbfa0a0`.
