@@ -126,8 +126,9 @@ Movement phases due on the same WHEN timestamp are collected before placement mu
 
 - one uncontested mover into genuinely available space succeeds;
 - two or more movers claiming the same destination compare frozen canonical physical scores; a unique highest scorer may win that cell, while an exact/unknown top tie is a stalemate and no claimant wins;
-- reciprocal swaps may succeed atomically when each actor vacates the other's required cells on the same timestamp;
-- longer vacating chains/cycles may succeed only while every blocking actor has a surviving simultaneous move that actually vacates the claimed cells;
+- a same-timestamp departure may release a cell for another actor's arrival claim;
+- reciprocal ordinary walks `X -> Y` and `Y -> X` are a head-on traversal of the same physical edge and both fail with `movement_edge_conflict` rather than phasing through one another;
+- longer compatible vacating chains/cycles may still succeed while every blocking actor has a surviving simultaneous move that actually vacates the claimed cells;
 - if one mover in such a dependency set fails, blocked followers are removed to a fixed point rather than phasing through the actor that stayed;
 - static/non-ACTOR blockers are never deferred;
 - in-place turns do not count as vacating their occupied cell.
@@ -206,6 +207,24 @@ Marker: `PHASE2C_STAT_CONTESTS_OK unequal_winner=<resident actor> tied_stalemate
 The production scene set two otherwise equivalent infected to unequal canonical carry capacities (24 kg versus 12 kg) and submitted simultaneous moves into the same empty cell. Both actions shared the same movement timestamp; the higher derived physical score won the cell and the weaker actor remained at origin with `target_contest_lost`. Repeating the case at equal 18 kg capacities produced an exact derived-score tie: both actors remained at origin with `target_contest_tied`, proving there is still no actor-ID/order fallback.
 
 This supersedes the provisional 13A assertion that all same-destination claimants necessarily fail. They now all fail only when no unique physical-stat winner exists.
+
+## 13C. Phase 2C transition-edge verification — 2026-09-25
+
+Fresh prompt-local verifier/workflow:
+
+- `game/scripts/ci/Phase2CTransitionEdgesSmoke.gd`
+- `.github/workflows/phase2c-transition-edges.yml`
+
+Functional production head/run: `54a62812bf692816ebf8907ff3f1c91e85296f41` / `36192545127` — **SUCCESS**.
+
+Marker: `PHASE2C_TRANSITION_EDGES_OK reciprocal_blocked=true release_chain=true`.
+
+The production scene proves both sides of the new transition model:
+
+- two adjacent walkers attempting to exchange cells on one timestamp do **not** atomically swap; both remain at their incoming positions and fail with `movement_edge_conflict`;
+- three walkers in a one-direction chain may all advance together when the leading actor moves into genuinely empty space, allowing each trailing actor to inherit the cell released ahead of it.
+
+This supersedes the earlier Phase-2C claim that reciprocal occupied-cell swaps are always valid. Same-timestamp occupancy is now understood as conditional origin release plus destination arrival claim, with opposing traversal of the same edge treated as a physical conflict.
 
 ## 14. Supersession note
 
