@@ -287,6 +287,9 @@ func _on_external_event(event: ScheduledEvent) -> void:
         if aa != ba: return aa < ba
         return int(a.get("action_serial", 0)) < int(b.get("action_serial", 0))
     )
+
+    # One contact tick is one consequence boundary. Freeze all targeting and
+    # strike damage before mutating HP, condition, placement, death or corpses.
     var actor_snapshot: Dictionary = _actor_snapshot_for_intents(intents)
     var resolved: Array[Dictionary] = []
     for intent_value: Variant in intents:
@@ -295,9 +298,18 @@ func _on_external_event(event: ScheduledEvent) -> void:
         var intent: Dictionary = intent_value
         var cell := _cell_from_payload(intent.get("strike_cell", []))
         var target_id: String = _choose_target(intent, actor_snapshot.get(cell, []))
-        resolved.append({"intent": intent, "target_id": target_id, "cell": cell})
-    for resolution: Dictionary in resolved:
-        _apply_resolution(resolution)
+        var resolution := {
+            "intent": intent,
+            "target_id": target_id,
+            "cell": cell,
+            "damage": 0,
+            "contact_mode": &"blunt",
+        }
+        if not target_id.is_empty() and String(intent.get("kind", "")) != "shove":
+            resolution["damage"] = _derived_damage(String(intent.get("attacker_id", "")), intent)
+            resolution["contact_mode"] = StringName(String(intent.get("contact_mode", "blunt")))
+        resolved.append(resolution)
+    _apply_resolution_batch(resolved)
 
 func _actor_snapshot_for_intents(intents: Array) -> Dictionary:
     var cells: Dictionary = {}
@@ -329,27 +341,59 @@ func _choose_target(intent: Dictionary, candidates_value: Variant) -> String:
             return candidate
     return ""
 
-func _apply_resolution(resolution: Dictionary) -> void:
-    var intent: Dictionary = resolution.get("intent", {})
-    var attacker: String = String(intent.get("attacker_id", ""))
-    var serial: int = int(intent.get("action_serial", 0))
-    var target: String = String(resolution.get("target_id", ""))
-    var cell: Vector2i = resolution.get("cell", Vector2i.ZERO)
-    if target.is_empty():
-        attack_missed.emit(attacker, serial, cell)
-        return
-    if String(intent.get("kind", "")) == "shove":
-        var displaced: bool = _resolve_shove(attacker, target)
-        shove_resolved.emit(attacker, target, serial, displaced)
-        impact_resolved.emit(attacker, target, serial, cell, 0, &"blunt")
-        return
-    var damage: int = _derived_damage(attacker, intent)
-    if damage <= 0 or not _health.apply_damage(target, damage):
-        attack_missed.emit(attacker, serial, cell)
-        return
-    var contact_mode := StringName(String(intent.get("contact_mode", "blunt")))
-    _health.add_injury(target, _injury_type(contact_mode), _body_region(attacker, target, serial), _severity_for_damage(damage))
-    impact_resolved.emit(attacker, target, serial, cell, damage, contact_mode)
+func _apply_resolution_batch(resolved: Array[Dictionary]) -> void:
+    var damage_by_target: Dictionary = {}
+    for resolution: Dictionary in resolved:
+        var intent: Dictionary = resolution.get("intent", {})
+        var target: String = String(resolution.get("target_id", ""))
+        var damage: int = int(resolution.get("damage", 0))
+        if target.is_empty() or String(intent.get("kind", "")) == "shove" or damage <= 0:
+            continue
+        damage_by_target[target] = int(damage_by_target.get(target, 0)) + damage
+
+    # HP for every struck actor reaches its same-tick final value before any
+    # lethal transition may unplace an actor or create a corpse. Death ownership
+    # observes this health consequence batch and publishes only when it closes.
+    _health.begin_consequence_batch()
+    var damaged_targets: Dictionary = {}
+    var target_ids: Array[String] = []
+    for key: Variant in damage_by_target.keys():
+        target_ids.append(String(key))
+    target_ids.sort()
+    for target_id: String in target_ids:
+        damaged_targets[target_id] = _health.apply_damage(target_id, int(damage_by_target[target_id]))
+
+    for resolution: Dictionary in resolved:
+        var intent: Dictionary = resolution.get("intent", {})
+        var attacker: String = String(intent.get("attacker_id", ""))
+        var serial: int = int(intent.get("action_serial", 0))
+        var target: String = String(resolution.get("target_id", ""))
+        var cell: Vector2i = resolution.get("cell", Vector2i.ZERO)
+        if target.is_empty():
+            attack_missed.emit(attacker, serial, cell)
+            continue
+        if String(intent.get("kind", "")) == "shove":
+            var displaced: bool = _resolve_shove(attacker, target)
+            shove_resolved.emit(attacker, target, serial, displaced)
+            impact_resolved.emit(attacker, target, serial, cell, 0, &"blunt")
+            continue
+
+        var damage: int = int(resolution.get("damage", 0))
+        if damage <= 0 or not bool(damaged_targets.get(target, false)):
+            attack_missed.emit(attacker, serial, cell)
+            continue
+        var contact_mode: StringName = StringName(resolution.get("contact_mode", &"blunt"))
+        _health.add_injury(
+            target,
+            _injury_type(contact_mode),
+            _body_region(attacker, target, serial),
+            _severity_for_damage(damage)
+        )
+        # Damage is the full consequence of this contact. HP itself is clamped at
+        # zero after aggregate same-tick damage; overkill never erases a valid hit.
+        impact_resolved.emit(attacker, target, serial, cell, damage, contact_mode)
+
+    _health.end_consequence_batch()
 
 func _derived_damage(attacker_id: String, intent: Dictionary) -> int:
     var mass: int = maxi(1, int(intent.get("weight_grams", UNARMED_EFFECTIVE_MASS_GRAMS)))
