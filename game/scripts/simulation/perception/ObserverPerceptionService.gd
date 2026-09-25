@@ -35,6 +35,7 @@ var _recompute_count: int = 0
 var _recompute_total_usec: int = 0
 var _recompute_max_usec: int = 0
 var _last_recompute_tick: int = -1
+var _last_acquisition_revision: int = -1
 var _dirty: bool = true
 
 func _init(
@@ -95,7 +96,8 @@ func acquisition_provider() -> VisualAcquisitionProvider:
     return _acquisition
 
 func recompute_if_stale(reason: StringName = &"manual") -> bool:
-    if not _dirty:
+    var acquisition_revision: int = _acquisition.freshness_revision() if _acquisition != null else -1
+    if not _dirty and acquisition_revision == _last_acquisition_revision:
         return true
     return recompute(reason)
 
@@ -127,6 +129,7 @@ func recompute(reason: StringName = &"manual") -> bool:
     _refresh_environment_memory(acquired_cells)
     _refresh_actor_memory(acquired_cells)
     _last_recompute_tick = _kernel.world_tick()
+    _last_acquisition_revision = _acquisition.freshness_revision()
     _dirty = false
     perception_changed.emit(reason)
     _record_recompute(started)
