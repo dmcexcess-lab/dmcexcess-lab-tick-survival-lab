@@ -19,6 +19,7 @@ signal movement_failed(actor_id, action_serial, action_type, reason)
 signal run_stride_committed(actor_id, action_serial, stride_index, target_anchor, target_facing)
 signal movement_exertion_resolved(actor_id, action_serial, action_type, stride_index, terrain_walk_ticks, impacted)
 signal run_impact(actor_id, action_serial, stride_index, target_anchor, target_facing, blocking_entity_ids)
+signal forced_displacement_resolved(source_actor_id, target_actor_id, source_action_serial, displaced, reason, target_anchor)
 
 const STEP_FORWARD: StringName = &"movement.step_forward"
 const STEP_BACKWARD: StringName = &"movement.step_backward"
@@ -31,6 +32,10 @@ const RUN_STRIDE_2_PHASE: StringName = &"movement.run_stride_2"
 const TIMESTAMP_BATCH_FLUSH_EVENT: StringName = &"movement.timestamp_batch_flush"
 const TIMESTAMP_BATCH_FLUSH_OWNER: String = "when.movement.timestamp_batch"
 const TIMESTAMP_BATCH_FLUSH_PRIORITY: int = 2147483647
+const CANDIDATE_MOVEMENT: StringName = &"movement"
+const CANDIDATE_FORCED: StringName = &"forced_displacement"
+const SHOVE_ACTION: StringName = &"combat.shove"
+const HOLD_ACTION: StringName = &"physical.hold"
 
 var _world: WorldState = null
 var _mutations: WorldMutationService = null
@@ -75,6 +80,74 @@ func configure_physical_contest(provider: MovementPhysicalContestProvider) -> bo
         return false
     _physical_contest = provider
     return true
+
+func physical_contest_score(actor_id: String, action_type: StringName) -> int:
+    if _physical_contest == null or not _physical_contest.is_ready():
+        return -1
+    var result: Dictionary = _physical_contest.score(actor_id, action_type)
+    if int(result.get("status", MovementPhysicalContestProvider.Status.UNKNOWN)) != MovementPhysicalContestProvider.Status.KNOWN:
+        return -1
+    return maxi(0, int(result.get("score", -1)))
+
+func queue_forced_displacement(
+    source_actor_id: String,
+    target_actor_id: String,
+    source_action_serial: int,
+    direction: Vector2i,
+    source_score: int,
+    resistance_score: int
+) -> bool:
+    if not is_ready() or source_actor_id.strip_edges().is_empty() or target_actor_id.strip_edges().is_empty()         or source_action_serial <= 0 or source_score < 0 or resistance_score < 0:
+        return false
+    if direction not in [Vector2i.UP, Vector2i.RIGHT, Vector2i.DOWN, Vector2i.LEFT]:
+        return false
+    var current: WorldPlacement = _world.placement(target_actor_id)
+    if current == null or current.channel != Layers.Channel.ACTOR:
+        return false
+    var target_anchor: Vector2i = current.anchor + direction
+    var query_result: SpatialQueryResult = _query.query_entity_footprint(
+        target_actor_id,
+        target_anchor,
+        current.facing,
+        true
+    )
+    if query_result == null or query_result.status == QueryResultClass.Status.UNKNOWN:
+        forced_displacement_resolved.emit(
+            source_actor_id, target_actor_id, source_action_serial, false, "displacement_unknown", current.anchor
+        )
+        return true
+
+    var candidate: Dictionary = {
+        "kind": CANDIDATE_FORCED,
+        "action": null,
+        "actor_id": target_actor_id,
+        "action_serial": source_action_serial,
+        "stride_index": 0,
+        "ready": true,
+        "impact": false,
+        "reason": "",
+        "blocking_entity_ids": [],
+        "target_cells": query_result.cells.duplicate(),
+        "walk_terrain_ticks": 0,
+        "current": current.copy(),
+        "target_anchor": target_anchor,
+        "target_facing": current.facing,
+        "source_actor_id": source_actor_id,
+        "source_action_serial": source_action_serial,
+        "physical_score": source_score,
+        "resistance_score": resistance_score,
+        "linked_candidate_index": -1,
+    }
+    if query_result.status == QueryResultClass.Status.BLOCKED:
+        if _has_only_actor_blockers(query_result):
+            candidate["blocking_entity_ids"] = query_result.blocking_entity_ids.duplicate()
+        else:
+            candidate["ready"] = false
+            candidate["reason"] = "displacement_blocked"
+    elif query_result.status != QueryResultClass.Status.CLEAR:
+        candidate["ready"] = false
+        candidate["reason"] = "displacement_unknown"
+    return _queue_timestamp_candidate(candidate)
 
 func request_step_forward(actor_id: String) -> MovementActionResult:
     return _request(actor_id, STEP_FORWARD)
@@ -509,6 +582,15 @@ func _prepare_run_stride(action: TimedAction, stride_index: int) -> Dictionary:
 func _queue_timestamp_commit(candidate: Dictionary) -> bool:
     if candidate.is_empty() or not bool(candidate.get("ready", false)) or _kernel == null:
         return false
+    var action: TimedAction = candidate.get("action", null)
+    if action == null:
+        return false
+    candidate["physical_score"] = physical_contest_score(action.actor_id, action.action_type)
+    return _queue_timestamp_candidate(candidate)
+
+func _queue_timestamp_candidate(candidate: Dictionary) -> bool:
+    if candidate.is_empty() or _kernel == null:
+        return false
     if _pending_flush_event_serial <= 0:
         _pending_flush_event_serial = _kernel.schedule_event(
             _kernel.world_tick(),
@@ -812,15 +894,7 @@ func _emit_run_impact_failure(candidate: Dictionary) -> void:
     _fail_commit(action, "run_impact")
 
 func _physical_contest_score(candidate: Dictionary) -> int:
-    if _physical_contest == null or not _physical_contest.is_ready():
-        return -1
-    var action: TimedAction = candidate.get("action", null)
-    if action == null:
-        return -1
-    var result: Dictionary = _physical_contest.score(action.actor_id, action.action_type)
-    if int(result.get("status", MovementPhysicalContestProvider.Status.UNKNOWN)) != MovementPhysicalContestProvider.Status.KNOWN:
-        return -1
-    return maxi(0, int(result.get("score", -1)))
+    return int(candidate.get("physical_score", -1))
 
 func _has_only_actor_blockers(query_result: SpatialQueryResult) -> bool:
     if query_result == null or query_result.status != QueryResultClass.Status.BLOCKED         or query_result.blocking_entity_ids.is_empty()         or not query_result.missing_terrain_cells.is_empty()         or not query_result.unclassified_entity_ids.is_empty():
@@ -876,6 +950,7 @@ func _mark_timestamp_conflict(candidate: Dictionary, reason: String) -> void:
 
 func _candidate_base(action: TimedAction, stride_index: int) -> Dictionary:
     return {
+        "kind": CANDIDATE_MOVEMENT,
         "action": action.copy() if action != null else null,
         "actor_id": action.actor_id if action != null else "",
         "action_serial": action.serial if action != null else 0,
@@ -886,6 +961,9 @@ func _candidate_base(action: TimedAction, stride_index: int) -> Dictionary:
         "blocking_entity_ids": [],
         "target_cells": [],
         "walk_terrain_ticks": 0,
+        "physical_score": -1,
+        "resistance_score": -1,
+        "linked_candidate_index": -1,
     }
 
 static func _candidate_failure(candidate: Dictionary, reason: String) -> Dictionary:
