@@ -31,6 +31,10 @@ var _profile: VisionProfile = null
 var _vision: VisionQuery = null
 var _acquisition: VisualAcquisitionProvider = null
 var _visible: Dictionary = {}
+var _geometric_cells_cache: Array[Vector2i] = []
+var _geometry_dirty: bool = true
+var _geometry_recompute_count: int = 0
+var _geometry_recompute_total_usec: int = 0
 var _recompute_count: int = 0
 var _recompute_total_usec: int = 0
 var _recompute_max_usec: int = 0
@@ -80,6 +84,7 @@ func set_profile(value: VisionProfile) -> bool:
     if value == null or not value.is_valid():
         return false
     _profile = value.copy()
+    _geometry_dirty = true
     _dirty = true
     recompute(&"profile_changed")
     return true
@@ -117,7 +122,14 @@ func recompute(reason: StringName = &"manual") -> bool:
         return false
 
     var observer_placement: WorldPlacement = _world.placement(_observer_id)
-    var geometric_cells: Array[Vector2i] = _vision.visible_cells(observer_placement.anchor, observer_placement.facing, _profile)
+    var geometric_cells: Array[Vector2i] = _geometric_cells_cache
+    if _geometry_dirty or geometric_cells.is_empty():
+        var geometry_started: int = Time.get_ticks_usec()
+        geometric_cells = _vision.visible_cells(observer_placement.anchor, observer_placement.facing, _profile)
+        _geometric_cells_cache = geometric_cells.duplicate()
+        _geometry_dirty = false
+        _geometry_recompute_count += 1
+        _geometry_recompute_total_usec += maxi(0, Time.get_ticks_usec() - geometry_started)
     var acquired_cells: Array[Vector2i] = []
     _visible.clear()
     for cell: Vector2i in geometric_cells:
@@ -150,6 +162,12 @@ func recompute_total_usec() -> int:
 
 func recompute_max_usec() -> int:
     return _recompute_max_usec
+
+func geometry_recompute_count() -> int:
+    return _geometry_recompute_count
+
+func geometry_recompute_total_usec() -> int:
+    return _geometry_recompute_total_usec
 
 func visible_cells() -> Array[Vector2i]:
     var result: Array[Vector2i] = []
@@ -276,10 +294,12 @@ func _on_world_changed(change: WorldChange) -> void:
         return
     var observer_placement: WorldPlacement = _world.placement(_observer_id)
     if observer_placement == null:
+        _geometry_dirty = true
         _dirty = true
         recompute(&"observer_missing")
         return
     if change.entity_id == _observer_id:
+        _geometry_dirty = true
         _dirty = true
         recompute(&"observer_changed")
         return
@@ -295,6 +315,8 @@ func _on_world_changed(change: WorldChange) -> void:
                 recompute(&"nearby_terrain_changed")
         ChangeClass.Kind.PLACEMENT_SET, ChangeClass.Kind.PLACEMENT_REMOVED, ChangeClass.Kind.ENTITY_REMOVED:
             if _cells_near_observer(change.before_cells, observer_placement.anchor) or _cells_near_observer(change.after_cells, observer_placement.anchor):
+                if change.affects_channel(Layers.Channel.STRUCTURE):
+                    _geometry_dirty = true
                 _dirty = true
                 recompute(&"nearby_placement_changed")
         _:
@@ -305,10 +327,13 @@ func _on_world_batch_changed(batch: WorldChangeBatch) -> void:
         return
     var observer_placement: WorldPlacement = _world.placement(_observer_id)
     if observer_placement == null:
+        _geometry_dirty = true
         _dirty = true
         recompute(&"observer_missing_after_batch")
         return
     if _batch_near_observer(batch, observer_placement.anchor):
+        if batch.terrain_changed or batch.channel_changed(Layers.Channel.STRUCTURE):
+            _geometry_dirty = true
         _dirty = true
         recompute(&"nearby_world_batch_changed")
 
@@ -331,6 +356,7 @@ func _batch_near_observer(batch: WorldChangeBatch, observer_cell: Vector2i) -> b
     return false
 
 func _on_world_reset() -> void:
+    _geometry_dirty = true
     _dirty = true
     recompute(&"world_reset")
 
@@ -344,6 +370,7 @@ func _on_door_state_changed(door_id: String, _previous_state: StringName, _new_s
     _recompute_for_door(door_id)
 
 func _on_door_reset() -> void:
+    _geometry_dirty = true
     _dirty = true
     recompute(&"door_state_reset")
 
@@ -353,6 +380,7 @@ func _recompute_for_door(door_id: String) -> void:
     if observer_placement == null or door_placement == null:
         return
     if _cell_near_observer(door_placement.anchor, observer_placement.anchor):
+        _geometry_dirty = true
         _dirty = true
         recompute(&"door_state_changed")
 
