@@ -585,6 +585,27 @@ func _flush_timestamp_commits() -> void:
             candidate["target_cells"] = query_result.cells.duplicate()
         eligible.append(candidate)
 
+    # Departures and arrivals are distinct transition facts. A follower may
+    # inherit a cell vacated in the same timestamp, but two walkers traversing
+    # one edge in opposite directions physically meet; they do not phase through
+    # each other as a free atomic swap.
+    var edge_conflicts: Dictionary = {}
+    for left_index: int in range(eligible.size()):
+        var left: Dictionary = eligible[left_index]
+        if not bool(left.get("ready", false)) or not _candidate_changes_anchor(left):
+            continue
+        for right_index: int in range(left_index + 1, eligible.size()):
+            var right: Dictionary = eligible[right_index]
+            if not bool(right.get("ready", false)) or not _candidate_changes_anchor(right):
+                continue
+            if _candidates_cross_same_edge(left, right):
+                edge_conflicts[left_index] = true
+                edge_conflicts[right_index] = true
+    for index_value: Variant in edge_conflicts.keys():
+        var index: int = int(index_value)
+        if index >= 0 and index < eligible.size():
+            _mark_timestamp_conflict(eligible[index], "movement_edge_conflict")
+
     # No callback/ID initiative for simultaneous shared-space claims.
     # A unique stronger canonical physical score may win the contested cell;
     # an exact/unknown top tie remains a stalemate.
@@ -815,6 +836,21 @@ static func _candidate_changes_anchor(candidate: Dictionary) -> bool:
     if current == null:
         return false
     return candidate.get("target_anchor", current.anchor) != current.anchor
+
+static func _candidates_cross_same_edge(left: Dictionary, right: Dictionary) -> bool:
+    var left_action: TimedAction = left.get("action", null)
+    var right_action: TimedAction = right.get("action", null)
+    if left_action == null or right_action == null:
+        return false
+    if left_action.action_type not in [STEP_FORWARD, STEP_BACKWARD]         or right_action.action_type not in [STEP_FORWARD, STEP_BACKWARD]:
+        return false
+    var left_current: WorldPlacement = left.get("current", null)
+    var right_current: WorldPlacement = right.get("current", null)
+    if left_current == null or right_current == null:
+        return false
+    var left_target: Vector2i = left.get("target_anchor", left_current.anchor)
+    var right_target: Vector2i = right.get("target_anchor", right_current.anchor)
+    return left_target == right_current.anchor and right_target == left_current.anchor
 
 static func _candidate_final_cells_overlap(candidate: Dictionary, cells: Array) -> bool:
     var current: WorldPlacement = candidate.get("current", null)
