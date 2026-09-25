@@ -21,6 +21,7 @@ var _carry_query: ActorCarryQuery = null
 var _kernel: TickKernel = null
 var _health: ActorHealthState = null
 var _skill_checks: ActorSkillCheckService = null
+var _condition_modifiers: ActorConditionModifierQuery = null
 var _outcomes: Dictionary = {}
 var _outcome_order: Array[int] = []
 
@@ -105,7 +106,7 @@ func treatment_offers(actor_id: String, selected_item_id: String) -> Array[Dicti
             "mode": String(profile.get("mode", "dress")),
             "resource_item_ids": resource_ids.duplicate(),
             "resource_semantics": resource_semantics.duplicate(),
-            "duration_ticks": int(skill.get("duration_ticks", 1)),
+            "duration_ticks": _deliberate_duration(actor, int(skill.get("duration_ticks", 1))),
             "skill_level": int(skill.get("skill_level", -1)),
             "skill_difficulty": difficulty,
             "success_chance_percent": int(skill.get("success_chance_percent", 0)),
@@ -302,6 +303,12 @@ func _item_carried_by(actor_id: String, item_id: String) -> bool:
         if current == actor_id:
             return true
     return false
+
+func _deliberate_duration(actor_id: String, base_ticks: int) -> int:
+    if _condition_modifiers == null or not _condition_modifiers.is_ready()         or not _condition_modifiers.has_actor(actor_id):
+        return maxi(1, base_ticks)
+    var multiplier_bp: int = _condition_modifiers.deliberate_action_duration_multiplier_bp(actor_id)
+    return maxi(1, int(ceili(float(base_ticks * multiplier_bp) / 10000.0)))
 
 func _profile(semantic: StringName) -> Dictionary:
     if semantic in [&"item.medical.bandage_roll", &"item.medical.gauze_pack", &"item.medical.medical_tape"]:
