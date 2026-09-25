@@ -269,6 +269,33 @@ The production scene proves:
 
 Automatic pressure propagation is deliberately capped at one packed actor in this slice. Arbitrary-depth compression, knockdown/stumble, crush damage and fortification damage remain later work.
 
+## 13F. Phase 2C crowd-pressure core closure — 2026-09-25
+
+Fresh prompt-local verifier/workflow:
+
+- `game/scripts/ci/Phase2CCrowdPressureClosureSmoke.gd`
+- `.github/workflows/phase2c-crowd-pressure-closure.yml`
+
+Functional production head/run: `a5a92abb245ac7204b9cad0f71166e04bd61057a` / `36196436906` — **SUCCESS**.
+
+Marker: `PHASE2C_CROWD_PRESSURE_CLOSED movement_contact=true multi_body=true exhaustion=true opposing_cancel=true static_stop=true`.
+
+This closes the release-level crowd-pressure core:
+
+- committed ordinary movement into an occupied actor cell contributes its frozen locomotion score as contact pressure; movement still obeys occupancy and does not directly teleport/displace the blocker;
+- pressure propagates through multiple packed actors, not just one body;
+- each actor's frozen hold/movement resistance consumes pressure before residual force can continue;
+- aligned downstream movement/force can add to transmitted pressure;
+- only unsent force deltas propagate, preventing repeated amplification during bounded resolution passes;
+- propagation carries a visited actor path and has explicit depth/pass limits, preventing cyclic or malformed occupancy from creating an infinite resolver;
+- exhausted force naturally dies before the front of the line;
+- static endpoints stop the chain and existing fixed-point occupancy blocks every dependent upstream advance;
+- all surviving positions remain one atomic WHAT placement batch.
+
+No infected-specific crowd logic was added. Ordinary pursuit/movement is sufficient to create the pressure inputs.
+
+The crowd-pressure core should not be reopened merely to add knockdown, crush injury or fortification damage; those are downstream consequence mechanics owned by later combat/balance/fortification work.
+
 ## 14. Supersession note
 
 System 17 supersedes older statements in this design that all Movement actions were COMMITTED and that Run did not exist. The canonical detailed Run contract is `17_RUN_DAMAGE_INTERRUPTIBLE_WALKING.md`.
