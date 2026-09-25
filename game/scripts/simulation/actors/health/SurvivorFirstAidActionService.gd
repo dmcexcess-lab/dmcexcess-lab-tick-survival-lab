@@ -35,7 +35,8 @@ func _init(
     carry_query: ActorCarryQuery = null,
     kernel: TickKernel = null,
     health_state: ActorHealthState = null,
-    skill_checks: ActorSkillCheckService = null
+    skill_checks: ActorSkillCheckService = null,
+    condition_modifiers: ActorConditionModifierQuery = null
 ) -> void:
     _world = world_state
     _world_mutations = world_mutations
@@ -47,6 +48,7 @@ func _init(
     _kernel = kernel
     _health = health_state
     _skill_checks = skill_checks
+    _condition_modifiers = condition_modifiers
     if _kernel != null:
         var finished := Callable(self, "_on_action_finished")
         if not _kernel.action_finished.is_connected(finished):
