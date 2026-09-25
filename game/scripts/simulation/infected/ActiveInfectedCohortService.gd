@@ -132,6 +132,8 @@ func sync_active_now() -> bool:
             ok = false
             break
     _sync_guard = false
+    if ok:
+        _prepare_active_perception_bounds()
     _record_sync(Time.get_ticks_usec() - started)
     if ok:
         active_members_changed.emit(active_actor_ids())
@@ -248,6 +250,9 @@ func _valid_living_infected(actor_id: String) -> bool:
     return placement != null and placement.channel == Layers.Channel.ACTOR
 
 func _connect_signals() -> void:
+    var action_started := Callable(self, "_on_action_started")
+    if not _kernel.action_started.is_connected(action_started):
+        _kernel.action_started.connect(action_started)
     var stream_changed := Callable(self, "_on_active_regions_changed")
     if not _streaming.active_regions_changed.is_connected(stream_changed):
         _streaming.active_regions_changed.connect(stream_changed)
@@ -258,6 +263,11 @@ func _connect_signals() -> void:
     if not _health.hp_changed.is_connected(hp_changed):
         _health.hp_changed.connect(hp_changed)
 
+func _on_action_started(action: TimedAction) -> void:
+    if action == null or action.actor_id != _player_id or _sync_guard:
+        return
+    _prepare_active_perception_bounds()
+
 func _on_active_regions_changed(_activated, _deactivated) -> void:
     sync_active_now()
 
@@ -265,11 +275,15 @@ func _on_world_changed(change) -> void:
     if _sync_guard or change == null:
         return
     var actor_id := String(change.entity_id)
+    if actor_id == _player_id:
+        _prepare_active_perception_bounds()
+        return
     if _roster_set.has(actor_id):
         var started: int = Time.get_ticks_usec()
         _sync_guard = true
         _sync_actor(actor_id)
         _sync_guard = false
+        _prepare_active_perception_bounds()
         _record_sync(Time.get_ticks_usec() - started)
 
 func _on_hp_changed(actor_id: String, _previous_hp: int, _current_hp: int, _max_hp: int, _version: int) -> void:
@@ -279,7 +293,46 @@ func _on_hp_changed(actor_id: String, _previous_hp: int, _current_hp: int, _max_
     _sync_guard = true
     _sync_actor(actor_id)
     _sync_guard = false
+    _prepare_active_perception_bounds()
     _record_sync(Time.get_ticks_usec() - started)
+
+func _prepare_active_perception_bounds() -> bool:
+    if _acquisition == null or not _acquisition.is_ready():
+        return false
+    var combined: Rect2i = Rect2i()
+    var has_bounds: bool = false
+    var max_range: int = 0
+    for actor_id: String in _roster:
+        if not _active.has(actor_id):
+            continue
+        var perception: StreamingObserverPerceptionService = perception_for_actor(actor_id)
+        var placement: WorldPlacement = _world.placement(actor_id)
+        if perception == null or placement == null:
+            continue
+        var profile: VisionProfile = perception.profile()
+        if profile == null or not profile.is_valid():
+            continue
+        max_range = maxi(max_range, profile.max_range)
+        var required := Rect2i(
+            placement.anchor - Vector2i(profile.max_range, profile.max_range),
+            Vector2i(profile.max_range * 2 + 1, profile.max_range * 2 + 1)
+        )
+        combined = required if not has_bounds else combined.merge(required)
+        has_bounds = true
+
+    # Player perception uses the same default System-23 profile in production.
+    # Including the player prevents the player observer and infected cohort from
+    # ping-ponging the one physical-light field between separate envelopes.
+    var player: WorldPlacement = _world.placement(_player_id)
+    if player != null and max_range > 0:
+        var player_required := Rect2i(
+            player.anchor - Vector2i(max_range, max_range),
+            Vector2i(max_range * 2 + 1, max_range * 2 + 1)
+        )
+        combined = player_required if not has_bounds else combined.merge(player_required)
+        has_bounds = true
+
+    return has_bounds and _acquisition.prepare_bounds(combined)
 
 func _record_sync(elapsed_usec: int) -> void:
     var elapsed := maxi(elapsed_usec, 0)
