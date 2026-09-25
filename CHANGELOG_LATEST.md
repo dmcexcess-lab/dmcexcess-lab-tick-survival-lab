@@ -2,6 +2,18 @@
 
 This compact ledger records the newest executable work. `CHANGELOG.md` remains the historical archive.
 
+## Phase 2C — causal transition edges — 2026-09-25
+
+Functional production head: `54a62812bf692816ebf8907ff3f1c91e85296f41`.
+
+- Refined same-timestamp movement into conditional origin releases plus destination arrival claims.
+- Ordinary reciprocal walks `X -> Y` and `Y -> X` are now treated as a head-on traversal of one physical edge. Both actors remain at origin and fail with `movement_edge_conflict`; they no longer phase through each other as a free atomic swap.
+- Compatible release chains remain valid. A three-actor one-direction chain advanced atomically when the leading destination was empty, proving that a same-tick departure may release a cell for a trailing arrival.
+- Same-destination stat contests, static blocking, fixed-point dependency failure and placement batching remain intact.
+- Fresh prompt-local verifier/workflow: `game/scripts/ci/Phase2CTransitionEdgesSmoke.gd` + `.github/workflows/phase2c-transition-edges.yml`.
+- Focused production run `36192545127`: **success** with marker `PHASE2C_TRANSITION_EDGES_OK reciprocal_blocked=true release_chain=true`.
+- The approved wider tick model is now documented as `S_t -> sealed current consequences -> interaction/occupancy resolution -> outgoing S_t+1`; shove/displacement and terminal death ordering remain the next staged implementation.
+
 ## Phase 2C — stat-based same-tick physical contests — 2026-09-25
 
 Functional production head: `1689fb3124641b7a9abacfc9010fbc7056951e5f`.
