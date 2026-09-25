@@ -7,8 +7,11 @@ const ConditionServiceClass = preload("res://scripts/simulation/actors/condition
 const ConditionMoodletClass = preload("res://scripts/simulation/actors/condition/ActorConditionMoodletQuery.gd")
 const ConditionMobilityClass = preload("res://scripts/simulation/actors/condition/ActorConditionMobilityModifierProvider.gd")
 const ConditionExertionClass = preload("res://scripts/simulation/actors/condition/MovementConditionExertionService.gd")
+const FearPressureClass = preload("res://scripts/simulation/actors/condition/ActorFearPressureService.gd")
 const ConditionFearClass = preload("res://scripts/simulation/actors/condition/ConditionPerceptionFearAdapter.gd")
 const ConditionHeardFearClass = preload("res://scripts/simulation/actors/condition/ConditionHeardFearAdapter.gd")
+const ConditionInjuryFearClass = preload("res://scripts/simulation/actors/condition/ConditionInjuryFearAdapter.gd")
+const ConditionPhysicalPressureFearClass = preload("res://scripts/simulation/actors/condition/ConditionPhysicalPressureFearAdapter.gd")
 const ConditionEnvironmentClass = preload("res://scripts/simulation/actors/condition/ConditionEnvironmentPressureAdapter.gd")
 const PhysicalContestClass = preload("res://scripts/simulation/actors/locomotion/ActorPhysicalContestQuery.gd")
 const SustainmentProfilesClass = preload("res://scripts/simulation/actors/condition/SurvivorSustainmentProfileCatalog.gd")
@@ -24,8 +27,11 @@ var _condition_service: ActorConditionService = null
 var _condition_moodlets: ActorConditionMoodletQuery = null
 var _condition_mobility: ActorConditionMobilityModifierProvider = null
 var _condition_exertion: MovementConditionExertionService = null
+var _fear_pressure: ActorFearPressureService = null
 var _condition_fear: ConditionPerceptionFearAdapter = null
 var _condition_heard_fear: ConditionHeardFearAdapter = null
+var _condition_injury_fear: ConditionInjuryFearAdapter = null
+var _condition_physical_pressure_fear: ConditionPhysicalPressureFearAdapter = null
 var _condition_environment: ConditionEnvironmentPressureAdapter = null
 var _physical_contest: ActorPhysicalContestQuery = null
 var _sustainment_profiles: SurvivorSustainmentProfileCatalog = null
@@ -58,12 +64,20 @@ func _boot_system34() -> bool:
     _condition_moodlets = ConditionMoodletClass.new(_condition_modifiers, _health_state, _carry_query)
     if not _condition_moodlets.is_ready():
         return false
+    _fear_pressure = FearPressureClass.new(_condition_service, _condition_modifiers, _kernel)
+    if not _fear_pressure.is_ready():
+        return false
     if _hearing_profile != null and not _hearing_profile.configure_condition(_condition_service):
         return false
 
     if not _carry_query.configure_capacity_modifier(_condition_modifiers):
         return false
-    _physical_contest = PhysicalContestClass.new(_carry_query, _health_state, _locomotion_state)
+    _physical_contest = PhysicalContestClass.new(
+        _carry_query,
+        _health_state,
+        _locomotion_state,
+        _condition_modifiers
+    )
     if not _physical_contest.is_ready() or _movement == null or not _movement.configure_physical_contest(_physical_contest):
         return false
     _condition_mobility = ConditionMobilityClass.new(_condition_service, _condition_modifiers)
@@ -73,11 +87,36 @@ func _boot_system34() -> bool:
     if not _condition_exertion.is_ready():
         return false
 
-    _condition_fear = ConditionFearClass.new(_world, _perception, _condition_service, FixtureClass.PLAYER_ID)
+    _condition_fear = ConditionFearClass.new(
+        _world,
+        _perception,
+        _fear_pressure,
+        _kernel,
+        _world_time_profile,
+        FixtureClass.PLAYER_ID
+    )
     if _perception != null and _perception.is_ready() and not _condition_fear.is_ready():
         return false
-    _condition_heard_fear = ConditionHeardFearClass.new(_spatial_sound, _condition_service, FixtureClass.PLAYER_ID)
+    _condition_heard_fear = ConditionHeardFearClass.new(
+        _spatial_sound,
+        _fear_pressure,
+        FixtureClass.PLAYER_ID
+    )
     if _spatial_sound != null and _spatial_sound.is_ready() and not _condition_heard_fear.is_ready():
+        return false
+    _condition_injury_fear = ConditionInjuryFearClass.new(
+        _health_state,
+        _fear_pressure,
+        FixtureClass.PLAYER_ID
+    )
+    if not _condition_injury_fear.is_ready():
+        return false
+    _condition_physical_pressure_fear = ConditionPhysicalPressureFearClass.new(
+        _movement,
+        _fear_pressure,
+        FixtureClass.PLAYER_ID
+    )
+    if not _condition_physical_pressure_fear.is_ready():
         return false
     _condition_environment = ConditionEnvironmentClass.new(
         _world,
@@ -88,6 +127,9 @@ func _boot_system34() -> bool:
         FixtureClass.PLAYER_ID
     )
     if _weather != null and _weather.is_ready() and not _condition_environment.is_ready():
+        return false
+
+    if _crafting_actions != null and not _crafting_actions.configure_condition_modifiers(_condition_modifiers):
         return false
 
     _sustainment_profiles = SustainmentProfilesClass.new()
@@ -120,7 +162,8 @@ func _boot_system34() -> bool:
         _carry_query,
         _kernel,
         _health_state,
-        _skill_checks
+        _skill_checks,
+        _condition_modifiers
     )
     if not _first_aid_actions.is_ready() or not _shell.configure_first_aid_actions(_first_aid_actions):
         return false
