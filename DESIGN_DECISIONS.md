@@ -8,6 +8,22 @@ If a later discussion changes a decision, do not erase history. Add a newer entr
 
 ---
 
+## 2026-09-25 — Same-tick movement conflicts have no priority winner
+
+**Decision:** Actor movement consequences due on the same authoritative WHEN timestamp are resolved as a physical conflict set, not as serial occupancy mutations.
+
+**Meaning:** All candidate moves inspect the same pre-resolution occupancy. Two or more movers claiming the same destination space do not receive an actor-ID, callback-order or queue-order winner; every competing claim fails. Reciprocal swaps and vacating chains/cycles may succeed atomically when every occupied target cell is actually vacated by another surviving same-tick move. Static blockers never disappear merely because arbitration exists.
+
+A mover blocked by another candidate succeeds only if that blocker also has a surviving simultaneous move that vacates the required cells. Failure propagates through dependent movers to a fixed point, preventing phasing through an actor whose own move failed.
+
+Walk remains interruptible during wind-up but its final movement commit timestamp is its point of no return. Internal deterministic sorting exists only for stable processing and publication.
+
+**Affected systems:** WHEN movement phases, Collision queries, WHAT placement batching, player/zombie movement, later shove/displacement and mob-force work.
+
+**Implementation state:** Phase 2C movement arbitration is live for canonical walk/timestamp placement. Same-destination contests fail all claimants and reciprocal actor swaps succeed atomically. Shove-vs-move/displacement conflicts remain the next bounded Phase-2 operation.
+
+---
+
 ## 2026-09-25 — One tick has no internal combat initiative
 
 **Decision:** Consequences due on the same authoritative WHEN tick are simultaneous for combat resolution. There is no attacker-first ordering inside that tick.
