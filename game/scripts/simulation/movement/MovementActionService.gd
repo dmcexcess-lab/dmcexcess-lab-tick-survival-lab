@@ -37,6 +37,7 @@ var _mutations: WorldMutationService = null
 var _query: SpatialQueryService = null
 var _kernel: TickKernel = null
 var _policy: MovementTraversalPolicy = null
+var _physical_contest: MovementPhysicalContestProvider = null
 var _pending_commits: Array[Dictionary] = []
 var _pending_flush_event_serial: int = 0
 
@@ -68,6 +69,12 @@ func is_ready() -> bool:
         and _query != null and _query.is_ready() \
         and _kernel != null \
         and _policy != null
+
+func configure_physical_contest(provider: MovementPhysicalContestProvider) -> bool:
+    if provider == null or not provider.is_ready():
+        return false
+    _physical_contest = provider
+    return true
 
 func request_step_forward(actor_id: String) -> MovementActionResult:
     return _request(actor_id, STEP_FORWARD)
@@ -578,9 +585,9 @@ func _flush_timestamp_commits() -> void:
             candidate["target_cells"] = query_result.cells.duplicate()
         eligible.append(candidate)
 
-    # No hidden initiative for two movers claiming the same physical cell.
-    # Every claimant in that conflict loses the timestamp instead of a sorted
-    # first actor receiving the cell.
+    # No callback/ID initiative for simultaneous shared-space claims.
+    # A unique stronger canonical physical score may win the contested cell;
+    # an exact/unknown top tie remains a stalemate.
     var claims_by_cell: Dictionary = {}
     for index: int in range(eligible.size()):
         var candidate: Dictionary = eligible[index]
@@ -594,18 +601,54 @@ func _flush_timestamp_commits() -> void:
             claimants.append(index)
             claims_by_cell[cell] = claimants
 
-    var contested_indexes: Dictionary = {}
+    var candidate_scores: Dictionary = {}
+    for index: int in range(eligible.size()):
+        var candidate: Dictionary = eligible[index]
+        if not bool(candidate.get("ready", false)) or not _candidate_changes_anchor(candidate):
+            continue
+        candidate_scores[index] = _physical_contest_score(candidate)
+
+    var contested_losses: Dictionary = {}
+    var contested_ties: Dictionary = {}
     for value: Variant in claims_by_cell.values():
         var claimants: Array = value
         if claimants.size() < 2:
             continue
+
+        var best_score: int = -1
+        var winners: Array[int] = []
+        var all_known: bool = true
         for index_value: Variant in claimants:
-            contested_indexes[int(index_value)] = true
-    for index_value: Variant in contested_indexes.keys():
-        var index: int = int(index_value)
-        if index < 0 or index >= eligible.size():
+            var index: int = int(index_value)
+            var score_value: int = int(candidate_scores.get(index, -1))
+            if score_value < 0:
+                all_known = false
+                break
+            if score_value > best_score:
+                best_score = score_value
+                winners = [index]
+            elif score_value == best_score:
+                winners.append(index)
+
+        if not all_known or winners.size() != 1:
+            for index_value: Variant in claimants:
+                contested_ties[int(index_value)] = true
             continue
-        _mark_timestamp_conflict(eligible[index], "target_contested")
+
+        var winner: int = winners[0]
+        for index_value: Variant in claimants:
+            var index: int = int(index_value)
+            if index != winner:
+                contested_losses[index] = true
+
+    for index_value: Variant in contested_ties.keys():
+        var index: int = int(index_value)
+        if index >= 0 and index < eligible.size():
+            _mark_timestamp_conflict(eligible[index], "target_contest_tied")
+    for index_value: Variant in contested_losses.keys():
+        var index: int = int(index_value)
+        if index >= 0 and index < eligible.size() and bool(eligible[index].get("ready", false)):
+            _mark_timestamp_conflict(eligible[index], "target_contest_lost")
 
     # Actor blockers are legal only when every blocking actor has a surviving
     # simultaneous move that vacates the exact cells being claimed. Iterate to
@@ -746,6 +789,17 @@ func _emit_run_impact_failure(candidate: Dictionary) -> void:
         blocking_entity_ids.duplicate()
     )
     _fail_commit(action, "run_impact")
+
+func _physical_contest_score(candidate: Dictionary) -> int:
+    if _physical_contest == null or not _physical_contest.is_ready():
+        return -1
+    var action: TimedAction = candidate.get("action", null)
+    if action == null:
+        return -1
+    var result: Dictionary = _physical_contest.score(action.actor_id, action.action_type)
+    if int(result.get("status", MovementPhysicalContestProvider.Status.UNKNOWN)) != MovementPhysicalContestProvider.Status.KNOWN:
+        return -1
+    return maxi(0, int(result.get("score", -1)))
 
 func _has_only_actor_blockers(query_result: SpatialQueryResult) -> bool:
     if query_result == null or query_result.status != QueryResultClass.Status.BLOCKED         or query_result.blocking_entity_ids.is_empty()         or not query_result.missing_terrain_cells.is_empty()         or not query_result.unclassified_entity_ids.is_empty():
