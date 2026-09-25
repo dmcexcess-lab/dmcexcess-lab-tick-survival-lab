@@ -72,7 +72,19 @@ func _boot_system37_combat() -> bool:
     if not _firearm_profiles.register_physical_profiles(_physical_catalog): return false
     _firearm_state = FirearmStateClass.new(_world, _inventory_state, _inventory_mutations, _firearm_profiles)
     if not _firearm_state.is_ready(): return false
-    _firearm_actions = FirearmActionsClass.new(_world, _world_mutations, _spatial_query, _kernel, _hand_state, _health_state, _inventory_state, _inventory_mutations, _firearm_profiles, _firearm_state)
+    _firearm_actions = FirearmActionsClass.new(
+        _world,
+        _world_mutations,
+        _spatial_query,
+        _kernel,
+        _hand_state,
+        _health_state,
+        _inventory_state,
+        _inventory_mutations,
+        _firearm_profiles,
+        _firearm_state,
+        _condition_modifiers
+    )
     if not _firearm_actions.is_ready(): return false
     _firearm_damage = FirearmDamageClass.new(_health_state, _kernel)
     if not _firearm_damage.is_ready(): return false
