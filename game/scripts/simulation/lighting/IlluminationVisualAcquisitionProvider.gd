@@ -24,6 +24,9 @@ func is_ready() -> bool:
     # query. Having the injected lighting owner is enough to establish them.
     return _lighting != null
 
+func freshness_revision() -> int:
+    return -1 if _lighting == null else _lighting.lighting_revision()
+
 func allows_target(
     _observer_id: String,
     origin: Vector2i,
