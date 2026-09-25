@@ -22,6 +22,10 @@ const ACTION_IDS: Array[StringName] = [STRIKE_PRIMARY, STRIKE_SECONDARY, STRIKE_
 const CONTACT_PHASE: StringName = &"combat.contact"
 const RESOLVE_EVENT: StringName = &"combat.resolve_impacts"
 const RESOLVE_PRIORITY: int = 1000
+const TERMINAL_EVENT: StringName = &"combat.finish_consequence_batch"
+const TERMINAL_OWNER: String = "when.zz.combat.terminal"
+const TERMINAL_PRIORITY: int = 2147483647
+const HOLD_ACTION: StringName = &"physical.hold"
 const UNARMED_EFFECTIVE_MASS_GRAMS: int = 350
 
 var _world: WorldState = null
@@ -34,10 +38,12 @@ var _condition: ActorConditionService = null
 var _condition_modifiers: ActorConditionModifierQuery = null
 var _physical_catalog: ItemPhysicalPropertyCatalog = null
 var _impact_profiles: CombatImpactProfileCatalog = null
+var _movement: MovementActionService = null
 var _pending_by_tick: Dictionary = {}
 var _resolution_scheduled: Dictionary = {}
 var _contact_tick_by_serial: Dictionary = {}
 var _fatigue_floor_by_serial: Dictionary = {}
+var _terminal_scheduled: Dictionary = {}
 
 func _init(
     world: WorldState = null,
@@ -49,7 +55,8 @@ func _init(
     condition: ActorConditionService = null,
     condition_modifiers: ActorConditionModifierQuery = null,
     physical_catalog: ItemPhysicalPropertyCatalog = null,
-    impact_profiles: CombatImpactProfileCatalog = null
+    impact_profiles: CombatImpactProfileCatalog = null,
+    movement: MovementActionService = null
 ) -> void:
     _world = world
     _mutations = mutations
@@ -61,19 +68,23 @@ func _init(
     _condition_modifiers = condition_modifiers
     _physical_catalog = physical_catalog
     _impact_profiles = impact_profiles
+    _movement = movement
     if _kernel != null:
         _kernel.action_phase.connect(_on_action_phase)
         _kernel.external_event_due.connect(_on_external_event)
         _kernel.action_finished.connect(_on_action_finished)
     if _health != null:
         _health.damage_applied.connect(_on_damage_applied)
+    if _movement != null:
+        _movement.forced_displacement_resolved.connect(_on_forced_displacement_resolved)
 
 func is_ready() -> bool:
     return _world != null and _mutations != null and _mutations.is_ready() \
         and _spatial_query != null and _spatial_query.is_ready() \
         and _kernel != null and _hands != null and _health != null \
         and _condition != null and _condition_modifiers != null \
-        and _physical_catalog != null and _impact_profiles != null
+        and _physical_catalog != null and _impact_profiles != null \
+        and _movement != null and _movement.is_ready()
 
 func request_action(actor_id: String, target_id: String, action_id: StringName) -> Dictionary:
     if action_id == SHOVE:
@@ -272,8 +283,17 @@ func _on_action_phase(action: TimedAction, phase: ActionPhase) -> void:
         _resolution_scheduled[_kernel.world_tick()] = event_serial
 
 func _on_external_event(event: ScheduledEvent) -> void:
-    if event == null or event.event_type != RESOLVE_EVENT:
+    if event == null:
         return
+    if event.event_type == TERMINAL_EVENT:
+        var terminal_tick: int = int(event.payload.get("tick", -1))
+        _terminal_scheduled.erase(terminal_tick)
+        if _health.consequence_batch_active():
+            _health.end_consequence_batch()
+        return
+    if event.event_type != RESOLVE_EVENT:
+        return
+
     var tick: int = int(event.payload.get("tick", -1))
     _resolution_scheduled.erase(tick)
     var value: Variant = _pending_by_tick.get(tick, [])
@@ -288,8 +308,8 @@ func _on_external_event(event: ScheduledEvent) -> void:
         return int(a.get("action_serial", 0)) < int(b.get("action_serial", 0))
     )
 
-    # One contact tick is one consequence boundary. Freeze all targeting and
-    # strike damage before mutating HP, condition, placement, death or corpses.
+    # Contact and physical scores are frozen before any HP mutation generated
+    # by this timestamp can alter the already-earned trajectory.
     var actor_snapshot: Dictionary = _actor_snapshot_for_intents(intents)
     var resolved: Array[Dictionary] = []
     for intent_value: Variant in intents:
@@ -304,12 +324,23 @@ func _on_external_event(event: ScheduledEvent) -> void:
             "cell": cell,
             "damage": 0,
             "contact_mode": &"blunt",
+            "source_physical_score": -1,
+            "target_resistance_score": -1,
         }
-        if not target_id.is_empty() and String(intent.get("kind", "")) != "shove":
+        if not target_id.is_empty() and String(intent.get("kind", "")) == "shove":
+            resolution["source_physical_score"] = _movement.physical_contest_score(
+                String(intent.get("attacker_id", "")),
+                SHOVE
+            )
+            resolution["target_resistance_score"] = _movement.physical_contest_score(
+                target_id,
+                HOLD_ACTION
+            )
+        elif not target_id.is_empty():
             resolution["damage"] = _derived_damage(String(intent.get("attacker_id", "")), intent)
             resolution["contact_mode"] = StringName(String(intent.get("contact_mode", "blunt")))
         resolved.append(resolution)
-    _apply_resolution_batch(resolved)
+    _apply_resolution_batch(resolved, tick)
 
 func _actor_snapshot_for_intents(intents: Array) -> Dictionary:
     var cells: Dictionary = {}
@@ -341,7 +372,7 @@ func _choose_target(intent: Dictionary, candidates_value: Variant) -> String:
             return candidate
     return ""
 
-func _apply_resolution_batch(resolved: Array[Dictionary]) -> void:
+func _apply_resolution_batch(resolved: Array[Dictionary], tick: int) -> void:
     var damage_by_target: Dictionary = {}
     for resolution: Dictionary in resolved:
         var intent: Dictionary = resolution.get("intent", {})
@@ -351,9 +382,9 @@ func _apply_resolution_batch(resolved: Array[Dictionary]) -> void:
             continue
         damage_by_target[target] = int(damage_by_target.get(target, 0)) + damage
 
-    # HP for every struck actor reaches its same-tick final value before any
-    # lethal transition may unplace an actor or create a corpse. Death ownership
-    # observes this health consequence batch and publishes only when it closes.
+    # Keep this consequence batch open through the late spatial transition flush.
+    # Death/corpse ownership receives the final HP now but cannot publish terminal
+    # placement until already-earned same-tick movement/displacement has settled.
     _health.begin_consequence_batch()
     var damaged_targets: Dictionary = {}
     var target_ids: Array[String] = []
@@ -372,9 +403,19 @@ func _apply_resolution_batch(resolved: Array[Dictionary]) -> void:
         if target.is_empty():
             attack_missed.emit(attacker, serial, cell)
             continue
+
         if String(intent.get("kind", "")) == "shove":
-            var displaced: bool = _resolve_shove(attacker, target)
-            shove_resolved.emit(attacker, target, serial, displaced)
+            var direction: Vector2i = Facing.vector(int(intent.get("latched_facing", -1)))
+            var queued: bool = _movement.queue_forced_displacement(
+                attacker,
+                target,
+                serial,
+                direction,
+                int(resolution.get("source_physical_score", -1)),
+                int(resolution.get("target_resistance_score", -1))
+            )
+            if not queued:
+                shove_resolved.emit(attacker, target, serial, false)
             impact_resolved.emit(attacker, target, serial, cell, 0, &"blunt")
             continue
 
@@ -389,11 +430,36 @@ func _apply_resolution_batch(resolved: Array[Dictionary]) -> void:
             _body_region(attacker, target, serial),
             _severity_for_damage(damage)
         )
-        # Damage is the full consequence of this contact. HP itself is clamped at
-        # zero after aggregate same-tick damage; overkill never erases a valid hit.
         impact_resolved.emit(attacker, target, serial, cell, damage, contact_mode)
 
-    _health.end_consequence_batch()
+    if not _schedule_terminal_batch_close(tick):
+        _health.end_consequence_batch()
+
+func _schedule_terminal_batch_close(tick: int) -> bool:
+    if _terminal_scheduled.has(tick):
+        return true
+    var serial: int = _kernel.schedule_event(
+        tick,
+        TERMINAL_OWNER,
+        TERMINAL_EVENT,
+        "",
+        {"tick": tick},
+        TERMINAL_PRIORITY
+    )
+    if serial <= 0:
+        return false
+    _terminal_scheduled[tick] = serial
+    return true
+
+func _on_forced_displacement_resolved(
+    source_actor_id: String,
+    target_actor_id: String,
+    source_action_serial: int,
+    displaced: bool,
+    _reason: String,
+    _target_anchor: Vector2i
+) -> void:
+    shove_resolved.emit(source_actor_id, target_actor_id, source_action_serial, displaced)
 
 func _derived_damage(attacker_id: String, intent: Dictionary) -> int:
     var mass: int = maxi(1, int(intent.get("weight_grams", UNARMED_EFFECTIVE_MASS_GRAMS)))
@@ -403,22 +469,6 @@ func _derived_damage(attacker_id: String, intent: Dictionary) -> int:
     value = maxi(1, int(round(float(value * int(intent.get("contact_transfer_bp", 10000))) / 10000.0)))
     var body_bp: int = _condition_modifiers.melee_damage_multiplier_bp(attacker_id) if _condition_modifiers.has_actor(attacker_id) else 10000
     return clampi(maxi(1, int(round(float(value * body_bp) / 10000.0))), 1, 25)
-
-func _resolve_shove(attacker_id: String, target_id: String) -> bool:
-    var attacker: WorldPlacement = _world.placement(attacker_id)
-    var target: WorldPlacement = _world.placement(target_id)
-    if attacker == null or target == null:
-        return false
-    var destination: Vector2i = target.anchor + Facing.vector(attacker.facing)
-    var query: SpatialQueryResult = _spatial_query.query_entity_footprint(target_id, destination, target.facing, true)
-    if query == null or not query.is_clear():
-        return false
-    if not _mutations.set_placement(target_id, Layers.Channel.ACTOR, destination, target.facing, target.footprint):
-        return false
-    var active: TimedAction = _kernel.active_action_for_actor(target_id)
-    if active != null:
-        _kernel.interrupt_action(active.serial, "shoved")
-    return true
 
 func _on_damage_applied(actor_id: String, _amount: int, _previous_hp: int, _current_hp: int, _version: int) -> void:
     var active: TimedAction = _kernel.active_action_for_actor(actor_id) if _kernel != null else null
