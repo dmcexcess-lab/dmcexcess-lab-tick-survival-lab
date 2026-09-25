@@ -132,7 +132,7 @@ func _run() -> void:
     if not health.set_hp(target, 1):
         _fail("could not stage lethal target hp")
         return
-    if not _place_actor(mutations, world, target, cells["center"], Facing.Value.NORTH)         or not _place_actor(mutations, world, shover, cells["west"], Facing.Value.EAST)         or not _place_actor(mutations, world, striker, cells["north"], Facing.Value.SOUTH):
+    if not _place_actor(mutations, world, target, cells["center"], Facing.Value.NORTH)         or not _place_actor(mutations, world, shover, cells["west"], Facing.Value.EAST)         or not _place_actor(mutations, world, striker, cells["north"], Facing.Value.SOUTH)         or not _place_actor(mutations, world, opponent, cells["south"], Facing.Value.NORTH):
         _fail("could not arrange lethal shove fixture")
         return
 
