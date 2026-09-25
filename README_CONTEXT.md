@@ -2,114 +2,138 @@
 
 Read this file first, then `README_SOPS.md`. Fetch current `main` once before the next repository operation.
 
-## Current checkpoint — SURVIVAL RELEASE PHASE 1 COMPLETE — 2026-09-25
+## Current checkpoint — SURVIVAL RELEASE PHASE 2A COMMITMENT WINDOWS COMPLETE — 2026-09-25
 
-Phase 1 of `ROADMAP.md` is complete: the live survivor/social/outbreak runtime has been retired from production composition while zombies and shared player/world mechanics remain live.
+Phase 1 remains complete. This bounded Phase-2 slice implemented explicit action commitment windows in canonical WHEN timing and wired melee contact to the point-of-no-return seam.
 
-Starting main for this bounded operation: `4b7115055efae0ea7f59770c04fad395435d839d`.
+Starting main for this operation: `c290e514acb7fec52d2d5c5ff9b2b99fe71ddf79`.
 
-Functional/executable owning head: `46827d36fd0621a59aadb1e808d004c7ddbfa0a0`.
+Functional/executable owning head: `bd69adcb19d8b473018cbdbbcd01c9cf41a3c2cd`.
 
-Documentation head immediately before this final handoff write: `6c93e2673157fda8bb8f644b7694a83a01e2dc99`.
+Focused verifier head: `664d33d69168e6354dddd33be863eb87981df137`.
+
+Documentation head immediately before this final handoff write: `c422977dfa04677e37307a0c031673554e159819`.
 
 This `README_CONTEXT.md` commit is the final repository write for the operation. Identify its exact SHA from `main`; everything after it is read-only verification.
 
-## Completed
+## Prompt-local verifier lifecycle
 
-- Removed live production construction of:
-  - `SurvivorNpcState`;
-  - `SurvivorHydrationService`;
-  - `ActiveSurvivorCohortService`;
-  - `SurvivorNpcBehaviorService`;
-  - survivor TALK / ASK TO FOLLOW / TELL TO STAY offer/handler registration;
-  - `SurvivorInteractionService`;
-  - `SurvivorInfectionService` and survivor-to-infected conversion wiring.
-- `CombatGameMain` now finishes production population boot after the infected path instead of hydrating four living survivors.
-- Replaced the production `DynamicInfectedCohortService` composition with `ActiveInfectedCohortService`. The dynamic outbreak-mutation subclass remains only as dormant recovery/history code.
-- Preserved generated household/resident/population data and `PopulationResidentProjection` where the infected hydration path still consumes deterministic resident identity.
-- Left survivor/social implementation files in the repository as uncomposed archaeology rather than deleting shared-looking code blindly.
-- Updated `SYSTEM_DESIGNS/40_SURVIVOR_SOCIAL_OUTBREAK.md`, `ROADMAP.md`, and `CHANGELOG_LATEST.md` to mark Phase 1 retired/complete and Phase 2 next.
-- No shared player condition, sustainment, first-aid, hearing, movement, Health, inventory, utility, time, weather, vehicle, rendering or zombie behavior owner was removed.
-
-## Focused before / after evidence
-
-Fresh prompt-local verifier pair:
+The previous Phase-1 prompt-owned pair was deleted before Phase-2 code work:
 
 - `game/scripts/ci/Phase1SurvivorRuntimeRetirementSmoke.gd`
 - `.github/workflows/phase1-survivor-runtime-retirement.yml`
 
-Pre-change production measurement, run `36180918709`: **success**.
+Fresh current pair:
 
-- boot: 19,780,576 µs;
-- infected roster: 8;
-- live survivor roster: 4;
-- one ordinary player commitment: 8 infected evaluations / 164,489 µs;
-- same commitment: 2 survivor evaluations / 43,198 µs.
+- `game/scripts/ci/Phase2CombatCommitmentWindowsSmoke.gd`
+- `.github/workflows/phase2-combat-commitment-windows.yml`
 
-Post-change focused run `36181091707`: **success** on functional head `46827d36fd0621a59aadb1e808d004c7ddbfa0a0`.
+The next code prompt must delete this Phase-2A pair before changing code and create its own focused verifier/workflow.
 
-- boot: 19,563,557 µs;
-- infected roster: 8;
-- live non-infected survivor NPCs: 0;
-- survivor/social public composition APIs absent;
-- infected cohort no longer exposes the dynamic outbreak add/remove seam;
-- one ordinary player commitment still produced 8 infected evaluations / 154,043 µs;
-- the action returned to decision pause;
-- world time still followed the authoritative tick;
-- player inventory remained enrolled;
-- utility runtime remained ready.
+## Completed
 
-These are single-run GitHub CI observations, not a stable hardware benchmark. The meaningful retirement result is removal of the survivor behavior work and live survivor actors while the infected/shared path remains operational. Do not infer that zombie performance is solved.
+- Added `commit_offset_ticks` to canonical `TimedAction`.
+- A CANCELABLE or RESUMABLE action now keeps that policy only before its declared commit offset; at and after the boundary its effective policy is COMMITTED.
+- Already-COMMITTED actions remain committed for their whole duration.
+- Added `TimedAction.effective_interruption_policy(world_tick)` and `is_committed_at(world_tick)`.
+- `TickKernel.interrupt_action` now checks the effective current policy rather than the action's original static policy.
+- Commitment boundaries persist through action copy and WHEN snapshot/restore.
+- `TickKernel.begin_action` accepts the optional commit offset without breaking existing callers.
+- Melee strike actions use their existing `combat.contact` phase offset as the commitment boundary.
+- Light/unarmed strikes therefore remain interruptible during wind-up but cannot be canceled after contact has become consequential.
+- Existing heavy strikes and shoves remain fully committed from action start; their current behavior was not weakened.
+- Light attack quote text now exposes the transition as `INTERRUPTIBLE → COMMITTED @Nt`.
+- Existing same-tick action-phase batching remains intact; this operation did not replace the scheduler or add a second clock.
+- No survivor/raider runtime was restored.
 
-## Publication state at final write
+## Focused verification
 
-The focused functional verifier succeeded on its owning head.
+Owning focused run `36183887142`: **success**.
 
-The owning-head Pages run was cancelled only because later documentation pushes superseded it. The documentation-head verifier/Pages runs were still moving when this final handoff was written. The final context commit itself must be verified read-only to terminal state per `README_SOPS.md`, including exact-head `Phase 1 survivor runtime retirement` success and exact-head `Build and deploy Tick Survival Lab` success.
+It proved:
 
-Do not write a repair after this context commit. If exact-final-head verification unexpectedly fails, inspect and record the evidence in the user response; the repair becomes the next operation.
+- a CANCELABLE action with a commit offset cancels before the boundary;
+- two actors' contact phases due at tick 3 are both dispatched in the same tick batch;
+- at the contact boundary both actions report effective COMMITTED policy;
+- an attempted interruption after commitment returns RUNNING and does not cancel recovery;
+- the player returns to the normal automatic decision pause;
+- commit offsets survive timing snapshot/restore;
+- the real production `CombatActionService` player unarmed strike carries contact as its commit boundary;
+- that production strike cancels before contact;
+- that production strike refuses cancellation after contact and then returns to the ordinary decision pause.
+
+Successful verifier marker:
+
+`PHASE2_COMMITMENT_WINDOWS_OK same_tick_phases=2 stop=4 production_actor=actor.player.demo`
+
+An earlier verifier revision on old head `95ee496...` intentionally cleared the decision actor and could continue processing recurring world events instead of reaching the normal automatic stop. That was a verifier design defect, not a gameplay failure. It was superseded by `664d33d...`, which keeps the real decision-pause contract and passed.
+
+## What this slice does NOT claim
+
+Phase 2 is still open.
+
+This operation does not yet prove or implement:
+
+- atomic/coherent damage + death publication for all simultaneous contacts;
+- contested movement/combat ordering beyond the existing same-tick event ordering;
+- mob force/crowd pressure;
+- final canonical fear tuning/effects;
+- removal of zombie callback/perception fan-out;
+- presentation of overlapping actor outcomes as one coherent beat;
+- crowded-fight performance targets or Safari timing acceptance.
+
+The existing combat service already gathers same-tick melee contact intents against a stable actor-cell snapshot before applying them. However, individual damage/injury/death mutations are still published sequentially afterward, so downstream death/removal callbacks can make later same-tick effects order-sensitive. That is the next bounded seam.
 
 ## Current release direction
 
-Core loop remains: scavenge, fight, craft, survive on the persistent map with day/night, weather, power and water. A base is an existing fortified house/building with supplies, generator and well. No freeform settlement/base-building simulation.
+The game is player versus zombies. Living survivor NPCs, raiders, followers, recruitment/dialogue and live society simulation remain retired from production.
 
-Living survivor NPCs, companions/followers, raiders, recruitment/dialogue, household/job/social simulation and local live-society outbreak propagation are not release runtime.
+Core loop: scavenge, fight, craft, survive on the persistent map with day/night, weather, power and water. A base is an existing fortified house/building with supplies, generator and well.
 
-Zombies remain active actors. Shared ticks, interruptible versus committed actions, simultaneous per-tick resolution, mob force and fear define the release combat identity. Real-time-with-automatic-pauses is presentation/feel; the player does not receive arbitrary tactical pause control.
+Combat identity remains:
+
+- one authoritative WHEN clock;
+- automatic decision pauses rather than player-selectable tactical pause;
+- explicit action durations and consequential phases;
+- interruptible wind-up versus committed point-of-no-return behavior;
+- coherent simultaneous effects for events due at the same tick;
+- mob force and fear as required mechanics.
+
+Hard application pause remains separate from tactical timing and must freeze without canceling or granting a free order.
 
 ## NEXT OPERATION
 
-Phase 2 of `ROADMAP.md`: implement the shared-tick combat contract and make the surviving zombie path responsive/coherent.
+Phase 2B: make same-tick melee impacts and death consequences coherent at one combat consequence boundary.
 
-Begin from targeted current owners only:
+Targeted starting reads only:
 
-- `TickKernel.gd`, `TimedAction.gd`, `TickEventQueue.gd` and existing due-tick action resolution seams;
-- `CombatActionService.gd`, damage/death/interruption services and the player combat controller;
-- `ActiveInfectedCohortService.gd`, `CohortInfectedBehaviorService.gd`, `FirstInfectedBehaviorService.gd`;
-- the exact perception/sound callbacks those zombie behaviors consume;
-- canonical System-34 fear/condition adapters already present.
+- `CombatActionService.gd` current `_on_external_event`, stable intent snapshot and resolution path;
+- `ActorHealthState.gd` damage mutation/signals;
+- `ActorDeathTransitionService.gd` death/corpse callback timing;
+- `TickKernel.gd` exact same-tick event ordering only if needed to connect the boundary.
 
-First define/verify the existing same-tick ordering and action phase semantics from those owners; do not broad-reread the repository. Then implement a bounded slice that advances the Phase-2 contract: simultaneous due-tick consequences plus explicit committed/interruptible behavior, with mob force/fear integrated through canonical owners and measured zombie evaluation/perception/presentation cost.
+First establish the exact current failure mode for two or more impacts due on the same tick, especially mutual lethal hits and multiple hits on one target. Then implement a bounded deterministic batch/transaction seam so target selection, damage calculation, HP/death truth, injuries and corpse transition do not depend on attacker ID/event callback order.
 
-Keep hard application pause distinct from tactical decision pauses. Do not resurrect survivor/social runtime. Do not create a new engine, second clock, parallel fear meter or presentation-owned gameplay truth.
+Preserve the newly implemented commit-offset contract. Do not broaden this operation into mob force, fear tuning, movement conflicts or zombie performance yet; those follow after the combat consequence boundary is trustworthy.
 
-Before changing code in the next prompt, delete this prompt's verifier pair and create a brand-new prompt-local verifier/workflow scoped only to the Phase-2 slice, per `README_SOPS.md`.
+Before changing code, delete the Phase-2A verifier pair and create a new prompt-local verifier/workflow scoped to simultaneous impact/death resolution.
 
 ## Protected behavior
 
 Preserve:
 
-- WHERE / WHAT / WHEN authority;
-- eight resident-backed infected startup cohort unless Phase-2 design explicitly changes zombie-count tuning;
+- WHERE / WHAT / WHEN authority and one clock;
+- Phase-2A commitment offsets and snapshot compatibility;
+- existing eight resident-backed infected startup cohort;
+- no live survivor/raider/social runtime;
+- stable pre-contact target snapshot semantics;
 - player movement, Health/injury, inventory, condition/moodlets, skills and equipment;
-- day/night and weather;
-- utility and vehicle state;
+- day/night, weather, utilities and vehicles;
 - persistent world changes and terrain/streaming improvements;
-- physical rendering/perception boundaries;
-- input lock until the next legitimate decision pause;
+- input locked until the next legitimate decision pause;
 - hard application pause;
 - STATS / INVENTORY / CRAFT / MENU ownership;
 - no player-facing ZOMBIES / ZOMBIES NEARBY indicator;
 - LOADING behavior unless a later explicit UX operation replaces it.
 
-Dormant survivor/social files are not protected runtime. Historical gameplay suites and the retired twelve-seed matrix are not current gates.
+Historical gameplay suites and the retired twelve-seed matrix are not current gates.
