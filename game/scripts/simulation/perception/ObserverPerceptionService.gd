@@ -35,6 +35,7 @@ var _recompute_count: int = 0
 var _recompute_total_usec: int = 0
 var _recompute_max_usec: int = 0
 var _last_recompute_tick: int = -1
+var _dirty: bool = true
 
 func _init(
     world_state: WorldState = null,
@@ -78,6 +79,7 @@ func set_profile(value: VisionProfile) -> bool:
     if value == null or not value.is_valid():
         return false
     _profile = value.copy()
+    _dirty = true
     recompute(&"profile_changed")
     return true
 
@@ -85,6 +87,7 @@ func set_acquisition_provider(value: VisualAcquisitionProvider) -> bool:
     if value == null or not value.is_ready():
         return false
     _acquisition = value
+    _dirty = true
     recompute(&"acquisition_provider_changed")
     return true
 
@@ -92,7 +95,7 @@ func acquisition_provider() -> VisualAcquisitionProvider:
     return _acquisition
 
 func recompute_if_stale(reason: StringName = &"manual") -> bool:
-    if _kernel != null and _last_recompute_tick == _kernel.world_tick():
+    if not _dirty:
         return true
     return recompute(reason)
 
@@ -124,6 +127,7 @@ func recompute(reason: StringName = &"manual") -> bool:
     _refresh_environment_memory(acquired_cells)
     _refresh_actor_memory(acquired_cells)
     _last_recompute_tick = _kernel.world_tick()
+    _dirty = false
     perception_changed.emit(reason)
     _record_recompute(started)
     return true
@@ -269,21 +273,26 @@ func _on_world_changed(change: WorldChange) -> void:
         return
     var observer_placement: WorldPlacement = _world.placement(_observer_id)
     if observer_placement == null:
+        _dirty = true
         recompute(&"observer_missing")
         return
     if change.entity_id == _observer_id:
+        _dirty = true
         recompute(&"observer_changed")
         return
 
     match change.kind:
         ChangeClass.Kind.TERRAIN_SET, ChangeClass.Kind.TERRAIN_REMOVED:
             if _cell_near_observer(change.terrain_cell, observer_placement.anchor):
+                _dirty = true
+                _dirty = true
                 recompute(&"nearby_terrain_changed")
         ChangeClass.Kind.TERRAIN_BATCH_SET:
             if _terrain_batch_near_observer(change, observer_placement.anchor):
                 recompute(&"nearby_terrain_changed")
         ChangeClass.Kind.PLACEMENT_SET, ChangeClass.Kind.PLACEMENT_REMOVED, ChangeClass.Kind.ENTITY_REMOVED:
             if _cells_near_observer(change.before_cells, observer_placement.anchor) or _cells_near_observer(change.after_cells, observer_placement.anchor):
+                _dirty = true
                 recompute(&"nearby_placement_changed")
         _:
             return
@@ -293,9 +302,11 @@ func _on_world_batch_changed(batch: WorldChangeBatch) -> void:
         return
     var observer_placement: WorldPlacement = _world.placement(_observer_id)
     if observer_placement == null:
+        _dirty = true
         recompute(&"observer_missing_after_batch")
         return
     if _batch_near_observer(batch, observer_placement.anchor):
+        _dirty = true
         recompute(&"nearby_world_batch_changed")
 
 func _batch_near_observer(batch: WorldChangeBatch, observer_cell: Vector2i) -> bool:
@@ -317,6 +328,7 @@ func _batch_near_observer(batch: WorldChangeBatch, observer_cell: Vector2i) -> b
     return false
 
 func _on_world_reset() -> void:
+    _dirty = true
     recompute(&"world_reset")
 
 func _on_door_changed(door_id: String, _state: StringName, _version: int) -> void:
@@ -329,6 +341,7 @@ func _on_door_state_changed(door_id: String, _previous_state: StringName, _new_s
     _recompute_for_door(door_id)
 
 func _on_door_reset() -> void:
+    _dirty = true
     recompute(&"door_state_reset")
 
 func _recompute_for_door(door_id: String) -> void:
@@ -337,6 +350,7 @@ func _recompute_for_door(door_id: String) -> void:
     if observer_placement == null or door_placement == null:
         return
     if _cell_near_observer(door_placement.anchor, observer_placement.anchor):
+        _dirty = true
         recompute(&"door_state_changed")
 
 func _terrain_batch_near_observer(change: WorldChange, observer_cell: Vector2i) -> bool:
