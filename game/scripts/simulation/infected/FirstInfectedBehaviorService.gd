@@ -180,7 +180,7 @@ func _drive(reason: StringName, refresh_perception: bool = true) -> void:
         return
     if refresh_perception and not _recompute_guard:
         _recompute_guard = true
-        _perception.recompute(&"infected_behavior_decision")
+        _perception.recompute_if_stale(&"infected_behavior_decision")
         _recompute_guard = false
     _refresh_intention(reason)
     if _kernel.is_hard_paused() or _kernel.is_decision_paused() or _kernel.has_active_action(_actor_id):
