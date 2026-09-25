@@ -16,15 +16,18 @@ const STANDING_BP: int = 10000
 var _carry: ActorCarryQuery = null
 var _health: ActorHealthState = null
 var _locomotion: ActorLocomotionState = null
+var _condition_modifiers: ActorConditionModifierQuery = null
 
 func _init(
     carry_query: ActorCarryQuery = null,
     health_state: ActorHealthState = null,
-    locomotion_state: ActorLocomotionState = null
+    locomotion_state: ActorLocomotionState = null,
+    condition_modifiers: ActorConditionModifierQuery = null
 ) -> void:
     _carry = carry_query
     _health = health_state
     _locomotion = locomotion_state
+    _condition_modifiers = condition_modifiers
 
 func is_ready() -> bool:
     return _carry != null and _health != null and _locomotion != null
@@ -69,6 +72,10 @@ func score(actor_id: String, action_type: StringName) -> Dictionary:
     score_value = maxi(1, int((score_value * hp_bp) / SCALE_ONE))
     score_value = maxi(1, int((score_value * stance_bp) / SCALE_ONE))
     score_value = maxi(1, int((score_value * action_bp) / SCALE_ONE))
+    if action_type == &"physical.hold" and _condition_modifiers != null         and _condition_modifiers.is_ready() and _condition_modifiers.has_actor(actor_id):
+        score_value = maxi(1, int(
+            (score_value * _condition_modifiers.hold_resistance_multiplier_bp(actor_id)) / SCALE_ONE
+        ))
     return result(Status.KNOWN, score_value, "")
 
 static func _action_force_bp(action_type: StringName) -> int:
