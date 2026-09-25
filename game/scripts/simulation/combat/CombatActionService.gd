@@ -139,7 +139,8 @@ func _begin_strike(actor_id: String, target_id: String, action_id: StringName) -
         duration_ticks,
         int(quote.get("policy", TickRulesClass.InterruptionPolicy.CANCELABLE)),
         [PhaseClass.new(CONTACT_PHASE, contact_ticks)],
-        payload
+        payload,
+        contact_ticks
     )
     if serial <= 0:
         return _rejected("combat_timing_rejected")
@@ -165,7 +166,8 @@ func _begin_shove(actor_id: String, target_id: String) -> Dictionary:
             "slot": -1,
             "latched_facing": placement.facing,
             "request_strike_cell": [strike_cell.x, strike_cell.y],
-        }
+        },
+        3
     )
     if serial <= 0:
         return _rejected("combat_timing_rejected")
@@ -210,7 +212,7 @@ func _quote_from_profile(action_id: StringName, item_id: String, slot: int, weig
     var contact_ticks: int = clampi(2 + weight_ticks + handling_penalty, 3, 8)
     var duration_ticks: int = contact_ticks + 3 + maxi(0, ceili(float(weight) / 1400.0))
     var policy: int = TickRulesClass.InterruptionPolicy.COMMITTED if weight >= 900 else TickRulesClass.InterruptionPolicy.CANCELABLE
-    var policy_label: String = "COMMITTED" if policy == TickRulesClass.InterruptionPolicy.COMMITTED else "INTERRUPTIBLE"
+    var policy_label: String = "COMMITTED" if policy == TickRulesClass.InterruptionPolicy.COMMITTED else "INTERRUPTIBLE → COMMITTED @%dt" % contact_ticks
     return {
         "available": true,
         "action_id": action_id,
@@ -225,6 +227,7 @@ func _quote_from_profile(action_id: StringName, item_id: String, slot: int, weig
         "duration_ticks": duration_ticks,
         "fatigue_cost": 1 + maxi(1, ceili(float(weight) / 900.0)),
         "policy": policy,
+        "commit_offset_ticks": contact_ticks,
         "label": "STRIKE — %s · %dt · %s" % [display, duration_ticks, policy_label],
     }
 
