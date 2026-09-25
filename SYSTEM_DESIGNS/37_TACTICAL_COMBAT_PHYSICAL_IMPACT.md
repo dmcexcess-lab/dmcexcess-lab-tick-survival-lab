@@ -44,7 +44,7 @@ Light effective striking mass (<900 g) is WHEN `CANCELABLE`; heavy strikes (>=90
 
 CONTACT intents are resolved through one same-tick consequence batch. Target occupancy, strike damage, shove source force and shove target resistance are frozen from the same incoming state before generated HP changes can alter an already-earned consequence. Same-target strike damage is aggregated for canonical HP mutation, every valid contact still records its own injury/impact consequence, and shove no longer writes placement directly from Combat.
 
-A shove instead submits a forced trajectory to `MovementActionService`, which resolves it in the same late timestamp batch as ordinary movement. Target movement and shove may align or compete; competing target trajectories use frozen canonical physical scores. Equal opposing shove forces do not get an attacker-order winner. Static blockers remain absolute here; later crowd-force/push-chain work extends this same seam rather than replacing it.
+A shove instead submits a forced trajectory to `MovementActionService`, which resolves it in the same late timestamp batch as ordinary movement. Target movement and shove may align or compete; competing target trajectories use frozen canonical physical scores. Equal opposing shove forces do not get an attacker-order winner. Parallel shove/pressure inputs now add in the shared spatial arbiter, opposite cardinal force subtracts, and residual force may propagate through one packed actor. Static blockers remain absolute; deeper pile compression, knockdown/crush and fortification damage extend this same seam rather than replacing it.
 
 There is no attacker-first initiative inside a tick. If two actors mutually reach lethal CONTACT on the same tick, both hits land and both die. If several strikes reach one target on the same tick, none is erased merely because aggregate HP reaches zero during that timestamp. Deterministic internal sorting is data stability only; it must not decide which already-due hit exists.
 
@@ -215,6 +215,16 @@ Focused verifier repair head/run: `f161e1673fb23e351399f5d778d4cf8efa4fe4d4` / `
 Marker: `PHASE2C_SHOVE_TRANSITIONS_OK shove_beats_move=true opposing_tie=true corpse_after_displacement=true`.
 
 This run proves the first cross-system executable form of the approved causal tick transition: shove contact seals force before damage mutation, forced displacement arbitrates with same-tick movement, equal opposing shoves do not gain serial initiative, and lethal death publication occurs only after the surviving spatial consequence publishes. The corpse therefore appears at the post-displacement position rather than snapping back to the incoming cell.
+
+### Phase 2C aggregate crowd pressure
+
+Focused production head/run: `57c4e6d2f3a8b235640b59053fb88fcc8e655ef9` / `36195331005` — **SUCCESS**.
+
+Marker: `PHASE2C_CROWD_PRESSURE_OK aggregate=true one_body_propagation=true opposing_cancel=true static_termination=true`.
+
+A real same-timestamp combat chain proves that a rear shove can leave residual pressure after overcoming the front actor, transmit that residual into the next packed body, and combine with the front actor's independently earned shove. The combined downstream force moves the body even when neither contribution alone is sufficient. Exact opposing aggregate force produces no hidden directional winner. Static geometry terminates the chain and fixed-point occupancy prevents any actor from phasing into the blocked endpoint.
+
+This is physical simulation, not zombie crowd choreography. Infected behavior remains an intention source; Combat seals force; Movement resolves aggregate trajectories and propagation.
 
 ## 13. Deliberately deferred extensions
 
