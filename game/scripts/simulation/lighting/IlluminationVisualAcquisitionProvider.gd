@@ -24,6 +24,11 @@ func is_ready() -> bool:
     # query. Having the injected lighting owner is enough to establish them.
     return _lighting != null
 
+func prepare_bounds(bounds: Rect2i) -> bool:
+    if _lighting == null or bounds.size.x <= 0 or bounds.size.y <= 0:
+        return false
+    return _lighting.set_field_bounds(bounds)
+
 func freshness_revision() -> int:
     return -1 if _lighting == null else _lighting.lighting_revision()
 
