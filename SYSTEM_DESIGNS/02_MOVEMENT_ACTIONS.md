@@ -248,6 +248,27 @@ The production scene proves:
 
 Movement physical scores are now frozen when each movement consequence enters the timestamp batch rather than re-read after combat damage. This prevents same-tick injury from retroactively weakening an already-earned movement contest.
 
+## 13E. Phase 2C aggregate crowd-pressure verification — 2026-09-25
+
+Fresh prompt-local verifier/workflow:
+
+- `game/scripts/ci/Phase2CCrowdPressureSmoke.gd`
+- `.github/workflows/phase2c-crowd-pressure.yml`
+
+Functional production head/run: `57c4e6d2f3a8b235640b59053fb88fcc8e655ef9` / `36195331005` — **SUCCESS**.
+
+Marker: `PHASE2C_CROWD_PRESSURE_OK aggregate=true one_body_propagation=true opposing_cancel=true static_termination=true`.
+
+The production scene proves:
+
+- parallel forced trajectories on one actor add their frozen force rather than selecting one source;
+- opposite cardinal force subtracts from that aggregate, with an exact aggregate tie producing no direction winner;
+- residual force after overcoming the current body can transmit through one packed actor and combine with force already acting on the downstream body;
+- that downstream body may then move, allowing the upstream packed actor to inherit its released cell in the same atomic placement batch;
+- if propagated pressure ends at static blocked geometry, the downstream actor cannot move, fixed-point occupancy prevents the upstream actor from moving, and nobody phases.
+
+Automatic pressure propagation is deliberately capped at one packed actor in this slice. Arbitrary-depth compression, knockdown/stumble, crush damage and fortification damage remain later work.
+
 ## 14. Supersession note
 
 System 17 supersedes older statements in this design that all Movement actions were COMMITTED and that Run did not exist. The canonical detailed Run contract is `17_RUN_DAMAGE_INTERRUPTIBLE_WALKING.md`.
