@@ -33,6 +33,8 @@ func _run() -> void:
 
     var perception_before: int = _perception_recompute_total(cohort, active)
     var infected_perception_usec_before: int = _perception_usec_total(cohort, active)
+    var infected_geometry_before: int = _geometry_recompute_total(cohort, active)
+    var infected_geometry_usec_before: int = _geometry_usec_total(cohort, active)
     var player_perception_count_before: int = player_perception.recompute_count()
     var player_perception_usec_before: int = player_perception.recompute_total_usec()
     var behavior_before: Dictionary = cohort.metrics_snapshot()
@@ -63,11 +65,15 @@ func _run() -> void:
     var elapsed_usec: int = first_elapsed_usec + second_elapsed_usec
     var perception_after: int = _perception_recompute_total(cohort, active)
     var infected_perception_usec_after: int = _perception_usec_total(cohort, active)
+    var infected_geometry_after: int = _geometry_recompute_total(cohort, active)
+    var infected_geometry_usec_after: int = _geometry_usec_total(cohort, active)
     var player_perception_count_after: int = player_perception.recompute_count()
     var player_perception_usec_after: int = player_perception.recompute_total_usec()
     var behavior_after: Dictionary = cohort.metrics_snapshot()
     var perception_delta: int = perception_after - perception_before
     var infected_perception_usec_delta: int = infected_perception_usec_after - infected_perception_usec_before
+    var infected_geometry_delta: int = infected_geometry_after - infected_geometry_before
+    var infected_geometry_usec_delta: int = infected_geometry_usec_after - infected_geometry_usec_before
     var player_perception_delta: int = player_perception_count_after - player_perception_count_before
     var player_perception_usec_delta: int = player_perception_usec_after - player_perception_usec_before
     var evaluation_delta: int = int(behavior_after.get("behavior_evaluation_count", 0)) \
@@ -78,11 +84,11 @@ func _run() -> void:
     var submission_delta: int = int(behavior_after.get("ordinary_action_submission_count", 0)) \
         - int(behavior_before.get("ordinary_action_submission_count", 0))
 
-    if perception_delta < 0 or infected_perception_usec_delta < 0         or player_perception_delta < 0 or player_perception_usec_delta < 0         or evaluation_delta < 0 or evaluation_usec_delta < 0 or submission_delta < 0:
+    if perception_delta < 0 or infected_perception_usec_delta < 0         or infected_geometry_delta < 0 or infected_geometry_usec_delta < 0         or player_perception_delta < 0 or player_perception_usec_delta < 0         or evaluation_delta < 0 or evaluation_usec_delta < 0 or submission_delta < 0:
         _fail("performance counters moved backward")
         return
-    if perception_delta != 0:
-        _fail("infected perception recomputed without a relevant perception invalidation")
+    if infected_geometry_delta != 0:
+        _fail("lighting/acquisition refresh rebuilt infected geometric LOS")
         return
     if evaluation_delta != active.size() * 2:
         _fail("expected one behavior evaluation per active infected per player decision")
@@ -91,7 +97,7 @@ func _run() -> void:
         _fail("infected behavior evaluation exceeded focused 10ms aggregate budget")
         return
 
-    print("PHASE2_INFECTED_PERF_METRIC head_route=two_player_turns active=%d tick_delta=%d elapsed_usec=%d first_elapsed_usec=%d second_elapsed_usec=%d infected_perception_recomputes=%d infected_perception_usec=%d player_perception_recomputes=%d player_perception_usec=%d behavior_evaluations=%d behavior_eval_usec=%d behavior_eval_max_usec=%d submissions=%d stop_reasons=%d/%d" % [
+    print("PHASE2_INFECTED_PERF_METRIC head_route=two_player_turns active=%d tick_delta=%d elapsed_usec=%d first_elapsed_usec=%d second_elapsed_usec=%d infected_perception_recomputes=%d infected_perception_usec=%d infected_geometry_recomputes=%d infected_geometry_usec=%d player_perception_recomputes=%d player_perception_usec=%d behavior_evaluations=%d behavior_eval_usec=%d behavior_eval_max_usec=%d submissions=%d stop_reasons=%d/%d" % [
         active.size(),
         kernel.world_tick() - start_tick,
         elapsed_usec,
@@ -99,6 +105,8 @@ func _run() -> void:
         second_elapsed_usec,
         perception_delta,
         infected_perception_usec_delta,
+        infected_geometry_delta,
+        infected_geometry_usec_delta,
         player_perception_delta,
         player_perception_usec_delta,
         evaluation_delta,
@@ -109,6 +117,22 @@ func _run() -> void:
         second_stop_reason,
     ])
     quit(0)
+
+func _geometry_recompute_total(cohort: ActiveInfectedCohortService, actor_ids: Array[String]) -> int:
+    var total: int = 0
+    for actor_id: String in actor_ids:
+        var perception: StreamingObserverPerceptionService = cohort.perception_for_actor(actor_id)
+        if perception != null:
+            total += perception.geometry_recompute_count()
+    return total
+
+func _geometry_usec_total(cohort: ActiveInfectedCohortService, actor_ids: Array[String]) -> int:
+    var total: int = 0
+    for actor_id: String in actor_ids:
+        var perception: StreamingObserverPerceptionService = cohort.perception_for_actor(actor_id)
+        if perception != null:
+            total += perception.geometry_recompute_total_usec()
+    return total
 
 func _perception_usec_total(cohort: ActiveInfectedCohortService, actor_ids: Array[String]) -> int:
     var total: int = 0
