@@ -94,7 +94,11 @@ func _run() -> void:
         _fail("expected one behavior evaluation per active infected per player decision")
         return
     if evaluation_usec_delta > 10000:
-        _fail("infected behavior evaluation exceeded focused 10ms aggregate budget")
+        _fail("infected behavior evaluation exceeded focused 10ms aggregate budget: %d usec; perception=%d usec geometry=%d usec" % [
+            evaluation_usec_delta,
+            infected_perception_usec_delta,
+            infected_geometry_usec_delta,
+        ])
         return
 
     print("PHASE2_INFECTED_PERF_METRIC head_route=two_player_turns active=%d tick_delta=%d elapsed_usec=%d first_elapsed_usec=%d second_elapsed_usec=%d infected_perception_recomputes=%d infected_perception_usec=%d infected_geometry_recomputes=%d infected_geometry_usec=%d player_perception_recomputes=%d player_perception_usec=%d behavior_evaluations=%d behavior_eval_usec=%d behavior_eval_max_usec=%d submissions=%d stop_reasons=%d/%d" % [
