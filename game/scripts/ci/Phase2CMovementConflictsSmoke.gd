@@ -79,6 +79,7 @@ func _run() -> void:
     if contest_failures != 2:
         _fail("same-destination contest did not fail both claimants explicitly")
         return
+    var contest_tick: int = _event_tick_for_serial(failed, contest_a.action_serial)
 
     # Direct reciprocal swap: both actors vacate simultaneously, so both moves succeed.
     committed.clear()
@@ -107,7 +108,7 @@ func _run() -> void:
         return
 
     print("PHASE2C_MOVEMENT_CONFLICTS_OK contest_tick=%d swap_tick=%d no_hidden_winner=true" % [
-        _event_tick_for_serial(failed, contest_a.action_serial),
+        contest_tick,
         _event_tick_for_serial(committed, swap_a.action_serial),
     ])
     quit(0)
