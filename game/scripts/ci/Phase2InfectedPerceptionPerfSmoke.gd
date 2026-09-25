@@ -37,19 +37,30 @@ func _run() -> void:
     var player_perception_usec_before: int = player_perception.recompute_total_usec()
     var behavior_before: Dictionary = cohort.metrics_snapshot()
     var start_tick: int = kernel.world_tick()
-    var started_usec: int = Time.get_ticks_usec()
 
-    var player_action: MovementActionResult = movement.request_turn_right(Fixture.PLAYER_ID)
-    if player_action == null or not player_action.is_accepted():
-        _fail("ordinary player decision was not accepted")
+    var first_started_usec: int = Time.get_ticks_usec()
+    var first_action: MovementActionResult = movement.request_turn_right(Fixture.PLAYER_ID)
+    if first_action == null or not first_action.is_accepted():
+        _fail("first ordinary player decision was not accepted")
         return
-    var stop_reason: int = kernel.run_until_stop()
-    var elapsed_usec: int = maxi(0, Time.get_ticks_usec() - started_usec)
-
+    var first_stop_reason: int = kernel.run_until_stop()
+    var first_elapsed_usec: int = maxi(0, Time.get_ticks_usec() - first_started_usec)
     if not kernel.is_decision_paused():
-        _fail("ordinary decision route did not return to player decision pause")
+        _fail("first ordinary decision did not return to player pause")
         return
 
+    var second_started_usec: int = Time.get_ticks_usec()
+    var second_action: MovementActionResult = movement.request_turn_left(Fixture.PLAYER_ID)
+    if second_action == null or not second_action.is_accepted():
+        _fail("second ordinary player decision was not accepted")
+        return
+    var second_stop_reason: int = kernel.run_until_stop()
+    var second_elapsed_usec: int = maxi(0, Time.get_ticks_usec() - second_started_usec)
+    if not kernel.is_decision_paused():
+        _fail("second ordinary decision did not return to player pause")
+        return
+
+    var elapsed_usec: int = first_elapsed_usec + second_elapsed_usec
     var perception_after: int = _perception_recompute_total(cohort, active)
     var infected_perception_usec_after: int = _perception_usec_total(cohort, active)
     var player_perception_count_after: int = player_perception.recompute_count()
@@ -70,11 +81,22 @@ func _run() -> void:
     if perception_delta < 0 or infected_perception_usec_delta < 0         or player_perception_delta < 0 or player_perception_usec_delta < 0         or evaluation_delta < 0 or evaluation_usec_delta < 0 or submission_delta < 0:
         _fail("performance counters moved backward")
         return
+    if perception_delta != 0:
+        _fail("infected perception recomputed without a relevant perception invalidation")
+        return
+    if evaluation_delta != active.size() * 2:
+        _fail("expected one behavior evaluation per active infected per player decision")
+        return
+    if evaluation_usec_delta > 10000:
+        _fail("infected behavior evaluation exceeded focused 10ms aggregate budget")
+        return
 
-    print("PHASE2_INFECTED_PERF_METRIC head_route=player_turn active=%d tick_delta=%d elapsed_usec=%d infected_perception_recomputes=%d infected_perception_usec=%d player_perception_recomputes=%d player_perception_usec=%d behavior_evaluations=%d behavior_eval_usec=%d behavior_eval_max_usec=%d submissions=%d stop_reason=%d" % [
+    print("PHASE2_INFECTED_PERF_METRIC head_route=two_player_turns active=%d tick_delta=%d elapsed_usec=%d first_elapsed_usec=%d second_elapsed_usec=%d infected_perception_recomputes=%d infected_perception_usec=%d player_perception_recomputes=%d player_perception_usec=%d behavior_evaluations=%d behavior_eval_usec=%d behavior_eval_max_usec=%d submissions=%d stop_reasons=%d/%d" % [
         active.size(),
         kernel.world_tick() - start_tick,
         elapsed_usec,
+        first_elapsed_usec,
+        second_elapsed_usec,
         perception_delta,
         infected_perception_usec_delta,
         player_perception_delta,
@@ -83,7 +105,8 @@ func _run() -> void:
         evaluation_usec_delta,
         evaluation_max_usec,
         submission_delta,
-        stop_reason,
+        first_stop_reason,
+        second_stop_reason,
     ])
     quit(0)
 
