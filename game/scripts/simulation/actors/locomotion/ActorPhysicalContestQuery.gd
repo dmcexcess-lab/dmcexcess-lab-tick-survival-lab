@@ -8,6 +8,8 @@ const SCALE_ONE: int = 10000
 const STEP_FORWARD_BP: int = 10000
 const STEP_BACKWARD_BP: int = 9000
 const RUN_FORWARD_BP: int = 12500
+const SHOVE_BP: int = 12500
+const HOLD_BP: int = 10000
 const CROUCHED_BP: int = 8500
 const STANDING_BP: int = 10000
 
@@ -77,5 +79,9 @@ static func _action_force_bp(action_type: StringName) -> int:
             return STEP_BACKWARD_BP
         &"movement.run_forward":
             return RUN_FORWARD_BP
+        &"combat.shove":
+            return SHOVE_BP
+        &"physical.hold":
+            return HOLD_BP
         _:
             return 0
