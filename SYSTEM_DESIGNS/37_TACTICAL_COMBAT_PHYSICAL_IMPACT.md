@@ -44,7 +44,7 @@ Light effective striking mass (<900 g) is WHEN `CANCELABLE`; heavy strikes (>=90
 
 CONTACT intents are resolved through one same-tick consequence batch. Target occupancy, strike damage, shove source force and shove target resistance are frozen from the same incoming state before generated HP changes can alter an already-earned consequence. Same-target strike damage is aggregated for canonical HP mutation, every valid contact still records its own injury/impact consequence, and shove no longer writes placement directly from Combat.
 
-A shove instead submits a forced trajectory to `MovementActionService`, which resolves it in the same late timestamp batch as ordinary movement. Target movement and shove may align or compete; competing target trajectories use frozen canonical physical scores. Equal opposing shove forces do not get an attacker-order winner. Parallel shove/pressure inputs now add in the shared spatial arbiter, opposite cardinal force subtracts, and residual force may propagate through one packed actor. Static blockers remain absolute; deeper pile compression, knockdown/crush and fortification damage extend this same seam rather than replacing it.
+A shove instead submits a forced trajectory to `MovementActionService`, which resolves it in the same late timestamp batch as ordinary movement. Target movement and shove may align or compete; competing target trajectories use frozen canonical physical scores. Equal opposing shove forces do not get an attacker-order winner. Parallel shove/pressure inputs add in the shared spatial arbiter, opposite cardinal force subtracts, and residual force may propagate through a bounded multi-body chain. Ordinary committed movement contact also contributes locomotion force when it meets an occupied actor cell, so simple zombie pursuit can create crowd pressure without combat-specific crowd AI. Static blockers remain absolute; knockdown/crush and fortification damage are downstream consequence mechanics rather than missing pressure architecture.
 
 There is no attacker-first initiative inside a tick. If two actors mutually reach lethal CONTACT on the same tick, both hits land and both die. If several strikes reach one target on the same tick, none is erased merely because aggregate HP reaches zero during that timestamp. Deterministic internal sorting is data stability only; it must not decide which already-due hit exists.
 
@@ -225,6 +225,16 @@ Marker: `PHASE2C_CROWD_PRESSURE_OK aggregate=true one_body_propagation=true oppo
 A real same-timestamp combat chain proves that a rear shove can leave residual pressure after overcoming the front actor, transmit that residual into the next packed body, and combine with the front actor's independently earned shove. The combined downstream force moves the body even when neither contribution alone is sufficient. Exact opposing aggregate force produces no hidden directional winner. Static geometry terminates the chain and fixed-point occupancy prevents any actor from phasing into the blocked endpoint.
 
 This is physical simulation, not zombie crowd choreography. Infected behavior remains an intention source; Combat seals force; Movement resolves aggregate trajectories and propagation.
+
+### Phase 2C crowd-pressure core closure
+
+Focused production head/run: `a5a92abb245ac7204b9cad0f71166e04bd61057a` / `36196436906` — **SUCCESS**.
+
+Marker: `PHASE2C_CROWD_PRESSURE_CLOSED movement_contact=true multi_body=true exhaustion=true opposing_cancel=true static_stop=true`.
+
+A normal committed movement into an occupied actor now becomes physical contact pressure automatically. This lets ordinary infected pursuit feed the same aggregate-force system without selecting a special shove behavior. Pressure can pass through several packed bodies, losing frozen resistance at each body; independently earned downstream force can combine with that transmitted residual. Exhausted force stops naturally, and static geometry terminates the chain with no phasing. Propagation is bounded by depth/pass limits and a visited actor path.
+
+This closes the crowd-force core. Stability/knockdown, crush injury and fortification damage should consume the pressure result later rather than changing how force itself propagates.
 
 ## 13. Deliberately deferred extensions
 
