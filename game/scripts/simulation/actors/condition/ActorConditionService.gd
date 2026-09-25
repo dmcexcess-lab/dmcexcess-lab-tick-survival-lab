@@ -223,10 +223,6 @@ func _connect_signals() -> void:
             var callable: Callable = pair[1]
             if not source.is_connected(callable):
                 source.connect(callable)
-    if _health != null:
-        var damage_callable := Callable(self, "_on_damage_applied")
-        if not _health.damage_applied.is_connected(damage_callable):
-            _health.damage_applied.connect(damage_callable)
 
 func _on_decision_required(actor_id: String, world_tick: int) -> void:
     if has_actor(actor_id):
@@ -257,11 +253,6 @@ func _on_action_finished(action: TimedAction) -> void:
         change_condition(action.actor_id, StateClass.ENGAGEMENT, 6, &"meaningful_crafting")
     elif action_text.contains("scavenge") or action_text.contains("loot"):
         change_condition(action.actor_id, StateClass.ENGAGEMENT, 4, &"meaningful_scavenging")
-
-func _on_damage_applied(actor_id: String, amount: int, _previous_hp: int, _current_hp: int, _version: int) -> void:
-    if _applying_condition_damage or not has_actor(actor_id) or amount <= 0:
-        return
-    change_condition(actor_id, StateClass.CALM, -mini(30, 5 + amount), &"injury_fear")
 
 static func _is_physical_action(action_type: StringName) -> bool:
     var text: String = String(action_type)
