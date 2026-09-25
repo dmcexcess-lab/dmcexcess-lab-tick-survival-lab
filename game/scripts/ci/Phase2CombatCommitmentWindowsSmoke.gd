@@ -89,5 +89,59 @@ func _run() -> void:
         _fail("restored action lost commit offset")
         return
 
-    print("PHASE2_COMMITMENT_WINDOWS_OK same_tick_phases=%d stop=%d" % [phases_seen.size(), stop])
+
+    var gameplay: PackedScene = load("res://gameplay.tscn")
+    if gameplay == null:
+        _fail("production gameplay scene missing")
+        return
+    var game: Node = gameplay.instantiate()
+    get_root().add_child(game)
+    await process_frame
+
+    var combat: CombatActionService = game.get("_combat_actions")
+    var live_kernel: TickKernel = game.get("_kernel")
+    var cohort: ActiveInfectedCohortService = game.infected_cohort_service()
+    if combat == null or live_kernel == null or cohort == null:
+        _fail("production combat/infected timing composition is incomplete")
+        return
+    var infected_ids: Array[String] = cohort.roster_actor_ids()
+    if infected_ids.is_empty():
+        _fail("production infected cohort is empty")
+        return
+    for infected_id: String in infected_ids:
+        var behavior: CohortInfectedBehaviorService = cohort.behavior_for_actor(infected_id)
+        if behavior != null:
+            behavior.deactivate(&"focused_verifier")
+
+    live_kernel.set_decision_actor("")
+    var attacker_id: String = infected_ids[0]
+    var first_result: Dictionary = combat.request_action(attacker_id, "", CombatActionService.STRIKE_UNARMED)
+    if not bool(first_result.get("accepted", false)):
+        _fail("production unarmed strike did not begin")
+        return
+    var first_serial: int = int(first_result.get("action_serial", 0))
+    var first_action: TimedAction = live_kernel.action_by_serial(first_serial)
+    if first_action == null or first_action.phases.is_empty()         or first_action.commit_offset_ticks != first_action.phases[0].offset_ticks:
+        _fail("production strike commit boundary is not its contact phase")
+        return
+    if live_kernel.interrupt_action(first_serial, "pre_contact_test") != Rules.ActionStatus.CANCELED:
+        _fail("production strike wind-up was not interruptible")
+        return
+
+    var second_result: Dictionary = combat.request_action(attacker_id, "", CombatActionService.STRIKE_UNARMED)
+    if not bool(second_result.get("accepted", false)):
+        _fail("second production unarmed strike did not begin")
+        return
+    var second_serial: int = int(second_result.get("action_serial", 0))
+    live_kernel.run_next_batch()
+    var second_action: TimedAction = live_kernel.action_by_serial(second_serial)
+    if second_action == null or not second_action.is_committed_at(live_kernel.world_tick()):
+        _fail("production strike did not commit at contact")
+        return
+    if live_kernel.interrupt_action(second_serial, "post_contact_test") != Rules.ActionStatus.RUNNING:
+        _fail("production strike was cancelable after contact")
+        return
+    live_kernel.run_until_stop()
+
+    print("PHASE2_COMMITMENT_WINDOWS_OK same_tick_phases=%d stop=%d production_attacker=%s" % [phases_seen.size(), stop, attacker_id])
     quit(0)
