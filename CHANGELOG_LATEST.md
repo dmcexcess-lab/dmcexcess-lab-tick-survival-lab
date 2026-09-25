@@ -2,6 +2,23 @@
 
 This compact ledger records the newest executable work. `CHANGELOG.md` remains the historical archive.
 
+## Phase 2C — crowd-pressure core closure — 2026-09-25
+
+Functional production head: `a5a92abb245ac7204b9cad0f71166e04bd61057a`.
+
+- Closed the release-level mob-force architecture instead of subdividing it again.
+- Ordinary committed movement into an actor-occupied cell now contributes frozen locomotion force to the shared pressure solver. Infected AI remains unchanged; normal pursuit can therefore create jams and surges by itself.
+- Generalized residual force transmission from one packed body to a bounded multi-body chain.
+- Every body consumes its frozen resistance before residual force continues.
+- Aligned movement/pressure support adds physically, and only newly available force deltas are transmitted so iterative resolution cannot amplify the same force repeatedly.
+- Added visited-actor path protection plus explicit propagation depth/pass bounds.
+- Weak pressure now exhausts inside a packed column and leaves the entire dependent chain in place.
+- Equal opposing aggregate force remains a true no-winner result.
+- Static geometry terminates even very strong pressure and fixed-point occupancy prevents upstream phasing.
+- Fresh prompt-local verifier/workflow: `game/scripts/ci/Phase2CCrowdPressureClosureSmoke.gd` + `.github/workflows/phase2c-crowd-pressure-closure.yml`.
+- Focused production run `36196436906`: **success** with `PHASE2C_CROWD_PRESSURE_CLOSED movement_contact=true multi_body=true exhaustion=true opposing_cancel=true static_stop=true`.
+- Knockdown/stumble, crush injury and fortification damage remain possible consumers of pressure later; they no longer keep the crowd-pressure core open.
+
 ## Phase 2C — aggregate crowd pressure and one-body propagation — 2026-09-25
 
 Functional production head: `57c4e6d2f3a8b235640b59053fb88fcc8e655ef9`.
