@@ -3,6 +3,8 @@ extends SceneTree
 const KernelClass = preload("res://scripts/foundation/time/TickKernel.gd")
 const PhaseClass = preload("res://scripts/foundation/time/ActionPhase.gd")
 const Rules = preload("res://scripts/foundation/time/TickRules.gd")
+const Fixture = preload("res://scripts/demo/GeneratedIslandCritiqueFixture.gd")
+const Slots = preload("res://scripts/simulation/actors/equipment/ActorHandSlot.gd")
 
 func _initialize() -> void:
     call_deferred("_run")
@@ -101,21 +103,20 @@ func _run() -> void:
     var combat: CombatActionService = game.get("_combat_actions")
     var live_kernel: TickKernel = game.get("_kernel")
     var cohort: ActiveInfectedCohortService = game.infected_cohort_service()
-    if combat == null or live_kernel == null or cohort == null:
+    var hand_mutations: ActorHandEquipmentMutationService = game.get("_hand_mutations")
+    if combat == null or live_kernel == null or cohort == null or hand_mutations == null:
         _fail("production combat/infected timing composition is incomplete")
         return
-    var infected_ids: Array[String] = cohort.roster_actor_ids()
-    if infected_ids.is_empty():
-        _fail("production infected cohort is empty")
-        return
-    for infected_id: String in infected_ids:
+    for infected_id: String in cohort.roster_actor_ids():
         var behavior: CohortInfectedBehaviorService = cohort.behavior_for_actor(infected_id)
         if behavior != null:
             behavior.deactivate(&"focused_verifier")
 
-    live_kernel.set_decision_actor("")
-    var attacker_id: String = infected_ids[0]
-    var first_result: Dictionary = combat.request_action(attacker_id, "", CombatActionService.STRIKE_UNARMED)
+    if not hand_mutations.clear_slot(Fixture.PLAYER_ID, Slots.Value.PRIMARY_RIGHT)         or not hand_mutations.clear_slot(Fixture.PLAYER_ID, Slots.Value.SECONDARY_LEFT):
+        _fail("could not expose an empty hand for the production strike")
+        return
+
+    var first_result: Dictionary = combat.request_action(Fixture.PLAYER_ID, "", CombatActionService.STRIKE_UNARMED)
     if not bool(first_result.get("accepted", false)):
         _fail("production unarmed strike did not begin")
         return
@@ -127,21 +128,34 @@ func _run() -> void:
     if live_kernel.interrupt_action(first_serial, "pre_contact_test") != Rules.ActionStatus.CANCELED:
         _fail("production strike wind-up was not interruptible")
         return
+    live_kernel.run_until_stop()
+    if not live_kernel.is_decision_paused():
+        _fail("pre-contact interruption did not return to a decision pause")
+        return
 
-    var second_result: Dictionary = combat.request_action(attacker_id, "", CombatActionService.STRIKE_UNARMED)
+    var second_result: Dictionary = combat.request_action(Fixture.PLAYER_ID, "", CombatActionService.STRIKE_UNARMED)
     if not bool(second_result.get("accepted", false)):
         _fail("second production unarmed strike did not begin")
         return
     var second_serial: int = int(second_result.get("action_serial", 0))
-    live_kernel.run_next_batch()
+    var reached_commit: bool = false
+    for _batch: int in range(32):
+        var current: TimedAction = live_kernel.action_by_serial(second_serial)
+        if current != null and current.is_committed_at(live_kernel.world_tick()):
+            reached_commit = true
+            break
+        live_kernel.run_next_batch()
     var second_action: TimedAction = live_kernel.action_by_serial(second_serial)
-    if second_action == null or not second_action.is_committed_at(live_kernel.world_tick()):
-        _fail("production strike did not commit at contact")
+    if not reached_commit or second_action == null:
+        _fail("production strike did not reach its contact commitment")
         return
     if live_kernel.interrupt_action(second_serial, "post_contact_test") != Rules.ActionStatus.RUNNING:
         _fail("production strike was cancelable after contact")
         return
     live_kernel.run_until_stop()
+    if not live_kernel.is_decision_paused():
+        _fail("committed production strike did not finish at a decision pause")
+        return
 
-    print("PHASE2_COMMITMENT_WINDOWS_OK same_tick_phases=%d stop=%d production_attacker=%s" % [phases_seen.size(), stop, attacker_id])
+    print("PHASE2_COMMITMENT_WINDOWS_OK same_tick_phases=%d stop=%d production_actor=%s" % [phases_seen.size(), stop, Fixture.PLAYER_ID])
     quit(0)
