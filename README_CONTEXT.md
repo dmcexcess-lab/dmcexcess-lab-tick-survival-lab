@@ -2,121 +2,182 @@
 
 Read this file first, then `README_SOPS.md`. Fetch current `main` once before the next repository operation.
 
-## Current checkpoint — SURVIVAL RELEASE PHASE 2A COMMITMENT WINDOWS COMPLETE — 2026-09-25
+## Current checkpoint — SURVIVAL RELEASE PHASE 2B SIMULTANEOUS MELEE CONSEQUENCES COMPLETE — 2026-09-25
 
-Phase 1 remains complete. This bounded Phase-2 slice implemented explicit action commitment windows in canonical WHEN timing and wired melee contact to the point-of-no-return seam.
+Phase 1 remains complete. Phase 2A commitment windows remain protected. This bounded Phase-2B slice implements the approved rule that one combat tick has no internal initiative: every melee contact due on that tick is resolved from the same pre-impact state, every valid hit is accounted for, and death/corpse transition publishes only afterward.
 
-Starting main for this operation: `c290e514acb7fec52d2d5c5ff9b2b99fe71ddf79`.
+Starting main for this operation: `004f55a77ca93c17bfa6a4501c60a5c40a486fa7`.
 
-Functional/executable owning head: `bd69adcb19d8b473018cbdbbcd01c9cf41a3c2cd`.
+Functional/executable owning head: `a33e302467921ab58541c462a89fc37b6f2b6964`.
 
-Focused verifier head: `664d33d69168e6354dddd33be863eb87981df137`.
+Focused verifier owning run: `36185910858` — **SUCCESS**.
 
-Documentation head immediately before this final handoff write: `c422977dfa04677e37307a0c031673554e159819`.
+Documentation head immediately before this final handoff write: `02c00963d1ac203a79c7809198b85848dd83af31`.
 
 This `README_CONTEXT.md` commit is the final repository write for the operation. Identify its exact SHA from `main`; everything after it is read-only verification.
 
+## User-approved simultaneous tick rule
+
+The user's explicit combat rule is now canonical:
+
+- there is no "first attacker" inside one authoritative tick;
+- freeze the relevant pre-resolution state;
+- determine all attacks that legitimately reach contact on that tick;
+- calculate all those impacts from that same frozen state;
+- account for every hit/injury;
+- only then publish HP-zero death, corpse conversion and downstream removal.
+
+Therefore:
+
+- if player and zombie mutually land lethal hits on one tick, both hits land and both actors die;
+- if multiple attackers hit one target on one tick, every already-due hit lands even when aggregate damage is lethal;
+- deterministic sorting may stabilize processing but may never become hidden initiative or erase an already-due consequence.
+
+This rule is also recorded in `DESIGN_DECISIONS.md` and System 37.
+
 ## Prompt-local verifier lifecycle
 
-The previous Phase-1 prompt-owned pair was deleted before Phase-2 code work:
-
-- `game/scripts/ci/Phase1SurvivorRuntimeRetirementSmoke.gd`
-- `.github/workflows/phase1-survivor-runtime-retirement.yml`
-
-Fresh current pair:
+The Phase-2A prompt-owned pair was deleted before Phase-2B code work:
 
 - `game/scripts/ci/Phase2CombatCommitmentWindowsSmoke.gd`
 - `.github/workflows/phase2-combat-commitment-windows.yml`
 
-The next code prompt must delete this Phase-2A pair before changing code and create its own focused verifier/workflow.
+Fresh current pair:
+
+- `game/scripts/ci/Phase2BSimultaneousImpactsSmoke.gd`
+- `.github/workflows/phase2b-simultaneous-impacts.yml`
+
+The next code prompt must delete this Phase-2B pair before changing code and create its own focused verifier/workflow.
 
 ## Completed
 
-- Added `commit_offset_ticks` to canonical `TimedAction`.
-- A CANCELABLE or RESUMABLE action now keeps that policy only before its declared commit offset; at and after the boundary its effective policy is COMMITTED.
-- Already-COMMITTED actions remain committed for their whole duration.
-- Added `TimedAction.effective_interruption_policy(world_tick)` and `is_committed_at(world_tick)`.
-- `TickKernel.interrupt_action` now checks the effective current policy rather than the action's original static policy.
-- Commitment boundaries persist through action copy and WHEN snapshot/restore.
-- `TickKernel.begin_action` accepts the optional commit offset without breaking existing callers.
-- Melee strike actions use their existing `combat.contact` phase offset as the commitment boundary.
-- Light/unarmed strikes therefore remain interruptible during wind-up but cannot be canceled after contact has become consequential.
-- Existing heavy strikes and shoves remain fully committed from action start; their current behavior was not weakened.
-- Light attack quote text now exposes the transition as `INTERRUPTIBLE → COMMITTED @Nt`.
-- Existing same-tick action-phase batching remains intact; this operation did not replace the scheduler or add a second clock.
-- No survivor/raider runtime was restored.
+### Combat consequence preparation
 
-## Focused verification
+`CombatActionService` already collected all CONTACT intents due on one tick and selected targets from a stable actor-cell snapshot. Phase 2B completes that seam:
 
-Owning focused run `36183887142`: **success**.
+- all target choices are frozen before mutation;
+- all strike damage values are derived before mutation;
+- same-target strike damage is aggregated for canonical HP mutation;
+- every valid contact retains its own injury and `impact_resolved` publication;
+- HP is clamped at zero, but overkill does not erase an already-due contact.
 
-It proved:
+### Health consequence batch
 
-- a CANCELABLE action with a commit offset cancels before the boundary;
-- two actors' contact phases due at tick 3 are both dispatched in the same tick batch;
-- at the contact boundary both actions report effective COMMITTED policy;
-- an attempted interruption after commitment returns RUNNING and does not cancel recovery;
-- the player returns to the normal automatic decision pause;
-- commit offsets survive timing snapshot/restore;
-- the real production `CombatActionService` player unarmed strike carries contact as its commit boundary;
-- that production strike cancels before contact;
-- that production strike refuses cancellation after contact and then returns to the ordinary decision pause.
+`ActorHealthState` now provides a bounded nested consequence-batch boundary:
 
-Successful verifier marker:
+- `begin_consequence_batch()`;
+- `end_consequence_batch()`;
+- `consequence_batch_active()`;
+- start/finish signals for downstream canonical owners.
 
-`PHASE2_COMMITMENT_WINDOWS_OK same_tick_phases=2 stop=4 production_actor=actor.player.demo`
+The batch does not create a parallel health model. System 13A remains the HP/injury owner.
 
-An earlier verifier revision on old head `95ee496...` intentionally cleared the decision actor and could continue processing recurring world events instead of reaching the normal automatic stop. That was a verifier design defect, not a gameplay failure. It was superseded by `664d33d...`, which keeps the real decision-pause contract and passed.
+### Deferred lethal transition
 
-## What this slice does NOT claim
+`ActorDeathTransitionService` still owns generic death/corpse conversion.
 
-Phase 2 is still open.
+Outside a consequence batch, HP > 0 -> HP <= 0 transitions remain immediate.
 
-This operation does not yet prove or implement:
+Inside a combat consequence batch:
 
-- atomic/coherent damage + death publication for all simultaneous contacts;
-- contested movement/combat ordering beyond the existing same-tick event ordering;
-- mob force/crowd pressure;
-- final canonical fear tuning/effects;
-- removal of zombie callback/perception fan-out;
-- presentation of overlapping actor outcomes as one coherent beat;
-- crowded-fight performance targets or Safari timing acceptance.
+- lethal HP changes are recorded as pending deaths;
+- no actor is unplaced and no corpse is created while same-tick impacts are still being published;
+- when the outer batch closes, pending lethal actors are transitioned deterministically;
+- active WHEN actions are then failed by the existing death owner;
+- exact carried/equipped item identities still move through the existing corpse path.
 
-The existing combat service already gathers same-tick melee contact intents against a stable actor-cell snapshot before applying them. However, individual damage/injury/death mutations are still published sequentially afterward, so downstream death/removal callbacks can make later same-tick effects order-sensitive. That is the next bounded seam.
+### Protected Phase 2A semantics
+
+The new batch does not weaken commitment windows:
+
+- light/unarmed strike wind-up remains interruptible;
+- contact is still the point of no return;
+- after contact, same-tick damage cannot retroactively cancel the already-due attack;
+- heavy strikes/shoves remain committed according to their existing policy;
+- WHEN remains the single authoritative clock.
+
+## Focused production verification
+
+Fresh focused run `36185910858`: **SUCCESS**.
+
+Successful marker:
+
+`PHASE2B_SIMULTANEOUS_IMPACTS_OK shared_tick=3 mutual_tick=10 impacts_before_death=true`
+
+The production-scene verifier proves two required cases.
+
+### Two hits on one lethal target
+
+- player and a second attacker both reach CONTACT against the same 1-HP infected on tick 3;
+- both `impact_resolved` events publish;
+- both contacts create injuries;
+- the target reaches canonical HP 0;
+- the death/corpse event occurs only after both impacts;
+- one persistent corpse is created for the dead target.
+
+### Mutual lethal contact
+
+- player and infected begin from living pre-tick state at 1 HP each;
+- both attacks reach CONTACT on tick 10;
+- both `impact_resolved` events publish on tick 10;
+- neither death/corpse transition publishes before both hits;
+- both actors reach HP 0;
+- both receive their generic persistent corpse transition.
+
+This directly verifies the user's approved "we both got hit and both died" rule in the real production combat/death owners.
+
+## What Phase 2B does NOT claim
+
+Phase 2 remains open.
+
+This slice does not yet close:
+
+- contested same-tick movement into the same cell;
+- simultaneous shove/displacement conflicts;
+- mob-force/crowd-pressure rules;
+- opening/fortification force aggregation;
+- canonical fear tuning/effects;
+- zombie callback/perception fan-out and performance;
+- presentation of overlapping outcomes as one visual/audio beat;
+- crowded-fight timing budgets or Safari acceptance;
+- firearm same-tick batching beyond existing firearm behavior.
+
+Shoves remain in the melee resolver but conflicting displacement ordering is not claimed solved by this operation.
 
 ## Current release direction
 
-The game is player versus zombies. Living survivor NPCs, raiders, followers, recruitment/dialogue and live society simulation remain retired from production.
+The game remains player versus zombies. Living survivor NPCs, raiders, followers, recruitment/dialogue and live society simulation remain retired from production.
 
 Core loop: scavenge, fight, craft, survive on the persistent map with day/night, weather, power and water. A base is an existing fortified house/building with supplies, generator and well.
 
-Combat identity remains:
+Combat identity now has two executable Phase-2 foundations:
 
-- one authoritative WHEN clock;
-- automatic decision pauses rather than player-selectable tactical pause;
-- explicit action durations and consequential phases;
-- interruptible wind-up versus committed point-of-no-return behavior;
-- coherent simultaneous effects for events due at the same tick;
-- mob force and fear as required mechanics.
-
-Hard application pause remains separate from tactical timing and must freeze without canceling or granting a free order.
+1. explicit interruptible -> committed action windows;
+2. true simultaneous melee consequence/death semantics at one CONTACT tick.
 
 ## NEXT OPERATION
 
-Phase 2B: make same-tick melee impacts and death consequences coherent at one combat consequence boundary.
+Phase 2C: define and implement deterministic same-tick physical conflict resolution for movement/displacement, using the simultaneous-tick rule rather than actor order.
 
-Targeted starting reads only:
+Start with targeted current owners only:
 
-- `CombatActionService.gd` current `_on_external_event`, stable intent snapshot and resolution path;
-- `ActorHealthState.gd` damage mutation/signals;
-- `ActorDeathTransitionService.gd` death/corpse callback timing;
-- `TickKernel.gd` exact same-tick event ordering only if needed to connect the boundary.
+- movement action CONTACT/completion and any existing batch placement seam;
+- `WorldMutationService.set_placements_batch` and exact occupancy validation;
+- `CombatActionService._resolve_shove`;
+- current infected forward movement submission;
+- opening-pressure/mob-pressure code only where a concrete displacement/force seam requires it.
 
-First establish the exact current failure mode for two or more impacts due on the same tick, especially mutual lethal hits and multiple hits on one target. Then implement a bounded deterministic batch/transaction seam so target selection, damage calculation, HP/death truth, injuries and corpse transition do not depend on attacker ID/event callback order.
+Required rule:
 
-Preserve the newly implemented commit-offset contract. Do not broaden this operation into mob force, fear tuning, movement conflicts or zombie performance yet; those follow after the combat consequence boundary is trustworthy.
+- actors due to move/displace on the same tick evaluate against one stable pre-resolution occupancy state;
+- processing order cannot allow one actor to "win" merely because its callback ran first;
+- direct swaps, same-destination contests, shove-vs-move and blocked displacement need explicit deterministic outcomes;
+- no actor phases through a blocker;
+- a zombie killed by a same-tick attack still contributes any movement/force consequence that had already reached its own committed consequence point on that tick.
 
-Before changing code, delete the Phase-2A verifier pair and create a new prompt-local verifier/workflow scoped to simultaneous impact/death resolution.
+This operation should establish the physical conflict primitive needed by later mob force. Do not broaden into final mob-force tuning, fear, zombie performance or presentation until same-tick spatial consequences are trustworthy.
+
+Before changing code, delete the Phase-2B verifier pair and create a new prompt-local verifier/workflow scoped to same-tick movement/displacement conflicts.
 
 ## Protected behavior
 
@@ -124,9 +185,10 @@ Preserve:
 
 - WHERE / WHAT / WHEN authority and one clock;
 - Phase-2A commitment offsets and snapshot compatibility;
+- Phase-2B simultaneous melee hit/death rule;
+- stable pre-contact melee target snapshot;
 - existing eight resident-backed infected startup cohort;
 - no live survivor/raider/social runtime;
-- stable pre-contact target snapshot semantics;
 - player movement, Health/injury, inventory, condition/moodlets, skills and equipment;
 - day/night, weather, utilities and vehicles;
 - persistent world changes and terrain/streaming improvements;
