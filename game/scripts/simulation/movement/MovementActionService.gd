@@ -36,6 +36,8 @@ const CANDIDATE_MOVEMENT: StringName = &"movement"
 const CANDIDATE_FORCED: StringName = &"forced_displacement"
 const SHOVE_ACTION: StringName = &"combat.shove"
 const HOLD_ACTION: StringName = &"physical.hold"
+const MAX_PRESSURE_PROPAGATION_DEPTH: int = 32
+const MAX_PRESSURE_PROPAGATION_PASSES: int = 64
 
 var _world: WorldState = null
 var _mutations: WorldMutationService = null
@@ -139,7 +141,10 @@ func queue_forced_displacement(
         "resistance_consumed": -1,
         "linked_candidate_index": -1,
         "blocking_resistance_scores": {},
+        "pressure_resistance_scores": _freeze_pressure_resistance_line(target_actor_id, direction, resistance_score),
         "pressure_depth": 0,
+        "pressure_residual_sent": 0,
+        "pressure_path": [source_actor_id, target_actor_id],
         "report_resolution": true,
     }
     if query_result.status == QueryResultClass.Status.BLOCKED:
@@ -594,6 +599,18 @@ func _queue_timestamp_commit(candidate: Dictionary) -> bool:
     if action == null:
         return false
     candidate["physical_score"] = physical_contest_score(action.actor_id, action.action_type)
+    candidate["contact_force_sent"] = 0
+    if _candidate_changes_anchor(candidate):
+        var current: WorldPlacement = candidate.get("current", null)
+        var target_anchor: Vector2i = candidate.get("target_anchor", Vector2i.ZERO)
+        if current != null:
+            var direction: Vector2i = target_anchor - current.anchor
+            candidate["pressure_resistance_scores"] = _freeze_pressure_resistance_line(
+                action.actor_id,
+                direction,
+                physical_contest_score(action.actor_id, HOLD_ACTION)
+            )
+            candidate["pressure_path"] = [action.actor_id]
     return _queue_timestamp_candidate(candidate)
 
 func _queue_timestamp_candidate(candidate: Dictionary) -> bool:
@@ -691,7 +708,7 @@ func _flush_timestamp_commits() -> void:
         eligible.append(candidate)
 
     _resolve_actor_trajectory_conflicts(eligible)
-    _propagate_forced_pressure_one_step(eligible)
+    _propagate_pressure_bounded(eligible)
     _finalize_forced_hold_resistance(eligible)
 
     # Opposite traversal of one physical edge cannot pass through. Ordinary
@@ -964,7 +981,7 @@ func _resolve_actor_trajectory_conflicts(
         var movement: Dictionary = candidates[movement_index]
         var movement_score: int = _physical_contest_score(movement)
         if movement.get("target_anchor", Vector2i.ZERO) == forced.get("target_anchor", Vector2i.ZERO):
-            movement["physical_score"] = maxi(movement_score, net_force)
+            movement["physical_score"] = maxi(0, movement_score) + net_force
             forced["ready"] = false
             forced["reason"] = "displacement_aligned"
             forced["linked_candidate_index"] = movement_index
@@ -978,56 +995,117 @@ func _resolve_actor_trajectory_conflicts(
         else:
             _mark_timestamp_conflict(forced, "target_trajectory_won")
 
-func _propagate_forced_pressure_one_step(candidates: Array[Dictionary]) -> void:
-    var initial_size: int = candidates.size()
-    var affected_actors: Dictionary = {}
+func _propagate_pressure_bounded(candidates: Array[Dictionary]) -> void:
+    # Pressure is solved as bounded waves. Ordinary movement contact contributes
+    # body force without requiring AI to choose a special crowd action. Newly
+    # aggregated/aligned force sends only its unsent delta forward, preventing
+    # repeated amplification while still allowing longer packed chains.
+    var pass_index: int = 0
+    while pass_index < MAX_PRESSURE_PROPAGATION_PASSES:
+        pass_index += 1
+        var initial_size: int = candidates.size()
+        var affected_actors: Dictionary = {}
+        var additions: Array[Dictionary] = []
 
-    for index: int in range(initial_size):
-        var candidate: Dictionary = candidates[index]
-        if StringName(candidate.get("kind", CANDIDATE_MOVEMENT)) != CANDIDATE_FORCED             or not bool(candidate.get("ready", false))             or int(candidate.get("pressure_depth", 0)) >= 1:
-            continue
-        var blockers: Array = candidate.get("blocking_entity_ids", [])
-        if blockers.size() != 1:
-            continue
+        for index: int in range(initial_size):
+            var candidate: Dictionary = candidates[index]
+            if not bool(candidate.get("ready", false)) or not _candidate_changes_anchor(candidate):
+                continue
 
-        var current: WorldPlacement = candidate.get("current", null)
-        if current == null:
-            continue
-        var direction: Vector2i = _forced_direction(candidate)
-        if direction == Vector2i.ZERO:
-            continue
+            var kind: StringName = StringName(candidate.get("kind", CANDIDATE_MOVEMENT))
+            if kind == CANDIDATE_MOVEMENT:
+                var movement_delta: int = _movement_contact_force_delta(candidate)
+                if movement_delta <= 0:
+                    continue
+                var movement_blockers: Array = candidate.get("blocking_entity_ids", [])
+                if movement_blockers.size() != 1:
+                    continue
+                var blocker_id: String = String(movement_blockers[0])
+                if blocker_id.is_empty():
+                    continue
+                var current: WorldPlacement = candidate.get("current", null)
+                if current == null:
+                    continue
+                var direction: Vector2i = _candidate_direction(candidate)
+                if direction == Vector2i.ZERO:
+                    continue
+                var pressure_path: Array = candidate.get("pressure_path", [String(candidate.get("actor_id", ""))]).duplicate()
+                if blocker_id in pressure_path or pressure_path.size() >= MAX_PRESSURE_PROPAGATION_DEPTH + 1:
+                    continue
+                var blocker: WorldPlacement = _world.placement(blocker_id)
+                if blocker == null or blocker.channel != Layers.Channel.ACTOR:
+                    continue
+                var frozen: Dictionary = candidate.get("pressure_resistance_scores", {})
+                var blocker_resistance: int = int(frozen.get(blocker_id, -1))
+                if blocker_resistance < 0:
+                    continue
+                candidate["contact_force_sent"] = int(candidate.get("contact_force_sent", 0)) + movement_delta
+                var propagated: Dictionary = _forced_candidate_for_pressure(
+                    candidate,
+                    blocker,
+                    direction,
+                    movement_delta,
+                    blocker_resistance
+                )
+                if propagated.is_empty():
+                    continue
+                additions.append(propagated)
+                affected_actors[blocker_id] = true
+                continue
 
-        var force_value: int = _physical_contest_score(candidate)
-        var consumed: int = int(candidate.get("resistance_consumed", -1))
-        if consumed < 0:
-            consumed = int(candidate.get("resistance_score", -1))
-        var residual_force: int = force_value - consumed
-        if residual_force <= 0:
-            continue
+            if kind != CANDIDATE_FORCED:
+                continue
+            var forced_delta: int = _forced_residual_delta(candidate)
+            if forced_delta <= 0:
+                continue
+            var blockers: Array = candidate.get("blocking_entity_ids", [])
+            if blockers.size() != 1:
+                continue
+            var blocker_id: String = String(blockers[0])
+            var pressure_path: Array = candidate.get("pressure_path", []).duplicate()
+            if blocker_id.is_empty() or blocker_id in pressure_path                 or int(candidate.get("pressure_depth", 0)) >= MAX_PRESSURE_PROPAGATION_DEPTH:
+                continue
+            var blocker: WorldPlacement = _world.placement(blocker_id)
+            if blocker == null or blocker.channel != Layers.Channel.ACTOR:
+                continue
+            var frozen: Dictionary = candidate.get("pressure_resistance_scores", {})
+            var blocker_resistance: int = int(frozen.get(blocker_id, -1))
+            if blocker_resistance < 0:
+                continue
+            candidate["pressure_residual_sent"] = int(candidate.get("pressure_residual_sent", 0)) + forced_delta
+            var direction: Vector2i = _forced_direction(candidate)
+            var propagated: Dictionary = _forced_candidate_for_pressure(
+                candidate,
+                blocker,
+                direction,
+                forced_delta,
+                blocker_resistance
+            )
+            if propagated.is_empty():
+                continue
+            additions.append(propagated)
+            affected_actors[blocker_id] = true
 
-        var blocker_id: String = String(blockers[0])
-        var frozen_resistance: Dictionary = candidate.get("blocking_resistance_scores", {})
-        var blocker_resistance: int = int(frozen_resistance.get(blocker_id, -1))
-        if blocker_resistance < 0:
-            continue
-        var blocker: WorldPlacement = _world.placement(blocker_id)
-        if blocker == null or blocker.channel != Layers.Channel.ACTOR:
-            continue
+        if additions.is_empty():
+            return
+        for addition: Dictionary in additions:
+            candidates.append(addition)
+        for actor_id: String in _sorted_string_keys(affected_actors):
+            _resolve_actor_trajectory_conflicts(candidates, actor_id)
 
-        var propagated: Dictionary = _forced_candidate_for_pressure(
-            candidate,
-            blocker,
-            direction,
-            residual_force,
-            blocker_resistance
-        )
-        if propagated.is_empty():
-            continue
-        candidates.append(propagated)
-        affected_actors[blocker_id] = true
+func _movement_contact_force_delta(candidate: Dictionary) -> int:
+    var score_value: int = _physical_contest_score(candidate)
+    var sent: int = int(candidate.get("contact_force_sent", 0))
+    return maxi(0, score_value - sent)
 
-    for actor_id: String in _sorted_string_keys(affected_actors):
-        _resolve_actor_trajectory_conflicts(candidates, actor_id)
+func _forced_residual_delta(candidate: Dictionary) -> int:
+    var force_value: int = _physical_contest_score(candidate)
+    var consumed: int = int(candidate.get("resistance_consumed", -1))
+    if consumed < 0:
+        consumed = int(candidate.get("resistance_score", -1))
+    var residual: int = maxi(0, force_value - maxi(0, consumed))
+    var sent: int = int(candidate.get("pressure_residual_sent", 0))
+    return maxi(0, residual - sent)
 
 func _forced_candidate_for_pressure(
     source_candidate: Dictionary,
@@ -1068,7 +1146,10 @@ func _forced_candidate_for_pressure(
         "resistance_consumed": -1,
         "linked_candidate_index": -1,
         "blocking_resistance_scores": {},
+        "pressure_resistance_scores": source_candidate.get("pressure_resistance_scores", {}).duplicate(true),
         "pressure_depth": int(source_candidate.get("pressure_depth", 0)) + 1,
+        "pressure_residual_sent": 0,
+        "pressure_path": _extended_pressure_path(source_candidate, current.entity_id),
         "report_resolution": false,
     }
 
@@ -1209,6 +1290,58 @@ func _emit_run_impact_failure(candidate: Dictionary) -> void:
     )
     _fail_commit(action, "run_impact")
 
+func _freeze_pressure_resistance_line(
+    source_actor_id: String,
+    direction: Vector2i,
+    source_resistance: int = -1
+) -> Dictionary:
+    var result: Dictionary = {}
+    if source_actor_id.strip_edges().is_empty()         or direction not in [Vector2i.UP, Vector2i.RIGHT, Vector2i.DOWN, Vector2i.LEFT]:
+        return result
+
+    var current_id: String = source_actor_id
+    var visited: Dictionary = {}
+    var depth: int = 0
+    while depth <= MAX_PRESSURE_PROPAGATION_DEPTH:
+        if current_id.is_empty() or visited.has(current_id):
+            break
+        visited[current_id] = true
+        var resistance: int = source_resistance if depth == 0 and source_resistance >= 0             else physical_contest_score(current_id, HOLD_ACTION)
+        if resistance < 0:
+            break
+        result[current_id] = resistance
+
+        var placement: WorldPlacement = _world.placement(current_id)
+        if placement == null or placement.channel != Layers.Channel.ACTOR:
+            break
+        var query_result: SpatialQueryResult = _query.query_entity_footprint(
+            current_id,
+            placement.anchor + direction,
+            placement.facing,
+            true
+        )
+        if query_result == null or not _has_only_actor_blockers(query_result)             or query_result.blocking_entity_ids.size() != 1:
+            break
+        current_id = String(query_result.blocking_entity_ids[0])
+        depth += 1
+    return result
+
+static func _extended_pressure_path(source_candidate: Dictionary, actor_id: String) -> Array:
+    var result: Array = source_candidate.get("pressure_path", []).duplicate()
+    if not actor_id.is_empty() and actor_id not in result:
+        result.append(actor_id)
+    return result
+
+static func _candidate_direction(candidate: Dictionary) -> Vector2i:
+    var current: WorldPlacement = candidate.get("current", null)
+    if current == null:
+        return Vector2i.ZERO
+    var target_anchor: Vector2i = candidate.get("target_anchor", current.anchor)
+    var direction: Vector2i = target_anchor - current.anchor
+    if direction in [Vector2i.UP, Vector2i.RIGHT, Vector2i.DOWN, Vector2i.LEFT]:
+        return direction
+    return Vector2i.ZERO
+
 func _physical_contest_score(candidate: Dictionary) -> int:
     return int(candidate.get("physical_score", -1))
 
@@ -1276,7 +1409,11 @@ func _candidate_base(action: TimedAction, stride_index: int) -> Dictionary:
         "resistance_consumed": -1,
         "linked_candidate_index": -1,
         "blocking_resistance_scores": {},
+        "pressure_resistance_scores": {},
         "pressure_depth": 0,
+        "pressure_residual_sent": 0,
+        "pressure_path": [],
+        "contact_force_sent": 0,
         "report_resolution": true,
     }
 
