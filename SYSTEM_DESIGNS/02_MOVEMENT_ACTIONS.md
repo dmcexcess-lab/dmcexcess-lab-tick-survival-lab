@@ -42,9 +42,9 @@ Primary verification:
 
 ## 4. Allowed dependencies / hard boundaries
 
-`MovementActionService` may consume public contracts from WHERE, WHAT, Collision, WHEN, and the replaceable movement policy. It must not import Health, Needs, Carry, Inventory, Combat, renderer/art, input/UI, generation, Reboot, or other mechanic internals.
+`MovementActionService` may consume public contracts from WHERE, WHAT, Collision, WHEN, the replaceable movement policy, and the narrow `MovementPhysicalContestProvider` read-only seam. It must not import Health, Needs, Carry, Inventory, Combat, renderer/art, input/UI, generation, Reboot, or other mechanic internals.
 
-System 17 preserves that boundary through two stateless coordinators rather than importing Health/Needs into Movement.
+System 17 preserves that boundary through stateless coordinators rather than importing Health/Needs into Movement. The 2026-09-25 stat-contest revision follows the same rule: `ActorPhysicalContestQuery` lives with actor state and supplies only a derived score through the narrow movement provider.
 
 ## 5. Request contract
 
@@ -125,7 +125,7 @@ Walk and Run reserve no cells. Request-time clarity does not guarantee commit-ti
 Movement phases due on the same WHEN timestamp are collected before placement mutation. The resolver re-reads one unchanged pre-resolution occupancy state, then resolves physical conflicts as a set:
 
 - one uncontested mover into genuinely available space succeeds;
-- two or more movers claiming any same destination cell all fail with an explicit timestamp conflict rather than awarding the cell to the first sorted actor;
+- two or more movers claiming the same destination compare frozen canonical physical scores; a unique highest scorer may win that cell, while an exact/unknown top tie is a stalemate and no claimant wins;
 - reciprocal swaps may succeed atomically when each actor vacates the other's required cells on the same timestamp;
 - longer vacating chains/cycles may succeed only while every blocking actor has a surviving simultaneous move that actually vacates the claimed cells;
 - if one mover in such a dependency set fails, blocked followers are removed to a fixed point rather than phasing through the actor that stayed;
@@ -134,7 +134,9 @@ Movement phases due on the same WHEN timestamp are collected before placement mu
 
 Successful placements are installed through `WorldMutationService.set_placements_batch`, so observers see the complete final occupancy rather than serial intermediate positions. Expected origin/intermediate placement must still match, preventing stale actions from overwriting newer WHAT truth.
 
-This slice establishes actor movement arbitration only. Shove/displacement conflicts and broader mob-force aggregation remain Phase-2 work and must reuse this no-hidden-initiative rule rather than inventing an attacker-order exception.
+`ActorPhysicalContestQuery` currently derives that score from existing state only: condition-adjusted carry capacity, current load, current HP relative to max HP, stance, and movement intent. It deliberately does not create a persistent Strength stat. A later dedicated body/Strength attribute can extend this provider without changing movement arbitration.
+
+This slice establishes actor movement arbitration only. Shove/displacement conflicts and broader mob-force aggregation remain Phase-2 work and must reuse this stat-based no-hidden-initiative rule rather than inventing an attacker-order exception.
 
 ## 11. Damage and exertion coordination
 
@@ -189,6 +191,21 @@ Focused verifier head/run: `f605987f7feb4fd24e06f3724d90622d900beee9` / `3618779
 Marker: `PHASE2C_MOVEMENT_CONFLICTS_OK contest_tick=10 swap_tick=20 no_hidden_winner=true`.
 
 The production scene proved that two infected reaching the same empty destination on one timestamp both remain at their origins and both fail with `target_contested`, while two adjacent infected moving into each other's occupied cells on one timestamp are both admitted to arbitration and atomically exchange positions.
+
+## 13B. Phase 2C stat-based contest verification — 2026-09-25
+
+Fresh prompt-local verifier/workflow:
+
+- `game/scripts/ci/Phase2CStatContestsSmoke.gd`
+- `.github/workflows/phase2c-stat-contests.yml`
+
+Functional production head/run: `1689fb3124641b7a9abacfc9010fbc7056951e5f` / `36189772342` — **SUCCESS**.
+
+Marker: `PHASE2C_STAT_CONTESTS_OK unequal_winner=<resident actor> tied_stalemate=true`.
+
+The production scene set two otherwise equivalent infected to unequal canonical carry capacities (24 kg versus 12 kg) and submitted simultaneous moves into the same empty cell. Both actions shared the same movement timestamp; the higher derived physical score won the cell and the weaker actor remained at origin with `target_contest_lost`. Repeating the case at equal 18 kg capacities produced an exact derived-score tie: both actors remained at origin with `target_contest_tied`, proving there is still no actor-ID/order fallback.
+
+This supersedes the provisional 13A assertion that all same-destination claimants necessarily fail. They now all fail only when no unique physical-stat winner exists.
 
 ## 14. Supersession note
 
