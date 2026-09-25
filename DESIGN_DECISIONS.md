@@ -8,6 +8,22 @@ If a later discussion changes a decision, do not erase history. Add a newer entr
 
 ---
 
+## 2026-09-25 — One tick has no internal combat initiative
+
+**Decision:** Consequences due on the same authoritative WHEN tick are simultaneous for combat resolution. There is no attacker-first ordering inside that tick.
+
+**Meaning:** Combat freezes the relevant pre-consequence state, determines every contact that legitimately exists on that tick, calculates those impacts from that same frozen state, and accounts for all of them before death/corpse publication may remove an actor from the living world.
+
+A lethal hit does not erase another attack that already reached contact on the same tick. If the player and a zombie mutually land lethal blows on one tick, both hits land and both actors die. If several attackers hit one target on the same tick, every valid hit contributes its full impact/injury consequence even when aggregate HP reaches zero.
+
+Deterministic sorting may still be used internally for stable data processing, but it may not become hidden initiative or change which already-due combat consequences occur.
+
+**Affected systems:** WHEN batching, melee combat, Health/injury, interruption/commitment, death/corpse transition, later firearm/movement/crowd conflict work.
+
+**Implementation state:** Phase 2B now batches same-tick melee strike targeting/damage against one pre-impact snapshot, aggregates HP damage per target, records every valid injury/impact, and defers lethal actor/corpse transition until the consequence batch closes. Contested movement, shove/mob-force conflicts and cross-system same-tick ordering remain later Phase-2 work.
+
+---
+
 ## 2026-09-25 — Finish the survival loop; retire society simulation
 
 **Decision:** Release scope is scavenging, fighting, crafting and survival on the existing persistent map with day/night, weather, vehicles, electricity and water. Shared ticks, interruptible versus committed actions, simultaneous tick consequences, mob force and fear are defining mechanics, not optional fidelity.
