@@ -2,6 +2,19 @@
 
 This compact ledger records the newest executable work. `CHANGELOG.md` remains the historical archive.
 
+## Phase 2C — stat-based same-tick physical contests — 2026-09-25
+
+Functional production head: `1689fb3124641b7a9abacfc9010fbc7056951e5f`.
+
+- Replaced the provisional "all claimants fail" same-destination movement rule with an approved physical-stat comparison that still has no callback, actor-ID or queue-order initiative.
+- Added the narrow read-only `MovementPhysicalContestProvider` seam and `ActorPhysicalContestQuery` implementation. Movement still imports no Health/Carry/condition internals.
+- The current derived score uses existing canonical state only: condition-adjusted carry capacity, current carried load, current HP relative to max HP, locomotion stance and movement intent. No persistent Strength stat was invented.
+- A unique highest physical score wins the exclusive contested destination. Exact or unclassifiable top-score ties remain a stalemate; no random or hidden initiative tiebreaker is used.
+- Existing reciprocal swap/vacating-chain arbitration remains intact, as do static collision and Phase-2A movement commitment semantics.
+- Fresh prompt-local verifier/workflow: `game/scripts/ci/Phase2CStatContestsSmoke.gd` + `.github/workflows/phase2c-stat-contests.yml`.
+- Focused production run `36189772342`: **success**. An infected with 24 kg canonical carry capacity defeated an otherwise equivalent 12 kg actor for the same tick/cell, while equal 18 kg capacities produced a true stalemate with both actors remaining at origin.
+- Shove/displacement and mob pressure are intentionally not claimed complete; they should reuse this provider seam next.
+
 ## Phase 2C — same-tick movement arbitration — 2026-09-25
 
 Functional production head: `d87f1402b0f06f69f1f8a614b3a7557dd7641b71`.
