@@ -15,6 +15,7 @@ var start_tick: int = 0
 var segment_start_tick: int = -1
 var status: int = Rules.ActionStatus.RUNNING
 var interruption_policy: int = Rules.InterruptionPolicy.COMMITTED
+var commit_offset_ticks: int = -1
 var phases: Array[ActionPhase] = []
 var next_phase_index: int = 0
 var payload: Dictionary = {}
@@ -28,7 +29,8 @@ func _init(
     action_start_tick: int = 0,
     action_policy: int = Rules.InterruptionPolicy.COMMITTED,
     action_phases: Array = [],
-    action_payload: Dictionary = {}
+    action_payload: Dictionary = {},
+    action_commit_offset_ticks: int = -1
 ) -> void:
     serial = action_serial
     actor_id = action_actor_id
@@ -37,6 +39,7 @@ func _init(
     start_tick = action_start_tick
     segment_start_tick = action_start_tick
     interruption_policy = action_policy
+    commit_offset_ticks = action_commit_offset_ticks
     payload = Rules.copy_payload(action_payload)
     for value: Variant in action_phases:
         if value is ActionPhase:
@@ -55,6 +58,8 @@ func is_valid() -> bool:
     if start_tick < 0:
         return false
     if not Rules.is_valid_policy(interruption_policy):
+        return false
+    if commit_offset_ticks < -1 or commit_offset_ticks == 0 or commit_offset_ticks > duration_ticks:
         return false
     if not Rules.is_valid_action_status(status):
         return false
@@ -84,6 +89,16 @@ func progress_at(world_tick: int) -> int:
 func remaining_at(world_tick: int) -> int:
     return maxi(0, duration_ticks - progress_at(world_tick))
 
+func effective_interruption_policy(world_tick: int) -> int:
+    if interruption_policy == Rules.InterruptionPolicy.COMMITTED or commit_offset_ticks < 1:
+        return interruption_policy
+    if progress_at(world_tick) >= commit_offset_ticks:
+        return Rules.InterruptionPolicy.COMMITTED
+    return interruption_policy
+
+func is_committed_at(world_tick: int) -> bool:
+    return effective_interruption_policy(world_tick) == Rules.InterruptionPolicy.COMMITTED
+
 func sync_to_tick(world_tick: int) -> void:
     if status != Rules.ActionStatus.RUNNING or segment_start_tick < 0:
         return
@@ -102,7 +117,8 @@ func copy() -> TimedAction:
         start_tick,
         interruption_policy,
         phase_copies,
-        payload
+        payload,
+        commit_offset_ticks
     )
     value.elapsed_ticks = elapsed_ticks
     value.segment_start_tick = segment_start_tick
@@ -125,6 +141,7 @@ func to_snapshot() -> Dictionary:
         "segment_start_tick": segment_start_tick,
         "status": status,
         "interruption_policy": interruption_policy,
+        "commit_offset_ticks": commit_offset_ticks,
         "phases": phase_entries,
         "next_phase_index": next_phase_index,
         "payload": Rules.copy_payload(payload),
@@ -156,7 +173,8 @@ static func from_snapshot(data: Dictionary) -> TimedAction:
         int(data.get("start_tick", -1)),
         int(data.get("interruption_policy", -1)),
         restored_phases,
-        payload_value
+        payload_value,
+        int(data.get("commit_offset_ticks", -1))
     )
     action.elapsed_ticks = int(data.get("elapsed_ticks", -1))
     action.segment_start_tick = int(data.get("segment_start_tick", -2))
