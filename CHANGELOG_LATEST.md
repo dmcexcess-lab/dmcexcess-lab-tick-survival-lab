@@ -2,6 +2,18 @@
 
 This compact ledger records the newest executable work. `CHANGELOG.md` remains the historical archive.
 
+## Phase 1 survivor/social runtime retirement — 2026-09-25
+
+Functional executable head: `46827d36fd0621a59aadb1e808d004c7ddbfa0a0`.
+
+- Removed the live survivor/social composition from `CombatGameMain`: no survivor hydration, active survivor cohort, neutral/follower/raider AI, TALK/recruit/dismiss interaction registration, or survivor-to-infected conversion boots in a new game.
+- Replaced the live dynamic infected cohort with the bounded `ActiveInfectedCohortService`; the eight resident-backed infected remain active and still use the shared movement, perception, sound, combat, Health/condition and WHEN path.
+- Kept cheap generated population/resident identity data where the infected path consumes it. Historical survivor/social implementation files remain in the tree as recovery substrate only and are no longer production dependencies.
+- Fresh focused verifier/workflow: `game/scripts/ci/Phase1SurvivorRuntimeRetirementSmoke.gd` + `.github/workflows/phase1-survivor-runtime-retirement.yml`.
+- Pre-change run `36180918709`: boot 19,780,576 µs; 8 infected + 4 live survivors; one ordinary player commitment produced 8 infected evaluations / 164,489 µs plus 2 survivor evaluations / 43,198 µs.
+- Post-change run `36181091707`: success; boot 19,563,557 µs; 8 infected + 0 live survivor NPCs; the ordinary commitment still produced 8 infected evaluations / 154,043 µs, returned to decision pause, and preserved world time, player inventory and utility runtime.
+- Those timings are single-run CI observations rather than a stable benchmark. Phase 2 still owns zombie decision/perception/presentation cost, simultaneous due-tick combat, commitment/interruption, mob force and fear.
+
 ## Survival release roadmap reset — 2026-09-25
 
 Documentation only. Replaced the previous core-complete roadmap with a finite release plan covering scope retirement, simultaneous tick combat/commitment/mob force/fear, responsiveness, durable save/continue, fortified-house survival and utilities, contextual parking/vehicles, persistent environmental stories, balance and desktop/mobile acceptance. Reconciled the North Star, README and cross-system decisions. No runtime system has been removed or implemented by this update; README_SOPS.md remains unchanged.
