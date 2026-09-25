@@ -2,6 +2,22 @@
 
 This compact ledger records the newest executable work. `CHANGELOG.md` remains the historical archive.
 
+## Phase 2C — aggregate crowd pressure and one-body propagation — 2026-09-25
+
+Functional production head: `57c4e6d2f3a8b235640b59053fb88fcc8e655ef9`.
+
+- Replaced the prior "strongest shove wins" staging rule with aggregate force on each actor: parallel forced-displacement inputs add, opposite cardinal inputs subtract, and exact net ties produce no directional winner.
+- Grid resolution uses the dominant net cardinal axis; an exact perpendicular-axis tie remains a stalemate rather than an arbitrary sort/ID tiebreak.
+- Hold resistance is finalized only after one-step pressure propagation, allowing independently insufficient downstream pressure contributions to combine before the outgoing trajectory is decided.
+- Residual force is the winning frozen force remaining after overcoming the current actor's resistance (or opposing committed movement when that is the active trajectory contest).
+- Residual pressure may transmit through one packed actor and re-enter the same downstream trajectory arbitration, where it can combine with an independently earned shove already acting on that body.
+- Static/non-ACTOR geometry terminates propagated displacement. Fixed-point occupancy then prevents upstream bodies from phasing forward when the downstream body cannot release its cell.
+- Internal propagated pressure candidates do not masquerade as new Combat shove actions; original shove outcomes continue to report through their linked causal result.
+- Infected behavior was intentionally unchanged. Crowd jams/surges are expected to emerge from ordinary intentions plus shared physical arbitration, not from formation or random-stumble AI.
+- Fresh prompt-local verifier/workflow: `game/scripts/ci/Phase2CCrowdPressureSmoke.gd` + `.github/workflows/phase2c-crowd-pressure.yml`.
+- Focused production run `36195331005`: **success** with `PHASE2C_CROWD_PRESSURE_OK aggregate=true one_body_propagation=true opposing_cancel=true static_termination=true`.
+- Arbitrary-depth pile compression, knockdown/stumble, crush/impact damage, door/fortification pressure damage and fear remain intentionally deferred.
+
 ## Phase 2C — shove as causal forced trajectory — 2026-09-25
 
 Functional production head: `355de006567289ac257b0b3437f87946d72c427c`.
