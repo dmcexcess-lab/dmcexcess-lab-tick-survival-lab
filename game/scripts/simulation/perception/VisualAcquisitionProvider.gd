@@ -9,6 +9,9 @@ class_name VisualAcquisitionProvider
 func is_ready() -> bool:
     return true
 
+func prepare_bounds(_bounds: Rect2i) -> bool:
+    return true
+
 func freshness_revision() -> int:
     # Providers whose acquisition truth can change independently of WHAT/doors
     # override this. Neutral geometry-only acquisition is revision-stable.
