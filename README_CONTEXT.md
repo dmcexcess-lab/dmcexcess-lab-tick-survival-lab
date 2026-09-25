@@ -2,232 +2,204 @@
 
 Read this file first, then `README_SOPS.md`. Fetch current `main` once before the next repository operation.
 
-## Current checkpoint — SURVIVAL RELEASE PHASE 2C SHOVE TRANSITION ARBITRATION COMPLETE — 2026-09-25
+## Current checkpoint — SURVIVAL RELEASE PHASE 2C FIRST CROWD-PRESSURE PRIMITIVE COMPLETE — 2026-09-25
 
-Phase 1 remains complete. Phase 2A commitment windows, Phase 2B simultaneous melee hit/death semantics, and prior Phase-2C stat-based movement / release-chain / edge-conflict semantics remain protected.
+Phase 1 remains complete. Phase 2A commitment windows, Phase 2B simultaneous melee consequences, and prior Phase-2C causal movement/shove/death semantics remain protected.
 
-This bounded slice implements the first cross-system spatial consequence under the approved causal tick model:
+This bounded slice implements the first real emergent mob-pressure behavior under the approved simulation-first rule:
 
-> `S_t -> seal consequences already earned -> resolve trajectories / physical interaction / occupancy -> publish outgoing space -> publish bodily/terminal consequences -> S_t+1`.
+> Zombies and other actors submit ordinary intentions. Shared physical state decides jams, surges, releases and pressure. Do not author formation logic or cosmetic random stumbling to force a desired crowd look.
 
-Starting main for this operation: `68c563962b581282696a54ba7163984f2bb2c124`.
+Starting main for this operation: `3120d3f9bb66077d845e0c0c179c55db67dd9b67`.
 
-Functional/executable owning head: `355de006567289ac257b0b3437f87946d72c427c`.
+Functional/executable owning head: `57c4e6d2f3a8b235640b59053fb88fcc8e655ef9`.
 
-Fresh verifier repair head/run: `f161e1673fb23e351399f5d778d4cf8efa4fe4d4` / `36194398176` — **SUCCESS**.
+Focused verifier head/run: `57c4e6d2f3a8b235640b59053fb88fcc8e655ef9` / `36195331005` — **SUCCESS**.
 
-Documentation head immediately before this final handoff write: `8aff313fda84648e60a8c490034c6358ec68580d`.
+Documentation head immediately before this final handoff write: `f8209da5b334d5f6201c9525a817907ec82a1462`.
 
 This `README_CONTEXT.md` commit is the final repository write for the operation. Identify its exact SHA from `main`; everything after it is read-only verification.
 
 ## Prompt-local verifier lifecycle
 
-The previous transition-edge verifier pair was deleted before code work:
+The previous prompt-local shove-transition pair was deleted before code work:
 
-- `game/scripts/ci/Phase2CTransitionEdgesSmoke.gd`
-- `.github/workflows/phase2c-transition-edges.yml`
+- `game/scripts/ci/Phase2CShoveTransitionsSmoke.gd`
+- `.github/workflows/phase2c-shove-transitions.yml`
 
 Fresh current pair:
 
-- `game/scripts/ci/Phase2CShoveTransitionsSmoke.gd`
-- `.github/workflows/phase2c-shove-transitions.yml`
+- `game/scripts/ci/Phase2CCrowdPressureSmoke.gd`
+- `.github/workflows/phase2c-crowd-pressure.yml`
 
 The next code prompt must delete this pair before changing code and create its own focused verifier/workflow.
 
-## Completed — shove is now a forced trajectory, not an immediate placement write
+## Completed — parallel pressure adds instead of selecting one attacker
 
-`CombatActionService` no longer resolves shove by directly calling `WorldMutationService.set_placement`.
+Forced-displacement inputs acting on the same actor in one timestamp are now treated as physical force contributions.
 
-At `combat.contact`, Combat now freezes:
+Movement's shared spatial arbiter now:
 
-- attacker/source physical shove score;
-- target physical resistance score;
-- contact target and direction from the stable incoming contact state.
+- sums frozen force from parallel cardinal inputs;
+- subtracts force from the opposite cardinal direction;
+- derives the resulting net cardinal pressure before displacement is decided;
+- never chooses a winner from callback order, source actor ID, action serial or sorted processing order.
 
-It then submits a forced-displacement trajectory to `MovementActionService`.
+The previous staging behavior that effectively selected the strongest individual shove is superseded.
 
-Movement owns the late same-timestamp spatial transition batch and arbitrates the forced trajectory alongside ordinary movement and other spatial claims.
+## Completed — opposing aggregate force cancels cleanly
 
-This preserves ownership:
+For one actor at one timestamp:
 
-- Combat owns contact/action meaning;
-- actor state owns physical-stat inputs;
-- Movement owns shared spatial transition arbitration;
-- WHAT owns final placement mutation;
-- WHEN owns timestamp/action ordering.
+- east/west pressure oppose one another;
+- north/south pressure oppose one another;
+- exact zero net pressure produces no directional winner;
+- when both axes have non-zero net pressure, the dominant grid axis owns the candidate trajectory;
+- an exact perpendicular-axis tie remains a stalemate rather than inventing a direction.
 
-## Completed — physical scores are frozen before same-tick damage can rewrite them
+This remains a grid simulation. No diagonal displacement has been invented.
 
-Ordinary movement previously derived its physical contest score at the late spatial flush. That allowed damage generated earlier in the same timestamp to reduce HP and therefore weaken an already-earned movement contest.
+## Completed — residual force propagates through one packed actor
 
-That is now corrected.
+Pressure now has a real transmission rule.
 
-When a movement consequence reaches its commit phase and enters the timestamp batch, its canonical physical contest score is frozen immediately.
+For a surviving forced trajectory:
 
-Shove source force and target hold resistance are likewise frozen at combat contact before aggregate same-tick damage mutates HP.
+1. aggregate force acts on the current target;
+2. the resistance already frozen for that current-tick body/trajectory is consumed;
+3. only positive residual force may continue forward;
+4. if the target's outgoing cell is occupied by one actor, that residual force creates an internal propagated pressure candidate on the blocking actor;
+5. the propagated candidate re-enters that actor's same shared trajectory arbitration;
+6. it can combine with an independently earned shove already acting on the downstream body;
+7. outgoing placements are still published atomically through WHAT after dependency resolution.
 
-Therefore:
+Automatic propagation is intentionally capped at **one packed actor** in this slice.
 
-- current-tick injury cannot retroactively weaken a movement consequence already earned for that tick;
-- a lethal wound does not erase the physical force an already-committed shove brought into the transition;
-- outgoing HP/injury state affects future timestamps, not the already-sealed physical consequence.
+This is a staging limit, not a claim that real crowd pressure stops after one body. The next bounded operation should generalize the same rule safely rather than replacing it.
 
-## Completed — shove versus target movement
+## Completed — downstream forces can combine before hold resistance rejects them
 
-A target may have an ordinary movement trajectory already due on the same timestamp when it is shoved.
+Hold resistance is now finalized after one-step propagation.
 
-Movement now resolves these as competing trajectories for the same actor.
+This matters for real crowd behavior.
 
-If movement and shove point to different destinations:
+Example proven by the production verifier:
 
-- frozen target movement score is compared with frozen shove source force;
-- stronger shove wins and the target movement fails with `shoved`;
-- stronger movement wins and the shove does not displace;
-- exact/unknown equality is a trajectory stalemate and the actor remains in its incoming cell.
+- rear infected shoves the front infected;
+- front infected simultaneously shoves the next body;
+- rear shove is strong enough to move the front body but leaves only a small residual;
+- front infected's own shove is individually too weak to move the downstream body;
+- residual rear pressure reaches that downstream body;
+- the residual and the front infected's shove add;
+- the aggregate exceeds downstream resistance;
+- downstream body moves;
+- front body then inherits the cell that downstream body released.
 
-If movement and shove point to the same destination:
+Thus a packed line may surge even when no single shove would have moved the frontmost body.
 
-- they are compatible, not contradictory;
-- the shared destination claim uses the stronger frozen score;
-- shove does not generate an extra square of travel.
+## Completed — static geometry terminates the chain
 
-Ordinary walking still has no displacement authority merely because its actor has a high stat.
+Propagated pressure uses the same collision/occupancy truth as every other spatial trajectory.
 
-## Completed — simultaneous opposing shoves have no hidden winner
+A propagated body cannot move into static/non-ACTOR blocked space.
 
-Multiple forced trajectories on one actor are resolved before final occupancy publication.
+When the downstream actor cannot release its cell:
 
-For equal strongest shove forces pointing to different destinations:
+- its displacement fails;
+- the existing fixed-point occupancy dependency prevents the upstream actor from occupying that cell;
+- pressure does not create phasing or teleportation.
 
-- no attacker ID, callback order, action serial or sort order chooses a winner;
-- all tied opposing displacement trajectories fail;
-- the target remains in place.
+This slice does not yet convert terminated pressure into crush damage, knockdown, fortification damage or another bodily consequence.
 
-Parallel shove trajectories pointing toward the same outgoing destination are currently coalesced onto one destination result without adding their force together.
+## Frozen physical-state rule preserved
 
-That is intentional staging, not final mob force. **Same-direction force aggregation is the next crowd-pressure mechanic and is not claimed complete here.**
+All source force and resistance inputs continue to come from frozen current-tick physical state.
 
-## Completed — forced displacement obeys the same space rules as movement
+Current same-tick damage cannot retroactively weaken a force consequence already sealed into the transition.
 
-A surviving forced trajectory participates in the same spatial transition rules as movement:
+The existing derived physical score remains based on canonical state such as condition-adjusted capacity, load, HP state at sealing time, stance and action/movement intent. No standalone Strength stat was invented.
 
-- destination claims;
-- actor-only occupancy release dependencies;
-- fixed-point failure propagation;
-- physical reciprocal-edge conflicts;
-- static/non-ACTOR collision;
-- atomic `WorldMutationService.set_placements_batch` publication.
+## Zombie AI remains intentionally simple
 
-A shove cannot phase a target through a wall or a surviving actor.
+`FirstInfectedBehaviorService` was inspected but not changed.
 
-Push-chain propagation through bodies is not implemented yet. A forced trajectory that meets an unresolved body remains blocked rather than inventing teleportation.
+It remains an intention selector that submits ordinary movement/combat actions to the existing owners.
 
-## Completed — lethal same-tick contact now publishes death after spatial consequences
+No:
 
-Combat's Health consequence batch no longer closes immediately after applying aggregate same-tick melee damage.
+- crowd steering;
+- formation behavior;
+- mob controller;
+- random stumble routine;
+- special traffic coordinator;
+- per-crowd scripted choreography
 
-It remains open through the late spatial transition flush.
+was added.
 
-The terminal batch-close event is scheduled on the same authoritative timestamp after Movement's spatial flush. `ActorDeathTransitionService` therefore knows HP may already be zero but cannot unplace the actor or create a corpse until every already-earned spatial consequence for that tick has settled.
+The desired behavior is emergent:
 
-Result:
-
-- shove contact can be lethal-hit-adjacent and still resolve;
-- committed movement can survive same-tick lethal melee damage under the established commitment rules;
-- corpse placement inherits the actor's resolved outgoing position.
-
-The actor does not snap back to its incoming position merely because death is terminal.
+- sometimes zombies flow through releases;
+- sometimes they collide;
+- sometimes they jam;
+- sometimes stacked force produces a surge;
+- static geometry can hold the line;
+- later physical stability consequences may make some failed contests become actual stumbles/knockdowns.
 
 ## Focused production verification
 
-Fresh verifier:
+Fresh current verifier/workflow:
 
-- `game/scripts/ci/Phase2CShoveTransitionsSmoke.gd`
-- `.github/workflows/phase2c-shove-transitions.yml`
+- `game/scripts/ci/Phase2CCrowdPressureSmoke.gd`
+- `.github/workflows/phase2c-crowd-pressure.yml`
 
-Functional production head:
+Functional production head/run:
 
-- `355de006567289ac257b0b3437f87946d72c427c`
-
-Initial run:
-
-- `36194296697` — **FAILED**
-- exact failure: lethal-shove fixture left the previous opposing shover occupying the intended displacement destination;
-- this was a focused fixture-state defect, not evidence of production shove ordering;
-- the fixture was repaired by moving that actor out of the destination; assertions were not weakened.
-
-Focused repair head/run:
-
-- `f161e1673fb23e351399f5d778d4cf8efa4fe4d4`
-- run `36194398176` — **SUCCESS**
+- `57c4e6d2f3a8b235640b59053fb88fcc8e655ef9`
+- run `36195331005` — **SUCCESS**
 
 Marker:
 
-`PHASE2C_SHOVE_TRANSITIONS_OK shove_beats_move=true opposing_tie=true corpse_after_displacement=true`
+`PHASE2C_CROWD_PRESSURE_OK aggregate=true one_body_propagation=true opposing_cancel=true static_termination=true`
 
-The real production scene proves:
+The verifier boots the real production scene and proves:
 
-### Shove versus committed movement
+### Aggregate plus one-body propagation
 
-- target begins an ordinary move;
-- shove is started later so its contact and the target's movement commitment mature on the same timestamp;
-- stronger shove force wins the target's trajectory;
-- target ends in the shove destination;
-- target movement fails explicitly with `shoved`;
-- shove resolves `displaced=true`.
+Three infected form a packed line.
 
-### Equal opposing shoves
+The rear and middle infected both perform real `combat.shove` actions on the same contact timestamp.
 
-- equal physical attackers shove the same stationary target from opposite sides on one contact timestamp;
-- target remains in place;
-- both shoves report no displacement;
-- no hidden initiative chooses an attacker.
+The rear shove transmits residual force through the middle actor. That residual combines with the middle actor's own independently earned shove. The downstream target moves even though neither downstream contribution alone is sufficient. The middle actor then moves into the released cell.
 
-### Lethal hit plus shove
+Both contributing real shoves report successful displacement through their causal linked results.
 
-- shove and unarmed strike reach the same 1-HP target on one combat contact timestamp;
-- strike reduces canonical HP to zero;
-- death publication stays deferred;
-- already-earned shove displaces the actor;
-- terminal death then creates the corpse at that post-shove outgoing cell;
-- shove reports `displaced=true`.
+### Opposing aggregate cancellation
+
+The public forced-trajectory seam applies two same-direction contributions whose total exactly equals an opposing contribution.
+
+The target remains at its incoming cell. No source/action ordering chooses a direction.
+
+### Static termination
+
+A strong pressure chain is placed against real production static blocked geometry.
+
+The downstream actor cannot enter the blocked endpoint, so fixed-point dependency prevents the upstream packed body from advancing. Nobody phases through the obstacle.
 
 ## Durable documentation updated
 
-- `DESIGN_DECISIONS.md` records shove as a forced trajectory and terminal death after outgoing spatial truth.
-- `SYSTEM_DESIGNS/02_MOVEMENT_ACTIONS.md` records forced-displacement arbitration, frozen physical scores and focused evidence.
-- `SYSTEM_DESIGNS/37_TACTICAL_COMBAT_PHYSICAL_IMPACT.md` records shove/contact/death integration.
-- `ROADMAP.md` advances Phase 2 beyond shove-vs-move and cross-system melee death/movement ordering.
-- `CHANGELOG_LATEST.md` records implementation and both focused runs.
+- `DESIGN_DECISIONS.md` records crowd pressure as aggregate emergent force rather than authored zombie behavior.
+- `SYSTEM_DESIGNS/02_MOVEMENT_ACTIONS.md` records aggregate force, residual transmission, one-body propagation and focused evidence.
+- `SYSTEM_DESIGNS/37_TACTICAL_COMBAT_PHYSICAL_IMPACT.md` records how real shove contacts feed the aggregate spatial pressure seam.
+- `ROADMAP.md` advances Phase 2 through the first mob-pressure primitive.
+- `CHANGELOG_LATEST.md` records the implementation and focused run.
 
-## Emergence direction
+## Scope note — humans and pets
 
-Newest user direction is to **let the simulation win** rather than authoring zombie crowd choreography.
+Living survivor NPC society, raiders, human followers, recruitment/dialogue and social simulation remain retired.
 
-Zombies should remain intentionally simple/bumbling actors whose ordinary intentions interact through the physical transition system. Desired crowd behavior should emerge from:
+Pets are expected to return later as a distinct bounded feature. They should use the same ordinary intent, movement, occupancy and physical consequence rules rather than restoring the retired human follower/social architecture.
 
-- occupancy;
-- conflicting trajectories;
-- body resistance;
-- momentum / shove force;
-- bottlenecks;
-- released cells;
-- failed releases;
-- pressure through neighboring bodies;
-- injuries / condition;
-- environment geometry.
-
-Do not add a cosmetic/random `stumble` routine merely to make zombies look dumb. Stumble/knockdown should eventually be a physical outcome of losing force/trajectory/stability contests.
-
-It is acceptable and desirable for the same rules to sometimes produce unexpectedly orderly flow and sometimes jams/collisions.
-
-## Scope note — followers versus pets
-
-Human survivor followers/recruitment/social runtime remain retired.
-
-The user clarified that an earlier reference to `followers` should not restore that system. However, the user expects **pets to return eventually** as a distinct future feature. Pets should later use ordinary physical movement/intent/world rules rather than resurrecting the retired human follower/social simulation.
-
-No pet runtime is part of Phase 2C and none was added in this operation.
+No pet runtime was added here.
 
 ## What this slice does NOT claim
 
@@ -235,71 +207,79 @@ Phase 2 remains open.
 
 Not yet complete:
 
-- additive same-direction zombie/crowd force;
-- push-chain force propagation through packed actors;
-- force loss/transmission through geometry;
+- automatic pressure propagation beyond one packed actor;
+- arbitrary-depth pile compression;
+- attenuation/transmission rules across a longer body chain;
+- cycle/loop protection for deeper pressure graphs;
 - knockdown / stumble / prone stability consequences;
-- impact/crush consequences when pressure terminates against walls/doors/bodies;
-- door/fortification pressure aggregation and breakage;
+- crush / impact injury from pressure terminating against walls or bodies;
+- door / barricade / fortification pressure damage;
+- fear tuning/effects;
 - firearm/movement same-tick ordering;
-- canonical fear tuning/effects;
 - zombie callback/perception performance;
 - overlapping consequence presentation;
 - crowded-fight/Safari performance acceptance.
 
-The current forced-trajectory seam is intentionally shaped so these can emerge from one shared physical transition model rather than parallel special cases.
+Do not add random stumbling merely for appearance. If stumble/knockdown is added, it should be a consequence of the physical transition/stability model.
 
 ## Current release direction
 
-The game remains primarily player versus zombies. Living survivor NPC society, raiders, human followers, recruitment/dialogue and live social simulation remain retired.
+Core loop remains: **scavenge, fight, craft, survive** on the persistent map with day/night, weather, power, water and vehicles.
 
-Core loop: scavenge, fight, craft, survive on the persistent map with day/night, weather, power and water. A base is an existing fortified house/building with supplies, generator and well.
+A base is an existing fortified house/building with supplies, generator and well.
+
+The game remains primarily player versus zombies. Human society simulation remains out of release scope.
 
 Phase-2 executable foundations now include:
 
 1. explicit interruptible -> committed action windows;
 2. simultaneous melee hit/damage semantics;
-3. deferred terminal death after current-tick consequence resolution;
+3. deferred terminal death after surviving current-tick spatial consequences;
 4. conditional origin releases / destination arrival claims;
 5. atomic compatible movement chains;
 6. stat-based exclusive destination contests;
 7. head-on reciprocal edge conflicts;
-8. shove as a frozen forced trajectory sharing the same spatial arbiter;
-9. shove-vs-target-movement trajectory competition;
-10. no-hidden-initiative opposing shove ties;
-11. corpse placement at resolved outgoing position.
+8. shove as a frozen forced trajectory;
+9. shove-vs-movement trajectory competition;
+10. aggregate same-actor forced pressure;
+11. opposing aggregate cancellation without hidden initiative;
+12. one-packed-body residual force transmission;
+13. downstream force combination;
+14. static endpoint termination without phasing.
 
 ## NEXT OPERATION
 
-Continue Phase 2 with the first genuine **crowd-pressure / mob-force** slice while staying faithful to the simulation-first direction.
+Continue Phase 2C by generalizing one-body pressure transmission into a **bounded multi-body pressure chain** using the same simulation-first physical rules.
 
 Targeted starting reads only:
 
-- current forced-displacement / actor-trajectory logic in `MovementActionService`;
-- `MovementPhysicalContestProvider.gd` / `ActorPhysicalContestQuery.gd`;
-- current infected action-selection call site only as needed to prove ordinary zombies naturally generate relevant contacts;
-- existing stance/Health/condition inputs only if needed by the physical result;
-- door/static collision only if required by the focused pressure endpoint test.
+- current aggregate force / `_propagate_forced_pressure_one_step` path in `MovementActionService`;
+- current forced candidate bookkeeping / linked-result handling;
+- current occupancy fixed-point and edge-conflict pass;
+- physical contest provider only if one existing frozen input is needed.
 
 Required bounded outcomes:
 
-- multiple same-direction shove/pressure inputs on one actor combine physically rather than selecting one attacker;
-- opposing directional forces resolve from aggregate frozen forces, not callback order;
-- pressure can propagate through at least one packed actor when downstream space is available, using the same conditional-release / outgoing-occupancy model;
-- if the chain terminates against static blocked space, nobody phases through it;
-- do not create authored zombie formation logic, crowd steering or random stumble behavior;
-- do not tune fear yet;
-- do not build a complete knockdown/crush model yet unless a minimal typed consequence is required by actual pressure resolution;
-- preserve all completed movement, shove, melee and terminal-death semantics.
+- residual pressure may propagate through multiple contiguous packed actors in one timestamp;
+- each body's frozen resistance consumes force before any residual continues;
+- a downstream independently earned force contribution can join propagated pressure at the correct body;
+- propagation terminates naturally when residual force is exhausted;
+- propagation terminates at static geometry;
+- propagation has explicit cycle/duplicate protection and a finite bound so malformed/cyclic occupancy can never create an infinite resolver;
+- all final actor placements remain one atomic outgoing spatial state;
+- no authored zombie crowd logic;
+- no random stumble;
+- no crush/knockdown/fear tuning yet;
+- preserve all completed movement, shove, damage/death and one-tick causal ordering semantics.
 
-The goal is the smallest real force-propagation primitive from which zombie jams, surges and pile pressure can emerge naturally.
+The goal is to make a longer packed zombie column behave through the same mechanics already proven for one body, then inspect what emerges before adding stability or injury consequences.
 
-Before changing code, delete the current prompt-local verifier pair:
+Before changing code, delete the current prompt-local pair:
 
-- `game/scripts/ci/Phase2CShoveTransitionsSmoke.gd`
-- `.github/workflows/phase2c-shove-transitions.yml`
+- `game/scripts/ci/Phase2CCrowdPressureSmoke.gd`
+- `.github/workflows/phase2c-crowd-pressure.yml`
 
-Then create a fresh focused verifier/workflow scoped only to aggregate crowd-pressure / one-chain propagation.
+Then create a fresh prompt-local verifier/workflow scoped only to bounded multi-body pressure transmission and termination.
 
 ## Protected behavior
 
@@ -310,15 +290,17 @@ Preserve:
 - Phase-2A commitment offsets;
 - Phase-2B simultaneous melee contacts/damage;
 - terminal death after surviving same-tick spatial consequences;
-- frozen physical scores for current-tick trajectory resolution;
+- frozen physical scores for current-tick force/trajectory resolution;
 - stat-based same-destination arbitration;
 - release-chain/fixed-point movement semantics;
 - head-on reciprocal walk conflict;
 - shove-vs-move trajectory arbitration;
-- equal opposing shove no-hidden-winner behavior;
+- aggregate/opposing force semantics from this slice;
+- one-body residual transmission semantics as the base case;
 - stable pre-contact melee target snapshot;
 - existing eight resident-backed infected startup cohort;
 - no live survivor/raider/human-follower/social runtime;
+- pets only as future bounded scope;
 - player movement, Health/injury, inventory, condition/moodlets, skills and equipment;
 - day/night, weather, utilities and vehicles;
 - persistent world changes and terrain/streaming improvements;
