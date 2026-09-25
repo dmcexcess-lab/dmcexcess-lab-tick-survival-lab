@@ -10,6 +10,11 @@ const HeardFear = preload("res://scripts/simulation/actors/condition/ConditionHe
 const CombatActions = preload("res://scripts/simulation/combat/CombatActionService.gd")
 
 func _initialize() -> void:
+    var watchdog := create_timer(30.0)
+    watchdog.timeout.connect(func() -> void:
+        push_error("PHASE2_FEAR: verifier watchdog expired")
+        quit(1)
+    )
     call_deferred("_run")
 
 func _fail(message: String) -> void:
@@ -73,7 +78,7 @@ func _run() -> void:
         _fail("could not establish calm baseline")
         return
 
-    # 1) Same-tick fear inputs aggregate exactly once and cap at 20 Calm.
+    print("PHASE2_FEAR_STAGE aggregate")\n\n    # 1) Same-tick fear inputs aggregate exactly once and cap at 20 Calm.
     var resolved: Array[Dictionary] = []
     fear.fear_resolved.connect(func(actor_id: String, pressure: int, before: int, after: int, _tb: StringName, _ta: StringName, sources: Array, tick: int) -> void:
         resolved.append({
@@ -99,7 +104,7 @@ func _run() -> void:
         _fail("fear aggregation lost source categories")
         return
 
-    # 2) Calm is no longer a hidden generic body-stat penalty.
+    print("PHASE2_FEAR_STAGE explicit_effects")\n\n    # 2) Calm is no longer a hidden generic body-stat penalty.
     if not condition.set_condition(player, ConditionState.CALM, 60, &"composed"):
         _fail("could not set composed calm")
         return
@@ -126,7 +131,7 @@ func _run() -> void:
         _fail("Terrified player feedback is missing")
         return
 
-    # 3) Fear slows a deliberate melee strike but not locomotion or shove escape.
+    print("PHASE2_FEAR_STAGE timing")\n\n    # 3) Fear slows a deliberate melee strike but not locomotion or shove escape.
     var line: Array[Vector2i] = _find_clear_horizontal_run(query, world.placement(player).anchor, 4)
     if line.size() != 4:
         _fail("could not find fear timing fixture")
@@ -188,7 +193,7 @@ func _run() -> void:
         _fail("deliberate-action fear timing is not wired across production services")
         return
 
-    # 4) Injury shock and physical crowd pressure feed the same aggregate owner.
+    print("PHASE2_FEAR_STAGE sources")\n\n    # 4) Injury shock and physical crowd pressure feed the same aggregate owner.
     resolved.clear()
     if not condition.set_condition(player, ConditionState.CALM, 60, &"injury_pressure_test"):
         _fail("could not reset injury fear fixture")
@@ -227,7 +232,7 @@ func _run() -> void:
         _fail("resolved body pressure did not create fear pressure")
         return
 
-    # 5) Existing visual/sound adapters use explicit bounded observations.
+    print("PHASE2_FEAR_STAGE classification")\n\n    # 5) Existing visual/sound adapters use explicit bounded observations.
     if PerceptionFear._band_for_distance(1) != PerceptionFear.BAND_CONTACT         or PerceptionFear._band_for_distance(4) != PerceptionFear.BAND_NEAR         or PerceptionFear._band_for_distance(7) != PerceptionFear.BAND_FAR:
         _fail("visual fear bands are incorrect")
         return
@@ -235,7 +240,7 @@ func _run() -> void:
         _fail("heard fear classification is incorrect")
         return
 
-    # 6) Fear recovers analytically toward neutral on game time, with no fear loop.
+    print("PHASE2_FEAR_STAGE recovery")\n\n    # 6) Fear recovers analytically toward neutral on game time, with no fear loop.
     condition.set_condition(player, ConditionState.CALM, 0, &"recovery_test")
     var future_tick: int = kernel.world_tick() + time_profile.ticks_per_hour()
     var future_raw: Dictionary = modifiers.raw_values_at(player, future_tick)
