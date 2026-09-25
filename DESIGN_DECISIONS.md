@@ -8,6 +8,26 @@ If a later discussion changes a decision, do not erase history. Add a newer entr
 
 ---
 
+## 2026-09-25 — Crowd pressure is aggregate force, not authored crowd behavior
+
+**Decision:** Mob pressure is an emergent physical consequence of ordinary actor force inputs inside the shared `S_t -> transition -> S_t+1` spatial resolver. Do not add zombie formation logic, crowd steering, cosmetic random stumbling, or attacker-order shortcuts to manufacture the desired look.
+
+For one actor at one timestamp:
+
+- parallel forced-displacement inputs add their frozen force;
+- opposite cardinal inputs subtract from that aggregate;
+- equal net force produces no directional winner;
+- perpendicular net components use the dominant grid axis; an exact axis tie is a stalemate rather than an arbitrary turn/order winner;
+- only residual force remaining after overcoming the current body's resistance may transmit into the next packed actor;
+- one-step transmitted pressure re-enters the same actor trajectory arbitration and can combine with force already acting on that downstream body;
+- a static endpoint terminates displacement; pressure never phases actors through walls or other non-displaceable geometry.
+
+This first implementation intentionally limits automatic transmission to one packed actor per transition. It establishes the real propagation primitive without yet claiming arbitrary-depth pile compression, knockdown, crush damage, fortification damage or fear.
+
+**Emergence rule:** zombie AI continues to submit ordinary simple intentions. Jams, surges, accidental orderly flow and body pressure should arise from geometry, occupancy, releases, resistance and force—not from choreography written into infected behavior.
+
+---
+
 ## 2026-09-25 — Shove is a forced trajectory inside the tick transition
 
 **Decision:** `combat.shove` no longer mutates placement at combat callback time. Contact seals a forced trajectory from the target's incoming placement, with source force and target resistance frozen before same-timestamp damage mutates HP. That trajectory enters the same late spatial arbitration used by ordinary movement.
