@@ -27,6 +27,19 @@ jobs:
         run: |
           set -euxo pipefail
           ./Godot_v4.7.1-stable_linux.x86_64 --headless --editor --path "$GITHUB_WORKSPACE/game" --quit
+      - name: Check fear-touched script chain
+        shell: bash
+        run: |
+          set -euxo pipefail
+          for script in \
+            res://scripts/simulation/actors/condition/ActorFearPressureService.gd \
+            res://scripts/simulation/actors/locomotion/ActorPhysicalContestQuery.gd \
+            res://scripts/simulation/combat/FirearmActionService.gd \
+            res://scripts/app/System34GameMain.gd \
+            res://scripts/app/CombatGameMain.gd
+          do
+            ./Godot_v4.7.1-stable_linux.x86_64 --headless --path "$GITHUB_WORKSPACE/game" --check-only --script "$script"
+          done
       - name: Verify canonical fear
         shell: bash
         run: |
