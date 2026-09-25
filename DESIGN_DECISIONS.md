@@ -8,6 +8,26 @@ If a later discussion changes a decision, do not erase history. Add a newer entr
 
 ---
 
+## 2026-09-25 — Shove is a forced trajectory inside the tick transition
+
+**Decision:** `combat.shove` no longer mutates placement at combat callback time. Contact seals a forced trajectory from the target's incoming placement, with source force and target resistance frozen before same-timestamp damage mutates HP. That trajectory enters the same late spatial arbitration used by ordinary movement.
+
+Consequences:
+
+- a target's own committed movement and an incoming shove are competing trajectories for one actor;
+- if they point in different directions, frozen physical scores decide which trajectory survives; ties leave the actor in place;
+- if shove and movement point to the same destination, they are compatible rather than contradictory; the stronger frozen score supports the shared claim without creating an extra square of movement;
+- equal opposing simultaneous shoves do not receive an attacker-order winner;
+- ordinary walking still has no implicit displacement authority;
+- static blockers remain absolute in this slice;
+- forced trajectories participate in destination claims, occupied-cell release dependencies and physical edge conflicts instead of bypassing them.
+
+**Terminal ordering:** Combat keeps its Health consequence batch open until after the late spatial transition flush. A lethal hit therefore cannot retroactively erase a shove/move that already earned consequence on the same timestamp. Death/corpse publication then uses the actor's resolved outgoing position.
+
+This is the first cross-system executable realization of the approved `S_t -> transition -> S_t+1` ordering. Same-direction crowd-force aggregation, push-chain propagation and crush/impact pressure remain later work.
+
+---
+
 ## 2026-09-25 — A tick is a causal state transition, not serial mini-turns
 
 **Decision:** Canonical simulation reasoning is `S_t -> transition -> S_t+1`. Everything whose consequence point has matured into the current WHEN timestamp is sealed first; those consequences are then resolved together from stable incoming truth; only afterward is the resulting world state published forward.
