@@ -8,6 +8,29 @@ If a later discussion changes a decision, do not erase history. Add a newer entr
 
 ---
 
+## 2026-09-25 — Crowd-pressure core is closed at the physics layer
+
+**Decision:** Crowd pressure is now considered a complete core physical primitive for release work. Do not keep subdividing it into progressively smaller architecture slices.
+
+Ordinary actor locomotion contributes contact force when a committed movement trajectory enters an occupied actor cell. The movement itself still does not bypass occupancy; instead its frozen locomotion score becomes pressure on the blocking body. That pressure then uses the same aggregate force/resistance/trajectory solver as shove.
+
+Consequences:
+
+- simple zombie pursuit automatically creates body pressure when zombies crowd one another;
+- no infected-specific shove policy, formation controller or crowd script is required;
+- aligned body force may propagate through multiple contiguous actors in one timestamp;
+- each body's frozen resistance consumes force before residual pressure continues;
+- independently earned downstream force can combine with transmitted pressure;
+- pressure stops when exhausted or when static geometry prevents the downstream release;
+- propagation is explicitly bounded and carries a visited actor path, so malformed/cyclic occupancy cannot recurse forever;
+- all surviving positions still publish as one atomic outgoing spatial state.
+
+This closes the **mob-force core**. Knockdown/stumble, crush injury and fortification damage are downstream consequence mechanics and should be added only when their owning release/balance work calls for them; they are not reasons to keep reopening crowd-pressure architecture.
+
+This supersedes the earlier provisional statement that ordinary walking has no displacement authority at all. Walking still cannot directly choose to displace another actor, but committed locomotion contact contributes real physical force to the shared pressure system.
+
+---
+
 ## 2026-09-25 — Crowd pressure is aggregate force, not authored crowd behavior
 
 **Decision:** Mob pressure is an emergent physical consequence of ordinary actor force inputs inside the shared `S_t -> transition -> S_t+1` spatial resolver. Do not add zombie formation logic, crowd steering, cosmetic random stumbling, or attacker-order shortcuts to manufacture the desired look.
