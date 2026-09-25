@@ -2,163 +2,181 @@
 
 Read this file first, then `README_SOPS.md`. Fetch current `main` once before the next repository operation.
 
-## Current checkpoint — SURVIVAL RELEASE PHASE 2C STAT-BASED PHYSICAL CONTESTS COMPLETE — 2026-09-25
+## Current checkpoint — SURVIVAL RELEASE PHASE 2C CAUSAL TRANSITION EDGES COMPLETE — 2026-09-25
 
-Phase 1 remains complete. Phase 2A commitment windows, Phase 2B simultaneous melee hit/death semantics, and Phase 2C same-tick walk batching remain protected.
+Phase 1 remains complete. Phase 2A commitment windows, Phase 2B simultaneous melee hit/death semantics, and prior Phase-2C stat-based same-destination arbitration remain protected.
 
-This bounded continuation refines the provisional same-destination movement rule using the user's newly approved principle:
+This bounded slice implements the first executable correction from the user's newly approved full tick model:
 
-> When simultaneous physical outcomes genuinely compete for one exclusive result, defer to frozen canonical actor stats/state rather than callback order, actor ID, queue order, or arbitrary initiative.
+> A tick is a causal transition from `S_t` to `S_t+1`: consequences already earned for the timestamp are sealed, interactions/occupancy are resolved from stable incoming truth, then outgoing world truth is published. Same-timestamp actors do not take serial mini-turns.
 
-Starting main for this operation: `4e8981b4cd79b8ac9a69f3da64f7c894e1003bbb`.
+Starting main for this operation: `0f4cb77d3e780bbfd16903cb13ec339227c5ea57`.
 
-Functional/executable owning head: `1689fb3124641b7a9abacfc9010fbc7056951e5f`.
+Functional/executable owning head: `54a62812bf692816ebf8907ff3f1c91e85296f41`.
 
-Focused verifier owning run: `36189772342` — **SUCCESS**.
+Focused verifier head/run: `54a62812bf692816ebf8907ff3f1c91e85296f41` / `36192545127` — **SUCCESS**.
 
-Documentation head immediately before this final handoff write: `4c11bb56a0d4c215c6ba7d95b1512048aa3195ef`.
+Documentation head immediately before this final handoff write: `223aed4ae439c77ecc5b990b0705b5afc77085d1`.
 
 This `README_CONTEXT.md` commit is the final repository write for the operation. Identify its exact SHA from `main`; everything after it is read-only verification.
 
 ## Prompt-local verifier lifecycle
 
-The prior Phase-2C walk-arbitration pair was deleted before this code work:
-
-- `game/scripts/ci/Phase2CMovementConflictsSmoke.gd`
-- `.github/workflows/phase2c-movement-conflicts.yml`
-
-Fresh current pair:
+The preceding Phase-2C stat-contest pair had already been deleted before this slice's implementation:
 
 - `game/scripts/ci/Phase2CStatContestsSmoke.gd`
 - `.github/workflows/phase2c-stat-contests.yml`
 
+Fresh current pair:
+
+- `game/scripts/ci/Phase2CTransitionEdgesSmoke.gd`
+- `.github/workflows/phase2c-transition-edges.yml`
+
 The next code prompt must delete this pair before changing code and create its own focused verifier/workflow.
 
-## User-approved physical conflict principle
+## User-approved canonical tick model
 
-The user explicitly approved this broader design rule on 2026-09-25:
+The user approved the following simulation model on 2026-09-25.
 
-- when an edge case involves competing physical outcomes, prefer existing actor stats/state;
-- evaluate those stats from the same frozen simultaneous timestamp;
-- never fall back to callback order, actor ID or queue order as initiative;
-- a genuine exact stat tie may remain unresolved/stalemated rather than inventing a winner.
+Canonical conceptual order:
 
-This extends the earlier no-internal-initiative tick rule. It does not mean every simultaneous action needs a contest; independent consequences still all happen. The comparison is for genuinely exclusive physical outcomes such as two actors claiming one space or later opposing displacement/force.
+1. **Seal incoming consequences** whose commitment/contact matured at the current authoritative WHEN timestamp.
+2. **Describe the transition** from the stable incoming state: conditional origin releases, movement trajectories/edges, contact facts, destination claims, shove/pressure forces, topology releases.
+3. **Resolve physical interaction** without callback order, actor ID, queue order or hidden initiative.
+4. **Solve occupancy dependencies** to a fixed point.
+5. **Publish final spatial truth atomically.**
+6. **Apply bodily/condition consequences** produced by already-established contact/force facts.
+7. **Publish terminal outgoing truth** such as incapacitation, death and corpse placement.
+8. The resulting stable world is `S_t+1`; only that outgoing state becomes incoming truth for new decisions.
 
-## Completed
+This is a causal order of consequence categories, not an initiative order among actors.
 
-### Narrow physical-contest provider seam
+### Important derived distinction
 
-Added:
+A movement `X -> Y` is conceptually two linked transition facts:
 
-- `game/scripts/simulation/movement/MovementPhysicalContestProvider.gd`
-- `game/scripts/simulation/actors/locomotion/ActorPhysicalContestQuery.gd`
+- a **conditional release** of origin X;
+- an **arrival claim** on Y for the outgoing state.
 
-`MovementActionService` consumes only the narrow read-only provider. It does not import Health, Carry, condition or actor-state internals.
+The origin release becomes effective only if the movement survives arbitration and the actor actually leaves X.
 
-`System34GameMain` composes the production actor query after canonical condition-adjusted Carry state is available and injects it into Movement.
+This is why a follower may move into a cell vacated by another actor on the same timestamp, while a failed upstream movement can propagate failure backward through dependent followers.
 
-### No invented Strength stat
+## Completed — reciprocal walk is now a head-on edge conflict
 
-There is currently no dedicated persistent Strength attribute in the live actor model. This operation deliberately does not create one merely to settle movement contests.
+Prior Phase-2C code allowed two adjacent actors walking directly into each other's occupied cells to atomically swap.
 
-The current derived physical score uses existing canonical facts:
+That provisional behavior is now superseded.
 
-- condition-adjusted carry capacity;
-- current carried load;
-- current HP relative to max HP;
-- locomotion stance;
-- movement intent.
+For ordinary walking:
 
-Current interpretation:
+- `A: X -> Y`
+- `B: Y -> X`
 
-- greater physical/carry capacity increases contest force;
-- load reduces usable force smoothly;
-- low HP/injury-state health loss reduces present physical effectiveness;
-- crouched movement has less forward leverage than standing movement;
-- running contributes more movement momentum than a walk;
-- backward movement contributes less than forward movement.
+is an **opposing traversal of the same physical edge**.
 
-If a dedicated body/Strength attribute is introduced later, it should extend `ActorPhysicalContestQuery`; it must not create a parallel physical-conflict system.
+The actors meet. They do not phase through one another.
 
-### Same-destination outcome
+`MovementActionService` now detects this reciprocal edge traversal during the same timestamp arbitration pass and marks both walkers with:
 
-When two or more movement candidates claim the same destination cell on one timestamp:
+`movement_edge_conflict`
 
-1. all candidates still come from the same pre-resolution occupancy state;
-2. each claimant receives a frozen derived physical score;
-3. a unique highest score wins that exclusive destination;
-4. losing claimants fail with `target_contest_lost`;
-5. if the highest score is tied, or required stat truth is unknown, the contest remains a stalemate and tied claimants fail with `target_contest_tied`;
-6. there is no random, actor-ID or callback-order tiebreaker.
+Both remain in their incoming cells.
 
-The earlier rule that all same-destination claimants automatically fail is superseded. It remains the effective fallback only when there is no unique physical-stat winner.
+No stat comparison is used to let an ordinary walker push through another actor; displacement authority belongs to actual force mechanics such as shove, run impact and future mob pressure.
 
-### Existing Phase-2C spatial rules preserved
+## Completed — same-direction release chains still work
 
-- reciprocal swaps may still succeed atomically when both actors vacate;
-- compatible vacating chains/cycles retain fixed-point blocking semantics;
-- static/non-ACTOR blockers remain blockers;
-- successful placement still uses `WorldMutationService.set_placements_batch`;
-- walk remains CANCELABLE during wind-up and COMMITTED at its final `movement.commit` boundary;
-- run/turn behavior outside this contest remains unchanged.
+This correction does not turn incoming occupancy into a permanent blocker for the whole timestamp.
+
+Example:
+
+- A begins in X and claims Y;
+- B begins in Y and claims Z;
+- C begins in Z and claims W;
+- W is genuinely available.
+
+If all three same-timestamp moves survive arbitration, B's departure releases Y for A and C's departure releases Z for B. The placement batch publishes:
+
+- A -> Y
+- B -> Z
+- C -> W
+
+atomically.
+
+If an upstream departure fails in a later dependency case, the existing fixed-point logic still removes dependent followers rather than allowing phasing.
 
 ## Focused production verification
 
-Functional production head/run:
+Fresh focused production run:
 
-- `1689fb3124641b7a9abacfc9010fbc7056951e5f`
-- run `36189772342` — **SUCCESS**
+- functional head: `54a62812bf692816ebf8907ff3f1c91e85296f41`
+- run: `36192545127` — **SUCCESS**
 
 Marker:
 
-`PHASE2C_STAT_CONTESTS_OK unequal_winner=<resident actor> tied_stalemate=true`
+`PHASE2C_TRANSITION_EDGES_OK reciprocal_blocked=true release_chain=true`
 
-The real production scene proves:
+The production scene proves:
 
-### Unequal canonical physical stats
+### Reciprocal head-on edge
 
-- two production infected are placed on opposite sides of one empty cell;
-- both submit ordinary forward walks with the same due timestamp;
-- one actor's canonical carry capacity is set to 24,000 g and the other's to 12,000 g;
-- neither capacity change affects the movement timestamp in this zero-load fixture;
-- the higher derived physical score wins the destination;
-- the weaker actor stays at origin and receives `target_contest_lost`.
+- two production infected begin in adjacent cells;
+- both ordinary walk actions are admitted to the same timestamp arbitration;
+- each claims the other's incoming cell;
+- neither actor swaps through the other;
+- both remain at origin;
+- both fail explicitly with `movement_edge_conflict`.
 
-### Exact physical tie
+### Three-actor release chain
 
-- both actors are reset to equal 18,000 g canonical carry capacity with otherwise equivalent focused state;
-- both again claim the same cell on the same timestamp;
-- neither actor moves;
-- both receive `target_contest_tied`;
-- no ID/order tiebreaker appears.
+- three production infected occupy consecutive cells facing the same direction;
+- all three walks share the same due timestamp;
+- the leading destination is empty;
+- all three placements advance atomically by one cell;
+- trailing actors successfully inherit cells released ahead of them.
+
+This directly verifies the distinction between **leaving a cell** and **arriving into a cell**.
+
+## Existing rules preserved
+
+- same-destination claims still use the approved frozen canonical physical-stat contest;
+- a unique highest physical score may win an exclusive empty destination;
+- exact/unknown top score remains a stalemate;
+- actor ID/callback/sorted queue order never becomes initiative;
+- static/non-ACTOR blockers remain blockers;
+- compatible non-reciprocal release chains/cycles retain fixed-point dependency semantics;
+- successful placements still publish through `WorldMutationService.set_placements_batch`;
+- walk remains CANCELABLE before its final commitment point and COMMITTED once that point matures;
+- Phase-2B same-tick melee contacts/damage/deferred death remain protected.
 
 ## Durable documentation updated
 
-- `DESIGN_DECISIONS.md` records the approved stat-first physical-conflict principle and explicitly supersedes automatic all-fail same-destination arbitration.
-- `SYSTEM_DESIGNS/02_MOVEMENT_ACTIONS.md` documents the provider boundary, score inputs, unique-winner/tie semantics and focused evidence.
-- `ROADMAP.md` now describes Phase-2C shared-space contests as stat-based.
-- `CHANGELOG_LATEST.md` records the executable slice and focused run.
+- `DESIGN_DECISIONS.md` now records the canonical `S_t -> transition -> S_t+1` causal model and the distinction between origin release and destination arrival.
+- `SYSTEM_DESIGNS/02_MOVEMENT_ACTIONS.md` now replaces unconditional reciprocal-swap language with head-on edge-conflict semantics and records the focused verifier.
+- `ROADMAP.md` reflects valid release chains versus invalid reciprocal ordinary-walk swaps.
+- `CHANGELOG_LATEST.md` records this executable slice and verifier evidence.
 
 ## What this slice does NOT claim
 
 Phase 2 remains open.
 
-This operation does not yet implement or close:
+This operation implements only the movement-edge correction from the larger approved tick model. It does not yet close:
 
-- shove-vs-move arbitration;
+- shove-vs-move trajectory arbitration;
 - simultaneous opposing shoves/displacements;
-- group/zombie mob-force accumulation;
-- opening/fortification force aggregation;
-- dedicated persistent Strength/body-mass attributes;
-- cross-system committed movement/displacement versus same-tick lethal death;
+- same-direction force aggregation / zombie mob pressure;
+- push-chain force propagation;
+- impact/crush consequences when force terminates against an immovable blocker;
+- final cross-system committed consequence versus same-tick lethal death ordering;
+- door/topology transition participation in the same pipeline;
 - firearm/movement interaction;
-- final fear tuning/effects;
+- canonical fear tuning;
 - zombie callback/perception performance;
-- coherent presentation of overlapping consequences;
+- overlapping consequence presentation;
 - crowded-fight/Safari performance acceptance.
 
-The current contest score is a real derived rule over canonical state, not a claim that the final body-model vocabulary is complete.
+Do not claim the entire causal transition pipeline is executable yet. Its ordering is now an approved design contract being implemented in bounded slices.
 
 ## Current release direction
 
@@ -166,38 +184,46 @@ The game remains player versus zombies. Living survivor NPCs, raiders, followers
 
 Core loop: scavenge, fight, craft, survive on the persistent map with day/night, weather, power and water. A base is an existing fortified house/building with supplies, generator and well.
 
-Phase-2 foundations now include:
+Phase-2 executable foundations now include:
 
 1. explicit interruptible -> committed action windows;
 2. simultaneous melee hit/damage/death semantics;
-3. same-tick movement batching with atomic swaps/chains;
-4. stat-based resolution of exclusive shared-space physical contests.
+3. same-tick occupancy batching and fixed-point release chains;
+4. stat-based exclusive shared-space contests;
+5. head-on reciprocal movement-edge conflict detection.
 
 ## NEXT OPERATION
 
-Continue Phase 2C by routing combat shove/displacement through the same physical-contest seam and timestamp arbitration.
+Continue Phase 2C by routing combat shove/displacement into the approved causal transition model.
 
 Targeted starting reads only:
 
-- `CombatActionService._apply_resolution_batch` and `_resolve_shove`;
+- `CombatActionService._apply_resolution_batch` / current shove resolution path;
+- current `MovementActionService` timestamp candidate/arbitration seam;
 - `MovementPhysicalContestProvider.gd` / `ActorPhysicalContestQuery.gd`;
-- current `MovementActionService` timestamp-arbitration/public seam;
-- `ActorHealthState` consequence batch and `ActorDeathTransitionService` only where necessary for same-tick death/displacement closure;
-- production composition only for exact wiring.
+- `ActorHealthState` consequence-batch boundary and `ActorDeathTransitionService` only for the exact same-timestamp terminal ordering seam;
+- production composition only where one public seam must be wired.
 
-Required behavior:
+Required outcomes for the next bounded slice:
 
-- shove force versus a moving/holding actor is decided from frozen canonical physical stats/state, not attacker order;
-- opposing simultaneous displacements cannot use actor ID or callback order as a winner;
-- movement momentum/stance/load/health/current physical capacity remain reusable inputs;
-- mob force later aggregates through this same physical contest model rather than bypassing it;
-- static blockers remain absolute unless a separate real damage/breakage mechanic changes them;
-- an already-committed same-tick physical consequence is not retroactively erased merely because its actor is lethally hit on that same tick;
-- preserve Phase-2B mutual lethal hits and all Phase-2C walk/swap/stat-contest semantics.
+- shove contact is sealed as an incoming current-timestamp consequence rather than immediately mutating target placement;
+- shove produces a forced trajectory/displacement claim that enters the same spatial arbitration as movement;
+- a target's own committed movement and incoming shove can oppose or align without callback-order initiative;
+- ordinary movement never gains implicit shove authority merely from a high stat;
+- static blockers remain absolute for this slice;
+- competing displacement outcomes reuse frozen canonical physical state;
+- already-earned current-tick force/contact is not retroactively erased by lethal damage generated on the same timestamp;
+- death/corpse publication occurs only after spatial consequences that legitimately survive that timestamp are accounted for;
+- preserve Phase-2B mutual lethal hits and every completed Phase-2C movement rule above.
 
-Do not tune mob-force numbers or fear in the next slice. First establish one shared shove/displacement arbitration path.
+Do not tune mob-force magnitudes or fear yet. Shape the shove path so later same-direction crowd force can aggregate through it instead of requiring a replacement architecture.
 
-Before changing code, delete the current Phase-2C stat-contest verifier pair and create a new prompt-local verifier/workflow scoped to shove/displacement arbitration.
+Before changing code, delete the current prompt-local pair:
+
+- `game/scripts/ci/Phase2CTransitionEdgesSmoke.gd`
+- `.github/workflows/phase2c-transition-edges.yml`
+
+Then create a brand-new focused verifier/workflow scoped to shove/displacement transition arbitration.
 
 ## Protected behavior
 
@@ -205,10 +231,10 @@ Preserve:
 
 - WHERE / WHAT / WHEN authority and one clock;
 - Phase-2A commitment offsets;
-- Phase-2B simultaneous melee hit/death semantics;
-- Phase-2C atomic movement batching/swaps/chains;
-- Phase-2C stat-based same-destination contest rule;
-- no hidden initiative/order fallback;
+- Phase-2B simultaneous melee hit/death rule;
+- Phase-2C stat-based same-destination arbitration;
+- Phase-2C release-chain/fixed-point movement semantics;
+- Phase-2C head-on reciprocal walk conflict;
 - stable pre-contact melee target snapshot;
 - existing eight resident-backed infected startup cohort;
 - no live survivor/raider/social runtime;
