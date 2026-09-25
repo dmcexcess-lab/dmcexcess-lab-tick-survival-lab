@@ -31,10 +31,11 @@ var _inventory: InventoryContainmentState
 var _inventory_mutations: InventoryContainmentMutationService
 var _profiles: FirearmProfileCatalog
 var _state: FirearmState
+var _condition_modifiers: ActorConditionModifierQuery = null
 
-func _init(world=null, world_mutations=null, spatial=null, kernel=null, hands=null, health=null, inventory=null, inventory_mutations=null, profiles=null, state=null) -> void:
+func _init(world=null, world_mutations=null, spatial=null, kernel=null, hands=null, health=null, inventory=null, inventory_mutations=null, profiles=null, state=null, condition_modifiers=null) -> void:
     _world=world; _world_mutations=world_mutations; _spatial=spatial; _kernel=kernel; _hands=hands; _health=health
-    _inventory=inventory; _inventory_mutations=inventory_mutations; _profiles=profiles; _state=state
+    _inventory=inventory; _inventory_mutations=inventory_mutations; _profiles=profiles; _state=state; _condition_modifiers=condition_modifiers
     if _kernel != null: _kernel.action_phase.connect(_on_action_phase)
 
 func is_ready() -> bool:
@@ -58,6 +59,10 @@ func request_fire(actor_id: String, action_id: StringName = FIRE_SNAP) -> Dictio
     var aimed := action_id == FIRE_AIMED
     var discharge_tick := 5 if aimed else 2
     var duration := 7 if aimed else 4
+    if aimed:
+        var fear_bp: int = _fear_timing_bp(actor_id)
+        discharge_tick = _scaled_ticks(discharge_tick, fear_bp)
+        duration = maxi(discharge_tick + 1, _scaled_ticks(duration, fear_bp))
     var serial := _kernel.begin_action(actor_id, action_id, duration, Rules.InterruptionPolicy.COMMITTED, [Phase.new(DISCHARGE_PHASE, discharge_tick)], {
         "firearm_id": firearm_id, "round_id": round_id, "facing": placement.facing, "aimed": aimed
     })
@@ -71,11 +76,12 @@ func request_reload(actor_id: String) -> Dictionary:
     var candidate := _find_compatible_magazine(actor_id, firearm_id, current_mag)
     var phases: Array = []
     var offset := 0
-    if not current_mag.is_empty() and not candidate.is_empty(): offset += 2; phases.append(Phase.new(RELOAD_EJECT, offset))
-    if not candidate.is_empty(): offset += 3; phases.append(Phase.new(RELOAD_INSERT, offset))
-    if _state.chamber_round(firearm_id).is_empty(): offset += 3; phases.append(Phase.new(RELOAD_CHAMBER, offset))
+    var fear_bp: int = _fear_timing_bp(actor_id)
+    if not current_mag.is_empty() and not candidate.is_empty(): offset += _scaled_ticks(2, fear_bp); phases.append(Phase.new(RELOAD_EJECT, offset))
+    if not candidate.is_empty(): offset += _scaled_ticks(3, fear_bp); phases.append(Phase.new(RELOAD_INSERT, offset))
+    if _state.chamber_round(firearm_id).is_empty(): offset += _scaled_ticks(3, fear_bp); phases.append(Phase.new(RELOAD_CHAMBER, offset))
     if phases.is_empty(): return {"accepted": false, "reason": "nothing_to_reload"}
-    var serial := _kernel.begin_action(actor_id, RELOAD, offset + 1, Rules.InterruptionPolicy.RESUMABLE, phases, {
+    var serial := _kernel.begin_action(actor_id, RELOAD, offset + _scaled_ticks(1, fear_bp), Rules.InterruptionPolicy.RESUMABLE, phases, {
         "firearm_id": firearm_id, "magazine_id": candidate, "original_magazine_id": current_mag
     })
     return {"accepted": serial > 0, "action_serial": serial, "reason": "" if serial > 0 else "when_rejected"}
@@ -139,6 +145,14 @@ func _resolve_discharge(action: TimedAction) -> void:
     _health.apply_damage(hit_id, damage)
     _health.add_injury(hit_id, &"gunshot", Injury.TORSO, Injury.Severity.CRITICAL)
     firearm_impact.emit(action.actor_id, hit_id, action.serial, hit_cell, damage)
+
+func _fear_timing_bp(actor_id: String) -> int:
+    if _condition_modifiers == null or not _condition_modifiers.is_ready()         or not _condition_modifiers.has_actor(actor_id):
+        return 10000
+    return _condition_modifiers.deliberate_action_duration_multiplier_bp(actor_id)
+
+static func _scaled_ticks(base_ticks: int, multiplier_bp: int) -> int:
+    return maxi(1, int(ceili(float(base_ticks * maxi(1, multiplier_bp)) / 10000.0)))
 
 func _actor_can_act(actor_id: String) -> bool:
     return _health.has_actor(actor_id) and _health.current_hp(actor_id) > 0 and _hands.has_actor(actor_id) and not _kernel.has_active_action(actor_id)
