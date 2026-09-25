@@ -9,6 +9,11 @@ class_name VisualAcquisitionProvider
 func is_ready() -> bool:
     return true
 
+func freshness_revision() -> int:
+    # Providers whose acquisition truth can change independently of WHAT/doors
+    # override this. Neutral geometry-only acquisition is revision-stable.
+    return 0
+
 func allows_target(
     _observer_id: String,
     _origin: Vector2i,
