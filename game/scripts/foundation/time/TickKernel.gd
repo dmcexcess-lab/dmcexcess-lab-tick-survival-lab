@@ -117,7 +117,8 @@ func begin_action(
     duration_ticks: int,
     interruption_policy: int = Rules.InterruptionPolicy.COMMITTED,
     phases: Array = [],
-    payload: Dictionary = {}
+    payload: Dictionary = {},
+    commit_offset_ticks: int = -1
 ) -> int:
     var normalized_actor: String = actor_id.strip_edges()
     if normalized_actor.is_empty() or String(action_type).strip_edges().is_empty():
@@ -143,7 +144,8 @@ func begin_action(
         _world_tick,
         interruption_policy,
         normalized_phases,
-        payload
+        payload,
+        commit_offset_ticks
     )
     if not action.is_valid():
         return 0
@@ -197,12 +199,17 @@ func interrupt_action(action_serial: int, reason: String = "interrupted", forced
         _finish_active_action(action, Rules.ActionStatus.FAILED)
         return Rules.ActionStatus.FAILED
 
-    if action.interruption_policy == Rules.InterruptionPolicy.COMMITTED:
-        _append_trace("action_interruption_ignored", {"action_serial": action_serial, "reason": reason})
+    var effective_policy: int = action.effective_interruption_policy(_world_tick)
+    if effective_policy == Rules.InterruptionPolicy.COMMITTED:
+        _append_trace("action_interruption_ignored", {
+            "action_serial": action_serial,
+            "reason": reason,
+            "commit_offset_ticks": action.commit_offset_ticks,
+        })
         action_interrupted.emit(_action_view(action))
         return Rules.ActionStatus.RUNNING
 
-    if action.interruption_policy == Rules.InterruptionPolicy.RESUMABLE:
+    if effective_policy == Rules.InterruptionPolicy.RESUMABLE:
         _queue.cancel_action_events(action_serial)
         _active_actions.erase(action_serial)
         _actor_active_action.erase(action.actor_id)
