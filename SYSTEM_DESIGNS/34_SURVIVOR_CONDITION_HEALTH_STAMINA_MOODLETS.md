@@ -1,6 +1,6 @@
 # System 34 — Survivor Condition, Health, Fatigue & Moodlets
 
-Status: **IMPLEMENTED + EXACT-ITEM INVENTORY USE VERIFIED — human playtest pending**
+Status: **IMPLEMENTED + CANONICAL FEAR VERIFIED — human playtest pending**
 
 The filename retains its approved-candidate history; the canonical model has no separate Stamina resource.
 
@@ -41,7 +41,7 @@ Positive and normal state remain readable in meters/inspection but do not clutte
 
 ## Derived consequences
 
-The read-only modifier query combines condition potency and Fatigue, with bounded outputs for effective max Health, Fatigue gain/recovery, movement speed, carry capacity and body-powered/melee damage. Presentation does not apply these rules.
+The read-only modifier query combines physical condition potency and Fatigue, with bounded outputs for effective max Health, Fatigue gain/recovery, movement speed, carry capacity and body-powered/melee damage. **Calm is excluded from that generic physical potency.** Fear has explicit coordination, exertion and bracing effects instead. Presentation does not apply these rules.
 
 - Speed changes authoritative action duration without delaying input dispatch.
 - Firearm energy is not weakened by a body-powered damage multiplier.
@@ -49,6 +49,45 @@ The read-only modifier query combines condition potency and Fatigue, with bounde
 - Exertion adds Fatigue and running costs much more than walking, scaled by terrain and actual carried load.
 - Fatigue recovers only as authoritative WHEN advances; real-time decision pause recovers nothing.
 - Continuing physical exertion beyond maximum Fatigue causes real HP damage and can kill through canonical Health.
+
+## Canonical fear — implemented and focused-verified 2026-09-25
+
+`CALM` remains the sole authoritative fear state. `ActorFearPressureService` owns same-timestamp psychological consequence aggregation; observation adapters submit pressure but do not mutate Calm directly.
+
+Current sources:
+
+- visible infected threat from canonical Perception, using distance bands and diminishing additional-threat contributions;
+- recognized `threat` Sound observations above bounded perceived-strength thresholds, without revealing hidden source identity/location;
+- bounded injury shock from canonical Health damage;
+- resolved physical crowd pressure from Movement, distinguishing resisted pressure, displacement and trapped/terminated pressure.
+
+All pressure generated on one authoritative timestamp is aggregated and applied once, with a maximum **20 Calm loss per tick**. This prevents callback order and duplicated observation channels from producing runaway psychological damage.
+
+Fear tiers use the existing shared condition boundaries but have explicit semantics:
+
+| Calm | Player state | Mechanical effect |
+|---:|---|---|
+| 45–100 | Composed | no fear penalty |
+| 30–44 | Uneasy | warning/moodlet only |
+| 15–29 | Afraid | +15% deliberate-action time, +10% Fatigue gain, -5% hold/bracing resistance |
+| 0–14 | Terrified | +30% deliberate-action time, +20% Fatigue gain, -10% hold/bracing resistance |
+
+Fear does **not** reduce movement speed, max Health, carry capacity, melee damage or raw shove/movement force. It does not force flee behavior, reject commands, drop equipment or otherwise take control from the player.
+
+Current deliberate actions affected by fear timing are melee strikes, aimed firearm discharge, reload phases, first aid and crafting. Walking, running, shove and snap fire retain their normal timing so escape remains responsive.
+
+Visual threat is encounter-aware. A visible infected charges fear when first encountered or when it crosses into a worse distance band; ordinary perception refreshes of the same unchanged threat do not repeatedly charge Calm. Encounter memory resets only after at least five in-game minutes without a visible infected threat.
+
+Calm analytically returns toward neutral 60 when no new fear pressure occurs. Current recovery is tuned to about **25 Calm points per in-game hour**, so a survivor at 0 Calm returns to neutral in roughly 2.4 in-game hours. Fear never generates fear pressure from itself.
+
+Focused production verifier/workflow:
+
+- `game/scripts/ci/Phase2FearSmoke.gd`
+- `.github/workflows/phase2-fear.yml`
+- functional run `36199423801`: **SUCCESS**
+- marker: `PHASE2_FEAR_OK aggregate_cap=true explicit_effects=true escape_responsive=true injury=true pressure=true recovery=true`
+
+The verifier boots the production scene and proves capped same-tick aggregation, removal of hidden generic Calm penalties, exact Afraid/Terrified explicit multipliers, unchanged escape-movement/shove timing, slower deliberate melee, production wiring for first aid/crafting/firearms, injury and crowd-pressure fear inputs, threat classification, Terrified feedback, and hours-scale analytic recovery.
 
 ## Time and survival actions
 
