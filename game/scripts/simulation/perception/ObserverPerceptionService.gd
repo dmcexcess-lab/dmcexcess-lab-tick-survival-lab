@@ -32,6 +32,8 @@ var _vision: VisionQuery = null
 var _acquisition: VisualAcquisitionProvider = null
 var _visible: Dictionary = {}
 var _recompute_count: int = 0
+var _recompute_total_usec: int = 0
+var _recompute_max_usec: int = 0
 var _last_recompute_tick: int = -1
 
 func _init(
@@ -127,11 +129,20 @@ func recompute(reason: StringName = &"manual") -> bool:
     return true
 
 func _record_recompute(started_usec: int) -> void:
-    PerformanceTelemetry.record_timing(&"perception_recompute", Time.get_ticks_usec() - started_usec)
+    var elapsed_usec: int = maxi(0, Time.get_ticks_usec() - started_usec)
+    _recompute_total_usec += elapsed_usec
+    _recompute_max_usec = maxi(_recompute_max_usec, elapsed_usec)
+    PerformanceTelemetry.record_timing(&"perception_recompute", elapsed_usec)
     PerformanceTelemetry.record_value(&"perception_recomputes", _recompute_count)
 
 func recompute_count() -> int:
     return _recompute_count
+
+func recompute_total_usec() -> int:
+    return _recompute_total_usec
+
+func recompute_max_usec() -> int:
+    return _recompute_max_usec
 
 func visible_cells() -> Array[Vector2i]:
     var result: Array[Vector2i] = []
