@@ -397,3 +397,15 @@ Verified executable lineage: `156ee4b0a1727a5d5d26b479cf7a0dea9e9b462a`
 - Fresh focused verifier: game/scripts/ci/VisionWorldRefreshRegressionSmoke.gd / .github/workflows/vision-world-refresh-regression.yml.
 - Run 36215957560 — SUCCESS. Marker: VISION_WORLD_REFRESH_OK.
 - Production evidence: TURN R caused one geometric rebuild with changed visible-cell membership; FORWARD caused another rebuild from the new anchor; world tick advanced 0 -> 13.
+
+
+## 2026-09-25 — Simplify lighting presentation to direct tile tint
+
+- User direction: remove bloom-style lighting presentation and keep only physical-light-driven tile recoloring/darkening.
+- Preserved System 27 physical lighting truth, including structure/door/window transmission, local emitters, day/night input, and lighting-driven perception.
+- Simplified `physical_lighting_multiply.gdshader` to one direct texture sample per tile. Removed neighbor sampling, edge weighting, smoothing, and perceptual blur work.
+- Removed the second glow image/texture/sprite generation and upload path from `PhysicalLightingPresentationRenderer.gd`.
+- The production lighting presentation now owns exactly one child renderer, `PhysicalLightTileTint`, in `tile_tint_only` mode.
+- The retired glow shader remains as an inert source file only; it is no longer loaded or instantiated by production lighting presentation.
+- Fresh focused verifier: `game/scripts/ci/SimpleLightingPresentationSmoke.gd` / `.github/workflows/simple-lighting-presentation.yml`.
+- Run `36217199331` — SUCCESS. Marker: `SIMPLE_LIGHTING_PRESENTATION_OK children=1 mode=tile_tint_only`.
