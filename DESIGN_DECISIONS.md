@@ -8,6 +8,24 @@ If a later discussion changes a decision, do not erase history. Add a newer entr
 
 ---
 
+## 2026-09-26 — Survival actions are contextual, not a permanent action strip
+
+**Decision:** Do not expose EAT / DRINK / TAP / REST / SLEEP as a permanent global survival-control strip. Survival actions originate from the thing the player is acting on.
+
+Ordinary player routes are:
+
+- carried food or drink: select the exact item in **INVENTORY**, then use its **EAT** or **DRINK** action;
+- powered potable sink/fixture: click the world object, then choose **DRINK**;
+- bed: click the world object, then choose **REST** or **SLEEP**;
+- chair or sofa: click the world object, then choose **REST**.
+
+The existing `SurvivorSustainmentActionService` remains authoritative for time, condition changes, target revalidation and completion outcomes. Inventory and world interaction only select the exact item/object and request the action; they do not own survival truth.
+
+There is no ordinary player-facing generic ground REST/SLEEP command. Wilderness sleeping/resting will be provided by a later camp mechanic: a real sleeping bag/bedroll item is carried in inventory, placed into the world, and then interacted with contextually like furniture. This preserves the same object-first interaction language without creating freeform base construction.
+
+This supersedes the September 25 permanent `ConditionPlayerControls` survival strip.
+
+---
 ## 2026-09-25 — Fear is canonical Calm pressure, not loss of player agency
 
 **Decision:** Fear uses the existing persistent `CALM` condition as its only authoritative state. Do not add a second panic/fear meter.
