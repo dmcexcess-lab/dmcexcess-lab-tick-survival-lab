@@ -12,6 +12,8 @@ const PRESS_BARRIER: StringName = &"infected.press_barrier"
 var _evaluation_count: int = 0
 var _evaluation_total_usec: int = 0
 var _evaluation_max_usec: int = 0
+var _intention_refresh_total_usec: int = 0
+var _submission_total_usec: int = 0
 var _opening_pressure: ActorOpeningPressureActionService = null
 
 func evaluation_count() -> int:
@@ -22,6 +24,12 @@ func evaluation_total_usec() -> int:
 
 func evaluation_max_usec() -> int:
     return _evaluation_max_usec
+
+func intention_refresh_total_usec() -> int:
+    return _intention_refresh_total_usec
+
+func submission_total_usec() -> int:
+    return _submission_total_usec
 
 func configure_opening_pressure(service: ActorOpeningPressureActionService) -> bool:
     if service == null or not service.is_ready():
@@ -46,6 +54,16 @@ func _drive(reason: StringName, refresh_perception: bool = true) -> void:
     _evaluation_max_usec = maxi(_evaluation_max_usec, elapsed)
     PerformanceTelemetry.record_timing(&"infected_behavior_evaluation", elapsed)
     PerformanceTelemetry.record_value(&"infected_behavior_evaluations", _evaluation_count)
+
+func _refresh_intention(reason: StringName) -> void:
+    var started: int = Time.get_ticks_usec()
+    super._refresh_intention(reason)
+    _intention_refresh_total_usec += maxi(Time.get_ticks_usec() - started, 0)
+
+func _submit_for_current_intention() -> void:
+    var started: int = Time.get_ticks_usec()
+    super._submit_for_current_intention()
+    _submission_total_usec += maxi(Time.get_ticks_usec() - started, 0)
 
 func _submit_move_toward(destination: Vector2i) -> bool:
     var placement: WorldPlacement = _world.placement(_actor_id)
