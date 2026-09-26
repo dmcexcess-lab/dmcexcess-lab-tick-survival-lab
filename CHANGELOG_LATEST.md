@@ -2,6 +2,23 @@
 
 This compact ledger records the newest executable work. `CHANGELOG.md` remains the historical archive.
 
+## Phase 2 — eight-infected callback/perception performance — 2026-09-25
+
+Functional production head: `cd28fae78d5bdc80df5721f674265deeb69f4085`.
+
+- Measured the real production eight-infected route before changing architecture.
+- Removed unconditional decision-time infected perception recompute; behavior now uses System-23 dirty/acquisition freshness.
+- Added acquisition freshness revision tracking so lighting changes still invalidate visual truth correctly.
+- Cached geometric LOS separately from acquisition filtering; lighting-only refresh no longer retraces infected LOS.
+- Prepared one bounded physical-light field covering the player plus active infected cohort instead of letting observers request separate fields.
+- Warmed that shared field during cohort activation/loading so the first real player input no longer pays a cold lighting build.
+- Added phase telemetry for infected intention refresh and action submission; those were measured small and were not rewritten.
+- No horde brain, AI scheduler, frame loop, perception budget queue or behavior-policy change was introduced.
+- Same-route pre-warm diagnostic: first/second action-start callbacks `113442 / 9855` µs.
+- Final focused run `36206781574`: first/second callbacks `9874 / 9580` µs; infected behavior `8984 / 8905` µs per decision; 16 perception refreshes / `15797` µs total; **0 infected LOS geometry rebuilds**.
+- Prompt-local verifier/workflow: `game/scripts/ci/Phase2InfectedPerceptionPerfSmoke.gd` + `.github/workflows/phase2-infected-perception-perf.yml`.
+- The full two-turn route still measured roughly 282/287 ms per turn in CI, so this pass does not claim total action performance is solved. Remaining cost lies outside the bounded infected callback/perception slice and should be attributed during later crowded-fight/Safari acceptance.
+
 ## Phase 2 — canonical fear — 2026-09-25
 
 Functional production head: `82deda793337ea49b7cd47e52325e346bcbafec7`.
