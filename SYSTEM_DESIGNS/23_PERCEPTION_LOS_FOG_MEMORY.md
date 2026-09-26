@@ -385,3 +385,23 @@ Possible later observer-side refinements:
 - AI-specific interpretation of visual observations.
 
 These should extend observer perception and provider contracts rather than move knowledge ownership into System 27 or Actor AI.
+
+## 2026-09-25 regression repair — cached LOS must follow observer pose
+
+A performance optimization introduced a correctness regression by allowing the geometric LOS cache to outlive a batched controlled-observer pose change.
+
+The failure mode was specific:
+
+- WorldChangeBatch carries dirty channel bounds, not changed entity identity.
+- A batched player turn/move therefore reached _on_world_batch_changed() as an ACTOR-channel change.
+- Perception was marked dirty and recomputed, but _geometry_dirty could remain false.
+- recompute() then reused geometric cells calculated from the player's previous anchor/facing.
+- The perception overlay masks all non-visible live world cells, so stale geometry presented as both a frozen/wrong vision cone and an apparently non-updating world.
+
+The repaired invariant is stronger than relying on notification detail:
+
+A cached geometric LOS result is valid only for the exact observer anchor + facing that produced it.
+
+ObserverPerceptionService now stores the cache pose and compares it against the current authoritative placement before every recompute. Any anchor or facing mismatch forces geometric LOS regeneration. Acquisition-only refreshes still reuse geometry when the observer pose and physical occlusion geometry are unchanged.
+
+Fresh verifier VisionWorldRefreshRegressionSmoke.gd proves through ordinary production controls that TURN R rebuilds geometry for the new facing, FORWARD rebuilds geometry for the new anchor, and the visible-cell set changes accordingly.
