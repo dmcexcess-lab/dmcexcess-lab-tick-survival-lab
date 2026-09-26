@@ -2,12 +2,12 @@ extends Node2D
 class_name PhysicalLightingPresentationRenderer
 
 const MULTIPLY_SHADER: Shader = preload("res://shaders/physical_lighting_multiply.gdshader")
-const GLOW_SHADER: Shader = preload("res://shaders/physical_lighting_glow.gdshader")
 const Layers = preload("res://scripts/foundation/spatial/SpatialLayer.gd")
 const ChangeClass = preload("res://scripts/foundation/world/WorldChange.gd")
 const PerformanceTelemetry = preload("res://scripts/foundation/diagnostics/PerformanceTelemetry.gd")
 
 ## Presentation-only visualization of System 27 physical illumination.
+## One nearest-neighbor tile tint map only; no bloom, blur, halo, scatter, or reflection pass.
 ## This layer never decides gameplay visibility and never becomes light authority.
 ## World notifications refresh only for visible terrain/STRUCTURE dirtiness; actor and
 ## ordinary object movement do not redraw the full light maps.
@@ -24,11 +24,8 @@ var _view_valid: bool = false
 var _configured: bool = false
 
 var _multiply_sprite: Sprite2D = null
-var _glow_sprite: Sprite2D = null
 var _multiply_texture: ImageTexture = null
-var _glow_texture: ImageTexture = null
 var _multiply_image: Image = null
-var _glow_image: Image = null
 var _texture_size: Vector2i = Vector2i.ZERO
 
 var _presentation_revision: int = 0
@@ -36,7 +33,6 @@ var _last_reason: StringName = &""
 var _last_build_usec: int = 0
 var _last_min_luminance: float = 0.0
 var _last_max_luminance: float = 0.0
-var _last_glow_cells: int = 0
 var _last_lighting_revision: int = 0
 
 func _ready() -> void:
@@ -97,14 +93,13 @@ func refresh(reason: StringName = &"external") -> bool:
         return true
 
     var started: int = Time.get_ticks_usec()
-    _ensure_images()
-    if _multiply_image == null or _glow_image == null:
+    _ensure_image()
+    if _multiply_image == null:
         return false
 
     var optics: AtmosphericOptics = _lighting.atmosphere()
     var min_luminance: float = 1.0
     var max_luminance: float = 0.0
-    var glow_cells: int = 0
 
     for local_y in range(_visible_size.y):
         for local_x in range(_visible_size.x):
@@ -116,35 +111,12 @@ func refresh(reason: StringName = &"external") -> bool:
             max_luminance = maxf(max_luminance, luminance)
             _multiply_image.set_pixel(local_x, local_y, Color(tint.r, tint.g, tint.b, luminance))
 
-            var glow_strength: float = _glow_strength(sample)
-            if glow_strength > 0.01:
-                glow_cells += 1
-            _glow_image.set_pixel(local_x, local_y, Color(tint.r, tint.g, tint.b, glow_strength))
-
-    for emitter: LightEmitter in _lighting.emitters():
-        if not emitter.active or emitter.profile == null:
-            continue
-        var local: Vector2i = emitter.origin_cell - _visible_origin
-        if local.x < 0 or local.y < 0 or local.x >= _visible_size.x or local.y >= _visible_size.y:
-            continue
-        var core_strength: float = clampf(
-            emitter.profile.base_luminance * emitter.profile.presentation_glow_scale,
-            0.0,
-            1.0
-        )
-        if core_strength <= 0.01:
-            continue
-        var core_color: Color = emitter.profile.tint
-        _glow_image.set_pixel(local.x, local.y, Color(core_color.r, core_color.g, core_color.b, core_strength))
-
-    _upload_maps()
-    _apply_atmosphere_uniforms(optics)
+    _upload_map()
     _presentation_revision += 1
     _last_reason = reason
     _last_build_usec = Time.get_ticks_usec() - started
     _last_min_luminance = 0.0 if min_luminance > 1.0 else min_luminance
     _last_max_luminance = max_luminance
-    _last_glow_cells = glow_cells
     _last_lighting_revision = prepared_revision
     PerformanceTelemetry.record_timing(&"lighting_draw", _last_build_usec)
     PerformanceTelemetry.record_value(&"lighting_draws", _presentation_revision)
@@ -159,15 +131,11 @@ func presentation_values_for_cell(cell: Vector2i) -> Dictionary:
     return {
         "luminance": sample.useful_luminance,
         "tint": _display_tint(sample, optics),
-        "glow_strength": _glow_strength(sample),
         "portal": sample.portal,
         "local_artificial": sample.local_artificial,
-        "glare": sample.glare,
-        "scatter": sample.scatter,
     }
 
 func presentation_snapshot() -> Dictionary:
-    var optics: AtmosphericOptics = null if _lighting == null else _lighting.atmosphere()
     return {
         "configured": is_configured(),
         "view_valid": _view_valid,
@@ -180,21 +148,17 @@ func presentation_snapshot() -> Dictionary:
         "last_lighting_revision": _last_lighting_revision,
         "min_luminance": _last_min_luminance,
         "max_luminance": _last_max_luminance,
-        "glow_cells": _last_glow_cells,
         "emitter_count": 0 if _lighting == null else _lighting.emitters().size(),
-        "wetness": 0.0 if optics == null else optics.wet_surface_factor,
-        "scatter_strength": 0.0 if optics == null else optics.scatter_strength,
         "multiply_texture_ready": _multiply_texture != null,
-        "glow_texture_ready": _glow_texture != null,
         "texture_size": _texture_size,
+        "presentation_mode": "tile_tint_only",
     }
 
 func _ensure_layers() -> void:
     if _multiply_sprite != null:
         return
-
     _multiply_sprite = Sprite2D.new()
-    _multiply_sprite.name = "PhysicalLightMultiply"
+    _multiply_sprite.name = "PhysicalLightTileTint"
     _multiply_sprite.centered = false
     _multiply_sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
     var multiply_material := ShaderMaterial.new()
@@ -203,50 +167,21 @@ func _ensure_layers() -> void:
     _multiply_sprite.z_index = 0
     add_child(_multiply_sprite)
 
-    _glow_sprite = Sprite2D.new()
-    _glow_sprite.name = "PhysicalLightGlow"
-    _glow_sprite.centered = false
-    _glow_sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-    _glow_sprite.visible = false
-    var glow_material := ShaderMaterial.new()
-    glow_material.shader = GLOW_SHADER
-    _glow_sprite.material = glow_material
-    _glow_sprite.z_index = 1
-    add_child(_glow_sprite)
-
-func _ensure_images() -> void:
-    if _multiply_image != null and _glow_image != null and _multiply_image.get_size() == _visible_size and _glow_image.get_size() == _visible_size:
+func _ensure_image() -> void:
+    if _multiply_image != null and _multiply_image.get_size() == _visible_size:
         return
     _multiply_image = Image.create(_visible_size.x, _visible_size.y, false, Image.FORMAT_RGBA8)
-    _glow_image = Image.create(_visible_size.x, _visible_size.y, false, Image.FORMAT_RGBA8)
 
-func _upload_maps() -> void:
+func _upload_map() -> void:
     var size_changed: bool = _texture_size != _visible_size
     if _multiply_texture == null or size_changed:
         _multiply_texture = ImageTexture.create_from_image(_multiply_image)
     else:
         _multiply_texture.update(_multiply_image)
-    if _glow_texture == null or size_changed:
-        _glow_texture = ImageTexture.create_from_image(_glow_image)
-    else:
-        _glow_texture.update(_glow_image)
     _texture_size = _visible_size
-
     _multiply_sprite.texture = _multiply_texture
-    _glow_sprite.texture = _glow_texture
-    var scale_value := Vector2(_cell_pixels, _cell_pixels)
-    _multiply_sprite.scale = scale_value
-    _glow_sprite.scale = scale_value
+    _multiply_sprite.scale = Vector2(_cell_pixels, _cell_pixels)
     _multiply_sprite.position = Vector2.ZERO
-    _glow_sprite.position = Vector2.ZERO
-
-func _apply_atmosphere_uniforms(optics: AtmosphericOptics) -> void:
-    var glow_material := _glow_sprite.material as ShaderMaterial
-    if glow_material == null:
-        return
-    glow_material.set_shader_parameter("scatter_strength", optics.scatter_strength)
-    glow_material.set_shader_parameter("wetness", optics.wet_surface_factor)
-    glow_material.set_shader_parameter("glow_strength", 0.42)
 
 func _display_tint(sample: IlluminationSample, optics: AtmosphericOptics) -> Color:
     var tint: Color = sample.tint
@@ -256,15 +191,6 @@ func _display_tint(sample: IlluminationSample, optics: AtmosphericOptics) -> Col
         clampf(tint.r, 0.0, 1.0),
         clampf(tint.g, 0.0, 1.0),
         clampf(tint.b, 0.0, 1.0),
-        1.0
-    )
-
-func _glow_strength(sample: IlluminationSample) -> float:
-    return clampf(
-        sample.portal * 0.35
-        + sample.glare * 0.86
-        + sample.scatter * 0.45,
-        0.0,
         1.0
     )
 
