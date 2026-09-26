@@ -134,6 +134,34 @@ On documentation head `149adb8b27e07dd608e2c2fc4935f5f42a826b22`:
 
 After this final context write, perform read-only exact-head verification only.
 
+## Continuation reconciliation — 2026-09-26
+
+A stale continuation from an older Phase-2 performance checkpoint resumed after the repository had already advanced through **63 newer commits**.
+
+Those newer commits had already completed:
+
+- infected callback/perception performance closure;
+- coherent consequence presentation;
+- crowded-fight technical acceptance;
+- the cached vision-cone/world-refresh regression repair;
+- simplified direct per-tile lighting presentation;
+- the current production survival-action strip.
+
+One duplicate stale edit was briefly added after those completed slices: an extra `_acquisition.freshness_revision()` call in `ActiveInfectedCohortService.sync_active_now()`. The repository already contained the finalized infected-lighting preparation solution from the completed performance pass, so that duplicate call was removed exactly and no newer work was reverted.
+
+Reconciliation code head: `205acf86867db953f3ab069d37e93c056d40df9e`.
+
+Exact-head survival-control verifier run `36261877837` — **SUCCESS**.
+
+No production survival-control, perception, lighting, combat, fear, crowd-pressure or world behavior was intentionally changed by this reconciliation.
+
+The existing prompt-local pair remains authoritative because this was a restoration/reconciliation, not a new feature slice:
+
+- `game/scripts/ci/SurvivalControlsSmoke.gd`
+- `.github/workflows/survival-controls.yml`
+
+This README_CONTEXT write is the final repository mutation for the reconciliation. Everything after it is read-only exact-head verification.
+
 ## NEXT OPERATION
 
 Visually playtest the deployed survival strip on the real build.
