@@ -2,6 +2,7 @@ extends Control
 class_name StartupMenu
 
 const GAMEPLAY_SCENE_PATH: String = "res://gameplay.tscn"
+const DurableSessionStoreClass = preload("res://scripts/persistence/DurableSessionStore.gd")
 const PRELOAD_PROGRESS_START: float = 8.0
 const PRELOAD_PROGRESS_SPAN: float = 57.0
 const STATUS_DOT_INTERVAL_SECONDS: float = 0.32
@@ -11,6 +12,7 @@ const STATUS_DOT_FRAMES := [".", "..", "..."]
 @onready var _continue_button: Button = $Center/MenuPanel/Menu/ContinueButton
 @onready var _status_label: Label = $Center/MenuPanel/Menu/StatusLabel
 @onready var _progress_bar: ProgressBar = $Center/MenuPanel/Menu/LoadProgress
+@onready var _hint: Label = $Center/MenuPanel/Menu/Hint
 
 var _gameplay_scene: PackedScene = null
 var _preload_requested: bool = false
@@ -20,13 +22,17 @@ var _status_base_text: String = ""
 var _status_dots_animated: bool = false
 var _status_dot_elapsed: float = 0.0
 var _status_dot_index: int = 0
+var _session_store: DurableSessionStore = null
+var _continue_session: Dictionary = {}
 
 func _ready() -> void:
     # NEW GAME awaits loading frames and eventually retires this entire menu tree.
     # Start it after Button.pressed finishes emitting so the signal owner cannot be
     # freed while Godot is still unwinding the original UI signal.
     _new_game_button.pressed.connect(_on_new_game_pressed, CONNECT_DEFERRED)
-    _continue_button.tooltip_text = "Persistent save/continue is not implemented yet."
+    _continue_button.pressed.connect(_on_continue_pressed, CONNECT_DEFERRED)
+    _session_store = DurableSessionStoreClass.new()
+    _refresh_continue_state()
     _progress_bar.value = PRELOAD_PROGRESS_START
     _set_status("Menu ready. Loading game systems", true)
     call_deferred("_begin_gameplay_preload")
@@ -77,6 +83,19 @@ func _process(delta: float) -> void:
             set_process(false)
 
 func _on_new_game_pressed() -> void:
+    await _launch_game({})
+
+func _on_continue_pressed() -> void:
+    if _launching:
+        return
+    var loaded: Dictionary = _session_store.load_best()
+    if not bool(loaded.get("ok", false)):
+        _refresh_continue_state()
+        _set_status("No valid compatible save is available.")
+        return
+    await _launch_game(loaded.get("session", {}))
+
+func _launch_game(session: Dictionary) -> void:
     if _launching:
         return
     _launching = true
@@ -85,36 +104,74 @@ func _on_new_game_pressed() -> void:
     _set_status("Finishing gameplay load", true)
     _progress_bar.value = maxf(_progress_bar.value, 68.0)
 
-    # Paint the loading state before any synchronous fallback or world generation.
     await get_tree().process_frame
     var packed_scene: PackedScene = await _obtain_gameplay_scene()
     if packed_scene == null:
         _launching = false
         _new_game_button.disabled = false
+        _refresh_continue_state()
         _set_status("Unable to load the gameplay scene.")
         _progress_bar.value = 0.0
         return
 
-    _set_status("Generating island and activating the starting region", true)
+    _set_status("Restoring persistent world" if not session.is_empty() else "Generating island and activating the starting region", true)
     _progress_bar.value = 78.0
     await get_tree().process_frame
 
-    # add_child() runs the gameplay root's existing synchronous boot. Keeping this
-    # menu alive until that call returns means the player sees a truthful loading
-    # surface instead of a long Godot splash/black frame while worldgen runs.
-    # The dot animation intentionally uses ordinary process frames; if this legacy
-    # synchronous boot blocks the main thread, the dots pause rather than lying
-    # about responsiveness. Startup phase 2 remains the proper fix for that stall.
     var game: Node = packed_scene.instantiate()
     if game == null:
         _launching = false
         _new_game_button.disabled = false
+        _refresh_continue_state()
         _set_status("Unable to create the gameplay scene.")
         return
+    if not session.is_empty():
+        if not game.has_method("configure_continue_session") or not bool(game.call("configure_continue_session", session)):
+            game.queue_free()
+            _launching = false
+            _new_game_button.disabled = false
+            _refresh_continue_state()
+            _set_status("Saved game is incompatible. The previous save was preserved.")
+            return
+
     get_tree().root.add_child(game)
+    if not game.has_method("session_boot_ok") or not bool(game.call("session_boot_ok")):
+        var error_text: String = String(game.call("session_boot_error")) if game.has_method("session_boot_error") else "unknown_restore_failure"
+        game.queue_free()
+        _launching = false
+        _new_game_button.disabled = false
+        _refresh_continue_state()
+        _set_status("Continue failed safely: %s. Saved files were preserved." % error_text)
+        _progress_bar.value = PRELOAD_PROGRESS_START + PRELOAD_PROGRESS_SPAN
+        return
+
     get_tree().current_scene = game
     _progress_bar.value = 100.0
     queue_free()
+
+func _refresh_continue_state() -> void:
+    if _session_store == null:
+        return
+    var loaded: Dictionary = _session_store.load_best()
+    _continue_session = loaded.get("session", {}) if bool(loaded.get("ok", false)) else {}
+    _continue_button.disabled = _continue_session.is_empty()
+    if _continue_session.is_empty():
+        _continue_button.text = "CONTINUE — NO SAVE"
+        _continue_button.tooltip_text = "No valid compatible durable save is available."
+    elif String(loaded.get("source", "")) == "backup":
+        _continue_button.text = "CONTINUE — RECOVERED SAVE"
+        _continue_button.tooltip_text = "The primary save was invalid; Continue will use the last valid backup."
+    else:
+        _continue_button.text = "CONTINUE"
+        _continue_button.tooltip_text = "Resume the persistent game."
+
+    var storage: Dictionary = _session_store.storage_status()
+    if not bool(storage.get("writable", false)):
+        _hint.text = "Saving is unavailable in this browser/device. Progress will not survive closing the game."
+    elif not bool(storage.get("persistent", true)):
+        _hint.text = "Browser storage is temporary here. Saves may not survive closing this tab/browser."
+    else:
+        _hint.text = "NEW GAME creates a fresh world. CONTINUE resumes the saved persistent world."
 
 func _obtain_gameplay_scene() -> PackedScene:
     if _gameplay_scene != null:

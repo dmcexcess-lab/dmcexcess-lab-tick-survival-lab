@@ -179,12 +179,25 @@ var _loot_blocks_interaction: bool = false
 var _action_blocks_interaction: bool = false
 var _lighting_refresh_pending: bool = false
 var _perception_refresh_pending: bool = false
+var _canonical_boot_ok: bool = false
+var _world_seed_override: int = -1
+
+func configure_world_seed_override(seed: int) -> bool:
+    if is_inside_tree() or _world != null or seed <= 0:
+        return false
+    _world_seed_override = seed
+    return true
+
+func canonical_boot_ok() -> bool:
+    return _canonical_boot_ok
 
 func _ready() -> void:
+    _canonical_boot_ok = false
     if not _boot_canonical_demo():
         push_error("GameMain: boot failed")
         print("CANONICAL_DEMO_BOOT_FAILED")
         return
+    _canonical_boot_ok = true
     print("CANONICAL_DEMO_BOOT_OK")
 
 func _boot_canonical_demo() -> bool:
@@ -205,7 +218,8 @@ func _boot_canonical_demo() -> bool:
         _collision_catalog,
         _base_traversal,
         _door_state,
-        _door_mutations
+        _door_mutations,
+        _world_seed_override
     ):
         return false
 
