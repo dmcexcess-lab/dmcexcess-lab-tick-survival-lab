@@ -11,7 +11,7 @@ PROJECT = Tick Survival Lab
 IDENTITY = sprite-based zombie survival
 CORE_LOOP = scavenge -> fight -> craft -> survive
 ACTIVE_PHASE = 4 / expedition + fortified-house loop
-ACTIVE_SLICE = existing-building fortification
+ACTIVE_SLICE = independent shelter utilities
 ROADMAP_CHANGE = false
 ```
 
@@ -23,28 +23,33 @@ ROADMAP_CHANGE = false
 - Vision observer-pose invalidation regression repaired.
 - Lighting presentation simplified to direct tile tint while preserving physical-light gameplay truth.
 - Contextual sustainment: inventory EAT/DRINK; furniture REST/SLEEP; powered-fixture DRINK.
-- Phase 4 powered cooking route: generated stove -> contextual crafting UI -> real carried input/tool -> WHEN craft -> cooked inventory output; live power loss blocks cooking and restored power re-enables it; cooked food exposes EAT and persists through Continue without resurrecting consumed input.
-- Phase 4 contextual deconstruction route: dining chair -> DECONSTRUCT -> hammer/crowbar + Mechanical requirement -> cancelable WHEN action -> authoritative removal + one existing wood plank; interruption is consequence-free and Continue preserves removal/salvage identity without duplication.
+- Phase 4 powered cooking: contextual stove -> real carried input/tool -> WHEN craft -> cooked food; live power gates cooking and Continue preserves consequence.
+- Phase 4 deconstruction: contextual dining-chair DECONSTRUCT -> tool/Mechanical -> cancelable WHEN -> authoritative removal + existing wood-plank salvage; safe interruption and durable Continue verified.
+- Phase 4 existing-building fortification: contextual window/door BOARD can now be layered to the authoritative three-board maximum; each layer uses existing hammer + plank + nails + Mechanical/WHEN semantics, materially reduces infected opening-pressure damage, renders from authoritative interaction state and persists through Continue.
 - Permanent generic survival-action strip removed.
 
 Do not reopen these merely for improvement. A concrete active-play defect may justify a targeted repair.
 
-## Phase 4 deconstruction invariant
+## Phase 4 fortification invariant
 
-- Deconstruction remains part of the established world-interaction owner, not a construction/crafting subsystem.
-- Actions originate from the target object through the contextual world-cell interaction panel.
-- Existing tool semantics, Mechanical skill state, WHEN action scheduling and WHAT/inventory mutation own requirements and consequences.
-- Pre-commit cancellation leaves the target intact and creates no salvage.
-- Successful completion removes the target through authoritative WHAT, preserves the tool and creates salvage through existing item/inventory/world truth exactly once.
-- Durable Continue preserves the removal and salvage identity; persistence itself remains closed Phase 3 infrastructure.
+- Fortification is an interaction on an existing opening, not construction or base placement.
+- `WorldInteractableState` remains the board/damage truth and caps openings at three board layers.
+- The existing contextual `WorldInteractionOfferProvider` exposes BOARD while an opening has fewer than three boards; REMOVE BOARD/BREAK remain ordinary contextual alternatives.
+- Each BOARD is the existing timed WHEN action requiring hammer, one wood plank, one nails box and Mechanical semantics. Materials are consumed exactly once; the hammer is preserved.
+- `ActorOpeningPressureActionService` reads authoritative board count. The active infected behavior uses that same pressure service when blocked by a door/window.
+- Verified opening-pressure damage: 55 unboarded -> 40 at three boards. Fortification therefore changes breach resistance, not only presentation.
+- `WorldInteractionStateRenderer` derives board visuals from authoritative interaction state.
+- Durable Continue preserves board count, opening damage, tool state and consumed-material consequences.
 
-Focused production verifier `36275247010`: **SUCCESS**, marker `PHASE4_DECONSTRUCTION_ROUTE_OK target=dining_chair contextual=true timed=true interrupted_safe=true removed=true salvage=wood_plank salvage_once=true tool_preserved=true continue=true`.
+Focused production verifier `36276349197`: **SUCCESS**, marker `PHASE4_FORTIFICATION_ROUTE_OK contextual=true timed=true boards=3 materials_once=true tool_preserved=true baseline_damage=55 fortified_damage=40 infected_pressure_owner=true continue=true`.
 
 ## Active roadmap phase — expedition + fortified-house loop
 
-Continue through natural contextual controls using systems already present. First aid, rest/sleep, repair, powered cooking and first deconstruction are production-routed. Repository search found no existing boarding/barricade/fortification route, making existing-building fortification the next missing player-facing link.
+The ordinary shelter loop now has contextual food/drink, first aid, rest/sleep, repair owners, powered cooking, deconstruction and meaningful opening fortification. The next release requirement not yet closed vertically is practical independent shelter utilities / real utility failure recovery.
 
-A base is an existing place the player has fortified and supplied. This phase is not permission for freeform construction, settlement management, new society simulation or a new crafting architecture.
+Existing production source already contains portable-generator and utility power repair owners. Start there rather than inventing another utility architecture. Inspect only enough current source to identify the first incomplete player-facing power/water route.
+
+A base remains an existing place the player has fortified and supplied. This phase is not permission for freeform construction, settlement management, new society simulation or a new crafting architecture.
 
 ## Current interaction invariants
 
@@ -54,20 +59,21 @@ A base is an existing place the player has fortified and supplied. This phase is
 - Powered potable fixture -> DRINK.
 - Stove -> contextual crafting; cooking availability follows live utility power.
 - Deconstructable object -> contextual DECONSTRUCT with existing tool/skill requirements.
-- No generic survival/crafting action strip.
+- Existing door/window -> contextual BOARD/REMOVE BOARD/BREAK/opening actions; BOARD remains available until three layers.
+- No generic survival/crafting/construction action strip.
 - Existing WHAT/WHEN/combat/perception/lighting/open-world persistence contracts remain fixed unless a concrete defect requires a targeted repair.
 
 ## Verification lifecycle
 
 Current prompt-local verifier/workflow:
 
-- `game/scripts/ci/Phase4DeconstructionRouteSmoke.gd`
-- `.github/workflows/phase4-deconstruction-route.yml`
+- `game/scripts/ci/Phase4FortificationRouteSmoke.gd`
+- `.github/workflows/phase4-fortification-route.yml`
 
-The **next code-changing prompt** must delete that pair before production edits and create one fresh prompt-local verifier/workflow scoped to the chosen fortification route.
+The **next code-changing prompt** must delete that pair before production edits and create one fresh prompt-local verifier/workflow scoped to the chosen independent-utility/failure-recovery route.
 
 ## NEXT
 
-**Phase 4 — implement the first real existing-building fortification route, starting with boarding an existing window unless targeted current-source inspection identifies an earlier missing fortification link.**
+**Phase 4 — finish the first missing independent-shelter utility route, starting from the existing portable-generator owners unless targeted production inspection identifies an earlier missing power/water failure/repair link.**
 
-Use the existing window/opening world truth, contextual interaction model, carried tools/materials, skills, WHEN actions, WHAT/inventory consequences and persistence owners. The player should stand beside an existing window/opening, have the ordinary required tool/materials, choose a contextual fortification action, spend real action time, and leave that existing opening materially harder for zombies to cross. Consume materials exactly once, preserve ordinary tools, make the changed opening affect the existing opening/pressure/traversal mechanics rather than only presentation, and prove save -> reopen -> Continue preserves the fortification without restoring materials or duplicating the modification. Do not create freeform construction, wall placement, a base-building grid or a parallel structure-state architecture.
+The player-facing outcome should close one real survival dependency end to end: an existing shelter loses or lacks ordinary utility service; the player uses the already-established tool/item/utility owners to provide or restore useful service; the service actually powers/feeds existing gameplay such as lighting, cooking, refrigeration or potable water; resource/fuel/tool consequences are real; and save -> reopen -> Continue preserves the result. Use the simplest existing power/water architecture. Do not create a utility-building or base-management system.
