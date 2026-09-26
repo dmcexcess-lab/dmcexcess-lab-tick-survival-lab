@@ -2,194 +2,161 @@
 
 Read this file first, then `README_SOPS.md`. Fetch current `main` once before the next repository operation.
 
-## Current checkpoint — PRODUCTION SURVIVAL ACTION STRIP WIRED — 2026-09-25
+## Current checkpoint — CONTEXTUAL SURVIVAL INTERACTIONS RESTORED; GLOBAL STRIP REMOVED — 2026-09-26
 
-The previously missing ordinary player route for System 34 survival actions is now live in production gameplay.
+The permanent EAT / DRINK / TAP / REST / SLEEP strip was the wrong interaction model and has been removed from production.
 
-Starting main for this operation: `f656bccd1914f815e15f47680c5e07f9cd2e972e`.
+Starting main for this operation: `d1b18ddd006b94da8d9fbf37d39104968f408b6c`.
 
-Production wiring heads:
-- compact touch layout: `a1e33551e8b671f528b9698944ebf3244e37e28b`;
-- production scene node: `2697ce62b4c7635f4d41d5c5da73068b1dbb1d26`;
-- authoritative sustainment-service wiring: `4194d3e9d4f4342d7ff211d9f7e726bddeb6f557`.
+Production correction commits:
 
-Fresh verifier/workflow owning head: `1eec74a1fb90d8aa945d550cb879659ba4977bac`.
+- production scene strip/resource removed: `7a5acb7a650b40e5a80aed95c7fd95260a714bd9`;
+- System 34 strip composition dependency removed: `9437bffa3b95a728ffe11ac309b71de6f66a58b7`;
+- obsolete `ConditionPlayerControls.gd` deleted: `879cd1bf9b39ae76904b44b95f57f6f5dfabf207`.
 
-Focused verifier run: `36217859923` — **SUCCESS**.
+Fresh verifier script head: `47ba72e3d8502ee7e5cf7ba733d88d7942af56e6`.
+
+Fresh verifier/workflow owning functional head: `2a57b800d4b882d0a483e3b8d1486d9f2647c9a1`.
+
+Focused verifier run `36262910696` — **SUCCESS**.
 
 Marker:
 
-`SURVIVAL_CONTROLS_OK buttons=5 eat=true drink=true tap_status=SURVIVAL — no working tap panel_bottom=632`
+`CONTEXTUAL_SUSTAINMENT_OK strip=false inventory_eat=true inventory_drink=true chair_rest=true bed_rest=true bed_sleep=true fixture_drink_handler=true`
 
-Documentation head immediately before this final handoff write: `149adb8b27e07dd608e2c2fc4935f5f42a826b22`.
+Functional-head Pages run `36262910604` — **SUCCESS**.
+
+Cross-system decision documentation head: `5d4c845b104243820f5648a7fc4c53f4d15f0c84`.
+
+System 29 changelog head immediately before this final handoff write: `cb322ea4023f9b9168a69f90fda1194085c58c3c`.
 
 This `README_CONTEXT.md` commit is the final repository write for the operation. Identify its exact SHA from `main`; everything after it is read-only verification.
 
 ## Prompt-local verifier lifecycle
 
-The previous lighting pair was retired before production changes:
+The previous strip verifier/workflow were retired before production code changes:
 
-- `game/scripts/ci/SimpleLightingPresentationSmoke.gd`
-- `.github/workflows/simple-lighting-presentation.yml`
+- `game/scripts/ci/SurvivalControlsSmoke.gd`;
+- `.github/workflows/survival-controls.yml`.
 
 Fresh current pair:
 
-- `game/scripts/ci/SurvivalControlsSmoke.gd`
-- `.github/workflows/survival-controls.yml`
+- `game/scripts/ci/ContextualSustainmentRoutesSmoke.gd`;
+- `.github/workflows/contextual-sustainment.yml`.
 
-The next code-changing prompt must delete this pair before changing code and create one fresh verifier/workflow scoped only to the next operation.
+The next code-changing prompt must delete this pair before changing code and create one fresh verifier/workflow scoped only to the camp/sleeping-bag operation.
 
-## Completed — ordinary survival controls
+## Completed — object-first survival interaction language
 
-`gameplay.tscn` now includes `SurvivalControls` using the existing `ConditionPlayerControls`.
+Ordinary player sustainment actions now use the existing natural interaction surfaces only.
 
-The production strip exposes:
+### Carried food and drink
 
-- **EAT**
-- **DRINK**
-- **TAP**
-- **REST**
-- **SLEEP**
+Select the exact carried item in **INVENTORY**.
 
-The strip is touch-first and sits directly above the existing movement controls:
+The selected consumable exposes its existing authoritative:
 
-- panel x = 41;
-- panel y = 576;
-- panel width = 558;
-- panel bottom = 632;
-- movement controls begin at y = 638.
+- **EAT** action for food;
+- **DRINK** action for carried drink.
 
-This avoids the prior top-HUD overlap risk and preserves the existing lower movement grid.
+The action consumes that exact persistent item through `SurvivorSustainmentActionService` and advances authoritative WHEN.
 
-## Authority and behavior
+### Furniture
 
-No parallel survival state or replacement action system was introduced.
+Furniture sustainment remains a world click interaction through the existing System 29 world interaction stack.
 
-`System34GameMain` configures the control strip with the existing authoritative:
+Current semantics:
 
-- `SurvivorSustainmentActionService`;
-- `TickKernel`;
-- canonical player identity.
+- bed -> **REST** and **SLEEP**;
+- dining chair / armchair -> **REST**;
+- sofa -> **REST**.
 
-Action behavior remains owned by the existing System 34 service:
+The clicked persistent furniture identity is carried through the action and revalidated at completion.
 
-- EAT selects the first real carried edible item through carry truth and consumes the exact persistent entity on committed completion;
-- DRINK does the same for a carried drink;
-- TAP checks the existing real reachable powered potable-fixture provider;
-- REST schedules the existing committed one-hour WHEN action;
-- SLEEP schedules the existing committed eight-hour WHEN action;
-- current bed/ground surface truth continues to affect comfort;
-- elapsed-time condition pressure continues during rest/sleep.
+### Potable fixtures
 
-The UI owns only touch buttons and concise result text.
+Powered potable fixtures remain world click interactions.
+
+Current water-fixture semantics include:
+
+- kitchen sink;
+- bathroom vanity;
+- utility sink.
+
+The world interaction route offers **DRINK** only when the exact fixture is reachable and its real utility water service is available.
+
+## Removed — permanent survival strip
+
+Production no longer contains:
+
+- the `SurvivalControls` scene node;
+- the `ConditionPlayerControls.gd` script;
+- permanent EAT / DRINK / TAP / REST / SLEEP buttons;
+- System 34 composition wiring for that strip.
+
+No replacement HUD or duplicate sustainment state was introduced.
+
+The existing authoritative sustainment, condition, inventory and world-interaction services remain intact.
+
+## Approved interaction rule
+
+Survival actions originate from the thing being acted on.
+
+Do not reintroduce a permanent generic survival-action bar.
+
+There is no ordinary player-facing generic ground REST/SLEEP command.
+
+Ground/wilderness recovery will use a real camp object placed from inventory rather than a magical action available everywhere.
+
+This decision is recorded in `DESIGN_DECISIONS.md`.
 
 ## Focused verification
 
-Fresh production-scene verifier:
+`ContextualSustainmentRoutesSmoke.gd` boots the real production `gameplay.tscn` and proves:
 
-- `game/scripts/ci/SurvivalControlsSmoke.gd`
-- `.github/workflows/survival-controls.yml`
-
-Run `36217859923` — **SUCCESS**.
-
-The verifier proves:
-
-1. `SurvivalControls` exists in production `gameplay.tscn`;
-2. all five buttons exist;
-3. all five buttons have ordinary pressed routes;
-4. the panel fits the 640px phone layout and does not overlap the movement row;
-5. a real persistent `item.food.apple` placed in canonical player inventory is consumed through the actual EAT button;
-6. authoritative WHEN advances during EAT;
-7. a real persistent `item.drink.water_bottle` is consumed through the actual DRINK button;
-8. authoritative WHEN advances during DRINK;
-9. TAP routes through the real control and returns the truthful unavailable result at the canonical spawn location rather than fabricating water access.
-
-REST and SLEEP button routes are verified as live UI routes without forcing an artificial multi-hour infected-simulation benchmark inside this focused UI smoke.
-
-## Preserved neighboring systems
-
-This operation did not change:
-
-- direct tile-tint lighting presentation;
-- System 27 physical lighting truth or occlusion;
-- perception / LOS;
-- active infected cohort size or behavior;
-- simultaneous combat consequences;
-- mob force;
-- fear;
-- vehicles;
-- utilities;
-- world generation;
-- inventory exact-item EAT/DRINK path;
-- crafting;
-- touch movement controls;
-- hard pause ownership.
-
-## Publication state before final handoff write
-
-On documentation head `149adb8b27e07dd608e2c2fc4935f5f42a826b22`:
-
-- fresh survival-control workflow run `36217918808` was in progress;
-- Pages run `36217918776` was in progress.
-
-After this final context write, perform read-only exact-head verification only.
-
-## Continuation reconciliation — 2026-09-26
-
-A stale continuation from an older Phase-2 performance checkpoint resumed after the repository had already advanced through **63 newer commits**.
-
-Those newer commits had already completed:
-
-- infected callback/perception performance closure;
-- coherent consequence presentation;
-- crowded-fight technical acceptance;
-- the cached vision-cone/world-refresh regression repair;
-- simplified direct per-tile lighting presentation;
-- the current production survival-action strip.
-
-One duplicate stale edit was briefly added after those completed slices: an extra `_acquisition.freshness_revision()` call in `ActiveInfectedCohortService.sync_active_now()`. The repository already contained the finalized infected-lighting preparation solution from the completed performance pass, so that duplicate call was removed exactly and no newer work was reverted.
-
-Reconciliation code head: `205acf86867db953f3ab069d37e93c056d40df9e`.
-
-Exact-head survival-control verifier run `36261877837` — **SUCCESS**.
-
-No production survival-control, perception, lighting, combat, fear, crowd-pressure or world behavior was intentionally changed by this reconciliation.
-
-The existing prompt-local pair remains authoritative because this was a restoration/reconciliation, not a new feature slice:
-
-- `game/scripts/ci/SurvivalControlsSmoke.gd`
-- `.github/workflows/survival-controls.yml`
-
-This README_CONTEXT write is the final repository mutation for the reconciliation. Everything after it is read-only exact-head verification.
+1. no `SurvivalControls` node exists;
+2. a real carried apple exposes **EAT** in the selected inventory item UI;
+3. pressing that inventory action consumes the exact apple and advances WHEN;
+4. a real carried water bottle exposes **DRINK** in inventory;
+5. pressing that action consumes the exact bottle and advances WHEN;
+6. chair/armchair/sofa/bed semantics remain classified as rest surfaces;
+7. the production world interaction controller retains DRINK-from-fixture, REST-on-furniture and SLEEP-in-bed handlers;
+8. a reachable chair offers REST but not SLEEP;
+9. a reachable bed offers both REST and SLEEP;
+10. the powered-fixture DRINK route remains registered.
 
 ## NEXT OPERATION
 
-Visually playtest the deployed survival strip on the real build.
+Implement the approved bounded **camp / sleeping-bag** slice.
 
-Check specifically:
+Goal:
 
-- all five controls are comfortable on phone/touch;
-- the strip does not obscure important world content;
-- EAT / DRINK feedback is readable;
-- TAP gives useful failure feedback away from a sink and succeeds beside a working potable fixture;
-- REST / SLEEP feel acceptable when actually advancing long stretches of world time.
+- add one real sleeping bag / bedroll item that can exist in inventory;
+- expose a contextual **PLACE** action from that selected inventory item;
+- placement creates/persists a real world object at a valid nearby ground location;
+- clicking the placed sleeping bag/bedroll exposes **REST** and **SLEEP** through the same contextual world-interaction language as furniture;
+- expose a contextual way to pick it back up into inventory;
+- reuse the existing sustainment, placement, interaction, inventory, persistence and WHEN owners;
+- do not introduce freeform base construction or a second placement engine.
 
-If visual acceptance passes, continue with the next concrete player-facing release defect or core-loop balance issue exposed by playtest.
+If an existing generic placeable-item path already owns this behavior, extend it rather than creating a parallel camp system.
 
-Do not reopen System 34 architecture unless the production control path reveals a concrete defect.
+Craft/acquisition details should use the smallest truthful existing item/crafting path needed for one usable camp object; do not expand this slice into a camping equipment tree.
 
 ## Protected behavior
 
 Preserve:
 
 - one WHERE / WHAT / WHEN authority chain;
+- the contextual inventory EAT/DRINK route;
+- contextual furniture REST/SLEEP;
+- contextual powered-fixture DRINK;
+- exact target/item identity and completion revalidation;
 - System 27 physical-light truth and tile-tint-only presentation;
-- lighting-driven perception;
-- observer-pose LOS cache invalidation;
+- lighting-driven perception and observer-pose LOS invalidation;
 - active infected cohort size 8;
 - simultaneous combat consequences;
-- mob-force core;
-- canonical fear;
+- mob-force core and canonical fear;
 - coherent consequence presentation;
 - touch-first semantic controls;
 - input locked until legitimate decision pause;
@@ -197,5 +164,7 @@ Preserve:
 - player movement, health/injury, inventory, skills/equipment;
 - day/night, weather, utilities, vehicles, persistence/terrain/streaming;
 - STATS / INVENTORY / CRAFT / MENU ownership.
+
+Do not reopen the removed permanent survival strip.
 
 Historical gameplay suites and the retired twelve-seed matrix are not current gates.
