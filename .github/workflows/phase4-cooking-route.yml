@@ -27,6 +27,14 @@ jobs:
         run: |
           set -euxo pipefail
           ./Godot_v4.7.1-stable_linux.x86_64 --headless --editor --path "$GITHUB_WORKSPACE/game" --quit
+      - name: Run cooking protected regressions
+        shell: bash
+        run: |
+          set -euxo pipefail
+          for smoke in CraftingSmoke.gd System33PowerPhysicalNetworkSmoke.gd System34SurvivorConditionSmoke.gd WorldInteractionSmoke.gd CanonicalDemoSmoke.gd
+          do
+            timeout 180s ./Godot_v4.7.1-stable_linux.x86_64 --headless --path "$GITHUB_WORKSPACE/game" -s "res://scripts/ci/$smoke"
+          done
       - name: Verify cooking vertical route
         shell: bash
         run: |
