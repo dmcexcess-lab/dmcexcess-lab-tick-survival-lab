@@ -18,6 +18,7 @@ const PopulationProjectionClass = preload("res://scripts/simulation/population/P
 const InfectedStateClass = preload("res://scripts/simulation/infected/InfectedState.gd")
 const FirstInfectedHydratorClass = preload("res://scripts/simulation/infected/FirstInfectedHydrationService.gd")
 const ActiveInfectedCohortClass = preload("res://scripts/simulation/infected/ActiveInfectedCohortService.gd")
+const ConsequencePresenterClass = preload("res://scripts/ui/ConsequenceMomentPresenter.gd")
 
 const ACTIVE_INFECTED_COHORT_SIZE: int = 8
 
@@ -33,6 +34,7 @@ var _firearm_damage: FirearmDamageInterruptionService = null
 var _firearm_sound: FirearmSoundEmitterAdapter = null
 var _corpse_state: CorpseState = null
 var _death_transitions: ActorDeathTransitionService = null
+var _consequence_presenter: ConsequenceMomentPresenter = null
 var _population_resident_projection: PopulationResidentProjection = null
 var _infected_state: InfectedState = null
 var _first_infected_hydrator: FirstInfectedHydrationService = null
@@ -96,6 +98,12 @@ func _boot_system37_combat() -> bool:
     _death_transitions = DeathTransitionsClass.new(_world, _world_mutations, _kernel, _health_state, _hand_state, _hand_mutations, _inventory_state, _inventory_mutations, _corpse_state)
     if not _death_transitions.is_ready(): return false
     _death_transitions.actor_died.connect(_on_actor_died)
+
+    _consequence_presenter = ConsequencePresenterClass.new(
+        _kernel, _combat_actions, _movement, _health_state, _death_transitions, FixtureClass.PLAYER_ID
+    )
+    add_child(_consequence_presenter)
+    if not _consequence_presenter.is_configured(): return false
 
     _combat_controller = CombatControllerClass.new(_combat_actions, _kernel, FixtureClass.PLAYER_ID, _firearm_actions)
     add_child(_combat_controller)
@@ -173,6 +181,9 @@ func _boot_infected_cohort_behavior() -> bool:
 
 func infected_cohort_service() -> ActiveInfectedCohortService:
     return _infected_cohort
+
+func consequence_presenter() -> ConsequenceMomentPresenter:
+    return _consequence_presenter
 
 func infected_state() -> InfectedState:
     return _infected_state
