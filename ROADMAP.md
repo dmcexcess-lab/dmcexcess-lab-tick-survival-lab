@@ -60,6 +60,8 @@ Closed Phase 4 slice: powered stove cooking now uses the existing stove contextu
 
 Closed Phase 4 slice: dining-chair deconstruction is a contextual DECONSTRUCT interaction using the existing hammer/crowbar tool semantics, Mechanical skill check, cancelable WHEN action and authoritative WHAT/inventory mutation. Pre-commit cancellation leaves the chair intact and creates no salvage; completion removes the chair, preserves the tool, yields exactly one existing wood-plank material and survives Continue without resurrection or duplication.
 
+Closed Phase 4 slice: existing windows/doors can be fortified contextually in up to three board layers using the existing hammer + wood-plank + nails semantics and timed WHEN action. The production interaction now continues to offer BOARD until the authoritative three-layer maximum is reached. Each layer consumes one material pair exactly once, preserves the hammer, renders from `WorldInteractableState`, reduces opening-pressure damage used by infected behavior (55 unboarded -> 40 at three layers), and persists through Continue with damage/board state intact.
+
 **Done when:** the player can supply and fortify an existing shelter, recover/craft/repair through ordinary controls, use practical independent utilities and recover from a real infrastructure failure.
 
 ### Phase 5 — Contextual vehicles/parking — QUEUED
@@ -110,4 +112,4 @@ One operation = one coherent vertical player/system outcome. The user chooses th
 
 ## NEXT
 
-**Phase 4 — first existing-building fortification route, starting with boarding an existing window unless current production truth identifies an earlier missing fortification link.**
+**Phase 4 — finish the first missing independent-shelter utility route, starting from the existing portable-generator owners unless targeted production inspection identifies an earlier missing power/water failure/repair link.**
