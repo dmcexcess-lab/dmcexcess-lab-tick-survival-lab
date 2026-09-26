@@ -2,241 +2,134 @@
 
 Read this file first, then `README_SOPS.md`. Fetch current `main` once before the next repository operation.
 
-## Current checkpoint — SURVIVAL RELEASE PHASE 2 EIGHT-INFECTED CALLBACK/PERCEPTION PERFORMANCE BOUNDED — 2026-09-25
+## Current checkpoint — SURVIVAL RELEASE PHASE 2 OVERLAPPING CONSEQUENCE PRESENTATION CLOSED — 2026-09-25
 
-Phase 1 remains complete. Phase 2A commitment windows, Phase 2B simultaneous melee consequences, Phase-2C causal movement/shove/death ordering, the closed mob-force core, and canonical fear remain protected.
+Phase 1 remains complete. Phase 2 commitment windows, simultaneous melee consequences, causal movement/shove/death ordering, the closed mob-force core, canonical fear, bounded eight-infected callback/perception cost, and coherent overlapping consequence presentation are now protected.
 
-This operation targeted the existing production eight-infected cohort only. It measured real callback/perception cost, removed proven redundant work, and kept infected behavior intentionally simple.
+Starting main for this operation: `bd94f7e13556c68277026dacde95d20bc4170676`.
 
-Starting main for this operation: `f61a7318e936cd92f0d6703815a148b505b9b572`.
+Functional/executable owning head: `e76f9411f297c753f5c439b30756110622b814c3`.
 
-Functional/executable owning head: `cd28fae78d5bdc80df5721f674265deeb69f4085`.
+Focused verifier owning head/run: `e76f9411f297c753f5c439b30756110622b814c3` / `36207564242` — **SUCCESS**.
 
-Focused verifier owning head/run: `4d674f25a00d4c454a40f2652f43fa02cc29e891` / `36206781574` — **SUCCESS**.
+Functional-head Pages run: `36207564248` — **SUCCESS**.
 
-Functional-head Pages run: `36206781364` — **SUCCESS**.
-
-Documentation head immediately before this final handoff write: `13f996fc1713a42b6b192480c1a2e496bc4d240b`.
+Documentation head immediately before this final handoff write: `66a2bf3b4aa9375449a8d677809926f945850627`.
 
 This `README_CONTEXT.md` commit is the final repository write for the operation. Identify its exact SHA from `main`; everything after it is read-only verification.
 
 ## Prompt-local verifier lifecycle
 
-The previous canonical-fear pair was deleted before performance code work:
-
-- `game/scripts/ci/Phase2FearSmoke.gd`
-- `.github/workflows/phase2-fear.yml`
-
-Fresh current pair:
+The previous infected-performance verifier/workflow were retired before production code work:
 
 - `game/scripts/ci/Phase2InfectedPerceptionPerfSmoke.gd`
 - `.github/workflows/phase2-infected-perception-perf.yml`
 
-The next code prompt must delete this pair before changing code and create a fresh focused verifier/workflow for overlapping consequence presentation.
+Fresh current pair:
 
-## Completed — measured the real eight-infected route first
+- `game/scripts/ci/Phase2ConsequencePresentationSmoke.gd`
+- `.github/workflows/phase2-consequence-presentation.yml`
 
-The first focused production route used one ordinary player turn with the real active cohort.
+The next code prompt must delete this pair before changing code and create a fresh focused verifier/workflow for the crowded-fight + Safari acceptance/performance route.
 
-Baseline run `36200438756` measured:
+## Completed — one consequence moment per shared timestamp
 
-```text
-active infected          = 8
-elapsed_usec             = 269034
-perception_recomputes    = 8
-behavior_evaluations     = 8
-ordinary submissions     = 0
-```
+New production presentation owner:
 
-That established a real cost rather than assuming more AI architecture was needed.
+- `game/scripts/ui/ConsequenceMomentPresenter.gd`
 
-Inspection then showed a concrete duplication:
+It consumes already-resolved production signals from:
 
-- System 23 already recomputed observer truth on relevant world/perception changes;
-- infected behavior still explicitly requested another recompute whenever it drove from a player commitment.
+- Combat impact/shove;
+- Movement commits;
+- physical crowd-pressure summaries;
+- generic actor death;
+- Health consequence-batch closure.
 
-No horde manager, scheduler or perception budget queue was justified.
+It does not mutate gameplay truth, own combat/movement/health state, schedule WHEN work, or advance simulation time.
 
-## Completed — event-driven perception freshness
+Events are grouped by canonical world tick. Combat consequence batches flush only after the existing Health batch closes, so already-earned movement/shove/death outcomes can join the same presentation moment.
 
-`ObserverPerceptionService` now distinguishes current observer truth from stale truth.
+## Completed — simultaneous combat remains visibly simultaneous
 
-Behavior calls:
+When two reciprocal hits resolve on the same timestamp, the player-facing surface explicitly presents them as a mutual exchange rather than serial enemy turns.
 
-`recompute_if_stale(...)`
+Mutual lethal remains visibly mutual and uses one shared consequence summary.
 
-instead of forcing a full recompute every decision.
+Multiple same-tick impact/death events do not become separate cinematic waits or action locks.
 
-Freshness is still invalidated by real dependencies.
+## Completed — movement, shove and mob pressure are legible together
 
-This optimization never allows actor callback/order to decide perception truth.
+The presenter groups:
 
-## Completed — acquisition freshness remains correct
+- shove success/failure;
+- pressure displacement/trapping;
+- same-timestamp actor movement;
+- combat impact/death when they share the timestamp.
 
-Visual acquisition depends on physical lighting, so merely caching by world tick was not sufficient.
+Repeated pressure summaries for the same target/timestamp are coalesced.
 
-System 23 now tracks the acquisition provider's freshness revision separately from geometric/world dirtiness.
+A lone ordinary movement event is suppressed, preventing routine infected movement from spamming the consequence surface.
 
-If physical-light acquisition truth changes, Perception refreshes even when actor geometry did not.
+No crowd-force or movement-resolution rules changed.
 
-Thus the optimization does **not** freeze stale darkness/light visibility.
+## Completed — resident-backed infected labels use real identity
 
-## Completed — cached geometric LOS across lighting-only refresh
+The first focused run exposed a presentation defect: resident-backed infected actor IDs do not necessarily contain the literal word `infected`.
 
-Lighting/acquisition changes do not automatically mean walls, doors, terrain or observer facing changed.
+The production presenter now receives the actual hydrated active-cohort actor IDs from `CombatGameMain` and uses that identity set for player-facing labels.
 
-System 23 now retains geometric LOS candidates separately.
+No actor identity or hydration truth was changed.
 
-When only visual acquisition changes:
+## Focused verifier evidence
 
-- cached LOS candidates are reused;
-- only acquisition filtering + observer memory refresh run again;
-- no LOS ray/opacity geometry pass is repeated.
+Fresh verifier/workflow:
 
-The final production verifier proves:
+- `game/scripts/ci/Phase2ConsequencePresentationSmoke.gd`
+- `.github/workflows/phase2-consequence-presentation.yml`
 
-`infected_geometry_recomputes=0`
+Initial run:
 
-across the measured two-decision route.
+- `36207501236` — **FAILURE**
+- correctly exposed the resident-backed infected labeling defect;
+- production was repaired rather than weakening the assertion.
 
-Geometry still invalidates for the actual geometry/facing/profile dependencies.
+Final functional run:
 
-## Completed — one bounded shared physical-light field
-
-The player and active infected observers use the same physical-light acquisition provider.
-
-Previously observer demand could move/rebuild one bounded physical-light query field around separate observer envelopes.
-
-`ActiveInfectedCohortService` now prepares one combined bounded field covering:
-
-- every currently active infected observer's vision envelope;
-- the player observer envelope.
-
-No whole-world light field was introduced.
-
-No renderer/camera state became gameplay truth.
-
-## Completed — warm shared field before the first real input
-
-A later diagnostic isolated a large remaining spike.
-
-Before the final warm-preparation fix, the same two-decision route measured:
-
-```text
-first_request_usec   = 113442
-second_request_usec  = 9855
-```
-
-The first infected behavior callback was paying the cold shared-light-field build through visual-acquisition freshness.
-
-`IlluminationVisualAcquisitionProvider.prepare_bounds(...)` now means the bounded field is actually current, not merely that its bounds were stored.
-
-The cohort already prepares those bounds during activation/loading, so the expensive cold build moves out of the first real player input.
-
-No simulation time advances during this preparation.
-
-## Final focused production evidence
-
-Focused run:
-
-- head: `4d674f25a00d4c454a40f2652f43fa02cc29e891`
-- run: `36206781574`
+- head: `e76f9411f297c753f5c439b30756110622b814c3`
+- run: `36207564242`
 - result: **SUCCESS**
 
-Final marker:
+Marker:
 
-`PHASE2_INFECTED_PERF_METRIC`
+`PHASE2_CONSEQUENCE_PRESENTATION_OK`
 
-Key measured values:
+The production-scene verifier proves:
 
-```text
-active infected                  = 8
-first_request_usec               = 9874
-second_request_usec              = 9580
+1. the presenter is wired to real Combat/Movement/Death production signals;
+2. two reciprocal hits remain one simultaneous consequence moment;
+3. mutual death remains visibly mutual;
+4. shove + pressure + two same-tick moves are grouped coherently;
+5. duplicate pressure for one target is coalesced;
+6. one isolated ordinary movement does not create presentation spam;
+7. presentation work leaves the WHEN world tick unchanged.
 
-first_behavior_eval_usec         = 8984
-second_behavior_eval_usec        = 8905
-behavior_evaluations             = 16
-behavior_eval_max_usec           = 1726
+## Phone/Safari presentation contract
 
-infected_perception_recomputes   = 16
-infected_perception_usec         = 15797
-infected_geometry_recomputes     = 0
-infected_geometry_usec           = 0
+The consequence surface is:
 
-intention_usec                   = 1581
-submit_usec                      = 14
-ordinary submissions             = 0
-```
+- viewport-relative;
+- non-interactive;
+- presentation-only;
+- free of cinematic delays or timers that gate the next decision.
 
-Interpretation:
-
-- exactly one behavior evaluation per active infected per player decision;
-- both measured action-start callbacks are under the focused 10 ms per-decision target on this CI route;
-- aggregate infected behavior work is under 10 ms per decision;
-- geometric LOS is not redundantly rebuilt;
-- remaining acquisition/memory refresh is roughly 1 ms per infected observer on this route;
-- intention selection and submission are small, so they were not rewritten.
-
-## Important non-claim — total turn performance is not solved
-
-The same final CI route still measured approximately:
-
-- first full turn: `282219` µs;
-- second full turn: `287141` µs.
-
-Player Perception accounted for only about `20612` µs across both turns, and infected callback/perception is now bounded as above.
-
-Therefore this operation does **not** claim the entire accepted-action route meets the eventual Phase-2 <50 ms engineering target.
-
-The remaining full-turn cost is outside the bounded infected callback/perception slice and must be attributed from later crowded-fight/Safari acceptance evidence before more optimization.
-
-Do not reopen infected scheduling or perception architecture merely because total turn time remains high.
-
-## Behavior preserved
-
-`FirstInfectedBehaviorService` still owns only simple intention selection:
-
-- idle;
-- pursue visible;
-- pursue last seen;
-- investigate sound;
-- attack visible.
-
-No:
-
-- horde brain;
-- group target sharing;
-- formation logic;
-- crowd steering;
-- generic AI scheduler;
-- budget queue;
-- per-frame zombie update;
-- private zombie clock
-
-was added.
-
-All actions still submit through normal Movement / Combat / WHEN.
-
-## Measurement hooks
-
-The active-cohort measurement layer now also exposes:
-
-- behavior evaluation count / total / max;
-- intention-refresh total microseconds;
-- action-submission total microseconds;
-- Perception recompute count / total / max;
-- geometric LOS recompute count / total.
-
-These are diagnostics only and do not alter gameplay decisions.
+No desktop-only input assumption was introduced.
 
 ## Durable documentation updated
 
-- `SYSTEM_DESIGNS/23_PERCEPTION_LOS_FOG_MEMORY.md` records event-driven freshness, cached geometric LOS, shared acquisition demand and final performance evidence.
-- `SYSTEM_DESIGNS/38_FIRST_INFECTED_POPULATION_HYDRATION.md` records eight-infected callback-performance closure and explicitly rejects scheduler/horde-brain drift.
-- `SYSTEM_DESIGNS/PERFORMANCE_ARCHITECTURE.md` records the measured P4B callback/perception pass and its non-claim about full-turn performance.
-- `ROADMAP.md` marks zombie callback/perception cost bounded and moves Phase 2 forward.
-- `CHANGELOG_LATEST.md` records the same-route cold/warm measurements and final proof.
+- `SYSTEM_DESIGNS/37_TACTICAL_COMBAT_PHYSICAL_IMPACT.md` records the consequence-presentation contract and focused proof.
+- `ROADMAP.md` marks overlapping consequence presentation complete and advances Phase 2.
+- `CHANGELOG_LATEST.md` records implementation, verifier evidence and the repaired labeling defect.
 
 ## Current release direction
 
@@ -260,35 +153,38 @@ Phase-2 defining work now complete includes:
 6. shove as shared forced trajectory;
 7. aggregate multi-body mob pressure;
 8. canonical Calm/fear;
-9. bounded eight-infected callback/perception path.
+9. bounded eight-infected callback/perception path;
+10. coherent overlapping consequence presentation.
 
 ## NEXT OPERATION
 
-Continue Phase 2 with **coherent overlapping consequence presentation**.
+Continue Phase 2 directly with the **crowded-fight + Safari acceptance/performance route**.
 
-Do not reopen mob force, fear, infected scheduling or Perception performance without a concrete new defect.
+Do not reopen mob force, fear, infected scheduling, Perception performance or consequence presentation without a concrete defect.
 
-The next bounded slice should make the simultaneous simulation legible to the player.
+This next bounded slice is acceptance + attribution, not another architecture pass.
 
 Targeted starting reads only:
 
-- existing combat/movement consequence signals and current player-facing combat/status presentation;
-- current corpse/injury/impact feedback surface;
-- existing action/consequence message queue or tactical overlays where simultaneous events are currently shown serially;
-- no broad renderer rediscovery.
+- the current player action/run loop needed to drive a real crowded fight;
+- the current fresh consequence presenter only as an observed output;
+- current performance counters already exposed by the active infected cohort / perception owners;
+- Safari/web input and viewport seams needed to exercise the same route;
+- current Pages/export configuration only if the Safari run exposes a concrete web defect.
 
 Required outcomes:
 
-- same-timestamp melee impacts that truly resolve together are presented as one coherent consequence moment rather than looking like sequential enemy turns;
-- simultaneous movement/shove/crowd outcomes are grouped enough that the player can understand why actors ended where they did;
-- mutual hits / mutual lethal remain visibly mutual;
-- fear/injury/pressure feedback does not spam duplicate messages for one consequence boundary;
-- presentation owns no gameplay truth and advances no WHEN time;
-- no cinematic delay that blocks the next legitimate decision;
-- phone/Safari remains first-class;
-- use one fresh prompt-local verifier/workflow scoped only to consequence presentation.
+- run a real production crowded fight with the active eight-infected cohort through ordinary player actions;
+- verify automatic decision-pause/input-lock behavior remains usable under crowd pressure;
+- verify simultaneous impact/movement/shove/death presentation remains coherent in the real route;
+- verify touch/mobile/Safari path for the same decision loop rather than a desktop-only substitute;
+- measure end-to-end accepted-action/turn cost in the crowded route;
+- attribute the remaining full-turn cost by existing measured phases before changing performance architecture;
+- only optimize a component if this acceptance evidence identifies a concrete bounded bottleneck;
+- no broad gameplay gate, no historical suites, no retired seed matrix;
+- use one fresh prompt-local verifier/workflow scoped only to this acceptance/performance route.
 
-After coherent consequence presentation, Phase 2 should move directly to the crowded-fight + Safari acceptance/performance route. That acceptance pass should attribute the remaining full-turn cost before any further optimization.
+After this acceptance/performance slice, Phase 2 should close or identify one concrete release blocker. Do not create a new indefinite technical phase.
 
 ## Protected behavior
 
@@ -311,6 +207,8 @@ Preserve:
 - simple independent infected intentions;
 - no horde brain/scheduler/group coordination;
 - resident-backed infected identity;
+- coherent same-timestamp consequence presentation;
+- no presentation-owned gameplay truth or time advancement;
 - player movement, Health/injury, inventory, condition/moodlets, skills/equipment;
 - day/night, Weather, utilities and vehicles;
 - persistence/terrain/streaming;
