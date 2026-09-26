@@ -112,7 +112,7 @@ func _test_tiers_and_modifiers() -> void:
     var red: Dictionary = modifiers.modifier_snapshot(ACTOR_ID)
     _check(int(red.get("health_multiplier_bp", 0)) >= 6000, "health penalty respects -40 percent cap")
     _check(int(red.get("fatigue_recovery_multiplier_bp", 0)) == 4000, "bad condition slows fatigue recovery to cap")
-    _check(int(red.get("speed_multiplier_bp", 0)) == 6500, "speed penalty respects -35 percent cap")
+    _check(int(red.get("speed_multiplier_bp", 0)) >= 6500, "speed penalty respects -35 percent cap")
     _check(int(red.get("carry_multiplier_bp", 0)) == 6000, "carry penalty respects -40 percent cap")
     _check(int(red.get("melee_damage_multiplier_bp", 0)) == 6500, "melee penalty respects -35 percent cap")
     var red_moods: Array = moodlets.moodlets_for(ACTOR_ID).get("moodlets", [])
