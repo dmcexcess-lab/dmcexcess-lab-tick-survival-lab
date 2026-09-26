@@ -2,138 +2,162 @@
 
 Read this file first, then `README_SOPS.md`. Fetch current `main` once before the next repository operation.
 
-## Current checkpoint — LIGHTING PRESENTATION SIMPLIFIED TO DIRECT TILE TINT — 2026-09-25
+## Current checkpoint — PRODUCTION SURVIVAL ACTION STRIP WIRED — 2026-09-25
 
-User direction superseded the earlier transparent-circle idea:
+The previously missing ordinary player route for System 34 survival actions is now live in production gameplay.
 
-**Lighting presentation should only change each tile's color/darkness from the real physical lightmap. No bloom, blur, halo, scatter, reflection, or other added visual lighting effects.**
+Starting main for this operation: `f656bccd1914f815e15f47680c5e07f9cd2e972e`.
 
-Starting main for this operation: `cdc73bb077101172b9253a4573548aa2f85442c8`.
+Production wiring heads:
+- compact touch layout: `a1e33551e8b671f528b9698944ebf3244e37e28b`;
+- production scene node: `2697ce62b4c7635f4d41d5c5da73068b1dbb1d26`;
+- authoritative sustainment-service wiring: `4194d3e9d4f4342d7ff211d9f7e726bddeb6f557`.
 
-Functional production lighting cleanup head: `a307e8bb0c268709aa176fae5d5e513922c4dc42`.
+Fresh verifier/workflow owning head: `1eec74a1fb90d8aa945d550cb879659ba4977bac`.
 
-Fresh verifier/workflow owning head: `d2c8b6f99c5ddd76920dfb563d3996d7a97c80ed`.
+Focused verifier run: `36217859923` — **SUCCESS**.
 
-Focused verifier run: `36217199331` — **SUCCESS**.
+Marker:
 
-Documentation head immediately before this final handoff write: `141c3790eb642c5479c61e65ccff5f30364ab8e1`.
+`SURVIVAL_CONTROLS_OK buttons=5 eat=true drink=true tap_status=SURVIVAL — no working tap panel_bottom=632`
+
+Documentation head immediately before this final handoff write: `149adb8b27e07dd608e2c2fc4935f5f42a826b22`.
 
 This `README_CONTEXT.md` commit is the final repository write for the operation. Identify its exact SHA from `main`; everything after it is read-only verification.
 
 ## Prompt-local verifier lifecycle
 
-The previous pair was retired during this operation:
-
-- `game/scripts/ci/VisionWorldRefreshRegressionSmoke.gd`
-- `.github/workflows/vision-world-refresh-regression.yml`
-
-Fresh current pair:
+The previous lighting pair was retired before production changes:
 
 - `game/scripts/ci/SimpleLightingPresentationSmoke.gd`
 - `.github/workflows/simple-lighting-presentation.yml`
 
-The next code-changing prompt must delete this pair before changing code and create a fresh prompt-local verifier/workflow scoped only to the next operation.
+Fresh current pair:
 
-## Completed — direct tile-tint presentation
+- `game/scripts/ci/SurvivalControlsSmoke.gd`
+- `.github/workflows/survival-controls.yml`
 
-The production physical-light presentation is now intentionally minimal.
+The next code-changing prompt must delete this pair before changing code and create one fresh verifier/workflow scoped only to the next operation.
 
-`physical_lighting_multiply.gdshader` now:
+## Completed — ordinary survival controls
 
-- performs one direct `texture(TEXTURE, UV)` sample;
-- uses the sampled physical-light tint and luminance directly;
-- performs no neighboring texture samples;
-- performs no edge weighting;
-- performs no smoothing/blur pass.
+`gameplay.tscn` now includes `SurvivalControls` using the existing `ConditionPlayerControls`.
 
-`PhysicalLightingPresentationRenderer.gd` now:
+The production strip exposes:
 
-- owns one lighting image;
-- owns one lighting texture;
-- owns one Sprite2D child named `PhysicalLightTileTint`;
-- uploads only that one tile-tint map;
-- exposes `presentation_mode = "tile_tint_only"`;
-- no longer creates or uploads a glow map;
-- no longer creates an additive glow Sprite2D;
-- no longer computes presentation glow strength, glare, scatter, wet reflections, or emitter core bloom.
+- **EAT**
+- **DRINK**
+- **TAP**
+- **REST**
+- **SLEEP**
 
-The old glow shader source file remains in the repository as inert historical source, but production presentation no longer loads or instantiates it.
+The strip is touch-first and sits directly above the existing movement controls:
 
-## Preserved physical lighting truth
+- panel x = 41;
+- panel y = 576;
+- panel width = 558;
+- panel bottom = 632;
+- movement controls begin at y = 638.
 
-This operation did **not** simplify the authoritative System 27 simulation.
+This avoids the prior top-HUD overlap risk and preserves the existing lower movement grid.
 
-Still preserved:
+## Authority and behavior
 
-- day/night physical luminance;
-- weather/atmosphere influence on physical illumination;
-- opaque structure light blocking;
-- closed-door blocking;
-- open-door transmission;
-- window transmission;
-- portal/interior light transfer;
-- local artificial emitters;
-- flashlight/light-source physical range and occlusion;
-- lighting-driven System 23 perception/acquisition.
+No parallel survival state or replacement action system was introduced.
 
-Therefore this is a presentation simplification, not a gameplay-lighting downgrade.
+`System34GameMain` configures the control strip with the existing authoritative:
 
-## Focused verifier evidence
+- `SurvivorSustainmentActionService`;
+- `TickKernel`;
+- canonical player identity.
 
-Run `36217199331` — **SUCCESS**.
+Action behavior remains owned by the existing System 34 service:
 
-Marker:
+- EAT selects the first real carried edible item through carry truth and consumes the exact persistent entity on committed completion;
+- DRINK does the same for a carried drink;
+- TAP checks the existing real reachable powered potable-fixture provider;
+- REST schedules the existing committed one-hour WHEN action;
+- SLEEP schedules the existing committed eight-hour WHEN action;
+- current bed/ground surface truth continues to affect comfort;
+- elapsed-time condition pressure continues during rest/sleep.
 
-`SIMPLE_LIGHTING_PRESENTATION_OK children=1 mode=tile_tint_only`
+The UI owns only touch buttons and concise result text.
 
-The fresh production-scene verifier proves:
+## Focused verification
 
-1. production `gameplay.tscn` boots;
-2. the physical-light presentation node exists;
-3. it reports `tile_tint_only`;
-4. its single tile-tint texture is ready;
-5. it has exactly one render child;
-6. that child is `PhysicalLightTileTint`;
-7. the multiply shader uses exactly one direct texture lookup;
-8. neighbor smoothing code is absent.
+Fresh production-scene verifier:
+
+- `game/scripts/ci/SurvivalControlsSmoke.gd`
+- `.github/workflows/survival-controls.yml`
+
+Run `36217859923` — **SUCCESS**.
+
+The verifier proves:
+
+1. `SurvivalControls` exists in production `gameplay.tscn`;
+2. all five buttons exist;
+3. all five buttons have ordinary pressed routes;
+4. the panel fits the 640px phone layout and does not overlap the movement row;
+5. a real persistent `item.food.apple` placed in canonical player inventory is consumed through the actual EAT button;
+6. authoritative WHEN advances during EAT;
+7. a real persistent `item.drink.water_bottle` is consumed through the actual DRINK button;
+8. authoritative WHEN advances during DRINK;
+9. TAP routes through the real control and returns the truthful unavailable result at the canonical spawn location rather than fabricating water access.
+
+REST and SLEEP button routes are verified as live UI routes without forcing an artificial multi-hour infected-simulation benchmark inside this focused UI smoke.
+
+## Preserved neighboring systems
+
+This operation did not change:
+
+- direct tile-tint lighting presentation;
+- System 27 physical lighting truth or occlusion;
+- perception / LOS;
+- active infected cohort size or behavior;
+- simultaneous combat consequences;
+- mob force;
+- fear;
+- vehicles;
+- utilities;
+- world generation;
+- inventory exact-item EAT/DRINK path;
+- crafting;
+- touch movement controls;
+- hard pause ownership.
 
 ## Publication state before final handoff write
 
-On documentation head `141c3790eb642c5479c61e65ccff5f30364ab8e1`:
+On documentation head `149adb8b27e07dd608e2c2fc4935f5f42a826b22`:
 
-- fresh focused lighting workflow run `36217258040` was in progress;
-- Pages run `36217257995` was in progress.
+- fresh survival-control workflow run `36217918808` was in progress;
+- Pages run `36217918776` was in progress.
 
 After this final context write, perform read-only exact-head verification only.
 
 ## NEXT OPERATION
 
-Visually playtest the deployed build, especially at night and around:
+Visually playtest the deployed survival strip on the real build.
 
-- streetlights;
-- building exteriors;
-- windows;
-- open/closed doors;
-- flashlight or other local emitters.
+Check specifically:
 
-Confirm that the hard tile-tint lighting aesthetic is readable and that the removal of bloom did not make important light sources visually ambiguous.
+- all five controls are comfortable on phone/touch;
+- the strip does not obscure important world content;
+- EAT / DRINK feedback is readable;
+- TAP gives useful failure feedback away from a sink and succeeds beside a working potable fixture;
+- REST / SLEEP feel acceptable when actually advancing long stretches of world time.
 
-If visual acceptance passes, return to the previously identified release gap:
+If visual acceptance passes, continue with the next concrete player-facing release defect or core-loop balance issue exposed by playtest.
 
-**wire the existing EAT / DRINK / TAP / REST / SLEEP survival-action controls into the production gameplay scene and verify them through ordinary player input.**
-
-Do not reopen physical-lighting simulation unless a concrete gameplay-lighting defect appears.
+Do not reopen System 34 architecture unless the production control path reveals a concrete defect.
 
 ## Protected behavior
 
 Preserve:
 
 - one WHERE / WHAT / WHEN authority chain;
-- System 27 physical-light truth and occlusion;
+- System 27 physical-light truth and tile-tint-only presentation;
 - lighting-driven perception;
-- cached geometric LOS observer-pose invalidation;
-- event-driven perception freshness;
-- one bounded shared player + active-infected acquisition field;
+- observer-pose LOS cache invalidation;
 - active infected cohort size 8;
 - simultaneous combat consequences;
 - mob-force core;
