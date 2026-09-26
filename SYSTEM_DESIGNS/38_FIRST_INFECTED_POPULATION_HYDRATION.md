@@ -219,6 +219,27 @@ The exact microseconds are CI-machine observations, not universal budgets. The d
 
 System 38 does **not** need more scaling architecture right now.
 
+A 2026-09-25 focused eight-infected production pass removed proven redundant observer work without changing behavior policy or adding a scheduler:
+
+- behavior now requests perception only when System 23 marks the observer/acquisition truth stale;
+- lighting-only acquisition refresh reuses cached geometric LOS;
+- one bounded physical-light field covers the player plus active infected cohort instead of letting observers ping-pong separate fields;
+- that field is warmed during activation/loading so the first real player action does not inherit a cold acquisition build.
+
+Focused run `36206781574` on the real eight-member cohort measured two ordinary player decisions:
+
+```text
+first_request_usec        = 9874
+second_request_usec       = 9580
+first_behavior_eval_usec  = 8984
+second_behavior_eval_usec = 8905
+behavior_evaluations      = 16
+infected_geometry_rebuilds = 0
+```
+
+The immediately preceding same-route diagnostic measured `113442` µs for the first action-start callback and `9855` µs for the second, proving the spike was cold shared acquisition preparation rather than recurring AI policy. The final path keeps one behavior evaluation per active infected per player decision and preserves all observer-specific perception truth.
+
+
 The measured behavior is healthy enough to continue gameplay development with eight active infected. Complexity should emerge from ordinary systems interacting:
 
 - sound creates investigation/migration pressure;
@@ -232,11 +253,9 @@ Do not add a horde brain, group target sharing, formation logic or generic AI sc
 
 ## 15. Next operation
 
-Use the now-eight-member active cohort to prove **emergent environmental pressure** rather than increasing counts again.
+The eight-member callback/perception cost is now bounded enough to stop reopening System 38 for scheduler work.
 
-Infected should encounter ordinary doors/windows/barriers while pursuing sound or sight and interact only through real physical actions. Reuse existing opening state, collision, System-26 sound, movement, WHEN and System-37 consequences. If an infected cannot currently traverse/open/break a barrier, add only the minimum generic actor/opening action seam required to let the existing systems interact.
-
-Do **not** add horde AI, group coordination or zombie-only environmental shortcuts.
+Continue Phase 2 with coherent overlapping consequence presentation, then run the crowded-fight/Safari acceptance route. If that acceptance evidence identifies a new infected-specific hotspot, optimize the proven hotspot in its existing owner; do not preemptively add horde AI, group coordination, a generic AI budget queue or zombie-only shortcuts.
 
 ## 16. North-star fit
 
