@@ -1,7 +1,7 @@
 # Tick Survival Lab — Release Roadmap
 
 Updated: **2026-09-26**  
-Status: **finite release order; current phase = 3**
+Status: **finite release order; current phase = 4**
 
 This file owns **order and definitions of done**, not implementation history. Detailed chronology remains in Git/changelogs. Discussion of a future idea does not reorder this roadmap; roadmap priority changes only by explicit user direction.
 
@@ -56,6 +56,8 @@ Crafting is treated coherently here: recipes, tools/materials, item actions and 
 
 Power/water must have readable service/failure/repair paths. Generator/well work is site-specific survival interaction, not a general construction engine.
 
+Closed Phase 4 slice: powered stove cooking now uses the existing stove contextual interaction and crafting UI, real carried recipe inputs/tools, WHEN crafting action, System 33 live power availability and durable WHAT/inventory output. Power loss blocks cooking; restoring service re-enables it; cooked food returns to the established EAT route and survives Continue without restoring consumed inputs.
+
 **Done when:** the player can supply and fortify an existing shelter, recover/craft/repair through ordinary controls, use practical independent utilities and recover from a real infrastructure failure.
 
 ### Phase 5 — Contextual vehicles/parking — QUEUED
@@ -106,4 +108,4 @@ One operation = one coherent vertical player/system outcome. The user chooses th
 
 ## NEXT
 
-**Phase 4 — finish expedition + fortified-house loop.**
+**Phase 4 — deconstruction through existing contextual interaction/tool/material owners.**
