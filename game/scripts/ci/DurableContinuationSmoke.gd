@@ -140,7 +140,9 @@ func _run() -> void:
         _fail("vehicle state did not survive Continue")
         return
     var power_after: Dictionary = second.call("power_infrastructure_debug_snapshot")
-    if power_after.get("condition", {}) != power_before.get("condition", {}):
+    var network_before: Dictionary = power_before.get("network", {})
+    var network_after: Dictionary = power_after.get("network", {})
+    if network_after.get("condition", {}) != network_before.get("condition", {}):
         _fail("utility damage state did not survive Continue")
         return
     var restored_action: TimedAction = kernel.active_action_for_actor(Fixture.PLAYER_ID)
@@ -185,7 +187,11 @@ func _run() -> void:
     if corrupt == null:
         _fail("could not exercise invalid-primary fallback")
         return
-    corrupt.store_string("not a Tick Lab save")
+    corrupt.store_var({
+        "format_schema_version": StoreClass.FORMAT_SCHEMA_VERSION,
+        "payload_sha256": "invalid-checksum",
+        "payload": PackedByteArray([1, 2, 3, 4]),
+    }, false)
     corrupt.close()
     var fallback: Dictionary = store.load_best()
     if not bool(fallback.get("ok", false)) or String(fallback.get("source", "")) != "backup":

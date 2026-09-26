@@ -20,11 +20,11 @@ func _ready() -> void:
     add_child(panel)
 
     var column := VBoxContainer.new()
-    column.theme_override_constants.separation = 4
+    column.add_theme_constant_override("separation", 4)
     panel.add_child(column)
 
     var row := HBoxContainer.new()
-    row.theme_override_constants.separation = 6
+    row.add_theme_constant_override("separation", 6)
     column.add_child(row)
 
     _save_button = Button.new()
