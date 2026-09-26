@@ -102,6 +102,40 @@ Implemented after human play reported a growing spawn-step stall, flashlight-fac
 
 The permanent `PlayerInputResponsivenessSmoke.gd` contract proves that a three-input same-window turn burst yields to the scene, commits exactly one turn and drops the two stale buffered turns.
 
+## P4B — active-infected perception/callback bounding
+
+A later Phase-2 production measurement targeted the existing eight-infected cohort rather than introducing a new scheduler.
+
+Measured problems:
+
+- each player commitment could ask all eight infected observers to recompute Perception even when their current observer truth was already fresh;
+- lighting-acquisition freshness could change without geometric LOS changing;
+- the first real decision could pay a cold shared physical-light field build inside the first infected behavior callback.
+
+Implemented response:
+
+- System 23 tracks dirty observer truth and acquisition freshness separately;
+- behavior uses `recompute_if_stale` rather than unconditional decision-time recompute;
+- geometric LOS candidates are cached and invalidated only by geometry/facing/profile dependencies;
+- acquisition-only refresh reuses those candidates;
+- the active cohort prepares one bounded lighting field covering player + active infected observers;
+- field preparation now materializes the current shared lighting field during activation/loading instead of deferring it to the first actor decision;
+- no horde brain, AI scheduler, frame loop or perception budget queue was added.
+
+Focused production run `36206781574` measured:
+
+```text
+first action-start callback   9874 usec
+second action-start callback  9580 usec
+infected behavior / decision  8984 / 8905 usec
+infected perception total     15797 usec across 16 refreshes
+infected LOS geometry rebuilds 0
+```
+
+The same two-decision diagnostic immediately before the warm-preparation fix measured `113442` µs for the first action-start callback and `9855` µs for the second. The final result therefore removes the cold first-input spike while preserving event-driven observer truth.
+
+The full turn still contains substantial cost outside infected callback/perception. This pass does **not** claim the whole turn is ~10 ms; later crowded-fight/Safari acceptance must identify any remaining blocking owner before more optimization.
+
 ## P4 follow-up — decision-pause gate and startup action cost
 
 Human acceptance found the backlog repair much better but exposed a remaining first-actions hitch and the fixed 120 ms drain window as avoidable latency.
