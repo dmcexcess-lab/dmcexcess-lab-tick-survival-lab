@@ -1,0 +1,173 @@
+name: Ad hoc rendered playtest
+
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  playtest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Godot and Xvfb
+        shell: bash
+        run: |
+          set -euxo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq xvfb
+          curl -L -o godot.zip https://github.com/godotengine/godot-builds/releases/download/4.7.1-stable/Godot_v4.7.1-stable_linux.x86_64.zip
+          unzip -q godot.zip
+          chmod +x Godot_v4.7.1-stable_linux.x86_64
+          ./Godot_v4.7.1-stable_linux.x86_64 --headless --editor --path "$GITHUB_WORKSPACE/game" --quit
+      - name: Create ad hoc player-style test
+        shell: bash
+        run: |
+          cat > "$GITHUB_WORKSPACE/game/scripts/ci/AdHocRenderedPlaytest.gd" <<'GDSCRIPT'
+          extends SceneTree
+
+          const Fixture = preload("res://scripts/demo/GeneratedIslandCritiqueFixture.gd")
+          const OUT := "/tmp/tick-playtest"
+
+          func _initialize() -> void:
+              DirAccess.make_dir_recursive_absolute(OUT)
+              call_deferred("_run")
+
+          func _run() -> void:
+              var menu_scene: PackedScene = load("res://main.tscn")
+              var menu: Node = menu_scene.instantiate()
+              get_root().add_child(menu)
+              current_scene = menu
+              await _frames(3)
+              _shot("01_menu.png")
+
+              var new_game: Button = menu.get_node("Center/MenuPanel/Menu/NewGameButton") as Button
+              print("PLAYTEST menu_new_game=", new_game != null, " continue_disabled=", (menu.get_node("Center/MenuPanel/Menu/ContinueButton") as Button).disabled)
+              new_game.pressed.emit()
+
+              var game: Node = null
+              for i in range(900):
+                  await process_frame
+                  game = get_root().get_node_or_null("TickSurvivalGame")
+                  if game != null:
+                      break
+              if game == null:
+                  push_error("PLAYTEST_FAIL gameplay did not launch")
+                  quit(1)
+                  return
+
+              await _frames(8)
+              _shot("02_gameplay_boot.png")
+              var kernel: TickKernel = game.get("_kernel")
+              var controls: PlayerMovementControls = game.get_node("Controls") as PlayerMovementControls
+              var presenter: ConsequenceMomentPresenter = game.consequence_presenter()
+              print("PLAYTEST boot tick=", kernel.world_tick(), " paused=", kernel.is_decision_paused(), " controls=", controls.is_enabled())
+
+              _dump_buttons(game)
+
+              await _press_named(controls, "TURN R", kernel, "turn_right")
+              await _press_named(controls, "FORWARD", kernel, "forward")
+              await _press_named(controls, "RUN", kernel, "run")
+              await _press_named(controls, "FORAGE", kernel, "forage")
+              await _press_named(controls, "STRIKE", kernel, "strike")
+              _shot("03_after_actions.png")
+
+              var survival: Node = _find_node_with_button(game, "REST")
+              if survival != null:
+                  var rest := _find_button(survival, "REST")
+                  print("PLAYTEST rest_found=true")
+                  rest.pressed.emit()
+                  await _frames(3)
+              else:
+                  print("PLAYTEST rest_found=false")
+
+              for label in ["STATS", "INVENTORY", "CRAFT", "MENU"]:
+                  var owner := _find_node_with_button(game, label)
+                  var button := null if owner == null else _find_button(owner, label)
+                  if button == null:
+                      print("PLAYTEST panel_missing=", label)
+                      continue
+                  button.pressed.emit()
+                  await _frames(2)
+                  _shot("panel_%s.png" % label.to_lower())
+                  print("PLAYTEST panel_opened=", label, " hard_pause=", kernel.is_hard_paused())
+                  var close_owner := _find_node_with_button(game, "CLOSE")
+                  var close := null if close_owner == null else _find_button(close_owner, "CLOSE")
+                  if close != null and close.visible and not close.disabled:
+                      close.pressed.emit()
+                      await _frames(2)
+
+              var history: Array[Dictionary] = presenter.history_snapshot()
+              print("PLAYTEST final tick=", kernel.world_tick(), " paused=", kernel.is_decision_paused(), " hard_pause=", kernel.is_hard_paused(), " controls=", controls.is_enabled(), " consequence_moments=", history.size())
+              if not history.is_empty():
+                  print("PLAYTEST latest_consequence=", JSON.stringify(history[history.size()-1]))
+
+              _shot("99_final.png")
+              print("PLAYTEST_OK")
+              quit(0)
+
+          func _press_named(root: Node, text_value: String, kernel: TickKernel, tag: String) -> void:
+              var button := _find_button(root, text_value)
+              if button == null:
+                  print("PLAYTEST action_missing=", text_value)
+                  return
+              var before := kernel.world_tick()
+              var enabled_before := not button.disabled
+              button.pressed.emit()
+              var locked_seen := button.disabled
+              for i in range(600):
+                  await process_frame
+                  if kernel.is_decision_paused():
+                      break
+              print("PLAYTEST action=", tag, " enabled_before=", enabled_before, " locked_seen=", locked_seen, " tick_before=", before, " tick_after=", kernel.world_tick(), " paused=", kernel.is_decision_paused(), " button_disabled=", button.disabled)
+
+          func _find_button(root: Node, label: String) -> Button:
+              if root is Button and (root as Button).text == label:
+                  return root as Button
+              for child in root.get_children():
+                  var found := _find_button(child, label)
+                  if found != null:
+                      return found
+              return null
+
+          func _find_node_with_button(root: Node, label: String) -> Node:
+              if _find_button(root, label) != null:
+                  return root
+              return null
+
+          func _dump_buttons(root: Node) -> void:
+              var labels := PackedStringArray()
+              _collect_buttons(root, labels)
+              print("PLAYTEST buttons=", ", ".join(labels))
+
+          func _collect_buttons(root: Node, labels: PackedStringArray) -> void:
+              if root is Button:
+                  labels.append((root as Button).text)
+              for child in root.get_children():
+                  _collect_buttons(child, labels)
+
+          func _frames(count: int) -> void:
+              for i in range(count):
+                  await process_frame
+
+          func _shot(name: String) -> void:
+              await process_frame
+              var image := get_root().get_texture().get_image()
+              var err := image.save_png(OUT.path_join(name))
+              print("PLAYTEST screenshot=", name, " err=", err, " size=", image.get_size())
+          GDSCRIPT
+      - name: Run rendered playtest
+        shell: bash
+        run: |
+          set -euxo pipefail
+          mkdir -p /tmp/tick-playtest
+          timeout 180s xvfb-run -a ./Godot_v4.7.1-stable_linux.x86_64 --path "$GITHUB_WORKSPACE/game" --rendering-method gl_compatibility -s res://scripts/ci/AdHocRenderedPlaytest.gd | tee /tmp/tick-playtest/playtest.log
+      - name: Upload playtest evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: rendered-playtest
+          path: /tmp/tick-playtest
