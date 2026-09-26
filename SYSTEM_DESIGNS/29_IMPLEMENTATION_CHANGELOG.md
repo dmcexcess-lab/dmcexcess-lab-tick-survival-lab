@@ -1,5 +1,11 @@
 # System 29 — Implementation Changelog
 
+## 2026-09-26 — Remove redundant global survival strip
+
+- Removed the production `SurvivalControls` node/resource and deleted `ConditionPlayerControls.gd`. System 34 still owns the same authoritative sustainment service; no parallel survival state or replacement action system was introduced.
+- Preserved the natural interaction routes already present in production: selected carried food/drink exposes EAT/DRINK in INVENTORY; beds expose REST + SLEEP; chairs/sofas expose REST; powered potable fixtures route DRINK through world interaction.
+- Fresh prompt-local verifier: `ContextualSustainmentRoutesSmoke.gd` / `contextual-sustainment.yml`. Functional head `2a57b800d4b882d0a483e3b8d1486d9f2647c9a1`; run `36262910696` succeeded with `CONTEXTUAL_SUSTAINMENT_OK strip=false inventory_eat=true inventory_drink=true chair_rest=true bed_rest=true bed_sleep=true fixture_drink_handler=true`.
+- Approved next slice: add a real placeable sleeping-bag/bedroll camp object carried from inventory; ground rest/sleep remains unavailable as a global command.
 ## 2026-09-09 — Furniture rest/sleep completion feedback
 
 - Rest/sleep service records bounded, copy-protected outcomes including unavailable target and cancellation. Production furniture requests provide an outcome query; WorldInteractionPlayerController consults it after timer completion before reporting success. Existing handler results without an outcome query retain their behavior.
