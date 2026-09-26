@@ -100,15 +100,16 @@ func _run() -> void:
         _fail("reachable dining chair did not expose contextual DECONSTRUCT")
         return
 
-    # Prove pre-commit interruption is safe: no destroyed object and no salvage.
+    # CANCELABLE actions terminate as CANCELED when interrupted before their commit phase.
+    # The player-visible invariant is that neither target nor salvage changes.
     var interrupted: Dictionary = actions.request_action(Fixture.PLAYER_ID, target_id, Actions.OBJECT_DECONSTRUCT)
     var interrupted_serial: int = int(interrupted.get("action_serial", 0))
     if not bool(interrupted.get("accepted", false)) or interrupted_serial <= 0:
         _fail("timed deconstruction action could not start")
         return
     var interrupt_status: int = kernel.interrupt_action(interrupted_serial, "phase4_precommit_cancel")
-    if interrupt_status != TickRules.ActionStatus.INTERRUPTED:
-        _fail("cancelable deconstruction did not interrupt before commit")
+    if interrupt_status != TickRules.ActionStatus.CANCELED:
+        _fail("cancelable deconstruction did not cancel before commit")
         return
     if not world.has_entity(target_id) or not world.entity_ids_of_type(SALVAGE_SEMANTIC).is_empty():
         _fail("pre-commit interruption changed target or created salvage")
