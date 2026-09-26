@@ -42,6 +42,7 @@ func _run() -> void:
 
     var first_started_usec: int = Time.get_ticks_usec()
     var first_action: MovementActionResult = movement.request_turn_right(Fixture.PLAYER_ID)
+    var first_request_usec: int = maxi(0, Time.get_ticks_usec() - first_started_usec)
     if first_action == null or not first_action.is_accepted():
         _fail("first ordinary player decision was not accepted")
         return
@@ -53,6 +54,7 @@ func _run() -> void:
 
     var second_started_usec: int = Time.get_ticks_usec()
     var second_action: MovementActionResult = movement.request_turn_left(Fixture.PLAYER_ID)
+    var second_request_usec: int = maxi(0, Time.get_ticks_usec() - second_started_usec)
     if second_action == null or not second_action.is_accepted():
         _fail("second ordinary player decision was not accepted")
         return
@@ -97,7 +99,9 @@ func _run() -> void:
     if evaluation_delta != active.size() * 2:
         _fail("expected one behavior evaluation per active infected per player decision")
         return
-    print("PHASE2_INFECTED_PERF_DIAGNOSTIC first_elapsed_usec=%d second_elapsed_usec=%d behavior_eval_usec=%d perception_usec=%d player_perception_usec=%d intention_usec=%d submit_usec=%d" % [
+    print("PHASE2_INFECTED_PERF_DIAGNOSTIC first_request_usec=%d second_request_usec=%d first_elapsed_usec=%d second_elapsed_usec=%d behavior_eval_usec=%d perception_usec=%d player_perception_usec=%d intention_usec=%d submit_usec=%d" % [
+        first_request_usec,
+        second_request_usec,
         first_elapsed_usec,
         second_elapsed_usec,
         evaluation_usec_delta,
@@ -116,10 +120,12 @@ func _run() -> void:
         ])
         return
 
-    print("PHASE2_INFECTED_PERF_METRIC head_route=two_player_turns active=%d tick_delta=%d elapsed_usec=%d first_elapsed_usec=%d second_elapsed_usec=%d infected_perception_recomputes=%d infected_perception_usec=%d infected_geometry_recomputes=%d infected_geometry_usec=%d player_perception_recomputes=%d player_perception_usec=%d behavior_evaluations=%d behavior_eval_usec=%d behavior_eval_max_usec=%d intention_usec=%d submit_usec=%d submissions=%d stop_reasons=%d/%d" % [
+    print("PHASE2_INFECTED_PERF_METRIC head_route=two_player_turns active=%d tick_delta=%d elapsed_usec=%d first_request_usec=%d second_request_usec=%d first_elapsed_usec=%d second_elapsed_usec=%d infected_perception_recomputes=%d infected_perception_usec=%d infected_geometry_recomputes=%d infected_geometry_usec=%d player_perception_recomputes=%d player_perception_usec=%d behavior_evaluations=%d behavior_eval_usec=%d behavior_eval_max_usec=%d intention_usec=%d submit_usec=%d submissions=%d stop_reasons=%d/%d" % [
         active.size(),
         kernel.world_tick() - start_tick,
         elapsed_usec,
+        first_request_usec,
+        second_request_usec,
         first_elapsed_usec,
         second_elapsed_usec,
         perception_delta,
