@@ -409,3 +409,16 @@ Verified executable lineage: `156ee4b0a1727a5d5d26b479cf7a0dea9e9b462a`
 - The retired glow shader remains as an inert source file only; it is no longer loaded or instantiated by production lighting presentation.
 - Fresh focused verifier: `game/scripts/ci/SimpleLightingPresentationSmoke.gd` / `.github/workflows/simple-lighting-presentation.yml`.
 - Run `36217199331` — SUCCESS. Marker: `SIMPLE_LIGHTING_PRESENTATION_OK children=1 mode=tile_tint_only`.
+
+
+## 2026-09-25 — Production survival action strip
+
+- Added the existing System 34 survival actions to ordinary production gameplay as a compact touch-first strip immediately above the movement controls.
+- Visible actions: **EAT / DRINK / TAP / REST / SLEEP**.
+- The strip is production scene content, not a debug panel.
+- EAT/DRINK route to the existing `SurvivorSustainmentActionService` and consume real carried persistent items only on committed completion.
+- TAP routes to the existing potable-fixture provider and truthfully rejects when no working reachable tap exists.
+- REST/SLEEP route to the existing committed WHEN actions; no parallel rest/sleep state was introduced.
+- Layout is bounded to the 640px phone surface: survival panel bottom y=632, movement controls begin y=638.
+- Fresh prompt-local verifier: `game/scripts/ci/SurvivalControlsSmoke.gd` / `.github/workflows/survival-controls.yml`.
+- Run `36217859923` — SUCCESS. Marker: `SURVIVAL_CONTROLS_OK buttons=5 eat=true drink=true tap_status=SURVIVAL — no working tap panel_bottom=632`.
