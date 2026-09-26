@@ -375,3 +375,15 @@ Verified executable lineage: `156ee4b0a1727a5d5d26b479cf7a0dea9e9b462a`
 - Real procedural local substations target roughly ten generated buildings, use shared roadside feeder trees and short service drops; regional source-to-substation is logical/non-physical.
 - One real grid-independent island municipal water plant supplies municipal service and real rural private wells persist; wastewater/sewer/septic remains retired.
 - Automated green never replaces pending human browser acceptance for generated utility behavior, current survivor-condition feel, skill/crafting/scavenging, outdoor forage UX or System 36 vehicle feel/UX.
+
+
+## 2026-09-25 — Phase 2 crowded-fight acceptance/performance route
+
+- Retired the prior consequence-presentation prompt verifier/workflow and created fresh `Phase2CrowdedFightAcceptanceSmoke.gd` / `phase2-crowded-fight-acceptance.yml`.
+- The first acceptance run correctly exposed that the eight real resident-backed infected spawn roughly 40–75 cells from the player in the canonical island boot; 32 behavior evaluations produced 0 action submissions, so an accepted empty STRIKE was not evidence of a crowd fight.
+- The verifier was repaired, not production: it uses authoritative `WorldMutationService.set_placements_batch()` only to arrange those same eight already-hydrated production actors into a valid bounded crowd around the player. No fake actors, damage, pressure or consequences are injected.
+- From that point onward the verifier presses the actual touch-first UI Buttons and requires the production controller to lock input, advance the shared WHEN clock and unlock only at the next legitimate decision pause.
+- Functional crowded-fight run `36208495717` passed with eight active infected, real contact and coherent overlapping consequence presentation.
+- Final attribution run `36208557288` on `51350037bb890efc4e2684027142a939f0d4687a` passed: 2 turn actions + 3 strikes, 5 input-lock cycles, 27 world ticks, overlap/contact true, player HP 100.
+- Accepted-action elapsed total: 1,937,370 usec; max accepted action: 477,635 usec. Existing exclusive counters attribute 52,684 usec to infected behavior, 81,204 usec to infected perception, 63,629 usec to player perception and 20,552 usec to cohort sync. Telemetry also identifies lighting rebuild as the largest currently measured bounded phase at 262,873 usec total, but measured timings overlap and do not explain most end-to-end route time. No speculative architecture optimization was made.
+- The real touch/mobile semantic path is CI-proven. Actual Safari/WebKit execution is not available on the Linux Actions runner, so a real Safari run of the deployed Pages build remains the single Phase 2 release-acceptance blocker.
