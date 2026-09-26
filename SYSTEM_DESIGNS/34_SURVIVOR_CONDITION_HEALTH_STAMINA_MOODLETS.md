@@ -125,3 +125,22 @@ Historical system-level smokes remain useful implementation history, but they ar
 For the 2026-09-07 Inventory usability closure, `PromptInventoryItemUseSmoke.gd` proved the player can select exact persistent carried items through ordinary Inventory and receive EAT/DRINK from the existing sustainment owner. It also proved the selected item still exists before timed completion, the exact selected item disappears only after authoritative completion, and a same-type sibling remains. Workflow `Prompt Inventory Item Use` run `34086785612` passed on exact functional head `77f58cb5776d193cae2c6ae98190f7a65b47952d`.
 
 Human browser acceptance remains separate from automated verification.
+
+
+### Production touch controls — 2026-09-25
+
+The ordinary production gameplay scene now includes a compact System 34 survival-action strip immediately above the movement controls:
+
+- **EAT**
+- **DRINK**
+- **TAP**
+- **REST**
+- **SLEEP**
+
+`ConditionPlayerControls` owns only the touch surface and status text. It is configured with the existing authoritative `SurvivorSustainmentActionService` and `TickKernel`; no condition, inventory, water, rest, or timing truth is duplicated in UI.
+
+EAT and DRINK use `begin_first_consumable()`, selecting a real carried item from canonical carry truth. TAP uses the existing reachable powered potable-source provider. REST and SLEEP use the existing committed WHEN actions and current rest-surface provider.
+
+The strip is sized for the production 640px phone layout and ends at y=632, leaving the existing movement controls beginning at y=638 unobstructed.
+
+Focused production verification run `36217859923` passed through the real buttons. It proved all five buttons have pressed routes, real EAT and DRINK remove exact carried persistent verifier items only through the canonical sustainment action, TAP returns the truthful unavailable result at the spawn location, and the touch strip does not overlap the movement row.
