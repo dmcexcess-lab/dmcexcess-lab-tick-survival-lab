@@ -396,3 +396,23 @@ The implementation follows the reduced-complexity survival rule:
 The gameplay question is now genuinely:
 
 > **What is actually illuminated here, what can this observer physically make out, and what tactical risk does creating light introduce?**
+
+
+## 2026-09-25 presentation simplification — tile tint only
+
+The visual lighting contract is now intentionally simpler than the physical lighting simulation.
+
+Production presentation:
+- one nearest-neighbor light texture;
+- one direct per-cell tint/luminance multiply;
+- no bloom;
+- no blur or neighbor smoothing;
+- no additive halo;
+- no scatter/reflection presentation pass;
+- no second glow texture generation or upload.
+
+The underlying System 27 simulation is unchanged. Opaque structures still block direct artificial light, windows and open doors transmit light according to their physical coefficients, portal transfer remains authoritative, and System 23 perception still queries the real physical illumination field.
+
+This keeps lighting consequence while making presentation appropriate to the low-resolution tile aesthetic and reducing avoidable rendering work.
+
+Focused production verifier run `36217199331` confirms the renderer exposes exactly one lighting child and reports `presentation_mode=tile_tint_only`.
