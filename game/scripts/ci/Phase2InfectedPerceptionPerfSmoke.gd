@@ -81,6 +81,10 @@ func _run() -> void:
     var evaluation_usec_delta: int = int(behavior_after.get("behavior_evaluation_total_usec", 0)) \
         - int(behavior_before.get("behavior_evaluation_total_usec", 0))
     var evaluation_max_usec: int = int(behavior_after.get("behavior_evaluation_max_usec", 0))
+    var intention_usec_delta: int = int(behavior_after.get("behavior_intention_refresh_total_usec", 0)) \
+        - int(behavior_before.get("behavior_intention_refresh_total_usec", 0))
+    var submit_usec_delta: int = int(behavior_after.get("behavior_submission_total_usec", 0)) \
+        - int(behavior_before.get("behavior_submission_total_usec", 0))
     var submission_delta: int = int(behavior_after.get("ordinary_action_submission_count", 0)) \
         - int(behavior_before.get("ordinary_action_submission_count", 0))
 
@@ -94,14 +98,16 @@ func _run() -> void:
         _fail("expected one behavior evaluation per active infected per player decision")
         return
     if evaluation_usec_delta > 10000:
-        _fail("infected behavior evaluation exceeded focused 10ms aggregate budget: %d usec; perception=%d usec geometry=%d usec" % [
+        _fail("infected behavior evaluation exceeded focused 10ms aggregate budget: %d usec; perception=%d usec geometry=%d usec intention=%d usec submit=%d usec" % [
             evaluation_usec_delta,
             infected_perception_usec_delta,
             infected_geometry_usec_delta,
+            intention_usec_delta,
+            submit_usec_delta,
         ])
         return
 
-    print("PHASE2_INFECTED_PERF_METRIC head_route=two_player_turns active=%d tick_delta=%d elapsed_usec=%d first_elapsed_usec=%d second_elapsed_usec=%d infected_perception_recomputes=%d infected_perception_usec=%d infected_geometry_recomputes=%d infected_geometry_usec=%d player_perception_recomputes=%d player_perception_usec=%d behavior_evaluations=%d behavior_eval_usec=%d behavior_eval_max_usec=%d submissions=%d stop_reasons=%d/%d" % [
+    print("PHASE2_INFECTED_PERF_METRIC head_route=two_player_turns active=%d tick_delta=%d elapsed_usec=%d first_elapsed_usec=%d second_elapsed_usec=%d infected_perception_recomputes=%d infected_perception_usec=%d infected_geometry_recomputes=%d infected_geometry_usec=%d player_perception_recomputes=%d player_perception_usec=%d behavior_evaluations=%d behavior_eval_usec=%d behavior_eval_max_usec=%d intention_usec=%d submit_usec=%d submissions=%d stop_reasons=%d/%d" % [
         active.size(),
         kernel.world_tick() - start_tick,
         elapsed_usec,
@@ -116,6 +122,8 @@ func _run() -> void:
         evaluation_delta,
         evaluation_usec_delta,
         evaluation_max_usec,
+        intention_usec_delta,
+        submit_usec_delta,
         submission_delta,
         first_stop_reason,
         second_stop_reason,
