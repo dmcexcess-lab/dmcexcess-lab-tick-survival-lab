@@ -27,7 +27,13 @@ func is_ready() -> bool:
 func prepare_bounds(bounds: Rect2i) -> bool:
     if _lighting == null or bounds.size.x <= 0 or bounds.size.y <= 0:
         return false
-    return _lighting.set_field_bounds(bounds)
+    if not _lighting.set_field_bounds(bounds):
+        return false
+    # "Prepare" means the bounded acquisition field is actually current, not
+    # merely that its bounds were recorded. Cohort activation/loading pays this
+    # one shared rebuild so the first real actor decision does not.
+    _lighting.lighting_revision()
+    return _lighting.is_ready()
 
 func freshness_revision() -> int:
     return -1 if _lighting == null else _lighting.lighting_revision()
