@@ -144,7 +144,7 @@ func save(session: Dictionary) -> Dictionary:
     }
 
 func _write_session_file(path: String, session: Dictionary) -> bool:
-    var payload: PackedByteArray = var_to_bytes(session, false)
+    var payload: PackedByteArray = var_to_bytes(session)
     if payload.is_empty():
         return false
     var envelope := {
@@ -173,7 +173,7 @@ func _read_session_file(path: String) -> Dictionary:
     var payload: PackedByteArray = payload_value
     if payload.is_empty() or String(data.get("payload_sha256", "")) != _sha256(payload):
         return {"ok": false, "session": {}, "reason": "checksum_failed"}
-    var decoded: Variant = bytes_to_var(payload, false)
+    var decoded: Variant = bytes_to_var(payload)
     if typeof(decoded) != TYPE_DICTIONARY:
         return {"ok": false, "session": {}, "reason": "invalid_session_payload"}
     var session: Dictionary = decoded
