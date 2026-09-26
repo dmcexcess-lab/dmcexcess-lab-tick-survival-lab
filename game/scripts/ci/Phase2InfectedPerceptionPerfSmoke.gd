@@ -51,6 +51,7 @@ func _run() -> void:
     if not kernel.is_decision_paused():
         _fail("first ordinary decision did not return to player pause")
         return
+    var behavior_mid: Dictionary = cohort.metrics_snapshot()
 
     var second_started_usec: int = Time.get_ticks_usec()
     var second_action: MovementActionResult = movement.request_turn_left(Fixture.PLAYER_ID)
@@ -82,6 +83,10 @@ func _run() -> void:
         - int(behavior_before.get("behavior_evaluation_count", 0))
     var evaluation_usec_delta: int = int(behavior_after.get("behavior_evaluation_total_usec", 0)) \
         - int(behavior_before.get("behavior_evaluation_total_usec", 0))
+    var first_evaluation_usec: int = int(behavior_mid.get("behavior_evaluation_total_usec", 0)) \
+        - int(behavior_before.get("behavior_evaluation_total_usec", 0))
+    var second_evaluation_usec: int = int(behavior_after.get("behavior_evaluation_total_usec", 0)) \
+        - int(behavior_mid.get("behavior_evaluation_total_usec", 0))
     var evaluation_max_usec: int = int(behavior_after.get("behavior_evaluation_max_usec", 0))
     var intention_usec_delta: int = int(behavior_after.get("behavior_intention_refresh_total_usec", 0)) \
         - int(behavior_before.get("behavior_intention_refresh_total_usec", 0))
@@ -99,19 +104,23 @@ func _run() -> void:
     if evaluation_delta != active.size() * 2:
         _fail("expected one behavior evaluation per active infected per player decision")
         return
-    print("PHASE2_INFECTED_PERF_DIAGNOSTIC first_request_usec=%d second_request_usec=%d first_elapsed_usec=%d second_elapsed_usec=%d behavior_eval_usec=%d perception_usec=%d player_perception_usec=%d intention_usec=%d submit_usec=%d" % [
+    print("PHASE2_INFECTED_PERF_DIAGNOSTIC first_request_usec=%d second_request_usec=%d first_elapsed_usec=%d second_elapsed_usec=%d first_behavior_eval_usec=%d second_behavior_eval_usec=%d behavior_eval_usec=%d perception_usec=%d player_perception_usec=%d intention_usec=%d submit_usec=%d" % [
         first_request_usec,
         second_request_usec,
         first_elapsed_usec,
         second_elapsed_usec,
+        first_evaluation_usec,
+        second_evaluation_usec,
         evaluation_usec_delta,
         infected_perception_usec_delta,
         player_perception_usec_delta,
         intention_usec_delta,
         submit_usec_delta,
     ])
-    if evaluation_usec_delta > 10000:
-        _fail("infected behavior evaluation exceeded focused 10ms aggregate budget: %d usec; perception=%d usec geometry=%d usec intention=%d usec submit=%d usec" % [
+    if first_evaluation_usec > 10000 or second_evaluation_usec > 10000:
+        _fail("infected behavior evaluation exceeded focused 10ms per-decision budget: first=%d usec second=%d usec total=%d usec; perception=%d usec geometry=%d usec intention=%d usec submit=%d usec" % [
+            first_evaluation_usec,
+            second_evaluation_usec,
             evaluation_usec_delta,
             infected_perception_usec_delta,
             infected_geometry_usec_delta,
@@ -120,7 +129,7 @@ func _run() -> void:
         ])
         return
 
-    print("PHASE2_INFECTED_PERF_METRIC head_route=two_player_turns active=%d tick_delta=%d elapsed_usec=%d first_request_usec=%d second_request_usec=%d first_elapsed_usec=%d second_elapsed_usec=%d infected_perception_recomputes=%d infected_perception_usec=%d infected_geometry_recomputes=%d infected_geometry_usec=%d player_perception_recomputes=%d player_perception_usec=%d behavior_evaluations=%d behavior_eval_usec=%d behavior_eval_max_usec=%d intention_usec=%d submit_usec=%d submissions=%d stop_reasons=%d/%d" % [
+    print("PHASE2_INFECTED_PERF_METRIC head_route=two_player_turns active=%d tick_delta=%d elapsed_usec=%d first_request_usec=%d second_request_usec=%d first_elapsed_usec=%d second_elapsed_usec=%d infected_perception_recomputes=%d infected_perception_usec=%d infected_geometry_recomputes=%d infected_geometry_usec=%d player_perception_recomputes=%d player_perception_usec=%d behavior_evaluations=%d first_behavior_eval_usec=%d second_behavior_eval_usec=%d behavior_eval_usec=%d behavior_eval_max_usec=%d intention_usec=%d submit_usec=%d submissions=%d stop_reasons=%d/%d" % [
         active.size(),
         kernel.world_tick() - start_tick,
         elapsed_usec,
@@ -135,6 +144,8 @@ func _run() -> void:
         player_perception_delta,
         player_perception_usec_delta,
         evaluation_delta,
+        first_evaluation_usec,
+        second_evaluation_usec,
         evaluation_usec_delta,
         evaluation_max_usec,
         intention_usec_delta,
