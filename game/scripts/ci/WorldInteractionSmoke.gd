@@ -20,7 +20,7 @@ func _initialize() -> void:
     call_deferred("_run")
 
 func _run() -> void:
-    var packed: PackedScene = load("res://main.tscn")
+    var packed: PackedScene = load("res://gameplay.tscn")
     _check(packed != null, "main scene loads")
     if packed == null:
         _finish()
