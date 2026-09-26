@@ -87,7 +87,7 @@ func _test_decision_pause_after_full_batch() -> void:
     _check(reason == Rules.RunStopReason.DECISION_REQUIRED, "player readiness returns decision stop")
     _check(kernel.world_tick() == 5, "decision action completes at exact duration")
     _check(kernel.is_decision_paused(), "decision pause engaged")
-    _check(order == ["player_finished@5", "zombie_same_tick@5"], "full tick batch drains before decision pause")
+    _check(order == ["zombie_same_tick@5", "player_finished@5"], "same-tick work drains before terminal action completion and decision pause")
 
 func _test_concurrent_actions_and_phases() -> void:
     var kernel := KernelClass.new()
