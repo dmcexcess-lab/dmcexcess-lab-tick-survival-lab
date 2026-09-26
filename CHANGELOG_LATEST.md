@@ -3,6 +3,24 @@
 This compact ledger records the newest executable work. `CHANGELOG.md` remains the historical archive.
 
 
+## Phase 3 — durable save / leave / reopen / Continue — 2026-09-26
+
+Functional production head: `300057eef7f3fda480648b39a3bfdef9923335ef`.
+
+- Added a conventional versioned `user://` durable-session store with binary Godot Variant payloads, SHA-256 verification, validated temporary writes, primary/backup rotation and safe fallback to the last valid backup.
+- Continue boots the same procedural world seed through the established generation path, then restores existing authoritative WHAT/WHEN/streaming/mechanic snapshots in place. No duplicate persistence state model, IDs or gameplay database was introduced.
+- Release-relevant persistence now covers world/materialization truth, player placement/locomotion, inventory/equipment, health/skills/conditions, freshness/carry/loot/perception/forage, utilities/power/generators/flashlights, vehicles, structures/interactions, firearms/corpses/infected, weather and in-flight combat/WHEN state.
+- Added truthful startup New Game/Continue behavior plus in-game SAVE and SAVE & MENU. New games and successful continues establish a durable checkpoint; decision/region checkpoints and focus/background/close checkpoints supplement explicit saves without relying only on unload.
+- Application background/focus loss asserts WHEN hard pause before saving. Continue clears only the application hard-pause bit while preserving pending committed actions/events, preventing save/background from becoming a cancellation exploit.
+- Browser/device storage capability is surfaced to the player; an unwritable store does not pretend progress is durable, and a non-persistent browser userfs is explicitly warned.
+- Added missing restore paths for firearm, corpse and infected state and a persisted combat-runtime latch snapshot needed to keep in-flight attack interruption/fatigue semantics intact.
+- Fresh prompt-local verifier/workflow: `game/scripts/ci/DurableContinuationSmoke.gd` + `.github/workflows/durable-continuation.yml`.
+- Focused/protected run `36271614098`: **SUCCESS**. Protected set passed WHEN, WHAT, streaming/materialization, inventory, survivor condition, power network, vehicles, live world interaction, weather and canonical gameplay boot; durable route passed save -> destroy scene -> reopen -> Continue, repeated save/load, pending action exactly-once resolution, utility/vehicle/condition/inventory continuity, corrupt/incompatible-primary backup recovery and surfaced storage failure.
+- Exact code-head Pages run `36271614056`: **SUCCESS** build and deploy.
+- Protected regression cleanup also repaired two stale assertions/fixtures without changing gameplay: terminal action completion is already terminal-last within a same-tick batch, and the live world-interaction smoke now boots `gameplay.tscn` rather than the startup menu.
+
+
+
 ## Phase 2 — coherent overlapping consequence presentation — 2026-09-25
 
 Functional production head: `e76f9411f297c753f5c439b30756110622b814c3`.

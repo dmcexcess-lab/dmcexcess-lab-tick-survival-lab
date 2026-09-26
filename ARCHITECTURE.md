@@ -45,7 +45,15 @@ Technical chunks/streaming boundaries never become logical geography or persiste
 | Crafting/repair/deconstruction | extend existing item/tool/resource/action owners; no parallel crafting stack | ESTABLISHED |
 | Vehicles | preserve existing transport identity/movement/storage/fuel/repair owners | ESTABLISHED |
 | Utilities | existing power/water service truth; failures/repairs arise from world action | ESTABLISHED |
-| Persistence | use existing authoritative stores/snapshots as sources for a versioned durable session; do not create duplicate gameplay truth | OPEN — Phase 3 |
+| Persistence | existing authoritative stores/snapshots -> checksum-verified versioned durable session; saved seed reconstructs runtime owners before in-place restore; primary/backup user storage; no duplicate gameplay truth | CLOSED — Phase 3 |
+
+## Durable continuation ownership
+
+- `DurableSessionStore` owns only conventional file-format/storage concerns: versioned envelope, checksum verification, primary/backup rotation and storage capability reporting.
+- `EnvironmentalPressureGameMain` assembles/restores one session from the already-authoritative world, WHEN, streaming registry and mechanic-owner snapshots. It does not become a second gameplay state owner.
+- `StartupMenu` owns truthful New Game/Continue presentation and launches Continue with a validated saved session.
+- App focus/background hard pause is lifecycle state. A restored session clears the application hard-pause bit while preserving the saved WHEN queue and committed action truth.
+- Streaming/materialization identity is restored from the existing registry plus WHAT; reopening or crossing regions must not regenerate already-materialized facts.
 
 ## World-generation boundaries
 

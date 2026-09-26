@@ -36,7 +36,7 @@ Closed release foundation:
 
 Do not reopen this phase without a concrete play-visible defect. Real mobile/Safari acceptance remains part of final release acceptance rather than blocking Phase 3 engineering.
 
-### Phase 3 — Durable save, leave and continue — ACTIVE
+### Phase 3 — Durable save, leave and continue — DONE
 
 Use existing authoritative stores/snapshots to implement a versioned durable session format. Do not create duplicate gameplay truth.
 
@@ -46,7 +46,9 @@ Provide truthful New Game/Continue behavior, explicit durable saving and safe au
 
 **Done when:** mutate meaningful state -> save -> leave/close -> reopen -> Continue restores the same game; repeated save/load and region transitions do not duplicate/reset state; hard pause/backgrounding cannot exploit pending commitments.
 
-### Phase 4 — Finish expedition + fortified-house loop — QUEUED
+Closed 2026-09-26 with production New Game/Continue, explicit Save/Save & Menu, safe checkpoints, saved-seed reconstruction, versioned checksum-verified primary/backup storage and in-place restoration of existing authoritative WHAT/WHEN/mechanic snapshots. Production verification covered repeated load, a pending committed action, representative player/world mutations, backup recovery and storage failure.
+
+### Phase 4 — Finish expedition + fortified-house loop — ACTIVE
 
 Wire/finish ordinary scavenging, carrying, item use, crafting/cooking, first aid, sleep/rest, repairs, deconstruction, doors/windows and existing-building fortification through natural contextual controls.
 
@@ -104,4 +106,4 @@ One operation = one coherent vertical player/system outcome. The user chooses th
 
 ## NEXT
 
-**Phase 3 — durable save / leave / reopen / Continue.**
+**Phase 4 — finish expedition + fortified-house loop.**

@@ -125,9 +125,12 @@ Payload is transport data, not persistent domain state. WHEN deep-copies it and 
 Queue order is:
 
 1. due tick ascending;
-2. priority ascending;
-3. owner/source key lexical ascending;
-4. insertion serial ascending.
+2. non-terminal work before action-completion events at the same tick;
+3. priority ascending;
+4. owner/source key lexical ascending;
+5. insertion serial ascending.
+
+Action completion is deliberately terminal-last at a timestamp so every other already-due or same-tick-generated consequence at that timestamp resolves before the action becomes terminal and tactical decision pause can engage.
 
 Default priority is `0`. Non-default priority exists as an extension seam but should be introduced sparingly by later approved system designs; priority must not become a hidden substitute for explicit physical rules.
 
