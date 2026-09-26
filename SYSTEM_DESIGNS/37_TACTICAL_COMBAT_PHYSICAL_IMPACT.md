@@ -135,6 +135,26 @@ The existing center on-foot touch control remains the practical `STRIKE` / `play
 
 Exact visible actor melee targeting remains available through the shared System-29 chooser. ACTOR occupancy alone grants no interaction; `CombatInteractionOfferProvider` still gates offers through canonical Health, reach and current System-23 visibility.
 
+
+### 10A. Coherent overlapping consequence presentation
+
+`ConsequenceMomentPresenter` is a presentation-only consumer of already-resolved production signals from Combat, Movement, Health-batch closure and generic death transition. It groups events by canonical world tick after simulation owners have decided truth.
+
+Its contract is intentionally narrow:
+
+- same-timestamp melee hits are shown together rather than as a serial attacker queue;
+- reciprocal same-tick hits are presented as a mutual exchange;
+- mutual lethal remains visibly mutual;
+- shove outcome, physical pressure and same-timestamp movement are summarized in the same consequence moment;
+- repeat pressure summaries for one actor/timestamp are coalesced;
+- isolated ordinary movement is suppressed so routine infected motion does not spam the player;
+- infected labels come from the actual hydrated production cohort identities, not string-pattern guesses;
+- presentation performs no gameplay mutation, owns no Health/Movement/Combat truth and advances no WHEN time;
+- there is no cinematic wait, animation lock or delayed decision gate;
+- the surface is non-interactive and viewport-relative so phone/Safari remains a first-class presentation target.
+
+The consequence presenter does not replace canonical HUD status, fear/moodlets, impact signals or action results. It only makes already-settled concurrent consequences legible.
+
 ## 11. No Combat skill
 
 The canonical skill catalog remains Awareness, Stealth, Mechanical and Survival. System 37 does not recreate the retired Combat skill. Current combat results arise from physical state, player timing/facing, exact equipment, condition/Fatigue, occupancy/collision and Health.
@@ -235,6 +255,22 @@ Marker: `PHASE2C_CROWD_PRESSURE_CLOSED movement_contact=true multi_body=true exh
 A normal committed movement into an occupied actor now becomes physical contact pressure automatically. This lets ordinary infected pursuit feed the same aggregate-force system without selecting a special shove behavior. Pressure can pass through several packed bodies, losing frozen resistance at each body; independently earned downstream force can combine with that transmitted residual. Exhausted force stops naturally, and static geometry terminates the chain with no phasing. Propagation is bounded by depth/pass limits and a visited actor path.
 
 This closes the crowd-force core. Stability/knockdown, crush injury and fortification damage should consume the pressure result later rather than changing how force itself propagates.
+
+
+### Phase 2 coherent consequence presentation
+
+Fresh prompt-local verifier/workflow:
+
+- `game/scripts/ci/Phase2ConsequencePresentationSmoke.gd`
+- `.github/workflows/phase2-consequence-presentation.yml`
+
+Functional production head: `e76f9411f297c753f5c439b30756110622b814c3`.
+
+Focused run `36207564242`: **SUCCESS**.
+
+Marker: `PHASE2_CONSEQUENCE_PRESENTATION_OK`.
+
+The production-scene verifier proves the presenter is wired to the actual Combat/Movement/Death signals, batches a reciprocal two-hit exchange, shove, pressure, two same-tick moves and two deaths into one consequence moment, coalesces duplicate pressure to one event, preserves `BOTH DOWN`, suppresses one isolated ordinary movement, and leaves the WHEN world tick unchanged. The initial focused run exposed incorrect actor labeling for resident-backed infected; production was repaired to receive the hydrated cohort identities rather than weakening the assertion.
 
 ## 13. Deliberately deferred extensions
 
