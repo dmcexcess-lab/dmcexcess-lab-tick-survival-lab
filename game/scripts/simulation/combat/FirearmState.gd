@@ -1,6 +1,8 @@
 extends RefCounted
 class_name FirearmState
 
+const SNAPSHOT_SCHEMA_VERSION: int = 1
+
 signal firearm_enrolled(firearm_id)
 signal magazine_changed(firearm_id, previous_magazine_id, magazine_id)
 signal chamber_changed(firearm_id, previous_round_id, round_id)
@@ -96,7 +98,43 @@ func cycle_next_round(firearm_id: String) -> String:
     return chamber_from_magazine(firearm_id)
 
 func snapshot() -> Dictionary:
-    return {"records": _records.duplicate(true)}
+    return {"schema_version": SNAPSHOT_SCHEMA_VERSION, "records": _records.duplicate(true)}
+
+func load_snapshot(data: Dictionary) -> bool:
+    if not is_ready() or int(data.get("schema_version", -1)) != SNAPSHOT_SCHEMA_VERSION:
+        return false
+    var records_value: Variant = data.get("records", {})
+    if typeof(records_value) != TYPE_DICTIONARY:
+        return false
+    var restored: Dictionary = {}
+    var claimed_items: Dictionary = {}
+    for key: Variant in records_value.keys():
+        var firearm_id: String = String(key).strip_edges()
+        var raw: Variant = records_value[key]
+        if firearm_id.is_empty() or typeof(raw) != TYPE_DICTIONARY or restored.has(firearm_id):
+            return false
+        var entity: WorldEntityRecord = _world.entity(firearm_id)
+        if entity == null or not _profiles.has_firearm(entity.semantic_type):
+            return false
+        var record: Dictionary = Dictionary(raw).duplicate(true)
+        var magazine_id: String = String(record.get("magazine_id", "")).strip_edges()
+        var chamber_id: String = String(record.get("chamber_round_id", "")).strip_edges()
+        if int(record.get("version", 0)) < 1:
+            return false
+        if not magazine_id.is_empty():
+            if claimed_items.has(magazine_id) or not _world.has_entity(magazine_id)                 or _inventory.container_of(magazine_id) != firearm_id or not _magazine_compatible(firearm_id, magazine_id):
+                return false
+            claimed_items[magazine_id] = true
+        if not chamber_id.is_empty():
+            var chamber: WorldEntityRecord = _world.entity(chamber_id)
+            if claimed_items.has(chamber_id) or chamber == null or _inventory.container_of(chamber_id) != firearm_id                 or String(chamber.semantic_type) != String(_profiles.ammo_type(entity.semantic_type)):
+                return false
+            claimed_items[chamber_id] = true
+        record["magazine_id"] = magazine_id
+        record["chamber_round_id"] = chamber_id
+        restored[firearm_id] = record
+    _records = restored
+    return true
 
 func _set_chamber(firearm_id: String, round_id: String) -> void:
     var record: Dictionary = Dictionary(_records[firearm_id])

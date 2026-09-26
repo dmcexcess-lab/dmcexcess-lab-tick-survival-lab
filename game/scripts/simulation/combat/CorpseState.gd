@@ -1,6 +1,8 @@
 extends RefCounted
 class_name CorpseState
 
+const SNAPSHOT_SCHEMA_VERSION: int = 1
+
 signal corpse_recorded(actor_id, corpse_id)
 
 var _corpse_by_actor: Dictionary = {}
@@ -23,4 +25,23 @@ func record(actor_id: String, corpse_id: String) -> bool:
     return true
 
 func snapshot() -> Dictionary:
-    return {"corpse_by_actor": _corpse_by_actor.duplicate(true)}
+    return {"schema_version": SNAPSHOT_SCHEMA_VERSION, "corpse_by_actor": _corpse_by_actor.duplicate(true)}
+
+func load_snapshot(data: Dictionary) -> bool:
+    if int(data.get("schema_version", -1)) != SNAPSHOT_SCHEMA_VERSION:
+        return false
+    var rows: Variant = data.get("corpse_by_actor", {})
+    if typeof(rows) != TYPE_DICTIONARY:
+        return false
+    var by_actor: Dictionary = {}
+    var by_corpse: Dictionary = {}
+    for key: Variant in rows.keys():
+        var actor_id: String = String(key).strip_edges()
+        var corpse_id: String = String(rows[key]).strip_edges()
+        if actor_id.is_empty() or corpse_id.is_empty() or by_actor.has(actor_id) or by_corpse.has(corpse_id):
+            return false
+        by_actor[actor_id] = corpse_id
+        by_corpse[corpse_id] = actor_id
+    _corpse_by_actor = by_actor
+    _actor_by_corpse = by_corpse
+    return true

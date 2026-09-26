@@ -1,6 +1,8 @@
 extends RefCounted
 class_name InfectedState
 
+const SNAPSHOT_SCHEMA_VERSION: int = 1
+
 ## Infection is persistent state on a human actor identity, not a parallel zombie entity class.
 
 signal infected_hydrated(actor_id, resident_record)
@@ -30,4 +32,23 @@ func actor_ids() -> Array[String]:
     return result
 
 func snapshot() -> Dictionary:
-    return {"records": _records.duplicate(true)}
+    return {"schema_version": SNAPSHOT_SCHEMA_VERSION, "records": _records.duplicate(true)}
+
+func load_snapshot(data: Dictionary) -> bool:
+    if int(data.get("schema_version", -1)) != SNAPSHOT_SCHEMA_VERSION:
+        return false
+    var rows: Variant = data.get("records", {})
+    if typeof(rows) != TYPE_DICTIONARY:
+        return false
+    var restored: Dictionary = {}
+    for key: Variant in rows.keys():
+        var actor_id: String = String(key).strip_edges()
+        var raw: Variant = rows[key]
+        if actor_id.is_empty() or typeof(raw) != TYPE_DICTIONARY or restored.has(actor_id):
+            return false
+        var record: Dictionary = Dictionary(raw).duplicate(true)
+        if String(record.get("resident_id", "")).strip_edges() != actor_id             or not bool(record.get("infected", false))             or String(record.get("building_id", "")).strip_edges().is_empty()             or int(record.get("resident_ordinal", 0)) < 1:
+            return false
+        restored[actor_id] = record
+    _records = restored
+    return true

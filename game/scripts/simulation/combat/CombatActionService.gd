@@ -1,6 +1,8 @@
 extends RefCounted
 class_name CombatActionService
 
+const RUNTIME_SNAPSHOT_SCHEMA_VERSION: int = 1
+
 const Facing = preload("res://scripts/foundation/spatial/SpatialFacing.gd")
 const Layers = preload("res://scripts/foundation/spatial/SpatialLayer.gd")
 const Slots = preload("res://scripts/simulation/actors/equipment/ActorHandSlot.gd")
@@ -492,6 +494,53 @@ func _on_action_finished(action: TimedAction) -> void:
         if current >= 0 and current < floor_value:
             _condition.apply_exertion(action.actor_id, floor_value - current, &"combat_action_no_recovery")
     _fatigue_floor_by_serial.erase(action.serial)
+
+func runtime_snapshot() -> Dictionary:
+    return {
+        "schema_version": RUNTIME_SNAPSHOT_SCHEMA_VERSION,
+        "pending_by_tick": _pending_by_tick.duplicate(true),
+        "resolution_scheduled": _resolution_scheduled.duplicate(true),
+        "contact_tick_by_serial": _contact_tick_by_serial.duplicate(true),
+        "fatigue_floor_by_serial": _fatigue_floor_by_serial.duplicate(true),
+        "terminal_scheduled": _terminal_scheduled.duplicate(true),
+    }
+
+func load_runtime_snapshot(data: Dictionary) -> bool:
+    if int(data.get("schema_version", -1)) != RUNTIME_SNAPSHOT_SCHEMA_VERSION:
+        return false
+    for field: String in [
+        "pending_by_tick",
+        "resolution_scheduled",
+        "contact_tick_by_serial",
+        "fatigue_floor_by_serial",
+        "terminal_scheduled",
+    ]:
+        if typeof(data.get(field, {})) != TYPE_DICTIONARY:
+            return false
+
+    var pending: Dictionary = data.get("pending_by_tick", {}).duplicate(true)
+    for key: Variant in pending.keys():
+        if typeof(key) != TYPE_INT or int(key) < 0 or typeof(pending[key]) != TYPE_ARRAY:
+            return false
+        for intent: Variant in pending[key]:
+            if typeof(intent) != TYPE_DICTIONARY:
+                return false
+
+    var resolution: Dictionary = data.get("resolution_scheduled", {}).duplicate(true)
+    var contacts: Dictionary = data.get("contact_tick_by_serial", {}).duplicate(true)
+    var fatigue: Dictionary = data.get("fatigue_floor_by_serial", {}).duplicate(true)
+    var terminal: Dictionary = data.get("terminal_scheduled", {}).duplicate(true)
+    for source: Dictionary in [resolution, contacts, fatigue, terminal]:
+        for key: Variant in source.keys():
+            if typeof(key) != TYPE_INT or int(key) < 0 or typeof(source[key]) != TYPE_INT or int(source[key]) < 0:
+                return false
+
+    _pending_by_tick = pending
+    _resolution_scheduled = resolution
+    _contact_tick_by_serial = contacts
+    _fatigue_floor_by_serial = fatigue
+    _terminal_scheduled = terminal
+    return true
 
 func _actor_can_act(actor_id: String) -> bool:
     if not is_ready() or actor_id.strip_edges().is_empty() or not _health.has_actor(actor_id) or _health.current_hp(actor_id) <= 0:
