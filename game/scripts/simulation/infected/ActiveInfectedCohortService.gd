@@ -134,11 +134,6 @@ func sync_active_now() -> bool:
     _sync_guard = false
     if ok:
         _prepare_active_perception_bounds()
-        # Cohort activation establishes a larger shared acquisition envelope than
-        # the individual observer constructors. Warm that shared acquisition truth
-        # here while startup/loading owns the cost, so the first player action does
-        # not pay a cold physical-light rebuild inside infected behavior callbacks.
-        _acquisition.freshness_revision()
     _record_sync(Time.get_ticks_usec() - started)
     if ok:
         active_members_changed.emit(active_actor_ids())
