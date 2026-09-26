@@ -2,7 +2,6 @@ extends SceneTree
 
 const Fixture = preload("res://scripts/demo/GeneratedIslandCritiqueFixture.gd")
 const Facing = preload("res://scripts/foundation/spatial/SpatialFacing.gd")
-const QueryResult = preload("res://scripts/simulation/collision/SpatialQueryResult.gd")
 const Actions = preload("res://scripts/simulation/interaction/WorldInteractionActionService.gd")
 const StoreClass = preload("res://scripts/persistence/DurableSessionStore.gd")
 
@@ -15,8 +14,7 @@ var _impact: Dictionary = {}
 
 func _initialize() -> void: call_deferred("_run")
 func _fail(message: String) -> void:
-    push_error("PHASE4_FORTIFICATION_ROUTE: " + message)
-    quit(1)
+    push_error("PHASE4_FORTIFICATION_ROUTE: " + message); quit(1)
 func _cleanup() -> void:
     for path: String in [PRIMARY, BACKUP, TEMP]:
         if FileAccess.file_exists(path): DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
@@ -25,8 +23,7 @@ func _boot(session: Dictionary = {}) -> Node:
     var game: Node = null if scene == null else scene.instantiate()
     if game == null or not game.call("configure_session_paths", PRIMARY, BACKUP, TEMP): _fail("production session configuration unavailable"); return null
     if not session.is_empty() and not game.call("configure_continue_session", session): _fail("valid saved session rejected"); return null
-    get_root().add_child(game)
-    await process_frame; await process_frame; await process_frame
+    get_root().add_child(game); await process_frame; await process_frame; await process_frame
     if not bool(game.call("session_boot_ok")): _fail("production gameplay boot failed"); return null
     return game
 func _on_finished(target_id: String, action_id: StringName, success: bool, reason: String) -> void:
@@ -51,14 +48,14 @@ func _run() -> void:
     var pressure: ActorOpeningPressureActionService = game.call("opening_pressure_service")
     if world == null or mutations == null or inventory == null or inventory_mutations == null or skills == null or kernel == null or state == null or affordances == null or controller == null or panel == null or pressure == null:
         _fail("production fortification owners unavailable"); return
+    controller.action_finished.connect(Callable(self, "_on_finished"))
     if not skills.set_skill(Fixture.PLAYER_ID, &"mechanical", 10, 0): _fail("could not stabilize Mechanical skill"); return
 
     var window := ""
     for candidate: String in _prefix_ids(world, "window."):
-        if _place_actor_facing(game, world, mutations, Fixture.PLAYER_ID, candidate): window = candidate; break
+        if _place_actor_facing(world, mutations, Fixture.PLAYER_ID, candidate): window = candidate; break
     if window.is_empty(): _fail("generated world has no reachable existing window"); return
 
-    # Measure the same opening-pressure owner used by active infected before fortification.
     var impact_cb := Callable(self, "_on_impact")
     pressure.impact_resolved.connect(impact_cb)
     _impact = {}
@@ -69,13 +66,13 @@ func _run() -> void:
     if baseline_damage <= 0: _fail("baseline opening pressure produced no damage"); return
     if not state.set_opening_damage(window, 0, &"fortification_verifier_reset"): _fail("could not reset verifier-only baseline damage"); return
 
-    if not _give(world, mutations, inventory_mutations, &"item.tool.hammer", HAMMER_ID): _fail("could not stage existing hammer"); return
+    if not _give(mutations, inventory_mutations, &"item.tool.hammer", HAMMER_ID): _fail("could not stage existing hammer"); return
     for index: int in range(3):
         var plank_id := "item.phase4.fortification.plank.%d" % index
         var nails_id := "item.phase4.fortification.nails.%d" % index
-        if not _give(world, mutations, inventory_mutations, &"item.material.wood_plank", plank_id) or not _give(world, mutations, inventory_mutations, &"item.material.nails_box", nails_id):
+        if not _give(mutations, inventory_mutations, &"item.material.wood_plank", plank_id) or not _give(mutations, inventory_mutations, &"item.material.nails_box", nails_id):
             _fail("could not stage existing fortification materials"); return
-        if not _place_actor_facing(game, world, mutations, Fixture.PLAYER_ID, window): _fail("lost contact with window"); return
+        if not _place_actor_facing(world, mutations, Fixture.PLAYER_ID, window): _fail("lost contact with window"); return
         var board_offer := false
         for offer: InteractionOffer in affordances.offers():
             if offer.target_entity_id == window and offer.action_id == Actions.OPENING_BOARD and offer.label == "BOARD": board_offer = true; break
@@ -104,19 +101,16 @@ func _run() -> void:
     game.queue_free(); await process_frame; await process_frame
     var reopened: Node = await _boot(session)
     if reopened == null: return
-    world = reopened.get("_world")
-    inventory = reopened.get("_inventory_state")
-    state = reopened.get("_world_interaction_state")
+    world = reopened.get("_world"); inventory = reopened.get("_inventory_state"); state = reopened.get("_world_interaction_state")
     if state.board_count(window) != 3: _fail("fortification did not survive Continue"); return
     if state.opening_damage(window) != fortified_damage: _fail("fortification damage state did not survive Continue"); return
     if not world.has_entity(HAMMER_ID) or inventory.container_of(HAMMER_ID) != Fixture.PLAYER_ID: _fail("tool state did not survive Continue"); return
     for index: int in range(3):
         if world.has_entity("item.phase4.fortification.plank.%d" % index) or world.has_entity("item.phase4.fortification.nails.%d" % index): _fail("consumed fortification materials resurrected across Continue"); return
     reopened.queue_free(); await process_frame; _cleanup()
-    print("PHASE4_FORTIFICATION_ROUTE_OK contextual=true timed=true boards=3 materials_once=true tool_preserved=true baseline_damage=%d fortified_damage=%d infected_pressure_owner=true continue=true" % [baseline_damage, fortified_damage])
-    quit(0)
+    print("PHASE4_FORTIFICATION_ROUTE_OK contextual=true timed=true boards=3 materials_once=true tool_preserved=true baseline_damage=%d fortified_damage=%d infected_pressure_owner=true continue=true" % [baseline_damage, fortified_damage]); quit(0)
 
-func _give(world: WorldState, mutations: WorldMutationService, inventory_mutations: InventoryContainmentMutationService, semantic: StringName, item_id: String) -> bool:
+func _give(mutations: WorldMutationService, inventory_mutations: InventoryContainmentMutationService, semantic: StringName, item_id: String) -> bool:
     return mutations.create_entity(semantic, item_id) == item_id and inventory_mutations.set_container(item_id, Fixture.PLAYER_ID)
 func _prefix_ids(world: WorldState, prefix: String) -> Array[String]:
     var result: Array[String] = []
@@ -124,14 +118,11 @@ func _prefix_ids(world: WorldState, prefix: String) -> Array[String]:
         var entity: WorldEntityRecord = world.entity(entity_id)
         if entity != null and String(entity.semantic_type).begins_with(prefix): result.append(entity_id)
     result.sort(); return result
-func _place_actor_facing(game: Node, world: WorldState, mutations: WorldMutationService, actor_id: String, target_id: String) -> bool:
-    var actor: WorldPlacement = world.placement(actor_id)
-    var target: WorldPlacement = world.placement(target_id)
-    var spatial: SpatialQueryService = game.get("_spatial_query")
+func _place_actor_facing(world: WorldState, mutations: WorldMutationService, actor_id: String, target_id: String) -> bool:
+    var actor: WorldPlacement = world.placement(actor_id); var target: WorldPlacement = world.placement(target_id)
     if actor == null or target == null or actor.footprint == null: return false
     for direction: Vector2i in [Vector2i.UP, Vector2i.RIGHT, Vector2i.DOWN, Vector2i.LEFT]:
-        var actor_cell := target.anchor - direction
-        var facing := Facing.from_vector(direction)
+        var actor_cell := target.anchor - direction; var facing := Facing.from_vector(direction)
         if not world.has_terrain(actor_cell) or facing < 0: continue
         if mutations.set_placement(actor_id, actor.channel, actor_cell, facing, actor.footprint): return true
     return false
