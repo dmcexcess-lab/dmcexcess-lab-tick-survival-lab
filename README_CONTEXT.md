@@ -2,134 +2,136 @@
 
 Read this file first, then `README_SOPS.md`. Fetch current `main` once before the next repository operation.
 
-## Current checkpoint — SURVIVAL RELEASE PHASE 2 OVERLAPPING CONSEQUENCE PRESENTATION CLOSED — 2026-09-25
+## Current checkpoint — SURVIVAL RELEASE PHASE 2 TECHNICAL COMBAT ACCEPTANCE CLOSED; REAL SAFARI ACCEPTANCE REMAINS — 2026-09-25
 
-Phase 1 remains complete. Phase 2 commitment windows, simultaneous melee consequences, causal movement/shove/death ordering, the closed mob-force core, canonical fear, bounded eight-infected callback/perception cost, and coherent overlapping consequence presentation are now protected.
+Phase 1 remains complete. Phase 2 commitment windows, simultaneous melee consequences, causal movement/shove/death ordering, closed mob-force core, canonical fear, bounded eight-infected callback/perception cost, coherent overlapping consequence presentation, and the real crowded-fight touch/control acceptance route are now protected.
 
-Starting main for this operation: `bd94f7e13556c68277026dacde95d20bc4170676`.
+Starting main for this operation: `94bea679b48584804f8f87f444ecdc9a883af739`.
 
-Functional/executable owning head: `e76f9411f297c753f5c439b30756110622b814c3`.
+Final functional/attribution head before documentation: `51350037bb890efc4e2684027142a939f0d4687a`.
 
-Focused verifier owning head/run: `e76f9411f297c753f5c439b30756110622b814c3` / `36207564242` — **SUCCESS**.
+Focused final attribution run: `36208557288` — **SUCCESS**.
 
-Functional-head Pages run: `36207564248` — **SUCCESS**.
+Prior functional crowded-fight run: `36208495717` — **SUCCESS**.
 
-Documentation head immediately before this final handoff write: `66a2bf3b4aa9375449a8d677809926f945850627`.
+Documentation head immediately before this final handoff write: `52f2abc96f3d4e5427b8f9afcec333b58b3fffcd`.
 
 This `README_CONTEXT.md` commit is the final repository write for the operation. Identify its exact SHA from `main`; everything after it is read-only verification.
 
 ## Prompt-local verifier lifecycle
 
-The previous infected-performance verifier/workflow were retired before production code work:
+The previous consequence-presentation verifier/workflow were retired before this operation:
 
-- `game/scripts/ci/Phase2InfectedPerceptionPerfSmoke.gd`
-- `.github/workflows/phase2-infected-perception-perf.yml`
+- `game/scripts/ci/Phase2ConsequencePresentationSmoke.gd`
+- `.github/workflows/phase2-consequence-presentation.yml`
 
 Fresh current pair:
 
-- `game/scripts/ci/Phase2ConsequencePresentationSmoke.gd`
-- `.github/workflows/phase2-consequence-presentation.yml`
+- `game/scripts/ci/Phase2CrowdedFightAcceptanceSmoke.gd`
+- `.github/workflows/phase2-crowded-fight-acceptance.yml`
 
-The next code prompt must delete this pair before changing code and create a fresh focused verifier/workflow for the crowded-fight + Safari acceptance/performance route.
+The next code-changing prompt must delete this pair before changing code and create a fresh prompt-local verifier/workflow scoped only to the concrete new operation.
 
-## Completed — one consequence moment per shared timestamp
+If the next operation is only the real Safari acceptance pass and no code changes are required, do not churn the verifier merely to satisfy ceremony.
 
-New production presentation owner:
+## Completed — real eight-infected crowded-fight route
 
-- `game/scripts/ui/ConsequenceMomentPresenter.gd`
+The fresh verifier boots the real production `gameplay.tscn` and uses:
 
-It consumes already-resolved production signals from:
+- the actual active eight-infected resident-backed cohort;
+- the actual touch-first `PlayerMovementControls` Buttons;
+- the production semantic-intent routing;
+- the production player action controller and input-busy ownership;
+- the single WHEN/TickKernel clock;
+- production perception, infected behavior, Movement, Combat, Health/death, mob pressure and consequence presentation.
 
-- Combat impact/shove;
-- Movement commits;
-- physical crowd-pressure summaries;
-- generic actor death;
-- Health consequence-batch closure.
+The canonical island boot naturally places the eight infected roughly 40–75 cells from the player. The first focused acceptance attempt therefore produced 32 infected behavior evaluations but 0 infected action submissions; accepted empty STRIKE actions were correctly rejected as evidence of a crowd fight.
 
-It does not mutate gameplay truth, own combat/movement/health state, schedule WHEN work, or advance simulation time.
+The verifier was repaired rather than production. It now uses authoritative `WorldMutationService.set_placements_batch()` solely as an acceptance-fixture setup to move those same already-hydrated production actor identities into nearby collision-valid cells. It does not fabricate actors, AI decisions, hits, damage, pressure, movement, death or presentation events.
 
-Events are grouped by canonical world tick. Combat consequence batches flush only after the existing Health batch closes, so already-earned movement/shove/death outcomes can join the same presentation moment.
+After setup, all fight behavior and consequences are ordinary production behavior.
 
-## Completed — simultaneous combat remains visibly simultaneous
+## Completed — automatic pause and touch-input ownership
 
-When two reciprocal hits resolve on the same timestamp, the player-facing surface explicitly presents them as a mutual exchange rather than serial enemy turns.
+Final route evidence:
 
-Mutual lethal remains visibly mutual and uses one shared consequence summary.
-
-Multiple same-tick impact/death events do not become separate cinematic waits or action locks.
-
-## Completed — movement, shove and mob pressure are legible together
-
-The presenter groups:
-
-- shove success/failure;
-- pressure displacement/trapping;
-- same-timestamp actor movement;
-- combat impact/death when they share the timestamp.
-
-Repeated pressure summaries for the same target/timestamp are coalesced.
-
-A lone ordinary movement event is suppressed, preventing routine infected movement from spamming the consequence surface.
-
-No crowd-force or movement-resolution rules changed.
-
-## Completed — resident-backed infected labels use real identity
-
-The first focused run exposed a presentation defect: resident-backed infected actor IDs do not necessarily contain the literal word `infected`.
-
-The production presenter now receives the actual hydrated active-cohort actor IDs from `CombatGameMain` and uses that identity set for player-facing labels.
-
-No actor identity or hydration truth was changed.
-
-## Focused verifier evidence
-
-Fresh verifier/workflow:
-
-- `game/scripts/ci/Phase2ConsequencePresentationSmoke.gd`
-- `.github/workflows/phase2-consequence-presentation.yml`
-
-Initial run:
-
-- `36207501236` — **FAILURE**
-- correctly exposed the resident-backed infected labeling defect;
-- production was repaired rather than weakening the assertion.
-
-Final functional run:
-
-- head: `e76f9411f297c753f5c439b30756110622b814c3`
-- run: `36207564242`
-- result: **SUCCESS**
+- eight active infected;
+- 2 ordinary touch-driven turn actions;
+- 3 ordinary touch-driven strike actions;
+- 5 accepted-action input-lock cycles;
+- 27 shared world ticks;
+- each accepted action leaves the decision pause;
+- the touch surface remains locked while the action/world resolves;
+- input re-enables only after the next legitimate decision pause;
+- real physical contact occurs;
+- overlapping same-timestamp consequence presentation occurs coherently;
+- player remained at 100 HP in this deterministic route.
 
 Marker:
 
-`PHASE2_CONSEQUENCE_PRESENTATION_OK`
+`PHASE2_CROWDED_FIGHT_ACCEPTANCE_OK active=8 turns=2 strikes=3 overlap=true contact=true final_tick=27`
 
-The production-scene verifier proves:
+This proves the mobile/touch semantic action path without substituting desktop keyboard input.
 
-1. the presenter is wired to real Combat/Movement/Death production signals;
-2. two reciprocal hits remain one simultaneous consequence moment;
-3. mutual death remains visibly mutual;
-4. shove + pressure + two same-tick moves are grouped coherently;
-5. duplicate pressure for one target is coalesced;
-6. one isolated ordinary movement does not create presentation spam;
-7. presentation work leaves the WHEN world tick unchanged.
+## Completed — performance attribution without speculative rewrite
 
-## Phone/Safari presentation contract
+Final CI attribution route:
 
-The consequence surface is:
+- accepted-action elapsed total: 1,937,370 usec across 5 accepted actions;
+- max accepted action: 477,635 usec;
+- route elapsed: 2,017,918 usec.
 
-- viewport-relative;
-- non-interactive;
-- presentation-only;
-- free of cinematic delays or timers that gate the next decision.
+Existing exclusive counters measured:
 
-No desktop-only input assumption was introduced.
+- infected behavior evaluation: 52,684 usec;
+- infected perception: 81,204 usec;
+- player perception: 63,629 usec;
+- active-cohort sync: 20,552 usec;
+- infected intention refresh: 3,930 usec;
+- infected action submission: 17,939 usec.
+
+Shared `PerformanceTelemetry` measured:
+
+- lighting rebuild: 262,873 usec total;
+- lighting geometry rebuild: 151,494 usec;
+- lighting draw: 163,862 usec;
+- perception recompute: 144,833 usec;
+- infected behavior evaluation: 52,684 usec.
+
+The lighting figures overlap and must not be summed as independent phases.
+
+Lighting is the largest currently measured bounded phase, but the existing measurements still do not explain most end-to-end accepted-action time. The operation therefore did **not** reopen performance architecture or optimize on inference alone. A later performance change requires a concrete bounded attribution, not the residual itself.
+
+No protected mob-force, fear, infected scheduling, Perception, combat-ordering or consequence-presentation architecture changed in this operation.
+
+## Safari boundary
+
+The production touch/mobile action path is CI-proven.
+
+GitHub Actions runs on Linux and does not provide an actual Safari/WebKit browser session. The repository therefore does not claim Safari itself was executed or accepted by CI.
+
+This leaves exactly one Phase 2 release-acceptance blocker:
+
+**Run the deployed Pages build in real Safari and verify the already-proven decision loop on the actual browser.**
+
+The Safari pass should verify:
+
+1. touch/click activation of the production controls;
+2. viewport/control fit and legibility;
+3. accepted action locks input during resolution;
+4. controls return only at the legitimate next decision pause;
+5. crowded consequence moments remain readable and non-blocking;
+6. no Safari-specific focus/background/input regression appears.
+
+If Safari shows a concrete defect, repair that defect narrowly and verify it with a fresh prompt-local route. Do not reopen combat architecture merely because Safari acceptance is external.
+
+If Safari passes, Phase 2 is fully accepted and the release roadmap advances to Phase 3: durable save/leave/continue.
 
 ## Durable documentation updated
 
-- `SYSTEM_DESIGNS/37_TACTICAL_COMBAT_PHYSICAL_IMPACT.md` records the consequence-presentation contract and focused proof.
-- `ROADMAP.md` marks overlapping consequence presentation complete and advances Phase 2.
-- `CHANGELOG_LATEST.md` records implementation, verifier evidence and the repaired labeling defect.
+- `ROADMAP.md` records technical Phase 2 crowded-fight closure, measured timing attribution and the single real-Safari acceptance blocker.
+- `CHANGELOG_LATEST.md` records the initial no-engagement finding, bounded acceptance fixture, successful fight route and telemetry.
+- `SYSTEM_DESIGNS/37_TACTICAL_COMBAT_PHYSICAL_IMPACT.md` records the production touch-route acceptance contract and performance evidence.
 
 ## Current release direction
 
@@ -143,7 +145,7 @@ A base remains an existing fortified house/building with supplies, generator and
 
 Human survivor society, raiders and human followers remain outside release scope. Pets remain future bounded scope.
 
-Phase-2 defining work now complete includes:
+Phase-2 defining technical work now complete includes:
 
 1. commitment windows / points of no return;
 2. simultaneous same-tick melee consequences;
@@ -154,37 +156,20 @@ Phase-2 defining work now complete includes:
 7. aggregate multi-body mob pressure;
 8. canonical Calm/fear;
 9. bounded eight-infected callback/perception path;
-10. coherent overlapping consequence presentation.
+10. coherent overlapping consequence presentation;
+11. real eight-infected crowded-fight touch/control acceptance and end-to-end attribution.
 
 ## NEXT OPERATION
 
-Continue Phase 2 directly with the **crowded-fight + Safari acceptance/performance route**.
+Perform the **real Safari release-acceptance pass** on the deployed GitHub Pages build.
 
-Do not reopen mob force, fear, infected scheduling, Perception performance or consequence presentation without a concrete defect.
+This is acceptance, not architecture work.
 
-This next bounded slice is acceptance + attribution, not another architecture pass.
+Do not reopen mob force, fear, infected scheduling, Perception, combat ordering, consequence presentation or general performance unless the Safari run exposes a concrete defect.
 
-Targeted starting reads only:
+If Safari passes the six checks above, mark Phase 2 fully accepted and advance directly to **Phase 3 — durable save, leave and continue**.
 
-- the current player action/run loop needed to drive a real crowded fight;
-- the current fresh consequence presenter only as an observed output;
-- current performance counters already exposed by the active infected cohort / perception owners;
-- Safari/web input and viewport seams needed to exercise the same route;
-- current Pages/export configuration only if the Safari run exposes a concrete web defect.
-
-Required outcomes:
-
-- run a real production crowded fight with the active eight-infected cohort through ordinary player actions;
-- verify automatic decision-pause/input-lock behavior remains usable under crowd pressure;
-- verify simultaneous impact/movement/shove/death presentation remains coherent in the real route;
-- verify touch/mobile/Safari path for the same decision loop rather than a desktop-only substitute;
-- measure end-to-end accepted-action/turn cost in the crowded route;
-- attribute the remaining full-turn cost by existing measured phases before changing performance architecture;
-- only optimize a component if this acceptance evidence identifies a concrete bounded bottleneck;
-- no broad gameplay gate, no historical suites, no retired seed matrix;
-- use one fresh prompt-local verifier/workflow scoped only to this acceptance/performance route.
-
-After this acceptance/performance slice, Phase 2 should close or identify one concrete release blocker. Do not create a new indefinite technical phase.
+If Safari exposes a defect, identify exactly one browser-specific failure, make the narrowest production repair, use one fresh prompt-local verifier/workflow for that repair, deploy, and re-run Safari acceptance.
 
 ## Protected behavior
 
@@ -209,11 +194,12 @@ Preserve:
 - resident-backed infected identity;
 - coherent same-timestamp consequence presentation;
 - no presentation-owned gameplay truth or time advancement;
+- touch-first semantic input routing;
+- input locked until legitimate decision pause;
+- hard application pause;
 - player movement, Health/injury, inventory, condition/moodlets, skills/equipment;
 - day/night, Weather, utilities and vehicles;
 - persistence/terrain/streaming;
-- input locked until legitimate decision pause;
-- hard application pause;
 - STATS / INVENTORY / CRAFT / MENU ownership;
 - no player-facing ZOMBIES / ZOMBIES NEARBY indicator;
 - LOADING behavior unless explicitly replaced later.
