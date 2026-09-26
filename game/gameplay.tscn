@@ -1,4 +1,4 @@
-[gd_scene load_steps=17 format=3]
+[gd_scene load_steps=18 format=3]
 
 [ext_resource path="res://scripts/app/EnvironmentalPressureGameMain.gd" type="Script" id="1"]
 [ext_resource path="res://scripts/render/TacticalRendererStack.gd" type="Script" id="2"]
@@ -16,6 +16,7 @@
 [ext_resource path="res://scripts/ui/PlayerMapBootstrap.gd" type="Script" id="15"]
 [ext_resource path="res://scripts/ui/WorldResolutionIndicator.gd" type="Script" id="16"]
 [ext_resource path="res://scripts/ui/SessionControls.gd" type="Script" id="17"]
+[ext_resource path="res://scripts/simulation/crafting/PoweredCraftingWorkstationAdapter.gd" type="Script" id="18"]
 
 [node name="TickSurvivalGame" type="Node"]
 script = ExtResource("1")
@@ -66,3 +67,6 @@ script = ExtResource("14")
 
 [node name="SessionControls" type="CanvasLayer" parent="."]
 script = ExtResource("17")
+
+[node name="PoweredCraftingWorkstationAdapter" type="Node" parent="."]
+script = ExtResource("18")
