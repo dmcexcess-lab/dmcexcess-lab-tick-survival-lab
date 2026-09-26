@@ -104,6 +104,8 @@ Focused production verification kept the eight infected cohort intact, found zer
 
 Implement the combat/time contract above using the existing kernel. Address per-actor callback fan-out, repeated perception queries and coherent presentation. Preserve due-tick causality and input ownership. Finish targeting, hit/miss/range/occlusion rules, damage, death/corpses, injury feedback, weapon costs and clear failure reasons. Include mob force and fear rather than postponing them as optional polish.
 
+**Progress — overlapping consequence presentation complete 2026-09-25.** Production now batches already-resolved combat, shove, pressure, movement and death signals by shared world tick into one non-blocking consequence moment. Mutual hits remain visibly mutual, mutual lethal reads as one shared outcome, shove/crowd displacement is summarized with same-timestamp movement, repeated pressure for one target is coalesced, and isolated ordinary movement is suppressed to avoid message spam. The presenter owns no gameplay truth and never advances WHEN. Phase 2 now moves directly to the crowded-fight + Safari acceptance/performance route; that pass must attribute the remaining full-turn cost before any further optimization.
+
 Profile streaming separately. Use existing bulk terrain improvements; resolve measured transition work without regenerating places or removing world consequences. Do not hide CPU stalls with animation.
 
 The recorded baseline is p50 364 ms, p95 488 ms, p99 513 ms per accepted action, with an 8.76-second outlier and about 10 active NPCs. These were headless diagnostic measurements, not mobile timing.
