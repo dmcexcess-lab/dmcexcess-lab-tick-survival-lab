@@ -2,6 +2,20 @@
 
 This compact ledger records the newest executable work. `CHANGELOG.md` remains the historical archive.
 
+## Phase 4 — contextual deconstruction route — 2026-09-26
+
+Verified functional head before documentation: `8749642a8ee946ccec4c131bd79c465c34a794b8`.
+
+- Closed the next Phase 4 player-facing link using the production route already present in the established world-interaction owners rather than inventing another subsystem.
+- Generated dining chairs expose contextual DECONSTRUCT through the same world-cell interaction panel used by other object actions.
+- The route requires the existing hammer/crowbar tool semantics and Mechanical skill, then resolves as a real cancelable WHEN action.
+- Pre-commit interruption cancels cleanly: the chair remains and no salvage appears.
+- Completion removes the chair through authoritative WHAT, preserves the tool and creates exactly one existing `item.material.wood_plank` through existing inventory/world truth.
+- Save -> destroy gameplay scene -> reopen -> Continue keeps the chair removed and the same salvage identity present exactly once.
+- Fresh prompt-local verifier/workflow: `game/scripts/ci/Phase4DeconstructionRouteSmoke.gd` + `.github/workflows/phase4-deconstruction-route.yml`; the previous cooking verifier/workflow were deleted before this slice.
+- Focused/protected run `36275247010`: **SUCCESS**, marker `PHASE4_DECONSTRUCTION_ROUTE_OK target=dining_chair contextual=true timed=true interrupted_safe=true removed=true salvage=wood_plank salvage_once=true tool_preserved=true continue=true`.
+- Protected regressions: world interaction, crafting and canonical production boot all passed before the vertical route.
+
 ## Phase 4 — powered stove cooking route — 2026-09-26
 
 Functional production head before documentation: `40b6dab3726759576f078c8ef6b7a5aa3093ad5c`.
@@ -12,9 +26,7 @@ Functional production head before documentation: `40b6dab3726759576f078c8ef6b7a5
 - Heated soup immediately exposes the already-established contextual EAT route. No generic survival/crafting action strip was added.
 - Crafting consumes the canned-soup input exactly once, preserves the cooking pot, and creates exactly one cooked output through the existing WHAT/inventory mutation path.
 - Save -> destroy gameplay scene -> reopen -> Continue preserves the cooked output/tool and does not resurrect the consumed input.
-- Fresh prompt-local verifier/workflow: `game/scripts/ci/Phase4CookingRouteSmoke.gd` + `.github/workflows/phase4-cooking-route.yml`; the previous Phase 3 verifier/workflow were deleted before production edits.
 - Focused route run `36273690260`: **SUCCESS** with `PHASE4_COOKING_ROUTE_OK`.
-- Protected workflow covers crafting, physical power network, survivor condition, live world interaction and canonical production boot before the cooking vertical verifier.
 
 ## Phase 3 — durable save / leave / reopen / Continue — 2026-09-26
 
