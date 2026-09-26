@@ -2,128 +2,138 @@
 
 Read this file first, then `README_SOPS.md`. Fetch current `main` once before the next repository operation.
 
-## Current checkpoint — PLAYER VISION CONE / WORLD REFRESH REGRESSION REPAIRED — 2026-09-25
+## Current checkpoint — LIGHTING PRESENTATION SIMPLIFIED TO DIRECT TILE TINT — 2026-09-25
 
-The September 25 perception-performance work introduced a real player-facing regression: after batched player movement or turning, the cached geometric LOS could remain tied to the player's previous anchor/facing. Because the perception overlay is also the live fog/knowledge mask, this presented as both a broken/frozen vision cone and an apparently non-updating world.
+User direction superseded the earlier transparent-circle idea:
 
-Starting main for this repair operation: `efab155622e62639bc4c357ac8bd3b5341389b0d`.
+**Lighting presentation should only change each tile's color/darkness from the real physical lightmap. No bloom, blur, halo, scatter, reflection, or other added visual lighting effects.**
 
-Functional production repair head: `6de878af2df86f655f8d4eed8220bca21b7c69fb`.
+Starting main for this operation: `cdc73bb077101172b9253a4573548aa2f85442c8`.
 
-Fresh verifier owning head/run: `ff4b97727c239ecc56945ba7374b4f8913fd95c9` / `36215957560` — **SUCCESS**.
+Functional production lighting cleanup head: `a307e8bb0c268709aa176fae5d5e513922c4dc42`.
 
-Documentation head immediately before this final handoff write: `904ea0493b775b1a7418a463673e82f0c8729096`.
+Fresh verifier/workflow owning head: `d2c8b6f99c5ddd76920dfb563d3996d7a97c80ed`.
+
+Focused verifier run: `36217199331` — **SUCCESS**.
+
+Documentation head immediately before this final handoff write: `141c3790eb642c5479c61e65ccff5f30364ab8e1`.
 
 This `README_CONTEXT.md` commit is the final repository write for the operation. Identify its exact SHA from `main`; everything after it is read-only verification.
 
 ## Prompt-local verifier lifecycle
 
-The previous crowded-fight verifier/workflow were retired before the repair:
+The previous pair was retired during this operation:
 
-- `game/scripts/ci/Phase2CrowdedFightAcceptanceSmoke.gd`
-- `.github/workflows/phase2-crowded-fight-acceptance.yml`
+- `game/scripts/ci/VisionWorldRefreshRegressionSmoke.gd`
+- `.github/workflows/vision-world-refresh-regression.yml`
 
 Fresh current pair:
 
-- `game/scripts/ci/VisionWorldRefreshRegressionSmoke.gd`
-- `.github/workflows/vision-world-refresh-regression.yml`
+- `game/scripts/ci/SimpleLightingPresentationSmoke.gd`
+- `.github/workflows/simple-lighting-presentation.yml`
 
-The next code-changing prompt must delete this pair before changing code and create a fresh focused verifier/workflow for that prompt.
+The next code-changing prompt must delete this pair before changing code and create a fresh prompt-local verifier/workflow scoped only to the next operation.
 
-## Root cause
+## Completed — direct tile-tint presentation
 
-`ObserverPerceptionService` caches geometric LOS separately from lighting/acquisition filtering.
+The production physical-light presentation is now intentionally minimal.
 
-That cache is valid only while all LOS geometry inputs remain unchanged, including the controlled observer's own anchor and facing.
+`physical_lighting_multiply.gdshader` now:
 
-The regression path was:
+- performs one direct `texture(TEXTURE, UV)` sample;
+- uses the sampled physical-light tint and luminance directly;
+- performs no neighboring texture samples;
+- performs no edge weighting;
+- performs no smoothing/blur pass.
 
-1. player movement/turning resolved through a WHAT placement batch;
-2. `WorldChangeBatch` summarized dirty ACTOR-channel bounds but does not carry changed entity identity;
-3. `_on_world_batch_changed()` correctly marked perception dirty, so perception recomputed;
-4. however, it did not know that the observer itself had moved/turned, so `_geometry_dirty` could remain false;
-5. `recompute()` reused geometric cells calculated from the previous observer pose;
-6. the fog/knowledge overlay therefore continued masking/unmasking cells from the stale cone, making both vision and visible world updates appear frozen.
+`PhysicalLightingPresentationRenderer.gd` now:
 
-This was a correctness bug in the LOS cache optimization, not a camera/layout problem.
+- owns one lighting image;
+- owns one lighting texture;
+- owns one Sprite2D child named `PhysicalLightTileTint`;
+- uploads only that one tile-tint map;
+- exposes `presentation_mode = "tile_tint_only"`;
+- no longer creates or uploads a glow map;
+- no longer creates an additive glow Sprite2D;
+- no longer computes presentation glow strength, glare, scatter, wet reflections, or emitter core bloom.
 
-## Production repair
+The old glow shader source file remains in the repository as inert historical source, but production presentation no longer loads or instantiates it.
 
-`ObserverPerceptionService` now records the observer pose used to build the geometric cache:
+## Preserved physical lighting truth
 
-- cached observer anchor;
-- cached observer facing;
-- cache-pose validity.
+This operation did **not** simplify the authoritative System 27 simulation.
 
-Before every perception recompute, it compares the current authoritative WHAT placement against that cached pose.
+Still preserved:
 
-If anchor or facing differs, geometric LOS is forced dirty and rebuilt before acquisition filtering.
+- day/night physical luminance;
+- weather/atmosphere influence on physical illumination;
+- opaque structure light blocking;
+- closed-door blocking;
+- open-door transmission;
+- window transmission;
+- portal/interior light transfer;
+- local artificial emitters;
+- flashlight/light-source physical range and occlusion;
+- lighting-driven System 23 perception/acquisition.
 
-This preserves the intended optimization:
-
-- lighting/acquisition-only changes can still reuse geometric LOS;
-- unrelated actor movement does not force player LOS geometry work;
-- player movement/turning can never reuse a cone from the previous pose, regardless of batch notification detail.
-
-No combat, mob-force, fear, infected scheduling, world-generation, camera, renderer ownership or WHEN ordering changed.
+Therefore this is a presentation simplification, not a gameplay-lighting downgrade.
 
 ## Focused verifier evidence
 
-Fresh verifier:
-
-- `game/scripts/ci/VisionWorldRefreshRegressionSmoke.gd`
-- `.github/workflows/vision-world-refresh-regression.yml`
-
-Run:
-
-- `36215957560` — **SUCCESS**
+Run `36217199331` — **SUCCESS**.
 
 Marker:
 
-`VISION_WORLD_REFRESH_OK initial_tick=0 final_tick=13 initial_anchor=(1708, 1552) final_anchor=(1709, 1552) initial_facing=0 final_facing=1 geometry_rebuilds=2 visible_initial=152 visible_turn=152 visible_move=152`
+`SIMPLE_LIGHTING_PRESENTATION_OK children=1 mode=tile_tint_only`
 
-The production-scene verifier uses the ordinary player controls and proves:
+The fresh production-scene verifier proves:
 
-1. TURN R advances the shared clock and changes authoritative facing;
-2. turning forces a fresh geometric LOS rebuild;
-3. visible-cell membership changes with the new facing;
-4. FORWARD advances the shared clock and changes authoritative anchor;
-5. moving forces a second fresh geometric LOS rebuild;
-6. visible-cell membership moves with the new anchor;
-7. perception settles on the current WHEN tick.
+1. production `gameplay.tscn` boots;
+2. the physical-light presentation node exists;
+3. it reports `tile_tint_only`;
+4. its single tile-tint texture is ready;
+5. it has exactly one render child;
+6. that child is `PhysicalLightTileTint`;
+7. the multiply shader uses exactly one direct texture lookup;
+8. neighbor smoothing code is absent.
 
-Equal visible-cell counts are expected; the important assertion is that the cell membership changes with pose.
+## Publication state before final handoff write
 
-## Current release direction
+On documentation head `141c3790eb642c5479c61e65ccff5f30364ab8e1`:
 
-Core loop remains:
+- fresh focused lighting workflow run `36217258040` was in progress;
+- Pages run `36217257995` was in progress.
 
-**scavenge -> fight -> craft -> survive**
-
-Phase 2 combat/time architecture remains protected.
-
-The previous rendered playtest also exposed a separate missing production UI path for survival actions (EAT / DRINK / TAP / REST / SLEEP), but that was not touched in this repair because the user's correction identified vision/world refresh as the immediate regression.
+After this final context write, perform read-only exact-head verification only.
 
 ## NEXT OPERATION
 
-First, visually re-playtest the deployed build and confirm the player vision cone and visible world now follow TURN / movement correctly.
+Visually playtest the deployed build, especially at night and around:
 
-If that visual acceptance passes, continue with the next concrete player-facing release defect from the playtest:
+- streetlights;
+- building exteriors;
+- windows;
+- open/closed doors;
+- flashlight or other local emitters.
+
+Confirm that the hard tile-tint lighting aesthetic is readable and that the removal of bloom did not make important light sources visually ambiguous.
+
+If visual acceptance passes, return to the previously identified release gap:
 
 **wire the existing EAT / DRINK / TAP / REST / SLEEP survival-action controls into the production gameplay scene and verify them through ordinary player input.**
 
-Do not reopen perception architecture unless the visual re-playtest still shows a concrete defect.
+Do not reopen physical-lighting simulation unless a concrete gameplay-lighting defect appears.
 
 ## Protected behavior
 
 Preserve:
 
 - one WHERE / WHAT / WHEN authority chain;
-- cached geometric LOS for acquisition-only refreshes;
-- observer-pose invalidation added by this repair;
+- System 27 physical-light truth and occlusion;
+- lighting-driven perception;
+- cached geometric LOS observer-pose invalidation;
 - event-driven perception freshness;
-- lighting acquisition revision correctness;
-- one bounded shared player + active-infected lighting field;
+- one bounded shared player + active-infected acquisition field;
 - active infected cohort size 8;
 - simultaneous combat consequences;
 - mob-force core;
@@ -132,7 +142,7 @@ Preserve:
 - touch-first semantic controls;
 - input locked until legitimate decision pause;
 - hard application pause;
-- player movement, Health/injury, inventory, skills/equipment;
+- player movement, health/injury, inventory, skills/equipment;
 - day/night, weather, utilities, vehicles, persistence/terrain/streaming;
 - STATS / INVENTORY / CRAFT / MENU ownership.
 
