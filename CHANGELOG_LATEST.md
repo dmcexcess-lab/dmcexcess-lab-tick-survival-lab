@@ -2,6 +2,22 @@
 
 This compact ledger records the newest executable work. `CHANGELOG.md` remains the historical archive.
 
+
+## Phase 2 — coherent overlapping consequence presentation — 2026-09-25
+
+Functional production head: `e76f9411f297c753f5c439b30756110622b814c3`.
+
+- Added `ConsequenceMomentPresenter` as a presentation-only consumer of resolved combat, shove, physical-pressure, movement and death signals.
+- Same-world-tick consequences are grouped into one non-blocking player-facing moment instead of reading like sequential enemy turns.
+- Mutual hits are rendered as a reciprocal exchange; paired lethal outcomes remain visibly mutual with `BOTH DOWN`.
+- Shove, crowd-pressure displacement and same-timestamp movement are summarized together; duplicate pressure for one target is coalesced.
+- Single ordinary movement does not create a consequence message, preventing routine infected motion from spamming the player.
+- Resident-backed infected are labeled from the actual hydrated cohort identities rather than guessed from actor-ID strings.
+- Presentation never mutates gameplay truth and never advances WHEN time.
+- Fresh prompt-local verifier/workflow: `game/scripts/ci/Phase2ConsequencePresentationSmoke.gd` + `.github/workflows/phase2-consequence-presentation.yml`.
+- Focused run `36207564242`: **SUCCESS** with production signal wiring, 8 coalesced same-tick events, mutual-hit/mutual-death wording, pressure deduplication, single-move suppression and zero tick advancement.
+- Initial focused run `36207501236` correctly exposed the actor-labeling defect and was repaired in production without weakening the verifier.
+
 ## Phase 2 — eight-infected callback/perception performance — 2026-09-25
 
 Functional production head: `cd28fae78d5bdc80df5721f674265deeb69f4085`.
