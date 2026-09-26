@@ -305,3 +305,16 @@ System 37 now provides lethal combat without becoming a conventional combat laye
 - same-tick concurrent impact;
 - generic actor death and persistent exact-item corpse transition;
 - UI routes actions but owns no combat truth.
+
+
+### Phase 2 crowded-fight acceptance route
+
+The final Phase 2 technical acceptance verifier boots the real production gameplay scene and drives the actual touch-first `PlayerMovementControls` Buttons. An accepted action must synchronously lock that control surface through the production player controller, leave the decision pause, advance the single WHEN clock, and re-enable input only after the next legitimate decision pause.
+
+Because the canonical generated boot places the eight resident-backed infected tens of cells from the player, the verifier performs one acceptance-only setup step: it repositions the same already-hydrated production actor identities into nearby collision-valid cells through authoritative `WorldMutationService.set_placements_batch()`. It then resynchronizes/warm-refreshes the existing cohort/perception owners. This setup changes only starting WHERE for the bounded test; it does not inject AI decisions, hits, damage, movement, pressure, death or presentation events.
+
+Focused final run `36208557288` on head `51350037bb890efc4e2684027142a939f0d4687a` is SUCCESS with marker `PHASE2_CROWDED_FIGHT_ACCEPTANCE_OK`. It proves eight active infected, two ordinary turn actions, three ordinary strikes, five correct lock/pause cycles, real physical contact, overlapping same-timestamp presentation and 27 shared world ticks.
+
+Performance attribution from that route is diagnostic rather than a new gameplay gate. The five accepted actions consumed 1,937,370 usec total in CI, max 477,635 usec. Existing counters measured infected behavior 52,684 usec, infected perception 81,204 usec, player perception 63,629 usec and active-cohort synchronization 20,552 usec. Shared telemetry measured lighting rebuild 262,873 usec total, lighting geometry rebuild 151,494 usec and lighting draw 163,862 usec; these lighting figures overlap and are not additive. Because the current counters still leave most end-to-end time unattributed, no performance architecture was changed on inference alone.
+
+The production touch path is therefore technically accepted. A real Safari/WebKit browser execution remains external release acceptance because the Linux CI runner cannot supply Safari. Any defect found there should be treated as a narrow web/input/viewport defect rather than grounds to reopen combat ordering, mob force, fear, infected scheduling, Perception architecture or consequence presentation.
