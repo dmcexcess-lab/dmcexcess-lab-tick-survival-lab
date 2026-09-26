@@ -2,268 +2,241 @@
 
 Read this file first, then `README_SOPS.md`. Fetch current `main` once before the next repository operation.
 
-## Current checkpoint — SURVIVAL RELEASE PHASE 2 CANONICAL FEAR COMPLETE — 2026-09-25
+## Current checkpoint — SURVIVAL RELEASE PHASE 2 EIGHT-INFECTED CALLBACK/PERCEPTION PERFORMANCE BOUNDED — 2026-09-25
 
-Phase 1 remains complete. Phase 2A commitment windows, Phase 2B simultaneous melee consequences, Phase-2C causal movement/shove/death ordering, and the closed mob-force core remain protected.
+Phase 1 remains complete. Phase 2A commitment windows, Phase 2B simultaneous melee consequences, Phase-2C causal movement/shove/death ordering, the closed mob-force core, and canonical fear remain protected.
 
-The user approved the complete canonical fear contract on 2026-09-25 and this operation implemented it as one coherent system rather than another sequence of micro-slices.
+This operation targeted the existing production eight-infected cohort only. It measured real callback/perception cost, removed proven redundant work, and kept infected behavior intentionally simple.
 
-Starting main for this operation: `7790741157aedf6a56926eb1ace89e9600b6051a`.
+Starting main for this operation: `f61a7318e936cd92f0d6703815a148b505b9b572`.
 
-Functional/executable owning head: `82deda793337ea49b7cd47e52325e346bcbafec7`.
+Functional/executable owning head: `cd28fae78d5bdc80df5721f674265deeb69f4085`.
 
-Focused production verifier head/run: `82deda793337ea49b7cd47e52325e346bcbafec7` / `36199423801` — **SUCCESS**.
+Focused verifier owning head/run: `4d674f25a00d4c454a40f2652f43fa02cc29e891` / `36206781574` — **SUCCESS**.
 
-Focused marker:
+Functional-head Pages run: `36206781364` — **SUCCESS**.
 
-`PHASE2_FEAR_OK aggregate_cap=true explicit_effects=true escape_responsive=true injury=true pressure=true recovery=true`
-
-Functional-head Pages run `36199423817` — **SUCCESS**.
-
-Documentation head immediately before this final handoff write: `00b9560717232e3feb9286f7a0f2d7873ff87dcb`.
+Documentation head immediately before this final handoff write: `13f996fc1713a42b6b192480c1a2e496bc4d240b`.
 
 This `README_CONTEXT.md` commit is the final repository write for the operation. Identify its exact SHA from `main`; everything after it is read-only verification.
 
 ## Prompt-local verifier lifecycle
 
-The previous crowd-pressure closure verifier pair was deleted before fear code work:
+The previous canonical-fear pair was deleted before performance code work:
 
-- `game/scripts/ci/Phase2CCrowdPressureClosureSmoke.gd`
-- `.github/workflows/phase2c-crowd-pressure-closure.yml`
+- `game/scripts/ci/Phase2FearSmoke.gd`
+- `.github/workflows/phase2-fear.yml`
 
 Fresh current pair:
 
-- `game/scripts/ci/Phase2FearSmoke.gd`
-- `.github/workflows/phase2-fear.yml`
+- `game/scripts/ci/Phase2InfectedPerceptionPerfSmoke.gd`
+- `.github/workflows/phase2-infected-perception-perf.yml`
 
-The next code prompt must delete this pair before changing code and create a brand-new focused verifier/workflow for the next module.
+The next code prompt must delete this pair before changing code and create a fresh focused verifier/workflow for overlapping consequence presentation.
 
-## CANONICAL FEAR — COMPLETE
+## Completed — measured the real eight-infected route first
 
-Fear uses the existing persistent `CALM` condition as its only authoritative state.
+The first focused production route used one ordinary player turn with the real active cohort.
 
-No second fear/panic meter exists.
+Baseline run `36200438756` measured:
 
-### Same-timestamp fear pressure
+```text
+active infected          = 8
+elapsed_usec             = 269034
+perception_recomputes    = 8
+behavior_evaluations     = 8
+ordinary submissions     = 0
+```
 
-New owner:
+That established a real cost rather than assuming more AI architecture was needed.
 
-- `ActorFearPressureService.gd`
+Inspection then showed a concrete duplication:
 
-Observation/consequence systems no longer mutate Calm independently. They submit fear pressure to one current-timestamp owner.
+- System 23 already recomputed observer truth on relevant world/perception changes;
+- infected behavior still explicitly requested another recompute whenever it drove from a player commitment.
 
-Current production fear sources:
+No horde manager, scheduler or perception budget queue was justified.
 
-- visible infected threat from canonical Perception;
-- sufficiently strong recognized `threat` Sound observations;
-- bounded injury shock from canonical Health damage;
-- resolved physical crowd pressure from Movement.
+## Completed — event-driven perception freshness
 
-Pressure generated on one authoritative timestamp is aggregated before mutation.
+`ObserverPerceptionService` now distinguishes current observer truth from stale truth.
 
-The total Calm loss is capped at **20 points per tick**.
+Behavior calls:
 
-This prevents callback order or multiple simultaneous danger channels from producing arbitrary runaway fear.
+`recompute_if_stale(...)`
 
-The fear owner publishes one `fear_resolved` consequence after applying the capped aggregate.
+instead of forcing a full recompute every decision.
 
-## Fear tiers and explicit mechanical effects
+Freshness is still invalidated by real dependencies.
 
-Existing condition tier boundaries remain canonical.
+This optimization never allows actor callback/order to decide perception truth.
 
-Fear interpretation:
+## Completed — acquisition freshness remains correct
 
-- Calm 45–100: **Composed** — no fear penalty.
-- Calm 30–44: **Uneasy** — player-facing warning only.
-- Calm 15–29: **Afraid** — +15% deliberate-action duration, +10% Fatigue gain, -5% hold/bracing resistance.
-- Calm 0–14: **Terrified** — +30% deliberate-action duration, +20% Fatigue gain, -10% hold/bracing resistance.
+Visual acquisition depends on physical lighting, so merely caching by world tick was not sufficient.
 
-The existing Moodlet path continues to present `Uneasy`, `Afraid`, and `Terrified`.
+System 23 now tracks the acquisition provider's freshness revision separately from geometric/world dirtiness.
 
-### What fear does NOT alter
+If physical-light acquisition truth changes, Perception refreshes even when actor geometry did not.
 
-Calm has been removed from the generic condition potency calculation.
+Thus the optimization does **not** freeze stale darkness/light visibility.
 
-Fear therefore no longer silently modifies:
+## Completed — cached geometric LOS across lighting-only refresh
 
-- maximum Health;
-- general movement speed;
-- carry capacity;
-- body-powered/melee damage;
-- raw locomotion force;
-- raw shove force.
+Lighting/acquisition changes do not automatically mean walls, doors, terrain or observer facing changed.
 
-Fear also never:
+System 23 now retains geometric LOS candidates separately.
 
-- chooses actions for the player;
-- forces fleeing;
-- drops equipment;
-- rejects a valid command merely because the actor is afraid;
-- creates random loss-of-control behavior.
+When only visual acquisition changes:
 
-## Player-agency / escape rule
+- cached LOS candidates are reused;
+- only acquisition filtering + observer memory refresh run again;
+- no LOS ray/opacity geometry pass is repeated.
 
-Fear affects deliberate coordination-heavy execution rather than gross escape behavior.
+The final production verifier proves:
 
-Fear timing is currently wired into:
+`infected_geometry_recomputes=0`
 
-- melee strikes;
-- aimed firearm discharge;
-- firearm reload phases;
-- first aid;
-- crafting.
+across the measured two-decision route.
 
-Escape/reactive actions retain normal timing:
+Geometry still invalidates for the actual geometry/facing/profile dependencies.
 
-- ordinary walk;
-- run;
-- shove;
-- snap fire.
+## Completed — one bounded shared physical-light field
 
-The focused verifier explicitly proves terrified locomotion duration remains unchanged while deliberate melee becomes slower, and that terrified shove retains its normal 6-tick duration.
+The player and active infected observers use the same physical-light acquisition provider.
 
-## Fear and Fatigue
+Previously observer demand could move/rebuild one bounded physical-light query field around separate observer envelopes.
 
-Fear increases Fatigue gain explicitly:
+`ActiveInfectedCohortService` now prepares one combined bounded field covering:
 
-- Afraid: ×1.10;
-- Terrified: ×1.20.
+- every currently active infected observer's vision envelope;
+- the player observer envelope.
 
-This flows through the existing canonical condition/exertion path.
+No whole-world light field was introduced.
 
-Fear itself does not create Fatigue recovery penalties through a parallel subsystem.
+No renderer/camera state became gameplay truth.
 
-## Fear and physical bracing
+## Completed — warm shared field before the first real input
 
-Only `physical.hold` resistance receives the explicit fear reduction:
+A later diagnostic isolated a large remaining spike.
 
-- Afraid: ×0.95;
-- Terrified: ×0.90.
+Before the final warm-preparation fix, the same two-decision route measured:
 
-Raw shove and locomotion force are unchanged.
+```text
+first_request_usec   = 113442
+second_request_usec  = 9855
+```
 
-This allows a frightened survivor to be somewhat easier to physically displace without creating a runaway loss of strength.
+The first infected behavior callback was paying the cold shared-light-field build through visual-acquisition freshness.
 
-## Visible-threat fear
+`IlluminationVisualAcquisitionProvider.prepare_bounds(...)` now means the bounded field is actually current, not merely that its bounds were stored.
 
-`ConditionPerceptionFearAdapter` now uses encounter-aware distance bands instead of a flat repeated per-zombie Calm mutation.
+The cohort already prepares those bounds during activation/loading, so the expensive cold build moves out of the first real player input.
 
-Current bands:
+No simulation time advances during this preparation.
 
-- far;
-- near;
-- close;
-- contact.
+## Final focused production evidence
 
-Crossing into a worse band creates additional pressure.
+Focused run:
 
-Additional simultaneous visible infected contribute with diminishing weight rather than linearly charging the full amount for every body.
-
-The same visible threat does **not** repeatedly charge fear merely because Perception refreshes.
-
-Encounter memory resets only after a meaningful visible-threat-free interval: currently five in-game minutes.
-
-## Heard-threat fear
-
-`ConditionHeardFearAdapter` now submits bounded pressure instead of mutating Calm directly.
-
-Only observations already recognized by Sound as category `threat` qualify.
-
-Current perceived-strength thresholds:
-
-- >= 0.65: modest fear pressure;
-- >= 0.85: stronger fear pressure.
-
-This adapter does not expose hidden exact source identity or location.
-
-## Injury fear
-
-`ConditionInjuryFearAdapter` now owns the Health-to-fear seam.
-
-Damage creates a bounded shock pulse based on damage magnitude.
-
-The old direct `ActorConditionService` injury-to-Calm mutation was removed, so injury now participates in the same same-tick fear aggregate as other danger.
-
-## Crowd-pressure fear
-
-Movement now exposes one resolved `physical_pressure_resolved` consequence summary for psychological consumers.
-
-`ConditionPhysicalPressureFearAdapter` interprets the physical result without owning force:
-
-- resisted body pressure creates modest fear;
-- actual displacement creates stronger fear;
-- pressure trapped/terminated against geometry creates the strongest current crowd-pressure fear impulse.
-
-This does **not** reopen or alter the closed mob-force architecture. Fear consumes its result.
-
-## Recovery / anti-spiral rule
-
-Calm still recovers analytically toward neutral 60 as authoritative WHEN advances.
-
-Current tuning:
-
-- approximately +25 Calm points per in-game hour when below neutral;
-- 0 Calm reaches neutral in roughly 2.4 in-game hours if no new fear pressure occurs.
-
-Fear state itself never generates additional fear pressure.
-
-This prevents a self-sustaining psychological feedback loop.
-
-Decision pause advances no time, so it grants no free fear recovery.
-
-## Focused verification
-
-Fresh prompt-local production verifier:
-
-- `game/scripts/ci/Phase2FearSmoke.gd`
-- `.github/workflows/phase2-fear.yml`
-
-Successful functional run:
-
-- head: `82deda793337ea49b7cd47e52325e346bcbafec7`
-- run: `36199423801`
+- head: `4d674f25a00d4c454a40f2652f43fa02cc29e891`
+- run: `36206781574`
 - result: **SUCCESS**
 
-Marker:
+Final marker:
 
-`PHASE2_FEAR_OK aggregate_cap=true explicit_effects=true escape_responsive=true injury=true pressure=true recovery=true`
+`PHASE2_INFECTED_PERF_METRIC`
 
-The verifier boots the real production scene and proves:
+Key measured values:
 
-1. three same-tick fear inputs aggregate before one Calm mutation;
-2. the per-tick Calm-loss cap is exactly 20;
-3. Calm no longer changes generic Health/speed/carry/melee-damage multipliers;
-4. Terrified explicit multipliers are 13000 deliberate timing / 12000 Fatigue gain / 9000 hold resistance;
-5. existing `Terrified` moodlet feedback remains visible;
-6. ordinary movement timing is unchanged by terror;
-7. deliberate melee timing increases under terror;
-8. shove remains a responsive escape action;
-9. first aid, crafting and firearm services are production-wired to the same fear timing query;
-10. injury shock reaches the fear-pressure owner;
-11. resolved body pressure reaches the fear-pressure owner;
-12. visual threat bands and heard-threat classification are bounded as designed;
-13. one in-game hour of recovery from 0 Calm reaches the intended roughly 25-point range.
+```text
+active infected                  = 8
+first_request_usec               = 9874
+second_request_usec              = 9580
 
-## Focused repair history
+first_behavior_eval_usec         = 8984
+second_behavior_eval_usec        = 8905
+behavior_evaluations             = 16
+behavior_eval_max_usec           = 1726
 
-The first verifier attempt exposed two test/tooling issues and one real production wiring mismatch:
+infected_perception_recomputes   = 16
+infected_perception_usec         = 15797
+infected_geometry_recomputes     = 0
+infected_geometry_usec           = 0
 
-- a malformed verifier line-continuation caused a parse failure;
-- the verifier was given a watchdog/stage diagnostics so script failures terminate explicitly rather than hanging CI;
-- script-chain verification then exposed that `System34GameMain` passed the new fear modifier to `SurvivorFirstAidActionService` while that service still had its old 10-argument constructor.
+intention_usec                   = 1581
+submit_usec                      = 14
+ordinary submissions             = 0
+```
 
-The first-aid constructor was repaired to accept/store the shared condition modifier query.
+Interpretation:
 
-A dedicated prompt-local `--check-only` step now validates the fear-touched script chain before the runtime verifier.
+- exactly one behavior evaluation per active infected per player decision;
+- both measured action-start callbacks are under the focused 10 ms per-decision target on this CI route;
+- aggregate infected behavior work is under 10 ms per decision;
+- geometric LOS is not redundantly rebuilt;
+- remaining acquisition/memory refresh is roughly 1 ms per infected observer on this route;
+- intention selection and submission are small, so they were not rewritten.
 
-The final functional run is green.
+## Important non-claim — total turn performance is not solved
+
+The same final CI route still measured approximately:
+
+- first full turn: `282219` µs;
+- second full turn: `287141` µs.
+
+Player Perception accounted for only about `20612` µs across both turns, and infected callback/perception is now bounded as above.
+
+Therefore this operation does **not** claim the entire accepted-action route meets the eventual Phase-2 <50 ms engineering target.
+
+The remaining full-turn cost is outside the bounded infected callback/perception slice and must be attributed from later crowded-fight/Safari acceptance evidence before more optimization.
+
+Do not reopen infected scheduling or perception architecture merely because total turn time remains high.
+
+## Behavior preserved
+
+`FirstInfectedBehaviorService` still owns only simple intention selection:
+
+- idle;
+- pursue visible;
+- pursue last seen;
+- investigate sound;
+- attack visible.
+
+No:
+
+- horde brain;
+- group target sharing;
+- formation logic;
+- crowd steering;
+- generic AI scheduler;
+- budget queue;
+- per-frame zombie update;
+- private zombie clock
+
+was added.
+
+All actions still submit through normal Movement / Combat / WHEN.
+
+## Measurement hooks
+
+The active-cohort measurement layer now also exposes:
+
+- behavior evaluation count / total / max;
+- intention-refresh total microseconds;
+- action-submission total microseconds;
+- Perception recompute count / total / max;
+- geometric LOS recompute count / total.
+
+These are diagnostics only and do not alter gameplay decisions.
 
 ## Durable documentation updated
 
-- `DESIGN_DECISIONS.md` records the approved fear/player-agency contract.
-- `SYSTEM_DESIGNS/34_SURVIVOR_CONDITION_HEALTH_STAMINA_MOODLETS.md` records the implemented canonical fear owner, sources, tiers, explicit effects, recovery and focused evidence.
-- `ROADMAP.md` marks canonical fear complete within Phase 2.
-- `CHANGELOG_LATEST.md` records implementation and repair evidence.
+- `SYSTEM_DESIGNS/23_PERCEPTION_LOS_FOG_MEMORY.md` records event-driven freshness, cached geometric LOS, shared acquisition demand and final performance evidence.
+- `SYSTEM_DESIGNS/38_FIRST_INFECTED_POPULATION_HYDRATION.md` records eight-infected callback-performance closure and explicitly rejects scheduler/horde-brain drift.
+- `SYSTEM_DESIGNS/PERFORMANCE_ARCHITECTURE.md` records the measured P4B callback/perception pass and its non-claim about full-turn performance.
+- `ROADMAP.md` marks zombie callback/perception cost bounded and moves Phase 2 forward.
+- `CHANGELOG_LATEST.md` records the same-route cold/warm measurements and final proof.
 
 ## Current release direction
 
@@ -277,41 +250,45 @@ A base remains an existing fortified house/building with supplies, generator and
 
 Human survivor society, raiders and human followers remain outside release scope. Pets remain future bounded scope.
 
-Phase-2 defining mechanics now include:
+Phase-2 defining work now complete includes:
 
-1. explicit interruptible -> committed action windows;
+1. commitment windows / points of no return;
 2. simultaneous same-tick melee consequences;
-3. terminal death after already-earned same-tick spatial consequences;
+3. terminal death after already-earned spatial consequences;
 4. causal `S_t -> transition -> S_t+1` ordering;
-5. conditional origin release / destination arrival;
-6. atomic movement chains and deterministic physical contests;
-7. head-on edge conflicts;
-8. shove as shared forced trajectory;
-9. aggregate multi-body mob pressure with natural exhaustion and static termination;
-10. canonical fear with bounded same-tick pressure, explicit action/exertion/bracing effects and analytic recovery.
-
-**Mob-force core is complete. Canonical fear is complete.**
+5. deterministic same-tick movement/space arbitration;
+6. shove as shared forced trajectory;
+7. aggregate multi-body mob pressure;
+8. canonical Calm/fear;
+9. bounded eight-infected callback/perception path.
 
 ## NEXT OPERATION
 
-Continue Phase 2 with the next remaining release blocker: **zombie callback/perception performance under ordinary combat load**.
+Continue Phase 2 with **coherent overlapping consequence presentation**.
 
-Do not redesign mob force or fear.
+Do not reopen mob force, fear, infected scheduling or Perception performance without a concrete new defect.
 
-Target the existing eight-infected production cohort first.
+The next bounded slice should make the simultaneous simulation legible to the player.
 
-The next bounded operation should:
+Targeted starting reads only:
 
-- delete this prompt's fear verifier/workflow before code changes;
-- create a fresh performance-focused prompt-local verifier/workflow;
-- measure actual per-decision/per-tick infected callback and perception work on the production scene;
-- identify repeated Perception/visibility/path/acquisition work that is duplicated within one authoritative decision/timestamp;
-- remove or cache only proven redundant work without changing perception truth or zombie intentions;
-- preserve dumb/simple infected behavior and all current causal movement/combat/fear semantics;
-- report before/after timings from the same focused route;
-- avoid broad renderer/streaming optimization unless the evidence shows it is the actual blocker.
+- existing combat/movement consequence signals and current player-facing combat/status presentation;
+- current corpse/injury/impact feedback surface;
+- existing action/consequence message queue or tactical overlays where simultaneous events are currently shown serially;
+- no broad renderer rediscovery.
 
-After callback/perception cost is bounded, Phase 2 can move to coherent overlapping consequence presentation and then crowded-fight/Safari acceptance.
+Required outcomes:
+
+- same-timestamp melee impacts that truly resolve together are presented as one coherent consequence moment rather than looking like sequential enemy turns;
+- simultaneous movement/shove/crowd outcomes are grouped enough that the player can understand why actors ended where they did;
+- mutual hits / mutual lethal remain visibly mutual;
+- fear/injury/pressure feedback does not spam duplicate messages for one consequence boundary;
+- presentation owns no gameplay truth and advances no WHEN time;
+- no cinematic delay that blocks the next legitimate decision;
+- phone/Safari remains first-class;
+- use one fresh prompt-local verifier/workflow scoped only to consequence presentation.
+
+After coherent consequence presentation, Phase 2 should move directly to the crowded-fight + Safari acceptance/performance route. That acceptance pass should attribute the remaining full-turn cost before any further optimization.
 
 ## Protected behavior
 
@@ -319,27 +296,24 @@ Preserve:
 
 - WHERE / WHAT / WHEN authority and one clock;
 - `S_t -> transition -> S_t+1` causal ordering;
-- Phase-2A commitment windows;
-- Phase-2B simultaneous melee consequences;
-- deferred terminal death after surviving current-tick spatial consequences;
-- frozen physical state for current-tick contests;
-- same-destination stat arbitration;
-- release-chain/fixed-point occupancy semantics;
-- head-on edge conflicts;
-- shove-vs-move arbitration;
-- closed aggregate multi-body mob-force system;
-- ordinary locomotion contact pressure;
-- canonical fear as CALM only;
-- fear aggregation cap and encounter-aware observations;
-- explicit Afraid/Terrified effects;
-- responsive movement/run/shove/snap-fire escape timing;
-- no forced flee/random panic control theft;
-- existing player/infected Health, inventory, movement, perception, condition, skills and equipment;
-- day/night, weather, utilities and vehicles;
+- commitment windows;
+- simultaneous melee hit/damage/death behavior;
+- deferred terminal death after earned current-tick consequences;
+- deterministic movement/space contests;
+- mob-force core;
+- canonical fear;
+- responsive walk/run/shove/snap-fire escape actions;
+- event-driven Perception freshness;
+- lighting acquisition revision correctness;
+- cached geometric LOS;
+- one bounded shared player + active-infected acquisition field;
+- active cohort size 8;
+- simple independent infected intentions;
+- no horde brain/scheduler/group coordination;
+- resident-backed infected identity;
+- player movement, Health/injury, inventory, condition/moodlets, skills/equipment;
+- day/night, Weather, utilities and vehicles;
 - persistence/terrain/streaming;
-- simple infected intention selection with no crowd choreography;
-- no live survivor/raider/human-follower/social runtime;
-- pets only as future bounded scope;
 - input locked until legitimate decision pause;
 - hard application pause;
 - STATS / INVENTORY / CRAFT / MENU ownership;
