@@ -13,6 +13,7 @@ var _movement: MovementActionService = null
 var _health: ActorHealthState = null
 var _deaths: ActorDeathTransitionService = null
 var _player_id: String = ""
+var _infected_ids: Dictionary = {}
 
 var _events_by_tick: Dictionary = {}
 var _scheduled_flush_ticks: Dictionary = {}
@@ -52,6 +53,12 @@ func _ready() -> void:
 
 func is_configured() -> bool:
     return _kernel != null and _combat != null and _movement != null and _health != null         and _deaths != null and not _player_id.is_empty()
+
+func set_infected_actor_ids(actor_ids: Array[String]) -> void:
+    _infected_ids.clear()
+    for actor_id: String in actor_ids:
+        if not actor_id.strip_edges().is_empty():
+            _infected_ids[actor_id] = true
 
 func presentation_snapshot() -> Dictionary:
     return _last_presentation.duplicate(true)
@@ -301,7 +308,7 @@ func _contains_player(actor_ids: Array[String]) -> bool:
 func _actor_label(actor_id: String) -> String:
     if actor_id == _player_id:
         return "YOU"
-    if actor_id.to_lower().contains("infected"):
+    if _infected_ids.has(actor_id):
         return "INFECTED"
     return "ACTOR"
 
