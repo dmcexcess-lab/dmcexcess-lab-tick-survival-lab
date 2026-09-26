@@ -44,6 +44,7 @@ Technical chunks/streaming boundaries never become logical geography or persiste
 | Survival UI | no permanent generic EAT/DRINK/TAP/REST/SLEEP strip | CLOSED |
 | Crafting/repair/deconstruction | extend existing item/tool/resource/action owners; no parallel crafting stack | ESTABLISHED |
 | Powered cooking | System 32 workstation capability/plan/action owners consume System 33 live power truth through the production `PoweredCraftingWorkstationAdapter`; stove interaction opens existing crafting UI; no appliance/cooking state duplicate | CLOSED interaction route |
+| Existing-building fortification | opening-owned contextual BOARD action; hammer + plank + nails; timed WHEN consequence; `WorldInteractableState` owns 0–3 board layers; `ActorOpeningPressureActionService` reduces breach damage per layer and infected behavior uses that same pressure owner; renderer reads authoritative interaction state | CLOSED interaction route |
 | Vehicles | preserve existing transport identity/movement/storage/fuel/repair owners | ESTABLISHED |
 | Utilities | existing power/water service truth; failures/repairs arise from world action | ESTABLISHED |
 | Persistence | existing authoritative stores/snapshots -> checksum-verified versioned durable session; saved seed reconstructs runtime owners before in-place restore; primary/backup user storage; no duplicate gameplay truth | CLOSED — Phase 3 |
