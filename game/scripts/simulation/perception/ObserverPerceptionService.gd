@@ -33,6 +33,9 @@ var _acquisition: VisualAcquisitionProvider = null
 var _visible: Dictionary = {}
 var _geometric_cells_cache: Array[Vector2i] = []
 var _geometry_dirty: bool = true
+var _geometry_cache_pose_valid: bool = false
+var _geometry_cache_anchor: Vector2i = Vector2i.ZERO
+var _geometry_cache_facing: int = -1
 var _geometry_recompute_count: int = 0
 var _geometry_recompute_total_usec: int = 0
 var _recompute_count: int = 0
@@ -122,11 +125,18 @@ func recompute(reason: StringName = &"manual") -> bool:
         return false
 
     var observer_placement: WorldPlacement = _world.placement(_observer_id)
+    var pose_changed: bool = not _geometry_cache_pose_valid         or observer_placement.anchor != _geometry_cache_anchor         or observer_placement.facing != _geometry_cache_facing
+    if pose_changed:
+        _geometry_dirty = true
+
     var geometric_cells: Array[Vector2i] = _geometric_cells_cache
     if _geometry_dirty or geometric_cells.is_empty():
         var geometry_started: int = Time.get_ticks_usec()
         geometric_cells = _vision.visible_cells(observer_placement.anchor, observer_placement.facing, _profile)
         _geometric_cells_cache = geometric_cells.duplicate()
+        _geometry_cache_anchor = observer_placement.anchor
+        _geometry_cache_facing = observer_placement.facing
+        _geometry_cache_pose_valid = true
         _geometry_dirty = false
         _geometry_recompute_count += 1
         _geometry_recompute_total_usec += maxi(0, Time.get_ticks_usec() - geometry_started)
@@ -307,7 +317,6 @@ func _on_world_changed(change: WorldChange) -> void:
     match change.kind:
         ChangeClass.Kind.TERRAIN_SET, ChangeClass.Kind.TERRAIN_REMOVED:
             if _cell_near_observer(change.terrain_cell, observer_placement.anchor):
-                _dirty = true
                 _dirty = true
                 recompute(&"nearby_terrain_changed")
         ChangeClass.Kind.TERRAIN_BATCH_SET:
