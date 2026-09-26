@@ -387,3 +387,13 @@ Verified executable lineage: `156ee4b0a1727a5d5d26b479cf7a0dea9e9b462a`
 - Final attribution run `36208557288` on `51350037bb890efc4e2684027142a939f0d4687a` passed: 2 turn actions + 3 strikes, 5 input-lock cycles, 27 world ticks, overlap/contact true, player HP 100.
 - Accepted-action elapsed total: 1,937,370 usec; max accepted action: 477,635 usec. Existing exclusive counters attribute 52,684 usec to infected behavior, 81,204 usec to infected perception, 63,629 usec to player perception and 20,552 usec to cohort sync. Telemetry also identifies lighting rebuild as the largest currently measured bounded phase at 262,873 usec total, but measured timings overlap and do not explain most end-to-end route time. No speculative architecture optimization was made.
 - The real touch/mobile semantic path is CI-proven. Actual Safari/WebKit execution is not available on the Linux Actions runner, so a real Safari run of the deployed Pages build remains the single Phase 2 release-acceptance blocker.
+
+## 2026-09-25 — Fix stale player vision cone / apparent frozen world
+
+- Reproduced the player-facing regression introduced by cached geometric LOS.
+- Root cause: ObserverPerceptionService reused its geometric-cell cache after batched player movement/facing changes because WorldChangeBatch summarized dirty actor bounds but not the identity of the moved observer. Perception recomputed, but geometry stayed tied to the previous player anchor/facing.
+- Since PerceptionOverlayRenderer uses that visible-cell set as the live fog/knowledge mask, the stale cone also made live world changes underneath appear frozen or not to update.
+- Production fix: the geometric LOS cache now records the observer anchor + facing used to build it and self-invalidates whenever the current observer pose differs, independent of batch identity details.
+- Fresh focused verifier: game/scripts/ci/VisionWorldRefreshRegressionSmoke.gd / .github/workflows/vision-world-refresh-regression.yml.
+- Run 36215957560 — SUCCESS. Marker: VISION_WORLD_REFRESH_OK.
+- Production evidence: TURN R caused one geometric rebuild with changed visible-cell membership; FORWARD caused another rebuild from the new anchor; world tick advanced 0 -> 13.
