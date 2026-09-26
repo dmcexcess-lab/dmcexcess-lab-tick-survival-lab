@@ -97,6 +97,15 @@ func _run() -> void:
     if evaluation_delta != active.size() * 2:
         _fail("expected one behavior evaluation per active infected per player decision")
         return
+    print("PHASE2_INFECTED_PERF_DIAGNOSTIC first_elapsed_usec=%d second_elapsed_usec=%d behavior_eval_usec=%d perception_usec=%d player_perception_usec=%d intention_usec=%d submit_usec=%d" % [
+        first_elapsed_usec,
+        second_elapsed_usec,
+        evaluation_usec_delta,
+        infected_perception_usec_delta,
+        player_perception_usec_delta,
+        intention_usec_delta,
+        submit_usec_delta,
+    ])
     if evaluation_usec_delta > 10000:
         _fail("infected behavior evaluation exceeded focused 10ms aggregate budget: %d usec; perception=%d usec geometry=%d usec intention=%d usec submit=%d usec" % [
             evaluation_usec_delta,
