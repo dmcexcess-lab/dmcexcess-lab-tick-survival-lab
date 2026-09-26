@@ -28,8 +28,9 @@ func _run() -> void:
     var controls: PlayerMovementControls = game.get_node_or_null("Controls") as PlayerMovementControls
     var health: ActorHealthState = game.get("_health_state")
     var player_perception: ObserverPerceptionService = game.get("_perception")
+    var world: WorldState = game.get("_world")
 
-    if kernel == null or cohort == null or not cohort.is_configured() or presenter == null         or controls == null or health == null or player_perception == null:
+    if kernel == null or cohort == null or not cohort.is_configured() or presenter == null         or controls == null or health == null or player_perception == null or world == null:
         _fail("production crowded-fight route owners are incomplete")
         return
     if not kernel.is_decision_paused():
@@ -117,6 +118,17 @@ func _run() -> void:
     await process_frame
     var history: Array[Dictionary] = presenter.history_snapshot()
     if history.is_empty():
+        var diagnostic_metrics: Dictionary = cohort.metrics_snapshot()
+        var player_placement: WorldPlacement = world.placement(Fixture.PLAYER_ID)
+        print("PHASE2_CROWDED_FIGHT_NO_PRESENTATION turns=%d strikes=%d tick=%d behavior_evals=%d submissions=%d player=%s infected=%s" % [
+            accepted_turns,
+            accepted_strikes,
+            kernel.world_tick(),
+            int(diagnostic_metrics.get("behavior_evaluation_count", 0)),
+            int(diagnostic_metrics.get("ordinary_action_submission_count", 0)),
+            str(player_placement.anchor if player_placement != null else Vector2i(-9999, -9999)),
+            _actor_anchor_summary(world, active),
+        ])
         _fail("real crowded route produced no consequence presentation")
         return
 
@@ -284,3 +296,14 @@ func _perception_recompute_total(cohort: ActiveInfectedCohortService, actor_ids:
         if perception != null:
             total += perception.recompute_count()
     return total
+
+
+func _actor_anchor_summary(world: WorldState, actor_ids: Array[String]) -> String:
+    var parts := PackedStringArray()
+    for actor_id: String in actor_ids:
+        var placement: WorldPlacement = world.placement(actor_id)
+        parts.append("%s=%s" % [
+            actor_id,
+            str(placement.anchor if placement != null else Vector2i(-9999, -9999)),
+        ])
+    return ",".join(parts)
