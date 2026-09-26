@@ -206,7 +206,8 @@ func _ensure_layers() -> void:
     _glow_sprite = Sprite2D.new()
     _glow_sprite.name = "PhysicalLightGlow"
     _glow_sprite.centered = false
-    _glow_sprite.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
+    _glow_sprite.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+    _glow_sprite.visible = false
     var glow_material := ShaderMaterial.new()
     glow_material.shader = GLOW_SHADER
     _glow_sprite.material = glow_material
