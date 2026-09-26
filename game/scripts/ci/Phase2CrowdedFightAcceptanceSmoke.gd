@@ -29,8 +29,11 @@ func _run() -> void:
     var health: ActorHealthState = game.get("_health_state")
     var player_perception: ObserverPerceptionService = game.get("_perception")
     var world: WorldState = game.get("_world")
+    var mutations: WorldMutationService = game.get("_world_mutations")
+    var spatial: SpatialQueryService = game.get("_spatial_query")
 
-    if kernel == null or cohort == null or not cohort.is_configured() or presenter == null         or controls == null or health == null or player_perception == null or world == null:
+    if kernel == null or cohort == null or not cohort.is_configured() or presenter == null         or controls == null or health == null or player_perception == null or world == null \
+        or mutations == null or spatial == null:
         _fail("production crowded-fight route owners are incomplete")
         return
     if not kernel.is_decision_paused():
@@ -41,6 +44,24 @@ func _run() -> void:
     if active.size() != 8:
         _fail("expected eight active production infected, got %d" % active.size())
         return
+
+    # Acceptance fixture only: move the already-hydrated production actors into
+    # a nearby valid ring. From this point onward all decisions and consequences
+    # use the ordinary production touch/controller/simulation route.
+    if not _arrange_crowd_fixture(world, mutations, spatial, active):
+        _fail("could not arrange the existing production infected into a valid crowded-fight fixture")
+        return
+    if not cohort.sync_active_now():
+        _fail("production infected cohort did not remain active after bounded fixture arrangement")
+        return
+    if cohort.active_actor_ids().size() != 8:
+        _fail("crowded fixture did not retain all eight active production infected")
+        return
+    player_perception.recompute(&"crowded_fight_acceptance_fixture")
+    for actor_id: String in active:
+        var infected_perception: StreamingObserverPerceptionService = cohort.perception_for_actor(actor_id)
+        if infected_perception != null:
+            infected_perception.recompute(&"crowded_fight_acceptance_fixture")
 
     var turn_right: Button = _button_by_text(controls, "TURN R")
     var strike: Button = controls.get_node_or_null("CombatForwardButton") as Button
@@ -82,8 +103,9 @@ func _run() -> void:
             var strike_usec: int = int(strike_result.get("elapsed_usec", 0))
             action_elapsed_total_usec += strike_usec
             max_action_usec = maxi(max_action_usec, strike_usec)
-            if accepted_strikes >= 2:
-                break
+            await process_frame
+        if _history_has_contact(presenter.history_snapshot()):
+            break
 
         if attempt >= MAX_APPROACH_TURNS:
             break
@@ -307,3 +329,76 @@ func _actor_anchor_summary(world: WorldState, actor_ids: Array[String]) -> Strin
             str(placement.anchor if placement != null else Vector2i(-9999, -9999)),
         ])
     return ",".join(parts)
+
+
+func _arrange_crowd_fixture(
+    world: WorldState,
+    mutations: WorldMutationService,
+    spatial: SpatialQueryService,
+    actor_ids: Array[String]
+) -> bool:
+    var player: WorldPlacement = world.placement(Fixture.PLAYER_ID)
+    if player == null:
+        return false
+
+    var offsets: Array[Vector2i] = [
+        Vector2i(0, -2),
+        Vector2i(1, -2),
+        Vector2i(2, -1),
+        Vector2i(2, 0),
+        Vector2i(2, 1),
+        Vector2i(1, 2),
+        Vector2i(0, 2),
+        Vector2i(-1, 2),
+    ]
+    var placements: Array = []
+    var used: Dictionary = {}
+    for index: int in range(actor_ids.size()):
+        var actor_id: String = actor_ids[index]
+        var current: WorldPlacement = world.placement(actor_id)
+        if current == null:
+            return false
+        var target: Vector2i = _find_fixture_cell(player.anchor + offsets[index], player.anchor, spatial, actor_id, used)
+        if target == Vector2i(-999999, -999999):
+            return false
+        used[target] = true
+        placements.append(WorldPlacement.new(
+            actor_id,
+            current.channel,
+            target,
+            current.facing,
+            current.footprint,
+            current.structure_axis
+        ))
+    return mutations.set_placements_batch(placements)
+
+func _find_fixture_cell(
+    preferred: Vector2i,
+    player_anchor: Vector2i,
+    spatial: SpatialQueryService,
+    actor_id: String,
+    used: Dictionary
+) -> Vector2i:
+    const INVALID := Vector2i(-999999, -999999)
+    for radius: int in range(0, 4):
+        for y: int in range(-radius, radius + 1):
+            for x: int in range(-radius, radius + 1):
+                if radius > 0 and absi(x) != radius and absi(y) != radius:
+                    continue
+                var cell: Vector2i = preferred + Vector2i(x, y)
+                if cell == player_anchor or used.has(cell):
+                    continue
+                var query: SpatialQueryResult = spatial.query_cell(cell, actor_id, true)
+                if query != null and query.is_clear():
+                    return cell
+    return INVALID
+
+func _history_has_contact(history: Array[Dictionary]) -> bool:
+    for moment: Dictionary in history:
+        for value: Variant in moment.get("events", []):
+            if typeof(value) != TYPE_DICTIONARY:
+                continue
+            var kind: String = String((value as Dictionary).get("kind", ""))
+            if kind == "hit" or kind == "pressure" or kind == "shove" or kind == "death":
+                return true
+    return false
