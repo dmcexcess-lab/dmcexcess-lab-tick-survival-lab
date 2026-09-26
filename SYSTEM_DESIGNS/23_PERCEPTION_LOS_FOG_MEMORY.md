@@ -286,7 +286,37 @@ Focused illumination-aware perception benchmark on the same System 27 run:
 
 The original implementation measured approximately **4.06 ms geometry-only** versus **11.84 ms lighting-aware** on those CI fixtures. The 2026-08-29 responsiveness follow-up added a bounded opacity/structure cache keyed to terrain, STRUCTURE and door revisions; repeated focused FOV runs measured approximately **2.5-2.9 ms** locally afterward. Wall-clock figures remain diagnostic rather than pass/fail thresholds.
 
-The user explicitly chose to keep the current behavior and monitor scaling as more systems/actors are added rather than pre-optimize now.
+The user explicitly chose to keep the current behavior and monitor scaling as more systems/actors are added rather than pre-optimize blindly.
+
+### 2026-09-25 eight-infected callback/perception performance pass
+
+A focused production-scene measurement found a concrete redundant path rather than a need for a new AI scheduler:
+
+- behavior requested a perception recompute whenever a player action started even when System 23 already held current observer truth;
+- visual-acquisition freshness was tied to physical-light revision, so acquisition changes still invalidate perception correctly;
+- geometric LOS is now cached separately from acquisition filtering, so lighting-only refreshes do **not** retrace LOS;
+- the player plus all active infected share one bounded physical-light field prepared by the existing active-cohort owner;
+- that shared field is now fully warmed during cohort activation/preparation instead of making the first real player input pay the cold rebuild.
+
+The final focused two-decision production run `36206781574` reported:
+
+```text
+first_request_usec             = 9874
+second_request_usec            = 9580
+first_behavior_eval_usec       = 8984
+second_behavior_eval_usec      = 8905
+infected_perception_recomputes = 16
+infected_perception_usec       = 15797
+infected_geometry_recomputes   = 0
+infected_geometry_usec         = 0
+behavior_evaluations           = 16
+```
+
+That is eight event-driven behavior evaluations per ordinary player decision, with **zero repeated infected LOS geometry builds** and roughly 1 ms of acquisition/memory refresh per infected observer on this CI route.
+
+The same two-decision diagnostic immediately before warming the shared field measured a first action-start callback of `113442` µs and second callback of `9855` µs. After warming, those were `9874` and `9580` µs. This proves the large first-decision spike was a cold shared-light-field build, not recurring zombie decision logic.
+
+Wall-clock figures remain diagnostic and machine-specific. The durable contract is event-driven freshness, dependency-correct acquisition invalidation, cached LOS geometry, one bounded shared light field, and no per-zombie scheduler or horde brain.
 
 The auditory presentation refinement adds no permanent per-frame sound simulation. Only currently visible transient words schedule short redraw pulses during their one-second fade.
 
