@@ -82,6 +82,7 @@ func _run() -> void:
     var player_perception_usec_before: int = player_perception.recompute_total_usec()
     var player_perception_count_before: int = player_perception.recompute_count()
     var start_tick: int = kernel.world_tick()
+    PerformanceTelemetry.reset()
     var route_started_usec: int = Time.get_ticks_usec()
 
     var accepted_turns: int = 0
@@ -208,6 +209,9 @@ func _run() -> void:
         _fail("crowded route rebuilt infected geometric LOS despite unchanged geometry contract")
         return
 
+    var telemetry: Dictionary = PerformanceTelemetry.snapshot()
+    print("PHASE2_CROWDED_FIGHT_TELEMETRY %s" % JSON.stringify(telemetry.get("timings", {})))
+    print("PHASE2_CROWDED_FIGHT_VALUES %s" % JSON.stringify(telemetry.get("values", {})))
     print("PHASE2_CROWDED_FIGHT_PERF accepted_turns=%d accepted_strikes=%d lock_cycles=%d tick_delta=%d route_elapsed_usec=%d accepted_action_elapsed_usec=%d max_action_usec=%d behavior_usec=%d infected_perception_usec=%d player_perception_usec=%d activation_sync_usec=%d intention_usec=%d submission_usec=%d tracked_usec=%d unattributed_estimate_usec=%d infected_recomputes=%d player_recomputes=%d history=%d player_hp=%d" % [
         accepted_turns,
         accepted_strikes,
