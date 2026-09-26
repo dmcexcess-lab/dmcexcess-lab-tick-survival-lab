@@ -143,6 +143,8 @@ func metrics_snapshot() -> Dictionary:
     var evaluations: int = 0
     var evaluation_total_usec: int = 0
     var evaluation_max_usec: int = 0
+    var intention_refresh_total_usec: int = 0
+    var submission_total_usec: int = 0
     var submissions: int = 0
     for actor_id: String in _roster:
         var behavior: CohortInfectedBehaviorService = behavior_for_actor(actor_id)
@@ -150,6 +152,8 @@ func metrics_snapshot() -> Dictionary:
         evaluations += behavior.evaluation_count()
         evaluation_total_usec += behavior.evaluation_total_usec()
         evaluation_max_usec = maxi(evaluation_max_usec, behavior.evaluation_max_usec())
+        intention_refresh_total_usec += behavior.intention_refresh_total_usec()
+        submission_total_usec += behavior.submission_total_usec()
         submissions += behavior.action_submission_count()
     var result := {
         "roster_count": _roster.size(),
@@ -163,6 +167,8 @@ func metrics_snapshot() -> Dictionary:
         "behavior_evaluation_count": evaluations,
         "behavior_evaluation_total_usec": evaluation_total_usec,
         "behavior_evaluation_max_usec": evaluation_max_usec,
+        "behavior_intention_refresh_total_usec": intention_refresh_total_usec,
+        "behavior_submission_total_usec": submission_total_usec,
         "ordinary_action_submission_count": submissions,
     }
     PerformanceTelemetry.record_value(&"infected_cohort_roster", _roster.size())
