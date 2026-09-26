@@ -157,6 +157,11 @@ func _boot_first_real_infected() -> bool:
             _infected_cohort_results.append((value as Dictionary).duplicate(true))
     if _infected_cohort_results.size() != ACTIVE_INFECTED_COHORT_SIZE:
         return false
+    if _consequence_presenter != null:
+        var infected_ids: Array[String] = []
+        for member: Dictionary in _infected_cohort_results:
+            infected_ids.append(String(member.get("actor_id", "")))
+        _consequence_presenter.set_infected_actor_ids(infected_ids)
     _first_infected_result = _infected_cohort_results[0].duplicate(true)
     if _perception != null: _perception.recompute(&"infected_cohort_hydrated")
     return _boot_infected_cohort_behavior()
