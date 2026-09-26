@@ -1,4 +1,4 @@
-[gd_scene load_steps=16 format=3]
+[gd_scene load_steps=17 format=3]
 
 [ext_resource path="res://scripts/app/EnvironmentalPressureGameMain.gd" type="Script" id="1"]
 [ext_resource path="res://scripts/render/TacticalRendererStack.gd" type="Script" id="2"]
@@ -15,6 +15,7 @@
 [ext_resource path="res://scripts/ui/CraftingPanel.gd" type="Script" id="14"]
 [ext_resource path="res://scripts/ui/PlayerMapBootstrap.gd" type="Script" id="15"]
 [ext_resource path="res://scripts/ui/WorldResolutionIndicator.gd" type="Script" id="16"]
+[ext_resource path="res://scripts/ui/ConditionPlayerControls.gd" type="Script" id="17"]
 
 [node name="TickSurvivalGame" type="Node"]
 script = ExtResource("1")
@@ -41,6 +42,9 @@ script = ExtResource("10")
 
 [node name="Controls" type="CanvasLayer" parent="."]
 script = ExtResource("4")
+
+[node name="SurvivalControls" type="CanvasLayer" parent="."]
+script = ExtResource("17")
 
 [node name="CameraControls" type="CanvasLayer" parent="."]
 script = ExtResource("11")
