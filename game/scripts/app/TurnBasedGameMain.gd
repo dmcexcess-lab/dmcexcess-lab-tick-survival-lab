@@ -1,21 +1,27 @@
-extends EnvironmentalPressureGameMain
+extends GameMain
 class_name TurnBasedGameMain
 
 const SimpleTurnControllerClass = preload("res://scripts/player/SimpleTurnController.gd")
 const TurnIntents = preload("res://scripts/input/PlayerActionIntent.gd")
+const PopulationProjectionClass = preload("res://scripts/simulation/population/PopulationResidentProjection.gd")
+const Facing = preload("res://scripts/foundation/spatial/SpatialFacing.gd")
+const Footprint = preload("res://scripts/foundation/spatial/SpatialFootprint.gd")
+const Layers = preload("res://scripts/foundation/spatial/SpatialLayer.gd")
+
+const SIMPLE_INFECTED_COUNT := 12
+const SIMPLE_INFECTED_SEARCH_RADIUS := 12
+const INVALID_CELL := Vector2i(-999999, -999999)
 
 var _simple_turns: SimpleTurnController = null
+var _simple_infected_ids: Array[String] = []
 
 func _boot_production_world() -> bool:
     if not super._boot_production_world():
         return false
+    if not _hydrate_simple_local_infected():
+        return false
     _simple_turns = SimpleTurnControllerClass.new(_world, _world_mutations, _spatial_query, WorldBootstrapClass.PLAYER_ID)
-    var infected_ids: Array[String] = []
-    for member: Dictionary in _infected_cohort_results:
-        var actor_id := String(member.get("actor_id", ""))
-        if not actor_id.is_empty():
-            infected_ids.append(actor_id)
-    _simple_turns.set_infected_actor_ids(infected_ids)
+    _simple_turns.set_infected_actor_ids(_simple_infected_ids)
     add_child(_simple_turns)
     if not _simple_turns.is_ready():
         return false
@@ -24,28 +30,52 @@ func _boot_production_world() -> bool:
     _simple_turns.turn_completed.connect(_on_simple_turn_completed)
     return true
 
-# Utilities are not migrated yet, but later gameplay boot layers already consume
-# their logical power/water truth. Keep that plain state and omit the legacy
-# tick-driven physical-wire/appliance runtime from Slice 1 startup.
-func _boot_utility_runtime() -> bool:
+func _hydrate_simple_local_infected() -> bool:
     var plan: GeneratedGlobalWorldPlan = WorldBootstrapClass.global_plan()
-    if plan == null or not plan.is_generated():
-        return false
-    _local_power_topology = PowerTopologyPlannerClass.new().plan(plan)
-    if not bool(_local_power_topology.get("ok", false)):
-        return false
-    _utilities = UtilityStateClass.new(_local_power_topology)
-    if not _utilities.initialize_from_plan(plan):
-        return false
     var player: WorldPlacement = _world.placement(WorldBootstrapClass.PLAYER_ID)
-    if player == null:
+    if plan == null or not plan.is_generated() or player == null:
         return false
-    _central_power_service_id = _utilities.power_service_for_cell(player.anchor)
-    _central_water_service_id = _utilities.water_service_for_cell(player.anchor)
-    return not _central_power_service_id.is_empty() and not _central_water_service_id.is_empty()
+    var population_plan := {
+        "ok": true,
+        "settlements": plan.population_settlements.duplicate(true),
+        "resident_population": plan.resident_population,
+        "infected_population": plan.infected_population,
+        "survivor_population": plan.survivor_population,
+        "local_area_manifest": plan.local_area_manifest.duplicate(true),
+    }
+    var projection = PopulationProjectionClass.new()
+    var candidates: Array[Dictionary] = projection.infected_near(population_plan, WorldBootstrapClass.loot_source_id(), player.anchor)
+    for record: Dictionary in candidates:
+        if _simple_infected_ids.size() >= SIMPLE_INFECTED_COUNT:
+            break
+        var actor_id := String(record.get("resident_id", ""))
+        var home_cell: Vector2i = record.get("home_cell", INVALID_CELL)
+        if actor_id.is_empty() or home_cell == INVALID_CELL or _world.has_entity(actor_id):
+            continue
+        var spawn_cell := _clear_actor_cell_near(home_cell)
+        if spawn_cell == INVALID_CELL:
+            continue
+        if _world_mutations.create_entity(&"actor.survivor", actor_id) != actor_id:
+            continue
+        if not _world_mutations.set_placement(actor_id, Layers.Channel.ACTOR, spawn_cell, Facing.Value.SOUTH, Footprint.single_cell()):
+            _world_mutations.remove_entity(actor_id)
+            continue
+        _simple_infected_ids.append(actor_id)
+    return not _simple_infected_ids.is_empty()
+
+func _clear_actor_cell_near(origin: Vector2i) -> Vector2i:
+    for radius in range(0, SIMPLE_INFECTED_SEARCH_RADIUS + 1):
+        for y in range(-radius, radius + 1):
+            for x in range(-radius, radius + 1):
+                if radius > 0 and absi(x) != radius and absi(y) != radius:
+                    continue
+                var cell := origin + Vector2i(x, y)
+                if _spatial_query.has_terrain(cell) and _spatial_query.query_cell(cell, "", true).is_clear():
+                    return cell
+    return INVALID_CELL
 
 func _route_player_intent(intent: StringName) -> void:
-    if TurnIntents.is_movement(intent) and _simple_turns != null and (_vehicle_controller == null or not _vehicle_controller.is_mounted()):
+    if TurnIntents.is_movement(intent) and _simple_turns != null:
         _simple_turns.submit_intent(intent)
         return
     super._route_player_intent(intent)
