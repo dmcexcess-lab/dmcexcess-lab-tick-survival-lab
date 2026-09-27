@@ -3,6 +3,7 @@ class_name StartupMenu
 
 const GAMEPLAY_SCENE_PATH: String = "res://gameplay.tscn"
 const DurableSessionStoreClass = preload("res://scripts/persistence/DurableSessionStore.gd")
+const WorldBootstrapClass = preload("res://scripts/generation/integration/ProductionWorldBootstrap.gd")
 const PRELOAD_PROGRESS_START: float = 8.0
 const PRELOAD_PROGRESS_SPAN: float = 57.0
 const STATUS_DOT_INTERVAL_SECONDS: float = 0.32
@@ -51,9 +52,7 @@ func _begin_gameplay_preload() -> void:
 
 func _process(delta: float) -> void:
     _advance_loading_indicator(delta)
-    if _launching:
-        return
-    if not _preload_requested or _gameplay_scene != null or _preload_failed:
+    if _launching or not _preload_requested or _gameplay_scene != null or _preload_failed:
         return
     var progress: Array = []
     var status: int = ResourceLoader.load_threaded_get_status(GAMEPLAY_SCENE_PATH, progress)
@@ -100,7 +99,6 @@ func _launch_game(session: Dictionary) -> void:
     _continue_button.disabled = true
     _set_status("Finishing gameplay load", true)
     _progress_bar.value = maxf(_progress_bar.value, 68.0)
-
     await get_tree().process_frame
     var packed_scene: PackedScene = await _obtain_gameplay_scene()
     if packed_scene == null:
@@ -110,7 +108,6 @@ func _launch_game(session: Dictionary) -> void:
         _set_status("Unable to load the gameplay scene.")
         _progress_bar.value = 0.0
         return
-
     _set_status("Restoring persistent world" if not session.is_empty() else "Generating island and activating the starting region", true)
     _progress_bar.value = 78.0
     await get_tree().process_frame
@@ -129,35 +126,44 @@ func _launch_game(session: Dictionary) -> void:
                 game = null
                 boot_error = "incompatible_save"
                 break
-
         get_tree().root.add_child(game)
         if game.has_method("session_boot_ok") and bool(game.call("session_boot_ok")):
             break
-
         boot_error = String(game.call("session_boot_error")) if game.has_method("session_boot_error") else "gameplay_boot_failed"
+        if session.is_empty() and boot_error == "gameplay_boot_failed" and not WorldBootstrapClass.last_failure().is_empty():
+            boot_error = WorldBootstrapClass.last_failure()
         game.queue_free()
         game = null
         await get_tree().process_frame
-        if session.is_empty() and attempt + 1 < attempt_limit:
-            _set_status("World seed could not initialize. Trying another island", true)
-            await get_tree().process_frame
+        if not session.is_empty() or not _retryable_generation_failure(boot_error) or attempt + 1 >= attempt_limit:
+            break
+        _set_status("Generated island was invalid. Trying another procedural seed", true)
+        await get_tree().process_frame
 
     if game == null:
         _launching = false
         _new_game_button.disabled = false
         _refresh_continue_state()
         if session.is_empty():
-            _set_status("NEW GAME could not generate a playable island after %d attempts: %s" % [attempt_limit, boot_error])
+            _set_status("NEW GAME failed: %s" % boot_error)
         elif boot_error == "incompatible_save":
             _set_status("Saved game is incompatible. The previous save was preserved.")
         else:
             _set_status("Continue failed safely: %s. Saved files were preserved." % boot_error)
         _progress_bar.value = PRELOAD_PROGRESS_START + PRELOAD_PROGRESS_SPAN
         return
-
     get_tree().current_scene = game
     _progress_bar.value = 100.0
     queue_free()
+
+func _retryable_generation_failure(reason: String) -> bool:
+    return reason.begins_with("global_generation:") \
+        or reason == "no_generated_area_sites" \
+        or reason.begins_with("spawn_projection_failed:") \
+        or reason.begins_with("spawn_request_invalid:") \
+        or reason.begins_with("spawn_area_generation_failed:") \
+        or reason.begins_with("spawn_cell_unavailable:") \
+        or reason == "no_spawnable_area"
 
 func _refresh_continue_state() -> void:
     if _session_store == null:
@@ -174,7 +180,6 @@ func _refresh_continue_state() -> void:
     else:
         _continue_button.text = "CONTINUE"
         _continue_button.tooltip_text = "Resume the persistent game."
-
     var storage: Dictionary = _session_store.storage_status()
     if not bool(storage.get("writable", false)):
         _hint.text = "Saving is unavailable in this browser/device. Progress will not survive closing the game."
@@ -186,7 +191,6 @@ func _refresh_continue_state() -> void:
 func _obtain_gameplay_scene() -> PackedScene:
     if _gameplay_scene != null:
         return _gameplay_scene
-
     if _preload_requested and not _preload_failed:
         while _gameplay_scene == null and not _preload_failed:
             var progress: Array = []
@@ -202,7 +206,6 @@ func _obtain_gameplay_scene() -> PackedScene:
                 var ratio: float = clampf(float(progress[0]), 0.0, 1.0)
                 _progress_bar.value = PRELOAD_PROGRESS_START + PRELOAD_PROGRESS_SPAN * ratio
             await get_tree().process_frame
-
     if _gameplay_scene == null:
         _set_status("Loading gameplay systems", true)
         await get_tree().process_frame
