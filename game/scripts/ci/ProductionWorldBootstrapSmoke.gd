@@ -29,6 +29,10 @@ func _run() -> void:
     if map_source == null or map_source.get_as_text().contains("res://scripts/demo/"):
         _fail("production map bootstrap retains demo dependency")
         return
+    for script_path: String in ["res://scripts/app/GameMain.gd", "res://scripts/app/CraftingGameMain.gd", "res://scripts/app/UtilityGameMain.gd", "res://scripts/app/System34GameMain.gd", "res://scripts/app/VehicleGameMain.gd", "res://scripts/app/CombatGameMain.gd", "res://scripts/app/EnvironmentalPressureGameMain.gd"]:
+        if load(script_path) == null:
+            _fail("production app script failed to load: %s" % script_path)
+            return
     var scene: PackedScene = load("res://gameplay.tscn")
     if scene == null:
         _fail("gameplay scene missing")
