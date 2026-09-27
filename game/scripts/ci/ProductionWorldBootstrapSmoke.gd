@@ -38,24 +38,16 @@ func _run() -> void:
         _fail("gameplay scene missing")
         return
     var game: Node = scene.instantiate()
-    if game == null or not game.has_method("configure_world_seed_override"):
-        _fail("production gameplay composition failed to instantiate")
-        return
-    if not bool(game.call("configure_world_seed_override", TEST_SEED)):
-        _fail("cannot configure production seed")
+    if game == null or not game.has_method("configure_world_seed_override") or not bool(game.call("configure_world_seed_override", TEST_SEED)):
+        _fail("production gameplay composition failed to configure")
         return
     get_root().add_child(game)
-    await process_frame
-    await process_frame
-    await process_frame
+    await process_frame; await process_frame; await process_frame
     if not game.has_method("canonical_boot_ok") or not bool(game.call("canonical_boot_ok")):
         _fail("canonical production boot failed: %s" % Bootstrap.last_failure())
         return
     var world: WorldState = game.get("_world") as WorldState
-    if world == null:
-        _fail("authoritative WHAT unavailable")
-        return
-    var placement: WorldPlacement = world.placement(Bootstrap.PLAYER_ID)
+    var placement: WorldPlacement = null if world == null else world.placement(Bootstrap.PLAYER_ID)
     if placement == null or Bootstrap.PLAYER_ID.contains("demo"):
         _fail("production player missing or demo-owned")
         return
@@ -80,11 +72,8 @@ func _run() -> void:
     var neighbor_cell: Vector2i = placement.anchor + Vector2i(Bootstrap.STREAM_REGION_SIZE.x, 0)
     if plan.bounds.has_point(neighbor_cell):
         var moved: Dictionary = streaming.update_focus(neighbor_cell)
-        if not bool(moved.get("ok", false)):
-            _fail("adjacent production region did not stream: %s" % String(moved.get("failure_reason", "unknown")))
-            return
-        if grid.region_coord_for_cell(neighbor_cell) == current_region:
-            _fail("streaming transition probe did not cross a region")
+        if not bool(moved.get("ok", false)) or grid.region_coord_for_cell(neighbor_cell) == current_region:
+            _fail("adjacent production region did not stream")
             return
     if not game.has_method("durable_session_snapshot"):
         _fail("durable session owner missing from production composition")
@@ -93,7 +82,24 @@ func _run() -> void:
     if session.is_empty() or int(session.get("world_seed", 0)) != Bootstrap.active_seed():
         _fail("durable session does not preserve production world identity")
         return
-    print("PRODUCTION_WORLD_BOOTSTRAP_OK seed=%d player=%s spawn=%s active_regions=1 render_bounds=%s demo_free=true save_world=true" % [Bootstrap.active_seed(), Bootstrap.PLAYER_ID, placement.anchor, Bootstrap.render_bounds()])
+    var original_anchor: Vector2i = placement.anchor
     game.queue_free()
+    await process_frame
+    var continued: Node = scene.instantiate()
+    if continued == null or not continued.has_method("configure_continue_session") or not bool(continued.call("configure_continue_session", session)):
+        _fail("production Continue rejected its own durable session")
+        return
+    get_root().add_child(continued)
+    await process_frame; await process_frame; await process_frame
+    if not continued.has_method("session_boot_ok") or not bool(continued.call("session_boot_ok")):
+        _fail("production Continue failed: %s" % String(continued.call("session_boot_error")))
+        return
+    var continued_world: WorldState = continued.get("_world") as WorldState
+    var continued_player: WorldPlacement = null if continued_world == null else continued_world.placement(Bootstrap.PLAYER_ID)
+    if continued_player == null or continued_player.anchor != original_anchor or Bootstrap.active_seed() != TEST_SEED:
+        _fail("Continue did not restore the same production world/player")
+        return
+    print("PRODUCTION_WORLD_BOOTSTRAP_OK seed=%d player=%s spawn=%s active_regions=1 render_bounds=%s demo_free=true save_continue=true" % [Bootstrap.active_seed(), Bootstrap.PLAYER_ID, continued_player.anchor, Bootstrap.render_bounds()])
+    continued.queue_free()
     await process_frame
     quit(0)
