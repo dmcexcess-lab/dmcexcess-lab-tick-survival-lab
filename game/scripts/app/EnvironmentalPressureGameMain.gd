@@ -62,10 +62,7 @@ func save_durable_session(reason: StringName = &"manual") -> Dictionary:
     var result: Dictionary = _session_store.save(session)
     if bool(result.get("ok", false)):
         _last_save_msec = Time.get_ticks_msec()
-        if bool(result.get("persistent", true)):
-            _set_session_status("SAVED")
-        else:
-            _set_session_status("SAVED — BROWSER STORAGE NOT PERSISTENT")
+        _set_session_status("SAVED" if bool(result.get("persistent", true)) else "SAVED — BROWSER STORAGE NOT PERSISTENT")
     else:
         _set_session_status("SAVE FAILED — %s" % String(result.get("reason", "storage_error")).to_upper())
     result["checkpoint_reason"] = String(reason)
@@ -76,9 +73,8 @@ func _ready() -> void:
     _session_boot_error = ""
     super._ready()
     if not canonical_boot_ok():
-        _session_boot_error = "gameplay_boot_failed"
+        _session_boot_error = WorldBootstrapClass.last_failure() if not WorldBootstrapClass.last_failure().is_empty() else "gameplay_boot_failed"
         return
-
     _ensure_session_store()
     _restoring_session = not _continue_session.is_empty()
     if _restoring_session and not _restore_durable_session(_continue_session):
@@ -87,14 +83,12 @@ func _ready() -> void:
         push_error("EnvironmentalPressureGameMain: durable Continue restore failed")
         return
     _restoring_session = false
-
     _connect_session_lifecycle()
     _session_boot_ok = true
     var status: Dictionary = _session_store.storage_status()
     if not bool(status.get("writable", false)):
         _set_session_status("SAVING UNAVAILABLE — PROGRESS WILL NOT SURVIVE CLOSE")
         return
-
     var checkpoint_reason: StringName = &"continue_checkpoint" if not _continue_session.is_empty() else &"new_game_checkpoint"
     var result: Dictionary = save_durable_session(checkpoint_reason)
     if bool(result.get("ok", false)) and not bool(status.get("persistent", true)):
@@ -124,13 +118,11 @@ func _connect_session_lifecycle() -> void:
             _session_controls.save_requested.connect(save_cb)
         if not _session_controls.save_leave_requested.is_connected(leave_cb):
             _session_controls.save_leave_requested.connect(leave_cb)
-
     if _kernel != null:
         var decision_cb := Callable(self, "_on_session_decision_required")
         if not _kernel.decision_required.is_connected(decision_cb):
             _kernel.decision_required.connect(decision_cb)
-
-    var streaming: WorldStreamingCoordinator = FixtureClass.streaming_coordinator()
+    var streaming: WorldStreamingCoordinator = WorldBootstrapClass.streaming_coordinator()
     if streaming != null:
         var region_cb := Callable(self, "_on_session_regions_changed")
         if not streaming.active_regions_changed.is_connected(region_cb):
@@ -172,153 +164,84 @@ func _set_session_status(message: String) -> void:
         _session_controls.set_status(message)
 
 func _build_durable_session() -> Dictionary:
-    var registry: MaterializationRegistry = FixtureClass.materialization_registry()
-    if not canonical_boot_ok() or registry == null or FixtureClass.active_seed() <= 0         or _world == null or _kernel == null or _combat_actions == null:
+    var registry: MaterializationRegistry = WorldBootstrapClass.materialization_registry()
+    if not canonical_boot_ok() or registry == null or WorldBootstrapClass.active_seed() <= 0 or _world == null or _kernel == null or _combat_actions == null:
         return {}
     return {
         "schema_version": DurableSessionStoreClass.SESSION_SCHEMA_VERSION,
-        "world_seed": FixtureClass.active_seed(),
+        "world_seed": WorldBootstrapClass.active_seed(),
         "saved_unix_time": int(Time.get_unix_time_from_system()),
         "owners": {
-            "world": _world.snapshot(),
-            "materialization_registry": registry.snapshot(),
-            "kernel": _kernel.snapshot(),
-            "collision_overrides": _collision_overrides.snapshot(),
-            "doors": _door_state.snapshot(),
-            "locomotion": _locomotion_state.snapshot(),
-            "hands": _hand_state.snapshot(),
-            "inventory": _inventory_state.snapshot(),
-            "health": _health_state.snapshot(),
-            "skills": _skill_state.snapshot(),
-            "freshness": _freshness_state.snapshot(),
-            "carry": _carry_state.snapshot(),
-            "loot": _loot_state.snapshot(),
-            "perception_memory": _perception_memory.snapshot(),
-            "forage": _forage_state.snapshot(),
-            "conditions": _condition_state.snapshot(),
-            "utilities": _utilities.snapshot(),
-            "power_network": _power_network.snapshot(),
-            "flashlight": _flashlight_state.snapshot(),
-            "portable_generators": _portable_generators.snapshot(),
-            "vehicles": _vehicle_state.snapshot(),
-            "world_interactions": _world_interaction_state.snapshot(),
-            "firearms": _firearm_state.snapshot(),
-            "corpses": _corpse_state.snapshot(),
-            "infected": _infected_state.snapshot(),
-            "combat_runtime": _combat_actions.runtime_snapshot(),
-            "weather": _weather.snapshot(),
+            "world": _world.snapshot(), "materialization_registry": registry.snapshot(), "kernel": _kernel.snapshot(),
+            "collision_overrides": _collision_overrides.snapshot(), "doors": _door_state.snapshot(), "locomotion": _locomotion_state.snapshot(),
+            "hands": _hand_state.snapshot(), "inventory": _inventory_state.snapshot(), "health": _health_state.snapshot(), "skills": _skill_state.snapshot(),
+            "freshness": _freshness_state.snapshot(), "carry": _carry_state.snapshot(), "loot": _loot_state.snapshot(), "perception_memory": _perception_memory.snapshot(),
+            "forage": _forage_state.snapshot(), "conditions": _condition_state.snapshot(), "utilities": _utilities.snapshot(), "power_network": _power_network.snapshot(),
+            "flashlight": _flashlight_state.snapshot(), "portable_generators": _portable_generators.snapshot(), "vehicles": _vehicle_state.snapshot(),
+            "world_interactions": _world_interaction_state.snapshot(), "firearms": _firearm_state.snapshot(), "corpses": _corpse_state.snapshot(),
+            "infected": _infected_state.snapshot(), "combat_runtime": _combat_actions.runtime_snapshot(), "weather": _weather.snapshot(),
         },
     }
 
 func _restore_durable_session(session: Dictionary) -> bool:
     var validation: Dictionary = _session_store.validate_session(session)
-    if not bool(validation.get("ok", false)) or int(session.get("world_seed", 0)) != FixtureClass.active_seed():
+    if not bool(validation.get("ok", false)) or int(session.get("world_seed", 0)) != WorldBootstrapClass.active_seed():
         return false
     var owners: Dictionary = session.get("owners", {})
-    var registry: MaterializationRegistry = FixtureClass.materialization_registry()
+    var registry: MaterializationRegistry = WorldBootstrapClass.materialization_registry()
     if registry == null:
         return false
-
-    if not registry.load_snapshot(owners["materialization_registry"]):
-        return false
-    if not _world.load_snapshot(owners["world"]):
-        return false
-    if not _collision_overrides.load_snapshot(owners["collision_overrides"]):
-        return false
-    if not _door_state.load_snapshot(owners["doors"]):
-        return false
-
+    if not registry.load_snapshot(owners["materialization_registry"]): return false
+    if not _world.load_snapshot(owners["world"]): return false
+    if not _collision_overrides.load_snapshot(owners["collision_overrides"]): return false
+    if not _door_state.load_snapshot(owners["doors"]): return false
     var kernel_snapshot: Dictionary = Dictionary(owners["kernel"]).duplicate(true)
-    # Hard pause is application lifecycle state, not a way to erase a committed action.
     kernel_snapshot["hard_paused"] = false
-    if not _kernel.load_snapshot(kernel_snapshot):
-        return false
-
-    if not _locomotion_state.load_snapshot(owners["locomotion"]):
-        return false
-    if not _hand_state.load_snapshot(owners["hands"]):
-        return false
-    if not _inventory_state.load_snapshot(owners["inventory"]):
-        return false
-    if not _health_state.load_snapshot(owners["health"]):
-        return false
-    if not _skill_state.load_snapshot(owners["skills"]):
-        return false
-    if not _freshness_state.load_snapshot(owners["freshness"]):
-        return false
-    if not _carry_state.load_snapshot(owners["carry"]):
-        return false
-    if not _loot_state.load_snapshot(owners["loot"]):
-        return false
-    if not _perception_memory.load_snapshot(owners["perception_memory"]):
-        return false
-    if not _forage_state.load_snapshot(owners["forage"]):
-        return false
-    if not _condition_service.restore_state(owners["conditions"]):
-        return false
-    if not _utilities.restore_snapshot(owners["utilities"]):
-        return false
-    if not _power_network.restore_snapshot(owners["power_network"]):
-        return false
-    if not _flashlight_state.load_snapshot(owners["flashlight"]):
-        return false
-    if not _portable_generators.restore_snapshot(owners["portable_generators"]):
-        return false
-    if not _vehicle_state.load_snapshot(owners["vehicles"]):
-        return false
-    if not _world_interaction_state.load_snapshot(owners["world_interactions"]):
-        return false
-    if not _firearm_state.load_snapshot(owners["firearms"]):
-        return false
-    if not _corpse_state.load_snapshot(owners["corpses"]):
-        return false
-    if not _infected_state.load_snapshot(owners["infected"]):
-        return false
-    if not _combat_actions.load_runtime_snapshot(owners["combat_runtime"]):
-        return false
-    if not _weather.load_snapshot(owners["weather"]):
-        return false
-
-    var placement: WorldPlacement = _world.placement(FixtureClass.PLAYER_ID)
-    var streaming: WorldStreamingCoordinator = FixtureClass.streaming_coordinator()
+    if not _kernel.load_snapshot(kernel_snapshot): return false
+    if not _locomotion_state.load_snapshot(owners["locomotion"]): return false
+    if not _hand_state.load_snapshot(owners["hands"]): return false
+    if not _inventory_state.load_snapshot(owners["inventory"]): return false
+    if not _health_state.load_snapshot(owners["health"]): return false
+    if not _skill_state.load_snapshot(owners["skills"]): return false
+    if not _freshness_state.load_snapshot(owners["freshness"]): return false
+    if not _carry_state.load_snapshot(owners["carry"]): return false
+    if not _loot_state.load_snapshot(owners["loot"]): return false
+    if not _perception_memory.load_snapshot(owners["perception_memory"]): return false
+    if not _forage_state.load_snapshot(owners["forage"]): return false
+    if not _condition_service.restore_state(owners["conditions"]): return false
+    if not _utilities.restore_snapshot(owners["utilities"]): return false
+    if not _power_network.restore_snapshot(owners["power_network"]): return false
+    if not _flashlight_state.load_snapshot(owners["flashlight"]): return false
+    if not _portable_generators.restore_snapshot(owners["portable_generators"]): return false
+    if not _vehicle_state.load_snapshot(owners["vehicles"]): return false
+    if not _world_interaction_state.load_snapshot(owners["world_interactions"]): return false
+    if not _firearm_state.load_snapshot(owners["firearms"]): return false
+    if not _corpse_state.load_snapshot(owners["corpses"]): return false
+    if not _infected_state.load_snapshot(owners["infected"]): return false
+    if not _combat_actions.load_runtime_snapshot(owners["combat_runtime"]): return false
+    if not _weather.load_snapshot(owners["weather"]): return false
+    var placement: WorldPlacement = _world.placement(WorldBootstrapClass.PLAYER_ID)
+    var streaming: WorldStreamingCoordinator = WorldBootstrapClass.streaming_coordinator()
     if placement == null or streaming == null or not bool(streaming.update_focus(placement.anchor).get("ok", false)):
         return false
-    if _infected_cohort != null and not _infected_cohort.sync_active_now():
-        return false
-    if not _sync_vehicle_lighting_emitters():
-        return false
+    if _infected_cohort != null and not _infected_cohort.sync_active_now(): return false
+    if not _sync_vehicle_lighting_emitters(): return false
     _sync_refrigeration_clocks()
-    if not _sync_infected_opening_pressure():
-        return false
+    if not _sync_infected_opening_pressure(): return false
     _flush_pending_visual_state()
     return true
 
-func _boot_canonical_demo() -> bool:
-    if not super._boot_canonical_demo():
+func _boot_production_world() -> bool:
+    if not super._boot_production_world():
         return false
     if not _boot_system39_environmental_pressure():
         return false
     return _boot_world_resolution_indicator()
 
 func _boot_system39_environmental_pressure() -> bool:
-    if _world == null or _world_interaction_state == null or _door_state == null \
-        or _door_transition == null or _interaction_reach == null or _spatial_query == null \
-        or _kernel == null or _world_interaction_catalog == null or _world_interaction_actions == null \
-        or _spatial_sound == null or _infected_cohort == null:
+    if _world == null or _world_interaction_state == null or _door_state == null or _door_transition == null or _interaction_reach == null or _spatial_query == null or _kernel == null or _world_interaction_catalog == null or _world_interaction_actions == null or _spatial_sound == null or _infected_cohort == null:
         return false
-
-    _opening_pressure = OpeningPressureClass.new(
-        _world,
-        _world_interaction_state,
-        _door_state,
-        _door_transition,
-        _interaction_reach,
-        _spatial_query,
-        _kernel,
-        _world_interaction_catalog,
-        _world_interaction_actions,
-        _spatial_sound
-    )
+    _opening_pressure = OpeningPressureClass.new(_world, _world_interaction_state, _door_state, _door_transition, _interaction_reach, _spatial_query, _kernel, _world_interaction_catalog, _world_interaction_actions, _spatial_sound)
     if _opening_pressure == null or not _opening_pressure.is_ready():
         return false
     var callback := Callable(self, "_on_infected_active_members_changed")
@@ -340,7 +263,7 @@ func _on_infected_active_members_changed(_active_actor_ids: Array[String]) -> vo
         push_error("EnvironmentalPressureGameMain: failed to configure opening pressure for activated infected")
 
 func _boot_world_resolution_indicator() -> bool:
-    var streaming: WorldStreamingCoordinator = FixtureClass.streaming_coordinator()
+    var streaming: WorldStreamingCoordinator = WorldBootstrapClass.streaming_coordinator()
     if _resolution_indicator == null or _kernel == null or _infected_cohort == null or streaming == null:
         return false
     return _resolution_indicator.configure(_kernel, _infected_cohort, streaming)
