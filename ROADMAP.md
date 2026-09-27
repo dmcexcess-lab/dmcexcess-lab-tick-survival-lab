@@ -1,7 +1,7 @@
 # Tick Survival Lab — Turn-Based Rewrite Roadmap
 
 Updated: **2026-09-27**  
-Status: **architecture simplification in progress; Slice 1 complete**
+Status: **architecture simplification in progress; Slices 1-2 complete**
 
 ## Release target
 
@@ -21,13 +21,13 @@ The previous generalized tick/WHERE/WHAT/WHEN execution architecture is legacy a
 
 ### Slice 1 — Simple turn spine — DONE
 
-Canonical production movement now bypasses TickKernel/WHEN movement execution. One movement input performs one ordinary placement change; only infected within the active local radius receive at most one simple movement; control returns immediately. Production streaming/perception/presentation follow the new position. Legacy systems remain booted only for unmigrated routes.
+Canonical production movement bypasses TickKernel/WHEN movement execution. One movement input performs one ordinary placement change; only infected within the active local radius receive at most one simple movement; control returns immediately.
 
-### Slice 2 — Ordinary world state and spatial queries — NEXT
+### Slice 2 — Ordinary world state and spatial queries — DONE
 
-Collapse the minimum movement-facing WHERE/WHAT responsibilities into conventional world state and spatial queries. Remove old movement-specific owners that become unused. Do not create replacement frameworks.
+Canonical simple-turn movement now reads terrain/occupancy directly from `WorldState`, applies existing collision facts locally, and writes movement directly through `WorldState.move_entity()`. `SimpleTurnController` no longer depends on `SpatialQueryService`, `WorldMutationService`, `MovementActionService`, TickKernel or generalized movement consequence execution. Legacy query/mutation services remain only for bootstrap and unmigrated gameplay routes.
 
-### Slice 3 — Simple turn-based combat
+### Slice 3 — Simple turn-based combat — NEXT
 
 Reconnect existing weapons/damage/injury/death to the turn loop. Player attack consumes one action; relevant zombies attack on their actions. Preserve crowd/fear/mob/darkness pressure as ordinary calculations. Remove simultaneous melee/intention/commitment machinery from the migrated route.
 
@@ -90,4 +90,4 @@ Play and tune the real repeated loop on desktop and iPhone/Safari. Acceptance is
 
 ## NEXT
 
-**Slice 2 — simplify the world-state/spatial-query path used by canonical movement, preserving the working simple turn spine and deleting movement-specific legacy ownership that is no longer needed.**
+**Slice 3 — reconnect combat as ordinary turn-based gameplay on the now-simple movement/world-state spine, then remove combat-side tick/simultaneous-resolution dependencies that become obsolete.**
