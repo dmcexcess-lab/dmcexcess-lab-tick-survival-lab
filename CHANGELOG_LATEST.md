@@ -2,32 +2,29 @@
 
 This compact ledger records the newest executable work. `CHANGELOG.md` remains the historical archive.
 
-## Mobile/Safari rejected-seed recovery — 2026-09-26
+## Production world bootstrap separation — 2026-09-27
 
-Functional repair head before documentation: `cb44d6e444f6c8d1927400a45b7170484c330bca`.
+- Confirmed the canonical playable game was incorrectly booting through `scripts/demo/GeneratedIslandCritiqueFixture.gd`; production identity, spawn, map UI and downstream app composition still inherited demo-era ownership.
+- Added `generation/integration/ProductionWorldBootstrap.gd` and promoted generated-world collision/traversal rule installation into production integration code.
+- Canonical app chain now uses `_boot_production_world()` and `WorldBootstrapClass`; production player identity is `actor.player`.
+- Production spawn is selected from actual generated area sites/roads near world center rather than requiring `area.rural.crossroads.001`, `dev.rural_crossroads`, the diner fixture or `actor.player.demo`.
+- Utility runtime binds initial service truth to the actual production player cell rather than the demo central-settlement constant.
+- `PlayerMapBootstrap` now reads the production global plan/player identity directly.
+- NEW GAME only retries failures classified as genuine procedural generation/spawn invalidity; deterministic bootstrap/materialization/configuration failures are surfaced with their production reason instead of being mislabeled as bad seeds.
+- The focused verifier statically rejects demo dependencies anywhere in canonical app scripts, boots the real gameplay scene, verifies generated spawn/render/one-region materialization, crosses a streaming-region boundary, snapshots the durable session, and proves Continue restores the same seed/player/world identity.
+- Focused run `36348729521`: **SUCCESS**, marker `PRODUCTION_WORLD_BOOTSTRAP_OK ... demo_free=true save_continue=true`.
+- The previous rejected-seed recovery was symptom treatment and is superseded by this production ownership repair.
 
-- Real iPhone/Safari retest reached an application-level `gameplay_boot_failed` instead of a WebKit restart, proving the bounded bootstrap footprint survived far enough for production boot validation to reject the generated world.
-- The earlier memory repair intentionally removed disposable full-world seed probes; that exposed an existing reality: some procedural seeds pass global/start planning but fail later materialization/topology validation (known fixture seed `271828`).
-- NEW GAME now treats that as ordinary procedural-generation rejection: it frees the rejected game, yields a frame, and tries a fresh procedural island up to six bounded attempts. It does not silently retry Continue/save restoration failures.
-- The menu now reports NEW GAME generation failures as NEW GAME failures instead of the misleading `Continue failed safely` message.
-- Fresh focused verifier/workflow: `game/scripts/ci/NewGameSeedRecoverySmoke.gd` + `.github/workflows/new-game-seed-recovery.yml`.
-- Focused/protected run `36287621698`: **SUCCESS**. It proves a known rejected seed fails, a replacement production seed boots, bounded NEW GAME recovery is installed, and canonical production boot remains green.
-- Real iPhone/Safari NEW GAME remains the decisive acceptance gate.
+## Mobile/Safari rejected-seed recovery — 2026-09-26 (superseded)
+
+- The bounded retry exposed that the canonical runtime still depended on demo bootstrap ownership. Its prompt-local verifier/workflow has been retired.
 
 ## Mobile/Safari bootstrap footprint repair — 2026-09-26
 
-Functional repair head before documentation: `a1aaf45c61788fe379fabf92791a0ba46aa0da61`.
-
-- Real iPhone/Safari retest of the first bootstrap repair still restarted WebKit/Godot: NEW GAME -> map loading wait -> Godot loading screen -> startup menu.
-- The initial streaming policy was still synchronously materializing a radius-1 3x3 neighborhood of 128x128 regions before the first playable frame, even though the renderer shows only an 80x96-cell window.
-- Production bootstrap now keeps only the 128x128 focus region active. Existing streaming identity, procedural world truth and edge look-ahead remain intact; this is representation/scheduling, not a smaller world.
-- This reduces initial active surface footprint from as many as 147,456 cells (384x384 neighborhood) to 16,384 cells while still covering more than the visible render window.
-- A first diagnostic seed exposed a pre-existing utility-topology seed failure and was not treated as evidence for/against the streaming change. The established production seed 20001 boots successfully with the bounded footprint.
-- Focused run `36286982875`: **SUCCESS**; canonical production boot regression also passed.
+- Initial streaming was bounded from a 3x3 128x128 neighborhood to the single 128x128 focus region while preserving the procedural world and streaming identity.
+- Focused run `36286982875`: **SUCCESS**.
 
 ## Mobile/Safari new-game bootstrap repair — 2026-09-26
-
-Functional repair head before documentation: `b4f2a317883be7759d7e8ab69ad11eb3c163ee00`.
 
 - Removed duplicate disposable initial-neighborhood materialization before authoritative world materialization.
 - Focused production run `36281756339`: **SUCCESS**.
