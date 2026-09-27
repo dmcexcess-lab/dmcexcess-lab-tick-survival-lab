@@ -9,12 +9,13 @@ const EntityStoreClass = preload("res://scripts/foundation/world/EntityStore.gd"
 const PlacementStoreClass = preload("res://scripts/foundation/world/PlacementStore.gd")
 const OccupancyIndexClass = preload("res://scripts/foundation/world/OccupancyIndex.gd")
 const ChangeBatchClass = preload("res://scripts/foundation/world/WorldChangeBatch.gd")
+const ChangeClass = preload("res://scripts/foundation/world/WorldChange.gd")
 const Layers = preload("res://scripts/foundation/spatial/SpatialLayer.gd")
 const PerformanceTelemetry = preload("res://scripts/foundation/diagnostics/PerformanceTelemetry.gd")
 
-## Authoritative WHAT read/query facade and state composition.
-## Global revision remains authoritative; domain revisions are cache invalidation hints.
-## Normal writes go through WorldMutationService.
+## Authoritative persistent world state. Generation and unmigrated systems may still
+## use WorldMutationService, while the canonical simple-turn movement route changes
+## placement directly through move_entity().
 
 signal changed(change)
 signal batch_changed(batch)
@@ -101,6 +102,30 @@ func placement(entity_id: String) -> WorldPlacement:
 func entities_at(cell: Vector2i, channel: int = -1) -> Array[String]:
     return _occupancy.ids_at(cell, channel)
 
+## Conventional movement write for the turn-based game. Legality is checked by
+## the caller; this method owns the single authoritative placement mutation and
+## emits the same world change used by rendering and persistence observers.
+func move_entity(entity_id: String, anchor: Vector2i, facing: int) -> bool:
+    var previous: WorldPlacement = _placements.get_placement(entity_id)
+    if previous == null:
+        return false
+    var candidate := PlacementClass.new(entity_id, previous.channel, anchor, facing, previous.footprint, previous.structure_axis)
+    if not candidate.is_valid():
+        return false
+    if previous.equivalent(candidate):
+        return true
+    var before_cells := previous.world_cells()
+    var before_channel := previous.channel
+    if not _set_placement_record(candidate):
+        return false
+    var change := ChangeClass.new(ChangeClass.Kind.PLACEMENT_SET, entity_id)
+    change.before_cells = before_cells
+    change.after_cells = candidate.world_cells()
+    change.before_channel = before_channel
+    change.after_channel = candidate.channel
+    _commit_change(change)
+    return true
+
 func snapshot() -> Dictionary:
     return {
         "schema_version": SNAPSHOT_SCHEMA_VERSION,
@@ -172,7 +197,7 @@ func load_snapshot(data: Dictionary) -> bool:
     world_reset.emit()
     return true
 
-# --- WHAT-internal mutation surface. External gameplay systems use WorldMutationService. ---
+# Internal mutation surface retained for generation and unmigrated systems.
 
 func _allocate_runtime_id() -> String:
     while true:
