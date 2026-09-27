@@ -32,6 +32,7 @@ const STREAM_REGION_SIZE: Vector2i = Vector2i(128, 128)
 const STREAM_ACTIVE_RADIUS: int = 0
 const WORLD_SEED_OVERRIDE_ENV: String = "TICK_LAB_WORLD_SEED"
 const LOOT_SOURCE_KIND: StringName = &"generated_area"
+const MAX_WORLD_SEED_ATTEMPTS: int = 128
 
 static var _global_plan: GeneratedGlobalWorldPlan = null
 static var _spawn_area_plan: GeneratedAreaPlan = null
@@ -47,12 +48,13 @@ static func build(world: WorldState, mutations: WorldMutationService, collision_
     if world == null or mutations == null or collision_catalog == null or traversal_policy == null or door_state == null or door_mutations == null: return _fail("bootstrap_dependencies_missing")
     var rules: Dictionary = RuleInstallerClass.new().install(collision_catalog, traversal_policy)
     if not bool(rules.get("ok", false)): return _fail("rule_installation_failed:%s" % String(rules.get("failure_reason", "unknown")))
-    var world_seed: int = _choose_new_game_seed(seed_override)
-    if world_seed <= 0: return _fail("invalid_world_seed")
-    var request := GlobalRequestClass.new(WORLD_ID, world_seed, WORLD_BOUNDS, GlobalProfilesClass.TEMPERATE_ISLAND_REGION)
-    var global_plan: GeneratedGlobalWorldPlan = IslandPlannerClass.new().generate(request)
-    if global_plan == null: return _fail("global_plan_null")
-    if not global_plan.is_generated(): return _fail("global_generation:%s" % String(global_plan.failure_reason))
+    var requested_seed: int = _choose_new_game_seed(seed_override)
+    if requested_seed <= 0: return _fail("invalid_world_seed")
+    var resolved: Dictionary = _resolve_new_game_plan(requested_seed)
+    if not bool(resolved.get("ok", false)): return _fail(String(resolved.get("failure_reason", "global_generation_failed")))
+    var world_seed: int = int(resolved.get("seed", -1))
+    var global_plan: GeneratedGlobalWorldPlan = resolved.get("global_plan") as GeneratedGlobalWorldPlan
+    if world_seed <= 0 or global_plan == null or not global_plan.is_generated(): return _fail("resolved_global_plan_invalid")
     var spawn: Dictionary = _resolve_spawn(global_plan)
     if not bool(spawn.get("ok", false)): return _fail(String(spawn.get("failure_reason", "spawn_unavailable")))
     var spawn_plan: GeneratedAreaPlan = spawn.get("plan") as GeneratedAreaPlan
@@ -78,6 +80,43 @@ static func build(world: WorldState, mutations: WorldMutationService, collision_
     _active_seed = world_seed; _global_plan = global_plan; _spawn_area_plan = spawn_plan; _spawn_site_id = spawn_site_id; _registry = registry; _streaming = streaming; _streaming_focus = focus_adapter
     print("PRODUCTION_WORLD_READY seed=%d spawn_site=%s sites=%d" % [world_seed, spawn_site_id, global_plan.area_sites.size()])
     return true
+
+## Production replacement for the old demo fixture's accidental but important
+## seed-acceptance gate. IslandWorldPlanner already proves every advertised local
+## site through IslandPopulationPlanner.generate_manifest(); therefore a plan that
+## fails with a seed-sensitive generation constraint is not a playable island and
+## NEW GAME advances deterministically to the next candidate. Configuration/API
+## failures are not retried and remain diagnostic.
+static func _resolve_new_game_plan(seed: int) -> Dictionary:
+    var requested_seed: int = seed & GlobalSeed.HASH_MASK
+    if requested_seed <= 0: requested_seed = 1
+    var candidate_seed: int = requested_seed
+    var last_failure: String = "unknown"
+    for attempt: int in range(MAX_WORLD_SEED_ATTEMPTS):
+        var request := GlobalRequestClass.new(WORLD_ID, candidate_seed, WORLD_BOUNDS, GlobalProfilesClass.TEMPERATE_ISLAND_REGION)
+        var plan: GeneratedGlobalWorldPlan = IslandPlannerClass.new().generate(request)
+        if plan != null and plan.is_generated():
+            if candidate_seed != requested_seed:
+                print("PRODUCTION_ISLAND_SEED_REROLL requested=%d resolved=%d attempts=%d" % [requested_seed, candidate_seed, attempt + 1])
+            return {"ok": true, "seed": candidate_seed, "global_plan": plan, "failure_reason": ""}
+        last_failure = "global_plan_null" if plan == null else String(plan.failure_reason)
+        if last_failure.is_empty(): last_failure = "invalid_global_plan"
+        if not _retryable_seed_failure(last_failure):
+            return {"ok": false, "seed": candidate_seed, "global_plan": plan, "failure_reason": "global_generation:%s" % last_failure}
+        candidate_seed = _next_world_seed(candidate_seed)
+    return {"ok": false, "seed": -1, "global_plan": null, "failure_reason": "global_generation_seed_exhausted:%s" % last_failure}
+
+static func _retryable_seed_failure(reason: String) -> bool:
+    return reason.begins_with("island_base_world_generation_failed:") \
+        or reason.begins_with("island_base_site_") \
+        or reason.begins_with("island_road_clipping_failed") \
+        or reason.begins_with("island_power_adaptation_failed") \
+        or reason.begins_with("island_population_planning_failed") \
+        or reason.begins_with("island_population_site_generation_failed:") \
+        or reason.begins_with("island_world_validation_failed:")
+
+static func _next_world_seed(seed: int) -> int:
+    return 1 if seed >= GlobalSeed.HASH_MASK else seed + 1
 
 static func active_seed() -> int: return _active_seed
 static func last_failure() -> String: return _last_failure
