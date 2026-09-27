@@ -28,5 +28,6 @@ jobs:
           grep -q '^extends GameMain$' game/scripts/app/TurnBasedGameMain.gd
           ! grep -q 'EnvironmentalPressureGameMain' game/scripts/app/TurnBasedGameMain.gd
           ! grep -q 'UtilityGameMain' game/scripts/app/TurnBasedGameMain.gd
+          ! grep -q 'scripts/demo' game/scripts/app/TurnBasedGameMain.gd
           ! grep -q 'TickKernel' game/scripts/player/SimpleTurnController.gd
           ! grep -q 'MovementActionService' game/scripts/player/SimpleTurnController.gd
