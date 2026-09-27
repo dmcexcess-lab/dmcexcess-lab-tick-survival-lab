@@ -24,34 +24,11 @@ func _boot_production_world() -> bool:
     _simple_turns.turn_completed.connect(_on_simple_turn_completed)
     return true
 
-# Slice-1 compatibility boundary: the old physical wire-layout simulation is not
-# part of the new turn spine and must not reject an otherwise playable procedural
-# world. Logical utility state still initializes normally. Physical power/water
-# gameplay is migrated deliberately in its later rewrite slice.
-func _wire_power_infrastructure(plan: GeneratedGlobalWorldPlan) -> bool:
-    if super._wire_power_infrastructure(plan):
-        return true
-    push_warning("TurnBasedGameMain: legacy physical power-line projection unavailable; continuing without local wire geometry")
-    _power_infrastructure = null
-    _power_network = null
-    if _world_view != null:
-        return _world_view.configure_power_infrastructure(_world, [])
-    return true
-
-func _wire_utility_lighting() -> bool:
-    if _physical_lighting == null or _hand_state == null or _flashlight_state == null:
-        return false
-    var support_services: Dictionary = {}
-    if _power_infrastructure != null:
-        support_services = _power_infrastructure.support_power_services()
-    _utility_lighting = UtilityLightingClass.new(_world, _hand_state, WorldBootstrapClass.PLAYER_ID, _utilities, _kernel, _flashlight_state, support_services, _ambient_daylight)
-    if not _utility_lighting.is_ready():
-        return false
-    if not _physical_lighting.set_emitters(_utility_lighting.emitters()):
-        return false
-    var lighting_callable := Callable(self, "_on_lighting_emitters_changed")
-    if not _utility_lighting.emitters_changed.is_connected(lighting_callable):
-        _utility_lighting.emitters_changed.connect(lighting_callable)
+# Utilities are an unmigrated legacy gameplay route. Slice 1 deliberately keeps
+# their tick-driven runtime out of canonical turn-game startup instead of making
+# NEW GAME depend on old wire projection, appliance clocks, and TickKernel hooks.
+# The feature code remains for the later utility migration slice.
+func _boot_utility_runtime() -> bool:
     return true
 
 func _route_player_intent(intent: StringName) -> void:
