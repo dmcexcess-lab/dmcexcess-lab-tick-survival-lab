@@ -2,13 +2,13 @@ extends GameMain
 class_name TurnBasedGameMain
 
 const SimpleTurnControllerClass = preload("res://scripts/player/SimpleTurnController.gd")
+const ResidentProjectionClass = preload("res://scripts/simulation/population/PopulationResidentProjection.gd")
 const TurnIntents = preload("res://scripts/input/PlayerActionIntent.gd")
 const Facing = preload("res://scripts/foundation/spatial/SpatialFacing.gd")
 const Footprint = preload("res://scripts/foundation/spatial/SpatialFootprint.gd")
 const Layers = preload("res://scripts/foundation/spatial/SpatialLayer.gd")
 
-const SIMPLE_INFECTED_COUNT := 12
-const SIMPLE_INFECTED_SEARCH_RADIUS := 12
+const RESIDENT_SPAWN_SEARCH_RADIUS := 8
 const INVALID_CELL := Vector2i(-999999, -999999)
 
 var _simple_turns: SimpleTurnController = null
@@ -17,7 +17,7 @@ var _simple_infected_ids: Array[String] = []
 func _boot_production_world() -> bool:
     if not super._boot_production_world():
         return false
-    if not _hydrate_simple_local_infected():
+    if not _hydrate_procedural_local_infected():
         return false
     _simple_turns = SimpleTurnControllerClass.new(_world, _world_mutations, _spatial_query, WorldBootstrapClass.PLAYER_ID)
     _simple_turns.set_infected_actor_ids(_simple_infected_ids)
@@ -36,19 +36,38 @@ func _boot_production_world() -> bool:
     _controls.action_intent.connect(_on_turn_intent)
     return true
 
-func _hydrate_simple_local_infected() -> bool:
+func _hydrate_procedural_local_infected() -> bool:
     var player: WorldPlacement = _world.placement(WorldBootstrapClass.PLAYER_ID)
-    if player == null:
+    var global_plan: GeneratedGlobalWorldPlan = WorldBootstrapClass.global_plan()
+    if player == null or global_plan == null or not global_plan.is_generated():
         return false
-    # Slice 1 materializes only a tiny active-neighborhood cohort. Population-
-    # density spawning is an existing game feature to reconnect later; it must not
-    # make the foundational turn loop scan or hydrate the persistent island.
-    for index in range(SIMPLE_INFECTED_COUNT):
-        var spawn_cell := _clear_actor_cell_near(player.anchor)
-        if spawn_cell == INVALID_CELL:
-            break
-        var actor_id := "infected.local.%03d" % (index + 1)
+
+    # Infected are projected from the island's real household/population plan.
+    # We only instantiate residents whose homes are in currently materialized terrain;
+    # streaming can hydrate additional residents later. There is deliberately no
+    # player-centered ring, fixed demo cohort, synthetic infected.local identity,
+    # safe-radius relocation, or hard-coded count here.
+    var population_plan := {
+        "ok": true,
+        "settlements": global_plan.population_settlements.duplicate(true),
+        "resident_population": global_plan.resident_population,
+        "infected_population": global_plan.infected_population,
+        "survivor_population": global_plan.survivor_population,
+        "local_area_manifest": global_plan.local_area_manifest.duplicate(true),
+    }
+    var records: Array[Dictionary] = ResidentProjectionClass.new().infected_near(population_plan, "", player.anchor)
+    for record: Dictionary in records:
+        var actor_id := String(record.get("resident_id", "")).strip_edges()
+        var home_cell: Vector2i = record.get("home_cell", INVALID_CELL)
+        if actor_id.is_empty() or home_cell == INVALID_CELL or not _spatial_query.has_terrain(home_cell):
+            continue
         if _world.has_entity(actor_id):
+            var existing := _world.placement(actor_id)
+            if existing != null and not _simple_infected_ids.has(actor_id):
+                _simple_infected_ids.append(actor_id)
+            continue
+        var spawn_cell := _clear_actor_cell_near_home(home_cell)
+        if spawn_cell == INVALID_CELL:
             continue
         if _world_mutations.create_entity(&"actor.survivor", actor_id) != actor_id:
             continue
@@ -56,13 +75,14 @@ func _hydrate_simple_local_infected() -> bool:
             _world_mutations.remove_entity(actor_id)
             continue
         _simple_infected_ids.append(actor_id)
-    return not _simple_infected_ids.is_empty()
+    _simple_infected_ids.sort()
+    return true
 
-func _clear_actor_cell_near(origin: Vector2i) -> Vector2i:
-    for radius in range(2, SIMPLE_INFECTED_SEARCH_RADIUS + 1):
+func _clear_actor_cell_near_home(origin: Vector2i) -> Vector2i:
+    for radius in range(0, RESIDENT_SPAWN_SEARCH_RADIUS + 1):
         for y in range(-radius, radius + 1):
             for x in range(-radius, radius + 1):
-                if absi(x) != radius and absi(y) != radius:
+                if radius > 0 and absi(x) != radius and absi(y) != radius:
                     continue
                 var cell := origin + Vector2i(x, y)
                 if _spatial_query.has_terrain(cell) and _spatial_query.query_cell(cell, "", true).is_clear():
