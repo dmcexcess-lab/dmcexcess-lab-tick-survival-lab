@@ -3,9 +3,13 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+concurrency:
+  group: turn-based-production-boot-matrix
+  cancel-in-progress: true
 jobs:
   production-boot-matrix:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v4
       - name: Install Godot 4.7.1
