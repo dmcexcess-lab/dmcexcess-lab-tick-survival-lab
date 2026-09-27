@@ -2,6 +2,15 @@
 
 This compact ledger records the newest executable work. `CHANGELOG.md` remains the historical archive.
 
+## Production infrastructure reservation repair — 2026-09-27
+
+- Real iPhone/Safari NEW GAME reached production generation and exposed `generation_failed:area.smalltown.center.001:infrastructure_reservation_unresolved...`.
+- Root cause: a legitimate global infrastructure node could land near an area/road edge where the reservation planner tested only the two perpendicular facility rectangles at that exact source cell. A legal substation frontage farther along the same inherited road was ignored, causing an otherwise valid generated small-town center to fail.
+- `InfrastructureReservationPlanner` now keeps the global node as semantic source truth but searches deterministically along its same inherited road for the nearest legal roadside facility footprint. It does not reroll the world, invent a fallback town, or move the infrastructure to an unrelated road.
+- Added focused edge-source recovery verification plus the existing procedural-island seed matrix as the bounded protected regression.
+- Focused run `36350128246`: **SUCCESS**; both reservation recovery and the procedural island seed matrix passed.
+- Real iPhone/Safari NEW GAME remains the final acceptance gate for production bootstrap.
+
 ## Production world bootstrap separation — 2026-09-27
 
 - Confirmed the canonical playable game was incorrectly booting through `scripts/demo/GeneratedIslandCritiqueFixture.gd`; production identity, spawn, map UI and downstream app composition still inherited demo-era ownership.
@@ -28,28 +37,3 @@ This compact ledger records the newest executable work. `CHANGELOG.md` remains t
 
 - Removed duplicate disposable initial-neighborhood materialization before authoritative world materialization.
 - Focused production run `36281756339`: **SUCCESS**.
-
-## Phase 4 — existing-window fortification route — 2026-09-26
-
-- Existing windows/doors contextually BOARD to three authoritative layers through existing tool/material/Mechanical/WHEN semantics.
-- Three layers materially reduce infected opening-pressure damage from 55 to 40.
-- Save/reopen/Continue preserves fortification without duplicating consumed materials.
-- Focused/protected run `36276349197`: **SUCCESS**.
-
-## Phase 4 — contextual deconstruction route — 2026-09-26
-
-- Generated dining chairs expose contextual DECONSTRUCT through established world interaction.
-- Existing tool/Mechanical/WHEN semantics remove the chair and yield one existing wood plank; cancellation is safe and Continue is durable.
-- Focused/protected run `36275247010`: **SUCCESS**.
-
-## Phase 4 — powered stove cooking route — 2026-09-26
-
-- Generated stove -> contextual crafting -> real carried input/tool -> WHEN crafting -> heated soup.
-- Live System 33 power gates cooking; cooked food enters EAT and persists through Continue.
-- Focused route run `36273690260`: **SUCCESS**.
-
-## Phase 3 — durable save / leave / reopen / Continue — 2026-09-26
-
-- Versioned checksum-verified primary/backup durable sessions restore existing authoritative WHAT/WHEN/mechanic state without duplicate persistence truth.
-- New Game, Continue, Save/Save & Menu and safe checkpoints are production-wired.
-- Protected/focused run `36271614098`: **SUCCESS**; exact-head Pages run `36271614056`: **SUCCESS**.
