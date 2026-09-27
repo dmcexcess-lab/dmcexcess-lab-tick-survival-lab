@@ -4,36 +4,47 @@ const Bootstrap = preload("res://scripts/generation/integration/ProductionWorldB
 const GridClass = preload("res://scripts/streaming/StreamingRegionGrid.gd")
 const TEST_SEED: int = 20001
 
-func _initialize() -> void:
-    call_deferred("_run")
-
+func _initialize() -> void: call_deferred("_run")
 func _fail(message: String) -> void:
     push_error("PRODUCTION_WORLD_BOOTSTRAP: " + message)
     quit(1)
 
 func _run() -> void:
-    var source := FileAccess.open("res://scripts/app/GameMain.gd", FileAccess.READ)
-    if source == null:
-        _fail("cannot inspect canonical GameMain")
+    var app_dir := DirAccess.open("res://scripts/app")
+    if app_dir == null:
+        _fail("cannot inspect canonical application scripts")
         return
-    var text: String = source.get_as_text()
-    for forbidden: String in ["res://scripts/demo/", "FixtureClass", "_boot_canonical_demo", "actor.player.demo"]:
-        if text.contains(forbidden):
-            _fail("canonical GameMain retains demo dependency: %s" % forbidden)
+    for filename: String in app_dir.get_files():
+        if not filename.ends_with(".gd"): continue
+        var source := FileAccess.open("res://scripts/app/%s" % filename, FileAccess.READ)
+        if source == null:
+            _fail("cannot inspect app script: %s" % filename)
             return
+        var text: String = source.get_as_text()
+        for forbidden: String in ["res://scripts/demo/", "FixtureClass", "_boot_canonical_demo", "actor.player.demo", "GeneratedIslandCritiqueFixture"]:
+            if text.contains(forbidden):
+                _fail("canonical app retains demo dependency in %s: %s" % [filename, forbidden])
+                return
+    var map_source := FileAccess.open("res://scripts/ui/PlayerMapBootstrap.gd", FileAccess.READ)
+    if map_source == null or map_source.get_as_text().contains("res://scripts/demo/"):
+        _fail("production map bootstrap retains demo dependency")
+        return
     var scene: PackedScene = load("res://gameplay.tscn")
     if scene == null:
         _fail("gameplay scene missing")
         return
     var game: Node = scene.instantiate()
-    if game == null or not bool(game.call("configure_world_seed_override", TEST_SEED)):
+    if game == null or not game.has_method("configure_world_seed_override"):
+        _fail("production gameplay composition failed to instantiate")
+        return
+    if not bool(game.call("configure_world_seed_override", TEST_SEED)):
         _fail("cannot configure production seed")
         return
     get_root().add_child(game)
     await process_frame
     await process_frame
     await process_frame
-    if not bool(game.call("canonical_boot_ok")):
+    if not game.has_method("canonical_boot_ok") or not bool(game.call("canonical_boot_ok")):
         _fail("canonical production boot failed: %s" % Bootstrap.last_failure())
         return
     var world: WorldState = game.get("_world") as WorldState
@@ -71,7 +82,14 @@ func _run() -> void:
         if grid.region_for_cell(neighbor_cell) == current_region:
             _fail("streaming transition probe did not cross a region")
             return
-    print("PRODUCTION_WORLD_BOOTSTRAP_OK seed=%d player=%s spawn=%s active_regions=1 render_bounds=%s demo_free=true" % [Bootstrap.active_seed(), Bootstrap.PLAYER_ID, placement.anchor, Bootstrap.render_bounds()])
+    if not game.has_method("durable_session_snapshot"):
+        _fail("durable session owner missing from production composition")
+        return
+    var session: Dictionary = game.call("durable_session_snapshot")
+    if session.is_empty() or int(session.get("world_seed", 0)) != Bootstrap.active_seed():
+        _fail("durable session does not preserve production world identity")
+        return
+    print("PRODUCTION_WORLD_BOOTSTRAP_OK seed=%d player=%s spawn=%s active_regions=1 render_bounds=%s demo_free=true save_world=true" % [Bootstrap.active_seed(), Bootstrap.PLAYER_ID, placement.anchor, Bootstrap.render_bounds()])
     game.queue_free()
     await process_frame
     quit(0)
