@@ -40,26 +40,18 @@ var _infected_state: InfectedState = null
 var _first_infected_hydrator: FirstInfectedHydrationService = null
 var _infected_cohort_results: Array[Dictionary] = []
 var _infected_cohort: ActiveInfectedCohortService = null
-
-# Compatibility aliases for the already-closed one-infected seam.
 var _first_infected_result: Dictionary = {}
 var _first_infected_perception: ObserverPerceptionService = null
 var _first_infected_behavior: FirstInfectedBehaviorService = null
 
-func _boot_canonical_demo() -> bool:
-    if not super._boot_canonical_demo(): return false
+func _boot_production_world() -> bool:
+    if not super._boot_production_world(): return false
     if not _boot_system37_combat(): return false
     return _boot_first_real_infected()
 
 func _boot_system37_combat() -> bool:
-    if _world == null or _world_mutations == null or _spatial_query == null or _kernel == null \
-        or _hand_state == null or _hand_mutations == null or _health_state == null or _condition_service == null \
-        or _condition_modifiers == null or _physical_catalog == null or _spatial_sound == null \
-        or _inventory_state == null or _inventory_mutations == null or _collision_catalog == null \
-        or _interaction_reach == null or _interaction_affordances == null or _perception == null \
-        or _world_interaction_controller == null:
+    if _world == null or _world_mutations == null or _spatial_query == null or _kernel == null or _hand_state == null or _hand_mutations == null or _health_state == null or _condition_service == null or _condition_modifiers == null or _physical_catalog == null or _spatial_sound == null or _inventory_state == null or _inventory_mutations == null or _collision_catalog == null or _interaction_reach == null or _interaction_affordances == null or _perception == null or _world_interaction_controller == null:
         return false
-
     _combat_impact_profiles = CombatImpactProfilesClass.new()
     _combat_actions = CombatActionsClass.new(_world, _world_mutations, _spatial_query, _kernel, _hand_state, _health_state, _condition_service, _condition_modifiers, _physical_catalog, _combat_impact_profiles, _movement)
     if not _combat_actions.is_ready(): return false
@@ -69,43 +61,25 @@ func _boot_system37_combat() -> bool:
     if not _combat_offers.is_ready() or not _interaction_affordances.register_provider(_combat_offers): return false
     for action_id: StringName in CombatActionsClass.ACTION_IDS:
         if not _world_interaction_controller.register_handler(action_id, Callable(_combat_actions, "request_action")): return false
-
     _firearm_profiles = FirearmProfilesClass.new()
     if not _firearm_profiles.register_physical_profiles(_physical_catalog): return false
     _firearm_state = FirearmStateClass.new(_world, _inventory_state, _inventory_mutations, _firearm_profiles)
     if not _firearm_state.is_ready(): return false
-    _firearm_actions = FirearmActionsClass.new(
-        _world,
-        _world_mutations,
-        _spatial_query,
-        _kernel,
-        _hand_state,
-        _health_state,
-        _inventory_state,
-        _inventory_mutations,
-        _firearm_profiles,
-        _firearm_state,
-        _condition_modifiers
-    )
+    _firearm_actions = FirearmActionsClass.new(_world, _world_mutations, _spatial_query, _kernel, _hand_state, _health_state, _inventory_state, _inventory_mutations, _firearm_profiles, _firearm_state, _condition_modifiers)
     if not _firearm_actions.is_ready(): return false
     _firearm_damage = FirearmDamageClass.new(_health_state, _kernel)
     if not _firearm_damage.is_ready(): return false
     _firearm_sound = FirearmSoundClass.new(_firearm_actions, _spatial_sound)
     if not _firearm_sound.is_ready(): return false
-
     _corpse_state = CorpseStateClass.new()
     if not _collision_catalog.register(DeathTransitionsClass.CORPSE_SEMANTIC, false): return false
     _death_transitions = DeathTransitionsClass.new(_world, _world_mutations, _kernel, _health_state, _hand_state, _hand_mutations, _inventory_state, _inventory_mutations, _corpse_state)
     if not _death_transitions.is_ready(): return false
     _death_transitions.actor_died.connect(_on_actor_died)
-
-    _consequence_presenter = ConsequencePresenterClass.new(
-        _kernel, _combat_actions, _movement, _health_state, _death_transitions, FixtureClass.PLAYER_ID
-    )
+    _consequence_presenter = ConsequencePresenterClass.new(_kernel, _combat_actions, _movement, _health_state, _death_transitions, WorldBootstrapClass.PLAYER_ID)
     add_child(_consequence_presenter)
     if not _consequence_presenter.is_configured(): return false
-
-    _combat_controller = CombatControllerClass.new(_combat_actions, _kernel, FixtureClass.PLAYER_ID, _firearm_actions)
+    _combat_controller = CombatControllerClass.new(_combat_actions, _kernel, WorldBootstrapClass.PLAYER_ID, _firearm_actions)
     add_child(_combat_controller)
     if not _combat_controller.is_ready(): return false
     _combat_controller.action_resolved.connect(Callable(_hud, "present_action_result"))
@@ -113,104 +87,58 @@ func _boot_system37_combat() -> bool:
     return true
 
 func _on_actor_died(actor_id: String, _corpse_id: String) -> void:
-    if actor_id != FixtureClass.PLAYER_ID or _shell == null:
-        return
+    if actor_id != WorldBootstrapClass.PLAYER_ID or _shell == null: return
     _shell.call_deferred("open_death")
 
 func _population_plan_snapshot() -> Dictionary:
-    var global_plan: GeneratedGlobalWorldPlan = FixtureClass.global_plan()
-    if global_plan == null or not global_plan.is_generated():
-        return {}
-    return {
-        "ok": true,
-        "settlements": global_plan.population_settlements.duplicate(true),
-        "resident_population": global_plan.resident_population,
-        "infected_population": global_plan.infected_population,
-        "survivor_population": global_plan.survivor_population,
-        "local_area_manifest": global_plan.local_area_manifest.duplicate(true),
-    }
+    var global_plan: GeneratedGlobalWorldPlan = WorldBootstrapClass.global_plan()
+    if global_plan == null or not global_plan.is_generated(): return {}
+    return {"ok": true, "settlements": global_plan.population_settlements.duplicate(true), "resident_population": global_plan.resident_population, "infected_population": global_plan.infected_population, "survivor_population": global_plan.survivor_population, "local_area_manifest": global_plan.local_area_manifest.duplicate(true)}
 
 func _boot_first_real_infected() -> bool:
     var population_plan := _population_plan_snapshot()
-    var player: WorldPlacement = _world.placement(FixtureClass.PLAYER_ID)
-    if population_plan.is_empty() or player == null or _locomotion_mutations == null or _skill_state == null \
-        or _carry_state == null or _condition_state == null:
-        return false
+    var player: WorldPlacement = _world.placement(WorldBootstrapClass.PLAYER_ID)
+    if population_plan.is_empty() or player == null or _locomotion_mutations == null or _skill_state == null or _carry_state == null or _condition_state == null: return false
     _population_resident_projection = PopulationProjectionClass.new()
     _infected_state = InfectedStateClass.new()
-    _first_infected_hydrator = FirstInfectedHydratorClass.new(
-        _world, _world_mutations, _spatial_query, _kernel,
-        _population_resident_projection, _infected_state,
-        _locomotion_mutations, _hand_mutations, _inventory_mutations,
-        _health_state, _skill_state, _carry_state, _condition_state
-    )
+    _first_infected_hydrator = FirstInfectedHydratorClass.new(_world, _world_mutations, _spatial_query, _kernel, _population_resident_projection, _infected_state, _locomotion_mutations, _hand_mutations, _inventory_mutations, _health_state, _skill_state, _carry_state, _condition_state)
     if not _first_infected_hydrator.is_ready(): return false
-
-    var cohort_result: Dictionary = _first_infected_hydrator.hydrate_cohort(
-        population_plan, FixtureClass.CENTRAL_SITE_ID, player.anchor, ACTIVE_INFECTED_COHORT_SIZE
-    )
+    var cohort_result: Dictionary = _first_infected_hydrator.hydrate_cohort(population_plan, WorldBootstrapClass.loot_source_id(), player.anchor, ACTIVE_INFECTED_COHORT_SIZE)
     if not bool(cohort_result.get("ok", false)):
         push_error("CombatGameMain: infected cohort hydration failed: %s" % String(cohort_result.get("reason", "unknown")))
         return false
     for value: Variant in cohort_result.get("members", []):
-        if typeof(value) == TYPE_DICTIONARY:
-            _infected_cohort_results.append((value as Dictionary).duplicate(true))
-    if _infected_cohort_results.size() != ACTIVE_INFECTED_COHORT_SIZE:
-        return false
+        if typeof(value) == TYPE_DICTIONARY: _infected_cohort_results.append((value as Dictionary).duplicate(true))
+    if _infected_cohort_results.size() != ACTIVE_INFECTED_COHORT_SIZE: return false
     if _consequence_presenter != null:
         var infected_ids: Array[String] = []
-        for member: Dictionary in _infected_cohort_results:
-            infected_ids.append(String(member.get("actor_id", "")))
+        for member: Dictionary in _infected_cohort_results: infected_ids.append(String(member.get("actor_id", "")))
         _consequence_presenter.set_infected_actor_ids(infected_ids)
     _first_infected_result = _infected_cohort_results[0].duplicate(true)
     if _perception != null: _perception.recompute(&"infected_cohort_hydrated")
     return _boot_infected_cohort_behavior()
 
 func _boot_infected_cohort_behavior() -> bool:
-    var streaming: WorldStreamingCoordinator = FixtureClass.streaming_coordinator()
-    if streaming == null or _perception_memory == null or _perception == null \
-        or _spatial_sound == null or _movement == null or _combat_actions == null:
-        return false
-    _infected_cohort = ActiveInfectedCohortClass.new(
-        _world, _door_state, _kernel, _infected_state, _perception_memory,
-        _perception.acquisition_provider(), _spatial_sound, _movement, _combat_actions,
-        _health_state, streaming, FixtureClass.PLAYER_ID
-    )
-    if _infected_cohort == null or not _infected_cohort.configure(_infected_cohort_results):
-        return false
+    var streaming: WorldStreamingCoordinator = WorldBootstrapClass.streaming_coordinator()
+    if streaming == null or _perception_memory == null or _perception == null or _spatial_sound == null or _movement == null or _combat_actions == null: return false
+    _infected_cohort = ActiveInfectedCohortClass.new(_world, _door_state, _kernel, _infected_state, _perception_memory, _perception.acquisition_provider(), _spatial_sound, _movement, _combat_actions, _health_state, streaming, WorldBootstrapClass.PLAYER_ID)
+    if _infected_cohort == null or not _infected_cohort.configure(_infected_cohort_results): return false
     var first_id: String = String(_first_infected_result.get("actor_id", ""))
     _first_infected_perception = _infected_cohort.perception_for_actor(first_id)
     _first_infected_behavior = _infected_cohort.behavior_for_actor(first_id)
     return not first_id.is_empty() and _first_infected_perception != null and _first_infected_behavior != null
 
-
-func infected_cohort_service() -> ActiveInfectedCohortService:
-    return _infected_cohort
-
-func consequence_presenter() -> ConsequenceMomentPresenter:
-    return _consequence_presenter
-
-func infected_state() -> InfectedState:
-    return _infected_state
-
+func infected_cohort_service() -> ActiveInfectedCohortService: return _infected_cohort
+func consequence_presenter() -> ConsequenceMomentPresenter: return _consequence_presenter
+func infected_state() -> InfectedState: return _infected_state
 func infected_cohort_results() -> Array[Dictionary]:
     var result: Array[Dictionary] = []
-    for member: Dictionary in _infected_cohort_results:
-        result.append(member.duplicate(true))
+    for member: Dictionary in _infected_cohort_results: result.append(member.duplicate(true))
     return result
-
-
-func population_plan_snapshot() -> Dictionary:
-    return _population_plan_snapshot().duplicate(true)
-
-func first_infected_result() -> Dictionary:
-    return _first_infected_result.duplicate(true)
-
-func first_infected_behavior() -> FirstInfectedBehaviorService:
-    return _first_infected_behavior
-
-func first_infected_perception() -> ObserverPerceptionService:
-    return _first_infected_perception
+func population_plan_snapshot() -> Dictionary: return _population_plan_snapshot().duplicate(true)
+func first_infected_result() -> Dictionary: return _first_infected_result.duplicate(true)
+func first_infected_behavior() -> FirstInfectedBehaviorService: return _first_infected_behavior
+func first_infected_perception() -> ObserverPerceptionService: return _first_infected_perception
 
 func _route_player_intent(intent: StringName) -> void:
     if intent == Intents.COMBAT_FORWARD and _combat_controller != null and (_vehicle_controller == null or not _vehicle_controller.is_mounted()):
