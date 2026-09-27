@@ -1,7 +1,7 @@
 extends Node
 class_name PlayerMapBootstrap
 
-const IslandFixture = preload("res://scripts/demo/GeneratedIslandCritiqueFixture.gd")
+const WorldBootstrap = preload("res://scripts/generation/integration/ProductionWorldBootstrap.gd")
 
 var _configured: bool = false
 var _failure_reason: String = ""
@@ -22,7 +22,7 @@ func _configure_from_composition_root() -> void:
         return
     var camera_controls := composition_root.get_node_or_null("CameraControls") as CameraControls
     var world: WorldState = composition_root.get("_world") as WorldState
-    var plan: GeneratedGlobalWorldPlan = IslandFixture.global_plan()
+    var plan: GeneratedGlobalWorldPlan = WorldBootstrap.global_plan()
     if camera_controls == null:
         _fail("missing CameraControls")
         return
@@ -32,7 +32,7 @@ func _configure_from_composition_root() -> void:
     if plan == null or not plan.is_generated():
         _fail("generated island plan was not booted")
         return
-    if not camera_controls.configure_map(plan, world, IslandFixture.PLAYER_ID):
+    if not camera_controls.configure_map(plan, world, WorldBootstrap.PLAYER_ID):
         _fail("CameraControls rejected canonical island map configuration")
         return
     _configured = true
