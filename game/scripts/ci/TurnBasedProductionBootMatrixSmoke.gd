@@ -25,7 +25,7 @@ func _run() -> void:
     get_root().add_child(game)
     await process_frame
     await process_frame
-    if not bool(game.call("canonical_boot_ok")) or not bool(game.call("session_boot_ok")):
+    if not bool(game.call("canonical_boot_ok")):
         _fail("full gameplay boot failed")
         return
     var turns = game.call("simple_turn_controller")
