@@ -2,6 +2,18 @@
 
 This compact ledger records the newest executable work. `CHANGELOG.md` remains the historical archive.
 
+## Mobile/Safari rejected-seed recovery — 2026-09-26
+
+Functional repair head before documentation: `cb44d6e444f6c8d1927400a45b7170484c330bca`.
+
+- Real iPhone/Safari retest reached an application-level `gameplay_boot_failed` instead of a WebKit restart, proving the bounded bootstrap footprint survived far enough for production boot validation to reject the generated world.
+- The earlier memory repair intentionally removed disposable full-world seed probes; that exposed an existing reality: some procedural seeds pass global/start planning but fail later materialization/topology validation (known fixture seed `271828`).
+- NEW GAME now treats that as ordinary procedural-generation rejection: it frees the rejected game, yields a frame, and tries a fresh procedural island up to six bounded attempts. It does not silently retry Continue/save restoration failures.
+- The menu now reports NEW GAME generation failures as NEW GAME failures instead of the misleading `Continue failed safely` message.
+- Fresh focused verifier/workflow: `game/scripts/ci/NewGameSeedRecoverySmoke.gd` + `.github/workflows/new-game-seed-recovery.yml`.
+- Focused/protected run `36287621698`: **SUCCESS**. It proves a known rejected seed fails, a replacement production seed boots, bounded NEW GAME recovery is installed, and canonical production boot remains green.
+- Real iPhone/Safari NEW GAME remains the decisive acceptance gate.
+
 ## Mobile/Safari bootstrap footprint repair — 2026-09-26
 
 Functional repair head before documentation: `a1aaf45c61788fe379fabf92791a0ba46aa0da61`.
@@ -11,19 +23,14 @@ Functional repair head before documentation: `a1aaf45c61788fe379fabf92791a0ba46a
 - Production bootstrap now keeps only the 128x128 focus region active. Existing streaming identity, procedural world truth and edge look-ahead remain intact; this is representation/scheduling, not a smaller world.
 - This reduces initial active surface footprint from as many as 147,456 cells (384x384 neighborhood) to 16,384 cells while still covering more than the visible render window.
 - A first diagnostic seed exposed a pre-existing utility-topology seed failure and was not treated as evidence for/against the streaming change. The established production seed 20001 boots successfully with the bounded footprint.
-- Fresh focused verifier/workflow: `game/scripts/ci/MobileStreamingFootprintSmoke.gd` + `.github/workflows/mobile-streaming-footprint.yml`.
 - Focused run `36286982875`: **SUCCESS**; canonical production boot regression also passed.
-- Existing mobile bootstrap run `36286982809`: **SUCCESS** on the same production head.
-- Real iPhone/Safari NEW GAME remains the decisive acceptance gate for the reported WebKit restart.
 
 ## Mobile/Safari new-game bootstrap repair — 2026-09-26
 
 Functional repair head before documentation: `b4f2a317883be7759d7e8ab69ad11eb3c163ee00`.
 
-- Investigated the reported real iPhone/Safari failure: startup menu loads, NEW GAME begins world generation, then WebKit/Godot restarts before the playable map appears.
-- Found a concrete bootstrap memory defect in `GeneratedIslandCritiqueFixture`: every candidate seed fully materialized the initial 3x3 streaming neighborhood into a disposable probe world, then immediately materialized the same neighborhood again into authoritative WHAT.
-- Removed the disposable full-world streaming probe. Seed selection still validates global generation, central-area generation and a valid player start; the selected world is then materialized exactly once into authoritative WHAT.
-- Focused production run `36281756339`: **SUCCESS**, marker `MOBILE_NEW_GAME_BOOTSTRAP_OK production_boot=true single_initial_materialization=true player=true streaming=true`.
+- Removed duplicate disposable initial-neighborhood materialization before authoritative world materialization.
+- Focused production run `36281756339`: **SUCCESS**.
 
 ## Phase 4 — existing-window fortification route — 2026-09-26
 
