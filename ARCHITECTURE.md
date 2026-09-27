@@ -1,96 +1,76 @@
 # Tick Survival Lab — Settled Architecture Map
 
-Status: **active ownership/context map**
+Status: **active turn-based migration map**
 
-Purpose: tell an AI engineer what is already settled so reasoning is spent on genuine problems rather than rediscovering architecture. This is not implementation history.
+## Canonical direction
 
-`CLOSED` = do not redesign without a concrete defect.  
-`ESTABLISHED` = extend the existing owner/pattern.  
-`OPEN` = release work remains, but existing authority boundaries still apply.
+Tick Lab is a conventional turn-based open-world zombie survival game. The persistent procedural island and gameplay content are retained; the generalized tick/WHERE/WHAT/WHEN execution architecture is legacy and is being removed route by route.
 
-## Core authority chain
+Canonical action flow:
 
-| Concern | Owner / rule | Status |
-|---|---|---|
-| WHERE | spatial geometry/language | CLOSED |
-| WHAT | authoritative persistent world entities/current physical truth | CLOSED |
-| WHEN | `TickKernel`; single deterministic clock/action scheduler | CLOSED |
-| Global planning/coherence | System 00D | CLOSED |
-| Local physical generation | System 20 | CLOSED |
-| Building interiors/grammar | System 19 | CLOSED |
-| Production world bootstrap | `ProductionWorldBootstrap` -> production generation/materialization/streaming; canonical app code never depends on `scripts/demo` fixtures | CLOSED |
-| Logical materialization/technical activation | System 00F; never morphology | CLOSED |
-| Rendering | presentation only; never gameplay truth/physics | CLOSED |
-| Input | emits intent; simulation owns consequences | CLOSED |
-| UI | presentation/intent only; owns no gameplay truth | CLOSED |
+`player action -> direct authoritative consequence -> relevant local actors each act at most once -> ordinary time/environment advance -> player control`
 
-Technical chunks/streaming boundaries never become logical geography or persistent identity. Generation creates virgin truth once; WHAT and typed mechanic stores own subsequent reality.
+Do not create a replacement simulation framework.
 
-## Player/world systems
+## Current production spine
 
-| System | Settled rule | Status |
-|---|---|---|
-| Combat/time | shared ticks, variable durations, commitment/interruption, simultaneous due-tick consequences | CLOSED foundation |
-| Mob pressure | ordinary physical movement/contact produces bounded force propagation; no separate horde brain | CLOSED |
-| Fear | canonical `CALM`/condition path; no parallel fear meter | CLOSED |
-| Perception | existing bounded perception/LOS path; observer pose participates in freshness/invalidation | CLOSED |
-| Lighting | physical-light truth remains gameplay input; presentation is simple tile tint, not bloom/shadow spectacle | CLOSED |
-| Infected cohort | active production cohort remains bounded at 8 unless a later explicit design/performance decision changes it | CLOSED for current release |
-| Inventory/equipment | existing persistent containment/hand owners | ESTABLISHED |
-| Health/injury | existing health/injury owners | ESTABLISHED |
-| Sustainment | `SurvivorSustainmentActionService` and condition owners | ESTABLISHED |
-| Food/drink | selected carried item -> contextual EAT/DRINK through inventory | CLOSED interaction rule |
-| Rest/sleep | clicked furniture/world object -> contextual REST/SLEEP | CLOSED interaction rule |
-| Potable water | clicked powered potable fixture -> contextual DRINK | CLOSED interaction rule |
-| Survival UI | no permanent generic EAT/DRINK/TAP/REST/SLEEP strip | CLOSED |
-| Crafting/repair/deconstruction | extend existing item/tool/resource/action owners; no parallel crafting stack | ESTABLISHED |
-| Powered cooking | System 32 workstation capability/plan/action owners consume System 33 live power truth through the production `PoweredCraftingWorkstationAdapter`; stove interaction opens existing crafting UI; no appliance/cooking state duplicate | CLOSED interaction route |
-| Existing-building fortification | opening-owned contextual BOARD action; hammer + plank + nails; timed WHEN consequence; `WorldInteractableState` owns 0–3 board layers; `ActorOpeningPressureActionService` reduces breach damage per layer and infected behavior uses that same pressure owner; renderer reads authoritative interaction state | CLOSED interaction route |
-| Vehicles | preserve existing transport identity/movement/storage/fuel/repair owners | ESTABLISHED |
-| Utilities | existing power/water service truth; failures/repairs arise from world action | ESTABLISHED |
-| Persistence | existing authoritative stores/snapshots -> checksum-verified versioned durable session; saved seed reconstructs runtime owners before in-place restore; primary/backup user storage; no duplicate gameplay truth | CLOSED — Phase 3 |
+- `gameplay.tscn -> TurnBasedGameMain` is canonical.
+- `ProductionWorldBootstrap` owns real procedural generation/materialization/streaming; production never depends on demo fixtures.
+- `SimpleTurnController` owns the migrated unmounted movement route only.
+- One movement input changes the player placement at most once.
+- Only infected within the bounded active radius receive individual simple movement after a successful player movement action.
+- Canonical movement does not execute `TickKernel`, `MovementActionService`, WHEN queues or simultaneous resolution.
+- Streaming focus, perception and rendering follow authoritative placement after the simple turn.
 
-## Durable continuation ownership
+## Transitional boundary
 
-- `DurableSessionStore` owns only conventional file-format/storage concerns: versioned envelope, checksum verification, primary/backup rotation and storage capability reporting.
-- `EnvironmentalPressureGameMain` assembles/restores one session from the already-authoritative world, WHEN, streaming registry and mechanic-owner snapshots. It does not become a second gameplay state owner.
-- `StartupMenu` owns truthful New Game/Continue presentation and launches Continue with a validated saved session.
-- App focus/background hard pause is lifecycle state. A restored session clears the application hard-pause bit while preserving the saved WHEN queue and committed action truth.
-- Streaming/materialization identity is restored from the existing registry plus WHAT; reopening or crossing regions must not regenerate already-materialized facts.
+The old runtime remains temporarily instantiated because combat, contextual interactions, long actions and durable persistence still depend on portions of it. This is migration debt, not protected architecture.
 
-## World-generation boundaries
+Rules while migrating:
 
-- Canonical runtime path is `GameMain -> ProductionWorldBootstrap -> IslandWorldPlanner/System 20/materialization/streaming`. Demo/critique fixtures may consume production systems for tests/dev scenes, but production app/UI must never consume them.
-- Production spawn selection is derived from generated area sites and their generated road cells; it does not require the retired rural-crossroads/diner fixture or a hard-coded demo site ID.
-- Production identity is `actor.player`; `.demo` actor/world IDs are not canonical gameplay identity.
-- Keep the existing generated map, roads, buildings, terrain, stable identities and streaming architecture.
-- Do not restart/rewrite global world generation without a concrete release blocker.
-- Parking/garage/carport enrichment is a later deterministic site-enrichment problem, not permission to regenerate buildings.
-- Environmental stories are persistent arrangements of real existing objects/mechanics, not a new NPC/society simulation.
+- no new dependency on TickKernel/WHEN for migrated routes;
+- no WHERE 2.0 / WHAT 2.0 / WHEN 2.0;
+- plain world state and direct spatial queries are preferred;
+- delete legacy owners/adapters once their final player-facing route migrates;
+- do not preserve architecture-only behavior at the expense of responsiveness;
+- only locally relevant actors receive individual turns;
+- far/unloaded world remains persistent data, not an always-running simulation.
 
-## Explicitly retired / forbidden parallel systems
+## Game systems to preserve
 
-- living survivor/raider/follower/social runtime for this release;
-- settlement/colony management;
-- freeform house/base construction engine;
-- duplicate clock, inventory, health, position, condition or persistence truth;
-- presentation-owned consequences;
-- generic survival action strip;
-- routine historical gameplay-suite gates or retired twelve-seed matrix.
+- open procedural persistent island, generated roads/buildings and streaming;
+- scavenging, inventory/equipment and loot;
+- zombies, weapons, damage, injury and death;
+- crowd pressure, fear and darkness/perception pressure as ordinary gameplay rules;
+- contextual interactions originating from the thing acted upon;
+- crafting/cooking/healing, rest/sleep, repair/deconstruction;
+- existing-building fortification and shelter/base use;
+- vehicles;
+- power/water, generators/wells and failures/repairs;
+- day/night and weather;
+- durable New Game / Continue.
 
-## Performance contract
+## Stable non-execution boundaries
 
-Phone/Safari is first-class. Turn-based systems do not wake because a render frame occurred. Bound recurring work to relevant actors/changed state; prefer cached/batched/coarse work where truth is preserved. Streaming may change representation/scheduling but not persistent causal truth.
+- Generation creates the procedural world; persistent state owns subsequent player-caused changes.
+- Rendering/UI own presentation and input only, never gameplay consequences.
+- Production identity is `actor.player`; demo actor/world IDs are not canonical.
+- A base is an existing building the player fortifies and supplies; no settlement management or freeform construction engine.
+- Persistence should serialize ordinary authoritative state conventionally; do not create duplicate gameplay truth.
 
-See `PERFORMANCE_NORTH_STAR.md` only when the active slice contains a concrete performance issue or cost-sensitive new system.
+## Explicitly retired direction
 
-## Extension rule
+The following are no longer project identity and should disappear as migration permits:
 
-Before inventing a new owner, answer in order:
+- shared simulation ticks as the universal execution model;
+- multiple movement phases per player action;
+- generalized simultaneous intention/consequence resolution;
+- universal commitment/interruption machinery;
+- generalized WHEN scheduling for ordinary actions;
+- WHERE/WHAT as heavyweight runtime frameworks rather than ordinary state/query responsibilities;
+- living survivor/raider/follower/social simulation;
+- colony/settlement management;
+- freeform base construction;
+- demo/fixture-owned production startup.
 
-1. Is the concern already listed here? Use that owner/rule.
-2. Does current source contain the established owner named by the active task? Extend it.
-3. Is this a conventional engineering problem? Use the conventional solution consistent with the owners above.
-4. Only then consider a new architecture decision.
-
-A new architecture decision that changes this map must be justified by a concrete requirement/defect and documented here after implementation.
+See `ROADMAP.md` for migration order and `CURRENT.md` for the exact next operation.
