@@ -7,6 +7,7 @@ const PRELOAD_PROGRESS_START: float = 8.0
 const PRELOAD_PROGRESS_SPAN: float = 57.0
 const STATUS_DOT_INTERVAL_SECONDS: float = 0.32
 const STATUS_DOT_FRAMES := [".", "..", "..."]
+const NEW_GAME_BOOT_ATTEMPTS: int = 6
 
 @onready var _new_game_button: Button = $Center/MenuPanel/Menu/NewGameButton
 @onready var _continue_button: Button = $Center/MenuPanel/Menu/ContinueButton
@@ -26,9 +27,6 @@ var _session_store: DurableSessionStore = null
 var _continue_session: Dictionary = {}
 
 func _ready() -> void:
-    # NEW GAME awaits loading frames and eventually retires this entire menu tree.
-    # Start it after Button.pressed finishes emitting so the signal owner cannot be
-    # freed while Godot is still unwinding the original UI signal.
     _new_game_button.pressed.connect(_on_new_game_pressed, CONNECT_DEFERRED)
     _continue_button.pressed.connect(_on_continue_pressed, CONNECT_DEFERRED)
     _session_store = DurableSessionStoreClass.new()
@@ -38,7 +36,6 @@ func _ready() -> void:
     call_deferred("_begin_gameplay_preload")
 
 func _begin_gameplay_preload() -> void:
-    # Let the lightweight menu paint before any heavy gameplay resources are requested.
     await get_tree().process_frame
     await get_tree().process_frame
     if _launching or _gameplay_scene != null or _preload_requested:
@@ -118,30 +115,43 @@ func _launch_game(session: Dictionary) -> void:
     _progress_bar.value = 78.0
     await get_tree().process_frame
 
-    var game: Node = packed_scene.instantiate()
+    var game: Node = null
+    var boot_error: String = "gameplay_boot_failed"
+    var attempt_limit: int = 1 if not session.is_empty() else NEW_GAME_BOOT_ATTEMPTS
+    for attempt in range(attempt_limit):
+        game = packed_scene.instantiate()
+        if game == null:
+            boot_error = "scene_instantiation_failed"
+            break
+        if not session.is_empty():
+            if not game.has_method("configure_continue_session") or not bool(game.call("configure_continue_session", session)):
+                game.queue_free()
+                game = null
+                boot_error = "incompatible_save"
+                break
+
+        get_tree().root.add_child(game)
+        if game.has_method("session_boot_ok") and bool(game.call("session_boot_ok")):
+            break
+
+        boot_error = String(game.call("session_boot_error")) if game.has_method("session_boot_error") else "gameplay_boot_failed"
+        game.queue_free()
+        game = null
+        await get_tree().process_frame
+        if session.is_empty() and attempt + 1 < attempt_limit:
+            _set_status("World seed could not initialize. Trying another island", true)
+            await get_tree().process_frame
+
     if game == null:
         _launching = false
         _new_game_button.disabled = false
         _refresh_continue_state()
-        _set_status("Unable to create the gameplay scene.")
-        return
-    if not session.is_empty():
-        if not game.has_method("configure_continue_session") or not bool(game.call("configure_continue_session", session)):
-            game.queue_free()
-            _launching = false
-            _new_game_button.disabled = false
-            _refresh_continue_state()
+        if session.is_empty():
+            _set_status("NEW GAME could not generate a playable island after %d attempts: %s" % [attempt_limit, boot_error])
+        elif boot_error == "incompatible_save":
             _set_status("Saved game is incompatible. The previous save was preserved.")
-            return
-
-    get_tree().root.add_child(game)
-    if not game.has_method("session_boot_ok") or not bool(game.call("session_boot_ok")):
-        var error_text: String = String(game.call("session_boot_error")) if game.has_method("session_boot_error") else "unknown_restore_failure"
-        game.queue_free()
-        _launching = false
-        _new_game_button.disabled = false
-        _refresh_continue_state()
-        _set_status("Continue failed safely: %s. Saved files were preserved." % error_text)
+        else:
+            _set_status("Continue failed safely: %s. Saved files were preserved." % boot_error)
         _progress_bar.value = PRELOAD_PROGRESS_START + PRELOAD_PROGRESS_SPAN
         return
 
@@ -218,9 +228,3 @@ func _advance_loading_indicator(delta: float) -> void:
         _status_dot_elapsed -= STATUS_DOT_INTERVAL_SECONDS
         _status_dot_index = (_status_dot_index + 1) % STATUS_DOT_FRAMES.size()
     _status_label.text = _status_base_text + String(STATUS_DOT_FRAMES[_status_dot_index])
-
-func gameplay_resource_ready() -> bool:
-    return _gameplay_scene != null
-
-func is_launching_game() -> bool:
-    return _launching
