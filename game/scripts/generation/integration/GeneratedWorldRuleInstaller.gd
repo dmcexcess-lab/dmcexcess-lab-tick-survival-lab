@@ -1,5 +1,5 @@
 extends RefCounted
-class_name GeneratedWorldRuleInstaller
+class_name ProductionWorldRuleInstaller
 
 const BuildingGeneratorClass = preload("res://scripts/generation/buildings/LocalBuildingGenerator.gd")
 const BuildingRequestClass = preload("res://scripts/generation/buildings/BuildingGenerationRequest.gd")
@@ -8,20 +8,8 @@ const EnvironmentCatalogClass = preload("res://scripts/generation/areas/Environm
 const SURVIVOR: StringName = &"actor.survivor"
 const BASE_WALK_TICKS: int = 10
 
-const ENVIRONMENT_GROUND_KEYS: Array[String] = [
-    "base_ground", "road_ground", "road_surface_ground",
-    "road_centerline_horizontal", "road_centerline_vertical",
-    "local_road_ground", "driveway_ground", "field_ground",
-]
-const EXTRA_WALKABLE_TERRAIN: Array[StringName] = [
-    &"ground.road", &"ground.road_plain", &"ground.sidewalk",
-    &"ground.dirt_road", &"ground.road_white_line_h", &"ground.road_white_line_v",
-    &"ground.parking", &"ground.parking_v", &"ground.crosswalk_h", &"ground.crosswalk_v",
-    &"ground.gravel", &"ground.shoulder_gravel",
-    &"ground.shore_sand", &"ground.shore_n", &"ground.shore_e", &"ground.shore_s", &"ground.shore_w",
-    &"ground.shore_ne", &"ground.shore_es", &"ground.shore_sw", &"ground.shore_wn",
-    &"ground.shore_nes", &"ground.shore_wne", &"ground.shore_swn", &"ground.shore_esw", &"ground.shore_all",
-]
+const ENVIRONMENT_GROUND_KEYS: Array[String] = ["base_ground", "road_ground", "road_surface_ground", "road_centerline_horizontal", "road_centerline_vertical", "local_road_ground", "driveway_ground", "field_ground"]
+const EXTRA_WALKABLE_TERRAIN: Array[StringName] = [&"ground.road", &"ground.road_plain", &"ground.sidewalk", &"ground.dirt_road", &"ground.road_white_line_h", &"ground.road_white_line_v", &"ground.parking", &"ground.parking_v", &"ground.crosswalk_h", &"ground.crosswalk_v", &"ground.gravel", &"ground.shoulder_gravel", &"ground.shore_sand", &"ground.shore_n", &"ground.shore_e", &"ground.shore_s", &"ground.shore_w", &"ground.shore_ne", &"ground.shore_es", &"ground.shore_sw", &"ground.shore_wn", &"ground.shore_nes", &"ground.shore_wne", &"ground.shore_swn", &"ground.shore_esw", &"ground.shore_all"]
 const BLOCKED_TERRAIN: Array[StringName] = [&"ground.water_ocean", &"ground.water_river"]
 
 func install(collision_catalog: CollisionCatalog, traversal_policy: MovementTraversalPolicy) -> Dictionary:
