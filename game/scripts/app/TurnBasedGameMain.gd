@@ -27,6 +27,13 @@ func _boot_production_world() -> bool:
     _simple_turns.action_resolved.connect(Callable(_hud, "present_action_result"))
     _simple_turns.action_busy_changed.connect(_on_player_action_busy_changed)
     _simple_turns.turn_completed.connect(_on_simple_turn_completed)
+    var legacy_submit := Callable(_controller, "submit_intent")
+    if _keyboard.action_intent.is_connected(legacy_submit):
+        _keyboard.action_intent.disconnect(legacy_submit)
+    if _controls.action_intent.is_connected(legacy_submit):
+        _controls.action_intent.disconnect(legacy_submit)
+    _keyboard.action_intent.connect(_on_turn_intent)
+    _controls.action_intent.connect(_on_turn_intent)
     return true
 
 func _hydrate_simple_local_infected() -> bool:
@@ -62,11 +69,9 @@ func _clear_actor_cell_near(origin: Vector2i) -> Vector2i:
                     return cell
     return INVALID_CELL
 
-func _route_player_intent(intent: StringName) -> void:
+func _on_turn_intent(intent: StringName) -> void:
     if TurnIntents.is_movement(intent) and _simple_turns != null:
         _simple_turns.submit_intent(intent)
-        return
-    super._route_player_intent(intent)
 
 func _on_simple_turn_completed(_turn_number: int, _active_actor_count: int) -> void:
     var player := _world.placement(WorldBootstrapClass.PLAYER_ID)
