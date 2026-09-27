@@ -49,12 +49,14 @@ func _hydrate_simple_local_infected() -> bool:
         if _simple_infected_ids.size() >= SIMPLE_INFECTED_COUNT:
             break
         var actor_id := String(record.get("resident_id", ""))
-        var home_cell: Vector2i = record.get("home_cell", INVALID_CELL)
-        if actor_id.is_empty() or home_cell == INVALID_CELL or _world.has_entity(actor_id):
+        if actor_id.is_empty() or _world.has_entity(actor_id):
             continue
-        var spawn_cell := _clear_actor_cell_near(home_cell)
+        # Only the active neighborhood is materialized in the simple turn game.
+        # Population identity still comes from the procedural plan; placement is
+        # local so boot work stays bounded instead of probing the whole island.
+        var spawn_cell := _clear_actor_cell_near(player.anchor)
         if spawn_cell == INVALID_CELL:
-            continue
+            break
         if _world_mutations.create_entity(&"actor.survivor", actor_id) != actor_id:
             continue
         if not _world_mutations.set_placement(actor_id, Layers.Channel.ACTOR, spawn_cell, Facing.Value.SOUTH, Footprint.single_cell()):
@@ -64,10 +66,10 @@ func _hydrate_simple_local_infected() -> bool:
     return not _simple_infected_ids.is_empty()
 
 func _clear_actor_cell_near(origin: Vector2i) -> Vector2i:
-    for radius in range(0, SIMPLE_INFECTED_SEARCH_RADIUS + 1):
+    for radius in range(2, SIMPLE_INFECTED_SEARCH_RADIUS + 1):
         for y in range(-radius, radius + 1):
             for x in range(-radius, radius + 1):
-                if radius > 0 and absi(x) != radius and absi(y) != radius:
+                if absi(x) != radius and absi(y) != radius:
                     continue
                 var cell := origin + Vector2i(x, y)
                 if _spatial_query.has_terrain(cell) and _spatial_query.query_cell(cell, "", true).is_clear():
