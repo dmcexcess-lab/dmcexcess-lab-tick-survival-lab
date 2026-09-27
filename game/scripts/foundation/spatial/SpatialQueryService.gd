@@ -2,41 +2,47 @@ class_name SpatialQueryService
 extends RefCounted
 
 ## Canonical read-only spatial query facade used by gameplay.
-## SpatialModel owns the implementation; this service keeps callers on one stable API.
+## WorldState owns placements/occupancy; this service exposes stable spatial reads.
 
-var _model: SpatialModel
+var _world: WorldState
 
 
-func _init(model: SpatialModel) -> void:
-	_model = model
+func _init(world: WorldState) -> void:
+	_world = world
 
 
 func query_entity_footprint(entity_id: String) -> Dictionary:
-	if _model == null or not _model.has_method("query_entity_footprint"):
+	if _world == null or not _world.has_placement(entity_id):
 		return {}
-	var result: Variant = _model.call("query_entity_footprint", entity_id)
-	return result as Dictionary if result is Dictionary else {}
+	var placement: WorldPlacement = _world.placement(entity_id)
+	if placement == null:
+		return {}
+	return {
+		"entity_id": entity_id,
+		"anchor": placement.anchor,
+		"facing": placement.facing,
+		"channel": placement.channel,
+		"cells": placement.world_cells(),
+	}
 
 
 func query_tile_occupants(tile: Vector2i) -> Array[String]:
-	if _model == null or not _model.has_method("query_tile_occupants"):
+	if _world == null:
 		return []
-	var raw: Variant = _model.call("query_tile_occupants", tile)
-	var result: Array[String] = []
-	if raw is Array:
-		for value: Variant in raw:
-			result.append(str(value))
-	return result
+	return _world.entities_at(tile)
 
 
 func query_entities_in_rect(rect: Rect2i) -> Array[String]:
-	if _model == null or not _model.has_method("query_entities_in_rect"):
-		return []
-	var raw: Variant = _model.call("query_entities_in_rect", rect)
 	var result: Array[String] = []
-	if raw is Array:
-		for value: Variant in raw:
-			result.append(str(value))
+	if _world == null or rect.size.x <= 0 or rect.size.y <= 0:
+		return result
+	var seen: Dictionary = {}
+	for y: int in range(rect.position.y, rect.end.y):
+		for x: int in range(rect.position.x, rect.end.x):
+			for entity_id: String in _world.entities_at(Vector2i(x, y)):
+				if not seen.has(entity_id):
+					seen[entity_id] = true
+					result.append(entity_id)
 	return result
 
 
