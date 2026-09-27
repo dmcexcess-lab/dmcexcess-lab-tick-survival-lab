@@ -4,10 +4,6 @@ class_name GeneratedIslandCritiqueFixture
 const Facing = preload("res://scripts/foundation/spatial/SpatialFacing.gd")
 const Footprint = preload("res://scripts/foundation/spatial/SpatialFootprint.gd")
 const Layers = preload("res://scripts/foundation/spatial/SpatialLayer.gd")
-const WorldStateClass = preload("res://scripts/foundation/world/WorldState.gd")
-const WorldMutationClass = preload("res://scripts/foundation/world/WorldMutationService.gd")
-const DoorStateClass = preload("res://scripts/simulation/doors/DoorStateStore.gd")
-const DoorMutationClass = preload("res://scripts/simulation/doors/DoorStateMutationService.gd")
 const GlobalFixture = preload("res://scripts/demo/GlobalWorldPlanFixture.gd")
 const GlobalSeed = preload("res://scripts/generation/world/GlobalWorldSeed.gd")
 const GlobalRequestClass = preload("res://scripts/generation/world/GlobalWorldGenerationRequest.gd")
@@ -38,7 +34,6 @@ const STREAM_ACTIVE_RADIUS: int = 1
 const WORLD_SEED_OVERRIDE_ENV: String = "TICK_LAB_WORLD_SEED"
 const MAX_WORLD_SEED_ATTEMPTS: int = 128
 
-# Keep the current System-24 DEV source identity for the spawn-area loot bridge.
 const LOOT_SOURCE_KEY: String = "dev.rural_crossroads"
 const LOOT_SOURCE_KIND: StringName = &"dev_area"
 const LOOT_SOURCE_ID: String = "rural_crossroads"
@@ -57,12 +52,7 @@ static func generate_global_plan(seed: int = GlobalFixture.SEED) -> GeneratedGlo
     var candidate_seed: int = requested_seed
     var last_failure: String = "unknown"
     for attempt: int in range(MAX_WORLD_SEED_ATTEMPTS):
-        var request := GlobalRequestClass.new(
-            GlobalFixture.WORLD_ID,
-            candidate_seed,
-            AREA_BOUNDS,
-            GlobalProfilesClass.TEMPERATE_ISLAND_REGION
-        )
+        var request := GlobalRequestClass.new(GlobalFixture.WORLD_ID, candidate_seed, AREA_BOUNDS, GlobalProfilesClass.TEMPERATE_ISLAND_REGION)
         var plan: GeneratedGlobalWorldPlan = IslandPlannerClass.new().generate(request)
         if plan != null and plan.is_generated():
             if candidate_seed != requested_seed:
@@ -75,10 +65,7 @@ static func generate_global_plan(seed: int = GlobalFixture.SEED) -> GeneratedGlo
             if last_failure.is_empty():
                 last_failure = "invalid_plan"
         candidate_seed = _next_world_seed(candidate_seed)
-    push_error(
-        "GeneratedIslandCritiqueFixture: exhausted %d world-seed attempts from %d; last_failure=%s"
-        % [MAX_WORLD_SEED_ATTEMPTS, requested_seed, last_failure]
-    )
+    push_error("GeneratedIslandCritiqueFixture: exhausted %d world-seed attempts from %d; last_failure=%s" % [MAX_WORLD_SEED_ATTEMPTS, requested_seed, last_failure])
     return null
 
 static func generate_plan(seed: int = GlobalFixture.SEED) -> GeneratedAreaPlan:
@@ -96,15 +83,7 @@ static func generated_building_plans(seed: int = -1) -> Array[GeneratedBuildingP
         return []
     return AreaMaterializerClass.new().generated_building_plans(plan)
 
-static func build(
-    world: WorldState,
-    mutations: WorldMutationService,
-    collision_catalog: CollisionCatalog,
-    traversal_policy: MovementTraversalPolicy,
-    door_state: DoorStateStore,
-    door_mutations: DoorStateMutationService,
-    seed_override: int = -1
-) -> bool:
+static func build(world: WorldState, mutations: WorldMutationService, collision_catalog: CollisionCatalog, traversal_policy: MovementTraversalPolicy, door_state: DoorStateStore, door_mutations: DoorStateMutationService, seed_override: int = -1) -> bool:
     _global_plan = null
     _central_area_plan = null
     _registry = null
@@ -130,8 +109,7 @@ static func build(
     var global_plan: GeneratedGlobalWorldPlan = resolved.get("global_plan") as GeneratedGlobalWorldPlan
     var central_plan: GeneratedAreaPlan = resolved.get("central_plan") as GeneratedAreaPlan
     var player_start: Vector2i = resolved.get("player_start", Vector2i(-1, -1))
-    if world_seed <= 0 or global_plan == null or not global_plan.is_generated() \
-        or central_plan == null or not central_plan.is_generated() or player_start.x < 0:
+    if world_seed <= 0 or global_plan == null or not global_plan.is_generated() or central_plan == null or not central_plan.is_generated() or player_start.x < 0:
         push_error("GeneratedIslandCritiqueFixture: resolved playable-world candidate was invalid")
         return false
 
@@ -142,39 +120,25 @@ static func build(
         push_error("GeneratedIslandCritiqueFixture: island surface source catalog failed")
         return false
     var surface_source := IslandSurfaceSourceClass.new(registry, surface_catalog)
-    var materialization := MaterializationClass.new(
-        world,
-        mutations,
-        door_state,
-        door_mutations,
-        registry,
-        area_source,
-        null,
-        [surface_source]
-    )
+    var materialization := MaterializationClass.new(world, mutations, door_state, door_mutations, registry, area_source, null, [surface_source])
     if not materialization.is_ready():
         return false
     var grid := StreamingGridClass.new(global_plan.bounds, STREAM_REGION_SIZE)
     var streaming := StreamingClass.new(global_plan, grid, materialization, null, STREAM_ACTIVE_RADIUS)
     if not streaming.is_ready():
         return false
+
+    # Materialize the initial neighborhood exactly once into authoritative WHAT.
+    # The old playable-seed preflight fully materialized an equivalent disposable
+    # probe world immediately before this, roughly doubling peak bootstrap memory.
     var initial: Dictionary = streaming.update_focus(player_start)
     if not bool(initial.get("ok", false)):
-        push_error(
-            "GeneratedIslandCritiqueFixture: resolved seed %d passed playable preflight but initial streaming failed: %s"
-            % [world_seed, String(initial.get("failure_reason", "unknown"))]
-        )
+        push_error("GeneratedIslandCritiqueFixture: resolved seed %d initial streaming failed: %s" % [world_seed, String(initial.get("failure_reason", "unknown"))])
         return false
 
     if mutations.create_entity(SURVIVOR, PLAYER_ID) != PLAYER_ID:
         return false
-    if not mutations.set_placement(
-        PLAYER_ID,
-        Layers.Channel.ACTOR,
-        player_start,
-        Facing.Value.NORTH,
-        Footprint.single_cell()
-    ):
+    if not mutations.set_placement(PLAYER_ID, Layers.Channel.ACTOR, player_start, Facing.Value.NORTH, Footprint.single_cell()):
         return false
 
     var focus_adapter := StreamingFocusClass.new(world, streaming, PLAYER_ID)
@@ -220,16 +184,9 @@ static func player_start_for_plan(plan: GeneratedAreaPlan) -> Vector2i:
     var center: Vector2i = _central_intersection_cell(plan)
     if center.x < 0:
         return Vector2i(-1, -1)
-    var candidates: Array[Vector2i] = [
-        center + Vector2i(0, 4),
-        center + Vector2i(4, 0),
-        center + Vector2i(0, -4),
-        center + Vector2i(-4, 0),
-    ]
+    var candidates: Array[Vector2i] = [center + Vector2i(0, 4), center + Vector2i(4, 0), center + Vector2i(0, -4), center + Vector2i(-4, 0)]
     for candidate: Vector2i in candidates:
-        if plan.bounds.has_point(candidate) \
-            and _cell_in_inherited_road(plan, candidate) \
-            and not _outdoor_prop_at(plan, candidate):
+        if plan.bounds.has_point(candidate) and _cell_in_inherited_road(plan, candidate) and not _outdoor_prop_at(plan, candidate):
             return candidate
     if plan.bounds.has_point(center) and _cell_in_inherited_road(plan, center) and not _outdoor_prop_at(plan, center):
         return center
@@ -251,9 +208,6 @@ static func _choose_new_game_seed(seed_override: int) -> int:
         var parsed: int = int(environment_override) & GlobalSeed.HASH_MASK
         if parsed > 0:
             return parsed
-    # CI/headless runs need deterministic reproducibility. Interactive browser/desktop
-    # launches intentionally choose a fresh seed once, then the whole generation stack
-    # remains deterministic from that one authoritative new-game seed.
     if DisplayServer.get_name() == "headless":
         return GlobalFixture.SEED
     var rng := RandomNumberGenerator.new()
@@ -267,12 +221,7 @@ static func _resolve_playable_boot(seed: int) -> Dictionary:
     var candidate_seed: int = requested_seed
     var last_failure: String = "unknown"
     for attempt: int in range(MAX_WORLD_SEED_ATTEMPTS):
-        var request := GlobalRequestClass.new(
-            GlobalFixture.WORLD_ID,
-            candidate_seed,
-            AREA_BOUNDS,
-            GlobalProfilesClass.TEMPERATE_ISLAND_REGION
-        )
+        var request := GlobalRequestClass.new(GlobalFixture.WORLD_ID, candidate_seed, AREA_BOUNDS, GlobalProfilesClass.TEMPERATE_ISLAND_REGION)
         var global_plan: GeneratedGlobalWorldPlan = IslandPlannerClass.new().generate(request)
         if global_plan == null or not global_plan.is_generated():
             last_failure = "null_plan" if global_plan == null else String(global_plan.failure_reason)
@@ -292,64 +241,19 @@ static func _resolve_playable_boot(seed: int) -> Dictionary:
             candidate_seed = _next_world_seed(candidate_seed)
             continue
 
-        var probe: Dictionary = _probe_initial_streaming(global_plan, player_start)
-        if bool(probe.get("ok", false)):
-            if candidate_seed != requested_seed:
-                print(
-                    "PLAYABLE_ISLAND_SEED_REROLL requested=%d resolved=%d attempts=%d"
-                    % [requested_seed, candidate_seed, attempt + 1]
-                )
-            return {
-                "ok": true,
-                "seed": candidate_seed,
-                "global_plan": global_plan,
-                "central_plan": central_plan,
-                "player_start": player_start,
-                "failure_reason": "",
-            }
-        last_failure = String(probe.get("failure_reason", "initial_streaming_failed"))
-        candidate_seed = _next_world_seed(candidate_seed)
-
-    push_error(
-        "GeneratedIslandCritiqueFixture: exhausted %d playable world-seed attempts from %d; last_failure=%s"
-        % [MAX_WORLD_SEED_ATTEMPTS, requested_seed, last_failure]
-    )
-    return {"ok": false, "failure_reason": last_failure}
-
-static func _probe_initial_streaming(global_plan: GeneratedGlobalWorldPlan, player_start: Vector2i) -> Dictionary:
-    var probe_world: WorldState = WorldStateClass.new()
-    var probe_mutations: WorldMutationService = WorldMutationClass.new(probe_world)
-    var probe_door_state: DoorStateStore = DoorStateClass.new()
-    var probe_door_mutations: DoorStateMutationService = DoorMutationClass.new(probe_door_state, probe_world)
-    var registry := RegistryClass.new()
-    var area_source := AreaSourceClass.new(registry)
-    var surface_catalog := IslandSurfaceCatalogClass.new(global_plan)
-    if not surface_catalog.is_ready():
-        return {"ok": false, "failure_reason": "island_surface_source_catalog_failed"}
-    var surface_source := IslandSurfaceSourceClass.new(registry, surface_catalog)
-    var materialization := MaterializationClass.new(
-        probe_world,
-        probe_mutations,
-        probe_door_state,
-        probe_door_mutations,
-        registry,
-        area_source,
-        null,
-        [surface_source]
-    )
-    if not materialization.is_ready():
-        return {"ok": false, "failure_reason": "materialization_not_ready"}
-    var grid := StreamingGridClass.new(global_plan.bounds, STREAM_REGION_SIZE)
-    var streaming := StreamingClass.new(global_plan, grid, materialization, null, STREAM_ACTIVE_RADIUS)
-    if not streaming.is_ready():
-        return {"ok": false, "failure_reason": "streaming_not_ready"}
-    var initial: Dictionary = streaming.update_focus(player_start)
-    if not bool(initial.get("ok", false)):
+        if candidate_seed != requested_seed:
+            print("PLAYABLE_ISLAND_SEED_REROLL requested=%d resolved=%d attempts=%d" % [requested_seed, candidate_seed, attempt + 1])
         return {
-            "ok": false,
-            "failure_reason": "initial_streaming_failed:%s" % String(initial.get("failure_reason", "unknown")),
+            "ok": true,
+            "seed": candidate_seed,
+            "global_plan": global_plan,
+            "central_plan": central_plan,
+            "player_start": player_start,
+            "failure_reason": "",
         }
-    return {"ok": true, "failure_reason": ""}
+
+    push_error("GeneratedIslandCritiqueFixture: exhausted %d playable world-seed attempts from %d; last_failure=%s" % [MAX_WORLD_SEED_ATTEMPTS, requested_seed, last_failure])
+    return {"ok": false, "failure_reason": last_failure}
 
 static func _next_world_seed(seed: int) -> int:
     if seed >= GlobalSeed.HASH_MASK:
@@ -408,7 +312,4 @@ static func _window_origin_for_cell(cell: Vector2i) -> Vector2i:
     var desired := cell - Vector2i(RENDER_WINDOW_SIZE.x / 2, RENDER_WINDOW_SIZE.y / 2)
     var bounds: Rect2i = render_bounds()
     var max_origin := bounds.position + bounds.size - RENDER_WINDOW_SIZE
-    return Vector2i(
-        clampi(desired.x, bounds.position.x, max_origin.x),
-        clampi(desired.y, bounds.position.y, max_origin.y)
-    )
+    return Vector2i(clampi(desired.x, bounds.position.x, max_origin.x), clampi(desired.y, bounds.position.y, max_origin.y))
