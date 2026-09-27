@@ -16,21 +16,25 @@ Do not create a replacement simulation framework.
 
 - `gameplay.tscn -> TurnBasedGameMain` is canonical.
 - `ProductionWorldBootstrap` owns real procedural generation/materialization/streaming; production never depends on demo fixtures.
-- `SimpleTurnController` owns the migrated unmounted movement route only.
-- One movement input changes the player placement at most once.
-- Only infected within the bounded active radius receive individual simple movement after a successful player movement action.
-- Canonical movement does not execute `TickKernel`, `MovementActionService`, WHEN queues or simultaneous resolution.
-- Streaming focus, perception and rendering follow authoritative placement after the simple turn.
+- `SimpleTurnController` owns the migrated unmounted movement route.
+- `WorldState` owns authoritative placements and exposes the narrow ordinary `move_entity()` write used by simple turns.
+- `SimpleTurnController` checks candidate footprint cells directly against `WorldState` terrain/occupancy plus the existing collision catalog/overrides; it no longer calls `SpatialQueryService` or `WorldMutationService` for canonical movement.
+- One movement input changes the player placement at most once. Zombies resolve sequentially against current occupancy.
+- Only infected within the bounded 24-cell active radius receive individual simple movement after a successful player action.
+- Canonical movement does not execute `TickKernel`, `MovementActionService`, WHEN queues, generalized spatial-query execution or simultaneous resolution.
+- Streaming focus, perception and rendering continue to follow authoritative placement after the simple turn.
 
 ## Transitional boundary
 
-The old runtime remains temporarily instantiated because combat, contextual interactions, long actions and durable persistence still depend on portions of it. This is migration debt, not protected architecture.
+The old runtime remains temporarily instantiated because generation/bootstrap, combat, contextual interactions, long actions, vehicles and durable persistence still depend on portions of it. This is migration debt, not protected architecture.
+
+`SpatialQueryService` and `WorldMutationService` therefore still exist for unmigrated routes and bootstrap/hydration, but they are not dependencies of the canonical simple-turn movement controller.
 
 Rules while migrating:
 
 - no new dependency on TickKernel/WHEN for migrated routes;
 - no WHERE 2.0 / WHAT 2.0 / WHEN 2.0;
-- plain world state and direct spatial queries are preferred;
+- plain world state and direct local spatial questions are preferred;
 - delete legacy owners/adapters once their final player-facing route migrates;
 - do not preserve architecture-only behavior at the expense of responsiveness;
 - only locally relevant actors receive individual turns;
