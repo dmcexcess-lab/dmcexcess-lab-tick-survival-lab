@@ -1,6 +1,7 @@
 extends SceneTree
 
 const Bootstrap = preload("res://scripts/generation/integration/ProductionWorldBootstrap.gd")
+const GridClass = preload("res://scripts/streaming/StreamingRegionGrid.gd")
 const TEST_SEED: int = 20001
 
 func _initialize() -> void:
@@ -40,11 +41,8 @@ func _run() -> void:
         _fail("authoritative WHAT unavailable")
         return
     var placement: WorldPlacement = world.placement(Bootstrap.PLAYER_ID)
-    if placement == null:
-        _fail("production player missing")
-        return
-    if Bootstrap.PLAYER_ID.contains("demo"):
-        _fail("production player id is demo-owned")
+    if placement == null or Bootstrap.PLAYER_ID.contains("demo"):
+        _fail("production player missing or demo-owned")
         return
     var plan: GeneratedGlobalWorldPlan = Bootstrap.global_plan()
     if plan == null or not plan.is_generated() or not plan.bounds.has_point(placement.anchor):
@@ -62,7 +60,7 @@ func _run() -> void:
     if int(initial.get("active_region_count", -1)) != 1:
         _fail("bounded initial materialization lost: %s" % initial)
         return
-    var grid := StreamingRegionGrid.new(plan.bounds, Bootstrap.STREAM_REGION_SIZE)
+    var grid := GridClass.new(plan.bounds, Bootstrap.STREAM_REGION_SIZE)
     var current_region: Vector2i = grid.region_for_cell(placement.anchor)
     var neighbor_cell: Vector2i = placement.anchor + Vector2i(Bootstrap.STREAM_REGION_SIZE.x, 0)
     if plan.bounds.has_point(neighbor_cell):
@@ -70,8 +68,7 @@ func _run() -> void:
         if not bool(moved.get("ok", false)):
             _fail("adjacent production region did not stream: %s" % String(moved.get("failure_reason", "unknown")))
             return
-        var next_region: Vector2i = grid.region_for_cell(neighbor_cell)
-        if next_region == current_region:
+        if grid.region_for_cell(neighbor_cell) == current_region:
             _fail("streaming transition probe did not cross a region")
             return
     print("PRODUCTION_WORLD_BOOTSTRAP_OK seed=%d player=%s spawn=%s active_regions=1 render_bounds=%s demo_free=true" % [Bootstrap.active_seed(), Bootstrap.PLAYER_ID, placement.anchor, Bootstrap.render_bounds()])
