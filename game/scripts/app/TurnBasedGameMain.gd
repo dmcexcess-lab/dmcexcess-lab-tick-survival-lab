@@ -3,7 +3,6 @@ class_name TurnBasedGameMain
 
 const SimpleTurnControllerClass = preload("res://scripts/player/SimpleTurnController.gd")
 const TurnIntents = preload("res://scripts/input/PlayerActionIntent.gd")
-const PopulationProjectionClass = preload("res://scripts/simulation/population/PopulationResidentProjection.gd")
 const Facing = preload("res://scripts/foundation/spatial/SpatialFacing.gd")
 const Footprint = preload("res://scripts/foundation/spatial/SpatialFootprint.gd")
 const Layers = preload("res://scripts/foundation/spatial/SpatialLayer.gd")
@@ -31,32 +30,19 @@ func _boot_production_world() -> bool:
     return true
 
 func _hydrate_simple_local_infected() -> bool:
-    var plan: GeneratedGlobalWorldPlan = WorldBootstrapClass.global_plan()
     var player: WorldPlacement = _world.placement(WorldBootstrapClass.PLAYER_ID)
-    if plan == null or not plan.is_generated() or player == null:
+    if player == null:
         return false
-    var population_plan := {
-        "ok": true,
-        "settlements": plan.population_settlements.duplicate(true),
-        "resident_population": plan.resident_population,
-        "infected_population": plan.infected_population,
-        "survivor_population": plan.survivor_population,
-        "local_area_manifest": plan.local_area_manifest.duplicate(true),
-    }
-    var projection = PopulationProjectionClass.new()
-    var candidates: Array[Dictionary] = projection.infected_near(population_plan, WorldBootstrapClass.loot_source_id(), player.anchor)
-    for record: Dictionary in candidates:
-        if _simple_infected_ids.size() >= SIMPLE_INFECTED_COUNT:
-            break
-        var actor_id := String(record.get("resident_id", ""))
-        if actor_id.is_empty() or _world.has_entity(actor_id):
-            continue
-        # Only the active neighborhood is materialized in the simple turn game.
-        # Population identity still comes from the procedural plan; placement is
-        # local so boot work stays bounded instead of probing the whole island.
+    # Slice 1 materializes only a tiny active-neighborhood cohort. Population-
+    # density spawning is an existing game feature to reconnect later; it must not
+    # make the foundational turn loop scan or hydrate the persistent island.
+    for index in range(SIMPLE_INFECTED_COUNT):
         var spawn_cell := _clear_actor_cell_near(player.anchor)
         if spawn_cell == INVALID_CELL:
             break
+        var actor_id := "infected.local.%03d" % (index + 1)
+        if _world.has_entity(actor_id):
+            continue
         if _world_mutations.create_entity(&"actor.survivor", actor_id) != actor_id:
             continue
         if not _world_mutations.set_placement(actor_id, Layers.Channel.ACTOR, spawn_cell, Facing.Value.SOUTH, Footprint.single_cell()):
