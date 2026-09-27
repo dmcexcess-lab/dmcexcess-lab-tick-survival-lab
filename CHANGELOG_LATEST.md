@@ -2,6 +2,17 @@
 
 This compact ledger records the newest executable work. `CHANGELOG.md` remains the historical archive.
 
+## Turn-based rewrite Slice 1 — simple production turn spine — 2026-09-27
+
+- Project direction changed deliberately: preserve the open procedural zombie-survival game while retiring the experimental tick/WHERE/WHAT/WHEN execution architecture route by route.
+- Canonical `gameplay.tscn` now boots through `TurnBasedGameMain`.
+- Unmounted player movement bypasses `PlayerActionController`, `MovementActionService` and `TickKernel` execution. One movement input performs one ordinary placement mutation.
+- `SimpleTurnController` gives only infected within a 24-cell active radius at most one ordinary adjacent movement after a successful player action, then immediately returns control.
+- Distant infected receive no individual turn. The persistent procedural world is not iterated as a simulation.
+- Production streaming focus, perception and visual flush follow the completed simple turn.
+- Legacy systems remain temporarily booted for unmigrated combat/interactions/persistence; they are not executed underneath the new movement route.
+- Focused run `36352629634`: **SUCCESS**. It proves two consecutive player turns, exact one-tile movement, bounded infected work, distant infected inactivity and `TickKernel` world-tick delta `0` across the simple movement route.
+
 ## Production infrastructure reservation repair — 2026-09-27
 
 - Real iPhone/Safari NEW GAME reached production generation and exposed `generation_failed:area.smalltown.center.001:infrastructure_reservation_unresolved...`.
