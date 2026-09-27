@@ -24,12 +24,25 @@ func _boot_production_world() -> bool:
     _simple_turns.turn_completed.connect(_on_simple_turn_completed)
     return true
 
-# Utilities are an unmigrated legacy gameplay route. Slice 1 deliberately keeps
-# their tick-driven runtime out of canonical turn-game startup instead of making
-# NEW GAME depend on old wire projection, appliance clocks, and TickKernel hooks.
-# The feature code remains for the later utility migration slice.
+# Utilities are not migrated yet, but later gameplay boot layers already consume
+# their logical power/water truth. Keep that plain state and omit the legacy
+# tick-driven physical-wire/appliance runtime from Slice 1 startup.
 func _boot_utility_runtime() -> bool:
-    return true
+    var plan: GeneratedGlobalWorldPlan = WorldBootstrapClass.global_plan()
+    if plan == null or not plan.is_generated():
+        return false
+    _local_power_topology = PowerTopologyPlannerClass.new().plan(plan)
+    if not bool(_local_power_topology.get("ok", false)):
+        return false
+    _utilities = UtilityStateClass.new(_local_power_topology)
+    if not _utilities.initialize_from_plan(plan):
+        return false
+    var player: WorldPlacement = _world.placement(WorldBootstrapClass.PLAYER_ID)
+    if player == null:
+        return false
+    _central_power_service_id = _utilities.power_service_for_cell(player.anchor)
+    _central_water_service_id = _utilities.water_service_for_cell(player.anchor)
+    return not _central_power_service_id.is_empty() and not _central_water_service_id.is_empty()
 
 func _route_player_intent(intent: StringName) -> void:
     if TurnIntents.is_movement(intent) and _simple_turns != null and (_vehicle_controller == null or not _vehicle_controller.is_mounted()):
