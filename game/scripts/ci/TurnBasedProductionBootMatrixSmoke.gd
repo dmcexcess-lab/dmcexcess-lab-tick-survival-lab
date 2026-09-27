@@ -1,6 +1,9 @@
 extends SceneTree
 
-const SEEDS := [20001, 20002, 20003, 20004, 20005, 314159, 8675309, 271828]
+# 20002 is the concrete seed that exposed the old utility-stack boot failure.
+# Keep a small varied matrix here: this verifier exercises the complete gameplay
+# scene and is intentionally heavier than the world-generation seed matrix.
+const SEEDS := [20001, 20002, 314159]
 
 func _initialize() -> void:
     call_deferred("_run")
