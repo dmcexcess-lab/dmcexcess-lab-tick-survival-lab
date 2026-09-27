@@ -76,14 +76,14 @@ func _run() -> void:
         _fail("bounded initial materialization lost: %s" % initial)
         return
     var grid := GridClass.new(plan.bounds, Bootstrap.STREAM_REGION_SIZE)
-    var current_region: Vector2i = grid.region_for_cell(placement.anchor)
+    var current_region: Vector2i = grid.region_coord_for_cell(placement.anchor)
     var neighbor_cell: Vector2i = placement.anchor + Vector2i(Bootstrap.STREAM_REGION_SIZE.x, 0)
     if plan.bounds.has_point(neighbor_cell):
         var moved: Dictionary = streaming.update_focus(neighbor_cell)
         if not bool(moved.get("ok", false)):
             _fail("adjacent production region did not stream: %s" % String(moved.get("failure_reason", "unknown")))
             return
-        if grid.region_for_cell(neighbor_cell) == current_region:
+        if grid.region_coord_for_cell(neighbor_cell) == current_region:
             _fail("streaming transition probe did not cross a region")
             return
     if not game.has_method("durable_session_snapshot"):
