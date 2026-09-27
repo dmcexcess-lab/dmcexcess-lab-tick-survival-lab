@@ -20,11 +20,14 @@ jobs:
       - name: Build script class cache
         working-directory: game
         run: godot --headless --editor --quit
-      - name: Verify full canonical production boot across seeds
+      - name: Verify full canonical production boot
         working-directory: game
         run: godot --headless --script res://scripts/ci/TurnBasedProductionBootMatrixSmoke.gd
-      - name: Guard simple movement from legacy tick execution
+      - name: Guard simple turn game from legacy simulation execution
         run: |
-          ! grep -q "TickKernel" game/scripts/player/SimpleTurnController.gd
-          ! grep -q "MovementActionService" game/scripts/player/SimpleTurnController.gd
-          ! grep -q "run_next_batch\|run_until_stop" game/scripts/player/SimpleTurnController.gd
+          grep -q '^extends GameMain$' game/scripts/app/TurnBasedGameMain.gd
+          ! grep -q 'EnvironmentalPressureGameMain' game/scripts/app/TurnBasedGameMain.gd
+          ! grep -q 'UtilityGameMain' game/scripts/app/TurnBasedGameMain.gd
+          ! grep -q 'TickKernel' game/scripts/player/SimpleTurnController.gd
+          ! grep -q 'MovementActionService' game/scripts/player/SimpleTurnController.gd
+          ! grep -q 'run_next_batch\|run_until_stop' game/scripts/player/SimpleTurnController.gd
