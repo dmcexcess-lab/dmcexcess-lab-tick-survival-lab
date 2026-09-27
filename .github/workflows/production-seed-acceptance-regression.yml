@@ -1,0 +1,21 @@
+name: Production Seed Acceptance Regression
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Godot
+        uses: chickensoft-games/setup-godot@v2
+        with:
+          version: 4.6.1
+          use-dotnet: false
+          include-templates: false
+      - name: Run production seed acceptance smoke
+        working-directory: game
+        run: godot --headless --path . --script res://scripts/ci/ProductionSeedAcceptanceRegressionSmoke.gd
