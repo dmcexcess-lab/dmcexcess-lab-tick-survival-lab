@@ -24,6 +24,20 @@ func _boot_production_world() -> bool:
     _simple_turns.turn_completed.connect(_on_simple_turn_completed)
     return true
 
+# Slice-1 compatibility boundary: the old physical wire-layout simulation is not
+# part of the new turn spine and must not reject an otherwise playable procedural
+# world. Logical utility state still initializes normally. Physical power/water
+# gameplay is migrated deliberately in its later rewrite slice.
+func _wire_power_infrastructure(plan: GeneratedGlobalWorldPlan) -> bool:
+    if super._wire_power_infrastructure(plan):
+        return true
+    push_warning("TurnBasedGameMain: legacy physical power-line projection unavailable; continuing without local wire geometry")
+    _power_infrastructure = null
+    _power_network = null
+    if _world_view != null:
+        return _world_view.configure_power_infrastructure(_world, [])
+    return true
+
 func _route_player_intent(intent: StringName) -> void:
     if TurnIntents.is_movement(intent) and _simple_turns != null and (_vehicle_controller == null or not _vehicle_controller.is_mounted()):
         _simple_turns.submit_intent(intent)
