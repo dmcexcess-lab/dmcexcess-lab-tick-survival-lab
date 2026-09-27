@@ -17,7 +17,7 @@ func _initialize() -> void:
     _require(source, "_retryable_seed_failure(last_failure)", "retry gate is missing")
     _require(source, "candidate_seed = _next_world_seed(candidate_seed)", "candidate seed does not advance")
     _require(source, "island_population_planning_failed", "local-site generation failures are not accepted as seed-sensitive")
-    _require(source, "invalid_island_world_request", "deterministic configuration rejection is not explicit")
+    _require(source, "return {\"ok\": false, \"seed\": candidate_seed", "non-seed failures do not fail diagnostically")
     if source.contains("scripts/demo") or source.contains("FixtureClass") or source.contains("actor.player.demo"):
         _failures.append("production bootstrap regained demo ownership")
 
