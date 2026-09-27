@@ -64,11 +64,10 @@ func _run() -> void:
         for dx in range(SimpleTurnController.ACTIVE_RADIUS + 1, SimpleTurnController.ACTIVE_RADIUS + 24):
             var candidate := player.anchor + Vector2i(dx, 0)
             var query := spatial.query_entity_footprint(candidate_id, candidate, infected.facing, true)
-            if query != null and query.is_clear():
-                if mutations.set_placement(candidate_id, infected.channel, candidate, infected.facing, infected.footprint, infected.structure_axis):
-                    distant_id = candidate_id
-                    distant_before = candidate
-                    break
+            if query != null and query.is_clear() and mutations.set_placement(candidate_id, infected.channel, candidate, infected.facing, infected.footprint, infected.structure_axis):
+                distant_id = candidate_id
+                distant_before = candidate
+                break
     if distant_id.is_empty():
         _fail("could not establish distant infected bounded-work probe")
         return
@@ -101,7 +100,29 @@ func _run() -> void:
     if streaming == null or not streaming.has_focus():
         _fail("production streaming focus unavailable after turn")
         return
-    print("SIMPLE_TURN_SPINE_OK turns=2 kernel_delta=0 local_actor_actions=%d distant_actor_unchanged=true" % local_actions)
+    var saved_position := world.placement(player_id).anchor
+    var session: Dictionary = game.call("durable_session_snapshot")
+    if session.is_empty():
+        _fail("durable session snapshot unavailable after simple turns")
+        return
     game.queue_free()
+    await process_frame
+    var resumed := scene.instantiate()
+    if resumed == null or not resumed.call("configure_continue_session", session):
+        _fail("Continue session could not be configured")
+        return
+    get_root().add_child(resumed)
+    await process_frame
+    await process_frame
+    if not bool(resumed.call("session_boot_ok")):
+        _fail("Continue failed after simple movement")
+        return
+    var resumed_world: WorldState = resumed.get("_world")
+    var resumed_turns: SimpleTurnController = resumed.call("simple_turn_controller")
+    if resumed_world == null or resumed_turns == null or not resumed_turns.has_control() or resumed_world.placement(player_id).anchor != saved_position:
+        _fail("Continue did not restore moved player into simple turn control")
+        return
+    print("SIMPLE_TURN_SPINE_OK turns=2 kernel_delta=0 local_actor_actions=%d distant_actor_unchanged=true continue=true" % local_actions)
+    resumed.queue_free()
     await process_frame
     quit(0)
