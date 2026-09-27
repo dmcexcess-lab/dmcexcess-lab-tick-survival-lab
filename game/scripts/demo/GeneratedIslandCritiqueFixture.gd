@@ -30,7 +30,10 @@ const SURVIVOR: StringName = &"actor.survivor"
 const CENTRAL_SITE_ID: String = "area.rural.crossroads.001"
 const DINER_ARCHETYPE: StringName = &"commercial.diner.rural_small"
 const STREAM_REGION_SIZE: Vector2i = Vector2i(128, 128)
-const STREAM_ACTIVE_RADIUS: int = 1
+# One 128x128 region already exceeds the 80x96 render window. Keeping only the
+# focus region active avoids materializing a 3x3 (384x384) neighborhood at boot;
+# the existing edge look-ahead prepares the next region before a crossing.
+const STREAM_ACTIVE_RADIUS: int = 0
 const WORLD_SEED_OVERRIDE_ENV: String = "TICK_LAB_WORLD_SEED"
 const MAX_WORLD_SEED_ATTEMPTS: int = 128
 
@@ -128,9 +131,10 @@ static func build(world: WorldState, mutations: WorldMutationService, collision_
     if not streaming.is_ready():
         return false
 
-    # Materialize the initial neighborhood exactly once into authoritative WHAT.
-    # The old playable-seed preflight fully materialized an equivalent disposable
-    # probe world immediately before this, roughly doubling peak bootstrap memory.
+    # Bootstrap only the focus region. The previous radius=1 policy synchronously
+    # materialized nine 128x128 regions before the first playable frame, despite
+    # the renderer showing only 80x96 cells. Existing look-ahead/region crossing
+    # keeps the same procedural world available without that mobile memory peak.
     var initial: Dictionary = streaming.update_focus(player_start)
     if not bool(initial.get("ok", false)):
         push_error("GeneratedIslandCritiqueFixture: resolved seed %d initial streaming failed: %s" % [world_seed, String(initial.get("failure_reason", "unknown"))])
@@ -243,14 +247,7 @@ static func _resolve_playable_boot(seed: int) -> Dictionary:
 
         if candidate_seed != requested_seed:
             print("PLAYABLE_ISLAND_SEED_REROLL requested=%d resolved=%d attempts=%d" % [requested_seed, candidate_seed, attempt + 1])
-        return {
-            "ok": true,
-            "seed": candidate_seed,
-            "global_plan": global_plan,
-            "central_plan": central_plan,
-            "player_start": player_start,
-            "failure_reason": "",
-        }
+        return {"ok": true, "seed": candidate_seed, "global_plan": global_plan, "central_plan": central_plan, "player_start": player_start, "failure_reason": ""}
 
     push_error("GeneratedIslandCritiqueFixture: exhausted %d playable world-seed attempts from %d; last_failure=%s" % [MAX_WORLD_SEED_ATTEMPTS, requested_seed, last_failure])
     return {"ok": false, "failure_reason": last_failure}
