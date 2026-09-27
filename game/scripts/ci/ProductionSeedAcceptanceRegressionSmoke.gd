@@ -12,7 +12,7 @@ func _initialize() -> void:
         _failures.append("production resolver did not recover from structurally invalid seed: %s" % String(resolved.get("failure_reason", "unknown")))
     else:
         var effective_seed: int = int(resolved.get("seed", -1))
-        var plan: GeneratedGlobalWorldPlan = resolved.get("global_plan") as GeneratedGlobalWorldPlan
+        var plan: Variant = resolved.get("global_plan")
         if effective_seed <= 0 or effective_seed == KNOWN_STRUCTURALLY_INVALID_SEED:
             _failures.append("production resolver did not advance to a valid seed")
         elif plan == null or not plan.is_generated() or plan.seed != effective_seed:
