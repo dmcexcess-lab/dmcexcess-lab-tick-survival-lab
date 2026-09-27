@@ -29,18 +29,22 @@ Do not reopen these merely for improvement. A concrete active-play defect may ju
 
 ## Mobile/Safari bootstrap checkpoint
 
-Real iPhone/Safari acceptance after the first bootstrap repair still failed: NEW GAME -> starts loading map -> waits -> Godot loading screen -> startup menu. Treat that as the active release defect until real Safari proves otherwise.
+Real iPhone/Safari has now provided two distinct failure signatures:
 
-Two concrete bootstrap peaks have now been removed/bounded:
+1. Before footprint repairs: NEW GAME -> map loading -> WebKit/Godot restart -> startup menu.
+2. After bounded streaming: NEW GAME returned cleanly to the menu with `gameplay_boot_failed`, proving the browser survived bootstrap far enough for application-level world validation to reject that procedural island.
+
+Three concrete repairs are now present:
 
 1. `_resolve_playable_boot()` no longer fully materializes a disposable initial neighborhood before authoritative materialization.
-2. Production streaming bootstrap no longer synchronously keeps a radius-1 3x3 set of 128x128 regions active before the first playable frame. The focus region alone is active. One 128x128 region already exceeds the 80x96 visible render window; existing look-ahead/region-crossing streaming keeps the same procedural world available as the player moves.
+2. Production streaming bootstrap keeps only the 128x128 focus region active before the first playable frame instead of a 3x3 region neighborhood. The procedural world itself is unchanged and streams normally as the player moves.
+3. NEW GAME now owns conventional bounded procedural-seed recovery. A rejected generated island is freed, a frame is yielded, and a fresh procedural seed is attempted, up to six attempts. Continue/save restoration remains single-attempt and fail-safe; it is never silently rerolled.
 
-This changes representation/scheduling only: world bounds, procedural generation, stable identity and gameplay truth remain unchanged.
+The menu also now distinguishes NEW GAME generation failure from Continue failure instead of labeling both as `Continue failed safely`.
 
-Focused bounded-footprint run `36286982875`: **SUCCESS**, including canonical production boot regression. Existing production bootstrap run `36286982809`: **SUCCESS** on the same head.
+Known diagnostic seed `271828` reaches a materialization/topology rejection; established production seed `20001` boots. This is now explicitly exercised by the focused recovery verifier.
 
-A diagnostic seed (`271828`) exposed a pre-existing utility-topology failure (`Power span cannot be supported`) and was not used as acceptance evidence. The established production seed `20001` boots successfully with the bounded footprint. If future random-seed play exposes that utility-topology failure visibly, repair it as its own concrete generation defect rather than conflating it with WebKit memory pressure.
+Focused/protected run `36287621698`: **SUCCESS**, including rejected-seed -> replacement-seed recovery evidence and canonical production boot regression.
 
 ## Active roadmap phase — expedition + fortified-house loop
 
@@ -61,17 +65,17 @@ A base remains an existing place the player has fortified and supplied.
 
 Current focused verifier/workflow:
 
-- `game/scripts/ci/MobileStreamingFootprintSmoke.gd`
-- `.github/workflows/mobile-streaming-footprint.yml`
+- `game/scripts/ci/NewGameSeedRecoverySmoke.gd`
+- `.github/workflows/new-game-seed-recovery.yml`
 
-The older first-bootstrap verifier/workflow also remains present because repository deletion was unavailable during this repair; it is green on the same head and does not own new production behavior.
+The previous prompt-local bounded-streaming verifier/workflow was retired before this production repair. The older first-bootstrap verifier/workflow remains as historical protected coverage.
 
-The next code-changing operation should retire prompt-local bootstrap verification and create fresh verification scoped to the actual next operation.
+The next code-changing operation should retire this prompt-local recovery verifier/workflow and create fresh verification scoped to the actual next operation.
 
 ## NEXT
 
-**Retry NEW GAME on real iPhone/Safari after the bounded-streaming Pages deployment.**
+**Retry NEW GAME on real iPhone/Safari after the seed-recovery Pages deployment.**
 
-If it reaches the playable map without WebKit/Godot restarting, close the mobile bootstrap defect and proceed to Phase 4 independent shelter utilities, starting from existing portable-generator owners unless targeted inspection finds an earlier missing power/water link.
+If it reaches the playable map without restart or `gameplay_boot_failed`, close the mobile bootstrap defect and proceed to Phase 4 independent shelter utilities, starting from existing portable-generator owners unless targeted inspection finds an earlier missing power/water link.
 
-If Safari still restarts, keep this defect active and diagnose the next measured/proven bootstrap peak. Do not advance gameplay work and do not shrink procedural-world truth to hide the problem.
+If Safari still fails, keep this defect active and use the exact new visible failure signature to diagnose the next concrete bootstrap defect. Do not advance gameplay work and do not shrink procedural-world truth to hide the problem.
