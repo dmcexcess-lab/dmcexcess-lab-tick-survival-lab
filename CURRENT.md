@@ -11,7 +11,7 @@ PROJECT = Tick Survival Lab
 IDENTITY = sprite-based zombie survival
 CORE_LOOP = scavenge -> fight -> craft -> survive
 ACTIVE_PHASE = 4 / expedition + fortified-house loop
-ACTIVE_SLICE = production world bootstrap repaired; infrastructure reservation defect repaired; real iPhone/Safari acceptance pending
+ACTIVE_SLICE = production procedural-world bootstrap acceptance repaired; real iPhone/Safari acceptance pending
 ROADMAP_CHANGE = false
 ```
 
@@ -27,28 +27,24 @@ Do not reopen closed work merely for improvement. A concrete active-play defect 
 
 ## Production world bootstrap checkpoint
 
-Canonical runtime is now:
+Canonical runtime remains:
 
 `GameMain -> ProductionWorldBootstrap -> IslandWorldPlanner / System 20 / materialization / streaming`
 
-Production app/UI no longer imports or executes `scripts/demo` to create the playable world. Production spawn comes from actual generated content, player identity is `actor.player`, initial materialization is the bounded single focus region, adjacent streaming remains active, and durable Continue targets the same production world.
+Production app/UI does not import or execute `scripts/demo` to create the playable world. Production spawn comes from generated content, player identity is `actor.player`, initial materialization is the bounded focus region, adjacent streaming remains active, and durable Continue targets the same production world.
 
-The latest real iPhone/Safari attempt progressed through production bootstrap far enough to expose a genuine System 20 generation defect:
+The retired `GeneratedIslandCritiqueFixture` was inspected directly after repeated iPhone failures. It confirmed an important accidental contract: the old demo-owned bootstrap did not accept the first requested seed blindly. It tried up to 128 candidate seeds and accepted only one whose generated island/local-generation contract succeeded. Removing demo ownership correctly removed the fixture, but production bootstrap initially failed to replace that seed-acceptance responsibility.
 
-`generation_failed:area.smalltown.center.001:infrastructure_reservation_unresolved...`
+Current `IslandWorldPlanner` already validates advertised local sites through `IslandPopulationPlanner -> LocalAreaGenerator.generate_manifest()`. Therefore failures such as:
 
-Root cause: `InfrastructureReservationPlanner` required a facility footprint to fit immediately perpendicular to the exact global infrastructure source cell. A legitimate power node near an inherited-road/area edge could therefore have no legal local substation rectangle even though legal frontage existed a short distance along the same road.
+- `area.smalltown.center.001:infrastructure_reservation_unresolved...`
+- `area.rural.scattered.003:parcel_access...`
 
-Repair: the global node remains authoritative semantic source truth, while its local facility reservation deterministically searches along that same inherited road and chooses the nearest legal roadside footprint. This does not reroll the island, create a fallback town, move infrastructure to another road, or restore demo ownership.
+are genuine seed-sensitive procedural rejections discovered while validating the complete island contract, not reasons to boot a partially invalid island.
 
-Current focused verifier/workflow:
+Repair: `ProductionWorldBootstrap._resolve_new_game_plan()` now owns production seed acceptance. NEW GAME generates a candidate island, accepts it only when `IslandWorldPlanner` returns a generated plan, and deterministically advances/retries bounded candidate seeds for recognized seed-sensitive procedural failures. Deterministic/configuration failures remain diagnostic instead of being hidden by retries. No demo town, fixture, fallback island, known-good seed or compatibility wrapper was restored.
 
-- `game/scripts/ci/InfrastructureReservationRecoverySmoke.gd`
-- `.github/workflows/infrastructure-reservation-recovery.yml`
-
-Run `36350128246`: **SUCCESS**. It proves edge-constrained facility recovery and then passes the existing procedural-island seed matrix.
-
-The previous production-bootstrap prompt-local verifier/workflow was retired before this production edit per SOP.
+The prompt-local production-seed verifier/workflow was created before production edits and retired before this checkpoint per SOP.
 
 ## Active roadmap phase — expedition + fortified-house loop
 
@@ -67,7 +63,7 @@ A base remains an existing place the player fortified and supplied.
 
 ## NEXT
 
-**Real iPhone/Safari acceptance: NEW GAME must reach the visible playable procedural map with the infrastructure-reservation repair deployed.**
+**Real iPhone/Safari acceptance: NEW GAME must survive any rejected procedural candidate(s), resolve a valid production island, and reach the visible playable procedural map.**
 
 If it succeeds, close the mobile/bootstrap release defect and proceed to Phase 4 independent shelter utilities, starting from the existing portable-generator owners unless targeted inspection finds an earlier missing power/water link.
 
