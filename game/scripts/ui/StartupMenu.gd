@@ -127,10 +127,16 @@ func _launch_game(session: Dictionary) -> void:
                 boot_error = "incompatible_save"
                 break
         get_tree().root.add_child(game)
-        if game.has_method("session_boot_ok") and bool(game.call("session_boot_ok")):
+        var boot_ok := false
+        if game.has_method("session_boot_ok"):
+            boot_ok = bool(game.call("session_boot_ok"))
+        elif game.has_method("canonical_boot_ok"):
+            boot_ok = bool(game.call("canonical_boot_ok"))
+        if boot_ok:
             break
-        boot_error = String(game.call("session_boot_error")) if game.has_method("session_boot_error") else "gameplay_boot_failed"
-        if session.is_empty() and boot_error == "gameplay_boot_failed" and not WorldBootstrapClass.last_failure().is_empty():
+        if game.has_method("session_boot_error"):
+            boot_error = String(game.call("session_boot_error"))
+        elif not WorldBootstrapClass.last_failure().is_empty():
             boot_error = WorldBootstrapClass.last_failure()
         game.queue_free()
         game = null
