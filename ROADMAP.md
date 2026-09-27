@@ -1,115 +1,93 @@
-# Tick Survival Lab — Release Roadmap
+# Tick Survival Lab — Turn-Based Rewrite Roadmap
 
-Updated: **2026-09-26**  
-Status: **finite release order; current phase = 4**
-
-This file owns **order and definitions of done**, not implementation history. Detailed chronology remains in Git/changelogs. Discussion of a future idea does not reorder this roadmap; roadmap priority changes only by explicit user direction.
+Updated: **2026-09-27**  
+Status: **architecture simplification in progress; Slice 1 complete**
 
 ## Release target
 
 **Scavenge. Fight. Craft. Survive.**
 
-Persistent sprite-based zombie survival with day/night, weather, useful buildings, vehicles, power/water and a complete repeated-day loop. Existing houses are fortified; no colony/freeform-building or living-society simulation is required.
+A responsive turn-based open-world zombie survival game on the existing persistent procedural island. The player explores, scavenges, fights or escapes, crafts/cooks/heals, rests, repairs/deconstructs, fortifies existing houses, establishes supplies/utilities and ventures farther. Existing houses are bases; no colony/freeform-building or living-society simulation is required.
 
-## Phase status
+## Execution model
 
-### Phase 0 — Establish release contract — DONE
+Canonical play is deliberately conventional:
 
-Scope reset around the finite survival game and retired broader society/freeform-construction ambitions.
+`player action -> resolve player action -> relevant local actors each get at most one action -> advance ordinary time/environment -> return control`
 
-### Phase 1 — Retire live survivor/society dependencies — DONE
+The previous generalized tick/WHERE/WHAT/WHEN execution architecture is legacy and will be removed route by route. Distinctive gameplay such as crowd pressure, fear, darkness, fortification and survival pressure remains as ordinary game rules rather than reasons to preserve the old architecture.
 
-Production no longer requires living survivor cohorts/social runtime. Shared player/zombie systems remain.
+## Migration slices
 
-### Phase 2 — Shared-tick combat foundation — DONE (engineering)
+### Slice 1 — Simple turn spine — DONE
 
-Closed release foundation:
+Canonical production movement now bypasses TickKernel/WHEN movement execution. One movement input performs one ordinary placement change; only infected within the active local radius receive at most one simple movement; control returns immediately. Production streaming/perception/presentation follow the new position. Legacy systems remain booted only for unmigrated routes.
 
-- commitment/interruption windows;
-- simultaneous due-tick melee consequences;
-- deterministic contested movement/shove;
-- causal mob-force propagation;
-- canonical fear through condition/CALM;
-- bounded eight-infected perception/callback path;
-- coherent overlapping consequence presentation;
-- production crowded-fight technical acceptance.
+### Slice 2 — Ordinary world state and spatial queries — NEXT
 
-Do not reopen this phase without a concrete play-visible defect. Real mobile/Safari acceptance remains part of final release acceptance rather than blocking Phase 3 engineering.
+Collapse the minimum movement-facing WHERE/WHAT responsibilities into conventional world state and spatial queries. Remove old movement-specific owners that become unused. Do not create replacement frameworks.
 
-### Phase 3 — Durable save, leave and continue — DONE
+### Slice 3 — Simple turn-based combat
 
-Use existing authoritative stores/snapshots to implement a versioned durable session format. Do not create duplicate gameplay truth.
+Reconnect existing weapons/damage/injury/death to the turn loop. Player attack consumes one action; relevant zombies attack on their actions. Preserve crowd/fear/mob/darkness pressure as ordinary calculations. Remove simultaneous melee/intention/commitment machinery from the migrated route.
 
-Required continuity includes release-relevant player position/state, inventory/equipment, world mutations/loot, actors/zombies/corpses, conditions/skills, vehicles, structures/fortifications, utilities, day/weather and necessary WHEN/action state.
+### Slice 4 — Scavenging and inventory
 
-Provide truthful New Game/Continue behavior, explicit durable saving and safe automatic checkpoints. Do not rely only on browser unload. Restore pending committed actions without cancellation, duplicated consumption or duplicated rewards. Detect incompatible/invalid saves and preserve the last valid save. Surface browser-storage failure honestly.
+Reconnect contextual search/take/carry/drop/use/equip through direct authoritative state changes and turn costs.
 
-**Done when:** mutate meaningful state -> save -> leave/close -> reopen -> Continue restores the same game; repeated save/load and region transitions do not duplicate/reset state; hard pause/backgrounding cannot exploit pending commitments.
+### Slice 5 — Survival
 
-Closed 2026-09-26 with production New Game/Continue, explicit Save/Save & Menu, safe checkpoints, saved-seed reconstruction, versioned checksum-verified primary/backup storage and in-place restoration of existing authoritative WHAT/WHEN/mechanic snapshots. Production verification covered repeated load, a pending committed action, representative player/world mutations, backup recovery and storage failure.
+Reconnect hunger, thirst, fatigue, health, wounds, fear/mood and recovery to elapsed turns/game time without universal simulation scheduling.
 
-### Phase 4 — Finish expedition + fortified-house loop — ACTIVE
+### Slice 6 — Contextual interaction
 
-Wire/finish ordinary scavenging, carrying, item use, crafting/cooking, first aid, sleep/rest, repairs, deconstruction, doors/windows and existing-building fortification through natural contextual controls.
+Preserve actions-from-things: food EAT, drink DRINK, beds SLEEP, furniture REST, windows/doors opening actions, furniture DECONSTRUCT, stove COOK, vehicles contextual actions. Replace generalized action routing where migrated.
 
-Crafting is treated coherently here: recipes, tools/materials, item actions and practical survival objects belong to the system rather than being added as unrelated one-offs. Portable camping/rest equipment may be considered here if it serves the loop; it is not an active Phase 3 feature.
+### Slice 7 — Craft/cook/heal/repair/deconstruct
 
-Power/water must have readable service/failure/repair paths. Generator/well work is site-specific survival interaction, not a general construction engine.
+Reconnect existing content using ordinary turn costs. Long actions may consume multiple turns; interruption exists only where it materially improves gameplay.
 
-Closed Phase 4 slice: powered stove cooking now uses the existing stove contextual interaction and crafting UI, real carried recipe inputs/tools, WHEN crafting action, System 33 live power availability and durable WHAT/inventory output. Power loss blocks cooking; restoring service re-enables it; cooked food returns to the established EAT route and survives Continue without restoring consumed inputs.
+### Slice 8 — House fortification and bases
 
-Closed Phase 4 slice: dining-chair deconstruction is a contextual DECONSTRUCT interaction using the existing hammer/crowbar tool semantics, Mechanical skill check, cancelable WHEN action and authoritative WHAT/inventory mutation. Pre-commit cancellation leaves the chair intact and creates no salvage; completion removes the chair, preserves the tool, yields exactly one existing wood-plank material and survives Continue without resurrection or duplication.
+Restore the complete existing-building shelter loop: clear a house, board openings, repair, stash supplies, sleep and establish utilities. No freeform construction architecture.
 
-Closed Phase 4 slice: existing windows/doors can be fortified contextually in up to three board layers using the existing hammer + wood-plank + nails semantics and timed WHEN action. The production interaction now continues to offer BOARD until the authoritative three-layer maximum is reached. Each layer consumes one material pair exactly once, preserves the hammer, renders from `WorldInteractableState`, reduces opening-pressure damage used by infected behavior (55 unboarded -> 40 at three layers), and persists through Continue with damage/board state intact.
+### Slice 9 — Power and water
 
-**Done when:** the player can supply and fortify an existing shelter, recover/craft/repair through ordinary controls, use practical independent utilities and recover from a real infrastructure failure.
+Reconnect generators, wells, grid state, failures and repairs as ordinary world systems driven by events/elapsed time rather than universal tick participation.
 
-### Phase 5 — Contextual vehicles/parking — QUEUED
+### Slice 10 — Vehicles
 
-Deterministically enrich appropriate existing sites with driveways, carports, garages/lots and plausible vehicle placement without regenerating buildings or changing established identity/player modifications.
+Reconnect enter/exit, movement, fuel, damage, cargo and repair using simple turn actions.
 
-**Done when:** representative residential/commercial/farm sites have believable usable parking; moving/stripping vehicles persists; revisit/reload never duplicates or respawns them.
+### Slice 11 — Day/night, weather and world time
 
-### Phase 6 — Persistent environmental stories — QUEUED
+Define ordinary turn-to-world-time advancement and derive day/night/weather from world time without a general action scheduler.
 
-Bounded scenes made from real objects/mechanics: crashes, failed/fortified refuges, dead/turned occupants, salvage/repair opportunities. Scene choice occurs once and persists.
+### Slice 12 — Open-world simulation boundary
 
-**Done when:** scenes make spatial/mechanical sense, offer real choices and remain changed after interaction/save/load without resurrecting living quest/NPC society systems.
+Only the player's relevant neighborhood receives individual actor turns. Unloaded/far world state remains persistent data; coarse offscreen progression is calculated only when needed.
 
-### Phase 7 — Balance repeated days — QUEUED
+### Slice 13 — Persistence migration
 
-Integrated tuning after required content exists:
+Adapt durable Continue to simplified state while preserving seed, player/inventory, meaningful zombies/corpses, looted/deconstructed objects, fortifications, vehicles, utilities, time/weather and world deltas. Do not invent a second save architecture.
 
-- building-specific loot quantity/rarity;
-- hunger/thirst/fatigue/injury/fear rates and recovery;
-- weapon duration/reach/cost/damage and crowd danger;
-- crafting/shelter inputs, yields, durability/upkeep;
-- vehicle/utility availability and maintenance;
-- day/night/weather/travel pacing.
+### Slice 14 — Legacy demolition
 
-Do not invent respawn/economy systems merely to hide bad distribution.
+Delete the obsolete TickKernel/WHEN scheduler, generalized consequence/intention/commitment machinery, obsolete movement/combat adapters, unused WHERE/WHAT framework pieces, compatibility bridges and architecture-only tests after all player routes have migrated.
 
-**Done when:** a first-day and multi-day campaign exercise the complete loop without debug grants, unavoidable deterioration loops or trivial surplus; tuning follows observed play evidence.
+### Slice 15 — Balance/performance/release acceptance
 
-### Phase 8 — Release acceptance — QUEUED
+Play and tune the real repeated loop on desktop and iPhone/Safari. Acceptance is a responsive enjoyable survival game, not preservation of an architecture.
 
-Bounded end-to-end candidate play:
+## Migration rules
 
-1. new game -> scavenge -> eat/drink -> craft/treat -> fortify -> sleep -> next-day expedition;
-2. small/crowd combat demonstrating commitment, interruption, simultaneous outcomes, force, fear and escape/death;
-3. vehicle use/move/repair across save/continue;
-4. generator/well use, real damage and repair;
-5. day/night/weather during ordinary and long actions;
-6. persistent environmental stories;
-7. streaming boundaries with persistent changes and acceptable responsiveness;
-8. desktop + real mobile/Safari controls, input lock, hard pause/backgrounding and durable Continue.
-
-**Finished means:** the survival loop works, stays saved, remains responsive and is enjoyable across repeated days. No optional new system is required to explain why release has not happened.
-
-## Execution rule
-
-One operation = one coherent vertical player/system outcome. The user chooses the slice; the AI chooses internal implementation steps. Use `CURRENT.md` for the exact active operation and `ARCHITECTURE.md` for settled ownership. Do not convert internal engineering steps into repeated approval gates.
+- Migrate vertical player-facing routes, not abstract infrastructure first.
+- After each route works, delete legacy code used only by that route.
+- Reuse existing procedural world/content/presentation/persistence data where practical.
+- Do not build WHERE 2.0, WHAT 2.0, WHEN 2.0, a generalized turn framework, ECS, event bus or speculative replacement architecture.
+- Work per player action must be bounded by the active local gameplay situation, not the whole persistent island.
+- If deleting an abstraction leaves player experience unchanged, delete it.
 
 ## NEXT
 
-**Phase 4 — finish the first missing independent-shelter utility route, starting from the existing portable-generator owners unless targeted production inspection identifies an earlier missing power/water failure/repair link.**
+**Slice 2 — simplify the world-state/spatial-query path used by canonical movement, preserving the working simple turn spine and deleting movement-specific legacy ownership that is no longer needed.**
