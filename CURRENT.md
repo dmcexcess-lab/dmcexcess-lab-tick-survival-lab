@@ -8,47 +8,52 @@ Status: **canonical active working state**
 PROJECT = Tick Survival Lab
 IDENTITY = turn-based open-world zombie survival
 CORE_LOOP = explore -> scavenge -> fight/escape -> craft/heal -> fortify/supply shelter -> survive
-ACTIVE_REWRITE_SLICE = 1 complete / simple turn spine
-NEXT_REWRITE_SLICE = 2 / ordinary world state and spatial queries
+ACTIVE_REWRITE_SLICE = 2 complete / plain movement world-state + spatial queries
+NEXT_REWRITE_SLICE = 3 / simple turn-based combat
 ROADMAP_CHANGE = true / 2026-09-27
 ```
 
-## New authoritative direction
+## Authoritative direction
 
 Keep the game; retire the experimental execution architecture.
 
-Canonical play is now:
+Canonical play is:
 
 `player action -> direct consequence -> relevant local actors each act at most once -> ordinary time/environment advance -> return player control`
 
-Shared simulation ticks, generalized simultaneous resolution, universal commitment/interruption and heavyweight WHERE/WHAT/WHEN execution are legacy. They remain temporarily only where unmigrated gameplay still depends on them. Do not optimize or extend them as architecture.
+Shared simulation ticks, generalized simultaneous resolution, universal commitment/interruption and heavyweight WHERE/WHAT/WHEN execution are legacy. They remain temporarily only where unmigrated gameplay still depends on them.
 
 ## Slice 1 checkpoint — simple production turn spine
 
-Canonical `gameplay.tscn` now boots `TurnBasedGameMain`.
+Canonical `gameplay.tscn` boots `TurnBasedGameMain`. Unmounted movement routes through `SimpleTurnController`; one input is one ordinary turn action and only infected within the 24-cell active radius receive individual simple movement.
 
-For an unmounted survivor, movement intents route to `SimpleTurnController` rather than `PlayerActionController` / `MovementActionService` / TickKernel execution.
+Procedural infected now derive from the real island household/population plan. The temporary player-centered synthetic zombie ring is gone.
 
-Current migrated movement behavior:
+## Slice 2 checkpoint — plain movement state/query path
 
-- one legal movement input changes player placement exactly once;
-- forward/back/run-forward are one-tile attempts; turns are one ordinary turn action;
-- illegal movement is rejected without creating a simulation queue;
-- after a successful player action, only infected within the 24-cell active radius are considered for one simple adjacent pursuit step;
+Canonical simple-turn movement no longer depends on `SpatialQueryService`, `WorldMutationService`, `MovementActionService`, TickKernel or generalized footprint-query execution.
+
+Current movement behavior:
+
+- `WorldState` is the authoritative owner of entity placement;
+- `SimpleTurnController` reads terrain and occupancy directly from `WorldState`;
+- existing collision catalog/override facts are consulted locally for blocking semantics;
+- `WorldState.move_entity()` performs the narrow authoritative placement change and emits the ordinary world change consumed by presentation/persistence observers;
+- player movement resolves first;
+- relevant infected resolve sequentially against the resulting current occupancy;
 - distant infected receive no individual turn;
-- streaming focus, perception and presentation refresh from the resulting authoritative placement;
-- control returns immediately for the next player action;
-- the legacy TickKernel world tick does not advance anywhere under this movement route.
+- streaming focus, perception and presentation follow the resulting authoritative player placement;
+- no legacy simulation tick or simultaneous movement consequence phase executes underneath this route.
 
-The focused production verifier proves two consecutive turns, exact one-tile movement, bounded infected work, distant-infected inactivity, zero TickKernel advancement, and durable snapshot -> Continue restoring the moved player into simple-turn control.
+Focused Slice 2 verification on production seed `20001` booted the real procedural world, performed a real legal adjacent move, completed a second ordinary turn, returned control after each action and passed static guards preventing the migrated controller from reacquiring `SpatialQueryService`, `WorldMutationService`, TickKernel, `MovementActionService` or `query_entity_footprint`.
 
 ## Transitional legacy boundary
 
-Legacy systems are still instantiated because combat, vehicles, contextual interactions, long actions and the existing durable-session format have not yet migrated. This is temporary migration debt.
+Legacy query/mutation/scheduling systems still exist because generation/bootstrap, combat, vehicles, contextual interactions, long actions and the durable-session implementation have not all migrated. This is migration debt, not protected architecture.
 
 Do not create adapters that reproduce old semantics around `SimpleTurnController`.
 
-Do not delete legacy owners still required by unmigrated routes until their owning slice replaces them.
+Delete legacy owners only when their final production consumer has migrated.
 
 ## Preserved game
 
@@ -73,15 +78,15 @@ A base remains an existing building the player fortified and supplied. No colony
 
 Current prompt-local verifier/workflow:
 
-- `game/scripts/ci/SimpleTurnSpineSmoke.gd`
-- `.github/workflows/simple-turn-spine.yml`
+- `game/scripts/ci/Slice2PlainMovementSmoke.gd`
+- `.github/workflows/slice2-plain-movement.yml`
 
-Per SOP, the next code-changing prompt must retire these before production edits and create fresh Slice 2 verification.
+Per SOP, the next code-changing prompt must retire these before production edits and create fresh Slice 3 verification.
 
 ## NEXT
 
-**Rewrite Slice 2 — simplify the world-state/spatial-query path used by canonical movement.**
+**Rewrite Slice 3 — simple turn-based combat.**
 
-Start from the working simple-turn movement route. Replace only the minimum movement-facing WHERE/WHAT responsibilities with conventional plain world state/spatial queries, then delete movement-specific legacy ownership that becomes unused.
+Start from the working simple movement/world-state spine. Reconnect the existing combat content as ordinary turn actions: a player attack is one action; relevant zombies may attack on their action when in range; damage/injury/death remain authoritative game state. Preserve crowd/fear/mob/darkness pressure as ordinary calculations where they materially affect combat.
 
-Do not migrate combat yet. Do not create a replacement framework. Keep the real procedural world, rendering/perception, bounded local actor work and durable Continue working while the code underneath movement becomes smaller and more conventional.
+Remove combat-side tick/simultaneous-intention/commitment dependencies that become obsolete after the migrated production combat route works. Do not migrate scavenging, survival, contextual doors/windows, crafting, fortification, vehicles or utilities yet unless a concrete combat prerequisite requires a narrowly targeted compatibility repair.
