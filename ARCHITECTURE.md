@@ -18,6 +18,7 @@ Purpose: tell an AI engineer what is already settled so reasoning is spent on ge
 | Global planning/coherence | System 00D | CLOSED |
 | Local physical generation | System 20 | CLOSED |
 | Building interiors/grammar | System 19 | CLOSED |
+| Production world bootstrap | `ProductionWorldBootstrap` -> production generation/materialization/streaming; canonical app code never depends on `scripts/demo` fixtures | CLOSED |
 | Logical materialization/technical activation | System 00F; never morphology | CLOSED |
 | Rendering | presentation only; never gameplay truth/physics | CLOSED |
 | Input | emits intent; simulation owns consequences | CLOSED |
@@ -59,6 +60,9 @@ Technical chunks/streaming boundaries never become logical geography or persiste
 
 ## World-generation boundaries
 
+- Canonical runtime path is `GameMain -> ProductionWorldBootstrap -> IslandWorldPlanner/System 20/materialization/streaming`. Demo/critique fixtures may consume production systems for tests/dev scenes, but production app/UI must never consume them.
+- Production spawn selection is derived from generated area sites and their generated road cells; it does not require the retired rural-crossroads/diner fixture or a hard-coded demo site ID.
+- Production identity is `actor.player`; `.demo` actor/world IDs are not canonical gameplay identity.
 - Keep the existing generated map, roads, buildings, terrain, stable identities and streaming architecture.
 - Do not restart/rewrite global world generation without a concrete release blocker.
 - Parking/garage/carport enrichment is a later deterministic site-enrichment problem, not permission to regenerate buildings.
