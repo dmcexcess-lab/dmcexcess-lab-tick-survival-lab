@@ -25,27 +25,27 @@ ROADMAP_CHANGE = false
 - Contextual sustainment: inventory EAT/DRINK; furniture REST/SLEEP; powered-fixture DRINK.
 - Phase 4 powered cooking: contextual stove -> real carried input/tool -> WHEN craft -> cooked food; live power gates cooking and Continue preserves consequence.
 - Phase 4 deconstruction: contextual dining-chair DECONSTRUCT -> tool/Mechanical -> cancelable WHEN -> authoritative removal + existing wood-plank salvage; safe interruption and durable Continue verified.
-- Phase 4 existing-building fortification: contextual window/door BOARD can now be layered to the authoritative three-board maximum; each layer uses existing hammer + plank + nails + Mechanical/WHEN semantics, materially reduces infected opening-pressure damage, renders from authoritative interaction state and persists through Continue.
+- Phase 4 existing-building fortification: contextual window/door BOARD layers to the authoritative three-board maximum and materially reduces infected opening-pressure damage.
+- Mobile new-game bootstrap repair: removed the disposable full initial-streaming materialization that immediately preceded authoritative materialization and doubled peak world-bootstrap work/memory. Production new-game bootstrap now materializes the selected initial neighborhood once.
 - Permanent generic survival-action strip removed.
 
 Do not reopen these merely for improvement. A concrete active-play defect may justify a targeted repair.
 
-## Phase 4 fortification invariant
+## Mobile/Safari bootstrap checkpoint
 
-- Fortification is an interaction on an existing opening, not construction or base placement.
-- `WorldInteractableState` remains the board/damage truth and caps openings at three board layers.
-- The existing contextual `WorldInteractionOfferProvider` exposes BOARD while an opening has fewer than three boards; REMOVE BOARD/BREAK remain ordinary contextual alternatives.
-- Each BOARD is the existing timed WHEN action requiring hammer, one wood plank, one nails box and Mechanical semantics. Materials are consumed exactly once; the hammer is preserved.
-- `ActorOpeningPressureActionService` reads authoritative board count. The active infected behavior uses that same pressure service when blocked by a door/window.
-- Verified opening-pressure damage: 55 unboarded -> 40 at three boards. Fortification therefore changes breach resistance, not only presentation.
-- `WorldInteractionStateRenderer` derives board visuals from authoritative interaction state.
-- Durable Continue preserves board count, opening damage, tool state and consumed-material consequences.
+A real iPhone/Safari playtest reported: menu loads -> NEW GAME starts generation -> WebKit/Godot restarts before the playable map appears.
 
-Focused production verifier `36276349197`: **SUCCESS**, marker `PHASE4_FORTIFICATION_ROUTE_OK contextual=true timed=true boards=3 materials_once=true tool_preserved=true baseline_damage=55 fortified_damage=40 infected_pressure_owner=true continue=true`.
+Targeted source inspection found a concrete peak-memory defect: `_resolve_playable_boot()` fully materialized the initial streaming neighborhood into a disposable probe world, discarded it, and `build()` immediately materialized the same neighborhood again into authoritative WHAT. That probe has been removed. Seed selection still validates generated global truth, the central area and player start before one authoritative initial materialization.
+
+No world size, streaming radius, procedural content or gameplay truth was reduced.
+
+Focused verifier `36281756339`: **SUCCESS**, marker `MOBILE_NEW_GAME_BOOTSTRAP_OK production_boot=true single_initial_materialization=true player=true streaming=true`.
+
+The automated production bootstrap is green. Because the original symptom is a WebKit process restart, the repaired deployed build still requires real iPhone/Safari acceptance. If Safari still restarts, keep this as the active concrete defect and profile the next bootstrap peak rather than advancing gameplay work.
 
 ## Active roadmap phase — expedition + fortified-house loop
 
-The ordinary shelter loop now has contextual food/drink, first aid, rest/sleep, repair owners, powered cooking, deconstruction and meaningful opening fortification. The next release requirement not yet closed vertically is practical independent shelter utilities / real utility failure recovery.
+Once real iPhone/Safari confirms NEW GAME reaches the playable map, continue the next release requirement: practical independent shelter utilities / real utility failure recovery.
 
 Existing production source already contains portable-generator and utility power repair owners. Start there rather than inventing another utility architecture. Inspect only enough current source to identify the first incomplete player-facing power/water route.
 
@@ -67,13 +67,15 @@ A base remains an existing place the player has fortified and supplied. This pha
 
 Current prompt-local verifier/workflow:
 
-- `game/scripts/ci/Phase4FortificationRouteSmoke.gd`
-- `.github/workflows/phase4-fortification-route.yml`
+- `game/scripts/ci/MobileNewGameBootstrapSmoke.gd`
+- `.github/workflows/mobile-new-game-bootstrap.yml`
 
-The **next code-changing prompt** must delete that pair before production edits and create one fresh prompt-local verifier/workflow scoped to the chosen independent-utility/failure-recovery route.
+The **next code-changing prompt** must delete that pair before production edits and create one fresh prompt-local verifier/workflow scoped to the actual next operation.
 
 ## NEXT
 
-**Phase 4 — finish the first missing independent-shelter utility route, starting from the existing portable-generator owners unless targeted production inspection identifies an earlier missing power/water failure/repair link.**
+**First acceptance gate: retry NEW GAME on real iPhone/Safari.**
 
-The player-facing outcome should close one real survival dependency end to end: an existing shelter loses or lacks ordinary utility service; the player uses the already-established tool/item/utility owners to provide or restore useful service; the service actually powers/feeds existing gameplay such as lighting, cooking, refrigeration or potable water; resource/fuel/tool consequences are real; and save -> reopen -> Continue preserves the result. Use the simplest existing power/water architecture. Do not create a utility-building or base-management system.
+If it reaches the playable map without WebKit/Godot restarting, the concrete regression is closed and the next code operation is Phase 4 independent shelter utilities, starting from the existing portable-generator owners unless targeted inspection finds an earlier missing power/water link.
+
+If Safari still restarts during generation/bootstrap, do not move on to utilities. Continue targeted bootstrap performance diagnosis from the deployed repaired head and remove the next proven peak while preserving procedural world/gameplay truth.
