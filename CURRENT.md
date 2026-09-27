@@ -11,7 +11,7 @@ PROJECT = Tick Survival Lab
 IDENTITY = sprite-based zombie survival
 CORE_LOOP = scavenge -> fight -> craft -> survive
 ACTIVE_PHASE = 4 / expedition + fortified-house loop
-ACTIVE_SLICE = production world bootstrap repaired; real iPhone/Safari acceptance pending
+ACTIVE_SLICE = production world bootstrap repaired; infrastructure reservation defect repaired; real iPhone/Safari acceptance pending
 ROADMAP_CHANGE = false
 ```
 
@@ -27,36 +27,28 @@ Do not reopen closed work merely for improvement. A concrete active-play defect 
 
 ## Production world bootstrap checkpoint
 
-Root cause confirmed: canonical gameplay was still booting the real procedural world through old demo/critique ownership (`GeneratedIslandCritiqueFixture`, demo player/site constants and `_boot_canonical_demo`). The earlier seed-retry behavior was symptom treatment, not the architectural fix.
-
 Canonical runtime is now:
 
 `GameMain -> ProductionWorldBootstrap -> IslandWorldPlanner / System 20 / materialization / streaming`
 
-Production app/UI no longer imports or executes `scripts/demo` to create the playable world.
+Production app/UI no longer imports or executes `scripts/demo` to create the playable world. Production spawn comes from actual generated content, player identity is `actor.player`, initial materialization is the bounded single focus region, adjacent streaming remains active, and durable Continue targets the same production world.
 
-Production bootstrap now:
+The latest real iPhone/Safari attempt progressed through production bootstrap far enough to expose a genuine System 20 generation defect:
 
-- generates the real island from the production planner;
-- selects a spawn from actual generated area sites and generated road cells rather than requiring the retired rural-crossroads/diner fixture;
-- uses canonical player identity `actor.player`;
-- materializes only the bounded single focus region initially;
-- initializes renderer/camera/perception from the actual generated player/world position;
-- keeps normal adjacent-region streaming;
-- supplies the same production world seed/identity to durable save/Continue.
+`generation_failed:area.smalltown.center.001:infrastructure_reservation_unresolved...`
 
-Utility startup now binds initial power/water service truth to the actual production player location instead of the old demo central-settlement constant. `PlayerMapBootstrap` reads the production plan directly.
+Root cause: `InfrastructureReservationPlanner` required a facility footprint to fit immediately perpendicular to the exact global infrastructure source cell. A legitimate power node near an inherited-road/area edge could therefore have no legal local substation rectangle even though legal frontage existed a short distance along the same road.
 
-NEW GAME retries only failures classified as genuine procedural generation/spawn invalidity. Deterministic bootstrap/materialization/configuration failures are surfaced by their production failure reason rather than burned through as supposedly bad seeds. Continue remains single-attempt and fail-safe.
+Repair: the global node remains authoritative semantic source truth, while its local facility reservation deterministically searches along that same inherited road and chooses the nearest legal roadside footprint. This does not reroll the island, create a fallback town, move infrastructure to another road, or restore demo ownership.
 
-Focused verifier/workflow:
+Current focused verifier/workflow:
 
-- `game/scripts/ci/ProductionWorldBootstrapSmoke.gd`
-- `.github/workflows/production-world-bootstrap.yml`
+- `game/scripts/ci/InfrastructureReservationRecoverySmoke.gd`
+- `.github/workflows/infrastructure-reservation-recovery.yml`
 
-Run `36348729521`: **SUCCESS**. It proves canonical app scripts are demo-free, production seed `20001` boots the real gameplay composition, generated spawn/player/render bounds are valid, initial active region count is one, adjacent streaming transitions, durable session records the production seed, and Continue restores the same production world/player identity.
+Run `36350128246`: **SUCCESS**. It proves edge-constrained facility recovery and then passes the existing procedural-island seed matrix.
 
-The old prompt-local rejected-seed and first mobile-bootstrap verifier/workflows were retired. Demo/critique fixtures may remain for tests/dev work but are not production owners.
+The previous production-bootstrap prompt-local verifier/workflow was retired before this production edit per SOP.
 
 ## Active roadmap phase — expedition + fortified-house loop
 
@@ -75,8 +67,8 @@ A base remains an existing place the player fortified and supplied.
 
 ## NEXT
 
-**Real iPhone/Safari acceptance: NEW GAME must reach the visible playable procedural map through the new production bootstrap.**
+**Real iPhone/Safari acceptance: NEW GAME must reach the visible playable procedural map with the infrastructure-reservation repair deployed.**
 
 If it succeeds, close the mobile/bootstrap release defect and proceed to Phase 4 independent shelter utilities, starting from the existing portable-generator owners unless targeted inspection finds an earlier missing power/water link.
 
-If Safari still fails, keep this defect active and diagnose the exact new visible failure from the production path. Do not restore demo ownership, add a fallback island, hard-code a known-good seed, or shrink procedural-world truth to hide the failure.
+If Safari still fails, keep this defect active and diagnose the exact new visible production-path failure. Do not restore demo ownership, add a fallback island, hard-code a known-good seed, or shrink procedural-world truth to hide the failure.
