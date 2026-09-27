@@ -2,6 +2,16 @@
 
 This compact ledger records the newest executable work. `CHANGELOG.md` remains the historical archive.
 
+## Turn-based rewrite Slice 2 — plain movement state/query path — 2026-09-27
+
+- Canonical `SimpleTurnController` no longer depends on `SpatialQueryService` or `WorldMutationService` for player/zombie movement.
+- Movement legality now reads the candidate footprint directly against authoritative `WorldState` terrain/occupancy and the existing collision catalog/override facts.
+- `WorldState.move_entity()` is the narrow ordinary placement write for migrated turn movement; rendering/persistence observers continue to receive authoritative world changes.
+- Sequential zombie turns resolve against current occupancy; only the established 24-cell active neighborhood receives individual zombie work.
+- No TickKernel, WHEN queue, `MovementActionService`, generalized footprint query or simultaneous movement resolver executes underneath the migrated route.
+- Production seed 20001 booted and completed consecutive simple turns in the focused Slice 2 verifier; static guards reject reacquiring the retired movement dependencies.
+- Legacy query/mutation owners remain for generation/bootstrap and unmigrated combat/interactions/vehicles; that is explicit migration debt.
+
 ## Turn-based rewrite Slice 1 — simple production turn spine — 2026-09-27
 
 - Project direction changed deliberately: preserve the open procedural zombie-survival game while retiring the experimental tick/WHERE/WHAT/WHEN execution architecture route by route.
