@@ -19,7 +19,7 @@ func _boot_production_world() -> bool:
         return false
     if not _hydrate_procedural_local_infected():
         return false
-    _simple_turns = SimpleTurnControllerClass.new(_world, _world_mutations, _spatial_query, WorldBootstrapClass.PLAYER_ID)
+    _simple_turns = SimpleTurnControllerClass.new(_world, _collision_catalog, _collision_overrides, WorldBootstrapClass.PLAYER_ID)
     _simple_turns.set_infected_actor_ids(_simple_infected_ids)
     add_child(_simple_turns)
     if not _simple_turns.is_ready():
