@@ -1,4 +1,4 @@
-name: Infrastructure reservation recovery
+name: Turn-based production boot
 
 on:
   push:
@@ -8,10 +8,14 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: turn-based-production-boot-known
+  cancel-in-progress: true
+
 jobs:
-  reservation-recovery:
+  production-boot:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 8
     steps:
       - uses: actions/checkout@v4
       - name: Install Godot 4.7.1
@@ -23,7 +27,15 @@ jobs:
           chmod +x Godot_v4.7.1-stable_linux.x86_64
       - name: Build script class cache
         run: ./Godot_v4.7.1-stable_linux.x86_64 --headless --editor --path "$GITHUB_WORKSPACE/game" --quit
-      - name: Verify bounded facility reservation recovery
-        run: timeout 120s ./Godot_v4.7.1-stable_linux.x86_64 --headless --path "$GITHUB_WORKSPACE/game" -s res://scripts/ci/InfrastructureReservationRecoverySmoke.gd
-      - name: Verify procedural island seed matrix
+      - name: Verify canonical turn-based production boot
+        run: timeout 180s ./Godot_v4.7.1-stable_linux.x86_64 --headless --path "$GITHUB_WORKSPACE/game" -s res://scripts/ci/TurnBasedProductionBootMatrixSmoke.gd
+      - name: Guard turn game from legacy simulation execution
+        run: |
+          grep -q '^extends GameMain$' game/scripts/app/TurnBasedGameMain.gd
+          ! grep -q 'EnvironmentalPressureGameMain' game/scripts/app/TurnBasedGameMain.gd
+          ! grep -q 'UtilityGameMain' game/scripts/app/TurnBasedGameMain.gd
+          ! grep -q 'scripts/demo' game/scripts/app/TurnBasedGameMain.gd
+          ! grep -q 'TickKernel' game/scripts/player/SimpleTurnController.gd
+          ! grep -q 'MovementActionService' game/scripts/player/SimpleTurnController.gd
+      - name: Preserve procedural generation regression
         run: timeout 180s ./Godot_v4.7.1-stable_linux.x86_64 --headless --path "$GITHUB_WORKSPACE/game" -s res://scripts/ci/ProceduralIslandSeedMatrixSmoke.gd
