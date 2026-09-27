@@ -3,6 +3,7 @@ class_name SimpleTurnController
 
 const Intents = preload("res://scripts/input/PlayerActionIntent.gd")
 const Facing = preload("res://scripts/foundation/spatial/SpatialFacing.gd")
+const Layers = preload("res://scripts/foundation/spatial/SpatialLayer.gd")
 
 signal action_resolved(intent: StringName, success: bool, reason: String, turn_number: int)
 signal action_busy_changed(busy: bool)
@@ -11,22 +12,22 @@ signal turn_completed(turn_number: int, active_actor_count: int)
 const ACTIVE_RADIUS: int = 24
 
 var _world: WorldState
-var _mutations: WorldMutationService
-var _spatial: SpatialQueryService
+var _collision_catalog: CollisionCatalog
+var _collision_overrides: CollisionOverrideState
 var _player_id: String
 var _infected_ids: Array[String] = []
 var _turn_number := 0
 var _busy := false
 var _individual_actor_actions := 0
 
-func _init(world: WorldState = null, mutations: WorldMutationService = null, spatial: SpatialQueryService = null, player_id: String = "") -> void:
+func _init(world: WorldState = null, collision_catalog: CollisionCatalog = null, collision_overrides: CollisionOverrideState = null, player_id: String = "") -> void:
     _world = world
-    _mutations = mutations
-    _spatial = spatial
+    _collision_catalog = collision_catalog
+    _collision_overrides = collision_overrides
     _player_id = player_id
 
 func is_ready() -> bool:
-    return _world != null and _mutations != null and _spatial != null and not _player_id.is_empty() and _world.placement(_player_id) != null
+    return _world != null and _collision_catalog != null and _collision_overrides != null and not _player_id.is_empty() and _world.placement(_player_id) != null
 
 func has_control() -> bool:
     return is_ready() and not _busy
@@ -79,11 +80,9 @@ func _resolve_player_movement(intent: StringName) -> bool:
             target_anchor -= Facing.vector(current.facing)
         _:
             return false
-    if target_anchor != current.anchor:
-        var query := _spatial.query_entity_footprint(_player_id, target_anchor, target_facing, true)
-        if query == null or not query.is_clear():
-            return false
-    return _mutations.set_placement(_player_id, current.channel, target_anchor, target_facing, current.footprint, current.structure_axis)
+    if target_anchor != current.anchor and not _can_occupy(_player_id, current, target_anchor, target_facing):
+        return false
+    return _world.move_entity(_player_id, target_anchor, target_facing)
 
 func _run_local_infected_turns() -> int:
     var player := _world.placement(_player_id)
@@ -102,13 +101,38 @@ func _run_local_infected_turns() -> int:
             continue
         var target := placement.anchor + step
         var facing := Facing.from_vector(step)
-        var query := _spatial.query_entity_footprint(actor_id, target, facing, true)
-        if query == null or not query.is_clear():
+        if not _can_occupy(actor_id, placement, target, facing):
             continue
-        if _mutations.set_placement(actor_id, placement.channel, target, facing, placement.footprint, placement.structure_axis):
+        if _world.move_entity(actor_id, target, facing):
             acted += 1
             _individual_actor_actions += 1
     return acted
+
+func _can_occupy(entity_id: String, current: WorldPlacement, target_anchor: Vector2i, target_facing: int) -> bool:
+    if current == null or current.footprint == null:
+        return false
+    for cell: Vector2i in current.footprint.world_cells(target_anchor, target_facing):
+        if not _world.has_terrain(cell):
+            return false
+        for occupant_id: String in _world.entities_at(cell):
+            if occupant_id == entity_id:
+                continue
+            if _collision_overrides.has_override(occupant_id):
+                if _collision_overrides.blocks_movement(occupant_id):
+                    return false
+                continue
+            var record := _world.entity(occupant_id)
+            var placement := _world.placement(occupant_id)
+            if record == null or placement == null:
+                return false
+            var profile := _collision_catalog.profile_for(record.semantic_type)
+            if profile != null:
+                if profile.blocks_movement:
+                    return false
+                continue
+            if placement.channel == Layers.Channel.STRUCTURE or placement.channel == Layers.Channel.OBJECT or placement.channel == Layers.Channel.ACTOR:
+                return false
+    return true
 
 func _greedy_step(delta: Vector2i) -> Vector2i:
     if delta == Vector2i.ZERO:
