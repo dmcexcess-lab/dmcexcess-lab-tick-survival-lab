@@ -42,6 +42,7 @@ const POTENCY_TENTHS: Dictionary = {
 var _state: ActorConditionState = null
 var _time_profile: WorldTimeProfile = null
 var _kernel: TickKernel = null
+var _manual_tick: int = -1
 
 func _init(
     condition_state: ActorConditionState = null,
@@ -53,7 +54,19 @@ func _init(
     _kernel = kernel
 
 func is_ready() -> bool:
-    return _state != null and _state.is_ready() and _time_profile != null and _time_profile.is_valid() and _kernel != null
+    return _state != null and _state.is_ready() and _time_profile != null and _time_profile.is_valid() \
+        and (_manual_tick >= 0 or _kernel != null)
+
+func configure_manual_clock(world_tick: int) -> bool:
+    if world_tick < 0 or _state == null or not _state.is_ready() or _time_profile == null or not _time_profile.is_valid():
+        return false
+    _manual_tick = world_tick
+    return true
+
+func current_clock_tick() -> int:
+    if _manual_tick >= 0:
+        return _manual_tick
+    return -1 if _kernel == null else _kernel.world_tick()
 
 func has_actor(actor_id: String) -> bool:
     return is_ready() and _state.has_actor(actor_id)
@@ -61,7 +74,7 @@ func has_actor(actor_id: String) -> bool:
 func current_values(actor_id: String) -> Dictionary:
     if not is_ready():
         return {}
-    var raw: Dictionary = raw_values_at(actor_id, _kernel.world_tick())
+    var raw: Dictionary = raw_values_at(actor_id, current_clock_tick())
     if raw.is_empty():
         return {}
     var result: Dictionary = {}
@@ -210,7 +223,7 @@ func effective_max_health(actor_id: String, base_max_hp: int) -> int:
     return maxi(1, int((base_max_hp * health_multiplier_bp(actor_id)) / 10000))
 
 func fatigue_value(actor_id: String) -> int:
-    var raw: int = fatigue_raw_at(actor_id, _kernel.world_tick()) if is_ready() else -1
+    var raw: int = fatigue_raw_at(actor_id, current_clock_tick()) if is_ready() else -1
     return -1 if raw < 0 else clampi(raw / StateClass.VALUE_SCALE, 0, 100)
 
 func fatigue_raw_at(actor_id: String, world_tick: int) -> int:
