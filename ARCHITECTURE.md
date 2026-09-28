@@ -1,6 +1,6 @@
 # Tick Survival Lab — Settled Architecture Map
 
-Status: **active turn-based migration map; Slices 1-6 complete**
+Status: **active turn-based migration map; Slices 1-7 complete**
 
 ## Canonical direction
 
@@ -14,42 +14,36 @@ Do not create a replacement simulation framework.
 
 ## Current production spine
 
-- gameplay.tscn -> TurnBasedGameMain is canonical.
-- ProductionWorldBootstrap owns real procedural generation/materialization/streaming; production never depends on demo fixtures.
-- SimpleTurnController owns migrated unmounted movement, combat, scavenging and ordinary inventory turn completion; its single turn-completion signal is the canonical survival-time advancement seam.
-- WorldState owns authoritative entities/placements and exposes narrow ordinary direct writes used by migrated turn routes.
-- Movement legality reads candidate cells directly from WorldState terrain/occupancy plus existing collision facts; canonical movement does not call SpatialQueryService, WorldMutationService or MovementActionService.
-- A player movement or combat input resolves at most once, consumes one ordinary turn when accepted, then relevant infected resolve sequentially against the resulting current state.
-- Only infected within the bounded 24-cell active radius receive individual actions. Distant infected receive no individual turn.
-- Canonical melee/firearm combat writes existing Health/injury/firearm/corpse state directly and does not execute TickKernel/WHEN/simultaneous combat machinery.
-- Streaming focus, player perception and presentation follow final authoritative state after each simple turn.
-- Real generated loot remains owned by LootState + InventoryContainmentState; inspection is read-only and never rerolls contents.
-- Search/take/store/equip/stow/drop/loose-item pickup validate against current authoritative state, mutate existing owners directly, then commit one ordinary turn. Exact item identity is preserved.
-- Existing ActorConditionState / ActorConditionService / ActorConditionModifierQuery remain authoritative survival state. The canonical route advances explicit elapsed survival time once per accepted action and never from render frames.
-- Existing need rates, fatigue math, condition modifiers, Health pressure and moodlet presentation are reused. Running applies existing fatigue pressure; nearby perceived infected and actual injury feed existing Calm/fear state.
-- Contextual interaction remains action-from-thing: the existing InteractionAffordanceQuery and WorldInteractionPanel discover/present actions belonging to the selected real entity, while TurnBasedGameMain dispatches migrated contextual consequences directly to existing domain owners and completes through the same SimpleTurnController turn seam.
-- Inventory EAT/DRINK uses exact carried item identity plus existing SurvivorSustainmentProfileCatalog values. The item is lawfully released, freshness state removed where present, the exact WorldState entity consumed, canonical condition gains applied, and existing profile duration becomes explicit elapsed survival time.
-- World potable fixtures DRINK into canonical hydration. Beds/furniture expose REST/SLEEP from existing sustainment offers; REST advances one hour and SLEEP eight hours through the manual survival clock without scheduled long actions.
-- Doors use existing DoorPhysicalTransitionService and authoritative door/collision state. Windows OPEN/CLOSE use existing WorldInteractableState. Contextual UI browsing/rejection is zero-time.
-- Loot SEARCH/pickup contextual offers delegate to the already-migrated Slice 4 simple-turn methods. Crafting workstation discovery remains an entry point to the existing crafting UI; crafting execution itself remains Slice 7.
-- The canonical phone shell is TurnBasedPlayerShell -> EquipmentPlayerShell. It changes only EAT/DRINK execution delegation; existing inventory/equipment presentation remains intact.
-- The canonical phone header has one unobstructed MENU control. SAVE and SAVE & MENU use the existing DurableSessionStore and Continue lifecycle.
+- `gameplay.tscn -> Slice7GameMain -> TurnBasedGameMain` is the current canonical production composition. `Slice7GameMain` is a narrow migration composition containing explicit craft/heal/repair/deconstruct commits, not a generalized action layer.
+- ProductionWorldBootstrap owns procedural generation/materialization/streaming.
+- SimpleTurnController owns migrated turn completion and bounded local infected actions. Its completion signal remains the single survival elapsed-time seam.
+- WorldState owns authoritative entities/placements and narrow direct writes.
+- Canonical movement, combat, scavenging, inventory, survival and contextual interaction retain the Slice 1-6 ownership recorded previously.
+- Existing CraftingRecipeCatalog/CraftingPlanQuery remain recipe/ingredient/tool/workstation truth. Canonical CRAFT validates the existing plan and skill check, removes exact consumed entities, creates exact recipe outputs and places them in existing authoritative containment.
+- Existing PoweredCraftingWorkstationAdapter remains cooking availability truth. Cooking uses the same canonical recipe execution only when the real workstation is available/powered; Slice 7 does not fake utility state.
+- Existing SurvivorFirstAidActionService remains treatment-offer/content truth while canonical treatment commit now consumes the exact selected medical resources and writes ActorHealthState injury state directly before ordinary turn completion.
+- Existing WorldInteractionCatalog repair/deconstruction profiles remain object/tool/material/difficulty/salvage truth. Canonical repair writes existing broken state and consumes exact materials. Canonical deconstruction removes the actual world object and creates existing salvage semantics in inventory or lawful loose placement.
+- Craft/heal/repair/deconstruct durations become explicit elapsed survival ticks through the same Slice 5 seam; no per-action timer or scheduler runs.
+- Contextual action-from-thing remains canonical: workstation CRAFT/COOK, broken-object REPAIR and deconstructable-object DECONSTRUCT use the existing interaction presentation. First aid remains item/injury driven through the existing phone inventory UI.
+- The canonical phone shell remains TurnBasedPlayerShell -> EquipmentPlayerShell; Slice 7 adds only first-aid delegation to the canonical owner.
+- MENU, SAVE, SAVE & MENU and Continue retain the existing DurableSessionStore lifecycle.
 
 ## Transitional boundary
 
-The old runtime remains temporarily instantiated or referenced because bootstrap, the existing durable-session owner chain, and later roadmap routes such as crafting/healing/repair/deconstruction, vehicles and utilities still depend on portions of it. TurnBasedGameMain currently inherits the established durable/condition owner chain as a compatibility bridge, while migrated player action execution remains on the simple-turn route. This is migration debt, not protected architecture.
+The old runtime remains temporarily instantiated/referenced because bootstrap, durable-session compatibility, fortification, vehicles, utilities and later routes still depend on portions of it. This is migration debt, not protected architecture.
 
-Legacy WorldInteractionPlayerController scheduled execution is disconnected from the canonical pointer/panel route. WorldInteractionActionService and SurvivorSustainmentActionService remain useful as read-only offer/profile compatibility sources and for still-unmigrated callers, but their timed action execution is not canonical contextual gameplay.
+`Slice7GameMain` is also explicit migration debt: it exists to keep the newly migrated domain commits readable while the older inheritance chain still supplies legacy owners. It must not grow into a generalized action framework and should be folded away during later consolidation/legacy demolition.
 
-Legacy CombatGameMain, CombatActionService, CombatPlayerController, FirearmActionService, LootSearchActionService, LootPlayerInteractionController, timed ItemTransferActionService and TickKernel-driven condition/fear adapters are not canonical migrated execution. Do not extend them for migrated gameplay. Delete them when remaining legacy dependents migrate safely.
+Legacy CraftingActionService timed execution, SurvivorFirstAidActionService scheduled execution, WorldObjectRepairActionService scheduling and WorldInteractionActionService deconstruction scheduling are no longer canonical player execution for their migrated Slice 7 actions. Their catalogs/offer queries may remain useful until remaining dependents migrate.
 
-SpatialQueryService and WorldMutationService likewise remain for unmigrated routes/bootstrap but are not dependencies of canonical simple-turn movement/combat/scavenging/inventory/survival/contextual execution.
+Legacy WorldInteractionPlayerController scheduled execution, combat action services, loot timed services, TickKernel-driven condition/fear adapters, SpatialQueryService and WorldMutationService remain noncanonical migration dependencies where still required.
 
 Rules while migrating:
 
 - no new dependency on TickKernel/WHEN for migrated routes;
 - no WHERE 2.0 / WHAT 2.0 / WHEN 2.0;
-- plain world state and direct local spatial questions are preferred;
+- no generalized craft/job/action replacement layer;
+- plain authoritative state and narrow domain owners are preferred;
 - delete legacy owners/adapters once their final dependent route migrates;
 - only locally relevant actors receive individual turns;
 - far/unloaded world remains persistent data, not an always-running simulation.
@@ -59,7 +53,7 @@ Rules while migrating:
 - open procedural persistent island, generated roads/buildings and streaming;
 - scavenging, inventory/equipment and loot;
 - zombies, weapons, damage, injury, death and corpses;
-- crowd congestion/pressure, fear and darkness/perception pressure;
+- crowd pressure, fear and darkness/perception pressure;
 - contextual interactions originating from the thing acted upon;
 - crafting/cooking/healing, rest/sleep, repair/deconstruction;
 - existing-building fortification and shelter/base use;
@@ -72,23 +66,12 @@ Rules while migrating:
 
 - Generation creates the procedural world; persistent state owns subsequent player-caused changes.
 - Rendering/UI own presentation and input only, never gameplay consequences.
-- Production identity is actor.player; demo actor/world IDs are not canonical.
+- Production identity is actor.player.
 - A base is an existing building the player fortifies and supplies; no settlement management or freeform construction engine.
-- Persistence should serialize ordinary authoritative state conventionally; do not create duplicate gameplay truth.
+- Persistence serializes ordinary authoritative state; do not create duplicate gameplay truth.
 
 ## Explicitly retired direction
 
-The following are no longer project identity and should disappear as migration permits:
-
-- shared simulation ticks as the universal execution model;
-- multiple movement phases per player action;
-- generalized simultaneous intention/consequence resolution;
-- universal commitment/interruption machinery;
-- generalized WHEN scheduling for ordinary actions;
-- WHERE/WHAT as heavyweight runtime frameworks rather than ordinary state/query responsibilities;
-- living survivor/raider/follower/social simulation;
-- colony/settlement management;
-- freeform base construction;
-- demo/fixture-owned production startup.
+Shared universal simulation ticks, generalized simultaneous resolution, universal commitment/interruption, generalized WHEN scheduling, heavyweight WHERE/WHAT runtime frameworks, living survivor social simulation, colony management, freeform base construction and demo-owned production startup remain retired.
 
 See ROADMAP.md for migration order and CURRENT.md for the exact next operation.
