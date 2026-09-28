@@ -4,6 +4,8 @@ const REGRESSION_SEED := 20001
 const PLAYER_ID := "actor.player"
 const Intents = preload("res://scripts/input/PlayerActionIntent.gd")
 const Facing = preload("res://scripts/foundation/spatial/SpatialFacing.gd")
+const Slots = preload("res://scripts/simulation/actors/equipment/ActorHandSlot.gd")
+const FirearmProfiles = preload("res://scripts/simulation/combat/FirearmProfileCatalog.gd")
 
 func _initialize() -> void:
     call_deferred("_run")
@@ -118,7 +120,81 @@ func _run() -> void:
         _fail("canonical combat advanced the retired shared TickKernel")
         return
 
-    print("SLICE3_SIMPLE_COMBAT_OK seed=%d turn=%d corpse=%s player_hp=%d" % [
+    # Prove the existing exact firearm/magazine/round content uses the same one-turn path.
+    if not world.move_entity(attacker, center + Vector2i(40, 41), Facing.Value.WEST):
+        _fail("could not move melee attacker out of the firearm lane")
+        return
+    var ranged_target := distant
+    if not world.move_entity(ranged_target, center + Vector2i(3, 0), Facing.Value.WEST):
+        _fail("could not place ranged target")
+        return
+    if not health.set_hp(ranged_target, health.max_hp(ranged_target)):
+        _fail("could not reset ranged target health")
+        return
+
+    var firearm_id := "slice3.test.firearm"
+    var magazine_id := "slice3.test.magazine"
+    var round_id := "slice3.test.round"
+    if world.create_entity(FirearmProfiles.SERVICE_PISTOL, firearm_id) != firearm_id:
+        _fail("could not create focused-test firearm identity")
+        return
+    if world.create_entity(FirearmProfiles.SERVICE_MAGAZINE, magazine_id) != magazine_id:
+        _fail("could not create focused-test magazine identity")
+        return
+    if world.create_entity(FirearmProfiles.SERVICE_ROUND, round_id) != round_id:
+        _fail("could not create focused-test round identity")
+        return
+
+    var firearm_state: FirearmState = game.call("combat_firearm_state")
+    if firearm_state == null or not firearm_state.ensure_firearm(firearm_id) or not firearm_state.ensure_magazine(magazine_id):
+        _fail("firearm state did not accept exact physical identities")
+        return
+    if not game._inventory_mutations.set_container(round_id, magazine_id):
+        _fail("could not place exact round into magazine")
+        return
+    if not firearm_state.insert_magazine(firearm_id, magazine_id):
+        _fail("could not insert exact magazine")
+        return
+    if firearm_state.chamber_from_magazine(firearm_id) != round_id:
+        _fail("could not chamber exact live round")
+        return
+    if not game._hand_mutations.set_item(PLAYER_ID, Slots.Value.PRIMARY_RIGHT, firearm_id):
+        _fail("could not equip focused-test firearm")
+        return
+
+    var ranged_hp_before: int = health.current_hp(ranged_target)
+    var ranged_turn_before: int = int(turns.turn_number())
+    var ranged_tick_before: int = int(legacy_kernel.world_tick()) if legacy_kernel != null else -1
+    turns.submit_intent(Intents.COMBAT_FORWARD)
+
+    if int(turns.turn_number()) != ranged_turn_before + 1:
+        _fail("firearm attack did not consume exactly one turn")
+        return
+    if health.current_hp(ranged_target) != ranged_hp_before - 34:
+        _fail("firearm attack did not apply canonical profile damage")
+        return
+    if world.has_entity(round_id):
+        _fail("discharged exact chambered round still exists")
+        return
+    if not firearm_state.chamber_round(firearm_id).is_empty():
+        _fail("single-round firearm did not end with an empty chamber")
+        return
+    var gunshot_found := false
+    for injury: ActorInjuryRecord in health.injuries(ranged_target):
+        if injury.injury_type == &"gunshot":
+            gunshot_found = true
+            break
+    if not gunshot_found:
+        _fail("firearm impact did not create canonical gunshot injury")
+        return
+    if legacy_kernel != null and int(legacy_kernel.world_tick()) != ranged_tick_before:
+        _fail("firearm combat advanced the retired shared TickKernel")
+        return
+    if not turns.has_control():
+        _fail("player control was not returned after firearm turn")
+        return
+
+    print("SLICE3_SIMPLE_COMBAT_OK seed=%d turns=%d corpse=%s player_hp=%d firearm_damage=34" % [
         REGRESSION_SEED,
         turns.turn_number(),
         corpse_id,
@@ -139,6 +215,8 @@ func _find_arena(world: WorldState) -> Dictionary:
                 var cells := [
                     center,
                     center + Vector2i.RIGHT,
+                    center + Vector2i(2, 0),
+                    center + Vector2i(3, 0),
                     center + Vector2i.UP,
                 ]
                 var valid := true
