@@ -11,7 +11,7 @@ concurrency:
 jobs:
   verify:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 5
     steps:
       - uses: actions/checkout@v4
       - name: Install Godot 4.7.1
@@ -24,7 +24,7 @@ jobs:
       - name: Build script class cache
         run: ./Godot_v4.7.1-stable_linux.x86_64 --headless --editor --path "$GITHUB_WORKSPACE/game" --quit
       - name: Verify production Slice 8 fortification route
-        run: timeout 240s ./Godot_v4.7.1-stable_linux.x86_64 --headless --path "$GITHUB_WORKSPACE/game" -s res://scripts/ci/Slice8FortificationSmoke.gd
+        run: timeout 60s ./Godot_v4.7.1-stable_linux.x86_64 --headless --path "$GITHUB_WORKSPACE/game" -s res://scripts/ci/Slice8FortificationSmoke.gd
       - name: Guard canonical fortification from legacy execution
         shell: bash
         run: |
