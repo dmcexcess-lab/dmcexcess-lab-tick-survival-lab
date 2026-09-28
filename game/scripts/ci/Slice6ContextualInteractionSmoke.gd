@@ -17,21 +17,16 @@ func _fail(message: String) -> void: push_error("SLICE6_CONTEXTUAL: " + message)
 
 func _run() -> void:
     _clear_save_files()
-    var scene: PackedScene = load("res://gameplay.tscn")
-    var game := scene.instantiate() if scene != null else null
+    var scene: PackedScene = load("res://gameplay.tscn"); var game := scene.instantiate() if scene != null else null
     if game == null or not game.call("configure_world_seed_override", REGRESSION_SEED) or not game.call("configure_session_paths", SAVE_PRIMARY, SAVE_BACKUP, SAVE_TEMP): _fail("production scene/session setup failed"); return
     get_root().add_child(game); await process_frame; await process_frame
     if not bool(game.call("canonical_boot_ok")) or not bool(game.call("session_boot_ok")): _fail("production/session boot failed"); return
     var turns: SimpleTurnController = game.call("simple_turn_controller"); var world: WorldState = turns._world if turns != null else null
     if turns == null or world == null or not turns.has_control(): _fail("canonical simple turn route unavailable"); return
     if game.get_node_or_null("SessionControls") != null: _fail("menu/save regression returned"); return
-
     var panel: WorldInteractionPanel = game.call("simple_contextual_panel"); var affordances: InteractionAffordanceQuery = game.call("simple_contextual_affordances")
     if panel == null or affordances == null: _fail("production contextual presentation/query unavailable"); return
-    var ui_turn: int = turns.turn_number(); var ui_tick: int = int(game.call("survival_elapsed_tick")); var offers: Array[InteractionOffer] = affordances.offers()
-    if offers.is_empty() or not panel.open_for_target(offers[0].target_entity_id, "INTERACT", [offers[0]]): _fail("contextual panel could not browse real offer"); return
-    panel.close_panel()
-    if turns.turn_number() != ui_turn or int(game.call("survival_elapsed_tick")) != ui_tick: _fail("contextual browsing advanced time"); return
+    var ui_turn: int = turns.turn_number(); var ui_tick: int = int(game.call("survival_elapsed_tick"))
     var rejected: Dictionary = game.call("run_simple_contextual_action", PLAYER_ID, "missing.target", &"door.open")
     if bool(rejected.get("success", false)) or turns.turn_number() != ui_turn or int(game.call("survival_elapsed_tick")) != ui_tick: _fail("rejected contextual action advanced time"); return
 
@@ -58,6 +53,10 @@ func _run() -> void:
     if bed.is_empty() or not _place_player_for_target(world, bed): _fail("real bed target unavailable"); return
     var bed_offers: Array[InteractionOffer] = _offers_for_target(affordances, bed)
     if not _has_action(bed_offers, SustainmentOffers.REST_ON_FURNITURE) or not _has_action(bed_offers, SustainmentOffers.SLEEP_IN_BED): _fail("bed does not expose REST/SLEEP from target"); return
+    ui_turn = turns.turn_number(); ui_tick = int(game.call("survival_elapsed_tick"))
+    if not panel.open_for_target(bed, "BED", bed_offers): _fail("contextual panel could not browse reachable bed actions"); return
+    panel.close_panel()
+    if turns.turn_number() != ui_turn or int(game.call("survival_elapsed_tick")) != ui_tick: _fail("contextual browsing advanced time"); return
     var rest_before: int = int(game._condition_service.value(PLAYER_ID, ConditionStateClass.REST)); var legacy_before: int = int(game._kernel.world_tick())
     var rest_result: Dictionary = game.call("run_simple_contextual_action", PLAYER_ID, bed, SustainmentOffers.REST_ON_FURNITURE)
     if not bool(rest_result.get("success", false)) or int(game._condition_service.value(PLAYER_ID, ConditionStateClass.REST)) <= rest_before: _fail("REST did not use canonical condition state"); return
@@ -78,8 +77,7 @@ func _run() -> void:
 
     var save: Dictionary = game.call("save_durable_session", &"slice6_contextual"); var loaded: Dictionary = game._session_store.load_best(); var probe := scene.instantiate()
     if not bool(save.get("ok", false)) or not bool(loaded.get("ok", false)) or probe == null or not probe.call("configure_session_paths", SAVE_PRIMARY, SAVE_BACKUP, SAVE_TEMP) or not probe.call("configure_continue_session", loaded.get("session", {})): _fail("contextual save is not Continue-compatible"); return
-    probe.free()
-    print("SLICE6_CONTEXTUAL_OK seed=%d turns=%d survival_tick=%d eat=true drink=true rest=true sleep=true door=true save=true" % [REGRESSION_SEED, turns.turn_number(), game.call("survival_elapsed_tick")]); _clear_save_files(); quit(0)
+    probe.free(); print("SLICE6_CONTEXTUAL_OK seed=%d turns=%d survival_tick=%d eat=true drink=true rest=true sleep=true door=true save=true" % [REGRESSION_SEED, turns.turn_number(), game.call("survival_elapsed_tick")]); _clear_save_files(); quit(0)
 
 func _find_real_consumable(game: Node, kind: StringName) -> Dictionary:
     for container_id: String in game._loot_state.container_ids():
