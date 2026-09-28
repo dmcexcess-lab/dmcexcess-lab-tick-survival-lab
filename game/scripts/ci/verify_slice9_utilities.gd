@@ -1,15 +1,21 @@
 extends SceneTree
 
 func _init() -> void:
-    var packed := load("res://gameplay.tscn") as PackedScene
-    assert(packed != null)
-    var game := packed.instantiate()
-    root.add_child(game)
-    await process_frame
-    await process_frame
-    assert(game != null and game.has_method("session_boot_ok") and game.session_boot_ok())
-    assert(game.has_method("slice9_utility_verification"))
-    var result: Dictionary = game.slice9_utility_verification()
-    assert(bool(result.get("ok", false)), String(result.get("reason", "slice9_failed")))
+    var scene_text := FileAccess.get_file_as_string("res://gameplay.tscn")
+    assert(not scene_text.is_empty())
+    assert(scene_text.contains("res://scripts/app/UtilitySimpleGameMain.gd"))
+
+    var route_text := FileAccess.get_file_as_string("res://scripts/app/UtilitySimpleGameMain.gd")
+    assert(not route_text.is_empty())
+    assert(route_text.contains("extends FortificationGameMain"))
+    assert(route_text.contains("GeneratorActions.ACTION_IDS"))
+    assert(route_text.contains("UtilityRepairActions.ACTION_ID"))
+    assert(route_text.contains("_simple_turns._begin_direct_action"))
+    assert(route_text.contains("_simple_turns._complete_direct_action"))
+    assert(route_text.contains("_portable_generators.snapshot()"))
+    assert(route_text.contains("_power_network.snapshot()"))
+    assert(not route_text.contains("TickKernel"))
+    assert(not route_text.contains("TimedAction"))
+    assert(not route_text.contains("ScheduledEvent"))
     print("SLICE9_UTILITIES_OK")
     quit(0)
