@@ -4,8 +4,9 @@ class_name EquipmentPlayerShell
 const Slots = preload("res://scripts/simulation/actors/equipment/ActorHandSlot.gd")
 const Profiles = preload("res://scripts/simulation/actors/equipment/ActorEquipmentProfileCatalog.gd")
 
-## Production inventory/equipment surface. Reads the authoritative paper-doll projection
-## and routes all mutations through the existing timed ItemTransferActionService.
+## Production inventory/equipment surface. Reads the authoritative paper-doll projection.
+## Canonical play routes equip/stow/drop through SimpleTurnController; the legacy timed
+## transfer service remains only as compatibility debt for older noncanonical composition.
 
 var _equipment_profiles: ActorEquipmentProfileCatalog = Profiles.new()
 
