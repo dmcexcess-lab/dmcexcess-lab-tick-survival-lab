@@ -24,6 +24,8 @@ var _kernel: TickKernel = null
 var _time_profile: WorldTimeProfile = null
 var _modifiers: ActorConditionModifierQuery = null
 var _applying_condition_damage: bool = false
+var _manual_clock_enabled: bool = false
+var _manual_tick: int = -1
 
 func _init(
     condition_state: ActorConditionState = null,
@@ -40,9 +42,52 @@ func _init(
     _connect_signals()
 
 func is_ready() -> bool:
-    return _state != null and _state.is_ready() and _health != null and _kernel != null \
+    return _state != null and _state.is_ready() and _health != null \
+        and (_manual_clock_enabled or _kernel != null) \
         and _time_profile != null and _time_profile.is_valid() \
         and _modifiers != null and _modifiers.is_ready()
+
+func configure_manual_clock(world_tick: int) -> bool:
+    if world_tick < 0 or _modifiers == null or not _modifiers.configure_manual_clock(world_tick):
+        return false
+    _manual_clock_enabled = true
+    _manual_tick = world_tick
+    return true
+
+func current_clock_tick() -> int:
+    if _manual_clock_enabled:
+        return _manual_tick
+    return -1 if _kernel == null else _kernel.world_tick()
+
+func advance_elapsed_ticks(actor_id: String, elapsed_ticks: int, reason: StringName = &"simple_turn_elapsed") -> bool:
+    if not _manual_clock_enabled or not has_actor(actor_id) or elapsed_ticks < 1:
+        return false
+    var previous_tick := _manual_tick
+    var target_tick := previous_tick + elapsed_ticks
+    _manual_tick = target_tick
+    if not _modifiers.configure_manual_clock(target_tick):
+        _manual_tick = previous_tick
+        _modifiers.configure_manual_clock(previous_tick)
+        return false
+
+    # Preserve analytic need/fatigue drift between material mutations. Once a lethal
+    # physical need reaches zero, settle each turn so canonical Health damage accrues
+    # through the existing remainder rather than waiting for a later interaction.
+    var values_now := _modifiers.current_values(actor_id)
+    var lethal_need_zero := int(values_now.get(String(StateClass.SATIETY), 1)) <= 0 \
+        or int(values_now.get(String(StateClass.HYDRATION), 1)) <= 0 \
+        or int(values_now.get(String(StateClass.REST), 1)) <= 0
+    if lethal_need_zero and not _settle_actor(actor_id, target_tick, reason):
+        return false
+    _clamp_health_to_effective_max(actor_id)
+    fatigue_changed.emit(actor_id, current_fatigue(actor_id), reason)
+    condition_changed.emit(actor_id, reason)
+    return true
+
+func settle_manual_clock(actor_id: String, reason: StringName = &"manual_clock_settle") -> bool:
+    if not _manual_clock_enabled or not has_actor(actor_id):
+        return false
+    return _settle_actor(actor_id, _manual_tick, reason)
 
 func has_actor(actor_id: String) -> bool:
     return is_ready() and _state.has_actor(actor_id) and _health.has_actor(actor_id)
@@ -69,7 +114,7 @@ func can_start_run(actor_id: String) -> bool:
 func set_condition(actor_id: String, channel: StringName, value_points: int, reason: StringName = &"condition_set") -> bool:
     if not has_actor(actor_id) or channel not in StateClass.CHANNELS or value_points < 0 or value_points > 100:
         return false
-    if not _settle_actor(actor_id, _kernel.world_tick(), &"pre_condition_set"):
+    if not _settle_actor(actor_id, current_clock_tick(), &"pre_condition_set"):
         return false
     var record_value: Dictionary = _state.record(actor_id)
     var values_raw: Dictionary = record_value.get("values_raw", {}).duplicate(true)
@@ -86,7 +131,7 @@ func change_condition(actor_id: String, channel: StringName, delta_points: int, 
         return false
     if delta_points == 0:
         return true
-    if not _settle_actor(actor_id, _kernel.world_tick(), &"pre_condition_change"):
+    if not _settle_actor(actor_id, current_clock_tick(), &"pre_condition_change"):
         return false
     var record_value: Dictionary = _state.record(actor_id)
     var values_raw: Dictionary = record_value.get("values_raw", {}).duplicate(true)
@@ -107,7 +152,7 @@ func relieve_fatigue(actor_id: String, points: int, reason: StringName = &"fatig
         return false
     if points == 0:
         return true
-    var now: int = _kernel.world_tick()
+    var now: int = current_clock_tick()
     var record_value: Dictionary = _state.record(actor_id)
     var current_raw: int = _modifiers.fatigue_raw_at(actor_id, now)
     record_value["fatigue_raw"] = maxi(0, current_raw - points * StateClass.VALUE_SCALE)
@@ -122,7 +167,7 @@ func apply_exertion(actor_id: String, fatigue_cost: int, reason: StringName = &"
         return false
     if fatigue_cost == 0:
         return true
-    var now: int = _kernel.world_tick()
+    var now: int = current_clock_tick()
     if not _settle_actor(actor_id, now, &"pre_exertion"):
         return false
     var record_value: Dictionary = _state.record(actor_id)
@@ -225,12 +270,16 @@ func _connect_signals() -> void:
                 source.connect(callable)
 
 func _on_decision_required(actor_id: String, world_tick: int) -> void:
+    if _manual_clock_enabled:
+        return
     if has_actor(actor_id):
         _settle_actor(actor_id, world_tick, &"decision_settle")
         fatigue_changed.emit(actor_id, current_fatigue(actor_id), &"decision_settle")
         condition_changed.emit(actor_id, &"decision_settle")
 
 func _on_action_started(action: TimedAction) -> void:
+    if _manual_clock_enabled:
+        return
     if action == null or not has_actor(action.actor_id) or not _is_physical_action(action.action_type):
         return
     var record_value: Dictionary = _state.record(action.actor_id)
@@ -239,6 +288,8 @@ func _on_action_started(action: TimedAction) -> void:
     _state._set_record(action.actor_id, record_value, &"physical_action_started")
 
 func _on_action_finished(action: TimedAction) -> void:
+    if _manual_clock_enabled:
+        return
     if action == null or not has_actor(action.actor_id):
         return
     if _is_physical_action(action.action_type):
