@@ -1,8 +1,8 @@
-extends CanonicalPlayerShell
+extends EquipmentPlayerShell
 class_name TurnBasedPlayerShell
 
-## Slice 6 compatibility surface: presentation stays in the established phone shell,
-## while EAT/DRINK execution is delegated to the canonical simple-turn game owner.
+## Slice 6 compatibility surface: presentation stays in the established phone/equipment
+## shell, while EAT/DRINK execution is delegated to the canonical simple-turn game owner.
 var _simple_consume: Callable = Callable()
 
 func configure_simple_contextual_consume(callback: Callable) -> bool:
