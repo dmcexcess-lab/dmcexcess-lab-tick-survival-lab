@@ -229,7 +229,7 @@ func _run() -> void:
         return
 
     # Status presentation reads the same canonical survival owner.
-    var status: Dictionary = game._status_summary.summary(PLAYER_ID)
+    var status: Dictionary = game._status_summary.query(PLAYER_ID)
     if not bool(status.get("ok", false)):
         _fail("status summary unavailable after survival migration")
         return
