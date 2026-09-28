@@ -1,14 +1,21 @@
 extends EquipmentPlayerShell
 class_name TurnBasedPlayerShell
 
-## Slice 6 compatibility surface: presentation stays in the established phone/equipment
-## shell, while EAT/DRINK execution is delegated to the canonical simple-turn game owner.
+## Turn-based compatibility surface: presentation stays in the established phone/equipment
+## shell, while migrated item actions delegate to the canonical simple-turn game owner.
 var _simple_consume: Callable = Callable()
+var _simple_first_aid: Callable = Callable()
 
 func configure_simple_contextual_consume(callback: Callable) -> bool:
     if not callback.is_valid():
         return false
     _simple_consume = callback
+    return true
+
+func configure_simple_first_aid(callback: Callable) -> bool:
+    if not callback.is_valid():
+        return false
+    _simple_first_aid = callback
     return true
 
 func _consume_selected_inventory_item() -> void:
@@ -34,4 +41,25 @@ func _consume_selected_inventory_item() -> void:
         _selected_inventory_item_id = ""
     else:
         _inventory_status = "%s failed: %s." % [label, String(result.get("reason", "action rejected")).replace("_", " ")]
+    open_inventory()
+
+func _treat_selected_inventory_item(injury_id: String) -> void:
+    var item_id: String = _selected_inventory_item_id
+    if _pause_was_active:
+        _inventory_status = "Resume before using inventory actions."
+        _render_inventory()
+        return
+    if not _simple_first_aid.is_valid():
+        _inventory_status = "First aid unavailable."
+        _render_inventory()
+        return
+    close_modal()
+    var result: Dictionary = _simple_first_aid.call(item_id, injury_id)
+    if bool(result.get("success", false)):
+        _inventory_status = "Treatment complete — %s." % (
+            "wound treated" if bool(result.get("treated", false)) else "wound stabilized; treatment was limited"
+        )
+        _selected_inventory_item_id = ""
+    else:
+        _inventory_status = "First aid failed: %s" % String(result.get("reason", "unknown")).replace("_", " ")
     open_inventory()
