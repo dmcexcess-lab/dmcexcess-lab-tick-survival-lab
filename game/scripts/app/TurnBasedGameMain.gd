@@ -1,4 +1,4 @@
-extends GameMain
+extends EnvironmentalPressureGameMain
 class_name TurnBasedGameMain
 
 const SimpleTurnControllerClass = preload("res://scripts/player/SimpleTurnController.gd")
@@ -7,25 +7,39 @@ const TurnIntents = preload("res://scripts/input/PlayerActionIntent.gd")
 const Facing = preload("res://scripts/foundation/spatial/SpatialFacing.gd")
 const Footprint = preload("res://scripts/foundation/spatial/SpatialFootprint.gd")
 const Layers = preload("res://scripts/foundation/spatial/SpatialLayer.gd")
-const FirearmProfilesClass = preload("res://scripts/simulation/combat/FirearmProfileCatalog.gd")
-const FirearmStateClass = preload("res://scripts/simulation/combat/FirearmState.gd")
-const CorpseStateClass = preload("res://scripts/simulation/combat/CorpseState.gd")
-const DeathTransitionsClass = preload("res://scripts/simulation/combat/ActorDeathTransitionService.gd")
+const ConditionStateClass = preload("res://scripts/simulation/actors/condition/ActorConditionState.gd")
+const PerceptionFearRules = preload("res://scripts/simulation/actors/condition/ConditionPerceptionFearAdapter.gd")
+const InjuryFearRules = preload("res://scripts/simulation/actors/condition/ConditionInjuryFearAdapter.gd")
+const MovementExertionRules = preload("res://scripts/simulation/actors/condition/MovementConditionExertionService.gd")
 
 const RESIDENT_SPAWN_SEARCH_RADIUS := 8
 const INVALID_CELL := Vector2i(-999999, -999999)
+const SURVIVAL_SECONDS_PER_TURN := 1
 
 var _simple_turns: SimpleTurnController = null
 var _simple_infected_ids: Array[String] = []
 var _simple_firearm_profiles: FirearmProfileCatalog = null
 var _simple_firearm_state: FirearmState = null
 var _simple_corpse_state: CorpseState = null
-var _simple_death_transitions: ActorDeathTransitionService = null
+var _simple_fear_bands: Dictionary = {}
+var _simple_visible_threats: Dictionary = {}
+var _simple_threat_free_since_tick: int = -1
+var _last_player_hp: int = -1
+
+func _ready() -> void:
+    super._ready()
+    if session_boot_ok():
+        _sync_survival_clock_from_state()
+        _last_player_hp = _health_state.current_hp(WorldBootstrapClass.PLAYER_ID) if _health_state != null else -1
+        if _hud != null:
+            _hud.refresh()
 
 func _boot_production_world() -> bool:
     if not super._boot_production_world():
         return false
     if not _boot_simple_combat_state():
+        return false
+    if not _configure_simple_survival():
         return false
     if not _hydrate_procedural_local_infected():
         return false
@@ -52,7 +66,7 @@ func _boot_production_world() -> bool:
     _simple_turns.action_resolved.connect(Callable(_hud, "present_action_result"))
     _simple_turns.action_busy_changed.connect(_on_player_action_busy_changed)
     _simple_turns.turn_completed.connect(_on_simple_turn_completed)
-    if not _wire_simple_inventory_route():
+    if not _wire_simple_inventory_route() or not _wire_simple_session_menu():
         return false
 
     var legacy_submit := Callable(_controller, "submit_intent")
@@ -62,7 +76,115 @@ func _boot_production_world() -> bool:
         _controls.action_intent.disconnect(legacy_submit)
     _keyboard.action_intent.connect(_on_turn_intent)
     _controls.action_intent.connect(_on_turn_intent)
+    _last_player_hp = _health_state.current_hp(WorldBootstrapClass.PLAYER_ID)
     return true
+
+func _boot_simple_combat_state() -> bool:
+    # Reuse the existing durable combat owners booted by the transitional parent chain.
+    # Canonical execution is still SimpleTurnController; the old combat action services
+    # are not invoked by migrated input.
+    if _firearm_profiles == null or _firearm_state == null or not _firearm_state.is_ready() \
+        or _corpse_state == null or _death_transitions == null or not _death_transitions.is_ready():
+        return false
+    _simple_firearm_profiles = _firearm_profiles
+    _simple_firearm_state = _firearm_state
+    _simple_corpse_state = _corpse_state
+    var death_cb := Callable(self, "_on_simple_actor_died")
+    if not _death_transitions.actor_died.is_connected(death_cb):
+        _death_transitions.actor_died.connect(death_cb)
+    return true
+
+func _configure_simple_survival() -> bool:
+    if _condition_state == null or _condition_service == null or _condition_modifiers == null \
+        or not _condition_service.is_ready() or not _condition_state.has_actor(WorldBootstrapClass.PLAYER_ID):
+        return false
+    var record := _condition_state.record(WorldBootstrapClass.PLAYER_ID)
+    var start_tick := maxi(
+        int(record.get("anchor_tick", 0)),
+        int(record.get("fatigue_anchor_tick", 0))
+    )
+    if not _condition_service.configure_manual_clock(start_tick):
+        return false
+    _disable_legacy_condition_event_adapters()
+    return true
+
+func _sync_survival_clock_from_state() -> bool:
+    if _condition_state == null or _condition_service == null \
+        or not _condition_state.has_actor(WorldBootstrapClass.PLAYER_ID):
+        return false
+    var record := _condition_state.record(WorldBootstrapClass.PLAYER_ID)
+    var anchor_tick := maxi(
+        int(record.get("anchor_tick", 0)),
+        int(record.get("fatigue_anchor_tick", 0))
+    )
+    if _condition_service.current_clock_tick() > anchor_tick:
+        anchor_tick = _condition_service.current_clock_tick()
+    return _condition_service.configure_manual_clock(anchor_tick)
+
+func _disable_legacy_condition_event_adapters() -> void:
+    if _condition_fear != null and _perception != null:
+        var perception_cb := Callable(_condition_fear, "_on_perception_changed")
+        if _perception.perception_changed.is_connected(perception_cb):
+            _perception.perception_changed.disconnect(perception_cb)
+    if _condition_injury_fear != null and _health_state != null:
+        var injury_cb := Callable(_condition_injury_fear, "_on_damage_applied")
+        if _health_state.damage_applied.is_connected(injury_cb):
+            _health_state.damage_applied.disconnect(injury_cb)
+    if _condition_heard_fear != null and _spatial_sound != null:
+        var heard_cb := Callable(_condition_heard_fear, "_on_sound_heard")
+        if _spatial_sound.sound_heard.is_connected(heard_cb):
+            _spatial_sound.sound_heard.disconnect(heard_cb)
+    if _fear_pressure != null:
+        _fear_pressure._on_timing_state_reset()
+
+func _wire_simple_session_menu() -> bool:
+    if _shell == null:
+        return false
+    var save_cb := Callable(self, "_on_session_save_requested")
+    var save_menu_cb := Callable(self, "_on_shell_save_menu_requested")
+    if not _shell.save_requested.is_connected(save_cb):
+        _shell.save_requested.connect(save_cb)
+    if not _shell.save_menu_requested.is_connected(save_menu_cb):
+        _shell.save_menu_requested.connect(save_menu_cb)
+    return true
+
+func _on_shell_save_menu_requested() -> void:
+    _set_session_status("SAVING...")
+    var result := save_durable_session(&"save_and_menu")
+    if not bool(result.get("ok", false)):
+        return
+    if _shell != null and _shell.active_modal() != _shell.MODAL_NONE:
+        _shell.close_modal()
+    get_tree().change_scene_to_file(STARTUP_SCENE_PATH)
+
+func save_menu_destination() -> String:
+    return STARTUP_SCENE_PATH
+
+func _set_session_status(message: String) -> void:
+    if _shell != null:
+        _shell.present_session_status(message)
+    super._set_session_status(message)
+
+func save_durable_session(reason: StringName = &"manual") -> Dictionary:
+    if _condition_service != null and _condition_state != null \
+        and _condition_state.has_actor(WorldBootstrapClass.PLAYER_ID):
+        var record := _condition_state.record(WorldBootstrapClass.PLAYER_ID)
+        var anchor_tick := maxi(
+            int(record.get("anchor_tick", 0)),
+            int(record.get("fatigue_anchor_tick", 0))
+        )
+        if _condition_service.current_clock_tick() < anchor_tick:
+            _condition_service.configure_manual_clock(anchor_tick)
+        _condition_service.settle_manual_clock(WorldBootstrapClass.PLAYER_ID, &"durable_save_settle")
+    return super.save_durable_session(reason)
+
+func survival_elapsed_tick() -> int:
+    return -1 if _condition_service == null else _condition_service.current_clock_tick()
+
+func survival_ticks_per_turn() -> int:
+    if _world_time_profile == null or not _world_time_profile.is_valid():
+        return 1
+    return maxi(1, _world_time_profile.ticks_per_second * SURVIVAL_SECONDS_PER_TURN)
 
 func _wire_simple_inventory_route() -> bool:
     if _simple_turns == null or _loot_panel == null or _loot_inspection == null or _shell == null:
@@ -124,39 +246,6 @@ func _on_simple_loot_take(container_id: String, item_id: String) -> void:
 func _on_simple_loot_store(container_id: String, item_id: String) -> void:
     if _simple_turns != null:
         _simple_turns.store_loot_item(container_id, item_id)
-
-func _boot_simple_combat_state() -> bool:
-    if _world == null or _health_state == null or _hand_state == null or _hand_mutations == null \
-        or _inventory_state == null or _inventory_mutations == null or _physical_catalog == null \
-        or _collision_catalog == null:
-        return false
-    _simple_firearm_profiles = FirearmProfilesClass.new()
-    if not _simple_firearm_profiles.register_physical_profiles(_physical_catalog):
-        return false
-    _simple_firearm_state = FirearmStateClass.new(
-        _world,
-        _inventory_state,
-        _inventory_mutations,
-        _simple_firearm_profiles
-    )
-    if not _simple_firearm_state.is_ready():
-        return false
-    _simple_corpse_state = CorpseStateClass.new()
-    if not _collision_catalog.register(DeathTransitionsClass.CORPSE_SEMANTIC, false):
-        return false
-    _simple_death_transitions = DeathTransitionsClass.new(
-        _world,
-        _health_state,
-        _hand_state,
-        _hand_mutations,
-        _inventory_state,
-        _inventory_mutations,
-        _simple_corpse_state
-    )
-    if not _simple_death_transitions.is_ready():
-        return false
-    _simple_death_transitions.actor_died.connect(_on_simple_actor_died)
-    return true
 
 func _hydrate_procedural_local_infected() -> bool:
     var player: WorldPlacement = _world.placement(WorldBootstrapClass.PLAYER_ID)
@@ -235,7 +324,98 @@ func _on_simple_turn_completed(_turn_number: int, _active_actor_count: int) -> v
         streaming.update_focus(player.anchor)
     if _perception != null:
         _perception.recompute(&"simple_turn")
+    _advance_simple_survival()
+    if _hud != null:
+        _hud.refresh()
     _flush_pending_visual_state()
+
+func _advance_simple_survival() -> void:
+    if _condition_service == null or not _condition_service.has_actor(WorldBootstrapClass.PLAYER_ID):
+        return
+    if not _condition_service.advance_elapsed_ticks(
+        WorldBootstrapClass.PLAYER_ID,
+        survival_ticks_per_turn(),
+        &"simple_turn_elapsed"
+    ):
+        return
+
+    var intent := _simple_turns.last_completed_intent() if _simple_turns != null else &""
+    if intent == TurnIntents.RUN_FORWARD:
+        _condition_service.apply_exertion(
+            WorldBootstrapClass.PLAYER_ID,
+            MovementExertionRules.RUN_BASE_FATIGUE_COST,
+            &"movement_exertion"
+        )
+
+    _apply_simple_fear_pressure()
+
+func _apply_simple_fear_pressure() -> void:
+    if _condition_service == null or _perception == null:
+        return
+    var player := _world.placement(WorldBootstrapClass.PLAYER_ID)
+    if player == null:
+        return
+
+    var current_visible: Dictionary = {}
+    var worsened: Array[Dictionary] = []
+    for actor_id: String in _simple_infected_ids:
+        var placement := _world.placement(actor_id)
+        if placement == null or not _health_state.has_actor(actor_id) or _health_state.current_hp(actor_id) <= 0:
+            continue
+        var distance := _chebyshev(player.anchor, placement.anchor)
+        if distance > SimpleTurnController.ACTIVE_RADIUS or not _perception.is_visible(placement.anchor):
+            continue
+        current_visible[actor_id] = true
+        var band := PerceptionFearRules._band_for_distance(distance)
+        var previous := int(_simple_fear_bands.get(actor_id, 0))
+        if band > previous:
+            worsened.append({
+                "actor_id": actor_id,
+                "pressure": int(PerceptionFearRules.BAND_PRESSURE.get(band, 0)) - int(PerceptionFearRules.BAND_PRESSURE.get(previous, 0)),
+            })
+            _simple_fear_bands[actor_id] = band
+
+    var now := survival_elapsed_tick()
+    if current_visible.is_empty():
+        if not _simple_visible_threats.is_empty() and _simple_threat_free_since_tick < 0:
+            _simple_threat_free_since_tick = now
+        if _simple_threat_free_since_tick >= 0 \
+            and now - _simple_threat_free_since_tick >= _world_time_profile.ticks_per_minute() * PerceptionFearRules.ENCOUNTER_RESET_MINUTES:
+            _simple_fear_bands.clear()
+            _simple_threat_free_since_tick = -1
+    else:
+        _simple_threat_free_since_tick = -1
+    _simple_visible_threats = current_visible
+
+    worsened.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
+        var pa := int(a.get("pressure", 0))
+        var pb := int(b.get("pressure", 0))
+        if pa != pb:
+            return pa > pb
+        return String(a.get("actor_id", "")) < String(b.get("actor_id", ""))
+    )
+    var pressure := 0
+    for index in range(worsened.size()):
+        var weight_bp := PerceptionFearRules.DIMINISHING_BP[mini(index, PerceptionFearRules.DIMINISHING_BP.size() - 1)]
+        pressure += int(ceili(float(int(worsened[index].get("pressure", 0)) * weight_bp) / 10000.0))
+
+    var current_hp := _health_state.current_hp(WorldBootstrapClass.PLAYER_ID)
+    if _last_player_hp >= 0 and current_hp < _last_player_hp:
+        pressure += InjuryFearRules.pressure_for_damage(_last_player_hp - current_hp)
+    _last_player_hp = current_hp
+
+    pressure = mini(ActorFearPressureService.MAX_PRESSURE_PER_TICK, maxi(0, pressure))
+    if pressure > 0:
+        _condition_service.change_condition(
+            WorldBootstrapClass.PLAYER_ID,
+            ConditionStateClass.CALM,
+            -pressure,
+            &"simple_turn_fear_pressure"
+        )
+
+static func _chebyshev(a: Vector2i, b: Vector2i) -> int:
+    var delta := a - b
+    return maxi(absi(delta.x), absi(delta.y))
 
 func _on_simple_actor_died(actor_id: String, _corpse_id: String) -> void:
     if actor_id != WorldBootstrapClass.PLAYER_ID or _shell == null:
