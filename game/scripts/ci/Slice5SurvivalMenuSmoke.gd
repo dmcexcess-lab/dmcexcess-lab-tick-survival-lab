@@ -178,8 +178,8 @@ func _run() -> void:
     if player == null or not world.move_entity(combat_target, player.anchor + Vector2i.RIGHT, Facing.Value.WEST):
         _fail("could not place combat target")
         return
-    if not game._health_state.set_hp(combat_target, game._health_state.max_hp(combat_target)):
-        _fail("could not reset combat target")
+    if not game._health_state.set_hp(combat_target, 1):
+        _fail("could not prepare lethal combat target")
         return
     world.move_entity(attacker, player.anchor + Vector2i.UP, Facing.Value.SOUTH)
     world.move_entity(distant, player.anchor + Vector2i(40, 40), Facing.Value.WEST)
