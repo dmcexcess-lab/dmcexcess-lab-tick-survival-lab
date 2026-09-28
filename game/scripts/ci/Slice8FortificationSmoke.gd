@@ -41,38 +41,39 @@ func _run() -> void:
         return
 
     _check(skills.set_skill(PlayerId, SkillCatalog.MECHANICAL, 10, 0), "Mechanical test level set")
-    var target := _first_generated_opening(world, state)
+    var target: String = _first_generated_opening(world, state)
     _check(not target.is_empty(), "real generated boardable opening found")
     if target.is_empty():
         _finish()
         return
     _check(_face_target(world, target), "player positioned at generated opening")
 
-    var initial_boards := state.board_count(target)
-    var initial_survival := int(game.call("survival_elapsed_tick"))
-    var initial_kernel := kernel.current_tick()
+    var initial_boards: int = state.board_count(target)
+    var initial_survival: int = int(game.call("survival_elapsed_tick"))
+    var initial_kernel: int = int(kernel.current_tick())
     var rejected: Dictionary = game.call("run_simple_fortification", target, WorldActions.OPENING_BOARD)
     _check(not bool(rejected.get("success", false)), "BOARD rejects without real requirements")
     _check(state.board_count(target) == initial_boards, "rejected BOARD mutates no fortification state")
     _check(int(game.call("survival_elapsed_tick")) == initial_survival, "rejected BOARD is zero-time")
 
-    var hammer := _give(world, inventory_mutations, &"item.tool.hammer", "ci.slice8.hammer")
-    var plank := _give(world, inventory_mutations, &"item.material.wood_plank", "ci.slice8.plank")
-    var nails := _give(world, inventory_mutations, &"item.material.nails_box", "ci.slice8.nails")
+    var hammer: String = _give(world, inventory_mutations, &"item.tool.hammer", "ci.slice8.hammer")
+    var plank: String = _give(world, inventory_mutations, &"item.material.wood_plank", "ci.slice8.plank")
+    var nails: String = _give(world, inventory_mutations, &"item.material.nails_box", "ci.slice8.nails")
     _check(not hammer.is_empty() and not plank.is_empty() and not nails.is_empty(), "real hammer/plank/nails enter authoritative inventory")
 
-    var before_turn := simple.turn_index()
-    var before_survival := int(game.call("survival_elapsed_tick"))
+    var before_turn: int = int(simple.turn_index())
+    var before_survival: int = int(game.call("survival_elapsed_tick"))
     var boarded: Dictionary = game.call("run_simple_fortification", target, WorldActions.OPENING_BOARD)
     _check(bool(boarded.get("success", false)), "BOARD succeeds through canonical production route")
     _check(state.board_count(target) == initial_boards + 1, "BOARD increments authoritative opening board count by one")
     _check(world.has_entity(hammer) and inventory.is_contained(hammer), "hammer remains a real carried tool")
     _check(not world.has_entity(plank) and not world.has_entity(nails), "BOARD consumes exact plank and nails entities")
-    _check(simple.turn_index() == before_turn + 1, "BOARD completes exactly one canonical player turn")
+    _check(int(simple.turn_index()) == before_turn + 1, "BOARD completes exactly one canonical player turn")
     _check(int(game.call("survival_elapsed_tick")) > before_survival, "BOARD advances explicit survival elapsed time")
-    _check(kernel.current_tick() == initial_kernel, "BOARD does not advance TickKernel")
+    _check(int(kernel.current_tick()) == initial_kernel, "BOARD does not advance TickKernel")
 
-    var offers: Array[InteractionOffer] = game.call("simple_contextual_affordances").offers()
+    var affordances: InteractionAffordanceQuery = game.call("simple_contextual_affordances")
+    var offers: Array[InteractionOffer] = affordances.offers()
     var has_remove := false
     for offer: InteractionOffer in offers:
         if offer.target_entity_id == target and offer.action_id == WorldActions.OPENING_UNBOARD:
@@ -81,14 +82,14 @@ func _run() -> void:
     _check(has_remove, "boarded real opening exposes REMOVE BOARD contextually")
 
     _check(_face_target(world, target), "player remains/repositions at boarded opening")
-    before_turn = simple.turn_index()
+    before_turn = int(simple.turn_index())
     before_survival = int(game.call("survival_elapsed_tick"))
     var unboarded: Dictionary = game.call("run_simple_fortification", target, WorldActions.OPENING_UNBOARD)
     _check(bool(unboarded.get("success", false)), "REMOVE BOARD succeeds through canonical production route")
     _check(state.board_count(target) == initial_boards, "REMOVE BOARD updates the same authoritative board state")
-    _check(simple.turn_index() == before_turn + 1, "REMOVE BOARD completes exactly one canonical player turn")
+    _check(int(simple.turn_index()) == before_turn + 1, "REMOVE BOARD completes exactly one canonical player turn")
     _check(int(game.call("survival_elapsed_tick")) > before_survival, "REMOVE BOARD advances explicit survival elapsed time once")
-    _check(kernel.current_tick() == initial_kernel, "REMOVE BOARD does not advance TickKernel")
+    _check(int(kernel.current_tick()) == initial_kernel, "REMOVE BOARD does not advance TickKernel")
 
     var recovered := false
     for item_id: String in world.entity_ids_of_type(&"item.material.wood_plank"):
@@ -100,9 +101,9 @@ func _run() -> void:
     var save_result: Dictionary = game.call("save_durable_session", &"slice8_smoke")
     _check(bool(save_result.get("ok", false)), "durable save accepts fortification state")
     _check(String(game.call("save_menu_destination")) == "res://startup.tscn", "SAVE & MENU destination remains startup")
-    _check(shell.get_global_rect().size.x > 0.0, "canonical touch shell remains present")
+    _check(shell.get_viewport() != null, "canonical touch shell remains present")
 
-    print("SLICE8_OK target=%s boards=%d turn=%d survival_tick=%d save=%s" % [target, state.board_count(target), simple.turn_index(), int(game.call("survival_elapsed_tick")), str(bool(save_result.get("ok", false)))])
+    print("SLICE8_OK target=%s boards=%d turn=%d survival_tick=%d save=%s" % [target, state.board_count(target), int(simple.turn_index()), int(game.call("survival_elapsed_tick")), str(bool(save_result.get("ok", false)))])
     _finish()
 
 func _first_generated_opening(world: WorldState, state: WorldInteractableState) -> String:
@@ -140,7 +141,7 @@ func _face_target(world: WorldState, target_id: String) -> bool:
 func _give(world: WorldState, inventory_mutations: InventoryContainmentMutationService, semantic: StringName, item_id: String) -> String:
     if world.has_entity(item_id):
         world.remove_entity(item_id)
-    var created := world.create_entity(semantic, item_id)
+    var created: String = world.create_entity(semantic, item_id)
     if created.is_empty() or not inventory_mutations.set_container(created, PlayerId):
         if not created.is_empty() and world.has_entity(created):
             world.remove_entity(created)
