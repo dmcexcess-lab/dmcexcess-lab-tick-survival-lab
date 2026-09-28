@@ -39,7 +39,11 @@ func _boot_production_world() -> bool:
         _inventory_state,
         _physical_catalog,
         _simple_firearm_profiles,
-        _simple_firearm_state
+        _simple_firearm_state,
+        _inventory_mutations,
+        _hand_mutations,
+        _carry_acquisition,
+        _loot_state
     )
     _simple_turns.set_infected_actor_ids(_simple_infected_ids)
     add_child(_simple_turns)
@@ -48,6 +52,8 @@ func _boot_production_world() -> bool:
     _simple_turns.action_resolved.connect(Callable(_hud, "present_action_result"))
     _simple_turns.action_busy_changed.connect(_on_player_action_busy_changed)
     _simple_turns.turn_completed.connect(_on_simple_turn_completed)
+    if not _wire_simple_inventory_route():
+        return false
 
     var legacy_submit := Callable(_controller, "submit_intent")
     if _keyboard.action_intent.is_connected(legacy_submit):
@@ -57,6 +63,67 @@ func _boot_production_world() -> bool:
     _keyboard.action_intent.connect(_on_turn_intent)
     _controls.action_intent.connect(_on_turn_intent)
     return true
+
+func _wire_simple_inventory_route() -> bool:
+    if _simple_turns == null or _loot_panel == null or _loot_inspection == null or _shell == null:
+        return false
+
+    if _loot_controller != null:
+        var legacy_pointer := Callable(_loot_controller, "submit_world_cell")
+        if _door_pointer.world_cell_primary.is_connected(legacy_pointer):
+            _door_pointer.world_cell_primary.disconnect(legacy_pointer)
+        var legacy_take := Callable(_loot_controller, "request_take")
+        if _loot_panel.take_requested.is_connected(legacy_take):
+            _loot_panel.take_requested.disconnect(legacy_take)
+        var legacy_store := Callable(_loot_controller, "request_store")
+        if _loot_panel.store_requested.is_connected(legacy_store):
+            _loot_panel.store_requested.disconnect(legacy_store)
+        var legacy_hud := Callable(_hud, "present_action_result")
+        if _loot_controller.action_resolved.is_connected(legacy_hud):
+            _loot_controller.action_resolved.disconnect(legacy_hud)
+        var legacy_panel_result := Callable(_loot_panel, "present_action_result")
+        if _loot_controller.action_resolved.is_connected(legacy_panel_result):
+            _loot_controller.action_resolved.disconnect(legacy_panel_result)
+        var legacy_open := Callable(_loot_panel, "open_container")
+        if _loot_controller.container_opened.is_connected(legacy_open):
+            _loot_controller.container_opened.disconnect(legacy_open)
+        var legacy_refresh := Callable(_loot_panel, "refresh")
+        if _loot_controller.container_changed.is_connected(legacy_refresh):
+            _loot_controller.container_changed.disconnect(legacy_refresh)
+
+    _door_pointer.world_cell_primary.connect(_on_simple_world_cell)
+    _loot_panel.take_requested.connect(_on_simple_loot_take)
+    _loot_panel.store_requested.connect(_on_simple_loot_store)
+    _simple_turns.action_resolved.connect(Callable(_loot_panel, "present_action_result"))
+    _simple_turns.loot_container_opened.connect(Callable(_loot_panel, "open_container"))
+    _simple_turns.loot_container_changed.connect(Callable(_loot_panel, "refresh"))
+    return _shell.configure_simple_inventory_turns(_simple_turns)
+
+func _on_simple_world_cell(cell: Vector2i) -> void:
+    if _simple_turns == null or not _simple_turns.has_control():
+        return
+    var containers := _loot_inspection.searchable_container_ids_at(cell)
+    if containers.size() == 1:
+        _simple_turns.search_loot_container(containers[0])
+        return
+    if not containers.is_empty():
+        return
+    var loose_items: Array[String] = []
+    for entity_id: String in _world.entities_at(cell, Layers.Channel.LOOSE_ITEM):
+        var entity := _world.entity(entity_id)
+        if entity != null and String(entity.semantic_type).begins_with("item."):
+            loose_items.append(entity_id)
+    loose_items.sort()
+    if loose_items.size() == 1:
+        _simple_turns.pickup_loose_item(loose_items[0])
+
+func _on_simple_loot_take(container_id: String, item_id: String) -> void:
+    if _simple_turns != null:
+        _simple_turns.take_loot_item(container_id, item_id)
+
+func _on_simple_loot_store(container_id: String, item_id: String) -> void:
+    if _simple_turns != null:
+        _simple_turns.store_loot_item(container_id, item_id)
 
 func _boot_simple_combat_state() -> bool:
     if _world == null or _health_state == null or _hand_state == null or _hand_mutations == null \
