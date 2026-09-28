@@ -1,7 +1,7 @@
 # Tick Survival Lab — Turn-Based Rewrite Roadmap
 
 Updated: **2026-09-27**  
-Status: **architecture simplification in progress; Slices 1-4 complete**
+Status: **architecture simplification in progress; Slices 1-5 complete**
 
 ## Release target
 
@@ -37,11 +37,13 @@ Legacy tick-based combat classes remain noncanonical source migration debt only 
 
 Canonical production scavenging/inventory now runs through the simple turn spine using real generated loot and existing authoritative item/containment/equipment owners. Inspection is read-only. Search, take, store, equip, stow, drop and narrow loose-item pickup preserve exact item identity and use ordinary one-turn costs; rejected actions cost no turn. The existing loot panel and inventory/equipment shell route to this migrated path. TickKernel, timed transfer scheduling and LootSearchActionService do not execute underneath canonical Slice 4 actions.
 
-### Slice 5 — Survival — NEXT
+### Slice 5 — Survival — DONE
 
-Reconnect hunger, thirst, fatigue, health, wounds, fear/mood and recovery to elapsed turns/game time without universal simulation scheduling.
+Existing authoritative condition/Health/moodlet state now advances from the canonical ordinary-turn seam rather than TickKernel. Each successful migrated turn advances one second of existing survival-time math exactly once; rejected actions, pure UI and inspection advance none. Satiety/hydration/rest/engagement/comfort/calm and fatigue keep their existing rates/modifiers; running applies existing fatigue pressure; bounded visible-infected/injury danger updates existing Calm/fear state. No render-frame survival loop or generalized scheduler was introduced.
 
-### Slice 6 — Contextual interaction
+The production save/menu regression was repaired in the same operation: the duplicate high-layer SessionControls strip that covered MENU was removed, SAVE and SAVE & MENU now live inside the canonical phone MENU, and TurnBasedGameMain reconnects the existing DurableSessionStore/Continue lifecycle. SAVE & MENU completes the real durable save before returning to res://main.tscn.
+
+### Slice 6 — Contextual interaction — NEXT
 
 Preserve actions-from-things: food EAT, drink DRINK, beds SLEEP, furniture REST, windows/doors opening actions, furniture DECONSTRUCT, stove COOK, vehicles contextual actions. Replace generalized action routing where migrated.
 
@@ -92,4 +94,4 @@ Play and tune the real repeated loop on desktop and iPhone/Safari. Acceptance is
 
 ## NEXT
 
-**Slice 5 — reconnect survival condition progression and recovery to ordinary elapsed turns/game time without restoring universal simulation scheduling.**
+**Slice 6 — reconnect contextual world/item interactions to the simple-turn model, preserving actions-from-things without restoring generalized scheduling.**

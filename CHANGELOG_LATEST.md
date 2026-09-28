@@ -2,6 +2,19 @@
 
 This compact ledger records the newest executable work. CHANGELOG.md remains the historical archive.
 
+## Save/menu repair + turn-based rewrite Slice 5 — survival — 2026-09-27
+
+- Root cause of the phone UI regression was twofold: the legacy SessionControls CanvasLayer sat at layer 90 over the canonical shell's layer-40 MENU hitbox, and TurnBasedGameMain had bypassed EnvironmentalPressureGameMain, leaving those visible save controls without their established durable-session signal owner.
+- Removed the duplicate SessionControls node from gameplay.tscn. The canonical MENU button is now the only top-right session control; SAVE and SAVE & MENU live inside the existing MENU modal, so they no longer cover or intercept MENU on the 640x844 phone layout.
+- TurnBasedGameMain temporarily inherits the established durable-session/condition owner chain as a compatibility bridge. Migrated player actions still execute through SimpleTurnController; the bridge restores the existing DurableSessionStore, Continue validation/restore and canonical condition owners without creating a second save or survival state.
+- SAVE uses the existing durable save path. SAVE & MENU performs the real save_and_menu checkpoint, releases the menu/input block, then returns to res://main.tscn. Continue accepts the resulting save through the existing production session validator.
+- ActorConditionState / ActorConditionService / ActorConditionModifierQuery remain authoritative. The canonical simple-turn completion seam advances an explicit survival clock by one in-game second (five existing timing units) exactly once per accepted turn without advancing TickKernel.
+- Existing satiety, hydration, rest, engagement, comfort, calm, fatigue, condition modifiers, Health pressure and moodlet presentation are reused. Running applies the existing run fatigue rule. Bounded perceived-infected danger and actual injury update the existing Calm/fear state; no shadow fear state or scheduled fear flush was added.
+- Pure MENU/inventory/loot inspection and rejected actions advance no survival time; render frames advance none. Combat and scavenging each advance survival once regardless of how many local infected act afterward.
+- Existing EAT/DRINK/sleep/first-aid interaction UX remains deferred to the contextual/survival-action roadmap slices; this slice migrated progression/state, not those interaction surfaces.
+- Focused production run 36365188143: SUCCESS on the pre-final-doc code head, marker SLICE5_SURVIVAL_UI_OK seed=20001 turns=6 survival_tick=30 calm=45 hp=98 save=true menu=true. It proves production/session boot, unobstructed MENU, real durable SAVE + Continue acceptance, save-and-menu contract/destination, zero-time UI/inspection/rejections, ordinary survival accumulation, running fatigue, protected combat/infected bounds/fear, real-loot search timing, canonical status presentation and zero TickKernel advancement.
+- Static guards reject TickKernel, TimedAction and ScheduledEvent from SimpleTurnController and reject restoration of the legacy SessionControls node.
+
 ## Turn-based rewrite Slice 4 — scavenging and inventory — 2026-09-27
 
 - Canonical SimpleTurnController now owns ordinary search, take, store, equip, stow, drop and narrow loose-item pickup actions in addition to movement/combat.

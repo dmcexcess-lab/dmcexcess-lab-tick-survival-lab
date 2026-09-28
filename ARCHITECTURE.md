@@ -1,6 +1,6 @@
 # Tick Survival Lab — Settled Architecture Map
 
-Status: **active turn-based migration map; Slices 1-4 complete**
+Status: **active turn-based migration map; Slices 1-5 complete**
 
 ## Canonical direction
 
@@ -16,7 +16,7 @@ Do not create a replacement simulation framework.
 
 - gameplay.tscn -> TurnBasedGameMain is canonical.
 - ProductionWorldBootstrap owns real procedural generation/materialization/streaming; production never depends on demo fixtures.
-- SimpleTurnController owns migrated unmounted movement, combat, scavenging and ordinary inventory actions.
+- SimpleTurnController owns migrated unmounted movement, combat, scavenging and ordinary inventory actions; its single turn-completion signal is the canonical survival-time advancement seam.
 - WorldState owns authoritative entities/placements and exposes narrow ordinary direct writes used by migrated turn routes.
 - Movement legality reads candidate cells directly from WorldState terrain/occupancy plus existing collision facts; canonical movement does not call SpatialQueryService, WorldMutationService or MovementActionService.
 - A player movement or combat input resolves at most once, consumes one ordinary turn when accepted, then relevant infected resolve sequentially against the resulting current state.
@@ -31,15 +31,20 @@ Do not create a replacement simulation framework.
 - Search/take/store/equip/stow/drop/loose-item pickup validate against current WorldState, containment, equipment, carry capacity and interaction reach, mutate those existing owners directly, then commit one ordinary turn.
 - Exact item entity identity is preserved across loot container -> player containment -> equipment -> world drop -> pickup -> container transitions.
 - The existing LootContainerPanel and inventory/equipment shell remain presentation/input surfaces. Canonical mutations route to SimpleTurnController; they do not run ItemTransferActionService, LootSearchActionService or TickKernel.
+- Existing ActorConditionState / ActorConditionService / ActorConditionModifierQuery remain authoritative survival state. The canonical route advances an explicit elapsed survival clock once per accepted ordinary turn; it does not advance TickKernel and no render frame advances survival.
+- Existing need rates, fatigue math, condition modifiers, Health pressure and moodlet presentation are reused. Running applies the existing run-fatigue rule; nearby perceived infected and actual injury feed existing Calm/fear state through bounded turn-end calculations.
+- Pure UI/inspection and rejected actions do not advance survival time.
+- The canonical phone header now has one unobstructed MENU control. SAVE and SAVE & MENU live inside that menu and use the existing DurableSessionStore; SAVE & MENU saves first, releases modal/input blocking, then returns to res://main.tscn.
+
 
 
 ## Transitional boundary
 
-The old runtime remains temporarily instantiated or referenced because bootstrap plus later roadmap routes such as survival/contextual actions, long actions, vehicles, utilities and durable-session migration still depend on portions of it. This is migration debt, not protected architecture.
+The old runtime remains temporarily instantiated or referenced because bootstrap, the existing durable-session owner chain, and later roadmap routes such as contextual actions, long actions, vehicles and utilities still depend on portions of it. TurnBasedGameMain currently inherits the established durable/condition owner chain as a compatibility bridge, while migrated player action execution remains in SimpleTurnController. This is migration debt, not protected architecture.
 
-Legacy CombatGameMain, CombatActionService, CombatPlayerController, FirearmActionService, LootSearchActionService, LootPlayerInteractionController and timed ItemTransferActionService are not canonical movement/combat/scavenging/inventory execution. They remain only because older noncanonical app composition/source dependencies have not yet been demolished. Do not extend them for migrated gameplay. Delete them when their remaining legacy dependents are migrated safely.
+Legacy CombatGameMain, CombatActionService, CombatPlayerController, FirearmActionService, LootSearchActionService, LootPlayerInteractionController, timed ItemTransferActionService and TickKernel-driven condition/fear adapters are not canonical movement/combat/scavenging/inventory/survival execution. They remain only because older noncanonical app composition/source dependencies have not yet been demolished. Do not extend them for migrated gameplay. Delete them when their remaining legacy dependents are migrated safely.
 
-SpatialQueryService and WorldMutationService likewise remain for unmigrated routes/bootstrap but are not dependencies of canonical simple-turn movement/combat/scavenging/inventory.
+SpatialQueryService and WorldMutationService likewise remain for unmigrated routes/bootstrap but are not dependencies of canonical simple-turn movement/combat/scavenging/inventory/survival.
 
 Rules while migrating:
 
