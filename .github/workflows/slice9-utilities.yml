@@ -1,0 +1,27 @@
+name: Slice 9 utilities
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'game/scripts/app/UtilitySimpleGameMain.gd'
+      - 'game/gameplay.tscn'
+      - 'game/scripts/ci/verify_slice9_utilities.gd'
+      - '.github/workflows/slice9-utilities.yml'
+  workflow_dispatch:
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Godot 4.7.1
+        run: |
+          wget -q https://github.com/godotengine/godot-builds/releases/download/4.7.1-stable/Godot_v4.7.1-stable_linux.x86_64.zip
+          unzip -q Godot_v4.7.1-stable_linux.x86_64.zip
+          sudo mv Godot_v4.7.1-stable_linux.x86_64 /usr/local/bin/godot
+      - name: Build script class cache
+        run: godot --headless --path game --editor --quit
+      - name: Verify production Slice 9 utility route
+        run: godot --headless --path game --script res://scripts/ci/verify_slice9_utilities.gd
+      - name: Guard canonical utilities from legacy scheduling
+        run: |
+          ! grep -E 'TickKernel|TimedAction|ScheduledEvent|begin_action|ActionPhase' game/scripts/app/UtilitySimpleGameMain.gd
