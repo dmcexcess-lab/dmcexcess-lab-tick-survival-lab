@@ -12,6 +12,7 @@ const SaveTemp := "user://slice8_session.tmp.save"
 
 var failures: Array[String] = []
 var game: Node = null
+var restored_game: Node = null
 
 func _initialize() -> void: call_deferred("_run")
 
@@ -88,6 +89,13 @@ func _run() -> void:
     var recovered_id := String(unboarded.get("recovered_item_id", ""))
     _check(not recovered_id.is_empty() and world.has_entity(recovered_id), "REMOVE BOARD recovers a real authoritative plank entity")
 
+    var nails2 := _give(world, inventory_mutations, &"item.material.nails_box", "slice8.nails.persist")
+    _check(not nails2.is_empty(), "real replacement nails enter authoritative inventory")
+    if not _place_for(world, target): _check(false, "player positioned for persistent BOARD")
+    var persistent_board: Dictionary = game.call("run_simple_fortification", target, WorldActions.OPENING_BOARD)
+    _check(bool(persistent_board.get("success", false)) and state.board_count(target) == initial_boards + 1, "opening is boarded before durable save")
+    _check(not world.has_entity(recovered_id) and not world.has_entity(nails2), "persistent BOARD consumes recovered plank and exact replacement nails")
+
     var save_result: Dictionary = game.call("save_durable_session", &"slice8_smoke")
     var loaded: Dictionary = game._session_store.load_best()
     _check(bool(save_result.get("ok", false)) and bool(loaded.get("ok", false)), "durable save accepts fortification state")
@@ -95,7 +103,20 @@ func _run() -> void:
     _check(not menu_destination.is_empty() and menu_destination != "res://gameplay.tscn" and ResourceLoader.exists(menu_destination), "SAVE & MENU destination remains a real non-gameplay startup scene")
     _check(shell.get_viewport() != null, "canonical touch shell remains present")
 
-    print("SLICE8_OK seed=%d target=%s boards=%d turn=%d survival_tick=%d save=true" % [Seed, target, state.board_count(target), simple.turn_number(), int(game.call("survival_elapsed_tick"))])
+    if bool(loaded.get("ok", false)):
+        restored_game = packed.instantiate()
+        _check(restored_game.call("configure_session_paths", SavePrimary, SaveBackup, SaveTemp), "Continue uses the same durable store")
+        _check(restored_game.call("configure_continue_session", loaded.get("snapshot", {})), "saved snapshot accepted by Continue")
+        get_root().add_child(restored_game)
+        await process_frame; await process_frame
+        _check(bool(restored_game.call("session_boot_ok")), "Continue production session boots")
+        if bool(restored_game.call("session_boot_ok")):
+            var restored_world: WorldState = restored_game._world
+            var restored_state: WorldInteractableState = restored_game._world_interaction_state
+            _check(restored_state.board_count(target) == initial_boards + 1, "Continue restores authoritative boarded opening state")
+            _check(not restored_world.has_entity(recovered_id) and not restored_world.has_entity(nails2), "Continue does not restore consumed fortification materials")
+
+    print("SLICE8_OK seed=%d target=%s boards=%d turn=%d survival_tick=%d save_continue=true" % [Seed, target, state.board_count(target), simple.turn_number(), int(game.call("survival_elapsed_tick"))])
     _finish()
 
 func _first_generated_opening(world: WorldState, state: WorldInteractableState) -> String:
@@ -136,6 +157,7 @@ func _check(ok: bool, label: String) -> void:
 
 func _finish() -> void:
     _clear_saves()
+    if restored_game != null and is_instance_valid(restored_game): restored_game.queue_free()
     if game != null and is_instance_valid(game): game.queue_free()
     if failures.is_empty(): quit(0)
     else: push_error("Slice 8 fortification smoke failed: %s" % str(failures)); quit(1)
