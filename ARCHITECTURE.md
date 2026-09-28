@@ -1,6 +1,6 @@
 # Tick Survival Lab — Settled Architecture Map
 
-Status: **active turn-based migration map; Slices 1-7 complete**
+Status: **active turn-based migration map; Slices 1-8 complete**
 
 ## Canonical direction
 
@@ -14,7 +14,7 @@ Do not create a replacement simulation framework.
 
 ## Current production spine
 
-- `gameplay.tscn -> Slice7GameMain -> TurnBasedGameMain` is the current canonical production composition. `Slice7GameMain` is a narrow migration composition containing explicit craft/heal/repair/deconstruct commits, not a generalized action layer.
+- `gameplay.tscn -> FortificationGameMain -> Slice7GameMain -> TurnBasedGameMain` is the current canonical production composition. The two narrow migration subclasses contain explicit domain commits only; neither is a generalized action layer.
 - ProductionWorldBootstrap owns procedural generation/materialization/streaming.
 - SimpleTurnController owns migrated turn completion and bounded local infected actions. Its completion signal remains the single survival elapsed-time seam.
 - WorldState owns authoritative entities/placements and narrow direct writes.
@@ -23,18 +23,20 @@ Do not create a replacement simulation framework.
 - Existing PoweredCraftingWorkstationAdapter remains cooking availability truth. Cooking uses the same canonical recipe execution only when the real workstation is available/powered; Slice 7 does not fake utility state.
 - Existing SurvivorFirstAidActionService remains treatment-offer/content truth while canonical treatment commit now consumes the exact selected medical resources and writes ActorHealthState injury state directly before ordinary turn completion.
 - Existing WorldInteractionCatalog repair/deconstruction profiles remain object/tool/material/difficulty/salvage truth. Canonical repair writes existing broken state and consumes exact materials. Canonical deconstruction removes the actual world object and creates existing salvage semantics in inventory or lawful loose placement.
-- Craft/heal/repair/deconstruct durations become explicit elapsed survival ticks through the same Slice 5 seam; no per-action timer or scheduler runs.
-- Contextual action-from-thing remains canonical: workstation CRAFT/COOK, broken-object REPAIR and deconstructable-object DECONSTRUCT use the existing interaction presentation. First aid remains item/injury driven through the existing phone inventory UI.
+- Existing WorldInteractableState board counts remain fortification truth. Canonical BOARD/REMOVE BOARD validate real doors/windows, existing Mechanical/tool/material rules, consume/recover exact entities, and mutate the same persistent 0-3 board count used by opening pressure and rendering.
+- Craft/heal/repair/deconstruct/fortification durations become explicit elapsed survival ticks through the same Slice 5 seam; no per-action timer or scheduler runs.
+- Contextual action-from-thing remains canonical: workstation CRAFT/COOK, broken-object REPAIR, deconstructable-object DECONSTRUCT, and real opening BOARD/REMOVE BOARD use the existing interaction presentation. First aid remains item/injury driven through the existing phone inventory UI.
+- Existing ActorOpeningPressureActionService continues to consume installed boards before damaging/breaking an opening; Slice 8 adds no second barricade or siege state.
 - The canonical phone shell remains TurnBasedPlayerShell -> EquipmentPlayerShell; Slice 7 adds only first-aid delegation to the canonical owner.
-- MENU, SAVE, SAVE & MENU and Continue retain the existing DurableSessionStore lifecycle.
+- MENU, SAVE, SAVE & MENU and Continue retain the existing DurableSessionStore lifecycle. `world_interactions` plus ordinary world/inventory snapshots persist fortification and exact material consequences.
 
 ## Transitional boundary
 
-The old runtime remains temporarily instantiated/referenced because bootstrap, durable-session compatibility, fortification, vehicles, utilities and later routes still depend on portions of it. This is migration debt, not protected architecture.
+The old runtime remains temporarily instantiated/referenced because bootstrap, durable-session compatibility, vehicles, utilities and later routes still depend on portions of it. This is migration debt, not protected architecture.
 
-`Slice7GameMain` is also explicit migration debt: it exists to keep the newly migrated domain commits readable while the older inheritance chain still supplies legacy owners. It must not grow into a generalized action framework and should be folded away during later consolidation/legacy demolition.
+`Slice7GameMain` and `FortificationGameMain` are explicit migration debt: they keep migrated domain commits readable while the older inheritance chain still supplies legacy owners. They must not grow into generalized action frameworks and should be folded away during later consolidation/legacy demolition.
 
-Legacy CraftingActionService timed execution, SurvivorFirstAidActionService scheduled execution, WorldObjectRepairActionService scheduling and WorldInteractionActionService deconstruction scheduling are no longer canonical player execution for their migrated Slice 7 actions. Their catalogs/offer queries may remain useful until remaining dependents migrate.
+Legacy CraftingActionService timed execution, SurvivorFirstAidActionService scheduled execution, WorldObjectRepairActionService scheduling, and WorldInteractionActionService scheduling for migrated deconstruction/fortification actions are no longer canonical player execution. Their catalogs/offer queries may remain useful until remaining dependents migrate.
 
 Legacy WorldInteractionPlayerController scheduled execution, combat action services, loot timed services, TickKernel-driven condition/fear adapters, SpatialQueryService and WorldMutationService remain noncanonical migration dependencies where still required.
 
@@ -42,7 +44,7 @@ Rules while migrating:
 
 - no new dependency on TickKernel/WHEN for migrated routes;
 - no WHERE 2.0 / WHAT 2.0 / WHEN 2.0;
-- no generalized craft/job/action replacement layer;
+- no generalized craft/job/action/build replacement layer;
 - plain authoritative state and narrow domain owners are preferred;
 - delete legacy owners/adapters once their final dependent route migrates;
 - only locally relevant actors receive individual turns;
