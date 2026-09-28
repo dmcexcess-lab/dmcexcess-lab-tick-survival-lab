@@ -16,12 +16,12 @@ func _run() -> void:
     print("SLICE7_STAGE craft=", result)
     quit(1)
 func _take(game: Node, semantic: StringName) -> String:
-    for container_id: String in game._loot_state.container_ids():
-        for item_id: String in game._inventory_state.direct_contents(container_id):
-            if not game._world.has_entity(item_id): continue
-            var entity: WorldEntityRecord = game._world.entity(item_id)
-            if entity == null or entity.semantic_type != semantic: continue
-            if not game._inventory_mutations.clear_container(item_id): return ""
-            if game._inventory_mutations.set_container(item_id, PLAYER): return item_id
-            return ""
+    for item_id: String in game._world.entity_ids_of_type(semantic):
+        if not game._inventory_state.is_contained(item_id): continue
+        var container_id := game._inventory_state.container_of(item_id)
+        if not game._loot_state.has_container(container_id): continue
+        if not game._inventory_mutations.clear_container(item_id): return ""
+        if game._inventory_mutations.set_container(item_id, PLAYER): return item_id
+        game._inventory_mutations.set_container(item_id, container_id)
+        return ""
     return ""
