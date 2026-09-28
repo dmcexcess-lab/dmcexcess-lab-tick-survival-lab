@@ -7,8 +7,8 @@ Status: **canonical active working state**
 PROJECT = Tick Survival Lab  
 IDENTITY = turn-based open-world zombie survival  
 CORE_LOOP = explore -> scavenge -> fight/escape -> craft/heal -> fortify/supply shelter -> survive  
-ACTIVE_REWRITE_SLICE = 5 complete / survival + save-menu production repair  
-NEXT_REWRITE_SLICE = 6 / contextual interaction  
+ACTIVE_REWRITE_SLICE = 6 complete / contextual interaction  
+NEXT_REWRITE_SLICE = 7 / craft-cook-heal-repair-deconstruct  
 ROADMAP_CHANGE = true / 2026-09-27
 
 ## Authoritative direction
@@ -24,67 +24,59 @@ Shared simulation ticks, generalized simultaneous resolution, universal commitme
 ## Closed canonical simple-turn routes
 
 ### Movement
-
-SimpleTurnController reads terrain/occupancy directly from WorldState and changes placement through narrow authoritative WorldState writes. Canonical movement does not execute SpatialQueryService, WorldMutationService, MovementActionService, TickKernel or simultaneous movement resolution.
+SimpleTurnController reads terrain/occupancy directly from WorldState and performs narrow authoritative placement writes. Canonical movement does not execute SpatialQueryService, WorldMutationService, MovementActionService, TickKernel or simultaneous movement resolution.
 
 ### Combat
-
-Player melee/firearm actions resolve directly against authoritative Health/injury/equipment/firearm/corpse state. Nearby infected receive at most one sequential local action; distant infected receive none. Canonical combat does not advance TickKernel or execute CombatActionService, FirearmActionService, timed combat actions or simultaneous consequence batches.
+Player melee/firearm actions resolve directly against authoritative Health/injury/equipment/firearm/corpse state. Nearby infected receive at most one sequential local action; distant infected receive none. Canonical combat does not advance TickKernel or execute legacy timed/simultaneous combat machinery.
 
 ### Scavenging and inventory
-
-Real generated LootState / InventoryContainmentState contents remain authoritative. Inspection is read-only. Search, take, store, equip, stow, drop and narrow loose-item pickup preserve exact item identity and route through SimpleTurnController. Successful material actions consume one ordinary turn; rejected actions consume none. Equipped items remain the combat truth.
+Real generated LootState / InventoryContainmentState contents remain authoritative. Search, take, store, equip, stow, drop and loose-item pickup preserve exact item identity and route through SimpleTurnController. Inspection/rejection is zero-time.
 
 ### Survival
+ActorConditionState / ActorConditionService / ActorConditionModifierQuery / ActorHealthState remain authoritative. One ordinary accepted turn advances the explicit manual survival clock once; render frames and UI inspection do not. Existing need rates, fatigue, condition modifiers, Health pressure, fear/calm and moodlets remain the content truth.
 
-Existing ActorConditionState, ActorConditionService, ActorConditionModifierQuery, ActorHealthState and condition/moodlet queries remain authoritative. No replacement survival state was introduced.
+### Contextual interaction
 
-Canonical survival behavior:
+Actions still originate from the real thing/item being acted upon.
 
-- one accepted ordinary SimpleTurnController action advances survival exactly once;
-- the current conversion is one in-game second per ordinary canonical turn, represented by five existing WorldTimeProfile timing units;
-- the survival clock is explicit state owned through the existing condition service/query and does not advance TickKernel;
-- render frames, MENU, inventory/loot inspection and rejected actions advance no survival time;
-- satiety, hydration, rest, engagement and their existing analytic decay rates are preserved;
-- comfort and calm keep their existing recovery behavior toward neutral;
-- fatigue remains the existing authoritative fatigue state; running applies the existing run-fatigue rule while ordinary walking remains governed by existing pressure rules;
-- existing condition modifiers continue to affect health ceiling, fatigue, speed/carry/melee calculations where their consumers are active;
-- zero satiety/hydration/rest can use the existing starvation/dehydration/sleep-deprivation Health pressure through canonical Health;
-- perceived infected danger is bounded to relevant active infected and applies existing fear-band/diminishing rules to the existing Calm channel;
-- actual player damage adds the existing injury-shock fear pressure;
-- condition/fatigue/moodlet/status presentation reads the same authoritative state after the turn;
-- canonical survival does not schedule fear flushes, TimedAction, ScheduledEvent or WHEN work underneath the migrated turn route.
+Canonical world interaction presentation uses the existing InteractionAffordanceQuery and WorldInteractionPanel. TurnBasedGameMain disconnects WorldInteractionPlayerController's scheduled execution callback and dispatches migrated contextual actions directly to existing authoritative domain owners before committing through the same SimpleTurnController completion seam.
 
-Food/drink/sleep/first-aid contextual interaction UX remains intentionally deferred. Slice 5 migrated survival progression/state, not those later action surfaces.
+Current migrated contextual behavior:
 
-## Save/menu production repair
+- real carried edible item -> EAT;
+- real carried drink item -> DRINK;
+- potable fixture -> DRINK;
+- suitable furniture/bed -> REST;
+- bed -> SLEEP;
+- door -> OPEN/CLOSE;
+- window -> OPEN/CLOSE;
+- real loot source -> SEARCH through the already-migrated Slice 4 route;
+- loose item -> pickup through the already-migrated Slice 4 route;
+- crafting workstation -> existing crafting UI entry point only; Slice 7 owns crafting execution.
 
-The reported phone save/menu regression had two concrete causes:
+Inventory EAT/DRINK uses exact existing item identity and SurvivorSustainmentProfileCatalog values. The exact item leaves containment/equipment lawfully, freshness state is removed where present, the WorldState entity is consumed, and existing satiety/hydration/engagement gains are applied. Its existing profile duration becomes explicit elapsed survival time; it is not a scheduled TimedAction.
 
-1. gameplay.tscn contained a legacy SessionControls CanvasLayer at layer 90 whose top-right SAVE / SAVE & MENU panel physically overlapped the canonical shell MENU button at layer 40 on the 640x844 phone layout;
-2. the earlier TurnBasedGameMain simplification inherited GameMain directly, bypassing EnvironmentalPressureGameMain, which still owned the established DurableSessionStore / Continue lifecycle and SessionControls signal handlers. The visible legacy save controls therefore had no canonical production owner.
+REST uses the existing furniture surface facts, canonical condition state and one explicit hour of survival elapsed time. SLEEP uses bed semantics and eight explicit hours. Both still produce only the ordinary bounded local infected response rather than individually simulating eight hours of the island.
 
-Current repair:
+Door OPEN/CLOSE uses DoorPhysicalTransitionService and existing authoritative door/collision state. Window OPEN/CLOSE uses existing WorldInteractableState. No duplicate door/window state exists.
 
-- the duplicate SessionControls node is removed from gameplay.tscn;
-- the actual canonical MENU button is unobstructed and remains the single top-right session/menu entry point;
-- SAVE and SAVE & MENU now live inside CanonicalPlayerShell's MENU modal;
-- SAVE invokes the existing durable save owner;
-- SAVE & MENU invokes the real save_and_menu durable checkpoint, closes the modal/release input blocking after successful save, then changes to res://main.tscn;
-- the resulting save remains accepted by the existing production Continue validator;
-- no second persistence format or save owner was introduced.
+Contextual menu browsing and rejected actions consume no turn and no survival time.
 
-SessionControls.gd may remain as legacy source, but it is no longer instantiated by canonical gameplay.
+## Presentation / phone route
+
+gameplay.tscn now uses TurnBasedPlayerShell -> EquipmentPlayerShell. It preserves the existing phone inventory/equipment presentation and changes only inventory EAT/DRINK execution delegation to the canonical simple-turn owner.
+
+The repaired MENU / SAVE / SAVE & MENU route remains canonical and unobstructed. DurableSessionStore and Continue remain the existing persistence owners.
 
 ## Transitional compatibility boundary
 
-TurnBasedGameMain currently inherits EnvironmentalPressureGameMain as a compatibility bridge so the existing durable-session state/restore path and established condition/Health/moodlet owners remain available without reimplementing persistence.
+TurnBasedGameMain still inherits EnvironmentalPressureGameMain so the established durable-session state/restore path and existing domain owners remain available without reimplementation.
 
-That superclass chain still instantiates legacy services required by persistence and still-unmigrated roadmap routes. This does **not** make those services canonical action execution.
+The superclass chain still instantiates legacy services required by persistence and later roadmap routes. This does not make those services canonical action execution.
 
-Migrated movement, combat, scavenging, inventory and survival continue through SimpleTurnController + ordinary authoritative state. TickKernel remains present for legacy compatibility/snapshots but does not advance underneath these migrated routes.
+WorldInteractionPlayerController remains legacy source but is disconnected from canonical pointer/panel execution. WorldInteractionActionService and SurvivorSustainmentActionService remain useful for existing offer/profile queries and unmigrated callers, but their timed action execution is not used by the migrated contextual route.
 
-Legacy CombatActionService, FirearmActionService, LootSearchActionService, timed ItemTransferActionService and TickKernel-driven condition/fear adapters must not be extended for migrated gameplay. Remove compatibility owners only when their final dependent routes/persistence fields migrate safely.
+Crafting/cooking/healing/repair/deconstruction, vehicles and utilities still contain legacy execution paths and are the next migration work. Do not extend generalized scheduling to migrate them.
 
 ## Protected game behavior
 
@@ -98,8 +90,8 @@ Preserve throughout the remaining rewrite:
 - canonical Health/injury/death/corpse state;
 - survival condition/moodlet state;
 - darkness/perception pressure;
-- contextual actions originating from world objects/items;
-- crafting/cooking/healing, rest, repair and deconstruction;
+- action-from-thing contextual interaction;
+- crafting/cooking/healing, repair and deconstruction content;
 - existing-building fortification/base use;
 - vehicles;
 - power/water and independent shelter utilities;
@@ -110,60 +102,52 @@ A base remains an existing building the player fortified and supplied. No colony
 
 ## Verification lifecycle
 
-Current prompt-local verifier/workflow:
+Current prompt-local verification:
 
-- game/scripts/ci/Slice5SurvivalMenuSmoke.gd
-- .github/workflows/slice5-survival-menu.yml
+- game/scripts/ci/Slice6ContextualInteractionSmoke.gd
+- game/scripts/ci/Slice6CombatRegression.gd
+- .github/workflows/slice6-contextual-interaction.yml
 
-Focused production run 36365188143 passed on the completed code path with:
+Focused production run 36366512080 passed on the completed code path.
 
-SLICE5_SURVIVAL_UI_OK seed=20001 turns=6 survival_tick=30 calm=45 hp=98 save=true menu=true
+Primary marker:
 
-The verifier proves:
+SLICE6_CONTEXTUAL_OK seed=20001 turns=7 survival_tick=162047 eat=true drink=true rest=true sleep=true door=true save=true
 
-- real production and durable-session boot;
-- no legacy SessionControls node overlays the phone header;
-- canonical MENU is visible, in bounds and opens correctly;
-- opening/closing MENU advances neither turn nor survival time;
-- MENU contains SAVE and SAVE & MENU;
-- SAVE writes a real valid DurableSessionStore session accepted by production Continue;
-- the SAVE & MENU signal is connected to the canonical handler;
-- the real save_and_menu durable checkpoint succeeds and leaves a valid Continue-compatible save;
-- the destination is res://main.tscn;
-- render frames do not advance survival;
-- successful canonical turns advance survival exactly once;
-- rejected actions do not advance it;
-- satiety/hydration progress through existing rates;
-- running produces existing fatigue pressure;
-- protected combat damage and exactly bounded local infected response remain intact;
-- distant infected receive no individual action;
-- visible/injury danger changes canonical Calm/fear state;
-- combat does not advance TickKernel;
-- real generated loot inspection costs no survival time while search advances it once;
-- status UI reads canonical hunger/thirst/fatigue/sleep-pressure state;
-- static guards reject TickKernel/TimedAction/ScheduledEvent dependencies in SimpleTurnController and reject restoration of the legacy SessionControls node.
+The same workflow's protected combat step passed.
 
-Per SOP, the next code-changing prompt must retire this Slice 5 verifier/workflow before production edits and create fresh Slice 6 verification.
+The verification proves:
+
+- real production/session boot;
+- real existing affordance query/panel route;
+- rejected contextual actions are zero-time;
+- contextual browsing is zero-time;
+- real generated edible and drink items are taken from authoritative generated loot and consumed by exact identity;
+- EAT improves canonical satiety and advances the turn/survival seam exactly once;
+- DRINK improves canonical hydration and advances exactly once;
+- a real generated bed exposes REST and SLEEP from the target;
+- REST uses one explicit hour and SLEEP eight explicit hours without advancing TickKernel;
+- a real generated door exposes OPEN/CLOSE and mutates authoritative door state;
+- contextual state remains durably saveable and Continue-compatible;
+- protected lethal combat still advances exactly one canonical turn;
+- protected combat does not advance TickKernel;
+- a distant infected remains individually idle;
+- static guards reject TickKernel/TimedAction/ScheduledEvent from SimpleTurnController and reject run_until_stop/begin_action underneath the migrated contextual dispatcher.
+
+Per SOP, the next code-changing prompt must retire the Slice 6 verifier scripts/workflow before production edits and create fresh Slice 7 verification.
 
 ## NEXT
 
-**Rewrite Slice 6 — contextual interaction.**
+**Rewrite Slice 7 — craft, cook, heal, repair and deconstruct.**
 
-Reconnect actions-from-things to the simple-turn production model using the existing real world/item state and established domain owners.
+Reconnect the existing real crafting/cooking/healing/repair/deconstruction content to ordinary simple-turn execution.
 
-Preserve contextual semantics such as:
+Use existing recipes, ingredients, tools, skills, workstations, Health/injury state, world-object condition and item identity. Do not create replacement crafting or repair frameworks.
 
-- food item -> EAT;
-- drink/potable source -> DRINK;
-- bed -> SLEEP;
-- suitable furniture -> REST;
-- door/window -> its actual opening/closing/smash/climb interaction where currently supported;
-- furniture/world object -> DECONSTRUCT where currently supported;
-- stove/workstation -> contextual COOK/interaction entry point;
-- vehicle -> its actual contextual interaction entry points.
+Ordinary accepted actions should mutate their existing authoritative owners directly, use explicit ordinary elapsed-time costs through the established survival clock, run only the bounded local infected response appropriate to the action and return control.
 
-The interaction object/item should remain the source of available actions. Do not replace this with a permanent generic survival-action bar or a generalized scheduler.
+Long actions may consume multiple explicit turns/time where that materially represents the player action. Do not restore generalized WHEN scheduling, TimedAction, universal commitment/interruption or island-wide simulation. Add interruption only for a concrete player-visible reason such as danger making a long action unsafe, and implement it narrowly rather than rebuilding the retired architecture.
 
-Each accepted contextual action should resolve through ordinary authoritative state, consume the appropriate ordinary turn/time cost, advance survival through the single established turn/time seam, allow the usual bounded local infected phase where appropriate, update presentation and return control.
+Preserve the Slice 6 action-from-thing rule: workstation/object/item context should remain the entry point for COOK, HEAL, REPAIR and DECONSTRUCT where applicable.
 
-Do not migrate the full crafting/repair/fortification/vehicle/utilities systems beyond the narrow contextual entry points required by Slice 6; their later roadmap slices still own those implementations.
+Do not migrate fortification/base-building, vehicles, utilities or day/night/weather beyond narrow compatibility required by the real Slice 7 route; later roadmap slices own those systems.
