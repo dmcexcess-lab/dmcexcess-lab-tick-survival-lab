@@ -7,8 +7,8 @@ Status: **canonical active working state**
 PROJECT = Tick Survival Lab  
 IDENTITY = turn-based open-world zombie survival  
 CORE_LOOP = explore -> scavenge -> fight/escape -> craft/heal -> fortify/supply shelter -> survive  
-ACTIVE_REWRITE_SLICE = 3 complete / simple turn-based combat  
-NEXT_REWRITE_SLICE = 4 / scavenging and inventory  
+ACTIVE_REWRITE_SLICE = 4 complete / scavenging and inventory  
+NEXT_REWRITE_SLICE = 5 / survival  
 ROADMAP_CHANGE = true / 2026-09-27
 
 ## Authoritative direction
@@ -21,68 +21,53 @@ player action -> direct consequence -> relevant local actors each act at most on
 
 Shared simulation ticks, generalized simultaneous resolution, universal commitment/interruption and heavyweight WHERE/WHAT/WHEN execution are legacy. They remain temporarily only where still-unmigrated gameplay/source dependencies require them.
 
-## Slice 1 checkpoint — simple production turn spine
+## Closed canonical simple-turn routes
 
-Canonical gameplay.tscn boots TurnBasedGameMain. Unmounted movement routes through SimpleTurnController; one input is one ordinary turn action and only infected within the 24-cell active radius receive individual simple movement.
+### Movement
 
-Procedural infected derive from the real island household/population plan. The temporary player-centered synthetic zombie ring is gone.
+SimpleTurnController reads terrain/occupancy directly from WorldState and changes placement through narrow authoritative WorldState writes. Canonical movement does not execute SpatialQueryService, WorldMutationService, MovementActionService, TickKernel or simultaneous movement resolution.
 
-## Slice 2 checkpoint — plain movement state/query path
+### Combat
 
-Canonical simple-turn movement reads terrain/occupancy directly from WorldState and changes placement through narrow authoritative WorldState writes. It does not execute SpatialQueryService, WorldMutationService, MovementActionService, TickKernel or simultaneous movement resolution underneath the migrated route.
+Player melee/firearm actions resolve directly against authoritative Health/injury/equipment/firearm/corpse state. Nearby infected receive at most one sequential local action; distant infected receive none. Canonical combat does not advance TickKernel or execute CombatActionService, FirearmActionService, timed combat actions or simultaneous consequence batches.
 
-Player movement resolves first; relevant infected resolve sequentially against resulting current occupancy; distant infected receive no individual turn; streaming focus, perception and presentation follow final player placement.
+### Scavenging and inventory
 
-## Slice 3 checkpoint — simple turn-based combat
+Canonical production scavenging/inventory now routes through SimpleTurnController and the existing authoritative loot/item owners.
 
-Canonical combat now routes through SimpleTurnController on the same ordinary turn spine.
+Current behavior:
 
-Current combat behavior:
+- real generated LootState + InventoryContainmentState contents are used; no fake Slice 4 loot source exists;
+- LootContainerInspectionQuery is read-only and pure inspection consumes no turn;
+- search/opening a reachable initialized loot container is an ordinary one-turn action, matching the established player-facing search rule;
+- TAKE moves the same exact item entity from the real source container into authoritative player containment;
+- STORE moves the same exact carried item into the reachable real loot container;
+- compatible carried items can be equipped through ActorHandEquipmentMutationService without duplicate active-weapon state;
+- stow returns the same exact equipped item to player containment;
+- drop removes the exact item from containment/equipment and creates real LOOSE_ITEM WorldState placement at the player;
+- narrow loose-item pickup restores that same entity to player containment, including items just dropped;
+- carry acquisition policy remains authoritative for take/pickup admission;
+- failed/rejected actions mutate nothing and consume no turn;
+- each successful material inventory/scavenging action consumes one ordinary turn, runs the same bounded local infected phase and returns control;
+- the existing LootContainerPanel and EquipmentPlayerShell remain the production presentation/input surfaces and are wired to the simple-turn route;
+- equipped items continue to feed the migrated combat route directly;
+- canonical Slice 4 actions do not advance TickKernel or execute LootSearchActionService, timed ItemTransferActionService, TimedAction, ScheduledEvent or run_until_stop.
 
-- player.combat_forward is one accepted player action and consumes exactly one ordinary turn;
-- if a firearm is equipped, the existing FirearmProfileCatalog / FirearmState exact firearm, magazine and live-round identities are used;
-- a firearm discharge consumes the exact chambered round, cycles the next exact round when present and writes the existing firearm damage plus canonical gunshot injury;
-- otherwise forward melee uses the existing physical impact profiles and real equipped hand-item mass/profile facts, falling back to the existing unarmed profile;
-- damage and injury write directly to canonical ActorHealthState;
-- procedurally projected infected are enrolled into canonical Health, hand-equipment and containment state;
-- after the player consequence, each living infected inside the 24-cell active radius receives at most one sequential action against current state;
-- an adjacent infected attacks; otherwise it may perform the established one-cell greedy movement;
-- distant infected receive no individual action;
-- lethal Health state transitions through CorpseState / ActorDeathTransitionService to ordinary persistent corpse world state, preserving exact carried/equipped item identity;
-- ActorDeathTransitionService no longer depends on TickKernel or WorldMutationService;
-- canonical combat does not advance TickKernel and does not execute CombatActionService, FirearmActionService, timed combat actions, simultaneous combat intentions/consequence batches or universal commitment/interruption underneath the migrated route;
-- control returns immediately after the bounded local actor phase.
+Removed-from-canonical-route legacy does not mean deleted source yet. LootSearchActionService, LootPlayerInteractionController and timed ItemTransferActionService remain noncanonical compatibility debt because older app composition/source dependencies still reference them. Do not extend them for migrated gameplay; remove them when their final legacy dependents migrate.
 
-Existing darkness/perception presentation remains authoritative for what the player can perceive. Old fear timing/commitment semantics were not recreated because the simple turn route has no action-duration mechanic and survival/condition migration is a later roadmap slice. Do not invent a combat-only fear shadow state. Crowd danger currently emerges through bounded local sequential attacks and occupancy/congestion; do not restore the retired simultaneous force architecture merely to reproduce its implementation.
+## Protected behavior
 
-## World-state direct-write boundary
+Preserve:
 
-WorldState now exposes narrow ordinary create/remove/place/unplace writes in addition to move_entity() for migrated turn routes. These extend the existing authoritative state owner; they are not a replacement mutation framework.
-
-Generation/bootstrap and still-unmigrated routes may continue using WorldMutationService until their roadmap migration.
-
-## Transitional legacy boundary
-
-Legacy CombatGameMain, CombatActionService, CombatPlayerController and FirearmActionService remain source migration debt because older noncanonical app composition still references them. They are not canonical production combat execution and must not be extended for new combat behavior.
-
-Other legacy scheduling/query/mutation systems remain for unmigrated scavenging/contextual interactions, long actions, vehicles, utilities and durable-session migration. Delete them only when their final dependent route has migrated.
-
-## Preserved game
-
-Preserve throughout the rewrite:
-
-- real procedural persistent island and streaming;
-- generated roads/buildings/world content;
-- scavenging, loot and inventory;
-- zombies and canonical combat consequences;
-- crowd/fear/darkness/perception pressure as ordinary gameplay rules when their owning systems are active;
-- contextual actions originating from world objects/items;
-- survival, crafting/cooking/healing, rest, repair and deconstruction;
-- existing-building fortification/base use;
-- vehicles;
-- power/water and independent shelter utilities;
-- day/night/weather;
-- durable New Game / Continue.
+- the real procedural persistent island and streaming;
+- exact item identities and existing loot generation;
+- authoritative containment/equipment/carry state;
+- movement and combat simple-turn semantics;
+- bounded 24-cell individual infected actions;
+- canonical Health/injury/death/corpse consequences;
+- existing darkness/perception presentation;
+- contextual actions from things;
+- later survival/crafting/doors/windows/fortification/vehicles/utilities/day-night/weather/persistence systems until their roadmap slices migrate.
 
 A base remains an existing building the player fortified and supplied. No colony/freeform-building system.
 
@@ -90,17 +75,19 @@ A base remains an existing building the player fortified and supplied. No colony
 
 Current prompt-local verifier/workflow:
 
-- game/scripts/ci/Slice3SimpleCombatSmoke.gd
-- .github/workflows/slice3-simple-combat.yml
+- game/scripts/ci/Slice4ScavengingInventorySmoke.gd
+- .github/workflows/slice4-scavenging-inventory.yml
 
-The focused production verifier boots seed 20001 and proves one-turn lethal melee, authoritative corpse transition, one adjacent infected attack, distant infected inactivity, control return, exact-round firearm discharge/damage/injury and zero TickKernel advancement across both combat actions. Static guards reject legacy execution dependencies in the migrated combat/death route.
+The focused production verifier boots seed 20001 and uses an actual generated bathroom-vanity loot container. It proves read-only inspection, one-turn search with one nearby infected response, distant infected inactivity, exact take/store identity, no loot respawn, rejected-action atomicity, equip/stow/drop/re-pickup identity, zero TickKernel advancement and the protected Slice 3 equipped-item melee regression.
 
-Per SOP, the next code-changing prompt must retire this verifier/workflow before production edits and create fresh Slice 4 verification.
+Per SOP, the next code-changing prompt must retire this Slice 4 verifier/workflow before production edits and create fresh Slice 5 verification.
 
 ## NEXT
 
-**Rewrite Slice 4 — scavenging and inventory.**
+**Rewrite Slice 5 — survival.**
 
-Reconnect contextual search/take/carry/drop/use/equip through the existing simple turn/world-state spine and existing authoritative loot, exact item identity, containment and equipment state. Each accepted player inventory/scavenging action should have an ordinary direct consequence and ordinary turn cost where appropriate, followed by the same bounded local infected phase and return of control.
+Reconnect hunger, thirst, fatigue, Health/wounds, fear/mood and recovery to ordinary elapsed turns/game time without restoring universal simulation scheduling.
 
-Do not migrate survival progression, contextual doors/windows, crafting, fortification, vehicles, utilities, world-time/weather or durable persistence yet unless a concrete scavenging/inventory prerequisite requires a narrowly targeted compatibility repair.
+Use the existing authoritative condition/Health/moodlet state and existing player-facing survival content. Ordinary turn completion should advance the relevant survival consequences coherently; no render-frame simulation, per-entity permanent timers, replacement condition framework or resurrection of TickKernel/WHEN as the canonical clock.
+
+Do not migrate contextual doors/windows, crafting/cooking/healing interactions, fortification, vehicles, utilities, day/night/weather or durable persistence beyond narrowly required survival prerequisites.
