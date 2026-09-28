@@ -1,0 +1,36 @@
+name: Slice 8 fortification
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: slice8-fortification
+  cancel-in-progress: true
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Godot 4.7.1
+        shell: bash
+        run: |
+          set -euxo pipefail
+          curl -L -o godot.zip https://github.com/godotengine/godot-builds/releases/download/4.7.1-stable/Godot_v4.7.1-stable_linux.x86_64.zip
+          unzip -q godot.zip
+          chmod +x Godot_v4.7.1-stable_linux.x86_64
+      - name: Build script class cache
+        run: ./Godot_v4.7.1-stable_linux.x86_64 --headless --editor --path "$GITHUB_WORKSPACE/game" --quit
+      - name: Verify production Slice 8 fortification route
+        run: timeout 240s ./Godot_v4.7.1-stable_linux.x86_64 --headless --path "$GITHUB_WORKSPACE/game" -s res://scripts/ci/Slice8FortificationSmoke.gd
+      - name: Guard canonical fortification from legacy execution
+        shell: bash
+        run: |
+          grep -q 'run_simple_fortification' game/scripts/app/Slice7GameMain.gd
+          ! grep -A120 'func run_simple_fortification' game/scripts/app/Slice7GameMain.gd | grep -q 'TickKernel'
+          ! grep -A120 'func run_simple_fortification' game/scripts/app/Slice7GameMain.gd | grep -q 'TimedAction'
+          ! grep -A120 'func run_simple_fortification' game/scripts/app/Slice7GameMain.gd | grep -q 'ScheduledEvent'
+          ! grep -A120 'func run_simple_fortification' game/scripts/app/Slice7GameMain.gd | grep -q 'begin_action'
+          ! grep -q '\[node name="SessionControls"' game/gameplay.tscn
