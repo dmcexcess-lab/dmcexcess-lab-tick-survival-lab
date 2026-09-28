@@ -8,6 +8,8 @@ const HandSlots = preload("res://scripts/simulation/actors/equipment/ActorHandSl
 ## System 31 icons are optional presentation enrichment from semantic keys only.
 
 signal interaction_blocked_changed(blocked: bool)
+signal save_requested
+signal save_menu_requested
 
 const MODAL_NONE: StringName = &""
 const MODAL_STATS: StringName = &"stats"
@@ -39,6 +41,7 @@ var _last_result: Dictionary = {}
 var _leave_result: String = ""
 var _selected_inventory_item_id: String = ""
 var _inventory_status: String = ""
+var _session_status: String = "AUTOSAVE ON"
 
 func _ready() -> void:
     layer = 40
@@ -397,15 +400,38 @@ func _render_inventory() -> void:
 func _render_menu() -> void:
     _last_result = {"ok": true}
     _last_lines = []
-    _append_line("Simulation hard-paused.", 16)
-    _append_line("Resume returns to the exact pause state that existed before this shell opened.", 13)
-    var leave_button := Button.new()
-    leave_button.text = "LEAVE GAME"
-    leave_button.custom_minimum_size = Vector2(0, 54)
-    leave_button.focus_mode = Control.FOCUS_NONE
-    leave_button.pressed.connect(_leave_game)
-    _body.add_child(leave_button)
-    _last_lines.append("LEAVE GAME")
+    _append_line("Simulation paused.", 16)
+    _append_line("Resume returns to the exact state that existed before this menu opened.", 13)
+    if not _session_status.is_empty():
+        _append_line(_session_status, 13)
+
+    var save_button := Button.new()
+    save_button.text = "SAVE"
+    save_button.custom_minimum_size = Vector2(0, 54)
+    save_button.focus_mode = Control.FOCUS_NONE
+    save_button.pressed.connect(func() -> void:
+        save_requested.emit()
+    )
+    _body.add_child(save_button)
+    _last_lines.append("SAVE")
+
+    var save_menu_button := Button.new()
+    save_menu_button.text = "SAVE & MENU"
+    save_menu_button.custom_minimum_size = Vector2(0, 54)
+    save_menu_button.focus_mode = Control.FOCUS_NONE
+    save_menu_button.pressed.connect(func() -> void:
+        save_menu_requested.emit()
+    )
+    _body.add_child(save_menu_button)
+    _last_lines.append("SAVE & MENU")
+
+func present_session_status(message: String) -> void:
+    _session_status = message.strip_edges()
+    if _active_modal == MODAL_MENU:
+        _render_menu()
+
+func menu_has_session_actions() -> bool:
+    return _active_modal == MODAL_MENU and _last_lines.has("SAVE") and _last_lines.has("SAVE & MENU")
 
 func _append_hand_row(value: Variant) -> void:
     if typeof(value) != TYPE_DICTIONARY:
