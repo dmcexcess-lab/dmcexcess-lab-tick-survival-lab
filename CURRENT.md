@@ -7,9 +7,9 @@ Status: **canonical active working state**
 PROJECT = Tick Survival Lab  
 IDENTITY = turn-based open-world zombie survival  
 CORE_LOOP = explore -> scavenge -> fight/escape -> craft/heal -> fortify/supply shelter -> survive  
-ACTIVE_REWRITE_SLICE = 7 complete / craft-cook-heal-repair-deconstruct  
-NEXT_REWRITE_SLICE = 8 / existing-house fortification and bases  
-ROADMAP_CHANGE = true / 2026-09-27
+ACTIVE_REWRITE_SLICE = 8 complete / existing-opening fortification  
+NEXT_REWRITE_SLICE = 9 / power and water  
+ROADMAP_CHANGE = true / 2026-09-28
 
 ## Authoritative direction
 
@@ -29,35 +29,37 @@ Slices 1-5 remain canonical through SimpleTurnController, authoritative WorldSta
 ### Contextual interaction
 Slice 6 action-from-thing presentation remains canonical. EAT/DRINK, REST/SLEEP, doors/windows, loot/pickup and later-system entry points do not use scheduled contextual execution.
 
-### Crafting and cooking
-Existing CraftingRecipeCatalog and CraftingPlanQuery remain recipe/input/tool/workstation truth. A valid craft resolves the existing skill check, consumes exact selected ingredient entities, creates exact existing recipe outputs into authoritative player containment, applies existing XP and advances the existing explicit survival clock through ordinary turn completion.
+### Craft/cook/heal/repair/deconstruct
+Slice 7 remains canonical. Existing recipe/tool/workstation/skill, Health/injury, repair/deconstruction profile and exact item/world owners supply content truth; accepted actions commit directly and use explicit elapsed survival time. Cooking remains gated by real workstation/utility availability.
 
-Cooking is the same recipe path with existing PoweredCraftingWorkstationAdapter availability. The focused seed's representative stove is correctly blocked because its real utility availability is not satisfied. No fake powered cooking was added; Slice 9 owns utility migration.
+### Fortification
+Slice 8 is closed. Existing real generated doors/windows expose BOARD/REMOVE BOARD through the existing contextual affordance route.
 
-### First aid
-Existing SurvivorFirstAidActionService remains treatment-offer/content truth. The canonical commit consumes the exact selected medical resources and writes the existing ActorHealthState injury record. No second wound/Health model exists.
+Canonical BOARD validates the actual opening, reach, broken/open/closed state, existing Mechanical difficulty, a real carried hammer, one exact `item.material.wood_plank` and one exact `item.material.nails_box`. Success increments the existing `WorldInteractableState` board count by one (maximum three), removes the exact plank/nails entities, awards existing Mechanical XP, applies the existing explicit action duration through the shared survival seam and completes one bounded simple turn. Failed preconditions are zero-time; an actual failed skill attempt retains the established elapsed-attempt consequence without generalized scheduling.
 
-### Repair
-Existing WorldInteractionCatalog repair profiles remain tool/material/difficulty truth. Canonical repair validates reach, existing broken state, required carried tool/materials and Mechanical skill, consumes exact repair materials, clears the existing broken state and advances ordinary elapsed time.
+Canonical REMOVE BOARD validates the same opening state and existing hammer-or-crowbar requirement, decrements that same authoritative board count and creates one real recovered wood-plank entity in lawful player containment or nearby loose placement. Nails are not invented/recovered because the existing unboard behavior only recovers the plank.
 
-### Deconstruction
-Existing WorldInteractionCatalog deconstruction profiles remain tool/skill/salvage truth. Canonical deconstruction validates the actual world object, removes that authoritative object and creates its existing salvage semantics into player containment or lawful loose placement.
+Existing opening-pressure gameplay already consumes installed boards before opening damage/breakage, so fortification materially protects the real opening without a second siege/barricade state. Existing board rendering derives from the same authoritative count.
+
+Durable save/Continue persists the existing `world_interactions` state plus ordinary world/inventory owners. Focused verification proved an installed board survives Continue and consumed exact plank/nails entities do not reappear.
 
 ## Presentation / production composition
 
-`gameplay.tscn` currently boots `Slice7GameMain -> TurnBasedGameMain`.
+`gameplay.tscn` currently boots `FortificationGameMain -> Slice7GameMain -> TurnBasedGameMain`.
 
-`Slice7GameMain` is a narrow temporary migration composition containing explicit Slice 7 domain commits while the older superclass chain still supplies persistence and unmigrated owners. It is not a generalized action/job framework and must not become one. Fold it away during later consolidation/legacy demolition when practical.
+`FortificationGameMain` and `Slice7GameMain` are narrow temporary migration compositions containing explicit migrated domain commits while the older superclass chain still supplies persistence and unmigrated owners. They are not generalized action/job/build frameworks and should fold away during later consolidation/legacy demolition.
 
-TurnBasedPlayerShell still preserves the existing phone inventory/equipment presentation and now delegates both EAT/DRINK and first aid to canonical owners.
+TurnBasedPlayerShell preserves the existing phone inventory/equipment/contextual presentation. BOARD/REMOVE BOARD use the same authoritative contextual action route for touch and mouse; no parallel mobile gameplay path was introduced.
 
 The repaired MENU / SAVE / SAVE & MENU / Continue route remains canonical and unobstructed.
 
 ## Transitional compatibility boundary
 
-Legacy timed CraftingActionService, scheduled first-aid execution, WorldObjectRepairActionService scheduling and WorldInteractionActionService deconstruction scheduling remain source/compatibility debt for any still-unmigrated callers but are not canonical player execution for Slice 7 actions.
+Legacy WorldInteractionActionService scheduled BOARD/REMOVE BOARD execution remains source/compatibility debt for any still-unmigrated callers but is no longer canonical player fortification execution. Its action IDs/content semantics remain reused by contextual offers.
 
-The older runtime/service chain remains instantiated where bootstrap, persistence, fortification, vehicles, utilities and later roadmap routes still require it. Do not extend its generalized scheduling for migrated gameplay.
+Legacy timed/scheduled CraftingActionService, first-aid, repair and deconstruction execution likewise remain noncanonical compatibility debt where still referenced.
+
+The older runtime/service chain remains instantiated where bootstrap, persistence, vehicles, utilities and later roadmap routes still require it. Do not extend its generalized scheduling for migrated gameplay.
 
 ## Protected game behavior
 
@@ -74,41 +76,36 @@ Preserve throughout the remaining rewrite:
 - action-from-thing contextual interaction;
 - migrated crafting/healing/repair/deconstruction content;
 - cooking availability tied to real workstation/utility facts;
-- existing-building fortification/base use;
+- authoritative 0-3 board fortification on existing openings;
+- existing infected opening-pressure behavior against boards;
 - vehicles;
 - power/water and independent shelter utilities;
 - day/night/weather;
-- durable New Game / Continue.
+- durable New Game / Continue including fortification/material consequences.
 
-A base remains an existing building the player fortified and supplied. No colony/freeform-building system.
+A base remains an existing building the player fortified and supplied. No colony/freeform-building system or base-ownership framework.
 
 ## Verification lifecycle
 
 Current prompt-local verification:
 
-- `game/scripts/ci/Slice7CraftHealRepairSmoke.gd`
-- `.github/workflows/slice7-craft-heal-repair.yml`
+- `game/scripts/ci/Slice8FortificationSmoke.gd`
+- `.github/workflows/slice8-fortification.yml`
 
-Focused production run `36368972219` passed.
+Focused production run `36461458824` passed after repair from concrete CI evidence.
 
-Primary marker:
+The verifier proves production/session boot; canonical phone/menu composition; a real generated opening; rejected zero-time BOARD; real hammer/plank/nails requirements; existing Mechanical skill use; exact plank/nails consumption; one-board authoritative mutation; one canonical turn and explicit survival-time advancement; zero TickKernel advancement; contextual REMOVE BOARD discovery; same-state unboarding; real plank recovery; durable save; canonical save-menu destination; Continue boot; restored boarded state; and no restoration of consumed exact fortification materials. Static guards reject TickKernel/TimedAction/ScheduledEvent/generalized begin_action dependencies from the canonical fortification composition.
 
-`SLICE7_OK seed=20001 turns=5 survival_tick=1849 craft=true heal=true repair=true deconstruct=true cook=blocked_by_real_power save=true`
-
-The verifier proves production/session boot; invalid craft zero-time behavior; exact craft input removal/output creation; explicit elapsed survival advancement; first-aid resource consumption and authoritative injury stabilization; actual production object deconstruction and salvage; actual production door repair; real cooking availability gating; zero TickKernel advancement; durable save compatibility; and the unobstructed canonical menu composition. Static guards reject TickKernel/TimedAction/ScheduledEvent/run_until_stop/begin_action dependencies from the explicit Slice 7 composition.
-
-Per SOP, the next code-changing prompt must retire the Slice 7 verifier/workflow before production edits and create fresh Slice 8 verification.
+Per SOP, the next code-changing prompt must retire the Slice 8 verifier/workflow before production edits and create fresh Slice 9 verification.
 
 ## NEXT
 
-**Rewrite Slice 8 — existing-house fortification and bases.**
+**Rewrite Slice 9 — power and water.**
 
-Reconnect the existing shelter/base gameplay to ordinary contextual/simple-turn execution.
+Reconnect the existing utility gameplay to ordinary authoritative world state and explicit elapsed-time/event consequences without restoring universal simulation scheduling.
 
-A base is an existing generated house/building the player clears, secures and supplies. Preserve existing authoritative building/opening/item/world state. Reconnect boarding/unboarding or existing opening fortification, shelter repair, stash/supply use and the existing notion of a usable secured shelter where those systems already exist.
+Preserve existing generated grid/network topology, utility condition/runtime state, portable generators, wells/independent water sources, repair content, powered workstation/refrigeration/lighting facts and durable persistence where already present.
 
-Do not create freeform construction, settlement management, colony simulation, follower labor, generalized build jobs or another scheduling framework.
+Canonical utility interactions should originate from the actual generator/utility object or relevant contextual owner, validate existing tools/materials/fuel/skills, mutate existing authoritative utility state directly, feed explicit elapsed action cost through the established simple-turn/survival seam where player actions consume time, and return control after the bounded local infected phase.
 
-Fortification actions should originate from the actual opening/object being acted upon, validate existing tools/materials/skills, mutate existing authoritative state directly, use explicit ordinary elapsed-time costs through the established survival clock, permit only bounded local infected response and return control.
-
-Do not migrate vehicles, full power/water, day/night/weather or offscreen simulation beyond narrow compatibility required by the real Slice 8 shelter loop. Slice 9 owns utilities.
+Do not create a replacement utility simulation framework, per-node permanent timers, generalized event scheduler, settlement/base-management system or another power/water truth. Do not migrate vehicles or day/night/weather beyond narrow compatibility concretely required by the real utility route.
