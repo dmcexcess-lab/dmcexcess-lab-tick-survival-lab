@@ -2,6 +2,17 @@
 
 This compact ledger records the newest executable work. CHANGELOG.md remains the historical archive.
 
+## Turn-based rewrite Slice 8 — fortification — 2026-09-28
+
+- Real generated doors/windows expose existing BOARD / REMOVE BOARD affordances through the canonical action-from-thing route.
+- BOARD directly validates current opening state, hammer, exact wood plank + nails-box entities, and the existing Mechanical skill check; it increments the existing 0–3 authoritative board count, consumes the exact plank/nails entities, and leaves the hammer as a tool.
+- REMOVE BOARD directly decrements the same authoritative opening state, accepts the existing hammer-or-crowbar tool rule, and recovers one real wood-plank entity into lawful player containment or nearby loose-item placement.
+- Existing opening-pressure gameplay remains authoritative: installed boards are already consumed as protection before opening damage/breakage. No new siege or construction framework was introduced.
+- Fortification uses explicit existing action durations through the shared simple-turn/survival seam, bounded local infected response, and never advances TickKernel/WHEN/TimedAction/ScheduledEvent execution.
+- Durable save/Continue now has focused proof that boarded opening state and consumed exact fortification materials restore correctly through the existing `world_interactions`/world/inventory snapshot owners.
+- Production `gameplay.tscn` composes the narrow `FortificationGameMain` migration layer over the closed Slice 7 route; legacy scheduled world-interaction machinery remains noncanonical migration debt for still-unmigrated domains only.
+- Fresh focused production run 36461458824: SUCCESS, including production boot, real generated opening, rejected zero-time BOARD, BOARD/REMOVE BOARD exact-resource semantics, explicit elapsed survival time, TickKernel guard, save/Continue restoration, phone shell/menu composition and static legacy-execution guards.
+
 ## Turn-based rewrite Slice 7 — craft/cook/heal/repair/deconstruct — 2026-09-27
 
 - Existing crafting recipes now execute through direct canonical commits: current recipe/tool/workstation/skill facts are validated, exact ingredient entities are removed, exact recipe outputs are created into authoritative player containment, and the existing action duration feeds the shared survival-time seam.
