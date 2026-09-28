@@ -61,14 +61,14 @@ func _run() -> void:
     var nails: String = _give(world, inventory_mutations, &"item.material.nails_box", "ci.slice8.nails")
     _check(not hammer.is_empty() and not plank.is_empty() and not nails.is_empty(), "real hammer/plank/nails enter authoritative inventory")
 
-    var before_turn: int = int(simple.turn_index())
+    var before_turn: int = simple.turn_number()
     var before_survival: int = int(game.call("survival_elapsed_tick"))
     var boarded: Dictionary = game.call("run_simple_fortification", target, WorldActions.OPENING_BOARD)
     _check(bool(boarded.get("success", false)), "BOARD succeeds through canonical production route")
     _check(state.board_count(target) == initial_boards + 1, "BOARD increments authoritative opening board count by one")
     _check(world.has_entity(hammer) and inventory.is_contained(hammer), "hammer remains a real carried tool")
     _check(not world.has_entity(plank) and not world.has_entity(nails), "BOARD consumes exact plank and nails entities")
-    _check(int(simple.turn_index()) == before_turn + 1, "BOARD completes exactly one canonical player turn")
+    _check(simple.turn_number() == before_turn + 1, "BOARD completes exactly one canonical player turn")
     _check(int(game.call("survival_elapsed_tick")) > before_survival, "BOARD advances explicit survival elapsed time")
     _check(int(kernel.current_tick()) == initial_kernel, "BOARD does not advance TickKernel")
 
@@ -82,12 +82,12 @@ func _run() -> void:
     _check(has_remove, "boarded real opening exposes REMOVE BOARD contextually")
 
     _check(_face_target(world, target), "player remains/repositions at boarded opening")
-    before_turn = int(simple.turn_index())
+    before_turn = simple.turn_number()
     before_survival = int(game.call("survival_elapsed_tick"))
     var unboarded: Dictionary = game.call("run_simple_fortification", target, WorldActions.OPENING_UNBOARD)
     _check(bool(unboarded.get("success", false)), "REMOVE BOARD succeeds through canonical production route")
     _check(state.board_count(target) == initial_boards, "REMOVE BOARD updates the same authoritative board state")
-    _check(int(simple.turn_index()) == before_turn + 1, "REMOVE BOARD completes exactly one canonical player turn")
+    _check(simple.turn_number() == before_turn + 1, "REMOVE BOARD completes exactly one canonical player turn")
     _check(int(game.call("survival_elapsed_tick")) > before_survival, "REMOVE BOARD advances explicit survival elapsed time once")
     _check(int(kernel.current_tick()) == initial_kernel, "REMOVE BOARD does not advance TickKernel")
 
@@ -103,7 +103,7 @@ func _run() -> void:
     _check(String(game.call("save_menu_destination")) == "res://startup.tscn", "SAVE & MENU destination remains startup")
     _check(shell.get_viewport() != null, "canonical touch shell remains present")
 
-    print("SLICE8_OK target=%s boards=%d turn=%d survival_tick=%d save=%s" % [target, state.board_count(target), int(simple.turn_index()), int(game.call("survival_elapsed_tick")), str(bool(save_result.get("ok", false)))])
+    print("SLICE8_OK target=%s boards=%d turn=%d survival_tick=%d save=%s" % [target, state.board_count(target), simple.turn_number(), int(game.call("survival_elapsed_tick")), str(bool(save_result.get("ok", false)))])
     _finish()
 
 func _first_generated_opening(world: WorldState, state: WorldInteractableState) -> String:
