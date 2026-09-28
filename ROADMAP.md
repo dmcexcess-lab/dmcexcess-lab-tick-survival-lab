@@ -1,7 +1,7 @@
 # Tick Survival Lab — Turn-Based Rewrite Roadmap
 
 Updated: **2026-09-27**  
-Status: **architecture simplification in progress; Slices 1-6 complete**
+Status: **architecture simplification in progress; Slices 1-7 complete**
 
 ## Release target
 
@@ -15,40 +15,39 @@ Canonical play is deliberately conventional:
 
 player action -> resolve player action -> relevant local actors each get at most one action -> advance ordinary time/environment -> return control
 
-The previous generalized tick/WHERE/WHAT/WHEN execution architecture is legacy and will be removed route by route. Distinctive gameplay such as crowd pressure, fear, darkness, fortification and survival pressure remains as ordinary game rules rather than reasons to preserve the old architecture.
+The previous generalized tick/WHERE/WHAT/WHEN execution architecture is legacy and will be removed route by route.
 
 ## Migration slices
 
 ### Slice 1 — Simple turn spine — DONE
-Canonical production movement bypasses TickKernel/WHEN movement execution. One movement input performs one ordinary placement change; only infected within the active local radius receive at most one simple movement; control returns immediately.
+Canonical production movement bypasses TickKernel/WHEN movement execution.
 
 ### Slice 2 — Ordinary world state and spatial queries — DONE
-Canonical simple-turn movement now reads terrain/occupancy directly from WorldState, applies existing collision facts locally, and writes movement directly through WorldState.move_entity(). SimpleTurnController no longer depends on SpatialQueryService, WorldMutationService, MovementActionService, TickKernel or generalized movement consequence execution. Legacy query/mutation services remain only for bootstrap and unmigrated gameplay routes.
+Canonical movement reads/writes ordinary WorldState directly and no longer depends on generalized movement execution.
 
 ### Slice 3 — Simple turn-based combat — DONE
-Canonical production combat now runs inside the simple turn spine. Forward melee reuses existing physical item impact profiles; forward firearm use preserves exact firearm/magazine/live-round state; Health/injury and corpse consequences remain canonical authoritative state. Player combat consumes one action, nearby infected may attack on their one sequential action, distant infected receive no individual turn, and the migrated route does not advance TickKernel or use simultaneous combat intention/consequence resolution.
+Canonical melee/firearm combat resolves against existing Health/injury/equipment/firearm/corpse state with bounded sequential infected actions.
 
 ### Slice 4 — Scavenging and inventory — DONE
-Canonical production scavenging/inventory now runs through the simple turn spine using real generated loot and existing authoritative item/containment/equipment owners. Inspection is read-only. Search, take, store, equip, stow, drop and narrow loose-item pickup preserve exact item identity and use ordinary one-turn costs; rejected actions cost no turn. The existing loot panel and inventory/equipment shell route to this migrated path.
+Real generated loot and exact item containment/equipment identity use ordinary simple-turn search/take/store/equip/stow/drop/pickup actions.
 
 ### Slice 5 — Survival — DONE
-Existing authoritative condition/Health/moodlet state now advances from the canonical ordinary-turn seam rather than TickKernel. Each successful migrated turn advances one second of existing survival-time math exactly once; rejected actions, pure UI and inspection advance none. Satiety/hydration/rest/engagement/comfort/calm and fatigue keep their existing rates/modifiers; running applies existing fatigue pressure; bounded visible-infected/injury danger updates existing Calm/fear state.
-
-The production save/menu regression was repaired in the same operation: the duplicate high-layer SessionControls strip that covered MENU was removed, SAVE and SAVE & MENU now live inside the canonical phone MENU, and TurnBasedGameMain reconnects the existing DurableSessionStore/Continue lifecycle.
+Existing condition/Health/moodlet state advances once from explicit elapsed canonical action time rather than TickKernel. MENU/SAVE/SAVE & MENU was repaired in the same operation.
 
 ### Slice 6 — Contextual interaction — DONE
+Existing action-from-thing presentation now fronts direct simple-turn EAT/DRINK, REST/SLEEP, door/window OPEN/CLOSE, loot/pickup and later-system entry points without scheduled contextual execution.
 
-The existing action-from-thing presentation now fronts the simple-turn production route instead of WorldInteractionPlayerController's scheduled execution. Pointer/touch selection gathers existing authoritative affordances for the selected world entity and presents only migrated or intentionally preserved entry points.
+### Slice 7 — Craft/cook/heal/repair/deconstruct — DONE
 
-Real generated edible/drink items use their existing sustainment profiles and exact item identity; EAT/DRINK mutate canonical condition state, consume the exact item and enter the same bounded actor/survival completion seam. Beds expose REST/SLEEP and apply existing condition semantics with explicit one-hour/eight-hour elapsed survival costs rather than scheduled long actions. Existing potable fixtures expose DRINK. Doors and windows OPEN/CLOSE through existing authoritative state/physical transition owners. Loot SEARCH/pickup stay on the Slice 4 route. Crafting workstations retain their contextual entry point without prematurely migrating crafting execution.
+Existing recipe, tool, skill, workstation, Health/injury, object-state and salvage content now executes through direct ordinary actions. Crafting consumes exact selected ingredient entities and creates exact recipe outputs in authoritative containment. First aid consumes the selected medical resource and updates the existing injury record. Repair uses existing repair profiles, tools/materials, Mechanical skill and broken-state ownership. Deconstruction uses existing object profiles, Mechanical skill and salvage semantics, removes the actual world object and creates authoritative salvage.
 
-Browsing contextual UI and rejected actions cost zero turns/time. Canonical contextual actions do not advance TickKernel or execute TimedAction/ScheduledEvent/WHEN scheduling.
+All accepted completed actions feed the same bounded SimpleTurnController actor phase and explicit survival elapsed-time seam; invalid/rejected actions remain zero-time. The canonical Slice 7 route does not run TickKernel, TimedAction, ScheduledEvent or generalized WHEN execution.
 
-### Slice 7 — Craft/cook/heal/repair/deconstruct — NEXT
+Cooking uses the same real recipe route and existing PoweredCraftingWorkstationAdapter availability. Seed 20001's focused production fixture correctly reports the representative stove unavailable because its existing power rule is not satisfied; Slice 7 does not fake powered cooking or migrate utilities early.
 
-Reconnect existing content using ordinary turn costs. Long actions may consume multiple turns; interruption exists only where it materially improves gameplay.
+The production composition currently uses a narrow `Slice7GameMain` subclass to hold the explicit migrated domain commits while the legacy superclass chain still supplies persistence and unmigrated owners. This is migration composition debt, not a new action framework, and should fold away during later consolidation/legacy demolition.
 
-### Slice 8 — House fortification and bases
+### Slice 8 — House fortification and bases — NEXT
 Restore the complete existing-building shelter loop: clear a house, board openings, repair, stash supplies, sleep and establish utilities. No freeform construction architecture.
 
 ### Slice 9 — Power and water
@@ -67,10 +66,10 @@ Only the player's relevant neighborhood receives individual actor turns. Unloade
 Adapt durable Continue to simplified state while preserving seed, player/inventory, meaningful zombies/corpses, looted/deconstructed objects, fortifications, vehicles, utilities, time/weather and world deltas. Do not invent a second save architecture.
 
 ### Slice 14 — Legacy demolition
-Delete the obsolete TickKernel/WHEN scheduler, generalized consequence/intention/commitment machinery, obsolete movement/combat adapters, unused WHERE/WHAT framework pieces, compatibility bridges and architecture-only tests after all player routes have migrated.
+Delete obsolete TickKernel/WHEN scheduling, generalized consequence/intention/commitment machinery, obsolete adapters, unused WHERE/WHAT framework pieces and compatibility bridges after all player routes migrate.
 
 ### Slice 15 — Balance/performance/release acceptance
-Play and tune the real repeated loop on desktop and iPhone/Safari. Acceptance is a responsive enjoyable survival game, not preservation of an architecture.
+Play and tune the real repeated loop on desktop and iPhone/Safari.
 
 ## Migration rules
 
@@ -83,4 +82,4 @@ Play and tune the real repeated loop on desktop and iPhone/Safari. Acceptance is
 
 ## NEXT
 
-**Slice 7 — reconnect crafting, cooking, healing, repair and deconstruction using ordinary turn costs and only narrow player-visible interruption where it matters.**
+**Slice 8 — reconnect existing-house fortification and base use: boarding openings, shelter repair, stashing supplies and established shelter state through ordinary contextual/simple-turn actions, without freeform construction or settlement simulation.**
