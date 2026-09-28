@@ -17,12 +17,12 @@ Do not reconstruct current state from this file or old commits.
 
 CURRENT.md is canonical working memory.
 
-As of 2026-09-27 the project direction deliberately changed from the experimental tick/WHERE/WHAT/WHEN execution model to a conventional turn-based survival game while preserving the existing procedural persistent world and gameplay content.
+As of 2026-09-28 the project direction is the conventional turn-based survival rewrite while preserving the existing procedural persistent world and gameplay content.
 
-Slices 1-7 now establish canonical simple-turn movement, combat, scavenging, inventory, survival, contextual interaction, crafting, first aid, repair and deconstruction. Actions mutate existing authoritative state, bounded local infected respond at most once, explicit elapsed survival time advances through the shared completion seam, and control returns promptly.
+Slices 1-9 are closed: simple-turn movement, combat, scavenging, inventory, survival, contextual interaction, crafting, first aid, repair, deconstruction, existing-opening fortification, and power/water utility interaction are canonical. Migrated actions mutate existing authoritative state directly, bounded local infected respond at most once, explicit elapsed survival time advances through the shared completion seam, and control returns promptly.
 
-Existing recipes, exact ingredient/tool identities, skills, workstations, Health/injury records, repair profiles, broken state and deconstruction salvage remain the content truth. Cooking uses the same migrated recipe route but still respects existing powered-workstation availability; utilities are not faked or prematurely migrated.
+Existing content owners remain truth; the rewrite does not replace procedural world generation, persistence, exact items, skills, utility topology/state, generators/wells, fortification state or other mature domain data. Legacy generalized scheduling remains migration debt only for still-unmigrated routes and compatibility/bootstrap dependencies.
 
-The old execution architecture remains only as migration debt for bootstrap, durable-session compatibility and still-unmigrated routes. The production MENU/save regression remains repaired. The next rewrite slice is existing-house fortification/base use.
+The production MENU/save/Continue regression remains repaired. The next rewrite slice is Slice 10: vehicles. See CURRENT.md for exact checkpoint and constraints.
 
 The previous verbose contents remain available in Git history and must not be copied back into active context.
