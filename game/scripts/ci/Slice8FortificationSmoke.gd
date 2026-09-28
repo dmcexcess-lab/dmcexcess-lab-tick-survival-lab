@@ -106,7 +106,7 @@ func _run() -> void:
     if bool(loaded.get("ok", false)):
         restored_game = packed.instantiate()
         _check(restored_game.call("configure_session_paths", SavePrimary, SaveBackup, SaveTemp), "Continue uses the same durable store")
-        _check(restored_game.call("configure_continue_session", loaded.get("snapshot", {})), "saved snapshot accepted by Continue")
+        _check(restored_game.call("configure_continue_session", loaded.get("session", {})), "saved durable session accepted by Continue")
         get_root().add_child(restored_game)
         await process_frame; await process_frame
         _check(bool(restored_game.call("session_boot_ok")), "Continue production session boots")
