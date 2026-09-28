@@ -1,10 +1,10 @@
 extends CanvasLayer
 class_name LootContainerPanel
 
-## Phone-first System 24 container UI. It reads current truth and emits semantic
-## TAKE/STORE requests; it never mutates WHAT or System 11 directly and does not use
-## hard pause because item transfers must be able to spend WHEN ticks while open.
-## System 31 icons are optional presentation enrichment from semantic keys only.
+## Phone-first loot-container UI. It reads current authoritative truth and emits
+## TAKE/STORE requests; gameplay mutation belongs to the active player action route.
+## The panel remains open while ordinary turn-cost transfers resolve, so nearby threats
+## may act before control returns. Icons are presentation enrichment only.
 
 signal take_requested(container_id, item_id)
 signal store_requested(container_id, item_id)
@@ -78,12 +78,12 @@ func refresh(_ignored_container_id: String = "") -> void:
         return
     _render()
 
-func present_action_result(intent: StringName, success: bool, reason: String, world_tick: int) -> void:
+func present_action_result(intent: StringName, success: bool, reason: String, turn_value: int) -> void:
     if not is_open():
         return
     var verb: String = String(intent).trim_prefix("loot.").to_upper()
     if success:
-        _status.text = "%s complete • tick %d" % [verb, world_tick]
+        _status.text = "%s complete • turn %d" % [verb, turn_value]
     else:
         _status.text = "%s failed: %s" % [verb, reason.replace("_", " ")]
     refresh()
