@@ -1,7 +1,7 @@
 # Tick Survival Lab — Turn-Based Rewrite Roadmap
 
-Updated: **2026-09-27**  
-Status: **architecture simplification in progress; Slices 1-7 complete**
+Updated: **2026-09-28**  
+Status: **architecture simplification in progress; Slices 1-8 complete**
 
 ## Release target
 
@@ -38,19 +38,12 @@ Existing condition/Health/moodlet state advances once from explicit elapsed cano
 Existing action-from-thing presentation now fronts direct simple-turn EAT/DRINK, REST/SLEEP, door/window OPEN/CLOSE, loot/pickup and later-system entry points without scheduled contextual execution.
 
 ### Slice 7 — Craft/cook/heal/repair/deconstruct — DONE
+Existing recipe, tool, skill, workstation, Health/injury, object-state and salvage content executes through direct ordinary actions. Cooking retains real utility availability rather than faking power.
 
-Existing recipe, tool, skill, workstation, Health/injury, object-state and salvage content now executes through direct ordinary actions. Crafting consumes exact selected ingredient entities and creates exact recipe outputs in authoritative containment. First aid consumes the selected medical resource and updates the existing injury record. Repair uses existing repair profiles, tools/materials, Mechanical skill and broken-state ownership. Deconstruction uses existing object profiles, Mechanical skill and salvage semantics, removes the actual world object and creates authoritative salvage.
+### Slice 8 — Existing-house fortification — DONE
+Real generated doors/windows expose existing BOARD/REMOVE BOARD contextually. BOARD validates existing opening state, Mechanical skill, hammer, exact wood-plank and nails-box entities, consumes exact materials and increments the existing persistent 0-3 board count. REMOVE BOARD uses the same authoritative state, accepts the existing hammer/crowbar rule and recovers one real plank entity. Existing opening pressure consumes boards before opening damage/breakage. Fortification uses the canonical bounded simple-turn/survival seam and durable Continue restores installed boards and exact consumed-material consequences. No freeform construction/base ownership/build-job architecture was introduced; existing stash/sleep/repair behavior remains supplied by already-closed inventory/contextual/repair routes.
 
-All accepted completed actions feed the same bounded SimpleTurnController actor phase and explicit survival elapsed-time seam; invalid/rejected actions remain zero-time. The canonical Slice 7 route does not run TickKernel, TimedAction, ScheduledEvent or generalized WHEN execution.
-
-Cooking uses the same real recipe route and existing PoweredCraftingWorkstationAdapter availability. Seed 20001's focused production fixture correctly reports the representative stove unavailable because its existing power rule is not satisfied; Slice 7 does not fake powered cooking or migrate utilities early.
-
-The production composition currently uses a narrow `Slice7GameMain` subclass to hold the explicit migrated domain commits while the legacy superclass chain still supplies persistence and unmigrated owners. This is migration composition debt, not a new action framework, and should fold away during later consolidation/legacy demolition.
-
-### Slice 8 — House fortification and bases — NEXT
-Restore the complete existing-building shelter loop: clear a house, board openings, repair, stash supplies, sleep and establish utilities. No freeform construction architecture.
-
-### Slice 9 — Power and water
+### Slice 9 — Power and water — NEXT
 Reconnect generators, wells, grid state, failures and repairs as ordinary world systems driven by events/elapsed time rather than universal tick participation.
 
 ### Slice 10 — Vehicles
@@ -82,4 +75,4 @@ Play and tune the real repeated loop on desktop and iPhone/Safari.
 
 ## NEXT
 
-**Slice 8 — reconnect existing-house fortification and base use: boarding openings, shelter repair, stashing supplies and established shelter state through ordinary contextual/simple-turn actions, without freeform construction or settlement simulation.**
+**Slice 9 — reconnect power and water: existing generators, wells, grid/network state, failures and repairs through ordinary authoritative world state and explicit elapsed time, without restoring universal tick scheduling.**
