@@ -25,7 +25,7 @@ func _run() -> void:
     if not bool(craft.get("success", false)) or turns.turn_number() != craft_turn + 1 or int(game.call("survival_elapsed_tick")) != craft_tick + int(craft.get("elapsed_ticks", 0)): _fail("real craft did not complete once"); return
     for value: Variant in craft.get("consumed_item_ids", []):
         var consumed_id := String(value)
-        if world.has_entity(consumed_id): _fail("committed craft input survived: %s" % consumed_id); return
+        if world.has_entity(consumed_id): _fail("committed craft input survived: %s before=%s after=%s" % [consumed_id, str(craft.get("consumed_present_before_complete", null)), str(craft.get("consumed_present_after_complete", null))]); return
     var craft_outputs: Array = craft.get("output_item_ids", [])
     if craft_outputs.size() != 1 or not world.has_entity(String(craft_outputs[0])) or game._inventory_state.container_of(String(craft_outputs[0])) != PLAYER: _fail("craft output not authoritative"); return
     var stove: String = _find_semantic(world, &"prop.stove_range"); var cook_recipe: CraftingRecipe = game._crafting_recipes.recipe(&"cooking.heated_beans")
