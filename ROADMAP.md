@@ -1,7 +1,7 @@
 # Tick Survival Lab — Turn-Based Rewrite Roadmap
 
 Updated: **2026-09-27**  
-Status: **architecture simplification in progress; Slices 1-3 complete**
+Status: **architecture simplification in progress; Slices 1-4 complete**
 
 ## Release target
 
@@ -33,11 +33,11 @@ Canonical production combat now runs inside the simple turn spine. Forward melee
 
 Legacy tick-based combat classes remain noncanonical source migration debt only where older app composition still references them; they are not extended by the production route.
 
-### Slice 4 — Scavenging and inventory — NEXT
+### Slice 4 — Scavenging and inventory — DONE
 
-Reconnect contextual search/take/carry/drop/use/equip through direct authoritative state changes and turn costs. Preserve existing loot, exact item identities, containment and equipment truth; do not invent a replacement inventory architecture.
+Canonical production scavenging/inventory now runs through the simple turn spine using real generated loot and existing authoritative item/containment/equipment owners. Inspection is read-only. Search, take, store, equip, stow, drop and narrow loose-item pickup preserve exact item identity and use ordinary one-turn costs; rejected actions cost no turn. The existing loot panel and inventory/equipment shell route to this migrated path. TickKernel, timed transfer scheduling and LootSearchActionService do not execute underneath canonical Slice 4 actions.
 
-### Slice 5 — Survival
+### Slice 5 — Survival — NEXT
 
 Reconnect hunger, thirst, fatigue, health, wounds, fear/mood and recovery to elapsed turns/game time without universal simulation scheduling.
 
@@ -92,4 +92,4 @@ Play and tune the real repeated loop on desktop and iPhone/Safari. Acceptance is
 
 ## NEXT
 
-**Slice 4 — reconnect scavenging and inventory as ordinary simple-turn gameplay using existing authoritative loot/item/containment/equipment state.**
+**Slice 5 — reconnect survival condition progression and recovery to ordinary elapsed turns/game time without restoring universal simulation scheduling.**

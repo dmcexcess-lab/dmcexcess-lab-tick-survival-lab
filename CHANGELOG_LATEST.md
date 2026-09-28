@@ -2,6 +2,19 @@
 
 This compact ledger records the newest executable work. CHANGELOG.md remains the historical archive.
 
+## Turn-based rewrite Slice 4 — scavenging and inventory — 2026-09-27
+
+- Canonical SimpleTurnController now owns ordinary search, take, store, equip, stow, drop and narrow loose-item pickup actions in addition to movement/combat.
+- Real generated LootState / InventoryContainmentState contents remain authoritative; inspection is read-only and never rerolls or respawns removed loot.
+- Exact item identity survives real-container take, player containment, equipment, protected melee use, stow, loose-world drop, re-pickup and store back into the original generated container.
+- Carry acquisition limits, interaction reach, authoritative containment mutation and hand-equipment mutation remain the existing domain owners; no second inventory list or active-weapon state was introduced.
+- The existing LootContainerPanel and EquipmentPlayerShell were retained and rewired to the simple-turn route. Their canonical path no longer executes timed ItemTransferActionService or LootSearchActionService.
+- Search and successful material inventory mutations each consume one ordinary turn and run the bounded local infected phase. Pure inspection and rejected actions consume no turn.
+- Dropped items become real LOOSE_ITEM placement and can be picked up again through the narrow production pointer route.
+- Focused production run 36362797618: SUCCESS, marker SLICE4_SCAVENGE_INVENTORY_OK seed=20001 turns=8 ... melee_damage=1. It proves real generated loot, read-only inspection, bounded zombie response, exact take/store/equip/stow/drop/pickup identity, no respawn, rejected-action atomicity, zero TickKernel advancement and the protected Slice 3 equipped-item melee regression.
+- Static guards reject TickKernel, ItemTransferActionService, LootSearchActionService, TimedAction, ScheduledEvent and run_until_stop dependencies from SimpleTurnController.
+
+
 ## Turn-based rewrite Slice 3 — simple turn-based combat — 2026-09-27
 
 - Canonical SimpleTurnController now accepts player.combat_forward alongside movement; a valid player combat action consumes exactly one ordinary turn before bounded sequential infected actions.

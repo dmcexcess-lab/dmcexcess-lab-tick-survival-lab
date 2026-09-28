@@ -1,6 +1,6 @@
 # Tick Survival Lab — Settled Architecture Map
 
-Status: **active turn-based migration map; Slices 1-3 complete**
+Status: **active turn-based migration map; Slices 1-4 complete**
 
 ## Canonical direction
 
@@ -16,7 +16,7 @@ Do not create a replacement simulation framework.
 
 - gameplay.tscn -> TurnBasedGameMain is canonical.
 - ProductionWorldBootstrap owns real procedural generation/materialization/streaming; production never depends on demo fixtures.
-- SimpleTurnController owns migrated unmounted movement and combat.
+- SimpleTurnController owns migrated unmounted movement, combat, scavenging and ordinary inventory actions.
 - WorldState owns authoritative entities/placements and exposes narrow ordinary direct writes used by migrated turn routes.
 - Movement legality reads candidate cells directly from WorldState terrain/occupancy plus existing collision facts; canonical movement does not call SpatialQueryService, WorldMutationService or MovementActionService.
 - A player movement or combat input resolves at most once, consumes one ordinary turn when accepted, then relevant infected resolve sequentially against the resulting current state.
@@ -27,6 +27,11 @@ Do not create a replacement simulation framework.
 - Procedurally projected infected are enrolled into the existing Health, hand-equipment and containment owners before taking simple combat turns.
 - Canonical movement/combat does not execute TickKernel, WHEN queues, timed combat actions, simultaneous intention/consequence batches or universal commitment/interruption machinery underneath the migrated route.
 - Streaming focus, player perception and presentation follow final authoritative state after each simple turn.
+- Real generated loot remains owned by LootState + InventoryContainmentState; inspection is read-only and never rerolls contents.
+- Search/take/store/equip/stow/drop/loose-item pickup validate against current WorldState, containment, equipment, carry capacity and interaction reach, mutate those existing owners directly, then commit one ordinary turn.
+- Exact item entity identity is preserved across loot container -> player containment -> equipment -> world drop -> pickup -> container transitions.
+- The existing LootContainerPanel and inventory/equipment shell remain presentation/input surfaces. Canonical mutations route to SimpleTurnController; they do not run ItemTransferActionService, LootSearchActionService or TickKernel.
+
 
 ## Transitional boundary
 
