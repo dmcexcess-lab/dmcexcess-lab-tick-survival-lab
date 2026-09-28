@@ -14,8 +14,8 @@ const Layers = preload("res://scripts/foundation/spatial/SpatialLayer.gd")
 const PerformanceTelemetry = preload("res://scripts/foundation/diagnostics/PerformanceTelemetry.gd")
 
 ## Authoritative persistent world state. Generation and unmigrated systems may still
-## use WorldMutationService, while the canonical simple-turn movement route changes
-## placement directly through move_entity().
+## use WorldMutationService, while migrated turn-based routes perform narrow ordinary
+## entity/placement writes directly here.
 
 signal changed(change)
 signal batch_changed(batch)
@@ -105,6 +105,83 @@ func entities_at(cell: Vector2i, channel: int = -1) -> Array[String]:
 ## Conventional movement write for the turn-based game. Legality is checked by
 ## the caller; this method owns the single authoritative placement mutation and
 ## emits the same world change used by rendering and persistence observers.
+## Conventional direct entity write used by migrated turn-based routes.
+func create_entity(semantic_type: StringName, requested_id: String = "") -> String:
+    if String(semantic_type).strip_edges().is_empty():
+        return ""
+    var entity_id := requested_id
+    if entity_id.is_empty():
+        entity_id = _allocate_runtime_id()
+    elif not EntityIdRules.is_valid(entity_id):
+        return ""
+    if _entities.has(entity_id):
+        return ""
+    var record := EntityRecordClass.new(entity_id, semantic_type)
+    if not record.is_valid() or not _insert_entity(record):
+        return ""
+    var change := ChangeClass.new(ChangeClass.Kind.ENTITY_CREATED, entity_id)
+    _commit_change(change)
+    return entity_id
+
+## Conventional direct entity removal used by migrated turn-based routes.
+func remove_entity(entity_id: String) -> bool:
+    if not _entities.has(entity_id):
+        return false
+    var previous := _placements.get_placement(entity_id)
+    var before_cells: Array[Vector2i] = []
+    var before_channel := -1
+    if previous != null:
+        before_cells = previous.world_cells()
+        before_channel = previous.channel
+        _remove_placement_record(entity_id)
+    var removed := _remove_entity_record(entity_id)
+    if removed == null:
+        if previous != null:
+            _set_placement_record(previous)
+        return false
+    var change := ChangeClass.new(ChangeClass.Kind.ENTITY_REMOVED, entity_id)
+    change.before_cells = before_cells
+    change.before_channel = before_channel
+    _commit_change(change)
+    return true
+
+## Conventional placement write for migrated routes that create terminal world state.
+func set_placement(entity_id: String, channel: int, anchor: Vector2i, facing: int, footprint: SpatialFootprint, structure_axis: int = WorldPlacement.NO_STRUCTURE_AXIS) -> bool:
+    if not _entities.has(entity_id):
+        return false
+    var candidate := PlacementClass.new(entity_id, channel, anchor, facing, footprint, structure_axis)
+    if not candidate.is_valid():
+        return false
+    var previous := _placements.get_placement(entity_id)
+    if previous != null and previous.equivalent(candidate):
+        return true
+    var before_cells: Array[Vector2i] = []
+    var before_channel := -1
+    if previous != null:
+        before_cells = previous.world_cells()
+        before_channel = previous.channel
+    if not _set_placement_record(candidate):
+        return false
+    var change := ChangeClass.new(ChangeClass.Kind.PLACEMENT_SET, entity_id)
+    change.before_cells = before_cells
+    change.after_cells = candidate.world_cells()
+    change.before_channel = before_channel
+    change.after_channel = candidate.channel
+    _commit_change(change)
+    return true
+
+func unplace_entity(entity_id: String) -> bool:
+    if not _placements.has(entity_id):
+        return false
+    var removed := _remove_placement_record(entity_id)
+    if removed == null:
+        return false
+    var change := ChangeClass.new(ChangeClass.Kind.PLACEMENT_REMOVED, entity_id)
+    change.before_cells = removed.world_cells()
+    change.before_channel = removed.channel
+    _commit_change(change)
+    return true
+
 func move_entity(entity_id: String, anchor: Vector2i, facing: int) -> bool:
     var previous: WorldPlacement = _placements.get_placement(entity_id)
     if previous == null:
