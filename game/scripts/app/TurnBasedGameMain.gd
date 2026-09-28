@@ -12,7 +12,10 @@ const InjuryFearRules = preload("res://scripts/simulation/actors/condition/Condi
 const MovementExertionRules = preload("res://scripts/simulation/actors/condition/MovementConditionExertionService.gd")
 const SustainmentOffers = preload("res://scripts/simulation/interaction/SustainmentInteractionOfferProvider.gd")
 const WorldActions = preload("res://scripts/simulation/interaction/WorldInteractionActionService.gd")
+const RepairActions = preload("res://scripts/simulation/interaction/WorldObjectRepairActionService.gd")
 const DoorValue = preload("res://scripts/simulation/doors/DoorStateValue.gd")
+const SkillCatalog = preload("res://scripts/simulation/actors/skills/ActorSkillCatalog.gd")
+const Injury = preload("res://scripts/simulation/actors/health/ActorInjuryRecord.gd")
 
 const RESIDENT_SPAWN_SEARCH_RADIUS := 8
 const INVALID_CELL := Vector2i(-999999, -999999)
@@ -28,6 +31,7 @@ var _simple_visible_threats: Dictionary = {}
 var _simple_threat_free_since_tick: int = -1
 var _last_player_hp: int = -1
 var _simple_elapsed_override_ticks: int = -1
+var _simple_action_serial: int = 1
 
 func _ready() -> void:
     super._ready()
@@ -46,7 +50,7 @@ func _boot_production_world() -> bool:
     _simple_turns.action_resolved.connect(Callable(_hud, "present_action_result"))
     _simple_turns.action_busy_changed.connect(_on_player_action_busy_changed)
     _simple_turns.turn_completed.connect(_on_simple_turn_completed)
-    if not _wire_simple_inventory_route() or not _wire_simple_contextual_route() or not _wire_simple_session_menu(): return false
+    if not _wire_simple_inventory_route() or not _wire_simple_contextual_route() or not _wire_simple_session_menu() or not _wire_simple_slice7_route(): return false
 
     var legacy_submit := Callable(_controller, "submit_intent")
     if _keyboard.action_intent.is_connected(legacy_submit): _keyboard.action_intent.disconnect(legacy_submit)
@@ -153,6 +157,14 @@ func _wire_simple_contextual_route() -> bool:
     if not _shell.has_method("configure_simple_contextual_consume"): return false
     return bool(_shell.call("configure_simple_contextual_consume", Callable(self, "run_simple_inventory_consumption")))
 
+func _wire_simple_slice7_route() -> bool:
+    if _crafting_panel == null or _shell == null or _first_aid_actions == null: return false
+    if _crafting_panel.craft_requested.is_connected(Callable(_crafting_controller, "request_craft")):
+        _crafting_panel.craft_requested.disconnect(Callable(_crafting_controller, "request_craft"))
+    _crafting_panel.craft_requested.connect(_on_simple_craft_requested)
+    if not _shell.has_method("configure_simple_first_aid"): return false
+    return bool(_shell.call("configure_simple_first_aid", Callable(self, "run_simple_first_aid")))
+
 func simple_contextual_panel() -> WorldInteractionPanel: return _world_interaction_panel
 func simple_contextual_affordances() -> InteractionAffordanceQuery: return _interaction_affordances
 
@@ -187,7 +199,7 @@ func _on_simple_contextual_world_cell(cell: Vector2i) -> void:
     _world_interaction_panel.open_for_targets(entries)
 
 func _simple_contextual_action_supported(action_id: StringName) -> bool:
-    return action_id in [WorldActions.DOOR_OPEN, WorldActions.DOOR_CLOSE, WorldActions.WINDOW_OPEN, WorldActions.WINDOW_CLOSE, SustainmentOffers.DRINK_FROM_FIXTURE, SustainmentOffers.REST_ON_FURNITURE, SustainmentOffers.SLEEP_IN_BED, LootOffersClass.SEARCH_ACTION_ID, LooseItemPickupOffersClass.ACTION_ID, CraftingOffersClass.ACTION_ID]
+    return action_id in [WorldActions.DOOR_OPEN, WorldActions.DOOR_CLOSE, WorldActions.WINDOW_OPEN, WorldActions.WINDOW_CLOSE, WorldActions.OBJECT_DECONSTRUCT, RepairActions.ACTION_ID, SustainmentOffers.DRINK_FROM_FIXTURE, SustainmentOffers.REST_ON_FURNITURE, SustainmentOffers.SLEEP_IN_BED, LootOffersClass.SEARCH_ACTION_ID, LooseItemPickupOffersClass.ACTION_ID, CraftingOffersClass.ACTION_ID]
 
 func _on_simple_contextual_action_requested(target_id: String, action_id: StringName) -> void:
     if action_id == LootOffersClass.SEARCH_ACTION_ID:
@@ -207,8 +219,9 @@ func _run_simple_contextual_action(actor_id: String, target_id: String, action_i
     if not _interaction_reach.target_reachable(actor, target, WorldInteractionReachQuery.CONTACT_FORWARD): return {"success": false, "reason": "context_target_out_of_reach"}
     var entity := _world.entity(target)
     if entity == null: return {"success": false, "reason": "context_target_missing"}
-    var elapsed := survival_ticks_per_turn()
-    var valid := false
+    if action_id == WorldActions.OBJECT_DECONSTRUCT: return run_simple_deconstruct(target)
+    if action_id == RepairActions.ACTION_ID: return run_simple_repair(target)
+    var elapsed := survival_ticks_per_turn(); var valid := false
     if action_id == WorldActions.DOOR_OPEN:
         valid = _world_interaction_catalog.is_door(entity.semantic_type) and not _world_interaction_state.is_locked(target) and _world_interaction_state.board_count(target) == 0 and not _world_interaction_state.is_broken(target)
     elif action_id == WorldActions.DOOR_CLOSE:
@@ -248,30 +261,189 @@ func run_simple_inventory_consumption(item_id: String) -> Dictionary:
     if not bool(offer.get("available", false)) or not _world.has_entity(item): return {"success": false, "reason": String(offer.get("reason", "item_not_consumable"))}
     var entity := _world.entity(item); var profile := _sustainment_profiles.profile(entity.semantic_type) if entity != null else {}
     if entity == null or profile.is_empty(): return {"success": false, "reason": "item_profile_missing"}
-    var assignment: Dictionary = _hand_state.assignment_for_item(item)
-    var source_container := _inventory_state.container_of(item)
-    if not _simple_turns._begin_direct_action(StringName("condition.%s" % String(profile.get("action_kind", "consume")))): return {"success": false, "reason": "player_unavailable"}
-    if not assignment.is_empty():
-        if String(assignment.get("actor_id", "")) != WorldBootstrapClass.PLAYER_ID or not _hand_mutations.clear_slot(WorldBootstrapClass.PLAYER_ID, int(assignment.get("slot", -1))): return _simple_turns._reject_direct_action(&"condition.consume", "item_release_failed")
-    elif source_container.is_empty() or not _inventory_mutations.clear_container(item): return _simple_turns._reject_direct_action(&"condition.consume", "item_release_failed")
+    var capture := _capture_personal_item(item)
+    if capture.is_empty() or not _simple_turns._begin_direct_action(StringName("condition.%s" % String(profile.get("action_kind", "consume")))): return {"success": false, "reason": "player_unavailable"}
+    if not _detach_personal_item(capture) or not _world.remove_entity(item):
+        _restore_personal_item(capture); return _simple_turns._reject_direct_action(&"condition.consume", "item_removal_failed")
     if _freshness_mutations.has_record(item): _freshness_mutations.remove_item(item)
-    if not _world.remove_entity(item): return _simple_turns._reject_direct_action(&"condition.consume", "item_removal_failed")
     _condition_service.change_condition(WorldBootstrapClass.PLAYER_ID, ConditionStateClass.SATIETY, int(profile.get("satiety_gain", 0)), &"food_consumed")
     _condition_service.change_condition(WorldBootstrapClass.PLAYER_ID, ConditionStateClass.HYDRATION, int(profile.get("hydration_gain", 0)), &"drink_consumed")
     _condition_service.change_condition(WorldBootstrapClass.PLAYER_ID, ConditionStateClass.ENGAGEMENT, int(profile.get("engagement_gain", 0)), &"meal_enjoyed")
     var elapsed := maxi(1, int(profile.get("duration_ticks", survival_ticks_per_turn())))
     _simple_elapsed_override_ticks = elapsed
     var intent := StringName("condition.%s" % String(profile.get("action_kind", "consume")))
-    var result := _simple_turns._complete_direct_action(intent, "")
-    result["elapsed_ticks"] = elapsed; result["item_id"] = item
-    return result
+    var result := _simple_turns._complete_direct_action(intent, ""); result["elapsed_ticks"] = elapsed; result["item_id"] = item; return result
+
+func _on_simple_craft_requested(recipe_id: StringName, workstation_id: String) -> void:
+    var result := run_simple_craft(recipe_id, workstation_id)
+    if _crafting_panel != null: _crafting_panel.present_action_result(recipe_id, bool(result.get("success", false)), String(result.get("reason", "")), survival_elapsed_tick(), workstation_id)
+
+func run_simple_craft(recipe_id: StringName, workstation_id: String = "") -> Dictionary:
+    if _simple_turns == null or not _simple_turns.has_control() or _crafting_plans == null or _crafting_recipes == null: return {"success": false, "reason": "crafting_unavailable"}
+    var plan: Dictionary = _crafting_plans.query(WorldBootstrapClass.PLAYER_ID, recipe_id, workstation_id)
+    if not bool(plan.get("ready", false)): return {"success": false, "reason": String(plan.get("reason", "crafting_blocked"))}
+    var recipe: CraftingRecipe = _crafting_recipes.recipe(recipe_id)
+    if recipe == null: return {"success": false, "reason": "recipe_unknown"}
+    var skill_profile := _skill_checks.action_profile(WorldBootstrapClass.PLAYER_ID, recipe.skill_id, recipe.duration_ticks, recipe.skill_difficulty)
+    if not bool(skill_profile.get("ok", false)): return {"success": false, "reason": String(skill_profile.get("reason", "skill_unavailable"))}
+    var exact := _crafting_plans.validate_exact(WorldBootstrapClass.PLAYER_ID, recipe_id, int(plan.get("recipe_catalog_version", -1)), plan.get("consumed_item_ids", []), plan.get("tool_item_ids", []), workstation_id)
+    if not bool(exact.get("ready", false)): return {"success": false, "reason": String(exact.get("reason", "crafting_plan_stale"))}
+    var serial := _next_simple_action_serial(); var skill := _skill_checks.resolve_attempt(WorldBootstrapClass.PLAYER_ID, recipe.skill_id, recipe.skill_difficulty, serial, recipe_id, int(skill_profile.get("skill_level", -1)))
+    if not bool(skill.get("ok", false)): return {"success": false, "reason": String(skill.get("reason", "skill_check_unavailable"))}
+    var elapsed := _deliberate_elapsed(int(skill_profile.get("duration_ticks", recipe.duration_ticks)))
+    if not bool(skill.get("success", false)):
+        _skill_checks.award_attempt_xp(WorldBootstrapClass.PLAYER_ID, recipe.skill_id, recipe.skill_difficulty, false)
+        return {"success": false, "reason": "skill_check_failed", "elapsed_ticks": 0}
+    var captures: Array[Dictionary] = []
+    for value: Variant in exact.get("consumed_item_ids", []):
+        var capture := _capture_personal_item(String(value)); if capture.is_empty(): return {"success": false, "reason": "input_disposition_stale"}; captures.append(capture)
+    var outputs: Array[String] = []
+    for index in range(exact.get("output_semantics", []).size()):
+        var output_id := "craft.simple.%016d.%02d" % [serial, index]
+        if _world.has_entity(output_id): return {"success": false, "reason": "output_identity_collision"}
+        outputs.append(output_id)
+    if not _simple_turns._begin_direct_action(&"crafting.craft_recipe"): return {"success": false, "reason": "player_unavailable"}
+    var removed: Array[Dictionary] = []
+    for capture: Dictionary in captures:
+        if not _remove_captured_item(capture): _restore_captured_items(removed); return _simple_turns._reject_direct_action(&"crafting.craft_recipe", "input_remove_failed")
+        removed.append(capture)
+    var created: Array[String] = []; var semantics: Array = exact.get("output_semantics", [])
+    for index in range(outputs.size()):
+        var output_id := outputs[index]
+        if _world.create_entity(StringName(semantics[index]), output_id) != output_id or not _inventory_mutations.set_container(output_id, WorldBootstrapClass.PLAYER_ID):
+            _rollback_created_items(created); _restore_captured_items(removed); return _simple_turns._reject_direct_action(&"crafting.craft_recipe", "output_commit_failed")
+        created.append(output_id)
+    if not _skill_checks.award_attempt_xp(WorldBootstrapClass.PLAYER_ID, recipe.skill_id, recipe.skill_difficulty, true):
+        _rollback_created_items(created); _restore_captured_items(removed); return _simple_turns._reject_direct_action(&"crafting.craft_recipe", "skill_xp_commit_failed")
+    _simple_elapsed_override_ticks = elapsed
+    var result := _simple_turns._complete_direct_action(&"crafting.craft_recipe", ""); result["elapsed_ticks"] = elapsed; result["output_item_ids"] = created; result["recipe_id"] = recipe_id; return result
+
+func run_simple_first_aid(item_id: String, injury_id: String) -> Dictionary:
+    if _simple_turns == null or not _simple_turns.has_control() or _first_aid_actions == null: return {"success": false, "reason": "first_aid_unavailable"}
+    var chosen: Dictionary = {}
+    for offer: Dictionary in _first_aid_actions.treatment_offers(WorldBootstrapClass.PLAYER_ID, item_id):
+        if String(offer.get("injury_id", "")) == injury_id: chosen = offer; break
+    var wound: ActorInjuryRecord = _health_state.injury(WorldBootstrapClass.PLAYER_ID, injury_id)
+    if chosen.is_empty() or wound == null: return {"success": false, "reason": "treatment_unavailable"}
+    var captures: Array[Dictionary] = []
+    for value: Variant in chosen.get("resource_item_ids", []):
+        var capture := _capture_personal_item(String(value)); if capture.is_empty(): return {"success": false, "reason": "treatment_resource_changed"}; captures.append(capture)
+    var serial := _next_simple_action_serial(); var difficulty := int(chosen.get("skill_difficulty", 1)); var skill := _skill_checks.resolve_attempt(WorldBootstrapClass.PLAYER_ID, SkillCatalog.SURVIVAL, difficulty, serial, &"health.first_aid", int(chosen.get("skill_level", -1)))
+    if not bool(skill.get("ok", false)): return {"success": false, "reason": "skill_check_unavailable"}
+    if not _simple_turns._begin_direct_action(&"health.first_aid"): return {"success": false, "reason": "player_unavailable"}
+    var removed: Array[Dictionary] = []
+    for capture: Dictionary in captures:
+        if not _remove_captured_item(capture): _restore_captured_items(removed); return _simple_turns._reject_direct_action(&"health.first_aid", "treatment_resource_commit_failed")
+        removed.append(capture)
+    var skill_success := bool(skill.get("success", false)); var next_severity := wound.severity
+    if skill_success and String(chosen.get("mode", "")) == "kit": next_severity = maxi(Injury.Severity.MINOR, wound.severity - 1)
+    if not _health_state.set_injury_state(WorldBootstrapClass.PLAYER_ID, injury_id, next_severity, true, wound.treated or skill_success):
+        _restore_captured_items(removed); return _simple_turns._reject_direct_action(&"health.first_aid", "injury_commit_failed")
+    if not _skill_checks.award_attempt_xp(WorldBootstrapClass.PLAYER_ID, SkillCatalog.SURVIVAL, difficulty, skill_success):
+        _health_state.set_injury_state(WorldBootstrapClass.PLAYER_ID, injury_id, wound.severity, wound.stabilized, wound.treated); _restore_captured_items(removed); return _simple_turns._reject_direct_action(&"health.first_aid", "skill_xp_commit_failed")
+    var elapsed := maxi(1, int(chosen.get("duration_ticks", survival_ticks_per_turn()))); _simple_elapsed_override_ticks = elapsed
+    var result := _simple_turns._complete_direct_action(&"health.first_aid", ""); result["elapsed_ticks"] = elapsed; result["treated"] = wound.treated or skill_success; result["stabilized"] = true; result["severity"] = next_severity; return result
+
+func run_simple_repair(target_id: String) -> Dictionary:
+    var target := target_id.strip_edges(); var actor := WorldBootstrapClass.PLAYER_ID
+    if target.is_empty() or not _world.has_entity(target) or _simple_turns == null or not _simple_turns.has_control(): return {"success": false, "reason": "repair_target_unavailable"}
+    if not _interaction_reach.target_reachable(actor, target, WorldInteractionReachQuery.CONTACT_FORWARD): return {"success": false, "reason": "target_out_of_reach"}
+    var entity := _world.entity(target); var profile := _world_interaction_catalog.repair_profile(entity.semantic_type) if entity != null else {}
+    if profile.is_empty() or not _world_interaction_state.is_broken(target): return {"success": false, "reason": "target_not_repairable"}
+    var tool := _find_carried_any(profile.get("tool_semantics", []), {}); if tool.is_empty(): return {"success": false, "reason": "repair_tool_required"}
+    var used := {tool: true}; var materials: Array[String] = []
+    for semantic: Variant in profile.get("material_semantics", []):
+        var item := _find_carried_any([semantic], used); if item.is_empty(): return {"success": false, "reason": "repair_material_required"}; used[item] = true; materials.append(item)
+    var skill_profile := _skill_checks.action_profile(actor, SkillCatalog.MECHANICAL, int(profile.get("base_duration_ticks", 16)), int(profile.get("difficulty", 3)))
+    if not bool(skill_profile.get("ok", false)): return {"success": false, "reason": "mechanical_skill_unavailable"}
+    var serial := _next_simple_action_serial(); var skill := _skill_checks.resolve_attempt(actor, SkillCatalog.MECHANICAL, int(profile.get("difficulty", 3)), serial, StringName("world.repair|%s" % target), int(skill_profile.get("skill_level", -1)))
+    if not bool(skill.get("ok", false)) or not bool(skill.get("success", false)): return {"success": false, "reason": "mechanical_skill_check_failed"}
+    var captures: Array[Dictionary] = []; for item: String in materials: captures.append(_capture_personal_item(item))
+    for capture: Dictionary in captures: if capture.is_empty(): return {"success": false, "reason": "repair_material_changed"}
+    if not _simple_turns._begin_direct_action(RepairActions.ACTION_ID): return {"success": false, "reason": "player_unavailable"}
+    var previous_door := _door_state.state(target); if previous_door == DoorValue.OPEN and not _door_transition.close_manually(actor, target): return _simple_turns._reject_direct_action(RepairActions.ACTION_ID, "door_close_failed")
+    if not _world_interaction_state.set_broken(target, false, &"simple_door_repaired"): return _simple_turns._reject_direct_action(RepairActions.ACTION_ID, "repair_state_failed")
+    var removed: Array[Dictionary] = []
+    for capture: Dictionary in captures:
+        if not _remove_captured_item(capture): _world_interaction_state.set_broken(target, true, &"repair_rollback"); _restore_captured_items(removed); return _simple_turns._reject_direct_action(RepairActions.ACTION_ID, "repair_material_commit_failed")
+        removed.append(capture)
+    _skill_checks.award_attempt_xp(actor, SkillCatalog.MECHANICAL, int(profile.get("difficulty", 3)), true)
+    var elapsed := _deliberate_elapsed(int(skill_profile.get("duration_ticks", 1))); _simple_elapsed_override_ticks = elapsed
+    var result := _simple_turns._complete_direct_action(RepairActions.ACTION_ID, ""); result["elapsed_ticks"] = elapsed; result["target_id"] = target; return result
+
+func run_simple_deconstruct(target_id: String) -> Dictionary:
+    var target := target_id.strip_edges(); var actor := WorldBootstrapClass.PLAYER_ID
+    if target.is_empty() or not _world.has_entity(target) or _simple_turns == null or not _simple_turns.has_control(): return {"success": false, "reason": "deconstruct_target_unavailable"}
+    if not _interaction_reach.target_reachable(actor, target, WorldInteractionReachQuery.CONTACT_FORWARD): return {"success": false, "reason": "target_out_of_reach"}
+    var entity := _world.entity(target); var placement := _world.placement(target); var profile := _world_interaction_catalog.deconstruction_profile(entity.semantic_type) if entity != null else {}
+    if profile.is_empty() or placement == null or placement.channel != Layers.Channel.OBJECT or _inventory_state.has_container(target): return {"success": false, "reason": "object_not_deconstructible"}
+    var tool := _find_carried_any(profile.get("tool_semantics", []), {}); if tool.is_empty(): return {"success": false, "reason": "deconstruction_tool_required"}
+    var difficulty := int(profile.get("difficulty", 2)); var skill_profile := _skill_checks.action_profile(actor, SkillCatalog.MECHANICAL, int(profile.get("base_duration_ticks", 16)), difficulty)
+    if not bool(skill_profile.get("ok", false)): return {"success": false, "reason": "mechanical_skill_unavailable"}
+    var serial := _next_simple_action_serial(); var skill := _skill_checks.resolve_attempt(actor, SkillCatalog.MECHANICAL, difficulty, serial, StringName("world.deconstruct|%s" % target), int(skill_profile.get("skill_level", -1)))
+    if not bool(skill.get("ok", false)) or not bool(skill.get("success", false)): return {"success": false, "reason": "mechanical_skill_check_failed"}
+    var output_semantic := StringName(profile.get("output_semantic", &"")); var count := int(profile.get("output_count", 0)); if count < 1: return {"success": false, "reason": "deconstruction_profile_invalid"}
+    if not _simple_turns._begin_direct_action(WorldActions.OBJECT_DECONSTRUCT): return {"success": false, "reason": "player_unavailable"}
+    var created: Array[String] = []
+    for index in range(count):
+        var item_id := "deconstruct.simple.%016d.%02d" % [serial, index]
+        if _world.create_entity(output_semantic, item_id) != item_id: _rollback_created_items(created); return _simple_turns._reject_direct_action(WorldActions.OBJECT_DECONSTRUCT, "salvage_create_failed")
+        var capacity := _carry_acquisition.evaluate(actor, item_id); var stored := int(capacity.get("status", -1)) == 0 and _inventory_mutations.set_container(item_id, actor)
+        if not stored and not _world.set_placement(item_id, Layers.Channel.LOOSE_ITEM, _world.placement(actor).anchor, Facing.Value.SOUTH, Footprint.single_cell()): _world.remove_entity(item_id); _rollback_created_items(created); return _simple_turns._reject_direct_action(WorldActions.OBJECT_DECONSTRUCT, "salvage_place_failed")
+        created.append(item_id)
+    if not _world_interaction_state.set_destroyed(target, true, &"simple_object_deconstructed") or not _world.remove_entity(target): _world_interaction_state.set_destroyed(target, false, &"deconstruct_rollback"); _rollback_created_items(created); return _simple_turns._reject_direct_action(WorldActions.OBJECT_DECONSTRUCT, "deconstruct_commit_failed")
+    _skill_checks.award_attempt_xp(actor, SkillCatalog.MECHANICAL, difficulty, true)
+    var elapsed := _deliberate_elapsed(int(skill_profile.get("duration_ticks", 1))); _simple_elapsed_override_ticks = elapsed
+    var result := _simple_turns._complete_direct_action(WorldActions.OBJECT_DECONSTRUCT, ""); result["elapsed_ticks"] = elapsed; result["target_id"] = target; result["output_item_ids"] = created; return result
+
+func _capture_personal_item(item_id: String) -> Dictionary:
+    if item_id.is_empty() or not _world.has_entity(item_id): return {}
+    var entity := _world.entity(item_id); if entity == null: return {}
+    var assignment := _hand_state.assignment_for_item(item_id)
+    if not assignment.is_empty() and String(assignment.get("actor_id", "")) == WorldBootstrapClass.PLAYER_ID: return {"item_id": item_id, "semantic": entity.semantic_type, "kind": "hand", "slot": int(assignment.get("slot", -1)), "container": ""}
+    var current := item_id; var visited: Dictionary = {}
+    while _inventory_state.is_contained(current) and not visited.has(current):
+        visited[current] = true; var container := _inventory_state.container_of(current)
+        if container == WorldBootstrapClass.PLAYER_ID: return {"item_id": item_id, "semantic": entity.semantic_type, "kind": "container", "slot": -1, "container": _inventory_state.container_of(item_id)}
+        current = container
+    return {}
+func _detach_personal_item(capture: Dictionary) -> bool:
+    return _hand_mutations.clear_slot(WorldBootstrapClass.PLAYER_ID, int(capture.get("slot", -1))) if String(capture.get("kind", "")) == "hand" else _inventory_mutations.clear_container(String(capture.get("item_id", "")))
+func _restore_personal_item(capture: Dictionary) -> bool:
+    var item := String(capture.get("item_id", "")); if not _world.has_entity(item): _world.create_entity(StringName(capture.get("semantic", &"")), item)
+    return _hand_mutations.set_item(WorldBootstrapClass.PLAYER_ID, int(capture.get("slot", -1)), item) if String(capture.get("kind", "")) == "hand" else _inventory_mutations.set_container(item, String(capture.get("container", "")))
+func _remove_captured_item(capture: Dictionary) -> bool:
+    if not _detach_personal_item(capture): return false
+    if _world.remove_entity(String(capture.get("item_id", ""))): return true
+    _restore_personal_item(capture); return false
+func _restore_captured_items(captures: Array[Dictionary]) -> void:
+    for capture: Dictionary in captures: _restore_personal_item(capture)
+func _rollback_created_items(ids: Array[String]) -> void:
+    for index in range(ids.size() - 1, -1, -1):
+        var item := ids[index]
+        if _inventory_state.is_contained(item): _inventory_mutations.clear_container(item)
+        if _world.has_entity(item): _world.remove_entity(item)
+func _find_carried_any(semantics: Array, excluded: Dictionary) -> String:
+    var allowed: Dictionary = {}; for value: Variant in semantics: allowed[String(value)] = true
+    var carry := _carry_query.query(WorldBootstrapClass.PLAYER_ID); var ids: Array[String] = []
+    for value: Variant in carry.get("item_ids", []): ids.append(String(value))
+    ids.sort()
+    for item: String in ids:
+        if excluded.has(item) or not _world.has_entity(item): continue
+        var entity := _world.entity(item); if entity != null and allowed.has(String(entity.semantic_type)): return item
+    return ""
+func _deliberate_elapsed(base_ticks: int) -> int:
+    var duration := maxi(1, base_ticks)
+    if _condition_modifiers != null and _condition_modifiers.is_ready() and _condition_modifiers.has_actor(WorldBootstrapClass.PLAYER_ID): duration = maxi(1, int(ceili(float(duration * _condition_modifiers.deliberate_action_duration_multiplier_bp(WorldBootstrapClass.PLAYER_ID)) / 10000.0)))
+    return duration
+func _next_simple_action_serial() -> int:
+    var serial := _simple_action_serial; _simple_action_serial += 1; return serial
 
 func _apply_simple_surface_comfort(actor_id: String, surface: StringName, full_sleep: bool) -> void:
     if surface == &"bed": _condition_service.change_condition(actor_id, ConditionStateClass.COMFORT, 15 if full_sleep else 6, &"comfortable_rest")
     elif surface == &"sofa": _condition_service.change_condition(actor_id, ConditionStateClass.COMFORT, -2 if full_sleep else 5, &"sofa_rest")
     elif surface == &"chair": _condition_service.change_condition(actor_id, ConditionStateClass.COMFORT, -6 if full_sleep else 3, &"chair_rest")
     else: _condition_service.change_condition(actor_id, ConditionStateClass.COMFORT, -10 if full_sleep else -4, &"rough_rest")
-
 func _on_simple_loot_take(container_id: String, item_id: String) -> void:
     if _simple_turns != null: _simple_turns.take_loot_item(container_id, item_id)
 func _on_simple_loot_store(container_id: String, item_id: String) -> void:
@@ -320,8 +492,7 @@ func _on_simple_turn_completed(_turn_number: int, _active_actor_count: int) -> v
     var streaming := WorldBootstrapClass.streaming_coordinator()
     if streaming != null: streaming.update_focus(player.anchor)
     if _perception != null: _perception.recompute(&"simple_turn")
-    var elapsed := _simple_elapsed_override_ticks if _simple_elapsed_override_ticks > 0 else survival_ticks_per_turn()
-    _simple_elapsed_override_ticks = -1
+    var elapsed := _simple_elapsed_override_ticks if _simple_elapsed_override_ticks > 0 else survival_ticks_per_turn(); _simple_elapsed_override_ticks = -1
     _advance_simple_survival(elapsed)
     if _hud != null: _hud.refresh()
     _flush_pending_visual_state()
@@ -331,32 +502,26 @@ func _advance_simple_survival(elapsed_ticks: int) -> void:
     var intent := _simple_turns.last_completed_intent() if _simple_turns != null else &""
     if intent == TurnIntents.RUN_FORWARD: _condition_service.apply_exertion(WorldBootstrapClass.PLAYER_ID, MovementExertionRules.RUN_BASE_FATIGUE_COST, &"movement_exertion")
     _apply_simple_fear_pressure()
-
 func _apply_simple_fear_pressure() -> void:
     if _condition_service == null or _perception == null: return
-    var player := _world.placement(WorldBootstrapClass.PLAYER_ID)
-    if player == null: return
+    var player := _world.placement(WorldBootstrapClass.PLAYER_ID); if player == null: return
     var current_visible: Dictionary = {}; var worsened: Array[Dictionary] = []
     for actor_id: String in _simple_infected_ids:
         var placement := _world.placement(actor_id)
         if placement == null or not _health_state.has_actor(actor_id) or _health_state.current_hp(actor_id) <= 0: continue
         var distance := _chebyshev(player.anchor, placement.anchor)
         if distance > SimpleTurnController.ACTIVE_RADIUS or not _perception.is_visible(placement.anchor): continue
-        current_visible[actor_id] = true
-        var band := PerceptionFearRules._band_for_distance(distance); var previous := int(_simple_fear_bands.get(actor_id, 0))
-        if band > previous:
-            worsened.append({"actor_id": actor_id, "pressure": int(PerceptionFearRules.BAND_PRESSURE.get(band, 0)) - int(PerceptionFearRules.BAND_PRESSURE.get(previous, 0))}); _simple_fear_bands[actor_id] = band
+        current_visible[actor_id] = true; var band := PerceptionFearRules._band_for_distance(distance); var previous := int(_simple_fear_bands.get(actor_id, 0))
+        if band > previous: worsened.append({"actor_id": actor_id, "pressure": int(PerceptionFearRules.BAND_PRESSURE.get(band, 0)) - int(PerceptionFearRules.BAND_PRESSURE.get(previous, 0))}); _simple_fear_bands[actor_id] = band
     var now := survival_elapsed_tick()
     if current_visible.is_empty():
         if not _simple_visible_threats.is_empty() and _simple_threat_free_since_tick < 0: _simple_threat_free_since_tick = now
         if _simple_threat_free_since_tick >= 0 and now - _simple_threat_free_since_tick >= _world_time_profile.ticks_per_minute() * PerceptionFearRules.ENCOUNTER_RESET_MINUTES: _simple_fear_bands.clear(); _simple_threat_free_since_tick = -1
     else: _simple_threat_free_since_tick = -1
     _simple_visible_threats = current_visible
-    worsened.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
-        var pa := int(a.get("pressure", 0)); var pb := int(b.get("pressure", 0)); return pa > pb if pa != pb else String(a.get("actor_id", "")) < String(b.get("actor_id", "")))
+    worsened.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: var pa := int(a.get("pressure", 0)); var pb := int(b.get("pressure", 0)); return pa > pb if pa != pb else String(a.get("actor_id", "")) < String(b.get("actor_id", "")))
     var pressure := 0
-    for index in range(worsened.size()):
-        var weight_bp := PerceptionFearRules.DIMINISHING_BP[mini(index, PerceptionFearRules.DIMINISHING_BP.size() - 1)]; pressure += int(ceili(float(int(worsened[index].get("pressure", 0)) * weight_bp) / 10000.0))
+    for index in range(worsened.size()): var weight_bp := PerceptionFearRules.DIMINISHING_BP[mini(index, PerceptionFearRules.DIMINISHING_BP.size() - 1)]; pressure += int(ceili(float(int(worsened[index].get("pressure", 0)) * weight_bp) / 10000.0))
     var current_hp := _health_state.current_hp(WorldBootstrapClass.PLAYER_ID)
     if _last_player_hp >= 0 and current_hp < _last_player_hp: pressure += InjuryFearRules.pressure_for_damage(_last_player_hp - current_hp)
     _last_player_hp = current_hp; pressure = mini(ActorFearPressureService.MAX_PRESSURE_PER_TICK, maxi(0, pressure))
