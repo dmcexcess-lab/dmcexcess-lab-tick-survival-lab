@@ -35,8 +35,9 @@ jobs:
           ! grep -q 'TickKernel' game/scripts/player/SimpleTurnController.gd
           ! grep -q 'TimedAction' game/scripts/player/SimpleTurnController.gd
           ! grep -q 'ScheduledEvent' game/scripts/player/SimpleTurnController.gd
-          grep -q 'complete_contextual_action' game/scripts/player/SimpleTurnController.gd
+          grep -q '_complete_direct_action' game/scripts/player/SimpleTurnController.gd
           grep -q '_run_simple_contextual_action' game/scripts/app/TurnBasedGameMain.gd
-          ! grep -A140 '_run_simple_contextual_action' game/scripts/app/TurnBasedGameMain.gd | grep -q 'run_until_stop'
-          ! grep -A140 '_run_simple_contextual_action' game/scripts/app/TurnBasedGameMain.gd | grep -q 'begin_action'
+          grep -q 'run_simple_inventory_consumption' game/scripts/app/TurnBasedGameMain.gd
+          ! grep -A120 '_run_simple_contextual_action' game/scripts/app/TurnBasedGameMain.gd | grep -q 'run_until_stop'
+          ! grep -A120 '_run_simple_contextual_action' game/scripts/app/TurnBasedGameMain.gd | grep -q 'begin_action'
           ! grep -q '\[node name="SessionControls"' game/gameplay.tscn
