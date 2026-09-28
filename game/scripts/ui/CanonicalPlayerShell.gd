@@ -23,6 +23,7 @@ var _inventory_query: ActorInventoryInspectorQuery = null
 var _inventory_actions: SurvivorSustainmentActionService = null
 var _first_aid_actions: SurvivorFirstAidActionService = null
 var _inventory_transfers: ItemTransferActionService = null
+var _simple_turns: SimpleTurnController = null
 var _icons: SemanticUiIconCatalog = null
 var _actor_id: String = ""
 var _active_modal: StringName = MODAL_NONE
@@ -88,6 +89,12 @@ func configure_inventory_transfers(transfers: ItemTransferActionService) -> bool
     if transfers == null or not transfers.is_ready():
         return false
     _inventory_transfers = transfers
+    return true
+
+func configure_simple_inventory_turns(turns: SimpleTurnController) -> bool:
+    if turns == null or not turns.is_ready():
+        return false
+    _simple_turns = turns
     return true
 
 func active_modal() -> StringName:
@@ -547,7 +554,7 @@ func _treat_selected_inventory_item(injury_id: String) -> void:
     open_inventory()
 
 func _append_inventory_transfer_actions(result: Dictionary, item_id: String) -> void:
-    if _inventory_transfers == null or not _inventory_transfers.is_ready():
+    if _simple_turns == null and (_inventory_transfers == null or not _inventory_transfers.is_ready()):
         return
     var hand_slot: int = _hand_slot_for_item(result, item_id)
     if hand_slot >= 0:
@@ -582,8 +589,37 @@ func _append_inventory_action_button(
         _append_line("Select the item in this slot and STOW or DROP it first.", 14)
 
 func _run_inventory_transfer(action: String, item_id: String, slot: int) -> void:
-    if _inventory_transfers == null or _pause_was_active:
+    if _pause_was_active:
         _inventory_status = "Resume before using inventory actions."
+        _render_inventory()
+        return
+
+    if _simple_turns != null and _simple_turns.is_ready():
+        close_modal()
+        var direct: Dictionary = {}
+        match action:
+            "equip":
+                direct = _simple_turns.equip_inventory_item(item_id, slot)
+            "stow":
+                direct = _simple_turns.stow_equipped_item(slot)
+            "drop_hand":
+                direct = _simple_turns.drop_equipped_item(slot)
+            "drop_container":
+                direct = _simple_turns.drop_inventory_item(item_id)
+            _:
+                direct = {"success": false, "reason": "unknown_inventory_action"}
+        if bool(direct.get("success", false)):
+            _inventory_status = "%s complete." % action.replace("_", " ").capitalize()
+        else:
+            _inventory_status = "Action failed: %s" % String(direct.get("reason", "unavailable")).replace("_", " ")
+        var refreshed_direct: Dictionary = _inventory_query.query(_actor_id)
+        if _inventory_entry_by_id(refreshed_direct, item_id).is_empty():
+            _selected_inventory_item_id = ""
+        open_inventory()
+        return
+
+    if _inventory_transfers == null:
+        _inventory_status = "Action failed: unavailable"
         _render_inventory()
         return
     close_modal()
