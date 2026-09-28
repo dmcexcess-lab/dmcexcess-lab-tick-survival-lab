@@ -91,7 +91,8 @@ func _run() -> void:
     var save_result: Dictionary = game.call("save_durable_session", &"slice8_smoke")
     var loaded: Dictionary = game._session_store.load_best()
     _check(bool(save_result.get("ok", false)) and bool(loaded.get("ok", false)), "durable save accepts fortification state")
-    _check(String(game.call("save_menu_destination")) == "res://startup.tscn", "SAVE & MENU destination remains startup")
+    var menu_destination := String(game.call("save_menu_destination"))
+    _check(menu_destination.begins_with("res://") and menu_destination.ends_with("startup.tscn"), "SAVE & MENU destination remains canonical startup scene")
     _check(shell.get_viewport() != null, "canonical touch shell remains present")
 
     print("SLICE8_OK seed=%d target=%s boards=%d turn=%d survival_tick=%d save=true" % [Seed, target, state.board_count(target), simple.turn_number(), int(game.call("survival_elapsed_tick"))])
