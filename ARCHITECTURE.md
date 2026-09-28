@@ -1,6 +1,6 @@
 # Tick Survival Lab — Settled Architecture Map
 
-Status: **active turn-based migration map**
+Status: **active turn-based migration map; Slices 1-3 complete**
 
 ## Canonical direction
 
@@ -8,34 +8,40 @@ Tick Lab is a conventional turn-based open-world zombie survival game. The persi
 
 Canonical action flow:
 
-`player action -> direct authoritative consequence -> relevant local actors each act at most once -> ordinary time/environment advance -> player control`
+player action -> direct authoritative consequence -> relevant local actors each act at most once -> ordinary time/environment advance -> player control
 
 Do not create a replacement simulation framework.
 
 ## Current production spine
 
-- `gameplay.tscn -> TurnBasedGameMain` is canonical.
-- `ProductionWorldBootstrap` owns real procedural generation/materialization/streaming; production never depends on demo fixtures.
-- `SimpleTurnController` owns the migrated unmounted movement route.
-- `WorldState` owns authoritative placements and exposes the narrow ordinary `move_entity()` write used by simple turns.
-- `SimpleTurnController` checks candidate footprint cells directly against `WorldState` terrain/occupancy plus the existing collision catalog/overrides; it no longer calls `SpatialQueryService` or `WorldMutationService` for canonical movement.
-- One movement input changes the player placement at most once. Zombies resolve sequentially against current occupancy.
-- Only infected within the bounded 24-cell active radius receive individual simple movement after a successful player action.
-- Canonical movement does not execute `TickKernel`, `MovementActionService`, WHEN queues, generalized spatial-query execution or simultaneous resolution.
-- Streaming focus, perception and rendering continue to follow authoritative placement after the simple turn.
+- gameplay.tscn -> TurnBasedGameMain is canonical.
+- ProductionWorldBootstrap owns real procedural generation/materialization/streaming; production never depends on demo fixtures.
+- SimpleTurnController owns migrated unmounted movement and combat.
+- WorldState owns authoritative entities/placements and exposes narrow ordinary direct writes used by migrated turn routes.
+- Movement legality reads candidate cells directly from WorldState terrain/occupancy plus existing collision facts; canonical movement does not call SpatialQueryService, WorldMutationService or MovementActionService.
+- A player movement or combat input resolves at most once, consumes one ordinary turn when accepted, then relevant infected resolve sequentially against the resulting current state.
+- Only infected within the bounded 24-cell active radius receive individual actions. An adjacent living infected attacks; otherwise a relevant infected may make one ordinary movement. Distant infected receive no individual turn.
+- Canonical forward melee reuses existing physical item impact profiles and writes damage/injury directly to canonical ActorHealthState.
+- Canonical firearm use reuses existing FirearmProfileCatalog / FirearmState: exact firearm, magazine and live-round identities remain authoritative; a discharge consumes the exact chambered round and writes canonical gunshot damage/injury.
+- CorpseState plus ActorDeathTransitionService own lethal actor transition. The migrated death path no longer requires TickKernel or WorldMutationService; it transfers exact equipment/inventory and creates ordinary persistent corpse world state.
+- Procedurally projected infected are enrolled into the existing Health, hand-equipment and containment owners before taking simple combat turns.
+- Canonical movement/combat does not execute TickKernel, WHEN queues, timed combat actions, simultaneous intention/consequence batches or universal commitment/interruption machinery underneath the migrated route.
+- Streaming focus, player perception and presentation follow final authoritative state after each simple turn.
 
 ## Transitional boundary
 
-The old runtime remains temporarily instantiated because generation/bootstrap, combat, contextual interactions, long actions, vehicles and durable persistence still depend on portions of it. This is migration debt, not protected architecture.
+The old runtime remains temporarily instantiated or referenced because bootstrap plus later roadmap routes such as scavenging/contextual actions, long actions, vehicles, utilities and durable-session migration still depend on portions of it. This is migration debt, not protected architecture.
 
-`SpatialQueryService` and `WorldMutationService` therefore still exist for unmigrated routes and bootstrap/hydration, but they are not dependencies of the canonical simple-turn movement controller.
+Legacy CombatGameMain, CombatActionService, CombatPlayerController and FirearmActionService are not canonical combat execution. They remain only because older noncanonical app composition/source dependencies have not yet been demolished. Do not extend them for new combat behavior. Delete them when their remaining legacy dependents are migrated safely.
+
+SpatialQueryService and WorldMutationService likewise remain for unmigrated routes/bootstrap but are not dependencies of canonical simple-turn movement/combat.
 
 Rules while migrating:
 
 - no new dependency on TickKernel/WHEN for migrated routes;
 - no WHERE 2.0 / WHAT 2.0 / WHEN 2.0;
 - plain world state and direct local spatial questions are preferred;
-- delete legacy owners/adapters once their final player-facing route migrates;
+- delete legacy owners/adapters once their final dependent route migrates;
 - do not preserve architecture-only behavior at the expense of responsiveness;
 - only locally relevant actors receive individual turns;
 - far/unloaded world remains persistent data, not an always-running simulation.
@@ -44,8 +50,8 @@ Rules while migrating:
 
 - open procedural persistent island, generated roads/buildings and streaming;
 - scavenging, inventory/equipment and loot;
-- zombies, weapons, damage, injury and death;
-- crowd pressure, fear and darkness/perception pressure as ordinary gameplay rules;
+- zombies, weapons, damage, injury, death and corpses;
+- crowd congestion/pressure, fear and darkness/perception pressure as ordinary gameplay rules where their owning systems are active;
 - contextual interactions originating from the thing acted upon;
 - crafting/cooking/healing, rest/sleep, repair/deconstruction;
 - existing-building fortification and shelter/base use;
@@ -58,7 +64,7 @@ Rules while migrating:
 
 - Generation creates the procedural world; persistent state owns subsequent player-caused changes.
 - Rendering/UI own presentation and input only, never gameplay consequences.
-- Production identity is `actor.player`; demo actor/world IDs are not canonical.
+- Production identity is actor.player; demo actor/world IDs are not canonical.
 - A base is an existing building the player fortifies and supplies; no settlement management or freeform construction engine.
 - Persistence should serialize ordinary authoritative state conventionally; do not create duplicate gameplay truth.
 
@@ -77,4 +83,4 @@ The following are no longer project identity and should disappear as migration p
 - freeform base construction;
 - demo/fixture-owned production startup.
 
-See `ROADMAP.md` for migration order and `CURRENT.md` for the exact next operation.
+See ROADMAP.md for migration order and CURRENT.md for the exact next operation.

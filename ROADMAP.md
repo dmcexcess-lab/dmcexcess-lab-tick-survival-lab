@@ -1,7 +1,7 @@
 # Tick Survival Lab — Turn-Based Rewrite Roadmap
 
 Updated: **2026-09-27**  
-Status: **architecture simplification in progress; Slices 1-2 complete**
+Status: **architecture simplification in progress; Slices 1-3 complete**
 
 ## Release target
 
@@ -13,7 +13,7 @@ A responsive turn-based open-world zombie survival game on the existing persiste
 
 Canonical play is deliberately conventional:
 
-`player action -> resolve player action -> relevant local actors each get at most one action -> advance ordinary time/environment -> return control`
+player action -> resolve player action -> relevant local actors each get at most one action -> advance ordinary time/environment -> return control
 
 The previous generalized tick/WHERE/WHAT/WHEN execution architecture is legacy and will be removed route by route. Distinctive gameplay such as crowd pressure, fear, darkness, fortification and survival pressure remains as ordinary game rules rather than reasons to preserve the old architecture.
 
@@ -25,15 +25,17 @@ Canonical production movement bypasses TickKernel/WHEN movement execution. One m
 
 ### Slice 2 — Ordinary world state and spatial queries — DONE
 
-Canonical simple-turn movement now reads terrain/occupancy directly from `WorldState`, applies existing collision facts locally, and writes movement directly through `WorldState.move_entity()`. `SimpleTurnController` no longer depends on `SpatialQueryService`, `WorldMutationService`, `MovementActionService`, TickKernel or generalized movement consequence execution. Legacy query/mutation services remain only for bootstrap and unmigrated gameplay routes.
+Canonical simple-turn movement now reads terrain/occupancy directly from WorldState, applies existing collision facts locally, and writes movement directly through WorldState.move_entity(). SimpleTurnController no longer depends on SpatialQueryService, WorldMutationService, MovementActionService, TickKernel or generalized movement consequence execution. Legacy query/mutation services remain only for bootstrap and unmigrated gameplay routes.
 
-### Slice 3 — Simple turn-based combat — NEXT
+### Slice 3 — Simple turn-based combat — DONE
 
-Reconnect existing weapons/damage/injury/death to the turn loop. Player attack consumes one action; relevant zombies attack on their actions. Preserve crowd/fear/mob/darkness pressure as ordinary calculations. Remove simultaneous melee/intention/commitment machinery from the migrated route.
+Canonical production combat now runs inside the simple turn spine. Forward melee reuses existing physical item impact profiles; forward firearm use preserves exact firearm/magazine/live-round state; Health/injury and corpse consequences remain canonical authoritative state. Player combat consumes one action, nearby infected may attack on their one sequential action, distant infected receive no individual turn, and the migrated route does not advance TickKernel or use simultaneous combat intention/consequence resolution.
 
-### Slice 4 — Scavenging and inventory
+Legacy tick-based combat classes remain noncanonical source migration debt only where older app composition still references them; they are not extended by the production route.
 
-Reconnect contextual search/take/carry/drop/use/equip through direct authoritative state changes and turn costs.
+### Slice 4 — Scavenging and inventory — NEXT
+
+Reconnect contextual search/take/carry/drop/use/equip through direct authoritative state changes and turn costs. Preserve existing loot, exact item identities, containment and equipment truth; do not invent a replacement inventory architecture.
 
 ### Slice 5 — Survival
 
@@ -90,4 +92,4 @@ Play and tune the real repeated loop on desktop and iPhone/Safari. Acceptance is
 
 ## NEXT
 
-**Slice 3 — reconnect combat as ordinary turn-based gameplay on the now-simple movement/world-state spine, then remove combat-side tick/simultaneous-resolution dependencies that become obsolete.**
+**Slice 4 — reconnect scavenging and inventory as ordinary simple-turn gameplay using existing authoritative loot/item/containment/equipment state.**

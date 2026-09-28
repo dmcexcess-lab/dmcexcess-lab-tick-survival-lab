@@ -1,6 +1,18 @@
 # Tick Survival Lab — Latest Changes
 
-This compact ledger records the newest executable work. `CHANGELOG.md` remains the historical archive.
+This compact ledger records the newest executable work. CHANGELOG.md remains the historical archive.
+
+## Turn-based rewrite Slice 3 — simple turn-based combat — 2026-09-27
+
+- Canonical SimpleTurnController now accepts player.combat_forward alongside movement; a valid player combat action consumes exactly one ordinary turn before bounded sequential infected actions.
+- Forward melee reuses the existing physical impact catalog and real equipped hand-item mass/profile facts, then writes damage and injury directly to canonical ActorHealthState.
+- Existing firearm content is retained without the old scheduler: FirearmState still owns exact firearm, magazine and chambered live-round identities; a discharge consumes the exact chambered round, cycles the next round when present and applies the existing firearm damage/gunshot injury.
+- Procedurally projected infected are enrolled into canonical Health, hand-equipment and containment state. An adjacent living infected may attack on its one local action; otherwise the existing bounded greedy movement remains. Distant infected receive no individual turn.
+- Generic death/corpse transition no longer requires TickKernel or WorldMutationService. Lethal Health state immediately transfers exact equipment/carried items and replaces the living placement with non-blocking persistent corpse state.
+- WorldState now exposes narrow ordinary create/remove/place/unplace writes for migrated turn routes, extending the direct authoritative-state direction established by Slice 2 instead of introducing a replacement mutation framework.
+- Legacy CombatGameMain / tick-based combat services remain noncanonical migration debt only because older app composition/source dependencies still reference them. The canonical combat route does not call them.
+- Focused production run 36361532785: SUCCESS, marker SLICE3_SIMPLE_COMBAT_OK seed=20001 turns=2 ... firearm_damage=34. It proves real procedural boot, one-turn lethal melee, authoritative corpse transition, one adjacent infected attack, distant infected inactivity, control return, exact-round firearm discharge/damage/injury, and zero TickKernel advancement across both combat actions.
+- Static guards reject TickKernel, CombatActionService, MovementActionService, SpatialQueryService, WorldMutationService, TimedAction and ScheduledEvent dependencies in the migrated controller, and reject TickKernel/WorldMutationService in the migrated death transition.
 
 ## Turn-based rewrite Slice 2 — plain movement state/query path — 2026-09-27
 
