@@ -35,11 +35,11 @@ Do not create a replacement simulation framework.
 
 ## Transitional boundary
 
-The old runtime remains temporarily instantiated or referenced because bootstrap plus later roadmap routes such as scavenging/contextual actions, long actions, vehicles, utilities and durable-session migration still depend on portions of it. This is migration debt, not protected architecture.
+The old runtime remains temporarily instantiated or referenced because bootstrap plus later roadmap routes such as survival/contextual actions, long actions, vehicles, utilities and durable-session migration still depend on portions of it. This is migration debt, not protected architecture.
 
-Legacy CombatGameMain, CombatActionService, CombatPlayerController and FirearmActionService are not canonical combat execution. They remain only because older noncanonical app composition/source dependencies have not yet been demolished. Do not extend them for new combat behavior. Delete them when their remaining legacy dependents are migrated safely.
+Legacy CombatGameMain, CombatActionService, CombatPlayerController, FirearmActionService, LootSearchActionService, LootPlayerInteractionController and timed ItemTransferActionService are not canonical movement/combat/scavenging/inventory execution. They remain only because older noncanonical app composition/source dependencies have not yet been demolished. Do not extend them for migrated gameplay. Delete them when their remaining legacy dependents are migrated safely.
 
-SpatialQueryService and WorldMutationService likewise remain for unmigrated routes/bootstrap but are not dependencies of canonical simple-turn movement/combat.
+SpatialQueryService and WorldMutationService likewise remain for unmigrated routes/bootstrap but are not dependencies of canonical simple-turn movement/combat/scavenging/inventory.
 
 Rules while migrating:
 
