@@ -73,7 +73,7 @@ func _boot_system37_combat() -> bool:
     if not _firearm_sound.is_ready(): return false
     _corpse_state = CorpseStateClass.new()
     if not _collision_catalog.register(DeathTransitionsClass.CORPSE_SEMANTIC, false): return false
-    _death_transitions = DeathTransitionsClass.new(_world, _world_mutations, _kernel, _health_state, _hand_state, _hand_mutations, _inventory_state, _inventory_mutations, _corpse_state)
+    _death_transitions = DeathTransitionsClass.new(_world, _health_state, _hand_state, _hand_mutations, _inventory_state, _inventory_mutations, _corpse_state)
     if not _death_transitions.is_ready(): return false
     _death_transitions.actor_died.connect(_on_actor_died)
     _consequence_presenter = ConsequencePresenterClass.new(_kernel, _combat_actions, _movement, _health_state, _death_transitions, WorldBootstrapClass.PLAYER_ID)
