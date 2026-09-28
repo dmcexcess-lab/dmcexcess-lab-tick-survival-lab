@@ -35,7 +35,9 @@ func _run() -> void:
     var world: WorldState = turns._world
     var health: ActorHealthState = game.call("combat_health_state")
     var corpses: CorpseState = game.call("combat_corpse_state")
-    var infected_ids: Array[String] = game.call("simple_infected_actor_ids")
+    var infected_ids: Array[String] = []
+    for value: Variant in game.call("simple_infected_actor_ids"):
+        infected_ids.append(String(value))
     if world == null or health == null or corpses == null:
         _fail("combat owners missing")
         return
@@ -81,6 +83,8 @@ func _run() -> void:
     var player_hp_before: int = health.current_hp(PLAYER_ID)
     var turn_before: int = int(turns.turn_number())
     var actor_actions_before: int = int(turns.individual_actor_actions())
+    var legacy_kernel = game._kernel
+    var legacy_tick_before: int = int(legacy_kernel.world_tick()) if legacy_kernel != null else -1
 
     turns.submit_intent(Intents.COMBAT_FORWARD)
 
@@ -109,6 +113,9 @@ func _run() -> void:
         return
     if not turns.has_control():
         _fail("player control was not returned after combat actor phase")
+        return
+    if legacy_kernel != null and int(legacy_kernel.world_tick()) != legacy_tick_before:
+        _fail("canonical combat advanced the retired shared TickKernel")
         return
 
     print("SLICE3_SIMPLE_COMBAT_OK seed=%d turn=%d corpse=%s player_hp=%d" % [
