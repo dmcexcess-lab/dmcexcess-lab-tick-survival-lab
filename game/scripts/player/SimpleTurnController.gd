@@ -40,6 +40,7 @@ var _infected_ids: Array[String] = []
 var _turn_number := 0
 var _busy := false
 var _individual_actor_actions := 0
+var _last_completed_intent: StringName = &""
 
 func _init(
     world: WorldState = null,
@@ -93,6 +94,9 @@ func turn_number() -> int:
 
 func individual_actor_actions() -> int:
     return _individual_actor_actions
+
+func last_completed_intent() -> StringName:
+    return _last_completed_intent
 
 func set_infected_actor_ids(ids: Array[String]) -> void:
     _infected_ids.clear()
@@ -282,6 +286,7 @@ func _reject_direct_action(intent: StringName, reason: String) -> Dictionary:
 
 func _complete_direct_action(intent: StringName, reason: String) -> Dictionary:
     _turn_number += 1
+    _last_completed_intent = intent
     var acted := _run_local_infected_turns()
     turn_completed.emit(_turn_number, acted)
     action_resolved.emit(intent, true, reason, _turn_number)
