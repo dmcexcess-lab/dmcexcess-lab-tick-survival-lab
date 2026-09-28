@@ -28,9 +28,9 @@ jobs:
       - name: Guard canonical fortification from legacy execution
         shell: bash
         run: |
-          grep -q 'run_simple_fortification' game/scripts/app/Slice7GameMain.gd
-          ! grep -A120 'func run_simple_fortification' game/scripts/app/Slice7GameMain.gd | grep -q 'TickKernel'
-          ! grep -A120 'func run_simple_fortification' game/scripts/app/Slice7GameMain.gd | grep -q 'TimedAction'
-          ! grep -A120 'func run_simple_fortification' game/scripts/app/Slice7GameMain.gd | grep -q 'ScheduledEvent'
-          ! grep -A120 'func run_simple_fortification' game/scripts/app/Slice7GameMain.gd | grep -q 'begin_action'
+          grep -q 'run_simple_fortification' game/scripts/app/FortificationGameMain.gd
+          ! grep -A220 'func run_simple_fortification' game/scripts/app/FortificationGameMain.gd | grep -q 'TickKernel'
+          ! grep -A220 'func run_simple_fortification' game/scripts/app/FortificationGameMain.gd | grep -q 'TimedAction'
+          ! grep -A220 'func run_simple_fortification' game/scripts/app/FortificationGameMain.gd | grep -q 'ScheduledEvent'
+          ! grep -A220 'func run_simple_fortification' game/scripts/app/FortificationGameMain.gd | grep -q 'begin_action'
           ! grep -q '\[node name="SessionControls"' game/gameplay.tscn
