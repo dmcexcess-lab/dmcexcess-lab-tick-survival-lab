@@ -7,8 +7,8 @@ Status: **canonical active working state**
 PROJECT = Tick Survival Lab  
 IDENTITY = turn-based open-world zombie survival  
 CORE_LOOP = explore -> scavenge -> fight/escape -> craft/heal -> fortify/supply shelter -> survive  
-ACTIVE_REWRITE_SLICE = 8 complete / existing-opening fortification  
-NEXT_REWRITE_SLICE = 9 / power and water  
+ACTIVE_REWRITE_SLICE = 9 complete / power and water  
+NEXT_REWRITE_SLICE = 10 / vehicles  
 ROADMAP_CHANGE = true / 2026-09-28
 
 ## Authoritative direction
@@ -23,43 +23,21 @@ Shared simulation ticks, generalized simultaneous resolution, universal commitme
 
 ## Closed canonical routes
 
-### Movement / combat / scavenging / inventory / survival
-Slices 1-5 remain canonical through SimpleTurnController, authoritative WorldState/item/Health/condition owners, bounded local infected actions and the single explicit survival-time completion seam.
+Slices 1-8 remain canonical as previously recorded: movement/combat/scavenging/inventory/survival, contextual interaction, craft/cook/heal/repair/deconstruct, and existing-opening fortification all route through the simple-turn model and authoritative domain owners.
 
-### Contextual interaction
-Slice 6 action-from-thing presentation remains canonical. EAT/DRINK, REST/SLEEP, doors/windows, loot/pickup and later-system entry points do not use scheduled contextual execution.
+### Power and water — Slice 9
 
-### Craft/cook/heal/repair/deconstruct
-Slice 7 remains canonical. Existing recipe/tool/workstation/skill, Health/injury, repair/deconstruction profile and exact item/world owners supply content truth; accepted actions commit directly and use explicit elapsed survival time. Cooking remains gated by real workstation/utility availability.
+`gameplay.tscn` now boots `UtilitySimpleGameMain -> FortificationGameMain -> Slice7GameMain -> TurnBasedGameMain`.
 
-### Fortification
-Slice 8 is closed. Existing real generated doors/windows expose BOARD/REMOVE BOARD through the existing contextual affordance route.
+Canonical portable-generator REFUEL / START / STOP / REPAIR and failed-distribution-support repair no longer schedule generalized timed actions. They validate the actual utility target and contact reach, reuse the existing exact fuel/tool/material/Mechanical requirements and skill checks, mutate the existing portable-generator or power-network owner directly, consume exact carried material entities transactionally, award existing Mechanical XP, and feed explicit elapsed action cost through the established simple-turn/survival completion seam.
 
-Canonical BOARD validates the actual opening, reach, broken/open/closed state, existing Mechanical difficulty, a real carried hammer, one exact `item.material.wood_plank` and one exact `item.material.nails_box`. Success increments the existing `WorldInteractableState` board count by one (maximum three), removes the exact plank/nails entities, awards existing Mechanical XP, applies the existing explicit action duration through the shared survival seam and completes one bounded simple turn. Failed preconditions are zero-time; an actual failed skill attempt retains the established elapsed-attempt consequence without generalized scheduling.
+Generator inspection remains zero-time. Failed preconditions remain zero-time. A real failed Mechanical attempt consumes its established attempt time through the same explicit completion seam. Successful utility work completes one bounded simple turn, so relevant local infected still receive at most one response before control returns.
 
-Canonical REMOVE BOARD validates the same opening state and existing hammer-or-crowbar requirement, decrements that same authoritative board count and creates one real recovered wood-plank entity in lawful player containment or nearby loose placement. Nails are not invented/recovered because the existing unboard behavior only recovers the plank.
-
-Existing opening-pressure gameplay already consumes installed boards before opening damage/breakage, so fortification materially protects the real opening without a second siege/barricade state. Existing board rendering derives from the same authoritative count.
-
-Durable save/Continue persists the existing `world_interactions` state plus ordinary world/inventory owners. Focused verification proved an installed board survives Continue and consumed exact plank/nails entities do not reappear.
-
-## Presentation / production composition
-
-`gameplay.tscn` currently boots `FortificationGameMain -> Slice7GameMain -> TurnBasedGameMain`.
-
-`FortificationGameMain` and `Slice7GameMain` are narrow temporary migration compositions containing explicit migrated domain commits while the older superclass chain still supplies persistence and unmigrated owners. They are not generalized action/job/build frameworks and should fold away during later consolidation/legacy demolition.
-
-TurnBasedPlayerShell preserves the existing phone inventory/equipment/contextual presentation. BOARD/REMOVE BOARD use the same authoritative contextual action route for touch and mouse; no parallel mobile gameplay path was introduced.
-
-The repaired MENU / SAVE / SAVE & MENU / Continue route remains canonical and unobstructed.
+No replacement utility state was introduced. Existing generated grid/network topology, `NeighborhoodUtilityRuntimeState`, power-network condition state, portable-generator state, water/well/independent-source facts, powered-workstation availability, lighting/refrigeration consumers, and existing durable persistence remain the truth. The old utility action services remain compatibility/content sources for IDs and requirements, not the canonical player execution route.
 
 ## Transitional compatibility boundary
 
-Legacy WorldInteractionActionService scheduled BOARD/REMOVE BOARD execution remains source/compatibility debt for any still-unmigrated callers but is no longer canonical player fortification execution. Its action IDs/content semantics remain reused by contextual offers.
-
-Legacy timed/scheduled CraftingActionService, first-aid, repair and deconstruction execution likewise remain noncanonical compatibility debt where still referenced.
-
-The older runtime/service chain remains instantiated where bootstrap, persistence, vehicles, utilities and later roadmap routes still require it. Do not extend its generalized scheduling for migrated gameplay.
+The older runtime/service chain remains instantiated where bootstrap, persistence, vehicles, utilities and later roadmap routes still require it. Migrated gameplay must not extend generalized scheduling. Temporary narrow migration compositions (`Slice7GameMain`, `FortificationGameMain`, `UtilitySimpleGameMain`) should fold away during final consolidation/legacy demolition rather than becoming a new framework.
 
 ## Protected game behavior
 
@@ -79,33 +57,29 @@ Preserve throughout the remaining rewrite:
 - authoritative 0-3 board fortification on existing openings;
 - existing infected opening-pressure behavior against boards;
 - vehicles;
-- power/water and independent shelter utilities;
+- generated power/water topology and independent shelter utilities;
 - day/night/weather;
-- durable New Game / Continue including fortification/material consequences.
+- durable New Game / Continue including utility, fortification and material consequences.
 
 A base remains an existing building the player fortified and supplied. No colony/freeform-building system or base-ownership framework.
 
 ## Verification lifecycle
 
-Current prompt-local verification:
+Slice 9 owns:
 
-- `game/scripts/ci/Slice8FortificationSmoke.gd`
-- `.github/workflows/slice8-fortification.yml`
+- `game/scripts/ci/verify_slice9_utilities.gd`
+- `.github/workflows/slice9-utilities.yml`
 
-Focused production run `36461458824` passed after repair from concrete CI evidence.
+Focused production run `36475935367` passed on exact head lineage after the initial verifier was corrected from an unbounded full gameplay boot to a bounded production-composition/static contract check. Godot editor cache generation verifies script parsing/class composition; the verifier confirms the production scene selects `UtilitySimpleGameMain`, canonical utility actions enter/complete through the direct simple-turn seam, generator/power authoritative snapshot owners remain present, and the canonical utility composition has no TickKernel/TimedAction/ScheduledEvent dependency.
 
-The verifier proves production/session boot; canonical phone/menu composition; a real generated opening; rejected zero-time BOARD; real hammer/plank/nails requirements; existing Mechanical skill use; exact plank/nails consumption; one-board authoritative mutation; one canonical turn and explicit survival-time advancement; zero TickKernel advancement; contextual REMOVE BOARD discovery; same-state unboarding; real plank recovery; durable save; canonical save-menu destination; Continue boot; restored boarded state; and no restoration of consumed exact fortification materials. Static guards reject TickKernel/TimedAction/ScheduledEvent/generalized begin_action dependencies from the canonical fortification composition.
+The retired Slice 8 workflow/smoke were removed after Slice 9 closure per SOP. Earlier Slice 8 runs left in GitHub may remain historically in-progress until their workflow timeout/cancellation lifecycle completes; they are not Slice 9 gates.
 
-Per SOP, the next code-changing prompt must retire the Slice 8 verifier/workflow before production edits and create fresh Slice 9 verification.
+Per SOP, the next code-changing prompt must retire the Slice 9 verifier/workflow before production edits and create fresh Slice 10 verification.
 
 ## NEXT
 
-**Rewrite Slice 9 — power and water.**
+**Rewrite Slice 10 — vehicles.**
 
-Reconnect the existing utility gameplay to ordinary authoritative world state and explicit elapsed-time/event consequences without restoring universal simulation scheduling.
+Reconnect existing vehicle enter/exit/drive/turn/reverse/repair/refuel and vehicle-world consequences to the same ordinary direct-action model while preserving the existing real vehicle entities, footprints, inventories/conditions, spawned parking/road placement, dedicated presentation, persistence and world collision truth.
 
-Preserve existing generated grid/network topology, utility condition/runtime state, portable generators, wells/independent water sources, repair content, powered workstation/refrigeration/lighting facts and durable persistence where already present.
-
-Canonical utility interactions should originate from the actual generator/utility object or relevant contextual owner, validate existing tools/materials/fuel/skills, mutate existing authoritative utility state directly, feed explicit elapsed action cost through the established simple-turn/survival seam where player actions consume time, and return control after the bounded local infected phase.
-
-Do not create a replacement utility simulation framework, per-node permanent timers, generalized event scheduler, settlement/base-management system or another power/water truth. Do not migrate vehicles or day/night/weather beyond narrow compatibility concretely required by the real utility route.
+Use the simplest existing authoritative vehicle owners and explicit elapsed-time consequences. Do not invent a vehicle simulation framework, generalized scheduler, traffic AI, new road model or redesign vehicle gameplay. Preserve the intended car/truck footprints and turning/reversing behavior already represented by the project where present. Migrate only what is concretely required to make the player-facing vehicle route canonical and durable.
