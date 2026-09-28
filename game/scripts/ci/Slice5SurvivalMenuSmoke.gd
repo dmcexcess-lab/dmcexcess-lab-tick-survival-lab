@@ -94,6 +94,15 @@ func _run() -> void:
     if not shell.save_menu_requested.is_connected(Callable(game, "_on_shell_save_menu_requested")):
         _fail("SAVE & MENU is not wired to the canonical production navigation handler")
         return
+    var save_menu_result: Dictionary = game.call("save_durable_session", &"save_and_menu")
+    if not bool(save_menu_result.get("ok", false)):
+        _fail("SAVE & MENU durable checkpoint failed")
+        return
+    var save_menu_loaded: Dictionary = game._session_store.load_best()
+    var save_menu_session: Dictionary = save_menu_loaded.get("session", {}) if bool(save_menu_loaded.get("ok", false)) else {}
+    if String(save_menu_session.get("checkpoint_reason", "")) != "save_and_menu":
+        _fail("SAVE & MENU did not commit the real save_and_menu checkpoint")
+        return
     if String(game.call("save_menu_destination")) != "res://main.tscn":
         _fail("SAVE & MENU destination is not startup menu")
         return
