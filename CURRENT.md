@@ -7,8 +7,8 @@ Status: **canonical active working state**
 PROJECT = Tick Survival Lab  
 IDENTITY = turn-based open-world zombie survival  
 CORE_LOOP = explore -> scavenge -> fight/escape -> craft/heal -> fortify/supply shelter -> survive  
-ACTIVE_REWRITE_SLICE = 4 complete / scavenging and inventory  
-NEXT_REWRITE_SLICE = 5 / survival  
+ACTIVE_REWRITE_SLICE = 5 complete / survival + save-menu production repair  
+NEXT_REWRITE_SLICE = 6 / contextual interaction  
 ROADMAP_CHANGE = true / 2026-09-27
 
 ## Authoritative direction
@@ -17,7 +17,7 @@ Keep the game; retire the experimental execution architecture.
 
 Canonical play is:
 
-player action -> direct consequence -> relevant local actors each act at most once -> ordinary time/environment advance -> return player control
+player action -> direct consequence -> relevant local actors each act at most once -> ordinary survival/time consequence -> return player control
 
 Shared simulation ticks, generalized simultaneous resolution, universal commitment/interruption and heavyweight WHERE/WHAT/WHEN execution are legacy. They remain temporarily only where still-unmigrated gameplay/source dependencies require them.
 
@@ -33,41 +33,78 @@ Player melee/firearm actions resolve directly against authoritative Health/injur
 
 ### Scavenging and inventory
 
-Canonical production scavenging/inventory now routes through SimpleTurnController and the existing authoritative loot/item owners.
+Real generated LootState / InventoryContainmentState contents remain authoritative. Inspection is read-only. Search, take, store, equip, stow, drop and narrow loose-item pickup preserve exact item identity and route through SimpleTurnController. Successful material actions consume one ordinary turn; rejected actions consume none. Equipped items remain the combat truth.
 
-Current behavior:
+### Survival
 
-- real generated LootState + InventoryContainmentState contents are used; no fake Slice 4 loot source exists;
-- LootContainerInspectionQuery is read-only and pure inspection consumes no turn;
-- search/opening a reachable initialized loot container is an ordinary one-turn action, matching the established player-facing search rule;
-- TAKE moves the same exact item entity from the real source container into authoritative player containment;
-- STORE moves the same exact carried item into the reachable real loot container;
-- compatible carried items can be equipped through ActorHandEquipmentMutationService without duplicate active-weapon state;
-- stow returns the same exact equipped item to player containment;
-- drop removes the exact item from containment/equipment and creates real LOOSE_ITEM WorldState placement at the player;
-- narrow loose-item pickup restores that same entity to player containment, including items just dropped;
-- carry acquisition policy remains authoritative for take/pickup admission;
-- failed/rejected actions mutate nothing and consume no turn;
-- each successful material inventory/scavenging action consumes one ordinary turn, runs the same bounded local infected phase and returns control;
-- the existing LootContainerPanel and EquipmentPlayerShell remain the production presentation/input surfaces and are wired to the simple-turn route;
-- equipped items continue to feed the migrated combat route directly;
-- canonical Slice 4 actions do not advance TickKernel or execute LootSearchActionService, timed ItemTransferActionService, TimedAction, ScheduledEvent or run_until_stop.
+Existing ActorConditionState, ActorConditionService, ActorConditionModifierQuery, ActorHealthState and condition/moodlet queries remain authoritative. No replacement survival state was introduced.
 
-Removed-from-canonical-route legacy does not mean deleted source yet. LootSearchActionService, LootPlayerInteractionController and timed ItemTransferActionService remain noncanonical compatibility debt because older app composition/source dependencies still reference them. Do not extend them for migrated gameplay; remove them when their final legacy dependents migrate.
+Canonical survival behavior:
 
-## Protected behavior
+- one accepted ordinary SimpleTurnController action advances survival exactly once;
+- the current conversion is one in-game second per ordinary canonical turn, represented by five existing WorldTimeProfile timing units;
+- the survival clock is explicit state owned through the existing condition service/query and does not advance TickKernel;
+- render frames, MENU, inventory/loot inspection and rejected actions advance no survival time;
+- satiety, hydration, rest, engagement and their existing analytic decay rates are preserved;
+- comfort and calm keep their existing recovery behavior toward neutral;
+- fatigue remains the existing authoritative fatigue state; running applies the existing run-fatigue rule while ordinary walking remains governed by existing pressure rules;
+- existing condition modifiers continue to affect health ceiling, fatigue, speed/carry/melee calculations where their consumers are active;
+- zero satiety/hydration/rest can use the existing starvation/dehydration/sleep-deprivation Health pressure through canonical Health;
+- perceived infected danger is bounded to relevant active infected and applies existing fear-band/diminishing rules to the existing Calm channel;
+- actual player damage adds the existing injury-shock fear pressure;
+- condition/fatigue/moodlet/status presentation reads the same authoritative state after the turn;
+- canonical survival does not schedule fear flushes, TimedAction, ScheduledEvent or WHEN work underneath the migrated turn route.
 
-Preserve:
+Food/drink/sleep/first-aid contextual interaction UX remains intentionally deferred. Slice 5 migrated survival progression/state, not those later action surfaces.
 
-- the real procedural persistent island and streaming;
-- exact item identities and existing loot generation;
-- authoritative containment/equipment/carry state;
-- movement and combat simple-turn semantics;
-- bounded 24-cell individual infected actions;
-- canonical Health/injury/death/corpse consequences;
-- existing darkness/perception presentation;
-- contextual actions from things;
-- later survival/crafting/doors/windows/fortification/vehicles/utilities/day-night/weather/persistence systems until their roadmap slices migrate.
+## Save/menu production repair
+
+The reported phone save/menu regression had two concrete causes:
+
+1. gameplay.tscn contained a legacy SessionControls CanvasLayer at layer 90 whose top-right SAVE / SAVE & MENU panel physically overlapped the canonical shell MENU button at layer 40 on the 640x844 phone layout;
+2. the earlier TurnBasedGameMain simplification inherited GameMain directly, bypassing EnvironmentalPressureGameMain, which still owned the established DurableSessionStore / Continue lifecycle and SessionControls signal handlers. The visible legacy save controls therefore had no canonical production owner.
+
+Current repair:
+
+- the duplicate SessionControls node is removed from gameplay.tscn;
+- the actual canonical MENU button is unobstructed and remains the single top-right session/menu entry point;
+- SAVE and SAVE & MENU now live inside CanonicalPlayerShell's MENU modal;
+- SAVE invokes the existing durable save owner;
+- SAVE & MENU invokes the real save_and_menu durable checkpoint, closes the modal/release input blocking after successful save, then changes to res://main.tscn;
+- the resulting save remains accepted by the existing production Continue validator;
+- no second persistence format or save owner was introduced.
+
+SessionControls.gd may remain as legacy source, but it is no longer instantiated by canonical gameplay.
+
+## Transitional compatibility boundary
+
+TurnBasedGameMain currently inherits EnvironmentalPressureGameMain as a compatibility bridge so the existing durable-session state/restore path and established condition/Health/moodlet owners remain available without reimplementing persistence.
+
+That superclass chain still instantiates legacy services required by persistence and still-unmigrated roadmap routes. This does **not** make those services canonical action execution.
+
+Migrated movement, combat, scavenging, inventory and survival continue through SimpleTurnController + ordinary authoritative state. TickKernel remains present for legacy compatibility/snapshots but does not advance underneath these migrated routes.
+
+Legacy CombatActionService, FirearmActionService, LootSearchActionService, timed ItemTransferActionService and TickKernel-driven condition/fear adapters must not be extended for migrated gameplay. Remove compatibility owners only when their final dependent routes/persistence fields migrate safely.
+
+## Protected game behavior
+
+Preserve throughout the remaining rewrite:
+
+- real procedural persistent island and streaming;
+- generated roads/buildings/world content;
+- exact item identity, loot and inventory/equipment state;
+- zombies and canonical combat consequences;
+- bounded local infected actions and distant inactivity;
+- canonical Health/injury/death/corpse state;
+- survival condition/moodlet state;
+- darkness/perception pressure;
+- contextual actions originating from world objects/items;
+- crafting/cooking/healing, rest, repair and deconstruction;
+- existing-building fortification/base use;
+- vehicles;
+- power/water and independent shelter utilities;
+- day/night/weather;
+- durable New Game / Continue.
 
 A base remains an existing building the player fortified and supplied. No colony/freeform-building system.
 
@@ -75,19 +112,58 @@ A base remains an existing building the player fortified and supplied. No colony
 
 Current prompt-local verifier/workflow:
 
-- game/scripts/ci/Slice4ScavengingInventorySmoke.gd
-- .github/workflows/slice4-scavenging-inventory.yml
+- game/scripts/ci/Slice5SurvivalMenuSmoke.gd
+- .github/workflows/slice5-survival-menu.yml
 
-The focused production verifier boots seed 20001 and uses an actual generated bathroom-vanity loot container. It proves read-only inspection, one-turn search with one nearby infected response, distant infected inactivity, exact take/store identity, no loot respawn, rejected-action atomicity, equip/stow/drop/re-pickup identity, zero TickKernel advancement and the protected Slice 3 equipped-item melee regression.
+Focused production run 36365188143 passed on the completed code path with:
 
-Per SOP, the next code-changing prompt must retire this Slice 4 verifier/workflow before production edits and create fresh Slice 5 verification.
+SLICE5_SURVIVAL_UI_OK seed=20001 turns=6 survival_tick=30 calm=45 hp=98 save=true menu=true
+
+The verifier proves:
+
+- real production and durable-session boot;
+- no legacy SessionControls node overlays the phone header;
+- canonical MENU is visible, in bounds and opens correctly;
+- opening/closing MENU advances neither turn nor survival time;
+- MENU contains SAVE and SAVE & MENU;
+- SAVE writes a real valid DurableSessionStore session accepted by production Continue;
+- the SAVE & MENU signal is connected to the canonical handler;
+- the real save_and_menu durable checkpoint succeeds and leaves a valid Continue-compatible save;
+- the destination is res://main.tscn;
+- render frames do not advance survival;
+- successful canonical turns advance survival exactly once;
+- rejected actions do not advance it;
+- satiety/hydration progress through existing rates;
+- running produces existing fatigue pressure;
+- protected combat damage and exactly bounded local infected response remain intact;
+- distant infected receive no individual action;
+- visible/injury danger changes canonical Calm/fear state;
+- combat does not advance TickKernel;
+- real generated loot inspection costs no survival time while search advances it once;
+- status UI reads canonical hunger/thirst/fatigue/sleep-pressure state;
+- static guards reject TickKernel/TimedAction/ScheduledEvent dependencies in SimpleTurnController and reject restoration of the legacy SessionControls node.
+
+Per SOP, the next code-changing prompt must retire this Slice 5 verifier/workflow before production edits and create fresh Slice 6 verification.
 
 ## NEXT
 
-**Rewrite Slice 5 — survival.**
+**Rewrite Slice 6 — contextual interaction.**
 
-Reconnect hunger, thirst, fatigue, Health/wounds, fear/mood and recovery to ordinary elapsed turns/game time without restoring universal simulation scheduling.
+Reconnect actions-from-things to the simple-turn production model using the existing real world/item state and established domain owners.
 
-Use the existing authoritative condition/Health/moodlet state and existing player-facing survival content. Ordinary turn completion should advance the relevant survival consequences coherently; no render-frame simulation, per-entity permanent timers, replacement condition framework or resurrection of TickKernel/WHEN as the canonical clock.
+Preserve contextual semantics such as:
 
-Do not migrate contextual doors/windows, crafting/cooking/healing interactions, fortification, vehicles, utilities, day/night/weather or durable persistence beyond narrowly required survival prerequisites.
+- food item -> EAT;
+- drink/potable source -> DRINK;
+- bed -> SLEEP;
+- suitable furniture -> REST;
+- door/window -> its actual opening/closing/smash/climb interaction where currently supported;
+- furniture/world object -> DECONSTRUCT where currently supported;
+- stove/workstation -> contextual COOK/interaction entry point;
+- vehicle -> its actual contextual interaction entry points.
+
+The interaction object/item should remain the source of available actions. Do not replace this with a permanent generic survival-action bar or a generalized scheduler.
+
+Each accepted contextual action should resolve through ordinary authoritative state, consume the appropriate ordinary turn/time cost, advance survival through the single established turn/time seam, allow the usual bounded local infected phase where appropriate, update presentation and return control.
+
+Do not migrate the full crafting/repair/fortification/vehicle/utilities systems beyond the narrow contextual entry points required by Slice 6; their later roadmap slices still own those implementations.
