@@ -7,10 +7,15 @@ const Layers = preload("res://scripts/foundation/spatial/SpatialLayer.gd")
 const Slots = preload("res://scripts/simulation/actors/equipment/ActorHandSlot.gd")
 const Injury = preload("res://scripts/simulation/actors/health/ActorInjuryRecord.gd")
 const ImpactProfiles = preload("res://scripts/simulation/combat/CombatImpactProfileCatalog.gd")
+const ReachClass = preload("res://scripts/simulation/interaction/WorldInteractionReachQuery.gd")
+const Footprint = preload("res://scripts/foundation/spatial/SpatialFootprint.gd")
+const CapacityPolicy = preload("res://scripts/simulation/items/ItemAcquisitionCapacityPolicy.gd")
 
 signal action_resolved(intent: StringName, success: bool, reason: String, turn_number: int)
 signal action_busy_changed(busy: bool)
 signal turn_completed(turn_number: int, active_actor_count: int)
+signal loot_container_opened(container_id: String)
+signal loot_container_changed(container_id: String)
 
 const ACTIVE_RADIUS: int = 24
 const UNARMED_EFFECTIVE_MASS_GRAMS: int = 350
@@ -25,6 +30,11 @@ var _inventory: InventoryContainmentState
 var _physical_catalog: ItemPhysicalPropertyCatalog
 var _firearm_profiles: FirearmProfileCatalog
 var _firearm_state: FirearmState
+var _inventory_mutations: InventoryContainmentMutationService
+var _hand_mutations: ActorHandEquipmentMutationService
+var _carry_acquisition: ItemAcquisitionCapacityPolicy
+var _loot_state: LootState
+var _reach: WorldInteractionReachQuery
 var _impact_profiles: CombatImpactProfileCatalog = ImpactProfiles.new()
 var _infected_ids: Array[String] = []
 var _turn_number := 0
@@ -41,7 +51,11 @@ func _init(
     inventory: InventoryContainmentState = null,
     physical_catalog: ItemPhysicalPropertyCatalog = null,
     firearm_profiles: FirearmProfileCatalog = null,
-    firearm_state: FirearmState = null
+    firearm_state: FirearmState = null,
+    inventory_mutations: InventoryContainmentMutationService = null,
+    hand_mutations: ActorHandEquipmentMutationService = null,
+    carry_acquisition: ItemAcquisitionCapacityPolicy = null,
+    loot_state: LootState = null
 ) -> void:
     _world = world
     _collision_catalog = collision_catalog
@@ -53,6 +67,11 @@ func _init(
     _physical_catalog = physical_catalog
     _firearm_profiles = firearm_profiles
     _firearm_state = firearm_state
+    _inventory_mutations = inventory_mutations
+    _hand_mutations = hand_mutations
+    _carry_acquisition = carry_acquisition
+    _loot_state = loot_state
+    _reach = ReachClass.new(_world) if _world != null else null
 
 func is_ready() -> bool:
     return _world != null and _collision_catalog != null and _collision_overrides != null \
@@ -60,7 +79,11 @@ func is_ready() -> bool:
         and _health != null and _health.has_actor(_player_id) \
         and _hands != null and _hands.has_actor(_player_id) \
         and _inventory != null and _physical_catalog != null \
-        and _firearm_profiles != null and _firearm_state != null and _firearm_state.is_ready()
+        and _firearm_profiles != null and _firearm_state != null and _firearm_state.is_ready() \
+        and _inventory_mutations != null and _inventory_mutations.is_ready() \
+        and _hand_mutations != null and _hand_mutations.is_ready() \
+        and _carry_acquisition != null and _carry_acquisition.is_ready() \
+        and _loot_state != null and _reach != null and _reach.is_ready()
 
 func has_control() -> bool:
     return is_ready() and not _busy and _actor_alive(_player_id)
@@ -77,6 +100,206 @@ func set_infected_actor_ids(ids: Array[String]) -> void:
         if not actor_id.is_empty() and actor_id != _player_id and not _infected_ids.has(actor_id):
             _infected_ids.append(actor_id)
     _infected_ids.sort()
+
+func search_loot_container(container_id: String) -> Dictionary:
+    var container := container_id.strip_edges()
+    if not _begin_direct_action(&"loot.search"):
+        return _direct_failure("player_unavailable")
+    if not _valid_reachable_loot_container(container):
+        return _reject_direct_action(&"loot.search", "loot_container_unreachable")
+    var contents := _inventory.direct_contents(container)
+    var result := _complete_direct_action(&"loot.search", "")
+    result["container_id"] = container
+    result["contents"] = contents
+    loot_container_opened.emit(container)
+    return result
+
+func take_loot_item(container_id: String, item_id: String) -> Dictionary:
+    var container := container_id.strip_edges()
+    var item := item_id.strip_edges()
+    if not _begin_direct_action(&"loot.take"):
+        return _direct_failure("player_unavailable")
+    if not _valid_reachable_loot_container(container):
+        return _reject_direct_action(&"loot.take", "loot_container_unreachable")
+    if item.is_empty() or not _world.has_entity(item) or _inventory.container_of(item) != container:
+        return _reject_direct_action(&"loot.take", "item_not_in_container")
+    var capacity := _carry_acquisition.evaluate(_player_id, item)
+    if int(capacity.get("status", CapacityPolicy.Status.UNKNOWN)) != CapacityPolicy.Status.ALLOWED:
+        return _reject_direct_action(&"loot.take", String(capacity.get("reason", "carry_capacity_rejected")))
+    if not _inventory_mutations.set_container(item, _player_id):
+        return _reject_direct_action(&"loot.take", "containment_mutation_failed")
+    var result := _complete_direct_action(&"loot.take", "")
+    result["container_id"] = container
+    result["item_id"] = item
+    loot_container_changed.emit(container)
+    return result
+
+func store_loot_item(container_id: String, item_id: String) -> Dictionary:
+    var container := container_id.strip_edges()
+    var item := item_id.strip_edges()
+    if not _begin_direct_action(&"loot.store"):
+        return _direct_failure("player_unavailable")
+    if not _valid_reachable_loot_container(container):
+        return _reject_direct_action(&"loot.store", "loot_container_unreachable")
+    var source_container := _inventory.container_of(item)
+    if item.is_empty() or not _world.has_entity(item) or source_container.is_empty() \
+        or not _personal_container_accessible(source_container):
+        return _reject_direct_action(&"loot.store", "item_not_carried")
+    if not _inventory_mutations.set_container(item, container):
+        return _reject_direct_action(&"loot.store", "containment_mutation_failed")
+    var result := _complete_direct_action(&"loot.store", "")
+    result["container_id"] = container
+    result["item_id"] = item
+    loot_container_changed.emit(container)
+    return result
+
+func equip_inventory_item(item_id: String, slot: int) -> Dictionary:
+    var item := item_id.strip_edges()
+    if not _begin_direct_action(&"inventory.equip"):
+        return _direct_failure("player_unavailable")
+    if not Slots.is_valid(slot) or not _hands.has_actor(_player_id):
+        return _reject_direct_action(&"inventory.equip", "invalid_slot")
+    if not _hands.item_in_slot(_player_id, slot).is_empty():
+        return _reject_direct_action(&"inventory.equip", "hand_occupied")
+    var source_container := _inventory.container_of(item)
+    if item.is_empty() or not _world.has_entity(item) or source_container.is_empty() \
+        or not _personal_container_accessible(source_container):
+        return _reject_direct_action(&"inventory.equip", "item_not_carried")
+    if not _inventory_mutations.clear_container(item):
+        return _reject_direct_action(&"inventory.equip", "source_mutation_failed")
+    if not _hand_mutations.set_item(_player_id, slot, item):
+        _inventory_mutations.set_container(item, source_container)
+        return _reject_direct_action(&"inventory.equip", "equipment_mutation_failed")
+    var result := _complete_direct_action(&"inventory.equip", "")
+    result["item_id"] = item
+    result["slot"] = slot
+    return result
+
+func stow_equipped_item(slot: int) -> Dictionary:
+    if not _begin_direct_action(&"inventory.stow"):
+        return _direct_failure("player_unavailable")
+    if not Slots.is_valid(slot) or not _hands.has_actor(_player_id):
+        return _reject_direct_action(&"inventory.stow", "invalid_slot")
+    var item := _hands.item_in_slot(_player_id, slot)
+    if item.is_empty():
+        return _reject_direct_action(&"inventory.stow", "hand_empty")
+    if not _hand_mutations.clear_slot(_player_id, slot):
+        return _reject_direct_action(&"inventory.stow", "source_mutation_failed")
+    if not _inventory_mutations.set_container(item, _player_id):
+        _hand_mutations.set_item(_player_id, slot, item)
+        return _reject_direct_action(&"inventory.stow", "containment_mutation_failed")
+    var result := _complete_direct_action(&"inventory.stow", "")
+    result["item_id"] = item
+    result["slot"] = slot
+    return result
+
+func drop_inventory_item(item_id: String) -> Dictionary:
+    var item := item_id.strip_edges()
+    if not _begin_direct_action(&"inventory.drop"):
+        return _direct_failure("player_unavailable")
+    var source_container := _inventory.container_of(item)
+    if item.is_empty() or not _world.has_entity(item) or source_container.is_empty() \
+        or not _personal_container_accessible(source_container):
+        return _reject_direct_action(&"inventory.drop", "item_not_carried")
+    var actor := _world.placement(_player_id)
+    if actor == null:
+        return _reject_direct_action(&"inventory.drop", "player_unplaced")
+    if not _inventory_mutations.clear_container(item):
+        return _reject_direct_action(&"inventory.drop", "source_mutation_failed")
+    if not _world.set_placement(item, Layers.Channel.LOOSE_ITEM, actor.anchor, actor.facing, Footprint.single_cell()):
+        _inventory_mutations.set_container(item, source_container)
+        return _reject_direct_action(&"inventory.drop", "world_placement_failed")
+    var result := _complete_direct_action(&"inventory.drop", "")
+    result["item_id"] = item
+    return result
+
+func drop_equipped_item(slot: int) -> Dictionary:
+    if not _begin_direct_action(&"inventory.drop"):
+        return _direct_failure("player_unavailable")
+    if not Slots.is_valid(slot) or not _hands.has_actor(_player_id):
+        return _reject_direct_action(&"inventory.drop", "invalid_slot")
+    var item := _hands.item_in_slot(_player_id, slot)
+    var actor := _world.placement(_player_id)
+    if item.is_empty() or actor == null:
+        return _reject_direct_action(&"inventory.drop", "hand_empty")
+    if not _hand_mutations.clear_slot(_player_id, slot):
+        return _reject_direct_action(&"inventory.drop", "source_mutation_failed")
+    if not _world.set_placement(item, Layers.Channel.LOOSE_ITEM, actor.anchor, actor.facing, Footprint.single_cell()):
+        _hand_mutations.set_item(_player_id, slot, item)
+        return _reject_direct_action(&"inventory.drop", "world_placement_failed")
+    var result := _complete_direct_action(&"inventory.drop", "")
+    result["item_id"] = item
+    result["slot"] = slot
+    return result
+
+func pickup_loose_item(item_id: String) -> Dictionary:
+    var item := item_id.strip_edges()
+    if not _begin_direct_action(&"inventory.pickup"):
+        return _direct_failure("player_unavailable")
+    var placement := _world.placement(item)
+    if item.is_empty() or not _world.has_entity(item) or placement == null \
+        or placement.channel != Layers.Channel.LOOSE_ITEM:
+        return _reject_direct_action(&"inventory.pickup", "loose_item_missing")
+    if not _reach.target_reachable(_player_id, item, ReachClass.CONTACT_FORWARD):
+        return _reject_direct_action(&"inventory.pickup", "out_of_reach")
+    var capacity := _carry_acquisition.evaluate(_player_id, item)
+    if int(capacity.get("status", CapacityPolicy.Status.UNKNOWN)) != CapacityPolicy.Status.ALLOWED:
+        return _reject_direct_action(&"inventory.pickup", String(capacity.get("reason", "carry_capacity_rejected")))
+    if not _world.unplace_entity(item):
+        return _reject_direct_action(&"inventory.pickup", "source_mutation_failed")
+    if not _inventory_mutations.set_container(item, _player_id):
+        _world.set_placement(item, placement.channel, placement.anchor, placement.facing, placement.footprint, placement.structure_axis)
+        return _reject_direct_action(&"inventory.pickup", "containment_mutation_failed")
+    var result := _complete_direct_action(&"inventory.pickup", "")
+    result["item_id"] = item
+    return result
+
+func _valid_reachable_loot_container(container_id: String) -> bool:
+    return not container_id.is_empty() and _world.has_entity(container_id) \
+        and _loot_state.has_container(container_id) and _inventory.has_container(container_id) \
+        and _reach.target_reachable(_player_id, container_id, ReachClass.CONTACT_FORWARD)
+
+func _personal_container_accessible(container_id: String) -> bool:
+    var current := container_id.strip_edges()
+    var visited: Dictionary = {}
+    while not current.is_empty() and not visited.has(current):
+        if current == _player_id:
+            return true
+        visited[current] = true
+        current = _inventory.container_of(current)
+    return false
+
+func _begin_direct_action(_intent: StringName) -> bool:
+    if not has_control():
+        return false
+    _set_busy(true)
+    return true
+
+func _reject_direct_action(intent: StringName, reason: String) -> Dictionary:
+    _set_busy(false)
+    action_resolved.emit(intent, false, reason, _turn_number)
+    return _direct_failure(reason)
+
+func _complete_direct_action(intent: StringName, reason: String) -> Dictionary:
+    _turn_number += 1
+    var acted := _run_local_infected_turns()
+    turn_completed.emit(_turn_number, acted)
+    action_resolved.emit(intent, true, reason, _turn_number)
+    _set_busy(false)
+    return {
+        "success": true,
+        "reason": reason,
+        "turn_number": _turn_number,
+        "active_actor_count": acted,
+    }
+
+func _direct_failure(reason: String) -> Dictionary:
+    return {
+        "success": false,
+        "reason": reason,
+        "turn_number": _turn_number,
+        "active_actor_count": 0,
+    }
 
 func submit_intent(intent: StringName) -> void:
     if not has_control():
