@@ -327,6 +327,7 @@ func submit_intent(intent: StringName) -> void:
         return
 
     _turn_number += 1
+    _last_completed_intent = intent
     var acted := _run_local_infected_turns()
     turn_completed.emit(_turn_number, acted)
     action_resolved.emit(intent, true, String(result.get("reason", "")), _turn_number)
