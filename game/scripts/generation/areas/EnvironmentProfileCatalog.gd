@@ -111,7 +111,7 @@ func _environment(
         "version": version,
         "base_ground": base_ground,
         "road_ground": &"ground.road_plain",
-        "road_surface_ground": &"ground.road_plain",
+        "road_surface_ground": &"ground.asphalt",
         "road_centerline_horizontal": &"ground.road_yellow_line_h",
         "road_centerline_vertical": &"ground.road_yellow_line_v",
         "local_road_ground": local_road_ground,
