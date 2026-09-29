@@ -14,7 +14,14 @@ func _boot_production_world() -> bool:
     if _vehicle_actions == null or _vehicle_state == null or _vehicle_profiles == null or _vehicle_cargo == null or _vehicle_controls == null:
         return false
 
-    return _vehicle_controls.configure_simple(Callable(self, "run_simple_vehicle_action"))
+    return _vehicle_controls.configure_simple(
+        Callable(self, "run_simple_vehicle_action"),
+        _vehicle_actions,
+        _vehicle_state,
+        _vehicle_cargo,
+        _inventory_state,
+        WorldBootstrapClass.PLAYER_ID
+    )
 
 func _on_turn_intent(intent: StringName) -> void:
     if _vehicle_state != null and not _vehicle_state.vehicle_for_driver(WorldBootstrapClass.PLAYER_ID).is_empty():
