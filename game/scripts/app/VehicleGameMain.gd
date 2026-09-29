@@ -9,27 +9,20 @@ const VehicleCargoClass = preload("res://scripts/simulation/vehicles/VehicleCarg
 const VehicleConsequencesClass = preload("res://scripts/simulation/vehicles/VehicleConsequenceAdapter.gd")
 const VehicleLightingClass = preload("res://scripts/simulation/vehicles/VehicleLightingSourceAdapter.gd")
 const VehicleItems = preload("res://scripts/simulation/vehicles/VehicleItemCatalog.gd")
-const VehicleControllerClass = preload("res://scripts/player/VehiclePlayerController.gd")
 const VehicleControlsClass = preload("res://scripts/ui/VehiclePlayerControls.gd")
 const VehicleMaintenanceOffersClass = preload("res://scripts/simulation/vehicles/VehicleMaintenanceInteractionOfferProvider.gd")
-const VehicleMaintenanceHandlerClass = preload("res://scripts/player/VehicleMaintenancePlayerInteractionHandler.gd")
 const InteractionStateClass = preload("res://scripts/simulation/interaction/WorldInteractableState.gd")
 const InteractionCatalogClass = preload("res://scripts/simulation/interaction/WorldInteractionCatalog.gd")
 const InteractionItemsClass = preload("res://scripts/simulation/interaction/WorldInteractionItemCatalog.gd")
 const InteractionActionsClass = preload("res://scripts/simulation/interaction/WorldInteractionActionService.gd")
-const RepairActionsClass = preload("res://scripts/simulation/interaction/WorldObjectRepairActionService.gd")
 const InteractionOffersClass = preload("res://scripts/simulation/interaction/WorldInteractionOfferProvider.gd")
 const LooseItemPickupOffersClass = preload("res://scripts/simulation/interaction/LooseItemPickupInteractionOfferProvider.gd")
-const LooseItemPickupHandlerClass = preload("res://scripts/player/LooseItemPickupPlayerInteractionHandler.gd")
 const SustainmentOffersClass = preload("res://scripts/simulation/interaction/SustainmentInteractionOfferProvider.gd")
 const InteractionPanelClass = preload("res://scripts/ui/WorldInteractionPanel.gd")
-const InteractionControllerClass = preload("res://scripts/player/WorldInteractionPlayerController.gd")
 const LootOffersClass = preload("res://scripts/simulation/loot/LootSearchInteractionOfferProvider.gd")
 const CraftingOffersClass = preload("res://scripts/simulation/crafting/CraftingInteractionOfferProvider.gd")
 const Workstations = preload("res://scripts/simulation/crafting/CraftingWorkstationCatalog.gd")
-const UtilityRepairActionsClass = preload("res://scripts/simulation/utilities/UtilityPowerRepairActionService.gd")
 const UtilityRepairOffersClass = preload("res://scripts/simulation/utilities/UtilityPowerRepairInteractionOfferProvider.gd")
-const GeneratorActionsClass = preload("res://scripts/simulation/utilities/PortableGeneratorActionService.gd")
 const GeneratorOffersClass = preload("res://scripts/simulation/utilities/PortableGeneratorInteractionOfferProvider.gd")
 
 var _vehicle_profiles: VehicleProfileCatalog = null
@@ -39,24 +32,17 @@ var _vehicle_actions: VehicleActionService = null
 var _vehicle_cargo: VehicleCargoService = null
 var _vehicle_consequences: VehicleConsequenceAdapter = null
 var _vehicle_lighting: VehicleLightingSourceAdapter = null
-var _vehicle_controller: VehiclePlayerController = null
 var _vehicle_controls: VehiclePlayerControls = null
 var _vehicle_maintenance_offers: VehicleMaintenanceInteractionOfferProvider = null
-var _vehicle_maintenance_handler: VehicleMaintenancePlayerInteractionHandler = null
 var _world_interaction_state: WorldInteractableState = null
 var _world_interaction_catalog: WorldInteractionCatalog = null
 var _world_interaction_actions: WorldInteractionActionService = null
-var _world_repair_actions: WorldObjectRepairActionService = null
-var _utility_power_repair_actions: UtilityPowerRepairActionService = null
-var _generator_actions: PortableGeneratorActionService = null
 var _world_interaction_offers: WorldInteractionOfferProvider = null
 var _loose_item_pickup_offers: LooseItemPickupInteractionOfferProvider = null
-var _loose_item_pickup_handler: LooseItemPickupPlayerInteractionHandler = null
 var _sustainment_interaction_offers: SustainmentInteractionOfferProvider = null
 var _utility_power_repair_offers: UtilityPowerRepairInteractionOfferProvider = null
 var _generator_offers: PortableGeneratorInteractionOfferProvider = null
 var _world_interaction_panel: WorldInteractionPanel = null
-var _world_interaction_controller: WorldInteractionPlayerController = null
 var _world_blocks_interaction: bool = false
 
 func _boot_production_world() -> bool:
@@ -119,9 +105,6 @@ func _boot_world_interactions() -> bool:
     _world_interaction_panel.interaction_blocked_changed.connect(_on_world_interaction_blocked_changed)
     return true
 
-func _route_player_intent(intent: StringName) -> void:
-    if _vehicle_controller != null and _vehicle_controller.is_mounted(): _vehicle_controller.submit_intent(intent)
-    elif _controller != null: _controller.submit_intent(intent)
 func _wire_vehicle_lighting() -> bool:
     if _vehicle_lighting == null or _utility_lighting == null or _physical_lighting == null: return false
     var inherited_callable := Callable(self, "_on_lighting_emitters_changed")
@@ -160,21 +143,6 @@ func _request_target_sustainment(actor_id: String, target_id: String, action_id:
     elif action_id == SustainmentOffersClass.REST_ON_FURNITURE: serial = _sustainment_actions.begin_rest_on(actor_id, target_id)
     elif action_id == SustainmentOffersClass.SLEEP_IN_BED: serial = _sustainment_actions.begin_sleep_in(actor_id, target_id)
     return {"outcome_query": Callable(_sustainment_actions, "rest_outcome") if action_id in [SustainmentOffersClass.REST_ON_FURNITURE, SustainmentOffersClass.SLEEP_IN_BED] else Callable(), "accepted": serial > 0, "action_serial": serial, "reason": "" if serial > 0 else "sustainment_target_unavailable", "action_id": action_id, "target_id": target_id}
-func _request_target_crafting(_actor_id: String, target_id: String, _action_id: StringName) -> Dictionary:
-    if _crafting_controller == null or _crafting_panel == null: return {"success": false, "reason": "crafting_input_not_ready"}
-    var success: bool = _crafting_controller.request_open_workstation(target_id)
-    if success:
-        var snapshot: Dictionary = _crafting_panel.presentation_snapshot()
-        success = _crafting_panel.is_open() and String(snapshot.get("workstation_id", "")) == target_id
-    return {"success": success, "reason": "" if success else "workstation_unavailable"}
-func _request_target_loot(_actor_id: String, target_id: String, _action_id: StringName) -> Dictionary:
-    if _loot_controller == null or _loot_panel == null: return {"success": false, "reason": "loot_input_not_ready"}
-    var result: Dictionary = _loot_controller.request_search_container(target_id)
-    var success: bool = bool(result.get("success", false))
-    if success:
-        var snapshot: Dictionary = _loot_panel.presentation_snapshot()
-        success = _loot_panel.is_open() and String(snapshot.get("container_id", "")) == target_id
-    return {"success": success, "reason": String(result.get("reason", "" if success else "search_rejected"))}
 func _crafting_workstation_available(_actor_id: String, workstation_id: String, capability: StringName) -> bool:
     if capability != Workstations.COOKING_STOVE: return true
     if _world == null or _utilities == null or not _world.has_entity(workstation_id): return false
@@ -182,9 +150,6 @@ func _crafting_workstation_available(_actor_id: String, workstation_id: String, 
     var placement: WorldPlacement = _world.placement(workstation_id)
     if entity == null or placement == null or not _world_interaction_catalog.is_cooking_stove(entity.semantic_type): return false
     return _utilities.power_available_at_cell(placement.anchor)
-func _on_world_interaction_action_finished(_target_id: String, action_id: StringName, success: bool, reason: String) -> void:
-    if action_id in [CraftingOffersClass.ACTION_ID, LootOffersClass.SEARCH_ACTION_ID]: return
-    if _hud != null and _kernel != null: _hud.present_action_result(action_id, success, reason, _kernel.world_tick())
 func _on_interaction_utility_changed(_revision: int, _reason: StringName) -> void:
     if _sustainment_interaction_offers != null: _sustainment_interaction_offers.availability_changed.emit(&"utility_changed")
     if _crafting_interaction_offers != null: _crafting_interaction_offers.availability_changed.emit(&"utility_changed")
