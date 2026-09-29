@@ -16,6 +16,7 @@ var _cargo: VehicleCargoService
 var _inventory: InventoryContainmentState
 var _profiles: VehicleProfileCatalog = VehicleProfileCatalog.new()
 var _actor_id: String = ""
+var _simple_action: Callable = Callable()
 var _surface: Control = null
 var _status: Label
 var _actor_items: OptionButton
@@ -60,6 +61,23 @@ func configure(
         _inventory.item_containment_changed.connect(_on_item_containment_changed)
     _refresh_all()
     return true
+
+func configure_simple(action_callback: Callable) -> bool:
+    if not action_callback.is_valid():
+        return false
+    _simple_action = action_callback
+    _refresh_all()
+    return true
+
+func _run_simple(action_id: StringName, item_id: String = "") -> Dictionary:
+    if not _simple_action.is_valid():
+        return {"success": false, "reason": "simple_vehicle_route_unavailable"}
+    var result: Dictionary = _simple_action.call(action_id, item_id)
+    if bool(result.get("success", false)):
+        _refresh_all()
+    elif _surface != null and _surface.visible:
+        _status.text = "VEHICLE — %s" % String(result.get("reason", "vehicle action failed")).replace("_", " ")
+    return result
 
 func _build_ui() -> void:
     if _surface != null:
@@ -165,42 +183,79 @@ func _backward() -> void:
     _submit_drive_intent(Intents.BACKWARD)
 
 func _submit_drive_intent(intent: StringName) -> void:
+    if _simple_action.is_valid():
+        var action_id: StringName = VehicleActionService.MOVE
+        if intent == Intents.BACKWARD:
+            action_id = VehicleActionService.REVERSE
+        elif intent == Intents.TURN_LEFT:
+            action_id = VehicleActionService.TURN_LEFT
+        elif intent == Intents.TURN_RIGHT:
+            action_id = VehicleActionService.TURN_RIGHT
+        _run_simple(action_id)
+        return
     if _controller != null:
         _controller.submit_intent(intent)
 
 func _enter() -> void:
+    if _simple_action.is_valid():
+        _run_simple(VehicleActionService.ENTER)
+        return
     if _controller != null:
         _controller.request_enter()
 
 func _exit() -> void:
+    if _simple_action.is_valid():
+        _run_simple(VehicleActionService.EXIT)
+        return
     if _controller != null:
         _controller.request_exit()
 
 func _start() -> void:
+    if _simple_action.is_valid():
+        _run_simple(VehicleActionService.START)
+        return
     if _controller != null:
         _controller.request_start()
 
 func _hotwire() -> void:
+    if _simple_action.is_valid():
+        _run_simple(VehicleActionService.HOTWIRE)
+        return
     if _controller != null:
         _controller.request_hotwire()
 
 func _repair() -> void:
+    if _simple_action.is_valid():
+        _run_simple(VehicleActionService.REPAIR)
+        return
     if _controller != null:
         _controller.request_repair()
 
 func _modify() -> void:
+    if _simple_action.is_valid():
+        _run_simple(VehicleActionService.MODIFY)
+        return
     if _controller != null:
         _controller.request_modify()
 
 func _refuel() -> void:
+    if _simple_action.is_valid():
+        _run_simple(VehicleActionService.REFUEL)
+        return
     if _controller != null:
         _controller.request_refuel()
 
 func _brake() -> void:
+    if _simple_action.is_valid():
+        _run_simple(VehicleActionService.BRAKE)
+        return
     if _controller != null:
         _controller.request_brake()
 
 func _reverse() -> void:
+    if _simple_action.is_valid():
+        _run_simple(VehicleActionService.REVERSE)
+        return
     if _controller != null:
         _controller.request_reverse()
 
@@ -210,6 +265,9 @@ func _store_selected() -> void:
     var vehicle_id := _service.vehicle_for_driver(_actor_id)
     var item_id := _selected_metadata(_actor_items)
     if vehicle_id.is_empty() or item_id.is_empty():
+        return
+    if _simple_action.is_valid():
+        _run_simple(&"vehicle.cargo_store", item_id)
         return
     if not _cargo.store_from_actor(_actor_id, vehicle_id, item_id):
         _cargo_status.text = "CARGO — cannot store selected item"
@@ -222,6 +280,9 @@ func _take_selected() -> void:
     var vehicle_id := _service.vehicle_for_driver(_actor_id)
     var item_id := _selected_metadata(_cargo_items)
     if vehicle_id.is_empty() or item_id.is_empty():
+        return
+    if _simple_action.is_valid():
+        _run_simple(&"vehicle.cargo_take", item_id)
         return
     if not _cargo.take_to_actor(_actor_id, vehicle_id, item_id):
         _cargo_status.text = "CARGO — cannot take selected item"
