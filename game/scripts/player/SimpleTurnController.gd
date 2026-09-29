@@ -41,6 +41,7 @@ var _turn_number := 0
 var _busy := false
 var _individual_actor_actions := 0
 var _last_completed_intent: StringName = &""
+var _before_local_infected_turns: Callable = Callable()
 
 func _init(
     world: WorldState = null,
@@ -97,6 +98,15 @@ func individual_actor_actions() -> int:
 
 func last_completed_intent() -> StringName:
     return _last_completed_intent
+
+func set_before_local_infected_turns(callback: Callable) -> bool:
+    if not callback.is_valid():
+        return false
+    _before_local_infected_turns = callback
+    return true
+
+func infected_actor_ids() -> Array[String]:
+    return _infected_ids.duplicate()
 
 func set_infected_actor_ids(ids: Array[String]) -> void:
     _infected_ids.clear()
@@ -444,6 +454,8 @@ func _resolve_reload(actor_id: String, firearm_id: String) -> Dictionary:
     return {"accepted": true, "reason": "reloaded"}
 
 func _run_local_infected_turns() -> int:
+    if _before_local_infected_turns.is_valid():
+        _before_local_infected_turns.call()
     var player := _world.placement(_player_id)
     if player == null or not _actor_alive(_player_id):
         return 0
