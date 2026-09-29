@@ -100,6 +100,7 @@ func _run() -> void:
     legacy["schema_version"] = Store.LEGACY_SESSION_SCHEMA_VERSION
     var legacy_owners: Dictionary = legacy.get("owners", {})
     legacy_owners.erase("world_time")
+    legacy_owners.erase("refrigeration")
     legacy_owners["kernel"] = {"retired_runtime_payload": "must_not_load"}
     legacy_owners["perception_memory"] = {"retired_runtime_payload": "must_not_load"}
     legacy_owners["combat_runtime"] = {"retired_runtime_payload": "must_not_load"}
