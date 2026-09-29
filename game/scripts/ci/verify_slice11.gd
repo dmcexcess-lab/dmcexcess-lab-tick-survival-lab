@@ -56,7 +56,7 @@ func _run() -> void:
     var vehicle_id := _install_test_car(game)
     _check(not vehicle_id.is_empty(), "authoritative test car installed")
     if not vehicle_id.is_empty():
-        var enter := game.call("run_simple_vehicle_action", VehicleActions.ENTER, "", vehicle_id)
+        var enter: Dictionary = game.call("run_simple_vehicle_action", VehicleActions.ENTER, "", vehicle_id)
         _check(bool(enter.get("success", false)), "vehicle enter succeeds")
         var state = game.get("_vehicle_state")
         state.mutate(vehicle_id, {"key_in_ignition": true, "powered": true, "moving": false})
@@ -194,7 +194,7 @@ func _install_test_car(game) -> String:
             for dx in range(-radius, radius + 1):
                 if absi(dx) != radius and absi(dy) != radius:
                     continue
-                var anchor := player.anchor + Vector2i(dx, dy)
+                var anchor: Vector2i = player.anchor + Vector2i(dx, dy)
                 var route_ok := true
                 var route: Array[Vector2i] = [Vector2i.ZERO]
                 route.append_array(VehicleHeading.forward_path(0, profiles.movement_cells(VehicleProfiles.CAR)))
@@ -205,7 +205,7 @@ func _install_test_car(game) -> String:
                         break
                 if not route_ok:
                     continue
-                var actor_cell := anchor + Vector2i.RIGHT
+                var actor_cell: Vector2i = anchor + Vector2i.RIGHT
                 var actor_check = query.query_cell(actor_cell, "actor.player", true)
                 if actor_check == null or not actor_check.is_clear():
                     continue
