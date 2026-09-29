@@ -250,7 +250,7 @@ func _boot_world_time() -> bool:
     _world_time = WorldTimeServiceClass.new(_kernel, _world_time_profile); _ambient_daylight = OutdoorAmbientLightServiceClass.new(_world_time, daylight_profile); return _world_time.is_ready() and _ambient_daylight.is_ready()
 func _boot_item_freshness_query() -> bool:
     if _freshness_state == null or _freshness_profiles == null or _freshness_ambient == null: return false
-    var providers: Array[SpoilageEnvironmentProvider] = [_freshness_ambient]; _freshness_query = FreshQueryClass.new(_world, _freshness_state, _freshness_profiles, _kernel, providers); return _freshness_query.is_ready()
+    var providers: Array[SpoilageEnvironmentProvider] = [_freshness_ambient]; _freshness_query = FreshQueryClass.new(_world, _freshness_state, _freshness_profiles, _world_time, providers); return _freshness_query.is_ready()
 func _boot_physical_lighting() -> bool:
     _physical_lighting = PhysicalLightingClass.new(_world, _door_state, _ambient_daylight); var empty_emitters: Array[LightEmitter] = []; return _physical_lighting.set_emitters(empty_emitters)
 func _boot_weather() -> bool:
