@@ -70,10 +70,11 @@ func _boot_system36() -> bool:
     _vehicle_state = VehicleStateClass.new()
     if not VehicleItems.register_physical_profiles(_physical_catalog): return false
     _vehicle_seeder = VehicleSeederClass.new(_world, _world_mutations, _spatial_query, _collision_catalog, _inventory_mutations, _vehicle_profiles, _vehicle_state, WorldBootstrapClass.active_seed())
-    var seeded := _vehicle_seeder.seed_near(WorldBootstrapClass.PLAYER_ID)
-    if seeded < 1:
-        push_error("VehicleGameMain: no plausible parked vehicle locations were generated near the playable start")
-        return false
+    # A valid procedural start is not required to place a vehicle within the
+    # initial seeding radius. Zero nearby vehicles is ordinary world content, not
+    # a production boot failure; the vehicle runtime remains valid and can receive
+    # vehicles later through streaming/world state.
+    _vehicle_seeder.seed_near(WorldBootstrapClass.PLAYER_ID)
     _vehicle_actions = VehicleActionsClass.new(_world, _world_mutations, _spatial_query, _collision_overrides, _kernel, _skill_checks, _condition_service, _inventory_state, _inventory_mutations, _vehicle_profiles, _vehicle_state)
     if not _vehicle_actions.is_ready(): return false
     _vehicle_cargo = VehicleCargoClass.new(_world, _vehicle_state, _vehicle_profiles, _inventory_state, _inventory_mutations, _weight_query)
