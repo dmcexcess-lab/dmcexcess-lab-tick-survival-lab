@@ -29,60 +29,96 @@ func seed_near(actor_id: String, radius: int = 42) -> int:
     var actor_placement := _world.placement(actor_id)
     if actor_placement == null:
         return 0
+
     for kind: StringName in _profiles.kinds():
         _collisions.register(_profiles.semantic_type(kind), true)
+
+    # Initial materialization is deliberately sparse. It samples plausible parking
+    # surfaces independently; it never guarantees one of every vehicle class near
+    # the player and a valid start may contain no vehicles at all.
     var candidates: Array[Vector2i] = []
     var center := actor_placement.anchor
     for y in range(center.y - radius, center.y + radius + 1):
         for x in range(center.x - radius, center.x + radius + 1):
             var cell := Vector2i(x, y)
-            if not _world.has_terrain(cell):
+            if not _world.has_terrain(cell) or cell.distance_to(center) < 10.0:
                 continue
             var terrain := String(_world.terrain_at(cell)).to_lower()
-            if "road" in terrain or "driveway" in terrain or "parking" in terrain or "pavement" in terrain:
-                candidates.append(cell)
+            var chance_percent := 0
+            if "parking" in terrain:
+                chance_percent = 18
+            elif "driveway" in terrain:
+                chance_percent = 10
+            elif "pavement" in terrain:
+                chance_percent = 5
+            elif "road" in terrain:
+                chance_percent = 1
+            if chance_percent <= 0 or posmod(_stable_hash(cell + Vector2i(101, 211)), 100) >= chance_percent:
+                continue
+            candidates.append(cell)
+
     candidates.sort_custom(func(a: Vector2i, b: Vector2i) -> bool:
         var ha := _stable_hash(a)
         var hb := _stable_hash(b)
         return ha < hb if ha != hb else (a.y < b.y or (a.y == b.y and a.x < b.x))
     )
+
     var made: int = 0
-    var cursor: int = 0
-    for kind: StringName in _profiles.kinds():
-        while cursor < candidates.size():
-            var anchor: Vector2i = candidates[cursor]
-            cursor += 1
-            if anchor.distance_to(center) < 6.0:
-                continue
-            var heading := posmod(_stable_hash(anchor), 4) * 3
-            var cardinal_facing := VehicleHeading.cardinal_facing(heading)
-            var footprint := _profiles.footprint(kind)
-            var check := _query.query_footprint(anchor, cardinal_facing, footprint, "", true)
-            if check == null or not check.is_clear():
-                continue
-            var vehicle_id := "vehicle:%d:%s:%d:%d" % [_seed, String(kind), anchor.x, anchor.y]
-            if _world.has_entity(vehicle_id):
-                break
-            if _mutations.create_entity(_profiles.semantic_type(kind), vehicle_id).is_empty():
-                continue
-            var channel := Layers.Channel.LOOSE_ITEM if kind == VehicleProfileCatalog.SKATEBOARD else Layers.Channel.OBJECT
-            if not _mutations.set_placement(vehicle_id, channel, anchor, cardinal_facing, footprint):
-                _mutations.remove_entity(vehicle_id)
-                continue
-            if not _inventory_mutations.enroll_container(vehicle_id):
-                _mutations.remove_entity(vehicle_id)
-                continue
-            var max_fuel := _profiles.max_fuel(kind)
-            var fuel := 0 if max_fuel <= 0 else maxi(1, max_fuel / 2 + posmod(_stable_hash(anchor + Vector2i(3, 7)), maxi(1, max_fuel / 2)))
-            var key_in_ignition := _initial_key_in_ignition(kind, vehicle_id)
-            if not _state.create_vehicle(vehicle_id, kind, fuel, false, heading, key_in_ignition):
-                _inventory_mutations.remove_container(vehicle_id)
-                _mutations.remove_entity(vehicle_id)
-                continue
-            _seed_vehicle_supplies(vehicle_id, kind, anchor)
-            made += 1
+    var occupied_anchors: Array[Vector2i] = []
+    for anchor: Vector2i in candidates:
+        if made >= 6:
             break
+        var too_close := false
+        for existing_anchor: Vector2i in occupied_anchors:
+            if anchor.distance_to(existing_anchor) < 8.0:
+                too_close = true
+                break
+        if too_close:
+            continue
+
+        var kind := _weighted_kind(anchor)
+        var heading := posmod(_stable_hash(anchor + Vector2i(17, 31)), 4) * 3
+        var cardinal_facing := VehicleHeading.cardinal_facing(heading)
+        var footprint := _profiles.footprint(kind)
+        var check := _query.query_footprint(anchor, cardinal_facing, footprint, "", true)
+        if check == null or not check.is_clear():
+            continue
+
+        var vehicle_id := "vehicle:%d:%s:%d:%d" % [_seed, String(kind), anchor.x, anchor.y]
+        if _world.has_entity(vehicle_id):
+            continue
+        if _mutations.create_entity(_profiles.semantic_type(kind), vehicle_id).is_empty():
+            continue
+        var channel := Layers.Channel.LOOSE_ITEM if kind == VehicleProfileCatalog.SKATEBOARD else Layers.Channel.OBJECT
+        if not _mutations.set_placement(vehicle_id, channel, anchor, cardinal_facing, footprint):
+            _mutations.remove_entity(vehicle_id)
+            continue
+        if not _inventory_mutations.enroll_container(vehicle_id):
+            _mutations.remove_entity(vehicle_id)
+            continue
+        var max_fuel := _profiles.max_fuel(kind)
+        var fuel := 0 if max_fuel <= 0 else maxi(1, max_fuel / 2 + posmod(_stable_hash(anchor + Vector2i(3, 7)), maxi(1, max_fuel / 2)))
+        var key_in_ignition := _initial_key_in_ignition(kind, vehicle_id)
+        if not _state.create_vehicle(vehicle_id, kind, fuel, false, heading, key_in_ignition):
+            _inventory_mutations.remove_container(vehicle_id)
+            _mutations.remove_entity(vehicle_id)
+            continue
+        _seed_vehicle_supplies(vehicle_id, kind, anchor)
+        occupied_anchors.append(anchor)
+        made += 1
     return made
+
+func _weighted_kind(anchor: Vector2i) -> StringName:
+    var roll := posmod(_stable_hash(anchor + Vector2i(307, 509)), 100)
+    if roll < 58:
+        return VehicleProfileCatalog.CAR
+    if roll < 74:
+        return VehicleProfileCatalog.TRUCK
+    if roll < 84:
+        return VehicleProfileCatalog.MOTORCYCLE
+    if roll < 96:
+        return VehicleProfileCatalog.BICYCLE
+    return VehicleProfileCatalog.SKATEBOARD
 
 func _initial_key_in_ignition(kind: StringName, vehicle_id: String) -> bool:
     if not _profiles.is_motorized(kind):
