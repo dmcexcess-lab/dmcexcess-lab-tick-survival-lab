@@ -1,4 +1,4 @@
-extends System34GameMain
+extends "res://scripts/app/System34GameMain.gd"
 class_name VehicleGameMain
 
 const VehicleProfilesClass = preload("res://scripts/simulation/vehicles/VehicleProfileCatalog.gd")
