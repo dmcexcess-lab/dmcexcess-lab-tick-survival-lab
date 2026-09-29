@@ -139,7 +139,9 @@ func _simple_contextual_action_supported(action_id: StringName) -> bool: return 
 func _on_simple_contextual_action_requested(target_id: String, action_id: StringName) -> void:
     if action_id == LootOffersClass.SEARCH_ACTION_ID: _simple_turns.search_loot_container(target_id); return
     if action_id == LooseItemPickupOffersClass.ACTION_ID: _simple_turns.pickup_loose_item(target_id); return
-    if action_id == CraftingOffersClass.ACTION_ID: _request_target_crafting(WorldBootstrapClass.PLAYER_ID, target_id, action_id); return
+    if action_id == CraftingOffersClass.ACTION_ID:
+        if _crafting_panel != null: _crafting_panel.open_panel(target_id)
+        return
     run_simple_contextual_action(WorldBootstrapClass.PLAYER_ID, target_id, action_id)
 func run_simple_contextual_action(actor_id: String, target_id: String, action_id: StringName) -> Dictionary: return _run_simple_contextual_action(actor_id, target_id, action_id)
 func _run_simple_contextual_action(actor_id: String, target_id: String, action_id: StringName) -> Dictionary:
