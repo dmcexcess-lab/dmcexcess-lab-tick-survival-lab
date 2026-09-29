@@ -7,8 +7,8 @@ Status: **canonical active working state**
 PROJECT = Tick Lab  
 IDENTITY = turn-based open-world zombie survival  
 CORE_LOOP = explore -> scavenge -> fight/escape -> craft/heal -> fortify/supply shelter -> survive  
-ACTIVE_REWRITE_SLICE = 11 complete / day-night, weather and world time  
-NEXT_REWRITE_SLICE = 12 / open-world simulation boundary  
+ACTIVE_REWRITE_SLICE = 12 complete / open-world simulation boundary  
+NEXT_REWRITE_SLICE = 13 / persistence migration  
 ROADMAP_CHANGE = true / 2026-09-29
 
 ## Authoritative direction
@@ -17,29 +17,34 @@ Canonical play remains:
 
 player action -> direct authoritative consequence -> each relevant local actor acts at most once -> explicit elapsed survival/world time advances -> daylight/weather/environment derive -> player control
 
-Shared simulation ticks, generalized simultaneous resolution, universal commitment/interruption and heavyweight WHERE/WHAT/WHEN execution remain legacy.
+Shared simulation ticks, generalized simultaneous resolution, universal commitment/interruption, detailed offscreen actor simulation and heavyweight WHERE/WHAT/WHEN execution remain legacy/retired.
 
 ## Closed canonical routes
 
-Slices 1-10 remain canonical as previously recorded: movement/combat/scavenging/inventory/survival, contextual interaction, craft/cook/heal/repair/deconstruct, existing-opening fortification, power/water utilities, corrected road hierarchy and direct vehicle gameplay all use ordinary authoritative owners and the simple-turn model.
+Slices 1-11 remain canonical as previously recorded: movement/combat/scavenging/inventory/survival, contextual interaction, craft/cook/heal/repair/deconstruct, fortification, power/water, corrected roads, direct vehicles, authoritative world time/daylight/weather and durable New Game/Continue all use ordinary authoritative owners and the simple-turn model.
 
-### World time / daylight / weather — Slice 11
+### Open-world simulation boundary — Slice 12
 
 Canonical production now boots:
 
-`gameplay.tscn -> Slice11GameMain -> VehicleSimpleGameMain -> UtilitySimpleGameMain -> FortificationGameMain -> Slice7GameMain -> TurnBasedGameMain`
+`gameplay.tscn -> Slice12GameMain -> Slice11GameMain -> VehicleSimpleGameMain -> UtilitySimpleGameMain -> FortificationGameMain -> Slice7GameMain -> TurnBasedGameMain`
 
-`WorldTimeService` is the authoritative scenario clock for canonical play. It uses the existing Candidate 001 profile (5 ticks/second, 08:00 start, repeating 24-hour day) but no longer depends on TickKernel advancement. Each completed canonical action advances world time to the same explicit elapsed tick already committed by survival. Idle render frames and wall-clock time advance nothing.
+Individual infected turns are bounded in two existing layers:
 
-`OutdoorAmbientLightService` and the existing DaylightProfile remain daylight truth. Dawn/day/dusk/night and their smooth ambient-light curve derive directly from authoritative world time. Existing physical lighting, light-cone perception, utility/street lights, flashlights and vehicle headlights remain downstream and compose normally.
+1. `WorldStreamingCoordinator` active streamed regions define the eligible neighborhood;
+2. `SimpleTurnController.ACTIVE_RADIUS` remains the local action radius inside that neighborhood.
 
-Existing `WeatherService`, `WeatherState` and `WeatherProfile` remain weather truth. Canonical play switches Weather to explicit coarse world-time advancement rather than TickKernel-scheduled physical transitions. Deterministic profile transitions, analytic wetness, atmospheric optics, acoustic masking, lightning state and GPU weather presentation remain existing owners. Long actions can cross multiple weather transitions in one bounded operation without giving distant/local actors repeated turns.
+Only infected whose current authoritative WorldState placement is inside active streamed space are supplied to canonical local infected execution. Far/unloaded infected remain persistent entities/Health/world state but receive no ordinary pathfinding, movement, attack, perception/behavior or individual turn work.
 
-The HUD now presents compact authoritative day/time/weather information.
+Procedural infected resident records are projected once and cached. Streaming-boundary changes hydrate only resident homes that have entered active space. Same-region actions do not rescan the island population.
 
-Durable sessions persist optional `world_time` state alongside existing weather state. Continue restores exact clock/weather progression. Older compatible saves without the new owner recover canonical time from restored survival elapsed state rather than failing.
+SimpleTurnController refreshes the active infected roster immediately before local infected responses. Entering a newly active neighborhood therefore makes relevant infected eligible without waking the rest of the island.
 
-Legacy TickKernel may remain instantiated for still-unmigrated compatibility owners, but canonical world-time/weather progression does not advance it.
+Leaving an area does not delete or reset infected. Their identity, placement, Health and meaningful state remain authoritative and durable for return/Continue.
+
+World-time advancement remains separate from actor-turn advancement. Long actions such as eight hours of sleep still create one ordinary bounded local response boundary; they do not execute intermediate zombie turns.
+
+No offscreen zombie wandering/combat/pathfinding/siege/traffic/population simulator was introduced.
 
 ## Protected game behavior
 
@@ -50,7 +55,8 @@ Preserve throughout the remaining rewrite:
 - sparse realistic vehicle materialization;
 - exact item/inventory/equipment truth;
 - zombies, combat, health/injury/death/corpses;
-- bounded local infected turns and distant inactivity;
+- streaming-active + local-radius infected response boundary;
+- dormant far/unloaded actors retaining persistent state;
 - survival/moodlets;
 - darkness/light-cone perception;
 - contextual interaction, crafting/healing/repair/deconstruction;
@@ -62,29 +68,29 @@ Preserve throughout the remaining rewrite:
 - durable New Game / Continue;
 - phone/Safari bounded performance.
 
-A base remains an existing building the player fortifies and supplies. No colony/freeform-building system or base-ownership framework.
+A base remains an existing building the player fortifies and supplies. No colony/freeform-building system, base-ownership framework or living NPC society.
 
 Recent production repairs remain canonical:
 
 - optional local infected/vehicle absence never fails boot;
-- vehicle spawning is sparse rather than one-of-every-kind near spawn;
+- vehicle spawning remains sparse rather than one-of-every-kind near spawn;
 - MENU, SAVE, SAVE & MENU and Continue remain functional.
 
 ## Verification lifecycle
 
-Slice 11 owns:
+Slice 12 owns:
 
-- `game/scripts/ci/verify_slice11.gd`
-- `.github/workflows/slice11.yml`
+- `game/scripts/ci/verify_slice12.gd`
+- `.github/workflows/slice12.yml`
 
-The focused verifier proves production boot, idle-frame time stability, ordinary and vehicle action advancement exactly once, frozen legacy TickKernel, a bounded eight-hour action, bounded infected responses, daylight phase/brightness derivation, retained perception/artificial-light owners, deterministic coarse weather progression, compact HUD output and real durable snapshot/Continue restoration.
+The focused verifier boots the real production scene and proves active-roster eligibility, far infected dormancy, bounded per-action actor work, idle-frame inactivity, an eight-hour time jump without repeated infected turns, streaming-boundary activation/deactivation without deleting persistent infected, durable snapshot/Continue preservation, Slice 11 world-time survival and dormant legacy TickKernel behavior.
 
-Per SOP, the next code-changing prompt must retire the Slice 11 verifier/workflow before Slice 12 production edits and create fresh Slice 12 verification.
+Per SOP, the next code-changing prompt must retire the Slice 12 verifier/workflow before Slice 13 production edits and create fresh Slice 13 verification.
 
 ## NEXT
 
-**Rewrite Slice 12 — open-world simulation boundary.**
+**Rewrite Slice 13 — persistence migration.**
 
-Only the player’s currently relevant neighborhood should receive individual actor turns. Far/unloaded world state remains persistent data rather than an always-running simulation. Coarse offscreen progression may be calculated only when needed and must not recreate island-wide per-turn work.
+Adapt durable Continue to the simplified canonical state while preserving procedural seed/world identity, player/inventory/equipment, meaningful infected/corpses, looted/deconstructed/fortified world consequences, vehicles, utilities, authoritative world time/weather and relevant world deltas.
 
-Preserve the completed direct-action model, authoritative world time/weather, streaming, persistence, zombies, environmental state and phone/Safari performance. Use existing streaming/materialization boundaries and current authoritative owners rather than inventing a second simulation architecture.
+Do not invent a second save architecture. Extend/consolidate the existing DurableSessionStore and ordinary authoritative owner snapshots, remove persistence dependencies on retired execution state where safe, and preserve compatibility/migration for current valid saves.
