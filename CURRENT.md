@@ -7,101 +7,84 @@ Status: **canonical active working state**
 PROJECT = Tick Lab  
 IDENTITY = turn-based open-world zombie survival  
 CORE_LOOP = explore -> scavenge -> fight/escape -> craft/heal -> fortify/supply shelter -> survive  
-ACTIVE_REWRITE_SLICE = 10 complete / road hierarchy + vehicles  
-NEXT_REWRITE_SLICE = 11 / day-night, weather and world time  
+ACTIVE_REWRITE_SLICE = 11 complete / day-night, weather and world time  
+NEXT_REWRITE_SLICE = 12 / open-world simulation boundary  
 ROADMAP_CHANGE = true / 2026-09-29
 
 ## Authoritative direction
 
-Keep the game; retire the experimental execution architecture.
-
 Canonical play remains:
 
-player action -> direct consequence -> each relevant local actor acts at most once -> ordinary survival/time consequence -> return player control
+player action -> direct authoritative consequence -> each relevant local actor acts at most once -> explicit elapsed survival/world time advances -> daylight/weather/environment derive -> player control
 
 Shared simulation ticks, generalized simultaneous resolution, universal commitment/interruption and heavyweight WHERE/WHAT/WHEN execution remain legacy.
 
 ## Closed canonical routes
 
-Slices 1-9 remain canonical as previously recorded: movement/combat/scavenging/inventory/survival, contextual interaction, craft/cook/heal/repair/deconstruct, existing-opening fortification, and power/water utility interaction all route through ordinary authoritative owners and the simple-turn model.
+Slices 1-10 remain canonical as previously recorded: movement/combat/scavenging/inventory/survival, contextual interaction, craft/cook/heal/repair/deconstruct, existing-opening fortification, power/water utilities, corrected road hierarchy and direct vehicle gameplay all use ordinary authoritative owners and the simple-turn model.
 
-### Road hierarchy + vehicles — Slice 10
+### World time / daylight / weather — Slice 11
 
-Virgin island generation now establishes the transportation backbone before settlement access:
+Canonical production now boots:
 
-- four terrain-routed cross-island four-lane arterial routes form the sparse major network;
-- small towns and rural crossroads attach through paved two-lane access;
-- rural settlement access is gravel;
-- local rural/scattered/farm/home lanes and spurs are dirt;
-- paved production road surfaces materialize as asphalt with markings;
-- gravel and dirt remain unpainted.
+`gameplay.tscn -> Slice11GameMain -> VehicleSimpleGameMain -> UtilitySimpleGameMain -> FortificationGameMain -> Slice7GameMain -> TurnBasedGameMain`
 
-The existing procedural island, terrain-aware routing, settlement/building generation, deterministic projection/materialization and streaming architecture remain authoritative. Existing persistent worlds are not regenerated merely by loading them.
+`WorldTimeService` is the authoritative scenario clock for canonical play. It uses the existing Candidate 001 profile (5 ticks/second, 08:00 start, repeating 24-hour day) but no longer depends on TickKernel advancement. Each completed canonical action advances world time to the same explicit elapsed tick already committed by survival. Idle render frames and wall-clock time advance nothing.
 
-Production now boots:
+`OutdoorAmbientLightService` and the existing DaylightProfile remain daylight truth. Dawn/day/dusk/night and their smooth ambient-light curve derive directly from authoritative world time. Existing physical lighting, light-cone perception, utility/street lights, flashlights and vehicle headlights remain downstream and compose normally.
 
-`gameplay.tscn -> VehicleSimpleGameMain -> UtilitySimpleGameMain -> FortificationGameMain -> Slice7GameMain -> TurnBasedGameMain`
+Existing `WeatherService`, `WeatherState` and `WeatherProfile` remain weather truth. Canonical play switches Weather to explicit coarse world-time advancement rather than TickKernel-scheduled physical transitions. Deterministic profile transitions, analytic wetness, atmospheric optics, acoustic masking, lightning state and GPU weather presentation remain existing owners. Long actions can cross multiple weather transitions in one bounded operation without giving distant/local actors repeated turns.
 
-Canonical vehicle enter/exit/start/hotwire/forward/turn/reverse/brake/repair/modify/refuel/cargo actions no longer advance the legacy TickKernel timed vehicle route. They validate current authoritative state, directly commit the existing VehicleState/world placement/inventory owners, feed explicit elapsed time through the simple-turn survival seam, allow each relevant local infected at most one ordinary response, and return control.
+The HUD now presents compact authoritative day/time/weather information.
 
-Existing VehicleProfileCatalog/VehicleHeading geometry remains truth: cars retain the existing 1x3 footprint, trucks 2x3, ordinary 90-degree turns use the established three-cell turn path, reverse remains available, and collision/fuel/damage consequences remain authoritative. Vehicle cargo, condition, fuel, ignition/key/hotwire state, dedicated presentation and durable vehicle snapshots remain the same owners.
+Durable sessions persist optional `world_time` state alongside existing weather state. Continue restores exact clock/weather progression. Older compatible saves without the new owner recover canonical time from restored survival elapsed state rather than failing.
 
-Initial vehicle materialization is now sparse and surface-weighted rather than a guaranteed one-of-every-kind lineup around the player. Parking/driveway/pavement/road cells use low deterministic occupancy rates, vehicle classes are weighted rather than enumerated, placements are spaced apart and locally capped, and a valid start may contain zero vehicles. That condition must never fail production boot.
-
-The wider arterial geometry exposed a stale utility-support placement assumption during integration. Utility span support search was made robust to the corrected road width without changing utility topology/state ownership.
-
-## Transitional compatibility boundary
-
-The older runtime/service chain remains instantiated where bootstrap, persistence, utilities and later roadmap routes still require compatibility. Legacy vehicle services may remain present as content/consequence owners, but their generalized timed execution path is not canonical player execution.
-
-Temporary narrow migration compositions (`Slice7GameMain`, `FortificationGameMain`, `UtilitySimpleGameMain`, `VehicleSimpleGameMain`) are migration debt and should fold away during legacy demolition rather than becoming a new generalized framework.
+Legacy TickKernel may remain instantiated for still-unmigrated compatibility owners, but canonical world-time/weather progression does not advance it.
 
 ## Protected game behavior
 
 Preserve throughout the remaining rewrite:
 
 - real procedural persistent island and streaming;
-- corrected arterial -> paved secondary -> gravel rural -> dirt local road hierarchy;
-- generated settlements/buildings/world content;
-- exact item identity, loot and inventory/equipment state;
-- zombies and canonical combat consequences;
-- bounded local infected actions and distant inactivity;
-- canonical Health/injury/death/corpse state;
-- survival condition/moodlet state;
-- darkness/perception pressure;
-- contextual action-from-thing;
-- crafting/healing/repair/deconstruction;
+- corrected arterial -> paved secondary -> gravel rural -> dirt local roads;
+- sparse realistic vehicle materialization;
+- exact item/inventory/equipment truth;
+- zombies, combat, health/injury/death/corpses;
+- bounded local infected turns and distant inactivity;
+- survival/moodlets;
+- darkness/light-cone perception;
+- contextual interaction, crafting/healing/repair/deconstruction;
 - existing-opening fortification;
-- power/water topology, generators, wells and failures;
-- vehicle entities, footprints, cargo, fuel, damage and persistence;
-- day/night/weather;
-- durable New Game / Continue.
+- power/water/generator/well truth;
+- vehicle footprints/cargo/fuel/damage/persistence;
+- authoritative world time, daylight and weather;
+- utility/artificial lighting composition;
+- durable New Game / Continue;
+- phone/Safari bounded performance.
 
-A base remains an existing building the player fortified and supplied. No colony/freeform-building system or base-ownership framework.
+A base remains an existing building the player fortifies and supplies. No colony/freeform-building system or base-ownership framework.
 
 Recent production repairs remain canonical:
 
-- UtilitySimpleGameMain has no inherited constant collision;
-- an empty locally hydrated infected set is valid;
-- zero nearby vehicles is valid;
-- New Game must not fail merely because optional local content is absent;
+- optional local infected/vehicle absence never fails boot;
+- vehicle spawning is sparse rather than one-of-every-kind near spawn;
 - MENU, SAVE, SAVE & MENU and Continue remain functional.
 
 ## Verification lifecycle
 
-Current post-Slice-10 correction owns:
+Slice 11 owns:
 
-- `game/scripts/ci/verify_vehicle_spawn_distribution.gd`
-- `.github/workflows/vehicle-spawn-distribution.yml`
+- `game/scripts/ci/verify_slice11.gd`
+- `.github/workflows/slice11.yml`
 
-The focused verifier boots multiple real production seeds and proves local vehicle materialization remains bounded, avoids planting vehicles beside the player, uses plausible vehicle surfaces, and does not guarantee all vehicle classes near spawn.
+The focused verifier proves production boot, idle-frame time stability, ordinary and vehicle action advancement exactly once, frozen legacy TickKernel, a bounded eight-hour action, bounded infected responses, daylight phase/brightness derivation, retained perception/artificial-light owners, deterministic coarse weather progression, compact HUD output and real durable snapshot/Continue restoration.
 
-Per SOP, the next code-changing prompt must retire this vehicle-spawn verifier/workflow before Slice 11 production edits and create fresh Slice 11 verification.
+Per SOP, the next code-changing prompt must retire the Slice 11 verifier/workflow before Slice 12 production edits and create fresh Slice 12 verification.
 
 ## NEXT
 
-**Rewrite Slice 11 — day/night, weather and world time.**
+**Rewrite Slice 12 — open-world simulation boundary.**
 
-Reconnect authoritative world-time progression to the ordinary turn-based model. Define explicit elapsed-time advancement for canonical actions and derive day/night, ambient light and weather from authoritative world time without restoring a generalized action scheduler or per-frame whole-world simulation.
+Only the player’s currently relevant neighborhood should receive individual actor turns. Far/unloaded world state remains persistent data rather than an always-running simulation. Coarse offscreen progression may be calculated only when needed and must not recreate island-wide per-turn work.
 
-Preserve the existing daylight/weather content, darkness/perception gameplay, utility lighting, persistence and phone/Safari performance. Use the simplest existing authoritative time/weather owners and migrate only the concrete production routes required for durable canonical behavior.
+Preserve the completed direct-action model, authoritative world time/weather, streaming, persistence, zombies, environmental state and phone/Safari performance. Use existing streaming/materialization boundaries and current authoritative owners rather than inventing a second simulation architecture.
