@@ -110,7 +110,8 @@ func _rebuild_slice13_runtime_state() -> bool:
 
     _slice12_last_active_regions.clear()
     _slice12_active_ids.clear()
-    _simple_turns.set_infected_actor_ids([])
+    var empty_active_ids: Array[String] = []
+    _simple_turns.set_infected_actor_ids(empty_active_ids)
     if not _refresh_slice12_simulation_boundary():
         return false
 
