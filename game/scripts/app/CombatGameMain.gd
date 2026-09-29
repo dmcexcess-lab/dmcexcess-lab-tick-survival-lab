@@ -6,19 +6,14 @@ const CombatImpactProfilesClass = preload("res://scripts/simulation/combat/Comba
 const CombatActionsClass = preload("res://scripts/simulation/combat/CombatActionService.gd")
 const CombatOffersClass = preload("res://scripts/simulation/combat/CombatInteractionOfferProvider.gd")
 const CombatSoundClass = preload("res://scripts/simulation/sound/CombatSoundEmitterAdapter.gd")
-const CombatControllerClass = preload("res://scripts/player/CombatPlayerController.gd")
 const FirearmProfilesClass = preload("res://scripts/simulation/combat/FirearmProfileCatalog.gd")
 const FirearmStateClass = preload("res://scripts/simulation/combat/FirearmState.gd")
-const FirearmActionsClass = preload("res://scripts/simulation/combat/FirearmActionService.gd")
-const FirearmDamageClass = preload("res://scripts/simulation/combat/FirearmDamageInterruptionService.gd")
-const FirearmSoundClass = preload("res://scripts/simulation/sound/FirearmSoundEmitterAdapter.gd")
 const CorpseStateClass = preload("res://scripts/simulation/combat/CorpseState.gd")
 const DeathTransitionsClass = preload("res://scripts/simulation/combat/ActorDeathTransitionService.gd")
 const PopulationProjectionClass = preload("res://scripts/simulation/population/PopulationResidentProjection.gd")
 const InfectedStateClass = preload("res://scripts/simulation/infected/InfectedState.gd")
 const FirstInfectedHydratorClass = preload("res://scripts/simulation/infected/FirstInfectedHydrationService.gd")
 const ActiveInfectedCohortClass = preload("res://scripts/simulation/infected/ActiveInfectedCohortService.gd")
-const ConsequencePresenterClass = preload("res://scripts/ui/ConsequenceMomentPresenter.gd")
 
 const ACTIVE_INFECTED_COHORT_SIZE: int = 8
 
@@ -26,15 +21,10 @@ var _combat_impact_profiles: CombatImpactProfileCatalog = null
 var _combat_actions: CombatActionService = null
 var _combat_offers: CombatInteractionOfferProvider = null
 var _combat_sound: CombatSoundEmitterAdapter = null
-var _combat_controller: CombatPlayerController = null
 var _firearm_profiles: FirearmProfileCatalog = null
 var _firearm_state: FirearmState = null
-var _firearm_actions: FirearmActionService = null
-var _firearm_damage: FirearmDamageInterruptionService = null
-var _firearm_sound: FirearmSoundEmitterAdapter = null
 var _corpse_state: CorpseState = null
 var _death_transitions: ActorDeathTransitionService = null
-var _consequence_presenter: ConsequenceMomentPresenter = null
 var _population_resident_projection: PopulationResidentProjection = null
 var _infected_state: InfectedState = null
 var _first_infected_hydrator: FirstInfectedHydrationService = null
@@ -94,10 +84,6 @@ func _boot_first_real_infected() -> bool:
     for value: Variant in cohort_result.get("members", []):
         if typeof(value) == TYPE_DICTIONARY: _infected_cohort_results.append((value as Dictionary).duplicate(true))
     if _infected_cohort_results.size() != ACTIVE_INFECTED_COHORT_SIZE: return false
-    if _consequence_presenter != null:
-        var infected_ids: Array[String] = []
-        for member: Dictionary in _infected_cohort_results: infected_ids.append(String(member.get("actor_id", "")))
-        _consequence_presenter.set_infected_actor_ids(infected_ids)
     _first_infected_result = _infected_cohort_results[0].duplicate(true)
     if _perception != null: _perception.recompute(&"infected_cohort_hydrated")
     return _boot_infected_cohort_behavior()
@@ -113,7 +99,6 @@ func _boot_infected_cohort_behavior() -> bool:
     return not first_id.is_empty() and _first_infected_perception != null and _first_infected_behavior != null
 
 func infected_cohort_service() -> ActiveInfectedCohortService: return _infected_cohort
-func consequence_presenter() -> ConsequenceMomentPresenter: return _consequence_presenter
 func infected_state() -> InfectedState: return _infected_state
 func infected_cohort_results() -> Array[Dictionary]:
     var result: Array[Dictionary] = []
@@ -124,8 +109,3 @@ func first_infected_result() -> Dictionary: return _first_infected_result.duplic
 func first_infected_behavior() -> FirstInfectedBehaviorService: return _first_infected_behavior
 func first_infected_perception() -> ObserverPerceptionService: return _first_infected_perception
 
-func _route_player_intent(intent: StringName) -> void:
-    if intent == Intents.COMBAT_FORWARD and _combat_controller != null and (_vehicle_controller == null or not _vehicle_controller.is_mounted()):
-        _combat_controller.submit_intent(intent)
-        return
-    super._route_player_intent(intent)
