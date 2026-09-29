@@ -1,181 +1,218 @@
 # Tick Survival Lab — Current State
 
-Status: **canonical active working state**
+Status: **release candidate / rewrite complete**
 
 ## Working model
 
 PROJECT = Tick Lab  
 IDENTITY = turn-based open-world zombie survival  
 CORE_LOOP = explore -> scavenge -> fight/escape -> craft/heal -> fortify/supply shelter -> survive  
-ACTIVE_REWRITE_SLICE = 14 complete / legacy demolition  
-NEXT_REWRITE_SLICE = 15 / balance, performance and release acceptance  
+ACTIVE_REWRITE_SLICE = 15 complete / balance, performance and release acceptance  
+NEXT_REWRITE_SLICE = none / rewrite complete  
 ROADMAP_CHANGE = true / 2026-09-29
 
-## Canonical production model
+## Operational direction
 
-Canonical play remains:
+The rewrite is finished.
 
-player action -> direct authoritative consequence -> each relevant local infected acts at most once -> explicit elapsed survival/world time advances -> daylight/weather/environment derive -> player control
+Do not invent Slice 16 or reopen architecture work merely to continue rewriting.
 
-Production now boots through:
+Normal work after this checkpoint is:
 
-`gameplay.tscn -> ProductionGameMain -> VehicleSimpleGameMain -> UtilitySimpleGameMain -> FortificationGameMain -> Slice7GameMain -> TurnBasedGameMain`
+**release maintenance / gameplay polish / content expansion driven by actual player experience**
 
-`ProductionGameMain` consolidates the former Slice 11/12/13 migration layers and owns:
+Fix concrete player-facing defects, measured performance problems and worthwhile content gaps. Preserve the established canonical architecture unless a real release/maintenance defect proves a change necessary.
 
-- authoritative world-time/weather advancement;
-- streaming-active infected eligibility;
-- canonical schema-2 persistence;
-- current schema-1 migration;
-- post-restore runtime reconstruction.
+## Canonical production path
 
-The former `Slice11GameMain`, `Slice12GameMain` and `Slice13GameMain` files are deleted.
+Real player startup is:
 
-## Slice 14 demolition result
+`main.tscn -> StartupMenu -> gameplay.tscn -> ProductionGameMain`
 
-The superseded player-facing scheduled execution graph is no longer constructed and its obsolete implementations were physically deleted.
+Production gameplay composition remains:
 
-Deleted controller/presentation branches include:
+`ProductionGameMain -> VehicleSimpleGameMain -> UtilitySimpleGameMain -> FortificationGameMain -> Slice7GameMain -> TurnBasedGameMain`
 
-- PlayerActionController;
-- DoorPlayerInteractionController;
-- LootPlayerInteractionController;
-- CraftingPlayerInteractionController;
-- VehiclePlayerController;
-- WorldInteractionPlayerController;
-- VehicleMaintenancePlayerInteractionHandler;
-- LooseItemPickupPlayerInteractionHandler;
-- CombatPlayerController;
-- ConsequenceMomentPresenter;
-- WorldResolutionIndicator.
+Canonical action flow remains:
 
-Deleted scheduled player-execution implementations include:
+player action -> direct authoritative consequence -> each relevant local infected acts at most once -> explicit elapsed survival/world time advances -> environment derives -> player control
 
-- CraftingActionService;
-- PolicyAwareItemTransferActionService;
-- LootSearchActionService;
-- DoorInteractionActionService;
-- DoorDamageInterruptionService;
-- FirearmActionService;
-- FirearmDamageInterruptionService;
-- FirearmSoundEmitterAdapter;
-- ActionSoundEmitterAdapter.
+Fresh script-class resolution is a release requirement. Production must not depend on stale Godot editor/class-cache state.
 
-Boot-time condition/fear/exertion compatibility objects that canonical survival immediately disconnected were also removed where current production no longer referenced them.
+## Slice 15 release acceptance
 
-No replacement scheduler, event bus, ECS or generic action framework was introduced.
+Release acceptance used the real StartupMenu path rather than direct internal scene boot.
 
-## TickKernel compatibility boundary
+The focused production scenario runs at a phone-sized 390x844 host viewport and proves:
 
-TickKernel **still exists in production**, but it is not canonical player-action time and it is not durable truth.
+- fresh script-class cache loads the complete production spine;
+- StartupMenu NEW GAME reaches ProductionGameMain;
+- session boot succeeds with no boot error;
+- player movement works and returns control;
+- generated loot can be searched and an exact generated item taken;
+- exact food/drink consumption works;
+- canonical melee combat works;
+- generated contextual door interaction works;
+- canonical crafting works;
+- local infected work stays bounded by the active roster;
+- far persistent infected remain dormant;
+- an eight-hour action advances authoritative world time once without zombie catch-up turns;
+- inventory/equipment, Health/injury, crafting, first aid, interaction/fortification, utilities, vehicles, world time/weather and perception/lighting owners remain available;
+- real SAVE & MENU returns to StartupMenu;
+- real StartupMenu CONTINUE restores the same world/player state;
+- idle frames advance neither world time nor actor simulation;
+- deleted Slice 14 controller architecture is not reconstructed.
 
-Concrete current dependents are limited to older compatibility seams:
+## Balance acceptance
 
-- the existing FORAGE timed action route;
-- utility generator/power/flashlight/lighting clock/event APIs;
-- spatial sound, perception and some phone-panel pause/status APIs;
-- the legacy infected cohort/opening-pressure route required to preserve current zombie barricade/opening-pressure behavior.
+The deterministic production release start used for acceptance produced:
 
-The old infected cohort therefore remains only for that existing opening-pressure behavior and its narrow compatibility dependencies. It does not define the canonical player/local-infected turn model.
+- 24 active local infected;
+- 44 known persistent infected;
+- 13 searchable containers within the near expedition range;
+- 23 contained items;
+- 5 food/drink consumables;
+- 2 medical items;
+- 1 construction-material item;
+- 18 consumables within the wider expedition range.
 
-Canonical movement, melee/firearm player combat, inventory/loot, contextual interaction, craft/cook/heal/repair/deconstruct/fortification, vehicle actions, long survival actions, authoritative world time and durable Continue do not advance TickKernel.
+Existing survival values were retained rather than tuned without evidence.
 
-## Canonical durable state
+Condition channels begin at 60/100. After the representative loop plus an eight-hour elapsed action, observed conditions remained viable:
 
-DurableSessionStore schema 2 remains authoritative.
+- satiety 43;
+- hydration 69 after drinking;
+- rest 46;
+- engagement 55;
+- comfort 60;
+- calm 57.
 
-It persists gameplay facts such as:
+The evidence did not justify broad loot/combat/survival numeric retuning. Scarcity remains part of the game; one deterministic start lacking a strict `tools`-family item within the measured radius was not treated as proof of a broken resource economy.
 
-- procedural world/materialization identity;
-- WorldState entities/placements and world consequences;
-- player placement/Health/conditions/skills;
-- exact inventory/equipment/firearm state;
-- loot/forage/world interactions/fortification;
-- infected/corpses;
-- vehicles/cargo/fuel/condition;
-- utilities/power/generators/flashlight;
-- weather/world time;
-- freshness/refrigeration exposure clocks.
+## Performance acceptance
 
-It does not persist:
+The major measured release-performance issue was durable save representation.
 
-- TickKernel;
-- combat runtime;
-- perception-memory cache;
-- active streaming membership;
-- active infected roster;
-- controller/UI/render state.
+Before Slice 15 storage compression:
 
-Current schema-1 saves remain accepted. Legacy runtime payloads are ignored; missing world time derives from restored condition anchors and refrigeration migrates through the established non-regressing fallback before the next schema-2 save.
+- initial canonical session: about 11.31 MB raw;
+- representative post-expedition/far-region canonical session: about 43.88 MB raw.
 
-## Protected game behavior
+The same payloads DEFLATE to roughly:
 
-Preserve into Slice 15:
+- initial: 364 KB;
+- post-expedition: 1.34 MB.
+
+DurableSessionStore now compresses the existing serialized payload at the file-envelope boundary when compression is beneficial.
+
+Important invariants:
+
+- canonical session schema is unchanged;
+- authoritative save truth is unchanged;
+- schema-2 persistence ownership is unchanged;
+- old pre-Slice-15 uncompressed save envelopes remain loadable;
+- checksum validation applies to the stored payload;
+- compressed payloads validate/decompress before ordinary session validation.
+
+The real post-expedition primary save measured about 1.34 MB on disk instead of writing the roughly 43.9 MB raw Variant payload.
+
+Streaming/local simulation remained bounded during acceptance:
+
+- one active streaming region at release start;
+- local infected actions bounded by the active infected roster;
+- far infected dormant;
+- idle frames perform no gameplay simulation.
+
+No speculative renderer/world rewrite was introduced.
+
+## Phone/Safari acceptance
+
+Phone/Safari remains first-class.
+
+Production keeps the 640x844 logical game canvas with `canvas_items` stretch. Movement controls are touch-first. Camera controls explicitly suppress synthetic mouse events after touch. Loot/crafting surfaces remain phone-oriented modal panels.
+
+The release verifier boots and plays the real production app with a 390x844 host viewport and completes the core acceptance path through SAVE & MENU / Continue.
+
+No release-blocking phone control/layout defect was found in this slice. Future device-specific polish should be driven by actual device play rather than speculative UI redesign.
+
+## Persistence
+
+Durable schema 2 remains canonical and saves gameplay facts rather than execution machinery.
+
+It persists world/materialization identity, player/domain state, exact inventory/equipment, Health/conditions, loot/world interactions, infected/corpses, vehicles, utilities, weather/world time and refrigeration state.
+
+It does not persist TickKernel execution, combat runtime, perception cache, active streaming membership, active infected roster or controller/render state.
+
+Schema-1 session compatibility and pre-Slice-15 uncompressed file-envelope compatibility remain supported.
+
+Closing/reopening does not advance world time or run catch-up zombie turns.
+
+## TickKernel compatibility
+
+TickKernel remains a noncanonical compatibility remnant for the previously documented limited seams:
+
+- FORAGE timed route;
+- older utility generator/power/flashlight/lighting clock/event APIs;
+- spatial sound, perception and some phone UI clock/pause APIs;
+- infected cohort/opening-pressure compatibility behavior.
+
+Canonical direct gameplay, survival/world-time progression and persistence do not use TickKernel as authoritative time.
+
+Do not make removal of these remaining references a maintenance goal unless one becomes a concrete player-facing or measured performance problem.
+
+## Protected game
+
+Preserve:
 
 - open procedural persistent island and streaming;
 - corrected road hierarchy;
 - sparse realistic vehicles;
-- direct simple-turn movement/combat;
-- streaming-active + local-radius infected responses;
-- dormant far/unloaded infected persistence;
-- exact inventory/equipment/loot;
+- direct turn-based movement/combat;
+- bounded local infected responses and dormant far actors;
+- scavenging and exact inventory/equipment;
 - Health/injury/death/corpses;
 - survival/moodlets;
 - contextual doors/windows;
-- craft/cook/heal/repair/deconstruct;
+- crafting/cooking/healing;
+- repair/deconstruction;
 - existing-opening fortification;
-- power/water/generator/well state;
+- power/water/generators/wells;
 - vehicles/cargo/fuel/damage;
 - authoritative world time/daylight/weather;
-- freshness/refrigeration elapsed-time truth;
-- light-cone/artificial lighting;
-- SAVE / SAVE & MENU / Continue;
-- phone/Safari bounded performance.
+- freshness/refrigeration;
+- darkness/light-cone/artificial lighting;
+- durable New Game / SAVE / SAVE & MENU / Continue;
+- phone/Safari viability.
 
-A base remains an existing building the player fortifies and supplies. No colony/freeform-building system, base-ownership framework or living NPC society.
+A base remains an existing building the player chooses to fortify and supply.
 
-## Production repair after Slice 14
-
-A real player-facing startup regression was found immediately after Slice 14 closure.
-
-The direct gameplay verifier had loaded `gameplay.tscn` successfully, but the actual production path `main.tscn -> StartupMenu -> NEW GAME -> gameplay.tscn` failed on a fresh script-class cache.
-
-Root causes repaired:
-
-- the production inheritance chain now uses explicit script paths rather than depending on fragile fresh global-class resolution;
-- `VehiclePlayerControls` no longer references the deleted `VehiclePlayerController` compatibility class;
-- canonical vehicle controls now receive the real VehicleActionService, VehicleState, VehicleCargoService, inventory and player identity during `configure_simple`;
-- `EnvironmentalPressureGameMain` again declares the narrow `_restore_durable_session` override seam required by its lifecycle, while `ProductionGameMain` remains the actual canonical restore owner;
-- workstation contextual interaction now opens the existing crafting panel directly instead of calling the deleted scheduled-controller bridge.
-
-No deleted scheduler/controller architecture was restored.
+No colony management, freeform construction or living survivor society is required for the focused release.
 
 ## Verification lifecycle
 
-The current production-repair prompt owns:
+Slice 15 owns:
 
-- `game/scripts/ci/verify_startup_repair.gd`
-- `.github/workflows/startup-repair.yml`
+- `game/scripts/ci/verify_slice15.gd`
+- `.github/workflows/slice15.yml`
 
-The focused verifier:
+The verifier is the current release gate and should remain focused on the real player startup/lifecycle rather than becoming an ever-growing historical integration suite.
 
-- loads the production app spine bottom-up with a fresh class cache;
-- boots the actual `main.tscn`;
-- launches NEW GAME through `StartupMenu._launch_game`;
-- requires transition to the real `gameplay.tscn`;
-- requires the resulting root to be `ProductionGameMain`;
-- requires `session_boot_ok()` with no boot error.
-
-Per SOP, the next code-changing prompt must retire this verifier/workflow before Slice 15 production edits.
+Any future code-changing maintenance prompt must follow README_SOPS.md: retire the previous prompt-local verifier/workflow before production edits and create fresh verification focused on that maintenance task.
 
 ## NEXT
 
-**Rewrite Slice 15 — balance, performance and release acceptance.**
+**No next rewrite slice. Rewrite complete.**
 
-Play and tune the actual repeated survival loop on desktop and iPhone/Safari. Prioritize release-blocking gameplay, balance, usability and performance defects over architecture work.
+Continue with ordinary release maintenance, gameplay polish and content expansion driven by actual player experience.
 
-Do not reopen the rewrite architecture unless a concrete release blocker proves necessary.
+Prioritize:
 
-The target is a focused playable release:
+1. production boot/save/Continue defects;
+2. controls/usability blockers;
+3. broken gameplay actions;
+4. measured phone/Safari performance problems;
+5. balance problems demonstrated by repeated play;
+6. feedback/polish;
+7. optional content expansion.
 
-**scavenge -> fight/escape -> craft/heal -> fortify/supply shelter -> survive -> venture farther.**
+Do not return to architecture work without a concrete player-facing reason.
