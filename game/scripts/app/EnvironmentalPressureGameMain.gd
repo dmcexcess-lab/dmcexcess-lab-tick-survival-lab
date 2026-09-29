@@ -1,4 +1,4 @@
-extends CombatGameMain
+extends "res://scripts/app/CombatGameMain.gd"
 class_name EnvironmentalPressureGameMain
 
 const OpeningPressureClass = preload("res://scripts/simulation/interaction/ActorOpeningPressureActionService.gd")
