@@ -19,10 +19,10 @@ CURRENT.md is canonical working memory.
 
 As of 2026-09-28 the project direction is the conventional turn-based survival rewrite while preserving the existing procedural persistent world and gameplay content.
 
-Slices 1-9 are closed: simple-turn movement, combat, scavenging, inventory, survival, contextual interaction, crafting, first aid, repair, deconstruction, existing-opening fortification, and power/water utility interaction are canonical. Migrated actions mutate existing authoritative state directly, bounded local infected respond at most once, explicit elapsed survival time advances through the shared completion seam, and control returns promptly.
+Slices 1-10 are closed: simple-turn movement, combat, scavenging, inventory, survival, contextual interaction, crafting, first aid, repair, deconstruction, existing-opening fortification, and power/water utility interaction, corrected road hierarchy, and vehicle interaction are canonical. Migrated actions mutate existing authoritative state directly, bounded local infected respond at most once, explicit elapsed survival time advances through the shared completion seam, and control returns promptly.
 
 Existing content owners remain truth; the rewrite does not replace procedural world generation, persistence, exact items, skills, utility topology/state, generators/wells, fortification state or other mature domain data. Legacy generalized scheduling remains migration debt only for still-unmigrated routes and compatibility/bootstrap dependencies.
 
-The production MENU/save/Continue regression remains repaired. The next rewrite slice is Slice 10: vehicles. See CURRENT.md for exact checkpoint and constraints.
+The production MENU/save/Continue and recent boot regressions remain repaired. The next rewrite slice is Slice 11: day/night, weather and world time. See CURRENT.md for exact checkpoint and constraints.
 
 The previous verbose contents remain available in Git history and must not be copied back into active context.
