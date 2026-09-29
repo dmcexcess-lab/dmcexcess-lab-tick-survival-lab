@@ -119,10 +119,13 @@ func _run() -> void:
 
     var migrated = await _boot_continue(legacy_load.get("session", {}))
     if migrated != null:
-        _assert_restored_facts(migrated, reference, far_id, corpse_id, consumed_id, vehicle_id, fortification_id, utility_component_id, looted_item_id, "schema-1 migration")
+        _assert_restored_facts(migrated, reference, far_id, corpse_id, consumed_id, vehicle_id, fortification_id, utility_component_id, looted_item_id, "schema-1 migration", true)
         var migrated_session: Dictionary = migrated.call("durable_session_snapshot")
         _check(int(migrated_session.get("schema_version", -1)) == Store.SESSION_SCHEMA_VERSION, "schema-1 Continue emits canonical schema 2 on next save")
-        _compare_canonical_owners(_canonical_owners(migrated_session), reference, "schema-1 migration owner")
+        var legacy_ignored: Array[String] = ["refrigeration"]
+        _compare_canonical_owners(_canonical_owners(migrated_session), reference, "schema-1 migration owner", legacy_ignored)
+        _check(_canonical_owners(migrated_session).get("world_time", {}) == reference.get("world_time", {}), "schema-1 migration derives exact world time from restored survival anchors")
+        _assert_legacy_refrigeration_migration(migrated_session)
         migrated.queue_free()
         await process_frame
 
@@ -442,11 +445,12 @@ func _assert_schema2_contract(session: Dictionary) -> void:
     no_vehicle_copy["owners"] = no_vehicle_owners
     _check(bool(Store.new(SAVE_A, SAVE_B, SAVE_T).validate_session(no_vehicle_copy).get("ok", false)), "persistence accepts a structurally valid zero-vehicle state")
 
-func _assert_restored_facts(game, reference: Dictionary, far_id: String, corpse_id: String, consumed_id: String, vehicle_id: String, fortification_id: String, utility_component_id: String, looted_item_id: String, label: String) -> void:
+func _assert_restored_facts(game, reference: Dictionary, far_id: String, corpse_id: String, consumed_id: String, vehicle_id: String, fortification_id: String, utility_component_id: String, looted_item_id: String, label: String, legacy_migration: bool = false) -> void:
     var session: Dictionary = game.call("durable_session_snapshot")
     _assert_schema2_contract(session)
     _check(int(session.get("world_seed", 0)) == SEED, "%s preserves world seed" % label)
-    _compare_canonical_owners(_canonical_owners(session), reference, "%s owner" % label)
+    var ignored_owner_keys: Array[String] = ["refrigeration"] if legacy_migration else []
+    _compare_canonical_owners(_canonical_owners(session), reference, "%s owner" % label, ignored_owner_keys)
     var world = game.get("_world")
     _check(not world.has_entity(consumed_id), "%s does not resurrect consumed item" % label)
     _check(world.has_entity(corpse_id), "%s preserves corpse entity" % label)
@@ -472,13 +476,62 @@ func _utility_component_state(game, component_id: String) -> StringName:
             return StringName(row.get("operational_state", &""))
     return &""
 
-func _compare_canonical_owners(actual: Dictionary, expected: Dictionary, label: String) -> void:
+func _compare_canonical_owners(actual: Dictionary, expected: Dictionary, label: String, ignored_keys: Array[String] = []) -> void:
     for key: String in Store.REQUIRED_OWNER_KEYS_V2:
+        if ignored_keys.has(key):
+            continue
         if not actual.has(key) or not expected.has(key):
             _check(false, "%s missing: %s" % [label, key])
             continue
         if actual[key] != expected[key]:
             _check(false, "%s mismatch: %s" % [label, key])
+
+func _assert_legacy_refrigeration_migration(session: Dictionary) -> void:
+    var owners_value: Variant = session.get("owners", {})
+    if typeof(owners_value) != TYPE_DICTIONARY:
+        _check(false, "schema-1 migration emits owner dictionary")
+        return
+    var owners: Dictionary = owners_value
+    var refrigeration_value: Variant = owners.get("refrigeration", {})
+    _check(typeof(refrigeration_value) == TYPE_DICTIONARY, "schema-1 migration emits refrigeration owner")
+    if typeof(refrigeration_value) != TYPE_DICTIONARY:
+        return
+    var refrigeration: Dictionary = refrigeration_value
+    _check(int(refrigeration.get("schema_version", -1)) == 1, "schema-1 migration emits canonical refrigeration schema")
+    var providers_value: Variant = refrigeration.get("providers", [])
+    _check(typeof(providers_value) == TYPE_ARRAY, "schema-1 migration emits refrigeration providers")
+    if typeof(providers_value) != TYPE_ARRAY:
+        return
+
+    var provider_by_context: Dictionary = {}
+    for raw: Variant in providers_value:
+        if typeof(raw) != TYPE_DICTIONARY:
+            _check(false, "schema-1 migration refrigeration provider is structured")
+            continue
+        var row: Dictionary = raw
+        var context_id := String(row.get("context_id", ""))
+        _check(not context_id.is_empty(), "schema-1 migration refrigeration provider has context")
+        _check(int(row.get("anchor_world_tick", -1)) >= 0, "schema-1 migration refrigeration provider has nonnegative world-time anchor")
+        _check(int(row.get("saved_exposure_milliticks", -1)) >= 0, "schema-1 migration refrigeration provider has nonnegative exposure")
+        if not context_id.is_empty():
+            provider_by_context[context_id] = row
+
+    var freshness_value: Variant = owners.get("freshness", {})
+    if typeof(freshness_value) != TYPE_DICTIONARY:
+        return
+    for raw_record: Variant in (freshness_value as Dictionary).get("records", []):
+        if typeof(raw_record) != TYPE_DICTIONARY:
+            continue
+        var record: Dictionary = raw_record
+        var context_id := String(record.get("exposure_context_id", ""))
+        if not context_id.begins_with("refrigerated."):
+            continue
+        _check(provider_by_context.has(context_id), "schema-1 migration provides saved refrigerated exposure context: %s" % context_id)
+        if not provider_by_context.has(context_id):
+            continue
+        var provider: Dictionary = provider_by_context[context_id]
+        var saved_exposure_ticks := int(provider.get("saved_exposure_milliticks", 0)) / 1000
+        _check(saved_exposure_ticks >= int(record.get("exposure_anchor_ticks", 0)), "schema-1 migration refrigeration exposure never regresses: %s" % context_id)
 
 func _canonical_owners(session: Dictionary) -> Dictionary:
     var result: Dictionary = {}
