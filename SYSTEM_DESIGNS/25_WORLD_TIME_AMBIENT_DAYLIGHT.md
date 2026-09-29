@@ -8,6 +8,12 @@ First fully green executable head: `6b6680c5b8eb4d8db2c4097df093abace661d5c7`.
 
 Exact-head context: `verify/system25-world-time-light`.
 
+## 0. Slice 11 canonical execution update — 2026-09-29
+
+System 25 remains the clock/daylight owner, but canonical turn-based play no longer derives physical world time from TickKernel. `WorldTimeService` now supports an explicit authoritative clock advanced from the same elapsed-tick value already committed by the survival action-completion seam. Idle frames advance nothing; long actions jump the clock once by their real duration. Candidate 001 still starts at 08:00 and keeps the same 24-hour mapping and smooth dawn/day/dusk/night curve.
+
+Legacy TickKernel mirroring remains available only for still-unmigrated compatibility callers. Canonical production uses explicit world-time advancement and persists a compact `world_time` snapshot; older saves without it recover time from restored survival elapsed state.
+
 ## 1. Goal
 
 Provide a real simulation-time interpretation layer downstream of WHEN and a deterministic outdoor daylight baseline that other systems can consume without teaching WHEN what seconds, hours, dawn or night mean.
