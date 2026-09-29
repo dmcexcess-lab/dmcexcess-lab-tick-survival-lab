@@ -1,6 +1,6 @@
 # Tick Survival Lab — Settled Architecture Map
 
-Status: **active turn-based migration map; Slices 1-12 complete**
+Status: **active turn-based migration map; Slices 1-13 complete**
 
 ## Canonical direction
 
@@ -14,7 +14,7 @@ Do not create a replacement simulation framework.
 
 ## Current production spine
 
-- `gameplay.tscn -> VehicleSimpleGameMain -> UtilitySimpleGameMain -> FortificationGameMain -> Slice7GameMain -> TurnBasedGameMain` is the current canonical production composition. These narrow migration subclasses contain explicit domain commits only; none is a generalized action layer.
+- `gameplay.tscn -> Slice13GameMain -> Slice12GameMain -> Slice11GameMain -> VehicleSimpleGameMain -> UtilitySimpleGameMain -> FortificationGameMain -> Slice7GameMain -> TurnBasedGameMain` is the current canonical production composition. These narrow migration subclasses contain explicit domain commits/migration seams only; none is a generalized action layer.
 - ProductionWorldBootstrap owns procedural generation/materialization/streaming.
 - SimpleTurnController owns migrated turn completion and bounded local infected actions. Its completion signal remains the single survival elapsed-time seam.
 - WorldState owns authoritative entities/placements and narrow direct writes.
@@ -33,7 +33,10 @@ Do not create a replacement simulation framework.
 - Existing VehicleState, VehicleProfileCatalog, VehicleCargoService, VehicleHeading and world placements remain vehicle truth. Canonical enter/exit/start/drive/turn/reverse/brake/hotwire/repair/modify/refuel/cargo actions commit those owners directly through VehicleSimpleGameMain and complete through SimpleTurnController with explicit survival time. Legacy TickKernel vehicle scheduling is not canonical player execution.
 - `WorldTimeService` is now the authoritative scenario clock in canonical play. It advances explicitly from the same elapsed-tick value already consumed by survival, never from render frames or wall time. `OutdoorAmbientLightService` derives dawn/day/dusk/night continuously from that clock.
 - Existing `WeatherService` / `WeatherState` / `WeatherProfile` remain weather truth, but canonical play advances weather coarsely to the authoritative world-time tick rather than scheduling physical weather through TickKernel. Existing atmospheric optics, acoustics, GPU weather presentation and lighting/perception consumers remain downstream.
-- Durable sessions persist optional canonical `world_time` state alongside existing weather state. Older saves without that owner migrate from the restored survival clock instead of failing.
+- Durable session schema 2 persists canonical gameplay facts and no longer requires TickKernel queues, perception-memory caches or combat runtime snapshots. Durable truth includes world/materialization identity, player/domain state, exact containment/equipment, Health/conditions, loot/world interactions, infected/corpses, vehicles, utilities, weather/world time and refrigeration exposure state.
+- Streaming membership, the Slice 12 active infected roster, perception memory, controller state, HUD/render state and other runtime caches are reconstructed after restore rather than persisted as parallel truth.
+- Schema 1 remains loadable for the current save lineage. Its legacy runtime dictionaries are ignored by canonical restore; world time is derived exactly from restored condition anchors when `world_time` is absent, and legacy refrigeration resumes from a safe non-regressing exposure baseline before the next schema-2 save.
+- Freshness queries and refrigeration exposure clocks use authoritative `WorldTimeService` in canonical play rather than restored TickKernel time.
 - Canonical infected simulation uses the existing streaming coordinator as the first eligibility boundary and the existing SimpleTurnController active radius as the second. Only infected whose authoritative placement is in an active streamed region are placed in the response roster; far/unloaded infected remain persistent WorldState/Health state but receive no pathfinding/attack/individual turn work.
 - Procedural infected resident records are projected once and cached for Slice 12 activation. Boundary changes hydrate only resident homes that have entered active streaming space; ordinary same-region actions do not rescan the island population.
 - SimpleTurnController refreshes that active roster immediately before local infected responses, so entering a new streamed neighborhood makes its eligible infected available without waking the rest of the island. Long elapsed-time actions still create only one ordinary local response boundary.
@@ -43,7 +46,7 @@ Do not create a replacement simulation framework.
 
 The old runtime remains temporarily instantiated/referenced because bootstrap, durable-session compatibility, utilities and later routes still depend on portions of it. Legacy vehicle services may remain instantiated as compatibility/content owners, but their timed execution path is no longer canonical. This is migration debt, not protected architecture.
 
-`Slice7GameMain`, `FortificationGameMain`, `UtilitySimpleGameMain`, `VehicleSimpleGameMain`, `Slice11GameMain` and `Slice12GameMain` are explicit migration debt: they keep migrated domain commits readable while the older inheritance chain still supplies legacy owners. They must not grow into generalized action frameworks and should be folded away during later consolidation/legacy demolition.
+`Slice7GameMain`, `FortificationGameMain`, `UtilitySimpleGameMain`, `VehicleSimpleGameMain`, `Slice11GameMain`, `Slice12GameMain` and `Slice13GameMain` are explicit migration debt: they keep migrated domain commits readable while the older inheritance chain still supplies legacy owners. They must not grow into generalized action frameworks and should be folded away during later consolidation/legacy demolition.
 
 Legacy CraftingActionService timed execution, SurvivorFirstAidActionService scheduled execution, WorldObjectRepairActionService scheduling, and WorldInteractionActionService scheduling for migrated deconstruction/fortification actions are no longer canonical player execution. Their catalogs/offer queries may remain useful until remaining dependents migrate.
 
