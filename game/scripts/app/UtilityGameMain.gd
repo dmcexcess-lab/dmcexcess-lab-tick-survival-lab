@@ -1,4 +1,4 @@
-extends CraftingGameMain
+extends "res://scripts/app/CraftingGameMain.gd"
 class_name UtilityGameMain
 
 const PowerTopologyPlannerClass = preload("res://scripts/simulation/utilities/UtilityLocalPowerTopologyPlanner.gd")
