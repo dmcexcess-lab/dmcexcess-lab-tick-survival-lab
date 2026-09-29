@@ -484,8 +484,25 @@ func _canonical_owners(session: Dictionary) -> Dictionary:
     var owners: Dictionary = owners_value
     for key: String in Store.REQUIRED_OWNER_KEYS_V2:
         if owners.has(key):
-            result[key] = Dictionary(owners[key]).duplicate(true)
+            result[key] = _normalized_durable_fact(owners[key])
     return result
+
+func _normalized_durable_fact(value: Variant) -> Variant:
+    if typeof(value) == TYPE_DICTIONARY:
+        var source: Dictionary = value
+        var normalized: Dictionary = {}
+        for raw_key: Variant in source.keys():
+            var key := String(raw_key)
+            if key == "revision" or key == "version" or key.ends_with("_revision"):
+                continue
+            normalized[raw_key] = _normalized_durable_fact(source[raw_key])
+        return normalized
+    if typeof(value) == TYPE_ARRAY:
+        var normalized_array: Array = []
+        for entry: Variant in value:
+            normalized_array.append(_normalized_durable_fact(entry))
+        return normalized_array
+    return value
 
 func _cleanup_files() -> void:
     for path in [SAVE_A, SAVE_B, SAVE_T]:
