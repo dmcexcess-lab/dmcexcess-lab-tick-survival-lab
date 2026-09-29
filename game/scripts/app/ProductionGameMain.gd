@@ -1,4 +1,4 @@
-extends VehicleSimpleGameMain
+extends "res://scripts/app/VehicleSimpleGameMain.gd"
 class_name ProductionGameMain
 
 const ProductionStore = preload("res://scripts/persistence/DurableSessionStore.gd")
