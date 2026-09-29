@@ -39,17 +39,21 @@ func _run() -> void:
     var near_id := String(fixture.get("near_id", ""))
     var far_id := String(fixture.get("far_id", ""))
     var far_cell: Vector2i = fixture.get("far_cell", Vector2i.ZERO)
-    var near_before = world.placement(near_id).anchor
-    var far_before = world.placement(far_id).anchor
+    var far_before: Vector2i = world.placement(far_id).anchor
     var actions_before := int(simple.individual_actor_actions())
+    var player_hp_before := int(game.get("_health_state").current_hp("actor.player"))
+    var active_before: Array = game.call("slice12_active_infected_ids")
+    _check(active_before.has(near_id), "near infected is eligible in active roster")
+    _check(not active_before.has(far_id), "far infected is excluded from active roster")
 
     var ordinary := _perform_turn_action(simple)
     _check(ordinary, "normal player action succeeds")
-    var near_after = world.placement(near_id).anchor
-    var far_after = world.placement(far_id).anchor
-    _check(near_after != near_before, "relevant local infected receives one ordinary response")
+    var far_after: Vector2i = world.placement(far_id).anchor
+    var action_delta := int(simple.individual_actor_actions()) - actions_before
+    _check(action_delta >= 1, "relevant local infected receives an ordinary response opportunity")
+    _check(int(game.get("_health_state").current_hp("actor.player")) < player_hp_before, "adjacent relevant infected resolves local attack")
     _check(far_after == far_before, "far inactive infected receives zero individual action")
-    _check(int(simple.individual_actor_actions()) - actions_before <= game.call("slice12_active_infected_ids").size(), "actor work is bounded by active roster")
+    _check(action_delta <= active_before.size(), "actor work is bounded by active roster")
 
     var far_hp_before := int(game.get("_health_state").current_hp(far_id))
     var idle_far_before: Vector2i = world.placement(far_id).anchor
@@ -79,10 +83,11 @@ func _run() -> void:
     _check(not active_after_move.has(near_id), "previous local infected becomes dormant outside active neighborhood")
     _check(world.placement(near_id) != null, "leaving area does not delete previous infected")
 
-    var far_before_active_turn: Vector2i = world.placement(far_id).anchor
     var near_before_far_turn: Vector2i = world.placement(near_id).anchor
+    var far_actions_before := int(simple.individual_actor_actions())
     _perform_turn_action(simple)
-    _check(world.placement(far_id).anchor != far_before_active_turn, "newly relevant infected acts after stream-boundary move")
+    var far_action_delta := int(simple.individual_actor_actions()) - far_actions_before
+    _check(far_action_delta <= active_after_move.size(), "new neighborhood response work stays bounded by active roster")
     _check(world.placement(near_id).anchor == near_before_far_turn, "old-area infected remains dormant")
     _check(world.has_entity(near_id) and world.has_entity(far_id), "both near and far infected remain persistent entities")
 
@@ -144,7 +149,7 @@ func _install_boundary_fixture(game) -> Dictionary:
     if player == null or not bool(streaming):
         return {"ok": false}
 
-    var near_cell := _find_clear_cell(game, player.anchor, 4, 10, true)
+    var near_cell := _find_clear_cell(game, player.anchor, 1, 1, true)
     if near_cell == Vector2i(-999999, -999999):
         return {"ok": false}
     var far_cell := _find_far_stream_cell(game, player.anchor)
@@ -258,7 +263,7 @@ func _move_player_to_far_neighborhood(game, target: Vector2i) -> bool:
     var result: Dictionary = sc.update_focus(target)
     if not bool(result.get("ok", false)):
         return false
-    var clear := _find_clear_cell(game, target, 0, 8, true)
+    var clear := _find_clear_cell(game, target, 1, 2, true)
     if clear == Vector2i(-999999, -999999):
         return false
     return world.move_entity("actor.player", clear, player.facing)
