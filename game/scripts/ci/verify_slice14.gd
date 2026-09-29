@@ -43,7 +43,7 @@ func _run() -> void:
     var world_time = game.get("_world_time")
     var time_before := int(world_time.world_tick())
     var infected_before := int(simple.individual_actor_actions())
-    var active_count := game.call("slice12_active_infected_ids").size()
+    var active_count: int = game.call("slice12_active_infected_ids").size()
     var elapsed := int(game.get("_world_time_profile").ticks_per_hour()) * 8
     game.set("_simple_elapsed_override_ticks", elapsed)
     _check(simple._begin_direct_action(&"condition.sleep"), "long direct action begins")
@@ -61,7 +61,7 @@ func _run() -> void:
     var saved_time := int(game.get("_world_time").world_tick())
     var saved_player = game.get("_world").placement("actor.player")
     var saved_anchor: Vector2i = saved_player.anchor
-    var saved_facing := saved_player.facing
+    var saved_facing: int = saved_player.facing
 
     game.queue_free()
     await process_frame
