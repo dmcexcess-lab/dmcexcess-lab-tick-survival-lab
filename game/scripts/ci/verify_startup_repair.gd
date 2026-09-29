@@ -80,4 +80,5 @@ func _finish() -> void:
     if failures.is_empty():
         print("STARTUP_BOOT_OK")
         quit(0)
+        return
     quit(1)
