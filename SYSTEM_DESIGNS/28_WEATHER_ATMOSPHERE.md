@@ -10,6 +10,12 @@ The original design/drafting path remains recoverable in Git history. This file 
 
 ---
 
+## 0. Slice 11 canonical execution update — 2026-09-29
+
+System 28 keeps the same WeatherState, WeatherProfile catalog, analytic interpolation/wetness, atmospheric optics, acoustic masking and GPU presentation. Canonical turn-based play now advances physical Weather coarsely to the authoritative `WorldTimeService` tick instead of scheduling its transitions through TickKernel.
+
+Weather still changes only when gameplay time advances, never from render frames or wall time. Long actions may cross multiple deterministic profile transitions in one bounded operation without simulating intermediate actor turns. Legacy TickKernel scheduling remains compatibility behavior outside the canonical route. Existing weather snapshots remain authoritative and are restored alongside canonical world time.
+
 ## 1. Ownership
 
 System 28 owns:
