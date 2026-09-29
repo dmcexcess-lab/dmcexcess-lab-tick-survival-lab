@@ -1,6 +1,6 @@
 # Tick Survival Lab — Settled Architecture Map
 
-Status: **active turn-based migration map; Slices 1-11 complete**
+Status: **active turn-based migration map; Slices 1-12 complete**
 
 ## Canonical direction
 
@@ -34,13 +34,16 @@ Do not create a replacement simulation framework.
 - `WorldTimeService` is now the authoritative scenario clock in canonical play. It advances explicitly from the same elapsed-tick value already consumed by survival, never from render frames or wall time. `OutdoorAmbientLightService` derives dawn/day/dusk/night continuously from that clock.
 - Existing `WeatherService` / `WeatherState` / `WeatherProfile` remain weather truth, but canonical play advances weather coarsely to the authoritative world-time tick rather than scheduling physical weather through TickKernel. Existing atmospheric optics, acoustics, GPU weather presentation and lighting/perception consumers remain downstream.
 - Durable sessions persist optional canonical `world_time` state alongside existing weather state. Older saves without that owner migrate from the restored survival clock instead of failing.
+- Canonical infected simulation uses the existing streaming coordinator as the first eligibility boundary and the existing SimpleTurnController active radius as the second. Only infected whose authoritative placement is in an active streamed region are placed in the response roster; far/unloaded infected remain persistent WorldState/Health state but receive no pathfinding/attack/individual turn work.
+- Procedural infected resident records are projected once and cached for Slice 12 activation. Boundary changes hydrate only resident homes that have entered active streaming space; ordinary same-region actions do not rescan the island population.
+- SimpleTurnController refreshes that active roster immediately before local infected responses, so entering a new streamed neighborhood makes its eligible infected available without waking the rest of the island. Long elapsed-time actions still create only one ordinary local response boundary.
 - Vehicle footprints and geometry remain established content: cars use the existing 1x3 footprint, trucks 2x3, ordinary vehicle turns use the existing three-cell 90-degree path, and reverse remains supported. Zero nearby vehicles is valid world content and never a boot requirement.
 
 ## Transitional boundary
 
 The old runtime remains temporarily instantiated/referenced because bootstrap, durable-session compatibility, utilities and later routes still depend on portions of it. Legacy vehicle services may remain instantiated as compatibility/content owners, but their timed execution path is no longer canonical. This is migration debt, not protected architecture.
 
-`Slice7GameMain` and `FortificationGameMain` are explicit migration debt: they keep migrated domain commits readable while the older inheritance chain still supplies legacy owners. They must not grow into generalized action frameworks and should be folded away during later consolidation/legacy demolition.
+`Slice7GameMain`, `FortificationGameMain`, `UtilitySimpleGameMain`, `VehicleSimpleGameMain`, `Slice11GameMain` and `Slice12GameMain` are explicit migration debt: they keep migrated domain commits readable while the older inheritance chain still supplies legacy owners. They must not grow into generalized action frameworks and should be folded away during later consolidation/legacy demolition.
 
 Legacy CraftingActionService timed execution, SurvivorFirstAidActionService scheduled execution, WorldObjectRepairActionService scheduling, and WorldInteractionActionService scheduling for migrated deconstruction/fortification actions are no longer canonical player execution. Their catalogs/offer queries may remain useful until remaining dependents migrate.
 
