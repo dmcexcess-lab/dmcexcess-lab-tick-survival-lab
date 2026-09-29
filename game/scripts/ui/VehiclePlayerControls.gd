@@ -9,7 +9,6 @@ const CARGO_BUTTON_SIZE := Vector2(76, 28)
 const STATUS_HEIGHT: float = 24.0
 const STATUS_TOP: float = CameraControls.ROW_Y - STATUS_HEIGHT * 2.0 - 6.0
 
-var _controller: VehiclePlayerController
 var _service: VehicleActionService
 var _state: VehicleState
 var _cargo: VehicleCargoService
@@ -29,43 +28,33 @@ func _ready() -> void:
     visible = false
     _build_ui()
 
-func configure(
-    controller: VehiclePlayerController,
+func configure_simple(
+    action_callback: Callable,
     service: VehicleActionService,
     state: VehicleState,
     cargo: VehicleCargoService,
     inventory: InventoryContainmentState,
     actor_id: String
 ) -> bool:
-    if controller == null or not controller.is_ready() or service == null or not service.is_ready() \
-        or state == null or cargo == null or not cargo.is_ready() or inventory == null \
-        or actor_id.strip_edges().is_empty():
+    var normalized := actor_id.strip_edges()
+    if not action_callback.is_valid() or service == null or not service.is_ready()         or state == null or cargo == null or not cargo.is_ready() or inventory == null or normalized.is_empty():
         return false
-    _controller = controller
+    _simple_action = action_callback
     _service = service
     _state = state
     _cargo = cargo
     _inventory = inventory
-    _actor_id = actor_id.strip_edges()
+    _actor_id = normalized
     _build_ui()
     var parent_node := get_parent()
     if parent_node != null:
         _movement_controls = parent_node.get_node_or_null("Controls") as PlayerMovementControls
     if _movement_controls != null and not _movement_controls.enter_vehicle_requested.is_connected(_enter):
         _movement_controls.enter_vehicle_requested.connect(_enter)
-    if not _controller.action_resolved.is_connected(_on_action_resolved):
-        _controller.action_resolved.connect(_on_action_resolved)
     if not _service.mounted_changed.is_connected(_on_mounted_changed):
         _service.mounted_changed.connect(_on_mounted_changed)
     if not _inventory.item_containment_changed.is_connected(_on_item_containment_changed):
         _inventory.item_containment_changed.connect(_on_item_containment_changed)
-    _refresh_all()
-    return true
-
-func configure_simple(action_callback: Callable) -> bool:
-    if not action_callback.is_valid():
-        return false
-    _simple_action = action_callback
     _refresh_all()
     return true
 
@@ -183,81 +172,41 @@ func _backward() -> void:
     _submit_drive_intent(Intents.BACKWARD)
 
 func _submit_drive_intent(intent: StringName) -> void:
-    if _simple_action.is_valid():
-        var action_id: StringName = VehicleActionService.MOVE
-        if intent == Intents.BACKWARD:
-            action_id = VehicleActionService.REVERSE
-        elif intent == Intents.TURN_LEFT:
-            action_id = VehicleActionService.TURN_LEFT
-        elif intent == Intents.TURN_RIGHT:
-            action_id = VehicleActionService.TURN_RIGHT
-        _run_simple(action_id)
-        return
-    if _controller != null:
-        _controller.submit_intent(intent)
+    var action_id: StringName = VehicleActionService.MOVE
+    if intent == Intents.BACKWARD:
+        action_id = VehicleActionService.REVERSE
+    elif intent == Intents.TURN_LEFT:
+        action_id = VehicleActionService.TURN_LEFT
+    elif intent == Intents.TURN_RIGHT:
+        action_id = VehicleActionService.TURN_RIGHT
+    _run_simple(action_id)
 
 func _enter() -> void:
-    if _simple_action.is_valid():
-        _run_simple(VehicleActionService.ENTER)
-        return
-    if _controller != null:
-        _controller.request_enter()
+    _run_simple(VehicleActionService.ENTER)
 
 func _exit() -> void:
-    if _simple_action.is_valid():
-        _run_simple(VehicleActionService.EXIT)
-        return
-    if _controller != null:
-        _controller.request_exit()
+    _run_simple(VehicleActionService.EXIT)
 
 func _start() -> void:
-    if _simple_action.is_valid():
-        _run_simple(VehicleActionService.START)
-        return
-    if _controller != null:
-        _controller.request_start()
+    _run_simple(VehicleActionService.START)
 
 func _hotwire() -> void:
-    if _simple_action.is_valid():
-        _run_simple(VehicleActionService.HOTWIRE)
-        return
-    if _controller != null:
-        _controller.request_hotwire()
+    _run_simple(VehicleActionService.HOTWIRE)
 
 func _repair() -> void:
-    if _simple_action.is_valid():
-        _run_simple(VehicleActionService.REPAIR)
-        return
-    if _controller != null:
-        _controller.request_repair()
+    _run_simple(VehicleActionService.REPAIR)
 
 func _modify() -> void:
-    if _simple_action.is_valid():
-        _run_simple(VehicleActionService.MODIFY)
-        return
-    if _controller != null:
-        _controller.request_modify()
+    _run_simple(VehicleActionService.MODIFY)
 
 func _refuel() -> void:
-    if _simple_action.is_valid():
-        _run_simple(VehicleActionService.REFUEL)
-        return
-    if _controller != null:
-        _controller.request_refuel()
+    _run_simple(VehicleActionService.REFUEL)
 
 func _brake() -> void:
-    if _simple_action.is_valid():
-        _run_simple(VehicleActionService.BRAKE)
-        return
-    if _controller != null:
-        _controller.request_brake()
+    _run_simple(VehicleActionService.BRAKE)
 
 func _reverse() -> void:
-    if _simple_action.is_valid():
-        _run_simple(VehicleActionService.REVERSE)
-        return
-    if _controller != null:
-        _controller.request_reverse()
+    _run_simple(VehicleActionService.REVERSE)
 
 func _store_selected() -> void:
     if _cargo == null or _actor_items == null or _actor_items.item_count < 1:
@@ -288,12 +237,6 @@ func _take_selected() -> void:
         _cargo_status.text = "CARGO — cannot take selected item"
         return
     _refresh_cargo()
-
-func _on_action_resolved(_intent: StringName, success: bool, reason: String, _world_tick: int) -> void:
-    if success:
-        _refresh_all()
-    elif _surface != null and _surface.visible:
-        _status.text = "VEHICLE — %s" % reason.replace("_", " ")
 
 func _on_mounted_changed(actor_id: String, _vehicle_id: String, mounted: bool) -> void:
     if actor_id != _actor_id:
