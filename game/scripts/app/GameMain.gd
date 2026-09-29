@@ -213,8 +213,6 @@ func _boot_production_world() -> bool:
     if not _movement_damage_interrupt.is_ready() or not _movement_run_impact_damage.is_ready(): return false
     _stance_actions = StanceActionClass.new(_world, _locomotion_state, _locomotion_mutations, _kernel, _movement_capability)
     if not _stance_actions.is_ready(): return false
-    _door_actions = DoorActionClass.new(_world, _door_state, _kernel, _door_transition); _door_damage_interrupt = DoorDamageInterruptionClass.new(_health_state, _kernel)
-    if not _door_actions.is_ready() or not _door_damage_interrupt.is_ready(): return false
     _perception_memory = PerceptionMemoryClass.new(); _perception = ObserverPerceptionClass.new(_world, _door_state, _kernel, _perception_memory, WorldBootstrapClass.PLAYER_ID, VisionProfileClass.new())
     if not _perception.is_ready() or not _boot_spatial_sound(): return false
     _art_catalog = ArtCatalogClass.new()
@@ -235,12 +233,10 @@ func _boot_production_world() -> bool:
     if not _hud.configure(_kernel, _status_summary, _inspection_query, WorldBootstrapClass.PLAYER_ID): return false
     _stats_inspector = StatsInspectorClass.new(_status_summary, _health_state, _skill_state, _locomotion_state); _inventory_inspector = InventoryInspectorClass.new(_world, _hand_state, _inventory_state, _weight_query, _carry_query, _freshness_query); _ui_icons = SemanticUiIconCatalogClass.new()
     if not _ui_icons.is_ready(): return false
-    if not _shell.configure(_kernel, _stats_inspector, _inventory_inspector, WorldBootstrapClass.PLAYER_ID, _ui_icons) or not _shell.configure_inventory_transfers(_item_transfer): return false
+    if not _shell.configure(_kernel, _stats_inspector, _inventory_inspector, WorldBootstrapClass.PLAYER_ID, _ui_icons): return false
     if not _loot_panel.configure(_loot_inspection, _inventory_inspector, WorldBootstrapClass.PLAYER_ID, _ui_icons) or not _controls.configure_stance(_locomotion_state, WorldBootstrapClass.PLAYER_ID): return false
     if _weather_controls != null and not _weather_controls.configure(_weather): return false
-    _controller = ControllerClass.new(_movement, _kernel, WorldBootstrapClass.PLAYER_ID, _stance_actions, _locomotion_state); _door_controller = DoorControllerClass.new(_world, _door_actions, _kernel, WorldBootstrapClass.PLAYER_ID); _loot_controller = LootControllerClass.new(_loot_search, _item_transfer, _loot_inspection, _kernel, WorldBootstrapClass.PLAYER_ID)
-    if not _controller.is_ready() or not _controller.stance_ready() or not _door_controller.is_ready() or not _loot_controller.is_ready(): return false
-    add_child(_controller); _keyboard.action_intent.connect(Callable(_controller, "submit_intent")); _controls.action_intent.connect(Callable(_controller, "submit_intent")); _door_pointer.world_cell_primary.connect(Callable(_door_controller, "submit_world_cell")); _door_pointer.world_cell_primary.connect(Callable(_loot_controller, "submit_world_cell")); _controller.action_resolved.connect(Callable(_hud, "present_action_result")); _controller.action_busy_changed.connect(_on_player_action_busy_changed); _door_controller.action_resolved.connect(Callable(_hud, "present_action_result")); _loot_controller.action_resolved.connect(Callable(_hud, "present_action_result")); _loot_controller.action_resolved.connect(Callable(_loot_panel, "present_action_result")); _loot_controller.container_opened.connect(Callable(_loot_panel, "open_container")); _loot_controller.container_changed.connect(Callable(_loot_panel, "refresh")); _loot_panel.take_requested.connect(Callable(_loot_controller, "request_take")); _loot_panel.store_requested.connect(Callable(_loot_controller, "request_store")); _shell.interaction_blocked_changed.connect(_on_shell_interaction_blocked_changed); _loot_panel.interaction_blocked_changed.connect(_on_loot_interaction_blocked_changed)
+    _shell.interaction_blocked_changed.connect(_on_shell_interaction_blocked_changed); _loot_panel.interaction_blocked_changed.connect(_on_loot_interaction_blocked_changed)
     if _weather_controls != null: _weather_controls.force_weather_requested.connect(_on_dev_weather_force_requested); _weather_controls.ambient_event_requested.connect(_on_dev_weather_ambient_requested); _weather_controls.present_weather(_weather.debug_snapshot())
     _weather.weather_changed.connect(_on_weather_changed); _refresh_interaction_enabled(); return true
 
@@ -284,12 +280,10 @@ func _initialize_world_loot() -> bool:
     if not bool(result.get("ok", false)): push_error("GameMain: loot initialization failed: %s" % String(result.get("reason", "unknown"))); return false
     return true
 func _boot_item_transfer_and_loot_actions() -> bool:
-    _item_transfer_timing = ItemTransferTimingClass.new()
-    for action_type: StringName in ItemTransferActionTypes.ALL:
-        if not _item_transfer_timing.register_duration(action_type, LIVE_ITEM_TRANSFER_TICKS): return false
     _interaction_reach = InteractionReachClass.new(_world)
     if not _interaction_reach.is_ready(): return false
-    _loot_access = LootAccessClass.new(_world, _loot_state, _inventory_state, _interaction_reach); _item_transfer = PolicyTransferClass.new(_world, _world_mutations, _hand_state, _hand_mutations, _inventory_state, _inventory_mutations, _kernel, _item_transfer_timing, null, _carry_acquisition, _loot_access); _loot_search = LootSearchClass.new(_world, _inventory_state, _loot_state, _loot_profiles, _kernel, _interaction_reach); _loot_inspection = LootInspectionClass.new(_world, _inventory_state, _loot_state, _loot_items, _loot_profiles, _weight_query, _carry_query, _freshness_query); return _item_transfer.is_ready() and _loot_search.is_ready() and _loot_inspection.is_ready()
+    _loot_inspection = LootInspectionClass.new(_world, _inventory_state, _loot_state, _loot_items, _loot_profiles, _weight_query, _carry_query, _freshness_query)
+    return _loot_inspection.is_ready()
 func _boot_interaction_affordances() -> bool:
     if _interaction_reach == null or not _interaction_reach.is_ready() or _perception == null or not _perception.is_ready(): return false
     _loot_interaction_offers = LootInteractionOfferProviderClass.new(_world, _inventory_state, _loot_state, _loot_profiles, _interaction_reach); _interaction_affordances = InteractionAffordanceClass.new(_world, _interaction_reach, _perception, WorldBootstrapClass.PLAYER_ID)
