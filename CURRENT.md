@@ -7,8 +7,8 @@ Status: **canonical active working state**
 PROJECT = Tick Lab  
 IDENTITY = turn-based open-world zombie survival  
 CORE_LOOP = explore -> scavenge -> fight/escape -> craft/heal -> fortify/supply shelter -> survive  
-ACTIVE_REWRITE_SLICE = 12 complete / open-world simulation boundary  
-NEXT_REWRITE_SLICE = 13 / persistence migration  
+ACTIVE_REWRITE_SLICE = 13 complete / persistence migration  
+NEXT_REWRITE_SLICE = 14 / legacy demolition  
 ROADMAP_CHANGE = true / 2026-09-29
 
 ## Authoritative direction
@@ -21,76 +21,87 @@ Shared simulation ticks, generalized simultaneous resolution, universal commitme
 
 ## Closed canonical routes
 
-Slices 1-11 remain canonical as previously recorded: movement/combat/scavenging/inventory/survival, contextual interaction, craft/cook/heal/repair/deconstruct, fortification, power/water, corrected roads, direct vehicles, authoritative world time/daylight/weather and durable New Game/Continue all use ordinary authoritative owners and the simple-turn model.
+Slices 1-12 remain canonical as previously recorded: direct simple-turn gameplay, bounded local infected responses, persistent procedural world/streaming, fortification, utilities, roads/vehicles, authoritative world time/daylight/weather and dormant far-world state all use ordinary authoritative owners.
 
-### Open-world simulation boundary — Slice 12
+### Persistence migration — Slice 13
 
 Canonical production now boots:
 
-`gameplay.tscn -> Slice12GameMain -> Slice11GameMain -> VehicleSimpleGameMain -> UtilitySimpleGameMain -> FortificationGameMain -> Slice7GameMain -> TurnBasedGameMain`
+`gameplay.tscn -> Slice13GameMain -> Slice12GameMain -> Slice11GameMain -> VehicleSimpleGameMain -> UtilitySimpleGameMain -> FortificationGameMain -> Slice7GameMain -> TurnBasedGameMain`
 
-Individual infected turns are bounded in two existing layers:
+DurableSessionStore schema 2 persists canonical gameplay facts rather than execution machinery.
 
-1. `WorldStreamingCoordinator` active streamed regions define the eligible neighborhood;
-2. `SimpleTurnController.ACTIVE_RADIUS` remains the local action radius inside that neighborhood.
+Canonical durable truth includes:
 
-Only infected whose current authoritative WorldState placement is inside active streamed space are supplied to canonical local infected execution. Far/unloaded infected remain persistent entities/Health/world state but receive no ordinary pathfinding, movement, attack, perception/behavior or individual turn work.
+- procedural world seed and materialization identity;
+- authoritative WorldState/entity/placement consequences;
+- player locomotion, Health/injuries, skills and conditions;
+- exact inventory containment/equipment and firearm state;
+- freshness state plus refrigeration exposure clocks;
+- loot/forage and persistent world-interaction/fortification state;
+- infected identities/state and corpses;
+- vehicles, fuel/condition/modifications and cargo;
+- utility/power/generator/flashlight state;
+- authoritative weather and world time.
 
-Procedural infected resident records are projected once and cached. Streaming-boundary changes hydrate only resident homes that have entered active space. Same-region actions do not rescan the island population.
+Schema 2 does not require or write TickKernel execution queues, perception-memory caches or combat runtime/action state.
 
-SimpleTurnController refreshes the active infected roster immediately before local infected responses. Entering a newly active neighborhood therefore makes relevant infected eligible without waking the rest of the island.
+Streaming-active membership, the Slice 12 local infected roster, perception state, controller state, HUD/render state and other reconstructable runtime state are rebuilt after authoritative restore.
 
-Leaving an area does not delete or reset infected. Their identity, placement, Health and meaningful state remain authoritative and durable for return/Continue.
+Restore establishes the saved world/domain facts first, restores world time/weather/refrigeration exposure, focuses existing streaming around the restored player, rebuilds local infected eligibility from Slice 12 rules, recomputes perception and refreshes presentation. Continue does not run intermediate zombie turns or advance time merely because the application was closed.
 
-World-time advancement remains separate from actor-turn advancement. Long actions such as eight hours of sleep still create one ordinary bounded local response boundary; they do not execute intermediate zombie turns.
+Freshness queries and refrigeration clocks now use authoritative WorldTimeService rather than TickKernel time.
 
-No offscreen zombie wandering/combat/pathfinding/siege/traffic/population simulator was introduced.
+Current schema-1 saves remain accepted for the active save lineage. Their legacy kernel/perception/combat-runtime dictionaries are ignored. Missing world time derives exactly from restored player condition anchors. Schema 1 never stored refrigeration-provider history, so migration establishes a safe non-regressing exposure baseline from restored time and saved refrigerated-item exposure anchors; the next save writes complete schema-2 refrigeration state.
+
+Repeated production save -> Continue -> save -> Continue preserves representative player, inventory/equipment, consumed/looted item, fortification, infected/corpse, vehicle/cargo, utility and time/weather consequences without duplication or reset.
+
+## Transitional boundary
+
+Legacy execution owners may still be instantiated because remaining bootstrap/content/adapters use them, but durable Continue no longer depends on their runtime snapshots.
+
+Materialization registry state remains durable because it is current persistence identity needed to prevent already-materialized virgin sources from being reintroduced. Broad deletion/folding of obsolete execution owners and migration subclasses belongs to Slice 14.
 
 ## Protected game behavior
 
-Preserve throughout the remaining rewrite:
+Preserve:
 
 - real procedural persistent island and streaming;
-- corrected arterial -> paved secondary -> gravel rural -> dirt local roads;
+- corrected road hierarchy;
 - sparse realistic vehicle materialization;
-- exact item/inventory/equipment truth;
-- zombies, combat, health/injury/death/corpses;
+- direct simple-turn action model;
 - streaming-active + local-radius infected response boundary;
-- dormant far/unloaded actors retaining persistent state;
+- dormant far/unloaded infected retaining persistent state;
+- exact item identity/inventory/equipment;
+- Health/injury/death/corpses;
 - survival/moodlets;
-- darkness/light-cone perception;
-- contextual interaction, crafting/healing/repair/deconstruction;
+- contextual interaction/crafting/healing/repair/deconstruction;
 - existing-opening fortification;
 - power/water/generator/well truth;
-- vehicle footprints/cargo/fuel/damage/persistence;
-- authoritative world time, daylight and weather;
-- utility/artificial lighting composition;
-- durable New Game / Continue;
+- vehicles/cargo/fuel/damage;
+- authoritative world time/daylight/weather;
+- freshness/refrigeration elapsed-time truth;
+- light-cone/artificial lighting composition;
+- durable New Game / SAVE / SAVE & MENU / Continue;
 - phone/Safari bounded performance.
 
 A base remains an existing building the player fortifies and supplies. No colony/freeform-building system, base-ownership framework or living NPC society.
 
-Recent production repairs remain canonical:
-
-- optional local infected/vehicle absence never fails boot;
-- vehicle spawning remains sparse rather than one-of-every-kind near spawn;
-- MENU, SAVE, SAVE & MENU and Continue remain functional.
-
 ## Verification lifecycle
 
-Slice 12 owns:
+Slice 13 owns:
 
-- `game/scripts/ci/verify_slice12.gd`
-- `.github/workflows/slice12.yml`
+- `game/scripts/ci/verify_slice13.gd`
+- `.github/workflows/slice13.yml`
 
-The focused verifier boots the real production scene and proves active-roster eligibility, far infected dormancy, bounded per-action actor work, idle-frame inactivity, an eight-hour time jump without repeated infected turns, streaming-boundary activation/deactivation without deleting persistent infected, durable snapshot/Continue preservation, Slice 11 world-time survival and dormant legacy TickKernel behavior.
+The focused verifier exercises the real file-backed production path: New Game, representative persistent mutations, SAVE, destroy/reopen via Continue, second SAVE/Continue idempotence cycle and current schema-1 migration. It proves canonical owner preservation, no resurrection/duplication/reset of representative consequences, dormant far infected after restore, reconstructed local active roster, frozen legacy TickKernel, idle-frame stability, exact schema-1 world-time migration and safe refrigeration migration.
 
-Per SOP, the next code-changing prompt must retire the Slice 12 verifier/workflow before Slice 13 production edits and create fresh Slice 13 verification.
+Per SOP, the next code-changing prompt must retire the Slice 13 verifier/workflow before Slice 14 production edits and create fresh Slice 14 verification.
 
 ## NEXT
 
-**Rewrite Slice 13 — persistence migration.**
+**Rewrite Slice 14 — legacy demolition.**
 
-Adapt durable Continue to the simplified canonical state while preserving procedural seed/world identity, player/inventory/equipment, meaningful infected/corpses, looted/deconstructed/fortified world consequences, vehicles, utilities, authoritative world time/weather and relevant world deltas.
+Delete obsolete TickKernel/WHEN scheduling, generalized consequence/intention/commitment machinery, obsolete adapters, unused WHERE/WHAT framework pieces and compatibility bridges that no longer own canonical gameplay or durable persistence.
 
-Do not invent a second save architecture. Extend/consolidate the existing DurableSessionStore and ordinary authoritative owner snapshots, remove persistence dependencies on retired execution state where safe, and preserve compatibility/migration for current valid saves.
+Preserve all player-facing behavior and authoritative domain owners. Delete only code proven unnecessary by current production dependencies. Consolidate the temporary migration subclasses where doing so simplifies the production spine without changing gameplay.
