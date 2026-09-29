@@ -239,7 +239,8 @@ func _establish_meaningful_state(game) -> Dictionary:
         return {"ok": false}
 
     var weather_before := int(game.get("_weather").debug_snapshot().get("transition_serial", -1))
-    game.call("simple_turn_controller").set_infected_actor_ids([])
+    var no_active_infected: Array[String] = []
+    game.call("simple_turn_controller").set_infected_actor_ids(no_active_infected)
     var elapsed := int(game.get("_world_time_profile").ticks_per_hour()) * 8
     game.set("_simple_elapsed_override_ticks", elapsed)
     if not simple._begin_direct_action(&"condition.sleep"):
