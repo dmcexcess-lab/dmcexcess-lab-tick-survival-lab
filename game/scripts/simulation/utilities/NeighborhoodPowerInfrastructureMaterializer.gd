@@ -16,6 +16,7 @@ const FACILITY_SEARCH_RADIUS: int = 32
 const CUSTOMER_CLEARANCE: int = 2
 const CUSTOMER_SEARCH_RADIUS: int = 6
 const ROAD_POLE_SEARCH_RADIUS: int = 8
+const SPAN_SUPPORT_SEARCH_RADIUS: int = 16
 const ROAD_POLE_SPACING: int = 10
 const ROAD_SIDE_HOLD_POLES: int = 2
 const MAX_WIRE_SPAN: int = 16
@@ -641,7 +642,7 @@ func _bound_wire_spans(
 func _span_support_cell(start: Vector2i, finish: Vector2i, reserved: Dictionary, buckets: Dictionary) -> Vector2i:
     var delta := Vector2(finish - start)
     var target := Vector2i((Vector2(start) + delta.normalized() * minf(delta.length() * 0.75, float(MAX_WIRE_SPAN - 4))).round())
-    for radius: int in range(ROAD_POLE_SEARCH_RADIUS + 1):
+    for radius: int in range(SPAN_SUPPORT_SEARCH_RADIUS + 1):
         for y: int in range(-radius, radius + 1):
             for x: int in range(-radius, radius + 1):
                 if radius > 0 and absi(x) != radius and absi(y) != radius:
