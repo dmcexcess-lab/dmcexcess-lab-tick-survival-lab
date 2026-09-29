@@ -95,15 +95,11 @@ func _ready() -> void:
         _set_session_status("BROWSER STORAGE NOT PERSISTENT — KEEP THIS TAB OPEN")
 
 func _notification(what: int) -> void:
-    if not _session_boot_ok or _kernel == null:
+    if not _session_boot_ok:
         return
     if what == NOTIFICATION_APPLICATION_PAUSED or what == NOTIFICATION_APPLICATION_FOCUS_OUT:
-        _kernel.set_hard_paused(true)
         save_durable_session(&"background_checkpoint")
-    elif what == NOTIFICATION_APPLICATION_RESUMED or what == NOTIFICATION_APPLICATION_FOCUS_IN:
-        _kernel.set_hard_paused(false)
     elif what == NOTIFICATION_WM_CLOSE_REQUEST:
-        _kernel.set_hard_paused(true)
         save_durable_session(&"close_checkpoint")
 
 func _ensure_session_store() -> void:
@@ -118,10 +114,6 @@ func _connect_session_lifecycle() -> void:
             _session_controls.save_requested.connect(save_cb)
         if not _session_controls.save_leave_requested.is_connected(leave_cb):
             _session_controls.save_leave_requested.connect(leave_cb)
-    if _kernel != null:
-        var decision_cb := Callable(self, "_on_session_decision_required")
-        if not _kernel.decision_required.is_connected(decision_cb):
-            _kernel.decision_required.connect(decision_cb)
     var streaming: WorldStreamingCoordinator = WorldBootstrapClass.streaming_coordinator()
     if streaming != null:
         var region_cb := Callable(self, "_on_session_regions_changed")
@@ -165,21 +157,21 @@ func _set_session_status(message: String) -> void:
 
 func _build_durable_session() -> Dictionary:
     var registry: MaterializationRegistry = WorldBootstrapClass.materialization_registry()
-    if not canonical_boot_ok() or registry == null or WorldBootstrapClass.active_seed() <= 0 or _world == null or _kernel == null or _combat_actions == null:
+    if not canonical_boot_ok() or registry == null or WorldBootstrapClass.active_seed() <= 0 or _world == null:
         return {}
     return {
         "schema_version": DurableSessionStoreClass.SESSION_SCHEMA_VERSION,
         "world_seed": WorldBootstrapClass.active_seed(),
         "saved_unix_time": int(Time.get_unix_time_from_system()),
         "owners": {
-            "world": _world.snapshot(), "materialization_registry": registry.snapshot(), "kernel": _kernel.snapshot(),
+            "world": _world.snapshot(), "materialization_registry": registry.snapshot(),
             "collision_overrides": _collision_overrides.snapshot(), "doors": _door_state.snapshot(), "locomotion": _locomotion_state.snapshot(),
             "hands": _hand_state.snapshot(), "inventory": _inventory_state.snapshot(), "health": _health_state.snapshot(), "skills": _skill_state.snapshot(),
-            "freshness": _freshness_state.snapshot(), "carry": _carry_state.snapshot(), "loot": _loot_state.snapshot(), "perception_memory": _perception_memory.snapshot(),
+            "freshness": _freshness_state.snapshot(), "carry": _carry_state.snapshot(), "loot": _loot_state.snapshot(),
             "forage": _forage_state.snapshot(), "conditions": _condition_state.snapshot(), "utilities": _utilities.snapshot(), "power_network": _power_network.snapshot(),
             "flashlight": _flashlight_state.snapshot(), "portable_generators": _portable_generators.snapshot(), "vehicles": _vehicle_state.snapshot(),
             "world_interactions": _world_interaction_state.snapshot(), "firearms": _firearm_state.snapshot(), "corpses": _corpse_state.snapshot(),
-            "infected": _infected_state.snapshot(), "combat_runtime": _combat_actions.runtime_snapshot(), "weather": _weather.snapshot(),
+            "infected": _infected_state.snapshot(), "weather": _weather.snapshot(),
         },
     }
 
