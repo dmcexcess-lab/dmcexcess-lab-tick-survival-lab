@@ -1,7 +1,7 @@
 # Tick Survival Lab — Turn-Based Rewrite Roadmap
 
-Updated: **2026-09-28**  
-Status: **architecture simplification in progress; Slices 1-8 complete**
+Updated: **2026-09-29**  
+Status: **architecture simplification in progress; Slices 1-10 complete**
 
 ## Release target
 
@@ -43,11 +43,13 @@ Existing recipe, tool, skill, workstation, Health/injury, object-state and salva
 ### Slice 8 — Existing-house fortification — DONE
 Real generated doors/windows expose existing BOARD/REMOVE BOARD contextually. BOARD validates existing opening state, Mechanical skill, hammer, exact wood-plank and nails-box entities, consumes exact materials and increments the existing persistent 0-3 board count. REMOVE BOARD uses the same authoritative state, accepts the existing hammer/crowbar rule and recovers one real plank entity. Existing opening pressure consumes boards before opening damage/breakage. Fortification uses the canonical bounded simple-turn/survival seam and durable Continue restores installed boards and exact consumed-material consequences. No freeform construction/base ownership/build-job architecture was introduced; existing stash/sleep/repair behavior remains supplied by already-closed inventory/contextual/repair routes.
 
-### Slice 9 — Power and water — NEXT
-Reconnect generators, wells, grid state, failures and repairs as ordinary world systems driven by events/elapsed time rather than universal tick participation.
+### Slice 9 — Power and water — DONE
+Existing generator/grid/water state remains authoritative while canonical generator and failed-distribution repair actions execute directly through the simple-turn/survival seam without generalized timed scheduling.
 
-### Slice 10 — Vehicles
-Reconnect enter/exit, movement, fuel, damage, cargo and repair using simple turn actions.
+### Slice 10 — Road hierarchy correction + vehicles — DONE
+Virgin island generation now establishes a sparse backbone of four terrain-routed cross-island four-lane arterials. Developed settlements attach by two-lane paved roads, rural settlement access is gravel, and local rural/farm/home lanes are dirt. Paved roads materialize as asphalt with markings while gravel/dirt remain unpainted.
+
+Existing vehicle entities/state/profiles/footprints/cargo/fuel/condition/keys/presentation/persistence remain authoritative. Enter/exit/start/drive/turn/reverse/brake/hotwire/repair/modify/refuel/cargo now resolve as direct simple-turn actions with explicit elapsed survival time and bounded local infected responses; canonical player vehicle execution no longer advances TickKernel timed actions.
 
 ### Slice 11 — Day/night, weather and world time
 Define ordinary turn-to-world-time advancement and derive day/night/weather from world time without a general action scheduler.
@@ -75,4 +77,4 @@ Play and tune the real repeated loop on desktop and iPhone/Safari.
 
 ## NEXT
 
-**Slice 9 — reconnect power and water: existing generators, wells, grid/network state, failures and repairs through ordinary authoritative world state and explicit elapsed time, without restoring universal tick scheduling.**
+**Slice 11 — day/night, weather and world time: define ordinary turn-to-world-time advancement and derive day/night/weather from authoritative world time without restoring a general action scheduler.**
