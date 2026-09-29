@@ -63,18 +63,20 @@ Preserve throughout the remaining rewrite:
 
 A base remains an existing building the player fortified and supplied. No colony/freeform-building system or base-ownership framework.
 
-## Verification lifecycle
+## Production boot repair and verification
 
-Slice 9 owns:
+The immediate production boot regression reported after Slice 9 closure was traced to a real GDScript inheritance parse failure: `UtilitySimpleGameMain` redeclared `HAMMER` and `NAILS`, which already exist in parent `FortificationGameMain`. The utility-local constants are now uniquely named, so the production utility composition parses and loads correctly.
 
-- `game/scripts/ci/verify_slice9_utilities.gd`
-- `.github/workflows/slice9-utilities.yml`
+The earlier quiet-area infected boot repair remains valid: zero locally hydrated infected is an allowed procedural result and does not itself fail startup.
 
-Focused production run `36475935367` passed on exact head lineage after the initial verifier was corrected from an unbounded full gameplay boot to a bounded production-composition/static contract check. Godot editor cache generation verifies script parsing/class composition; the verifier confirms the production scene selects `UtilitySimpleGameMain`, canonical utility actions enter/complete through the direct simple-turn seam, generator/power authoritative snapshot owners remain present, and the canonical utility composition has no TickKernel/TimedAction/ScheduledEvent dependency.
+Current prompt-local verification:
 
-The retired Slice 8 workflow/smoke were removed after Slice 9 closure per SOP. Earlier Slice 8 runs left in GitHub may remain historically in-progress until their workflow timeout/cancellation lifecycle completes; they are not Slice 9 gates.
+- `game/scripts/ci/verify_immediate_boot.gd`
+- `.github/workflows/immediate-production-boot.yml`
 
-Per SOP, the next code-changing prompt must retire the Slice 9 verifier/workflow before production edits and create fresh Slice 10 verification.
+The verifier loads `UtilitySimpleGameMain.gd`, loads and instantiates the actual `gameplay.tscn`, and requires the production session to reach `session_boot_ok()`. Exact code-head run `36523395854` passed and exact code-head Pages run `36523395802` passed.
+
+Per SOP, the next code-changing prompt must retire this prompt-owned verifier/workflow before Slice 10 production edits and create fresh Slice 10 verification.
 
 ## NEXT
 
