@@ -61,21 +61,12 @@ func _boot_simple_combat_state() -> bool:
 func _configure_simple_survival() -> bool:
     if _condition_state == null or _condition_service == null or _condition_modifiers == null or not _condition_service.is_ready() or not _condition_state.has_actor(WorldBootstrapClass.PLAYER_ID): return false
     var record := _condition_state.record(WorldBootstrapClass.PLAYER_ID); var start_tick := maxi(int(record.get("anchor_tick", 0)), int(record.get("fatigue_anchor_tick", 0)))
-    if not _condition_service.configure_manual_clock(start_tick): return false
-    _disable_legacy_condition_event_adapters(); return true
+    return _condition_service.configure_manual_clock(start_tick)
 func _sync_survival_clock_from_state() -> bool:
     if _condition_state == null or _condition_service == null or not _condition_state.has_actor(WorldBootstrapClass.PLAYER_ID): return false
     var record := _condition_state.record(WorldBootstrapClass.PLAYER_ID); var anchor_tick := maxi(int(record.get("anchor_tick", 0)), int(record.get("fatigue_anchor_tick", 0)))
     if _condition_service.current_clock_tick() > anchor_tick: anchor_tick = _condition_service.current_clock_tick()
     return _condition_service.configure_manual_clock(anchor_tick)
-func _disable_legacy_condition_event_adapters() -> void:
-    if _condition_fear != null and _perception != null:
-        var cb := Callable(_condition_fear, "_on_perception_changed"); if _perception.perception_changed.is_connected(cb): _perception.perception_changed.disconnect(cb)
-    if _condition_injury_fear != null and _health_state != null:
-        var cb := Callable(_condition_injury_fear, "_on_damage_applied"); if _health_state.damage_applied.is_connected(cb): _health_state.damage_applied.disconnect(cb)
-    if _condition_heard_fear != null and _spatial_sound != null:
-        var cb := Callable(_condition_heard_fear, "_on_sound_heard"); if _spatial_sound.sound_heard.is_connected(cb): _spatial_sound.sound_heard.disconnect(cb)
-    if _fear_pressure != null: _fear_pressure._on_timing_state_reset()
 func _wire_simple_session_menu() -> bool:
     if _shell == null: return false
     var save_cb := Callable(self, "_on_session_save_requested"); var save_menu_cb := Callable(self, "_on_shell_save_menu_requested")
