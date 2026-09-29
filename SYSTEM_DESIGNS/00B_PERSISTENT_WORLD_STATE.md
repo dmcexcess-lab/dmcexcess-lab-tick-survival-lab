@@ -6,6 +6,14 @@ Parent architecture: `00_FOUNDATION_WHERE_WHAT_WHEN.md`.
 
 Approval basis: after 00A WHERE was implemented and the next bounded target was identified as WHAT, the user explicitly instructed: **“good call. ok go for what.”** This authorized WHAT only. WHEN, generation, rendering, streaming, gameplay mechanics and live-runtime integration remain separate future slices.
 
+## Slice 13 durable file persistence update — 2026-09-29
+
+The foundation rule remains unchanged: current authoritative world/domain state is truth. Production durable persistence now applies that rule at the file boundary through DurableSessionStore schema 2.
+
+Schema 2 persists canonical owner snapshots needed to Continue the game, including world/materialization identity, player/domain state, exact containment/equipment, Health/conditions, loot/world interactions, infected/corpses, vehicles, utilities, weather/world time and refrigeration exposure clocks. It does not treat TickKernel queues, combat runtime, perception memory, streaming-active membership, the local infected response roster, controller/UI/render state or other reconstructable runtime machinery as durable truth.
+
+Restore loads authoritative owners first, establishes streaming from restored player placement, then reconstructs Slice 12 local infected eligibility, perception and presentation. Current schema-1 saves remain accepted for the active lineage; their old runtime payloads are ignored. Missing world time derives from restored condition anchors. Because schema 1 never stored refrigerator exposure-provider history, that clock resumes conservatively from restored world time with an exposure floor that cannot regress below saved refrigerated item anchors, and the next save writes complete schema-2 refrigeration state.
+
 ## 1. Goal
 
 Define the authoritative persistent data model for **what currently exists in the logically continuous world**, independent of rendering, generation, streaming partitions and Godot scene Nodes.
