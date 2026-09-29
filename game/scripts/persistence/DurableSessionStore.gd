@@ -20,6 +20,7 @@ const REQUIRED_OWNER_KEYS_V1: Array[String] = [
     "health",
     "skills",
     "freshness",
+    "refrigeration",
     "carry",
     "loot",
     "perception_memory",
