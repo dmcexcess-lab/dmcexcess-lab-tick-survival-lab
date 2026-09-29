@@ -5,15 +5,6 @@ const ConditionStateClass = preload("res://scripts/simulation/actors/condition/A
 const ConditionModifierClass = preload("res://scripts/simulation/actors/condition/ActorConditionModifierQuery.gd")
 const ConditionServiceClass = preload("res://scripts/simulation/actors/condition/ActorConditionService.gd")
 const ConditionMoodletClass = preload("res://scripts/simulation/actors/condition/ActorConditionMoodletQuery.gd")
-const ConditionMobilityClass = preload("res://scripts/simulation/actors/condition/ActorConditionMobilityModifierProvider.gd")
-const ConditionExertionClass = preload("res://scripts/simulation/actors/condition/MovementConditionExertionService.gd")
-const FearPressureClass = preload("res://scripts/simulation/actors/condition/ActorFearPressureService.gd")
-const ConditionFearClass = preload("res://scripts/simulation/actors/condition/ConditionPerceptionFearAdapter.gd")
-const ConditionHeardFearClass = preload("res://scripts/simulation/actors/condition/ConditionHeardFearAdapter.gd")
-const ConditionInjuryFearClass = preload("res://scripts/simulation/actors/condition/ConditionInjuryFearAdapter.gd")
-const ConditionPhysicalPressureFearClass = preload("res://scripts/simulation/actors/condition/ConditionPhysicalPressureFearAdapter.gd")
-const ConditionEnvironmentClass = preload("res://scripts/simulation/actors/condition/ConditionEnvironmentPressureAdapter.gd")
-const PhysicalContestClass = preload("res://scripts/simulation/actors/locomotion/ActorPhysicalContestQuery.gd")
 const SustainmentProfilesClass = preload("res://scripts/simulation/actors/condition/SurvivorSustainmentProfileCatalog.gd")
 const SustainmentActionsClass = preload("res://scripts/simulation/actors/condition/SurvivorSustainmentActionService.gd")
 const FirstAidActionsClass = preload("res://scripts/simulation/actors/health/SurvivorFirstAidActionService.gd")
@@ -25,15 +16,6 @@ var _condition_state: ActorConditionState = null
 var _condition_modifiers: ActorConditionModifierQuery = null
 var _condition_service: ActorConditionService = null
 var _condition_moodlets: ActorConditionMoodletQuery = null
-var _condition_mobility: ActorConditionMobilityModifierProvider = null
-var _condition_exertion: MovementConditionExertionService = null
-var _fear_pressure: ActorFearPressureService = null
-var _condition_fear: ConditionPerceptionFearAdapter = null
-var _condition_heard_fear: ConditionHeardFearAdapter = null
-var _condition_injury_fear: ConditionInjuryFearAdapter = null
-var _condition_physical_pressure_fear: ConditionPhysicalPressureFearAdapter = null
-var _condition_environment: ConditionEnvironmentPressureAdapter = null
-var _physical_contest: ActorPhysicalContestQuery = null
 var _sustainment_profiles: SurvivorSustainmentProfileCatalog = null
 var _sustainment_actions: SurvivorSustainmentActionService = null
 var _first_aid_actions: SurvivorFirstAidActionService = null
@@ -52,35 +34,21 @@ func _boot_system34() -> bool:
     if not _condition_service.is_ready(): return false
     _condition_moodlets = ConditionMoodletClass.new(_condition_modifiers, _health_state, _carry_query)
     if not _condition_moodlets.is_ready(): return false
-    _fear_pressure = FearPressureClass.new(_condition_service, _condition_modifiers, _kernel)
-    if not _fear_pressure.is_ready(): return false
     if _hearing_profile != null and not _hearing_profile.configure_condition(_condition_service): return false
     if not _carry_query.configure_capacity_modifier(_condition_modifiers): return false
-    _physical_contest = PhysicalContestClass.new(_carry_query, _health_state, _locomotion_state, _condition_modifiers)
-    if not _physical_contest.is_ready() or _movement == null or not _movement.configure_physical_contest(_physical_contest): return false
-    _condition_mobility = ConditionMobilityClass.new(_condition_service, _condition_modifiers)
-    if _movement_capability == null or not _movement_capability.register_provider(_condition_mobility): return false
-    _condition_exertion = ConditionExertionClass.new(_movement, _condition_service, _carry_query)
-    if not _condition_exertion.is_ready(): return false
-    _condition_fear = ConditionFearClass.new(_world, _perception, _fear_pressure, _kernel, _world_time_profile, WorldBootstrapClass.PLAYER_ID)
-    if _perception != null and _perception.is_ready() and not _condition_fear.is_ready(): return false
-    _condition_heard_fear = ConditionHeardFearClass.new(_spatial_sound, _fear_pressure, WorldBootstrapClass.PLAYER_ID)
-    if _spatial_sound != null and _spatial_sound.is_ready() and not _condition_heard_fear.is_ready(): return false
-    _condition_injury_fear = ConditionInjuryFearClass.new(_health_state, _fear_pressure, WorldBootstrapClass.PLAYER_ID)
-    if not _condition_injury_fear.is_ready(): return false
-    _condition_physical_pressure_fear = ConditionPhysicalPressureFearClass.new(_movement, _fear_pressure, WorldBootstrapClass.PLAYER_ID)
-    if not _condition_physical_pressure_fear.is_ready(): return false
-    _condition_environment = ConditionEnvironmentClass.new(_world, _weather, _carry_query, _condition_service, _kernel, WorldBootstrapClass.PLAYER_ID)
-    if _weather != null and _weather.is_ready() and not _condition_environment.is_ready(): return false
+
     _sustainment_profiles = SustainmentProfilesClass.new()
     _sustainment_actions = SustainmentActionsClass.new(_world, _world_mutations, _hand_state, _hand_mutations, _inventory_state, _inventory_mutations, _freshness_query, _freshness_mutations, _carry_query, _kernel, _world_time_profile, _condition_service, _sustainment_profiles)
     if not _sustainment_actions.is_ready(): return false
     if _shell == null or not _shell.configure_inventory_actions(_sustainment_actions): return false
+
     _first_aid_actions = FirstAidActionsClass.new(_world, _world_mutations, _hand_state, _hand_mutations, _inventory_state, _inventory_mutations, _carry_query, _kernel, _health_state, _skill_checks, _condition_modifiers)
     if not _first_aid_actions.is_ready() or not _shell.configure_first_aid_actions(_first_aid_actions): return false
+
     if not _sustainment_actions.set_potable_source_provider(Callable(self, "_potable_water_fixture_in_reach")): return false
     if not _sustainment_actions.set_sleep_surface_provider(Callable(self, "_sleep_surface_in_reach")): return false
     if _status_summary == null or not _status_summary.configure_condition(_condition_service, _condition_modifiers, _condition_moodlets): return false
+
     var refresh_callable := Callable(self, "_on_system34_changed")
     if not _condition_service.condition_changed.is_connected(refresh_callable): _condition_service.condition_changed.connect(refresh_callable)
     if not _condition_service.fatigue_changed.is_connected(refresh_callable): _condition_service.fatigue_changed.connect(refresh_callable)
