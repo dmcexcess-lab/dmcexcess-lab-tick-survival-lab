@@ -1,7 +1,7 @@
 # Tick Survival Lab — Turn-Based Rewrite Roadmap
 
 Updated: **2026-09-29**  
-Status: **architecture simplification in progress; Slices 1-10 complete**
+Status: **architecture simplification in progress; Slices 1-11 complete**
 
 ## Release target
 
@@ -51,8 +51,8 @@ Virgin island generation now establishes a sparse backbone of four terrain-route
 
 Existing vehicle entities/state/profiles/footprints/cargo/fuel/condition/keys/presentation/persistence remain authoritative. Enter/exit/start/drive/turn/reverse/brake/hotwire/repair/modify/refuel/cargo now resolve as direct simple-turn actions with explicit elapsed survival time and bounded local infected responses; canonical player vehicle execution no longer advances TickKernel timed actions.
 
-### Slice 11 — Day/night, weather and world time
-Define ordinary turn-to-world-time advancement and derive day/night/weather from world time without a general action scheduler.
+### Slice 11 — Day/night, weather and world time — DONE
+Canonical actions advance one authoritative world-time clock from their existing explicit elapsed ticks. Dawn/day/dusk/night derive continuously from that clock; existing weather profiles/state advance coarsely from the same clock without TickKernel scheduling. Existing lighting, perception, optics, acoustics and GPU weather presentation remain downstream. Time/weather persist through durable Continue, including migration for older saves without a dedicated world-time owner.
 
 ### Slice 12 — Open-world simulation boundary
 Only the player's relevant neighborhood receives individual actor turns. Unloaded/far world state remains persistent data; coarse offscreen progression is calculated only when needed.
@@ -77,4 +77,4 @@ Play and tune the real repeated loop on desktop and iPhone/Safari.
 
 ## NEXT
 
-**Slice 11 — day/night, weather and world time: define ordinary turn-to-world-time advancement and derive day/night/weather from authoritative world time without restoring a general action scheduler.**
+**Slice 12 — open-world simulation boundary: only the player’s relevant neighborhood receives individual actor turns; far/unloaded world remains persistent data with coarse progression only when needed.**
