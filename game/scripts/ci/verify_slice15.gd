@@ -10,6 +10,7 @@ const WorldActions = preload("res://scripts/simulation/interaction/WorldInteract
 const Sustainment = preload("res://scripts/simulation/interaction/SustainmentInteractionOfferProvider.gd")
 const Conditions = preload("res://scripts/simulation/actors/condition/ActorConditionState.gd")
 const Reach = preload("res://scripts/simulation/interaction/WorldInteractionReachQuery.gd")
+const DoorValue = preload("res://scripts/simulation/doors/DoorStateValue.gd")
 
 const PLAYER_ID := "actor.player"
 const INVALID_CELL := Vector2i(-999999, -999999)
@@ -140,6 +141,8 @@ func _run() -> void:
         return
 
     _check(Store.new().has_compatible_save(), "real SAVE & MENU produced a compatible durable save")
+    _check(_compressed_primary_save_is_valid(), "production save uses compressed payload envelope")
+    _check(_legacy_uncompressed_envelope_loads(durable_before), "current store still reads pre-Slice-15 uncompressed save envelopes")
     menu.call("_on_continue_pressed")
     var continued = await _wait_for_scene_script("res://scripts/app/ProductionGameMain.gd", 480)
     _check(continued != null, "real StartupMenu CONTINUE returns to gameplay")
@@ -402,7 +405,7 @@ func _exercise_real_context(game) -> bool:
         state.set_locked(target_id, false, &"slice15_acceptance")
         state.set_board_count(target_id, 0, &"slice15_acceptance")
         state.set_broken(target_id, false, &"slice15_acceptance")
-        var action_id: StringName = WorldActions.DOOR_CLOSE if door_state.state(target_id) == 1 else WorldActions.DOOR_OPEN
+        var action_id: StringName = WorldActions.DOOR_CLOSE if door_state.state(target_id) == DoorValue.OPEN else WorldActions.DOOR_OPEN
         var result: Dictionary = game.run_simple_contextual_action(PLAYER_ID, target_id, action_id)
         if bool(result.get("success", false)):
             return true
@@ -531,6 +534,59 @@ func _print_save_sizes(label: String, session: Dictionary) -> void:
     rows.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return int(a["bytes"]) > int(b["bytes"]))
     for row: Dictionary in rows:
         print("RELEASE_DIAG save_owner_%s %s=%d" % [label, String(row["key"]), int(row["bytes"])])
+
+func _compressed_primary_save_is_valid() -> bool:
+    var file := FileAccess.open(Store.DEFAULT_PRIMARY_PATH, FileAccess.READ)
+    if file == null:
+        return false
+    var envelope: Variant = file.get_var(false)
+    var file_size := file.get_length()
+    file.close()
+    if typeof(envelope) != TYPE_DICTIONARY:
+        return false
+    var data: Dictionary = envelope
+    var payload_value: Variant = data.get("payload", PackedByteArray())
+    if typeof(payload_value) != TYPE_PACKED_BYTE_ARRAY:
+        return false
+    var payload: PackedByteArray = payload_value
+    var raw_size := int(data.get("payload_uncompressed_size", -1))
+    print("RELEASE_DIAG stored_save_file_bytes=%d compressed_payload_bytes=%d uncompressed_payload_bytes=%d" % [file_size, payload.size(), raw_size])
+    return String(data.get("payload_compression", "")) == "deflate" and raw_size > payload.size() and payload.size() > 0
+
+func _legacy_uncompressed_envelope_loads(session: Dictionary) -> bool:
+    var legacy_primary := "user://slice15_uncompressed_compat.save"
+    var legacy_backup := "user://slice15_uncompressed_compat.backup.save"
+    var legacy_temp := "user://slice15_uncompressed_compat.tmp.save"
+    for path in [legacy_primary, legacy_backup, legacy_temp]:
+        if FileAccess.file_exists(path):
+            DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
+    var payload: PackedByteArray = var_to_bytes(session)
+    var envelope := {
+        "format_schema_version": Store.FORMAT_SCHEMA_VERSION,
+        "payload_sha256": _sha256(payload),
+        "payload": payload,
+    }
+    var out := FileAccess.open(legacy_primary, FileAccess.WRITE)
+    if out == null:
+        return false
+    out.store_var(envelope, false)
+    var write_ok := out.get_error() == OK
+    out.close()
+    if not write_ok:
+        return false
+    var loaded: Dictionary = Store.new(legacy_primary, legacy_backup, legacy_temp).load_best()
+    for path in [legacy_primary, legacy_backup, legacy_temp]:
+        if FileAccess.file_exists(path):
+            DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
+    return bool(loaded.get("ok", false))
+
+func _sha256(bytes: PackedByteArray) -> String:
+    var context := HashingContext.new()
+    if context.start(HashingContext.HASH_SHA256) != OK:
+        return ""
+    if context.update(bytes) != OK:
+        return ""
+    return context.finish().hex_encode()
 
 func _systems_available(game) -> bool:
     return game.get("_inventory_state") != null         and game.get("_hand_state") != null         and game.get("_health_state") != null         and game.get("_crafting_recipes") != null         and game.get("_first_aid_actions") != null         and game.get("_world_interaction_state") != null         and game.get("_utilities") != null         and game.get("_power_network") != null         and game.get("_portable_generators") != null         and game.get("_vehicle_state") != null         and game.get("_vehicle_profiles") != null         and game.get("_world_time") != null         and game.get("_weather") != null         and game.get("_perception") != null         and game.get("_ambient_daylight") != null
