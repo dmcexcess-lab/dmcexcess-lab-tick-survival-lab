@@ -132,10 +132,6 @@ func _on_session_save_leave_requested() -> void:
         return
     get_tree().change_scene_to_file(STARTUP_SCENE_PATH)
 
-func _on_session_decision_required(_actor_id: String, _world_tick: int) -> void:
-    if Time.get_ticks_msec() - _last_save_msec >= AUTOSAVE_MIN_MSEC:
-        _queue_session_autosave(&"decision_checkpoint")
-
 func _on_session_regions_changed(_activated: Variant, _deactivated: Variant) -> void:
     _queue_session_autosave(&"region_checkpoint")
 
@@ -173,54 +169,6 @@ func _build_durable_session() -> Dictionary:
             "infected": _infected_state.snapshot(), "weather": _weather.snapshot(),
         },
     }
-
-func _restore_durable_session(session: Dictionary) -> bool:
-    var validation: Dictionary = _session_store.validate_session(session)
-    if not bool(validation.get("ok", false)) or int(session.get("world_seed", 0)) != WorldBootstrapClass.active_seed():
-        return false
-    var owners: Dictionary = session.get("owners", {})
-    var registry: MaterializationRegistry = WorldBootstrapClass.materialization_registry()
-    if registry == null:
-        return false
-    if not registry.load_snapshot(owners["materialization_registry"]): return false
-    if not _world.load_snapshot(owners["world"]): return false
-    if not _collision_overrides.load_snapshot(owners["collision_overrides"]): return false
-    if not _door_state.load_snapshot(owners["doors"]): return false
-    var kernel_snapshot: Dictionary = Dictionary(owners["kernel"]).duplicate(true)
-    kernel_snapshot["hard_paused"] = false
-    if not _kernel.load_snapshot(kernel_snapshot): return false
-    if not _locomotion_state.load_snapshot(owners["locomotion"]): return false
-    if not _hand_state.load_snapshot(owners["hands"]): return false
-    if not _inventory_state.load_snapshot(owners["inventory"]): return false
-    if not _health_state.load_snapshot(owners["health"]): return false
-    if not _skill_state.load_snapshot(owners["skills"]): return false
-    if not _freshness_state.load_snapshot(owners["freshness"]): return false
-    if not _carry_state.load_snapshot(owners["carry"]): return false
-    if not _loot_state.load_snapshot(owners["loot"]): return false
-    if not _perception_memory.load_snapshot(owners["perception_memory"]): return false
-    if not _forage_state.load_snapshot(owners["forage"]): return false
-    if not _condition_service.restore_state(owners["conditions"]): return false
-    if not _utilities.restore_snapshot(owners["utilities"]): return false
-    if not _power_network.restore_snapshot(owners["power_network"]): return false
-    if not _flashlight_state.load_snapshot(owners["flashlight"]): return false
-    if not _portable_generators.restore_snapshot(owners["portable_generators"]): return false
-    if not _vehicle_state.load_snapshot(owners["vehicles"]): return false
-    if not _world_interaction_state.load_snapshot(owners["world_interactions"]): return false
-    if not _firearm_state.load_snapshot(owners["firearms"]): return false
-    if not _corpse_state.load_snapshot(owners["corpses"]): return false
-    if not _infected_state.load_snapshot(owners["infected"]): return false
-    if not _combat_actions.load_runtime_snapshot(owners["combat_runtime"]): return false
-    if not _weather.load_snapshot(owners["weather"]): return false
-    var placement: WorldPlacement = _world.placement(WorldBootstrapClass.PLAYER_ID)
-    var streaming: WorldStreamingCoordinator = WorldBootstrapClass.streaming_coordinator()
-    if placement == null or streaming == null or not bool(streaming.update_focus(placement.anchor).get("ok", false)):
-        return false
-    if _infected_cohort != null and not _infected_cohort.sync_active_now(): return false
-    if not _sync_vehicle_lighting_emitters(): return false
-    _sync_refrigeration_clocks()
-    if not _sync_infected_opening_pressure(): return false
-    _flush_pending_visual_state()
-    return true
 
 func _boot_production_world() -> bool:
     if not super._boot_production_world():
