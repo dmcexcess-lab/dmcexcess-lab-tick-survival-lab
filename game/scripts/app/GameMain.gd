@@ -43,15 +43,10 @@ const CarryStateClass = preload("res://scripts/simulation/actors/carry/ActorCarr
 const CarryQueryClass = preload("res://scripts/simulation/actors/carry/ActorCarryQuery.gd")
 const CarryMobilityProviderClass = preload("res://scripts/simulation/actors/carry/ActorCarryMobilityModifierProvider.gd")
 const CarryAcquisitionClass = preload("res://scripts/simulation/actors/carry/ActorCarryAcquisitionPolicy.gd")
-const ItemTransferActionTypes = preload("res://scripts/simulation/items/transfer/ItemTransferActionType.gd")
-const ItemTransferTimingClass = preload("res://scripts/simulation/items/transfer/ItemTransferTimingPolicy.gd")
-const PolicyTransferClass = preload("res://scripts/simulation/items/transfer/PolicyAwareItemTransferActionService.gd")
 const LootItemCatalogClass = preload("res://scripts/simulation/loot/LootItemCatalog.gd")
 const LootContainerCatalogClass = preload("res://scripts/simulation/loot/LootContainerProfileCatalog.gd")
 const LootStateClass = preload("res://scripts/simulation/loot/LootState.gd")
 const LootInitializerClass = preload("res://scripts/simulation/loot/LootSourceInitializer.gd")
-const LootAccessClass = preload("res://scripts/simulation/loot/LootWorldContainerAccessPolicy.gd")
-const LootSearchClass = preload("res://scripts/simulation/loot/LootSearchActionService.gd")
 const LootInspectionClass = preload("res://scripts/simulation/loot/LootContainerInspectionQuery.gd")
 const InteractionReachClass = preload("res://scripts/simulation/interaction/WorldInteractionReachQuery.gd")
 const InteractionAffordanceClass = preload("res://scripts/simulation/interaction/InteractionAffordanceQuery.gd")
@@ -62,7 +57,6 @@ const AcousticPropagationClass = preload("res://scripts/simulation/sound/Acousti
 const HearingProfileClass = preload("res://scripts/simulation/sound/SurvivorHearingProfileProvider.gd")
 const HeardSoundStoreClass = preload("res://scripts/simulation/sound/HeardSoundObservationStore.gd")
 const SpatialSoundClass = preload("res://scripts/simulation/sound/SpatialSoundService.gd")
-const ActionSoundEmitterClass = preload("res://scripts/simulation/sound/ActionSoundEmitterAdapter.gd")
 const StatusSummaryClass = preload("res://scripts/ui/ActorStatusSummaryQuery.gd")
 const InspectionQueryClass = preload("res://scripts/ui/FacingInspectionQuery.gd")
 const StatsInspectorClass = preload("res://scripts/ui/ActorStatsInspectorQuery.gd")
@@ -73,16 +67,10 @@ const DoorStateClass = preload("res://scripts/simulation/doors/DoorStateStore.gd
 const DoorMutationClass = preload("res://scripts/simulation/doors/DoorStateMutationService.gd")
 const DoorTransitionClass = preload("res://scripts/simulation/doors/DoorPhysicalTransitionService.gd")
 const DoorPassageClass = preload("res://scripts/simulation/doors/DoorMovementPassageResolver.gd")
-const DoorActionClass = preload("res://scripts/simulation/doors/DoorInteractionActionService.gd")
-const DoorDamageInterruptionClass = preload("res://scripts/simulation/doors/DoorDamageInterruptionService.gd")
 const VisionProfileClass = preload("res://scripts/simulation/perception/VisionProfile.gd")
 const PerceptionMemoryClass = preload("res://scripts/simulation/perception/PerceptionMemoryStore.gd")
 const ObserverPerceptionClass = preload("res://scripts/simulation/perception/ObserverPerceptionService.gd")
 const WorldBootstrapClass = preload("res://scripts/generation/integration/ProductionWorldBootstrap.gd")
-const ControllerClass = preload("res://scripts/player/PlayerActionController.gd")
-const DoorControllerClass = preload("res://scripts/player/DoorPlayerInteractionController.gd")
-const LootControllerClass = preload("res://scripts/player/LootPlayerInteractionController.gd")
-const LIVE_ITEM_TRANSFER_TICKS: int = 5
 
 @onready var _world_view: TacticalRendererStack = $WorldView
 @onready var _camera_controller: TacticalCameraController = $CameraRig
@@ -139,10 +127,6 @@ var _loot_items: LootItemCatalog = null
 var _loot_profiles: LootContainerProfileCatalog = null
 var _loot_state: LootState = null
 var _loot_initializer: LootSourceInitializer = null
-var _loot_access: ItemContainerAccessPolicy = null
-var _item_transfer_timing: ItemTransferTimingPolicy = null
-var _item_transfer: ItemTransferActionService = null
-var _loot_search: LootSearchActionService = null
 var _loot_inspection: LootContainerInspectionQuery = null
 var _interaction_reach: WorldInteractionReachQuery = null
 var _loot_interaction_offers: LootSearchInteractionOfferProvider = null
@@ -153,7 +137,6 @@ var _acoustic_propagation: AcousticPropagationQuery = null
 var _hearing_profile: SurvivorHearingProfileProvider = null
 var _heard_sounds: HeardSoundObservationStore = null
 var _spatial_sound: SpatialSoundService = null
-var _action_sound_emitters: ActionSoundEmitterAdapter = null
 var _status_summary: ActorStatusSummaryQuery = null
 var _inspection_query: FacingInspectionQuery = null
 var _stats_inspector: ActorStatsInspectorQuery = null
@@ -164,13 +147,8 @@ var _door_state: DoorStateStore = null
 var _door_mutations: DoorStateMutationService = null
 var _door_transition: DoorPhysicalTransitionService = null
 var _door_passage: DoorMovementPassageResolver = null
-var _door_actions: DoorInteractionActionService = null
-var _door_damage_interrupt: DoorDamageInterruptionService = null
 var _perception_memory: PerceptionMemoryStore = null
 var _perception: ObserverPerceptionService = null
-var _controller: PlayerActionController = null
-var _door_controller: DoorPlayerInteractionController = null
-var _loot_controller: LootPlayerInteractionController = null
 var _shell_blocks_interaction: bool = false
 var _loot_blocks_interaction: bool = false
 var _action_blocks_interaction: bool = false
@@ -294,8 +272,6 @@ func _boot_spatial_sound() -> bool:
     if not weather_environment.is_ready(): return false
     _acoustic_propagation = AcousticPropagationClass.new(_world, _door_state, _acoustic_materials, weather_environment); _hearing_profile = HearingProfileClass.new(_skill_state); _heard_sounds = HeardSoundStoreClass.new(); _spatial_sound = SpatialSoundClass.new(_world, _kernel, _sound_profiles, _acoustic_propagation, _hearing_profile, _heard_sounds, weather_environment)
     if not _spatial_sound.is_ready() or not _spatial_sound.register_listener(WorldBootstrapClass.PLAYER_ID): return false
-    _action_sound_emitters = ActionSoundEmitterClass.new(_movement, _door_transition, _spatial_sound)
-    if not _action_sound_emitters.is_ready(): return false
     _spatial_sound.listener_observations_changed.connect(_on_sound_observations_changed); _spatial_sound.listener_decision_unpaused.connect(_on_sound_listener_decision_unpaused); return true
 func _sync_player_sound_cues() -> bool:
     if _spatial_sound == null: return false
