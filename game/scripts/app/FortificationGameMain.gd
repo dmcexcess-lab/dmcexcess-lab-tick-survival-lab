@@ -1,4 +1,4 @@
-extends Slice7GameMain
+extends "res://scripts/app/Slice7GameMain.gd"
 class_name FortificationGameMain
 
 ## Narrow production composition for existing-opening fortification. BOARD/REMOVE BOARD
