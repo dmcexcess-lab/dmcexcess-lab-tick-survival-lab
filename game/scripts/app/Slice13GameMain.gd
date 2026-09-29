@@ -68,12 +68,14 @@ func _restore_durable_session(session: Dictionary) -> bool:
 
     # Canonical time is restored from schema 2 directly. Current schema 1 saves
     # migrate from the already-restored survival clock, as established in Slice 11.
-    var restored_time_tick := survival_elapsed_tick()
+    var restored_time_tick := _restored_condition_anchor_tick()
     if owners.has("world_time") and typeof(owners["world_time"]) == TYPE_DICTIONARY:
         if not _world_time.load_snapshot(owners["world_time"]):
             return false
         restored_time_tick = _world_time.world_tick()
-    elif not _world_time.configure_manual_clock(maxi(0, restored_time_tick)):
+    elif not _world_time.configure_manual_clock(restored_time_tick):
+        return false
+    if not _condition_service.configure_manual_clock(restored_time_tick):
         return false
 
     if not _weather.configure_manual_clock(_world_time.world_tick()):
@@ -91,6 +93,12 @@ func _restore_durable_session(session: Dictionary) -> bool:
     if not _rebuild_slice13_runtime_state():
         return false
     return true
+
+func _restored_condition_anchor_tick() -> int:
+    if _condition_state == null or not _condition_state.has_actor(WorldBootstrapClass.PLAYER_ID):
+        return 0
+    var record: Dictionary = _condition_state.record(WorldBootstrapClass.PLAYER_ID)
+    return maxi(0, maxi(int(record.get("anchor_tick", 0)), int(record.get("fatigue_anchor_tick", 0))))
 
 func _slice13_refrigeration_snapshot() -> Dictionary:
     var providers: Array[Dictionary] = []
