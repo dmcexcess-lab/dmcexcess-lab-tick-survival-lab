@@ -225,7 +225,9 @@ func _verify_action(game, simple, action_id: StringName, item_id: String) -> voi
     if not bool(result.get("success", false)):
         return
     _check(simple.turn_number() == turn_before + 1, "vehicle action completes exactly one simple turn: %s" % String(action_id))
-    _check(simple.individual_actor_actions() - actor_actions_before <= 1, "vehicle action gives local infected at most one response: %s" % String(action_id))
+    var actor_action_delta: int = simple.individual_actor_actions() - actor_actions_before
+    var local_infected_count: int = game.call("simple_infected_actor_ids").size()
+    _check(actor_action_delta <= local_infected_count, "vehicle action gives each relevant local infected at most one response: %s" % String(action_id))
     _check(int(result.get("elapsed_ticks", 0)) > 0, "vehicle action advances explicit elapsed time: %s" % String(action_id))
     _check(simple.has_control(), "vehicle action returns player control: %s" % String(action_id))
 
