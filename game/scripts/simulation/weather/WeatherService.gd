@@ -395,8 +395,16 @@ func _advance_manual_transitions() -> void:
         guard += 1
 
 func _advance_manual_lightning() -> void:
+    if _state != null and not _state.active_lightning_id.is_empty() and _manual_tick >= _state.active_lightning_end_tick:
+        var expired_id := _state.active_lightning_id
+        _clear_active_lightning()
+        _state.lightning_event_serial = 0
+        _state.lightning_event_kind = &""
+        lightning_ended.emit(expired_id, _manual_tick)
     if not _manual_mode or not _current_source_is_storm():
         _manual_next_lightning_tick = -1
+        _state.lightning_event_serial = 0
+        _state.lightning_event_kind = &""
         _clear_active_lightning()
         return
     if _manual_next_lightning_tick < 0:
@@ -412,10 +420,14 @@ func _advance_manual_lightning() -> void:
     _state.active_lightning_end_tick = flash_tick + LIGHTNING_FLASH_TICKS
     _state.active_lightning_intensity = clampf(0.78 + float(posmod(bolt_seed, 23)) / 100.0, 0.78, 1.0)
     _state.active_lightning_seed = bolt_seed
+    _state.lightning_event_serial = maxi(1, _state.lightning_serial)
+    _state.lightning_event_kind = LIGHTNING_KIND_END
     _state.environment_revision += 1
     if _manual_tick >= _state.active_lightning_end_tick:
         var ended_id := _state.active_lightning_id
         _clear_active_lightning()
+        _state.lightning_event_serial = 0
+        _state.lightning_event_kind = &""
         lightning_ended.emit(ended_id, _manual_tick)
     else:
         var lightning := active_lightning()
