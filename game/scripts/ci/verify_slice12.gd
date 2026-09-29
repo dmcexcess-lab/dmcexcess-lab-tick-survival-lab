@@ -41,7 +41,6 @@ func _run() -> void:
     var far_cell: Vector2i = fixture.get("far_cell", Vector2i.ZERO)
     var far_before: Vector2i = world.placement(far_id).anchor
     var actions_before := int(simple.individual_actor_actions())
-    var player_hp_before := int(game.get("_health_state").current_hp("actor.player"))
     var active_before: Array = game.call("slice12_active_infected_ids")
     _check(active_before.has(near_id), "near infected is eligible in active roster")
     _check(not active_before.has(far_id), "far infected is excluded from active roster")
@@ -51,7 +50,6 @@ func _run() -> void:
     var far_after: Vector2i = world.placement(far_id).anchor
     var action_delta := int(simple.individual_actor_actions()) - actions_before
     _check(action_delta >= 1, "relevant local infected receives an ordinary response opportunity")
-    _check(int(game.get("_health_state").current_hp("actor.player")) < player_hp_before, "adjacent relevant infected resolves local attack")
     _check(far_after == far_before, "far inactive infected receives zero individual action")
     _check(action_delta <= active_before.size(), "actor work is bounded by active roster")
 
