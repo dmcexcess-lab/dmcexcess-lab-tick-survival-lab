@@ -219,13 +219,13 @@ func _find_far_stream_cell(game, origin: Vector2i) -> Vector2i:
 
     # Use the coordinator's public active bounds to step beyond the current active set,
     # then ask production streaming to materialize that location before fixture placement.
-    var sc = preload("res://scripts/generation/bootstrap/ProductionWorldBootstrap.gd").streaming_coordinator()
+    var sc = preload("res://scripts/generation/integration/ProductionWorldBootstrap.gd").streaming_coordinator()
     if sc == null:
         return Vector2i(-999999, -999999)
     var active_bounds: Array[Rect2i] = sc.active_region_bounds()
     if active_bounds.is_empty():
         return Vector2i(-999999, -999999)
-    var world_bounds = preload("res://scripts/generation/bootstrap/ProductionWorldBootstrap.gd").global_plan().bounds
+    var world_bounds = preload("res://scripts/generation/integration/ProductionWorldBootstrap.gd").global_plan().bounds
     for bounds: Rect2i in active_bounds:
         var candidates: Array[Vector2i] = [
             bounds.position + Vector2i(bounds.size.x + 40, bounds.size.y / 2),
@@ -252,7 +252,7 @@ func _move_player_to_far_neighborhood(game, target: Vector2i) -> bool:
     var player = world.placement("actor.player")
     if player == null:
         return false
-    var sc = preload("res://scripts/generation/bootstrap/ProductionWorldBootstrap.gd").streaming_coordinator()
+    var sc = preload("res://scripts/generation/integration/ProductionWorldBootstrap.gd").streaming_coordinator()
     if sc == null:
         return false
     var result: Dictionary = sc.update_focus(target)
