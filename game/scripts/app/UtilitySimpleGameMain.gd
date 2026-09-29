@@ -8,10 +8,10 @@ const UtilitySkillCatalog = preload("res://scripts/simulation/actors/skills/Acto
 
 const GAS_CAN: StringName = &"item.automotive.gas_can"
 const WRENCH: StringName = &"item.tool.adjustable_wrench"
-const HAMMER: StringName = &"item.tool.hammer"
+const UTILITY_HAMMER: StringName = &"item.tool.hammer"
 const METAL_SCRAP: StringName = &"item.material.scrap_metal"
 const WOOD_PLANK: StringName = &"item.material.wood_plank"
-const NAILS: StringName = &"item.material.nails_box"
+const UTILITY_NAILS: StringName = &"item.material.nails_box"
 const GENERATOR_REPAIR_DIFFICULTY := 2
 const POWER_REPAIR_BASE_TICKS := 20
 
@@ -98,12 +98,12 @@ func _run_simple_power_repair(actor_id: String, target_id: String) -> Dictionary
     if asset.is_empty() or StringName(asset.get("kind", &"")) != UtilityConditions.DISTRIBUTION_SUPPORT or not bool(asset.get("failed", false)): return {"success": false, "reason": "utility_asset_not_failed"}
     var requirements := _power_network.repair_requirements(target); var material_units := int(requirements.get("material_units", -1)); var difficulty := int(requirements.get("mechanical_skill", -1))
     if material_units < 1 or difficulty < 0: return {"success": false, "reason": "utility_repair_profile_invalid"}
-    if _find_carried_any([HAMMER], {}).is_empty(): return {"success": false, "reason": "repair_tool_required"}
+    if _find_carried_any([UTILITY_HAMMER], {}).is_empty(): return {"success": false, "reason": "repair_tool_required"}
     var used := {}; var captures: Array[Dictionary] = []
     for _i in range(material_units):
         var plank := _find_carried_any([WOOD_PLANK], used); if plank.is_empty(): return {"success": false, "reason": "repair_material_required"}
         used[plank] = true; var capture := _capture_personal_item(plank); if capture.is_empty(): return {"success": false, "reason": "repair_material_changed"}; captures.append(capture)
-    var nails := _find_carried_any([NAILS], used); if nails.is_empty(): return {"success": false, "reason": "repair_fasteners_required"}
+    var nails := _find_carried_any([UTILITY_NAILS], used); if nails.is_empty(): return {"success": false, "reason": "repair_fasteners_required"}
     var nails_capture := _capture_personal_item(nails); if nails_capture.is_empty(): return {"success": false, "reason": "repair_fasteners_changed"}; captures.append(nails_capture)
     var profile: Dictionary = _skill_checks.action_profile(actor, UtilitySkillCatalog.MECHANICAL, POWER_REPAIR_BASE_TICKS, difficulty)
     if not bool(profile.get("ok", false)) or int(profile.get("skill_level", -1)) < difficulty: return {"success": false, "reason": "insufficient_mechanical_skill"}
