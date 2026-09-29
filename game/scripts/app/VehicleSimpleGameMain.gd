@@ -111,12 +111,16 @@ func _simple_vehicle_plan(action_id: StringName, item_id: String, target_id: Str
             return {"ok": false, "reason": "no_vehicle_in_reach"}
         return {"ok": true, "vehicle_id": target, "elapsed_ticks": 4}
 
+    var explicit_target := not target.is_empty()
     if action_id in [VehicleActionService.REPAIR, VehicleActionService.MODIFY, VehicleActionService.REFUEL] and target.is_empty():
         target = mounted if not mounted.is_empty() else _vehicle_actions._nearby_vehicle(actor)
     elif target.is_empty():
         target = mounted
     if target.is_empty() or not _vehicle_state.has_vehicle(target):
         return {"ok": false, "reason": "vehicle_not_ready"}
+    if explicit_target and action_id in [VehicleActionService.REPAIR, VehicleActionService.MODIFY, VehicleActionService.REFUEL] \
+        and not _interaction_reach.target_reachable(actor, target, WorldInteractionReachQuery.CONTACT_FORWARD):
+        return {"ok": false, "reason": "target_out_of_reach"}
 
     var rec := _vehicle_state.record(target)
     var kind := StringName(rec.get("kind", &""))
