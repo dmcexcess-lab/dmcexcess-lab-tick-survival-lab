@@ -8,6 +8,27 @@ func _init() -> void:
     call_deferred("_run")
 
 func _run() -> void:
+    for script_path: String in [
+        "res://scripts/app/GameMain.gd",
+        "res://scripts/app/CraftingGameMain.gd",
+        "res://scripts/app/UtilityGameMain.gd",
+        "res://scripts/app/System34GameMain.gd",
+        "res://scripts/app/VehicleGameMain.gd",
+        "res://scripts/app/CombatGameMain.gd",
+        "res://scripts/app/EnvironmentalPressureGameMain.gd",
+        "res://scripts/app/TurnBasedGameMain.gd",
+        "res://scripts/app/Slice7GameMain.gd",
+        "res://scripts/app/FortificationGameMain.gd",
+        "res://scripts/app/UtilitySimpleGameMain.gd",
+        "res://scripts/app/VehicleSimpleGameMain.gd",
+        "res://scripts/app/ProductionGameMain.gd",
+    ]:
+        var script_resource := load(script_path)
+        _check(script_resource != null, "fresh script load succeeds: %s" % script_path)
+        if script_resource == null:
+            _finish()
+            return
+
     var packed := load(StartupPath) as PackedScene
     _check(packed != null, "main.tscn loads")
     if packed == null:
