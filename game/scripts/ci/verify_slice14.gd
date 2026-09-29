@@ -127,7 +127,7 @@ func _verify_combat_action(game) -> bool:
     if player == null:
         return false
 
-    var chosen_facing := player.facing
+    var chosen_facing: int = player.facing
     var target_cell := Vector2i.ZERO
     var found := false
     for facing_value: int in [Facing.Value.NORTH, Facing.Value.EAST, Facing.Value.SOUTH, Facing.Value.WEST]:
@@ -186,7 +186,7 @@ func _verify_context_action(game) -> bool:
             var check = query.query_cell(actor_cell, "actor.player", true)
             if check == null or not check.is_clear():
                 continue
-            var facing := Facing.from_vector(target.anchor - actor_cell)
+            var facing: int = Facing.from_vector(target.anchor - actor_cell)
             if not world.move_entity("actor.player", actor_cell, facing):
                 continue
             interaction_state.set_locked(target_id, false, &"slice14_verify")
