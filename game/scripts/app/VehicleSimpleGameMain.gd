@@ -1,4 +1,4 @@
-extends UtilitySimpleGameMain
+extends "res://scripts/app/UtilitySimpleGameMain.gd"
 class_name VehicleSimpleGameMain
 
 const SimpleVehicleHeading = preload("res://scripts/simulation/vehicles/VehicleHeading.gd")
