@@ -1,7 +1,7 @@
 # Tick Survival Lab — Turn-Based Rewrite Roadmap
 
 Updated: **2026-09-29**  
-Status: **architecture simplification in progress; Slices 1-12 complete**
+Status: **architecture simplification in progress; Slices 1-13 complete**
 
 ## Release target
 
@@ -57,8 +57,8 @@ Canonical actions advance one authoritative world-time clock from their existing
 ### Slice 12 — Open-world simulation boundary — DONE
 The existing streaming coordinator now defines the first infected-eligibility boundary and SimpleTurnController's established local radius remains the second. Only infected currently placed in active streamed regions are supplied to canonical local-turn execution. Far/unloaded infected remain persistent authoritative entities/state but receive no ordinary pathfinding, attacks or individual turns. Procedural infected resident records are projected once and cached; hydration occurs only on streaming-boundary changes rather than scanning the island every action. Long world-time jumps still produce only one bounded local actor-response boundary.
 
-### Slice 13 — Persistence migration
-Adapt durable Continue to simplified state while preserving seed, player/inventory, meaningful zombies/corpses, looted/deconstructed objects, fortifications, vehicles, utilities, time/weather and world deltas. Do not invent a second save architecture.
+### Slice 13 — Persistence migration — DONE
+DurableSessionStore schema 2 now saves canonical gameplay facts without requiring TickKernel execution queues, perception caches or combat runtime state. Continue restores authoritative world/domain owners, exact world time/weather and refrigeration exposure state, then reconstructs streaming/local infected/perception/presentation runtime from restored facts. Current schema-1 saves remain accepted: retired runtime payloads are ignored, world time derives from restored condition anchors and refrigeration establishes a safe non-regressing baseline before the next schema-2 save. Repeated production save -> Continue -> save -> Continue preserves representative player, item, loot, fortification, infected/corpse, vehicle, utility and time/weather consequences without duplication/reset.
 
 ### Slice 14 — Legacy demolition
 Delete obsolete TickKernel/WHEN scheduling, generalized consequence/intention/commitment machinery, obsolete adapters, unused WHERE/WHAT framework pieces and compatibility bridges after all player routes migrate.
@@ -77,4 +77,4 @@ Play and tune the real repeated loop on desktop and iPhone/Safari.
 
 ## NEXT
 
-**Slice 13 — persistence migration: adapt durable Continue to the simplified canonical state while preserving seed, player/inventory, meaningful zombies/corpses, world deltas, fortifications, vehicles, utilities and time/weather without inventing a second save architecture.**
+**Slice 14 — legacy demolition: delete obsolete TickKernel/WHEN scheduling, generalized consequence/intention/commitment machinery, obsolete adapters, unused framework pieces and compatibility bridges now that canonical gameplay and durable Continue no longer require them.**
