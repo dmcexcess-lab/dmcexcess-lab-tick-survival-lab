@@ -82,7 +82,7 @@ func _run() -> void:
     var second_load: Dictionary = Store.new(SAVE_A, SAVE_B, SAVE_T).load_best()
     _check(bool(second_load.get("ok", false)), "second saved session reloads")
     var second_session: Dictionary = second_load.get("session", {})
-    _check(_canonical_owners(second_session) == reference, "save -> Continue -> save is idempotent")
+    _compare_canonical_owners(_canonical_owners(second_session), reference, "repeat save owner")
 
     continued.queue_free()
     await process_frame
@@ -92,7 +92,7 @@ func _run() -> void:
         _finish()
         return
     _assert_restored_facts(continued_twice, reference, far_id, corpse_id, consumed_id, vehicle_id, fortification_id, utility_component_id, looted_item_id, "second Continue")
-    _check(_canonical_owners(continued_twice.call("durable_session_snapshot")) == reference, "second Continue introduces no duplication or reset")
+    _compare_canonical_owners(_canonical_owners(continued_twice.call("durable_session_snapshot")), reference, "second Continue idempotence owner")
 
     # Current schema-1 saves remain accepted, but their retired runtime payloads are
     # deliberately invalid here. Successful Continue proves canonical restore ignores them.
@@ -118,7 +118,7 @@ func _run() -> void:
         _assert_restored_facts(migrated, reference, far_id, corpse_id, consumed_id, vehicle_id, fortification_id, utility_component_id, looted_item_id, "schema-1 migration")
         var migrated_session: Dictionary = migrated.call("durable_session_snapshot")
         _check(int(migrated_session.get("schema_version", -1)) == Store.SESSION_SCHEMA_VERSION, "schema-1 Continue emits canonical schema 2 on next save")
-        _check(_canonical_owners(migrated_session) == reference, "schema-1 migration reconstructs the same canonical facts")
+        _compare_canonical_owners(_canonical_owners(migrated_session), reference, "schema-1 migration owner")
         migrated.queue_free()
         await process_frame
 
@@ -442,7 +442,7 @@ func _assert_restored_facts(game, reference: Dictionary, far_id: String, corpse_
     var session: Dictionary = game.call("durable_session_snapshot")
     _assert_schema2_contract(session)
     _check(int(session.get("world_seed", 0)) == SEED, "%s preserves world seed" % label)
-    _check(_canonical_owners(session) == reference, "%s preserves canonical owner snapshots" % label)
+    _compare_canonical_owners(_canonical_owners(session), reference, "%s owner" % label)
     var world = game.get("_world")
     _check(not world.has_entity(consumed_id), "%s does not resurrect consumed item" % label)
     _check(world.has_entity(corpse_id), "%s preserves corpse entity" % label)
@@ -467,6 +467,14 @@ func _utility_component_state(game, component_id: String) -> StringName:
         if String(row.get("component_id", "")) == component_id:
             return StringName(row.get("operational_state", &""))
     return &""
+
+func _compare_canonical_owners(actual: Dictionary, expected: Dictionary, label: String) -> void:
+    for key: String in Store.REQUIRED_OWNER_KEYS_V2:
+        if not actual.has(key) or not expected.has(key):
+            _check(false, "%s missing: %s" % [label, key])
+            continue
+        if actual[key] != expected[key]:
+            _check(false, "%s mismatch: %s" % [label, key])
 
 func _canonical_owners(session: Dictionary) -> Dictionary:
     var result: Dictionary = {}
