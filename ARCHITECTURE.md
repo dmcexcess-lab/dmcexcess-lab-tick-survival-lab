@@ -1,6 +1,6 @@
 # Tick Survival Lab — Settled Architecture Map
 
-Status: **active turn-based production map; Slices 1-14 complete**
+Status: **active turn-based production map; Slices 1-15 complete / rewrite complete**
 
 ## Canonical direction
 
@@ -34,6 +34,7 @@ Do not create a replacement simulation framework.
 - `WorldTimeService` is now the authoritative scenario clock in canonical play. It advances explicitly from the same elapsed-tick value already consumed by survival, never from render frames or wall time. `OutdoorAmbientLightService` derives dawn/day/dusk/night continuously from that clock.
 - Existing `WeatherService` / `WeatherState` / `WeatherProfile` remain weather truth, but canonical play advances weather coarsely to the authoritative world-time tick rather than scheduling physical weather through TickKernel. Existing atmospheric optics, acoustics, GPU weather presentation and lighting/perception consumers remain downstream.
 - Durable session schema 2 persists canonical gameplay facts and no longer requires TickKernel queues, perception-memory caches or combat runtime snapshots. Durable truth includes world/materialization identity, player/domain state, exact containment/equipment, Health/conditions, loot/world interactions, infected/corpses, vehicles, utilities, weather/world time and refrigeration exposure state.
+- DurableSessionStore keeps the same canonical session schema but compresses the file-envelope payload with DEFLATE when beneficial. Existing pre-Slice-15 uncompressed envelopes remain readable; compression is storage representation only and creates no second persistence truth.
 - Streaming membership, the Slice 12 active infected roster, perception memory, controller state, HUD/render state and other runtime caches are reconstructed after restore rather than persisted as parallel truth.
 - Schema 1 remains loadable for the current save lineage. Its legacy runtime dictionaries are ignored by canonical restore; world time is derived exactly from restored condition anchors when `world_time` is absent, and legacy refrigeration resumes from a safe non-regressing exposure baseline before the next schema-2 save.
 - Freshness queries and refrigeration exposure clocks use authoritative `WorldTimeService` in canonical play rather than restored TickKernel time.
@@ -87,4 +88,4 @@ No replacement scheduler, event bus, ECS or generic action framework was introdu
 
 Shared universal simulation ticks, generalized simultaneous resolution, universal commitment/interruption, generalized WHEN scheduling, heavyweight WHERE/WHAT runtime frameworks, living survivor social simulation, colony management, freeform base construction and demo-owned production startup remain retired.
 
-See ROADMAP.md for migration order and CURRENT.md for the exact next operation.
+The rewrite is complete. See ROADMAP.md for the closed migration sequence and CURRENT.md for release-maintenance direction.
