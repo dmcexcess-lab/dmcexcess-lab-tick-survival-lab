@@ -1,4 +1,4 @@
-extends GameMain
+extends "res://scripts/app/GameMain.gd"
 class_name CraftingGameMain
 
 const SkillCheckServiceClass = preload("res://scripts/simulation/actors/skills/ActorSkillCheckService.gd")
