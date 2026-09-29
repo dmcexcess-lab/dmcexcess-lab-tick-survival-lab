@@ -23,5 +23,7 @@ jobs:
           chmod +x Godot_v4.7.1-stable_linux.x86_64
       - name: Build script class cache
         run: ./Godot_v4.7.1-stable_linux.x86_64 --headless --editor --path "$GITHUB_WORKSPACE/game" --quit
+      - name: Show verified HEAD
+        run: echo "$GITHUB_SHA"
       - name: Verify Slice 13
         run: timeout 300s ./Godot_v4.7.1-stable_linux.x86_64 --headless --path "$GITHUB_WORKSPACE/game" -s res://scripts/ci/verify_slice13.gd
