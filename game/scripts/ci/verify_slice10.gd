@@ -218,8 +218,8 @@ func _verify_vehicle_production_route() -> void:
     await process_frame
 
 func _verify_action(game, simple, action_id: StringName, item_id: String) -> void:
-    var turn_before := simple.turn_number()
-    var actor_actions_before := simple.individual_actor_actions()
+    var turn_before: int = int(simple.turn_number())
+    var actor_actions_before: int = int(simple.individual_actor_actions())
     var result: Dictionary = game.call("run_simple_vehicle_action", action_id, item_id)
     _check(bool(result.get("success", false)), "vehicle action succeeds: %s (%s)" % [String(action_id), String(result.get("reason", ""))])
     if not bool(result.get("success", false)):
@@ -244,7 +244,7 @@ func _place_vehicle_for_drive(world, mutations, spatial, state, profiles, vehicl
             for dx in range(-radius, radius + 1):
                 if absi(dx) != radius and absi(dy) != radius:
                     continue
-                var anchor := actor_place.anchor + Vector2i(dx, dy)
+                var anchor: Vector2i = actor_place.anchor + Vector2i(dx, dy)
                 var route_ok := true
                 var sequence: Array[Vector2i] = [Vector2i.ZERO]
                 sequence.append_array(VehicleHeadingClass.forward_path(0, 3))
@@ -255,7 +255,7 @@ func _place_vehicle_for_drive(world, mutations, spatial, state, profiles, vehicl
                         break
                 if not route_ok:
                     continue
-                var neighbor := anchor + Vector2i.RIGHT
+                var neighbor: Vector2i = anchor + Vector2i.RIGHT
                 var actor_check = spatial.query_cell(neighbor, actor_id, true)
                 if actor_check == null or not actor_check.is_clear():
                     continue
