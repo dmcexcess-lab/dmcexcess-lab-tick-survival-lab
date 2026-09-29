@@ -1,7 +1,7 @@
 # Tick Survival Lab — Turn-Based Rewrite Roadmap
 
 Updated: **2026-09-29**  
-Status: **architecture simplification in progress; Slices 1-11 complete**
+Status: **architecture simplification in progress; Slices 1-12 complete**
 
 ## Release target
 
@@ -54,8 +54,8 @@ Existing vehicle entities/state/profiles/footprints/cargo/fuel/condition/keys/pr
 ### Slice 11 — Day/night, weather and world time — DONE
 Canonical actions advance one authoritative world-time clock from their existing explicit elapsed ticks. Dawn/day/dusk/night derive continuously from that clock; existing weather profiles/state advance coarsely from the same clock without TickKernel scheduling. Existing lighting, perception, optics, acoustics and GPU weather presentation remain downstream. Time/weather persist through durable Continue, including migration for older saves without a dedicated world-time owner.
 
-### Slice 12 — Open-world simulation boundary
-Only the player's relevant neighborhood receives individual actor turns. Unloaded/far world state remains persistent data; coarse offscreen progression is calculated only when needed.
+### Slice 12 — Open-world simulation boundary — DONE
+The existing streaming coordinator now defines the first infected-eligibility boundary and SimpleTurnController's established local radius remains the second. Only infected currently placed in active streamed regions are supplied to canonical local-turn execution. Far/unloaded infected remain persistent authoritative entities/state but receive no ordinary pathfinding, attacks or individual turns. Procedural infected resident records are projected once and cached; hydration occurs only on streaming-boundary changes rather than scanning the island every action. Long world-time jumps still produce only one bounded local actor-response boundary.
 
 ### Slice 13 — Persistence migration
 Adapt durable Continue to simplified state while preserving seed, player/inventory, meaningful zombies/corpses, looted/deconstructed objects, fortifications, vehicles, utilities, time/weather and world deltas. Do not invent a second save architecture.
@@ -77,4 +77,4 @@ Play and tune the real repeated loop on desktop and iPhone/Safari.
 
 ## NEXT
 
-**Slice 12 — open-world simulation boundary: only the player’s relevant neighborhood receives individual actor turns; far/unloaded world remains persistent data with coarse progression only when needed.**
+**Slice 13 — persistence migration: adapt durable Continue to the simplified canonical state while preserving seed, player/inventory, meaningful zombies/corpses, world deltas, fortifications, vehicles, utilities and time/weather without inventing a second save architecture.**
