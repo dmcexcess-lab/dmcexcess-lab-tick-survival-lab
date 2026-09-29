@@ -125,7 +125,7 @@ Blocked movement cannot pass through persistent obstacles. Failed vehicle moveme
 
 ## World generation / persistence
 
-`VehicleWorldSeeder` performs a bounded deterministic materialization pass near the playable survivor over plausible road/driveway/parking/pavement cells. Generated vehicles are persistent real WHAT entities with typed vehicle state and real cargo containment. Broader island-wide vehicle population should extend this owner rather than introduce a second vehicle system.
+`VehicleWorldSeeder` performs a bounded deterministic **sparse** materialization pass over plausible parking/driveway/pavement/road cells in the initially playable area. It does not guarantee one of every vehicle class near the survivor. Occupancy is surface-weighted, vehicle classes are weighted rather than enumerated, nearby placements are spaced apart, and a valid start may contain zero vehicles. Generated vehicles remain persistent real WHAT entities with typed vehicle state and real cargo containment. Broader island-wide vehicle population should extend this owner rather than introduce a second vehicle system.
 
 Real seeded vehicles are enrolled as inventory containers, which is required for exact installed-component ownership such as cargo racks.
 
@@ -225,7 +225,7 @@ Human vehicle feel/UX acceptance remains pending.
 
 - 30-degree heading is exact typed state, but collision remains deterministic integer-grid occupancy rather than arbitrary-angle polygon physics.
 - refueling still uses whole gas-can item semantics rather than partial fluid quantities.
-- generated vehicle placement is bounded near playable materialized space rather than a full island-wide streaming population source.
+- generated vehicle placement is currently a sparse bounded initial-area materialization rather than a full island-wide streaming population source; there is no guaranteed spawn-side vehicle lineup.
 - richer battery/wheel/component replacement remains deferred rather than represented by fake replacement booleans.
 - human playtesting is still required for click-menu readability, maintenance feedback, steering feel, brake readability, cargo UX, loose-skateboard pickup feedback, generated placement plausibility, headlight presentation and phone/Safari behavior.
 
