@@ -49,10 +49,9 @@ func _boot_production_world() -> bool:
     if not _simple_turns.is_ready(): return false
     _simple_turns.action_resolved.connect(Callable(_hud, "present_action_result")); _simple_turns.action_busy_changed.connect(_on_player_action_busy_changed); _simple_turns.turn_completed.connect(_on_simple_turn_completed)
     if not _wire_simple_inventory_route() or not _wire_simple_contextual_route() or not _wire_simple_session_menu() or not _wire_simple_slice7_route(): return false
-    var legacy_submit := Callable(_controller, "submit_intent")
-    if _keyboard.action_intent.is_connected(legacy_submit): _keyboard.action_intent.disconnect(legacy_submit)
-    if _controls.action_intent.is_connected(legacy_submit): _controls.action_intent.disconnect(legacy_submit)
-    _keyboard.action_intent.connect(_on_turn_intent); _controls.action_intent.connect(_on_turn_intent); _last_player_hp = _health_state.current_hp(WorldBootstrapClass.PLAYER_ID); return true
+    if not _keyboard.action_intent.is_connected(_on_turn_intent): _keyboard.action_intent.connect(_on_turn_intent)
+    if not _controls.action_intent.is_connected(_on_turn_intent): _controls.action_intent.connect(_on_turn_intent)
+    _last_player_hp = _health_state.current_hp(WorldBootstrapClass.PLAYER_ID); return true
 
 func _boot_simple_combat_state() -> bool:
     if _firearm_profiles == null or _firearm_state == null or not _firearm_state.is_ready() or _corpse_state == null or _death_transitions == null or not _death_transitions.is_ready(): return false
@@ -102,28 +101,24 @@ func survival_ticks_per_turn() -> int: return 1 if _world_time_profile == null o
 
 func _wire_simple_inventory_route() -> bool:
     if _simple_turns == null or _loot_panel == null or _loot_inspection == null or _shell == null: return false
-    if _loot_controller != null:
-        var legacy_pointer := Callable(_loot_controller, "submit_world_cell"); if _door_pointer.world_cell_primary.is_connected(legacy_pointer): _door_pointer.world_cell_primary.disconnect(legacy_pointer)
-        var legacy_take := Callable(_loot_controller, "request_take"); if _loot_panel.take_requested.is_connected(legacy_take): _loot_panel.take_requested.disconnect(legacy_take)
-        var legacy_store := Callable(_loot_controller, "request_store"); if _loot_panel.store_requested.is_connected(legacy_store): _loot_panel.store_requested.disconnect(legacy_store)
-        var legacy_hud := Callable(_hud, "present_action_result"); if _loot_controller.action_resolved.is_connected(legacy_hud): _loot_controller.action_resolved.disconnect(legacy_hud)
-        var legacy_panel_result := Callable(_loot_panel, "present_action_result"); if _loot_controller.action_resolved.is_connected(legacy_panel_result): _loot_controller.action_resolved.disconnect(legacy_panel_result)
-        var legacy_open := Callable(_loot_panel, "open_container"); if _loot_controller.container_opened.is_connected(legacy_open): _loot_controller.container_opened.disconnect(legacy_open)
-        var legacy_refresh := Callable(_loot_panel, "refresh"); if _loot_controller.container_changed.is_connected(legacy_refresh): _loot_controller.container_changed.disconnect(legacy_refresh)
-    _door_pointer.world_cell_primary.connect(_on_simple_world_cell); _loot_panel.take_requested.connect(_on_simple_loot_take); _loot_panel.store_requested.connect(_on_simple_loot_store)
-    _simple_turns.action_resolved.connect(Callable(_loot_panel, "present_action_result")); _simple_turns.loot_container_opened.connect(Callable(_loot_panel, "open_container")); _simple_turns.loot_container_changed.connect(Callable(_loot_panel, "refresh"))
+    if not _door_pointer.world_cell_primary.is_connected(_on_simple_world_cell): _door_pointer.world_cell_primary.connect(_on_simple_world_cell)
+    if not _loot_panel.take_requested.is_connected(_on_simple_loot_take): _loot_panel.take_requested.connect(_on_simple_loot_take)
+    if not _loot_panel.store_requested.is_connected(_on_simple_loot_store): _loot_panel.store_requested.connect(_on_simple_loot_store)
+    _simple_turns.action_resolved.connect(Callable(_loot_panel, "present_action_result"))
+    _simple_turns.loot_container_opened.connect(Callable(_loot_panel, "open_container"))
+    _simple_turns.loot_container_changed.connect(Callable(_loot_panel, "refresh"))
     return _shell.configure_simple_inventory_turns(_simple_turns)
+
 func _wire_simple_contextual_route() -> bool:
-    if _simple_turns == null or _interaction_affordances == null or _world_interaction_panel == null or _world_interaction_controller == null or _shell == null: return false
-    var legacy_world_pointer := Callable(_world_interaction_controller, "submit_world_cell"); if _door_pointer.world_cell_primary.is_connected(legacy_world_pointer): _door_pointer.world_cell_primary.disconnect(legacy_world_pointer)
+    if _simple_turns == null or _interaction_affordances == null or _world_interaction_panel == null or _shell == null: return false
     if _door_pointer.world_cell_primary.is_connected(_on_simple_world_cell): _door_pointer.world_cell_primary.disconnect(_on_simple_world_cell)
-    var legacy_panel_action := Callable(_world_interaction_controller, "_on_action_requested"); if _world_interaction_panel.action_requested.is_connected(legacy_panel_action): _world_interaction_panel.action_requested.disconnect(legacy_panel_action)
-    _door_pointer.world_cell_primary.connect(_on_simple_contextual_world_cell); _world_interaction_panel.action_requested.connect(_on_simple_contextual_action_requested)
+    if not _door_pointer.world_cell_primary.is_connected(_on_simple_contextual_world_cell): _door_pointer.world_cell_primary.connect(_on_simple_contextual_world_cell)
+    if not _world_interaction_panel.action_requested.is_connected(_on_simple_contextual_action_requested): _world_interaction_panel.action_requested.connect(_on_simple_contextual_action_requested)
     return _shell.has_method("configure_simple_contextual_consume") and bool(_shell.call("configure_simple_contextual_consume", Callable(self, "run_simple_inventory_consumption")))
+
 func _wire_simple_slice7_route() -> bool:
     if _crafting_panel == null or _shell == null or _first_aid_actions == null: return false
-    if _crafting_panel.craft_requested.is_connected(Callable(_crafting_controller, "request_craft")): _crafting_panel.craft_requested.disconnect(Callable(_crafting_controller, "request_craft"))
-    _crafting_panel.craft_requested.connect(_on_simple_craft_requested)
+    if not _crafting_panel.craft_requested.is_connected(_on_simple_craft_requested): _crafting_panel.craft_requested.connect(_on_simple_craft_requested)
     return _shell.has_method("configure_simple_first_aid") and bool(_shell.call("configure_simple_first_aid", Callable(self, "run_simple_first_aid")))
 func simple_contextual_panel() -> WorldInteractionPanel: return _world_interaction_panel
 func simple_contextual_affordances() -> InteractionAffordanceQuery: return _interaction_affordances
