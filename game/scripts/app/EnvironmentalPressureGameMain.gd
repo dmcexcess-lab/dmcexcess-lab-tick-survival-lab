@@ -7,7 +7,6 @@ const DurableSessionStoreClass = preload("res://scripts/persistence/DurableSessi
 const STARTUP_SCENE_PATH: String = "res://main.tscn"
 const AUTOSAVE_MIN_MSEC: int = 10000
 
-@onready var _resolution_indicator: WorldResolutionIndicator = $ResolutionIndicator
 @onready var _session_controls: SessionControls = get_node_or_null("SessionControls") as SessionControls
 
 var _opening_pressure: ActorOpeningPressureActionService = null
@@ -226,9 +225,7 @@ func _restore_durable_session(session: Dictionary) -> bool:
 func _boot_production_world() -> bool:
     if not super._boot_production_world():
         return false
-    if not _boot_system39_environmental_pressure():
-        return false
-    return _boot_world_resolution_indicator()
+    return _boot_system39_environmental_pressure()
 
 func _boot_system39_environmental_pressure() -> bool:
     if _world == null or _world_interaction_state == null or _door_state == null or _door_transition == null or _interaction_reach == null or _spatial_query == null or _kernel == null or _world_interaction_catalog == null or _world_interaction_actions == null or _spatial_sound == null or _infected_cohort == null:
@@ -254,14 +251,6 @@ func _on_infected_active_members_changed(_active_actor_ids: Array[String]) -> vo
     if not _sync_infected_opening_pressure():
         push_error("EnvironmentalPressureGameMain: failed to configure opening pressure for activated infected")
 
-func _boot_world_resolution_indicator() -> bool:
-    var streaming: WorldStreamingCoordinator = WorldBootstrapClass.streaming_coordinator()
-    if _resolution_indicator == null or _kernel == null or _infected_cohort == null or streaming == null:
-        return false
-    return _resolution_indicator.configure(_kernel, _infected_cohort, streaming)
-
 func opening_pressure_service() -> ActorOpeningPressureActionService:
     return _opening_pressure
 
-func world_resolution_indicator() -> WorldResolutionIndicator:
-    return _resolution_indicator
