@@ -149,7 +149,7 @@ func _wire_refrigeration() -> bool:
         var power_service_id: String = _utilities.power_service_for_cell(placement.anchor)
         if power_service_id.is_empty(): continue
         if not _utilities.bind_appliance(container_id, &"refrigeration", power_service_id, container_id, true, _utilities.power_scope_for_cell(placement.anchor)): return false
-        var provider: UtilityRefrigerationEnvironmentProvider = RefrigerationProviderClass.new(_utilities, container_id, _kernel.world_tick())
+        var provider: UtilityRefrigerationEnvironmentProvider = RefrigerationProviderClass.new(_utilities, container_id, _freshness_world_tick())
         if not provider.is_valid() or not _freshness_mutations.register_provider(provider) or not _freshness_query.register_provider(provider): return false
         _refrigeration_providers[container_id] = provider
         var appliance: Dictionary = _utilities.appliance_record(container_id)
@@ -161,8 +161,13 @@ func _wire_refrigeration() -> bool:
 
 func _on_utility_power_changed(_revision: int, _reason: StringName) -> void: _sync_refrigeration_clocks()
 func _on_utility_appliances_changed(_revision: int, _reason: StringName) -> void: _sync_refrigeration_clocks()
+func _freshness_world_tick() -> int:
+    if _world_time != null and _world_time.is_ready():
+        return _world_time.world_tick()
+    return 0 if _kernel == null else _kernel.world_tick()
+
 func _sync_refrigeration_clocks() -> void:
-    var world_tick: int = _kernel.world_tick()
+    var world_tick: int = _freshness_world_tick()
     for refrigerator_id: String in _sorted_refrigerator_ids(): (_refrigeration_providers[refrigerator_id] as UtilityRefrigerationEnvironmentProvider).sync_at_tick(world_tick)
 func _on_utility_item_containment_changed(item_id: String, _previous_container_id: String, new_container_id: String) -> void: _reanchor_containment_subtree(item_id, _freshness_context_for_container(new_container_id), {})
 func _freshness_context_for_container(container_id: String) -> StringName:
@@ -178,7 +183,7 @@ func _reanchor_containment_subtree(item_id: String, context_id: StringName, visi
     var key: String = item_id.strip_edges()
     if key.is_empty() or visited.has(key): return
     visited[key] = true
-    if _freshness_mutations.has_record(key): _freshness_mutations.reanchor(key, context_id, _kernel.world_tick())
+    if _freshness_mutations.has_record(key): _freshness_mutations.reanchor(key, context_id, _freshness_world_tick())
     if not _inventory_state.has_container(key): return
     for child_id: String in _inventory_state.direct_contents(key): _reanchor_containment_subtree(child_id, context_id, visited)
 func _sorted_refrigerator_ids() -> Array[String]:
