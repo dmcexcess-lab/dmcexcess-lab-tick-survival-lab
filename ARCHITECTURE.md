@@ -1,6 +1,6 @@
 # Tick Survival Lab — Settled Architecture Map
 
-Status: **active turn-based migration map; Slices 1-8 complete**
+Status: **active turn-based migration map; Slices 1-10 complete**
 
 ## Canonical direction
 
@@ -14,7 +14,7 @@ Do not create a replacement simulation framework.
 
 ## Current production spine
 
-- `gameplay.tscn -> FortificationGameMain -> Slice7GameMain -> TurnBasedGameMain` is the current canonical production composition. The two narrow migration subclasses contain explicit domain commits only; neither is a generalized action layer.
+- `gameplay.tscn -> VehicleSimpleGameMain -> UtilitySimpleGameMain -> FortificationGameMain -> Slice7GameMain -> TurnBasedGameMain` is the current canonical production composition. These narrow migration subclasses contain explicit domain commits only; none is a generalized action layer.
 - ProductionWorldBootstrap owns procedural generation/materialization/streaming.
 - SimpleTurnController owns migrated turn completion and bounded local infected actions. Its completion signal remains the single survival elapsed-time seam.
 - WorldState owns authoritative entities/placements and narrow direct writes.
@@ -29,10 +29,13 @@ Do not create a replacement simulation framework.
 - Existing ActorOpeningPressureActionService continues to consume installed boards before damaging/breaking an opening; Slice 8 adds no second barricade or siege state.
 - The canonical phone shell remains TurnBasedPlayerShell -> EquipmentPlayerShell; Slice 7 adds only first-aid delegation to the canonical owner.
 - MENU, SAVE, SAVE & MENU and Continue retain the existing DurableSessionStore lifecycle. `world_interactions` plus ordinary world/inventory snapshots persist fortification and exact material consequences.
+- Island road generation is backbone-first: four terrain-routed cross-island four-lane arterial routes establish the sparse major network; developed settlements attach by paved two-lane access, rural settlement access is gravel, and generated local rural lanes/spurs are dirt. Paved production surfaces materialize as asphalt; gravel/dirt carry no painted centerline.
+- Existing VehicleState, VehicleProfileCatalog, VehicleCargoService, VehicleHeading and world placements remain vehicle truth. Canonical enter/exit/start/drive/turn/reverse/brake/hotwire/repair/modify/refuel/cargo actions commit those owners directly through VehicleSimpleGameMain and complete through SimpleTurnController with explicit survival time. Legacy TickKernel vehicle scheduling is not canonical player execution.
+- Vehicle footprints and geometry remain established content: cars use the existing 1x3 footprint, trucks 2x3, ordinary vehicle turns use the existing three-cell 90-degree path, and reverse remains supported. Zero nearby vehicles is valid world content and never a boot requirement.
 
 ## Transitional boundary
 
-The old runtime remains temporarily instantiated/referenced because bootstrap, durable-session compatibility, vehicles, utilities and later routes still depend on portions of it. This is migration debt, not protected architecture.
+The old runtime remains temporarily instantiated/referenced because bootstrap, durable-session compatibility, utilities and later routes still depend on portions of it. Legacy vehicle services may remain instantiated as compatibility/content owners, but their timed execution path is no longer canonical. This is migration debt, not protected architecture.
 
 `Slice7GameMain` and `FortificationGameMain` are explicit migration debt: they keep migrated domain commits readable while the older inheritance chain still supplies legacy owners. They must not grow into generalized action frameworks and should be folded away during later consolidation/legacy demolition.
 
