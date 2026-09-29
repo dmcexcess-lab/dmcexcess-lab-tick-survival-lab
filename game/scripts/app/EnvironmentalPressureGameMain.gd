@@ -93,6 +93,11 @@ func _ready() -> void:
     if bool(result.get("ok", false)) and not bool(status.get("persistent", true)):
         _set_session_status("BROWSER STORAGE NOT PERSISTENT — KEEP THIS TAB OPEN")
 
+func _restore_durable_session(_session: Dictionary) -> bool:
+    # ProductionGameMain owns canonical restore. This declaration keeps the
+    # lifecycle seam explicit without reinstating the retired runtime restore.
+    return false
+
 func _notification(what: int) -> void:
     if not _session_boot_ok:
         return
