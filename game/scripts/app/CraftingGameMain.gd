@@ -33,7 +33,6 @@ func _boot_production_world() -> bool:
 func _boot_crafting_runtime() -> bool:
     _skill_checks = SkillCheckServiceClass.new(_skill_state)
     if not _skill_checks.is_ready(): return false
-    if _loot_search == null or not _loot_search.configure_skill_checks(_skill_checks): return false
     _forage_state = OutdoorForageStateClass.new()
     _forage_actions = ForageNearbyActionClass.new(_world, _world_mutations, _kernel, _skill_checks, _loot_items, WorldBootstrapClass.active_seed(), _forage_state, _inventory_mutations, _carry_acquisition)
     if not _forage_actions.is_ready(): return false
@@ -46,25 +45,22 @@ func _boot_crafting_runtime() -> bool:
     _crafting_recipes = CraftingRecipeCatalogClass.new()
     _crafting_workstations = CraftingWorkstationCatalogClass.new()
     _crafting_plans = CraftingPlanQueryClass.new(_world, _hand_state, _inventory_state, _carry_query, _physical_catalog, _crafting_recipes, _crafting_items, _crafting_workstations, _freshness_profiles, _interaction_reach)
-    _crafting_actions = CraftingActionServiceClass.new(_world, _world_mutations, _hand_state, _hand_mutations, _inventory_state, _inventory_mutations, _kernel, _crafting_recipes, _crafting_plans, _skill_checks)
     _crafting_interaction_offers = CraftingInteractionOfferProviderClass.new(_world, _crafting_workstations, _interaction_reach)
-    if not _crafting_plans.is_ready() or not _crafting_actions.is_ready() or not _crafting_interaction_offers.is_ready(): return false
+    if not _crafting_plans.is_ready() or not _crafting_interaction_offers.is_ready(): return false
     if not _interaction_affordances.register_provider(_crafting_interaction_offers): return false
     _ui_icons = CraftingIconsClass.new()
     if not _ui_icons.is_ready(): return false
     if not _shell.configure(_kernel, _stats_inspector, _inventory_inspector, WorldBootstrapClass.PLAYER_ID, _ui_icons): return false
     if not _loot_panel.configure(_loot_inspection, _inventory_inspector, WorldBootstrapClass.PLAYER_ID, _ui_icons): return false
     if not _crafting_panel.configure(_crafting_plans, _kernel, WorldBootstrapClass.PLAYER_ID, _ui_icons, _skill_checks): return false
-    _crafting_controller = CraftingControllerClass.new(_crafting_actions, _interaction_affordances, _kernel, WorldBootstrapClass.PLAYER_ID)
-    if not _crafting_controller.is_ready() or not _shell.has_signal("crafting_open_requested"): return false
-    _shell.connect("crafting_open_requested", Callable(_crafting_controller, "request_open_global"))
-    _door_pointer.world_cell_primary.connect(Callable(_crafting_controller, "submit_world_cell"))
-    _crafting_controller.open_requested.connect(Callable(_crafting_panel, "open_panel"))
-    _crafting_panel.craft_requested.connect(Callable(_crafting_controller, "request_craft"))
-    _crafting_controller.action_resolved.connect(Callable(_crafting_panel, "present_action_result"))
+    if not _shell.has_signal("crafting_open_requested"): return false
+    if not _shell.crafting_open_requested.is_connected(_on_global_crafting_open_requested): _shell.crafting_open_requested.connect(_on_global_crafting_open_requested)
     _crafting_panel.interaction_blocked_changed.connect(_on_craft_interaction_blocked_changed)
     _refresh_interaction_enabled()
     return true
+
+func _on_global_crafting_open_requested() -> void:
+    if _crafting_panel != null: _crafting_panel.open_panel("")
 
 func _on_forage_requested() -> void:
     if _forage_actions == null or _kernel == null or _kernel.is_hard_paused(): return
