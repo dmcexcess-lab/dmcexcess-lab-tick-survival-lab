@@ -83,49 +83,29 @@ func _boot_system36() -> bool:
     if not _vehicle_consequences.is_ready(): return false
     _vehicle_lighting = VehicleLightingClass.new(_world, _vehicle_state, _vehicle_profiles)
     if not _vehicle_lighting.is_ready() or not _wire_vehicle_lighting(): return false
-    _vehicle_controller = VehicleControllerClass.new(_vehicle_actions, _kernel, WorldBootstrapClass.PLAYER_ID)
-    add_child(_vehicle_controller)
-    if not _vehicle_controller.is_ready(): return false
-    var base_callable := Callable(_controller, "submit_intent")
-    if _keyboard.action_intent.is_connected(base_callable): _keyboard.action_intent.disconnect(base_callable)
-    if _controls.action_intent.is_connected(base_callable): _controls.action_intent.disconnect(base_callable)
-    _keyboard.action_intent.connect(_route_player_intent)
-    _controls.action_intent.connect(_route_player_intent)
-    _vehicle_controller.action_resolved.connect(Callable(_hud, "present_action_result"))
-    _vehicle_controller.action_busy_changed.connect(_on_player_action_busy_changed)
     if not _world_view.configure_vehicles(_world, _vehicle_state, _vehicle_profiles): return false
     _vehicle_controls = VehicleControlsClass.new()
     add_child(_vehicle_controls)
-    return _vehicle_controls.configure(_vehicle_controller, _vehicle_actions, _vehicle_state, _vehicle_cargo, _inventory_state, WorldBootstrapClass.PLAYER_ID)
+    return true
 
 func _boot_world_interactions() -> bool:
-    if _interaction_reach == null or _interaction_affordances == null or _door_state == null or _door_transition == null or _door_passage == null or _spatial_query == null or _skill_checks == null or _carry_query == null or _hand_state == null or _hand_mutations == null or _item_transfer == null or _carry_acquisition == null or _sustainment_actions == null or _utilities == null or _power_network == null or _portable_generators == null or _vehicle_actions == null or _vehicle_state == null or _vehicle_profiles == null or _crafting_plans == null or _crafting_interaction_offers == null or _crafting_controller == null or _loot_controller == null: return false
+    if _interaction_reach == null or _interaction_affordances == null or _door_state == null or _door_transition == null or _door_passage == null or _spatial_query == null or _skill_checks == null or _carry_query == null or _hand_state == null or _hand_mutations == null or _carry_acquisition == null or _sustainment_actions == null or _utilities == null or _power_network == null or _portable_generators == null or _vehicle_actions == null or _vehicle_state == null or _vehicle_profiles == null or _crafting_plans == null or _crafting_interaction_offers == null: return false
     _world_interaction_catalog = InteractionCatalogClass.new()
     _world_interaction_state = InteractionStateClass.new()
     if not InteractionItemsClass.register_physical_profiles(_physical_catalog): return false
     _world_interaction_actions = InteractionActionsClass.new(_world, _world_mutations, _door_state, _door_transition, _interaction_reach, _spatial_query, _kernel, _skill_checks, _carry_query, _hand_state, _hand_mutations, _inventory_state, _inventory_mutations, _carry_acquisition, _world_interaction_state, _world_interaction_catalog)
     if not _world_interaction_actions.is_ready(): return false
-    _world_repair_actions = RepairActionsClass.new(_world, _world_mutations, _door_state, _door_transition, _interaction_reach, _kernel, _skill_checks, _carry_query, _hand_state, _hand_mutations, _inventory_state, _inventory_mutations, _world_interaction_state, _world_interaction_catalog)
-    if not _world_repair_actions.is_ready(): return false
-    _utility_power_repair_actions = UtilityRepairActionsClass.new(_world, _world_mutations, _interaction_reach, _kernel, _skill_checks, _carry_query, _hand_state, _hand_mutations, _inventory_state, _inventory_mutations, _power_network)
-    if not _utility_power_repair_actions.is_ready(): return false
-    _generator_actions = GeneratorActionsClass.new(_world, _world_mutations, _interaction_reach, _kernel, _skill_checks, _carry_query, _hand_state, _hand_mutations, _inventory_state, _inventory_mutations, _portable_generators)
-    if not _generator_actions.is_ready(): return false
     if not _door_passage.set_access_provider(Callable(self, "_door_passage_allowed")): return false
     _world_interaction_offers = InteractionOffersClass.new(_world, _interaction_reach, _door_state, _world_interaction_state, _world_interaction_catalog, _world_interaction_actions)
     if not _interaction_affordances.register_provider(_world_interaction_offers): return false
     _loose_item_pickup_offers = LooseItemPickupOffersClass.new(_world, _interaction_reach)
     if not _loose_item_pickup_offers.is_ready() or not _interaction_affordances.register_provider(_loose_item_pickup_offers): return false
-    _loose_item_pickup_handler = LooseItemPickupHandlerClass.new(_world, _item_transfer, _hand_state)
-    if not _loose_item_pickup_handler.is_ready(): return false
     _utility_power_repair_offers = UtilityRepairOffersClass.new(_world, _interaction_reach, _power_network)
     if not _interaction_affordances.register_provider(_utility_power_repair_offers): return false
     _generator_offers = GeneratorOffersClass.new(_world, _interaction_reach, _portable_generators)
     if not _interaction_affordances.register_provider(_generator_offers): return false
     _vehicle_maintenance_offers = VehicleMaintenanceOffersClass.new(_world, _interaction_reach, _vehicle_state, _vehicle_profiles)
     if not _vehicle_maintenance_offers.is_ready() or not _interaction_affordances.register_provider(_vehicle_maintenance_offers): return false
-    _vehicle_maintenance_handler = VehicleMaintenanceHandlerClass.new(_interaction_reach, _vehicle_state, _vehicle_actions, _kernel)
-    if not _vehicle_maintenance_handler.is_ready(): return false
     if not _sustainment_actions.set_potable_target_provider(Callable(self, "_potable_target_available")) or not _sustainment_actions.set_rest_target_provider(Callable(self, "_rest_target_surface")): return false
     _sustainment_interaction_offers = SustainmentOffersClass.new(_world, _interaction_reach, _world_interaction_catalog, Callable(self, "_potable_target_available"))
     if not _interaction_affordances.register_provider(_sustainment_interaction_offers): return false
@@ -137,30 +117,6 @@ func _boot_world_interactions() -> bool:
     _world_interaction_panel = InteractionPanelClass.new()
     add_child(_world_interaction_panel)
     _world_interaction_panel.interaction_blocked_changed.connect(_on_world_interaction_blocked_changed)
-    _world_interaction_controller = InteractionControllerClass.new(_world, _interaction_affordances, _kernel, _world_interaction_panel, WorldBootstrapClass.PLAYER_ID)
-    if not _world_interaction_controller.is_ready(): return false
-    for action_id: StringName in InteractionActionsClass.CORE_ACTIONS:
-        if not _world_interaction_controller.register_handler(action_id, Callable(_world_interaction_actions, "request_action")): return false
-    if not _world_interaction_controller.register_handler(LooseItemPickupOffersClass.ACTION_ID, Callable(_loose_item_pickup_handler, "request_pickup")): return false
-    if not _world_interaction_controller.register_handler(RepairActionsClass.ACTION_ID, Callable(_world_repair_actions, "request_action")): return false
-    if not _world_interaction_controller.register_handler(UtilityRepairActionsClass.ACTION_ID, Callable(_utility_power_repair_actions, "request_action")): return false
-    for action_id: StringName in GeneratorActionsClass.ACTION_IDS:
-        if not _world_interaction_controller.register_handler(action_id, Callable(_generator_actions, "request_action")): return false
-    for action_id: StringName in [VehicleActionsClass.REPAIR, VehicleActionsClass.MODIFY, VehicleActionsClass.REFUEL]:
-        if not _world_interaction_controller.register_delegated_handler(action_id, Callable(_vehicle_maintenance_handler, "request_action")): return false
-    for action_id: StringName in [SustainmentOffersClass.DRINK_FROM_FIXTURE, SustainmentOffersClass.REST_ON_FURNITURE, SustainmentOffersClass.SLEEP_IN_BED]:
-        if not _world_interaction_controller.register_handler(action_id, Callable(self, "_request_target_sustainment")): return false
-    if not _world_interaction_controller.register_delegated_handler(CraftingOffersClass.ACTION_ID, Callable(self, "_request_target_crafting")): return false
-    if not _world_interaction_controller.register_delegated_handler(LootOffersClass.SEARCH_ACTION_ID, Callable(self, "_request_target_loot")): return false
-    _world_interaction_controller.action_finished.connect(_on_world_interaction_action_finished)
-    var old_door_callable := Callable(_door_controller, "submit_world_cell")
-    if _door_controller != null and _door_pointer.world_cell_primary.is_connected(old_door_callable): _door_pointer.world_cell_primary.disconnect(old_door_callable)
-    var old_loot_callable := Callable(_loot_controller, "submit_world_cell")
-    if _door_pointer.world_cell_primary.is_connected(old_loot_callable): _door_pointer.world_cell_primary.disconnect(old_loot_callable)
-    var old_crafting_callable := Callable(_crafting_controller, "submit_world_cell")
-    if _door_pointer.world_cell_primary.is_connected(old_crafting_callable): _door_pointer.world_cell_primary.disconnect(old_crafting_callable)
-    var interaction_callable := Callable(_world_interaction_controller, "submit_world_cell")
-    if not _door_pointer.world_cell_primary.is_connected(interaction_callable): _door_pointer.world_cell_primary.connect(interaction_callable)
     return true
 
 func _route_player_intent(intent: StringName) -> void:
