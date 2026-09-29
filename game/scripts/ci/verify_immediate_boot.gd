@@ -55,5 +55,11 @@ func _verify() -> void:
         game.queue_free()
         await process_frame
 
+    var vehicle_source := FileAccess.get_file_as_string("res://scripts/app/VehicleGameMain.gd")
+    if vehicle_source.contains("if seeded < 1") or vehicle_source.contains("no plausible parked vehicle locations were generated near the playable start"):
+        push_error("vehicle seeding still treats zero nearby vehicles as fatal")
+        quit(1)
+        return
+
     print("IMMEDIATE_BOOT_REGRESSION_OK")
     quit(0)
