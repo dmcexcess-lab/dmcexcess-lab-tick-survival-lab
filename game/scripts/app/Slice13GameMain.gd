@@ -10,6 +10,7 @@ const RETIRED_RUNTIME_OWNER_KEYS: Array[String] = [
 ]
 
 func _build_durable_session() -> Dictionary:
+    _sync_refrigeration_clocks()
     var session := super._build_durable_session()
     if session.is_empty():
         return session
@@ -20,6 +21,9 @@ func _build_durable_session() -> Dictionary:
     for key: String in RETIRED_RUNTIME_OWNER_KEYS:
         owners.erase(key)
     if not owners.has("world_time") or typeof(owners["world_time"]) != TYPE_DICTIONARY:
+        return {}
+    owners["refrigeration"] = _slice13_refrigeration_snapshot()
+    if Dictionary(owners["refrigeration"]).is_empty():
         return {}
     session["schema_version"] = Slice13Store.SESSION_SCHEMA_VERSION
     session["owners"] = owners
@@ -78,9 +82,73 @@ func _restore_durable_session(session: Dictionary) -> bool:
         return false
     if not _weather.advance_to_tick(_world_time.world_tick()):
         return false
+    if owners.has("refrigeration") and typeof(owners["refrigeration"]) == TYPE_DICTIONARY:
+        if not _restore_slice13_refrigeration(owners["refrigeration"]):
+            return false
+    elif not _migrate_legacy_refrigeration():
+        return false
 
     if not _rebuild_slice13_runtime_state():
         return false
+    return true
+
+func _slice13_refrigeration_snapshot() -> Dictionary:
+    var providers: Array[Dictionary] = []
+    for refrigerator_id: String in _sorted_refrigerator_ids():
+        if not _refrigeration_providers.has(refrigerator_id):
+            continue
+        var provider: UtilityRefrigerationEnvironmentProvider = _refrigeration_providers[refrigerator_id]
+        var snapshot: Dictionary = provider.snapshot()
+        if snapshot.is_empty():
+            return {}
+        providers.append(snapshot)
+    return {
+        "schema_version": 1,
+        "providers": providers,
+    }
+
+func _restore_slice13_refrigeration(data: Dictionary) -> bool:
+    if int(data.get("schema_version", -1)) != 1:
+        return false
+    var values: Variant = data.get("providers", [])
+    if typeof(values) != TYPE_ARRAY:
+        return false
+    var restored: Dictionary = {}
+    for raw: Variant in values:
+        if typeof(raw) != TYPE_DICTIONARY:
+            return false
+        var row: Dictionary = raw
+        var refrigerator_id := String(row.get("appliance_id", "")).strip_edges()
+        if refrigerator_id.is_empty() or restored.has(refrigerator_id) or not _refrigeration_providers.has(refrigerator_id):
+            return false
+        var provider: UtilityRefrigerationEnvironmentProvider = _refrigeration_providers[refrigerator_id]
+        if not provider.restore_snapshot(row):
+            return false
+        restored[refrigerator_id] = true
+    for refrigerator_id: String in _sorted_refrigerator_ids():
+        if not restored.has(refrigerator_id):
+            return false
+    return true
+
+func _migrate_legacy_refrigeration() -> bool:
+    var restored_tick := _world_time.world_tick()
+    for refrigerator_id: String in _sorted_refrigerator_ids():
+        if not _refrigeration_providers.has(refrigerator_id):
+            continue
+        var provider: UtilityRefrigerationEnvironmentProvider = _refrigeration_providers[refrigerator_id]
+        var context_id := provider.context_id()
+        var minimum_exposure := 0
+        for item_id: String in _freshness_state.item_ids():
+            var record: ItemFreshnessRecord = _freshness_state.record(item_id)
+            if record != null and record.exposure_context_id == context_id:
+                minimum_exposure = maxi(minimum_exposure, record.exposure_anchor_ticks)
+        var migrated := provider.snapshot()
+        if migrated.is_empty():
+            return false
+        migrated["anchor_world_tick"] = restored_tick
+        migrated["saved_exposure_milliticks"] = minimum_exposure * 1000
+        if not provider.restore_snapshot(migrated):
+            return false
     return true
 
 func _rebuild_slice13_runtime_state() -> bool:
