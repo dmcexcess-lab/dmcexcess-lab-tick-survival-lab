@@ -2,12 +2,13 @@ extends RefCounted
 class_name DurableSessionStore
 
 const FORMAT_SCHEMA_VERSION: int = 1
-const SESSION_SCHEMA_VERSION: int = 1
+const LEGACY_SESSION_SCHEMA_VERSION: int = 1
+const SESSION_SCHEMA_VERSION: int = 2
 const DEFAULT_PRIMARY_PATH: String = "user://tick_lab_session.save"
 const DEFAULT_BACKUP_PATH: String = "user://tick_lab_session.backup.save"
 const DEFAULT_TEMP_PATH: String = "user://tick_lab_session.tmp.save"
 
-const REQUIRED_OWNER_KEYS: Array[String] = [
+const REQUIRED_OWNER_KEYS_V1: Array[String] = [
     "world",
     "materialization_registry",
     "kernel",
@@ -37,6 +38,34 @@ const REQUIRED_OWNER_KEYS: Array[String] = [
     "weather",
 ]
 
+const REQUIRED_OWNER_KEYS_V2: Array[String] = [
+    "world",
+    "materialization_registry",
+    "collision_overrides",
+    "doors",
+    "locomotion",
+    "hands",
+    "inventory",
+    "health",
+    "skills",
+    "freshness",
+    "carry",
+    "loot",
+    "forage",
+    "conditions",
+    "utilities",
+    "power_network",
+    "flashlight",
+    "portable_generators",
+    "vehicles",
+    "world_interactions",
+    "firearms",
+    "corpses",
+    "infected",
+    "weather",
+    "world_time",
+]
+
 var _primary_path: String
 var _backup_path: String
 var _temp_path: String
@@ -51,7 +80,8 @@ func _init(
     _temp_path = temp_path
 
 func validate_session(session: Dictionary) -> Dictionary:
-    if int(session.get("schema_version", -1)) != SESSION_SCHEMA_VERSION:
+    var schema_version := int(session.get("schema_version", -1))
+    if schema_version not in [LEGACY_SESSION_SCHEMA_VERSION, SESSION_SCHEMA_VERSION]:
         return {"ok": false, "reason": "incompatible_session_version"}
     if int(session.get("world_seed", 0)) <= 0:
         return {"ok": false, "reason": "invalid_world_seed"}
@@ -59,10 +89,11 @@ func validate_session(session: Dictionary) -> Dictionary:
     if typeof(owners_value) != TYPE_DICTIONARY:
         return {"ok": false, "reason": "invalid_owner_payload"}
     var owners: Dictionary = owners_value
-    for key: String in REQUIRED_OWNER_KEYS:
+    var required: Array[String] = REQUIRED_OWNER_KEYS_V1 if schema_version == LEGACY_SESSION_SCHEMA_VERSION else REQUIRED_OWNER_KEYS_V2
+    for key: String in required:
         if not owners.has(key) or typeof(owners[key]) != TYPE_DICTIONARY:
             return {"ok": false, "reason": "missing_owner:%s" % key}
-    return {"ok": true, "reason": ""}
+    return {"ok": true, "reason": "", "schema_version": schema_version}
 
 func has_compatible_save() -> bool:
     return bool(load_best().get("ok", false))
