@@ -69,12 +69,14 @@ The immediate production boot regression reported after Slice 9 closure was trac
 
 The earlier quiet-area infected boot repair remains valid: zero locally hydrated infected is an allowed procedural result and does not itself fail startup.
 
+A second production boot regression was then reproduced from player feedback after island generation: legacy `VehicleGameMain` treated zero plausible parked vehicles within the initial seeding radius as fatal. That is now nonfatal. A valid procedural start may have no nearby vehicle; the vehicle runtime remains available and later world/streaming state may contain vehicles. The production boot verifier now exercises multiple explicit browser-style seeds rather than relying only on headless seed 20001, and guards against restoring the fatal nearby-vehicle requirement.
+
 Current prompt-local verification:
 
 - `game/scripts/ci/verify_immediate_boot.gd`
 - `.github/workflows/immediate-production-boot.yml`
 
-The verifier loads `UtilitySimpleGameMain.gd`, loads and instantiates the actual `gameplay.tscn`, and requires the production session to reach `session_boot_ok()`. Exact code-head run `36523395854` passed and exact code-head Pages run `36523395802` passed.
+The verifier loads `UtilitySimpleGameMain.gd`, loads and instantiates the actual `gameplay.tscn`, and requires the production session to reach `session_boot_ok()`. Exact repaired code-head multi-seed boot run `36524037335` passed and exact repaired code-head Pages run `36524037415` passed.
 
 Per SOP, the next code-changing prompt must retire this prompt-owned verifier/workflow before Slice 10 production edits and create fresh Slice 10 verification.
 
