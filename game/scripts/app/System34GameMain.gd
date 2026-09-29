@@ -1,4 +1,4 @@
-extends UtilityGameMain
+extends "res://scripts/app/UtilityGameMain.gd"
 class_name System34GameMain
 
 const ConditionStateClass = preload("res://scripts/simulation/actors/condition/ActorConditionState.gd")
