@@ -46,7 +46,7 @@ Canonical vehicle enter/exit/start/hotwire/forward/turn/reverse/brake/repair/mod
 
 Existing VehicleProfileCatalog/VehicleHeading geometry remains truth: cars retain the existing 1x3 footprint, trucks 2x3, ordinary 90-degree turns use the established three-cell turn path, reverse remains available, and collision/fuel/damage consequences remain authoritative. Vehicle cargo, condition, fuel, ignition/key/hotwire state, dedicated presentation and durable vehicle snapshots remain the same owners.
 
-A valid start may contain zero nearby vehicles. That condition must never fail production boot.
+Initial vehicle materialization is now sparse and surface-weighted rather than a guaranteed one-of-every-kind lineup around the player. Parking/driveway/pavement/road cells use low deterministic occupancy rates, vehicle classes are weighted rather than enumerated, placements are spaced apart and locally capped, and a valid start may contain zero vehicles. That condition must never fail production boot.
 
 The wider arterial geometry exposed a stale utility-support placement assumption during integration. Utility span support search was made robust to the corrected road width without changing utility topology/state ownership.
 
@@ -89,14 +89,14 @@ Recent production repairs remain canonical:
 
 ## Verification lifecycle
 
-Slice 10 owns:
+Current post-Slice-10 correction owns:
 
-- `game/scripts/ci/verify_slice10.gd`
-- `.github/workflows/slice10.yml`
+- `game/scripts/ci/verify_vehicle_spawn_distribution.gd`
+- `.github/workflows/vehicle-spawn-distribution.yml`
 
-The focused verifier exercises real island generation across explicit seeds, production-facing paved/gravel/dirt materialization, settlement connection to the arterial hierarchy, actual production gameplay boot, and generated vehicle enter/start/move/turn/reverse/repair/refuel/cargo/exit through the direct simple-turn route. It also guards against canonical vehicle movement returning to TickKernel scheduling.
+The focused verifier boots multiple real production seeds and proves local vehicle materialization remains bounded, avoids planting vehicles beside the player, uses plausible vehicle surfaces, and does not guarantee all vehicle classes near spawn.
 
-Per SOP, the next code-changing prompt must retire the Slice 10 verifier/workflow before Slice 11 production edits and create fresh Slice 11 verification.
+Per SOP, the next code-changing prompt must retire this vehicle-spawn verifier/workflow before Slice 11 production edits and create fresh Slice 11 verification.
 
 ## NEXT
 
