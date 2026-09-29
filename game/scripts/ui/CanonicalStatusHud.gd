@@ -25,6 +25,8 @@ var _panel: Panel = null
 var _labels: Array[Label] = []
 var _moodlet_row: HBoxContainer = null
 var _last_presentation: Dictionary = {}
+var _world_time: WorldTimeService = null
+var _weather: WeatherService = null
 
 func _ready() -> void:
     layer = HUD_LAYER
@@ -50,6 +52,14 @@ func configure(
 
 func is_configured() -> bool:
     return _kernel != null and _status_query != null and _inspection_query != null and not _actor_id.is_empty()
+
+func configure_environment(world_time: WorldTimeService, weather: WeatherService) -> bool:
+    if world_time == null or not world_time.is_ready() or weather == null or not weather.is_ready():
+        return false
+    _world_time = world_time
+    _weather = weather
+    refresh()
+    return true
 
 func present_action_result(
     intent: StringName,
@@ -78,6 +88,19 @@ func refresh() -> void:
         looking_text = String(inspection.get("label", "Unknown"))
 
     var line_one: String = "Tick %d  •  %s  •  Facing %s" % [_kernel.world_tick(), _action_text, facing_text]
+    if _world_time != null and _world_time.is_ready() and _weather != null and _weather.is_ready():
+        var clock: Dictionary = _world_time.current_time()
+        var hour24 := int(clock.get("hour", 0))
+        var minute := int(clock.get("minute", 0))
+        var suffix := "AM" if hour24 < 12 else "PM"
+        var hour12 := hour24 % 12
+        if hour12 == 0:
+            hour12 = 12
+        var weather_sample: Dictionary = _weather.current_sample()
+        var weather_label := String(weather_sample.get("weather_kind", "clear")).to_upper()
+        line_one = "DAY %d — %d:%02d %s — %s  •  %s  •  Facing %s" % [
+            int(clock.get("day_index", 0)) + 1, hour12, minute, suffix, weather_label, _action_text, facing_text
+        ]
     var line_two: String = "Looking at: %s" % looking_text
     var line_three: String = "Status unavailable"
     var line_four: String = String(status.get("reason", "unknown"))
