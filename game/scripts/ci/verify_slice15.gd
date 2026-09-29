@@ -9,6 +9,7 @@ const Footprint = preload("res://scripts/foundation/spatial/SpatialFootprint.gd"
 const WorldActions = preload("res://scripts/simulation/interaction/WorldInteractionActionService.gd")
 const Sustainment = preload("res://scripts/simulation/interaction/SustainmentInteractionOfferProvider.gd")
 const Conditions = preload("res://scripts/simulation/actors/condition/ActorConditionState.gd")
+const Reach = preload("res://scripts/simulation/interaction/WorldInteractionReachQuery.gd")
 
 const PLAYER_ID := "actor.player"
 const INVALID_CELL := Vector2i(-999999, -999999)
@@ -34,7 +35,7 @@ func _run() -> void:
     _check(String(game.session_boot_error()).is_empty(), "production reports no boot error")
 
     var initial := _diagnostic_snapshot(game)
-    print("RELEASE_DIAG startup_ms=%d seed=%d active_infected=%d known_infected=%d nearby_containers=%d nearby_items=%d nearby_consumables=%d nearby_tools=%d nearby_medical=%d nearby_materials=%d active_regions=%d save_bytes=%d conditions=%s" % [
+    print("RELEASE_DIAG startup_ms=%d seed=%d active_infected=%d known_infected=%d nearby_containers=%d nearby_items=%d nearby_consumables=%d nearby_tools=%d nearby_medical=%d nearby_materials=%d wide_consumables=%d wide_tools=%d active_regions=%d save_bytes=%d conditions=%s" % [
         startup_ms,
         Bootstrap.active_seed(),
         int(initial.get("active_infected", 0)),
@@ -45,6 +46,8 @@ func _run() -> void:
         int(initial.get("nearby_tools", 0)),
         int(initial.get("nearby_medical", 0)),
         int(initial.get("nearby_materials", 0)),
+        int(initial.get("wide_consumables", 0)),
+        int(initial.get("wide_tools", 0)),
         int(initial.get("active_regions", 0)),
         int(initial.get("save_bytes", 0)),
         str(initial.get("conditions", {})),
@@ -54,6 +57,7 @@ func _run() -> void:
     _check(int(initial.get("nearby_containers", 0)) > 0, "generated start has at least one materialized loot container within expedition range")
     _check(int(initial.get("nearby_items", 0)) > 0, "generated start exposes real loot within expedition range")
     _check(int(initial.get("nearby_consumables", 0)) > 0, "generated start exposes food/drink within expedition range")
+    _print_save_sizes("initial", game.durable_session_snapshot())
 
     var simple = game.simple_turn_controller()
     var kernel_before := int(game.get("_kernel").world_tick())
@@ -120,6 +124,7 @@ func _run() -> void:
     var saved_time := int(game.get("_world_time").world_tick())
     var durable_before: Dictionary = game.durable_session_snapshot()
     var save_bytes := var_to_bytes(durable_before).size()
+    _print_save_sizes("post_expedition", durable_before)
     print("RELEASE_DIAG durable_payload_bytes=%d world_entities=%d active_infected=%d known_infected=%d" % [
         save_bytes,
         game.get("_world").entity_ids().size(),
@@ -239,6 +244,23 @@ func _diagnostic_snapshot(game) -> Dictionary:
                     nearby_medical += 1
                 elif family == "construction":
                     nearby_materials += 1
+    var wide_consumables := 0
+    var wide_tools := 0
+    if player != null:
+        for container_id: String in loot_state.container_ids():
+            var placement = world.placement(container_id)
+            if placement == null or _chebyshev(player.anchor, placement.anchor) > 96:
+                continue
+            for item_id: String in inventory.direct_contents(container_id):
+                if not world.has_entity(item_id):
+                    continue
+                var entity = world.entity(item_id)
+                if entity == null:
+                    continue
+                if sustainment.has_profile(entity.semantic_type):
+                    wide_consumables += 1
+                if String(loot_items.family(entity.semantic_type)) == "tools":
+                    wide_tools += 1
     var streaming = Bootstrap.streaming_coordinator()
     return {
         "active_infected": game.active_infected_ids().size(),
@@ -249,6 +271,8 @@ func _diagnostic_snapshot(game) -> Dictionary:
         "nearby_tools": nearby_tools,
         "nearby_medical": nearby_medical,
         "nearby_materials": nearby_materials,
+        "wide_consumables": wide_consumables,
+        "wide_tools": wide_tools,
         "active_regions": 0 if streaming == null else streaming.active_region_coords().size(),
         "save_bytes": var_to_bytes(game.durable_session_snapshot()).size(),
         "conditions": game.get("_condition_service").values(PLAYER_ID),
@@ -467,7 +491,7 @@ func _place_player_reachable(game, target_id: String) -> bool:
             continue
         if world.move_entity(PLAYER_ID, cell, facing):
             var reach = game.get("_interaction_reach")
-            if reach != null and reach.target_reachable(PLAYER_ID, target_id, 1):
+            if reach != null and reach.target_reachable(PLAYER_ID, target_id, Reach.CONTACT_FORWARD):
                 game.call("_refresh_simulation_boundary")
                 return true
     return false
@@ -489,6 +513,24 @@ func _find_clear_cell(game, origin: Vector2i, min_radius: int, max_radius: int, 
                 if check != null and check.is_clear():
                     return cell
     return INVALID_CELL
+
+func _print_save_sizes(label: String, session: Dictionary) -> void:
+    var raw: PackedByteArray = var_to_bytes(session)
+    var compressed: PackedByteArray = Compression.compress(raw, Compression.MODE_DEFLATE)
+    print("RELEASE_DIAG save_%s raw=%d deflate=%d ratio=%.3f" % [
+        label, raw.size(), compressed.size(),
+        0.0 if raw.is_empty() else float(compressed.size()) / float(raw.size())
+    ])
+    var owners_value: Variant = session.get("owners", {})
+    if typeof(owners_value) != TYPE_DICTIONARY:
+        return
+    var rows: Array[Dictionary] = []
+    var owners: Dictionary = owners_value
+    for key: Variant in owners.keys():
+        rows.append({"key": String(key), "bytes": var_to_bytes(owners[key]).size()})
+    rows.sort_custom(func(a: Dictionary, b: Dictionary) -> bool: return int(a["bytes"]) > int(b["bytes"]))
+    for row: Dictionary in rows:
+        print("RELEASE_DIAG save_owner_%s %s=%d" % [label, String(row["key"]), int(row["bytes"])])
 
 func _systems_available(game) -> bool:
     return game.get("_inventory_state") != null         and game.get("_hand_state") != null         and game.get("_health_state") != null         and game.get("_crafting_recipes") != null         and game.get("_first_aid_actions") != null         and game.get("_world_interaction_state") != null         and game.get("_utilities") != null         and game.get("_power_network") != null         and game.get("_portable_generators") != null         and game.get("_vehicle_state") != null         and game.get("_vehicle_profiles") != null         and game.get("_world_time") != null         and game.get("_weather") != null         and game.get("_perception") != null         and game.get("_ambient_daylight") != null
