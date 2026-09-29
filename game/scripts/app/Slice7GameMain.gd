@@ -1,4 +1,4 @@
-extends TurnBasedGameMain
+extends "res://scripts/app/TurnBasedGameMain.gd"
 class_name Slice7GameMain
 
 ## Temporary migration composition for Slice 7. This overrides only the five newly
