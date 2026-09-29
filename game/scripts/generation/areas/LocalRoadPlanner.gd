@@ -485,7 +485,7 @@ func _build_rural_scattered_lane(
         "waypoints": waypoints,
         "inherited": false,
         "allowed_boundary_cells": [],
-        "surface_family": &"rural_gravel",
+        "surface_family": &"rural_dirt",
         "paint_centerline": false,
         "parcel_frontage_enabled": true,
         "rural_scattered_lane": true,
@@ -705,7 +705,7 @@ func _build_local_rural_spur(
         "waypoints": waypoints,
         "inherited": false,
         "allowed_boundary_cells": [],
-        "surface_family": &"rural_gravel",
+        "surface_family": &"rural_dirt",
         "paint_centerline": false,
         "parcel_frontage_enabled": true,
     }
