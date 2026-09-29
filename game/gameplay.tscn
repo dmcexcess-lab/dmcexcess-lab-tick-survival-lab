@@ -1,4 +1,4 @@
-[gd_scene load_steps=17 format=3]
+[gd_scene load_steps=16 format=3]
 
 [ext_resource path="res://scripts/app/ProductionGameMain.gd" type="Script" id="1"]
 [ext_resource path="res://scripts/render/TacticalRendererStack.gd" type="Script" id="2"]
@@ -14,7 +14,6 @@
 [ext_resource path="res://scripts/ui/LootContainerPanel.gd" type="Script" id="12"]
 [ext_resource path="res://scripts/ui/CraftingPanel.gd" type="Script" id="14"]
 [ext_resource path="res://scripts/ui/PlayerMapBootstrap.gd" type="Script" id="15"]
-[ext_resource path="res://scripts/ui/WorldResolutionIndicator.gd" type="Script" id="16"]
 [ext_resource path="res://scripts/simulation/crafting/PoweredCraftingWorkstationAdapter.gd" type="Script" id="18"]
 
 [node name="TickSurvivalGame" type="Node"]
@@ -51,9 +50,6 @@ script = ExtResource("15")
 
 [node name="Hud" type="CanvasLayer" parent="."]
 script = ExtResource("5")
-
-[node name="ResolutionIndicator" type="CanvasLayer" parent="."]
-script = ExtResource("16")
 
 [node name="PlayerShell" type="CanvasLayer" parent="."]
 script = ExtResource("6")
