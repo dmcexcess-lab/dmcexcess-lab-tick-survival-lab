@@ -26,6 +26,9 @@ var _kernel: TickKernel = null
 var _profiles: Dictionary = {}
 var _state: WeatherState = null
 var _scenario_seed: int = 28028
+var _manual_mode: bool = false
+var _manual_tick: int = 0
+var _manual_next_lightning_tick: int = -1
 
 func _init(
     tick_kernel: TickKernel = null,
@@ -41,12 +44,54 @@ func _init(
         _initialize(initial_profile_id)
 
 func is_ready() -> bool:
-    return _kernel != null and _state != null and _profile(_state.current_profile_id) != null and _profile(_state.target_profile_id) != null
+    return (_manual_mode or _kernel != null) and _state != null and _profile(_state.current_profile_id) != null and _profile(_state.target_profile_id) != null
+
+func uses_manual_clock() -> bool:
+    return _manual_mode
+
+func world_tick() -> int:
+    return _clock_tick()
+
+func configure_manual_clock(start_tick: int) -> bool:
+    if start_tick < 0 or _state == null:
+        return false
+    if _kernel != null:
+        if _state.scheduled_event_serial > 0:
+            _kernel.cancel_event(_state.scheduled_event_serial)
+        if _state.lightning_event_serial > 0:
+            _kernel.cancel_event(_state.lightning_event_serial)
+    _disconnect_kernel()
+    _manual_mode = true
+    _manual_tick = start_tick
+    _state.scheduled_event_serial = 0
+    _state.lightning_event_serial = 0
+    _state.lightning_event_kind = &""
+    _clear_active_lightning()
+    if _state.transition_end_tick <= _manual_tick:
+        _advance_manual_transitions()
+    if _current_source_is_storm():
+        _manual_next_lightning_tick = _manual_tick + _next_lightning_delay()
+    else:
+        _manual_next_lightning_tick = -1
+    _publish_quantized_if_needed(true)
+    weather_changed.emit(debug_snapshot())
+    return true
+
+func advance_to_tick(target_tick: int) -> bool:
+    if not _manual_mode or target_tick < _manual_tick:
+        return false
+    if target_tick == _manual_tick:
+        return true
+    _manual_tick = target_tick
+    _advance_manual_transitions()
+    _advance_manual_lightning()
+    _publish_quantized_if_needed(false)
+    return true
 
 func current_sample(world_tick: int = -1) -> Dictionary:
     if not is_ready():
         return {}
-    var tick: int = _kernel.world_tick() if world_tick < 0 else world_tick
+    var tick: int = _clock_tick() if world_tick < 0 else world_tick
     tick = maxi(tick, _state.transition_start_tick)
     var current: WeatherProfile = _profile(_state.current_profile_id)
     var target: WeatherProfile = _profile(_state.target_profile_id)
@@ -100,7 +145,7 @@ func presentation_descriptor() -> Dictionary:
 func wetness_at(world_tick: int = -1) -> float:
     if not is_ready():
         return 0.0
-    var tick: int = _kernel.world_tick() if world_tick < 0 else world_tick
+    var tick: int = _clock_tick() if world_tick < 0 else world_tick
     if tick <= _state.wetness_anchor_tick:
         return _state.wetness_anchor
     var current: WeatherProfile = _profile(_state.current_profile_id)
@@ -130,7 +175,7 @@ func force_profile(profile_id: StringName) -> bool:
     var profile: WeatherProfile = _profile(profile_id)
     if _kernel == null or profile == null:
         return false
-    var tick: int = _kernel.world_tick()
+    var tick: int = _clock_tick()
     var current_wetness: float = wetness_at(tick) if is_ready() else 0.0
     if _state.scheduled_event_serial > 0:
         _kernel.cancel_event(_state.scheduled_event_serial)
@@ -174,12 +219,12 @@ func snapshot() -> Dictionary:
     }
 
 func load_snapshot(data: Dictionary) -> bool:
-    if _kernel == null or int(data.get("schema_version", -1)) != SNAPSHOT_SCHEMA_VERSION:
+    if (not _manual_mode and _kernel == null) or int(data.get("schema_version", -1)) != SNAPSHOT_SCHEMA_VERSION:
         return false
     var state_value: Variant = data.get("state", {})
     if typeof(state_value) != TYPE_DICTIONARY:
         return false
-    var restored: WeatherState = StateClass.from_snapshot(state_value, _kernel.world_tick())
+    var restored: WeatherState = StateClass.from_snapshot(state_value, _clock_tick())
     if restored == null or _profile(restored.current_profile_id) == null or _profile(restored.target_profile_id) == null:
         return false
     _scenario_seed = int(data.get("scenario_seed", _scenario_seed))
@@ -193,7 +238,7 @@ func debug_snapshot() -> Dictionary:
     return {
         "ready": true,
         "scenario_seed": _scenario_seed,
-        "world_tick": _kernel.world_tick(),
+        "world_tick": _clock_tick(),
         "current_profile_id": String(_state.current_profile_id),
         "target_profile_id": String(_state.target_profile_id),
         "transition_start_tick": _state.transition_start_tick,
@@ -210,7 +255,7 @@ func debug_snapshot() -> Dictionary:
     }
 
 func _initialize(initial_profile_id: StringName) -> void:
-    var tick: int = _kernel.world_tick()
+    var tick: int = _clock_tick()
     _state.current_profile_id = initial_profile_id
     _state.target_profile_id = initial_profile_id
     _state.transition_start_tick = tick
@@ -238,12 +283,15 @@ func _plan_next_transition(source_profile_id: StringName) -> bool:
         return false
     var span: int = maxi(1, source.max_duration_ticks - source.min_duration_ticks + 1)
     var duration: int = source.min_duration_ticks + posmod(_stable_mix(choice_seed, 17, String(target_id)), span)
-    var tick: int = _kernel.world_tick()
+    var tick: int = _clock_tick()
     _state.current_profile_id = source.profile_id
     _state.target_profile_id = target.profile_id
     _state.transition_start_tick = tick
     _state.transition_end_tick = tick + duration
     _state.wetness_anchor_tick = tick
+    if _manual_mode:
+        _state.scheduled_event_serial = 0
+        return true
     var event_serial: int = _kernel.schedule_event(
         _state.transition_end_tick,
         OWNER_KEY,
@@ -262,7 +310,12 @@ func _schedule_lightning_start(immediate: bool) -> bool:
     if _state.lightning_event_serial > 0:
         return _state.lightning_event_kind == LIGHTNING_KIND_START
     var delay: int = 1 if immediate else _next_lightning_delay()
-    var due_tick: int = _kernel.world_tick() + delay
+    var due_tick: int = _clock_tick() + delay
+    if _manual_mode:
+        _manual_next_lightning_tick = due_tick
+        _state.lightning_event_serial = 0
+        _state.lightning_event_kind = &""
+        return true
     var event_serial: int = _kernel.schedule_event(
         due_tick,
         OWNER_KEY,
@@ -294,6 +347,82 @@ func _connect_kernel() -> void:
     var advanced := Callable(self, "_on_world_tick_advanced")
     if not _kernel.world_tick_advanced.is_connected(advanced):
         _kernel.world_tick_advanced.connect(advanced)
+
+func _disconnect_kernel() -> void:
+    if _kernel == null:
+        return
+    var due := Callable(self, "_on_external_event_due")
+    if _kernel.external_event_due.is_connected(due):
+        _kernel.external_event_due.disconnect(due)
+    var advanced := Callable(self, "_on_world_tick_advanced")
+    if _kernel.world_tick_advanced.is_connected(advanced):
+        _kernel.world_tick_advanced.disconnect(advanced)
+
+func _clock_tick() -> int:
+    if _manual_mode:
+        return _manual_tick
+    return 0 if _kernel == null else _kernel.world_tick()
+
+func _advance_manual_transitions() -> void:
+    if not _manual_mode or _state == null:
+        return
+    var guard := 0
+    while _manual_tick >= _state.transition_end_tick and guard < 64:
+        var due_tick := _state.transition_end_tick
+        var previous: StringName = _state.current_profile_id
+        var arrived: StringName = _state.target_profile_id
+        var arrived_wetness := wetness_at(due_tick)
+        _clear_active_lightning()
+        _manual_next_lightning_tick = -1
+        _state.current_profile_id = arrived
+        _state.target_profile_id = arrived
+        _state.wetness_anchor = arrived_wetness
+        _state.wetness_anchor_tick = due_tick
+        _state.transition_start_tick = due_tick
+        _state.transition_end_tick = due_tick + 1
+        _state.transition_serial += 1
+        _state.environment_revision += 1
+        _state.scheduled_event_serial = 0
+        var final_tick := _manual_tick
+        _manual_tick = due_tick
+        if not _plan_next_transition(arrived):
+            _manual_tick = final_tick
+            return
+        if _current_source_is_storm():
+            _manual_next_lightning_tick = due_tick + _next_lightning_delay()
+        _manual_tick = final_tick
+        weather_transition_completed.emit(previous, arrived, due_tick)
+        guard += 1
+
+func _advance_manual_lightning() -> void:
+    if not _manual_mode or not _current_source_is_storm():
+        _manual_next_lightning_tick = -1
+        _clear_active_lightning()
+        return
+    if _manual_next_lightning_tick < 0:
+        _manual_next_lightning_tick = _manual_tick + _next_lightning_delay()
+        return
+    if _manual_tick < _manual_next_lightning_tick:
+        return
+    var flash_tick := _manual_next_lightning_tick
+    _state.lightning_serial += 1
+    var bolt_seed := _stable_mix(_scenario_seed, _state.lightning_serial, "lightning:%d" % flash_tick)
+    _state.active_lightning_id = "lightning.%d.%d" % [flash_tick, _state.lightning_serial]
+    _state.active_lightning_start_tick = flash_tick
+    _state.active_lightning_end_tick = flash_tick + LIGHTNING_FLASH_TICKS
+    _state.active_lightning_intensity = clampf(0.78 + float(posmod(bolt_seed, 23)) / 100.0, 0.78, 1.0)
+    _state.active_lightning_seed = bolt_seed
+    _state.environment_revision += 1
+    if _manual_tick >= _state.active_lightning_end_tick:
+        var ended_id := _state.active_lightning_id
+        _clear_active_lightning()
+        lightning_ended.emit(ended_id, _manual_tick)
+    else:
+        var lightning := active_lightning()
+        if lightning != null:
+            lightning_started.emit(lightning.copy())
+    _manual_next_lightning_tick = _manual_tick + _next_lightning_delay()
+    weather_changed.emit(debug_snapshot())
 
 func _on_external_event_due(event: ScheduledEvent) -> void:
     if event == null or event.owner_key != OWNER_KEY:
@@ -415,7 +544,8 @@ func _current_source_is_storm() -> bool:
     return profile != null and profile.kind == ProfileClass.KIND_STORM
 
 func _on_world_tick_advanced(_previous_tick: int, _new_tick: int) -> void:
-    _publish_quantized_if_needed(false)
+    if not _manual_mode:
+        _publish_quantized_if_needed(false)
 
 func _publish_quantized_if_needed(force: bool) -> void:
     if not is_ready():
