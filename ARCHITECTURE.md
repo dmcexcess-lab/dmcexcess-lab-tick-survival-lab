@@ -1,6 +1,6 @@
 # Tick Survival Lab — Settled Architecture Map
 
-Status: **active turn-based migration map; Slices 1-13 complete**
+Status: **active turn-based production map; Slices 1-14 complete**
 
 ## Canonical direction
 
@@ -14,7 +14,7 @@ Do not create a replacement simulation framework.
 
 ## Current production spine
 
-- `gameplay.tscn -> Slice13GameMain -> Slice12GameMain -> Slice11GameMain -> VehicleSimpleGameMain -> UtilitySimpleGameMain -> FortificationGameMain -> Slice7GameMain -> TurnBasedGameMain` is the current canonical production composition. These narrow migration subclasses contain explicit domain commits/migration seams only; none is a generalized action layer.
+- `gameplay.tscn -> ProductionGameMain -> VehicleSimpleGameMain -> UtilitySimpleGameMain -> FortificationGameMain -> Slice7GameMain -> TurnBasedGameMain` is the canonical production composition. `ProductionGameMain` now owns the previously separate Slice 11-13 time/weather, streaming-boundary and persistence seams.
 - ProductionWorldBootstrap owns procedural generation/materialization/streaming.
 - SimpleTurnController owns migrated turn completion and bounded local infected actions. Its completion signal remains the single survival elapsed-time seam.
 - WorldState owns authoritative entities/placements and narrow direct writes.
@@ -30,7 +30,7 @@ Do not create a replacement simulation framework.
 - The canonical phone shell remains TurnBasedPlayerShell -> EquipmentPlayerShell; Slice 7 adds only first-aid delegation to the canonical owner.
 - MENU, SAVE, SAVE & MENU and Continue retain the existing DurableSessionStore lifecycle. `world_interactions` plus ordinary world/inventory snapshots persist fortification and exact material consequences.
 - Island road generation is backbone-first: four terrain-routed cross-island four-lane arterial routes establish the sparse major network; developed settlements attach by paved two-lane access, rural settlement access is gravel, and generated local rural lanes/spurs are dirt. Paved production surfaces materialize as asphalt; gravel/dirt carry no painted centerline.
-- Existing VehicleState, VehicleProfileCatalog, VehicleCargoService, VehicleHeading and world placements remain vehicle truth. Canonical enter/exit/start/drive/turn/reverse/brake/hotwire/repair/modify/refuel/cargo actions commit those owners directly through VehicleSimpleGameMain and complete through SimpleTurnController with explicit survival time. Legacy TickKernel vehicle scheduling is not canonical player execution.
+- Existing VehicleState, VehicleProfileCatalog, VehicleCargoService, VehicleHeading and world placements remain vehicle truth. Canonical enter/exit/start/drive/turn/reverse/brake/hotwire/repair/modify/refuel/cargo actions commit those owners directly through VehicleSimpleGameMain and complete through SimpleTurnController with explicit survival time. The former VehiclePlayerController route is deleted.
 - `WorldTimeService` is now the authoritative scenario clock in canonical play. It advances explicitly from the same elapsed-tick value already consumed by survival, never from render frames or wall time. `OutdoorAmbientLightService` derives dawn/day/dusk/night continuously from that clock.
 - Existing `WeatherService` / `WeatherState` / `WeatherProfile` remain weather truth, but canonical play advances weather coarsely to the authoritative world-time tick rather than scheduling physical weather through TickKernel. Existing atmospheric optics, acoustics, GPU weather presentation and lighting/perception consumers remain downstream.
 - Durable session schema 2 persists canonical gameplay facts and no longer requires TickKernel queues, perception-memory caches or combat runtime snapshots. Durable truth includes world/materialization identity, player/domain state, exact containment/equipment, Health/conditions, loot/world interactions, infected/corpses, vehicles, utilities, weather/world time and refrigeration exposure state.
@@ -42,25 +42,24 @@ Do not create a replacement simulation framework.
 - SimpleTurnController refreshes that active roster immediately before local infected responses, so entering a new streamed neighborhood makes its eligible infected available without waking the rest of the island. Long elapsed-time actions still create only one ordinary local response boundary.
 - Vehicle footprints and geometry remain established content: cars use the existing 1x3 footprint, trucks 2x3, ordinary vehicle turns use the existing three-cell 90-degree path, and reverse remains supported. Zero nearby vehicles is valid world content and never a boot requirement.
 
-## Transitional boundary
+## Remaining compatibility boundary
 
-The old runtime remains temporarily instantiated/referenced because bootstrap, durable-session compatibility, utilities and later routes still depend on portions of it. Legacy vehicle services may remain instantiated as compatibility/content owners, but their timed execution path is no longer canonical. This is migration debt, not protected architecture.
+Slice 14 physically removed the obsolete player-facing scheduled execution graph rather than merely bypassing it. Deleted production/runtime branches include the old player, door, loot, crafting, vehicle, world-interaction and combat controllers; scheduled crafting/item-transfer/loot/door/firearm player execution; old consequence presentation; the legacy world-resolution indicator; and condition event adapters that canonical survival immediately disconnected.
 
-`Slice7GameMain`, `FortificationGameMain`, `UtilitySimpleGameMain`, `VehicleSimpleGameMain`, `Slice11GameMain`, `Slice12GameMain` and `Slice13GameMain` are explicit migration debt: they keep migrated domain commits readable while the older inheritance chain still supplies legacy owners. They must not grow into generalized action frameworks and should be folded away during later consolidation/legacy demolition.
+The Slice 11, Slice 12 and Slice 13 migration subclasses were folded into `ProductionGameMain` and deleted.
 
-Legacy CraftingActionService timed execution, SurvivorFirstAidActionService scheduled execution, WorldObjectRepairActionService scheduling, and WorldInteractionActionService scheduling for migrated deconstruction/fortification actions are no longer canonical player execution. Their catalogs/offer queries may remain useful until remaining dependents migrate.
+TickKernel still exists as a **noncanonical compatibility remnant**. Current production still passes it to a small set of older systems whose player-visible behavior was not redesigned in Slice 14:
 
-Legacy WorldInteractionPlayerController scheduled execution, combat action services, loot timed services, TickKernel-driven condition/fear adapters, SpatialQueryService and WorldMutationService remain noncanonical migration dependencies where still required.
+- ForageNearbyActionService still performs the FORAGE action through its existing timed route.
+- Utility generator/power/flashlight/lighting code still uses the old tick callback/clock API.
+- Spatial sound, perception and some phone-panel pause/status APIs still accept TickKernel.
+- The legacy infected cohort remains because ActorOpeningPressureActionService still supplies the existing zombie pressure/barricade behavior through that cohort; its movement/combat helper path still expects TickKernel.
 
-Rules while migrating:
+Canonical movement, melee/firearm player combat, inventory/loot transfer, contextual interaction, craft/cook/heal/repair/deconstruct/fortification, vehicle actions, survival/world-time advancement and durable Continue do **not** advance TickKernel. The Slice 14 verifier explicitly guards that boundary.
 
-- no new dependency on TickKernel/WHEN for migrated routes;
-- no WHERE 2.0 / WHAT 2.0 / WHEN 2.0;
-- no generalized craft/job/action/build replacement layer;
-- plain authoritative state and narrow domain owners are preferred;
-- delete legacy owners/adapters once their final dependent route migrates;
-- only locally relevant actors receive individual turns;
-- far/unloaded world remains persistent data, not an always-running simulation.
+Useful foundations remain canonical and are not legacy merely because they originated during earlier architecture work: WorldState, WorldMutationService, SpatialQueryService, placements/footprints/layers, collision, generation/materialization/streaming and typed domain state all remain ordinary game infrastructure.
+
+No replacement scheduler, event bus, ECS or generic action framework was introduced.
 
 ## Game systems to preserve
 
