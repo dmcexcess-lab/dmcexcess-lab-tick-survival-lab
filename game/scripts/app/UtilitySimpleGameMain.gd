@@ -1,4 +1,4 @@
-extends FortificationGameMain
+extends "res://scripts/app/FortificationGameMain.gd"
 class_name UtilitySimpleGameMain
 
 const GeneratorActions = preload("res://scripts/simulation/utilities/PortableGeneratorActionService.gd")
