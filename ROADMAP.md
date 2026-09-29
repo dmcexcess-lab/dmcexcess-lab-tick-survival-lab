@@ -1,7 +1,7 @@
 # Tick Survival Lab — Turn-Based Rewrite Roadmap
 
 Updated: **2026-09-29**  
-Status: **architecture simplification in progress; Slices 1-13 complete**
+Status: **architecture simplification complete; Slices 1-14 complete**
 
 ## Release target
 
@@ -60,8 +60,8 @@ The existing streaming coordinator now defines the first infected-eligibility bo
 ### Slice 13 — Persistence migration — DONE
 DurableSessionStore schema 2 now saves canonical gameplay facts without requiring TickKernel execution queues, perception caches or combat runtime state. Continue restores authoritative world/domain owners, exact world time/weather and refrigeration exposure state, then reconstructs streaming/local infected/perception/presentation runtime from restored facts. Current schema-1 saves remain accepted: retired runtime payloads are ignored, world time derives from restored condition anchors and refrigeration establishes a safe non-regressing baseline before the next schema-2 save. Repeated production save -> Continue -> save -> Continue preserves representative player, item, loot, fortification, infected/corpse, vehicle, utility and time/weather consequences without duplication/reset.
 
-### Slice 14 — Legacy demolition
-Delete obsolete TickKernel/WHEN scheduling, generalized consequence/intention/commitment machinery, obsolete adapters, unused WHERE/WHAT framework pieces and compatibility bridges after all player routes migrate.
+### Slice 14 — Legacy demolition — DONE
+Production no longer constructs the superseded player/door/loot/crafting/vehicle/world-interaction/combat controller graph or the scheduled crafting, item-transfer, loot, door and firearm player-execution services behind it. Those implementations were physically deleted along with obsolete consequence/debug presentation and disconnected condition adapters. Slice 11-13 migration layers were consolidated into ProductionGameMain. TickKernel remains only as a documented compatibility remnant for the existing forage route, utility/sound/perception/UI clock APIs, and the infected cohort/opening-pressure seam; canonical direct gameplay and durable persistence do not advance or serialize it.
 
 ### Slice 15 — Balance/performance/release acceptance
 Play and tune the real repeated loop on desktop and iPhone/Safari.
@@ -77,4 +77,4 @@ Play and tune the real repeated loop on desktop and iPhone/Safari.
 
 ## NEXT
 
-**Slice 14 — legacy demolition: delete obsolete TickKernel/WHEN scheduling, generalized consequence/intention/commitment machinery, obsolete adapters, unused framework pieces and compatibility bridges now that canonical gameplay and durable Continue no longer require them.**
+**Slice 15 — balance, performance and release acceptance: play and tune the real repeated loop on desktop and iPhone/Safari, fix release-blocking gameplay/performance defects, and close the rewrite as a shippable focused zombie survival game.**
