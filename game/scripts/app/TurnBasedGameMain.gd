@@ -1,4 +1,4 @@
-extends EnvironmentalPressureGameMain
+extends "res://scripts/app/EnvironmentalPressureGameMain.gd"
 class_name TurnBasedGameMain
 
 const SimpleTurnControllerClass = preload("res://scripts/player/SimpleTurnController.gd")
