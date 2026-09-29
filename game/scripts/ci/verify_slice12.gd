@@ -52,7 +52,7 @@ func _run() -> void:
     _check(int(simple.individual_actor_actions()) - actions_before <= game.call("slice12_active_infected_ids").size(), "actor work is bounded by active roster")
 
     var far_hp_before := int(game.get("_health_state").current_hp(far_id))
-    var idle_far_before := world.placement(far_id).anchor
+    var idle_far_before: Vector2i = world.placement(far_id).anchor
     for _i in range(20):
         await process_frame
     _check(world.placement(far_id).anchor == idle_far_before, "idle render frames do not move far infected")
@@ -71,7 +71,7 @@ func _run() -> void:
     _check(int(simple.individual_actor_actions()) - infected_actions_before <= game.call("slice12_active_infected_ids").size(), "eight-hour action does not multiply infected turns")
     _check(world.placement(far_id).anchor == far_before, "far infected remains dormant across long time jump")
 
-    var far_persist_before := world.placement(far_id).anchor
+    var far_persist_before: Vector2i = world.placement(far_id).anchor
     _check(_move_player_to_far_neighborhood(game, far_cell), "player can move streaming focus to far neighborhood")
     _check(game.call("_refresh_slice12_simulation_boundary"), "far neighborhood boundary refresh succeeds")
     var active_after_move: Array = game.call("slice12_active_infected_ids")
@@ -79,8 +79,8 @@ func _run() -> void:
     _check(not active_after_move.has(near_id), "previous local infected becomes dormant outside active neighborhood")
     _check(world.placement(near_id) != null, "leaving area does not delete previous infected")
 
-    var far_before_active_turn := world.placement(far_id).anchor
-    var near_before_far_turn := world.placement(near_id).anchor
+    var far_before_active_turn: Vector2i = world.placement(far_id).anchor
+    var near_before_far_turn: Vector2i = world.placement(near_id).anchor
     _perform_turn_action(simple)
     _check(world.placement(far_id).anchor != far_before_active_turn, "newly relevant infected acts after stream-boundary move")
     _check(world.placement(near_id).anchor == near_before_far_turn, "old-area infected remains dormant")
@@ -88,8 +88,8 @@ func _run() -> void:
 
     var session: Dictionary = game.call("durable_session_snapshot")
     _check(not session.is_empty(), "durable snapshot created with boundary fixture state")
-    var saved_near := world.placement(near_id).anchor
-    var saved_far := world.placement(far_id).anchor
+    var saved_near: Vector2i = world.placement(near_id).anchor
+    var saved_far: Vector2i = world.placement(far_id).anchor
     var saved_time := int(game.get("_world_time").world_tick())
 
     game.queue_free()
