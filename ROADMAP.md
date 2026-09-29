@@ -1,7 +1,7 @@
 # Tick Survival Lab — Turn-Based Rewrite Roadmap
 
 Updated: **2026-09-29**  
-Status: **architecture simplification complete; Slices 1-14 complete**
+Status: **rewrite complete; Slices 1-15 complete**
 
 ## Release target
 
@@ -63,8 +63,8 @@ DurableSessionStore schema 2 now saves canonical gameplay facts without requirin
 ### Slice 14 — Legacy demolition — DONE
 Production no longer constructs the superseded player/door/loot/crafting/vehicle/world-interaction/combat controller graph or the scheduled crafting, item-transfer, loot, door and firearm player-execution services behind it. Those implementations were physically deleted along with obsolete consequence/debug presentation and disconnected condition adapters. Slice 11-13 migration layers were consolidated into ProductionGameMain. TickKernel remains only as a documented compatibility remnant for the existing forage route, utility/sound/perception/UI clock APIs, and the infected cohort/opening-pressure seam; canonical direct gameplay and durable persistence do not advance or serialize it.
 
-### Slice 15 — Balance/performance/release acceptance
-Play and tune the real repeated loop on desktop and iPhone/Safari.
+### Slice 15 — Balance/performance/release acceptance — DONE
+Release acceptance now exercises the real fresh-cache `main.tscn -> StartupMenu -> NEW GAME -> ProductionGameMain` path at a phone-sized host viewport, performs representative movement/scavenging/exact-item use/combat/contextual interaction/crafting/long-time progression, then returns through real SAVE & MENU and StartupMenu Continue. Observed generated loot and survival pacing supported the repeated expedition loop without speculative numeric retuning. Measured durable-file bloat was addressed by backward-compatible DEFLATE envelope compression, reducing the representative post-expedition save from about 43.9 MB raw to about 1.34 MB stored while preserving canonical schema-2 truth and old uncompressed-save compatibility.
 
 ## Migration rules
 
@@ -77,4 +77,4 @@ Play and tune the real repeated loop on desktop and iPhone/Safari.
 
 ## NEXT
 
-**Slice 15 — balance, performance and release acceptance: play and tune the real repeated loop on desktop and iPhone/Safari, fix release-blocking gameplay/performance defects, and close the rewrite as a shippable focused zombie survival game.**
+**Rewrite complete.** Continue with ordinary release maintenance, gameplay polish and content expansion driven by actual player experience. Do not invent another rewrite slice merely to continue architecture work.
