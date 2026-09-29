@@ -341,7 +341,12 @@ func _hydrate_procedural_local_infected() -> bool:
         if not _world.set_placement(actor_id, Layers.Channel.ACTOR, spawn_cell, Facing.Value.SOUTH, Footprint.single_cell()): _world.remove_entity(actor_id); continue
         if not _ensure_simple_infected_state(actor_id): _world.remove_entity(actor_id); return false
         _simple_infected_ids.append(actor_id)
-    _simple_infected_ids.sort(); return not _simple_infected_ids.is_empty()
+    # An empty local infected set is a valid procedural outcome. The active set is
+    # bounded and may legitimately contain nobody at the player's starting cell;
+    # requiring at least one infected turned that ordinary world state into a
+    # generic gameplay_boot_failed startup failure.
+    _simple_infected_ids.sort()
+    return true
 func _ensure_simple_infected_state(actor_id: String) -> bool:
     if not _hand_state.has_actor(actor_id) and not _hand_mutations.enroll_actor(actor_id): return false
     if not _inventory_state.has_container(actor_id) and not _inventory_mutations.enroll_container(actor_id): return false
