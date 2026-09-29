@@ -1,4 +1,4 @@
-extends VehicleGameMain
+extends "res://scripts/app/VehicleGameMain.gd"
 class_name CombatGameMain
 
 const Intents = preload("res://scripts/input/PlayerActionIntent.gd")
