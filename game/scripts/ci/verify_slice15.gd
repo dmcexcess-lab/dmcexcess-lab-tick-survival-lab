@@ -59,10 +59,10 @@ func _run() -> void:
     var kernel_before := int(game.get("_kernel").world_tick())
     var world_time_before := int(game.get("_world_time").world_tick())
     var action_count_before := int(simple.individual_actor_actions())
-    var active_before := game.active_infected_ids().size()
+    var active_before: int = game.active_infected_ids().size()
     _check(_perform_real_movement(game), "player can perform real movement from production start")
     var action_delta := int(simple.individual_actor_actions()) - action_count_before
-    var active_after := game.active_infected_ids().size()
+    var active_after: int = game.active_infected_ids().size()
     _check(action_delta <= maxi(active_before, active_after), "one movement action produces bounded local infected work")
     _check(int(game.get("_kernel").world_tick()) == kernel_before, "canonical movement does not advance compatibility TickKernel")
     _check(int(game.get("_world_time").world_tick()) > world_time_before, "canonical movement advances authoritative world time")
@@ -89,7 +89,7 @@ func _run() -> void:
 
     var long_time_before := int(game.get("_world_time").world_tick())
     var long_actor_before := int(simple.individual_actor_actions())
-    var active_for_long := game.active_infected_ids().size()
+    var active_for_long: int = game.active_infected_ids().size()
     var eight_hours := int(game.get("_world_time_profile").ticks_per_hour()) * 8
     game.set("_simple_elapsed_override_ticks", eight_hours)
     _check(simple._begin_direct_action(&"condition.sleep"), "long survival action begins")
@@ -101,7 +101,7 @@ func _run() -> void:
         var far_after = game.get("_world").placement(far_id)
         _check(far_after != null and far_after.anchor == far_before, "far infected remains dormant through long time jump")
 
-    var after_daypart := game.get("_condition_service").values(PLAYER_ID)
+    var after_daypart: Dictionary = game.get("_condition_service").values(PLAYER_ID)
     print("RELEASE_DIAG post_8h_conditions=%s weather=%s time=%s" % [
         str(after_daypart),
         str(game.canonical_weather_snapshot()),
