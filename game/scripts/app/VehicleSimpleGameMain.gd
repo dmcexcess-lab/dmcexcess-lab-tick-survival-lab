@@ -14,24 +14,6 @@ func _boot_production_world() -> bool:
     if _vehicle_actions == null or _vehicle_state == null or _vehicle_profiles == null or _vehicle_cargo == null or _vehicle_controls == null:
         return false
 
-    # The legacy mounted route advances TickKernel batches. Canonical vehicle input
-    # stays on the already-established simple-turn route instead.
-    var legacy_route := Callable(self, "_route_player_intent")
-    if _keyboard.action_intent.is_connected(legacy_route):
-        _keyboard.action_intent.disconnect(legacy_route)
-    if _controls.action_intent.is_connected(legacy_route):
-        _controls.action_intent.disconnect(legacy_route)
-
-    # The legacy controller remains a compatibility object for the inherited boot,
-    # but it must not accumulate outcomes from canonical direct actions.
-    if _vehicle_controller != null:
-        var completed_cb := Callable(_vehicle_controller, "_on_action_completed")
-        var failed_cb := Callable(_vehicle_controller, "_on_action_failed")
-        if _vehicle_actions.action_completed.is_connected(completed_cb):
-            _vehicle_actions.action_completed.disconnect(completed_cb)
-        if _vehicle_actions.action_failed.is_connected(failed_cb):
-            _vehicle_actions.action_failed.disconnect(failed_cb)
-
     return _vehicle_controls.configure_simple(Callable(self, "run_simple_vehicle_action"))
 
 func _on_turn_intent(intent: StringName) -> void:
