@@ -176,14 +176,25 @@ func save(session: Dictionary) -> Dictionary:
     }
 
 func _write_session_file(path: String, session: Dictionary) -> bool:
-    var payload: PackedByteArray = var_to_bytes(session)
-    if payload.is_empty():
+    var raw_payload: PackedByteArray = var_to_bytes(session)
+    if raw_payload.is_empty():
         return false
+
+    var stored_payload: PackedByteArray = raw_payload
+    var compression := ""
+    var compressed: PackedByteArray = raw_payload.compress(FileAccess.COMPRESSION_DEFLATE)
+    if not compressed.is_empty() and compressed.size() < raw_payload.size():
+        stored_payload = compressed
+        compression = "deflate"
+
     var envelope := {
         "format_schema_version": FORMAT_SCHEMA_VERSION,
-        "payload_sha256": _sha256(payload),
-        "payload": payload,
+        "payload_sha256": _sha256(stored_payload),
+        "payload": stored_payload,
     }
+    if not compression.is_empty():
+        envelope["payload_compression"] = compression
+        envelope["payload_uncompressed_size"] = raw_payload.size()
     return _write_variant(path, envelope)
 
 func _read_session_file(path: String) -> Dictionary:
@@ -205,7 +216,20 @@ func _read_session_file(path: String) -> Dictionary:
     var payload: PackedByteArray = payload_value
     if payload.is_empty() or String(data.get("payload_sha256", "")) != _sha256(payload):
         return {"ok": false, "session": {}, "reason": "checksum_failed"}
-    var decoded: Variant = bytes_to_var(payload)
+
+    var decoded_payload: PackedByteArray = payload
+    var compression := String(data.get("payload_compression", ""))
+    if not compression.is_empty():
+        if compression != "deflate":
+            return {"ok": false, "session": {}, "reason": "unsupported_payload_compression"}
+        var expected_size := int(data.get("payload_uncompressed_size", -1))
+        if expected_size <= 0:
+            return {"ok": false, "session": {}, "reason": "invalid_uncompressed_size"}
+        decoded_payload = payload.decompress(expected_size, FileAccess.COMPRESSION_DEFLATE)
+        if decoded_payload.size() != expected_size:
+            return {"ok": false, "session": {}, "reason": "payload_decompression_failed"}
+
+    var decoded: Variant = bytes_to_var(decoded_payload)
     if typeof(decoded) != TYPE_DICTIONARY:
         return {"ok": false, "session": {}, "reason": "invalid_session_payload"}
     var session: Dictionary = decoded
