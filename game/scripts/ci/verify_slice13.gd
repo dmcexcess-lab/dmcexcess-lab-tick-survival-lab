@@ -29,6 +29,9 @@ func _run() -> void:
         _finish()
         return
 
+    var freshness_query = game.get("_freshness_query")
+    _check(freshness_query != null and freshness_query.get("_clock") == game.get("_world_time"), "freshness reads canonical world time rather than legacy TickKernel")
+
     var fixture: Dictionary = _establish_meaningful_state(game)
     _check(bool(fixture.get("ok", false)), "representative canonical persistence fixture established")
     if not bool(fixture.get("ok", false)):
