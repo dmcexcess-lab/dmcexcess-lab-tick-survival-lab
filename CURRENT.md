@@ -134,29 +134,39 @@ Preserve into Slice 15:
 
 A base remains an existing building the player fortifies and supplies. No colony/freeform-building system, base-ownership framework or living NPC society.
 
+## Production repair after Slice 14
+
+A real player-facing startup regression was found immediately after Slice 14 closure.
+
+The direct gameplay verifier had loaded `gameplay.tscn` successfully, but the actual production path `main.tscn -> StartupMenu -> NEW GAME -> gameplay.tscn` failed on a fresh script-class cache.
+
+Root causes repaired:
+
+- the production inheritance chain now uses explicit script paths rather than depending on fragile fresh global-class resolution;
+- `VehiclePlayerControls` no longer references the deleted `VehiclePlayerController` compatibility class;
+- canonical vehicle controls now receive the real VehicleActionService, VehicleState, VehicleCargoService, inventory and player identity during `configure_simple`;
+- `EnvironmentalPressureGameMain` again declares the narrow `_restore_durable_session` override seam required by its lifecycle, while `ProductionGameMain` remains the actual canonical restore owner;
+- workstation contextual interaction now opens the existing crafting panel directly instead of calling the deleted scheduled-controller bridge.
+
+No deleted scheduler/controller architecture was restored.
+
 ## Verification lifecycle
 
-Slice 14 owns:
+The current production-repair prompt owns:
 
-- `game/scripts/ci/verify_slice14.gd`
-- `.github/workflows/slice14.yml`
+- `game/scripts/ci/verify_startup_repair.gd`
+- `.github/workflows/startup-repair.yml`
 
-The focused verifier boots the real `gameplay.tscn` and proves:
+The focused verifier:
 
-- production uses `ProductionGameMain`;
-- removed legacy controllers/action services are not constructed;
-- canonical turn/movement completes and returns control;
-- representative direct melee combat completes;
-- representative direct contextual door interaction completes;
-- compatibility TickKernel remains frozen across canonical actions;
-- an eight-hour action advances authoritative world time once without multiplying infected turns;
-- vehicle and utility state remain available;
-- durable schema excludes kernel/combat_runtime/perception_memory;
-- real SAVE and schema-2 Continue restore player placement/time;
-- current schema-1 Continue still migrates to schema 2 while ignoring retired runtime payloads;
-- idle frames advance neither world time nor actor execution.
+- loads the production app spine bottom-up with a fresh class cache;
+- boots the actual `main.tscn`;
+- launches NEW GAME through `StartupMenu._launch_game`;
+- requires transition to the real `gameplay.tscn`;
+- requires the resulting root to be `ProductionGameMain`;
+- requires `session_boot_ok()` with no boot error.
 
-Per SOP, the next code-changing prompt must retire this Slice 14 verifier/workflow before Slice 15 production edits and create fresh Slice 15 verification.
+Per SOP, the next code-changing prompt must retire this verifier/workflow before Slice 15 production edits.
 
 ## NEXT
 
