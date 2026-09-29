@@ -1,6 +1,6 @@
 # Tick Survival Lab — Settled Architecture Map
 
-Status: **active turn-based migration map; Slices 1-10 complete**
+Status: **active turn-based migration map; Slices 1-11 complete**
 
 ## Canonical direction
 
@@ -31,6 +31,9 @@ Do not create a replacement simulation framework.
 - MENU, SAVE, SAVE & MENU and Continue retain the existing DurableSessionStore lifecycle. `world_interactions` plus ordinary world/inventory snapshots persist fortification and exact material consequences.
 - Island road generation is backbone-first: four terrain-routed cross-island four-lane arterial routes establish the sparse major network; developed settlements attach by paved two-lane access, rural settlement access is gravel, and generated local rural lanes/spurs are dirt. Paved production surfaces materialize as asphalt; gravel/dirt carry no painted centerline.
 - Existing VehicleState, VehicleProfileCatalog, VehicleCargoService, VehicleHeading and world placements remain vehicle truth. Canonical enter/exit/start/drive/turn/reverse/brake/hotwire/repair/modify/refuel/cargo actions commit those owners directly through VehicleSimpleGameMain and complete through SimpleTurnController with explicit survival time. Legacy TickKernel vehicle scheduling is not canonical player execution.
+- `WorldTimeService` is now the authoritative scenario clock in canonical play. It advances explicitly from the same elapsed-tick value already consumed by survival, never from render frames or wall time. `OutdoorAmbientLightService` derives dawn/day/dusk/night continuously from that clock.
+- Existing `WeatherService` / `WeatherState` / `WeatherProfile` remain weather truth, but canonical play advances weather coarsely to the authoritative world-time tick rather than scheduling physical weather through TickKernel. Existing atmospheric optics, acoustics, GPU weather presentation and lighting/perception consumers remain downstream.
+- Durable sessions persist optional canonical `world_time` state alongside existing weather state. Older saves without that owner migrate from the restored survival clock instead of failing.
 - Vehicle footprints and geometry remain established content: cars use the existing 1x3 footprint, trucks 2x3, ordinary vehicle turns use the existing three-cell 90-degree path, and reverse remains supported. Zero nearby vehicles is valid world content and never a boot requirement.
 
 ## Transitional boundary
