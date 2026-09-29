@@ -72,7 +72,6 @@ func _boot_system34() -> bool:
     if not _condition_physical_pressure_fear.is_ready(): return false
     _condition_environment = ConditionEnvironmentClass.new(_world, _weather, _carry_query, _condition_service, _kernel, WorldBootstrapClass.PLAYER_ID)
     if _weather != null and _weather.is_ready() and not _condition_environment.is_ready(): return false
-    if _crafting_actions != null and not _crafting_actions.configure_condition_modifiers(_condition_modifiers): return false
     _sustainment_profiles = SustainmentProfilesClass.new()
     _sustainment_actions = SustainmentActionsClass.new(_world, _world_mutations, _hand_state, _hand_mutations, _inventory_state, _inventory_mutations, _freshness_query, _freshness_mutations, _carry_query, _kernel, _world_time_profile, _condition_service, _sustainment_profiles)
     if not _sustainment_actions.is_ready(): return false
