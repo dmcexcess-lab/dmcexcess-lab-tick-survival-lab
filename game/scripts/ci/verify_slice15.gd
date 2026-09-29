@@ -516,7 +516,7 @@ func _find_clear_cell(game, origin: Vector2i, min_radius: int, max_radius: int, 
 
 func _print_save_sizes(label: String, session: Dictionary) -> void:
     var raw: PackedByteArray = var_to_bytes(session)
-    var compressed: PackedByteArray = Compression.compress(raw, Compression.MODE_DEFLATE)
+    var compressed: PackedByteArray = raw.compress(FileAccess.COMPRESSION_DEFLATE)
     print("RELEASE_DIAG save_%s raw=%d deflate=%d ratio=%.3f" % [
         label, raw.size(), compressed.size(),
         0.0 if raw.is_empty() else float(compressed.size()) / float(raw.size())
