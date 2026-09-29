@@ -13,20 +13,20 @@ const SPOILED: StringName = &"SPOILED"
 var _world: WorldState = null
 var _state: ItemFreshnessState = null
 var _profiles: ItemFreshnessProfileCatalog = null
-var _kernel: TickKernel = null
+var _clock: Variant = null
 var _providers: Dictionary = {}
 
 func _init(
     world_state: WorldState = null,
     freshness_state: ItemFreshnessState = null,
     profile_catalog: ItemFreshnessProfileCatalog = null,
-    kernel: TickKernel = null,
+    clock_source: Variant = null,
     providers: Array[SpoilageEnvironmentProvider] = []
 ) -> void:
     _world = world_state
     _state = freshness_state
     _profiles = profile_catalog
-    _kernel = kernel
+    _clock = clock_source
     for provider: SpoilageEnvironmentProvider in providers:
         if provider != null and provider.is_valid():
             _providers[String(provider.context_id())] = provider
@@ -43,12 +43,12 @@ func register_provider(provider: SpoilageEnvironmentProvider) -> bool:
     return true
 
 func is_ready() -> bool:
-    return _world != null and _state != null and _profiles != null and _kernel != null
+    return _world != null and _state != null and _profiles != null and _clock != null and typeof(_clock) == TYPE_OBJECT and _clock.has_method("world_tick")
 
 func query(item_id: String) -> Dictionary:
     if not is_ready():
         return _failure(Status.UNKNOWN, "freshness_query_not_ready")
-    return query_at_tick(item_id, _kernel.world_tick())
+    return query_at_tick(item_id, int(_clock.call("world_tick")))
 
 func query_at_tick(item_id: String, world_tick: int) -> Dictionary:
     var key: String = item_id.strip_edges()
