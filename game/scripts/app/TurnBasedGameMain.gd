@@ -16,6 +16,7 @@ const RepairActions = preload("res://scripts/simulation/interaction/WorldObjectR
 const DoorValue = preload("res://scripts/simulation/doors/DoorStateValue.gd")
 const SkillCatalog = preload("res://scripts/simulation/actors/skills/ActorSkillCatalog.gd")
 const Injury = preload("res://scripts/simulation/actors/health/ActorInjuryRecord.gd")
+const SoundProfiles = preload("res://scripts/simulation/sound/SoundEmissionProfileCatalog.gd")
 
 const RESIDENT_SPAWN_SEARCH_RADIUS := 8
 const INVALID_CELL := Vector2i(-999999, -999999)
@@ -47,6 +48,8 @@ func _boot_production_world() -> bool:
     _simple_turns.set_infected_actor_ids(_simple_infected_ids)
     add_child(_simple_turns)
     if not _simple_turns.is_ready(): return false
+    if not _simple_turns.configure_turn_based_movement(_spatial_query, _door_passage, _spatial_sound): return false
+    if _world_time != null and not _spatial_sound.configure_clock_provider(Callable(_world_time, "world_tick")): return false
     _simple_turns.action_resolved.connect(Callable(_hud, "present_action_result")); _simple_turns.action_busy_changed.connect(_on_player_action_busy_changed); _simple_turns.turn_completed.connect(_on_simple_turn_completed)
     if not _wire_simple_inventory_route() or not _wire_simple_contextual_route() or not _wire_simple_session_menu() or not _wire_simple_slice7_route(): return false
     if not _keyboard.action_intent.is_connected(_on_turn_intent): _keyboard.action_intent.connect(_on_turn_intent)
@@ -161,8 +164,12 @@ func _run_simple_contextual_action(actor_id: String, target_id: String, action_i
     if not valid: return {"success": false, "reason": "context_action_unavailable"}
     if not _simple_turns._begin_direct_action(action_id): return {"success": false, "reason": "player_unavailable"}
     var committed := false
-    if action_id == WorldActions.DOOR_OPEN: committed = _door_transition.open_manually(actor, target)
-    elif action_id == WorldActions.DOOR_CLOSE: committed = _door_transition.close_manually(actor, target)
+    if action_id == WorldActions.DOOR_OPEN:
+        committed = _door_transition.open_manually(actor, target)
+        if committed: _emit_simple_door_sound(target, SoundProfiles.DOOR_QUIET, "manual_open")
+    elif action_id == WorldActions.DOOR_CLOSE:
+        committed = _door_transition.close_manually(actor, target)
+        if committed: _emit_simple_door_sound(target, SoundProfiles.DOOR_NORMAL, "manual_close")
     elif action_id == WorldActions.WINDOW_OPEN: committed = _world_interaction_state.set_window_open(target, true, &"simple_window_open")
     elif action_id == WorldActions.WINDOW_CLOSE: committed = _world_interaction_state.set_window_open(target, false, &"simple_window_close")
     elif action_id == SustainmentOffers.DRINK_FROM_FIXTURE: committed = _condition_service.change_condition(actor, ConditionStateClass.HYDRATION, 28, &"potable_water_drunk")
@@ -172,6 +179,19 @@ func _run_simple_contextual_action(actor_id: String, target_id: String, action_i
         committed = _condition_service.change_condition(actor, ConditionStateClass.REST, 72, &"slept") and _condition_service.relieve_fatigue(actor, 100, &"slept"); if committed: _apply_simple_surface_comfort(actor, &"bed", true)
     if not committed: return _simple_turns._reject_direct_action(action_id, "context_mutation_failed")
     _simple_elapsed_override_ticks = elapsed; var result := _simple_turns._complete_direct_action(action_id, ""); result["elapsed_ticks"] = elapsed; result["target_id"] = target; result["action_id"] = action_id; return result
+
+func _emit_simple_door_sound(target_id: String, profile_id: StringName, key: String) -> void:
+    if _spatial_sound == null:
+        return
+    var placement: WorldPlacement = _world.placement(target_id)
+    if placement == null:
+        return
+    _spatial_sound.emit_sound(
+        profile_id,
+        placement.anchor,
+        WorldBootstrapClass.PLAYER_ID,
+        "%s.%s.%d" % [key, target_id, _simple_action_serial]
+    )
 
 func run_simple_inventory_consumption(item_id: String) -> Dictionary:
     var item := item_id.strip_edges()
