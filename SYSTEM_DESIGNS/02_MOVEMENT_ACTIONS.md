@@ -4,6 +4,22 @@ Status: **IMPLEMENTED — canonical modular source; same-tick movement arbitrati
 
 Approval basis: original Movement was approved with “Approved code it.” System 03 later extended the typed actor-capability seam. System 17, explicitly approved with “17 is go for approval,” revises walking interruption and activates explicit two-cell running.
 
+## Current canonical player-movement update — 2026-09-30
+
+Post-rewrite player movement no longer uses the legacy WHEN/timed MovementActionService route described below. Canonical player movement is owned by `SimpleTurnController`.
+
+Current player-visible rules:
+
+- WALK attempts exactly one cell and remains one player action.
+- RUN attempts exactly two forward cells in order as one player action.
+- A clear RUN moves both cells; if the second cell blocks, the first legal step remains; if the first blocks, the player remains at origin.
+- A hard RUN impact applies the existing 5 HP run-impact consequence.
+- RUN fatigue is charged once per completed RUN action through the canonical condition service, using the existing base cost of 8.
+- The two RUN cells never create two zombie-response rounds; relevant local infected still receive at most one response opportunity for the completed player action.
+- Player movement does not advance TickKernel.
+
+The older MovementActionService remains only where current compatibility systems still depend on it; it is not authoritative player movement.
+
 ## 1. Goal
 
 Own the canonical physical actor-movement bridge across WHERE + WHAT + Collision + WHEN. Movement validates semantic requests, submits deterministic timed actions, revalidates physical truth at movement phases, and mutates WHAT placement only through `WorldMutationService`.
