@@ -160,6 +160,49 @@ Canonical direct gameplay, survival/world-time progression and persistence do no
 
 Do not make removal of these remaining references a maintenance goal unless one becomes a concrete player-facing or measured performance problem.
 
+## Completed maintenance — true turn-based RUN + door passage
+
+Post-release movement maintenance is complete.
+
+Canonical player movement rules now are:
+
+- WALK attempts exactly one square.
+- RUN attempts exactly two forward squares in order as one player action.
+- RUN clear + clear moves two squares.
+- RUN clear + blocked preserves the first legal square and resolves an impact on the second.
+- RUN blocked on the first square leaves the player at origin and resolves an impact.
+- A two-square RUN still produces only one player turn, one elapsed-time completion and at most one ordinary local response per relevant infected.
+- Compatibility TickKernel remains frozen during canonical WALK/RUN.
+
+RUN reuses established balance values:
+
+- base fatigue cost = 8 per completed RUN action, applied once;
+- hard RUN impact damage = 5 HP.
+
+Door movement now uses existing authoritative door/passability owners:
+
+- explicit OPEN remains the quietest route;
+- WALK through a closed eligible unlocked door auto-opens it and enters in one action;
+- WALK into a locked door does not pass and causes no RUN impact damage;
+- RUN through a closed eligible unlocked door auto-opens it and continues through the second stride;
+- RUN into a locked/non-passable door stops and applies the normal RUN impact consequence;
+- RUN through an unlocked door followed by another blocker preserves the doorway step, leaves the door open and resolves the later impact.
+
+Canonical movement emits through the existing SpatialSoundService. Verified physical power hierarchy:
+
+`manual OPEN 70 < WALK 120 < WALK-through-door 180 < RUN 200 < RUN-through-door 240 < RUN impact 320`
+
+Existing infected hearing receives these canonical sounds. SpatialSoundService uses authoritative world time as its production read clock when configured, so sound observations age correctly even though TickKernel is not canonical turn time.
+
+Real SAVE & MENU / Continue verification preserves:
+
+- partial RUN player position;
+- auto-opened Door State;
+- RUN impact Health consequence;
+- RUN fatigue consequence.
+
+Idle frames produce no movement, fatigue drain or zombie actions.
+
 ## Protected game
 
 Preserve:
@@ -190,29 +233,19 @@ No colony management, freeform construction or living survivor society is requir
 
 ## Verification lifecycle
 
-Slice 15 owns:
+The current post-release maintenance prompt owns:
 
-- `game/scripts/ci/verify_slice15.gd`
-- `.github/workflows/slice15.yml`
+- `game/scripts/ci/verify_turn_based_run_doors.gd`
+- `.github/workflows/run-doors.yml`
 
-The verifier is the current release gate and should remain focused on the real player startup/lifecycle rather than becoming an ever-growing historical integration suite.
+The focused verifier boots through the real fresh-cache StartupMenu path and proves WALK/RUN distance, ordered partial movement, fatigue, impact damage, unlocked/locked door behavior, measured noise ordering, existing infected hearing, bounded local actor responses, real Save/Continue persistence and idle-frame stability.
 
-Any future code-changing maintenance prompt must follow README_SOPS.md: retire the previous prompt-local verifier/workflow before production edits and create fresh verification focused on that maintenance task.
+Per README_SOPS.md, the next code-changing maintenance prompt must retire this verifier/workflow before production edits and create a fresh prompt-focused verifier.
 
 ## NEXT
 
-**No next rewrite slice. Rewrite complete.**
+**No next rewrite slice. Rewrite remains complete.**
 
-Continue with ordinary release maintenance, gameplay polish and content expansion driven by actual player experience.
+Continue ordinary release maintenance, gameplay polish and content expansion from actual play observations.
 
-Prioritize:
-
-1. production boot/save/Continue defects;
-2. controls/usability blockers;
-3. broken gameplay actions;
-4. measured phone/Safari performance problems;
-5. balance problems demonstrated by repeated play;
-6. feedback/polish;
-7. optional content expansion.
-
-Do not return to architecture work without a concrete player-facing reason.
+Do not reopen architecture without a concrete player-facing defect.
