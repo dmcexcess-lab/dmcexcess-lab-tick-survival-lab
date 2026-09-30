@@ -160,7 +160,7 @@ func _run() -> void:
     _place_player(game, line)
     _clear_simple_infected(simple)
     emissions.clear()
-    var manual := game.run_simple_contextual_action(PLAYER_ID, door_id, WorldActions.DOOR_OPEN)
+    var manual: Dictionary = game.run_simple_contextual_action(PLAYER_ID, door_id, WorldActions.DOOR_OPEN)
     _check(bool(manual.get("success", false)), "explicit OPEN still works")
     _check(game.get("_door_state").state(door_id) == DoorValue.OPEN, "explicit OPEN changes authoritative door state")
     powers["manual_open"] = _max_power()
@@ -363,12 +363,12 @@ func _find_clear_line(game, length: int) -> Dictionary:
             for dx in range(-radius, radius + 1):
                 if absi(dx) != radius and absi(dy) != radius:
                     continue
-                var origin := player.anchor + Vector2i(dx, dy)
+                var origin: Vector2i = player.anchor + Vector2i(dx, dy)
                 for facing: int in [Facing.Value.NORTH, Facing.Value.EAST, Facing.Value.SOUTH, Facing.Value.WEST]:
                     var direction := Facing.vector(facing)
                     var clear := true
                     for step in range(0, length + 1):
-                        var cell := origin + direction * step
+                        var cell: Vector2i = origin + direction * step
                         if not game.cell_active(cell) or not world.has_terrain(cell):
                             clear = false
                             break
