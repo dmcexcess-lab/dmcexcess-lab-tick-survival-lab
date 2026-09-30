@@ -12,6 +12,20 @@ Depends on:
 - `00C_TICK_ACTION_PAUSE.md` — action timing/interruption;
 - current Structure renderer / Art Catalog — already render OPEN/CLOSED door state.
 
+## Current canonical turn-based passage update — 2026-09-30
+
+Player door passage now executes directly inside the canonical simple-turn movement route while retaining the existing Door State, lock/fortification eligibility, physical transition and collision-override owners.
+
+Current rules:
+
+- Explicit OPEN remains available and is the quietest route.
+- WALK into a CLOSED unlocked/unboarded/unbroken door auto-opens it and enters the doorway in the same one-cell WALK action.
+- WALK into a locked door fails without player impact damage.
+- RUN evaluates two forward cells in order. A CLOSED eligible door auto-opens at the encountered stride and RUN continues to the remaining stride.
+- RUN into a locked/non-passable door is a hard impact: movement stops at that stride, the door stays locked/closed and the player receives the established 5 HP impact consequence.
+- RUN through an eligible door followed by another blocker preserves the legal door step, leaves the door OPEN and resolves the later impact.
+- Auto-opened Door State and collision truth are ordinary persistent world consequences and survive Continue.
+
 ## 1. Goal
 
 Make ordinary doors feel physically natural without turning them into a menu-heavy subsystem.
