@@ -10,6 +10,9 @@ const ImpactProfiles = preload("res://scripts/simulation/combat/CombatImpactProf
 const ReachClass = preload("res://scripts/simulation/interaction/WorldInteractionReachQuery.gd")
 const Footprint = preload("res://scripts/foundation/spatial/SpatialFootprint.gd")
 const CapacityPolicy = preload("res://scripts/simulation/items/ItemAcquisitionCapacityPolicy.gd")
+const QueryResult = preload("res://scripts/simulation/collision/SpatialQueryResult.gd")
+const SoundProfiles = preload("res://scripts/simulation/sound/SoundEmissionProfileCatalog.gd")
+const RunImpactRules = preload("res://scripts/simulation/movement/MovementRunImpactDamageService.gd")
 
 signal action_resolved(intent: StringName, success: bool, reason: String, turn_number: int)
 signal action_busy_changed(busy: bool)
@@ -19,6 +22,10 @@ signal loot_container_changed(container_id: String)
 
 const ACTIVE_RADIUS: int = 24
 const UNARMED_EFFECTIVE_MASS_GRAMS: int = 350
+const WALK_ACTION: StringName = &"movement.step_forward"
+const BACKWARD_ACTION: StringName = &"movement.step_backward"
+const RUN_ACTION: StringName = &"movement.run_forward"
+const RUN_IMPACT_SOUND_POWER: int = 320
 
 var _world: WorldState
 var _collision_catalog: CollisionCatalog
@@ -42,6 +49,9 @@ var _busy := false
 var _individual_actor_actions := 0
 var _last_completed_intent: StringName = &""
 var _before_local_infected_turns: Callable = Callable()
+var _spatial_query: SpatialQueryService = null
+var _door_passage: DoorMovementPassageResolver = null
+var _spatial_sound: SpatialSoundService = null
 
 func _init(
     world: WorldState = null,
@@ -103,6 +113,18 @@ func set_before_local_infected_turns(callback: Callable) -> bool:
     if not callback.is_valid():
         return false
     _before_local_infected_turns = callback
+    return true
+
+func configure_turn_based_movement(
+    spatial_query: SpatialQueryService,
+    door_passage: DoorMovementPassageResolver,
+    spatial_sound: SpatialSoundService
+) -> bool:
+    if spatial_query == null or not spatial_query.is_ready()         or door_passage == null or not door_passage.is_ready()         or spatial_sound == null or not spatial_sound.is_ready():
+        return false
+    _spatial_query = spatial_query
+    _door_passage = door_passage
+    _spatial_sound = spatial_sound
     return true
 
 func infected_actor_ids() -> Array[String]:
@@ -326,8 +348,7 @@ func submit_intent(intent: StringName) -> void:
     _set_busy(true)
     var result := {"accepted": false, "reason": "unsupported_action"}
     if Intents.is_movement(intent):
-        var moved := _resolve_player_movement(intent)
-        result = {"accepted": moved, "reason": "" if moved else "movement_blocked"}
+        result = _resolve_player_movement(intent)
     else:
         result = _resolve_player_combat()
 
@@ -343,26 +364,135 @@ func submit_intent(intent: StringName) -> void:
     action_resolved.emit(intent, true, String(result.get("reason", "")), _turn_number)
     _set_busy(false)
 
-func _resolve_player_movement(intent: StringName) -> bool:
+func _resolve_player_movement(intent: StringName) -> Dictionary:
     var current := _world.placement(_player_id)
     if current == null:
-        return false
-    var target_anchor := current.anchor
-    var target_facing := current.facing
-    match intent:
-        Intents.TURN_LEFT:
-            target_facing = Facing.turn_left(current.facing)
-        Intents.TURN_RIGHT:
-            target_facing = Facing.turn_right(current.facing)
-        Intents.FORWARD, Intents.RUN_FORWARD:
-            target_anchor += Facing.vector(current.facing)
-        Intents.BACKWARD:
-            target_anchor -= Facing.vector(current.facing)
-        _:
-            return false
-    if target_anchor != current.anchor and not _can_occupy(_player_id, current, target_anchor, target_facing):
-        return false
-    return _world.move_entity(_player_id, target_anchor, target_facing)
+        return {"accepted": false, "reason": "player_unplaced"}
+
+    if intent == Intents.TURN_LEFT or intent == Intents.TURN_RIGHT:
+        var target_facing := Facing.turn_left(current.facing) if intent == Intents.TURN_LEFT else Facing.turn_right(current.facing)
+        return {
+            "accepted": _world.move_entity(_player_id, current.anchor, target_facing),
+            "reason": "",
+        }
+
+    if intent == Intents.RUN_FORWARD:
+        return _resolve_run_forward(current)
+
+    var direction := Facing.vector(current.facing)
+    if intent == Intents.BACKWARD:
+        direction = -direction
+    elif intent != Intents.FORWARD:
+        return {"accepted": false, "reason": "unsupported_movement"}
+
+    var action_type: StringName = BACKWARD_ACTION if intent == Intents.BACKWARD else WALK_ACTION
+    var step := _attempt_movement_step(current, current.anchor + direction, action_type)
+    if not bool(step.get("moved", false)):
+        return {"accepted": false, "reason": String(step.get("reason", "movement_blocked"))}
+    _emit_movement_sound(SoundProfiles.WALK_STEP, current.anchor + direction, "walk.%d" % (_turn_number + 1))
+    if bool(step.get("door_opened", false)):
+        _emit_movement_sound(SoundProfiles.DOOR_NORMAL, current.anchor + direction, "walk_door.%d" % (_turn_number + 1))
+    return {"accepted": true, "reason": ""}
+
+func _resolve_run_forward(current: WorldPlacement) -> Dictionary:
+    var direction := Facing.vector(current.facing)
+    var position := current.anchor
+    var opened_door := false
+
+    for stride_index in range(1, 3):
+        var target := position + direction
+        var step := _attempt_movement_step(_world.placement(_player_id), target, RUN_ACTION)
+        if bool(step.get("moved", false)):
+            position = target
+            _emit_movement_sound(
+                SoundProfiles.RUN_STRIDE,
+                position,
+                "run.%d.%d" % [_turn_number + 1, stride_index]
+            )
+            if bool(step.get("door_opened", false)):
+                opened_door = true
+                _emit_movement_sound(
+                    SoundProfiles.DOOR_LOUD,
+                    position,
+                    "run_door.%d.%d" % [_turn_number + 1, stride_index]
+                )
+            continue
+
+        if bool(step.get("blocked", false)):
+            _apply_run_impact(target, stride_index)
+            return {
+                "accepted": true,
+                "reason": "run_impact",
+                "partial_movement": stride_index > 1,
+                "door_opened": opened_door,
+            }
+        return {"accepted": false, "reason": String(step.get("reason", "movement_blocked"))}
+
+    return {"accepted": true, "reason": "", "door_opened": opened_door}
+
+func _attempt_movement_step(
+    current: WorldPlacement,
+    target_anchor: Vector2i,
+    action_type: StringName
+) -> Dictionary:
+    if current == null or _spatial_query == null:
+        return {"moved": false, "blocked": false, "reason": "movement_query_unavailable"}
+
+    var query_result: SpatialQueryResult = _spatial_query.query_entity_footprint(
+        _player_id,
+        target_anchor,
+        current.facing,
+        true
+    )
+    if query_result == null or query_result.status == QueryResult.Status.UNKNOWN:
+        return {"moved": false, "blocked": false, "reason": "target_unknown"}
+
+    var door_opened := false
+    if query_result.status == QueryResult.Status.BLOCKED         and _door_passage != null         and _door_passage.can_resolve(_player_id, action_type, query_result):
+        if not _door_passage.resolve(_player_id, 0, action_type, query_result):
+            return {"moved": false, "blocked": true, "reason": "door_passage_failed"}
+        door_opened = true
+        query_result = _spatial_query.query_entity_footprint(
+            _player_id,
+            target_anchor,
+            current.facing,
+            true
+        )
+
+    if query_result == null or query_result.status == QueryResult.Status.UNKNOWN:
+        return {"moved": false, "blocked": false, "reason": "target_unknown"}
+    if query_result.status == QueryResult.Status.BLOCKED:
+        return {
+            "moved": false,
+            "blocked": true,
+            "reason": "movement_blocked",
+            "blocking_entity_ids": query_result.blocking_entity_ids.duplicate(),
+        }
+    if query_result.status != QueryResult.Status.CLEAR:
+        return {"moved": false, "blocked": false, "reason": "target_unknown"}
+    if not _world.move_entity(_player_id, target_anchor, current.facing):
+        return {"moved": false, "blocked": false, "reason": "movement_commit_failed"}
+    return {"moved": true, "blocked": false, "door_opened": door_opened}
+
+func _apply_run_impact(target_cell: Vector2i, stride_index: int) -> void:
+    if _health != null and _health.has_actor(_player_id):
+        _health.apply_damage(_player_id, RunImpactRules.IMPACT_DAMAGE_HP)
+    _emit_movement_sound(
+        SoundProfiles.OPENING_IMPACT,
+        target_cell,
+        "run_impact.%d.%d" % [_turn_number + 1, stride_index],
+        RUN_IMPACT_SOUND_POWER
+    )
+
+func _emit_movement_sound(
+    profile_id: StringName,
+    cell: Vector2i,
+    group_key: String,
+    power_override: int = -1
+) -> void:
+    if _spatial_sound == null:
+        return
+    _spatial_sound.emit_sound(profile_id, cell, _player_id, group_key, power_override)
 
 func _resolve_player_combat() -> Dictionary:
     var firearm_id := _equipped_firearm(_player_id)
