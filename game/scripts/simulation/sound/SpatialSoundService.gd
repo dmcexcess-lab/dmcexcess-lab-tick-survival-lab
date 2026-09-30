@@ -14,6 +14,7 @@ const ObservationClass = preload("res://scripts/simulation/sound/HeardSoundObser
 signal sound_heard(listener_id, observation)
 signal listener_observations_changed(listener_id)
 signal listener_decision_unpaused(listener_id)
+signal emission_created(event_id, profile_id, acoustic_power, origin_cell, source_entity_id)
 signal emission_resolved(event_id, listeners_heard)
 
 const FNV1A_OFFSET_BASIS: int = 2166136261
@@ -123,6 +124,13 @@ func emit_sound(
     )
     if not emission.is_valid():
         return ""
+    emission_created.emit(
+        emission.event_id,
+        emission.profile_id,
+        emission.acoustic_power,
+        emission.origin_cell,
+        emission.source_entity_id
+    )
     var field: Dictionary = _propagation.propagation_field(emission)
     if field.is_empty():
         return ""
