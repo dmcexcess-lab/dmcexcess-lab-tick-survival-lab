@@ -6,6 +6,20 @@ Approval basis: after the user specified multiplicative terrain/encumbrance move
 
 This design supersedes only the affected timing/exertion/impact points of Systems 03 / 13B / 13E / 17. The System 16 Web Leave Game path is also revised as a bounded maintenance change.
 
+## Current canonical player RUN update — 2026-09-30
+
+The post-rewrite direct-turn player route supersedes the old timed/stride execution details below for player-controlled RUN.
+
+Current canonical consequences:
+
+- RUN is one player action that attempts two ordered forward cells.
+- The existing `RUN_BASE_FATIGUE_COST = 8` is applied once per completed RUN action, including partial movement and collision.
+- WALK does not receive this RUN exertion charge.
+- A hard RUN collision applies the existing `IMPACT_DAMAGE_HP = 5` through authoritative Health.
+- If stride 1 succeeds and stride 2 blocks, the player remains on the first legal cell and still receives the one RUN exertion charge plus the impact consequence.
+- If stride 1 blocks, the player remains at origin and receives the same RUN exertion + impact consequence.
+- No stamina subsystem or frame/held-key drain was introduced.
+
 ## 1. Goal
 
 Make movement effort physically coherent without adding a stamina subsystem:
