@@ -22,6 +22,23 @@ Exact-head owner: `verify/system26-spatial-sound`.
 
 ---
 
+## Current canonical movement-sound update — 2026-09-30
+
+The Slice-14 legacy `ActionSoundEmitterAdapter` is no longer the player-movement source. Canonical direct-turn player movement now emits into the existing `SpatialSoundService` directly, and explicit manual door interaction emits through the same existing profiles.
+
+Verified physical source-power hierarchy:
+
+- manual OPEN: `70` (`door.quiet`);
+- ordinary WALK: `120` (`movement.walk_step`);
+- WALK through an auto-opened door: max `180` (`door.normal`);
+- ordinary RUN: `200` (`movement.run_stride`);
+- RUN through an auto-opened door: max `240` (`door.loud`);
+- RUN collision / locked-door impact: `320` via the existing impact profile with a movement-impact override.
+
+Existing acoustic propagation, hearing uncertainty and infected listeners remain unchanged. A focused production verifier confirms a registered infected listener receives canonical RUN through the existing hearing system.
+
+Because canonical player turns intentionally do not advance TickKernel, `SpatialSoundService` now accepts the authoritative world-time clock as its active read clock in production. TickKernel remains the compatibility fallback. This keeps observation timestamps/expiry advancing with canonical world time without creating a second sound architecture.
+
 ## 1. Ownership
 
 System 26 owns:
