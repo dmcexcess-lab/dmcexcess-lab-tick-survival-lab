@@ -28,6 +28,7 @@ var _hearing: HearingProfileProvider = null
 var _observations: HeardSoundObservationStore = null
 var _environment: AcousticEnvironmentModifier = null
 var _next_event_serial: int = 1
+var _clock_provider: Callable = Callable()
 
 func _init(
     world: WorldState = null,
@@ -64,6 +65,22 @@ func is_ready() -> bool:
         and _observations != null \
         and _environment != null
 
+func configure_clock_provider(provider: Callable) -> bool:
+    if not provider.is_valid():
+        return false
+    var value: Variant = provider.call()
+    if typeof(value) != TYPE_INT or int(value) < 0:
+        return false
+    _clock_provider = provider
+    return true
+
+func _clock_tick() -> int:
+    if _clock_provider.is_valid():
+        var value: Variant = _clock_provider.call()
+        if typeof(value) == TYPE_INT and int(value) >= 0:
+            return int(value)
+    return -1 if _kernel == null else _kernel.world_tick()
+
 func register_listener(actor_id: String) -> bool:
     var normalized: String = actor_id.strip_edges()
     if not is_ready() or normalized.is_empty() or not _world.has_entity(normalized) or not _world.has_placement(normalized):
@@ -90,11 +107,14 @@ func emit_sound(
     var power: int = power_override if power_override > 0 else _profiles.power(profile_id)
     if power <= 0:
         return ""
-    var event_id: String = "sound.%d.%d" % [_kernel.world_tick(), _next_event_serial]
+    var emitted_tick := _clock_tick()
+    if emitted_tick < 0:
+        return ""
+    var event_id: String = "sound.%d.%d" % [emitted_tick, _next_event_serial]
     _next_event_serial += 1
     var emission := EmissionClass.new(
         event_id,
-        _kernel.world_tick(),
+        emitted_tick,
         origin_cell,
         profile_id,
         power,
@@ -122,7 +142,7 @@ func active_observations(listener_id: String) -> Array[HeardSoundObservation]:
     var result: Array[HeardSoundObservation] = []
     if not is_ready():
         return result
-    return _observations.active_observations(listener_id, _kernel.world_tick())
+    return _observations.active_observations(listener_id, _clock_tick())
 
 func presentation_descriptors(listener_id: String) -> Array[Dictionary]:
     var result: Array[Dictionary] = []
@@ -291,7 +311,7 @@ static func _fnv1a(value: String) -> int:
     return hash_value
 
 func _on_world_tick_advanced(_previous_tick: int, new_tick: int) -> void:
-    _observations.prune_expired(new_tick)
+    _observations.prune_expired(_clock_tick() if _clock_provider.is_valid() else new_tick)
 
 func _on_action_started(action: TimedAction) -> void:
     if action == null:
@@ -304,7 +324,7 @@ func _on_action_started(action: TimedAction) -> void:
 func _on_timing_state_reset() -> void:
     if _observations == null or _kernel == null:
         return
-    _observations.prune_expired(_kernel.world_tick())
+    _observations.prune_expired(_clock_tick())
     for listener_id: String in _observations.listener_ids():
         listener_observations_changed.emit(listener_id)
 
