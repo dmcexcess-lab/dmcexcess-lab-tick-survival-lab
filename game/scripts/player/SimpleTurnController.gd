@@ -21,7 +21,11 @@ signal loot_container_opened(container_id: String)
 signal loot_container_changed(container_id: String)
 
 const ACTIVE_RADIUS: int = 24
-const UNARMED_EFFECTIVE_MASS_GRAMS: int = 350
+# Effective striking mass includes the moving hand/forearm and committed body mass,
+# not merely the anatomical mass of a fist. Keep player unarmed viable but clearly
+# below strong purpose-built/improvised melee weapons.
+const PLAYER_UNARMED_EFFECTIVE_MASS_GRAMS: int = 2400
+const INFECTED_UNARMED_EFFECTIVE_MASS_GRAMS: int = 1000
 const WALK_ACTION: StringName = &"movement.step_forward"
 const BACKWARD_ACTION: StringName = &"movement.step_backward"
 const RUN_ACTION: StringName = &"movement.run_forward"
@@ -346,6 +350,7 @@ func submit_intent(intent: StringName) -> void:
         return
 
     _set_busy(true)
+    var player_hp_before := _health.current_hp(_player_id) if _health != null and _health.has_actor(_player_id) else -1
     var result := {"accepted": false, "reason": "unsupported_action"}
     if Intents.is_movement(intent):
         result = _resolve_player_movement(intent)
@@ -361,7 +366,10 @@ func submit_intent(intent: StringName) -> void:
     _last_completed_intent = intent
     var acted := _run_local_infected_turns()
     turn_completed.emit(_turn_number, acted)
-    action_resolved.emit(intent, true, String(result.get("reason", "")), _turn_number)
+    var feedback := String(result.get("reason", ""))
+    if intent == Intents.COMBAT_FORWARD:
+        feedback = _append_player_damage_feedback(feedback, player_hp_before)
+    action_resolved.emit(intent, true, feedback, _turn_number)
     _set_busy(false)
 
 func _resolve_player_movement(intent: StringName) -> Dictionary:
@@ -513,7 +521,7 @@ func _resolve_melee_attack(attacker_id: String) -> Dictionary:
     var strike_cell := placement.anchor + Facing.vector(placement.facing)
     var target_id := _living_actor_at(strike_cell, attacker_id)
     if target_id.is_empty():
-        return {"accepted": true, "reason": "melee_miss"}
+        return {"accepted": true, "reason": "MISS"}
 
     var strike := _melee_profile(attacker_id)
     if not bool(strike.get("available", false)):
@@ -521,7 +529,10 @@ func _resolve_melee_attack(attacker_id: String) -> Dictionary:
     var damage := _derived_melee_damage(strike)
     if not _apply_impact(attacker_id, target_id, damage, StringName(strike.get("contact_mode", &"blunt"))):
         return {"accepted": false, "reason": "impact_failed"}
-    return {"accepted": true, "reason": ""}
+    return {
+        "accepted": true,
+        "reason": _impact_feedback(String(strike.get("label", "HIT")), target_id, damage),
+    }
 
 func _resolve_firearm_attack(attacker_id: String, firearm_id: String) -> Dictionary:
     if not _actor_alive(attacker_id):
@@ -558,7 +569,8 @@ func _resolve_firearm_attack(attacker_id: String, firearm_id: String) -> Diction
             return {"accepted": false, "reason": "firearm_damage_failed"}
         if _health.has_actor(hit_id):
             _health.add_injury(hit_id, &"gunshot", Injury.TORSO, Injury.Severity.CRITICAL)
-    return {"accepted": true, "reason": "" if not hit_id.is_empty() else "firearm_miss"}
+        return {"accepted": true, "reason": _impact_feedback("SHOT", hit_id, damage)}
+    return {"accepted": true, "reason": "SHOT MISSED"}
 
 func _resolve_reload(actor_id: String, firearm_id: String) -> Dictionary:
     if not _actor_alive(actor_id) or not _firearm_state.ensure_firearm(firearm_id):
@@ -635,7 +647,7 @@ func _resolve_infected_attack(attacker_id: String, target_id: String) -> bool:
     var profile := _impact_profiles.unarmed_profile()
     var strike := {
         "available": true,
-        "weight_grams": UNARMED_EFFECTIVE_MASS_GRAMS,
+        "weight_grams": INFECTED_UNARMED_EFFECTIVE_MASS_GRAMS,
         "contact_mode": profile.contact_mode,
         "rigidity_bp": profile.rigidity_bp,
         "leverage_bp": profile.leverage_bp,
@@ -659,9 +671,13 @@ func _apply_impact(attacker_id: String, target_id: String, damage: int, contact_
 func _melee_profile(actor_id: String) -> Dictionary:
     if not _hands.has_actor(actor_id):
         return {"available": false, "reason": "hand_state_unavailable"}
+
+    var candidates: Array[Dictionary] = []
+    var empty_hand := false
     for slot: int in [Slots.Value.PRIMARY_RIGHT, Slots.Value.SECONDARY_LEFT]:
         var item_id := _hands.item_in_slot(actor_id, slot)
         if item_id.is_empty():
+            empty_hand = true
             continue
         var entity := _world.entity(item_id)
         if entity == null:
@@ -672,31 +688,78 @@ func _melee_profile(actor_id: String) -> Dictionary:
         var profile := _impact_profiles.profile_for_item(entity.semantic_type, weight)
         if profile == null or not profile.is_valid():
             continue
-        return {
+        candidates.append({
             "available": true,
+            "label": _combat_item_label(entity.semantic_type),
             "weight_grams": weight,
             "contact_mode": profile.contact_mode,
             "rigidity_bp": profile.rigidity_bp,
             "leverage_bp": profile.leverage_bp,
             "contact_transfer_bp": profile.contact_transfer_bp,
-        }
-    var unarmed := _impact_profiles.unarmed_profile()
-    return {
-        "available": true,
-        "weight_grams": UNARMED_EFFECTIVE_MASS_GRAMS,
-        "contact_mode": unarmed.contact_mode,
-        "rigidity_bp": unarmed.rigidity_bp,
-        "leverage_bp": unarmed.leverage_bp,
-        "contact_transfer_bp": unarmed.contact_transfer_bp,
-    }
+        })
+
+    # An empty hand always remains a viable weapon. Do not force the player to hit
+    # with a bottle/notebook merely because it happens to occupy the other hand.
+    if empty_hand:
+        var unarmed := _impact_profiles.unarmed_profile()
+        candidates.append({
+            "available": true,
+            "label": "FIST",
+            "weight_grams": PLAYER_UNARMED_EFFECTIVE_MASS_GRAMS,
+            "contact_mode": unarmed.contact_mode,
+            "rigidity_bp": unarmed.rigidity_bp,
+            "leverage_bp": unarmed.leverage_bp,
+            "contact_transfer_bp": unarmed.contact_transfer_bp,
+        })
+
+    if candidates.is_empty():
+        return {"available": false, "reason": "no_striking_hand_available"}
+    candidates.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
+        var ad := _derived_melee_damage(a)
+        var bd := _derived_melee_damage(b)
+        if ad != bd:
+            return ad > bd
+        return String(a.get("label", "")) < String(b.get("label", ""))
+    )
+    return candidates[0]
 
 func _derived_melee_damage(strike: Dictionary) -> int:
-    var mass := maxi(1, int(strike.get("weight_grams", UNARMED_EFFECTIVE_MASS_GRAMS)))
+    var mass := maxi(1, int(strike.get("weight_grams", PLAYER_UNARMED_EFFECTIVE_MASS_GRAMS)))
     var value := maxi(1, ceili(float(mass) / 180.0))
     value = maxi(1, int(round(float(value * int(strike.get("rigidity_bp", 10000))) / 10000.0)))
     value = maxi(1, int(round(float(value * int(strike.get("leverage_bp", 10000))) / 10000.0)))
     value = maxi(1, int(round(float(value * int(strike.get("contact_transfer_bp", 10000))) / 10000.0)))
+    var contact_mode := StringName(strike.get("contact_mode", &"blunt"))
+    if contact_mode == &"edge":
+        value = maxi(1, int(round(float(value) * 2.0)))
+    elif contact_mode == &"point":
+        value = maxi(1, int(round(float(value) * 2.5)))
     return clampi(value, 1, 25)
+
+func _impact_feedback(source_label: String, target_id: String, damage: int) -> String:
+    if not _health.has_actor(target_id):
+        return "%s %d DMG" % [source_label, damage]
+    var hp := _health.current_hp(target_id)
+    var target_label := "ZOMBIE" if _infected_ids.has(target_id) else "TARGET"
+    if hp <= 0:
+        return "%s %d DMG · %s DOWN" % [source_label, damage, target_label]
+    return "%s %d DMG · %s %d/%d HP" % [source_label, damage, target_label, hp, _health.max_hp(target_id)]
+
+func _append_player_damage_feedback(feedback: String, hp_before: int) -> String:
+    if hp_before < 0 or _health == null or not _health.has_actor(_player_id):
+        return feedback
+    var hp_after := _health.current_hp(_player_id)
+    if hp_after >= hp_before:
+        return feedback
+    var incoming := hp_before - hp_after
+    var suffix := "YOU -%d · %d/%d HP" % [incoming, hp_after, _health.max_hp(_player_id)]
+    return suffix if feedback.is_empty() else "%s · %s" % [feedback, suffix]
+
+static func _combat_item_label(semantic_type: StringName) -> String:
+    var parts: PackedStringArray = String(semantic_type).split(".", false)
+    if parts.is_empty():
+        return "HIT"
+    return String(parts[parts.size() - 1]).replace("_", " ").to_upper()
 
 func _equipped_firearm(actor_id: String) -> String:
     if not _hands.has_actor(actor_id):
