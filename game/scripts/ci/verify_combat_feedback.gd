@@ -79,11 +79,18 @@ func _run() -> void:
     _check(strikes <= 15, "unarmed kill does not require absurd punch counts")
     _check(health.current_hp(PLAYER_ID) > 0, "healthy player can survive a clean one-on-one unarmed zombie fight")
     _check(game.combat_corpse_state().has_corpse_for_actor(zombie_id), "unarmed kill performs canonical corpse transition")
-    _check(last_reason.contains("ZOMBIE DOWN"), "killing blow reports zombie death")
 
     var death_line := ""
     if hud != null:
         death_line = String(hud.presentation_snapshot().get("line_1", ""))
+    print("COMBAT_FEEDBACK_DIAG strikes=%d zombie_hp=%d player_hp=%d final_reason=%s hud=%s" % [
+        strikes,
+        int(health.current_hp(zombie_id)),
+        int(health.current_hp(PLAYER_ID)),
+        last_reason,
+        death_line,
+    ])
+    _check(last_reason.contains("ZOMBIE DOWN"), "killing blow reports zombie death")
     _check(death_line.contains("ZOMBIE DOWN"), "production HUD reports the killing blow")
 
     var turn_before_miss := int(simple.turn_number())
