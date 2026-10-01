@@ -8,10 +8,10 @@ const ProfileClass = preload("res://scripts/simulation/combat/CombatImpactProfil
 
 const _SPECIALIZED := {
     "item.crafting.sharpened_stake": {"mode": "point", "length": 90, "rigidity": 9000, "leverage": 10500, "balance": 10500, "transfer": 13000},
-    "item.crafting.stone_hammer": {"mode": "blunt", "length": 35, "rigidity": 11000, "leverage": 12000, "balance": 9000, "transfer": 10500},
-    "item.kitchen.kitchen_knife": {"mode": "edge", "length": 30, "rigidity": 9500, "leverage": 10500, "balance": 11000, "transfer": 14000},
-    "item.kitchen.frying_pan": {"mode": "blunt", "length": 45, "rigidity": 10000, "leverage": 11000, "balance": 7500, "transfer": 10500},
-    "item.tool.hammer": {"mode": "blunt", "length": 35, "rigidity": 11000, "leverage": 12000, "balance": 10000, "transfer": 12000},
+    "item.crafting.stone_hammer": {"mode": "blunt", "length": 35, "rigidity": 11000, "leverage": 12000, "balance": 9000, "transfer": 14000},
+    "item.kitchen.kitchen_knife": {"mode": "edge", "length": 30, "rigidity": 12000, "leverage": 13000, "balance": 11000, "transfer": 16000},
+    "item.kitchen.frying_pan": {"mode": "blunt", "length": 45, "rigidity": 10000, "leverage": 11000, "balance": 7500, "transfer": 15000},
+    "item.tool.hammer": {"mode": "blunt", "length": 35, "rigidity": 11000, "leverage": 12000, "balance": 10000, "transfer": 14000},
     "item.tool.crowbar": {"mode": "blunt", "length": 75, "rigidity": 13000, "leverage": 12500, "balance": 8000, "transfer": 12000},
     "item.tool.screwdriver": {"mode": "point", "length": 25, "rigidity": 11000, "leverage": 10500, "balance": 11000, "transfer": 14000},
     "item.farming.garden_hoe": {"mode": "edge", "length": 140, "rigidity": 9000, "leverage": 12500, "balance": 7000, "transfer": 11000},
