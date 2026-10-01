@@ -203,6 +203,36 @@ Real SAVE & MENU / Continue verification preserves:
 
 Idle frames produce no movement, fatigue drain or zombie actions.
 
+## Completed maintenance — combat feedback + unarmed viability
+
+Post-release combat readability/balance maintenance is complete.
+
+Canonical simple-turn combat now reports successful outcomes through the existing HUD:
+
+- melee miss;
+- strike source;
+- actual damage dealt;
+- zombie HP remaining;
+- zombie down;
+- firearm hit/miss;
+- incoming retaliation damage and current player HP.
+
+Successful action reasons are no longer discarded by CanonicalStatusHud.
+
+Unarmed combat is now a viable last resort rather than a roughly 50-punch deadlock. The focused production scenario verified:
+
+- first punch = 8 HP damage;
+- adjacent zombie retaliation = 4 HP damage;
+- a full-health zombie dies in 13 unarmed strikes;
+- the healthy player survives the uninterrupted one-on-one at 52/100 HP;
+- the killing blow performs the canonical corpse transition and displays `FIST 4 DMG · ZOMBIE DOWN`.
+
+An empty hand remains a valid strike when the other hand holds a weaker object. SimpleTurnController chooses the strongest currently available hand strike.
+
+Common practical melee items use explicit existing CombatImpactProfile data so real weapons remain preferable to fists where appropriate. Edge/point contact receives stronger derived effect than generic blunt contact without adding a separate weapon-damage framework.
+
+No combat scheduler, controller graph or parallel UI system was introduced.
+
 ## Protected game
 
 Preserve:
@@ -235,10 +265,10 @@ No colony management, freeform construction or living survivor society is requir
 
 The current post-release maintenance prompt owns:
 
-- `game/scripts/ci/verify_turn_based_run_doors.gd`
-- `.github/workflows/run-doors.yml`
+- `game/scripts/ci/verify_combat_feedback.gd`
+- `.github/workflows/combat-feedback.yml`
 
-The focused verifier boots through the real fresh-cache StartupMenu path and proves WALK/RUN distance, ordered partial movement, fatigue, impact damage, unlocked/locked door behavior, measured noise ordering, existing infected hearing, bounded local actor responses, real Save/Continue persistence and idle-frame stability.
+The focused verifier boots through the real fresh-cache StartupMenu path at a 390x844 host viewport and proves meaningful unarmed damage, repeated zombie retaliation, hit/damage/HP feedback, HUD visibility, unarmed lethality, player survival in an isolated one-on-one, corpse transition, killing-blow feedback, miss feedback and idle-frame stability.
 
 Per README_SOPS.md, the next code-changing maintenance prompt must retire this verifier/workflow before production edits and create a fresh prompt-focused verifier.
 
