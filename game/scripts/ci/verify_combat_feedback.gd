@@ -72,6 +72,10 @@ func _run() -> void:
 
     var strikes := 1
     while health.current_hp(zombie_id) > 0 and health.current_hp(PLAYER_ID) > 0 and strikes < 20:
+        # The fixture is not part of procedural population projection, so production
+        # streaming legitimately drops it from the active roster after each turn.
+        # Reassert it before the next action to model one continuously adjacent zombie.
+        simple.set_infected_actor_ids(infected)
         simple.submit_intent(Intents.COMBAT_FORWARD)
         strikes += 1
 
