@@ -68,11 +68,11 @@ func present_action_result(
     world_tick: int
 ) -> void:
     var action_label: String = Intents.label(intent)
+    var readable_reason := reason.strip_edges().replace("_", " ")
     if success:
-        _action_text = action_label
+        _action_text = action_label if readable_reason.is_empty() else "%s — %s" % [action_label, readable_reason]
     else:
-        var readable_reason: String = reason.replace("_", " ").capitalize()
-        _action_text = "%s — %s" % [action_label, readable_reason]
+        _action_text = "%s — %s" % [action_label, readable_reason.capitalize()]
     refresh()
 
 func refresh() -> void:
