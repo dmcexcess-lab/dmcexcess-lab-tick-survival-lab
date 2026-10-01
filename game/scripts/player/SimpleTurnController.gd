@@ -527,11 +527,16 @@ func _resolve_melee_attack(attacker_id: String) -> Dictionary:
     if not bool(strike.get("available", false)):
         return {"accepted": false, "reason": String(strike.get("reason", "strike_unavailable"))}
     var damage := _derived_melee_damage(strike)
+    var target_hp_before := _health.current_hp(target_id)
+    var target_max_hp := _health.max_hp(target_id)
+    var target_label := _combat_target_label(target_id)
     if not _apply_impact(attacker_id, target_id, damage, StringName(strike.get("contact_mode", &"blunt"))):
         return {"accepted": false, "reason": "impact_failed"}
+    var applied_damage := mini(damage, maxi(0, target_hp_before))
+    var target_hp_after := maxi(0, target_hp_before - applied_damage)
     return {
         "accepted": true,
-        "reason": _impact_feedback(String(strike.get("label", "HIT")), target_id, damage),
+        "reason": _impact_feedback(String(strike.get("label", "HIT")), target_label, applied_damage, target_hp_after, target_max_hp),
     }
 
 func _resolve_firearm_attack(attacker_id: String, firearm_id: String) -> Dictionary:
@@ -565,11 +570,16 @@ func _resolve_firearm_attack(attacker_id: String, firearm_id: String) -> Diction
 
     if not hit_id.is_empty():
         var damage := _firearm_profiles.impact_damage(firearm.semantic_type)
+        var target_hp_before := _health.current_hp(hit_id)
+        var target_max_hp := _health.max_hp(hit_id)
+        var target_label := _combat_target_label(hit_id)
         if not _health.apply_damage(hit_id, damage):
             return {"accepted": false, "reason": "firearm_damage_failed"}
         if _health.has_actor(hit_id):
             _health.add_injury(hit_id, &"gunshot", Injury.TORSO, Injury.Severity.CRITICAL)
-        return {"accepted": true, "reason": _impact_feedback("SHOT", hit_id, damage)}
+        var applied_damage := mini(damage, maxi(0, target_hp_before))
+        var target_hp_after := maxi(0, target_hp_before - applied_damage)
+        return {"accepted": true, "reason": _impact_feedback("SHOT", target_label, applied_damage, target_hp_after, target_max_hp)}
     return {"accepted": true, "reason": "SHOT MISSED"}
 
 func _resolve_reload(actor_id: String, firearm_id: String) -> Dictionary:
@@ -736,14 +746,13 @@ func _derived_melee_damage(strike: Dictionary) -> int:
         value = maxi(1, int(round(float(value) * 2.5)))
     return clampi(value, 1, 25)
 
-func _impact_feedback(source_label: String, target_id: String, damage: int) -> String:
-    if not _health.has_actor(target_id):
-        return "%s %d DMG" % [source_label, damage]
-    var hp := _health.current_hp(target_id)
-    var target_label := "ZOMBIE" if _infected_ids.has(target_id) else "TARGET"
-    if hp <= 0:
+func _impact_feedback(source_label: String, target_label: String, damage: int, hp_after: int, max_hp: int) -> String:
+    if hp_after <= 0:
         return "%s %d DMG · %s DOWN" % [source_label, damage, target_label]
-    return "%s %d DMG · %s %d/%d HP" % [source_label, damage, target_label, hp, _health.max_hp(target_id)]
+    return "%s %d DMG · %s %d/%d HP" % [source_label, damage, target_label, hp_after, max_hp]
+
+func _combat_target_label(target_id: String) -> String:
+    return "ZOMBIE" if _infected_ids.has(target_id) else "TARGET"
 
 func _append_player_damage_feedback(feedback: String, hp_before: int) -> String:
     if hp_before < 0 or _health == null or not _health.has_actor(_player_id):
